@@ -38,19 +38,19 @@ class default(object):
 
       # check user suppplied parameters
       if 'NLCGMAX' not in PAR:
-	  setattr(PAR,'NLCGMAX',10)
+          setattr(PAR,'NLCGMAX',10)
 
       if 'NLCGTHRESH' not in PAR:
-	  setattr(PAR,'NLCGTHRESH',0.5)
+          setattr(PAR,'NLCGTHRESH',0.5)
 
       if 'LBFGSMAX' not in PAR:
-	  setattr(PAR,'LBFGSMAX',6)
+          setattr(PAR,'LBFGSMAX',6)
 
       if 'SRCHTYPE' not in PAR:
-	  setattr(PAR,'SRCHTYPE','backtrack')
+          setattr(PAR,'SRCHTYPE','backtrack')
 
       if 'SRCHMAX' not in PAR:
-	  setattr(PAR,'SRCHMAX',10)
+          setattr(PAR,'SRCHMAX',10)
 
       if 'STEPLEN' not in PAR:
           setattr(PAR,'STEPLEN',0.05)
@@ -71,10 +71,10 @@ class default(object):
 
       # prepare algorithm machinery
       if PAR.SCHEME in ['cg']:
-	cls.NLCG = lib.NLCG(cls.path,PAR.NLCGTHRESH,PAR.NLCGMAX)
+        cls.NLCG = lib.NLCG(cls.path,PAR.NLCGTHRESH,PAR.NLCGMAX)
 
       elif PAR.SCHEME in ['qn']:
-	cls.LBFGS = lib.LBFGS(cls.path,PAR.LBFGSMAX,PAR.BEGIN)
+        cls.LBFGS = lib.LBFGS(cls.path,PAR.LBFGSMAX,PAR.BEGIN)
 
 
   def compute_direction(cls):
@@ -88,19 +88,19 @@ class default(object):
 
       if PAR.SCHEME=='sd':
         # steepest descent update
-	p_new = -g_new
+        p_new = -g_new
 
       elif PAR.SCHEME=='cg':
         # nonlinear conjugate gradient update
-	p_new = cls.NLCG.compute()
+        p_new = cls.NLCG.compute()
 
       elif PAR.SCHEME=='qn':
         # quasi-Newton update
-	if cls.iter==1:
-	  p_new = -g_new
-	else:
-	  cls.LBFGS.update()
-	  p_new = -cls.LBFGS.solve()
+        if cls.iter==1:
+          p_new = -g_new
+        else:
+          cls.LBFGS.update()
+          p_new = -cls.LBFGS.solve()
 
       # save results
       unix.cd(cls.path)
@@ -116,15 +116,15 @@ class default(object):
       """
       unix.cd(cls.path)
       if cls.iter==1:
-	s_new = loadtxt('s_new')
-	f_new = loadtxt('f_new')
-	g = loadnpy('g_new')
+        s_new = loadtxt('s_new')
+        f_new = loadtxt('f_new')
+        g = loadnpy('g_new')
       else:
-	s_old = loadtxt('s_old')
-	s_new = loadtxt('s_new')
-	f_old = loadtxt('f_old')
-	f_new = loadtxt('f_new')
-	alpha = loadtxt('alpha')
+        s_old = loadtxt('s_old')
+        s_new = loadtxt('s_new')
+        f_old = loadtxt('f_old')
+        f_new = loadtxt('f_new')
+        alpha = loadtxt('alpha')
 
       m = loadnpy('m_new')
       p = loadnpy('p_new')
@@ -142,33 +142,33 @@ class default(object):
       cls.step_ratio = float(len_m/len_d)
 
       if cls.iter==1:
-	if PAR.STEPLEN != 0.:
-	  alpha = PAR.STEPLEN*cls.step_ratio
-	else:
-	  alpha = 1./np.sum(np.abs(g))
+        if PAR.STEPLEN != 0.:
+          alpha = PAR.STEPLEN*cls.step_ratio
+        else:
+          alpha = 1./np.sum(np.abs(g))
       elif PAR.SCHEME in ['sd','cg']:
-	alpha = 2.*alpha*s_old/s_new
+        alpha = 2.*alpha*s_old/s_new
       elif PAR.SCHEME in ['qn']:
-	alpha = 1.
+        alpha = 1.
       elif PAR.SCHEME in ['gn','tn']:
-	alpha = 1.
+        alpha = 1.
 
       # ad hoc scaling
       if 0:
-	alpha *= 1
+        alpha *= 1
 
       # limit maximum step length 
       if PAR.STEPMAX > 0.:
-	if alpha/cls.step_ratio > PAR.STEPMAX:
-	  alpha = PAR.STEPMAX*cls.step_ratio
+        if alpha/cls.step_ratio > PAR.STEPMAX:
+          alpha = PAR.STEPMAX*cls.step_ratio
 
       # write trial model
       savenpy('m_try',m+p*alpha)
       savetxt('alpha',alpha)
 
       with open(cls.output,'a') as file:
-	file.write('Iteration '+str(cls.iter)+'\n')
-	file.write(' %9.4e %9.4e\n'%(0.,f_new))
+        file.write('Iteration '+str(cls.iter)+'\n')
+        file.write(' %9.4e %9.4e\n'%(0.,f_new))
 
 
   def search_status(cls):
@@ -188,26 +188,26 @@ class default(object):
       # is current step length the best so far?
       vals = cls.func_vals(sort=False)
       if np.all(vals[-1] < vals[:-1]):
-	cls.isbest = 1
+        cls.isbest = 1
 
       # are stopping criteria satisfied?
       if PAR.SRCHTYPE=='backtrack':
-	if any(f[1:] < f[0]):
-	  cls.isdone = 1
+        if any(f[1:] < f[0]):
+          cls.isdone = 1
 
       elif PAR.SRCHTYPE=='golden':
-	if cls.isbrak:
-	  cls.isdone = 1
-	elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
-	  cls.isbrak = 1
+        if cls.isbrak:
+          cls.isdone = 1
+        elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
+          cls.isbrak = 1
 
       elif PAR.SRCHTYPE=='fixed_step':
-	if any(f[1:] < f[0]) and (f[-2] < f[-1]):
-	  cls.isdone = 1
+        if any(f[1:] < f[0]) and (f[-2] < f[-1]):
+          cls.isdone = 1
 
       with open(cls.output,'a') as file:
-	file.write(' %9.4e %9.4e\n'%(x_,f_))
-	if cls.isdone: file.write('\n')
+        file.write(' %9.4e %9.4e\n'%(x_,f_))
+        if cls.isdone: file.write('\n')
 
       return cls.isdone, cls.isbest
 
@@ -226,18 +226,18 @@ class default(object):
 
       # compute trial step length
       if PAR.SRCHTYPE=='backtrack':
-	  alpha = lib.backtrack2(f0,g0,x[1],f[1],b1=0.1,b2=0.5)
-	  
+          alpha = lib.backtrack2(f0,g0,x[1],f[1],b1=0.1,b2=0.5)
+          
       elif PAR.SRCHTYPE=='golden':
-	if any(f[1:] < f[0]) and (f[-2] < f[-1]):
-	  alpha = lib.polyfit2(x,f)
-	elif any(f[1:] < f[0]):
-	  alpha = loadtxt('alpha')*GOLDENRATIO
-	else:
-	  alpha = -loadtxt('alpha')*GOLDENRATIO
+        if any(f[1:] < f[0]) and (f[-2] < f[-1]):
+          alpha = lib.polyfit2(x,f)
+        elif any(f[1:] < f[0]):
+          alpha = loadtxt('alpha')*GOLDENRATIO
+        else:
+          alpha = -loadtxt('alpha')*GOLDENRATIO
 
       elif PAR.SRCHTYPE=='fixed_step':
-	alpha = cls.step_ratio*(step+1)*PAR.STEPLEN
+        alpha = cls.step_ratio*(step+1)*PAR.STEPLEN
 
       # write trial model
       savetxt('alpha',alpha)
@@ -260,11 +260,11 @@ class default(object):
       unix.rm('f_try')
 
       if cls.iter > 1:
-	unix.rm('m_old')
-	unix.rm('f_old')
-	unix.rm('g_old')
-	unix.rm('p_old')
-	unix.rm('s_old')
+        unix.rm('m_old')
+        unix.rm('f_old')
+        unix.rm('g_old')
+        unix.rm('p_old')
+        unix.rm('s_old')
 
       unix.mv('m_new','m_old')
       unix.mv('f_new','f_old')
@@ -289,9 +289,9 @@ class default(object):
       f_sorted = f[abs(x).argsort()]
       x_sorted = x[abs(x).argsort()]
       if sort:
-	return x_sorted
+        return x_sorted
       else:
-	return x
+        return x
 
   def func_vals(cls,sort=True):
       x,f = zip(*cls.search_history)
@@ -300,7 +300,7 @@ class default(object):
       f_sorted = f[abs(x).argsort()]
       x_sorted = x[abs(x).argsort()]
       if sort:
-	return f_sorted
+        return f_sorted
       else:
-	return f
+        return f
 

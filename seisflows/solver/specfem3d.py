@@ -341,7 +341,7 @@ class specfem3d(object):
     v = np.array([])
     for key in self.inversion_parameters:
       for iproc in range(PAR.NPROC):
-	v = np.append(v,parts[key][iproc])
+        v = np.append(v,parts[key][iproc])
     return v
 
 
@@ -354,16 +354,16 @@ class specfem3d(object):
     for key in self.model_parameters:
       parts[key] = []
       if key in self.inversion_parameters:
-	for i in range(PAR.NPROC):
-	  imin = nrow*PAR.NPROC*j + nrow*i
-	  imax = nrow*PAR.NPROC*j + nrow*(i+1)
-	  i += 1
-	  parts[key].append(v[imin:imax])
-	j += 1
+        for i in range(PAR.NPROC):
+          imin = nrow*PAR.NPROC*j + nrow*i
+          imax = nrow*PAR.NPROC*j + nrow*(i+1)
+          i += 1
+          parts[key].append(v[imin:imax])
+        j += 1
       else:
-	for i in range(PAR.NPROC):
-	  proc = '%06d'%i
-	  parts[key].append(np.load(PATH.MESH+'/'+key+'/'+proc))
+        for i in range(PAR.NPROC):
+          proc = '%06d'%i
+          parts[key].append(np.load(PATH.MESH+'/'+key+'/'+proc))
     return parts
 
 
@@ -419,12 +419,12 @@ class specfem3d(object):
           # run smoothing
           print ' smoothing', kernel_name
           self.mpirun(
-	    PATH.SOLVER_BINARIES+'/'+'xsmooth_vol_data '
-	    + kernel_name + ' '
-	    + path + '/' + 'grad_nosmooth/' + ' '
-	    + path + '/' + 'grad/' + ' '
-	    + str(span) + ' '
-	    + str(span) + ' ' + '1')
+            PATH.SOLVER_BINARIES+'/'+'xsmooth_vol_data '
+            + kernel_name + ' '
+            + path + '/' + 'grad_nosmooth/' + ' '
+            + path + '/' + 'grad/' + ' '
+            + str(span) + ' '
+            + str(span) + ' ' + '1')
         else:
           src = glob(path+'/'+'grad_nosmooth/*'+kernel_name+'.bin')
           dst = path+'/'+'grad/'
@@ -556,11 +556,11 @@ class specfem3d(object):
       """ Wrapper for mpirun
       """
       with open(outfile) as f:
-	subprocess.call(
-	      system.mpiargs()
-	      + script,
-	      shell=True,
-	      stdout=f)
+        subprocess.call(
+              system.mpiargs()
+              + script,
+              shell=True,
+              stdout=f)
 
 
   def getpath(self):

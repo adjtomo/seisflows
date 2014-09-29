@@ -30,7 +30,7 @@ class specfem2d(object):
     """
     # check user supplied parameters
     if 'XMIN' not in PAR or 'XMAX' not in PAR:
-	raise Exception
+        raise Exception
 
     if 'ZMIN' not in PAR or 'ZMAX' not in PAR:
         raise Exception
@@ -48,10 +48,10 @@ class specfem2d(object):
         raise Exception
 
     if 'F0' not in PAR:
-	raise Exception
+        raise Exception
 
     if 'WAVELET' not in PAR:
-	setattr(PAR,'WAVELET','ricker')
+        setattr(PAR,'WAVELET','ricker')
 
     if 'PREPROCESS' not in PAR:
         setattr(PAR,'PREPROCESS','default')
@@ -121,39 +121,39 @@ class specfem2d(object):
 
 
       if PATH.DATA:
-	  # copy user supplied data
-	  src = glob(PATH.DATA+'/'+self.getshot()+'/'+'*')
-	  dst = 'traces/obs/'
-	  unix.cp(src,dst)
+          # copy user supplied data
+          src = glob(PATH.DATA+'/'+self.getshot()+'/'+'*')
+          dst = 'traces/obs/'
+          unix.cp(src,dst)
 
-	  # generate SPECFEM2D input files
-	  self.writepar()
-	  self.writesrc()
-	  self.writerec()
+          # generate SPECFEM2D input files
+          self.writepar()
+          self.writesrc()
+          self.writerec()
 
-	  # prepare starting model
-	  self.generate_mesh(
-	    model_path = PATH.MODEL_INIT,
-	    model_type = model_type,
-	    model_name = 'model_init')
+          # prepare starting model
+          self.generate_mesh(
+            model_path = PATH.MODEL_INIT,
+            model_type = model_type,
+            model_name = 'model_init')
 
       else:
          # copy user supplied SPECFEM2D input files
-	  src = glob(PATH.SOLVER_FILES+'/'+'*')
-	  dst = 'DATA/'
-	  unix.cp(src,dst)
+          src = glob(PATH.SOLVER_FILES+'/'+'*')
+          dst = 'DATA/'
+          unix.cp(src,dst)
 
-	  # generate data
-	  self.generate_data(
-	    model_path = PATH.MODEL_TRUE,
-	    model_type = model_type,
-	    model_name = 'model_true')
+          # generate data
+          self.generate_data(
+            model_path = PATH.MODEL_TRUE,
+            model_type = model_type,
+            model_name = 'model_true')
 
-	  # prepare starting model
-	  self.generate_mesh(
-	    model_path = PATH.MODEL_INIT,
-	    model_type = model_type,
-	    model_name = 'model_init')
+          # prepare starting model
+          self.generate_mesh(
+            model_path = PATH.MODEL_INIT,
+            model_type = model_type,
+            model_name = 'model_init')
 
 
 
@@ -171,7 +171,7 @@ class specfem2d(object):
       # save results
       self.export_residuals(path)
       if export_traces:
-	self.export_traces(path,'traces/syn')
+        self.export_traces(path,'traces/syn')
 
 
   def evaluate_grad(self,path='',export_traces=False):
@@ -183,7 +183,7 @@ class specfem2d(object):
       # save results
       self.export_kernels(path)
       if export_traces:
-	self.export_traces(path,'traces/syn')
+        self.export_traces(path,'traces/syn')
 
 
   def apply_hess(self,path='',hessian='exact'):
@@ -194,7 +194,7 @@ class specfem2d(object):
       self.forward()
       unix.mv(self.glob(),'traces/lcg')
       if PAR.SCHEME in ['gn']:
-	self.preprocess.prepare_adjoint(unix.pwd(),output_type=3)
+        self.preprocess.prepare_adjoint(unix.pwd(),output_type=3)
       elif PAR.SCHEME in ['tn']:
         self.preprocess.prepare_adjoint(unix.pwd(),output_type=4)
 
@@ -282,61 +282,61 @@ class specfem2d(object):
       if model_type in ['gll']:
         pass
       elif model_type in ['ascii','txt']:
-	model = loadascii(model_path)
+        model = loadascii(model_path)
       elif model_type in ['h','h@']:
-	model = loadsep(model_path)
+        model = loadsep(model_path)
       elif model_type in ['nc','netcdf','cdf','grd']:
-	model = loadnc(model_path)
+        model = loadnc(model_path)
       else:
-	raise Exception
+        raise Exception
 
       if model_type in ['gll']:
           parts = self.load(model_path)
           unix.cp(model_path,'DATA/model_velocity.dat_input')
       else:
-	seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
-	seistools.specfem2d.setpar('SAVE_FORWARD', '.false.')
-	seistools.specfem2d.setpar('assign_external_model', '.false.')
-	seistools.specfem2d.setpar('READ_EXTERNAL_SEP_FILE', '.false.')
-	nt = seistools.specfem2d.getpar('nt')
-	seistools.specfem2d.setpar('nt',str(100))
+        seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
+        seistools.specfem2d.setpar('SAVE_FORWARD', '.false.')
+        seistools.specfem2d.setpar('assign_external_model', '.false.')
+        seistools.specfem2d.setpar('READ_EXTERNAL_SEP_FILE', '.false.')
+        nt = seistools.specfem2d.getpar('nt')
+        seistools.specfem2d.setpar('nt',str(100))
 
-	mesher = 'bin/xmeshfem2D'
-	solver = 'bin/xspecfem2D'
-	with open('log.adj','w') as f:
-	  subprocess.call(mesher,stdout=f)
-	  subprocess.call(solver,stdout=f)
+        mesher = 'bin/xmeshfem2D'
+        solver = 'bin/xspecfem2D'
+        with open('log.adj','w') as f:
+          subprocess.call(mesher,stdout=f)
+          subprocess.call(solver,stdout=f)
 
         seistools.specfem2d.setpar('assign_external_model', '.true.')
         seistools.specfem2d.setpar('READ_EXTERNAL_SEP_FILE', '.true.')
         seistools.specfem2d.setpar('nt',str(nt))
 
         # interpolate model at GLL points
-	parts = self.load('DATA/model_velocity.dat_output')
-	x = np.array(parts['x'][:]).T
-	z = np.array(parts['z'][:]).T
-	meshcoords = np.column_stack((x,z))
-	x = model['x'].flatten()
-	z = model['z'].flatten()
-	gridcoords = np.column_stack((x,z))
-	for key in ['rho','vp','vs']:
-	  v = model[key].flatten()
-	  parts[key] = [griddata(gridcoords,v,meshcoords,'linear')]
+        parts = self.load('DATA/model_velocity.dat_output')
+        x = np.array(parts['x'][:]).T
+        z = np.array(parts['z'][:]).T
+        meshcoords = np.column_stack((x,z))
+        x = model['x'].flatten()
+        z = model['z'].flatten()
+        gridcoords = np.column_stack((x,z))
+        for key in ['rho','vp','vs']:
+          v = model[key].flatten()
+          parts[key] = [griddata(gridcoords,v,meshcoords,'linear')]
         self.save('DATA/model_velocity.dat_input',parts)
 
       # save results
       if system.getnode()==0:
-	if model_name:
-	  self.save(PATH.OUTPUT+'/'+model_name,parts)
-	if not exists(PATH.MESH):
+        if model_name:
+          self.save(PATH.OUTPUT+'/'+model_name,parts)
+        if not exists(PATH.MESH):
           set1 = set(['x','z','rho','vp','vs'] )
           set2 = set(self.inversion_parameters)
-	  keys = list(set1.difference(set2))
-	  for key in keys:
-	    unix.mkdir(PATH.MESH+'/'+key)
-	    for proc in range(PAR.NPROC):
-	      with open(PATH.MESH+'/'+key+'/'+'%06d'%proc,'w') as file:
-		np.save(file,parts[key][proc])
+          keys = list(set1.difference(set2))
+          for key in keys:
+            unix.mkdir(PATH.MESH+'/'+key)
+            for proc in range(PAR.NPROC):
+              with open(PATH.MESH+'/'+key+'/'+'%06d'%proc,'w') as file:
+                np.save(file,parts[key][proc])
 
 
 
@@ -350,15 +350,15 @@ class specfem2d(object):
       ncol = M.shape[1]
 
       if ncol==5:
-	ioff = 0
+        ioff = 0
       elif ncol==6:
-	ioff = 1
+        ioff = 1
 
       # fill in dictionary
       parts = {}
       for key in ['x','z','rho','vp','vs']:
-	parts[key] = [M[:,ioff]]
-	ioff += 1
+        parts[key] = [M[:,ioff]]
+        ioff += 1
       return parts
 
 
@@ -366,10 +366,10 @@ class specfem2d(object):
       "writes SPECFEM2D kernel or model"
       # allocate array
       if type == 'model':
-	nrow = len(parts[parts.keys().pop()][0])
-	ncol = 6
-	ioff = 1
-	M = np.zeros((nrow,ncol))
+        nrow = len(parts[parts.keys().pop()][0])
+        ncol = 6
+        ioff = 1
+        M = np.zeros((nrow,ncol))
 
       elif type =='kernel':
         nrow = len(parts[parts.keys().pop()][0])
@@ -379,7 +379,7 @@ class specfem2d(object):
 
       # fill in array
       for icol,key in enumerate(['x','z','rho','vp','vs']):
-	M[:,icol+ioff] = parts[key][0]
+        M[:,icol+ioff] = parts[key][0]
 
       # write array
       np.savetxt(filename,M,'%10.4e')
@@ -392,9 +392,9 @@ class specfem2d(object):
       "merges parts into vector"
       v = np.array([])
       for key in parts:
-	if key in self.inversion_parameters:
-	  for iproc in range(PAR.NPROC):
-	    v = np.append(v,parts[key][iproc])
+        if key in self.inversion_parameters:
+          for iproc in range(PAR.NPROC):
+            v = np.append(v,parts[key][iproc])
       return v
 
 
@@ -404,18 +404,18 @@ class specfem2d(object):
       nrow = len(v)/(PAR.NPROC*len(self.inversion_parameters))
       i = 0; j = 0;
       for key in ['x','z','rho','vp','vs']:
-	parts[key] = []
-	if key in self.inversion_parameters:
-	  for i in range(PAR.NPROC):
-	    imin = nrow*PAR.NPROC*j + nrow*i
-	    imax = nrow*PAR.NPROC*j + nrow*(i+1)
-	    i += 1
-	    parts[key].append(v[imin:imax])
-	  j += 1
-	else:
-	  for i in range(PAR.NPROC):
-	    proc = '%06d'%i
-	    parts[key].append(np.load(PATH.MESH+'/'+key+'/'+proc))
+        parts[key] = []
+        if key in self.inversion_parameters:
+          for i in range(PAR.NPROC):
+            imin = nrow*PAR.NPROC*j + nrow*i
+            imax = nrow*PAR.NPROC*j + nrow*(i+1)
+            i += 1
+            parts[key].append(v[imin:imax])
+          j += 1
+        else:
+          for i in range(PAR.NPROC):
+            proc = '%06d'%i
+            parts[key].append(np.load(PATH.MESH+'/'+key+'/'+proc))
       return parts
 
 
@@ -425,9 +425,9 @@ class specfem2d(object):
   def combine(self,path=''):
       "combines SPECFEM2D kernels"
       subprocess.call(\
-	     [getpath('seistools')+'/'+'specfem2d/combine.exe'] + \
-	     [str(len(unix.ls(path)))] + \
-	     [path])
+             [getpath('seistools')+'/'+'specfem2d/combine.exe'] + \
+             [str(len(unix.ls(path)))] + \
+             [path])
 
 
   def smooth(self,path='',span=0):
@@ -449,7 +449,7 @@ class specfem2d(object):
 
       # perform smoothing
       for key in self.inversion_parameters:
-	parts[key] = [meshsmooth(x,z,parts[key][0],span,nx,nz)]
+        parts[key] = [meshsmooth(x,z,parts[key][0],span,nx,nz)]
       unix.mv(path+'/'+'grad',path+'/'+'grad_nosmooth')
       self.save(path+'/'+'grad',parts)
 

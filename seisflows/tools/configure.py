@@ -51,30 +51,30 @@ class ParameterObject(object):
     def vars(self):
       mydict = dict()
       for key,val in vars(self.module).items():
-	if key[0] != '_':
-	  mydict[key] = val
+        if key[0] != '_':
+          mydict[key] = val
       return mydict
 
     def load(self,name):
       if name in _sys.modules:
-	return _sys.modules[name]
+        return _sys.modules[name]
 
       elif self.path:
         # load parameters from disk
         mydict = loadobj(join(self.path,name+'.p'))
 
-	# register module
-	module = _types.ModuleType(name)
-	_sys.modules[name] = module
+        # register module
+        module = _types.ModuleType(name)
+        _sys.modules[name] = module
 
         # populate module
-	for key,val in mydict.items():
-	  if key[0] != '_':
-	    setattr(module,key, val)
-	return module
+        for key,val in mydict.items():
+          if key[0] != '_':
+            setattr(module,key, val)
+        return module
 
       else:
-	raise Exception
+        raise Exception
 
 
 def getclass(*args):
@@ -164,7 +164,7 @@ def _parse(args,package=None):
       parglist = package.split('.')
       nn = min(len(arglist),len(parglist))
       for ii in range(nn+1):
-	if parglist[ii:nn] == arglist[0:nn-ii]:
+        if parglist[ii:nn] == arglist[0:nn-ii]:
           break
       arglist = parglist[0:ii] + arglist
     return arglist
@@ -181,5 +181,5 @@ def _exists(parts):
       args = _imp.find_module(parts[-1],path)
       return True
     except ImportError:
-	return False
+        return False
 

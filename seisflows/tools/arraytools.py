@@ -113,9 +113,9 @@ def uniquerows(a, sort_array=False, return_index=False):
     "Finds unique rows of numpy array."
     if sort_array:
       if return_index:
-	sa, si = sortrows(a, return_index=True)
+        sa, si = sortrows(a, return_index=True)
       else:
-	sa = sortrows(a)
+        sa = sortrows(a)
     else:
       sa, sj = sortrows(a, return_inverse=True)
     ui = np.ones(len(sa), 'bool')
@@ -124,11 +124,11 @@ def uniquerows(a, sort_array=False, return_index=False):
     if sort_array:
       ua = sa[ui]
       if return_index:
-	ui = si[ui]
+        ui = si[ui]
     else:
       ua = a[ui[sj]]
       if return_index:
-	ui = np.array(range(len(ui)))[ui[sj]]
+        ui = np.array(range(len(ui)))[ui[sj]]
 
     if return_index:
       return ua, ui

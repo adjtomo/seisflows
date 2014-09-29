@@ -91,7 +91,7 @@ class run(getclass('workflow','inversion')):
       self.isdone = False
 
 
-# run run
+# run
 if __name__ == '__main__':
     run().main()
 

@@ -25,17 +25,17 @@ class default(object):
     """
     # check user supplied parameters
     if 'SMOOTH' not in PAR:
-	setattr(PAR,'SMOOTH',0.)
+        setattr(PAR,'SMOOTH',0.)
 
     if 'SCALE' not in PAR:
-	setattr(PAR,'SCALE',1.)
+        setattr(PAR,'SCALE',1.)
 
 
   def process_kernels(self):
     # combine kernels
     system.run( solver.combine, 
-	hosts='head',
-	path=PATH.GRAD+'/'+'kernels' )
+        hosts='head',
+        path=PATH.GRAD+'/'+'kernels' )
 
     # construct mask
     unix.cd(PATH.GRAD+'/'+'kernels')
@@ -51,9 +51,9 @@ class default(object):
     # apply smoothing
     if PAR.SMOOTH > 0.:
       system.run( solver.smooth, 
-	  hosts='head',
-	  path=PATH.GRAD,
-	  span=PAR.SMOOTH )
+          hosts='head',
+          path=PATH.GRAD,
+          span=PAR.SMOOTH )
 
     # apply preconditioner
     if PATH.PRECOND:

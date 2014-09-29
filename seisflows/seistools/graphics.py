@@ -22,7 +22,7 @@ def splot(s,h,normalize=True,nxmax=1000,nymax=1000):
     for ir in range(h.nr):
       if normalize:
         w = max(abs(s[:,ir]))
-	if w > 0:
+        if w > 0:
           s[:,ir] = s[:,ir]/w
         else:
           break

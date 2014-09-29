@@ -26,10 +26,10 @@ def cd(path):
 def cp(src='',dst='',opt=''):
     if isinstance(src,(list,tuple)):
       if len(src) > 1:
-	assert isdir(dst)
+        assert isdir(dst)
 
       for sub in src:
-	cp(sub,dst)
+        cp(sub,dst)
 
       return
 
@@ -52,7 +52,7 @@ def ln(src,dst):
       for name in _strlist(src):
         s = abspath(name)
         d = join(dst,basename(name))
-	_os.symlink(s,d)
+        _os.symlink(s,d)
     else:
       _os.symlink(src,dst)
 
@@ -64,15 +64,15 @@ def ls(path):
 def mkdir(dirs):
     for dir in _strlist(dirs):
       if not _os.path.isdir(dir):
-	_os.makedirs(dir)
+        _os.makedirs(dir)
 
 
 def mv(src='',dst=''):
     if isinstance(src,(list,tuple)):
       if len(src) > 1:
-	assert isdir(dst)
+        assert isdir(dst)
       for sub in src: 
-	mv(sub,dst)
+        mv(sub,dst)
       return
 
     if isdir(dst):
@@ -88,17 +88,17 @@ def pwd():
 def rename(old,new,names):
     for name in names:
       if name.find(old) >= 0:
-	_os.rename(name,name.replace(old,new))
+        _os.rename(name,name.replace(old,new))
 
 
 def rm(path=''):
     for name in _strlist(path):
       if _os.path.isfile(name):
-	_os.remove(name)
+        _os.remove(name)
       elif _os.path.islink(name):
         _os.remove(name)
       elif _os.path.isdir(name):
-	_shutil.rmtree(name)
+        _shutil.rmtree(name)
 
 
 def select(items,prompt=''):
@@ -106,14 +106,14 @@ def select(items,prompt=''):
       if prompt:
         print prompt
       for i,item in enumerate(items):
-	print("%2d) %s" % (i+1,item))
+        print("%2d) %s" % (i+1,item))
       reply = int(raw_input().strip())
       try:
-	status = (1 <= reply and reply <= len(items))
+        status = (1 <= reply and reply <= len(items))
       except:
-	status = 0
+        status = 0
       if status:
-	return items[reply-1]
+        return items[reply-1]
 
 
 def whoami():

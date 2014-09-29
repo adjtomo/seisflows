@@ -98,30 +98,30 @@ class slurm(object):
       name = task.__name__
 
       if PAR.VERBOSE >= 2:
-	print 'running',name
+        print 'running',name
 
       # store function arguments
       file = PATH.SYSTEM+'/'+name+'.p'
       saveobj(file,kwargs)
 
       if hosts == 'all':
-	# run on all available nodes
-	args = ('srun '
-	  + '--wait=0 '
-	  + getpath('system') +'/'+ 'slurm/wrapper_srun '
-	  + PATH.SYSTEM + ' '
-	  + getmodule(task) + ' '
-	  + name)
+        # run on all available nodes
+        args = ('srun '
+          + '--wait=0 '
+          + getpath('system') +'/'+ 'slurm/wrapper_srun '
+          + PATH.SYSTEM + ' '
+          + getmodule(task) + ' '
+          + name)
       elif hosts == 'head':
-	# run on head node
-	args = ('srun '
-	  + '--wait=0 '
-	  + getpath('system') +'/'+ 'slurm/wrapper_srun_head '
-	  + PATH.SYSTEM + ' '
-	  + getmodule(task) + ' '
-	  + name)
+        # run on head node
+        args = ('srun '
+          + '--wait=0 '
+          + getpath('system') +'/'+ 'slurm/wrapper_srun_head '
+          + PATH.SYSTEM + ' '
+          + getmodule(task) + ' '
+          + name)
       else:
-	raise Exception
+        raise Exception
 
       subprocess.call(args, shell=1)
 

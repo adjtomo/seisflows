@@ -46,13 +46,13 @@ class inversion(object):
 
     # check user supplied parameters
     if 'BEGIN' not in PAR:
-	raise Exception
+        raise Exception
 
     if 'END' not in PAR:
-	raise Exception
+        raise Exception
 
     if 'SAVEMODELS' not in PAR:
-	setattr(PAR,'SAVEMODELS',1)
+        setattr(PAR,'SAVEMODELS',1)
 
     if 'SAVEKERNELS' not in PAR:
         setattr(PAR,'SAVEKERNELS',0)
@@ -134,10 +134,10 @@ class inversion(object):
     elif PAR.SCHEME in ['gn','tn']:
       self.optimize.initialize_newton()
       for self.ilcg in irange(1,PAR.LCGMAX):
-	self.apply_hessian()
-	isdone = self.optimize.solve_newton()
-	if isdone:
-	  break
+        self.apply_hessian()
+        isdone = self.optimize.solve_newton()
+        if isdone:
+          break
 
 
   def line_search(self):
@@ -150,7 +150,7 @@ class inversion(object):
 
       if isdone==1:
         self.optimize.finalize_search()
-	break
+        break
       elif isdone==0:
         self.optimize.compute_step()
         continue
@@ -220,7 +220,7 @@ class inversion(object):
     """ Saves results from model update last iteration
     """
     if divides(self.iter,PAR.SAVEMODELS):
-	self.save_model()
+        self.save_model()
 
     if divides(self.iter,PAR.SAVEKERNELS):
         self.save_kernels()
@@ -296,11 +296,11 @@ class inversion(object):
       if PAR.BEGIN == 1 and self.iter == 0:
         isready = False
       elif self.iter == 1:
-	isready = False
+        isready = False
       elif PATH.LOCAL:
-	isready = False
+        isready = False
       else:
-	isready = True
+        isready = True
       return isready
 
 

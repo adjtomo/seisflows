@@ -8,7 +8,7 @@ from seisflows.tools.codetools import glob, join
 
 # select path
 home = '/home/rmodrak/data/'
-opts = ['Examples2d','Examples3d']
+opts = ['Examples2d','Examples3d','Imaging']
 print ''
 path = join(home,unix.select(opts))
 print ''
