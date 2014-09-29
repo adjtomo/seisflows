@@ -1,0 +1,5 @@
+#!/bin/sh
+
+rm -rf output*
+rm -rf scratch
+

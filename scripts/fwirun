@@ -1,0 +1,41 @@
+#!/usr/bin/python -u
+
+import sys
+
+from seisflows.tools.configure import getclass, ParameterObject
+
+sys.path.append('.')
+import parameters
+import paths
+
+PAR = ParameterObject('parameters')
+PATH = ParameterObject('paths')
+
+
+if __name__ == '__main__':
+
+    # check import system by instantiating each class once
+    if 'SYSTEM' not in PAR: raise Exception
+    getclass('system',PAR.SYSTEM)()
+
+    if 'WORKFLOW' not in PAR: raise Exception
+    getclass('workflow',PAR.WORKFLOW)()
+
+    if 'OPTIMIZE' not in PAR: setattr(PAR,'OPTIMIZE','default')
+    getclass('optimize',PAR.OPTIMIZE)()
+
+    if 'PREPROCESS' not in PAR: setattr(PAR,'PREPROCESS','default')
+    getclass('preprocess',PAR.PREPROCESS)()
+
+    if 'POSTPROCESS' not in PAR: setattr(PAR,'POSTPROCESS','default')
+    getclass('postprocess',PAR.POSTPROCESS)()
+
+    if 'SOLVER' not in PAR: raise Exception
+    getclass('solver',PAR.SOLVER)()
+
+
+    # submit job
+    system = getclass('system',PAR.SYSTEM)()
+    workflow = getclass('workflow',PAR.WORKFLOW)
+    system.submit(workflow)
+

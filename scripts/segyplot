@@ -1,0 +1,54 @@
+#!/usr/bin/python
+
+import sys
+
+import numpy as np
+
+from seismic import readsegy, readsu, splot, wplot
+
+
+def segytype(file):
+
+    if ('.segy' in file):
+        return 'segy'
+
+    elif ('.su' in file):
+        return 'su'
+
+    elif ('single.bin' in file) or ('single.adj' in file):
+        return 'su'
+
+    elif ('_SU' in file):
+        return 'su'
+
+    else:
+        return None
+
+
+
+if __name__ == '__main__':
+
+  file = sys.argv[1]
+
+  if segytype(file) == 'segy':
+     s,h = readsegy(file)
+
+  elif segytype(file) == 'su':
+     s,h = readsu(file)
+
+  print s.shape
+
+  if len(sys.argv[1:]) == 1:
+     # plot record section
+     print 'min, max:', s.min(), s.max()
+     splot(s,h)
+
+  else:
+    # plot traces
+    for ii in sys.argv[2:]:
+      w = np.zeros((h.nt,2))
+      w[:,0] = np.linspace(0,h.nt*h.dt,h.nt)
+      w[:,1] = s[:,ii]
+
+      wplot(w)
+

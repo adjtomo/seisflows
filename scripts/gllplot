@@ -1,0 +1,51 @@
+#!/usr/bin/python
+
+import sys
+
+import numpy as np
+
+from seisflows.tools.arraytools import uniquerows, meshplot
+
+
+def isnonzero(a):
+  zmin = np.min(a,axis=0)
+  zmax = np.max(a,axis=0)
+
+  return np.flatnonzero(zmax-zmin)
+
+
+def wread(file):
+    w = np.loadtxt(file)
+    return w
+
+
+def gllplot(file):
+
+    fromfile = np.loadtxt(file)
+    nr,nc = fromfile.shape
+
+    if nc==5:
+      data = fromfile
+    elif nc==6:
+      data = np.copy(fromfile[:,1:])
+
+    xy = data[:,0:2]
+    _, indices = uniquerows(xy, False, True)
+    u = data[indices]
+
+    x = u[:,0]
+    y = u[:,1]
+    Z = u[:,2:]
+
+    for i in isnonzero(Z):
+        z = np.squeeze(Z[:,i])
+	print min(z), max(z)
+        meshplot(x,y,z)
+
+
+# run script
+if __name__ == '__main__':
+    file = sys.argv[1]
+    print file
+    gllplot(file)
+

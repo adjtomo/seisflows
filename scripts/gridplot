@@ -1,0 +1,33 @@
+#!/usr/bin/python
+
+import sys
+import numpy as np
+
+from utils import gridplot
+
+
+if __name__ == '__main__':
+
+    file  = sys.argv[1]
+
+    Z = np.loadtxt(file)
+    print Z.shape
+
+    ny = Z.shape[0]
+    nx = Z.shape[1]
+    nxmax = 750
+    nymax = 750
+
+    if ny > nymax:
+      iy = int(np.ceil(ny/nymax))
+      iy = range(0,ny,iy)
+    else:
+      iy = range(0,ny)
+
+    if nx > nxmax:
+      ix = int(np.ceil(nx/nxmax))
+      ix = range(0,nx,ix)
+    else:
+      ix = range(0,nx)
+
+    gridplot(Z[np.ix_(iy,ix)])

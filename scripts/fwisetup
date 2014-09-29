@@ -1,0 +1,42 @@
+#!/usr/bin/python
+
+import os
+
+from seisflows.tools import unix
+from seisflows.tools.codetools import glob, join
+
+
+# select path
+home = '/home/rmodrak/data/'
+opts = ['Examples2d','Examples3d']
+print ''
+path = join(home,unix.select(opts))
+print ''
+
+# select directory
+dirs = unix.ls(path)
+dirs.sort()
+prompt = 'select directory:'
+dir = unix.select(dirs,prompt)
+print ''
+
+# select sudirectory
+items = unix.ls(path+'/'+dir)
+if 'parameters.py' in items:
+  subdir = ''
+else:
+  subdirs = []
+  for item in items:
+    if os.path.isdir(path+'/'+dir+'/'+item):
+      subdirs.extend([item])
+  subdirs.sort()
+
+  prompt = 'select subdirectory:'
+  subdir = unix.select(subdirs,prompt)
+  print ''
+
+# copy files
+fullpath = path+'/'+dir+'/'+subdir
+unix.cp(fullpath+'/'+'parameters.py','.')
+unix.cp(fullpath+'/'+'paths.py','.')
+

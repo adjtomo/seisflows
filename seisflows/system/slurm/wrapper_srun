@@ -1,0 +1,28 @@
+#!/usr/bin/python -u
+
+import sys
+sys.path.append('.')
+
+from seisflows.tools.codetools import loadobj
+from seisflows.tools.configure import getclass, ParameterObject
+
+mypath = sys.argv[1]
+myobj = sys.argv[2]
+myfunc = sys.argv[3]
+
+PAR = ParameterObject('parameters',mypath)
+PATH = ParameterObject('paths',mypath)
+
+
+if __name__ == '__main__':
+
+    # load function
+    obj = getclass(myobj)()
+    func = getattr(obj,myfunc)
+
+    # load function arguments
+    kwargs = loadobj(PATH.SYSTEM+'/'+myfunc+'.p')
+
+    # call function
+    func(**kwargs)
+
