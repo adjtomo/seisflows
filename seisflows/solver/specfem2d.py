@@ -26,74 +26,73 @@ class specfem2d(object):
 
 
   def __init__(self):
-    """ Class constructor
-    """
-    # check user supplied parameters
-    if 'XMIN' not in PAR or 'XMAX' not in PAR:
-        raise Exception
+      """ Class constructor
+      """
+      # check user supplied parameters
+      if 'XMIN' not in PAR: 
+          raise Exception
 
-    if 'ZMIN' not in PAR or 'ZMAX' not in PAR:
-        raise Exception
+      if 'XMAX' not in PAR:
+          raise Exception
 
-    if 'NX' not in PAR:
-        raise Exception
+      if 'ZMIN' not in PAR: 
+          raise Exception
 
-    if 'NZ' not in PAR:
-        raise Exception
+      if 'ZMAX' not in PAR:
+          raise Exception
 
-    if 'NT' not in PAR:
-        raise Exception
+      if 'NX' not in PAR:
+          raise Exception
 
-    if 'DT' not in PAR:
-        raise Exception
+      if 'NZ' not in PAR:
+          raise Exception
 
-    if 'F0' not in PAR:
-        raise Exception
+      if 'NT' not in PAR:
+          raise Exception
 
-    if 'WAVELET' not in PAR:
-        setattr(PAR,'WAVELET','ricker')
+      if 'DT' not in PAR:
+          raise Exception
 
-    if 'PREPROCESS' not in PAR:
-        setattr(PAR,'PREPROCESS','default')
+      if 'F0' not in PAR:
+          raise Exception
 
-    if 'MODEL' not in PAR:
-        setattr(PAR,'MODEL','acoustic')
+      if 'PREPROCESS' not in PAR:
+          setattr(PAR,'PREPROCESS','default')
 
-    # check user supplied paths
-    if not exists(PATH.MODEL_INIT):
-        raise Exception
+      if 'WAVELET' not in PAR:
+          setattr(PAR,'WAVELET','ricker')
 
-    if not exists(PATH.DATA): 
-        assert exists(PATH.MODEL_TRUE)
-        assert exists(PATH.SOLVER_FILES)
+      # check user supplied paths
+      if not exists(PATH.MODEL_INIT):
+          raise Exception
 
-    if not exists(PATH.SOLVER_BINARIES):
-        raise Exception
+      if not exists(PATH.DATA): 
+          assert exists(PATH.MODEL_TRUE)
+          assert exists(PATH.SOLVER_FILES)
 
-    #if not exists(PATH.MESH):
-    #    raise Exception
+      if not exists(PATH.SOLVER_BINARIES):
+          raise Exception
 
-    # load preprocessing tools
-    self.preprocess = getclass('preprocess',PAR.PREPROCESS)(
-      reader=seistools.specfem2d.readsu,
-      writer=seistools.specfem2d.writesu)
+      # load preprocessing tools
+      self.preprocess = getclass('preprocess',PAR.PREPROCESS)(
+        reader=seistools.specfem2d.readsu,
+        writer=seistools.specfem2d.writesu)
 
-    # model parameters expected by solver
-    model_parameters = []
-    model_parameters += ['rho']
-    model_parameters += ['vp']
-    model_parameters += ['vs']
-    self.model_parameters = model_parameters
+      self.configure_model()
 
-    # model paramters included in inversion
-    inversion_parameters = []
-    if PAR.MODEL == 'acoustic':
-      inversion_parameters += ['vs']
-      self.inversion_parameters = inversion_parameters
 
-    elif PAR.MODEL == 'elastic':
-      inversion_parameters += ['rhop']
-      inversion_parameters += ['vp']
+  def configure_model(self):
+      """ Defines materials paremeters
+      """
+      # model parameters expected by solver
+      model_parameters = []
+      model_parameters += ['rho']
+      model_parameters += ['vp']
+      model_parameters += ['vs']
+      self.model_parameters = model_parameters
+
+      # model parameters included in inversion
+      inversion_parameters = []
       inversion_parameters += ['vs']
       self.inversion_parameters = inversion_parameters
 
@@ -118,7 +117,6 @@ class specfem2d(object):
       src = glob(PATH.SOLVER_BINARIES+'/'+'*')
       dst = 'bin/'
       unix.cp(src,dst)
-
 
       if PATH.DATA:
           # copy user supplied data

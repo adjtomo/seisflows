@@ -27,19 +27,37 @@ class specfem3d(object):
     """ Class constructor
     """
     # check user supplied parameters
-    if 'XMIN' not in PAR or 'XMAX' not in PAR:
+    if 'XMIN' not in PAR:
         raise Exception
 
-    if 'YMIN' not in PAR or 'YMAX' not in PAR:
+    if 'XMAX' not in PAR:
         raise Exception
 
-    if 'ZMIN' not in PAR or 'ZMAX' not in PAR:
+    if 'YMIN' not in PAR:
         raise Exception
 
-    if 'NX' not in PAR or 'NY' not in PAR or 'NZ' not in PAR:
+    if 'YMAX' not in PAR:
         raise Exception
 
-    if 'NT' not in PAR or 'DT' not in PAR:
+    if 'ZMIN' not in PAR:
+        raise Exception
+
+    if 'ZMAX' not in PAR:
+        raise Exception
+
+    if 'NX' not in PAR:
+        raise Exception
+
+    if 'NY' not in PAR:
+        raise Exception
+
+    if 'NZ' not in PAR:
+        raise Exception
+
+    if 'NT' not in PAR:
+        raise Exception
+
+    if 'DT' not in PAR:
         raise Exception
 
     if 'F0' not in PAR:
@@ -52,17 +70,20 @@ class specfem3d(object):
         setattr(PAR,'WAVELET','ricker')
 
     # check user supplied paths
-    if not exists(PATH.MODEL_INIT):
-        raise Exception
+    #if not exists(PATH.MODEL_INIT):
+    #    raise Exception
 
     if not exists(PATH.SOLVER_BINARIES):
         raise Exception
 
     if not exists(PATH.DATA):                                
-        assert exists(PATH.MODEL_TRUE)
+        #assert exists(PATH.MODEL_TRUE)
         assert exists(PATH.SOLVER_FILES)
 
-    #if not exists(PATH.MESH):
+    #if 'MESH' not in PATH:
+    #    raise Exception
+    #
+    #if 'SCRATCH' not in PATH:
     #    raise Exception
 
     # load preprocessing tools
@@ -70,14 +91,20 @@ class specfem3d(object):
       reader=seistools.specfem3d.readsu,
       writer=seistools.specfem3d.writesu)
 
-    # list model parameters expected by solver
+    self.configure_model()
+
+
+  def configure_model(self):
+    """ Defines materials paremeters
+    """
+    # model parameters expected by solver
     model_parameters = []
     model_parameters += ['rho']
     model_parameters += ['vp']
     model_parameters += ['vs']
     self.model_parameters = model_parameters
 
-    # list model paramters included in inversion
+    # model parameters included in inversion
     inversion_parameters = []
     inversion_parameters += ['rho']
     inversion_parameters += ['vp']
