@@ -106,7 +106,6 @@ class specfem3d(object):
 
     # model parameters included in inversion
     inversion_parameters = []
-    inversion_parameters += ['rho']
     inversion_parameters += ['vp']
     inversion_parameters += ['vs']
     self.inversion_parameters = inversion_parameters
