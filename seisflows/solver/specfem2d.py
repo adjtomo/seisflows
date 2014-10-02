@@ -49,7 +49,6 @@ class specfem2d(object):
       externally, from postprocessing routines.
   """
 
-
   def __init__(self):
       """ Class constructor
       """
@@ -378,6 +377,7 @@ class specfem2d(object):
       """
       seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
       seistools.specfem2d.setpar('SAVE_FORWARD', '.false.')
+
       seistools.specfem2d.setpar('assign_external_model', '.false.')
       seistools.specfem2d.setpar('READ_EXTERNAL_SEP_FILE', '.false.')
       nt = seistools.specfem2d.getpar('nt')
@@ -478,7 +478,7 @@ class specfem2d(object):
 
 
 
-  ### model manipulation
+  ### postprocessing utilities
 
   def combine(self,path=''):
       "combines SPECFEM2D kernels"

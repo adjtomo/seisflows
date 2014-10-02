@@ -34,8 +34,8 @@ class specfem3d(object):
 
     load, save
       For reading and writing SPECFEM3D models and kernels. On the disk, models
-      and kernels are stored as text files, and in memory, as dictionaries with
-      different keys corresponding to different material parameters.
+      and kernels are stored as binary files, and in memory, as dictionaries
+      with different keys corresponding to different material parameters.
 
     split, merge
       For the solver routines, it is possible to store models as dictionaries,
@@ -458,7 +458,7 @@ class specfem3d(object):
 
 
 
-  ### model manipulation
+  ### postprocessing utilities
 
   def combine(self,path=''):
       """ combines SPECFEM3D kernels
