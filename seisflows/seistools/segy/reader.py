@@ -2,24 +2,72 @@
 import numpy as np
 
 from seisflows.tools.arraytools import uniquerows
-from seisflows.tools.iotools import Reader, structure, mychar, mysize
+from seisflows.tools.codetools import Struct
+from seisflows.tools.iotools import Reader, mychar, mysize
 
-from headers import SEGY_TAPE_LABEL, SEGY_BINARY_HEADER, SEGY_TRACE_HEADER_LONG, SEGY_TRACE_HEADER_SHORT
+from headers import SEGY_TAPE_LABEL, SEGY_BINARY_HEADER, SEGY_TRACE_HEADER
 
 
 NMAX = 100000
-FIXEDLENGTH = 1
-SAVEHEADERS = 1
-
+FIXEDLENGTH = True
+SAVEHEADERS = True
 COORDSCALAR = 1.
 DEPTHSCALAR = 1.
+
+FIELDS = [
+  'TraceSequenceLine',
+  'SourceWaterDepth',
+  'GroupWaterDepth',
+  'ElevationOrDepthScalar',
+  'CoordinateScalar',
+  'SourceX',
+  'SourceY',
+  'GroupX',
+  'GroupY',
+  'RecordingDelay_ms',
+  'NumberSamples',
+  'SampleInterval_ms']
+
+# cull header fields
+_tmp = []
+for field in SEGY_TRACE_HEADER:
+  if field[-1] in FIELDS:
+    _tmp.append(field)
+SEGY_TRACE_HEADER = _tmp
+
+
+
+class SeisStruct(Struct):
+  """ Holds information about data
+  """
+  def __init__(self,nr,nt,dt,ts=0.,
+               sx=[],sy=[],sz=[],
+               rx=[],ry=[],rz=[],
+               nrec=[],nsrc=[]):
+    super(SeisStruct,self).__init__()
+
+    self.nr = nr
+    self.nt = nt
+    self.dt = dt
+    self.ts = ts
+
+    self.sx = sx
+    self.sy = sy
+    self.sz = sz
+    self.rx = rx
+    self.ry = ry
+    self.rz = rz
+
+    self.nrec = nrec
+    self.nsrc = nsrc
 
 
 
 class SeismicReader(Reader):
+  """ Base class used by both SegyReader and SuReader
+  """
 
   def ReadSeismicData(self):
-
     nsamples = int(self.read('int16',1,self.offset+114)[0])
     nbytes = int(nsamples*self.dsize+240)
     ntraces = int((self.size-self.offset)/nbytes);
@@ -50,11 +98,8 @@ class SeismicReader(Reader):
         tracelen = tracelen[:-1]
 
     # preallocate trace headers
-    if SAVEHEADERS == 1:
-      h = [self.scan(SEGY_TRACE_HEADER_LONG,traceptr[0])]
-      h = h*ntraces
-    elif SAVEHEADERS == 2:
-      h = [self.scan(SEGY_TRACE_HEADER_SHORT,traceptr[0],contiguous=0)]
+    if SAVEHEADERS:
+      h = [self.scan(SEGY_TRACE_HEADER,traceptr[0],contiguous=False)]
       h = h*ntraces
     else:
       h = []
@@ -67,20 +112,18 @@ class SeismicReader(Reader):
 
     # read trace headers and data
     for k in range(ntraces):
-      if SAVEHEADERS == 1: 
-        h[k] = self.scan(SEGY_TRACE_HEADER_LONG,traceptr[k])
-      elif SAVEHEADERS == 2:
-        h[k] = self.scan(SEGY_TRACE_HEADER_SHORT,traceptr[k],contiguous=0)
-
+      if SAVEHEADERS: 
+        h[k] = self.scan(SEGY_TRACE_HEADER,traceptr[k],contiguous=False)
       d[:,k] = self.read(self.dtype,nsamples,traceptr[k]+240)
 
+    # store results
+    self.ntraces = ntraces
     self.hdrs = h
     self.data = d
 
 
-  def CustomStructure(self):
-
-    h = structure()
+  def getstruct(self):
+    nr = self.ntraces
 
     # collect scalars
     nt = self.getscalar('NumberSamples')
@@ -96,11 +139,6 @@ class SeismicReader(Reader):
     ry = self.getarray('GroupY')
     rz = self.getarray('GroupWaterDepth')
 
-    sxyz = np.column_stack([sx,sy,sz])
-    rxyz = np.column_stack([rx,ry,rz])
-    ns = len(uniquerows(sxyz))
-    nr = len(uniquerows(rxyz))
-
     # apply scaling factors
     if COORDSCALAR and DEPTHSCALAR:
       c1 = COORDSCALAR
@@ -111,41 +149,32 @@ class SeismicReader(Reader):
       c2 = self.getscalar('ElevationOrDepthScalar')
       c3 = 1.e-6
 
-    h.sx = c1*sx
-    h.sy = c1*sy
-    h.sz = c2*sz
-    h.rx = c1*rx
-    h.ry = c1*ry
-    h.rz = c2*rz
-    h.ts = c3*ts
-    h.dt = c3*dt
+    sxyz = np.column_stack([sx,sy,sz])
+    rxyz = np.column_stack([rx,ry,rz])
+    nsrc = len(uniquerows(sxyz))
+    nrec = len(uniquerows(rxyz))
 
-    h.nt = nt
-    h.ns = ns
-    h.nr = nr
-
-    return h
+    return SeisStruct(nr,nt,dt,ts,
+      c1*sx,c1*sy,c2*sz,
+      c1*rx,c1*ry,c2*rz,
+      nsrc,nrec)
 
 
-  def getarray(self,label):
+  def getarray(self,key):
     # collect array
-    list = [ hdr[label] for hdr in self.hdrs ]
+    list = [ hdr[key] for hdr in self.hdrs ]
     return np.array(list)
 
 
-  def getscalar(self,label):
+  def getscalar(self,key):
     # collect scalar
-    array = self.getarray(label)
-    assert np.all(array == array[0])
+    array = self.getarray(key)
     return array[0]
 
 
-
-
-### SEGY class
-
 class SegyReader(SeismicReader):
-
+  """ SEGY reader
+  """
   def __init__(self,fname,endian=None):
     SeismicReader.__init__(self,fname,endian)
 
@@ -161,7 +190,6 @@ class SegyReader(SeismicReader):
 
 
   def ReadSegyHeaders(self):
-
     # read in tape label header if present
     code = self.read('char',2,4)
     if code == 'SY':
@@ -183,9 +211,7 @@ class SegyReader(SeismicReader):
     self.CheckSegyHeaders()
 
 
-
   def CheckSegyHeaders(self):
-
     # check revision number
     self.segyvers = '1.0'
 
@@ -198,10 +224,9 @@ class SegyReader(SeismicReader):
 
 
 
-### Seismic Unix class
-
 class SuReader(SeismicReader):
-
+  """ Seismic Unix file reader
+  """
   def __init__(self,fname,endian=None):
     SeismicReader.__init__(self,fname,endian)
 
@@ -216,31 +241,30 @@ class SuReader(SeismicReader):
       self.endian = checkByteOrder()
 
 
-
-### convenience functions
-
 def readsegy(filename):
-
+  """ SEGY convenience function
+  """
   obj = SegyReader(filename,endian='>')
-
   obj.ReadSegyHeaders()
   obj.ReadSeismicData()
 
   d = obj.data
-  h = obj.CustomStructure()
-
+  h = obj.getstruct()
   return d, h
 
 
 def readsu(filename):
-
+  """ SU convenience function
+  """
   obj = SuReader(filename,endian='<')
-
   obj.ReadSeismicData()
 
   d = obj.data
-  h = obj.CustomStructure()
-
+  h = obj.getstruct()
   return d, h
+
+
+def getstruct(*args,**kwargs):
+  return SeisStruct(*args,**kwargs)
 
 

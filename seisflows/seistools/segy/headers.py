@@ -45,7 +45,7 @@ SEGY_BINARY_HEADER = [
     ['int16', 1, 304, 'NumberExtendedTextualHeaders'],
     ['int16', 47, 306, 'Unassigned2']]
 
-SEGY_TRACE_HEADER_LONG = [
+SEGY_TRACE_HEADER = [
     ['int32', 1, 0, 'TraceSequenceLine'],
     ['int32', 1, 4, 'TraceSequenceFile'],
     ['int32', 1, 8, 'OriginalFieldRecord'],
@@ -135,22 +135,4 @@ SEGY_TRACE_HEADER_LONG = [
     ['int16', 1, 228, 'SourceMeasurementExponent'],
     ['int16', 1, 230, 'SourceMeasurementUnit'],
     ['int16', 4, 232, 'Unassigned']]
-
-SEGY_TRACE_HEADER_SHORT = [
-    ['int32', 1, 0, 'TraceSequenceLine'],
-    ['int32', 1, 60, 'SourceWaterDepth'],
-    ['int32', 1, 64, 'GroupWaterDepth'],
-    ['int16', 1, 68, 'ElevationOrDepthScalar'],
-    ['int16', 1, 70, 'CoordinateScalar'],
-    ['int32', 1, 72, 'SourceX'],
-    ['int32', 1, 76, 'SourceY'],
-    ['int32', 1, 80, 'GroupX'],
-    ['int32', 1, 84, 'GroupY'],
-    ['int16', 1, 108, 'RecordingDelay_ms'],
-    ['int16', 1, 114, 'NumberSamples'],
-    ['int16', 1, 116, 'SampleInterval_ms']]
-
-
-
-
 

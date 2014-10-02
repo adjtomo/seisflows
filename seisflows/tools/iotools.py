@@ -2,6 +2,9 @@
 import os as _os
 import struct as _struct
 
+from seisflows.tools.codetools import Struct
+
+
 
 class Reader(object):
 
@@ -40,7 +43,7 @@ class Reader(object):
     self.file.seek(origin)
 
     position = 0
-    h = structure()
+    h = Struct()
 
     for item in fmtlist:
       fmt = item[0]
@@ -106,12 +109,6 @@ class Writer(object):
         position = offset+mysize(fmt)
 
       self.write(fmt,val,length)
-
-
-class structure(dict):
-  def __init__(self,*args,**kwargs):
-    super(structure,self).__init__(*args,**kwargs)
-    self.__dict__ = self
 
 
 def mychar(fmt):

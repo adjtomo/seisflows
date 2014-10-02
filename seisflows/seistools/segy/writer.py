@@ -1,16 +1,40 @@
 
+import copy
+
 import numpy as np
 
 from seisflows.tools.iotools import Writer, mychar, mysize
 
-from headers import SEGY_TRACE_HEADER_SHORT
+from headers import SEGY_TRACE_HEADER
+
+FIELDS = [
+  'TraceSequenceLine',
+  'SourceWaterDepth',
+  'GroupWaterDepth',
+  'ElevationOrDepthScalar',
+  'CoordinateScalar',
+  'SourceX',
+  'SourceY',
+  'GroupX',
+  'GroupY',
+  'RecordingDelay_ms',
+  'NumberSamples',
+  'SampleInterval_ms']
+
+# cull header fields
+_tmp = []
+for field in SEGY_TRACE_HEADER:
+  if field[-1] in FIELDS:
+    _tmp.append(field)
+SEGY_TRACE_HEADER = _tmp
+
 
 
 class SeismicWriter(Writer):
 
   def __init__(self,fname):
     Writer.__init__(self,fname)
-
+    
     self.dtype = 'float'
     self.dsize = mysize(self.dtype)
     self.endian = '<'
@@ -19,41 +43,63 @@ class SeismicWriter(Writer):
 
   def prepareTraceData(self,h):
 
-    ntraces = h.nr
-    self.vals = [[1.] for k in range(ntraces)]
-    c1 = 1.e0
-    c2 = 1.e0
-    c3 = 1.e6
+    nr = int(h.nr)
+    self.vals = [[1] for k in range(nr)]
+    self.ntraces = nr
+
+    c1 = 1
+    c2 = 1
+    c3 = 1000000
+
+    nt = int(h.nt)
+    dt = int(h.dt*c3)
+    ts = int(h.ts*c3)
 
     dt_max = (2.**15-1.)*10.**-6
     if h.dt >= dt_max:
-      h.dt = 0
+      dt = 0
+
+    sx = self.getarray(h,'sx',c1)
+    sy = self.getarray(h,'sy',c1)
+    sz = self.getarray(h,'sz',c2)
+
+    rx = self.getarray(h,'rx',c1)
+    ry = self.getarray(h,'ry',c1)
+    rz = self.getarray(h,'rz',c2)
 
     # prepare trace headers
-    for k in range(ntraces):
-      self.vals[k].append(int(h.sz[k]*c1))
-      self.vals[k].append(int(h.rz[k]*c1))
-      self.vals[k].append(int(c1))
-      self.vals[k].append(int(c2))
-      self.vals[k].append(int(h.sx[k]*c2))
-      self.vals[k].append(int(h.sy[k]*c2))
-      self.vals[k].append(int(h.rx[k]*c2))
-      self.vals[k].append(int(h.ry[k]*c2))
-      self.vals[k].append(int(h.ts*c3))
-      self.vals[k].append(int(h.nt))
-      self.vals[k].append(int(h.dt*c3))
+    for k in range(nr):
+      self.vals[k].append(sz[k])
+      self.vals[k].append(rz[k])
+      self.vals[k].append(c1)
+      self.vals[k].append(c2)
+      self.vals[k].append(sx[k])
+      self.vals[k].append(sy[k])
+      self.vals[k].append(rx[k])
+      self.vals[k].append(ry[k])
+      self.vals[k].append(ts)
+      self.vals[k].append(nt)
+      self.vals[k].append(dt)
+
+
+  def getarray(self,h,key,constant):
+    if h[key] == []:
+      return [0]*self.ntraces
+
+    array = [int(f*constant) for f in h[key]]
+    return array
 
 
   def writeTraceData(self,d):
 
     nsamples = d.shape[0]
     nbytes = nsamples*self.dsize+240
-    ntraces = d.shape[1]
+    nr = d.shape[1]
 
-    for k in range(ntraces):
+    for k in range(nr):
 
       # write trace header
-      self.printf(SEGY_TRACE_HEADER_SHORT,self.vals[k],k*nbytes,contiguous=0)
+      self.printf(SEGY_TRACE_HEADER,self.vals[k],k*nbytes,contiguous=0)
 
       # write trace data
       self.write(self.dtype,d[:,k],nsamples,k*nbytes+240)
@@ -66,7 +112,7 @@ class SuWriter(SeismicWriter):
 
 
 def writesegy():
-  pass
+  raise NotImplementedError
 
 
 def writesu(filename,d,h):
