@@ -14,14 +14,16 @@ class default(object):
   """ Data processing class
   """
 
-  def __init__(self,reader=None,writer=None):
+  def __init__(self,reader=None,writer=None,channels=[]):
       """ Class constructor
       """
-
-      # check user supplied parameters
       if 'MISFIT' not in PAR:
           raise Exception
 
+      if 'NORMALIZE' not in PAR:
+          setattr(PAR,'NORMALIZE',True)
+
+      # check filter parameters
       if 'BANDPASS' not in PAR:
           setattr(PAR,'BANDPASS',False)
 
@@ -37,6 +39,7 @@ class default(object):
       if 'FREQHI' not in PAR:
           setattr(PAR,'FREQHI',0.)
 
+      # check mute parameters
       if 'MUTE' not in PAR:
           setattr(PAR,'MUTE',False)
 
@@ -46,18 +49,10 @@ class default(object):
       if 'MUTECONST' not in PAR:
           setattr(PAR,'MUTECONST',0.)
 
-      if 'XCOMP' not in PAR:
-          setattr(PAR,'XCOMP',False)
-
-      if 'YCOMP' not in PAR:
-          setattr(PAR,'YCOMP',True)
-
-      if 'ZCOMP' not in PAR:
-          setattr(PAR,'ZCOMP',False)
-
-      # IO routines
+      # define IO routines
       self.reader = reader
       self.writer = writer
+      self.channels = channels
 
 
   def process_traces(self,s,h):
@@ -125,7 +120,7 @@ class default(object):
 
 
       elif output_type == 3:
-        # write adjoint traces needed for action of Jacobian
+        # write adjoint traces needed to get action of Jacobian
         d,h = self.load(prefix='traces/lcg')
         s,_ = self.load(prefix='traces/syn')
 
@@ -137,7 +132,7 @@ class default(object):
 
 
       elif output_type == 4:
-        # write adjoint traces needed for action of Hessian
+        # write adjoint traces needed to get action of Hessian
         d,h = self.load(prefix='traces/obs')
         s,_ = self.load(prefix='traces/syn')
 
@@ -149,7 +144,7 @@ class default(object):
 
 
       elif output_type == 5:
-        # write adjoint traces needed for Hessian preconditioner
+        # write adjoint traces needed to compute Hessian preconditioner
         d,h = self.load(prefix='traces/obs')
         s,_ = self.load(prefix='traces/syn')
 
@@ -275,10 +270,8 @@ class default(object):
       h = Struct()
       f = Struct()
 
-      # load data
-      if PAR.XCOMP: (f.x,h.x) = self.reader(prefix=prefix,channel=1)
-      if PAR.YCOMP: (f.y,h.y) = self.reader(prefix=prefix,channel=2)
-      if PAR.ZCOMP: (f.z,h.z) = self.reader(prefix=prefix,channel=3)
+      for channel in self.channels:
+        f[channel],h[channel] = self.reader(prefix=prefix,channel=channel)
 
       # check headers
       h = self.check_headers(h)
@@ -289,16 +282,8 @@ class default(object):
   def save(self,s,h,prefix='traces/adj/',suffix=''):
       """ Writes seismic data to disk
       """
-      if PAR.XCOMP: self.writer(s.x,h,channel=1,prefix=prefix,suffix=suffix)
-      if PAR.YCOMP: self.writer(s.y,h,channel=2,prefix=prefix,suffix=suffix)
-      if PAR.ZCOMP: self.writer(s.z,h,channel=3,prefix=prefix,suffix=suffix)
-
-      if not PAR.XCOMP: self.writer(np.zeros((h.nt,h.nr)),h,channel=1,
-          prefix=prefix,suffix=suffix)
-      if not PAR.YCOMP: self.writer(np.zeros((h.nt,h.nr)),h,channel=2,
-          prefix=prefix,suffix=suffix)
-      if not PAR.ZCOMP: self.writer(np.zeros((h.nt,h.nr)),h,channel=3,
-          prefix=prefix,suffix=suffix)
+      for channel in self.channels:
+        self.writer(s[channel],h,prefix=prefix,channel=channel)
 
 
   def write_residuals(self,s,h):
@@ -306,9 +291,8 @@ class default(object):
       """
       # sum components
       sum = np.zeros((h.nr))
-      if PAR.XCOMP: sum = sum + s.x
-      if PAR.YCOMP: sum = sum + s.y
-      if PAR.ZCOMP: sum = sum + s.z
+      for channel in self.channels:
+        sum = sum + s[channel]
       np.savetxt('residuals',sum)
 
 
@@ -354,11 +338,11 @@ class default(object):
       if h.nr != PAR.NREC:
         print 'Warning: h.nr != PAR.NREC'
 
-      hdrs = headers.values()[1:]
-      keys = ['dt','nt']
-      for key in keys:
-        for hdr in hdrs:
-          assert h[key] == hdr[key]
+      #hdrs = headers.values()[1:]
+      #keys = ['dt','nt']
+      #for key in keys:
+      #  for hdr in hdrs:
+      #    assert h[key] == hdr[key]
 
       return h
 

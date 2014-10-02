@@ -48,13 +48,13 @@ def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
   files = []
 
   if opt=='legacy':
-    if channel == 1:
+    if channel in ['x']:
       fmt = '%s/S%s.AA.%sX.%s' % (prefix,'%04d',char,suffix)
-    elif channel == 2:
+    elif channel in ['y']:
       fmt = '%s/S%s.AA.%sY.%s' % (prefix,'%04d',char,suffix)
-    elif channel == 3:
+    elif channel in ['z']:
       fmt = '%s/S%s.AA.%sZ.%s' % (prefix,'%04d',char,suffix)
-    elif channel == 4:
+    elif channel in ['p']:
       fmt = '%s/S%s.AA.%sP.%s' % (prefix,'%04d',char,suffix)
     for i in range(h.nr):
       files.append( fmt % (i+1) )
@@ -71,13 +71,13 @@ def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
   else:
     for file in h.files:
       parts = _string.split(file,'.')
-      if channel == 1:
+      if channel in ['x']:
         label = ''.join([parts[2][:-1],'X'])
-      elif channel == 2:
+      elif channel in ['y']:
         label = ''.join([parts[2][:-1],'Y'])
-      elif channel == 3:
+      elif channel in ['z']:
         label = ''.join([parts[2][:-1],'Z'])
-      elif channel == 4:
+      elif channel in ['p']:
         label = ''.join([parts[2][:-1],'P'])
 
       parts[-2] = label
@@ -103,14 +103,14 @@ def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='semd'):
 
   elif filetype == 'ascii':
     if 'sem' in suffix:
-      if channel == 1:  wildcard = '%s/*.?XX.%s' % (prefix,suffix)
-      elif channel == 2:  wildcard = '%s/*.?XY.%s' % (prefix,suffix)
-      elif channel == 3:  wildcard = '%s/*.?XZ.%s' % (prefix,suffix)
+      if channel in ['x']:  wildcard = '%s/*.?XX.%s' % (prefix,suffix)
+      elif channel in ['y']:  wildcard = '%s/*.?XY.%s' % (prefix,suffix)
+      elif channel in ['z']:  wildcard = '%s/*.?XZ.%s' % (prefix,suffix)
       else: wildcard = '%s/*.?X?.%s' % (prefix,suffix)
     else:
-      if channel == 1:  wildcard = '%s/*[xX]*.%s' % (prefix,suffix)
-      elif channel == 2:  wildcard = '%s/*[yY]*.%s' % (prefix,suffix)
-      elif channel == 3:  wildcard = '%s/*[zZ]*.%s' % (prefix,suffix)
+      if channel in ['x']:  wildcard = '%s/*[xX]*.%s' % (prefix,suffix)
+      elif channel in ['y']:  wildcard = '%s/*[yY]*.%s' % (prefix,suffix)
+      elif channel in ['z']:  wildcard = '%s/*[zZ]*.%s' % (prefix,suffix)
     files = _glob.glob(wildcard)
     if files:
       files.sort()
@@ -119,9 +119,9 @@ def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='semd'):
     return files
 
   elif filetype == 'su':
-    if channel == 1:  file = '%s/Ux_file_single.%s' % (prefix,suffix)
-    elif channel == 2:  file = '%s/Uy_file_single.%s' % (prefix,suffix)
-    elif channel == 3:  file = '%s/Uz_file_single.%s' % (prefix,suffix)
+    if channel in ['x']:  file = '%s/Ux_file_single.%s' % (prefix,suffix)
+    elif channel in ['y']:  file = '%s/Uy_file_single.%s' % (prefix,suffix)
+    elif channel in ['z']:  file = '%s/Uz_file_single.%s' % (prefix,suffix)
     return file
 
 
@@ -130,13 +130,13 @@ def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='semd'):
 def readsu(channel=[],prefix='SEM',suffix='',verbose=False):
     """ Reads Seismic Unix file
     """
-    if channel == 1:
+    if channel in ['x']:
       wildcard = '%s/*_dx_SU%s' % (prefix,suffix)
-    elif channel == 2:
+    elif channel in ['y']:
       wildcard = '%s/*_dy_SU%s' % (prefix,suffix)
-    elif channel == 3:
+    elif channel in ['z']:
       wildcard = '%s/*_dz_SU%s' % (prefix,suffix)
-    elif channel == 4:
+    elif channel in ['p']:
       wildcard = '%s/*_dp_SU%s' % (prefix,suffix)
     else:
       Exception
@@ -200,18 +200,16 @@ def readsu(channel=[],prefix='SEM',suffix='',verbose=False):
 
 def writesu(d,h,channel=[],prefix='SEM',suffix='.adj',verbose=False):
 
-    nproc = len(h.nn)
-
     if suffix=='':
       suffix = '.adj'
 
-    if channel == 1:
+    if channel in ['x']:
       wildcard = '%s/%d_dx_SU%s'
-    elif channel == 2:
+    elif channel in ['y']:
       wildcard = '%s/%d_dy_SU%s'
-    elif channel == 3:
+    elif channel in ['z']:
       wildcard = '%s/%d_dz_SU%s'
-    elif channel == 4:
+    elif channel in ['p']:
       wildcard = '%s/%d_dp_SU%s'
     else:
       Exception
