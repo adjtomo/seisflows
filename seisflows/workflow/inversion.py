@@ -3,7 +3,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
-from seisflows.tools.codetools import divides, glob, irange, join
+from seisflows.tools.codetools import divides, exists, glob, irange, join
 from seisflows.tools.configure import getclass, ParameterObject
 
 PAR = ParameterObject('parameters')
@@ -60,14 +60,22 @@ class inversion(object):
     if 'SAVETRACES' not in PAR:
         setattr(PAR,'SAVETRACES',0)
 
+    # check user supplied paths
+    if 'DATA' not in PATH:
+        setattr(PATH,'DATA','')
+
+    if not exists(PATH.DATA):
+        assert exists(PATH.MODEL_TRUE)
+
+    if not exists(PATH.MODEL_INIT):
+        raise Exception
+
     self.configure_paths()
 
 
   def main(self):
     """ Carries out seismic inversion
     """
-    print 'Setting up...'
-    print 'Preparing data...\n'
     self.setup()
 
     for self.iter in irange(PAR.BEGIN,PAR.END):
@@ -96,7 +104,8 @@ class inversion(object):
     # prepare solver
     isready = self.solver_status()
     if not isready:
-      system.run( solver.setup,
+      print 'Preparing solver...'
+      system.run( solver.prepare_solver,
           hosts='all' )
 
     if PAR.BEGIN==1:
@@ -249,8 +258,12 @@ class inversion(object):
   def configure_paths(self):
     """ Configures directory structure
     """
+    PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
+    unix.mkdir(PATH.OUTPUT)
+
     PATH.SOLVER = join(PATH.GLOBAL,'solver')
     PATH.OPTIMIZE = join(PATH.GLOBAL,'optimize')
+    PATH.PREPROCESS = join(PATH.GLOBAL,'preprocess')
     PATH.POSTPROCESS = join(PATH.GLOBAL,'postprocess')
 
     PATH.FUNC = join(PATH.SOLVER,'func')
@@ -258,12 +271,8 @@ class inversion(object):
     PATH.HESS = join(PATH.SOLVER,'hess')
     PATH.MESH = join(PATH.SOLVER,'mesh')
 
-    PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
-    unix.mkdir(PATH.OUTPUT)
-
     PATH.SCRATCH = join(PATH.GLOBAL,'scratch')
     if PATH.LOCAL: PATH.SCRATCH = join(PATH.LOCAL,'scatch')
-
 
 
   ### utility functions
@@ -310,7 +319,7 @@ class inversion(object):
       solver.save(dst,solver.split(loadnpy(src)))
 
 
-  def save_traces(self):
+  def save_kernels(self):
       src = glob(join(PATH.GRAD,'kernels/sum*'))
       dst = join(PATH.OUTPUT,'kernels_%04d'%self.iter)
       unix.mkdir(dst)

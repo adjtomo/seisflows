@@ -57,6 +57,12 @@ def saveobj(filename,obj):
     with open(filename,'wb') as file:
       _pickle.dump(obj,file)
 
+def setdiff(list1,list2):
+   set1 = set(list1)
+   set2 = set(list2)
+   diff = set1.difference(set2)
+   return list(diff)
+
 def unique(mylist):
     "Finds unique elements of list"
     return list(set(mylist))

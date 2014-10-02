@@ -200,6 +200,8 @@ def readsu(channel=[],prefix='SEM',suffix='',verbose=False):
 
 def writesu(d,h,channel=[],prefix='SEM',suffix='.adj',verbose=False):
 
+    nproc = len(h.nn)
+
     if suffix=='':
       suffix = '.adj'
 

@@ -2,10 +2,11 @@
 import subprocess
 
 import numpy as np
+from scipy.interpolate import griddata
 
 from seisflows import seistools
 from seisflows.tools import unix
-from seisflows.tools.codetools import exists, glob, join
+from seisflows.tools.codetools import exists, glob, join, setdiff, Struct
 from seisflows.tools.configure import getclass, getpath, ParameterObject
 
 PAR = ParameterObject('parameters')
@@ -15,20 +16,44 @@ system = getclass('system',PAR.SYSTEM)()
 
 
 class specfem2d(object):
-  """ Python interface and base class for SPECFEM2D
+  """ Python interface for SPECFEM2D
 
-    In the code, we distinguish between high-level and low-level interfaces.
-    High-level methods deal with evaluation of the misfit function and its 
-    derivatives and include 'evaluate_func', 'evaluate_grad', 'apply_hess'. 
-    Low-level methods provide direct  accesss to the mesher, forward solver, 
-    adjoint solver, and other SPECFEM2D components.
+    evaluate_func, evaluate_grad, apply_hess
+      These methods deal with evaluation of the misfit function or its 
+      derivatives and provide the primary interface between the solver and other
+      workflow components.
+
+    forward, adjoint, mesher
+      These methods allow direct access to individual SPECFEM2D components.
+      Together, they provide a secondary interface users can employ whenever
+      high-level methods are not sufficient.
+
+    prepare_solver, prepare_data, prepare_model
+      SPECFEM2D requires a particular directory structure in which to run and
+      particular file formats for models, data, and parameter files. These
+      methods put in place all these prerequisites.
+
+    load, save
+      For reading and writing SPECFEM2D models and kernels. On the disk, models
+      and kernels are stored as text files, and in memory, as dictionaries with
+      different keys corresponding to different material parameters.
+
+    split, merge
+      For the solver routines, it is possible to store models as dictionaries,
+      but for the optimization routines, it is necessary to merge all model 
+      values together into a single vector. Two methods, 'split' and 'merge', 
+      are used to convert back and forth between these two representations.
+
+    combine, smooth
+      Utilities for combining and smoothing kernels, meant to be called 
+      externally, from postprocessing routines.
   """
 
 
   def __init__(self):
       """ Class constructor
       """
-      # check user supplied parameters
+      # check mesh parameters
       if 'XMIN' not in PAR: 
           raise Exception
 
@@ -47,6 +72,7 @@ class specfem2d(object):
       if 'NZ' not in PAR:
           raise Exception
 
+      # check time stepping parameters
       if 'NT' not in PAR:
           raise Exception
 
@@ -56,49 +82,47 @@ class specfem2d(object):
       if 'F0' not in PAR:
           raise Exception
 
-      if 'PREPROCESS' not in PAR:
-          setattr(PAR,'PREPROCESS','default')
-
       if 'WAVELET' not in PAR:
           setattr(PAR,'WAVELET','ricker')
 
       # check user supplied paths
-      if not exists(PATH.MODEL_INIT):
-          raise Exception
+      if not exists(PATH.DATA): assert exists(PATH.SOLVER_FILES)
+      assert exists(PATH.SOLVER_BINARIES)
 
-      if not exists(PATH.DATA): 
-          assert exists(PATH.MODEL_TRUE)
-          assert exists(PATH.SOLVER_FILES)
-
-      if not exists(PATH.SOLVER_BINARIES):
-          raise Exception
-
-      # load preprocessing tools
-      self.preprocess = getclass('preprocess',PAR.PREPROCESS)(
-        reader=seistools.specfem2d.readsu,
-        writer=seistools.specfem2d.writesu)
-
-      self.configure_model()
-
-
-  def configure_model(self):
-      """ Defines materials paremeters
-      """
-      # model parameters expected by solver
+      # list of material parameters goes here
       model_parameters = []
       model_parameters += ['rho']
       model_parameters += ['vp']
       model_parameters += ['vs']
       self.model_parameters = model_parameters
 
-      # model parameters included in inversion
+      # material parameters included in inversion go here
       inversion_parameters = []
       inversion_parameters += ['vs']
       self.inversion_parameters = inversion_parameters
 
+      # specify data channels
+      channels = []
+      channels += ['y']
+      self.channels = channels
 
-  def setup(self,model_type='gll'):
-      """ Prepares directories in which to run solver
+      # load preprocessing machinery
+      if 'PREPROCESS' not in PAR:
+           setattr(PAR,'PREPROCESS','default')
+
+      self.preprocess = getclass('preprocess',PAR.PREPROCESS)(
+          channels=self.channels,
+          reader=seistools.specfem2d.readsu,
+          writer=seistools.specfem2d.writesu)
+
+
+  def prepare_solver(self,prepare_data=True,prepare_model=True):
+      """ Sets up directory from which to run solver
+
+        Creates subdirectories expected by SPECFEM2D, copies mesher and solver
+        binary files, and then optionally calls prepare_data and prepare_mdoel.
+        Binaries must be supplied by user. There is currently no mechanism to
+        automatically compile binaries from source code.
       """
       unix.rm(self.getpath())
       unix.mkdir(self.getpath())
@@ -118,6 +142,34 @@ class specfem2d(object):
       dst = 'bin/'
       unix.cp(src,dst)
 
+      # prepare data
+      if prepare_data:
+        self.prepare_data()
+
+      # prepare model
+      if prepare_model:
+        self.prepare_model(
+            model_path = PATH.MODEL_INIT,
+            model_name = 'model_init')
+
+
+  def prepare_data(self,model_type='gll'):
+      """ Prepares data for inversion or migration
+
+        Users implementing an inversion or migration can choose between 
+        providing data or supplying a target model from which 'data' are 
+        generated on the fly. If data are provided, SPECFEM2D input files will 
+        be generated automatically from included header information. If data 
+        are not provided, both a target model and SPECFEM2D input files must be
+        supplied.
+
+        Adjoint traces are intialized by writing zeros for all components. This
+        is necessary because, at the start of an adjoint simulation, SPECFEM2D
+        expects that all components exists, even ones not actually in use for
+        the inversion.
+      """
+      unix.cd(self.getpath())
+
       if PATH.DATA:
           # copy user supplied data
           src = glob(PATH.DATA+'/'+self.getshot()+'/'+'*')
@@ -128,12 +180,6 @@ class specfem2d(object):
           self.writepar()
           self.writesrc()
           self.writerec()
-
-          # prepare starting model
-          self.generate_mesh(
-            model_path = PATH.MODEL_INIT,
-            model_type = model_type,
-            model_name = 'model_init')
 
       else:
          # copy user supplied SPECFEM2D input files
@@ -147,17 +193,105 @@ class specfem2d(object):
             model_type = model_type,
             model_name = 'model_true')
 
-          # prepare starting model
-          self.generate_mesh(
-            model_path = PATH.MODEL_INIT,
-            model_type = model_type,
-            model_name = 'model_init')
+      # initialize adjoint traces
+      zeros = np.zeros((PAR.NT,PAR.NREC))
+      h = seistools.segy.getstruct(PAR.NREC,PAR.NT,PAR.DT)
+      for channel in ['x','y','z']:
+        self.preprocess.writer(zeros,h,
+            channel=channel,prefix='traces/adj')
+
+
+  def prepare_model(self,model_path='',model_type='gll',model_name=''):
+      """ Performs meshing and model interpolation
+ 
+        Meshing is carried out using SPECFEM2D's builtin mesher. Following that
+        that, model parameters are read from a user supplied input file. If the
+        coordinates on which the model is defined do not match the coordinates
+        of the mesh, an additional interpolation step is performed.
+      """
+      unix.cd(self.getpath())
+
+      # perform meshing
+      if model_type in ['gll']:
+        parts = self.load(model_path)
+        unix.cp(model_path,'DATA/model_velocity.dat_input')
+      else:
+        self.mesher()
+
+      # load material parameters
+      if model_type in ['gll']:
+        parts = self.load(model_path)
+      else:
+        if model_type in ['ascii','txt']:
+          model = seistools.models.loadascii(model_path)
+        elif model_type in ['h','h@']:
+          model = seistools.models.loadsep(model_path)
+        elif model_type in ['nc','netcdf','cdf','grd']:
+          model = seistools.models.loadnc(model_path)
+        else:
+          raise Exception
+        parts = self.load('DATA/model_velocity.dat_output')
+
+        # interpolate material parameters
+        x = np.array(parts['x'][:]).T
+        z = np.array(parts['z'][:]).T
+        meshcoords = np.column_stack((x,z))
+        x = model['x'].flatten()
+        z = model['z'].flatten()
+        gridcoords = np.column_stack((x,z))
+        for key in ['rho','vp','vs']:
+          v = model[key].flatten()
+          parts[key] = [griddata(gridcoords,v,meshcoords,'linear')]
+        self.save('DATA/model_velocity.dat_input',parts)
+
+      # save results
+      if system.getnode()==0:
+        if model_name:
+          self.save(PATH.OUTPUT+'/'+model_name,parts)
+        if not exists(PATH.MESH):
+          for key in setdiff(['x','z','rho','vp','vs'],self.inversion_parameters):
+            unix.mkdir(PATH.MESH+'/'+key)
+            for proc in range(PAR.NPROC):
+              with open(PATH.MESH+'/'+key+'/'+'%06d'%proc,'w') as file:
+                np.save(file,parts[key][proc])
+
+
+  def generate_data(self,model_path='',model_type='',model_name=''):
+      """ Generates data using SPECFEM2D forward solver
+      """
+      unix.cd(self.getpath())
+
+      # prepare model
+      self.prepare_model(model_path,model_type,model_name)
+
+      # prepare solver
+      s = np.loadtxt('DATA/sources.dat')[system.getnode(),:]
+      seistools.specfem2d.setpar('xs',s[0],file='DATA/SOURCE')
+      seistools.specfem2d.setpar('zs',s[1],file='DATA/SOURCE')
+      seistools.specfem2d.setpar('NSOURCES',str(1))
+
+      seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
+      seistools.specfem2d.setpar('SAVE_FORWARD', ' .false.')
+
+      # run solver
+      f = open('log.fwd','w')
+      subprocess.call(self.mesher_binary,stdout=f)
+      subprocess.call(self.solver_binary,stdout=f)
+      f.close()
+
+      # export traces
+      unix.mv(self.glob(),'traces/obs')
+      self.exprt(PATH.OUTPUT,'obs')
 
 
 
   ### high-level solver interface
 
   def evaluate_func(self,path='',export_traces=False):
+      """ Evaluates misfit function by carrying out forward simulation and
+          making measurements on observations and synthetics.
+      """
+
       unix.cd(self.getpath())
       self.import_model(path)
 
@@ -173,6 +307,10 @@ class specfem2d(object):
 
 
   def evaluate_grad(self,path='',export_traces=False):
+      """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
+          must already be in place prior to calling this method, or the adjoint 
+          simulation will fail.
+      """
       unix.cd(self.getpath())
 
       # adjoint simulation
@@ -185,6 +323,8 @@ class specfem2d(object):
 
 
   def apply_hess(self,path='',hessian='exact'):
+      """ Evaluates action of Hessian on a given model vector.
+      """
       unix.cd(self.getpath())
       self.import_model(path)
 
@@ -233,115 +373,35 @@ class specfem2d(object):
       f.close()
 
 
-  def generate_data(self,model_path='',model_type='',model_name=''):
-      """ Generates data using SPECFEM2D forward solver
+  def mesher(self):
+      """ Calls SPECFEM2D builtin mesher
       """
-      unix.cd(self.getpath())
-
-      # prepare model
-      self.generate_mesh(model_path,model_type,model_name)
-
-      # prepare solver
-      s = np.loadtxt('DATA/sources.dat')[system.getnode(),:]
-      seistools.specfem2d.setpar('xs',s[0],file='DATA/SOURCE')
-      seistools.specfem2d.setpar('zs',s[1],file='DATA/SOURCE')
-      seistools.specfem2d.setpar('NSOURCES',str(1))
-
       seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
-      seistools.specfem2d.setpar('SAVE_FORWARD', ' .false.')
+      seistools.specfem2d.setpar('SAVE_FORWARD', '.false.')
+      seistools.specfem2d.setpar('assign_external_model', '.false.')
+      seistools.specfem2d.setpar('READ_EXTERNAL_SEP_FILE', '.false.')
+      nt = seistools.specfem2d.getpar('nt')
+      seistools.specfem2d.setpar('nt',str(100))
 
-      # run solver
-      f = open('log.fwd','w')
-      subprocess.call(self.mesher_binary,stdout=f)
-      subprocess.call(self.solver_binary,stdout=f)
-      f.close()
+      with open('log.mesher','w') as f:
+        subprocess.call(self.mesher_binary,stdout=f)
+        subprocess.call(self.solver_binary,stdout=f)
 
-      # export traces
-      unix.mv(self.glob(),'traces/obs')
-      self.exprt(PATH.OUTPUT,'obs')
-
-
-  def generate_mesh(self,model_path='',model_type='',model_name=''):
-      """ Performs meshing using SPECFEM2D builtin mesher and interpolates
-          model parameters at mesh coordinates
-      """
-      assert exists(model_path)
-
-      from copy import copy
-      from time import sleep
-      from scipy.interpolate import griddata
-      import warnings
-      warnings.filterwarnings('ignore')
-      from seisflows.seistools.models import loadascii, loadnc, loadsep
-
-      unix.cd(self.getpath())
-
-      # load model
-      if model_type in ['gll']:
-        pass
-      elif model_type in ['ascii','txt']:
-        model = loadascii(model_path)
-      elif model_type in ['h','h@']:
-        model = loadsep(model_path)
-      elif model_type in ['nc','netcdf','cdf','grd']:
-        model = loadnc(model_path)
-      else:
-        raise Exception
-
-      if model_type in ['gll']:
-          parts = self.load(model_path)
-          unix.cp(model_path,'DATA/model_velocity.dat_input')
-      else:
-        seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
-        seistools.specfem2d.setpar('SAVE_FORWARD', '.false.')
-        seistools.specfem2d.setpar('assign_external_model', '.false.')
-        seistools.specfem2d.setpar('READ_EXTERNAL_SEP_FILE', '.false.')
-        nt = seistools.specfem2d.getpar('nt')
-        seistools.specfem2d.setpar('nt',str(100))
-
-        mesher = 'bin/xmeshfem2D'
-        solver = 'bin/xspecfem2D'
-        with open('log.adj','w') as f:
-          subprocess.call(mesher,stdout=f)
-          subprocess.call(solver,stdout=f)
-
-        seistools.specfem2d.setpar('assign_external_model', '.true.')
-        seistools.specfem2d.setpar('READ_EXTERNAL_SEP_FILE', '.true.')
-        seistools.specfem2d.setpar('nt',str(nt))
-
-        # interpolate model at GLL points
-        parts = self.load('DATA/model_velocity.dat_output')
-        x = np.array(parts['x'][:]).T
-        z = np.array(parts['z'][:]).T
-        meshcoords = np.column_stack((x,z))
-        x = model['x'].flatten()
-        z = model['z'].flatten()
-        gridcoords = np.column_stack((x,z))
-        for key in ['rho','vp','vs']:
-          v = model[key].flatten()
-          parts[key] = [griddata(gridcoords,v,meshcoords,'linear')]
-        self.save('DATA/model_velocity.dat_input',parts)
-
-      # save results
-      if system.getnode()==0:
-        if model_name:
-          self.save(PATH.OUTPUT+'/'+model_name,parts)
-        if not exists(PATH.MESH):
-          set1 = set(['x','z','rho','vp','vs'] )
-          set2 = set(self.inversion_parameters)
-          keys = list(set1.difference(set2))
-          for key in keys:
-            unix.mkdir(PATH.MESH+'/'+key)
-            for proc in range(PAR.NPROC):
-              with open(PATH.MESH+'/'+key+'/'+'%06d'%proc,'w') as file:
-                np.save(file,parts[key][proc])
-
+      seistools.specfem2d.setpar('assign_external_model', '.true.')
+      seistools.specfem2d.setpar('READ_EXTERNAL_SEP_FILE', '.true.')
+      seistools.specfem2d.setpar('nt',str(nt))
 
 
   ### model input/output
 
   def load(self,filename,type=''):
-      "reads SPECFEM2D kernel or model"
+      """Reads SPECFEM2D kernel or model
+
+         Models and kernels are read from 5 or 6 column text files, the format 
+         of which is described in the SPECFEM2D user manual. Once read, a model
+         or kernel is stored in a dictionary containing mesh coordinates and 
+         corresponding material parameter values.
+      """
       # read text file
       M = np.loadtxt(filename)
       nrow = M.shape[0]
@@ -429,7 +489,7 @@ class specfem2d(object):
 
 
   def smooth(self,path='',span=0):
-      "smooths SPECFEM2D kernels"
+      "smooths SPECFEM2D kernels by convoling them with a Gaussian"
       from seisflows.tools.arraytools import meshsmooth
 
       parts = self.load(path+'/'+'grad')
@@ -515,14 +575,6 @@ class specfem2d(object):
 
 
   ### utility functions
-
-  def cleanup(self):
-      """ Cleans up local directory after simulation
-      """
-      unix.cd(self.getpath())
-      unix.rm(glob('traces/syn/*'))
-      unix.rm(glob('traces/adj/*'))
-
 
   def getpath(self):
      return join(PATH.SCRATCH,self.getshot())
