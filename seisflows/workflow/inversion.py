@@ -60,6 +60,7 @@ class inversion(object):
     if 'SAVETRACES' not in PAR:
         setattr(PAR,'SAVETRACES',0)
 
+
     # check user supplied paths
     if 'DATA' not in PATH:
         setattr(PATH,'DATA','')
@@ -70,7 +71,17 @@ class inversion(object):
     if not exists(PATH.MODEL_INIT):
         raise Exception
 
-    self.configure_paths()
+
+    # add some additional paths
+    PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
+    unix.mkdir(PATH.OUTPUT)
+
+    PATH.SCRATCH = join(PATH.GLOBAL,'scratch')
+    if PATH.LOCAL: PATH.SCRATCH = join(PATH.LOCAL,'scatch')
+
+    PATH.FUNC = join(PATH.SOLVER,'func')
+    PATH.GRAD = join(PATH.SOLVER,'grad')
+    PATH.HESS = join(PATH.SOLVER,'hess')
 
 
   def main(self):
@@ -226,7 +237,7 @@ class inversion(object):
 
 
   def finalize(self):
-    """ Saves results from model update last iteration
+    """ Saves results from most recent model update iteration
     """
     if divides(self.iter,PAR.SAVEMODELS):
         self.save_model()
@@ -255,24 +266,6 @@ class inversion(object):
     self.isdone = False
 
 
-  def configure_paths(self):
-    """ Configures directory structure
-    """
-    PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
-    unix.mkdir(PATH.OUTPUT)
-
-    PATH.SOLVER = join(PATH.GLOBAL,'solver')
-    PATH.OPTIMIZE = join(PATH.GLOBAL,'optimize')
-    PATH.PREPROCESS = join(PATH.GLOBAL,'preprocess')
-    PATH.POSTPROCESS = join(PATH.GLOBAL,'postprocess')
-
-    PATH.FUNC = join(PATH.SOLVER,'func')
-    PATH.GRAD = join(PATH.SOLVER,'grad')
-    PATH.HESS = join(PATH.SOLVER,'hess')
-    PATH.MESH = join(PATH.SOLVER,'mesh')
-
-    PATH.SCRATCH = join(PATH.GLOBAL,'scratch')
-    if PATH.LOCAL: PATH.SCRATCH = join(PATH.LOCAL,'scatch')
 
 
   ### utility functions

@@ -68,6 +68,9 @@ class specfem2d(object):
       """ Checks user supplied parameters
       """
       # check mesh parameters
+      if 'MESH' not in PATH:
+          setattr(PATH,'MESH',join(PATH.SOLVER,'mesh'))
+
       if 'XMIN' not in PAR: 
           raise Exception
 

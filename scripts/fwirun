@@ -2,6 +2,7 @@
 
 import sys
 
+from seisflows.tools.codetools import join
 from seisflows.tools.configure import getclass, ParameterObject
 
 sys.path.append('.')
@@ -11,13 +12,44 @@ import paths
 PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')
 
+system = getclass('system',PAR.SYSTEM)()
+
 
 if __name__ == '__main__':
 
-    # check import system by instantiating each class once
-    if 'SYSTEM' not in PAR: raise Exception
-    getclass('system',PAR.SYSTEM)()
+    # configure paths
+    if 'GLOBAL' not in PATH: 
+        raise Exception
 
+    if 'LOCAL' not in PATH:
+        raise Exception
+
+    if 'SUBMIT_DIR' not in PATH: 
+        raise Exception
+
+    if 'SUBMIT_HOST' not in PATH: 
+        raise Exception
+
+    if 'SYSTEM' not in PATH: 
+        PATH.SYSTEM = join(PATH.GLOBAL,'system')
+
+    if 'WORKFLOW' not in PATH: 
+        PATH.WORKFLOW = join(PATH.GLOBAL,'workflow')
+
+    if 'OPTIMIZE' not in PATH:
+        PATH.OPTIMIZE = join(PATH.GLOBAL,'optimize')
+
+    if 'PREPROCESS' not in PATH:
+        PATH.PREPROCESS = join(PATH.GLOBAL,'preprocess')
+
+    if 'POSTPROCESS' not in PATH:
+        PATH.POSTPROCESS = join(PATH.GLOBAL,'postprocess')
+
+    if 'SOLVER' not in PATH:
+        PATH.SOLVER = join(PATH.GLOBAL,'solver')
+
+
+    # check import system by instantiating each class once
     if 'WORKFLOW' not in PAR: raise Exception
     getclass('workflow',PAR.WORKFLOW)()
 
@@ -35,7 +67,6 @@ if __name__ == '__main__':
 
 
     # submit job
-    system = getclass('system',PAR.SYSTEM)()
     workflow = getclass('workflow',PAR.WORKFLOW)
     system.submit(workflow)
 

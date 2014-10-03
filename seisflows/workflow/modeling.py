@@ -30,8 +30,7 @@ class modeling(object):
     # configure paths
     PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
     unix.mkdir(PATH.OUTPUT)
-    PATH.SOLVER = join(PATH.GLOBAL,'solver')
-    PATH.MESH = join(PATH.SOLVER,'mesh')
+
     PATH.SCRATCH = join(PATH.GLOBAL,'scratch')
     if PATH.LOCAL: PATH.SCRATCH = join(PATH.LOCAL,'scatch')
 
