@@ -81,7 +81,7 @@ def getclass(*args):
     """ Given name of module realtive to package directory, returns 
      corresponding class
     """
-    if args[-1] == '':
+    if not args[-1]:
       return object # return dummy class
 
     # first, try importing relative to main package directory

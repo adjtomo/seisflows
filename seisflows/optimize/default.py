@@ -31,7 +31,7 @@ class default(object):
    the cls.path directory.
   """
 
-  def __init__(cls,path=None,output=None):
+  def __init__(cls,**kwargs):
       """ Class constructor
       """
       cls.iter = 0
@@ -59,15 +59,11 @@ class default(object):
           setattr(PAR,'STEPMAX',0.)
 
       # declare paths
-      if path:
-        cls.path = path
-      else:
+      try:
         cls.path = PATH.OPTIMIZE
-
-      if output:
-        cls.output = output
-      else:
         cls.output = PATH.SUBMIT_DIR+'/'+'output.optim'
+      except:
+        pass
 
       # prepare algorithm machinery
       if PAR.SCHEME in ['cg']:
