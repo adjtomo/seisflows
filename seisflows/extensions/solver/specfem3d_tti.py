@@ -7,7 +7,7 @@ PATH = ParameterObject('paths')
 system = getclass('system',PAR.SYSTEM)()
 
 
-class specfem3d_thomsen(getclass('extensions.solver','specfem3d_legacy')):
+class specfem3d_tti(getclass('extensions.solver','specfem3d_legacy')):
 
     # model parameters expected by solver
     model_parameters = []
