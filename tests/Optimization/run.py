@@ -4,7 +4,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
-from seisflows.tools.codetools import join, loadtxt, savetxt
+from seisflows.tools.codetools import abspath, join, loadtxt, savetxt
 from seisflows.tools.configure import getclass, ParameterObject
 
 import parameters
@@ -13,53 +13,54 @@ import paths
 PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')
 
+system = getclass('system','serial')()
 
 from problems import rosenbrock as problem
 
 
 
 class run(getclass('workflow','inversion')):
-  """ Optimization unit run.
+  """ Optimization unit test.
 
-      Tests nonlinear optimization procedure with inexpensive test function.
+      Tests nonlinear optimization procedure using inexpensive test function.
   """
 
-  def __init__(self):
-    pass
+  path = abspath('./scratch')
 
 
-  def setup(self):
-    cwd = join(unix.pwd(),'scratch')
-    unix.mkdir(cwd)
-    unix.cd(cwd)
+  def __init__(cls):
+    PATH.OPTIMIZE = cls.path
 
-    self.optimize = getclass('optimize','default')(
-      path=cwd,
-      output=cwd+'/'+'output.optim' )
+
+  def setup(cls):
+    unix.mkdir(cls.path)
+    unix.cd(cls.path)
+
+    cls.optimize = getclass('optimize','default')()
 
     # prepare starting model
-    unix.cd(cwd)
+    unix.cd(cls.path)
     m = np.array([-1.2,1])
     savenpy('m_new',m)
 
 
-  def initialize(self):
+  def initialize(cls):
     pass 
 
 
-  def search_status(self):
-    self.evaluate_function()
-    isdone, _ = self.optimize.search_status()
+  def search_status(cls):
+    cls.evaluate_function()
+    isdone, _ = cls.optimize.search_status()
     return isdone
 
 
-  def evaluate_function(self):
+  def evaluate_function(cls):
     m = loadnpy('m_try')
     f = problem.func(m)
     savetxt('f_try',f)
 
 
-  def evaluate_gradient(self):
+  def evaluate_gradient(cls):
     m = loadnpy('m_new')
     f = problem.func(m)
     g = problem.grad(m)
@@ -67,7 +68,7 @@ class run(getclass('workflow','inversion')):
     savenpy('g_new',g)
 
 
-  def apply_hessian(self):
+  def apply_hessian(cls):
     m = loadnpy('m_lcg')
     if PAR.SCHEME == 'gn':
       pass
@@ -76,7 +77,7 @@ class run(getclass('workflow','inversion')):
       savenpy('g_lcg',g)
 
 
-  def finalize(self):
+  def finalize(cls):
     print '%14.7e %14.7e'%tuple(loadnpy('m_new'))
 
     m_new = loadnpy('m_new')
@@ -85,10 +86,10 @@ class run(getclass('workflow','inversion')):
     # check stopping condition
     d = np.linalg.norm(m_new-m_old)/np.linalg.norm(m_new)
     if d < 1.e-6:
-      self.isdone = True
-      self.msg = 'Stopping criteria met.\n'
+      cls.isdone = True
+      cls.msg = 'Stopping criteria met.\n'
     else:
-      self.isdone = False
+      cls.isdone = False
 
 
 # run

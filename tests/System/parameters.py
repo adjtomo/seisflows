@@ -1,0 +1,5 @@
+SYSTEM = 'serial'
+NTASK = 16
+NPROC = 1
+VERBOSE = 0
+
