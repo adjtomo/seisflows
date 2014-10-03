@@ -31,10 +31,10 @@ class serial(object):
 
       # check user supplied parameters
       if 'NTASK' not in PAR:
-          raise Exception
+          setattr(PAR,'NTASK',1)
 
       if 'NPROC' not in PAR:
-          raise Exception
+          setattr(PAR,'NPROC',1)
 
       if 'VERBOSE' not in PAR:
           setattr(PAR,'VERBOSE',1)
