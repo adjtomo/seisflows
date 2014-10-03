@@ -264,7 +264,3 @@ def readsu(filename):
   return d, h
 
 
-def getstruct(*args,**kwargs):
-  return SeisStruct(*args,**kwargs)
-
-
