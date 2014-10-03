@@ -7,6 +7,8 @@ from seisflows import seistools
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join
 from seisflows.tools.configure import getclass, getpath, ParameterObject
+from seisflows.tools.iotools import loadbin, savebin
+
 
 PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')
@@ -24,13 +26,13 @@ class specfem3d(object):
 
     forward, adjoint, mesher
       These methods allow direct access to individual SPECFEM3D components.
-      Together, they provide a secondary interface users can employ whenever
-      high-level methods are not sufficient.
+      Together, they provide a secondary interface users can employ for
+      specialized tasks not covered by high level methods.
 
     prepare_solver, prepare_data, prepare_model
       SPECFEM3D requires a particular directory structure in which to run and
       particular file formats for models, data, and parameter files. These
-      methods put in place all these prerequisites.
+      methods help put in place all these prerequisites.
 
     load, save
       For reading and writing SPECFEM3D models and kernels. On the disk, models
@@ -38,18 +40,38 @@ class specfem3d(object):
       with different keys corresponding to different material parameters.
 
     split, merge
-      For the solver routines, it is possible to store models as dictionaries,
+      In the solver routines, it is possible to store models as dictionaries,
       but for the optimization routines, it is necessary to merge all model 
       values together into a single vector. Two methods, 'split' and 'merge', 
       are used to convert back and forth between these two representations.
 
     combine, smooth
-      Utilities for combining and smoothing kernels, meant to be called 
-      externally, from postprocessing routines.
+      Utilities for combining and smoothing kernels, meant to be called from
+      external postprocessing routines.
   """
 
+  # material parameters expected by solver
+  model_parameters = []
+  model_parameters += ['rho']
+  model_parameters += ['vp']
+  model_parameters += ['vs']
+
+  # material parameters included in inversion
+  inversion_parameters = []
+  inversion_parameters += ['vp']
+  inversion_parameters += ['vs']
+
+  # data channels
+  channels = []
+  channels += ['z']
+
+  kernel_map = {
+    'rho':'rho_kernel',
+    'vp':'alpha_kernel',
+    'vs':'beta_kernel'}
+
   def __init__(self):
-      """ Class constructor
+      """ Checks user supplied parameters
       """
       # check mesh parameters
       if 'XMIN' not in PAR:
@@ -92,33 +114,6 @@ class specfem3d(object):
       if 'WAVELET' not in PAR:
           setattr(PAR,'WAVELET','ricker')
 
-      # check solver paths
-      if not exists(PATH.DATA): assert exists(PATH.SOLVER_FILES)
-      assert exists(PATH.SOLVER_BINARIES)
-
-      # specify material parameters expected by solver
-      model_parameters = []
-      model_parameters += ['rho']
-      model_parameters += ['vp']
-      model_parameters += ['vs']
-      self.model_parameters = model_parameters
-
-      # specify material parameters included in inversion
-      inversion_parameters = []
-      inversion_parameters += ['vp']
-      inversion_parameters += ['vs']
-      self.inversion_parameters = inversion_parameters
-
-      self.kernel_map = {
-          'rho':'rho_kernel',
-          'vp':'alpha_kernel',
-          'vs':'beta_kernel'}
-
-      # specify data channels
-      channels = []
-      channels += ['z']
-      self.channels = channels
-
       # load preprocessing machinery
       if 'PREPROCESS' not in PAR:
           setattr(PAR,'PREPROCESS','default')
@@ -129,13 +124,13 @@ class specfem3d(object):
         writer=seistools.specfem3d.writesu)
 
 
-  def prepare_solver(self,prepare_data=True,prepare_model=True):
+  def prepare_solver(self,inversion=True,**kwargs):
       """ Sets up directory from which to run solver
 
         Creates subdirectories expected by SPECFEM3D, copies mesher and solver
-        binary files, and then optionally calls prepare_data and prepare_mdoel.
-        Binaries must be supplied by user. There is currently no mechanism to
-        automatically compile binaries from source code.
+        binary files, and optionally calls prepare_data and prepare_mdoel.
+        Binaries must be supplied by user as there is currently no mechanism to
+        automatically compile from source code.
       """
       unix.rm(self.getpath())
       unix.mkdir(self.getpath())
@@ -155,27 +150,36 @@ class specfem3d(object):
       dst = 'bin/'
       unix.cp(src,dst)
 
-      # prepare data
-      if prepare_data:
-        self.prepare_data()
+      if inversion:
+        if 'model_type' not in kwargs:
+          try:
+            file = PATH.SOLVER_FILES+'/'+'Par_file'
+            kwargs['model_type'] = seistools.specfem3d.getpar('MODEL',file=file)
+          except:
+            kwargs['model_type'] = 'gll'
 
-      # prepare starting model
-      if prepare_model:
-        self.prepare_model(
-          model_path = PATH.MODEL_INIT,
-          model_type = seistools.specfem3d.getpar('MODEL'),
-          model_name = 'model_init')
+        # prepare data
+        if not exists(PATH.DATA):
+          assert(exists(PATH.SOLVER_FILES))
+          kwargs['model_path'] = PATH.MODEL_TRUE
+          kwargs['model_name'] = 'model_true'
+        self.prepare_data(**kwargs)
+
+        # prepare model
+        kwargs['model_path'] = PATH.MODEL_INIT
+        kwargs['model_name'] = 'model_init'
+        self.prepare_model(**kwargs)
 
 
-  def prepare_data(self,model_type='gll'):
+  def prepare_data(self,**kwargs):
       """ Prepares data for inversion or migration
 
         Users implementing an inversion or migration can choose between 
-        providing data or supplying a target model from which 'data' are 
+        supplying data or supplying a target model from which data are 
         generated on the fly. If data are provided, SPECFEM3D input files will 
         be generated automatically from included header information. If data 
-        are not provided, both a target model and SPECFEM3D input files must be
-        supplied.
+        are to be generated on the fly, both a target model and SPECFEM3D input
+        files must be supplied.
 
         Adjoint traces are intialized by writing zeros for all components. This
         is necessary because, at the start of an adjoint simulation, SPECFEM3D
@@ -184,8 +188,8 @@ class specfem3d(object):
       """
       unix.cd(self.getpath())
 
-      if PATH.DATA:
-          # copy user-supplied data
+      if exists(PATH.DATA):
+          # copy user supplied data
           src = glob(PATH.DATA+'/'+getname()+'/'+'*')
           dst = 'traces/obs/'
           unix.cp(src,dst)
@@ -196,16 +200,8 @@ class specfem3d(object):
           self.writerec()
 
       else:
-          # copy user-supplied SPECFEM3D input files
-          src = glob(PATH.SOLVER_FILES+'/'+'*')
-          dst = 'DATA/'
-          unix.cp(src,dst)
-
-          # prepare data
-          self.generate_data(
-            model_path = PATH.MODEL_TRUE,
-            model_type = seistools.specfem3d.getpar('MODEL'),
-            model_name = 'model_true')
+          # generate data
+          self.generate_data(**kwargs)
 
       # initialize adjoint traces
       zeros = np.zeros((PAR.NT,PAR.NREC))
@@ -215,36 +211,30 @@ class specfem3d(object):
             channel=channel,prefix='traces/adj')
 
 
-  def prepare_model(self,model_path='',model_type='gll',model_name=''):
-      """ Performs meshing and model interpolation
- 
-        Meshing is carried out using SPECFEM3D's builtin mesher. Following that
-        that, model parameters are read from a user supplied input file. If the
-        coordinates on which the model is defined do not match the coordinates
-        of the mesh, an additional interpolation step is performed.
+  def prepare_model(self,model_path='',model_type='',model_name=''):
+      """ Performs meshing and model interpolation using SPECFEM3D's builtin 
+        mesher and database generation utility
       """
+      assert(exists(model_path))
+      assert(model_type)
+
       unix.cd(self.getpath())
 
+      # run builtin mesher and generate databases
       if model_type == 'gll':
         assert model_path
-        unix.cp(glob(model_path+'/'+'*'),'OUTPUT_FILES/DATABASES_MPI')
+        unix.cp(glob(model_path+'/'+'*'),'OUTPUT_FILES/DATABASES_MPI/')
       elif model_type == 'sep':
-        unix.rm('DATA/rho')
-        unix.rm('DATA/vp')
-        unix.rm('DATA/vs')
-        unix.ln(model_path+'/'+'rho','DATA/rho')
-        unix.ln(model_path+'/'+'vp','DATA/vp')
-        unix.ln(model_path+'/'+'vs','DATA/vs')
+        unix.cp(glob(model_path+'/'+'*'),'DATA/')
       elif model_type == 'default':
         pass
       elif model_type == 'tomo':
         pass
-
       seistools.specfem3d.setpar('MODEL',model_type)
       self.mesher()
-      parts = self.load('OUTPUT_FILES/DATABASES_MPI')
 
       # save results
+      parts = self.load('OUTPUT_FILES/DATABASES_MPI')
       if system.getnode()==0:
         if model_name and model_type == 'gll':
            unix.ln(model_path,PATH.OUTPUT+'/'+model_name)
@@ -261,25 +251,31 @@ class specfem3d(object):
                 np.save(file,parts[key][proc])
 
 
-
-
-  def generate_data(self,model_path='',model_type='',model_name=''):
-      """ Generates data using SPECFEM3D forward solver
+  def generate_data(self,**kwargs):
+      """ Generates data by copying input files, setting source coordinates,
+        preparing model, and  calling forward solver. Similar to 'forward', 
+        but puts together all the steps needed for modeling, rather than just
+        calling the solver binary.
       """
       unix.cd(self.getpath())
 
-      # prepare model
-      self.prepare_model(model_path,model_type,model_name)
+      # copy input files
+      src = glob(PATH.SOLVER_FILES+'/'+'*')
+      dst = 'DATA/'
+      unix.cp(src,dst)
 
-      # prepare solver
+      # set source coordinates
       s = np.loadtxt('DATA/SOURCE.XYZ')[system.getnode(),:]
       seistools.specfem3d.setpar('longitude',s[0],sep=': ',file='DATA/FORCESOLUTION')
       seistools.specfem3d.setpar('latitude',s[1],sep=': ',file='DATA/FORCESOLUTION')
       seistools.specfem3d.setpar('depth',s[2],sep=': ',file='DATA/FORCESOLUTION')
-      seistools.specfem3d.setpar('SIMULATION_TYPE','1')
-      seistools.specfem3d.setpar('SAVE_FORWARD','.true.')
+
+      # prepare model
+      self.prepare_model(**kwargs)
 
       # run solver
+      seistools.specfem3d.setpar('SIMULATION_TYPE', '1')
+      seistools.specfem3d.setpar('SAVE_FORWARD', '.false.')
       self.mpirun('bin/xspecfem3D')
       unix.mv(self.glob(),'traces/obs')
 
@@ -372,7 +368,7 @@ class specfem3d(object):
       self.mpirun('bin/xspecfem3D')
 
 
-  def mesher(self,model_path='',model_type='',model_name=''):
+  def mesher(self):
       """ Calls SPECFEM3D builtin mesher
       """
       self.mpirun('bin/xmeshfem3D')
@@ -394,7 +390,7 @@ class specfem3d(object):
         # read database files
         for iproc in range(PAR.NPROC):
           filename = 'proc%06d_%s.bin' % (iproc,key)
-          part = self.loadbin(join(dirname,filename))
+          part = loadbin(join(dirname,filename))
           parts[key].append(part)
 
     elif type == 'kernel':
@@ -403,7 +399,7 @@ class specfem3d(object):
         # read database files
         for iproc in range(PAR.NPROC):
           filename = 'proc%06d_%s.bin' % (iproc,mapping(key))
-          part = self.loadbin(join(dirname,filename))
+          part = loadbin(join(dirname,filename))
           parts[key].append(part)
 
     return parts
@@ -419,7 +415,7 @@ class specfem3d(object):
       nn = len(parts[key])
       for ii in range(nn):
         filename = 'proc%06d_%s.bin' % (ii,key)
-        self.savebin(parts[key][ii],join(dirname,filename))
+        savebin(parts[key][ii],join(dirname,filename))
 
 
 
@@ -614,34 +610,6 @@ class specfem3d(object):
       unix.rm(glob('traces/adj/*'))
 
 
-  def loadbin(self,filename):
-     """ reads Fortran style binary data
-     """
-     with open(filename,'rb') as file:
-
-       # read size of record
-       file.seek(0)
-       n = np.fromfile(file,dtype='int32',count=1)[0]
-
-       # read contents of record
-       file.seek(4)
-       v = np.fromfile(file,dtype='float32')
-
-     return v[:-1]
-
-
-  def savebin(self,v,filename):
-     """ writes Fortran style binary data
-     """
-     n = np.array([4*len(v)],dtype='int32')
-     v = np.array(v,dtype='float32')
-
-     with open(filename,'wb') as file:
-       n.tofile(file)
-       v.tofile(file)
-       n.tofile(file)
-
-
   def mpirun(self,script,outfile='/dev/null'):
       """ Wrapper for mpirun
       """
@@ -661,8 +629,14 @@ class specfem3d(object):
     return '%06d'%system.getnode()
 
 
+  def gettype(self):
+    try:
+      return seistools.specfem3d.getpar(
+        'MODEL',file=PATH.SOLVER_FILES+'/'+'Par_file')
+    except:
+      return None
 
-  ### class variables
 
   glob = lambda _ : glob('OUTPUT_FILES/*_SU')
+
 

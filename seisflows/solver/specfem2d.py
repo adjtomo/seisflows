@@ -25,13 +25,13 @@ class specfem2d(object):
 
     forward, adjoint, mesher
       These methods allow direct access to individual SPECFEM2D components.
-      Together, they provide a secondary interface users can employ whenever
-      high-level methods are not sufficient.
+      Together, they provide a secondary interface users can employ for
+      specialized tasks not covered by high level methods.
 
     prepare_solver, prepare_data, prepare_model
       SPECFEM2D requires a particular directory structure in which to run and
       particular file formats for models, data, and parameter files. These
-      methods put in place all these prerequisites.
+      methods help put in place all these prerequisites.
 
     load, save
       For reading and writing SPECFEM2D models and kernels. On the disk, models
@@ -39,18 +39,33 @@ class specfem2d(object):
       different keys corresponding to different material parameters.
 
     split, merge
-      For the solver routines, it is possible to store models as dictionaries,
+      In the solver routines, it is possible to store models as dictionaries,
       but for the optimization routines, it is necessary to merge all model 
       values together into a single vector. Two methods, 'split' and 'merge', 
       are used to convert back and forth between these two representations.
 
     combine, smooth
-      Utilities for combining and smoothing kernels, meant to be called 
-      externally, from postprocessing routines.
+      Utilities for combining and smoothing kernels, meant to be called from
+      external postprocessing routines.
   """
 
+  # material parameters expected by solver
+  model_parameters = []
+  model_parameters += ['rho']
+  model_parameters += ['vp']
+  model_parameters += ['vs']
+
+  # material parameters included in inversion
+  inversion_parameters = []
+  inversion_parameters += ['vs']
+
+  # data channels
+  channels = []
+  channels += ['y']
+
+
   def __init__(self):
-      """ Class constructor
+      """ Checks user supplied parameters
       """
       # check mesh parameters
       if 'XMIN' not in PAR: 
@@ -84,27 +99,6 @@ class specfem2d(object):
       if 'WAVELET' not in PAR:
           setattr(PAR,'WAVELET','ricker')
 
-      # check user supplied paths
-      if not exists(PATH.DATA): assert exists(PATH.SOLVER_FILES)
-      assert exists(PATH.SOLVER_BINARIES)
-
-      # list of material parameters goes here
-      model_parameters = []
-      model_parameters += ['rho']
-      model_parameters += ['vp']
-      model_parameters += ['vs']
-      self.model_parameters = model_parameters
-
-      # material parameters included in inversion go here
-      inversion_parameters = []
-      inversion_parameters += ['vs']
-      self.inversion_parameters = inversion_parameters
-
-      # specify data channels
-      channels = []
-      channels += ['y']
-      self.channels = channels
-
       # load preprocessing machinery
       if 'PREPROCESS' not in PAR:
            setattr(PAR,'PREPROCESS','default')
@@ -115,13 +109,13 @@ class specfem2d(object):
           writer=seistools.specfem2d.writesu)
 
 
-  def prepare_solver(self,prepare_data=True,prepare_model=True):
+  def prepare_solver(self,inversion=True,**kwargs):
       """ Sets up directory from which to run solver
 
         Creates subdirectories expected by SPECFEM2D, copies mesher and solver
-        binary files, and then optionally calls prepare_data and prepare_mdoel.
-        Binaries must be supplied by user. There is currently no mechanism to
-        automatically compile binaries from source code.
+        binary files, and optionally calls prepare_model and prepare_data.
+        Binaries must be supplied by user as there is currently no mechanism to
+        automatically compile from source code.
       """
       unix.rm(self.getpath())
       unix.mkdir(self.getpath())
@@ -137,39 +131,46 @@ class specfem2d(object):
       unix.mkdir('traces/adj')
 
       # copy binaries
+      assert exists(PATH.SOLVER_BINARIES)
       src = glob(PATH.SOLVER_BINARIES+'/'+'*')
       dst = 'bin/'
       unix.cp(src,dst)
 
-      # prepare data
-      if prepare_data:
-        self.prepare_data()
+      if inversion:
+        if 'model_type' not in kwargs:
+          kwargs['model_type'] = 'gll'
 
-      # prepare model
-      if prepare_model:
-        self.prepare_model(
-            model_path = PATH.MODEL_INIT,
-            model_name = 'model_init')
+        # prepare data
+        if not exists(PATH.DATA):
+          assert(exists(PATH.SOLVER_FILES))
+          kwargs['model_path'] = PATH.MODEL_TRUE
+          kwargs['model_name'] = 'model_true'
+        self.prepare_data(**kwargs)
+
+        # prepare model
+        kwargs['model_path'] = PATH.MODEL_INIT
+        kwargs['model_name'] = 'model_init'
+        self.prepare_model(**kwargs)
 
 
-  def prepare_data(self,model_type='gll'):
+  def prepare_data(self,**kwargs):
       """ Prepares data for inversion or migration
 
         Users implementing an inversion or migration can choose between 
-        providing data or supplying a target model from which 'data' are 
+        supplying data or supplying a target model from which data are 
         generated on the fly. If data are provided, SPECFEM2D input files will 
         be generated automatically from included header information. If data 
-        are not provided, both a target model and SPECFEM2D input files must be
-        supplied.
+        are to be generated on the fly, both a target model and SPECFEM2D input
+        files must be supplied.
 
         Adjoint traces are intialized by writing zeros for all components. This
         is necessary because, at the start of an adjoint simulation, SPECFEM2D
-        expects that all components exists, even ones not actually in use for
-        the inversion.
+        expects all components to exist, even ones not actually in use for the
+        inversion.
       """
       unix.cd(self.getpath())
 
-      if PATH.DATA:
+      if exists(PATH.DATA):
           # copy user supplied data
           src = glob(PATH.DATA+'/'+self.getshot()+'/'+'*')
           dst = 'traces/obs/'
@@ -181,33 +182,28 @@ class specfem2d(object):
           self.writerec()
 
       else:
-         # copy user supplied SPECFEM2D input files
-          src = glob(PATH.SOLVER_FILES+'/'+'*')
-          dst = 'DATA/'
-          unix.cp(src,dst)
-
           # generate data
-          self.generate_data(
-            model_path = PATH.MODEL_TRUE,
-            model_type = model_type,
-            model_name = 'model_true')
+          self.generate_data(**kwargs)
 
       # initialize adjoint traces
       zeros = np.zeros((PAR.NT,PAR.NREC))
-      h = seistools.segy.getstruct(PAR.NREC,PAR.NT,PAR.DT)
+      _,h = self.preprocess.load('traces/obs')
       for channel in ['x','y','z']:
         self.preprocess.writer(zeros,h,
             channel=channel,prefix='traces/adj')
 
 
-  def prepare_model(self,model_path='',model_type='gll',model_name=''):
+  def prepare_model(self,model_path='',model_type='',model_name=''):
       """ Performs meshing and model interpolation
  
-        Meshing is carried out using SPECFEM2D's builtin mesher. Following that
-        that, model parameters are read from a user supplied input file. If the
+        Meshing is carried out using SPECFEM2D's builtin mesher. Following that,
+        model values are read from a user supplied input file. If the
         coordinates on which the model is defined do not match the coordinates
         of the mesh, an additional interpolation step is performed.
       """
+      assert(exists(model_path))
+      assert(model_type)
+
       unix.cd(self.getpath())
 
       # perform meshing
@@ -255,32 +251,40 @@ class specfem2d(object):
                 np.save(file,parts[key][proc])
 
 
-  def generate_data(self,model_path='',model_type='',model_name=''):
-      """ Generates data using SPECFEM2D forward solver
+  def generate_data(self,**kwargs):
+      """ Generates data by copying input files, setting source coordinates,
+        preparing model, and  calling forward solver. Similar to 'forward', 
+        but puts together all the steps needed for modeling, rather than just
+        calling the solver binary.
       """
+      assert(exists(PATH.SOLVER_FILES))
+
       unix.cd(self.getpath())
 
-      # prepare model
-      self.prepare_model(model_path,model_type,model_name)
+      # copy input files
+      src = glob(PATH.SOLVER_FILES+'/'+'*')
+      dst = 'DATA/'
+      unix.cp(src,dst)
 
-      # prepare solver
+      # set source coordinates
       s = np.loadtxt('DATA/sources.dat')[system.getnode(),:]
       seistools.specfem2d.setpar('xs',s[0],file='DATA/SOURCE')
       seistools.specfem2d.setpar('zs',s[1],file='DATA/SOURCE')
       seistools.specfem2d.setpar('NSOURCES',str(1))
 
-      seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
-      seistools.specfem2d.setpar('SAVE_FORWARD', ' .false.')
+      # prepare model
+      self.prepare_model(**kwargs)
 
-      # run solver
-      f = open('log.fwd','w')
-      subprocess.call(self.mesher_binary,stdout=f)
-      subprocess.call(self.solver_binary,stdout=f)
-      f.close()
+      # forward simulation
+      seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
+      seistools.specfem2d.setpar('SAVE_FORWARD', '.false.')
+      with open('log.fwd','w') as f:
+          subprocess.call(self.mesher_binary,stdout=f)
+          subprocess.call(self.solver_binary,stdout=f)
 
       # export traces
       unix.mv(self.glob(),'traces/obs')
-      self.exprt(PATH.OUTPUT,'obs')
+      self.export_traces(PATH.OUTPUT,'traces/obs')
 
 
 
@@ -290,7 +294,6 @@ class specfem2d(object):
       """ Evaluates misfit function by carrying out forward simulation and
           making measurements on observations and synthetics.
       """
-
       unix.cd(self.getpath())
       self.import_model(path)
 
@@ -351,10 +354,9 @@ class specfem2d(object):
       seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
       seistools.specfem2d.setpar('SAVE_FORWARD',  ' .true.')
 
-      f = open('log.fwd','w')
-      subprocess.call(self.mesher_binary,stdout=f)
-      subprocess.call(self.solver_binary,stdout=f)
-      f.close()
+      with open('log.fwd','w') as f:
+          subprocess.call(self.mesher_binary,stdout=f)
+          subprocess.call(self.solver_binary,stdout=f)
 
 
   def adjoint(self):
@@ -366,10 +368,9 @@ class specfem2d(object):
       unix.rm('SEM')
       unix.ln('traces/adj','SEM')
 
-      f = open('log.adj','w')
-      subprocess.call(self.mesher_binary,stdout=f)
-      subprocess.call(self.solver_binary,stdout=f)
-      f.close()
+      with  open('log.adj','w') as f:
+          subprocess.call(self.mesher_binary,stdout=f)
+          subprocess.call(self.solver_binary,stdout=f)
 
 
   def mesher(self):
@@ -384,8 +385,8 @@ class specfem2d(object):
       seistools.specfem2d.setpar('nt',str(100))
 
       with open('log.mesher','w') as f:
-        subprocess.call(self.mesher_binary,stdout=f)
-        subprocess.call(self.solver_binary,stdout=f)
+          subprocess.call(self.mesher_binary,stdout=f)
+          subprocess.call(self.solver_binary,stdout=f)
 
       seistools.specfem2d.setpar('assign_external_model', '.true.')
       seistools.specfem2d.setpar('READ_EXTERNAL_SEP_FILE', '.true.')
@@ -397,9 +398,9 @@ class specfem2d(object):
   def load(self,filename,type=''):
       """Reads SPECFEM2D kernel or model
 
-         Models and kernels are read from 5 or 6 column text files, the format 
-         of which is described in the SPECFEM2D user manual. Once read, a model
-         or kernel is stored in a dictionary containing mesh coordinates and 
+         Models and kernels are read from 5 or 6 column text files whose format 
+         is described in the SPECFEM2D user manual. Once read, a model or kernel
+         is stored in a dictionary containing mesh coordinates and 
          corresponding material parameter values.
       """
       # read text file
@@ -582,10 +583,6 @@ class specfem2d(object):
 
   def getshot(self):
     return '%06d'%system.getnode()
-
-
-
-  ### class variables
 
   mesher_binary = 'bin/xmeshfem2D'
   solver_binary = 'bin/xspecfem2D'

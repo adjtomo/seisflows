@@ -2,11 +2,39 @@
 import os as _os
 import struct as _struct
 
+import numpy as _np
+
 from seisflows.tools.codetools import Struct
 
 
+def loadbin(filename):
+   "Reads Fortran style binary data"
+   with open(filename,'rb') as file:
+
+     # read size of record
+     file.seek(0)
+     n = _np.fromfile(file,dtype='int32',count=1)[0]
+
+     # read contents of record
+     file.seek(4)
+     v = _np.fromfile(file,dtype='float32')
+
+   return v[:-1]
+
+
+def savebin(v,filename):
+   "Writes Fortran style binary data"
+   n = _np.array([4*len(v)],dtype='int32')
+   v = _np.array(v,dtype='float32')
+
+   with open(filename,'wb') as file:
+     n.tofile(file)
+     v.tofile(file)
+     n.tofile(file)
+
 
 class Reader(object):
+  "Generic binary file reader"
 
   def __init__(self,fname,endian='|'):
     # opens binary file
@@ -65,6 +93,8 @@ class Reader(object):
 
 
 class Writer(object):
+  "Generic binary file writer"
+
   def __init__(self,fname,endian='|'):
     # open binary file
     self.file = open(fname,'w')
