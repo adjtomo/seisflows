@@ -5,7 +5,9 @@ from seisflows.tools.arraytools import uniquerows
 from seisflows.tools.codetools import Struct
 from seisflows.tools.iotools import Reader, mychar, mysize
 
-from headers import SEGY_TAPE_LABEL, SEGY_BINARY_HEADER, SEGY_TRACE_HEADER
+from seisflows.seistools.core import SeisStruct
+from seisflows.seistools.segy.headers import \
+    SEGY_TAPE_LABEL, SEGY_BINARY_HEADER, SEGY_TRACE_HEADER
 
 
 NMAX = 100000
@@ -34,32 +36,6 @@ for field in SEGY_TRACE_HEADER:
   if field[-1] in FIELDS:
     _tmp.append(field)
 SEGY_TRACE_HEADER = _tmp
-
-
-
-class SeisStruct(Struct):
-  """ Holds information about data
-  """
-  def __init__(self,nr,nt,dt,ts=0.,
-               sx=[],sy=[],sz=[],
-               rx=[],ry=[],rz=[],
-               nrec=[],nsrc=[]):
-    super(SeisStruct,self).__init__()
-
-    self.nr = nr
-    self.nt = nt
-    self.dt = dt
-    self.ts = ts
-
-    self.sx = sx
-    self.sy = sy
-    self.sz = sz
-    self.rx = rx
-    self.ry = ry
-    self.rz = rz
-
-    self.nrec = nrec
-    self.nsrc = nsrc
 
 
 

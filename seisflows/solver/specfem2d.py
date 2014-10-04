@@ -221,11 +221,11 @@ class specfem2d(object):
         parts = self.load(model_path)
       else:
         if model_type in ['ascii','txt']:
-          model = seistools.models.loadascii(model_path)
+          model = seistools.core.loadascii(model_path)
         elif model_type in ['h','h@']:
-          model = seistools.models.loadsep(model_path)
+          model = seistools.core.loadsep(model_path)
         elif model_type in ['nc','netcdf','cdf','grd']:
-          model = seistools.models.loadnc(model_path)
+          model = seistools.core.loadnc(model_path)
         else:
           raise Exception
         parts = self.load('DATA/model_velocity.dat_output')

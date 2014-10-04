@@ -118,7 +118,6 @@ def writesegy():
 def writesu(filename,d,h):
 
   obj = SuWriter(filename)
-
   obj.prepareTraceData(h)
   obj.writeTraceData(d)
 
