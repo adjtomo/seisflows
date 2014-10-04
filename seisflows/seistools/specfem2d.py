@@ -234,12 +234,10 @@ def writerec(nr,rx,rz):
     _writelines(file,lines)
 
 
-def writepar(vars,version='git-devel'):
+def writepar(PAR,version='git-devel'):
     """ Writes parameters to text file
     """
     from seisflows.tools.configure import getpath
-
-    PAR = Struct(vars)
 
     # read template
     file = getpath('seistools')+'/'+'specfem2d/par-'+version
@@ -272,7 +270,7 @@ def writepar(vars,version='git-devel'):
 
 
 def getpar(key,file='DATA/Par_file',sep='='):
-  """ Reads parameter from SPECFEM parfile
+  """ Reads parameter from parfile
   """
   with open(file,'r') as f:
     lines = []
@@ -292,7 +290,7 @@ def getpar(key,file='DATA/Par_file',sep='='):
 
 
 def setpar(key,val,file='DATA/Par_file',path='.',sep='='):
-  """ Writes parameter to SPECFEM parfile
+  """ Writes parameter to parfile
   """
 
   val = str(val)

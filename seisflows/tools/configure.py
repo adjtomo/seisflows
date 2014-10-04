@@ -49,11 +49,11 @@ class ParameterObject(object):
 
     @property
     def vars(self):
-      mydict = dict()
+      mystruct = Struct()
       for key,val in vars(self.module).items():
         if key[0] != '_':
-          mydict[key] = val
-      return mydict
+          mystruct[key] = val
+      return mystruct
 
     def load(self,name):
       if name in _sys.modules:
