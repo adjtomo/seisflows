@@ -218,21 +218,31 @@ class specfem3d(object):
       """ Performs meshing and model interpolation using SPECFEM3D's builtin 
         mesher and database generation utility
       """
-      assert(exists(model_path))
       assert(model_type)
 
       unix.cd(self.getpath())
 
       # run builtin mesher and generate databases
       if model_type == 'gll':
-        assert model_path
-        unix.cp(glob(model_path+'/'+'*'),'OUTPUT_FILES/DATABASES_MPI/')
+        assert(exists(model_path))
+        # copy files
+        src = glob(model_path+'/'+'*')
+        dst = 'OUTPUT_FILES/DATABASES_MPI/'
+        unix.cp(src,dst)
+
       elif model_type == 'sep':
+        assert(exists(model_path))
+        # copy files
+        src = glob(model_path+'/'+'*')
+        dst = 'DATA/'
         unix.cp(glob(model_path+'/'+'*'),'DATA/')
+
       elif model_type == 'default':
         pass
+
       elif model_type == 'tomo':
         pass
+
       seistools.specfem3d.setpar('MODEL',model_type)
       self.mesher()
 

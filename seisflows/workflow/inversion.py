@@ -40,7 +40,7 @@ class inversion(object):
 
 
   def __init__(self):
-    """ Class constructor
+    """ Constructor
     """
     self.iter = 0
 
@@ -66,9 +66,9 @@ class inversion(object):
         setattr(PATH,'DATA','')
 
     if not exists(PATH.DATA):
-        assert exists(PATH.MODEL_TRUE)
+        assert 'MODEL_TRUE' in PATH
 
-    if not exists(PATH.MODEL_INIT):
+    if 'MODEL_INIT' not in PATH:
         raise Exception
 
 
@@ -264,7 +264,6 @@ class inversion(object):
       unix.mkdir(PATH.FUNC)
 
     self.isdone = False
-
 
 
 

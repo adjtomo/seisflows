@@ -21,7 +21,8 @@ class modeling(object):
     """
     # check user supplied paths
     if 'MODEL' not in PATH:
-        raise Exception
+        setattr(PATH,'MODEL','')
+        print 'Warning: PATH.MODEL not defined.'
 
     # configure parameters
     PAR.OPTIMIZE = None
