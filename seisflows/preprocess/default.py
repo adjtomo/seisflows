@@ -283,7 +283,7 @@ class default(object):
       """ Writes seismic data to disk
       """
       for channel in self.channels:
-        self.writer(s[channel],h,prefix=prefix,channel=channel)
+        self.writer(s[channel],h,channel=channel,prefix=prefix,suffix=suffix)
 
 
   def write_residuals(self,s,h):
