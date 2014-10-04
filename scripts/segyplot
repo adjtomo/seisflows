@@ -4,7 +4,7 @@ import sys
 
 import numpy as np
 
-from seismic import readsegy, readsu, splot, wplot
+from seisflows.seistools import readsegy, readsu, splot, wplot
 
 
 def segytype(file):
