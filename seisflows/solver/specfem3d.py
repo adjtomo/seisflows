@@ -50,13 +50,13 @@ class specfem3d(object):
       external postprocessing routines.
   """
 
-  # material parameters expected by solver
+  # model parameters
   model_parameters = []
   model_parameters += ['rho']
   model_parameters += ['vp']
   model_parameters += ['vs']
 
-  # material parameters included in inversion
+  # inversion parameters
   inversion_parameters = []
   inversion_parameters += ['vp']
   inversion_parameters += ['vs']
