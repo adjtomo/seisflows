@@ -10,18 +10,22 @@ from seisflows.tools.arraytools import uniquerows, meshplot
 def isnonzero(a):
   zmin = np.min(a,axis=0)
   zmax = np.max(a,axis=0)
-
   return np.flatnonzero(zmax-zmin)
 
 
-def wread(file):
-    w = np.loadtxt(file)
-    return w
+if __name__ == '__main__':
+    """ Plots data on 2-D unstructured mesh
 
+        Reads mesh coordinates from first two columns of text file and data from
+        subsequent columns, computes Delauney triangulation, and plots data
+        using matplotlib.
+ 
+        In particular, can be used to plot kernels and models output from SPECFEM2D
+        on unstructured GLL bases.
+    """
+    filename = sys.argv[1]
 
-def gllplot(file):
-
-    fromfile = np.loadtxt(file)
+    fromfile = np.loadtxt(filename)
     nr,nc = fromfile.shape
 
     if nc==5:
@@ -39,13 +43,6 @@ def gllplot(file):
 
     for i in isnonzero(Z):
         z = np.squeeze(Z[:,i])
-	print min(z), max(z)
+	print 'min, max:', min(z), max(z)
         meshplot(x,y,z)
-
-
-# run script
-if __name__ == '__main__':
-    file = sys.argv[1]
-    print file
-    gllplot(file)
 

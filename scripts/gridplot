@@ -3,14 +3,17 @@
 import sys
 import numpy as np
 
-from utils import gridplot
+from seisflows.seistools.arraytools import gridplot
 
 
 if __name__ == '__main__':
+    """ Plots data on 2-D rectangular grid
 
-    file  = sys.argv[1]
+        Reads data from text file and plots it using matplotlib
+    """
+    filename  = sys.argv[1]
 
-    Z = np.loadtxt(file)
+    Z = np.loadtxt(filename)
     print Z.shape
 
     ny = Z.shape[0]

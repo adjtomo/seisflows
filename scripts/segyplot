@@ -7,18 +7,26 @@ import numpy as np
 from seisflows.seistools import readsegy, readsu, splot, wplot
 
 
-def segytype(file):
+def filetype(filename):
+    """ Decides filetype based on extension.
 
-    if ('.segy' in file):
+     Checks standard SU and SEGY extensions as well as extensions in use by
+     SPECFEM2D and SPECFEM3D. 
+    """
+
+    if ('.segy' in filename.lower()):
         return 'segy'
 
-    elif ('.su' in file):
+    elif ('.su' in filename.lower()):
         return 'su'
 
-    elif ('single.bin' in file) or ('single.adj' in file):
+    elif ('single.bin' in filename):
         return 'su'
 
-    elif ('_SU' in file):
+    elif ('single.adj' in filename):
+        return 'su'
+
+    elif ('_SU' in filename):
         return 'su'
 
     else:
@@ -27,28 +35,32 @@ def segytype(file):
 
 
 if __name__ == '__main__':
+  """ Plots record section read from SU or SEGY file
+  """
 
-  file = sys.argv[1]
+  filename = sys.argv[1]
 
-  if segytype(file) == 'segy':
-     s,h = readsegy(file)
+  if filetype(filename) == 'segy':
+     s,h = readsegy(filename)
 
-  elif segytype(file) == 'su':
-     s,h = readsu(file)
+  elif filetype(filename) == 'su':
+     s,h = readsu(filename)
 
-  print s.shape
+  print 'ntraces:', s.shape[0]
+  print 'nsamples:', s.shape[1]
 
   if len(sys.argv[1:]) == 1:
-     # plot record section
      print 'min, max:', s.min(), s.max()
+
+     # plot record section
      splot(s,h)
 
   else:
-    # plot traces
     for ii in sys.argv[2:]:
       w = np.zeros((h.nt,2))
       w[:,0] = np.linspace(0,h.nt*h.dt,h.nt)
       w[:,1] = s[:,ii]
 
+      # plot waveform
       wplot(w)
 
