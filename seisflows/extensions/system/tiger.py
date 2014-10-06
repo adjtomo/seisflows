@@ -1,6 +1,6 @@
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import abspath, join
+from seisflows.tools.codetools import abspath, exists, join
 from seisflows.tools.configure import getclass, ParameterObject
 
 PAR = ParameterObject('parameters')
@@ -55,6 +55,8 @@ class tiger(getclass('system','slurm')):
   def submit(self,*args,**kwargs):
       """Submits job
       """
-      unix.ln(PATH.GLOBAL,PATH.SUBMIT_DIR+'/'+'scratch')
+      if not exists(PATH.SUBMIT_DIR+'/'+'scratch'):
+          unix.ln(PATH.GLOBAL,PATH.SUBMIT_DIR+'/'+'scratch')
+
       super(tiger,self).submit(*args,**kwargs)
 
