@@ -143,18 +143,6 @@ class default(object):
             self.save(s,h)
 
 
-        elif output_type == 5:
-            # write adjoint traces needed to compute Hessian preconditioner
-            d,h = self.load(prefix='traces/obs')
-            s,_ = self.load(prefix='traces/syn')
-
-            d = self.apply(self.process_traces,[d],[h])
-            s = self.apply(self.process_traces,[s],[h])
-
-            s = self.apply(self.compute_adjoint,[s,d],[h,output_type])
-            self.save(s,h)
-
-
     def compute_residuals(self,s,d,h):
         """ Computes residuals from observations and synthetics
         """
@@ -178,7 +166,7 @@ class default(object):
 
         elif output_type == 3:
             # action of Jacobian
-            return s-s0
+            return s-d
 
         elif output_type == 4:
             # action of Hessian
