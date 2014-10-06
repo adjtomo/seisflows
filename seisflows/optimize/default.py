@@ -60,6 +60,8 @@ class default(object):
 
       # declare paths
       cls.path = PATH.OPTIMIZE
+      unix.mkdir(cls.path)
+
       cls.output = PATH.SUBMIT_DIR+'/'+'output.optim'
 
       # prepare algorithm machinery
