@@ -135,4 +135,3 @@ SEGY_TRACE_HEADER = [
     ['int16', 1, 228, 'SourceMeasurementExponent'],
     ['int16', 1, 230, 'SourceMeasurementUnit'],
     ['int16', 4, 232, 'Unassigned']]
-

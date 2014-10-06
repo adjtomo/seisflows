@@ -20,18 +20,18 @@ def abspath(*args,**kwargs):
 def divides(i,j):
     "Returns true if j divides i"
     if j is 0:
-      return False
+        return False
     elif i%j:
-      return False
+        return False
     else:
-      return True
+        return True
 
 def exists(name):
     "Wrapper for os.path.exists"
     if not name:
-      return False
+        return False
     else:
-      return _os.path.exists(name)
+        return _os.path.exists(name)
 
 def glob(*args):
     "Wrapper for glob.glob"
@@ -39,9 +39,9 @@ def glob(*args):
 
 def irange(*args):
     if len(args)==1:
-      return range(1,args[0]+1)
+        return range(1,args[0]+1)
     elif len(args)==2:
-      return range(args[0],args[1]+1)
+        return range(args[0],args[1]+1)
 
 def join(*args):
     "Wrapper for os.path.join"
@@ -50,18 +50,18 @@ def join(*args):
 def loadobj(filename):
     "Load object using pickle"
     with open(filename,'rb') as file:
-      return _pickle.load(file)
+        return _pickle.load(file)
 
 def saveobj(filename,obj):
     "Save object using pickle"
     with open(filename,'wb') as file:
-      _pickle.dump(obj,file)
+        _pickle.dump(obj,file)
 
 def setdiff(list1,list2):
-   set1 = set(list1)
-   set2 = set(list2)
-   diff = set1.difference(set2)
-   return list(diff)
+    set1 = set(list1)
+    set2 = set(list2)
+    diff = set1.difference(set2)
+    return list(diff)
 
 def unique(mylist):
     "Finds unique elements of list"
@@ -75,4 +75,3 @@ def loadtxt(filename):
 
 def savetxt(filename,v):
     _np.savetxt(filename,[v],'%11.6e')
-

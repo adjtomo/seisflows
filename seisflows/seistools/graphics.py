@@ -12,20 +12,20 @@ def splot(s,h,normalize=True,nxmax=1000,nymax=1000):
     ix = range(nx)
 
     if ny > nymax:
-      iy = _ceil(ny,nymax)
-      iy = range(0,ny,iy)
+        iy = _ceil(ny,nymax)
+        iy = range(0,ny,iy)
 
     if nx > nxmax:
-      ix = _ceil(nx,nxmax)
-      ix = range(0,nx,ix)
+        ix = _ceil(nx,nxmax)
+        ix = range(0,nx,ix)
 
     for ir in range(h.nr):
-      if normalize:
-        w = max(abs(s[:,ir]))
-        if w > 0:
-          s[:,ir] = s[:,ir]/w
-        else:
-          break
+        if normalize:
+            w = max(abs(s[:,ir]))
+            if w > 0:
+                s[:,ir] = s[:,ir]/w
+            else:
+                break
 
     gridplot(_np.flipud(s[_np.ix_(iy,ix)]))
 
@@ -52,4 +52,3 @@ def wplot(w):
 def _ceil(x,y):
     z = float(x)/float(y)
     return int(_np.ceil(z))
-

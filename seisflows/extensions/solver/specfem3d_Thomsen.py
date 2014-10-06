@@ -44,4 +44,3 @@ class specfem3d_Thomsen(getclass('extensions.solver','specfem3d_legacy')):
         'gamma':'gamma_kernel',
         'theta':'theta_kernel',
         'azimuth':'azimuth_kernel'}
-

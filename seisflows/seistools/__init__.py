@@ -28,4 +28,3 @@ import specfem3d
 
 from graphics import splot
 from graphics import wplot
-

@@ -15,90 +15,88 @@ solver = getclass('solver',PAR.SOLVER)()
 
 
 class HeruModelUpdate(getclass('workflow','inversion')):
-  """ Given search direction, computes model update
-  """
-
-
-  def __init__(self):
-    """ Checks parameters, paths and other prerequisites
+    """ Given search direction, computes model update
     """
-    self.iter = 1
-
-    # check user supplied parameters
-    if PAR.BEGIN != 1:
-       raise Exception
-
-    if PAR.END != 1:
-       raise Exception
-
-    if PAR.SCHEME != 'sd':
-       raise Exception
-
-    if 'SAVEMODELS' not in PAR:
-        setattr(PAR,'SAVEMODELS',1)
-
-    if 'SAVEKERNELS' not in PAR:
-        setattr(PAR,'SAVEKERNELS',0)
-
-    if 'SAVETRACES' not in PAR:
-        setattr(PAR,'SAVETRACES',0)
 
 
-    # add some additional paths
-    PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
-    unix.mkdir(PATH.OUTPUT)
+    def __init__(self):
+        """ Checks parameters, paths and other prerequisites
+        """
+        self.iter = 1
 
-    PATH.SCRATCH = join(PATH.GLOBAL,'scratch')
-    if PATH.LOCAL: PATH.SCRATCH = join(PATH.LOCAL,'scatch')
+        # check user supplied parameters
+        if PAR.BEGIN != 1:
+            raise Exception
 
-    PATH.FUNC = join(PATH.SOLVER,'func')
-    PATH.GRAD = join(PATH.SOLVER,'grad')
-    PATH.HESS = join(PATH.SOLVER,'hess')
+        if PAR.END != 1:
+            raise Exception
+
+        if PAR.SCHEME != 'sd':
+            raise Exception
+
+        if 'SAVEMODELS' not in PAR:
+            setattr(PAR,'SAVEMODELS',1)
+
+        if 'SAVEKERNELS' not in PAR:
+            setattr(PAR,'SAVEKERNELS',0)
+
+        if 'SAVETRACES' not in PAR:
+            setattr(PAR,'SAVETRACES',0)
 
 
-    # check model update prerequisites
-    assert exists(PATH.OUTPUT+'/'+'model_init')
-    assert exists(PATH.OPTIMIZE+'/'+'f_new')
+        # add some additional paths
+        PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
+        unix.mkdir(PATH.OUTPUT)
+
+        PATH.SCRATCH = join(PATH.GLOBAL,'scratch')
+        if PATH.LOCAL: PATH.SCRATCH = join(PATH.LOCAL,'scatch')
+
+        PATH.FUNC = join(PATH.SOLVER,'func')
+        PATH.GRAD = join(PATH.SOLVER,'grad')
+        PATH.HESS = join(PATH.SOLVER,'hess')
 
 
-
-  def main(self):
-    self.setup()
-
-    print "Computing search direction"
-    self.compute_direction()
-    
-    print "Computing step length"
-    self.line_search()
-
-    self.finalize()
-    print ''
+        # check model update prerequisites
+        assert exists(PATH.OUTPUT+'/'+'model_init')
+        assert exists(PATH.OPTIMIZE+'/'+'f_new')
 
 
 
-  def setup(self):
-    super(HeruModelUpdate,self).setup()
+    def main(self):
+        self.setup()
+
+        print "Computing search direction"
+        self.compute_direction()
+
+        print "Computing step length"
+        self.line_search()
+
+        self.finalize()
+        print ''
 
 
 
-  def compute_direction(self):
-    """ Given gradient, computes search direction
-    """
-    self.postprocess.process_kernels()
-    self.optimize.compute_direction()
+    def setup(self):
+        super(HeruModelUpdate,self).setup()
 
 
 
-  def finalize(self):
-    """ Saves results from most recent model update iteration
-    """
-    if divides(self.iter,PAR.SAVEMODELS):
-        self.save_model()
-
-    if divides(self.iter,PAR.SAVEKERNELS):
-        self.save_kernels()
-
-    if divides(self.iter,PAR.SAVETRACES):
-        self.save_traces()
+    def compute_direction(self):
+        """ Given gradient, computes search direction
+        """
+        self.postprocess.process_kernels()
+        self.optimize.compute_direction()
 
 
+
+    def finalize(self):
+        """ Saves results from most recent model update iteration
+        """
+        if divides(self.iter,PAR.SAVEMODELS):
+            self.save_model()
+
+        if divides(self.iter,PAR.SAVEKERNELS):
+            self.save_kernels()
+
+        if divides(self.iter,PAR.SAVETRACES):
+            self.save_traces()

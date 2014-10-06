@@ -11,115 +11,115 @@ from seisflows.seistools.segy import segyreader, segywriter
 ### reading and writing ASCII data
 
 def read(**kwargs):
-  """ Reads seismic traces from text files
-  """
-  files = glob(**kwargs)
-  t = _np.loadtxt(files[0])[:,0]
-  h = Struct()
-  h['t0'] = t[0]
-  h['nr'] = len(files)
-  h['ns'] = 1
-  h['dt'] = _np.mean(_np.diff(t))
-  h['nt'] = len(t)
+    """ Reads seismic traces from text files
+    """
+    files = glob(**kwargs)
+    t = _np.loadtxt(files[0])[:,0]
+    h = Struct()
+    h['t0'] = t[0]
+    h['nr'] = len(files)
+    h['ns'] = 1
+    h['dt'] = _np.mean(_np.diff(t))
+    h['nt'] = len(t)
 
-  # read data
-  s = _np.zeros((h['nt'],h['nr']))
-  i = 0
-  for file in files:
-    s[:,i] = _np.loadtxt(file)[:,1]
-    i = i+1
+    # read data
+    s = _np.zeros((h['nt'],h['nr']))
+    i = 0
+    for file in files:
+        s[:,i] = _np.loadtxt(file)[:,1]
+        i = i+1
 
-  # keep track of file names
-  h.files = []
-  for file in files:
-    file = unix.basename(file)
-    h.files.append(file)
+    # keep track of file names
+    h.files = []
+    for file in files:
+        file = unix.basename(file)
+        h.files.append(file)
 
-  return (s,h)
+    return (s,h)
 
 
 def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
-  """ Writes seismic traces to text files
-  """
+    """ Writes seismic traces to text files
+    """
 
-  files = []
+    files = []
 
-  if opt=='legacy':
-    if channel == 1:
-      fmt = '%s/S%s.AA.%sX.%s' % (prefix,'%04d',char,suffix)
-    elif channel == 2:
-      fmt = '%s/S%s.AA.%sY.%s' % (prefix,'%04d',char,suffix)
-    elif channel == 3:
-      fmt = '%s/S%s.AA.%sZ.%s' % (prefix,'%04d',char,suffix)
-    elif channel == 4:
-      fmt = '%s/S%s.AA.%sP.%s' % (prefix,'%04d',char,suffix)
-    for i in range(h.nr):
-      files.append( fmt % (i+1) )
+    if opt=='legacy':
+        if channel == 1:
+            fmt = '%s/S%s.AA.%sX.%s' % (prefix,'%04d',char,suffix)
+        elif channel == 2:
+            fmt = '%s/S%s.AA.%sY.%s' % (prefix,'%04d',char,suffix)
+        elif channel == 3:
+            fmt = '%s/S%s.AA.%sZ.%s' % (prefix,'%04d',char,suffix)
+        elif channel == 4:
+            fmt = '%s/S%s.AA.%sP.%s' % (prefix,'%04d',char,suffix)
+        for i in range(h.nr):
+            files.append( fmt % (i+1) )
 
-    # write data to files
-    imin = int(_np.floor(h['t0']/h['dt']))
-    imax = int(imin+h['nt'])
-    t = _np.arange(imin,imax)*h['dt']
+        # write data to files
+        imin = int(_np.floor(h['t0']/h['dt']))
+        imax = int(imin+h['nt'])
+        t = _np.arange(imin,imax)*h['dt']
 
-    for i in range(h.nr):
-      w = f[:,i]
-      _np.savetxt(files[i],_np.column_stack((t,w)),'%11.4e')
+        for i in range(h.nr):
+            w = f[:,i]
+            _np.savetxt(files[i],_np.column_stack((t,w)),'%11.4e')
 
-  else:
-    for file in h.files:
-      parts = _string.split(file,'.')
-      if channel == 1:
-        label = ''.join([parts[2][:-1],'X'])
-      elif channel == 2:
-        label = ''.join([parts[2][:-1],'Y'])
-      elif channel == 3:
-        label = ''.join([parts[2][:-1],'Z'])
-      elif channel == 4:
-        label = ''.join([parts[2][:-1],'P'])
+    else:
+        for file in h.files:
+            parts = _string.split(file,'.')
+            if channel == 1:
+                label = ''.join([parts[2][:-1],'X'])
+            elif channel == 2:
+                label = ''.join([parts[2][:-1],'Y'])
+            elif channel == 3:
+                label = ''.join([parts[2][:-1],'Z'])
+            elif channel == 4:
+                label = ''.join([parts[2][:-1],'P'])
 
-      parts[-2] = label
-      parts[-1] = 'adj'
+            parts[-2] = label
+            parts[-1] = 'adj'
 
-      files.append( prefix+'.'.join(parts) )
+            files.append( prefix+'.'.join(parts) )
 
-    # write data to files
-    imin = int(_np.floor(h['t0']/h['dt']))
-    imax = int(imin+h['nt'])
-    t = _np.arange(imin,imax)*h['dt']
+        # write data to files
+        imin = int(_np.floor(h['t0']/h['dt']))
+        imax = int(imin+h['nt'])
+        t = _np.arange(imin,imax)*h['dt']
 
-    for i,file in enumerate(files):
-      w = f[:,i]
-      _np.savetxt(file,_np.column_stack((t,w)),'%11.4e')
+        for i,file in enumerate(files):
+            w = f[:,i]
+            _np.savetxt(file,_np.column_stack((t,w)),'%11.4e')
 
 
 def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='sem.ascii'):
-  """ Checks for seismic traces in current directory
-  """
-  if files:
-    return files
-
-  elif filetype == 'ascii':
-    if 'sem' in suffix:
-      if channel == 1:  wildcard = '%s/*.?XE.%s' % (prefix,suffix)
-      elif channel == 2:  wildcard = '%s/*.?XN.%s' % (prefix,suffix)
-      elif channel == 3:  wildcard = '%s/*.?XZ.%s' % (prefix,suffix)
-      else: wildcard = '%s/*.?X?.%s' % (prefix,suffix)
-    else:
-      if channel == 1:  wildcard = '%s/*[xX]*.%s' % (prefix,suffix)
-      elif channel == 2:  wildcard = '%s/*[yY]*.%s' % (prefix,suffix)
-      elif channel == 3:  wildcard = '%s/*[zZ]*.%s' % (prefix,suffix)
-    files = _glob.glob(wildcard)
+    """ Checks for seismic traces in current directory
+    """
     if files:
-      files.sort()
-    else:
-      raise Exception
-    return files
+        return files
 
-  elif filetype == 'su':
-    if channel == 1:  file = '%s/Ux_file_single.%s' % (prefix,suffix)
-    elif channel == 2:  file = '%s/Uy_file_single.%s' % (prefix,suffix)
-    elif channel == 3:  file = '%s/Uz_file_single.%s' % (prefix,suffix)
-    return file
+    elif filetype == 'ascii':
+        if 'sem' in suffix:
+            if channel == 1:  wildcard = '%s/*.?XE.%s' % (prefix,suffix)
+            elif channel == 2:  wildcard = '%s/*.?XN.%s' % (prefix,suffix)
+            elif channel == 3:  wildcard = '%s/*.?XZ.%s' % (prefix,suffix)
+            else: wildcard = '%s/*.?X?.%s' % (prefix,suffix)
+        else:
+            if channel == 1:  wildcard = '%s/*[xX]*.%s' % (prefix,suffix)
+            elif channel == 2:  wildcard = '%s/*[yY]*.%s' % (prefix,suffix)
+            elif channel == 3:  wildcard = '%s/*[zZ]*.%s' % (prefix,suffix)
+        files = _glob.glob(wildcard)
+        if files:
+            files.sort()
+        else:
+            raise Exception
+        return files
+
+    elif filetype == 'su':
+        if channel == 1:  file = '%s/Ux_file_single.%s' % (prefix,suffix)
+        elif channel == 2:  file = '%s/Uy_file_single.%s' % (prefix,suffix)
+        elif channel == 3:  file = '%s/Uz_file_single.%s' % (prefix,suffix)
+        return file
 
 
 ### input file writers
@@ -131,7 +131,7 @@ def writesrc(PAR,h,path='.'):
 
     file = getpath('seistools')+'/'+'specfem2d/SOURCE'
     with open(file,'r') as f:
-      lines = f.readlines()
+        lines = f.readlines()
 
     file = 'DATA/SOURCE'
     _writelines(file,lines)
@@ -143,27 +143,27 @@ def writesrc(PAR,h,path='.'):
 
     # adjust source amplitude
     try:
-      fs = float(getpar('factor',file))
-      setpar('factor',str(fs*h.fs),file)
+        fs = float(getpar('factor',file))
+        setpar('factor',str(fs*h.fs),file)
     except:
-      pass
+        pass
 
     # adjust source wavelet
     if 1:
-      # Ricker wavelet
-      setpar( 'time_function_type', 1, file )
+        # Ricker wavelet
+        setpar( 'time_function_type', 1, file )
     elif 0:
-      # first derivative of Gaussian
-      setpar( 'time_function_type', 2, file )
+        # first derivative of Gaussian
+        setpar( 'time_function_type', 2, file )
     elif 0:
-      # Gaussian
-      setpar( 'time_function_type', 3, file )
+        # Gaussian
+        setpar( 'time_function_type', 3, file )
     elif 0:
-      # Dirac
-      setpar( 'time_function_type', 4, file )
+        # Dirac
+        setpar( 'time_function_type', 4, file )
     elif 0:
-      # Heaviside
-      setpar( 'time_function_type', 5, file )
+        # Heaviside
+        setpar( 'time_function_type', 5, file )
 
     setpar( 'f0', PAR['F0'], file )
 
@@ -176,14 +176,14 @@ def writerec(nr,rx,rz):
 
     # loop over receivers
     for ir in range(nr):
-      line = ''
-      line = line + 'S%06d'  % ir     + ' '
-      line = line + 'AA'              + ' '
-      line = line + '%11.5e' % rx[ir] + ' ' 
-      line = line + '%11.5e' % rz[ir] + ' '
-      line = line + '%3.1f'  % 0.     + ' '
-      line = line + '%3.1f'  % 0.     + '\n'
-      lines.extend(line)
+        line = ''
+        line = line + 'S%06d'  % ir     + ' '
+        line = line + 'AA'              + ' '
+        line = line + '%11.5e' % rx[ir] + ' '
+        line = line + '%11.5e' % rz[ir] + ' '
+        line = line + '%3.1f'  % 0.     + ' '
+        line = line + '%3.1f'  % 0.     + '\n'
+        lines.extend(line)
 
     # write file
     _writelines(file,lines)
@@ -199,7 +199,7 @@ def writepar(vars,version='git-devel'):
     # read template
     file = getpath('seistools')+'/'+'specfem2d/par-'+version
     with open(file,'r') as f:
-      lines = f.readlines()
+        lines = f.readlines()
     lines[-1] = ' '.join(['1',str(PAR.NX),'1',str(PAR.NZ),'1'])
 
     # write parameter file
@@ -227,86 +227,86 @@ def writepar(vars,version='git-devel'):
 
 
 def getpar(key,file='DATA/Par_file',sep='='):
-  """ Reads parameter from SPECFEM parfile
-  """
-  with open(file,'r') as f:
-    lines = []
+    """ Reads parameter from SPECFEM parfile
+    """
+    with open(file,'r') as f:
+        lines = []
 
-    # read line by line
-    for line in f:
-      if _string.find(line,key) == 0:
-        # read key
-        key,val = _split(line,sep)
-        if not key:
-          continue
-        # read val
-        val,_ = _split(val,'#')
-        return val.strip()
+        # read line by line
+        for line in f:
+            if _string.find(line,key) == 0:
+                # read key
+                key,val = _split(line,sep)
+                if not key:
+                    continue
+                # read val
+                val,_ = _split(val,'#')
+                return val.strip()
 
-    raise Exception
+        raise Exception
 
 
 def setpar(key,val,file='DATA/Par_file',path='.',sep='='):
-  """ Writes parameter to SPECFEM parfile
-  """
+    """ Writes parameter to SPECFEM parfile
+    """
 
-  val = str(val)
+    val = str(val)
 
-  # read line by line
-  with open(path+'/'+file,'r') as f:
-    lines = []
-    for line in f:
-      if _string.find(line,key) == 0:
-        # read key
-        key,_ = _split(line,sep)
-        # read comment
-        _,comment = _split(line,'#')
-        n = len(line)-len(key)-len(val)-len(comment)-2
-        # replace line
-        if comment:
-          line = _merge(key,sep,val,' '*n,'#',comment)
-        else:
-          line = _merge(key,sep,str(val),'\n')
-      lines.append(line)
+    # read line by line
+    with open(path+'/'+file,'r') as f:
+        lines = []
+        for line in f:
+            if _string.find(line,key) == 0:
+                # read key
+                key,_ = _split(line,sep)
+                # read comment
+                _,comment = _split(line,'#')
+                n = len(line)-len(key)-len(val)-len(comment)-2
+                # replace line
+                if comment:
+                    line = _merge(key,sep,val,' '*n,'#',comment)
+                else:
+                    line = _merge(key,sep,str(val),'\n')
+            lines.append(line)
 
-  # write file
-  _writelines(path+'/'+file,lines)
+    # write file
+    _writelines(path+'/'+file,lines)
 
 
 ### utility functions
 
 def _writelines(file,lines):
-  """ Writes text file
-  """
-  with open(file,'w') as f:
-    f.writelines(lines)
+    """ Writes text file
+    """
+    with open(file,'w') as f:
+        f.writelines(lines)
 
 
 def _split(str,sep):
-  from string import find
+    from string import find
 
-  n = find(str,sep)
-  if n >= 0:
-    return str[:n], str[n+len(sep):]
-  else:
-    return str, ''
+    n = find(str,sep)
+    if n >= 0:
+        return str[:n], str[n+len(sep):]
+    else:
+        return str, ''
 
 
 def _merge(*parts):
-  return ''.join(parts)
+    return ''.join(parts)
 
 
 def _cmp(names):
-  rank = []
-  for name in names:
-    ii = int(unix.basename(name).split('_')[0])
-    rank.append(ii)
-  print rank
-  return [names[ii] for ii in rank]
+    rank = []
+    for name in names:
+        ii = int(unix.basename(name).split('_')[0])
+        rank.append(ii)
+    print rank
+    return [names[ii] for ii in rank]
 
 
 def _stack(a1,a2):
-  if a1.size > 0:
-    return _np.column_stack((a1,a2))
-  else:
-    return a2
+    if a1.size > 0:
+        return _np.column_stack((a1,a2))
+    else:
+        return a2

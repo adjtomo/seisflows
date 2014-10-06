@@ -7,115 +7,115 @@ import LBFGS
 
 
 class LCG:
-  """ Linear conjugate gradient method
-  """
+    """ Linear conjugate gradient method
+    """
 
-  def __init__(self,path,thresh,itermax,precond_type=0):
-    self.path    = path
-    unix.mkdir(self.path+'/'+'LCG')
+    def __init__(self,path,thresh,itermax,precond_type=0):
+        self.path    = path
+        unix.mkdir(self.path+'/'+'LCG')
 
-    self.load    = load
-    self.save    = save
+        self.load    = load
+        self.save    = save
 
-    self.iter    = 0
-    self.thresh  = thresh
-    self.itermax = itermax
+        self.iter    = 0
+        self.thresh  = thresh
+        self.itermax = itermax
 
-    self.precond_type = precond_type
-    if precond_type in [1,2]:
-      self.LBFGS = LBFGS(path+'/'+'LCG',load,save,itermax)
-
-
-  def precond(self,r):
-    if self.precond_type == 0:
-      y = r
-
-    elif self.prcond_type == 1:
-      if self.iter == 1:
-        self.LBFGS = LBFGS()
-        y = r
-      else:
-        self.LBFGS.update()
-        y = self.LBFGS.solve(r)
-
-    elif self.precond_type == 2:
-      if self.iter == 1:
-        y = r
-      else:
-        self.LBFGS.update()
-        y = -self.LBFGS.solve()
-
-    return y
+        self.precond_type = precond_type
+        if precond_type in [1,2]:
+            self.LBFGS = LBFGS(path+'/'+'LCG',load,save,itermax)
 
 
-  def initialize(self):
+    def precond(self,r):
+        if self.precond_type == 0:
+            y = r
 
-    unix.cd(self.path)
+        elif self.prcond_type == 1:
+            if self.iter == 1:
+                self.LBFGS = LBFGS()
+                y = r
+            else:
+                self.LBFGS.update()
+                y = self.LBFGS.solve(r)
 
-    self.iter = 1
-    r = self.load('g_new')
-    n = r.size
-    x = np.zeros(n)
-    y = self.precond(r)
-    p = -y
+        elif self.precond_type == 2:
+            if self.iter == 1:
+                y = r
+            else:
+                self.LBFGS.update()
+                y = -self.LBFGS.solve()
 
-    self.save('LCG/x',x)
-    self.save('LCG/r',r)
-    self.save('LCG/y',y)
-    self.save('LCG/p',p)
-    savetxt('LCG/ry',np.dot(r,y))
-
-    return p
+        return y
 
 
-  def compute(self,ap):
+    def initialize(self):
 
-    unix.cd(self.path)
+        unix.cd(self.path)
 
-    self.iter += 1
-    x = self.load('LCG/x')
-    r = self.load('LCG/r')
-    y = self.load('LCG/y')
-    p = self.load('LCG/p')
-    ry = loadtxt('LCG/ry')
+        self.iter = 1
+        r = self.load('g_new')
+        n = r.size
+        x = np.zeros(n)
+        y = self.precond(r)
+        p = -y
 
-    pap = np.dot(p,ap)
-    alpha = ry/pap
-    x = x + alpha*p
-    r = r + alpha*ap
+        self.save('LCG/x',x)
+        self.save('LCG/r',r)
+        self.save('LCG/y',y)
+        self.save('LCG/p',p)
+        savetxt('LCG/ry',np.dot(r,y))
 
-    # check status
-    if self.iter==self.itermax:
-      isdone = 1
-    elif np.linalg.norm(r) > self.thresh:
-      isdone = 1
-    else:
-      isdone = 0
+        return p
 
-    # apply preconditioner
-    y = self.precond(r)
 
-    ry_old = ry
-    ry = np.dot(r,y)
-    beta = ry/ry_old
-    p = -y + beta*p
+    def compute(self,ap):
 
-    self.save('LCG/x',x)
-    self.save('LCG/r',r)
-    self.save('LCG/y',y)
-    self.save('LCG/p',p)
-    savetxt('LCG/ry',np.dot(r,y))
+        unix.cd(self.path)
 
-    return p,isdone
+        self.iter += 1
+        x = self.load('LCG/x')
+        r = self.load('LCG/r')
+        y = self.load('LCG/y')
+        p = self.load('LCG/p')
+        ry = loadtxt('LCG/ry')
+
+        pap = np.dot(p,ap)
+        alpha = ry/pap
+        x = x + alpha*p
+        r = r + alpha*ap
+
+        # check status
+        if self.iter==self.itermax:
+            isdone = 1
+        elif np.linalg.norm(r) > self.thresh:
+            isdone = 1
+        else:
+            isdone = 0
+
+        # apply preconditioner
+        y = self.precond(r)
+
+        ry_old = ry
+        ry = np.dot(r,y)
+        beta = ry/ry_old
+        p = -y + beta*p
+
+        self.save('LCG/x',x)
+        self.save('LCG/r',r)
+        self.save('LCG/y',y)
+        self.save('LCG/p',p)
+        savetxt('LCG/ry',np.dot(r,y))
+
+        return p,isdone
 
 
 ### utility functions
 
 def loadtxt(filename):
-  return int(np.loadtxt(filename))
+    return int(np.loadtxt(filename))
 
 def savetxt(filename,v):
-  np.savetxt(filename,[v],'%d')
+    np.savetxt(filename,[v],'%d')
 
 def load(filename):
     return np.load(filename)
@@ -123,6 +123,3 @@ def load(filename):
 def save(filename,v):
     np.save(filename,v)
     unix.mv(filename+'.npy',filename)
-
-
-

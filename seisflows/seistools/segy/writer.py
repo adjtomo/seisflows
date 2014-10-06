@@ -24,100 +24,99 @@ FIELDS = [
 # cull header fields
 _tmp = []
 for field in SEGY_TRACE_HEADER:
-  if field[-1] in FIELDS:
-    _tmp.append(field)
+    if field[-1] in FIELDS:
+        _tmp.append(field)
 SEGY_TRACE_HEADER = _tmp
 
 
 
 class SeismicWriter(Writer):
 
-  def __init__(self,fname):
-    Writer.__init__(self,fname)
-    
-    self.dtype = 'float'
-    self.dsize = mysize(self.dtype)
-    self.endian = '<'
-    self.offset = 0
+    def __init__(self,fname):
+        Writer.__init__(self,fname)
+
+        self.dtype = 'float'
+        self.dsize = mysize(self.dtype)
+        self.endian = '<'
+        self.offset = 0
 
 
-  def prepareTraceData(self,h):
+    def prepareTraceData(self,h):
 
-    nr = int(h.nr)
-    self.vals = [[1] for k in range(nr)]
-    self.ntraces = nr
+        nr = int(h.nr)
+        self.vals = [[1] for k in range(nr)]
+        self.ntraces = nr
 
-    c1 = 1
-    c2 = 1
-    c3 = 1000000
+        c1 = 1
+        c2 = 1
+        c3 = 1000000
 
-    nt = int(h.nt)
-    dt = int(h.dt*c3)
-    ts = int(h.ts*c3)
+        nt = int(h.nt)
+        dt = int(h.dt*c3)
+        ts = int(h.ts*c3)
 
-    dt_max = (2.**15-1.)*10.**-6
-    if h.dt >= dt_max:
-      dt = 0
+        dt_max = (2.**15-1.)*10.**-6
+        if h.dt >= dt_max:
+            dt = 0
 
-    sx = self.getarray(h,'sx',c1)
-    sy = self.getarray(h,'sy',c1)
-    sz = self.getarray(h,'sz',c2)
+        sx = self.getarray(h,'sx',c1)
+        sy = self.getarray(h,'sy',c1)
+        sz = self.getarray(h,'sz',c2)
 
-    rx = self.getarray(h,'rx',c1)
-    ry = self.getarray(h,'ry',c1)
-    rz = self.getarray(h,'rz',c2)
+        rx = self.getarray(h,'rx',c1)
+        ry = self.getarray(h,'ry',c1)
+        rz = self.getarray(h,'rz',c2)
 
-    # prepare trace headers
-    for k in range(nr):
-      self.vals[k].append(sz[k])
-      self.vals[k].append(rz[k])
-      self.vals[k].append(c1)
-      self.vals[k].append(c2)
-      self.vals[k].append(sx[k])
-      self.vals[k].append(sy[k])
-      self.vals[k].append(rx[k])
-      self.vals[k].append(ry[k])
-      self.vals[k].append(ts)
-      self.vals[k].append(nt)
-      self.vals[k].append(dt)
-
-
-  def getarray(self,h,key,constant):
-    if h[key] == []:
-      return [0]*self.ntraces
-
-    array = [int(f*constant) for f in h[key]]
-    return array
+        # prepare trace headers
+        for k in range(nr):
+            self.vals[k].append(sz[k])
+            self.vals[k].append(rz[k])
+            self.vals[k].append(c1)
+            self.vals[k].append(c2)
+            self.vals[k].append(sx[k])
+            self.vals[k].append(sy[k])
+            self.vals[k].append(rx[k])
+            self.vals[k].append(ry[k])
+            self.vals[k].append(ts)
+            self.vals[k].append(nt)
+            self.vals[k].append(dt)
 
 
-  def writeTraceData(self,d):
+    def getarray(self,h,key,constant):
+        if h[key] == []:
+            return [0]*self.ntraces
 
-    nsamples = d.shape[0]
-    nbytes = nsamples*self.dsize+240
-    nr = d.shape[1]
+        array = [int(f*constant) for f in h[key]]
+        return array
 
-    for k in range(nr):
 
-      # write trace header
-      self.printf(SEGY_TRACE_HEADER,self.vals[k],k*nbytes,contiguous=0)
+    def writeTraceData(self,d):
 
-      # write trace data
-      self.write(self.dtype,d[:,k],nsamples,k*nbytes+240)
+        nsamples = d.shape[0]
+        nbytes = nsamples*self.dsize+240
+        nr = d.shape[1]
+
+        for k in range(nr):
+
+            # write trace header
+            self.printf(SEGY_TRACE_HEADER,self.vals[k],k*nbytes,contiguous=0)
+
+            # write trace data
+            self.write(self.dtype,d[:,k],nsamples,k*nbytes+240)
 
 
 class SuWriter(SeismicWriter):
 
-  def __init__(self,fname):
-    SeismicWriter.__init__(self,fname)
+    def __init__(self,fname):
+        SeismicWriter.__init__(self,fname)
 
 
 def writesegy():
-  raise NotImplementedError
+    raise NotImplementedError
 
 
 def writesu(filename,d,h):
 
-  obj = SuWriter(filename)
-  obj.prepareTraceData(h)
-  obj.writeTraceData(d)
-
+    obj = SuWriter(filename)
+    obj.prepareTraceData(h)
+    obj.writeTraceData(d)

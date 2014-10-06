@@ -13,42 +13,41 @@ solver = getclass('solver',PAR.SOLVER)()
 
 
 class modeling(object):
-  """ Forward modeling base class
-  """
-
-  def __init__(self):
-    """ Constructor
+    """ Forward modeling base class
     """
-    # check user supplied paths
-    if 'MODEL' not in PATH:
-        setattr(PATH,'MODEL','')
-        print 'Warning: PATH.MODEL not defined.'
 
-    # configure parameters
-    PAR.OPTIMIZE = None
-    PAR.POSTPROCESS = None
+    def __init__(self):
+        """ Constructor
+        """
+        # check user supplied paths
+        if 'MODEL' not in PATH:
+            setattr(PATH,'MODEL','')
+            print 'Warning: PATH.MODEL not defined.'
 
-    # configure paths
-    PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
-    unix.mkdir(PATH.OUTPUT)
+        # configure parameters
+        PAR.OPTIMIZE = None
+        PAR.POSTPROCESS = None
 
-    PATH.SCRATCH = join(PATH.GLOBAL,'scratch')
-    if PATH.LOCAL: PATH.SCRATCH = join(PATH.LOCAL,'scatch')
+        # configure paths
+        PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
+        unix.mkdir(PATH.OUTPUT)
+
+        PATH.SCRATCH = join(PATH.GLOBAL,'scratch')
+        if PATH.LOCAL: PATH.SCRATCH = join(PATH.LOCAL,'scatch')
 
 
-  def main(self):
-    """ Generates seismic data
-    """
-    system.run( solver.prepare_solver,
-      hosts = 'all',
-      inversion = False)
+    def main(self):
+        """ Generates seismic data
+        """
+        system.run( solver.prepare_solver,
+          hosts = 'all',
+          inversion = False)
 
-    print "Generating data"
-    system.run( solver.generate_data,
-      hosts = 'all',
-      model_path = PATH.MODEL,
-      model_type = 'gll',
-      model_name = None)
+        print "Generating data"
+        system.run( solver.generate_data,
+          hosts = 'all',
+          model_path = PATH.MODEL,
+          model_type = 'gll',
+          model_name = None)
 
-    print "Finished"
-
+        print "Finished"

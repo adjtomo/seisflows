@@ -25,9 +25,9 @@ def lowpass(w,freq,df,npass=2):
 
 def window(nt,type='sine',**kwargs):
     if type=='sine':
-      return _np.sin(_np.linspace(0,1,2*length))
+        return _np.sin(_np.linspace(0,1,2*length))
     elif type=='tukey':
-      return tukeywin
+        return tukeywin
 
 
 def tukeywin(nt,imin,imax,alpha=0.05):
@@ -42,4 +42,3 @@ def tukeywin(nt,imin,imax,alpha=0.05):
     win = _np.zeros(nt)
     win[imin:imax] = w
     return win
-
