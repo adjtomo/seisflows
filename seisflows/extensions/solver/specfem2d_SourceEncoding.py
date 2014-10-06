@@ -13,7 +13,7 @@ PATH = ParameterObject('paths')
 system = getclass('system',PAR.SYSTEM)()
 
 
-class FwiSourceEncoding2d(getclass('solver','specfem2d')):
+class specfem2d_SourceEncoding(getclass('solver','specfem2d')):
 
     def writerec(self):
         unix.cd(self.getpath())
@@ -38,7 +38,7 @@ class FwiSourceEncoding2d(getclass('solver','specfem2d')):
 
 
     def writepar(self):
-        super(FwiSourceEncoding2d,self).writepar()
+        super(specfem2d_SourceEncoding,self).writepar()
 
         seistools.specfem2d.setpar('NSOURCES',PAR.NSRC)
         seistools.specfem2d.setpar('nt',PAR.NT_PADDED)

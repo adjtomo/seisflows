@@ -42,7 +42,7 @@ class FwiSourceEncoding(getclass('workflow','inversion')):
         else:
             PAR.NT_PADDED = PAR.NT
 
-        assert PAR.SOLVER in ['FwiSourceEncoding2d','FwiSourceEncoding3d']
+        assert 'SourceEncoding' in PAR.SOLVER
         assert PAR.PREPROCESS in ['default']
 
         assert exists(PATH.DATA)
