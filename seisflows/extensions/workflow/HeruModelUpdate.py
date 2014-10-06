@@ -74,12 +74,11 @@ class HeruModelUpdate(getclass('workflow','inversion')):
     self.finalize()
     print ''
 
-    if self.isdone:
-      return
 
 
   def setup(self):
-    super(HeruModuleUpdate,self).setup()
+    super(HeruModelUpdate,self).setup()
+
 
 
   def compute_direction(self):
@@ -87,6 +86,7 @@ class HeruModelUpdate(getclass('workflow','inversion')):
     """
     self.postprocess.process_kernels()
     self.optimize.compute_direction()
+
 
 
   def finalize(self):
