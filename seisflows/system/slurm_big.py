@@ -86,8 +86,6 @@ class slurm_big(object):
       """ Submits job
       """
       unix.cd(PATH.SUBMIT_DIR)
-      unix.rm(PATH.GLOBAL)
-      unix.mkdir(PATH.GLOBAL)
 
       # store parameters
       unix.mkdir(PATH.SYSTEM)
