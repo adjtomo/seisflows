@@ -16,8 +16,7 @@ def backtrack2(f0,g0,x1,f1,b1=0.1,b2=0.5):
 
 def backtrack3(f0,g0,x1,f1,x2,f2):
     # cubic backtrack
-    # not yet implemented
-    pass
+    raise NotImplementedError
 
 def polyfit2(x,f):
     # parabolic fit

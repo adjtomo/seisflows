@@ -26,8 +26,7 @@ def wdiff(wsyn,wobs,nt,dt):
   return wadj
 
 def etime(wsyn,wobs,nt,dt):
-  # not yet implemented
-  pass
+  raise NotImplementedError
 
 def ediff(wsyn,wobs,nt,dt,eps=0.05):
   # envelope difference
