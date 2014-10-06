@@ -9,14 +9,14 @@ def wtime(wsyn,wobs,nt,dt):
   # (Tromp et al. 2005, eq 45)
   wadj = _np.zeros(nt)
   wadj[1:-1] = (wsyn[2:] - wsyn[0:-2])/(2.*dt)
-  wadj = 1./(sum(wadj*wadj)*dt) * wadj
-  wadj = wadj * misfit.wtime(wsyn,wobs,nt,dt)
+  wadj *= 1./(sum(wadj*wadj)*dt)
+  wadj *= misfit.wtime(wsyn,wobs,nt,dt)
   return wadj
 
 def wampl(wsyn,wobs,nt,dt):
   # cross correlation amplitude
   wadj = 1./(sum(wsyn*wsyn)*dt) * wsyn
-  wadj = wadj * misfit.wampl(wsyn,wobs,nt,dt)
+  wadj *= misfit.wampl(wsyn,wobs,nt,dt)
   return wadj
 
 def wdiff(wsyn,wobs,nt,dt):

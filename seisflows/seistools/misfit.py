@@ -7,15 +7,15 @@ def wtime(wsyn,wobs,nt,dt):
   # cross correlation time
   cc = abs(np.convolve(wobs,np.flipud(wsyn)))
   cmax = 0
+  misfit = 0.
+  ioff = None
   for it in range(2*nt-1):
     if cc[it] > cmax:
       cmax = cc[it]
       ioff = it
       misfit = (ioff-nt+1)*dt
-  try:
+  if ioff != None:
     misfit = (ioff-nt+1)*dt
-  except:
-    misfit = 0.
   return misfit
 
 def wampl(wsyn,wobs,nt,dt):
