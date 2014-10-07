@@ -472,10 +472,10 @@ class specfem3d(object):
     def combine(self,path=''):
         """ combines SPECFEM3D kernels
         """
-        dirs = unix.ls(path)
+        unix.cd(self.getpath())
 
         # create temporary files and directories needed by xsum_kernels
-        unix.cd(self.getpath())
+        dirs = unix.ls(path)
         with open('../kernels_list.txt','w') as file:
             file.write('\n'.join(dirs)+'\n')
         unix.mkdir('INPUT_KERNELS')
@@ -501,8 +501,8 @@ class specfem3d(object):
         """
         unix.cd(self.getpath())
 
-        unix.mv(path+'/'+'grad',path+'/'+'grad_nosmooth')
-        unix.mkdir(path+'/'+'grad')
+        unix.mv(path+'/'+'gradient',path+'/'+'gradient_nosmooth')
+        unix.mkdir(path+'/'+'gradient')
 
         # prepare list
         kernel_list = []
@@ -520,16 +520,16 @@ class specfem3d(object):
                 self.mpirun(
                   PATH.SOLVER_BINARIES+'/'+'xsmooth_vol_data '
                   + kernel_name + ' '
-                  + path + '/' + 'grad_nosmooth/' + ' '
-                  + path + '/' + 'grad/' + ' '
+                  + path + '/' + 'gradient_nosmooth/' + ' '
+                  + path + '/' + 'gradient/' + ' '
                   + str(span) + ' '
                   + str(span) + ' ' + '1')
             else:
-                src = glob(path+'/'+'grad_nosmooth/*'+kernel_name+'.bin')
-                dst = path+'/'+'grad/'
+                src = glob(path+'/'+'gradient_nosmooth/*'+kernel_name+'.bin')
+                dst = path+'/'+'gradient/'
                 unix.cp(src,dst)
 
-        unix.rename('_smooth','',glob(path+'/'+'grad/*_smooth.bin'))
+        unix.rename('_smooth','',glob(path+'/'+'gradient/*_smooth.bin'))
         print ''
 
         unix.cd(path)

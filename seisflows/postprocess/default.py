@@ -46,7 +46,7 @@ class default(object):
         # write gradient
         g[mask] = g[mask]/m[mask]
         g[np.invert(mask)] = 0.
-        solver.save(PATH.GRAD+'/'+'grad',solver.split(g))
+        solver.save(PATH.GRAD+'/'+'gradient',solver.split(g))
 
         # apply smoothing
         if PAR.SMOOTH > 0.:
@@ -58,15 +58,15 @@ class default(object):
         # apply preconditioner
         if PATH.PRECOND:
             unix.cd(PATH.GRAD)
-            v = solver.merge(solver.load('grad'))
+            v = solver.merge(solver.load('gradient'))
             p = solver.merge(solver.load(PATH.PRECOND))
-            unix.mv('grad','grad_noscale')
-            solver.save('grad',solver.split(v/p))
+            unix.mv('gradient','gradient_noscale')
+            solver.save('gradient',solver.split(v/p))
 
         # apply scaling
         if PAR.SCALE:
             unix.cd(PATH.GRAD)
-            g = solver.merge(solver.load('grad',type='model'))
+            g = solver.merge(solver.load('gradient',type='model'))
             g *= PAR.SCALE
 
         savenpy(PATH.OPTIMIZE+'/'+'g_new',g)

@@ -496,7 +496,7 @@ class specfem2d(object):
         "smooths SPECFEM2D kernels by convoling them with a Gaussian"
         from seisflows.tools.arraytools import meshsmooth
 
-        parts = self.load(path+'/'+'grad')
+        parts = self.load(path+'/'+'gradient')
         if not span:
             return parts
 
@@ -512,8 +512,8 @@ class specfem2d(object):
         # perform smoothing
         for key in self.inversion_parameters:
             parts[key] = [meshsmooth(x,z,parts[key][0],span,nx,nz)]
-        unix.mv(path+'/'+'grad',path+'/'+'grad_nosmooth')
-        self.save(path+'/'+'grad',parts)
+        unix.mv(path+'/'+'gradient',path+'/'+'gradient_nosmooth')
+        self.save(path+'/'+'gradient',parts)
 
 
 
