@@ -65,14 +65,14 @@ class serial(object):
     def submit(self,workflow):
         """ Submits job
         """
-        unix.mkdir(PATH.SYSTEM)
-
         workflow().main()
 
 
     def run(self,task,hosts='all',**kwargs):
         """ Runs tasks in serial or parallel on specified hosts
         """
+        unix.mkdir(PATH.SYSTEM)
+
         if hosts=='all':
             for itask in range(PAR.NTASK):
                 self.setnode(itask)

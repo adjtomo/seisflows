@@ -88,11 +88,8 @@ class slurm_big(object):
         unix.cd(PATH.SUBMIT_DIR)
 
         # store parameters
-        unix.mkdir(PATH.SYSTEM)
-        saveobj(join(PATH.SYSTEM,'parameters.p'),
-            PAR.vars)
-        saveobj(join(PATH.SYSTEM,'paths.p'),
-            PATH.vars)
+        saveobj(join(PATH.SUBMIT_DIR,'parameters.p'),PAR.vars)
+        saveobj(join(PATH.SUBMIT_DIR,'paths.p'),PATH.vars)
 
         subprocess.call('sbatch '
           + '--job-name=%s ' % PAR.TITLE
@@ -101,7 +98,7 @@ class slurm_big(object):
           + '--nodes=%d ' % 1
           + '--time=%d ' % PAR.WALLTIME
           + getpath('system') +'/'+ 'slurm/wrapper_sbatch '
-          + PATH.SYSTEM + ' '
+          + PATH.SUBMIT_DIR + ' '
           + getmodule(workflow),
           shell=1)
 
@@ -115,6 +112,7 @@ class slurm_big(object):
             print 'running',name
 
         # prepare function arguments
+        unix.mkdir(PATH.SYSTEM)
         file = PATH.SYSTEM+'/'+name+'.p'
         saveobj(file,kwargs)
 
@@ -150,7 +148,7 @@ class slurm_big(object):
             + '--time=%d ' % PAR.STEPTIME
 
         args = getpath('system') +'/'+ 'slurm/wrapper_srun '         \
-            + PATH.SYSTEM + ' '                                      \
+            + PATH.SUBMIT_DIR + ' '                                  \
             + getmodule(task) + ' '                                  \
             + task.__name__ + ' '
 
