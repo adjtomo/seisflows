@@ -51,14 +51,20 @@ class inversion(object):
         if 'END' not in PAR:
             raise Exception
 
-        if 'SAVEMODELS' not in PAR:
-            setattr(PAR,'SAVEMODELS',1)
+        if 'SAVEMODEL' not in PAR:
+            setattr(PAR,'SAVEMODEL',1)
+
+        if 'SAVEGRADIENT' not in PAR:
+            setattr(PAR,'SAVEGRADIENT',0)
 
         if 'SAVEKERNELS' not in PAR:
             setattr(PAR,'SAVEKERNELS',0)
 
         if 'SAVETRACES' not in PAR:
             setattr(PAR,'SAVETRACES',0)
+
+        if 'SAVERESIDUALS' not in PAR:
+            setattr(PAR,'SAVERESIDUALS',0)
 
 
         # check user supplied paths
@@ -72,7 +78,7 @@ class inversion(object):
             raise Exception
 
 
-        # add some additional paths
+        # add paths to global dictionary
         PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
         unix.mkdir(PATH.OUTPUT)
 
@@ -239,14 +245,20 @@ class inversion(object):
     def finalize(self):
         """ Saves results from most recent model update iteration
         """
-        if divides(self.iter,PAR.SAVEMODELS):
+        if divides(self.iter,PAR.SAVEMODEL):
             self.save_model()
+
+        if divides(self.iter,PAR.SAVEGRADIENT):
+            self.save_gradient()
 
         if divides(self.iter,PAR.SAVEKERNELS):
             self.save_kernels()
 
         if divides(self.iter,PAR.SAVETRACES):
             self.save_traces()
+
+        if divides(self.iter,PAR.SAVERESIDUALS):
+            self.save_residuals()
 
         # clean up directories for next iteration
         if not PATH.LOCAL:
@@ -311,8 +323,14 @@ class inversion(object):
         solver.save(dst,solver.split(loadnpy(src)))
 
 
+    def save_gradient(self):
+        src = glob(join(PATH.GRAD,'gradient*'))
+        dst = join(PATH.OUTPUT,'gradient_%04d'%self.iter)
+        unix.mv(src,dst)
+
+
     def save_kernels(self):
-        src = glob(join(PATH.GRAD,'kernels/sum*'))
+        src = join(PATH.GRAD,'kernels')
         dst = join(PATH.OUTPUT,'kernels_%04d'%self.iter)
         unix.mkdir(dst)
         unix.mv(src,dst)
@@ -321,6 +339,12 @@ class inversion(object):
     def save_traces(self):
         src = join(PATH.GRAD,'traces')
         dst = join(PATH.OUTPUT,'traces_%04d'%self.iter)
+        unix.mv(src,dst)
+
+
+    def save_gradient(self):
+        src = glob(join(PATH.GRAD,'gradient*'))
+        dst = join(PATH.OUTPUT,'gradient_%04d'%self.iter)
         unix.mv(src,dst)
 
 
