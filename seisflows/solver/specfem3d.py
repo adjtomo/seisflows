@@ -135,9 +135,9 @@ class specfem3d(object):
           Binaries must be supplied by user as there is currently no mechanism to
           automatically compile from source code.
         """
-        unix.rm(self.getpath())
-        unix.mkdir(self.getpath())
-        unix.cd(self.getpath())
+        unix.rm(self.path())
+        unix.mkdir(self.path())
+        unix.cd(self.path())
 
         # create subdirectories
         unix.mkdir('bin')
@@ -189,7 +189,7 @@ class specfem3d(object):
           expects that all components exists, even ones not actually in use for
           the inversion.
         """
-        unix.cd(self.getpath())
+        unix.cd(self.path())
 
         if exists(PATH.DATA):
                 # copy user supplied data
@@ -220,7 +220,7 @@ class specfem3d(object):
         """
         assert(model_type)
 
-        unix.cd(self.getpath())
+        unix.cd(self.path())
 
         # run builtin mesher and generate databases
         if model_type == 'gll':
@@ -270,7 +270,7 @@ class specfem3d(object):
           but puts together all the steps needed for modeling, rather than just
           calling the solver binary.
         """
-        unix.cd(self.getpath())
+        unix.cd(self.path())
 
         # copy input files
         src = glob(PATH.SOLVER_FILES+'/'+'*')
@@ -300,7 +300,7 @@ class specfem3d(object):
         """ Evaluates misfit function by carrying out forward simulation and
             making measurements on observations and synthetics.
         """
-        unix.cd(self.getpath())
+        unix.cd(self.path())
         self.import_model(path)
 
         # forward simulation
@@ -316,10 +316,10 @@ class specfem3d(object):
 
     def evaluate_grad(self,path='',export_traces=False):
         """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
-            must already be in place prior to calling this method, or the adjoint
+            must already be in place prior to calling this method or the adjoint
             simulation will fail.
         """
-        unix.cd(self.getpath())
+        unix.cd(self.path())
 
         # adjoint simulation
         self.adjoint()
@@ -333,7 +333,7 @@ class specfem3d(object):
     def apply_hess(self,path='',hessian='exact'):
         """ Evaluates action of Hessian on a given model vector.
         """
-        unix.cd(self.getpath())
+        unix.cd(self.path())
         self.imprt(path,'model')
 
         # forward simulation
@@ -472,7 +472,7 @@ class specfem3d(object):
     def combine(self,path=''):
         """ combines SPECFEM3D kernels
         """
-        unix.cd(self.getpath())
+        unix.cd(self.path())
 
         # create temporary files and directories needed by xsum_kernels
         dirs = unix.ls(path)
@@ -499,7 +499,7 @@ class specfem3d(object):
     def smooth(self,path='',span=0):
         """ smooths SPECFEM3D kernels
         """
-        unix.cd(self.getpath())
+        unix.cd(self.path())
 
         unix.mv(path+'/'+'gradient',path+'/'+'gradient_nosmooth')
         unix.mkdir(path+'/'+'gradient')
@@ -539,13 +539,13 @@ class specfem3d(object):
     ### input file writers
 
     def write_parameters(self):
-        unix.cd(self.getpath())
+        unix.cd(self.path())
 
         write_parameters(vars(PAR))
 
 
     def write_receivers(self):
-        unix.cd(self.getpath())
+        unix.cd(self.path())
 
         # adjust parameters
         key = 'use_existing_STATIONS'
@@ -558,7 +558,7 @@ class specfem3d(object):
 
 
     def write_sources(self):
-        unix.cd(self.getpath())
+        unix.cd(self.path())
 
         # write source file
         _,h = self.preprocess.load(dir='traces/obs')
@@ -624,7 +624,7 @@ class specfem3d(object):
     def cleanup(self):
         """ Cleans up directory after simulation
         """
-        unix.cd(self.getpath())
+        unix.cd(self.path())
         unix.rm(glob('traces/syn/*'))
         unix.rm(glob('traces/adj/*'))
 
@@ -640,7 +640,7 @@ class specfem3d(object):
                   stdout=f)
 
 
-    def getpath(self):
+    def path(self):
         return join(PATH.SCRATCH,self.getshot())
 
 

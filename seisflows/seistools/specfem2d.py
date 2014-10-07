@@ -80,7 +80,7 @@ def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
             parts[-2] = label
             parts[-1] = 'adj'
 
-            files.append( prefix+'.'.join(parts) )
+            files.append( prefix+'/'+'.'.join(parts) )
 
         # write data to files
         imin = int(_np.floor(h['t0']/h['dt']))

@@ -32,7 +32,7 @@ class specfem2d_SourceEncoding(getclass('solver','specfem2d')):
             Writes sources file, taking into account that a single simulation 
             has to include multiple sources.
         """
-        unix.cd(self.getpath())
+        unix.cd(self.path())
 
         nodes = mapping(system.getnode())
         lines = []
@@ -52,7 +52,7 @@ class specfem2d_SourceEncoding(getclass('solver','specfem2d')):
             Overloads base method, removing write_sources and write_receivers
             since source and receiver factors are not yet available.
         """
-        unix.cd(self.getpath())
+        unix.cd(self.path())
 
         if exists(PATH.DATA):
             # generate SPECFEM2D input files
