@@ -18,14 +18,15 @@ def listdir(dir):
 
 if __name__ == '__main__':
     """ Prompts user to select SEISFLOWS example, then sets up current working
-        directory to run example. Currently, this script only works when run
-        from tiger.princeton.edu. A version that can be run from any machine is
-        under development.
+        directory to run example. 
+
+        Currently, this script only works on tiger.princeton.edu, but a version 
+        that runs on any Unix machine is being developed.
     """
 
     # select path
     home = '/home/rmodrak/data/'
-    opts = ['Examples2d','Examples3d','FwiSourceEncoding','Heru']
+    opts = ['Examples2d','Examples3d','FwiSourceEncoding','Interferometry','Heru']
     print ''
     path = join(home,unix.select(opts))
     print ''
