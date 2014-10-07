@@ -57,7 +57,7 @@ class HeruModelUpdate(getclass('workflow','inversion')):
 
 
         # check model update prerequisites
-        assert exists(PATH.OUTPUT+'/'+'model_init')
+        assert exists(PATH.GRAD+'/'+'kernels/sum')
         assert exists(PATH.OPTIMIZE+'/'+'f_new')
 
 
