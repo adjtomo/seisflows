@@ -198,9 +198,9 @@ class specfem3d(object):
             unix.cp(src,dst)
 
             # generate SPECFEM3D input files
-            self.writepar()
-            self.writesrc()
-            self.writerec()
+            self.write_parameters()
+            self.write_sources()
+            self.write_receivers()
 
         else:
             # generate data
@@ -538,11 +538,15 @@ class specfem3d(object):
 
     ### input file writers
 
-    def writepar(self):
-        writepar(vars(PAR))
+    def write_parameters(self):
+        unix.cd(self.getpath())
+
+        write_parameters(vars(PAR))
 
 
-    def writerec(self):
+    def write_receivers(self):
+        unix.cd(self.getpath())
+
         # adjust parameters
         key = 'use_existing_STATIONS'
         val = '.true.'
@@ -550,13 +554,15 @@ class specfem3d(object):
 
         # write receivers file
         _,h = self.preprocess.load('traces/obs')
-        writerec(h.nr,h.rx,h.rz)
+        write_receivers(h.nr,h.rx,h.rz)
 
 
-    def writesrc(self):
+    def write_sources(self):
+        unix.cd(self.getpath())
+
         # write source file
         _,h = self.preprocess.load(dir='traces/obs')
-        writesrc(vars(PAR),h)
+        write_sources(vars(PAR),h)
 
 
 

@@ -246,7 +246,7 @@ def writesu(d,h,channel=[],prefix='SEM',suffix='.adj',verbose=False):
 
 ### input file writers
 
-def writesrc(PAR,h,path='.'):
+def write_sources(PAR,h,path='.'):
     """ Writes source information to text file
     """
     from seisflows.tools.configure import getpath
@@ -268,7 +268,7 @@ def writesrc(PAR,h,path='.'):
 
 
 
-def writerec(nr,rx,rz):
+def write_receivers(nr,rx,rz):
     """ Writes receiver information to text file
     """
     file = 'DATA/STATIONS'
@@ -289,7 +289,7 @@ def writerec(nr,rx,rz):
     _writelines(file,lines)
 
 
-def writepar(PAR):
+def write_parameters(PAR):
     """ Writes parameters to text file
     """
     from seisflows.tools.configure import getpath

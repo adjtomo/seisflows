@@ -75,9 +75,9 @@ class FwiSourceEncoding(getclass('workflow','inversion')):
         self.combine(h,sinfo,rinfo,tag='obs')
 
         # update input files
-        solver.writerec()
+        solver.write_receivers()
 
-        solver.writesrc(
+        solver.write_sources(
             sinfo=sinfo,
             mapping=lambda _:range(PAR.NSRC))
 

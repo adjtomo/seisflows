@@ -15,21 +15,30 @@ system = getclass('system',PAR.SYSTEM)()
 
 class specfem2d_SourceEncoding(getclass('solver','specfem2d')):
 
-    def writerec(self):
-        unix.cd(self.getpath())
+    def write_parameters(self):
+        """ Writes parameter file
 
-        _,h = self.preprocess.load(prefix='traces/obs')
-        seistools.specfem2d.writerec(h.nr,h.rx,h.rz)
+            Calls base class method and then makes adjustments
+        """
+        super(specfem2d_SourceEncoding,self).write_parameters()
+
+        seistools.specfem2d.setpar('NSOURCES',PAR.NSRC)
+        seistools.specfem2d.setpar('nt',PAR.NT_PADDED)
 
 
-    def writesrc(self,sinfo=[],mapping=lambda i:[i]):
+    def write_sources(self,sinfo=[],mapping=lambda i:[i]):
+        """ Writes sources file
+        
+            Writes sources file, taking into account that a single simulation 
+            has to include multiple sources.
+        """
         unix.cd(self.getpath())
 
         nodes = mapping(system.getnode())
         lines = []
 
         for i in nodes:
-            seistools.specfem2d.writesrc(PAR.vars,sinfo[i])
+            seistools.specfem2d.write_sources(PAR.vars,sinfo[i])
             with open('DATA/SOURCE','r') as f:
                 lines.extend(f.readlines())
 
@@ -37,35 +46,17 @@ class specfem2d_SourceEncoding(getclass('solver','specfem2d')):
             f.writelines(lines)
 
 
-    def writepar(self):
-        super(specfem2d_SourceEncoding,self).writepar()
-
-        seistools.specfem2d.setpar('NSOURCES',PAR.NSRC)
-        seistools.specfem2d.setpar('nt',PAR.NT_PADDED)
-
-
-
-
     def prepare_data(self,**kwargs):
         """ Prepares data for inversion or migration
 
-          Users implementing an inversion or migration can choose between
-          supplying data or supplying a target model from which data are
-          generated on the fly. If data are provided, SPECFEM2D input files will
-          be generated automatically from included header information. If data
-          are to be generated on the fly, both a target model and SPECFEM2D input
-          files must be supplied.
-
-          Adjoint traces are intialized by writing zeros for all components. This
-          is necessary because, at the start of an adjoint simulation, SPECFEM2D
-          expects all components to exist, even ones not actually in use for the
-          inversion.
+            Overloads base method, removing write_sources and write_receivers
+            since source and receiver factors are not yet available.
         """
         unix.cd(self.getpath())
 
         if exists(PATH.DATA):
-                # generate SPECFEM2D input files
-            self.writepar()
+            # generate SPECFEM2D input files
+            self.write_parameters()
 
         else:
             # generate data

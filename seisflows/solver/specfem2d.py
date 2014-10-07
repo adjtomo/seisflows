@@ -174,15 +174,15 @@ class specfem2d(object):
         unix.cd(self.getpath())
 
         if exists(PATH.DATA):
-                # copy user supplied data
+            # copy user supplied data
             src = glob(PATH.DATA+'/'+self.getshot()+'/'+'*')
             dst = 'traces/obs/'
             unix.cp(src,dst)
 
             # generate SPECFEM2D input files
-            self.writepar()
-            self.writesrc()
-            self.writerec()
+            self.write_parameters()
+            self.write_sources()
+            self.write_receivers()
 
         else:
             # generate data
@@ -519,13 +519,17 @@ class specfem2d(object):
 
     ### input file writers
 
-    def writepar(self):
+    def write_parameters(self):
         "Write solver parameters file"
-        seistools.specfem2d.writepar(PAR.vars)
+        unix.cd(self.getpath())
+
+        seistools.specfem2d.write_parameters(PAR.vars)
 
 
-    def writerec(self,prefix='traces/obs'):
+    def write_receivers(self,prefix='traces/obs'):
         "Write receivers file"
+        unix.cd(self.getpath())
+
         # adjust parameters
         key = 'use_existing_STATIONS'
         val = '.true.'
@@ -533,13 +537,15 @@ class specfem2d(object):
 
         # write receiver file
         _,h = self.preprocess.load(prefix)
-        seistools.specfem2d.writerec(h.nr,h.rx,h.rz)
+        seistools.specfem2d.write_receivers(h.nr,h.rx,h.rz)
 
 
-    def writesrc(self):
+    def write_sources(self):
         "Write sources file"
+        unix.cd(self.getpath())
+
         _,h = self.preprocess.load(prefix='traces/obs')
-        seistools.specfem2d.writesrc(PAR.vars,h)
+        seistools.specfem2d.write_sources(PAR.vars,h)
 
 
 
