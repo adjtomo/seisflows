@@ -120,9 +120,9 @@ class specfem2d(object):
           Binaries must be supplied by user as there is currently no mechanism to
           automatically compile from source code.
         """
-        unix.rm(self.path())
-        unix.mkdir(self.path())
-        unix.cd(self.path())
+        unix.rm(self.path)
+        unix.mkdir(self.path)
+        unix.cd(self.path)
 
         # create subdirectories
         unix.mkdir('bin')
@@ -171,7 +171,7 @@ class specfem2d(object):
           expects all components to exist, even ones not actually in use for the
           inversion.
         """
-        unix.cd(self.path())
+        unix.cd(self.path)
 
         if exists(PATH.DATA):
             # copy user supplied data
@@ -207,7 +207,7 @@ class specfem2d(object):
         assert(exists(model_path))
         assert(model_type)
 
-        unix.cd(self.path())
+        unix.cd(self.path)
 
         # perform meshing
         if model_type in ['gll']:
@@ -262,7 +262,7 @@ class specfem2d(object):
         """
         assert(exists(PATH.SOLVER_FILES))
 
-        unix.cd(self.path())
+        unix.cd(self.path)
 
         # copy input files
         src = glob(PATH.SOLVER_FILES+'/'+'*')
@@ -297,7 +297,7 @@ class specfem2d(object):
         """ Evaluates misfit function by carrying out forward simulation and
             making measurements on observations and synthetics.
         """
-        unix.cd(self.path())
+        unix.cd(self.path)
         self.import_model(path)
 
         # forward simulation
@@ -316,7 +316,7 @@ class specfem2d(object):
             must already be in place prior to calling this method or the adjoint
             simulation will fail.
         """
-        unix.cd(self.path())
+        unix.cd(self.path)
 
         # adjoint simulation
         self.adjoint()
@@ -330,7 +330,7 @@ class specfem2d(object):
     def apply_hess(self,path='',hessian='exact'):
         """ Evaluates action of Hessian on a given model vector.
         """
-        unix.cd(self.path())
+        unix.cd(self.path)
         self.import_model(path)
 
         # forward simulation
@@ -521,14 +521,14 @@ class specfem2d(object):
 
     def write_parameters(self):
         "Write solver parameters file"
-        unix.cd(self.path())
+        unix.cd(self.path)
 
         seistools.specfem2d.write_parameters(PAR.vars)
 
 
     def write_receivers(self,prefix='traces/obs'):
         "Write receivers file"
-        unix.cd(self.path())
+        unix.cd(self.path)
 
         # adjust parameters
         key = 'use_existing_STATIONS'
@@ -542,7 +542,7 @@ class specfem2d(object):
 
     def write_sources(self):
         "Write sources file"
-        unix.cd(self.path())
+        unix.cd(self.path)
 
         _,h = self.preprocess.load(prefix='traces/obs')
         seistools.specfem2d.write_sources(PAR.vars,h)
@@ -586,9 +586,9 @@ class specfem2d(object):
 
     ### utility functions
 
+    @property
     def path(self):
         return join(PATH.SCRATCH,self.getshot())
-
 
     def getshot(self):
         return '%06d'%system.getnode()
