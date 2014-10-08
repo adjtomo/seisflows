@@ -31,7 +31,7 @@ class HeruModelUpdate(getclass('workflow','inversion')):
         if PAR.END != 1:
             raise Exception
 
-        if PAR.SCHEME != 'sd':
+        if PAR.SCHEME != 'GradientDescent':
             raise Exception
 
         if 'SAVEMODELS' not in PAR:

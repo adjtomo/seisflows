@@ -330,7 +330,7 @@ class specfem3d(object):
             self.export_traces(path,prefix='traces/syn')
 
 
-    def apply_hess(self,path='',hessian='exact'):
+    def apply_hess(self,path='',hessian='Newton'):
         """ Evaluates action of Hessian on a given model vector.
         """
         unix.cd(self.path)
@@ -339,9 +339,9 @@ class specfem3d(object):
         # forward simulation
         self.forward()
         unix.mv(self.glob(),'traces/lcg')
-        if PAR.SCHEME in ['gn']:
+        if hessian == 'Newton':
             self.preprocess.prepare_adjoint(unix.pwd(),output_type=3)
-        elif PAR.SCHEME in ['tn']:
+        elif hessian == 'GaussNewton':
             self.preprocess.prepare_adjoint(unix.pwd(),output_type=4)
 
         # adjoint simulation

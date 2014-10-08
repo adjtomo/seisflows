@@ -15,13 +15,13 @@ PATH = ParameterObject('paths')
 class default(object):
     """ Nonlinear optimization base class.
 
-     Available nonlinear optimization aglorithms include steepest descent,
-     nonlinear conjugatue gradient, and limited-memory BFGS,
-     (abbreviated in the code as sd, cg, and qn, respectively).
+     Available nonlinear optimization aglorithms include gradient descent,
+     nonlinear conjugatue gradient, and a quasi-Newton method 
+     (limited-memory BFGS).
 
      Available line search algorithms include a backtracking line search based
-     quadratic interpolation (using both function and gradient evaluations) and
-     a 'golden search' procedure (using only function evaluations).
+     on quadratic interpolation and a bracketing and interpolation procedure
+     (abbreviated as 'Backtrack' and 'BracketMinimum' respectively.)
 
      To reduce memory overhead, input vectors are read from the directory
      cls.path rather than passed from a calling routine. At the start of each
@@ -37,6 +37,9 @@ class default(object):
         cls.iter = 0
 
         # check user suppplied parameters
+        if 'SCHEME' not in PAR:
+            setattr(PAR,'SCHEME','QuasiNewton')
+
         if 'NLCGMAX' not in PAR:
             setattr(PAR,'NLCGMAX',10)
 
@@ -47,7 +50,7 @@ class default(object):
             setattr(PAR,'LBFGSMAX',6)
 
         if 'SRCHTYPE' not in PAR:
-            setattr(PAR,'SRCHTYPE','backtrack')
+            setattr(PAR,'SRCHTYPE','Backtrack')
 
         if 'SRCHMAX' not in PAR:
             setattr(PAR,'SRCHMAX',10)
@@ -65,10 +68,10 @@ class default(object):
         cls.output = PATH.SUBMIT_DIR+'/'+'output.optim'
 
         # prepare algorithm machinery
-        if PAR.SCHEME in ['cg']:
+        if PAR.SCHEME in ['ConjugateGradient']:
             cls.NLCG = lib.NLCG(cls.path,PAR.NLCGTHRESH,PAR.NLCGMAX)
 
-        elif PAR.SCHEME in ['qn']:
+        elif PAR.SCHEME in ['QuasiNewton']:
             cls.LBFGS = lib.LBFGS(cls.path,PAR.LBFGSMAX,PAR.BEGIN)
 
 
@@ -81,16 +84,15 @@ class default(object):
         g_new = loadnpy('g_new')
         cls.iter += 1
 
-        if PAR.SCHEME=='sd':
-            # steepest descent update
+        if PAR.SCHEME=='GradientDescent':
             p_new = -g_new
 
-        elif PAR.SCHEME=='cg':
-            # nonlinear conjugate gradient update
+        elif PAR.SCHEME=='ConjugateGradient':
+            # compute nonlinear conjugate gradient update
             p_new = cls.NLCG.compute()
 
-        elif PAR.SCHEME=='qn':
-            # quasi-Newton update
+        elif PAR.SCHEME=='QuasiNewton':
+            # compute L-BFGS update
             if cls.iter==1:
                 p_new = -g_new
             else:
@@ -141,11 +143,9 @@ class default(object):
                 alpha = PAR.STEPLEN*cls.step_ratio
             else:
                 alpha = 1./np.sum(np.abs(g))
-        elif PAR.SCHEME in ['sd','cg']:
+        elif PAR.SCHEME in ['GradientDescent','ConjugateGradient']:
             alpha = 2.*alpha*s_old/s_new
-        elif PAR.SCHEME in ['qn']:
-            alpha = 1.
-        elif PAR.SCHEME in ['gn','tn']:
+        else:
             alpha = 1.
 
         # ad hoc scaling
@@ -186,11 +186,11 @@ class default(object):
             cls.isbest = 1
 
         # are stopping criteria satisfied?
-        if PAR.SRCHTYPE=='backtrack':
+        if PAR.SRCHTYPE=='Backtrack':
             if any(f[1:] < f[0]):
                 cls.isdone = 1
 
-        elif PAR.SRCHTYPE=='golden':
+        elif PAR.SRCHTYPE=='BracketMinimum':
             if cls.isbrak:
                 cls.isdone = 1
             elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
@@ -220,10 +220,10 @@ class default(object):
         f = cls.func_vals()
 
         # compute trial step length
-        if PAR.SRCHTYPE=='backtrack':
+        if PAR.SRCHTYPE=='Backtrack':
             alpha = lib.backtrack2(f0,g0,x[1],f[1],b1=0.1,b2=0.5)
 
-        elif PAR.SRCHTYPE=='golden':
+        elif PAR.SRCHTYPE=='BracketMinimum':
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 alpha = lib.polyfit2(x,f)
             elif any(f[1:] < f[0]):

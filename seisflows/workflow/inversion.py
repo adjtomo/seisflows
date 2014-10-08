@@ -155,17 +155,8 @@ class inversion(object):
     def compute_direction(self):
         """ Computes search direction
         """
-        if PAR.SCHEME in ['sd','cg','qn']:
-            self.evaluate_gradient()
-            self.optimize.compute_direction()
-
-        elif PAR.SCHEME in ['gn','tn']:
-            self.optimize.initialize_newton()
-            for self.ilcg in irange(1,PAR.LCGMAX):
-                self.apply_hessian()
-                isdone = self.optimize.solve_newton()
-                if isdone:
-                    break
+        self.evaluate_gradient()
+        self.optimize.compute_direction()
 
 
     def line_search(self):
@@ -244,8 +235,7 @@ class inversion(object):
         # solver calls
         system.run( solver.action_hess,
             hosts='all',
-            path = PATH.HESS,
-            hessian=PAR.SCHEME )
+            path = PATH.HESS)
 
         self.postprocess.process_kernels(
             path=PATH.HESS)
