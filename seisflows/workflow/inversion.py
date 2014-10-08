@@ -362,7 +362,6 @@ class inversion(object):
         unix.mv(src,dst)
 
 
-
     def save_residuals(self):
         src = join(PATH.GRAD,'residuals')
         dst = join(PATH.OUTPUT,'residuals_%04d'%self.iter)

@@ -140,9 +140,9 @@ class specfem2d_Interferometry(getclass('solver','specfem2d')):
         """ Runs generating wavefield and ensembles forward wavefield
         """
         # adjust parameters
-        seistools.specfem2d.setpar( 'NOISE_TOMOGRAPHY', '1'      )
-        seistools.specfem2d.setpar( 'SIMULATION_TYPE',  '1'      )
-        seistools.specfem2d.setpar( 'SAVE_FORWARD',   ' .false.' )
+        seistools.specfem2d.setpar('NOISE_TOMOGRAPHY', '1')
+        seistools.specfem2d.setpar('SIMULATION_TYPE',  '1')
+        seistools.specfem2d.setpar('SAVE_FORWARD', '.false.')
 
         # generating wavefield
         with open('log.fwd','a') as f:
@@ -150,9 +150,9 @@ class specfem2d_Interferometry(getclass('solver','specfem2d')):
             subprocess.call(self.solver_binary,stdout=f)
 
         # adjust parameters
-        seistools.specfem2d.setpar( 'NOISE_TOMOGRAPHY', '2'      )
-        seistools.specfem2d.setpar( 'SIMULATION_TYPE',  '1'      )
-        seistools.specfem2d.setpar( 'SAVE_FORWARD',   ' .true.'  )
+        seistools.specfem2d.setpar('NOISE_TOMOGRAPHY', '2')
+        seistools.specfem2d.setpar('SIMULATION_TYPE',  '1')
+        seistools.specfem2d.setpar('SAVE_FORWARD', ' .true.')
 
         # ensemble forward wavefield
         with open('log.fwd','w') as f:
@@ -164,9 +164,9 @@ class specfem2d_Interferometry(getclass('solver','specfem2d')):
         """ Calls adjoint solver
         """
         # adjust parameters
-        seistools.specfem2d.setpar( 'NOISE_TOMOGRAPHY', '3'      )
-        seistools.specfem2d.setpar( 'SIMULATION_TYPE',  '2'      )
-        seistools.specfem2d.setpar( 'SAVE_FORWARD',   ' .false.' )
+        seistools.specfem2d.setpar('NOISE_TOMOGRAPHY', '3')
+        seistools.specfem2d.setpar('SIMULATION_TYPE',  '2')
+        seistools.specfem2d.setpar('SAVE_FORWARD', '.false.')
 
         unix.rm('SEM')
         unix.ln('traces/adj','SEM')
