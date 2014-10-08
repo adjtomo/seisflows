@@ -3,6 +3,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
+from seisflows.tools.codetools import exists
 from seisflows.tools.configure import getclass, ParameterObject
 
 PAR = ParameterObject('parameters')
@@ -30,15 +31,23 @@ class default(object):
         if 'SCALE' not in PAR:
             setattr(PAR,'SCALE',1.)
 
+        self.path = PATH.POSTPROCESS
+        unix.mkdir(self.path)
 
-    def process_kernels(self):
+
+    def process_kernels(self,input=None,suffix='new'):
+        """ Computes gradient and performs smoothing, preconditioning, and then
+            scaling operations
+        """
+        assert(exists(input))
+        unix.cd(input+'/'+'kernels')
+
         # combine kernels
         system.run( solver.combine,
             hosts='head',
-            path=PATH.GRAD+'/'+'kernels' )
+            path=input+'/'+'kernels' )
 
         # construct mask
-        unix.cd(PATH.GRAD+'/'+'kernels')
         g = solver.merge(solver.load('sum',type='kernel'))
         m = solver.merge(solver.load('../model',type='model'))
         mask = m>0
@@ -46,18 +55,18 @@ class default(object):
         # write gradient
         g[mask] = g[mask]/m[mask]
         g[np.invert(mask)] = 0.
-        solver.save(PATH.GRAD+'/'+'gradient',solver.split(g))
+        solver.save(self.path+'/'+'gradient',solver.split(g))
 
         # apply smoothing
         if PAR.SMOOTH > 0.:
             system.run( solver.smooth,
                 hosts='head',
-                path=PATH.GRAD,
+                path=self.path,
                 span=PAR.SMOOTH )
 
         # apply preconditioner
         if PATH.PRECOND:
-            unix.cd(PATH.GRAD)
+            unix.cd(self.path)
             v = solver.merge(solver.load('gradient'))
             p = solver.merge(solver.load(PATH.PRECOND))
             unix.mv('gradient','gradient_noscale')
@@ -65,8 +74,8 @@ class default(object):
 
         # apply scaling
         if PAR.SCALE:
-            unix.cd(PATH.GRAD)
+            unix.cd(self.path)
             g = solver.merge(solver.load('gradient',type='model'))
             g *= PAR.SCALE
+            solver.save('gradient',solver.split(g))
 
-        savenpy(PATH.OPTIMIZE+'/'+'g_new',g)

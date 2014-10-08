@@ -77,8 +77,7 @@ class inversion(object):
         if 'MODEL_INIT' not in PATH:
             raise Exception
 
-
-        # add paths to global dictionary
+       # add paths to global dictionary
         PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
         unix.mkdir(PATH.OUTPUT)
 
@@ -88,6 +87,7 @@ class inversion(object):
         PATH.FUNC = join(PATH.SOLVER,'func')
         PATH.GRAD = join(PATH.SOLVER,'grad')
         PATH.HESS = join(PATH.SOLVER,'hess')
+
 
 
     def main(self):
@@ -115,6 +115,8 @@ class inversion(object):
     def setup(self):
         """ Lays groundwork for inversion
         """
+        self.clean()
+
         self.optimize = getclass('optimize',PAR.OPTIMIZE)()
         self.postprocess = getclass('postprocess',PAR.POSTPROCESS)()
 
@@ -220,11 +222,17 @@ class inversion(object):
         """
         # adjoint simulation
         system.run( solver.evaluate_grad,
-              hosts='all',
-              path=PATH.GRAD,
-              export_traces=divides(self.iter,PAR.SAVETRACES) )
+            hosts='all',
+            path=PATH.GRAD,
+            export_traces=divides(self.iter,PAR.SAVETRACES) )
 
-        self.postprocess.process_kernels()
+        self.postprocess.process_kernels(PATH.GRAD)
+
+        src = PATH.POSTPROCESS+'/'+'gradient'
+        g = solver.merge(solver.load(src))
+
+        dst = PATH.OPTIMIZE+'/'+'g_new'
+        savenpy(dst,g)
 
 
     def apply_hessian(self):
@@ -239,7 +247,8 @@ class inversion(object):
             path = PATH.HESS,
             hessian=PAR.SCHEME )
 
-        self.postprocess.process_kernels(suffix='lcg')
+        self.postprocess.process_kernels(
+            path=PATH.HESS)
 
 
     def finalize(self):
@@ -261,6 +270,9 @@ class inversion(object):
             self.save_residuals()
 
         # clean up directories for next iteration
+        unix.rm(PATH.POSTPROCESS)
+        unix.mkdir(PATH.POSTPROCESS)
+
         if not PATH.LOCAL:
             unix.rm(PATH.GRAD)
             unix.mv(PATH.FUNC,PATH.GRAD)
@@ -274,6 +286,7 @@ class inversion(object):
             unix.rm(PATH.FUNC)
             unix.mkdir(PATH.GRAD)
             unix.mkdir(PATH.FUNC)
+
 
         self.isdone = False
 
@@ -317,6 +330,13 @@ class inversion(object):
         return isready
 
 
+    def clean(self):
+        """ Cleans globally accessible path
+        """
+        if PAR.BEGIN==1:
+            unix.rm(PATH.GLOBAL)
+            unix.mkdir(PATH.GLOBAL)
+
     def save_model(self):
         src = PATH.OPTIMIZE+'/'+'m_new'
         dst = join(PATH.OUTPUT,'model_%04d'%self.iter)
@@ -324,7 +344,7 @@ class inversion(object):
 
 
     def save_gradient(self):
-        src = glob(join(PATH.GRAD,'gradient*'))
+        src = glob(join(PATH.POSTPROCESS,'gradient*'))
         dst = join(PATH.OUTPUT,'gradient_%04d'%self.iter)
         unix.mv(src,dst)
 
@@ -341,11 +361,6 @@ class inversion(object):
         dst = join(PATH.OUTPUT,'traces_%04d'%self.iter)
         unix.mv(src,dst)
 
-
-    def save_gradient(self):
-        src = glob(join(PATH.GRAD,'gradient*'))
-        dst = join(PATH.OUTPUT,'gradient_%04d'%self.iter)
-        unix.mv(src,dst)
 
 
     def save_residuals(self):
