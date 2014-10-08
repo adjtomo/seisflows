@@ -89,10 +89,12 @@ class migration(object):
               export_traces=PAR.SAVETRACES )
 
 
+        # process image
         self.postprocess = getclass('postprocess',PAR.POSTPROCESS)()
         self.postprocess.process_kernels(input=PATH.SOLVER)
 
 
+        # save results
         if PAR.SAVEGRADIENT:
             self.save_gradient()
 
