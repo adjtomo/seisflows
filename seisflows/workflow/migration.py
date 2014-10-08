@@ -14,12 +14,10 @@ solver = getclass('solver',PAR.SOLVER)()
 
 
 
-class migration(getclass('workflow','inversion')):
+class migration(object):
     """ Migration base class.
 
-      Implements migration by subclassing inversion and overloading 'main'.
-
-      In the terminology of seismic exploration, implements
+      In the terminology of seismic exploration, implements a
       'reverse time migration'.
     """
 
@@ -38,6 +36,13 @@ class migration(getclass('workflow','inversion')):
         if 'SAVEKERNELS' not in PAR:
             setattr(PAR,'SAVEKERNELS',0)
 
+        if 'BEGIN' not in PAR:
+            setattr(PAR,'BEGIN',1)
+
+        if 'END' not in PAR:
+            setattr(PAR,'END',1)
+
+
         # check user supplied paths
         if 'DATA' not in PATH:
             setattr(PATH,'DATA','')
@@ -48,6 +53,7 @@ class migration(getclass('workflow','inversion')):
         if 'MODEL_INIT' not in PATH:
             raise Exception
 
+
         # add paths to global dictionary
         PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
         unix.mkdir(PATH.OUTPUT)
@@ -55,28 +61,38 @@ class migration(getclass('workflow','inversion')):
         PATH.SCRATCH = join(PATH.GLOBAL,'scratch')
         if PATH.LOCAL: PATH.SCRATCH = join(PATH.LOCAL,'scatch')
 
-        PATH.FUNC = join(PATH.SOLVER,'func')
-        PATH.GRAD = join(PATH.SOLVER,'grad')
-        PATH.HESS = join(PATH.SOLVER,'hess')
-
 
     def main(self):
         """ Migrates seismic data
         """
-        self.setup()
-
-        self.initialize()
-
-        print "Computing search direction"
-        self.compute_direction()
-
-        self.finalize()
-        print 'Finished\n'
+        unix.rm(PATH.GLOBAL)
+        unix.mkdir(PATH.GLOBAL)
 
 
-    def finalize(self):
-        """ Saves results from migration
-        """
+        # prepare solver
+        print 'Preparing solver...'
+        system.run( solver.prepare_solver,
+            hosts='all' )
+
+        self.prepare_model()
+
+        system.run( solver.evaluate_func,
+            hosts='all',
+            path=PATH.SOLVER )
+
+
+        # backproject data
+        print 'Backprojecting data...'
+        system.run( solver.evaluate_grad,
+              hosts='all',
+              path=PATH.SOLVER,
+              export_traces=PAR.SAVETRACES )
+
+
+        self.postprocess = getclass('postprocess',PAR.POSTPROCESS)()
+        self.postprocess.process_kernels(input=PATH.SOLVER)
+
+
         if PAR.SAVEGRADIENT:
             self.save_gradient()
 
@@ -86,4 +102,29 @@ class migration(getclass('workflow','inversion')):
         if PAR.SAVEKERNELS:
             self.save_kernels()
 
+        print 'Finished\n'
+
+
+    ### utility functions
+
+    def prepare_model(self):
+        model = PATH.OUTPUT+'/'+'model_init'
+        assert exists(model)
+        unix.cp(model,PATH.SOLVER+'/'+'model')
+
+    def save_gradient(self):
+        src = glob(join(PATH.POSTPROCESS,'gradient*'))
+        dst = join(PATH.OUTPUT)
+        unix.mv(src,dst)
+
+    def save_kernels(self):
+        src = join(PATH.SOLVER,'kernels')
+        dst = join(PATH.OUTPUT)
+        unix.mkdir(dst)
+        unix.mv(src,dst)
+
+    def save_traces(self):
+        src = join(PATH.SOLVER,'traces')
+        dst = join(PATH.OUTPUT)
+        unix.mv(src,dst)
 
