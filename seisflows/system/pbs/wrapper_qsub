@@ -1,0 +1,23 @@
+#!/usr/bin/python -u
+
+import os
+import sys
+
+mypath = sys.argv[1]
+myclass = sys.argv[2]
+
+os.chdir(mypath)
+
+from seisflows.tools.configtools import getclass, ParameterObject
+
+PAR = ParameterObject('parameters',mypath)
+PATH = ParameterObject('paths',mypath)
+
+if __name__ == '__main__':
+
+    # load class
+    obj = getclass(myclass)()
+
+    # call main
+    obj.main()
+
