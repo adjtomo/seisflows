@@ -7,8 +7,7 @@ PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')
 
 
-
-class tiger_big(getclass('system','slurm_big')):
+class TigerBigJob(getclass('system','slurm_big_job')):
 
     def __init__(self):
         """ Class constructor
@@ -67,4 +66,4 @@ class tiger_big(getclass('system','slurm_big')):
         """Submits job
         """
         unix.ln(PATH.GLOBAL,PATH.SUBMIT_DIR+'/'+'scratch')
-        super(tiger_big,self).submit(*args,**kwargs)
+        super(TigerBigJob,self).submit(*args,**kwargs)

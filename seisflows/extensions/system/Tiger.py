@@ -6,7 +6,8 @@ from seisflows.tools.configtools import getclass, ParameterObject
 PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')
 
-class tiger(getclass('system','slurm')):
+
+class Tiger(getclass('system','slurm')):
 
     def __init__(self):
         """ Class constructor
@@ -58,4 +59,4 @@ class tiger(getclass('system','slurm')):
         if not exists(PATH.SUBMIT_DIR+'/'+'scratch'):
             unix.ln(PATH.GLOBAL,PATH.SUBMIT_DIR+'/'+'scratch')
 
-        super(tiger,self).submit(*args,**kwargs)
+        super(Tiger,self).submit(*args,**kwargs)

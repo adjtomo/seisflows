@@ -17,7 +17,7 @@ PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')
 
 
-class slurm_big(object):
+class slurm_big_job(object):
     """ System interface class
 
       Provides an interface through which to submit jobs, run tasks in serial
