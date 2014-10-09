@@ -34,7 +34,7 @@ class specfem2d_Microseismic(getclass('solver','specfem2d')):
 
 
     def __init__(self):
-        super(specfem2d_Interferometry,self).__init__()
+        super(specfem2d_Microseismic,self).__init__()
         self.preprocess.reader = seistools.specfem2d.read
         self.preprocess.writer = seistools.specfem2d.write
 
@@ -42,9 +42,7 @@ class specfem2d_Microseismic(getclass('solver','specfem2d')):
     def prepare_data(self,**kwargs):
         """ Prepares data for inversion or migration
         """
-        #PAR.NT *= 2
-        super(specfem2d_Interferometry,self).prepare_data(**kwargs)
-        #PAR.NT /= 2
+        super(specfem2d_Microseismic,self).prepare_data(**kwargs)
 
 
     def generate_data(self,**kwargs):
