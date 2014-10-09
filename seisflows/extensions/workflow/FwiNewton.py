@@ -14,7 +14,7 @@ solver = getclass('solver',PAR.SOLVER)()
 
 
 
-class Newton(getclass('workflow','inversion')):
+class FwiNewton(getclass('workflow','inversion')):
     """ Inversion with truncated Newton model updates
     """
 
@@ -22,7 +22,7 @@ class Newton(getclass('workflow','inversion')):
     def __init__(self):
         """ Constructor
         """
-        super(Newton,self).__init__()
+        super(FwiNewton,self).__init__()
 
 
     def compute_direction(self):

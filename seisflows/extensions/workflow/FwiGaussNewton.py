@@ -14,7 +14,7 @@ solver = getclass('solver',PAR.SOLVER)()
 
 
 
-class GaussNewton(getclass('extensions.workflow','Newton')):
+class FwiGaussNewton(getclass('extensions.workflow','FwiNewton')):
     """ Inversion with Gauss-Newton model updates
     """
 
@@ -22,6 +22,6 @@ class GaussNewton(getclass('extensions.workflow','Newton')):
     def __init__(self):
         """ Constructor
         """
-        super(GaussNewton,self).__init__()
+        super(FwiGaussNewton,self).__init__()
 
 
