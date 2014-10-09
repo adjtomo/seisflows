@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     # select path
     home = '/home/rmodrak/data/'
-    opts = ['Examples2d','Examples3d','FwiSourceEncoding','Interferometry','Heru']
+    opts = ['Examples2d','Examples3d','FwiSourceEncoding','Heru']
     print ''
     path = join(home,unix.select(opts))
     print ''
