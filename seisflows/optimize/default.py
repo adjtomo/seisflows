@@ -32,11 +32,11 @@ class default(object):
     """
 
     def __init__(cls):
-        """ Class constructor
+        """ Constructor
         """
         cls.iter = 0
 
-        # check user suppplied parameters
+        # check optimization parameters
         if 'SCHEME' not in PAR:
             setattr(PAR,'SCHEME','QuasiNewton')
 
@@ -49,6 +49,7 @@ class default(object):
         if 'LBFGSMAX' not in PAR:
             setattr(PAR,'LBFGSMAX',6)
 
+        # check line search parameters
         if 'SRCHTYPE' not in PAR:
             setattr(PAR,'SRCHTYPE','Backtrack')
 
@@ -88,7 +89,7 @@ class default(object):
             p_new = -g_new
 
         elif PAR.SCHEME=='ConjugateGradient':
-            # compute nonlinear conjugate gradient update
+            # compute NLCG udpate
             p_new = cls.NLCG.compute()
 
         elif PAR.SCHEME=='QuasiNewton':
@@ -167,7 +168,7 @@ class default(object):
 
 
     def search_status(cls):
-        """ Determine status of line search
+        """ Determines status of line search
         """
         unix.cd(cls.path)
         f0 = loadtxt('f_new')
@@ -196,7 +197,7 @@ class default(object):
             elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 cls.isbrak = 1
 
-        elif PAR.SRCHTYPE=='fixed_step':
+        elif PAR.SRCHTYPE=='FixedStep':
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 cls.isdone = 1
 
@@ -208,7 +209,7 @@ class default(object):
 
 
     def compute_step(cls):
-        """ Compute next trial step length
+        """ Computes next trial step length
         """
         unix.cd(cls.path)
         m0 = loadnpy('m_new')
@@ -218,6 +219,8 @@ class default(object):
 
         x = cls.step_lens()
         f = cls.func_vals()
+
+        GOLDENRATIO = 1.618034
 
         # compute trial step length
         if PAR.SRCHTYPE=='Backtrack':
@@ -229,9 +232,9 @@ class default(object):
             elif any(f[1:] < f[0]):
                 alpha = loadtxt('alpha')*GOLDENRATIO
             else:
-                alpha = -loadtxt('alpha')*GOLDENRATIO
+                alpha = loadtxt('alpha')*GOLDENRATIO**-1
 
-        elif PAR.SRCHTYPE=='fixed_step':
+        elif PAR.SRCHTYPE=='FixedStep':
             alpha = cls.step_ratio*(step+1)*PAR.STEPLEN
 
         # write trial model

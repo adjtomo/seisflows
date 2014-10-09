@@ -335,9 +335,12 @@ class specfem2d(object):
 
         # forward simulation
         self.forward()
+        unix.mkdir('traces/lcg')
         unix.mv(self.glob(),'traces/lcg')
+
         if hessian == 'Newton':
             self.preprocess.prepare_adjoint(unix.pwd(),output_type=3)
+
         elif hessian == 'GaussNewton':
             self.preprocess.prepare_adjoint(unix.pwd(),output_type=4)
 

@@ -51,11 +51,10 @@ class LCG:
     def initialize(self):
 
         unix.cd(self.path)
+        self.iter = 0
 
-        self.iter = 1
         r = self.load('g_new')
-        n = r.size
-        x = np.zeros(n)
+        x = np.zeros(r.size)
         y = self.precond(r)
         p = -y
 
@@ -68,11 +67,11 @@ class LCG:
         return p
 
 
-    def compute(self,ap):
+    def update(self,ap):
 
         unix.cd(self.path)
-
         self.iter += 1
+
         x = self.load('LCG/x')
         r = self.load('LCG/r')
         y = self.load('LCG/y')
@@ -86,11 +85,13 @@ class LCG:
 
         # check status
         if self.iter==self.itermax:
-            isdone = 1
+            isdone = True
         elif np.linalg.norm(r) > self.thresh:
-            isdone = 1
+            isdone = True
         else:
-            isdone = 0
+            isdone = False
+        if isdone:
+            return x,isdone
 
         # apply preconditioner
         y = self.precond(r)
@@ -112,10 +113,10 @@ class LCG:
 ### utility functions
 
 def loadtxt(filename):
-    return int(np.loadtxt(filename))
+    return (np.loadtxt(filename))
 
 def savetxt(filename,v):
-    np.savetxt(filename,[v],'%d')
+    np.savetxt(filename,[v],'%e')
 
 def load(filename):
     return np.load(filename)

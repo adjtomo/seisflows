@@ -226,21 +226,6 @@ class inversion(object):
         savenpy(dst,g)
 
 
-    def apply_hessian(self):
-        """ Computes the action of the Hessian on a given vector through
-          appropriate solver call
-        """
-        self.prepare_model(path=PATH.HESS, suffix='lcg')
-
-        # solver calls
-        system.run( solver.action_hess,
-            hosts='all',
-            path = PATH.HESS)
-
-        self.postprocess.process_kernels(
-            path=PATH.HESS)
-
-
     def finalize(self):
         """ Saves results from most recent model update iteration
         """
