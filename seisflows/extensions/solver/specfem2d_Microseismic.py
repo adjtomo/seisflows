@@ -14,7 +14,7 @@ PATH = ParameterObject('paths')
 system = getclass('system',PAR.SYSTEM)()
 
 
-class specfem2d_Interferometry(getclass('solver','specfem2d')):
+class specfem2d_Microseismic(getclass('solver','specfem2d')):
 
     # model parameters
     model_parameters = []
