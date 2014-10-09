@@ -6,7 +6,7 @@ import numpy as np
 from seisflows import seistools
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join
-from seisflows.tools.configure import getclass, getpath, ParameterObject
+from seisflows.tools.configtools import getclass, getpath, ParameterObject
 from seisflows.tools.iotools import loadbin, savebin
 
 

@@ -127,7 +127,7 @@ def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='sem.ascii'):
 def writesrc(PAR,h,path='.'):
     """ Writes source information to text file
     """
-    from seisflows.tools.configure import getpath
+    from seisflows.tools.configtools import getpath
 
     file = getpath('seistools')+'/'+'specfem2d/SOURCE'
     with open(file,'r') as f:
@@ -192,7 +192,7 @@ def writerec(nr,rx,rz):
 def writepar(vars,version='git-devel'):
     """ Writes parameters to text file
     """
-    from seisflows.tools.configure import getpath
+    from seisflows.tools.configtools import getpath
 
     PAR = Struct(vars)
 

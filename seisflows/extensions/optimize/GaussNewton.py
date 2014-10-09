@@ -4,7 +4,7 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import loadtxt, savetxt
-from seisflows.tools.configure import getclass, ParameterObject
+from seisflows.tools.configtools import getclass, ParameterObject
 from seisflows.optimize import lib
 
 PAR = ParameterObject('parameters')

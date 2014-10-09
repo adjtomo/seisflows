@@ -6,7 +6,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, join
-from seisflows.tools.configure import ParameterObject
+from seisflows.tools.configtools import ParameterObject
 
 PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')

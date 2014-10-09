@@ -1,5 +1,5 @@
 
-from seisflows.tools.configure import getclass, ParameterObject
+from seisflows.tools.configtools import getclass, ParameterObject
 
 PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')

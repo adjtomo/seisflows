@@ -172,7 +172,7 @@ def writesu(d,h,channel=[],prefix='SEM',suffix='.bin.adj'):
 def write_sources(PAR,h,path='.'):
     """ Writes source information to text file
     """
-    from seisflows.tools.configure import getpath
+    from seisflows.tools.configtools import getpath
 
     file = getpath('seistools')+'/'+'specfem2d/SOURCE'
     with open(file,'r') as f:
@@ -237,7 +237,7 @@ def write_receivers(nr,rx,rz):
 def write_parameters(PAR,version='git-devel'):
     """ Writes parameters to text file
     """
-    from seisflows.tools.configure import getpath
+    from seisflows.tools.configtools import getpath
 
     # read template
     file = getpath('seistools')+'/'+'specfem2d/par-'+version

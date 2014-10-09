@@ -3,7 +3,7 @@
 import sys
 sys.path.append('.')
 
-from seisflows.tools.configure import getclass, ParameterObject
+from seisflows.tools.configtools import getclass, ParameterObject
 
 mypath = sys.argv[1]
 myclass = sys.argv[2]

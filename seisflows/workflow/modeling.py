@@ -3,7 +3,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join
-from seisflows.tools.configure import getclass, ParameterObject
+from seisflows.tools.configtools import getclass, ParameterObject
 
 PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')

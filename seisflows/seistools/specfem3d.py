@@ -249,7 +249,7 @@ def writesu(d,h,channel=[],prefix='SEM',suffix='.adj',verbose=False):
 def write_sources(PAR,h,path='.'):
     """ Writes source information to text file
     """
-    from seisflows.tools.configure import getpath
+    from seisflows.tools.configtools import getpath
 
     file = getpath('seistools')+'/'+'specfem3d/SOURCE'
     with open(file,'r') as f:
@@ -292,7 +292,7 @@ def write_receivers(nr,rx,rz):
 def write_parameters(PAR):
     """ Writes parameters to text file
     """
-    from seisflows.tools.configure import getpath
+    from seisflows.tools.configtools import getpath
 
     PAR = Struct(PAR)
 

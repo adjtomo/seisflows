@@ -9,8 +9,8 @@ import time
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, join, saveobj
-from seisflows.tools.configure import getmodule, getpath
-from seisflows.tools.configure import ParameterObject
+from seisflows.tools.configtools import getmodule, getpath
+from seisflows.tools.configtools import ParameterObject
 
 
 PAR = ParameterObject('parameters')

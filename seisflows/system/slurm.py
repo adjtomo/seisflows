@@ -6,7 +6,7 @@ import subprocess
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, join, saveobj
-from seisflows.tools.configure import getmodule, getpath, ParameterObject
+from seisflows.tools.configtools import getmodule, getpath, ParameterObject
 
 PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')

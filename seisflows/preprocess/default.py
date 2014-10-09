@@ -3,7 +3,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import Struct
-from seisflows.tools.configure import getclass, ParameterObject
+from seisflows.tools.configtools import getclass, ParameterObject
 from seisflows.seistools import adjoint, misfit, sbandpass, smute
 
 PAR = ParameterObject('parameters')

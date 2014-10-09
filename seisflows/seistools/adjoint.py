@@ -40,3 +40,4 @@ def cdiff(wsyn,wobs,nt,dt):
     cdiff = _np.correlate(wobs,wsyn) - _np.correlate(wobs,wobs)
     wadj = _np.convolve(wobs,cdiff)
     return 1e-10 * wadj
+
