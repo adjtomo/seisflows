@@ -47,14 +47,10 @@ class default(object):
             hosts='head',
             path=input+'/'+'kernels' )
 
-        # construct mask
+        # write gradient
         g = solver.merge(solver.load('sum',type='kernel'))
         m = solver.merge(solver.load('../model',type='model'))
-        mask = m>0
-
-        # write gradient
-        g[mask] = g[mask]/m[mask]
-        g[np.invert(mask)] = 0.
+        g *= m
         solver.save(self.path+'/'+'gradient',solver.split(g))
 
         # apply smoothing
