@@ -1,5 +1,6 @@
 
 import glob as _glob
+import json as _json
 import os as _os
 import pickle as _pickle
 import sys as _sys
@@ -56,6 +57,16 @@ def saveobj(filename,obj):
     "Save object using pickle"
     with open(filename,'wb') as file:
         _pickle.dump(obj,file)
+
+def loadjson(filename):
+    "Load object using json"
+    with open(filename,'rb') as file:
+        return _json.load(file)
+
+def savejson(filename,obj):
+    "Save object using json"
+    with open(filename,'wb') as file:
+        _json.dump(obj, file, sort_keys=True, indent=4)
 
 def setdiff(list1,list2):
     set1 = set(list1)

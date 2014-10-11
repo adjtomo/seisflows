@@ -5,7 +5,7 @@ import sys
 import subprocess
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import abspath, join, saveobj
+from seisflows.tools.codetools import abspath, join, savejson, saveobj
 from seisflows.tools.configtools import getmodule, getpath, ParameterObject
 
 PAR = ParameterObject('parameters')
@@ -68,8 +68,8 @@ class slurm(object):
         unix.cd(PATH.SUBMIT)
 
         # store parameters
-        saveobj(join(PATH.SUBMIT,'parameters.p'),PAR.vars)
-        saveobj(join(PATH.SUBMIT,'paths.p'),PATH.vars)
+        savejson(join(PATH.SUBMIT,'parameters.p'),PAR.vars)
+        savejson(join(PATH.SUBMIT,'paths.p'),PATH.vars)
 
         args = ('sbatch '
           + '--job-name=%s ' %  PAR.TITLE

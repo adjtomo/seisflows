@@ -7,7 +7,7 @@ import sys as _sys
 import types as _types
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import Struct, abspath, join, loadobj, saveobj
+from seisflows.tools.codetools import Struct, abspath, join, loadjson, savejson
 
 
 class ParameterObject(object):
@@ -61,7 +61,7 @@ class ParameterObject(object):
 
         elif self.path:
             # load parameters from disk
-            mydict = loadobj(join(self.path,name+'.p'))
+            mydict = loadjson(join(self.path,name+'.p'))
 
             # register module
             module = _types.ModuleType(name)
