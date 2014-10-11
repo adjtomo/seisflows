@@ -48,8 +48,8 @@ class inversion(object):
         if 'END' not in PAR:
             raise Exception
 
-        if 'VERBOSE' not in PATH:
-            setattr(PATH,'VERBOSE',1)
+        if 'VERBOSE' not in PAR:
+            setattr(PAR,'VERBOSE',1)
 
 
         # check scratch paths
