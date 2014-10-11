@@ -34,9 +34,13 @@ class default(object):
     def __init__(cls):
         """ Constructor
         """
-        cls.iter = 0
-
         # check optimization parameters
+        if 'BEGIN' not in PAR:
+            raise Exception
+
+        if 'END' not in PAR:
+            raise Exception
+
         if 'SCHEME' not in PAR:
             setattr(PAR,'SCHEME','QuasiNewton')
 
@@ -48,6 +52,7 @@ class default(object):
 
         if 'LBFGSMAX' not in PAR:
             setattr(PAR,'LBFGSMAX',6)
+
 
         # check line search parameters
         if 'SRCHTYPE' not in PAR:
@@ -62,11 +67,13 @@ class default(object):
         if 'STEPMAX' not in PAR:
             setattr(PAR,'STEPMAX',0.)
 
+
         # declare paths
         cls.path = PATH.OPTIMIZE
         unix.mkdir(cls.path)
 
         cls.output = PATH.SUBMIT_DIR+'/'+'output.optim'
+
 
         # prepare algorithm machinery
         if PAR.SCHEME in ['ConjugateGradient']:
@@ -74,6 +81,9 @@ class default(object):
 
         elif PAR.SCHEME in ['QuasiNewton']:
             cls.LBFGS = lib.LBFGS(cls.path,PAR.LBFGSMAX,PAR.BEGIN)
+
+        cls.iter = PAR.BEGIN-1
+
 
 
     def compute_direction(cls):
@@ -133,7 +143,7 @@ class default(object):
         cls.isbest = 0
         cls.isbrak = 0
 
-        # compute m to p ratio
+        # compute length ratio
         mask = np.invert(m==0)
         len_m = np.median(m[mask])
         len_d = max(abs(p[mask]))
@@ -193,6 +203,7 @@ class default(object):
 
         elif PAR.SRCHTYPE=='BracketMinimum':
             if cls.isbrak:
+                cls.isbest = 1
                 cls.isdone = 1
             elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 cls.isbrak = 1
