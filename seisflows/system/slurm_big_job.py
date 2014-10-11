@@ -75,8 +75,8 @@ class slurm_big_job(object):
         if 'SYSTEM' not in PATH:
             setattr(PATH,'SYSTEM',join(PATH.GLOBAL,'system'))
 
-        if 'SUBMIT_DIR' not in PATH:
-            setattr(PATH,'SUBMIT_DIR',unix.pwd())
+        if 'SUBMIT' not in PATH:
+            setattr(PATH,'SUBMIT',unix.pwd())
 
         if 'SUBMIT_HOST' not in PATH:
             setattr(PATH,'SUBMIT_HOST',unix.hostname())
@@ -85,20 +85,20 @@ class slurm_big_job(object):
     def submit(self,workflow):
         """ Submits job
         """
-        unix.cd(PATH.SUBMIT_DIR)
+        unix.cd(PATH.SUBMIT)
 
         # store parameters
-        saveobj(join(PATH.SUBMIT_DIR,'parameters.p'),PAR.vars)
-        saveobj(join(PATH.SUBMIT_DIR,'paths.p'),PATH.vars)
+        saveobj(join(PATH.SUBMIT,'parameters.p'),PAR.vars)
+        saveobj(join(PATH.SUBMIT,'paths.p'),PATH.vars)
 
         subprocess.call('sbatch '
           + '--job-name=%s ' % PAR.TITLE
-          + '--output %s ' % (PATH.SUBMIT_DIR+'/'+'output.log')
+          + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
           + '--ntasks-per-node=%d ' % PAR.CPUS_PER_NODE
           + '--nodes=%d ' % 1
           + '--time=%d ' % PAR.WALLTIME
           + getpath('system') +'/'+ 'slurm/wrapper_sbatch '
-          + PATH.SUBMIT_DIR + ' '
+          + PATH.SUBMIT + ' '
           + getmodule(workflow),
           shell=1)
 
@@ -148,7 +148,7 @@ class slurm_big_job(object):
             + '--time=%d ' % PAR.STEPTIME
 
         args = getpath('system') +'/'+ 'slurm/wrapper_srun '         \
-            + PATH.SUBMIT_DIR + ' '                                  \
+            + PATH.SUBMIT + ' '                                  \
             + getmodule(task) + ' '                                  \
             + task.__name__ + ' '
 

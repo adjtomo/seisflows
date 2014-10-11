@@ -16,8 +16,6 @@ class GaussNewton(getclass('optimize','default')):
     """ Implements truncated Gauss-Newton algorithm
     """
 
-    ### Newton methods
-
     def __init__(cls):
         super(GaussNewton,cls).__init__()
 
@@ -30,9 +28,12 @@ class GaussNewton(getclass('optimize','default')):
         if 'LCGTHRESH' not in PAR:
             setattr(PAR,'LCGTHRESH',np.inf)
 
-        # prepare algorithm machinery
-        cls.LCG = lib.LCG(cls.path,PAR.LCGTHRESH,PAR.LCGMAX)
 
+    def setup(cls):
+        """ description goes here
+        """
+        super(Newton,cls).setup()
+        cls.LCG = lib.LCG(cls.path,PAR.LCGTHRESH,PAR.LCGMAX)
 
 
     def initialize_newton(cls):

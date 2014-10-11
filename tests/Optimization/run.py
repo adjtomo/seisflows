@@ -37,6 +37,7 @@ class run(getclass('workflow','inversion')):
     unix.cd(cls.path)
 
     cls.optimize = getclass('optimize','default')()
+    cls.optimize.setup()
 
     # prepare starting model
     unix.cd(cls.path)
@@ -70,9 +71,9 @@ class run(getclass('workflow','inversion')):
 
   def apply_hessian(cls):
     m = loadnpy('m_lcg')
-    if PAR.SCHEME == 'gn':
+    if PAR.SCHEME == 'GaussNewton':
       pass
-    elif PAR.SCHEME == 'tn':
+    elif PAR.SCHEME == 'Newton':
       g = problem.grad(m)
       savenpy('g_lcg',g)
 

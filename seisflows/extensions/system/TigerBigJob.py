@@ -55,15 +55,12 @@ class TigerBigJob(getclass('system','slurm_big_job')):
         if 'SYSTEM' not in PATH:
             setattr(PATH,'SYSTEM',join(PATH.GLOBAL,'system'))
 
-        if 'SUBMIT_DIR' not in PATH:
-            setattr(PATH,'SUBMIT_DIR',unix.pwd())
-
-        if 'SUBMIT_HOST' not in PATH:
-            setattr(PATH,'SUBMIT_HOST',unix.hostname())
+        if 'SUBMIT' not in PATH:
+            setattr(PATH,'SUBMIT',unix.pwd())
 
 
     def submit(self,*args,**kwargs):
         """Submits job
         """
-        unix.ln(PATH.GLOBAL,PATH.SUBMIT_DIR+'/'+'scratch')
+        unix.ln(PATH.GLOBAL,PATH.SUBMIT+'/'+'scratch')
         super(TigerBigJob,self).submit(*args,**kwargs)

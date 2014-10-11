@@ -24,10 +24,7 @@ if __name__ == '__main__':
     if 'LOCAL' not in PATH:
         raise Exception
 
-    if 'SUBMIT_DIR' not in PATH: 
-        raise Exception
-
-    if 'SUBMIT_HOST' not in PATH: 
+    if 'SUBMIT' not in PATH: 
         raise Exception
 
     if 'SYSTEM' not in PATH: 
@@ -38,15 +35,6 @@ if __name__ == '__main__':
 
     if 'OPTIMIZE' not in PATH:
         PATH.OPTIMIZE = join(PATH.GLOBAL,'optimize')
-
-    if 'PREPROCESS' not in PATH:
-        PATH.PREPROCESS = join(PATH.GLOBAL,'preprocess')
-
-    if 'POSTPROCESS' not in PATH:
-        PATH.POSTPROCESS = join(PATH.GLOBAL,'postprocess')
-
-    if 'SOLVER' not in PATH:
-        PATH.SOLVER = join(PATH.GLOBAL,'solver')
 
 
     # check import system by instantiating each class once

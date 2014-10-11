@@ -55,11 +55,8 @@ class serial(object):
         if 'SYSTEM' not in PATH:
             setattr(PATH,'SYSTEM',join(PATH.GLOBAL,'system'))
 
-        if 'SUBMIT_DIR' not in PATH:
-            setattr(PATH,'SUBMIT_DIR',unix.pwd())
-
-        if 'SUBMIT_HOST' not in PATH:
-            setattr(PATH,'SUBMIT_HOST',unix.hostname())
+        if 'SUBMIT' not in PATH:
+            setattr(PATH,'SUBMIT',unix.pwd())
 
 
     def submit(self,workflow):

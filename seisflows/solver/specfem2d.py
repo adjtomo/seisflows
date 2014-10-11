@@ -65,12 +65,23 @@ class specfem2d(object):
 
 
     def __init__(self):
-        """ Checks user supplied parameters
-        """
-        # check mesh parameters
-        if 'MESH' not in PATH:
-            setattr(PATH,'MESH',join(PATH.SOLVER,'mesh'))
 
+        # check scratch paths
+        if 'GLOBAL' not in PATH:
+            raise Exception
+
+        if 'LOCAL' not in PATH:
+            setattr(PATH,'LOCAL',None)
+
+        if PATH.LOCAL:
+            setattr(PATH,'SOLVER',join(PATH.LOCAL,'solver'))
+        else:
+            setattr(PATH,'SOLVER',join(PATH.GLOBAL,'solver'))
+
+        if 'MESH' not in PATH:
+            setattr(PATH,'MESH',join(PATH.GLOBAL,'mesh'))
+
+        # check mesh parameters
         if 'XMIN' not in PAR:
             raise Exception
 
@@ -495,11 +506,11 @@ class specfem2d(object):
                [path])
 
 
-    def smooth(self,path='',span=0):
+    def smooth(self,path='',tag='grad',span=0):
         "smooths SPECFEM2D kernels by convoling them with a Gaussian"
         from seisflows.tools.arraytools import meshsmooth
 
-        parts = self.load(path+'/'+'gradient')
+        parts = self.load(path+'/'+tag)
         if not span:
             return parts
 
@@ -515,8 +526,8 @@ class specfem2d(object):
         # perform smoothing
         for key in self.inversion_parameters:
             parts[key] = [meshsmooth(x,z,parts[key][0],span,nx,nz)]
-        unix.mv(path+'/'+'gradient',path+'/'+'gradient_nosmooth')
-        self.save(path+'/'+'gradient',parts)
+        unix.mv(path+'/'+tag,path+'/'+tag+'_nosmooth')
+        self.save(path+'/'+tag,parts)
 
 
 
@@ -591,7 +602,8 @@ class specfem2d(object):
 
     @property
     def path(self):
-        return join(PATH.SCRATCH,self.getshot())
+         return join(PATH.SOLVER,self.getshot())
+
 
     def getshot(self):
         return '%06d'%system.getnode()

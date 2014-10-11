@@ -22,7 +22,6 @@ class specfem3d_Thomsen(getclass('extensions.solver','specfem3d_legacy')):
 
     # model parameters included in inversion
     inversion_parameters = []
-    model_parameters += ['rho']
     inversion_parameters += ['vp']
     inversion_parameters += ['vs']
     inversion_parameters += ['epsilon']

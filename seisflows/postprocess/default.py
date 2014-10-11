@@ -22,56 +22,57 @@ class default(object):
     """
 
     def __init__(self):
-        """ Constructor
-        """
-        # check user supplied parameters
+
+        # check postprocessing settings
+        if 'PRECOND' not in PATH:
+            setattr(PATH,'PRECOND',None)
+
         if 'SMOOTH' not in PAR:
             setattr(PAR,'SMOOTH',0.)
 
         if 'SCALE' not in PAR:
             setattr(PAR,'SCALE',1.)
 
-        self.path = PATH.POSTPROCESS
-        unix.mkdir(self.path)
 
-
-    def process_kernels(self,input=None,suffix='new'):
+    def process_kernels(self,tag='grad',path=None,optim_path=None):
         """ Computes gradient and performs smoothing, preconditioning, and then
             scaling operations
         """
-        assert(exists(input))
-        unix.cd(input+'/'+'kernels')
+        assert(exists(path))
 
         # combine kernels
         system.run( solver.combine,
             hosts='head',
-            path=input+'/'+'kernels' )
+            path=path+'/'+'kernels' )
 
         # write gradient
+        unix.cd(path+'/'+'kernels')
         g = solver.merge(solver.load('sum',type='kernel'))
-        m = solver.merge(solver.load('../model',type='model'))
-        g *= m
-        solver.save(self.path+'/'+'gradient',solver.split(g))
+        g *= solver.merge(solver.load('../model',type='model'))
+        solver.save(path+'/'+tag,solver.split(g))
 
         # apply smoothing
         if PAR.SMOOTH > 0.:
             system.run( solver.smooth,
                 hosts='head',
-                path=self.path,
+                path=path,
                 span=PAR.SMOOTH )
 
         # apply preconditioner
         if PATH.PRECOND:
-            unix.cd(self.path)
-            v = solver.merge(solver.load('gradient'))
+            unix.cd(path)
+            g = solver.merge(solver.load(tag))
             p = solver.merge(solver.load(PATH.PRECOND))
-            unix.mv('gradient','gradient_noscale')
-            solver.save('gradient',solver.split(v/p))
+            unix.mv(tag,tag+'_noscale')
+            solver.save(tag,solver.split(g/p))
 
         # apply scaling
         if PAR.SCALE:
-            unix.cd(self.path)
-            g = solver.merge(solver.load('gradient',type='model'))
+            unix.cd(path)
+            g = solver.merge(solver.load(tag,type='model'))
             g *= PAR.SCALE
-            solver.save('gradient',solver.split(g))
+            solver.save(tag,solver.split(g))
+
+        if optim_path:
+            savenpy(optim_path,g)
 

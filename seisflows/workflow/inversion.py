@@ -17,9 +17,9 @@ solver = getclass('solver',PAR.SOLVER)()
 class inversion(object):
     """ Seismic inversion base class.
 
-      Computes iterative model updates using a variety of possible settings, and
-      provides a base class on top of which custom inversion strategies can be
-      implemented.
+      Computes iterative model updates using any of a variety of possible 
+      settings, and provides a base class on top of which custom inversion 
+      strategies can be implemented.
 
       To allow overriding, separate methods are provided for each step in the
       inversion, including 'evaluate_function', 'evaluate_gradient',
@@ -40,9 +40,6 @@ class inversion(object):
 
 
     def __init__(self):
-        """ Constructor
-        """
-        self.iter = 0
 
         # check user supplied parameters
         if 'BEGIN' not in PAR:
@@ -50,6 +47,42 @@ class inversion(object):
 
         if 'END' not in PAR:
             raise Exception
+
+        if 'VERBOSE' not in PATH:
+            setattr(PATH,'VERBOSE',1)
+
+
+        # check scratch paths
+        if 'GLOBAL' not in PATH:
+            raise Exception
+
+        if 'LOCAL' not in PATH:
+            setattr(PATH,'LOCAL',None)
+
+        if 'FUNC' not in PATH:
+            setattr(PATH,'FUNC',join(PATH.GLOBAL,'func'))
+
+        if 'GRAD' not in PATH:
+            setattr(PATH,'GRAD',join(PATH.GLOBAL,'grad'))
+
+        if 'HESS' not in PATH:
+            setattr(PATH,'HESS',join(PATH.GLOBAL,'hess'))
+
+
+        # check input paths
+        if 'DATA' not in PATH:
+            setattr(PATH,'DATA',None)
+
+        if not exists(PATH.DATA):
+            assert 'MODEL_TRUE' in PATH
+
+        if 'MODEL_INIT' not in PATH:
+            raise Exception
+
+
+        # check output paths
+        if 'OUTPUT' not in PATH:
+            setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
 
         if 'SAVEMODEL' not in PAR:
             setattr(PAR,'SAVEMODEL',1)
@@ -65,28 +98,6 @@ class inversion(object):
 
         if 'SAVERESIDUALS' not in PAR:
             setattr(PAR,'SAVERESIDUALS',0)
-
-
-        # check user supplied paths
-        if 'DATA' not in PATH:
-            setattr(PATH,'DATA','')
-
-        if not exists(PATH.DATA):
-            assert 'MODEL_TRUE' in PATH
-
-        if 'MODEL_INIT' not in PATH:
-            raise Exception
-
-       # add paths to global dictionary
-        PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
-        unix.mkdir(PATH.OUTPUT)
-
-        PATH.SCRATCH = join(PATH.GLOBAL,'scratch')
-        if PATH.LOCAL: PATH.SCRATCH = join(PATH.LOCAL,'scatch')
-
-        PATH.FUNC = join(PATH.SOLVER,'func')
-        PATH.GRAD = join(PATH.SOLVER,'grad')
-        PATH.HESS = join(PATH.SOLVER,'hess')
 
 
 
@@ -115,24 +126,31 @@ class inversion(object):
     def setup(self):
         """ Lays groundwork for inversion
         """
-        self.clean()
-
         self.optimize = getclass('optimize',PAR.OPTIMIZE)()
         self.postprocess = getclass('postprocess',PAR.POSTPROCESS)()
 
-        # prepare solver
-        isready = self.solver_status()
-        if not isready:
-            print 'Preparing solver...'
+        if PAR.BEGIN==1:
+            # prepare directory structure
+            unix.rm(PATH.GLOBAL)
+            unix.mkdir(PATH.GLOBAL)
+            unix.rm(PATH.OUTPUT)
+            unix.mkdir(PATH.OUTPUT)
+
+            # prepare solver
             system.run( solver.prepare_solver,
                 hosts='all' )
 
-        if PAR.BEGIN==1:
-            # prepare starting model
-            parts = solver.load(PATH.OUTPUT+'/'+'model_init')
+            # prepare optimization
+            self.optimize.setup()
+
             src = PATH.OUTPUT+'/'+'model_init'
             dst = PATH.OPTIMIZE+'/'+'m_new'
-            savenpy(dst,solver.merge(parts))
+            savenpy(dst,solver.merge(solver.load(src)))
+
+
+        elif PATH.LOCAL:
+            system.run( solver.prepare_solver,
+                hosts='all' )
 
 
     def initialize(self):
@@ -187,10 +205,10 @@ class inversion(object):
 
         if not PATH.LOCAL:
             if isbest and isdone:
-                unix.mv(PATH.SCRATCH,PATH.SCRATCH+'_best')
+                unix.mv(PATH.SOLVER,PATH.SOLVER+'_best')
             elif isbest:
-                unix.rm(PATH.SCRATCH+'_best')
-                unix.cp(PATH.SCRATCH,PATH.SCRATCH+'_best')
+                unix.rm(PATH.SOLVER+'_best')
+                unix.cp(PATH.SOLVER,PATH.SOLVER+'_best')
 
         return isdone
 
@@ -217,13 +235,9 @@ class inversion(object):
             path=PATH.GRAD,
             export_traces=divides(self.iter,PAR.SAVETRACES) )
 
-        self.postprocess.process_kernels(PATH.GRAD)
-
-        src = PATH.POSTPROCESS+'/'+'gradient'
-        g = solver.merge(solver.load(src))
-
-        dst = PATH.OPTIMIZE+'/'+'g_new'
-        savenpy(dst,g)
+        self.postprocess.process_kernels(
+            path=PATH.GRAD,
+            optim_path=PATH.OPTIMIZE+'/'+'g_new')
 
 
     def finalize(self):
@@ -245,16 +259,13 @@ class inversion(object):
             self.save_residuals()
 
         # clean up directories for next iteration
-        unix.rm(PATH.POSTPROCESS)
-        unix.mkdir(PATH.POSTPROCESS)
-
         if not PATH.LOCAL:
             unix.rm(PATH.GRAD)
             unix.mv(PATH.FUNC,PATH.GRAD)
             unix.mkdir(PATH.FUNC)
 
-            unix.rm(PATH.SCRATCH)
-            unix.mv(PATH.SCRATCH+'_best',PATH.SCRATCH)
+            unix.rm(PATH.SOLVER)
+            unix.mv(PATH.SOLVER+'_best',PATH.SOLVER)
 
         else:
             unix.rm(PATH.GRAD)
@@ -294,9 +305,7 @@ class inversion(object):
     def solver_status(self):
         """ Decides if solver prerequisites are in place
         """
-        if PAR.BEGIN == 1 and self.iter == 0:
-            isready = False
-        elif self.iter == 1:
+        if self.iter <= 1:
             isready = False
         elif PATH.LOCAL:
             isready = False
@@ -305,13 +314,6 @@ class inversion(object):
         return isready
 
 
-    def clean(self):
-        """ Cleans globally accessible path
-        """
-        if PAR.BEGIN==1:
-            unix.rm(PATH.GLOBAL)
-            unix.mkdir(PATH.GLOBAL)
-
     def save_model(self):
         src = PATH.OPTIMIZE+'/'+'m_new'
         dst = join(PATH.OUTPUT,'model_%04d'%self.iter)
@@ -319,7 +321,7 @@ class inversion(object):
 
 
     def save_gradient(self):
-        src = glob(join(PATH.POSTPROCESS,'gradient*'))
+        src = glob(join(PATH.POSTPROCESS,'grad*'))
         dst = join(PATH.OUTPUT,'gradient_%04d'%self.iter)
         unix.mv(src,dst)
 

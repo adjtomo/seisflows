@@ -58,30 +58,27 @@ class slurm(object):
         if 'SYSTEM' not in PATH:
             setattr(PATH,'SYSTEM',join(PATH.GLOBAL,'system'))
 
-        if 'SUBMIT_DIR' not in PATH:
-            setattr(PATH,'SUBMIT_DIR',unix.pwd())
-
-        if 'SUBMIT_HOST' not in PATH:
-            setattr(PATH,'SUBMIT_HOST',unix.hostname())
+        if 'SUBMIT' not in PATH:
+            setattr(PATH,'SUBMIT',unix.pwd())
 
 
     def submit(self,workflow):
         """Submits job
         """
-        unix.cd(PATH.SUBMIT_DIR)
+        unix.cd(PATH.SUBMIT)
 
         # store parameters
-        saveobj(join(PATH.SUBMIT_DIR,'parameters.p'),PAR.vars)
-        saveobj(join(PATH.SUBMIT_DIR,'paths.p'),PATH.vars)
+        saveobj(join(PATH.SUBMIT,'parameters.p'),PAR.vars)
+        saveobj(join(PATH.SUBMIT,'paths.p'),PATH.vars)
 
         args = ('sbatch '
           + '--job-name=%s ' %  PAR.TITLE
-          + '--output=%s ' % (PATH.SUBMIT_DIR+'/'+'output.log')
+          + '--output=%s ' % (PATH.SUBMIT+'/'+'output.log')
           + '--cpus-per-task=%d ' % PAR.NPROC
           + '--ntasks=%d ' % PAR.NTASK
           + '--time=%d ' % PAR.WALLTIME
           + getpath('system') +'/'+ 'slurm/wrapper_sbatch '
-          + PATH.SUBMIT_DIR + ' '
+          + PATH.SUBMIT + ' '
           + getmodule(workflow))
 
         subprocess.call(args, shell=1)
@@ -105,7 +102,7 @@ class slurm(object):
             args = ('srun '
               + '--wait=0 '
               + getpath('system') +'/'+ 'slurm/wrapper_srun '
-              + PATH.SUBMIT_DIR + ' '
+              + PATH.SUBMIT + ' '
               + getmodule(task) + ' '
               + name)
         elif hosts == 'head':
@@ -113,7 +110,7 @@ class slurm(object):
             args = ('srun '
               + '--wait=0 '
               + getpath('system') +'/'+ 'slurm/wrapper_srun_head '
-              + PATH.SUBMIT_DIR + ' '
+              + PATH.SUBMIT + ' '
               + getmodule(task) + ' '
               + name)
         else:

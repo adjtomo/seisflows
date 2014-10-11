@@ -71,8 +71,23 @@ class specfem3d(object):
       'vs':'beta_kernel'}
 
     def __init__(self):
-        """ Checks user supplied parameters
-        """
+
+        # check scratch paths
+        if 'GLOBAL' not in PATH:
+            raise Exception
+
+        if 'LOCAL' not in PATH:
+            setattr(PATH,'LOCAL',None)
+
+        if PATH.LOCAL:
+            setattr(PATH,'SOLVER',join(PATH.LOCAL,'solver'))
+        else:
+            setattr(PATH,'SOLVER',join(PATH.GLOBAL,'solver'))
+
+        if 'MESH' not in PATH:
+            setattr(PATH,'MESH',join(PATH.GLOBAL,'mesh'))
+
+
         # check mesh parameters
         if 'MESH' not in PATH:
             setattr(PATH,'MESH',join(PATH.SOLVER,'mesh'))
@@ -104,6 +119,7 @@ class specfem3d(object):
         if 'NZ' not in PAR:
             raise Exception
 
+
         # check time stepping parameters
         if 'NT' not in PAR:
             raise Exception
@@ -116,6 +132,7 @@ class specfem3d(object):
 
         if 'WAVELET' not in PAR:
             setattr(PAR,'WAVELET','ricker')
+
 
         # load preprocessing machinery
         if 'PREPROCESS' not in PAR:
@@ -498,13 +515,13 @@ class specfem3d(object):
         unix.cd(path)
 
 
-    def smooth(self,path='',span=0):
+    def smooth(self,path='',tag='grad',span=0):
         """ smooths SPECFEM3D kernels
         """
         unix.cd(self.path)
 
-        unix.mv(path+'/'+'gradient',path+'/'+'gradient_nosmooth')
-        unix.mkdir(path+'/'+'gradient')
+        unix.mv(path+'/'+tag,path+'/'+tag+'_nosmooth')
+        unix.mkdir(path+'/'+tag)
 
         # prepare list
         kernel_list = []
@@ -522,16 +539,16 @@ class specfem3d(object):
                 self.mpirun(
                   PATH.SOLVER_BINARIES+'/'+'xsmooth_vol_data '
                   + kernel_name + ' '
-                  + path + '/' + 'gradient_nosmooth/' + ' '
-                  + path + '/' + 'gradient/' + ' '
+                  + path + '/' + tag+'_nosmooth/' + ' '
+                  + path + '/' + tag+'/' + ' '
                   + str(span) + ' '
                   + str(span) + ' ' + '1')
             else:
-                src = glob(path+'/'+'gradient_nosmooth/*'+kernel_name+'.bin')
-                dst = path+'/'+'gradient/'
+                src = glob(path+'/'+tag+'_nosmooth/*'+kernel_name+'.bin')
+                dst = path+'/'+tag+'/'
                 unix.cp(src,dst)
 
-        unix.rename('_smooth','',glob(path+'/'+'gradient/*_smooth.bin'))
+        unix.rename('_smooth','',glob(path+'/'+tag+'/*_smooth.bin'))
         print ''
 
         unix.cd(path)
@@ -644,7 +661,7 @@ class specfem3d(object):
 
     @property
     def path(self):
-        return join(PATH.SCRATCH,self.getshot())
+        return join(PATH.SOLVER,self.getshot())
 
 
     def getshot(self):

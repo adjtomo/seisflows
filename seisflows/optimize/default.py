@@ -3,7 +3,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
-from seisflows.tools.codetools import loadtxt, savetxt
+from seisflows.tools.codetools import loadtxt, savetxt, join
 from seisflows.tools.configtools import ParameterObject
 from seisflows.optimize import lib
 
@@ -32,8 +32,18 @@ class default(object):
     """
 
     def __init__(cls):
-        """ Constructor
-        """
+
+        # check scratch paths
+        if 'SUBMIT' not in PATH:
+            raise Exception
+
+        if 'SUBMIT' not in PATH:
+            raise Exception
+
+        if 'OPTIMIZE' not in PATH:
+            setattr(PATH,'OPTIMIZE',join(PATH.GLOBAL,'optimize'))
+
+
         # check optimization parameters
         if 'BEGIN' not in PAR:
             raise Exception
@@ -68,12 +78,13 @@ class default(object):
             setattr(PAR,'STEPMAX',0.)
 
 
-        # declare paths
+    def setup(cls):
+        cls.iter = PAR.BEGIN-1
+
         cls.path = PATH.OPTIMIZE
         unix.mkdir(cls.path)
 
-        cls.output = PATH.SUBMIT_DIR+'/'+'output.optim'
-
+        cls.output = PATH.SUBMIT+'/'+'output.optim'
 
         # prepare algorithm machinery
         if PAR.SCHEME in ['ConjugateGradient']:
@@ -82,18 +93,16 @@ class default(object):
         elif PAR.SCHEME in ['QuasiNewton']:
             cls.LBFGS = lib.LBFGS(cls.path,PAR.LBFGSMAX,PAR.BEGIN)
 
-        cls.iter = PAR.BEGIN-1
-
-
 
     def compute_direction(cls):
         """ Computes model update direction from function and gradient values
         """
+        cls.iter += 1
+
         unix.cd(cls.path)
         m_new = loadnpy('m_new')
         f_new = loadtxt('f_new')
         g_new = loadnpy('g_new')
-        cls.iter += 1
 
         if PAR.SCHEME=='GradientDescent':
             p_new = -g_new

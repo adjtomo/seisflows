@@ -15,15 +15,24 @@ class default(object):
     """
 
     def __init__(self,reader=None,writer=None,channels=[]):
-        """ Class constructor
-        """
+
         if 'MISFIT' not in PAR:
             raise Exception
 
         if 'NORMALIZE' not in PAR:
             setattr(PAR,'NORMALIZE',True)
 
-        # check filter parameters
+        # check mute settings
+        if 'MUTE' not in PAR:
+            setattr(PAR,'MUTE',False)
+
+        if 'MUTESLOPE' not in PAR:
+            setattr(PAR,'MUTESLOPE',0.)
+
+        if 'MUTECONST' not in PAR:
+            setattr(PAR,'MUTECONST',0.)
+
+        # check filter settings
         if 'BANDPASS' not in PAR:
             setattr(PAR,'BANDPASS',False)
 
@@ -38,16 +47,6 @@ class default(object):
 
         if 'FREQHI' not in PAR:
             setattr(PAR,'FREQHI',0.)
-
-        # check mute parameters
-        if 'MUTE' not in PAR:
-            setattr(PAR,'MUTE',False)
-
-        if 'MUTESLOPE' not in PAR:
-            setattr(PAR,'MUTESLOPE',0.)
-
-        if 'MUTECONST' not in PAR:
-            setattr(PAR,'MUTECONST',0.)
 
         # define IO routines
         self.reader = reader

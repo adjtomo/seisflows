@@ -41,10 +41,8 @@ class FwiSourceEncoding(getclass('workflow','inversion')):
         else:
             PAR.NT_PADDED = PAR.NT
 
-        assert 'SourceEncoding' in PAR.SOLVER
-        assert PAR.PREPROCESS in ['default']
-
-        assert exists(PATH.DATA)
+        assert('SourceEncoding' in PAR.SOLVER)
+        assert(PAR.PREPROCESS in ['default'])
 
 
     def setup(self):
@@ -170,7 +168,7 @@ class FwiSourceEncoding(getclass('workflow','inversion')):
 
         # save results
         preprocess.save(
-            sum,h,prefix=PATH.SCRATCH+'/'+'000000/traces/'+tag,suffix='.bin')
+            sum,h,prefix=PATH.SOLVER+'/'+'000000/traces/'+tag,suffix='.bin')
 
 
     def combine_traces(self,sum,d,sinfo,rinfo):

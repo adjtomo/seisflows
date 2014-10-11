@@ -22,30 +22,21 @@ class migration(object):
     """
 
     def __init__(self):
-        """ Class constructor
-        """
-        self.iter = 0
 
-        # check user supplied parameters
-        if 'SAVEGRADIENT' not in PAR:
-            setattr(PAR,'SAVEGRADIENT',1)
+        # check scratch paths
+        if 'GLOBAL' not in PATH:
+            raise Exception
 
-        if 'SAVETRACES' not in PAR:
-            setattr(PAR,'SAVETRACES',0)
+        if 'LOCAL' not in PATH:
+            setattr(PATH,'LOCAL',None)
 
-        if 'SAVEKERNELS' not in PAR:
-            setattr(PAR,'SAVEKERNELS',0)
-
-        if 'BEGIN' not in PAR:
-            setattr(PAR,'BEGIN',1)
-
-        if 'END' not in PAR:
-            setattr(PAR,'END',1)
+        if 'IMAGE' not in PATH:
+            setattr(PATH,'IMAGE',join(PATH.GLOBAL,'image'))
 
 
-        # check user supplied paths
+        # check input paths
         if 'DATA' not in PATH:
-            setattr(PATH,'DATA','')
+            setattr(PATH,'DATA',None)
 
         if not exists(PATH.DATA):
             assert 'MODEL_TRUE' in PATH
@@ -54,20 +45,28 @@ class migration(object):
             raise Exception
 
 
-        # add paths to global dictionary
-        PATH.OUTPUT = join(PATH.SUBMIT_DIR,'output')
-        unix.mkdir(PATH.OUTPUT)
+        # check output paths
+        if 'OUTPUT' not in PATH:
+            setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
 
-        PATH.SCRATCH = join(PATH.GLOBAL,'scratch')
-        if PATH.LOCAL: PATH.SCRATCH = join(PATH.LOCAL,'scatch')
+        if 'SAVEIMAGE' not in PAR:
+            setattr(PAR,'SAVEIMAGE',1)
+
+        if 'SAVEKERNELS' not in PAR:
+            setattr(PAR,'SAVEKERNELS',0)
+
+        if 'SAVETRACES' not in PAR:
+            setattr(PAR,'SAVETRACES',0)
 
 
     def main(self):
         """ Migrates seismic data
         """
+        # prepare directory structure
         unix.rm(PATH.GLOBAL)
         unix.mkdir(PATH.GLOBAL)
-
+        unix.mkdir(PATH.IMAGE)
+        unix.mkdir(PATH.OUTPUT)
 
         # prepare solver
         print 'Preparing solver...'
@@ -78,25 +77,26 @@ class migration(object):
 
         system.run( solver.evaluate_func,
             hosts='all',
-            path=PATH.SOLVER )
-
+            path=PATH.IMAGE )
 
         # backproject data
         print 'Backprojecting data...'
         system.run( solver.evaluate_grad,
               hosts='all',
-              path=PATH.SOLVER,
+              path=PATH.IMAGE,
               export_traces=PAR.SAVETRACES )
-
 
         # process image
         self.postprocess = getclass('postprocess',PAR.POSTPROCESS)()
-        self.postprocess.process_kernels(input=PATH.SOLVER)
+
+        self.postprocess.process_kernels(
+            path=PATH.IMAGE,
+            tag='image')
 
 
         # save results
-        if PAR.SAVEGRADIENT:
-            self.save_gradient()
+        if PAR.SAVEIMAGE:
+            self.save_image()
 
         if PAR.SAVETRACES:
             self.save_traces()
@@ -112,21 +112,21 @@ class migration(object):
     def prepare_model(self):
         model = PATH.OUTPUT+'/'+'model_init'
         assert exists(model)
-        unix.cp(model,PATH.SOLVER+'/'+'model')
+        unix.cp(model,PATH.IMAGE+'/'+'model')
 
-    def save_gradient(self):
-        src = glob(join(PATH.POSTPROCESS,'gradient*'))
+    def save_image(self):
+        src = glob(join(PATH.IMAGE,'image*'))
         dst = join(PATH.OUTPUT)
         unix.mv(src,dst)
 
     def save_kernels(self):
-        src = join(PATH.SOLVER,'kernels')
+        src = join(PATH.IMAGE,'kernels')
         dst = join(PATH.OUTPUT)
         unix.mkdir(dst)
         unix.mv(src,dst)
 
     def save_traces(self):
-        src = join(PATH.SOLVER,'traces')
+        src = join(PATH.IMAGE,'traces')
         dst = join(PATH.OUTPUT)
         unix.mv(src,dst)
 

@@ -16,8 +16,6 @@ class Newton(getclass('optimize','default')):
     """ Implements truncated Newton algorithm
     """
 
-    ### Newton methods
-
     def __init__(cls):
         super(Newton,cls).__init__()
 
@@ -30,9 +28,10 @@ class Newton(getclass('optimize','default')):
         if 'LCGTHRESH' not in PAR:
             setattr(PAR,'LCGTHRESH',np.inf)
 
-        # prepare algorithm machinery
-        cls.LCG = lib.LCG(cls.path,PAR.LCGTHRESH,PAR.LCGMAX)
 
+    def setup(cls):
+        super(Newton,cls).setup()
+        cls.LCG = lib.LCG(cls.path,PAR.LCGTHRESH,PAR.LCGMAX)
 
 
     def initialize_newton(cls):
