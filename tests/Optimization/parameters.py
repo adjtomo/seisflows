@@ -1,13 +1,12 @@
 
 SYSTEM=None
 WORKFLOW=None
-OPTIMIZE='default'
+OPTIMIZE=None
 SOLVER=None
 PREPROCESS=None
 POSTPROCESS=None
 
-SCHEME='QuasiNewton' # GradientDescient, ConjugateGradient, QuasiNewton
-
+SCHEME='QuasiNewton' # optimization algorithm
 BEGIN=1              # first iteration
 END=50               # last iteration
 

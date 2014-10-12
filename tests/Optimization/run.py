@@ -7,13 +7,8 @@ from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import abspath, join, loadtxt, savetxt
 from seisflows.tools.configtools import getclass, ParameterObject
 
-import parameters
-import paths
-
 PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')
-
-system = getclass('system','serial')()
 
 from problems import rosenbrock as problem
 
@@ -25,14 +20,30 @@ class run(getclass('workflow','inversion')):
       Tests nonlinear optimization procedure using inexpensive test function.
   """
 
-  path = abspath('./scratch')
-
-
   def __init__(cls):
-    PATH.OPTIMIZE = cls.path
+
+    # check paths
+    if 'GLOBAL' not in PATH:
+       setattr(PATH,'GLOBAL',abspath('./scratch'))
+
+    if 'SUBMIT' not in PATH:
+       setattr(PATH,'SUBMIT',abspath('.'))
+
+    if 'OPTIMIZE' not in PATH:
+       setattr(PATH,'OPTIMIZE',PATH.GLOBAL)
+
+
+    # check parameters
+    if 'BEGIN' not in PAR:
+        raise Exception
+
+    if 'END' not in PAR:
+        raise Exception
 
 
   def setup(cls):
+    cls.path = PATH.GLOBAL
+
     unix.mkdir(cls.path)
     unix.cd(cls.path)
 

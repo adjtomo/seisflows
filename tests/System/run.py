@@ -3,9 +3,6 @@
 from seisflows.tools import unix
 from seisflows.tools.configtools import getclass, ParameterObject
 
-import parameters
-import paths
-
 PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')
 
@@ -16,13 +13,27 @@ class run:
   """ Tests system interface.
   """
 
+  def __init__(self):
+
+    # check parameters
+    if 'NTASK' not in PAR:
+        raise Exception
+
+    if 'NPROC' not in PAR:
+        setattr(PAR,'NPROC',1)
+
+    if PAR.VERBOSE != 0:
+        setattr(PAR,'VERBOSE',0)
+
+
   def main(self):
     system.run(self.hello, hosts='all')
     print ''
 
 
   def hello(self):
-    # send hello message from compute node
+    """ Sends hello message from compute node
+    """
     import time
     time.sleep(1)
     print 'Hello from', system.getnode()
