@@ -7,7 +7,7 @@ import sys as _sys
 import types as _types
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import Struct, abspath, join, loadjson, savejson
+from seisflows.tools.codetools import Struct, join, loadjson, savejson
 
 
 class ParameterObject(object):
@@ -24,7 +24,11 @@ class ParameterObject(object):
      so that if necessary they can be read back by the compute nodes.
     """
 
-    def __init__(self,name,path=None):
+    def __init__(self,name,path='.'):
+        try:
+            path = _os.path.abspath(path)
+        except:
+            path = None
         self.__dict__['path'] = path
         self.__dict__['locked'] = False
         self.__dict__['module'] = self.load(name)
@@ -59,8 +63,8 @@ class ParameterObject(object):
         if name in _sys.modules:
             return _sys.modules[name]
 
-        elif self.path:
-            # load parameters from disk
+        elif _os.path.isfile(self.path+'/'+name+'.p'):
+            # load parameters from json
             mydict = loadjson(join(self.path,name+'.p'))
 
             # register module
@@ -71,6 +75,15 @@ class ParameterObject(object):
             for key,val in mydict.items():
                 if key[0] != '_':
                     setattr(module,key, val)
+            return module
+
+        elif _os.path.isfile(self.path+'/'+name+'.py'):
+            # adjust python path
+            if self.path not in map(_os.path.abspath,_sys.path):
+                _sys.path.append(self.path)
+
+            # import module
+            module =  __import__(name)
             return module
 
         else:

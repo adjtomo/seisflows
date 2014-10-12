@@ -5,12 +5,8 @@ import sys
 from seisflows.tools.codetools import join
 from seisflows.tools.configtools import getclass, ParameterObject
 
-sys.path.append('.')
-import parameters
-import paths
-
-PAR = ParameterObject('parameters')
-PATH = ParameterObject('paths')
+PAR = ParameterObject('parameters','.')
+PATH = ParameterObject('paths','.')
 
 system = getclass('system',PAR.SYSTEM)()
 
