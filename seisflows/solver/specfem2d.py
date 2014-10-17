@@ -7,12 +7,10 @@ from scipy.interpolate import griddata
 from seisflows import seistools
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join, setdiff, Struct
-from seisflows.tools.configtools import getclass, getpath, GlobalStruct
+from seisflows.tools.configtools import loadclass, findpath, ParameterObj, ConfigObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
-
-system = getclass('system',PAR.SYSTEM)()
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 class specfem2d(object):
@@ -63,8 +61,23 @@ class specfem2d(object):
     channels = []
     channels += ['y']
 
+    # input/output
+    reader = staticmethod(seistools.specfem2d.readsu)
+    writer = staticmethod(seistools.specfem2d.writesu)
 
-    def __init__(self):
+    mesher_binary = 'bin/xmeshfem2D'
+    solver_binary = 'bin/xspecfem2D'
+
+    glob = lambda _ : glob('OUTPUT_FILES/U?_file_single.bin')
+
+
+    def check(self):
+
+        global preprocess
+        import preprocess
+
+        global system
+        import system
 
         # check scratch paths
         if 'GLOBAL' not in PATH:
@@ -114,15 +127,6 @@ class specfem2d(object):
         if 'WAVELET' not in PAR:
             setattr(PAR,'WAVELET','ricker')
 
-        # load preprocessing machinery
-        if 'PREPROCESS' not in PAR:
-            setattr(PAR,'PREPROCESS','default')
-
-        self.preprocess = getclass('preprocess',PAR.PREPROCESS)(
-            channels=self.channels,
-            reader=seistools.specfem2d.readsu,
-            writer=seistools.specfem2d.writesu)
-
 
     def prepare_solver(self,inversion=True,**kwargs):
         """ Sets up directory from which to run solver
@@ -140,7 +144,6 @@ class specfem2d(object):
         unix.mkdir('bin')
         unix.mkdir('DATA')
         unix.mkdir('OUTPUT_FILES')
-
         unix.mkdir('traces/obs')
         unix.mkdir('traces/syn')
         unix.mkdir('traces/adj')
@@ -202,10 +205,9 @@ class specfem2d(object):
 
         # initialize adjoint traces
         zeros = np.zeros((PAR.NT,PAR.NREC))
-        _,h = self.preprocess.load('traces/obs')
+        _,h = preprocess.load('traces/obs')
         for channel in ['x','y','z']:
-            self.preprocess.writer(zeros,h,
-                channel=channel,prefix='traces/adj')
+            self.writer(zeros,h,channel=channel,prefix='traces/adj')
 
 
     def prepare_model(self,model_path='',model_type='',model_name=''):
@@ -315,7 +317,7 @@ class specfem2d(object):
         # forward simulation
         self.forward()
         unix.mv(self.glob(),'traces/syn')
-        self.preprocess.prepare_adjoint(unix.pwd(),output_type=2)
+        preprocess.prepare_adjoint(unix.pwd(),output_type=2)
 
         # save results
         self.export_residuals(path)
@@ -351,10 +353,10 @@ class specfem2d(object):
         unix.mv(self.glob(),'traces/lcg')
 
         if hessian == 'Newton':
-            self.preprocess.prepare_adjoint(unix.pwd(),output_type=3)
+            preprocess.prepare_adjoint(unix.pwd(),output_type=3)
 
         elif hessian == 'GaussNewton':
-            self.preprocess.prepare_adjoint(unix.pwd(),output_type=4)
+            preprocess.prepare_adjoint(unix.pwd(),output_type=4)
 
         # adjoint simulation
         self.adjoint()
@@ -502,7 +504,7 @@ class specfem2d(object):
     def combine(self,path=''):
         "combines SPECFEM2D kernels"
         subprocess.call(\
-               [getpath('seistools')+'/'+'specfem2d/combine.exe'] + \
+               [findpath('seistools')+'/'+'specfem2d/combine.exe'] + \
                [str(len(unix.ls(path)))] + \
                [path])
 
@@ -550,7 +552,7 @@ class specfem2d(object):
         seistools.specfem2d.setpar(key,val)
 
         # write receiver file
-        _,h = self.preprocess.load(prefix)
+        _,h = preprocess.load(prefix)
         seistools.specfem2d.write_receivers(h.nr,h.rx,h.rz)
 
 
@@ -558,7 +560,7 @@ class specfem2d(object):
         "Write sources file"
         unix.cd(self.path)
 
-        _,h = self.preprocess.load(prefix='traces/obs')
+        _,h = preprocess.load(prefix='traces/obs')
         seistools.specfem2d.write_sources(vars(PAR),h)
 
 
@@ -608,6 +610,3 @@ class specfem2d(object):
     def getshot(self):
         return '%06d'%system.getnode()
 
-    mesher_binary = 'bin/xmeshfem2D'
-    solver_binary = 'bin/xspecfem2D'
-    glob = lambda _ : glob('OUTPUT_FILES/U?_file_single.bin')

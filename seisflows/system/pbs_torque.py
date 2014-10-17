@@ -6,10 +6,10 @@ import subprocess
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, join, saveobj
-from seisflows.tools.configtools import getmodule, getpath, GlobalStruct
+from seisflows.tools.configtools import getmodule, getpath, ParameterObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('parameters')
+PATH = ParameterObj('paths')
 
 
 class pbs_torque(object):

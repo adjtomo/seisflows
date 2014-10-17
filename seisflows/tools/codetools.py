@@ -1,11 +1,11 @@
 
 import glob as _glob
-import json as _json
-import os as _os
-import pickle as _pickle
-import sys as _sys
+import json
+import os
+import pickle
+import sys
 
-import numpy as _np
+import numpy as np
 
 
 class Struct(dict):
@@ -15,7 +15,7 @@ class Struct(dict):
 
 
 def abspath(*args,**kwargs):
-    return _os.path.abspath(*args,**kwargs)
+    return os.path.abspath(*args,**kwargs)
 
 def divides(i,j):
     "Returns true if j divides i"
@@ -31,7 +31,7 @@ def exists(name):
     if not name:
         return False
     else:
-        return _os.path.exists(name)
+        return os.path.exists(name)
 
 def glob(*args):
     "Wrapper for glob.glob"
@@ -45,27 +45,27 @@ def irange(*args):
 
 def join(*args):
     "Wrapper for os.path.join"
-    return _os.path.join(*args)
+    return os.path.join(*args)
 
 def loadobj(filename):
     "Load object using pickle"
     with open(filename,'rb') as file:
-        return _pickle.load(file)
+        return pickle.load(file)
 
 def saveobj(filename,obj):
     "Save object using pickle"
     with open(filename,'wb') as file:
-        _pickle.dump(obj,file)
+        pickle.dump(obj,file)
 
 def loadjson(filename):
     "Load object using json"
     with open(filename,'rb') as file:
-        return _json.load(file)
+        return json.load(file)
 
 def savejson(filename,obj):
     "Save object using json"
     with open(filename,'wb') as file:
-        _json.dump(obj, file, sort_keys=True, indent=4)
+        json.dump(obj, file, sort_keys=True, indent=4)
 
 def setdiff(list1,list2):
     set1 = set(list1)
@@ -81,7 +81,7 @@ def unique(mylist):
 #
 
 def loadtxt(filename):
-    return float(_np.loadtxt(filename))
+    return float(np.loadtxt(filename))
 
 def savetxt(filename,v):
-    _np.savetxt(filename,[v],'%11.6e')
+    np.savetxt(filename,[v],'%11.6e')

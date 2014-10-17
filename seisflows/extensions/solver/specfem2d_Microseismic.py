@@ -6,15 +6,15 @@ from scipy.interpolate import griddata
 from seisflows import seistools
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join, setdiff, Struct
-from seisflows.tools.configtools import getclass, getpath, GlobalStruct
+from seisflows.tools.configtools import loadclass, getpath, ParameterObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('parameters')
+PATH = ParameterObj('paths')
 
-system = getclass('system',PAR.SYSTEM)()
+system = loadclass('system',PAR.SYSTEM)()
 
 
-class specfem2d_Microseismic(getclass('solver','specfem2d')):
+class specfem2d_Microseismic(loadclass('solver','specfem2d')):
 
     # model parameters
     model_parameters = []

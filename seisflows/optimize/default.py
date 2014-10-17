@@ -4,11 +4,11 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import loadtxt, savetxt, join
-from seisflows.tools.configtools import GlobalStruct
+from seisflows.tools.configtools import ParameterObj
 from seisflows.optimize import lib
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 
@@ -31,7 +31,7 @@ class default(object):
      the cls.path directory.
     """
 
-    def __init__(cls):
+    def check(cls):
 
         # check scratch paths
         if 'SUBMIT' not in PATH:

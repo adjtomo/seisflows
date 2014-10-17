@@ -4,17 +4,17 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import divides, exists, glob, irange, join
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import loadclass, ParameterObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('parameters')
+PATH = ParameterObj('paths')
 
-system = getclass('system',PAR.SYSTEM)()
-solver = getclass('solver',PAR.SOLVER)()
+system = loadclass('system',PAR.SYSTEM)()
+solver = loadclass('solver',PAR.SOLVER)()
 
 
 
-class HeruModelUpdate(getclass('workflow','inversion')):
+class HeruModelUpdate(loadclass('workflow','inversion')):
     """ Given search direction, computes model update
     """
 

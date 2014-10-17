@@ -5,18 +5,18 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import Struct, exists
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import loadclass, ParameterObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('parameters')
+PATH = ParameterObj('paths')
 
-system = getclass('system',PAR.SYSTEM)()
-solver = getclass('solver',PAR.SOLVER)()
+system = loadclass('system',PAR.SYSTEM)()
+solver = loadclass('solver',PAR.SOLVER)()
 preprocess = solver.preprocess
 
 
 
-class FwiSourceEncoding(getclass('workflow','inversion')):
+class FwiSourceEncoding(loadclass('workflow','inversion')):
     """ Source encoding subclass
     """
 

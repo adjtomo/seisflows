@@ -6,10 +6,10 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, join
-from seisflows.tools.configtools import GlobalStruct
+from seisflows.tools.configtools import ParameterObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 class serial(object):
@@ -18,18 +18,25 @@ class serial(object):
       Provides an interface through which to submit jobs, run tasks in serial
       or parallel, and perform other system functions.
 
-      One of several system interface classes included in SEISFLOWS in order
-      to provide a consistent interface across different computer systems.
-      Each class hides the details of submitting and running and jobs on one
-      particular system.
+      One of several system interface classes that together provide a consistent
+      interface across different computer environemnts. Each class implements a
+      standard sets of methods, hiding the details associated with, for example,
+      a particular filesystem or job scheduler.
     """
 
 
-    def __init__(self):
+    def check(self):
         """ Class constructor
         """
 
-        # check user supplied parameters
+        if 'TITLE' not in PAR:
+            setattr(PAR,'TITLE',unix.basename(abspath('.')))
+
+        if 'SUBTITLE' not in PAR:
+            setattr(PAR,'SUBTITLE',unix.basename(abspath('..')))
+
+
+        # check parameters
         if 'NTASK' not in PAR:
             setattr(PAR,'NTASK',1)
 
@@ -39,13 +46,8 @@ class serial(object):
         if 'VERBOSE' not in PAR:
             setattr(PAR,'VERBOSE',1)
 
-        if 'TITLE' not in PAR:
-            setattr(PAR,'TITLE','')
 
-        if 'SUBTITLE' not in PAR:
-            setattr(PAR,'SUBTITLE','')
-
-        # check user supplied paths
+        # check paths
         if 'GLOBAL' not in PATH:
             setattr(PATH,'GLOBAL',join(abspath('.'),'scratch'))
 

@@ -1,17 +1,23 @@
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, join
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import loadclass, ParameterObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
-class TigerBigJob(getclass('system','slurm_big_job')):
+class TigerBigJob(loadclass('system','slurm_big_job')):
 
-    def __init__(self):
+    def check(self):
         """ Class constructor
         """
+
+        if 'TITLE' not in PAR:
+            setattr(PAR,'TITLE',unix.basename(abspath('.')))
+
+        if 'SUBTITLE' not in PAR:
+            setattr(PAR,'SUBTITLE',unix.basename(abspath('..')))
 
         # check parameters
         if 'NTASK' not in PAR:
@@ -29,20 +35,14 @@ class TigerBigJob(getclass('system','slurm_big_job')):
         if 'STEPTIME' not in PAR:
             setattr(PAR,'STEPTIME',30.)
 
-        if 'VERBOSE' not in PAR:
-            setattr(PAR,'VERBOSE',1)
-
-        if 'TITLE' not in PAR:
-            setattr(PAR,'TITLE',unix.basename(abspath('.')))
-
-        if 'SUBTITLE' not in PAR:
-            setattr(PAR,'SUBTITLE',unix.basename(abspath('..')))
+        if 'SLEEPTIME' not in PAR:
+            PAR.SLEEPTIME = 1.
 
         if 'RETRY' not in PAR:
             PAR.RETRY = False
 
-        if 'SLEEP' not in PAR:
-            PAR.SLEEP = 30.
+        if 'VERBOSE' not in PAR:
+            setattr(PAR,'VERBOSE',1)
 
         # check paths
         if 'GLOBAL' not in PATH:
@@ -57,6 +57,9 @@ class TigerBigJob(getclass('system','slurm_big_job')):
 
         if 'SUBMIT' not in PATH:
             setattr(PATH,'SUBMIT',unix.pwd())
+
+        if 'OUTPUT' not in PATH:
+            setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
 
 
     def submit(self,*args,**kwargs):

@@ -2,15 +2,15 @@
 import subprocess
 
 from seisflows.tools import unix
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import loadclass, ParameterObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('parameters')
+PATH = ParameterObj('paths')
 
-system = getclass('system',PAR.SYSTEM)()
+system = loadclass('system',PAR.SYSTEM)()
 
 
-class specfem3d_legacy(getclass('solver','specfem3d')):
+class specfem3d_legacy(loadclass('solver','specfem3d')):
 
     def mpirun(self,script,outfile='/dev/null'):
         """ Wrapper for mpirun

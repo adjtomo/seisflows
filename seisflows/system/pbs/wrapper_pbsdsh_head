@@ -10,19 +10,19 @@ myfunc = sys.argv[3]
 os.chdir(mypath)
 
 from seisflows.tools.codetools import loadobj
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import loadclass, ParameterObj
 
-PAR = GlobalStruct('parameters',mypath)
-PATH = GlobalStruct('paths',mypath)
+PAR = ParameterObj('parameters',mypath)
+PATH = ParameterObj('paths',mypath)
 
-system = getclass('system',PAR.SYSTEM)()
+system = loadclass('system',PAR.SYSTEM)()
 
 
 if __name__ == '__main__':
     if system.getnode==0:
 
         # load function
-        obj = getclass(myobj)()
+        obj = loadclass(myobj)()
         func = getattr(obj,myfunc)
 
         # load function arguments

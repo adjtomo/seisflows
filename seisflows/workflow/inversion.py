@@ -4,14 +4,10 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import divides, exists, glob, irange, join
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import ParameterObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
-
-system = getclass('system',PAR.SYSTEM)()
-solver = getclass('solver',PAR.SOLVER)()
-
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 class inversion(object):
@@ -39,7 +35,23 @@ class inversion(object):
     """
 
 
-    def __init__(self):
+    def check(self):
+        """ Checks parameters
+        """
+
+        # load dependencies
+        global optimize
+        import optimize
+
+        global postprocess
+        import postprocess
+
+        global solver
+        import solver
+
+        global system
+        import system
+
 
         # check user supplied parameters
         if 'BEGIN' not in PAR:
@@ -69,7 +81,7 @@ class inversion(object):
             setattr(PATH,'HESS',join(PATH.GLOBAL,'hess'))
 
 
-        # check input paths
+        # check input settings
         if 'DATA' not in PATH:
             setattr(PATH,'DATA',None)
 
@@ -80,7 +92,7 @@ class inversion(object):
             raise Exception
 
 
-        # check output paths
+        # check output settings
         if 'OUTPUT' not in PATH:
             setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
 
@@ -98,7 +110,6 @@ class inversion(object):
 
         if 'SAVERESIDUALS' not in PAR:
             setattr(PAR,'SAVERESIDUALS',0)
-
 
 
     def main(self):
@@ -126,22 +137,17 @@ class inversion(object):
     def setup(self):
         """ Lays groundwork for inversion
         """
-        self.optimize = getclass('optimize',PAR.OPTIMIZE)()
-        self.postprocess = getclass('postprocess',PAR.POSTPROCESS)()
-
         if PAR.BEGIN==1:
             # prepare directory structure
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
-            unix.rm(PATH.OUTPUT)
-            unix.mkdir(PATH.OUTPUT)
 
             # prepare solver
-            system.run( solver.prepare_solver,
+            system.run( 'solver','prepare_solver',
                 hosts='all' )
 
             # prepare optimization
-            self.optimize.setup()
+            optimize.setup()
 
             src = PATH.OUTPUT+'/'+'model_init'
             dst = PATH.OPTIMIZE+'/'+'m_new'
@@ -149,7 +155,7 @@ class inversion(object):
 
 
         elif PATH.LOCAL:
-            system.run( solver.prepare_solver,
+            system.run( 'solver','prepare_solver',
                 hosts='all' )
 
 
@@ -163,7 +169,7 @@ class inversion(object):
             self.prepare_model(path=PATH.GRAD, suffix='new')
 
             # forward simulation
-            system.run( solver.evaluate_func,
+            system.run( 'solver','evaluate_func',
                 hosts='all',
                 path=PATH.GRAD )
 
@@ -174,22 +180,22 @@ class inversion(object):
         """ Computes search direction
         """
         self.evaluate_gradient()
-        self.optimize.compute_direction()
+        optimize.compute_direction()
 
 
     def line_search(self):
         """ Conducts line search in given search direction
         """
-        self.optimize.initialize_search()
+        optimize.initialize_search()
 
         for self.step in irange(1,PAR.SRCHMAX):
             isdone = self.search_status()
 
             if isdone==1:
-                self.optimize.finalize_search()
+                optimize.finalize_search()
                 break
             elif isdone==0:
-                self.optimize.compute_step()
+                optimize.compute_step()
                 continue
             elif isdone==-1:
                 self.isdone = -1
@@ -201,7 +207,7 @@ class inversion(object):
         """
         if PAR.VERBOSE: print " trial step", self.step
         self.evaluate_function()
-        isdone, isbest = self.optimize.search_status()
+        isdone, isbest = optimize.search_status()
 
         if not PATH.LOCAL:
             if isbest and isdone:
@@ -219,9 +225,9 @@ class inversion(object):
         self.prepare_model(path=PATH.FUNC, suffix='try')
 
         # forward simulation
-        system.run( solver.evaluate_func,
-              hosts='all',
-              path=PATH.FUNC )
+        system.run( 'solver','evaluate_func',
+            hosts='all',
+            path=PATH.FUNC )
 
         self.write_misfit(path=PATH.FUNC, suffix='try')
 
@@ -230,12 +236,13 @@ class inversion(object):
         """ Calls adjoint solver and runs process_kernels
         """
         # adjoint simulation
-        system.run( solver.evaluate_grad,
+        system.run( 'solver','evaluate_grad',
             hosts='all',
             path=PATH.GRAD,
             export_traces=divides(self.iter,PAR.SAVETRACES) )
 
-        self.postprocess.process_kernels(
+        system.run( 'postprocess','process_kernels',
+            hosts='head',
             path=PATH.GRAD,
             optim_path=PATH.OPTIMIZE+'/'+'g_new')
 

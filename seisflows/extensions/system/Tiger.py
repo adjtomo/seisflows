@@ -1,17 +1,26 @@
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, exists, join
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import loadclass, ParameterObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
-class Tiger(getclass('system','slurm')):
+class Tiger(loadclass('system','slurm')):
 
-    def __init__(self):
+    def check(self):
         """ Class constructor
         """
+
+        if 'TITLE' not in PAR:
+            setattr(PAR,'TITLE',unix.basename(abspath('.')))
+
+        if 'SUBTITLE' not in PAR:
+            setattr(PAR,'SUBTITLE',unix.basename(abspath('..')))
+
+        if 'UID' not in PATH:
+            setattr(PATH,'UID',join(PAR.SUBTITLE,PAR.TITLE))
 
         # check parameters
         if 'NTASK' not in PAR:
@@ -26,19 +35,9 @@ class Tiger(getclass('system','slurm')):
         if 'VERBOSE' not in PAR:
             setattr(PAR,'VERBOSE',1)
 
-        if 'TITLE' not in PAR:
-            setattr(PAR,'TITLE',unix.basename(abspath('.')))
-
-        if 'SUBTITLE' not in PAR:
-            setattr(PAR,'SUBTITLE',unix.basename(abspath('..')))
-
         # check paths
-        if 'APPEND_TO_PATH' not in PATH:
-            setattr(PATH,'APPEND_TO_PATH',join(PAR.SUBTITLE,PAR.TITLE))
-
         if 'GLOBAL' not in PATH:
-            setattr(PATH,'GLOBAL',join('/scratch/gpfs',unix.whoami(), \
-                PATH.APPEND_TO_PATH))
+            setattr(PATH,'GLOBAL',join('/scratch/gpfs',unix.whoami(),PATH.UID))
 
         if 'LOCAL' not in PATH:
             setattr(PATH,'LOCAL','')

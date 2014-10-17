@@ -1,20 +1,21 @@
 
 import os
 import math
-import pickle
-import socket
 import sys
 import subprocess
 import time
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import abspath, join, saveobj, saveobj
-from seisflows.tools.configtools import getmodule, getpath
-from seisflows.tools.configtools import GlobalStruct
+from seisflows.tools.codetools import abspath, join, saveobj
+from seisflows.tools.configtools import ConfigObj, ParameterObj, findpath
 
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
+OBJ = ConfigObj('SeisflowsObjects')
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+save_parameters = PAR.save
+save_paths = PATH.save
+save_objects = OBJ.save
 
 
 class slurm_big_job(object):
@@ -23,16 +24,22 @@ class slurm_big_job(object):
       Provides an interface through which to submit jobs, run tasks in serial
       or parallel, and perform other system functions.
 
-      One of several system interface classes included in SEISFLOWS to provide
-      a consistent interface across different computer environemnts. Each class
-      implements a standard sets of methods, hiding the details of submitting and
-      running and jobs in a particular environment.
+      One of several system interface classes that together provide a consistent
+      interface across different computer environemnts. Each class implements a
+      standard sets of methods, hiding the details associated with, for example,
+      a particular filesystem or job scheduler.
     """
 
 
-    def __init__(self):
+    def check(self):
         """ Class constructor
         """
+
+        if 'TITLE' not in PAR:
+            setattr(PAR,'TITLE',unix.basename(abspath('.')))
+
+        if 'SUBTITLE' not in PAR:
+            setattr(PAR,'SUBTITLE',unix.basename(abspath('..')))
 
         # check parameters
         if 'NTASK' not in PAR:
@@ -50,20 +57,14 @@ class slurm_big_job(object):
         if 'STEPTIME' not in PAR:
             setattr(PAR,'STEPTIME',30.)
 
-        if 'VERBOSE' not in PAR:
-            setattr(PAR,'VERBOSE',1)
-
-        if 'TITLE' not in PAR:
-            setattr(PAR,'TITLE',unix.basename(abspath('.')))
-
-        if 'SUBTITLE' not in PAR:
-            setattr(PAR,'SUBTITLE',unix.basename(abspath('..')))
+        if 'SLEEPTIME' not in PAR:
+            PAR.SLEEPTIME = 1.
 
         if 'RETRY' not in PAR:
             PAR.RETRY = False
 
-        if 'SLEEP' not in PAR:
-            PAR.SLEEP = 30.
+        if 'VERBOSE' not in PAR:
+            setattr(PAR,'VERBOSE',1)
 
         # check paths
         if 'GLOBAL' not in PATH:
@@ -78,67 +79,73 @@ class slurm_big_job(object):
         if 'SUBMIT' not in PATH:
             setattr(PATH,'SUBMIT',unix.pwd())
 
-        if 'SUBMIT_HOST' not in PATH:
-            setattr(PATH,'SUBMIT_HOST',unix.hostname())
+        if 'OUTPUT' not in PATH:
+            setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
 
 
     def submit(self,workflow):
         """ Submits job
         """
-        unix.cd(PATH.SUBMIT)
+        unix.mkdir(PATH.OUTPUT)
+        unix.cd(PATH.OUTPUT)
 
-        # store parameters
-        saveobj(join(PATH.SUBMIT,'parameters.p'),PAR.vars)
-        saveobj(join(PATH.SUBMIT,'paths.p'),PATH.vars)
+        # save current state
+        save_parameters('SeisflowsParameters.json')
+        save_paths('SeisflowsPaths.json')
+        save_objects('SeisflowsObjects')
 
-        subprocess.call('sbatch '
+        args = ('sbatch '
           + '--job-name=%s ' % PAR.TITLE
           + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
           + '--ntasks-per-node=%d ' % PAR.CPUS_PER_NODE
           + '--nodes=%d ' % 1
           + '--time=%d ' % PAR.WALLTIME
-          + getpath('system') +'/'+ 'slurm/wrapper_sbatch '
-          + PATH.SUBMIT + ' '
-          + getmodule(workflow),
-          shell=1)
+          + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
+          + PATH.OUTPUT)
+
+        subprocess.call(args, shell=1)
 
 
-    def run(self,task,hosts='all',**kwargs):
+    def run(self,classname,funcname,hosts='all',**kwargs):
         """  Runs tasks in serial or parallel on specified hosts
         """
-        name = task.__name__
+        unix.mkdir(PATH.SYSTEM)
 
         if PAR.VERBOSE >= 2:
-            print 'running',name
+            print 'running', funcname
 
-        # prepare function arguments
-        unix.mkdir(PATH.SYSTEM)
-        file = PATH.SYSTEM+'/'+name+'.p'
-        saveobj(file,kwargs)
+        # save current state
+        save_objects(join(PATH.OUTPUT,'SeisflowsObjects'))
+
+        # save keyword arguments
+        kwargspath = join(PATH.OUTPUT,'SeisflowsObjects',classname+'_kwargs')
+        kwargsfile = join(kwargspath,funcname+'.p')
+        unix.mkdir(kwargspath)
+        saveobj(kwargsfile,kwargs)
 
         if hosts == 'all':
             # run on all available nodes
-            jobs = self.launch(task,hosts)
+            jobs = self.launch(classname,funcname,hosts)
             while 1:
-                time.sleep(PAR.SLEEP)
+                time.sleep(60.*PAR.SLEEPTIME)
                 self.timestamp()
-                isdone,jobs = self.task_status(task,jobs)
+                isdone,jobs = self.task_status(classname,funcname,jobs)
                 if isdone:
                     return
         elif hosts == 'head':
             # run on head node
-            jobs = self.launch(task,hosts)
+            jobs = self.launch(classname,funcname,hosts)
             while 1:
-                time.sleep(PAR.SLEEP)
+                time.sleep(60.*PAR.SLEEPTIME)
                 self.timestamp()
-                isdone,jobs = self.task_status(task,jobs)
+                isdone,jobs = self.task_status(classname,funcname,jobs)
                 if isdone:
                     return
         else:
             raise Exception
 
 
-    def launch(self,task,hosts='all'):
+    def launch(self,classname,funcname,hosts='all'):
         # prepare sbatch arguments
         sbatch = 'sbatch '                                           \
             + '--job-name=%s ' % PAR.TITLE                           \
@@ -147,10 +154,10 @@ class slurm_big_job(object):
             + '--ntasks-per-node=%d ' % PAR.CPUS_PER_NODE            \
             + '--time=%d ' % PAR.STEPTIME
 
-        args = getpath('system') +'/'+ 'slurm/wrapper_srun '         \
-            + PATH.SUBMIT + ' '                                  \
-            + getmodule(task) + ' '                                  \
-            + task.__name__ + ' '
+        args = findpath('system') +'/'+ 'slurm/wrapper_srun '        \
+            + PATH.OUTPUT + ' '                                      \
+            + classname + ' '                                        \
+            + funcname + ' '
 
         # call sbatch
         if hosts == 'all':
@@ -187,7 +194,7 @@ class slurm_big_job(object):
         return dict(zip(job_ids,task_ids))
 
 
-    def task_status(self,task,jobs):
+    def task_status(self,classname,funcname,jobs):
         job_ids = jobs.keys()
         task_ids = jobs.values()
 
@@ -211,7 +218,7 @@ class slurm_big_job(object):
                 print 'JOB FAILED:', job_id
                 if PAR.RETRY:
                     jobs.__delitem__(job_id)
-                    job = self.launch(task,hosts=task_id)
+                    job = self.launch(classname,funcname,hosts=task_id)
                     job_id = job.keys().pop()
                     jobs.__setitem__(job_id,task_id)
                     isdone = 0
@@ -244,3 +251,4 @@ class slurm_big_job(object):
         with open(PATH.SYSTEM+'/'+'timestamps','a') as f:
             line = time.strftime('%H:%M:%S')+'\n'
             f.write(line)
+

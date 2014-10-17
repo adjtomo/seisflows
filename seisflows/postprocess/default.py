@@ -4,13 +4,10 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import exists
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import loadclass, ParameterObj, ConfigObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
-
-system = getclass('system',PAR.SYSTEM)()
-solver = getclass('solver',PAR.SOLVER)()
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 class default(object):
@@ -21,7 +18,13 @@ class default(object):
       and scaling operations on gradient in accordance with parameter settings.
     """
 
-    def __init__(self):
+    def check(self):
+
+        global solver
+        import solver
+
+        global system
+        import system
 
         # check postprocessing settings
         if 'PRECOND' not in PATH:
@@ -41,9 +44,7 @@ class default(object):
         assert(exists(path))
 
         # combine kernels
-        system.run( solver.combine,
-            hosts='head',
-            path=path+'/'+'kernels' )
+        solver.combine(path=path+'/'+'kernels')
 
         # write gradient
         unix.cd(path+'/'+'kernels')
@@ -53,10 +54,7 @@ class default(object):
 
         # apply smoothing
         if PAR.SMOOTH > 0.:
-            system.run( solver.smooth,
-                hosts='head',
-                path=path,
-                span=PAR.SMOOTH )
+            solver.smooth(path=path,span=PAR.SMOOTH)
 
         # apply preconditioner
         if PATH.PRECOND:

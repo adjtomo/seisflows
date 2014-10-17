@@ -1,21 +1,43 @@
 #!/usr/bin/python -u
 
 import sys
-sys.path.append('.')
 
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.codetools import join, loadjson
+from seisflows.tools.configtools import ConfigObj, ParameterObj
 
-mypath = sys.argv[1]
-myclass = sys.argv[2]
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
+OBJ = ConfigObj('SeisflowsObjects')
 
-PAR = GlobalStruct('parameters',mypath)
-PATH = GlobalStruct('paths',mypath)
 
 if __name__ == '__main__':
 
-    # load class
-    obj = getclass(myclass)()
+    mypath = sys.argv[1]
 
-    # call main
-    obj.main()
+    parname = 'SeisflowsParameters.json'
+    pathname = 'SeisflowsPaths.json'
+    objname = 'SeisflowsObjects'
+
+    parfile = join(mypath,parname)
+    pathfile = join(mypath,pathname)
+
+    PAR.update(loadjson(parfile))
+    PATH.update(loadjson(pathfile))
+    OBJ.load(objname,mypath)
+
+    import optimize
+    import preprocess
+    import postprocess
+    import solver
+    import system
+    import workflow
+
+    system.check()
+    solver.check()
+    optimize.check()
+    preprocess.check()
+    postprocess.check()
+    workflow.check()
+
+    workflow.main()
 

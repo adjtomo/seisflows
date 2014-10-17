@@ -1,36 +1,69 @@
 #!/usr/bin/python -u
 
-import sys
+from seisflows.tools.configtools import loadclass, loadvars, ConfigObj, ParameterObj
 
-from seisflows.tools.codetools import join
-from seisflows.tools.configtools import getclass, GlobalStruct
-
-PAR = GlobalStruct('parameters','.')
-PATH = GlobalStruct('paths','.')
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
+OBJ = ConfigObj('SeisflowsObjects')
 
 
 if __name__ == '__main__':
+    """ Loads and checks parameters and objects and submits SeisFlows workflow
+    """
+
+    # load parameters
+    PAR.update(loadvars('parameters','.'))
+    PATH.update(loadvars('paths','.'))
 
 
-    # check import system by instantiating each class once
-    if 'WORKFLOW' not in PAR: raise Exception
-    getclass('workflow',PAR.WORKFLOW)()
+    # check parameters
+    if 'SYSTEM' not in PAR:
+        raise Exception
 
-    if 'OPTIMIZE' not in PAR: setattr(PAR,'OPTIMIZE','default')
-    getclass('optimize',PAR.OPTIMIZE)()
+    if 'OPTIMIZE' not in PAR:
+        setattr(PAR,'OPTIMIZE','default')
 
-    if 'PREPROCESS' not in PAR: setattr(PAR,'PREPROCESS','default')
-    getclass('preprocess',PAR.PREPROCESS)()
+    if 'PREPROCESS' not in PAR:
+        setattr(PAR,'PREPROCESS','default')
 
-    if 'POSTPROCESS' not in PAR: setattr(PAR,'POSTPROCESS','default')
-    getclass('postprocess',PAR.POSTPROCESS)()
+    if 'POSTPROCESS' not in PAR:
+        setattr(PAR,'POSTPROCESS','default')
 
-    if 'SOLVER' not in PAR: raise Exception
-    getclass('solver',PAR.SOLVER)()
+    if 'SOLVER' not in PAR:
+        raise Exception
+
+    if 'WORKFLOW' not in PAR:
+        raise Exception
+
+
+    # load objects
+    system = loadclass('system',PAR.SYSTEM)()
+    solver = loadclass('solver',PAR.SOLVER)()
+    optimize = loadclass('optimize',PAR.OPTIMIZE)()
+    preprocess = loadclass('preprocess',PAR.PREPROCESS)()
+    postprocess = loadclass('postprocess',PAR.POSTPROCESS)()
+    workflow = loadclass('workflow',PAR.WORKFLOW)()
+
+
+    # register objects
+    register=OBJ.register
+    register('system',system)
+    register('solver',solver)
+    register('optimize',optimize)
+    register('preprocess',preprocess)
+    register('postprocess',postprocess)
+    register('workflow',workflow)
+
+
+    # check objects
+    system.check()
+    solver.check()
+    optimize.check()
+    preprocess.check()
+    postprocess.check()
+    workflow.check()   
 
 
     # submit job
-    system = getclass('system',PAR.SYSTEM)()
-    workflow = getclass('workflow',PAR.WORKFLOW)()
     system.submit(workflow)
 

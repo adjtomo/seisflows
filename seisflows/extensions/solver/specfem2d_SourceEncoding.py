@@ -4,16 +4,16 @@ import numpy as np
 from seisflows import seistools
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join
-from seisflows.tools.configtools import getclass, getpath, GlobalStruct
+from seisflows.tools.configtools import loadclass, getpath, ParameterObj
 from seisflows.seistools.core import SeisStruct
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('parameters')
+PATH = ParameterObj('paths')
 
-system = getclass('system',PAR.SYSTEM)()
+system = loadclass('system',PAR.SYSTEM)()
 
 
-class specfem2d_SourceEncoding(getclass('solver','specfem2d')):
+class specfem2d_SourceEncoding(loadclass('solver','specfem2d')):
 
     def write_parameters(self):
         """ Writes parameter file

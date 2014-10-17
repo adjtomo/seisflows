@@ -1,32 +1,77 @@
 
-import os as _os
-import imp as _imp
-import inspect as _inspect
-import pickle as _pickle
-import sys as _sys
-import types as _types
+import os
+import imp
+import inspect
+import sys
+import types
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import abspath, exists ,join, loadjson, loadobj
-
-class Config:
-    pass
+from seisflows.tools.codetools import Struct, abspath, exists, glob, join, loadjson, loadobj, savejson, saveobj
 
 
-class GlobalStruct(object):
-    """ Globally accessible object for holding parameters
+class ConfigObj(object):
+    """ Makes objects globally accessible by registering them in sys.modules
+
+        Also provides methods for reading and writing objects to disk
+    """
+
+    def __init__(self,name):
+        if name not in sys.modules:
+             sys.modules[name] = set()
+
+        self.name = name
+        self.keys = sys.modules[name]
+
+    def register(self,key,val):
+        "Registers an object"
+        sys.modules[key] = val
+        self.keys.add(key)
+
+    def unregister(self,key):
+        "Unregisters an object"
+        sys.modules.__delattr__(key)
+        self.keys.remove(key)
+
+    def save(self,name,path='.'):
+        "Saves current state"
+        try:
+            fullpath = join(abspath(path),name)
+        except:
+            raise IOError, path
+
+        unix.mkdir(fullpath)
+        for key in self.keys:
+            saveobj(fullpath+'/'+key+'.p',sys.modules[key])
+
+    def load(self,name,path='.'):
+        try:
+            fullpath = join(abspath(path),name)
+        except:
+            raise IOError, path
+
+        files = glob(join(fullpath,'*.p'))
+        for file in files:
+            key,_ = os.path.splitext(unix.basename(file))
+            self.keys.add(key)
+            sys.modules[key] = loadobj(file)
+
+
+
+class ParameterObj(object):
+    """ Dictionary like object for holding parameters
+
+        Makes parameters globally accessible by registering itself in sys.modules
     """
 
     def __new__(self,name,path='.'):
-        if name in _sys.modules:
-            return _sys.modules[name]
+        if name in sys.modules:
+            return sys.modules[name]
         else:
             return object.__new__(self)
 
     def __init__(self,name,path='.'):
-        if name not in _sys.modules:
-            self.fromfile(name,path)
-            _sys.modules[name] = self
+        if name not in sys.modules:
+            sys.modules[name] = self
 
     def __iter__(self):
         return iter(self.__dict__.keys())
@@ -44,28 +89,14 @@ class GlobalStruct(object):
             raise TypeError
         raise KeyError
 
-    def fromfile(self,name,path):
-        try:
-            path = abspath(path)
-        except:
-            raise IOError, path
+    def update(self,newdict):
+        super(ParameterObj,self).__setattr__('__dict__',newdict)
 
-        fullname = join(path,name)
-        if exists(fullname+'.p'):
-            vars = loadobj(fullname+'.p')
-        elif exists(fullname+'.json'):
-            vars = loadjson(fullname+'.json')
-        elif exists(fullname+'.py'):
-            vars = _vars(_import(name,path))
-        else:
-            raise IOError, fullname
-
-        super(GlobalStruct,self).__setattr__('__dict__',vars)
+    def save(self,name):
+        savejson(name,self.__dict__)
 
 
-
-
-def getclass(*args):
+def loadclass(*args):
     """ Given name of module relative to package directory, returns
      corresponding class object
     """
@@ -86,71 +117,48 @@ def getclass(*args):
         moduleobj = getattr(_import(string),list[-1])
         return moduleobj
 
-    # last, try importing relative to working directory
-    list = _parse(args)
-    string = '.'.join(list)
-    if _exists(list):
-        moduleobj = getattr(_import(string),list[-1])
-        return moduleobj
-
-    raise Exception
+    raise ImportError
 
 
-def getmodule(obj):
-    """Tries to determine module in which class, function, or method is defined
-   """
-    if isinstance(obj,_types.FunctionType):
-        name = obj.__module__
-
-    elif isinstance(obj,_types.MethodType):
-        name = obj.im_class.__module__
-
-    elif isinstance(obj,_types.InstanceType):
-        name = obj.__class__.__module__
-
-    else:
-        name = _inspect.getmodule(obj).__name__
-
-    if name == '__main__':
-        name,_ = _os.path.splitext(
-                   _os.path.basename(
-                     _inspect.getfile(obj)))
-    return name
+def loadvars(*args,**kwargs):
+    return _vars(_import(*args,**kwargs))
 
 
-def getpath(obj):
+
+def findpath(obj):
     """ Determines absolute path of module from name, relative path, or
       ModuleObject
     """
-    if isinstance(obj,_types.ModuleType):
+    if isinstance(obj,types.ModuleType):
         path = obj.__file__
-    elif _os.path.isfile(obj):
-        path = _os.path.abspath(obj)
+    elif os.path.isfile(obj):
+        path = os.path.abspath(obj)
     else:
         string = '.'.join(_parse([obj],package='seisflows'))
         moduleobj = _import(string)
         path = moduleobj.__file__
-    return _os.path.dirname(path)
+    return os.path.dirname(path)
 
 
 
 ### utility functions
 
 def _import(string,path=None):
-    "Imports module from string"
+    "Imports from string"
     if path:
         # temporarily adjust python path
-        _sys.path.append(path)
+        sys.path.append(path)
 
     moduleobj = __import__(string,fromlist='dummy')
 
     if path:
-        _sys.path.pop()
+        sys.path.pop()
 
     return moduleobj
 
 
 def _vars(obj):
+    "Returns an object's __dict__ with private varibles removed"
     mydict = {}
     for key,val in vars(obj).items():
         if key[0] != '_':
@@ -173,14 +181,14 @@ def _parse(args,package=None):
 
 
 def _exists(parts):
-    "Check if a module exists without importing it"
+    "Checks if a module exists without importing it"
     try:
         path = None
         for part in parts[:-1]:
-            args = _imp.find_module(part,path)
-            obj = _imp.load_module(part,*args)
+            args = imp.find_module(part,path)
+            obj = imp.load_module(part,*args)
             path = obj.__path__
-        args = _imp.find_module(parts[-1],path)
+        args = imp.find_module(parts[-1],path)
         return True
     except ImportError:
         return False

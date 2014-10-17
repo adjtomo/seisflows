@@ -6,14 +6,11 @@ import numpy as np
 from seisflows import seistools
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join
-from seisflows.tools.configtools import getclass, getpath, GlobalStruct
+from seisflows.tools.configtools import findpath, ParameterObj
 from seisflows.tools.iotools import loadbin, savebin
 
-
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
-
-system = getclass('system',PAR.SYSTEM)()
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 class specfem3d(object):
@@ -61,16 +58,28 @@ class specfem3d(object):
     inversion_parameters += ['vp']
     inversion_parameters += ['vs']
 
-    # data channels
-    channels = []
-    channels += ['z']
-
     kernel_map = {
       'rho':'rho_kernel',
       'vp':'alpha_kernel',
       'vs':'beta_kernel'}
 
-    def __init__(self):
+    # data channels
+    channels = []
+    channels += ['z']
+
+    reader = staticmethod(seistools.specfem3d.readsu)
+    writer = staticmethod(seistools.specfem3d.writesu)
+
+    glob = lambda _ : glob('OUTPUT_FILES/*_SU')
+
+
+    def check(self):
+
+        global preprocess
+        import preprocess
+
+        global system
+        import system
 
         # check scratch paths
         if 'GLOBAL' not in PATH:
@@ -133,16 +142,6 @@ class specfem3d(object):
 
         if 'WAVELET' not in PAR:
             setattr(PAR,'WAVELET','ricker')
-
-
-        # load preprocessing machinery
-        if 'PREPROCESS' not in PAR:
-            setattr(PAR,'PREPROCESS','default')
-
-        self.preprocess = getclass('preprocess',PAR.PREPROCESS)(
-          channels=self.channels,
-          reader=seistools.specfem3d.readsu,
-          writer=seistools.specfem3d.writesu)
 
 
     def prepare_solver(self,inversion=True,**kwargs):
@@ -226,9 +225,9 @@ class specfem3d(object):
 
         # initialize adjoint traces
         zeros = np.zeros((PAR.NT,PAR.NREC))
-        _,h = self.preprocess.load('traces/obs')
+        _,h = preprocess.load('traces/obs')
         for channel in ['x','y','z']:
-            self.preprocess.writer(zeros,h,
+            self.writer(zeros,h,
                 channel=channel,prefix='traces/adj')
 
 
@@ -324,7 +323,7 @@ class specfem3d(object):
         # forward simulation
         self.forward()
         unix.mv(self.glob(),'traces/syn')
-        self.preprocess.prepare_adjoint(unix.pwd(),output_type=2)
+        preprocess.prepare_adjoint(unix.pwd(),output_type=2)
 
         # save results
         self.export_residuals(path)
@@ -359,10 +358,10 @@ class specfem3d(object):
         unix.mv(self.glob(),'traces/lcg')
 
         if hessian == 'Newton':
-            self.preprocess.prepare_adjoint(unix.pwd(),output_type=3)
+            preprocess.prepare_adjoint(unix.pwd(),output_type=3)
 
         elif hessian == 'GaussNewton':
-            self.preprocess.prepare_adjoint(unix.pwd(),output_type=4)
+            preprocess.prepare_adjoint(unix.pwd(),output_type=4)
 
         # adjoint simulation
         self.adjoint()
@@ -573,7 +572,7 @@ class specfem3d(object):
         seistools.specfem3d.setpar(key,val)
 
         # write receivers file
-        _,h = self.preprocess.load('traces/obs')
+        _,h = preprocess.load('traces/obs')
         write_receivers(h.nr,h.rx,h.rz)
 
 
@@ -581,7 +580,7 @@ class specfem3d(object):
         unix.cd(self.path)
 
         # write source file
-        _,h = self.preprocess.load(dir='traces/obs')
+        _,h = preprocess.load(dir='traces/obs')
         write_sources(vars(PAR),h)
 
 
@@ -676,5 +675,3 @@ class specfem3d(object):
         except:
             return None
 
-
-    glob = lambda _ : glob('OUTPUT_FILES/*_SU')

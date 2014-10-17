@@ -1,31 +1,54 @@
 #!/usr/bin/python -u
 
 import sys
-sys.path.append('.')
 
-from seisflows.tools.codetools import loadobj
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.codetools import join, loadjson, loadobj
+from seisflows.tools.configtools import ConfigObj, ParameterObj
 
-mypath = sys.argv[1]
-myobj = sys.argv[2]
-myfunc = sys.argv[3]
-
-PAR = GlobalStruct('parameters',mypath)
-PATH = GlobalStruct('paths',mypath)
-
-system = getclass('system',PAR.SYSTEM)()
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
+OBJ = ConfigObj('SeisflowsObjects')
 
 
 if __name__ == '__main__':
-  if system.getnode() == 0:
 
-      # load function
-      obj = getclass(myobj)()
-      func = getattr(obj,myfunc)
+    mypath = sys.argv[1]
+    myobj = sys.argv[2]
+    myfunc = sys.argv[3]
 
-      # load function arguments
-      kwargs = loadobj(PATH.SYSTEM+'/'+myfunc+'.p')
+    parname = 'SeisflowsParameters.json'
+    pathname = 'SeisflowsPaths.json'
+    objname = 'SeisflowsObjects'
 
-      # call function
-      func(**kwargs)
+    parfile = join(mypath,parname)
+    pathfile = join(mypath,pathname)
+
+    PAR.update(loadjson(parfile))
+    PATH.update(loadjson(pathfile))
+    OBJ.load(objname,mypath)
+
+    import optimize
+    import preprocess
+    import postprocess
+    import solver
+    import system
+    import workflow
+
+    optimize.check()
+    preprocess.check()
+    postprocess.check()
+    solver.check()
+    system.check()
+    workflow.check()
+
+    if system.getnode() == 0:
+
+        # load function arguments
+        kwargspath = join(mypath,'SeisflowsObjects',myobj+'_kwargs')
+        kwargs = loadobj(join(kwargspath,myfunc+'.p'))
+
+        # load function
+        func = getattr(sys.modules[myobj],myfunc)
+
+        func(**kwargs)
 

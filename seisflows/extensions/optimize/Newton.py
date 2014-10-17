@@ -4,15 +4,15 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import loadtxt, savetxt
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import loadclass, ParameterObj
 from seisflows.optimize import lib
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('parameters')
+PATH = ParameterObj('paths')
 
 
 
-class Newton(getclass('optimize','default')):
+class Newton(loadclass('optimize','default')):
     """ Implements truncated Newton algorithm
     """
 

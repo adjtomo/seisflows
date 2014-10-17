@@ -4,13 +4,13 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import exists, glob, join
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import loadclass, ParameterObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('parameters')
+PATH = ParameterObj('paths')
 
-system = getclass('system',PAR.SYSTEM)()
-solver = getclass('solver',PAR.SOLVER)()
+system = loadclass('system',PAR.SYSTEM)()
+solver = loadclass('solver',PAR.SOLVER)()
 
 
 
@@ -87,7 +87,7 @@ class migration(object):
               export_traces=PAR.SAVETRACES )
 
         # process image
-        self.postprocess = getclass('postprocess',PAR.POSTPROCESS)()
+        self.postprocess = loadclass('postprocess',PAR.POSTPROCESS)()
 
         self.postprocess.process_kernels(
             path=PATH.IMAGE,

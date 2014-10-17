@@ -1,13 +1,13 @@
 
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import loadclass, ParameterObj
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('parameters')
+PATH = ParameterObj('paths')
 
-system = getclass('system',PAR.SYSTEM)()
+system = loadclass('system',PAR.SYSTEM)()
 
 
-class specfem3d_ChenTromp(getclass('extensions.solver','specfem3d_legacy')):
+class specfem3d_ChenTromp(loadclass('extensions.solver','specfem3d_legacy')):
 
     # data channels
     channels = []

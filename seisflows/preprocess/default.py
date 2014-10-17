@@ -3,26 +3,30 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import Struct
-from seisflows.tools.configtools import getclass, GlobalStruct
+from seisflows.tools.configtools import loadclass, ParameterObj, ConfigObj
 from seisflows.seistools import adjoint, misfit, sbandpass, smute
 
-PAR = GlobalStruct('parameters')
-PATH = GlobalStruct('paths')
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 class default(object):
     """ Data processing class
     """
 
-    def __init__(self,reader=None,writer=None,channels=[]):
+    def check(self):
 
+        global solver
+        import solver
+
+        # misfit settings
         if 'MISFIT' not in PAR:
             raise Exception
 
         if 'NORMALIZE' not in PAR:
             setattr(PAR,'NORMALIZE',True)
 
-        # check mute settings
+        # mute settings
         if 'MUTE' not in PAR:
             setattr(PAR,'MUTE',False)
 
@@ -32,7 +36,7 @@ class default(object):
         if 'MUTECONST' not in PAR:
             setattr(PAR,'MUTECONST',0.)
 
-        # check filter settings
+        # filter settings
         if 'BANDPASS' not in PAR:
             setattr(PAR,'BANDPASS',False)
 
@@ -47,11 +51,6 @@ class default(object):
 
         if 'FREQHI' not in PAR:
             setattr(PAR,'FREQHI',0.)
-
-        # define IO routines
-        self.reader = reader
-        self.writer = writer
-        self.channels = channels
 
 
     def process_traces(self,s,h):
@@ -75,7 +74,7 @@ class default(object):
             s = smute(s,h,vel,off,constant_spacing=False)
 
         elif PAR.MUTE == 2:
-            system = getclass('system',PAR.SYSTEM)()
+            system = loadclass('system',PAR.SYSTEM)()
             vel = PAR.MUTESLOPE*(PAR.NREC+1)/(PAR.XMAX-PAR.XMIN)
             off = PAR.MUTECONST
             src = system.getnode()
@@ -257,8 +256,8 @@ class default(object):
         h = Struct()
         f = Struct()
 
-        for channel in self.channels:
-            f[channel],h[channel] = self.reader(prefix=prefix,channel=channel)
+        for channel in solver.channels:
+            f[channel],h[channel] = solver.reader(prefix=prefix,channel=channel)
 
         # check headers
         h = self.check_headers(h)
@@ -269,8 +268,8 @@ class default(object):
     def save(self,s,h,prefix='traces/adj/',suffix=''):
         """ Writes seismic data to disk
         """
-        for channel in self.channels:
-            self.writer(s[channel],h,channel=channel,prefix=prefix,suffix=suffix)
+        for channel in solver.channels:
+            solver.writer(s[channel],h,channel=channel,prefix=prefix,suffix=suffix)
 
 
     def write_residuals(self,s,h):
@@ -278,7 +277,7 @@ class default(object):
         """
         # sum components
         sum = np.zeros((h.nr))
-        for channel in self.channels:
+        for channel in solver.channels:
             sum = sum + s[channel]
         np.savetxt('residuals',sum)
 
@@ -332,3 +331,5 @@ class default(object):
         #    assert h[key] == hdr[key]
 
         return h
+
+
