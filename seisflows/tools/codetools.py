@@ -9,7 +9,6 @@ import numpy as _np
 
 
 class Struct(dict):
-    "On the fly structure"
     def __init__(self,*args,**kwargs):
         super(Struct,self).__init__(*args,**kwargs)
         self.__dict__ = self

@@ -3,11 +3,11 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import Struct
-from seisflows.tools.configtools import getclass, ParameterObject
+from seisflows.tools.configtools import getclass, GlobalStruct
 from seisflows.seistools import adjoint, misfit, sbandpass, smute
 
-PAR = ParameterObject('parameters')
-PATH = ParameterObject('paths')
+PAR = GlobalStruct('parameters')
+PATH = GlobalStruct('paths')
 
 
 class default(object):

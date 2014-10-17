@@ -8,13 +8,13 @@ import subprocess
 import time
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import abspath, join, savejson, saveobj
+from seisflows.tools.codetools import abspath, join, saveobj, saveobj
 from seisflows.tools.configtools import getmodule, getpath
-from seisflows.tools.configtools import ParameterObject
+from seisflows.tools.configtools import GlobalStruct
 
 
-PAR = ParameterObject('parameters')
-PATH = ParameterObject('paths')
+PAR = GlobalStruct('parameters')
+PATH = GlobalStruct('paths')
 
 
 class slurm_big_job(object):
@@ -88,8 +88,8 @@ class slurm_big_job(object):
         unix.cd(PATH.SUBMIT)
 
         # store parameters
-        savejson(join(PATH.SUBMIT,'parameters.p'),PAR.vars)
-        savejson(join(PATH.SUBMIT,'paths.p'),PATH.vars)
+        saveobj(join(PATH.SUBMIT,'parameters.p'),PAR.vars)
+        saveobj(join(PATH.SUBMIT,'paths.p'),PATH.vars)
 
         subprocess.call('sbatch '
           + '--job-name=%s ' % PAR.TITLE

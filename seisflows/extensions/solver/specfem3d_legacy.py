@@ -2,10 +2,10 @@
 import subprocess
 
 from seisflows.tools import unix
-from seisflows.tools.configtools import getclass, ParameterObject
+from seisflows.tools.configtools import getclass, GlobalStruct
 
-PAR = ParameterObject('parameters')
-PATH = ParameterObject('paths')
+PAR = GlobalStruct('parameters')
+PATH = GlobalStruct('paths')
 
 system = getclass('system',PAR.SYSTEM)()
 

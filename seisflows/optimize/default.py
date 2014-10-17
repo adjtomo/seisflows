@@ -4,11 +4,11 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import loadtxt, savetxt, join
-from seisflows.tools.configtools import ParameterObject
+from seisflows.tools.configtools import GlobalStruct
 from seisflows.optimize import lib
 
-PAR = ParameterObject('parameters')
-PATH = ParameterObject('paths')
+PAR = GlobalStruct('parameters')
+PATH = GlobalStruct('paths')
 
 
 

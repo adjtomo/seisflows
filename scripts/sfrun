@@ -3,34 +3,13 @@
 import sys
 
 from seisflows.tools.codetools import join
-from seisflows.tools.configtools import getclass, ParameterObject
+from seisflows.tools.configtools import getclass, GlobalStruct
 
-PAR = ParameterObject('parameters','.')
-PATH = ParameterObject('paths','.')
-
-system = getclass('system',PAR.SYSTEM)()
+PAR = GlobalStruct('parameters','.')
+PATH = GlobalStruct('paths','.')
 
 
 if __name__ == '__main__':
-
-    # configure paths
-    if 'GLOBAL' not in PATH: 
-        raise Exception
-
-    if 'LOCAL' not in PATH:
-        raise Exception
-
-    if 'SUBMIT' not in PATH: 
-        raise Exception
-
-    if 'SYSTEM' not in PATH: 
-        PATH.SYSTEM = join(PATH.GLOBAL,'system')
-
-    if 'WORKFLOW' not in PATH: 
-        PATH.WORKFLOW = join(PATH.GLOBAL,'workflow')
-
-    if 'OPTIMIZE' not in PATH:
-        PATH.OPTIMIZE = join(PATH.GLOBAL,'optimize')
 
 
     # check import system by instantiating each class once
@@ -51,6 +30,7 @@ if __name__ == '__main__':
 
 
     # submit job
-    workflow = getclass('workflow',PAR.WORKFLOW)
+    system = getclass('system',PAR.SYSTEM)()
+    workflow = getclass('workflow',PAR.WORKFLOW)()
     system.submit(workflow)
 

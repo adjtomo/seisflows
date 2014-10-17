@@ -7,10 +7,10 @@ from scipy.interpolate import griddata
 from seisflows import seistools
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join, setdiff, Struct
-from seisflows.tools.configtools import getclass, getpath, ParameterObject
+from seisflows.tools.configtools import getclass, getpath, GlobalStruct
 
-PAR = ParameterObject('parameters')
-PATH = ParameterObject('paths')
+PAR = GlobalStruct('parameters')
+PATH = GlobalStruct('paths')
 
 system = getclass('system',PAR.SYSTEM)()
 
@@ -73,13 +73,14 @@ class specfem2d(object):
         if 'LOCAL' not in PATH:
             setattr(PATH,'LOCAL',None)
 
-        if PATH.LOCAL:
-            setattr(PATH,'SOLVER',join(PATH.LOCAL,'solver'))
-        else:
-            setattr(PATH,'SOLVER',join(PATH.GLOBAL,'solver'))
-
         if 'MESH' not in PATH:
             setattr(PATH,'MESH',join(PATH.GLOBAL,'mesh'))
+
+        if 'SOLVER' not in PATH:
+            if PATH.LOCAL:
+                setattr(PATH,'SOLVER',join(PATH.LOCAL,'solver'))
+            else:
+                setattr(PATH,'SOLVER',join(PATH.GLOBAL,'solver'))
 
         # check mesh parameters
         if 'XMIN' not in PAR:
@@ -536,8 +537,7 @@ class specfem2d(object):
     def write_parameters(self):
         "Write solver parameters file"
         unix.cd(self.path)
-
-        seistools.specfem2d.write_parameters(PAR.vars)
+        seistools.specfem2d.write_parameters(vars(PAR))
 
 
     def write_receivers(self,prefix='traces/obs'):
@@ -559,7 +559,7 @@ class specfem2d(object):
         unix.cd(self.path)
 
         _,h = self.preprocess.load(prefix='traces/obs')
-        seistools.specfem2d.write_sources(PAR.vars,h)
+        seistools.specfem2d.write_sources(vars(PAR),h)
 
 
 

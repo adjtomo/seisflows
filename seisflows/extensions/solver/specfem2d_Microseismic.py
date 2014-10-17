@@ -6,10 +6,10 @@ from scipy.interpolate import griddata
 from seisflows import seistools
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join, setdiff, Struct
-from seisflows.tools.configtools import getclass, getpath, ParameterObject
+from seisflows.tools.configtools import getclass, getpath, GlobalStruct
 
-PAR = ParameterObject('parameters')
-PATH = ParameterObject('paths')
+PAR = GlobalStruct('parameters')
+PATH = GlobalStruct('paths')
 
 system = getclass('system',PAR.SYSTEM)()
 

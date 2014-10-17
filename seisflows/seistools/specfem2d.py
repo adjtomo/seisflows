@@ -238,6 +238,7 @@ def write_parameters(PAR,version='git-devel'):
     """ Writes parameters to text file
     """
     from seisflows.tools.configtools import getpath
+    PAR = Struct(PAR)
 
     # read template
     file = getpath('seistools')+'/'+'specfem2d/par-'+version

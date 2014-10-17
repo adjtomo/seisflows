@@ -8,10 +8,10 @@ myclass = sys.argv[2]
 
 os.chdir(mypath)
 
-from seisflows.tools.configtools import getclass, ParameterObject
+from seisflows.tools.configtools import getclass, GlobalStruct
 
-PAR = ParameterObject('parameters',mypath)
-PATH = ParameterObject('paths',mypath)
+PAR = GlobalStruct('parameters',mypath)
+PATH = GlobalStruct('paths',mypath)
 
 if __name__ == '__main__':
 

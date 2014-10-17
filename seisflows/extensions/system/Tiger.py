@@ -1,10 +1,10 @@
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, exists, join
-from seisflows.tools.configtools import getclass, ParameterObject
+from seisflows.tools.configtools import getclass, GlobalStruct
 
-PAR = ParameterObject('parameters')
-PATH = ParameterObject('paths')
+PAR = GlobalStruct('parameters')
+PATH = GlobalStruct('paths')
 
 
 class Tiger(getclass('system','slurm')):

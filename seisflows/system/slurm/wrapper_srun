@@ -4,14 +4,14 @@ import sys
 sys.path.append('.')
 
 from seisflows.tools.codetools import loadobj
-from seisflows.tools.configtools import getclass, ParameterObject
+from seisflows.tools.configtools import getclass, GlobalStruct
 
 mypath = sys.argv[1]
 myobj = sys.argv[2]
 myfunc = sys.argv[3]
 
-PAR = ParameterObject('parameters',mypath)
-PATH = ParameterObject('paths',mypath)
+PAR = GlobalStruct('parameters',mypath)
+PATH = GlobalStruct('paths',mypath)
 
 
 if __name__ == '__main__':
