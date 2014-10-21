@@ -1,16 +1,21 @@
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, exists, join
-from seisflows.tools.configtools import loadclass, ParameterObj
+from seisflows.tools.configtools import loadclass, ConfigObj, ParameterObj
 
+OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
+
+save_objects = OBJ.save
+save_parameters = PAR.save
+save_paths = PATH.save
 
 
 class Tiger(loadclass('system','slurm')):
 
     def check(self):
-        """ Class constructor
+        """ Checks parameters and paths
         """
 
         if 'TITLE' not in PAR:
@@ -19,34 +24,16 @@ class Tiger(loadclass('system','slurm')):
         if 'SUBTITLE' not in PAR:
             setattr(PAR,'SUBTITLE',unix.basename(abspath('..')))
 
-        if 'UID' not in PATH:
-            setattr(PATH,'UID',join(PAR.SUBTITLE,PAR.TITLE))
+        if 'SUBDIRS' not in PATH:
+            setattr(PATH,'SUBDIRS',join(PAR.SUBTITLE,PAR.TITLE))
 
-        # check parameters
-        if 'NTASK' not in PAR:
-            raise Exception
-
-        if 'NPROC' not in PAR:
-            raise Exception
-
-        if 'WALLTIME' not in PAR:
-            setattr(PAR,'WALLTIME',30.)
-
-        if 'VERBOSE' not in PAR:
-            setattr(PAR,'VERBOSE',1)
-
-        # check paths
         if 'GLOBAL' not in PATH:
-            setattr(PATH,'GLOBAL',join('/scratch/gpfs',unix.whoami(),PATH.UID))
+            setattr(PATH,'GLOBAL',join('/scratch/gpfs',unix.whoami(),PATH.SUBDIRS))
 
         if 'LOCAL' not in PATH:
             setattr(PATH,'LOCAL','')
 
-        if 'SYSTEM' not in PATH:
-            setattr(PATH,'SYSTEM',join(PATH.GLOBAL,'system'))
-
-        if 'SUBMIT' not in PATH:
-            setattr(PATH,'SUBMIT',unix.pwd())
+        super(self.__class__,self).check()
 
 
     def submit(self,*args,**kwargs):
@@ -55,4 +42,4 @@ class Tiger(loadclass('system','slurm')):
         if not exists(PATH.SUBMIT+'/'+'scratch'):
             unix.ln(PATH.GLOBAL,PATH.SUBMIT+'/'+'scratch')
 
-        super(Tiger,self).submit(*args,**kwargs)
+        super(self.__class__,self).submit(*args,**kwargs)

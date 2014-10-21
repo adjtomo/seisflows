@@ -10,9 +10,8 @@ from seisflows.tools.codetools import Struct, abspath, exists, glob, join, loadj
 
 
 class ConfigObj(object):
-    """ Makes objects globally accessible by registering them in sys.modules
-
-        Also provides methods for reading and writing objects to disk
+    """ Makes objects globally accessible by registering them in sys.modules,
+        and provides methods for reading and writing registered objects to disk
     """
 
     def __init__(self,name):
@@ -21,6 +20,9 @@ class ConfigObj(object):
 
         self.name = name
         self.keys = sys.modules[name]
+
+    def __iter__(self):
+        return iter(sorted(list(self.keys)))
 
     def register(self,key,val):
         "Registers an object"
@@ -58,9 +60,8 @@ class ConfigObj(object):
 
 
 class ParameterObj(object):
-    """ Dictionary like object for holding parameters
-
-        Makes parameters globally accessible by registering itself in sys.modules
+    """ Dictionary like object for holding parameters. Makes parameters globally 
+        accessible by registering itself in sys.modules
     """
 
     def __new__(self,name,path='.'):
@@ -74,7 +75,7 @@ class ParameterObj(object):
             sys.modules[name] = self
 
     def __iter__(self):
-        return iter(self.__dict__.keys())
+        return iter(sorted(self.__dict__.keys()))
 
     def __getattr__(self,key):
         return self.__dict__[key]
@@ -96,26 +97,48 @@ class ParameterObj(object):
         savejson(name,self.__dict__)
 
 
+class Null(object):
+    """ Always and reliably does nothing
+    """
+    def __init__(self,*args,**kwargs):
+        pass
+
+    def __call__(self,*args,**kwargs):
+        return self
+
+    def __nonzero__(self):
+        return False
+
+    def __getattr__(self,key):
+        return self
+
+    def __setattr__(self,key,val):
+        return self
+
+    def __delattr__(self):
+        return self
+
+
 def loadclass(*args):
     """ Given name of module relative to package directory, returns
-     corresponding class object
+        corresponding class
     """
     if not args[-1]:
-        return object # return dummy class
+        return Null
 
     # first, try importing relative to main package directory
     list = _parse(args,package='seisflows')
     string = '.'.join(list)
     if _exists(list):
-        moduleobj = getattr(_import(string),list[-1])
-        return moduleobj
+        obj = getattr(_import(string),list[-1])
+        return obj
 
     # next, try importing relative to extensions directory
     list = _parse(args,package='seisflows.extensions')
     string = '.'.join(list)
     if _exists(list):
-        moduleobj = getattr(_import(string),list[-1])
-        return moduleobj
+        obj = getattr(_import(string),list[-1])
+        return obj
 
     raise ImportError
 
@@ -167,6 +190,7 @@ def _vars(obj):
 
 
 def _parse(args,package=None):
+    "Determines path of module relative to package directory"
     arglist = []
     for arg in args:
         arglist.extend(arg.split('.'))

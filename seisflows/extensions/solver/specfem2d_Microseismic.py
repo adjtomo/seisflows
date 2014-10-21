@@ -6,12 +6,11 @@ from scipy.interpolate import griddata
 from seisflows import seistools
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join, setdiff, Struct
-from seisflows.tools.configtools import loadclass, getpath, ParameterObj
+from seisflows.tools.configtools import loadclass, ConfigObj, ParameterObj
 
-PAR = ParameterObj('parameters')
-PATH = ParameterObj('paths')
-
-system = loadclass('system',PAR.SYSTEM)()
+OBJ = ConfigObj('SeisflowsObjects')
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 class specfem2d_Microseismic(loadclass('solver','specfem2d')):
@@ -26,6 +25,10 @@ class specfem2d_Microseismic(loadclass('solver','specfem2d')):
     inversion_parameters = []
     inversion_parameters += ['vs']
 
+    # data input/output
+    reader = staticmethod(seistools.specfem2d.read)
+    writer = staticmethod(seistools.specfem2d.write)
+
     # data channels
     channels = []
     channels += ['y']
@@ -33,16 +36,29 @@ class specfem2d_Microseismic(loadclass('solver','specfem2d')):
     glob = lambda _ : glob('OUTPUT_FILES/*.semd')
 
 
-    def __init__(self):
-        super(specfem2d_Microseismic,self).__init__()
-        self.preprocess.reader = seistools.specfem2d.read
-        self.preprocess.writer = seistools.specfem2d.write
+    def check(self):
+        """ Checks objects and parameters
+        """
+        super(self.__class__,self).check()
+
+        # check objects
+        if 'preprocess' not in OBJ:
+            raise Exception
+
+        if 'system' not in OBJ:
+            raise Excpetion
+
+        global preprocess
+        import preprocess
+
+        global system
+        import system
 
 
     def prepare_data(self,**kwargs):
         """ Prepares data for inversion or migration
         """
-        super(specfem2d_Microseismic,self).prepare_data(**kwargs)
+        super(self.__class__,self).prepare_data(**kwargs)
 
 
     def generate_data(self,**kwargs):
@@ -98,7 +114,7 @@ class specfem2d_Microseismic(loadclass('solver','specfem2d')):
         # forward simulation
         self.forward()
         unix.mv(self.glob(),'traces/syn')
-        self.preprocess.prepare_adjoint(path=unix.pwd(),output_type=1)
+        preprocess.prepare_adjoint(path=unix.pwd(),output_type=1)
         self.export_residuals(path)
         if export_traces:
             self.export_traces(path,'traces/syn')
@@ -112,7 +128,7 @@ class specfem2d_Microseismic(loadclass('solver','specfem2d')):
         unix.cd(self.path)
 
         # write residuals
-        self.preprocess.prepare_adjoint(path=unix.pwd(),output_type=1)
+        preprocess.prepare_adjoint(path=unix.pwd(),output_type=1)
 
         # negative branch
         self.prepare_adjoint(branch='neg')
@@ -201,14 +217,14 @@ class specfem2d_Microseismic(loadclass('solver','specfem2d')):
     ### data processing utilities
 
     def prepare_adjoint(self,branch=''):
-        d,h = self.preprocess.load(prefix='traces/obs')
-        s,_ = self.preprocess.load(prefix='traces/syn')
+        d,h = preprocess.load(prefix='traces/obs')
+        s,_ = preprocess.load(prefix='traces/syn')
 
-        d = self.preprocess.apply(self.process_traces,[d],[h,branch])
-        s = self.preprocess.apply(self.process_traces,[s],[h,branch])
+        d = preprocess.apply(self.process_traces,[d],[h,branch])
+        s = preprocess.apply(self.process_traces,[s],[h,branch])
 
-        s = self.preprocess.apply(self.preprocess.compute_adjoint,[s,d],[h,2])
-        self.preprocess.save(s,h)
+        s = preprocess.apply(preprocess.compute_adjoint,[s,d],[h,2])
+        preprocess.save(s,h)
 
 
     def process_traces(self,f,h,branch=''):
@@ -224,7 +240,7 @@ class specfem2d_Microseismic(loadclass('solver','specfem2d')):
             f = seistools.swindow(f,h,i1,i2,units='samples')
             f[i1:i2,:] = np.flipud(f[i1:i2,:])
             f[i3:i4,:] = 0.
-            f = self.preprocess.process_traces(f,h)
+            f = preprocess.process_traces(f,h)
             f[i1:i2,:] = np.flipud(f[i1:i2,:])
             f[i3:i4,:] = 0.
 
@@ -232,7 +248,7 @@ class specfem2d_Microseismic(loadclass('solver','specfem2d')):
             f = seistools.swindow(f,h,i3,i4,units='samples')
             f[i1:i2,:] = f[i3:i4,:]
             f[i3:i4,:] = 0.
-            f = self.preprocess.process_traces(f,h)
+            f = preprocess.process_traces(f,h)
             f[i3:i4,:] = f[i1:i2,:]
             f[i1:i2,:] = 0.
 

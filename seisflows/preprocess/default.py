@@ -3,9 +3,10 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import Struct
-from seisflows.tools.configtools import loadclass, ParameterObj, ConfigObj
 from seisflows.seistools import adjoint, misfit, sbandpass, smute
+from seisflows.tools.configtools import ConfigObj, ParameterObj
 
+OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
@@ -15,16 +16,30 @@ class default(object):
     """
 
     def check(self):
+        """ Checks objects and parameters
+        """
+
+        # check objects
+        if 'solver' not in OBJ:
+            raise Excpetion
+
+        if 'system' not in OBJ:
+            raise Excpetion
 
         global solver
         import solver
 
-        # misfit settings
+        global system
+        import system
+
+
+        # check parameters
         if 'MISFIT' not in PAR:
             raise Exception
 
         if 'NORMALIZE' not in PAR:
             setattr(PAR,'NORMALIZE',True)
+
 
         # mute settings
         if 'MUTE' not in PAR:
@@ -35,6 +50,7 @@ class default(object):
 
         if 'MUTECONST' not in PAR:
             setattr(PAR,'MUTECONST',0.)
+
 
         # filter settings
         if 'BANDPASS' not in PAR:
@@ -74,7 +90,6 @@ class default(object):
             s = smute(s,h,vel,off,constant_spacing=False)
 
         elif PAR.MUTE == 2:
-            system = loadclass('system',PAR.SYSTEM)()
             vel = PAR.MUTESLOPE*(PAR.NREC+1)/(PAR.XMAX-PAR.XMIN)
             off = PAR.MUTECONST
             src = system.getnode()

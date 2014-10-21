@@ -4,23 +4,37 @@ import numpy as np
 from seisflows import seistools
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join
-from seisflows.tools.configtools import loadclass, getpath, ParameterObj
+from seisflows.tools.configtools import loadclass, findpath, ConfigObj, ParameterObj
 from seisflows.seistools.core import SeisStruct
 
-PAR = ParameterObj('parameters')
-PATH = ParameterObj('paths')
-
-system = loadclass('system',PAR.SYSTEM)()
+OBJ = ConfigObj('SeisflowsObjects')
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 class specfem2d_SourceEncoding(loadclass('solver','specfem2d')):
 
-    def write_parameters(self):
-        """ Writes parameter file
-
-            Calls base class method and then makes adjustments
+    def check(self):
+        """ Checks objects and parameters
         """
-        super(specfem2d_SourceEncoding,self).write_parameters()
+        super(self.__class__,self).check()
+
+        # check objects
+        if 'system' not in OBJ:
+            raise Excpetion
+
+        global system
+        import system
+
+        # check parameters
+        if 'NT_PADDED' not in PAR:
+            raise Exception
+
+
+    def write_parameters(self):
+        """ Writes parameter file. Calls base method and makes adjustments
+        """
+        super(self.__class__,self).write_parameters()
 
         seistools.specfem2d.setpar('NSOURCES',PAR.NSRC)
         seistools.specfem2d.setpar('nt',PAR.NT_PADDED)
@@ -28,9 +42,6 @@ class specfem2d_SourceEncoding(loadclass('solver','specfem2d')):
 
     def write_sources(self,sinfo=[],mapping=lambda i:[i]):
         """ Writes sources file
-        
-            Writes sources file, taking into account that a single simulation 
-            has to include multiple sources.
         """
         unix.cd(self.path)
 
@@ -38,7 +49,7 @@ class specfem2d_SourceEncoding(loadclass('solver','specfem2d')):
         lines = []
 
         for i in nodes:
-            seistools.specfem2d.write_sources(PAR.vars,sinfo[i])
+            seistools.specfem2d.write_sources(vars(PAR),sinfo[i])
             with open('DATA/SOURCE','r') as f:
                 lines.extend(f.readlines())
 
@@ -47,10 +58,8 @@ class specfem2d_SourceEncoding(loadclass('solver','specfem2d')):
 
 
     def prepare_data(self,**kwargs):
-        """ Prepares data for inversion or migration
-
-            Overloads base method, removing write_sources and write_receivers
-            since source and receiver factors are not yet available.
+        """ Postpones write_sources and write_receivers because required
+            encoding factors are not yet available
         """
         unix.cd(self.path)
 
@@ -66,5 +75,5 @@ class specfem2d_SourceEncoding(loadclass('solver','specfem2d')):
         zeros = np.zeros((PAR.NT_PADDED,PAR.NREC))
         h = SeisStruct(PAR.NREC,PAR.NT_PADDED,PAR.DT)
         for channel in ['x','y','z']:
-            self.preprocess.writer(zeros,h,
+            self.writer(zeros,h,
                 channel=channel,prefix='traces/adj')

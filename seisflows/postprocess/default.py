@@ -4,8 +4,9 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import exists
-from seisflows.tools.configtools import loadclass, ParameterObj, ConfigObj
+from seisflows.tools.configtools import ConfigObj, ParameterObj
 
+OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
@@ -19,12 +20,22 @@ class default(object):
     """
 
     def check(self):
+        """ Checks objects and parameters
+        """
+
+        # check objects
+        if 'solver' not in OBJ:
+            raise Excpetion
+
+        if 'system' not in OBJ:
+            raise Excpetion
 
         global solver
         import solver
 
         global system
         import system
+
 
         # check postprocessing settings
         if 'PRECOND' not in PATH:

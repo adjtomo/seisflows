@@ -7,15 +7,15 @@ import time
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, join, saveobj
-from seisflows.tools.configtools import ConfigObj, ParameterObj, findpath
+from seisflows.tools.configtools import findpath, ConfigObj, ParameterObj
 
+OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
-OBJ = ConfigObj('SeisflowsObjects')
 
+save_objects = OBJ.save
 save_parameters = PAR.save
 save_paths = PATH.save
-save_objects = OBJ.save
 
 
 class slurm_big_job(object):
@@ -32,7 +32,7 @@ class slurm_big_job(object):
 
 
     def check(self):
-        """ Class constructor
+        """ Checks parameters and paths
         """
 
         if 'TITLE' not in PAR:
@@ -73,14 +73,14 @@ class slurm_big_job(object):
         if 'LOCAL' not in PATH:
             setattr(PATH,'LOCAL','')
 
-        if 'SYSTEM' not in PATH:
-            setattr(PATH,'SYSTEM',join(PATH.GLOBAL,'system'))
-
         if 'SUBMIT' not in PATH:
             setattr(PATH,'SUBMIT',unix.pwd())
 
         if 'OUTPUT' not in PATH:
             setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
+
+        if 'SYSTEM' not in PATH:
+            setattr(PATH,'SYSTEM',join(PATH.GLOBAL,'system'))
 
 
     def submit(self,workflow):
@@ -90,9 +90,9 @@ class slurm_big_job(object):
         unix.cd(PATH.OUTPUT)
 
         # save current state
+        save_objects('SeisflowsObjects')
         save_parameters('SeisflowsParameters.json')
         save_paths('SeisflowsPaths.json')
-        save_objects('SeisflowsObjects')
 
         args = ('sbatch '
           + '--job-name=%s ' % PAR.TITLE

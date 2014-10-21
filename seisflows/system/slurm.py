@@ -6,15 +6,15 @@ import subprocess
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, join, saveobj
-from seisflows.tools.configtools import findpath, ParameterObj, ConfigObj
+from seisflows.tools.configtools import findpath, ConfigObj, ParameterObj
 
+OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
-OBJ = ConfigObj('SeisflowsObjects')
 
+save_objects = OBJ.save
 save_parameters = PAR.save
 save_paths = PATH.save
-save_objects = OBJ.save
 
 
 class slurm(object):
@@ -31,7 +31,7 @@ class slurm(object):
 
 
     def check(self):
-        """ Parameter checking
+        """ Checks parameters and paths
         """
 
         if 'TITLE' not in PAR:
@@ -75,9 +75,9 @@ class slurm(object):
         unix.cd(PATH.OUTPUT)
 
         # save current state
+        save_objects('SeisflowsObjects')
         save_parameters('SeisflowsParameters.json')
         save_paths('SeisflowsPaths.json')
-        save_objects('SeisflowsObjects')
 
         # submit job
         args = ('sbatch '

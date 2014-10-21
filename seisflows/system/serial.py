@@ -6,10 +6,15 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import abspath, join
-from seisflows.tools.configtools import ParameterObj
+from seisflows.tools.configtools import ConfigObj, ParameterObj
 
+OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
+
+save_objects = OBJ.save
+save_parameters = PAR.save
+save_paths = PATH.save
 
 
 class serial(object):
@@ -24,9 +29,8 @@ class serial(object):
       a particular filesystem or job scheduler.
     """
 
-
     def check(self):
-        """ Class constructor
+        """ Checks parameters and paths
         """
 
         if 'TITLE' not in PAR:
@@ -54,20 +58,30 @@ class serial(object):
         if 'LOCAL' not in PATH:
             setattr(PATH,'LOCAL','')
 
-        if 'SYSTEM' not in PATH:
-            setattr(PATH,'SYSTEM',join(PATH.GLOBAL,'system'))
-
         if 'SUBMIT' not in PATH:
             setattr(PATH,'SUBMIT',unix.pwd())
+
+        if 'OUTPUT' not in PATH:
+            setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
+
+        if 'SYSTEM' not in PATH:
+            setattr(PATH,'SYSTEM',join(PATH.GLOBAL,'system'))
 
 
     def submit(self,workflow):
         """ Submits job
         """
-        workflow().main()
+        unix.mkdir(PATH.OUTPUT)
+        unix.cd(PATH.OUTPUT)
+
+        # save current state
+        save_parameters('SeisflowsParameters.json')
+        save_paths('SeisflowsPaths.json')
+
+        workflow.main()
 
 
-    def run(self,task,hosts='all',**kwargs):
+    def run(self,classname,funcname,hosts='all',**kwargs):
         """ Runs tasks in serial or parallel on specified hosts
         """
         unix.mkdir(PATH.SYSTEM)
@@ -76,12 +90,14 @@ class serial(object):
             for itask in range(PAR.NTASK):
                 self.setnode(itask)
                 self.progress(itask)
-                task(**kwargs)
+                func = getattr(__import__(classname),funcname)
+                func(**kwargs)
             print ''
 
         elif hosts=='head':
             self.setnode(0)
-            task(**kwargs)
+            func = getattr(__import__(classname),funcname)
+            func(**kwargs)
 
         else:
             task(**kwargs)

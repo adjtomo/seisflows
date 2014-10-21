@@ -6,12 +6,8 @@ from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import exists, glob, join
 from seisflows.tools.configtools import loadclass, ParameterObj
 
-PAR = ParameterObj('parameters')
-PATH = ParameterObj('paths')
-
-system = loadclass('system',PAR.SYSTEM)()
-solver = loadclass('solver',PAR.SOLVER)()
-
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 class migration(object):
@@ -21,7 +17,18 @@ class migration(object):
       'reverse time migration'.
     """
 
-    def __init__(self):
+    def check(self):
+
+        # load dependencies
+        global postprocess
+        import postprocess
+
+        global solver
+        import solver
+
+        global system
+        import system
+
 
         # check scratch paths
         if 'GLOBAL' not in PATH:
@@ -47,7 +54,7 @@ class migration(object):
 
         # check output paths
         if 'OUTPUT' not in PATH:
-            setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
+            raise Exception
 
         if 'SAVEIMAGE' not in PAR:
             setattr(PAR,'SAVEIMAGE',1)
@@ -65,34 +72,32 @@ class migration(object):
         # prepare directory structure
         unix.rm(PATH.GLOBAL)
         unix.mkdir(PATH.GLOBAL)
+
         unix.mkdir(PATH.IMAGE)
-        unix.mkdir(PATH.OUTPUT)
 
         # prepare solver
         print 'Preparing solver...'
-        system.run( solver.prepare_solver,
+        system.run( 'solver','prepare_solver',
             hosts='all' )
 
         self.prepare_model()
 
-        system.run( solver.evaluate_func,
+        system.run( 'solver','evaluate_func',
             hosts='all',
             path=PATH.IMAGE )
 
         # backproject data
         print 'Backprojecting data...'
-        system.run( solver.evaluate_grad,
+        system.run( 'solver','evaluate_grad',
               hosts='all',
               path=PATH.IMAGE,
               export_traces=PAR.SAVETRACES )
 
         # process image
-        self.postprocess = loadclass('postprocess',PAR.POSTPROCESS)()
-
-        self.postprocess.process_kernels(
+        system.run( 'postprocess','process_kernels',
+            hosts='head',
             path=PATH.IMAGE,
             tag='image')
-
 
         # save results
         if PAR.SAVEIMAGE:

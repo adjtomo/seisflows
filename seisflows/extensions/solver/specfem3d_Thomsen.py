@@ -1,10 +1,8 @@
 
 from seisflows.tools.configtools import loadclass, ParameterObj
 
-PAR = ParameterObj('parameters')
-PATH = ParameterObj('paths')
-
-system = loadclass('system',PAR.SYSTEM)()
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 class specfem3d_Thomsen(loadclass('extensions.solver','specfem3d_legacy')):

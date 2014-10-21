@@ -2,15 +2,26 @@
 import subprocess
 
 from seisflows.tools import unix
-from seisflows.tools.configtools import loadclass, ParameterObj
+from seisflows.tools.configtools import loadclass, ConfigObj, ParameterObj
 
-PAR = ParameterObj('parameters')
-PATH = ParameterObj('paths')
-
-system = loadclass('system',PAR.SYSTEM)()
+OBJ = ConfigObj('SeisflowsObjects')
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
 
 class specfem3d_legacy(loadclass('solver','specfem3d')):
+
+    def check(self):
+        """ Checks objects and parameters
+        """
+        super(specfem3d_legacy,self).check()
+
+        if 'system' not in OBJ:
+            raise Excpetion
+
+        global system
+        import system
+
 
     def mpirun(self,script,outfile='/dev/null'):
         """ Wrapper for mpirun

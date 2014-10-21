@@ -5,25 +5,34 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import Struct, exists
-from seisflows.tools.configtools import loadclass, ParameterObj
+from seisflows.tools.configtools import loadclass, ConfigObj, ParameterObj
 
-PAR = ParameterObj('parameters')
-PATH = ParameterObj('paths')
-
-system = loadclass('system',PAR.SYSTEM)()
-solver = loadclass('solver',PAR.SOLVER)()
-preprocess = solver.preprocess
-
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
+OBJ = ConfigObj('SeisflowsObjects')
 
 
 class FwiSourceEncoding(loadclass('workflow','inversion')):
     """ Source encoding subclass
     """
 
-    def __init__(self):
-        """ Class constructor
+    def check(self):
+        """ Checks objects and parameters
         """
-        super(FwiSourceEncoding,self).__init__()
+        super(self.__class__,self).check()
+
+        # check objects
+        if 'preprocess' not in OBJ:
+            raise Exception
+
+        if 'system' not in OBJ:
+            raise Excpetion
+
+        global preprocess
+        import preprocess
+
+        global solver
+        import solver
 
         # check source encoding parameters
         if 'ENCODING' not in PAR:
@@ -35,12 +44,12 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
         if 'SHIFT' not in PAR and PAR.ENCODING in [3,4]:
             raise Exception
 
-        # add new parameters
         if PAR.ENCODING in [3,4]:
             PAR.NT_PADDED = PAR.NT + (PAR.NSRC-1)*PAR.SHIFT
         else:
             PAR.NT_PADDED = PAR.NT
 
+        # assertions
         assert('SourceEncoding' in PAR.SOLVER)
         assert(PAR.PREPROCESS in ['default'])
 
@@ -49,7 +58,6 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
         """ Lays groundwork for inversion
         """
         super(FwiSourceEncoding,self).setup()
-
         self.multiload(path=PATH.DATA,tag='obs')
 
 

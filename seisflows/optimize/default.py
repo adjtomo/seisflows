@@ -37,9 +37,6 @@ class default(object):
         if 'SUBMIT' not in PATH:
             raise Exception
 
-        if 'SUBMIT' not in PATH:
-            raise Exception
-
         if 'OPTIMIZE' not in PATH:
             setattr(PATH,'OPTIMIZE',join(PATH.GLOBAL,'optimize'))
 

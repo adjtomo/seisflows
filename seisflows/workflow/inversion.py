@@ -4,8 +4,9 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import divides, exists, glob, irange, join
-from seisflows.tools.configtools import ParameterObj
+from seisflows.tools.configtools import ConfigObj, ParameterObj
 
+OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
@@ -36,10 +37,22 @@ class inversion(object):
 
 
     def check(self):
-        """ Checks parameters
+        """ Checks objects and parameters
         """
 
-        # load dependencies
+        # check objects
+        if 'optimize' not in OBJ:
+            raise Exception
+
+        if 'postprocess' not in OBJ:
+            raise Exception
+
+        if 'solver' not in OBJ:
+            raise Excpetion
+
+        if 'system' not in OBJ:
+            raise Excpetion
+
         global optimize
         import optimize
 
@@ -81,7 +94,7 @@ class inversion(object):
             setattr(PATH,'HESS',join(PATH.GLOBAL,'hess'))
 
 
-        # check input settings
+        # check input paths
         if 'DATA' not in PATH:
             setattr(PATH,'DATA',None)
 
@@ -92,9 +105,9 @@ class inversion(object):
             raise Exception
 
 
-        # check output settings
+        # check output paths
         if 'OUTPUT' not in PATH:
-            setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
+            raise Exception
 
         if 'SAVEMODEL' not in PAR:
             setattr(PAR,'SAVEMODEL',1)

@@ -6,9 +6,10 @@ import numpy as np
 from seisflows import seistools
 from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join
-from seisflows.tools.configtools import findpath, ParameterObj
+from seisflows.tools.configtools import findpath, ConfigObj, ParameterObj
 from seisflows.tools.iotools import loadbin, savebin
 
+OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
@@ -74,12 +75,22 @@ class specfem3d(object):
 
 
     def check(self):
+        """ Checks objects and parameters
+        """
+
+        # check objects
+        if 'preprocess' not in OBJ:
+            raise Exception
+
+        if 'system' not in OBJ:
+            raise Excpetion
 
         global preprocess
         import preprocess
 
         global system
         import system
+
 
         # check scratch paths
         if 'GLOBAL' not in PATH:

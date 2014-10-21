@@ -9,6 +9,7 @@ from seisflows.tools import unix
 from seisflows.tools.codetools import exists, glob, join, setdiff, Struct
 from seisflows.tools.configtools import loadclass, findpath, ParameterObj, ConfigObj
 
+OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
@@ -61,7 +62,7 @@ class specfem2d(object):
     channels = []
     channels += ['y']
 
-    # input/output
+    # data input/output
     reader = staticmethod(seistools.specfem2d.readsu)
     writer = staticmethod(seistools.specfem2d.writesu)
 
@@ -72,12 +73,22 @@ class specfem2d(object):
 
 
     def check(self):
+        """ Checks objects and parameters
+        """
+
+        # check objects
+        if 'preprocess' not in OBJ:
+            raise Exception
+
+        if 'system' not in OBJ:
+            raise Excpetion
 
         global preprocess
         import preprocess
 
         global system
         import system
+
 
         # check scratch paths
         if 'GLOBAL' not in PATH:
@@ -94,6 +105,7 @@ class specfem2d(object):
                 setattr(PATH,'SOLVER',join(PATH.LOCAL,'solver'))
             else:
                 setattr(PATH,'SOLVER',join(PATH.GLOBAL,'solver'))
+
 
         # check mesh parameters
         if 'XMIN' not in PAR:
@@ -113,6 +125,7 @@ class specfem2d(object):
 
         if 'NZ' not in PAR:
             raise Exception
+
 
         # check time stepping parameters
         if 'NT' not in PAR:
