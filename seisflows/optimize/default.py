@@ -75,13 +75,13 @@ class default(object):
             setattr(PAR,'STEPMAX',0.)
 
 
-    def setup(cls):
-        cls.iter = PAR.BEGIN-1
-
+        # instance variables
         cls.path = PATH.OPTIMIZE
-        unix.mkdir(cls.path)
-
         cls.output = PATH.SUBMIT+'/'+'output.optim'
+
+
+    def setup(cls):
+        unix.mkdir(cls.path)
 
         # prepare algorithm machinery
         if PAR.SCHEME in ['ConjugateGradient']:
@@ -94,8 +94,6 @@ class default(object):
     def compute_direction(cls):
         """ Computes model update direction from function and gradient values
         """
-        cls.iter += 1
-
         unix.cd(cls.path)
         m_new = loadnpy('m_new')
         f_new = loadtxt('f_new')

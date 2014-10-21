@@ -131,6 +131,8 @@ class inversion(object):
         self.setup()
 
         for self.iter in irange(PAR.BEGIN,PAR.END):
+            optimize.iter = self.iter
+
             print "Starting iteration", self.iter
             self.initialize()
 
@@ -155,21 +157,25 @@ class inversion(object):
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
 
-            # prepare solver
+            # run setup methods
+            optimize.setup()
+
             system.run( 'solver','prepare_solver',
                 hosts='all' )
 
-            # prepare optimization
-            optimize.setup()
-
+            # prepare starting model
             src = PATH.OUTPUT+'/'+'model_init'
             dst = PATH.OPTIMIZE+'/'+'m_new'
             savenpy(dst,solver.merge(solver.load(src)))
 
 
-        elif PATH.LOCAL:
-            system.run( 'solver','prepare_solver',
-                hosts='all' )
+        else:
+            # run setup methods
+            optimize.setup()
+
+            if PATH.LOCAL:
+                system.run( 'solver','prepare_solver',
+                    hosts='all' )
 
 
     def initialize(self):
@@ -201,7 +207,7 @@ class inversion(object):
         """
         optimize.initialize_search()
 
-        for self.step in irange(1,PAR.SRCHMAX):
+        for optimize.step in irange(1,PAR.SRCHMAX):
             isdone = self.search_status()
 
             if isdone==1:
@@ -218,7 +224,7 @@ class inversion(object):
     def search_status(self):
         """ Checks line search status
         """
-        if PAR.VERBOSE: print " trial step", self.step
+        if PAR.VERBOSE: print " trial step", optimize.step
         self.evaluate_function()
         isdone, isbest = optimize.search_status()
 
