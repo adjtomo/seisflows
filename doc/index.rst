@@ -14,6 +14,18 @@ Intro
 
 To come...
 
+Prerequisites
+=============
+
+* Seisflows source code
+   
+  * Python 2.7
+
+* Documentation
+
+  * To generate the documentation you will need `Sphinx <http://sphinx-doc.org/>`_
+  * Pages are written using *reStructuredText*, a good cheat sheet can be found `here <http://openalea.gforge.inria.fr/doc/openalea/doc/_build/html/source/sphinx/rest_syntax.html>`_.
+
 Examples
 ========
 
