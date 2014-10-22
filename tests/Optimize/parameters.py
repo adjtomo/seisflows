@@ -1,10 +1,10 @@
 
-SYSTEM=None
-WORKFLOW=None
-OPTIMIZE=None
-SOLVER=None
-PREPROCESS=None
-POSTPROCESS=None
+WORKFLOW=None        # not used
+SOLVER=None          # not used
+SYSTEM=None          # not used
+OPTIMIZE='default'   # default, Newton, GaussNewton
+PREPROCESS=None      # not used
+POSTPROCESS=None     # not used
 
 SCHEME='QuasiNewton' # optimization algorithm
 BEGIN=1              # first iteration
