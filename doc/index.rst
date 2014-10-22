@@ -19,6 +19,10 @@ Examples
 
 To come...
 
+.. toctree::
+   :maxdepth: 1
+
+   examples/examples.rst
 
 API Documentation
 =================
