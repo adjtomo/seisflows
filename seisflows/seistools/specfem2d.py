@@ -5,6 +5,7 @@ import numpy as _np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import Struct
+from seisflows.tools.configtools import findpath
 from seisflows.seistools.segy import segyreader, segywriter
 
 
@@ -169,27 +170,25 @@ def writesu(d,h,channel=[],prefix='SEM',suffix='.bin.adj'):
 
 ### input file writers
 
-def write_sources(PAR,h,path='.'):
+def write_sources(par,hdr,path='.',suffix=''):
     """ Writes source information to text file
     """
-    from seisflows.tools.configtools import findpath
-
     file = findpath('seistools')+'/'+'specfem2d/SOURCE'
     with open(file,'r') as f:
         lines = f.readlines()
 
-    file = 'DATA/SOURCE'
+    file = path+'/'+'DATA/SOURCE'+suffix
     _writelines(file,lines)
 
     # adjust source coordinates
-    setpar( 'xs', h.sx[0], file )
-    setpar( 'zs', h.sz[0], file )
-    setpar( 'ts', h.ts, file )
+    setpar( 'xs', hdr.sx[0], file )
+    setpar( 'zs', hdr.sz[0], file )
+    setpar( 'ts', hdr.ts, file )
 
     # adjust source amplitude
     try:
         fs = float(getpar('factor',file))
-        setpar('factor',str(fs*h.fs),file)
+        setpar('factor',str(fs*hdr.fs),file)
     except:
         pass
 
@@ -210,50 +209,47 @@ def write_sources(PAR,h,path='.'):
         # Heaviside
         setpar( 'time_function_type', 5, file )
 
-    setpar( 'f0', PAR['F0'], file )
+    setpar( 'f0', par['F0'], file )
 
 
-def write_receivers(nr,rx,rz):
+def write_receivers(h):
     """ Writes receiver information to text file
     """
     file = 'DATA/STATIONS'
     lines = []
 
     # loop over receivers
-    for ir in range(nr):
+    for ir in range(h.nr):
         line = ''
-        line = line + 'S%06d'  % ir     + ' '
-        line = line + 'AA'              + ' '
-        line = line + '%11.5e' % rx[ir] + ' '
-        line = line + '%11.5e' % rz[ir] + ' '
-        line = line + '%3.1f'  % 0.     + ' '
-        line = line + '%3.1f'  % 0.     + '\n'
+        line = line + 'S%06d'  % ir       + ' '
+        line = line + 'AA'                + ' '
+        line = line + '%11.5e' % h.rx[ir] + ' '
+        line = line + '%11.5e' % h.rz[ir] + ' '
+        line = line + '%3.1f'  % 0.       + ' '
+        line = line + '%3.1f'  % 0.       + '\n'
         lines.extend(line)
 
     # write file
     _writelines(file,lines)
 
 
-def write_parameters(PAR,version='git-devel'):
+def write_parameters(par,version='git-devel'):
     """ Writes parameters to text file
     """
-    from seisflows.tools.configtools import findpath
-    PAR = Struct(PAR)
-
     # read template
     file = findpath('seistools')+'/'+'specfem2d/par-'+version
     with open(file,'r') as f:
         lines = f.readlines()
-    lines[-1] = ' '.join(['1',str(PAR.NX),'1',str(PAR.NZ),'1'])
+    lines[-1] = ' '.join(['1',str(par.NX),'1',str(par.NZ),'1'])
 
     # write parameter file
     file = 'DATA/Par_file'
     _writelines(file,lines)
-    setpar( 'xmin',      str(PAR.XMIN) )
-    setpar( 'xmax',      str(PAR.XMAX) )
-    setpar( 'nx',        str(PAR.NX) )
-    setpar( 'nt',        str(PAR.NT) )
-    setpar( 'deltat',    str(PAR.DT) )
+    setpar( 'xmin',      str(par.XMIN) )
+    setpar( 'xmax',      str(par.XMAX) )
+    setpar( 'nx',        str(par.NX) )
+    setpar( 'nt',        str(par.NT) )
+    setpar( 'deltat',    str(par.DT) )
     setpar( 'nsources',  str(1)      )
 
     # write interfaces file
@@ -261,12 +257,12 @@ def write_parameters(PAR,version='git-devel'):
     lines = []
     lines.extend('2\n')
     lines.extend('2\n')
-    lines.extend('%f %f\n' % (PAR.XMIN,PAR.ZMIN))
-    lines.extend('%f %f\n' % (PAR.XMAX,PAR.ZMIN))
+    lines.extend('%f %f\n' % (par.XMIN,par.ZMIN))
+    lines.extend('%f %f\n' % (par.XMAX,par.ZMIN))
     lines.extend('2\n')
-    lines.extend('%f %f\n' % (PAR.XMIN,PAR.ZMAX))
-    lines.extend('%f %f\n' % (PAR.XMAX,PAR.ZMAX))
-    lines.extend(str(PAR.NZ))
+    lines.extend('%f %f\n' % (par.XMIN,par.ZMAX))
+    lines.extend('%f %f\n' % (par.XMAX,par.ZMAX))
+    lines.extend(str(par.NZ))
     _writelines(file,lines)
 
 
@@ -354,3 +350,21 @@ def _stack(a1,a2):
         return _np.column_stack((a1,a2))
     else:
         return a2
+
+
+def interpolate_model():
+    self.mesher()
+    parts = self.load('DATA/model_velocity.dat_output')
+
+    # interpolate material parameters
+    x = np.array(parts['x'][:]).T
+    z = np.array(parts['z'][:]).T
+    meshcoords = np.column_stack((x,z))
+    x = model['x'].flatten()
+    z = model['z'].flatten()
+    gridcoords = np.column_stack((x,z))
+    for key in ['rho','vp','vs']:
+        v = model[key].flatten()
+        parts[key] = [griddata(gridcoords,v,meshcoords,'linear')]
+    self.save('DATA/model_velocity.dat_input',parts)
+

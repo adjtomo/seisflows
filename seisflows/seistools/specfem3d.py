@@ -6,6 +6,7 @@ import numpy as _np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import Struct
+from seisflows.tools.configtools import findpath
 
 import segy.reader as segyreader
 import segy.writer as segywriter
@@ -249,8 +250,6 @@ def writesu(d,h,channel=[],prefix='SEM',suffix='.adj',verbose=False):
 def write_sources(PAR,h,path='.'):
     """ Writes source information to text file
     """
-    from seisflows.tools.configtools import findpath
-
     file = findpath('seistools')+'/'+'specfem3d/SOURCE'
     with open(file,'r') as f:
         lines = f.readlines()
@@ -268,44 +267,31 @@ def write_sources(PAR,h,path='.'):
 
 
 
-def write_receivers(nr,rx,rz):
+def write_receivers(h):
     """ Writes receiver information to text file
     """
     file = 'DATA/STATIONS'
     lines = []
 
     # loop over receivers
-    for ir in range(nr):
+    for ir in range(h.nr):
         line = ''
-        line = line + 'S%06d'  % ir     + ' '
-        line = line + 'AA'              + ' '
-        line = line + '%11.5e' % rx[ir] + ' '
-        line = line + '%11.5e' % rz[ir] + ' '
-        line = line + '%3.1f'  % 0.     + ' '
-        line = line + '%3.1f'  % 0.     + '\n'
+        line = line + 'S%06d'  % ir       + ' '
+        line = line + 'AA'                + ' '
+        line = line + '%11.5e' % h.rx[ir] + ' '
+        line = line + '%11.5e' % h.rz[ir] + ' '
+        line = line + '%3.1f'  % 0.       + ' '
+        line = line + '%3.1f'  % 0.       + '\n'
         lines.extend(line)
 
     # write file
     _writelines(file,lines)
 
 
-def write_parameters(PAR):
+def write_parameters(par,version):
     """ Writes parameters to text file
     """
-    from seisflows.tools.configtools import findpath
-
-    PAR = Struct(PAR)
-
-    # read template
-    file = findpath('seistools')+'/'+'specfem3d/par-'+version
-    with open(file,'r') as f:
-        lines = f.readlines()
-
-    # write parameter file
-
-    # write interfaces file
-
-    raise Exception
+    raise NotImplementedError
 
 
 def getpar(key,file='DATA/Par_file',sep='='):

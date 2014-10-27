@@ -68,6 +68,7 @@ class specfem3d(object):
     channels = []
     channels += ['z']
 
+    # data input/output
     reader = staticmethod(seistools.specfem3d.readsu)
     writer = staticmethod(seistools.specfem3d.writesu)
 
@@ -75,39 +76,8 @@ class specfem3d(object):
 
 
     def check(self):
-        """ Checks objects and parameters
+        """ Checks parameters, paths, and dependencies
         """
-
-        # check objects
-        if 'preprocess' not in OBJ:
-            raise Exception
-
-        if 'system' not in OBJ:
-            raise Excpetion
-
-        global preprocess
-        import preprocess
-
-        global system
-        import system
-
-
-        # check scratch paths
-        if 'GLOBAL' not in PATH:
-            raise Exception
-
-        if 'LOCAL' not in PATH:
-            setattr(PATH,'LOCAL',None)
-
-        if 'MESH' not in PATH:
-            setattr(PATH,'MESH',join(PATH.GLOBAL,'mesh'))
-
-        if 'SOLVER' not in PATH:
-            if PATH.LOCAL:
-                setattr(PATH,'SOLVER',join(PATH.LOCAL,'solver'))
-            else:
-                setattr(PATH,'SOLVER',join(PATH.GLOBAL,'solver'))
-
 
         # check mesh parameters
         if 'MESH' not in PATH:
@@ -155,8 +125,63 @@ class specfem3d(object):
             setattr(PAR,'WAVELET','ricker')
 
 
-    def prepare_solver(self,inversion=True,**kwargs):
-        """ Sets up directory from which to run solver
+        # check paths
+        if 'GLOBAL' not in PATH:
+            raise Exception
+
+        if 'LOCAL' not in PATH:
+            setattr(PATH,'LOCAL',None)
+
+        if 'MESH' not in PATH:
+            setattr(PATH,'MESH',join(PATH.GLOBAL,'mesh'))
+
+        if 'SOLVER' not in PATH:
+            if PATH.LOCAL:
+                setattr(PATH,'SOLVER',join(PATH.LOCAL,'solver'))
+            else:
+                setattr(PATH,'SOLVER',join(PATH.GLOBAL,'solver'))
+
+
+        # check dependencies
+        if 'preprocess' not in OBJ:
+            raise Exception
+
+        if 'system' not in OBJ:
+            raise Excpetion
+
+        global preprocess
+        import preprocess
+
+        global system
+        import system
+
+
+
+    def setup(self):
+        """ Prepares solver for inversion, migration, or forward modeling
+        """
+        self.prepare_dirs()
+        model_type = seistools.specfem3d.getpar('MODEL')
+
+        # prepare data
+        if exists(PATH.DATA):
+            self.prepare_data(
+                data_path = PATH.DATA)
+        else:
+            self.prepare_data(
+                model_path = PATH.MODEL_TRUE,
+                model_name = 'model_true',
+                model_type = model_type)
+
+        # prepare model
+        self.prepare_model(
+            model_path = PATH.MODEL_INIT,
+            model_name = 'model_init',
+                model_type = model_type)
+
+
+    def prepare_dirs(self):
+        """ Sets up directory in which to run solver
 
           Creates subdirectories expected by SPECFEM3D, copies mesher and solver
           binary files, and optionally calls prepare_data and prepare_mdoel.
@@ -181,36 +206,19 @@ class specfem3d(object):
         dst = 'bin/'
         unix.cp(src,dst)
 
-        if inversion:
-            if 'model_type' not in kwargs:
-                try:
-                    file = PATH.SOLVER_FILES+'/'+'Par_file'
-                    kwargs['model_type'] = seistools.specfem3d.getpar('MODEL',file=file)
-                except:
-                    kwargs['model_type'] = 'gll'
-
-            # prepare data
-            if not exists(PATH.DATA):
-                assert(exists(PATH.SOLVER_FILES))
-                kwargs['model_path'] = PATH.MODEL_TRUE
-                kwargs['model_name'] = 'model_true'
-            self.prepare_data(**kwargs)
-
-            # prepare model
-            kwargs['model_path'] = PATH.MODEL_INIT
-            kwargs['model_name'] = 'model_init'
-            self.prepare_model(**kwargs)
+        # copy input files
+        src = glob(PATH.SOLVER_FILES+'/'+'*')
+        dst = 'DATA/'
+        unix.cp(src,dst)
 
 
-    def prepare_data(self,**kwargs):
+    def prepare_data(self,data_path=None,**kwargs):
         """ Prepares data for inversion or migration
 
           Users implementing an inversion or migration can choose between
           supplying data or supplying a target model from which data are
-          generated on the fly. If data are provided, SPECFEM3D input files will
-          be generated automatically from included header information. If data
-          are to be generated on the fly, both a target model and SPECFEM3D input
-          files must be supplied.
+          generated on the fly. In both cases, all necessary SPECFEM3D input
+          files must be provided.
 
           Adjoint traces are intialized by writing zeros for all components. This
           is necessary because, at the start of an adjoint simulation, SPECFEM3D
@@ -219,30 +227,28 @@ class specfem3d(object):
         """
         unix.cd(self.path)
 
-        if exists(PATH.DATA):
-                # copy user supplied data
-            src = glob(PATH.DATA+'/'+getname()+'/'+'*')
+        # update source coordinates
+        src = 'DATA/FORCESOLUTION_'+self.getshot()
+        dst = 'DATA/FORCESOLUTION'
+        unix.cp(src,dst)
+
+        if data_path:
+            # copy user supplied data
+            src = glob(data_path+'/'+self.getshot()+'/'+'*')
             dst = 'traces/obs/'
             unix.cp(src,dst)
-
-            # generate SPECFEM3D input files
-            self.write_parameters()
-            self.write_sources()
-            self.write_receivers()
+            self.initialize_adjoint()
 
         else:
             # generate data
-            self.generate_data(**kwargs)
-
-        # initialize adjoint traces
-        zeros = np.zeros((PAR.NT,PAR.NREC))
-        _,h = preprocess.load('traces/obs')
-        for channel in ['x','y','z']:
-            self.writer(zeros,h,
-                channel=channel,prefix='traces/adj')
+            self.prepare_model(**kwargs)
+            self.mpirun('bin/xspecfem3D')
+            unix.mv(self.glob(),'traces/obs')
+            self.export_traces(PATH.OUTPUT,'traces/obs')
+            self.initialize_adjoint()
 
 
-    def prepare_model(self,model_path='',model_type='',model_name=''):
+    def prepare_model(self,model_path=None,model_name=None,model_type='gll'):
         """ Performs meshing and model interpolation using SPECFEM3D's builtin
           mesher and database generation utility
         """
@@ -290,36 +296,6 @@ class specfem3d(object):
                     for proc in range(PAR.NPROC):
                         with open(PATH.MESH+'/'+key+'/'+'%06d'%proc,'w') as file:
                             np.save(file,parts[key][proc])
-
-
-    def generate_data(self,**kwargs):
-        """ Generates data by copying input files, setting source coordinates,
-          preparing model, and  calling forward solver. Similar to 'forward',
-          but puts together all the steps needed for modeling, rather than just
-          calling the solver binary.
-        """
-        unix.cd(self.path)
-
-        # copy input files
-        src = glob(PATH.SOLVER_FILES+'/'+'*')
-        dst = 'DATA/'
-        unix.cp(src,dst)
-
-        # set source coordinates
-        s = np.loadtxt('DATA/SOURCE.XYZ')[system.getnode(),:]
-        seistools.specfem3d.setpar('longitude',s[0],sep=': ',file='DATA/FORCESOLUTION')
-        seistools.specfem3d.setpar('latitude',s[1],sep=': ',file='DATA/FORCESOLUTION')
-        seistools.specfem3d.setpar('depth',s[2],sep=': ',file='DATA/FORCESOLUTION')
-
-        # prepare model
-        self.prepare_model(**kwargs)
-
-        # run solver
-        seistools.specfem3d.setpar('SIMULATION_TYPE', '1')
-        seistools.specfem3d.setpar('SAVE_FORWARD', '.false.')
-        self.mpirun('bin/xspecfem3D')
-        unix.mv(self.glob(),'traces/obs')
-
 
 
     ### high-level solver interface
@@ -646,6 +622,13 @@ class specfem3d(object):
         src=join(unix.pwd(),prefix)
         dst=join(path,'traces','%06d'%system.getnode())
         unix.cp(src,dst)
+
+    def initialize_adjoint(self):
+        zeros = np.zeros((PAR.NT,PAR.NREC))
+        _,h = preprocess.load('traces/obs')
+        for channel in ['x','y','z']:
+            self.writer(zeros,h,channel=channel,prefix='traces/adj')
+
 
 
 
