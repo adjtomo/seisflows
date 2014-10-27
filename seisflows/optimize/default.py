@@ -32,14 +32,8 @@ class default(object):
     """
 
     def check(cls):
-
-        # check scratch paths
-        if 'SUBMIT' not in PATH:
-            raise Exception
-
-        if 'OPTIMIZE' not in PATH:
-            setattr(PATH,'OPTIMIZE',join(PATH.GLOBAL,'optimize'))
-
+        """ Checks parameters, paths, and dependencies
+        """
 
         # check optimization parameters
         if 'BEGIN' not in PAR:
@@ -75,12 +69,18 @@ class default(object):
             setattr(PAR,'STEPMAX',0.)
 
 
-        # instance variables
-        cls.path = PATH.OPTIMIZE
-        cls.output = PATH.SUBMIT+'/'+'output.optim'
+        # check paths
+        if 'SUBMIT' not in PATH:
+            raise Exception
+
+        if 'OPTIMIZE' not in PATH:
+            setattr(PATH,'OPTIMIZE',join(PATH.GLOBAL,'optimize'))
 
 
     def setup(cls):
+        """ Sets up directory in which to store optimization vectors
+        """
+        cls.path = PATH.OPTIMIZE
         unix.mkdir(cls.path)
 
         # prepare algorithm machinery
@@ -89,6 +89,8 @@ class default(object):
 
         elif PAR.SCHEME in ['QuasiNewton']:
             cls.LBFGS = lib.LBFGS(cls.path,PAR.LBFGSMAX,PAR.BEGIN)
+
+        cls.output = PATH.SUBMIT+'/'+'output.optim'
 
 
     def compute_direction(cls):

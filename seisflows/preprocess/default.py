@@ -16,10 +16,10 @@ class default(object):
     """
 
     def check(self):
-        """ Checks objects and parameters
+        """ Checks parameters, paths, and dependencies
         """
 
-        # check objects
+        # check dependencies
         if 'solver' not in OBJ:
             raise Excpetion
 

@@ -4,8 +4,9 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import exists, glob, join
-from seisflows.tools.configtools import loadclass, ParameterObj
+from seisflows.tools.configtools import loadclass, ConfigObj, ParameterObj
 
+OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
@@ -18,19 +19,10 @@ class migration(object):
     """
 
     def check(self):
+        """ Checks parameters, paths, and dependencies
+        """
 
-        # load dependencies
-        global postprocess
-        import postprocess
-
-        global solver
-        import solver
-
-        global system
-        import system
-
-
-        # check scratch paths
+        # check paths
         if 'GLOBAL' not in PATH:
             raise Exception
 
@@ -66,18 +58,37 @@ class migration(object):
             setattr(PAR,'SAVETRACES',0)
 
 
+        # check dependencies
+        if 'postprocess' not in OBJ:
+            raise Exception
+
+        if 'solver' not in OBJ:
+            raise Excpetion
+
+        if 'system' not in OBJ:
+            raise Excpetion
+
+        global postprocess
+        import postprocess
+
+        global solver
+        import solver
+
+        global system
+        import system
+
+
     def main(self):
         """ Migrates seismic data
         """
         # prepare directory structure
         unix.rm(PATH.GLOBAL)
         unix.mkdir(PATH.GLOBAL)
-
         unix.mkdir(PATH.IMAGE)
 
         # prepare solver
         print 'Preparing solver...'
-        system.run( 'solver','prepare_solver',
+        system.run( 'solver','setup',
             hosts='all' )
 
         self.prepare_model()

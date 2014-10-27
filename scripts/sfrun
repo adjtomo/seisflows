@@ -36,30 +36,30 @@ if __name__ == '__main__':
 
     # load objects
     system = loadclass('system',PAR.SYSTEM)()
+    workflow = loadclass('workflow',PAR.WORKFLOW)()
     solver = loadclass('solver',PAR.SOLVER)()
     optimize = loadclass('optimize',PAR.OPTIMIZE)()
     preprocess = loadclass('preprocess',PAR.PREPROCESS)()
     postprocess = loadclass('postprocess',PAR.POSTPROCESS)()
-    workflow = loadclass('workflow',PAR.WORKFLOW)()
 
 
     # register objects
     register=OBJ.register
     register('system',system)
+    register('workflow',workflow)
     register('solver',solver)
     register('optimize',optimize)
     register('preprocess',preprocess)
     register('postprocess',postprocess)
-    register('workflow',workflow)
 
 
     # check objects
     system.check()
+    workflow.check()
     solver.check()
     optimize.check()
     preprocess.check()
     postprocess.check()
-    workflow.check()   
 
 
     # submit job

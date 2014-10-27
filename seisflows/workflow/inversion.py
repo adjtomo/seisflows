@@ -37,10 +37,69 @@ class inversion(object):
 
 
     def check(self):
-        """ Checks objects and parameters
+        """ Checks parameters, paths, and dependencies
         """
 
-        # check objects
+        # check parameters
+        if 'BEGIN' not in PAR:
+            raise Exception
+
+        if 'END' not in PAR:
+            raise Exception
+
+        if 'VERBOSE' not in PAR:
+            setattr(PAR,'VERBOSE',1)
+
+
+        # check paths
+        if 'GLOBAL' not in PATH:
+            raise Exception
+
+        if 'LOCAL' not in PATH:
+            setattr(PATH,'LOCAL',None)
+
+        if 'FUNC' not in PATH:
+            setattr(PATH,'FUNC',join(PATH.GLOBAL,'func'))
+
+        if 'GRAD' not in PATH:
+            setattr(PATH,'GRAD',join(PATH.GLOBAL,'grad'))
+
+        if 'HESS' not in PATH:
+            setattr(PATH,'HESS',join(PATH.GLOBAL,'hess'))
+
+
+        # check input settings
+        if 'DATA' not in PATH:
+            setattr(PATH,'DATA',None)
+
+        if not exists(PATH.DATA):
+            assert 'MODEL_TRUE' in PATH
+
+        if 'MODEL_INIT' not in PATH:
+            raise Exception
+
+
+        # check output settings
+        if 'OUTPUT' not in PATH:
+            raise Exception
+
+        if 'SAVEMODEL' not in PAR:
+            setattr(PAR,'SAVEMODEL',1)
+
+        if 'SAVEGRADIENT' not in PAR:
+            setattr(PAR,'SAVEGRADIENT',0)
+
+        if 'SAVEKERNELS' not in PAR:
+            setattr(PAR,'SAVEKERNELS',0)
+
+        if 'SAVETRACES' not in PAR:
+            setattr(PAR,'SAVETRACES',0)
+
+        if 'SAVERESIDUALS' not in PAR:
+            setattr(PAR,'SAVERESIDUALS',0)
+
+
+       # check dependencies
         if 'optimize' not in OBJ:
             raise Exception
 
@@ -65,64 +124,6 @@ class inversion(object):
         global system
         import system
 
-
-        # check user supplied parameters
-        if 'BEGIN' not in PAR:
-            raise Exception
-
-        if 'END' not in PAR:
-            raise Exception
-
-        if 'VERBOSE' not in PAR:
-            setattr(PAR,'VERBOSE',1)
-
-
-        # check scratch paths
-        if 'GLOBAL' not in PATH:
-            raise Exception
-
-        if 'LOCAL' not in PATH:
-            setattr(PATH,'LOCAL',None)
-
-        if 'FUNC' not in PATH:
-            setattr(PATH,'FUNC',join(PATH.GLOBAL,'func'))
-
-        if 'GRAD' not in PATH:
-            setattr(PATH,'GRAD',join(PATH.GLOBAL,'grad'))
-
-        if 'HESS' not in PATH:
-            setattr(PATH,'HESS',join(PATH.GLOBAL,'hess'))
-
-
-        # check input paths
-        if 'DATA' not in PATH:
-            setattr(PATH,'DATA',None)
-
-        if not exists(PATH.DATA):
-            assert 'MODEL_TRUE' in PATH
-
-        if 'MODEL_INIT' not in PATH:
-            raise Exception
-
-
-        # check output paths
-        if 'OUTPUT' not in PATH:
-            raise Exception
-
-        if 'SAVEMODEL' not in PAR:
-            setattr(PAR,'SAVEMODEL',1)
-
-        if 'SAVEGRADIENT' not in PAR:
-            setattr(PAR,'SAVEGRADIENT',0)
-
-        if 'SAVEKERNELS' not in PAR:
-            setattr(PAR,'SAVEKERNELS',0)
-
-        if 'SAVETRACES' not in PAR:
-            setattr(PAR,'SAVETRACES',0)
-
-        if 'SAVERESIDUALS' not in PAR:
-            setattr(PAR,'SAVERESIDUALS',0)
 
 
     def main(self):
@@ -157,10 +158,10 @@ class inversion(object):
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
 
-            # run setup methods
+            # prepare optimization and solver directories
             optimize.setup()
 
-            system.run( 'solver','prepare_solver',
+            system.run( 'solver','setup',
                 hosts='all' )
 
             # prepare starting model
@@ -170,11 +171,11 @@ class inversion(object):
 
 
         else:
-            # run setup methods
+            # prepare optimization and solver directories
             optimize.setup()
 
             if PATH.LOCAL:
-                system.run( 'solver','prepare_solver',
+                system.run( 'solver','setup',
                     hosts='all' )
 
 
@@ -253,6 +254,7 @@ class inversion(object):
 
     def evaluate_gradient(self):
         """ Calls adjoint solver and runs process_kernels
+w
         """
         # adjoint simulation
         system.run( 'solver','evaluate_grad',
