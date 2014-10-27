@@ -37,11 +37,11 @@ class specfem2d_Microseismic(loadclass('solver','specfem2d')):
 
 
     def check(self):
-        """ Checks objects and parameters
+        """ Checks parameters, paths, and dependencies
         """
         super(self.__class__,self).check()
 
-        # check objects
+        # check dependencies
         if 'preprocess' not in OBJ:
             raise Exception
 
@@ -55,51 +55,56 @@ class specfem2d_Microseismic(loadclass('solver','specfem2d')):
         import system
 
 
-    def prepare_data(self,**kwargs):
-        """ Prepares data for inversion or migration
-        """
-        super(self.__class__,self).prepare_data(**kwargs)
-
-
-    def generate_data(self,**kwargs):
-        """ Generates preprocess using SPECFEM2D forward solver
-        """
-        unix.cd(self.path)
+    def prepare_dirs(self,**kwargs):
+        super(self.__class__,self).prepare_dirs()
 
         unix.mkdir('DATA/NOISE_TOMOGRAPHY')
         unix.mkdir('OUTPUT_FILES/NOISE_TOMOGRAPHY')
 
-        # prepare model
-        self.prepare_model(**kwargs)
+        with open('DATA/NOISE_TOMOGRAPHY/irec_master','w') as myfile:
+            myfile.write(str(system.getnode()+1)+'\n')
 
-        # copy input files
-        src = glob(PATH.SOLVER_FILES+'/'+'*')
-        dst = 'DATA/'
-        unix.cp(src,dst)
 
-        with open('DATA/NOISE_TOMOGRAPHY/irec_master','w') as f:
-            f.write(str(system.getnode()+1)+'\n')
+    def prepare_data(self,data_path=None,**kwargs):
+        """ Prepares data for inversion or migration
+        """
+        unix.cd(self.path)
 
-        # generating wavefield
-        seistools.specfem2d.setpar('NOISE_TOMOGRAPHY', '1')
-        seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
-        seistools.specfem2d.setpar('SAVE_FORWARD', '.false.')
+        if data_path:
+            # copy user supplied data
+            src = glob(data_path+'/'+self.getshot()+'/'+'*')
+            dst = 'traces/obs/'
+            unix.cp(src,dst)
+            self.initialize_adjoint()
 
-        with open('log.fwd','w') as f:
-            subprocess.call(self.mesher_binary,stdout=f)
-            subprocess.call(self.solver_binary,stdout=f)
+        else:
+            # generate data
+            self.prepare_model(**kwargs)
+            self.forward()
+            unix.mv(self.glob(),'traces/obs')
+            self.export_traces(PATH.OUTPUT,'traces/obs')
 
-        # ensemble forward wavefield
-        seistools.specfem2d.setpar('NOISE_TOMOGRAPHY', '2')
-        seistools.specfem2d.setpar('SIMULATION_TYPE',  '1')
-        seistools.specfem2d.setpar('SAVE_FORWARD', '.true.')
+            # generating wavefield
+            seistools.specfem2d.setpar('NOISE_TOMOGRAPHY', '1')
+            seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
+            seistools.specfem2d.setpar('SAVE_FORWARD', '.false.')
 
-        with open('log.fwd','w') as f:
-            subprocess.call(self.mesher_binary,stdout=f)
-            subprocess.call(self.solver_binary,stdout=f)
+            with open('log.fwd','w') as f:
+                subprocess.call(self.mesher_binary,stdout=f)
+                subprocess.call(self.solver_binary,stdout=f)
 
-        # export traces
-        unix.mv(self.glob(),'traces/obs')
+            # ensemble forward wavefield
+            seistools.specfem2d.setpar('NOISE_TOMOGRAPHY', '2')
+            seistools.specfem2d.setpar('SIMULATION_TYPE',  '1')
+            seistools.specfem2d.setpar('SAVE_FORWARD', '.true.')
+
+            with open('log.fwd','w') as f:
+                subprocess.call(self.mesher_binary,stdout=f)
+                subprocess.call(self.solver_binary,stdout=f)
+
+            unix.mv(self.glob(),'traces/obs')
+            self.initialize_adjoint()
+
 
 
     ### high-level interface

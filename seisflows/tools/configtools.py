@@ -186,7 +186,7 @@ def _vars(obj):
     for key,val in vars(obj).items():
         if key[0] != '_':
             mydict[key] = val
-    return mydict
+    return Struct(mydict)
 
 
 def _parse(args,package=None):

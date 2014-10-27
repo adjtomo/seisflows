@@ -17,22 +17,9 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
     """
 
     def check(self):
-        """ Checks objects and parameters
+        """ Checks parameters, paths, and dependencies
         """
-        super(self.__class__,self).check()
-
-        # check objects
-        if 'preprocess' not in OBJ:
-            raise Exception
-
-        if 'system' not in OBJ:
-            raise Excpetion
-
-        global preprocess
-        import preprocess
-
-        global solver
-        import solver
+        super(FwiSourceEncoding,self).check()
 
         # check source encoding parameters
         if 'ENCODING' not in PAR:
@@ -48,6 +35,21 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
             PAR.NT_PADDED = PAR.NT + (PAR.NSRC-1)*PAR.SHIFT
         else:
             PAR.NT_PADDED = PAR.NT
+
+
+        # check dependencies
+        if 'preprocess' not in OBJ:
+            raise Exception
+
+        if 'system' not in OBJ:
+            raise Excpetion
+
+        global preprocess
+        import preprocess
+
+        global solver
+        import solver
+
 
         # assertions
         assert('SourceEncoding' in PAR.SOLVER)

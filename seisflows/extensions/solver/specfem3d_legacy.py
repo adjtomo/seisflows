@@ -12,7 +12,7 @@ PATH = ParameterObj('SeisflowsPaths')
 class specfem3d_legacy(loadclass('solver','specfem3d')):
 
     def check(self):
-        """ Checks objects and parameters
+        """ Checks parameters, paths, and dependencies
         """
         super(specfem3d_legacy,self).check()
 
