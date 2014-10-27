@@ -67,6 +67,9 @@ class inversion(object):
         if 'HESS' not in PATH:
             setattr(PATH,'HESS',join(PATH.GLOBAL,'hess'))
 
+        if 'OPTIMIZE' not in PATH:
+            setattr(PATH,'OPTIMIZE',join(PATH.GLOBAL,'optimize'))
+
 
         # check input settings
         if 'DATA' not in PATH:
@@ -254,7 +257,6 @@ class inversion(object):
 
     def evaluate_gradient(self):
         """ Calls adjoint solver and runs process_kernels
-w
         """
         # adjoint simulation
         system.run( 'solver','evaluate_grad',
