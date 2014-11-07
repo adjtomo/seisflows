@@ -332,18 +332,14 @@ class default(object):
         """
         h = headers.values()[0]
 
-        if h.dt != PAR.DT:
-            h.dt = PAR.DT
-        if h.nt != PAR.NT:
-            print 'Warning: h.nt != PAR.NT'
-        if h.nr != PAR.NREC:
-            print 'Warning: h.nr != PAR.NREC'
+        if 'DT' in PAR:
+            if h.dt != PAR.DT: h.dt = PAR.DT
 
-        #hdrs = headers.values()[1:]
-        #keys = ['dt','nt']
-        #for key in keys:
-        #  for hdr in hdrs:
-        #    assert h[key] == hdr[key]
+        if 'NT' in PAR:
+            if h.nt != PAR.NT: print 'Warning: h.nt != PAR.NT'
+
+        if 'NREC' in PAR:
+            if h.nr != PAR.NREC: print 'Warning: h.nr != PAR.NREC'
 
         return h
 

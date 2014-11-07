@@ -21,6 +21,7 @@ import adjoint, misfit
 
 import specfem2d
 import specfem3d
+import specfem3d_globe
 
 
 

@@ -71,7 +71,6 @@ class specfem3d(object):
     # data input/output
     reader = staticmethod(seistools.specfem3d.readsu)
     writer = staticmethod(seistools.specfem3d.writesu)
-
     glob = lambda _ : glob('OUTPUT_FILES/*_SU')
 
 
@@ -80,9 +79,6 @@ class specfem3d(object):
         """
 
         # check mesh parameters
-        if 'MESH' not in PATH:
-            setattr(PATH,'MESH',join(PATH.SOLVER,'mesh'))
-
         if 'XMIN' not in PAR:
             raise Exception
 
@@ -164,7 +160,7 @@ class specfem3d(object):
         model_type = seistools.specfem3d.getpar('MODEL')
 
         # prepare data
-        if exists(PATH.DATA):
+        if PATH.DATA:
             self.prepare_data(
                 data_path = PATH.DATA)
         else:
@@ -253,7 +249,6 @@ class specfem3d(object):
           mesher and database generation utility
         """
         assert(model_type)
-
         unix.cd(self.path)
 
         # run builtin mesher and generate databases

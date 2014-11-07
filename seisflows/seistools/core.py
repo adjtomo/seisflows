@@ -5,7 +5,7 @@ from seisflows.tools.codetools import Struct
 class SeisStruct(Struct):
     """ Holds information about data
     """
-    def __init__(self,nr,nt,dt,ts=0.,
+    def __init__(self,nr=0,nt=0,dt=0.,ts=0.,
                  sx=[],sy=[],sz=[],
                  rx=[],ry=[],rz=[],
                  nrec=[],nsrc=[]):

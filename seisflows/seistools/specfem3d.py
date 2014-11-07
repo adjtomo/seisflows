@@ -250,11 +250,11 @@ def writesu(d,h,channel=[],prefix='SEM',suffix='.adj',verbose=False):
 def write_sources(PAR,h,path='.'):
     """ Writes source information to text file
     """
-    file = findpath('seistools')+'/'+'specfem3d/SOURCE'
+    file = findpath('seistools')+'/'+'specfem3d/FORCESOLUTION'
     with open(file,'r') as f:
         lines = f.readlines()
 
-    file = 'DATA/SOURCE'
+    file = 'DATA/FORCESOURCE'
     _writelines(file,lines)
 
     # adjust coordinates

@@ -1,11 +1,15 @@
 
+import copy as _copy
 import glob as _glob
 import string as _string
 import numpy as _np
 
 from seisflows.tools import unix
 from seisflows.tools.codetools import Struct
-from seisflows.seistools.segy import segyreader, segywriter
+from seisflows.tools.configtools import findpath
+
+import segy.reader as segyreader
+import segy.writer as segywriter
 
 
 ### reading and writing ASCII data
@@ -45,13 +49,13 @@ def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
     files = []
 
     if opt=='legacy':
-        if channel == 1:
+        if channel in ['x']:
             fmt = '%s/S%s.AA.%sX.%s' % (prefix,'%04d',char,suffix)
-        elif channel == 2:
+        elif channel in ['y']:
             fmt = '%s/S%s.AA.%sY.%s' % (prefix,'%04d',char,suffix)
-        elif channel == 3:
+        elif channel in ['z']:
             fmt = '%s/S%s.AA.%sZ.%s' % (prefix,'%04d',char,suffix)
-        elif channel == 4:
+        elif channel in ['p']:
             fmt = '%s/S%s.AA.%sP.%s' % (prefix,'%04d',char,suffix)
         for i in range(h.nr):
             files.append( fmt % (i+1) )
@@ -68,19 +72,19 @@ def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
     else:
         for file in h.files:
             parts = _string.split(file,'.')
-            if channel == 1:
+            if channel in ['x']:
                 label = ''.join([parts[2][:-1],'X'])
-            elif channel == 2:
+            elif channel in ['y']:
                 label = ''.join([parts[2][:-1],'Y'])
-            elif channel == 3:
+            elif channel in ['z']:
                 label = ''.join([parts[2][:-1],'Z'])
-            elif channel == 4:
+            elif channel in ['p']:
                 label = ''.join([parts[2][:-1],'P'])
 
             parts[-2] = label
             parts[-1] = 'adj'
 
-            files.append( prefix+'.'.join(parts) )
+            files.append( prefix+'/'+'.'.join(parts) )
 
         # write data to files
         imin = int(_np.floor(h['t0']/h['dt']))
@@ -89,6 +93,7 @@ def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
 
         for i,file in enumerate(files):
             w = f[:,i]
+            print t.shape, w.shape
             _np.savetxt(file,_np.column_stack((t,w)),'%11.4e')
 
 
@@ -100,14 +105,11 @@ def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='sem.ascii'):
 
     elif filetype == 'ascii':
         if 'sem' in suffix:
-            if channel == 1:  wildcard = '%s/*.?XE.%s' % (prefix,suffix)
-            elif channel == 2:  wildcard = '%s/*.?XN.%s' % (prefix,suffix)
-            elif channel == 3:  wildcard = '%s/*.?XZ.%s' % (prefix,suffix)
+            if channel in ['e']:  wildcard = '%s/*.?XE.%s' % (prefix,suffix)
+            elif channel in ['n']:  wildcard = '%s/*.?XN.%s' % (prefix,suffix)
+            elif channel in ['z']:  wildcard = '%s/*.?XZ.%s' % (prefix,suffix)
             else: wildcard = '%s/*.?X?.%s' % (prefix,suffix)
-        else:
-            if channel == 1:  wildcard = '%s/*[xX]*.%s' % (prefix,suffix)
-            elif channel == 2:  wildcard = '%s/*[yY]*.%s' % (prefix,suffix)
-            elif channel == 3:  wildcard = '%s/*[zZ]*.%s' % (prefix,suffix)
+            print wildcard
         files = _glob.glob(wildcard)
         if files:
             files.sort()
@@ -115,115 +117,54 @@ def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='sem.ascii'):
             raise Exception
         return files
 
-    elif filetype == 'su':
-        if channel == 1:  file = '%s/Ux_file_single.%s' % (prefix,suffix)
-        elif channel == 2:  file = '%s/Uy_file_single.%s' % (prefix,suffix)
-        elif channel == 3:  file = '%s/Uz_file_single.%s' % (prefix,suffix)
-        return file
-
 
 ### input file writers
 
-def writesrc(PAR,h,path='.'):
+def write_sources(PAR,h,path='.'):
     """ Writes source information to text file
     """
-    from seisflows.tools.configtools import getpath
-
-    file = getpath('seistools')+'/'+'specfem2d/SOURCE'
+    file = findpath('seistools')+'/'+'specfem3d/SOURCE'
     with open(file,'r') as f:
         lines = f.readlines()
 
     file = 'DATA/SOURCE'
     _writelines(file,lines)
 
-    # adjust source coordinates
+    # adjust coordinates
     setpar( 'xs', h.sx[0], file )
     setpar( 'zs', h.sz[0], file )
     setpar( 'ts', h.ts, file )
 
-    # adjust source amplitude
-    try:
-        fs = float(getpar('factor',file))
-        setpar('factor',str(fs*h.fs),file)
-    except:
-        pass
-
-    # adjust source wavelet
-    if 1:
-        # Ricker wavelet
-        setpar( 'time_function_type', 1, file )
-    elif 0:
-        # first derivative of Gaussian
-        setpar( 'time_function_type', 2, file )
-    elif 0:
-        # Gaussian
-        setpar( 'time_function_type', 3, file )
-    elif 0:
-        # Dirac
-        setpar( 'time_function_type', 4, file )
-    elif 0:
-        # Heaviside
-        setpar( 'time_function_type', 5, file )
-
+    # adjust wavelet
     setpar( 'f0', PAR['F0'], file )
 
 
-def writerec(nr,rx,rz):
+
+def write_receivers(h):
     """ Writes receiver information to text file
     """
     file = 'DATA/STATIONS'
     lines = []
 
     # loop over receivers
-    for ir in range(nr):
+    for ir in range(h.nr):
         line = ''
-        line = line + 'S%06d'  % ir     + ' '
-        line = line + 'AA'              + ' '
-        line = line + '%11.5e' % rx[ir] + ' '
-        line = line + '%11.5e' % rz[ir] + ' '
-        line = line + '%3.1f'  % 0.     + ' '
-        line = line + '%3.1f'  % 0.     + '\n'
+        line = line + 'S%06d'  % ir       + ' '
+        line = line + 'AA'                + ' '
+        line = line + '%11.5e' % h.rx[ir] + ' '
+        line = line + '%11.5e' % h.rz[ir] + ' '
+        line = line + '%3.1f'  % 0.       + ' '
+        line = line + '%3.1f'  % 0.       + '\n'
         lines.extend(line)
 
     # write file
     _writelines(file,lines)
 
 
-def writepar(vars,version='git-devel'):
+def write_parameters(par,version):
     """ Writes parameters to text file
     """
-    from seisflows.tools.configtools import getpath
-
-    PAR = Struct(vars)
-
-    # read template
-    file = getpath('seistools')+'/'+'specfem2d/par-'+version
-    with open(file,'r') as f:
-        lines = f.readlines()
-    lines[-1] = ' '.join(['1',str(PAR.NX),'1',str(PAR.NZ),'1'])
-
-    # write parameter file
-    file = 'DATA/Par_file'
-    _writelines(file,lines)
-    setpar( 'xmin',      str(PAR.XMIN) )
-    setpar( 'xmax',      str(PAR.XMAX) )
-    setpar( 'nx',        str(PAR.NX) )
-    setpar( 'nt',        str(PAR.NT) )
-    setpar( 'deltat',    str(PAR.DT) )
-    setpar( 'nsources',  str(1)      )
-
-    # write interfaces file
-    file = 'DATA/interfaces.dat'
-    lines = []
-    lines.extend('2\n')
-    lines.extend('2\n')
-    lines.extend('%f %f\n' % (PAR.XMIN,PAR.ZMIN))
-    lines.extend('%f %f\n' % (PAR.XMAX,PAR.ZMIN))
-    lines.extend('2\n')
-    lines.extend('%f %f\n' % (PAR.XMIN,PAR.ZMAX))
-    lines.extend('%f %f\n' % (PAR.XMAX,PAR.ZMAX))
-    lines.extend(str(PAR.NZ))
-    _writelines(file,lines)
+    raise NotImplementedError
 
 
 def getpar(key,file='DATA/Par_file',sep='='):
@@ -235,7 +176,7 @@ def getpar(key,file='DATA/Par_file',sep='='):
         # read line by line
         for line in f:
             if _string.find(line,key) == 0:
-                # read key
+            # read key
                 key,val = _split(line,sep)
                 if not key:
                     continue

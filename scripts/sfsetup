@@ -24,20 +24,20 @@ if __name__ == '__main__':
         that runs on any Unix machine is being developed.
     """
 
-    # select path
+    # prompt user for path
     home = '/home/rmodrak/data/'
-    opts = ['Examples2d','Examples3d','FwiSourceEncoding','Heru']
+    opts = ['Examples2d','Examples3d','Examples3dGlobe','Heru']
     print ''
     path = join(home,unix.select(opts))
     print ''
 
-    # select directory
+    # prompt user for directory
     dirs = listdir(path)
     prompt = 'select directory:'
     dir = unix.select(dirs,prompt)
     print ''
 
-    # select sudirectory
+    # prompt user for sudirectory
     items = unix.ls(path+'/'+dir)
     if 'parameters.py' in items:
       subdir = ''
@@ -47,7 +47,7 @@ if __name__ == '__main__':
       subdir = unix.select(subdirs,prompt)
       print ''
 
-    # copy files
+    # set up working directory
     fullpath = path+'/'+dir+'/'+subdir
     unix.cp(fullpath+'/'+'parameters.py','.')
     unix.cp(fullpath+'/'+'paths.py','.')
