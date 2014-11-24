@@ -3,49 +3,45 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to SeisFlows' documentation!
-=====================================
+What is SeisFlows?
+==================
 
-SeisFlows is a package to ease seismic processing, from forward modeling to
-full waveform inversion.
+SeisFlows is an open source seismic inversion package with three main goals:
 
-Intro
-=====
+- deliver a complete, customizable adjoint tomography and full waveform inversion workflow
 
-To come...
+- provide a framework for doing research in regional, global, and exploration tomography
 
-Prerequisites
+- avoid code duplication across 2D, 3D, and global solver packages
+
+
+Installation
+============
+
+To install Seisflows, first clone the repository::
+
+    git clone github.com/PrincetonUniversity/seisflows
+
+
+Then set environment variables. If using bash, add the following lines to ``.bash_profile`` or ``.bashrc``::
+
+    export PATH=$PATH:/path/to/seisflows/scripts
+    export PYTHONPATH=$PYTHONPATH:/path/to/seisflows
+
+
+Getting Started
+===============
+
+Perhaps the easiest way to get started is to run a few examples.  Users with accounts on ``tiger.princeton.edu`` can start directly with these instructions.  Other users should see the user manual first. 
+
+
+
+Documentation
 =============
 
-* Seisflows source code
-   
-  * Python 2.7
-
-* Documentation
-
-  * To generate the documentation you will need `Sphinx <http://sphinx-doc.org/>`_
-  * Pages are written using *reStructuredText*, a good cheat sheet can be found `here <http://openalea.gforge.inria.fr/doc/openalea/doc/_build/html/source/sphinx/rest_syntax.html>`_.
-
-Examples
-========
-
-To come...
-
 .. toctree::
-   :maxdepth: 1
-
-   examples/examples.rst
-
-API Documentation
-=================
-
-.. toctree::
-   :maxdepth: 4
-
-   ref/modules.rst
-
-Indices and tables
-==================
+  :maxdepth: 2
+  ref/modules.rst
 
 * :ref:`genindex`
 * :ref:`modindex`
