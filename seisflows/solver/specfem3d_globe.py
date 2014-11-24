@@ -14,8 +14,8 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 
-class specfem3d(object):
-    """ Python interface for SPECFEM3D
+class specfem3d_globe(object):
+    """ Python interface for SPECFEM3D_GLOBE
 
       evaluate_func, evaluate_grad, apply_hess
         These methods deal with evaluation of the misfit function or its
@@ -23,17 +23,17 @@ class specfem3d(object):
         workflow components.
 
       forward, adjoint, mesher
-        These methods allow direct access to individual SPECFEM3D components.
+        These methods allow direct access to individual SPECFEM3D_GLOBE components.
         Together, they provide a secondary interface users can employ for
         specialized tasks not covered by high level methods.
 
       prepare_solver, prepare_data, prepare_model
-        SPECFEM3D requires a particular directory structure in which to run and
+        SPECFEM3D_GLOBE requires a particular directory structure in which to run and
         particular file formats for models, data, and parameter files. These
         methods help put in place all these prerequisites.
 
       load, save
-        For reading and writing SPECFEM3D models and kernels. On the disk, models
+        For reading and writing SPECFEM3D_GLOBE models and kernels. On the disk, models
         and kernels are stored as binary files, and in memory, as dictionaries
         with different keys corresponding to different material parameters.
 
@@ -48,77 +48,100 @@ class specfem3d(object):
         external postprocessing routines.
     """
 
-    # model parameters
-    model_parameters = []
-    model_parameters += ['rho']
-    model_parameters += ['vp']
-    model_parameters += ['vs']
+    if 0:
+        # isotropic
+        model_parameters = []
+        model_parameters += ['reg1_rho']
+        model_parameters += ['reg1_vp']
+        model_parameters += ['reg1_vs']
+        #model_parameters += ['reg2_rho']
+        #model_parameters += ['reg2_vp']
+        #model_parameters += ['reg2_vs']
+        #model_parameters += ['reg3_rho']
+        #model_parameters += ['reg3_vp']
+        #model_parameters += ['reg3_vs']
 
-    # inversion parameters
-    inversion_parameters = []
-    inversion_parameters += ['vp']
-    inversion_parameters += ['vs']
+        inversion_parameters = []
+        inversion_parameters += ['reg1_rho']
+        inversion_parameters += ['reg1_vp']
+        inversion_parameters += ['reg1_vs']
 
-    kernel_map = {
-      'rho':'rho_kernel',
-      'vp':'alpha_kernel',
-      'vs':'beta_kernel'}
+        kernel_map = {
+          'reg1_rho':'reg1_rho_kernel',
+          'reg1_vp':'reg1_alpha_kernel',
+          'reg1_vs':'reg1_beta_kernel'}
+          #'reg2_rho':'reg2_rho_kernel',
+          #'reg2_vp':'reg2_alpha_kernel',
+          #'reg2_vs':'reg2_beta_kernel',
+          #'reg3_rho':'reg3_rho_kernel',
+          #'reg3_vp':'reg3_alpha_kernel',
+          #'reg3_vs':'reg3_beta_kernel'}
+
+    else:
+        # transversely isotropic
+        model_parameters = []
+        model_parameters += ['reg1_rho']
+        model_parameters += ['reg1_vpv']
+        model_parameters += ['reg1_vph']
+        model_parameters += ['reg1_vsv']
+        model_parameters += ['reg1_vsh']
+        model_parameters += ['reg1_eta']
+        #model_parameters += ['reg2_rho']
+        #model_parameters += ['reg2_vp']
+        #model_parameters += ['reg2_vs']
+        #model_parameters += ['reg3_rho']
+        #model_parameters += ['reg3_vp']
+        #model_parameters += ['reg3_vs']
+
+        inversion_parameters = []
+        inversion_parameters += ['reg1_rho']
+        inversion_parameters += ['reg1_vpv']
+        inversion_parameters += ['reg1_vph']
+        inversion_parameters += ['reg1_vsv']
+        inversion_parameters += ['reg1_vsh']
+        inversion_parameters += ['reg1_eta']
+
+        kernel_map = {
+          'reg1_rho':'reg1_rho_kernel',
+          'reg1_eta':'reg1_rho_kernel',
+          'reg1_vph':'reg1_alpha_kernel',
+          'reg1_vpv':'reg1_alpha_kernel',
+          'reg1_vsv':'reg1_beta_kernel',
+          'reg1_vsh':'reg1_beta_kernel'}
+          #'reg2_rho':'reg2_rho_kernel',
+          #'reg2_vp':'reg2_alpha_kernel',
+          #'reg2_vs':'reg2_beta_kernel',
+          #'reg3_rho':'reg3_rho_kernel',
+          #'reg3_vp':'reg3_alpha_kernel',
+          #'reg3_vs':'reg3_beta_kernel'}
+
 
     # data channels
     channels = []
     channels += ['z']
 
     # data input/output
-    reader = staticmethod(seistools.specfem3d.readsu)
-    writer = staticmethod(seistools.specfem3d.writesu)
-    glob = lambda _ : glob('OUTPUT_FILES/*_SU')
+    reader = staticmethod(seistools.specfem3d_globe.read)
+    writer = staticmethod(seistools.specfem3d_globe.write)
+    glob = lambda _ : glob('OUTPUT_FILES/*.sem.ascii')
 
 
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
 
-        # check mesh parameters
-        if 'XMIN' not in PAR:
-            raise Exception
+        # check parameters
+        if 'NEX_XI' not in PAR:
+            pass
 
-        if 'XMAX' not in PAR:
-            raise Exception
+        if 'NEX_ETA' not in PAR:
+            pass
 
-        if 'YMIN' not in PAR:
-            raise Exception
+        if 'NPROC_XI' not in PAR:
+            pass
 
-        if 'YMAX' not in PAR:
-            raise Exception
-
-        if 'ZMIN' not in PAR:
-            raise Exception
-
-        if 'ZMAX' not in PAR:
-            raise Exception
-
-        if 'NX' not in PAR:
-            raise Exception
-
-        if 'NY' not in PAR:
-            raise Exception
-
-        if 'NZ' not in PAR:
-            raise Exception
-
-
-        # check time stepping parameters
-        if 'NT' not in PAR:
-            raise Exception
-
-        if 'DT' not in PAR:
-            raise Exception
-
-        if 'F0' not in PAR:
-            raise Exception
-
-        if 'WAVELET' not in PAR:
-            setattr(PAR,'WAVELET','ricker')
+        if 'NPROC_ETA' not in PAR:
+            pass
 
 
         # check paths
@@ -157,10 +180,10 @@ class specfem3d(object):
         """ Prepares solver for inversion, migration, or forward modeling
         """
         self.prepare_dirs()
-        model_type = seistools.specfem3d.getpar('MODEL')
+        model_type = seistools.specfem3d_globe.getpar('MODEL')
 
         # prepare data
-        if PATH.DATA:
+        if exists(PATH.DATA):
             self.prepare_data(
                 data_path = PATH.DATA)
         else:
@@ -249,6 +272,11 @@ class specfem3d(object):
           mesher and database generation utility
         """
         assert(model_type)
+        print 'model_path:', model_path
+        print 'model_name:', model_name
+        print 'model_type:', model_type
+        print ''
+
         unix.cd(self.path)
 
         # run builtin mesher and generate databases
@@ -259,20 +287,10 @@ class specfem3d(object):
             dst = 'OUTPUT_FILES/DATABASES_MPI/'
             unix.cp(src,dst)
 
-        elif model_type == 'sep':
-            assert(exists(model_path))
-            # copy files
-            src = glob(model_path+'/'+'*')
-            dst = 'DATA/'
-            unix.cp(glob(model_path+'/'+'*'),'DATA/')
-
-        elif model_type == 'default':
+        else:
             pass
 
-        elif model_type == 'tomo':
-            pass
-
-        seistools.specfem3d.setpar('MODEL',model_type)
+        seistools.specfem3d_globe.setpar('MODEL',model_type)
         self.mesher()
 
         # save results
@@ -359,10 +377,9 @@ class specfem3d(object):
         """ Calls SPECFEM3D forward solver
         """
         # prepare solver
-        seistools.specfem3d.setpar('SIMULATION_TYPE', '1')
-        seistools.specfem3d.setpar('SAVE_FORWARD', '.true.')
-        seistools.specfem3d.setpar('MODEL','gll')
-        self.mpirun('bin/xgenerate_databases')
+        seistools.specfem3d_globe.setpar('SIMULATION_TYPE', '1')
+        seistools.specfem3d_globe.setpar('SAVE_FORWARD', '.true.')
+        seistools.specfem3d_globe.setpar('MODEL','gll')
 
         # run solver
         self.mpirun('bin/xspecfem3D')
@@ -373,8 +390,8 @@ class specfem3d(object):
         """ Calls SPECFEM3D adjoint solver
         """
         # prepare solver
-        seistools.specfem3d.setpar('SIMULATION_TYPE', '3')
-        seistools.specfem3d.setpar('SAVE_FORWARD', '.false.')
+        seistools.specfem3d_globe.setpar('SIMULATION_TYPE', '3')
+        seistools.specfem3d_globe.setpar('SAVE_FORWARD', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj','SEM')
 
@@ -386,7 +403,6 @@ class specfem3d(object):
         """ Calls SPECFEM3D builtin mesher
         """
         self.mpirun('bin/xmeshfem3D')
-        self.mpirun('bin/xgenerate_databases')
 
 
 
@@ -473,10 +489,22 @@ class specfem3d(object):
     def combine(self,path=''):
         """ combines SPECFEM3D kernels
         """
-        unix.cd(self.path)
+        dirs = unix.ls(path)
+
+        # initialize kernels
+        unix.mkdir(path+'/'+'sum')
+        parts = {}
+        i = 0; j = 0
+        for key in self.model_parameters:
+            if key not in self.inversion_parameters:
+                for i in range(PAR.NPROC):
+                    proc = '%06d'%i
+                    src = PATH.MESH+'/'+key+'/'+proc
+                    dst = path+'/'+'sum'+'/'+'proc'+proc+'_'+self.kernel_map[key]+'.bin'
+                    savebin(np.load(src),dst)
 
         # create temporary files and directories needed by xsum_kernels
-        dirs = unix.ls(path)
+        unix.cd(self.path)
         with open('kernels_list.txt','w') as file:
             file.write('\n'.join(dirs)+'\n')
         unix.mkdir('INPUT_KERNELS')
@@ -488,20 +516,18 @@ class specfem3d(object):
 
         # sum kernels
         self.mpirun(PATH.SOLVER_BINARIES+'/'+'xsum_kernels')
-        unix.mv('OUTPUT_SUM',path+'/'+'sum')
+        unix.mv(glob('OUTPUT_SUM/*'),path+'/'+'sum')
 
         # remove temporary files and directories
         unix.rm('INPUT_KERNELS')
+        unix.rm('OUTPUT_SUM')
         unix.rm('kernels_list.txt')
-
         unix.cd(path)
 
 
     def smooth(self,path='',tag='grad',span=0):
         """ smooths SPECFEM3D kernels
         """
-        unix.cd(self.path)
-
         unix.mv(path+'/'+tag,path+'/'+tag+'_nosmooth')
         unix.mkdir(path+'/'+tag)
 
@@ -512,7 +538,10 @@ class specfem3d(object):
                 smoothing_flag = True
             else:
                 smoothing_flag = False
-            kernel_list = kernel_list + [[key,smoothing_flag]]
+            region,kernel_name = key.split('_')
+            kernel_list = kernel_list + [[kernel_name,smoothing_flag]]
+
+        unix.cd(self.path)
 
         for kernel_name,smoothing_flag in kernel_list:
             if smoothing_flag:
@@ -524,13 +553,18 @@ class specfem3d(object):
                   + str(span) + ' '
                   + kernel_name + ' '
                   + path + '/' + tag+'_nosmooth/' + ' '
-                  + path + '/' + tag+'/' + ' ')
+                  + self.path + '/' + 'OUTPUT_FILES/DATABASES_MPI' + '/' + ' ')
+
+                src = glob(path+'/'+tag+'_nosmooth'+'/*_smooth.bin')
+                dst = path+'/'+tag
+                unix.mv(src,dst)
+                unix.rename('_smooth','',glob(path+'/'+tag+'/*_smooth.bin'))
+
             else:
                 src = glob(path+'/'+tag+'_nosmooth/*'+kernel_name+'.bin')
                 dst = path+'/'+tag+'/'
                 unix.cp(src,dst)
 
-        unix.rename('_smooth','',glob(path+'/'+tag+'/*_smooth.bin'))
         print ''
 
         unix.cd(path)
@@ -551,7 +585,7 @@ class specfem3d(object):
         # adjust parameters
         key = 'use_existing_STATIONS'
         val = '.true.'
-        seistools.specfem3d.setpar(key,val)
+        seistools.specfem3d_globe.setpar(key,val)
 
         # write receivers file
         _,h = preprocess.load('traces/obs')
@@ -619,12 +653,10 @@ class specfem3d(object):
         unix.cp(src,dst)
 
     def initialize_adjoint(self):
-        zeros = np.zeros((PAR.NT,PAR.NREC))
         _,h = preprocess.load('traces/obs')
+        zeros = np.zeros((h.nt,h.nr))
         for channel in ['x','y','z']:
             self.writer(zeros,h,channel=channel,prefix='traces/adj')
-
-
 
 
     ### utility functions
@@ -659,7 +691,7 @@ class specfem3d(object):
 
     def gettype(self):
         try:
-            return seistools.specfem3d.getpar(
+            return seistools.specfem3d_globe.getpar(
               'MODEL',file=PATH.SOLVER_FILES+'/'+'Par_file')
         except:
             return None

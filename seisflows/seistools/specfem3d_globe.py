@@ -50,9 +50,9 @@ def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
 
     if opt=='legacy':
         if channel in ['x']:
-            fmt = '%s/S%s.AA.%sX.%s' % (prefix,'%04d',char,suffix)
+            fmt = '%s/S%s.AA.%sE.%s' % (prefix,'%04d',char,suffix)
         elif channel in ['y']:
-            fmt = '%s/S%s.AA.%sY.%s' % (prefix,'%04d',char,suffix)
+            fmt = '%s/S%s.AA.%sN.%s' % (prefix,'%04d',char,suffix)
         elif channel in ['z']:
             fmt = '%s/S%s.AA.%sZ.%s' % (prefix,'%04d',char,suffix)
         elif channel in ['p']:
@@ -71,11 +71,11 @@ def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
 
     else:
         for file in h.files:
-            parts = _string.split(file,'.')
+            parts = _string.split(file,'.')[:-1]
             if channel in ['x']:
-                label = ''.join([parts[2][:-1],'X'])
+                label = ''.join([parts[2][:-1],'E'])
             elif channel in ['y']:
-                label = ''.join([parts[2][:-1],'Y'])
+                label = ''.join([parts[2][:-1],'N'])
             elif channel in ['z']:
                 label = ''.join([parts[2][:-1],'Z'])
             elif channel in ['p']:
@@ -93,7 +93,6 @@ def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
 
         for i,file in enumerate(files):
             w = f[:,i]
-            print t.shape, w.shape
             _np.savetxt(file,_np.column_stack((t,w)),'%11.4e')
 
 
@@ -109,7 +108,6 @@ def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='sem.ascii'):
             elif channel in ['n']:  wildcard = '%s/*.?XN.%s' % (prefix,suffix)
             elif channel in ['z']:  wildcard = '%s/*.?XZ.%s' % (prefix,suffix)
             else: wildcard = '%s/*.?X?.%s' % (prefix,suffix)
-            print wildcard
         files = _glob.glob(wildcard)
         if files:
             files.sort()
@@ -242,7 +240,6 @@ def _cmp(names):
     for name in names:
         ii = int(unix.basename(name).split('_')[0])
         rank.append(ii)
-    print rank
     return [names[ii] for ii in rank]
 
 

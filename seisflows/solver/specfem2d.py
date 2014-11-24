@@ -451,7 +451,7 @@ class specfem2d(object):
 
 
     def smooth(self,path='',tag='grad',span=0):
-        "smooths SPECFEM2D kernels by convoling them with a Gaussian"
+        "smooths SPECFEM2D kernels by convolving them with a Gaussian"
         from seisflows.tools.arraytools import meshsmooth
 
         parts = self.load(path+'/'+tag)

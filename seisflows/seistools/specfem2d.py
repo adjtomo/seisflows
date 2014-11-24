@@ -313,6 +313,43 @@ def setpar(key,val,file='DATA/Par_file',path='.',sep='='):
     _writelines(path+'/'+file,lines)
 
 
+###
+
+def interpolate():
+    parts = self.load('DATA/model_velocity.dat_output')
+
+    # interpolate material parameters
+    x = np.array(parts['x'][:]).T
+    z = np.array(parts['z'][:]).T
+    meshcoords = np.column_stack((x,z))
+    x = model['x'].flatten()
+    z = model['z'].flatten()
+    gridcoords = np.column_stack((x,z))
+    for key in ['rho','vp','vs']:
+        v = model[key].flatten()
+        parts[key] = [griddata(gridcoords,v,meshcoords,'linear')]
+    self.save('DATA/model_velocity.dat_input',parts)
+
+
+def mesher(self):
+
+    seistools.specfem2d.setpar('SIMULATION_TYPE', '1')
+    seistools.specfem2d.setpar('SAVE_FORWARD', '.false.')
+
+    seistools.specfem2d.setpar('assign_external_model', '.false.')
+    seistools.specfem2d.setpar('READ_EXTERNAL_SEP_FILE', '.false.')
+    nt = seistools.specfem2d.getpar('nt')
+    seistools.specfem2d.setpar('nt',str(100))
+
+    with open('log.mesher','w') as f:
+        subprocess.call(self.mesher_binary,stdout=f)
+        subprocess.call(self.solver_binary,stdout=f)
+
+    seistools.specfem2d.setpar('assign_external_model', '.true.')
+    seistools.specfem2d.setpar('READ_EXTERNAL_SEP_FILE', '.true.')
+    seistools.specfem2d.setpar('nt',str(nt))
+
+
 ### utility functions
 
 def _writelines(file,lines):
@@ -350,21 +387,4 @@ def _stack(a1,a2):
         return _np.column_stack((a1,a2))
     else:
         return a2
-
-
-def interpolate_model():
-    self.mesher()
-    parts = self.load('DATA/model_velocity.dat_output')
-
-    # interpolate material parameters
-    x = np.array(parts['x'][:]).T
-    z = np.array(parts['z'][:]).T
-    meshcoords = np.column_stack((x,z))
-    x = model['x'].flatten()
-    z = model['z'].flatten()
-    gridcoords = np.column_stack((x,z))
-    for key in ['rho','vp','vs']:
-        v = model[key].flatten()
-        parts[key] = [griddata(gridcoords,v,meshcoords,'linear')]
-    self.save('DATA/model_velocity.dat_input',parts)
 
