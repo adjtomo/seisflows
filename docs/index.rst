@@ -32,18 +32,15 @@ Then set environment variables. If using bash, add the following lines to ``.bas
 Getting Started
 ===============
 
-Perhaps the easiest way to get started is to run a few examples.  Users with accounts on ``tiger.princeton.edu`` can start directly with these instructions.  Other users should see the user manual first. 
-
+Perhaps the easiest way to get started is to run a few examples.  Users with accounts on ``tiger.princeton.edu`` can start directly with these :doc:`instructions <tiger>`.  Other users must await the arrival of an ftp download server. 
 
 
 Documentation
 =============
 
 .. toctree::
-  :maxdepth: 2
-  ref/modules.rst
+   :maxdepth: 1
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   manual/contents.rst
+   ref/modules.rst
 
