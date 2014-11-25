@@ -79,7 +79,7 @@ The result of compilation is a set of binaries files, including
 
 Note that if input files change, binary files may need to be recompiled.
 
-After compilation, input files must be gathered together in one directory and binary files in another.  The absolute paths to input file and binary file directories must be given as entries in ``paths.py``::
+After compilation, input files must be gathered together in one directory and binary files in another.  The absolute paths to input file and binary file directories must be given in ``paths.py`` as follows::
 
     SOLVER_INPUT = '/path/to/solver/input/files'
     SOLVER_BINARIES = '/path/to/solver/binary/files'
@@ -110,7 +110,7 @@ System Configuration
 
 SeisFlows can run on SLURM, PBS TORQUE, and PBS Pro clusters.  For debugging, an option to run simulations in serial is also provided.  
 
-While there are many similarities between job management systems, there are also many differences.  Our approach to such differences is to try to hide them behind a consistent python interface.  By creating a thin python layer over system commands such as ``qsub`` on PBS or ``sbatch`` on SLURM, it is possible to abstract the machinery for submitting and managing jobs.  Overall, our experience has been that there is enough in common between most cluster environments to make the task of abstracting system commands worthwhile.
+While there are many similarities between job management systems, there are also many differences.  Our approach to such differences is to try to hide them behind a consistent python interface.  By creating a thin python layer over system commands such as ``qsub`` on PBS or ``sbatch`` on SLURM, it is possible to abstract the machinery for submitting and managing jobs.
 
 Besides different job management systems, different filesystem configurations may exist as well.  Filesystem settings can be adjusted by modifying values in the ``PATH`` dictionary, which is populated from ``paths.py``.  Output files and temporary files, by default, are written to the working directory.  If a value for ``PATH.GLOBAL`` is supplied, temporary files are written there instead.  If each compute node has its own local filesystem and if a value for ``PATH.LOCAL`` is supplied, some temporary files will be written to ``PATH.LOCAL`` and others to ``PATH.GLOBAL``.
 
