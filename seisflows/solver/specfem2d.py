@@ -445,7 +445,7 @@ class specfem2d(object):
     def combine(self,path=''):
         "combines SPECFEM2D kernels"
         subprocess.call(\
-               [findpath('seistools')+'/'+'specfem2d/combine.exe'] + \
+               [self.path+'/'+'bin/xsmooth_sem'] + \
                [str(len(unix.ls(path)))] + \
                [path])
 
