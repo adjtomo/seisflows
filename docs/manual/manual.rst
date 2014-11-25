@@ -2,11 +2,11 @@
 Overview
 ========
 
-SeisFlows is a python adjoint tomography and full waveform inversion package desgined to be flexible enough for use in a variety of contexts, including scientific research.
+SeisFlows is a python adjoint tomography and full waveform inversion package designed to be flexible enough to use in a variety of contexts, including scientific research.
 
 To provide this flexibility, users are offered choices in each of the following categories: workflow, system, solver, optimization, preprocessing, and postprocessing.  Within each category, different classes are interchangeable. If desired functionality is missing from the main package, users can customize default classes by overloading methods, or contribute their own classes.  This combination of extensibility, modular design, and object oriented programming allows multiple users to work productively within the same framework.
 
-To illustrate how it works, consider an example from regional tomography.  A typical regional setup might involve a 3D Cartesian solver run on a PBS cluster.  Under SeisFlows, if the study area expands, users can replace the 3D Cartesian solver with a 3D spherical solver.  If a faster SLURM cluster comes online, users can substitute the PBS system interface for a SLURM system interface. If a new type of data becomes available, users can modify the misfit function by overloading appropriate methods.  
+To illustrate how it works, consider an example from regional tomography.  A typical regional setup involves a 3D Cartesian solver run on a PBS cluster.  Under SeisFlows, if the study area expands, users can replace the 3D Cartesian solver with a 3D spherical solver.  If a faster SLURM cluster comes online, users can substitute the PBS system interface for a SLURM system interface. If a new type of data becomes available, users can modify the misfit function by overloading appropriate methods.  
 
 
 Installation
@@ -32,20 +32,20 @@ SeisFlows requires Python 2.7, NumPy >1.6, and SciPy >0.12. Forward modeling sof
 Hardware Prerequisites
 ----------------------
 
-Access to a computer cluster is required for most applications.  Base classes are provided for several common cluster configurations, including PBS and SLURM.  Nonstandard configurations can sometimes be accommodated through modifications to one of the base classes; see :ref:`system` for details.
+Access to a computer cluster is required for most applications.  Base classes are provided for several common cluster configurations, including PBS and SLURM.  Nonstandard configurations can often be accommodated through modifications to one of the base classes; see :ref:`system` for details.
 
 
 
 Job Submission
 ==============
 
-Each job must be submitted from its own working directory.  Within a working directory, users must supply two input files, ``paths.py`` and ``paramters.py``, as described in detail below. Output files, by default, are written to the working directory, along with scratch files created by the solver and optimization routines. Different output and scratch directories can be specified by adding or modifying entries in ``paths.py``.
+Each job must be submitted from a `working directory`.  Within a working directory, users must supply two input files, ``paths.py`` and ``paramters.py``. Output files, by default, are written to the working directory, along with scratch files created by the solver and optimization routines. Different output and scratch directories can be specified by adding or modifying entries in ``paths.py``.
 
 ``parameters.py`` contains a list of parameter names and values. Prior to a job being submitted, parameters are checked so that errors can be detected without loss of queue time or wall time. Parameters are stored in a dictionary that is accessible from anywhere in the python code. By convention, all parameter names must be upper case. Parameter values can be floats, integers, strings or any other Python data type. Parameters can be listed in any order.
 
 ``paths.py`` contains a list of path names and values. Prior to a job being submitted, paths are checked so that errors can be detected without loss of queue time or wall time. Paths are stored in a dictionary that is accessible from anywhere in the python code. By convention, all names must be upper case, and all values must be absolute paths. Paths can be listed in any order.
 
-Once a working directory and input files have been created, users can type ``sfrun`` from within the working directory to submit a job. If the 'serial' system configuration is specified in ``parameters.py``, the job will begin executing immediately. If ``pbs`` or ``slurm`` system configurations are specified, the job will run when resources become available. Once the job begins running, status information will be displayed either to the terminal or to the file ``output.log``.
+Once a working directory and input files have been created, users can type ``sfrun`` from within the working directory to submit a job. If the ``serial`` system configuration is specified in ``parameters.py``, the job will begin executing immediately. If ``pbs`` or ``slurm`` configurations are specified, the job will run when resources become available. Once the job starts running, status information will be displayed either to the terminal or to the file ``output.log``.
 
 
 
@@ -54,7 +54,7 @@ Once a working directory and input files have been created, users can type ``sfr
 Solver Configuration
 ====================
 
-SeisFlows includes python interfaces for SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE.  While the interfaces are part of the main package, the solver source code itself is located in other repositories and must be downloaded separately.  
+SeisFlows includes python interfaces for SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE.  While the interfaces are part of the SeisFlows package, the solver source code itself is located in other repositories and must be downloaded separately.  
 
 After downloading the solver source code, users must configure and compile it following the instructions in the solver user manual. Summarized briefly, the configuration and compilation procedure is as follows:
 
@@ -110,13 +110,9 @@ System Configuration
 
 SeisFlows can run on SLURM, PBS TORQUE, and PBS Pro clusters.  For debugging, an option to run simulations in serial is also provided.  
 
-While there are many similarities between job management systems, there are also many differences.  Our approach to such differences is to try to hide them behind a consistent python interface.  By creating a thin python layer over system commands such as qsub on PBS or sbatch on SLURM, it is possible to abstract the machinery for submitting and managing jobs.  Overall, our experience has been that there is enough in common between most cluster environments to make the task of abstracting system commands worthwhile.
+While there are many similarities between job management systems, there are also many differences.  Our approach to such differences is to try to hide them behind a consistent python interface.  By creating a thin python layer over system commands such as ``qsub`` on PBS or ``sbatch`` on SLURM, it is possible to abstract the machinery for submitting and managing jobs.  Overall, our experience has been that there is enough in common between most cluster environments to make the task of abstracting system commands worthwhile.
 
-Besides different job management systems, different filesystem configurations exist as well.  Filesystem settings can be adjusted by modifying values in the ``PATH`` dictionary, which is populated from ``paths.py``.  By default, output files are written to ``PATH.OUTPUT``.  Temporary files are written to ``PATH.GLOBAL``.  If each compute node has its own local filesystem, users can have temporary files written there instead by supplying a value for ``PATH.LOCAL``.
-
-
-Scalability and Fault Tolerance
--------------------------------
+Besides different job management systems, different filesystem configurations may exist as well.  Filesystem settings can be adjusted by modifying values in the ``PATH`` dictionary, which is populated from ``paths.py``.  Output files and temporary files, by default, are written to the working directory.  If a value for ``PATH.GLOBAL`` is supplied, temporary files are written there instead.  If each compute node has its own local filesystem and if a value for ``PATH.LOCAL`` is supplied, some temporary files will be written to ``PATH.LOCAL`` and others to ``PATH.GLOBAL``.
 
 As the size of an inversion increases, scalability and fault tolerance become increasingly important.  If a single forward simulation spans more than one node, users must select ``pbs_big_job`` or ``slurm_big_job`` system configuration in ``parameters.py``.  If a forward simulation fits onto a single node, users must select ``pbs`` or ``slurm`` instead.
 
@@ -124,7 +120,7 @@ As the size of an inversion increases, scalability and fault tolerance become in
 Heavyweight Solutions
 ---------------------
 
-In writing system interfaces, the approach taken by SeisFlows developers has been to write lightweight python wrappers on top of PBS and SLURM commands.  For cases involving nonstandard cluster configurations or restrictive usage policies, heavyweight solutions may be required instead.  Users are referred to distributed computing projects such as SAGA or PATHOS for ideas about how proceed.
+In writing system interfaces, the approach taken by SeisFlows developers has been to write lightweight python wrappers on top of PBS and SLURM commands.  For some cases involving nonstandard cluster configurations or restrictive usage policies, heavyweight solutions may be required instead.  Users are referred to distributed computing projects such as SAGA or PATHOS for ideas.
 
 
 
