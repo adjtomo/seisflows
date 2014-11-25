@@ -114,7 +114,7 @@ While there are many similarities between job management systems, there are also
 
 Besides different job management systems, different filesystem configurations may exist as well.  Filesystem settings can be adjusted by modifying values in the ``PATH`` dictionary, which is populated from ``paths.py``.  Output files and temporary files, by default, are written to the working directory.  If a value for ``PATH.GLOBAL`` is supplied, temporary files are written there instead.  If each compute node has its own local filesystem and if a value for ``PATH.LOCAL`` is supplied, some temporary files will be written to ``PATH.LOCAL`` and others to ``PATH.GLOBAL``.
 
-As the size of an inversion increases, scalability and fault tolerance become increasingly important.  If a single forward simulation spans more than one node, users must select ``pbs_big_job`` or ``slurm_big_job`` system configuration in ``parameters.py``.  If a forward simulation fits onto a single node, users must select ``pbs`` or ``slurm`` instead.
+As the size of an inversion grows, scalability and fault tolerance become increasingly important.  If a single forward simulation spans more than one node, users must select ``pbs_big_job`` or ``slurm_big_job`` system configurations in ``parameters.py``.  If a forward simulation fits onto a single node, users must select ``pbs`` or ``slurm`` instead.
 
 
 Heavyweight Solutions
