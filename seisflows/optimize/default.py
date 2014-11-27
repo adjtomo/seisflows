@@ -132,7 +132,6 @@ class default(object):
         if cls.iter==1:
             s_new = loadtxt('s_new')
             f_new = loadtxt('f_new')
-            g = loadnpy('g_new')
         else:
             s_old = loadtxt('s_old')
             s_new = loadtxt('s_new')
@@ -150,16 +149,13 @@ class default(object):
         cls.isbrak = 0
 
         # compute length ratio
-        mask = np.invert(m==0)
-        len_m = np.median(m[mask])
-        len_d = max(abs(p[mask]))
+        len_m = max(abs(m))
+        len_d = max(abs(p))
         cls.step_ratio = float(len_m/len_d)
 
         if cls.iter==1:
             if PAR.STEPLEN != 0.:
                 alpha = PAR.STEPLEN*cls.step_ratio
-            else:
-                alpha = 1./np.sum(np.abs(g))
         elif PAR.SCHEME in ['GradientDescent','ConjugateGradient']:
             alpha = 2.*alpha*s_old/s_new
         else:

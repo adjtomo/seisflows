@@ -55,17 +55,23 @@ class default(object):
         assert(exists(path))
 
         # combine kernels
-        solver.combine(path=path+'/'+'kernels')
+        system.run('solver','combine',
+            hosts='head',
+            path=path+'/'+'kernels')
 
         # write gradient
         unix.cd(path+'/'+'kernels')
         g = solver.merge(solver.load('sum',type='kernel'))
-        g *= solver.merge(solver.load('../model',type='model'))
+        m = solver.merge(solver.load('../model',type='model'))
+        g *= m
         solver.save(path+'/'+tag,solver.split(g))
 
         # apply smoothing
         if PAR.SMOOTH > 0.:
-            solver.smooth(path=path,span=PAR.SMOOTH)
+            system.run('solver','smooth',
+                hosts='head',
+                path=path,
+                span=PAR.SMOOTH)
 
         # apply preconditioner
         if PATH.PRECOND:

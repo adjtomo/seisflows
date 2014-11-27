@@ -264,8 +264,7 @@ class inversion(object):
             path=PATH.GRAD,
             export_traces=divides(self.iter,PAR.SAVETRACES) )
 
-        system.run( 'postprocess','process_kernels',
-            hosts='head',
+        postprocess.process_kernels(
             path=PATH.GRAD,
             optim_path=PATH.OPTIMIZE+'/'+'g_new')
 
