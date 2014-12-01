@@ -192,7 +192,7 @@ class inversion(object):
             self.prepare_model(path=PATH.GRAD, suffix='new')
 
             # forward simulation
-            system.run( 'solver','evaluate_func',
+            system.run( 'solver','eval_func',
                 hosts='all',
                 path=PATH.GRAD )
 
@@ -248,7 +248,7 @@ class inversion(object):
         self.prepare_model(path=PATH.FUNC, suffix='try')
 
         # forward simulation
-        system.run( 'solver','evaluate_func',
+        system.run( 'solver','eval_func',
             hosts='all',
             path=PATH.FUNC )
 
@@ -259,7 +259,7 @@ class inversion(object):
         """ Calls adjoint solver and runs process_kernels
         """
         # adjoint simulation
-        system.run( 'solver','evaluate_grad',
+        system.run( 'solver','eval_grad',
             hosts='all',
             path=PATH.GRAD,
             export_traces=divides(self.iter,PAR.SAVETRACES) )

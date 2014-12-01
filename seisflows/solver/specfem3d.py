@@ -17,7 +17,7 @@ PATH = ParameterObj('SeisflowsPaths')
 class specfem3d(object):
     """ Python interface for SPECFEM3D
 
-      evaluate_func, evaluate_grad, apply_hess
+      eval_func, eval_grad, apply_hess
         These methods deal with evaluation of the misfit function or its
         derivatives and provide the primary interface between the solver and other
         workflow components.
@@ -295,7 +295,7 @@ class specfem3d(object):
 
     ### high-level solver interface
 
-    def evaluate_func(self,path='',export_traces=False):
+    def eval_func(self,path='',export_traces=False):
         """ Evaluates misfit function by carrying out forward simulation and
             making measurements on observations and synthetics.
         """
@@ -305,7 +305,7 @@ class specfem3d(object):
         # forward simulation
         self.forward()
         unix.mv(self.glob(),'traces/syn')
-        preprocess.prepare_adjoint(unix.pwd(),output_type=2)
+        preprocess.prepare_eval_grad(self.path)
 
         # save results
         self.export_residuals(path)
@@ -313,7 +313,7 @@ class specfem3d(object):
             self.export_traces(path,prefix='traces/syn')
 
 
-    def evaluate_grad(self,path='',export_traces=False):
+    def eval_grad(self,path='',export_traces=False):
         """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
             must already be in place prior to calling this method or the adjoint
             simulation will fail.
@@ -339,11 +339,7 @@ class specfem3d(object):
         self.forward()
         unix.mv(self.glob(),'traces/lcg')
 
-        if hessian == 'Newton':
-            preprocess.prepare_adjoint(unix.pwd(),output_type=3)
-
-        elif hessian == 'GaussNewton':
-            preprocess.prepare_adjoint(unix.pwd(),output_type=4)
+        preprocess.prepare_adjoint(self.path)
 
         # adjoint simulation
         self.adjoint()

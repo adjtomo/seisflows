@@ -93,13 +93,13 @@ class migration(object):
 
         self.prepare_model()
 
-        system.run( 'solver','evaluate_func',
+        system.run( 'solver','eval_func',
             hosts='all',
             path=PATH.IMAGE )
 
         # backproject data
         print 'Backprojecting data...'
-        system.run( 'solver','evaluate_grad',
+        system.run( 'solver','eval_grad',
               hosts='all',
               path=PATH.IMAGE,
               export_traces=PAR.SAVETRACES )

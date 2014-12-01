@@ -12,7 +12,13 @@ PATH = ParameterObj('SeisflowsPaths')
 
 
 class default(object):
-    """ Data processing class
+    """ Data preprocessing class
+
+        solver.read, solver.write
+            Low level input/output functions.
+
+        load, save
+             High-level input/output functions.
     """
 
     def check(self):
@@ -69,8 +75,26 @@ class default(object):
             setattr(PAR,'FREQHI',0.)
 
 
+    def prepare_eval_grad(self,path='.'):
+        """ Prepares solver for gradient evaluation by writing residuals and
+          adjoint traces
+        """
+        unix.cd(path)
+
+        d,h = self.load(prefix='traces/obs/')
+        s,_ = self.load(prefix='traces/syn/')
+
+        d = self.apply(self.process_traces,[d],[h])
+        s = self.apply(self.process_traces,[s],[h])
+
+        self.apply(self.write_residuals,[s,d],[h],inplace=False)
+
+        s = self.apply(self.generate_adjoint_traces,[s,d],[h])
+        self.save(s,h,prefix='traces/adj/')
+
+
     def process_traces(self,s,h):
-        """ Filters and mutes data
+        """ Performs data processing operations on traces
         """
         # filter data
         if PAR.BANDPASS:
@@ -98,117 +122,33 @@ class default(object):
         return s
 
 
-    def prepare_adjoint(self,path='.',output_type=2):
-        """ Prepares solver for adjoint simulation by reading observations and
-         synthetics, performing data processing, and writing various types of
-         adjoint traces, depending on the keyword argument output_type.
-        """
-        unix.cd(path)
-
-        if output_type == 1:
-            # write residuals only
-            d,h = self.load(prefix='traces/obs')
-            s,_ = self.load(prefix='traces/syn')
-
-            d = self.apply(self.process_traces,[d],[h])
-            s = self.apply(self.process_traces,[s],[h])
-
-            r = self.apply(self.compute_residuals,[s,d],[h],inplace=False)
-            self.write_residuals(r,h)
-
-
-        elif output_type == 2:
-            # write adjoint traces needed for gradient evaluation
-            d,h = self.load(prefix='traces/obs')
-            s,_ = self.load(prefix='traces/syn')
-
-            d = self.apply(self.process_traces,[d],[h])
-            s = self.apply(self.process_traces,[s],[h])
-
-            r = self.apply(self.compute_residuals,[s,d],[h],inplace=False)
-            self.write_residuals(r,h)
-
-            s = self.apply(self.compute_adjoint,[s,d],[h,output_type])
-            self.save(s,h)
-
-
-        elif output_type == 3:
-            # write adjoint traces needed to get action of Jacobian
-            d,h = self.load(prefix='traces/lcg')
-            s,_ = self.load(prefix='traces/syn')
-
-            d = self.apply(self.process_traces,[d],[h])
-            s = self.apply(self.process_traces,[s],[h])
-
-            s = self.apply(self.compute_adjoint,[s,d],[h,output_type])
-            self.save(s,h)
-
-
-        elif output_type == 4:
-            # write adjoint traces needed to get action of Hessian
-            d,h = self.load(prefix='traces/obs')
-            s,_ = self.load(prefix='traces/syn')
-
-            d = self.apply(self.process_traces,[d],[h])
-            s = self.apply(self.process_traces,[s],[h])
-
-            s = self.apply(self.compute_adjoint,[s,d],[h,output_type])
-            self.save(s,h)
-
-
-    def compute_residuals(self,s,d,h):
+    def write_residuals(self,s,d,h):
         """ Computes residuals from observations and synthetics
         """
         r = []
         for i in range(h.nr):
             r.append(self.call_misfit(s[:,i],d[:,i],h.nt,h.dt))
+
+        # write residuals
+        np.savetxt('residuals',r)
+
         return np.array(r)
 
 
-    def compute_adjoint(self,s,d,h,output_type):
-        """ Computes adjoint traces from observed and synthetic traces
+    def generate_adjoint_traces(self,s,d,h):
+        """ Generates adjoint traces from observed and synthetic traces
         """
-        if output_type == 1:
-            pass
+        # generate adjoint traces
+        for i in range(h.nr):
+            s[:,i] = self.call_adjoint(s[:,i],d[:,i],h.nt,h.dt)
+        return s
 
-        elif output_type == 2:
-            # gradient evaluation
-            for i in range(h.nr):
-                s[:,i] = self.call_adjoint(s[:,i],d[:,i],h.nt,h.dt)
-            return s
-
-        elif output_type == 3:
-            # action of Jacobian
-            return s-d
-
-        elif output_type == 4:
-            # action of Hessian
-            pass
-
-        elif output_type == 5:
-            # Hessian preconditioner
-            for i in range(h.nr):
-                if PAR.HESSIAN == 1:
-                    pass
-                if PAR.HESSIAN == 2:
-                    s[1:-1,i] = (s[2:,i]-2*s[1:-1,i]+s[0:-2,i]) / (h.dt**2)
-                elif PAR.HESSIAN in [3,4]:
-                    s[1:-1,i] = (s[2:,i]-s[0:-2,i]) / (2*h.dt)
-                    s[:,i] = 1/(sum(f[:,i]*f[:,i])*h.dt) * f[:,i]
-            return s
-
-        # normalize
-        if PAR.NORMALIZE==0:
-            pass
-        elif PAR.NORMALIZE==1:
+        # normalize traces
+        if PAR.NORMALIZE==1:
             for ir in range(h.nr):
                 s[:,ir] = s[:,ir]/np.norm(d[:,ir],ord=2)
-        elif PAR.NORMALIZE==2:
-            # normalize by trace
-            for ir in range(h.nr):
-                s[:,ir] = s[:,ir]/s[:,ir].max()
+
         elif PAR.NORMALIZE==3:
-            # normalize by source
             s = s/s.max()
 
         return s
@@ -217,7 +157,7 @@ class default(object):
     ### misfit/adjoint wrappers
 
     def call_adjoint(self,wsyn,wobs,nt,dt):
-        """ Wrapper for misfit functions
+        """ Wrapper for generating adjoint traces
         """
         if PAR.MISFIT in ['wav','wdiff']:
             # waveform difference
@@ -240,7 +180,7 @@ class default(object):
 
 
     def call_misfit(self,wsyn,wobs,nt,dt):
-        """ Wrapper for adjoint trace computations
+        """ Wrapper for evaluating misfit function
         """
         if PAR.MISFIT in ['wav','wdiff']:
             # waveform difference
@@ -287,21 +227,18 @@ class default(object):
             solver.writer(s[channel],h,channel=channel,prefix=prefix,suffix=suffix)
 
 
-    def write_residuals(self,s,h):
-        """ Writes residuals
-        """
-        # sum components
-        sum = np.zeros((h.nr))
-        for channel in solver.channels:
-            sum = sum + s[channel]
-        np.savetxt('residuals',sum)
-
-
-
     ### utility functions
 
     def apply(self,func,arrays,args,inplace=True):
         """ Applies data processing operation to multi-component data
+
+            'func' is the function which is applied once to each component 
+
+            'arrays' contains the numeric trace data, separated according to 
+            component
+
+            'args' contains other arguments, besides the numeric trace data, 
+            that are passed to 'func'
         """
         if inplace:
             if len(arrays) == 1:
