@@ -224,7 +224,7 @@ class default(object):
     ### utility functions
 
     def apply(self,func,arrays,input,inplace=True):
-        """ Applies data processing operation to multi-component data arrays
+        """ Applies function to multi-component data
         """
 
         if inplace:

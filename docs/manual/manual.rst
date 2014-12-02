@@ -139,8 +139,6 @@ To allow classes to work with one another, each class must conform to an establi
 
 - eval_grad
 
-- apply_hess
-
 - forward
 
 - adjoint
@@ -167,11 +165,11 @@ To allow classes to work with one another, each class must conform to an establi
 
 - check
 
-- prepare_adjoint
+- prepare_eval_grad
 
 - process_traces
 
-- compute_residuals
+- write_residuals
 
 
 ``postprocess`` classes must implement
