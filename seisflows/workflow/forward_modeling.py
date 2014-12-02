@@ -54,8 +54,13 @@ class forward_modeling(object):
     def main(self):
         """ Generates seismic data
         """
+       
+        print 'Preparing solver directories...'
+
         system.run('solver','prepare_dirs',
           hosts = 'all')
+
+        print 'Running solver...'
 
         system.run('solver','prepare_data',
           hosts = 'all',
