@@ -13,12 +13,6 @@ PATH = ParameterObj('SeisflowsPaths')
 
 class default(object):
     """ Data preprocessing class
-
-        solver.read, solver.write
-            Low level input/output functions.
-
-        load, save
-             High-level input/output functions.
     """
 
     def check(self):
@@ -229,39 +223,20 @@ class default(object):
 
     ### utility functions
 
-    def apply(self,func,arrays,args,inplace=True):
-        """ Applies data processing operation to multi-component data
-
-            'func' is the function which is applied once to each component 
-
-            'arrays' contains the numeric trace data, separated according to 
-            component
-
-            'args' contains other arguments, besides the numeric trace data, 
-            that are passed to 'func'
+    def apply(self,func,arrays,input,inplace=True):
+        """ Applies data processing operation to multi-component data arrays
         """
+
         if inplace:
-            if len(arrays) == 1:
-                for key in arrays[0]:
-                    arrays[0][key] = func(arrays[0][key],*args)
-                return arrays[0]
-
-            if len(arrays) == 2:
-                for key in arrays[0]:
-                    arrays[0][key] = func(arrays[0][key],arrays[1][key],*args)
-                return arrays[0]
-
+            output = Struct(arrays[0])
         else:
-            new = Struct()
-            if len(arrays) == 1:
-                for key in arrays[0]:
-                    new[key] = func(arrays[0][key],*args)
-                return new
+            output = Struct()
 
-            if len(arrays) == 2:
-                for key in arrays[0]:
-                    new[key] = func(arrays[0][key],arrays[1][key],*args)
-                return new
+        for channel in solver.channels:
+            args = [array[channel] for array in arrays] + input
+            output[channel] = func(*args)
+
+        return output
 
 
     def check_headers(self,headers):
