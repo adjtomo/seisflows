@@ -105,8 +105,7 @@ class migration(object):
               export_traces=PAR.SAVETRACES )
 
         # process image
-        system.run( 'postprocess','process_kernels',
-            hosts='head',
+        postprocess.process_kernels(
             path=PATH.IMAGE,
             tag='image')
 
