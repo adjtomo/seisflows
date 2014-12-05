@@ -135,12 +135,11 @@ class default(object):
         # generate adjoint traces
         for i in range(h.nr):
             s[:,i] = self.call_adjoint(s[:,i],d[:,i],h.nt,h.dt)
-        return s
 
         # normalize traces
         if PAR.NORMALIZE==1:
             for ir in range(h.nr):
-                s[:,ir] = s[:,ir]/np.norm(d[:,ir],ord=2)
+                s[:,ir] = s[:,ir]/np.linalg.norm(d[:,ir],ord=2)
 
         elif PAR.NORMALIZE==3:
             s = s/s.max()
