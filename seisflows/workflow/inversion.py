@@ -196,7 +196,7 @@ class inversion(object):
                 hosts='all',
                 path=PATH.GRAD )
 
-            self.write_misfit(path=PATH.GRAD, suffix='new')
+            self.sum_residuals(path=PATH.GRAD, suffix='new')
 
 
     def compute_direction(self):
@@ -252,7 +252,7 @@ class inversion(object):
             hosts='all',
             path=PATH.FUNC )
 
-        self.write_misfit(path=PATH.FUNC, suffix='try')
+        self.sum_residuals(path=PATH.FUNC, suffix='try')
 
 
     def evaluate_gradient(self):
@@ -319,7 +319,7 @@ class inversion(object):
         solver.save(dst,parts)
 
 
-    def write_misfit(self,path='',suffix=''):
+    def sum_residuals(self,path='',suffix=''):
         """ Sums residuals to obtain misfit function value
         """
         src = path+'/'+'residuals'
