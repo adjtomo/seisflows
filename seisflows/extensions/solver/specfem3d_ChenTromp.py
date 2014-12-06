@@ -83,5 +83,5 @@ class specfem3d_ChenTromp(loadclass('extensions.solver','specfem3d_legacy')):
         'Hs':'Hs_kernel',
         'Dc':'Dc_kernel',
         'Ds':'Ds_kernel',
-        'Bc':'Bc_kernel',
-        'Bs':'Bs_kernel'}
+        'Ec':'Ec_kernel',
+        'Es':'Es_kernel'}
