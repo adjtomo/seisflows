@@ -7,6 +7,7 @@ import numpy as _np
 from seisflows.tools import unix
 from seisflows.tools.codetools import Struct
 from seisflows.tools.configtools import findpath
+from seisflows.seistools.core import SeisStruct
 
 import segy.reader as segyreader
 import segy.writer as segywriter
@@ -154,15 +155,16 @@ def readsu(channel=[],prefix='SEM',suffix='',verbose=False):
         print 'min, max:', d.min(), d.max()
         print ''
 
-    rx = list(_copy.copy(h.rx))
-    ry = list(_copy.copy(h.ry))
-    rz = list(_copy.copy(h.rz))
-    sx = list(_copy.copy(h.sx))
-    sy = list(_copy.copy(h.sy))
-    sz = list(_copy.copy(h.sz))
+    rx = _list(h.rx)
+    ry = _list(h.ry)
+    rz = _list(h.rz)
+    sx = _list(h.sx)
+    sy = _list(h.sy)
+    sz = _list(h.sz)
 
     nn = [h.nr]
     nr = h.nr
+    i = 0
 
     for file in files:
         d_,h_ = segyreader.readsu(file)
@@ -227,7 +229,7 @@ def writesu(d,h,channel=[],prefix='SEM',suffix='.adj',verbose=False):
         imax = imax+h.nn[iproc]
 
         d_ = d[:,imin:imax]
-        h_ = _copy.copy(h)
+        h_ = SeisStruct(nr=h.nr,nt=h.nt,dt=h.dt,ts=h.ts,nrec=h.nrec,nsrc=h.nsrc)
         h_.rx = h.rx[imin:imax]
         h_.ry = h.ry[imin:imax]
         h_.rz = h.rz[imin:imax]
@@ -348,6 +350,11 @@ def _writelines(file,lines):
     """
     with open(file,'w') as f:
         f.writelines(lines)
+
+
+def _list(array):
+    array2 = (_copy.copy(array))
+    return list(array2)
 
 
 def _split(str,sep):
