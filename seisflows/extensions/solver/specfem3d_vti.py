@@ -5,7 +5,7 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 
-class specfem3d_Thomsen(loadclass('extensions.solver','specfem3d_legacy')):
+class specfem3d_vti(loadclass('extensions.solver','specfem3d_legacy')):
 
     # model parameters expected by solver
     model_parameters = []
