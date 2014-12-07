@@ -33,7 +33,7 @@ def savebin(v,filename):
         n.tofile(file)
 
 
-class Reader(object):
+class BinaryReader(object):
     "Generic binary file reader"
 
     def __init__(self,fname,endian='|'):
@@ -92,7 +92,7 @@ class Reader(object):
         return h
 
 
-class Writer(object):
+class BinaryWriter(object):
     "Generic binary file writer"
 
     def __init__(self,fname,endian='|'):
@@ -158,6 +158,11 @@ def mychar(fmt):
         return chars[fmt]
     else:
         return fmt
+
+
+class OutputWriter(self):
+    def __init__(self):
+        raise NotYetImplementedError
 
 
 def mysize(fmt):

@@ -1,7 +1,7 @@
 
 import numpy as np
 
-from seisflows.tools.iotools import Writer, mychar, mysize
+from seisflows.tools.iotools import BinaryWriter, mychar, mysize
 
 from headers import SEGY_TRACE_HEADER
 
@@ -28,10 +28,10 @@ SEGY_TRACE_HEADER = _tmp
 
 
 
-class SeismicWriter(Writer):
+class SeismicWriter(BinaryWriter):
 
     def __init__(self,fname):
-        Writer.__init__(self,fname)
+        super(SeismicWriter,self).__init__(self,fname)
 
         self.dtype = 'float'
         self.dsize = mysize(self.dtype)
