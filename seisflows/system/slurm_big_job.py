@@ -94,6 +94,8 @@ class slurm_big_job(object):
         save_parameters('SeisflowsParameters.json')
         save_paths('SeisflowsPaths.json')
 
+        unix.mkdir('SeisflowsOutput')
+
         args = ('sbatch '
           + '--job-name=%s ' % PAR.TITLE
           + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
@@ -149,7 +151,6 @@ class slurm_big_job(object):
         # prepare sbatch arguments
         sbatch = 'sbatch '                                           \
             + '--job-name=%s ' % PAR.TITLE                           \
-            + '--output %s ' % (PATH.SYSTEM+'/'+'output.log'+'%a')   \
             + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.CPUS_PER_NODE)) \
             + '--ntasks-per-node=%d ' % PAR.CPUS_PER_NODE            \
             + '--time=%d ' % PAR.STEPTIME
@@ -164,14 +165,14 @@ class slurm_big_job(object):
             with open(PATH.SYSTEM+'/'+'job_id','w') as f:
                 subprocess.call(sbatch
                   + '--array=%d-%d ' % (0,PAR.NTASK-1)
-                  + '--output %s ' % (PATH.SYSTEM+'/'+'output.log'+'%a')
+                  + '--output %s ' % (PATH.OUTPUT+'/'+'SeisflowsOutput/'+'%A_0')
                   + args,
                   shell=1,stdout=f)
         elif hosts == 'head':
             with open(PATH.SYSTEM+'/'+'job_id','w') as f:
                 subprocess.call(sbatch
                   + '--export='+'MY_JOB_ID=0 '
-                  + '--output %s ' % (PATH.SYSTEM+'/'+'output.log'+'0')
+                  + '--output %s ' % (PATH.OUTPUT+'/'+'SeisflowsOutput/'+'%A_%a')
                   + args,
                   shell=1,stdout=f)
         else:
