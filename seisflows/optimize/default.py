@@ -188,6 +188,9 @@ class default(object):
         x_ = loadtxt('alpha')
         f_ = loadtxt('f_try')
 
+        if np.isnan(f_):
+            raise ValueError
+
         cls.search_history += [[x_,f_]]
 
         x = cls.step_lens()
