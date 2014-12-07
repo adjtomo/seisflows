@@ -1,6 +1,4 @@
 
-import copy
-
 import numpy as np
 
 from seisflows.tools.iotools import Writer, mychar, mysize

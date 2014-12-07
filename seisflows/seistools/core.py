@@ -9,23 +9,11 @@ class SeisStruct(Struct):
                  sx=[],sy=[],sz=[],
                  rx=[],ry=[],rz=[],
                  nrec=[],nsrc=[]):
-        super(SeisStruct,self).__init__()
 
-        self.nr = nr
-        self.nt = nt
-        self.dt = dt
-        self.ts = ts
-
-        self.sx = sx
-        self.sy = sy
-        self.sz = sz
-        self.rx = rx
-        self.ry = ry
-        self.rz = rz
-
-        self.nrec = nrec
-        self.nsrc = nsrc
-
+        super(SeisStruct,self).__init__([['nr',nr],['nt',nt],['dt',dt],['ts',ts],
+                 ['sx',sx],['sy',sy],['sz',sz],
+                 ['rx',rx],['ry',ry],['rz',rz],
+                 ['nrec',nrec],['nsrc',nsrc]])
 
 def loadascii(dir):
     wildcard = os.path.join(dir,'*.ascii')
