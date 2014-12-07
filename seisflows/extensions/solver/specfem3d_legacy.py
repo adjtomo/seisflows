@@ -2,6 +2,7 @@
 import subprocess
 
 from seisflows.tools import unix
+from seisflows.tools.codetools import glob
 from seisflows.tools.configtools import loadclass, ConfigObj, ParameterObj
 
 OBJ = ConfigObj('SeisflowsObjects')
@@ -23,15 +24,16 @@ class specfem3d_legacy(loadclass('solver','specfem3d')):
         import system
 
 
-    def mpirun(self,script,outfile='/dev/null'):
+    def mpirun(self,runfile,args='',outfile='/dev/null'):
         """ Wrapper for mpirun
         """
         unix.cd('bin')
 
         with open(outfile) as f:
             subprocess.call(
-                  system.mpiargs()
-                  + unix.basename(script),
+                  system.mpiargs() +
+                      unix.basename(runfile) +
+                      args,
                   shell=True,
                   stdout=f)
         unix.cd('..')
@@ -86,8 +88,8 @@ class specfem3d_legacy(loadclass('solver','specfem3d')):
                 # run smoothing
                 print ' smoothing', kernel_name
                 self.mpirun(
-                  PATH.SOLVER_BINARIES+'/'+'xsmooth_vol_data '
-                  + kernel_name + ' '
+                  PATH.SOLVER_BINARIES+'/'+'xsmooth_vol_data ',
+                  kernel_name + ' '
                   + path + '/' + tag+'_nosmooth/' + ' '
                   + path + '/' + tag+'/' + ' '
                   + str(span) + ' '
