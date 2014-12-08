@@ -163,7 +163,10 @@ def mychar(fmt):
 class OutputWriter(object):
     def __init__(self,filename,keys):
 
-        self.filename = filename
+        try:
+            self.filename = _os.path.abspath(filename)
+        except:
+            raise IOError
 
         self.nkey = len(keys)
         self.keys = []
@@ -175,7 +178,7 @@ class OutputWriter(object):
         for key in self.keys:
             line += ('%10s  ') % (key)
 
-        # open file
+        # write headers to file
         if _os.path.exists(filename):
             fileobj = open(filename,'a')
         else:
