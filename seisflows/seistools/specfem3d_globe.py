@@ -147,12 +147,12 @@ def write_receivers(h):
     # loop over receivers
     for ir in range(h.nr):
         line = ''
-        line = line + 'S%06d'  % ir       + ' '
-        line = line + 'AA'                + ' '
-        line = line + '%11.5e' % h.rx[ir] + ' '
-        line = line + '%11.5e' % h.rz[ir] + ' '
-        line = line + '%3.1f'  % 0.       + ' '
-        line = line + '%3.1f'  % 0.       + '\n'
+        line += 'S%06d'  % ir       + ' '
+        line += 'AA'                + ' '
+        line += '%11.5e' % h.rx[ir] + ' '
+        line += '%11.5e' % h.rz[ir] + ' '
+        line += '%3.1f'  % 0.       + ' '
+        line += '%3.1f'  % 0.       + '\n'
         lines.extend(line)
 
     # write file
