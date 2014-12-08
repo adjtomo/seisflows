@@ -160,10 +160,56 @@ def mychar(fmt):
         return fmt
 
 
-class OutputWriter(self):
-    def __init__(self):
-        raise NotYetImplementedError
+class OutputWriter(object):
+    def __init__(self,filename,keys):
+
+        self.filename = filename
+
+        self.nkey = len(keys)
+        self.keys = []
+        for key in keys:
+            self.keys += [key.upper()]
+
+        # format column headers
+        line ='' 
+        for key in self.keys:
+            line += ('%10s  ') % (key)
+
+        # open file
+        if _os.path.exists(filename):
+            fileobj = open(filename,'a')
+        else:
+            fileobj = open(filename,'w')
+            fileobj.write(line+'\n')
+            fileobj.write((self.nkey*((10*'=')+'  '))+'\n')
+        fileobj.close()
+
+
+    def __call__(self,*vals):
+        fileobj = open(self.filename,'a')
+        nval = len(vals)
+        if nval != self.nkey:
+            raise Exception
+        line = ''
+        for val in vals:
+            line += self.apply_format(val)
+        fileobj.write(line+'\n')
+        fileobj.close()
+        
+
+    def apply_format(self,val):
+        if val == '':
+            return 12*' '
+        if val == []:
+            return 12*' '
+        if type(val) is int:
+            return '%10d  ' % val
+        if type(val) is float:
+            return '%10.3e  ' % val
+        if type(val) is str:
+            return '%10s  ' % val
 
 
 def mysize(fmt):
     return _struct.calcsize(mychar(fmt))
+

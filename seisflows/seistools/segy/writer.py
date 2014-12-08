@@ -31,7 +31,7 @@ SEGY_TRACE_HEADER = _tmp
 class SeismicWriter(BinaryWriter):
 
     def __init__(self,fname):
-        super(SeismicWriter,self).__init__(self,fname)
+        super(SeismicWriter,self).__init__(fname)
 
         self.dtype = 'float'
         self.dsize = mysize(self.dtype)
