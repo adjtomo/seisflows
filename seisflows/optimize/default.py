@@ -5,6 +5,7 @@ from seisflows.tools import unix
 from seisflows.tools.arraytools import loadnpy, savenpy
 from seisflows.tools.codetools import loadtxt, savetxt, join
 from seisflows.tools.configtools import ParameterObj
+from seisflows.tools.iotools import OutputWriter
 from seisflows.optimize import lib
 
 PAR = ParameterObj('SeisflowsParameters')
@@ -90,7 +91,9 @@ class default(object):
         elif PAR.SCHEME in ['QuasiNewton']:
             cls.LBFGS = lib.LBFGS(cls.path,PAR.LBFGSMAX,PAR.BEGIN)
 
-        cls.output = PATH.SUBMIT+'/'+'output.optim'
+        # prepare output writer
+        cls.writer = OutputWriter(PATH.SUBMIT+'/'+'output.optim',
+            ['iter','step len','data fit'])
 
 
     def compute_direction(cls):
@@ -174,9 +177,7 @@ class default(object):
         savenpy('m_try',m+p*alpha)
         savetxt('alpha',alpha)
 
-        with open(cls.output,'a') as file:
-            file.write('Iteration '+str(cls.iter)+'\n')
-            file.write(' %9.4e %9.4e\n'%(0.,f_new))
+        cls.writer(cls.iter,0.,f_new)
 
 
     def search_status(cls):
@@ -217,9 +218,7 @@ class default(object):
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 cls.isdone = 1
 
-        with open(cls.output,'a') as file:
-            file.write(' %9.4e %9.4e\n'%(x_,f_))
-            if cls.isdone: file.write('\n')
+        cls.writer([],x_,f_)
 
         return cls.isdone, cls.isbest
 
@@ -291,6 +290,8 @@ class default(object):
         savetxt('alpha',alpha)
         savenpy('m_new',m0+p*alpha)
         savetxt('f_new',f.min())
+
+        cls.writer([],[],[])
 
 
 
