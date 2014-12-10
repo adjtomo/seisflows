@@ -2,8 +2,8 @@
 
 import sys
 
-from seisflows.tools.codetools import join, loadjson
-from seisflows.tools.configtools import ConfigObj, ParameterObj
+from seisflows.tools.code import join, loadjson
+from seisflows.tools.config import ConfigObj, ParameterObj
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')

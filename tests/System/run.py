@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from seisflows.tools import unix
-from seisflows.tools.configtools import getclass, ParameterObject
+from seisflows.tools.config import getclass, ParameterObject
 
 PAR = ParameterObject('parameters')
 PATH = ParameterObject('paths')

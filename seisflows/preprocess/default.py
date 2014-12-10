@@ -2,9 +2,9 @@
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import Struct
+from seisflows.tools.code import Struct
 from seisflows.seistools import adjoint, misfit, sbandpass, smute
-from seisflows.tools.configtools import ConfigObj, ParameterObj
+from seisflows.tools.config import ConfigObj, ParameterObj
 
 OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')

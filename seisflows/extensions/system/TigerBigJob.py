@@ -1,7 +1,7 @@
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import abspath, join
-from seisflows.tools.configtools import loadclass, ConfigObj, ParameterObj
+from seisflows.tools.code import abspath, join
+from seisflows.tools.config import loadclass, ConfigObj, ParameterObj
 
 OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')

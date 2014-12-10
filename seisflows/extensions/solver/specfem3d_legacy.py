@@ -2,8 +2,8 @@
 import subprocess
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import glob
-from seisflows.tools.configtools import loadclass, ConfigObj, ParameterObj
+from seisflows.tools.code import glob
+from seisflows.tools.config import loadclass, ConfigObj, ParameterObj
 
 OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')

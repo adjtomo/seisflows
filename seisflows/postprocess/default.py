@@ -2,9 +2,9 @@
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.arraytools import loadnpy, savenpy
-from seisflows.tools.codetools import exists
-from seisflows.tools.configtools import ConfigObj, ParameterObj
+from seisflows.tools.array import loadnpy, savenpy
+from seisflows.tools.code import exists
+from seisflows.tools.config import ConfigObj, ParameterObj
 
 OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')

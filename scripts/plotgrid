@@ -3,7 +3,7 @@
 import sys
 import numpy as np
 
-from seisflows.seistools.arraytools import gridplot
+from seisflows.seistools.array import gridplot
 
 
 if __name__ == '__main__':

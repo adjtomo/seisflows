@@ -2,10 +2,10 @@
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.arraytools import loadnpy, savenpy
-from seisflows.tools.codetools import loadtxt, savetxt, join
-from seisflows.tools.configtools import ParameterObj
-from seisflows.tools.iotools import OutputWriter
+from seisflows.tools.array import loadnpy, savenpy
+from seisflows.tools.code import loadtxt, savetxt, join
+from seisflows.tools.config import ParameterObj
+from seisflows.tools.io import OutputWriter
 from seisflows.optimize import lib
 
 PAR = ParameterObj('SeisflowsParameters')

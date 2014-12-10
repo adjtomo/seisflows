@@ -1,5 +1,5 @@
 
-from seisflows.tools.configtools import loadclass, ParameterObj
+from seisflows.tools.config import loadclass, ParameterObj
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')

@@ -5,8 +5,8 @@ import string as _string
 import numpy as _np
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import Struct
-from seisflows.tools.configtools import findpath
+from seisflows.tools.code import Struct
+from seisflows.tools.config import findpath
 
 import segy.reader as segyreader
 import segy.writer as segywriter

@@ -6,7 +6,7 @@ import sys
 import types
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import Struct, abspath, exists, glob, join, loadjson, loadobj, savejson, saveobj
+from seisflows.tools.code import Struct, abspath, exists, glob, join, loadjson, loadobj, savejson, saveobj
 
 
 class ConfigObj(object):

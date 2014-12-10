@@ -8,7 +8,7 @@ myclass = sys.argv[2]
 
 os.chdir(mypath)
 
-from seisflows.tools.configtools import loadclass, ParameterObj
+from seisflows.tools.config import loadclass, ParameterObj
 
 PAR = ParameterObj('parameters',mypath)
 PATH = ParameterObj('paths',mypath)

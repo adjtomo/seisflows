@@ -4,7 +4,7 @@ import struct as _struct
 
 import numpy as _np
 
-from seisflows.tools.codetools import Struct
+from seisflows.tools.code import Struct
 
 
 def loadbin(filename):

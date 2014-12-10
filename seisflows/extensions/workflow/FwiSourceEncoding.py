@@ -4,8 +4,8 @@ import random
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import Struct, exists
-from seisflows.tools.configtools import loadclass, ConfigObj, ParameterObj
+from seisflows.tools.code import Struct, exists
+from seisflows.tools.config import loadclass, ConfigObj, ParameterObj
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')

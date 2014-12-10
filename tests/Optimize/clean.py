@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from seisflows.tools import unix
-from seisflows.tools.codetools import glob
+from seisflows.tools.code import glob
 
 unix.rm('scratch')
 

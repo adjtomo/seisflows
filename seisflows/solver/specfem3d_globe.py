@@ -5,9 +5,9 @@ import numpy as np
 
 from seisflows import seistools
 from seisflows.tools import unix
-from seisflows.tools.codetools import exists, glob, join
-from seisflows.tools.configtools import findpath, ConfigObj, ParameterObj
-from seisflows.tools.iotools import loadbin, savebin
+from seisflows.tools.code import exists, glob, join
+from seisflows.tools.config import findpath, ConfigObj, ParameterObj
+from seisflows.tools.io import loadbin, savebin
 
 OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')

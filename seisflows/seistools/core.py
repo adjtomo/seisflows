@@ -1,5 +1,5 @@
 
-from seisflows.tools.codetools import Struct
+from seisflows.tools.code import Struct
 
 
 class SeisStruct(Struct):

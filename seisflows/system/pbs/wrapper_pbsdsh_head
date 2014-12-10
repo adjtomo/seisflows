@@ -9,8 +9,8 @@ myfunc = sys.argv[3]
 
 os.chdir(mypath)
 
-from seisflows.tools.codetools import loadobj
-from seisflows.tools.configtools import loadclass, ParameterObj
+from seisflows.tools.code import loadobj
+from seisflows.tools.config import loadclass, ParameterObj
 
 PAR = ParameterObj('parameters',mypath)
 PATH = ParameterObj('paths',mypath)

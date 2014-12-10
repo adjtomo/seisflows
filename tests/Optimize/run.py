@@ -3,9 +3,9 @@
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.arraytools import loadnpy, savenpy
-from seisflows.tools.codetools import abspath, irange, join, loadtxt, savetxt
-from seisflows.tools.configtools import loadclass, loadvars, ParameterObj
+from seisflows.tools.array import loadnpy, savenpy
+from seisflows.tools.code import abspath, irange, join, loadtxt, savetxt
+from seisflows.tools.config import loadclass, loadvars, ParameterObj
 
 from problems import rosenbrock as problem
 

@@ -1,7 +1,7 @@
 
 import numpy as _np
 
-from seisflows.tools.arraytools import gridplot
+from seisflows.tools.array import gridplot
 
 
 def splot(s,h,normalize=True,nxmax=1000,nymax=1000):

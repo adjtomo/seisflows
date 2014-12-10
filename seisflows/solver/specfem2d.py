@@ -6,8 +6,8 @@ from scipy.interpolate import griddata
 
 from seisflows import seistools
 from seisflows.tools import unix
-from seisflows.tools.codetools import exists, glob, join, setdiff, Struct
-from seisflows.tools.configtools import loadclass, findpath, ParameterObj, ConfigObj
+from seisflows.tools.code import exists, glob, join, setdiff, Struct
+from seisflows.tools.config import loadclass, findpath, ParameterObj, ConfigObj
 
 OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
@@ -448,7 +448,7 @@ class specfem2d(object):
 
     def smooth(self,path='',tag='grad',span=0):
         "smooths SPECFEM2D kernels by convolving them with a Gaussian"
-        from seisflows.tools.arraytools import meshsmooth
+        from seisflows.tools.array import meshsmooth
 
         parts = self.load(path+'/'+tag)
         if not span:

@@ -4,7 +4,7 @@ import sys
 
 import numpy as np
 
-from seisflows.tools.arraytools import uniquerows, meshplot
+from seisflows.tools.array import uniquerows, meshplot
 
 
 def isnonzero(a):
