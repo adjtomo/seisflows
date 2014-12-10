@@ -35,7 +35,7 @@ class default(object):
 
         # check parameters
         if 'MISFIT' not in PAR:
-            raise Exception
+            setattr(PAR,'MISFIT','wav')
 
         if 'NORMALIZE' not in PAR:
             setattr(PAR,'NORMALIZE',True)
@@ -137,12 +137,9 @@ class default(object):
             s[:,i] = self.call_adjoint(s[:,i],d[:,i],h.nt,h.dt)
 
         # normalize traces
-        if PAR.NORMALIZE==1:
+        if PAR.NORMALIZE:
             for ir in range(h.nr):
                 s[:,ir] = s[:,ir]/np.linalg.norm(d[:,ir],ord=2)
-
-        elif PAR.NORMALIZE==3:
-            s = s/s.max()
 
         return s
 
