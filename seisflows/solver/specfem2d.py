@@ -66,7 +66,7 @@ class specfem2d(object):
     reader = staticmethod(seistools.specfem2d.readsu)
     writer = staticmethod(seistools.specfem2d.writesu)
 
-    glob = lambda _ : glob('OUTPUT_FILES/U?_file_single.bin')
+    glob = lambda _ : glob('OUTPUT_FILES/U?_file_single.su')
     mesher_binary = 'bin/xmeshfem2D'
     solver_binary = 'bin/xspecfem2D'
 

@@ -125,11 +125,11 @@ def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='semd'):
 
 ###  reading and writing seismograms Seismic Unix data
 
-def readsu(channel=[],prefix='SEM',suffix='.bin'):
+def readsu(channel=[],prefix='SEM',suffix='.su'):
     """ Reads Seismic Unix file
     """
     if suffix=='':
-        suffix = '.bin'
+        suffix = '.su'
 
     if channel in ['x']:
         file = '%s/Ux_file_single%s' % (prefix,suffix)
@@ -147,11 +147,11 @@ def readsu(channel=[],prefix='SEM',suffix='.bin'):
     return d,h
 
 
-def writesu(d,h,channel=[],prefix='SEM',suffix='.bin.adj'):
+def writesu(d,h,channel=[],prefix='SEM',suffix='.su.adj'):
     """ Writes Seismic Unix file
     """
     if suffix=='':
-        suffix = '.bin.adj'
+        suffix = '.su.adj'
 
     if channel in ['x']:
         file = '%s/Ux_file_single%s' % (prefix,suffix)
