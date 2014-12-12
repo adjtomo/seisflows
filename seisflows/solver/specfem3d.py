@@ -345,6 +345,7 @@ class specfem3d(object):
         self.adjoint()
 
         # save results
+        # FIXME: declaration has only 1 argument. Should it have 2?
         self.export_kernels(path,'kernels')
 
 
