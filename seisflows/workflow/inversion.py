@@ -24,7 +24,7 @@ class inversion(object):
 
       Calls to forward and adjoint solvers are abstracted through the 'solver'
       interface so that various forward modeling packages can be used
-      interchangably.
+      interchangeably.
 
       Commands for launching serial or parallel jobs on a workstation or cluster
       are abstracted through the 'system' interface so that the code can be

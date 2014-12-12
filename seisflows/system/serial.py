@@ -23,7 +23,7 @@ class serial(object):
       or parallel, and perform other system functions.
 
       One of several system interface classes that together provide a consistent
-      interface across different computer environemnts. Each class implements a
+      interface across different computer environments. Each class implements a
       standard sets of methods, hiding the details associated with, for example,
       a particular filesystem or job scheduler.
     """

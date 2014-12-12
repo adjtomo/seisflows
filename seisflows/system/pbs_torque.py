@@ -18,7 +18,7 @@ class pbs_torque(object):
       or parallel, and perform other system functions.
 
       One of several system interface classes included in SEISFLOWS to provide
-      a consistent interface across different computer environemnts. Each class
+      a consistent interface across different computer environments. Each class
       implements a standard sets of methods, hiding the details of submitting
       and running and jobs in a particular environment.
     """

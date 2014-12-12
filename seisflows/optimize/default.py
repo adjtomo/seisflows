@@ -14,8 +14,8 @@ PATH = ParameterObj('SeisflowsPaths')
 class default(object):
     """ Nonlinear optimization base class.
 
-     Available nonlinear optimization aglorithms include gradient descent,
-     nonlinear conjugatue gradient, and a quasi-Newton method 
+     Available nonlinear optimization algorithms include gradient descent,
+     nonlinear conjugate gradient, and a quasi-Newton method
      (limited-memory BFGS).
 
      Available line search algorithms include a backtracking line search based
