@@ -42,7 +42,7 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
             raise Exception
 
         if 'system' not in OBJ:
-            raise Excpetion
+            raise Exception("Undefined Exception")
 
         global preprocess
         import preprocess

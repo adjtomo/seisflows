@@ -143,7 +143,7 @@ class specfem3d(object):
             raise Exception
 
         if 'system' not in OBJ:
-            raise Excpetion
+            raise Exception("Undefined Exception")
 
         global preprocess
         import preprocess

@@ -110,10 +110,10 @@ class inversion(object):
             raise Exception
 
         if 'solver' not in OBJ:
-            raise Excpetion
+            raise Exception("Undefined Exception")
 
         if 'system' not in OBJ:
-            raise Excpetion
+            raise Exception("Undefined Exception")
 
         global optimize
         import optimize

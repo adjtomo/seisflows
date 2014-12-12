@@ -18,7 +18,7 @@ class specfem3d_legacy(loadclass('solver','specfem3d')):
         super(specfem3d_legacy,self).check()
 
         if 'system' not in OBJ:
-            raise Excpetion
+            raise Exception("Undefined Exception")
 
         global system
         import system

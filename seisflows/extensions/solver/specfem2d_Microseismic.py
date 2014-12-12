@@ -46,7 +46,7 @@ class specfem2d_Microseismic(loadclass('solver','specfem2d')):
             raise Exception
 
         if 'system' not in OBJ:
-            raise Excpetion
+            raise Exception("Undefined Exception")
 
         global preprocess
         import preprocess

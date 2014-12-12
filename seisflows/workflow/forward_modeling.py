@@ -38,10 +38,10 @@ class forward_modeling(object):
 
         # check dependencies
         if 'solver' not in OBJ:
-            raise Excpetion
+            raise Exception("Undefined Exception")
 
         if 'system' not in OBJ:
-            raise Excpetion
+            raise Exception("Undefined Exception")
 
         global solver
         import solver

@@ -25,10 +25,10 @@ class specfem2d_SourceEncoding(loadclass('solver','specfem2d')):
 
         # check dependencies
         if 'system' not in OBJ:
-            raise Excpetion
+            raise Exception("Undefined Exception")
 
         if 'preprocess' not in OBJ:
-            raise Excpetion
+            raise Exception("Undefined Exception")
 
         global system
         import system
