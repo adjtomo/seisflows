@@ -237,7 +237,7 @@ class slurm_big_job(object):
         """
         try:
             return int(os.getenv('SLURM_ARRAY_TASK_ID'))
-        except:
+        except ValueError:
             return int(os.getenv('MY_JOB_ID'))
 
     def mylen(self, hosts):

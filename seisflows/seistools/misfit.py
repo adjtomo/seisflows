@@ -32,7 +32,7 @@ def wampl(wsyn, wobs, nt, dt):
             wdiff = wsyn[ioff:]-wobs[:-ioff]
         if ioff > 0:
             wdiff = wsyn[:-ioff]-wobs[ioff:]
-    except:
+    except ArithmeticError:
         wdiff = wsyn-wobs
     return np.sqrt(np.sum(wdiff*wdiff*dt))
 

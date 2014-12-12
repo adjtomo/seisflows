@@ -461,7 +461,7 @@ class specfem2d(object):
     def export_kernels(self, path):
         try:
             unix.mkdir(join(path, 'kernels'))
-        except:
+        except OSError:
             pass
         src = join(unix.pwd(),
                    'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
@@ -471,7 +471,7 @@ class specfem2d(object):
     def export_residuals(self, path):
         try:
             unix.mkdir(join(path, 'residuals'))
-        except:
+        except OSError:
             pass
         src = join(unix.pwd(), 'residuals')
         dst = join(path, 'residuals', '%06d' % system.getnode())
@@ -480,7 +480,7 @@ class specfem2d(object):
     def export_traces(self, path, prefix='traces/obs'):
         try:
             unix.mkdir(join(path, 'traces'))
-        except:
+        except OSError:
             pass
         src = join(unix.pwd(), prefix)
         dst = join(path, 'traces', '%06d' % system.getnode())

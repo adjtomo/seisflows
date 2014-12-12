@@ -106,10 +106,10 @@ def select(items, prompt=''):
             print prompt
         for i, item in enumerate(items):
             print("%2d) %s" % (i + 1, item))
-        reply = int(raw_input().strip())
         try:
+            reply = int(raw_input().strip())
             status = (1 <= reply <= len(items))
-        except:
+        except (ValueError, TypeError, OverflowError):
             status = 0
         if status:
             return items[reply - 1]

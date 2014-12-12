@@ -267,11 +267,11 @@ def write_parameters(par, version='git-devel'):
     lines = []
     lines.extend('2\n')
     lines.extend('2\n')
-    lines.extend('%f %f\n' % (par.XMIN, par.ZMIN))
-    lines.extend('%f %f\n' % (par.XMAX, par.ZMIN))
+    lines.extend('%f %f\n'%(par.XMIN, par.ZMIN))
+    lines.extend('%f %f\n'%(par.XMAX, par.ZMIN))
     lines.extend('2\n')
-    lines.extend('%f %f\n' % (par.XMIN, par.ZMAX))
-    lines.extend('%f %f\n' % (par.XMAX, par.ZMAX))
+    lines.extend('%f %f\n'%(par.XMIN, par.ZMAX))
+    lines.extend('%f %f\n'%(par.XMAX, par.ZMAX))
     lines.extend(str(par.NZ))
     _writelines(file, lines)
 

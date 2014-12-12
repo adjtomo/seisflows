@@ -22,7 +22,7 @@ class NLCG:
 
         try:
             self.itercg = loadtxt(self.path+'/'+'NLCG/itercg')
-        except:
+        except IOError:
             self.itercg = 0
 
     def compute(self):
