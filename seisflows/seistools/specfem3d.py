@@ -141,7 +141,7 @@ def readsu(channel=[],prefix='SEM',suffix='',verbose=False):
     elif channel in ['p']:
         wildcard = '%s/*_dp_SU%s' % (prefix,suffix)
     else:
-        Exception
+        raise Exception("Undefined Exception")
 
     files = _glob.glob(wildcard)
     files = sorted(files,key=lambda x:int(unix.basename(x).split('_')[0]))
@@ -216,7 +216,7 @@ def writesu(d,h,channel=[],prefix='SEM',suffix='.adj',verbose=False):
     elif channel in ['p']:
         wildcard = '%s/%d_dp_SU%s'
     else:
-        Exception
+        raise Exception("Undefined Exception")
 
     imax=0
 

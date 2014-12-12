@@ -140,7 +140,7 @@ def readsu(channel=[],prefix='SEM',suffix='.su'):
     elif channel in ['p']:
         file = '%s/Up_file_single%s' % (prefix,suffix)
     else:
-        Exception
+        raise Exception("Undefined Exception")
 
     # read data from file
     d,h = segyreader.readsu(file)
@@ -162,7 +162,7 @@ def writesu(d,h,channel=[],prefix='SEM',suffix='.su.adj'):
     elif channel in ['p']:
         file = '%s/Up_file_single%s' % (prefix,suffix)
     else:
-        Exception
+        raise Exception("Undefined Exception")
 
     # write data to file
     segywriter.writesu(file,d,h)
