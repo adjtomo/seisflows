@@ -1,4 +1,3 @@
-
 import random
 
 import numpy as np
@@ -12,30 +11,29 @@ PATH = ParameterObj('SeisflowsPaths')
 OBJ = ConfigObj('SeisflowsObjects')
 
 
-class FwiSourceEncoding(loadclass('workflow','inversion')):
+class FwiSourceEncoding(loadclass('workflow', 'inversion')):
     """ Source encoding subclass
     """
 
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
-        super(FwiSourceEncoding,self).check()
+        super(FwiSourceEncoding, self).check()
 
         # check source encoding parameters
         if 'ENCODING' not in PAR:
-            setattr(PAR,'ENCODING',1)
+            setattr(PAR, 'ENCODING', 1)
 
         if 'FAILRATE' not in PAR:
-            setattr(PAR,'FAILRATE',0.)
+            setattr(PAR, 'FAILRATE', 0.)
 
-        if 'SHIFT' not in PAR and PAR.ENCODING in [3,4]:
+        if 'SHIFT' not in PAR and PAR.ENCODING in [3, 4]:
             raise Exception
 
-        if PAR.ENCODING in [3,4]:
-            PAR.NT_PADDED = PAR.NT + (PAR.NSRC-1)*PAR.SHIFT
+        if PAR.ENCODING in [3, 4]:
+            PAR.NT_PADDED = PAR.NT + (PAR.NSRC - 1)*PAR.SHIFT
         else:
             PAR.NT_PADDED = PAR.NT
-
 
         # check dependencies
         if 'preprocess' not in OBJ:
@@ -50,18 +48,15 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
         global solver
         import solver
 
-
         # assertions
-        assert('SourceEncoding' in PAR.SOLVER)
-        assert(PAR.PREPROCESS in ['default'])
-
+        assert ('SourceEncoding' in PAR.SOLVER)
+        assert (PAR.PREPROCESS in ['default'])
 
     def setup(self):
         """ Lays groundwork for inversion
         """
-        super(FwiSourceEncoding,self).setup()
-        self.multiload(path=PATH.DATA,tag='obs')
-
+        super(FwiSourceEncoding, self).setup()
+        self.multiload(path=PATH.DATA, tag='obs')
 
     def initialize(self):
         """ Prepares for next model update iteration
@@ -75,22 +70,21 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
         h.nt = PAR.NT_PADDED
 
         zeros = np.zeros(h.nr)
-        h = Struct(h.items() + \
-            [['sx',zeros],['sy',zeros],['sz',zeros]])
+        h = Struct(h.items() +
+                   [['sx', zeros], ['sy', zeros], ['sz', zeros]])
 
         # combine observations into single 'supergather'
-        self.combine(h,sinfo,rinfo,tag='obs')
+        self.combine(h, sinfo, rinfo, tag='obs')
 
         # update input files
         solver.write_receivers()
 
         solver.write_sources(
             sinfo=sinfo,
-            mapping=lambda _:range(PAR.NSRC))
+            mapping=lambda _: range(PAR.NSRC))
 
         # generate synthetics
-        super(FwiSourceEncoding,self).initialize()
-
+        super(FwiSourceEncoding, self).initialize()
 
     def prepare_sources(self):
         """ Generates source encoding factors
@@ -113,13 +107,13 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
 
         elif PAR.ENCODING == 3:
             # "staggered" shifts
-            ts = np.arange(0,PAR.NSRC)*PAR.SHIFT*PAR.DT
+            ts = np.arange(0, PAR.NSRC)*PAR.SHIFT*PAR.DT
             random.shuffle(ts)
             fs = np.ones(PAR.NSRC)
 
         elif PAR.ENCODING == 4:
             # random shifts
-            ts = ((PAR.NSRC-1)*PAR.SHIFT*PAR.DT)*np.random.rand(PAR.NSRC)
+            ts = ((PAR.NSRC - 1)*PAR.SHIFT*PAR.DT)*np.random.rand(PAR.NSRC)
             fs = np.ones(PAR.NSRC)
 
         # collect factors
@@ -129,26 +123,24 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
 
         return s
 
-
     def prepare_receivers(self):
         """ Generates receiver factors
         """
-        if self.iter==1:
+        if self.iter == 1:
             # generate receiver factors
-            if PAR.FAILRATE==0:
-                rs = np.ones((PAR.NREC,PAR.NSRC))
+            if PAR.FAILRATE == 0:
+                rs = np.ones((PAR.NREC, PAR.NSRC))
             else:
-                rs = np.random.rand(PAR.NREC,PAR.NSRC)
+                rs = np.random.rand(PAR.NREC, PAR.NSRC)
                 rs = (rs > PAR.FAILRATE).astype(int)
-            np.savetxt(PATH.GLOBAL+'/'+'rs',rs,'%3d')
+            np.savetxt(PATH.GLOBAL + '/' + 'rs', rs, '%3d')
 
         # collect factors
         r = []
-        rs = np.loadtxt(PATH.GLOBAL+'/'+'rs')
+        rs = np.loadtxt(PATH.GLOBAL + '/' + 'rs')
         for i in range(PAR.NSRC):
-            r.append(rs[:,i])
+            r.append(rs[:, i])
         return r
-
 
     def solver_status(self):
         """ Because source encoding factors change each iteration, the adjoint
@@ -157,48 +149,46 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
         isready = False
         return isready
 
+    # -- data processing utilities
 
-    ### data processing utilities
-
-    def combine(self,h,sinfo,rinfo,tag='obs',inplace=0):
+    def combine(self, h, sinfo, rinfo, tag='obs', inplace=0):
         """ Combines multiple source gathers into a single supergather
         """
-        self.multiload(PATH.DATA,tag)
+        self.multiload(PATH.DATA, tag)
         obj = globals()[tag]
         sum = Struct()
 
         # allocate arrays
         for channel in solver.channels:
-            sum[channel] = np.zeros((h.nt,h.nr))
+            sum[channel] = np.zeros((h.nt, h.nr))
 
         # combine gathers
-        for i,key in enumerate(obj.keys):
+        for i, key in enumerate(obj.keys):
             sum = preprocess.apply(
-                      self.combine_traces,[sum,obj.d[key]],[sinfo[i],rinfo[i]])
+                self.combine_traces, [sum, obj.d[key]], [sinfo[i], rinfo[i]])
 
         # save results
         preprocess.save(
-            sum,h,prefix=PATH.SOLVER+'/'+'000000/traces/'+tag,suffix='.bin')
+            sum, h, prefix=PATH.SOLVER + '/' + '000000/traces/' + tag,
+            suffix='.bin')
 
-
-    def combine_traces(self,sum,d,sinfo,rinfo):
+    def combine_traces(self, sum, d, sinfo, rinfo):
         """ Applies source encoding factors to one source gather and adds it to
             another source gather
         """
         if PAR.FAILRATE > 0:
             # apply "receiver factors"
             for j in range(PAR.NREC):
-                d[:,j] = rinfo[j]*d[:,j]
+                d[:, j] = rinfo[j]*d[:, j]
 
         # apply "source factors"
         imin = int(sinfo.ts/PAR.DT)
-        imax = imin+PAR.NT
-        sum[imin:imax,:] = sum[imin:imax,:] + sinfo.fs*d[:,:]
+        imax = imin + PAR.NT
+        sum[imin:imax, :] = sum[imin:imax, :] + sinfo.fs*d[:, :]
 
         return sum
 
-
-    def multiload(self,path='',tag='obs',inplace=0,debug=0):
+    def multiload(self, path='', tag='obs', inplace=0, debug=0):
         """ Loads data from multiple sources and keeps it in memory
         """
         if tag in globals():
@@ -207,10 +197,10 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
             else:
                 return
         else:
-            obj=Struct()
-            obj.d={}
-            obj.h={}
-            obj.keys=[]
+            obj = Struct()
+            obj.d = {}
+            obj.h = {}
+            obj.keys = []
 
         # generate keys
         keys = unix.ls(path)
@@ -219,13 +209,12 @@ class FwiSourceEncoding(loadclass('workflow','inversion')):
 
         # load data
         for key in obj.keys:
-            obj.d[key],obj.h[key] = preprocess.load(path+'/'+key)
+            obj.d[key], obj.h[key] = preprocess.load(path + '/' + key)
             if debug:
                 print key
 
         globals()[tag] = obj
 
-
-    def headers(self,tag='obs'):
+    def headers(self, tag='obs'):
         obj = globals()[tag]
         return [obj.h[key] for key in obj.keys]
