@@ -10,11 +10,10 @@ os.chdir(mypath)
 
 from seisflows.tools.config import loadclass, ParameterObj
 
-PAR = ParameterObj('parameters',mypath)
-PATH = ParameterObj('paths',mypath)
+PAR = ParameterObj('parameters', mypath)
+PATH = ParameterObj('paths', mypath)
 
 if __name__ == '__main__':
-
     # load class
     obj = loadclass(myclass)()
 

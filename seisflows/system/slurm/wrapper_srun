@@ -9,9 +9,7 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 OBJ = ConfigObj('SeisflowsObjects')
 
-
 if __name__ == '__main__':
-
     mypath = sys.argv[1]
     myobj = sys.argv[2]
     myfunc = sys.argv[3]
@@ -20,12 +18,12 @@ if __name__ == '__main__':
     pathname = 'SeisflowsPaths.json'
     objname = 'SeisflowsObjects'
 
-    parfile = join(mypath,parname)
-    pathfile = join(mypath,pathname)
+    parfile = join(mypath, parname)
+    pathfile = join(mypath, pathname)
 
     PAR.update(loadjson(parfile))
     PATH.update(loadjson(pathfile))
-    OBJ.load(objname,mypath)
+    OBJ.load(objname, mypath)
 
     import optimize
     import preprocess
@@ -42,11 +40,11 @@ if __name__ == '__main__':
     workflow.check()
 
     # load function arguments
-    kwargspath = join(mypath,'SeisflowsObjects',myobj+'_kwargs')
-    kwargs = loadobj(join(kwargspath,myfunc+'.p'))
+    kwargspath = join(mypath, 'SeisflowsObjects', myobj + '_kwargs')
+    kwargs = loadobj(join(kwargspath, myfunc + '.p'))
 
     # load function
-    func = getattr(sys.modules[myobj],myfunc)
+    func = getattr(sys.modules[myobj], myfunc)
 
     func(**kwargs)
 

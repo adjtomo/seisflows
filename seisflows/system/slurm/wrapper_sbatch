@@ -9,21 +9,19 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 OBJ = ConfigObj('SeisflowsObjects')
 
-
 if __name__ == '__main__':
-
     mypath = sys.argv[1]
 
     parname = 'SeisflowsParameters.json'
     pathname = 'SeisflowsPaths.json'
     objname = 'SeisflowsObjects'
 
-    parfile = join(mypath,parname)
-    pathfile = join(mypath,pathname)
+    parfile = join(mypath, parname)
+    pathfile = join(mypath, pathname)
 
     PAR.update(loadjson(parfile))
     PATH.update(loadjson(pathfile))
-    OBJ.load(objname,mypath)
+    OBJ.load(objname, mypath)
 
     import optimize
     import preprocess

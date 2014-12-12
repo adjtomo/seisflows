@@ -12,21 +12,19 @@ os.chdir(mypath)
 from seisflows.tools.code import loadobj
 from seisflows.tools.config import loadclass, ParameterObj
 
-PAR = ParameterObj('parameters',mypath)
-PATH = ParameterObj('paths',mypath)
+PAR = ParameterObj('parameters', mypath)
+PATH = ParameterObj('paths', mypath)
 
-system = loadclass('system',PAR.SYSTEM)()
-
+system = loadclass('system', PAR.SYSTEM)()
 
 if __name__ == '__main__':
-    if system.getnode==0:
-
+    if system.getnode == 0:
         # load function
         obj = loadclass(myobj)()
-        func = getattr(obj,myfunc)
+        func = getattr(obj, myfunc)
 
         # load function arguments
-        kwargs = loadobj(PATH.SYSTEM+'/'+myfunc+'.p')
+        kwargs = loadobj(PATH.SYSTEM + '/' + myfunc + '.p')
 
         # call function
         func(**kwargs)
