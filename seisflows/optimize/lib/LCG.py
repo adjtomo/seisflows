@@ -10,23 +10,22 @@ class LCG:
     """ Linear conjugate gradient method
     """
 
-    def __init__(self,path,thresh,itermax,precond_type=0):
-        self.path    = path
+    def __init__(self, path, thresh, itermax, precond_type=0):
+        self.path = path
         unix.mkdir(self.path+'/'+'LCG')
 
-        self.load    = load
-        self.save    = save
+        self.load = load
+        self.save = save
 
-        self.iter    = 0
-        self.thresh  = thresh
+        self.iter = 0
+        self.thresh = thresh
         self.itermax = itermax
 
         self.precond_type = precond_type
-        if precond_type in [1,2]:
-            self.LBFGS = LBFGS(path+'/'+'LCG',load,save,itermax)
+        if precond_type in [1, 2]:
+            self.LBFGS = LBFGS(path+'/'+'LCG', load, save, itermax)
 
-
-    def precond(self,r):
+    def precond(self, r):
         if self.precond_type == 0:
             y = r
 
@@ -47,7 +46,6 @@ class LCG:
 
         return y
 
-
     def initialize(self):
 
         unix.cd(self.path)
@@ -58,16 +56,15 @@ class LCG:
         y = self.precond(r)
         p = -y
 
-        self.save('LCG/x',x)
-        self.save('LCG/r',r)
-        self.save('LCG/y',y)
-        self.save('LCG/p',p)
-        savetxt('LCG/ry',np.dot(r,y))
+        self.save('LCG/x', x)
+        self.save('LCG/r', r)
+        self.save('LCG/y', y)
+        self.save('LCG/p', p)
+        savetxt('LCG/ry', np.dot(r, y))
 
         return p
 
-
-    def update(self,ap):
+    def update(self, ap):
 
         unix.cd(self.path)
         self.iter += 1
@@ -78,49 +75,52 @@ class LCG:
         p = self.load('LCG/p')
         ry = loadtxt('LCG/ry')
 
-        pap = np.dot(p,ap)
+        pap = np.dot(p, ap)
         alpha = ry/pap
         x = x + alpha*p
         r = r + alpha*ap
 
         # check status
-        if self.iter==self.itermax:
+        if self.iter == self.itermax:
             isdone = True
         elif np.linalg.norm(r) > self.thresh:
             isdone = True
         else:
             isdone = False
         if isdone:
-            return x,isdone
+            return x, isdone
 
         # apply preconditioner
         y = self.precond(r)
 
         ry_old = ry
-        ry = np.dot(r,y)
+        ry = np.dot(r, y)
         beta = ry/ry_old
         p = -y + beta*p
 
-        self.save('LCG/x',x)
-        self.save('LCG/r',r)
-        self.save('LCG/y',y)
-        self.save('LCG/p',p)
-        savetxt('LCG/ry',np.dot(r,y))
+        self.save('LCG/x', x)
+        self.save('LCG/r', r)
+        self.save('LCG/y', y)
+        self.save('LCG/p', p)
+        savetxt('LCG/ry', np.dot(r, y))
 
-        return p,isdone
+        return p, isdone
 
 
-### utility functions
+# -- utility functions
 
 def loadtxt(filename):
     return np.loadtxt(filename)
 
-def savetxt(filename,v):
-    np.savetxt(filename,[v],'%e')
+
+def savetxt(filename, v):
+    np.savetxt(filename, [v], '%e')
+
 
 def load(filename):
     return np.load(filename)
 
-def save(filename,v):
-    np.save(filename,v)
-    unix.mv(filename+'.npy',filename)
+
+def save(filename, v):
+    np.save(filename, v)
+    unix.mv(filename+'.npy', filename)

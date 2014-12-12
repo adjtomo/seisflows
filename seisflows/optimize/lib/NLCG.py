@@ -9,7 +9,7 @@ class NLCG:
     """ Nonlinear conjugate gradient method
     """
 
-    def __init__(self,path,thresh,itercgmax):
+    def __init__(self, path, thresh, itercgmax):
 
         self.path = path
         unix.mkdir(self.path+'/'+'NLCG')
@@ -25,7 +25,6 @@ class NLCG:
         except:
             self.itercg = 0
 
-
     def compute(self):
 
         def fletcher_reeves():
@@ -35,7 +34,6 @@ class NLCG:
             beta = top/bot
             return -g_new + beta*p_old
 
-
         def pollak_ribere():
             # pollack-riebere update
             top = np.dot(g_new, g_new - g_old)
@@ -43,9 +41,8 @@ class NLCG:
             beta = top/bot
             return -g_new + beta*p_old
 
-
         def rho():
-            return abs(np.dot(g_new,g_old)/np.dot(g_new,g_new))
+            return abs(np.dot(g_new, g_old) / np.dot(g_new, g_new))
 
         self.itercg += 1
         unix.cd(self.path)
@@ -63,7 +60,7 @@ class NLCG:
 
             unix.cd('NLCG')
             if self.itercg > self.itercgmax:
-            # require periodic restarts
+                # require periodic restarts
                 print 'restarting NLCG... [periodic restart]'
                 self.itercg = 1
                 p_new = -g_new
@@ -77,25 +74,28 @@ class NLCG:
                 self.itercg = 1
                 p_new = -g_new
 
-            elif np.dot(p_new,g_new) > 0:
+            elif np.dot(p_new, g_new) > 0:
                 # require descent direction
                 print 'restarting NLCG... [not a descent direction]'
                 self.itercg = 1
                 p_new = -g_new
 
-        savetxt(self.path+'/'+'NLCG/itercg',self.itercg)
+        savetxt(self.path+'/'+'NLCG/itercg', self.itercg)
         return p_new
 
 
 def loadtxt(filename):
     return int(np.loadtxt(filename))
 
-def savetxt(filename,v):
-    np.savetxt(filename,[v],'%d')
+
+def savetxt(filename, v):
+    np.savetxt(filename, [v], '%d')
+
 
 def load(filename):
     return np.load(filename)
 
-def save(filename,v):
-    np.save(filename,v)
-    unix.mv(filename+'.npy',filename)
+
+def save(filename, v):
+    np.save(filename, v)
+    unix.mv(filename+'.npy', filename)
