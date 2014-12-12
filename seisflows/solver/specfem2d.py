@@ -150,18 +150,18 @@ class specfem2d(object):
         # prepare data
         if exists(PATH.DATA):
             self.prepare_data(
-                data_path = PATH.DATA) 
+                data_path=PATH.DATA)
         else:
             self.prepare_data(
-                model_path = PATH.MODEL_TRUE,
-                model_name = 'model_true',
-                model_type = 'gll')
+                model_path=PATH.MODEL_TRUE,
+                model_name='model_true',
+                model_type=model_type)
 
         # prepare model
         self.prepare_model(
-            model_path = PATH.MODEL_INIT,
-            model_name = 'model_init',
-            model_type = 'gll')
+            model_path=PATH.MODEL_INIT,
+            model_name='model_init',
+            model_type=model_type)
 
 
     def prepare_dirs(self):
@@ -418,7 +418,7 @@ class specfem2d(object):
         """split vector into parts"""
         parts = {}
         nrow = len(v)/(PAR.NPROC*len(self.inversion_parameters))
-        i = 0; j = 0
+        j = 0
         for key in ['x','z','rho','vp','vs']:
             parts[key] = []
             if key in self.inversion_parameters:

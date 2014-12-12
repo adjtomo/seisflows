@@ -169,7 +169,6 @@ def getpar(key,file='DATA/Par_file',sep='='):
     """ Reads parameter from SPECFEM parfile
     """
     with open(file,'r') as f:
-        lines = []
 
         # read line by line
         for line in f:

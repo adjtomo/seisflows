@@ -462,7 +462,7 @@ class specfem3d_globe(object):
         """
         parts = {}
         nrow = len(v)/(PAR.NPROC*len(self.inversion_parameters))
-        i = 0; j = 0
+        j = 0
         for key in self.model_parameters:
             parts[key] = []
             if key in self.inversion_parameters:
@@ -489,8 +489,6 @@ class specfem3d_globe(object):
 
         # initialize kernels
         unix.mkdir(path+'/'+'sum')
-        parts = {}
-        i = 0; j = 0
         for key in self.model_parameters:
             if key not in self.inversion_parameters:
                 for i in range(PAR.NPROC):

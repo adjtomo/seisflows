@@ -84,7 +84,6 @@ class DoubleDifference(loadclass('preprocess','default')):
         """ Computes adjoint traces from observed and synthetic traces
         """
         nr = h.nr
-        nt = h.nt
         dt = h.dt
 
         for ir in range(nr):

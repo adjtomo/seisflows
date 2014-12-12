@@ -164,7 +164,6 @@ def readsu(channel=[],prefix='SEM',suffix='',verbose=False):
 
     nn = [h.nr]
     nr = h.nr
-    i = 0
 
     for file in files:
         d_,h_ = segyreader.readsu(file)
@@ -219,7 +218,6 @@ def writesu(d,h,channel=[],prefix='SEM',suffix='.adj',verbose=False):
     else:
         Exception
 
-    imin=0
     imax=0
 
     for iproc in range(nproc):
@@ -300,7 +298,6 @@ def getpar(key,file='DATA/Par_file',sep='='):
     """ Reads parameter from SPECFEM parfile
     """
     with open(file,'r') as f:
-        lines = []
 
         # read line by line
         for line in f:

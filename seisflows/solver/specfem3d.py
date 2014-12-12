@@ -446,7 +446,7 @@ class specfem3d(object):
         """
         parts = {}
         nrow = len(v)/(PAR.NPROC*len(self.inversion_parameters))
-        i = 0; j = 0
+        j = 0
         for key in self.model_parameters:
             parts[key] = []
             if key in self.inversion_parameters:
