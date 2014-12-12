@@ -96,7 +96,7 @@ def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
             _np.savetxt(file,_np.column_stack((t,w)),'%11.4e')
 
 
-def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='sem.ascii'):
+def glob(files=None,filetype='ascii',channel=None,prefix='SEM',suffix='sem.ascii'):
     """ Checks for seismic traces in current directory
     """
     if files:

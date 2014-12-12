@@ -97,7 +97,7 @@ def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
             _np.savetxt(file,_np.column_stack((t,w)),'%11.4e')
 
 
-def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='semd'):
+def glob(files=None,filetype='ascii',channel=None,prefix='SEM',suffix='semd'):
     """ Checks for seismic traces in current directory
     """
     if files:
@@ -129,7 +129,7 @@ def glob(files=[],filetype='ascii',channel=[],prefix='SEM',suffix='semd'):
 
 ###  reading and writing seismograms Seismic Unix data
 
-def readsu(channel=[],prefix='SEM',suffix='',verbose=False):
+def readsu(channel=None,prefix='SEM',suffix='',verbose=False):
     """ Reads Seismic Unix file
     """
     if channel in ['x']:
@@ -200,7 +200,7 @@ def readsu(channel=[],prefix='SEM',suffix='',verbose=False):
     return d,h
 
 
-def writesu(d,h,channel=[],prefix='SEM',suffix='.adj',verbose=False):
+def writesu(d,h,channel=None,prefix='SEM',suffix='.adj',verbose=False):
 
     nproc = len(h.nn)
 
