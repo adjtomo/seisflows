@@ -1,12 +1,10 @@
-
 from seisflows.tools.config import loadclass, ParameterObj
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 
-class specfem3d_ChenTromp(loadclass('extensions.solver','specfem3d_legacy')):
-
+class specfem3d_ChenTromp(loadclass('extensions.solver', 'specfem3d_legacy')):
     # data channels
     channels = []
     channels += ['x']
@@ -62,25 +60,25 @@ class specfem3d_ChenTromp(loadclass('extensions.solver','specfem3d_legacy')):
     inversion_parameters += ['Es']
 
     kernel_map = {
-        'rho':'rho_kernel',
-        'A':'A_kernel',
-        'C':'C_kernel',
-        'N':'N_kernel',
-        'L':'L_kernel',
-        'F':'F_kernel',
-        'Jc':'Jc_kernel',
-        'Js':'Js_kernel',
-        'Kc':'Kc_kernel',
-        'Ks':'Ks_kernel',
-        'Mc':'Mc_kernel',
-        'Ms':'Ms_kernel',
-        'Gc':'Gc_kernel',
-        'Gs':'Gs_kernel',
-        'Bc':'Bc_kernel',
-        'Bs':'Bs_kernel',
-        'Hc':'Hc_kernel',
-        'Hs':'Hs_kernel',
-        'Dc':'Dc_kernel',
-        'Ds':'Ds_kernel',
-        'Ec':'Ec_kernel',
-        'Es':'Es_kernel'}
+        'rho': 'rho_kernel',
+        'A': 'A_kernel',
+        'C': 'C_kernel',
+        'N': 'N_kernel',
+        'L': 'L_kernel',
+        'F': 'F_kernel',
+        'Jc': 'Jc_kernel',
+        'Js': 'Js_kernel',
+        'Kc': 'Kc_kernel',
+        'Ks': 'Ks_kernel',
+        'Mc': 'Mc_kernel',
+        'Ms': 'Ms_kernel',
+        'Gc': 'Gc_kernel',
+        'Gs': 'Gs_kernel',
+        'Bc': 'Bc_kernel',
+        'Bs': 'Bs_kernel',
+        'Hc': 'Hc_kernel',
+        'Hs': 'Hs_kernel',
+        'Dc': 'Dc_kernel',
+        'Ds': 'Ds_kernel',
+        'Ec': 'Ec_kernel',
+        'Es': 'Es_kernel'}

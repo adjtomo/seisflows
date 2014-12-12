@@ -1,12 +1,10 @@
-
 from seisflows.tools.config import loadclass, ParameterObj
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 
-class specfem3d_vti(loadclass('extensions.solver','specfem3d_legacy')):
-
+class specfem3d_vti(loadclass('extensions.solver', 'specfem3d_legacy')):
     # model parameters expected by solver
     model_parameters = []
     model_parameters += ['rho']
@@ -31,11 +29,11 @@ class specfem3d_vti(loadclass('extensions.solver','specfem3d_legacy')):
     channels += ['x']
 
     kernel_map = {
-        'rho':'rho_kernel',
-        'vp':'alpha_kernel',
-        'vs':'beta_kernel',
-        'epsilon':'epsilon_kernel',
-        'delta':'delta_kernel',
-        'gamma':'gamma_kernel',
-        'theta':'theta_kernel',
-        'azimuth':'azimuth_kernel'}
+        'rho': 'rho_kernel',
+        'vp': 'alpha_kernel',
+        'vs': 'beta_kernel',
+        'epsilon': 'epsilon_kernel',
+        'delta': 'delta_kernel',
+        'gamma': 'gamma_kernel',
+        'theta': 'theta_kernel',
+        'azimuth': 'azimuth_kernel'}
