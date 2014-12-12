@@ -1,4 +1,3 @@
-
 import numpy as np
 
 from seisflows.tools.array import uniquerows
@@ -17,18 +16,18 @@ COORDSCALAR = 1.
 DEPTHSCALAR = 1.
 
 FIELDS = [
-  'TraceSequenceLine',
-  'SourceWaterDepth',
-  'GroupWaterDepth',
-  'ElevationOrDepthScalar',
-  'CoordinateScalar',
-  'SourceX',
-  'SourceY',
-  'GroupX',
-  'GroupY',
-  'RecordingDelay_ms',
-  'NumberSamples',
-  'SampleInterval_ms']
+    'TraceSequenceLine',
+    'SourceWaterDepth',
+    'GroupWaterDepth',
+    'ElevationOrDepthScalar',
+    'CoordinateScalar',
+    'SourceX',
+    'SourceY',
+    'GroupX',
+    'GroupY',
+    'RecordingDelay_ms',
+    'NumberSamples',
+    'SampleInterval_ms']
 
 # cull header fields
 _tmp = []
@@ -38,15 +37,14 @@ for field in SEGY_TRACE_HEADER:
 SEGY_TRACE_HEADER = _tmp
 
 
-
 class SeismicReader(BinaryReader):
     """ Base class used by both SegyReader and SuReader
     """
 
     def ReadSeismicData(self):
-        nsamples = int(self.read('int16',1,self.offset+114)[0])
-        nbytes = int(nsamples*self.dsize+240)
-        ntraces = int((self.size-self.offset)/nbytes)
+        nsamples = int(self.read('int16', 1, self.offset + 114)[0])
+        nbytes = int(nsamples*self.dsize + 240)
+        ntraces = int((self.size - self.offset)/nbytes)
 
         # prepare offset pointers
         if FIXEDLENGTH:
@@ -60,8 +58,8 @@ class SeismicReader(BinaryReader):
 
             while 1:
                 ntraces += 1
-                nsamples = int(self.read('int16',1,traceptr[-1]+114)[0])
-                nbytes = nsamples*self.dsize+240
+                nsamples = int(self.read('int16', 1, traceptr[-1] + 114)[0])
+                nbytes = nsamples*self.dsize + 240
                 tracelen.append(nsamples)
                 traceptr.append(traceptr[-1] + nbytes)
 
@@ -74,28 +72,28 @@ class SeismicReader(BinaryReader):
 
         # preallocate trace headers
         if SAVEHEADERS:
-            h = [self.scan(SEGY_TRACE_HEADER,traceptr[0],contiguous=False)]
+            h = [self.scan(SEGY_TRACE_HEADER, traceptr[0], contiguous=False)]
             h = h*ntraces
         else:
             h = []
 
         # preallocate data array
         if FIXEDLENGTH:
-            d = np.zeros((nsamples,ntraces))
+            d = np.zeros((nsamples, ntraces))
         else:
-            d = np.zeros((tracelen.max(),len(traceptr)))
+            d = np.zeros((tracelen.max(), len(traceptr)))
 
         # read trace headers and data
         for k in range(ntraces):
             if SAVEHEADERS:
-                h[k] = self.scan(SEGY_TRACE_HEADER,traceptr[k],contiguous=False)
-            d[:,k] = self.read(self.dtype,nsamples,traceptr[k]+240)
+                h[k] = self.scan(SEGY_TRACE_HEADER, traceptr[k],
+                                 contiguous=False)
+            d[:, k] = self.read(self.dtype, nsamples, traceptr[k] + 240)
 
         # store results
         self.ntraces = ntraces
         self.hdrs = h
         self.data = d
-
 
     def getstruct(self):
         nr = self.ntraces
@@ -124,24 +122,22 @@ class SeismicReader(BinaryReader):
             c2 = self.getscalar('ElevationOrDepthScalar')
             c3 = 1.e-6
 
-        sxyz = np.column_stack([sx,sy,sz])
-        rxyz = np.column_stack([rx,ry,rz])
+        sxyz = np.column_stack([sx, sy, sz])
+        rxyz = np.column_stack([rx, ry, rz])
         nsrc = len(uniquerows(sxyz))
         nrec = len(uniquerows(rxyz))
 
-        return SeisStruct(nr,nt,dt,ts,
-          c1*sx,c1*sy,c2*sz,
-          c1*rx,c1*ry,c2*rz,
-          nsrc,nrec)
+        return SeisStruct(nr, nt, dt, ts,
+                          c1*sx, c1*sy, c2*sz,
+                          c1*rx, c1*ry, c2*rz,
+                          nsrc, nrec)
 
-
-    def getarray(self,key):
+    def getarray(self, key):
         # collect array
-        list = [ hdr[key] for hdr in self.hdrs ]
+        list = [hdr[key] for hdr in self.hdrs]
         return np.array(list)
 
-
-    def getscalar(self,key):
+    def getscalar(self, key):
         # collect scalar
         array = self.getarray(key)
         return array[0]
@@ -150,11 +146,12 @@ class SeismicReader(BinaryReader):
 class SegyReader(SeismicReader):
     """ SEGY reader
     """
-    def __init__(self,fname,endian=None):
-        SeismicReader.__init__(self,fname,endian)
 
-        self.dtype  = 'float'
-        self.dsize  = mysize(self.dtype)
+    def __init__(self, fname, endian=None):
+        SeismicReader.__init__(self, fname, endian)
+
+        self.dtype = 'float'
+        self.dsize = mysize(self.dtype)
         self.offset = 0
 
         # check byte order
@@ -163,28 +160,26 @@ class SegyReader(SeismicReader):
         else:
             self.endian = checkByteOrder()
 
-
     def ReadSegyHeaders(self):
         # read in tape label header if present
-        code = self.read('char',2,4)
+        code = self.read('char', 2, 4)
         if code == 'SY':
-            tapelabel = file.scan(SEGY_TAPE_LABEL,self.offset)
+            tapelabel = file.scan(SEGY_TAPE_LABEL, self.offset)
             self.offset += 128
         else:
             tapelabel = 'none'
 
         # read textual file header
-        self.segyTxtHeader = self.read('char',3200,self.offset)
+        self.segyTxtHeader = self.read('char', 3200, self.offset)
         self.offset += 3200
 
         # read binary file header
-        self.segyBinHeader = self.scan(SEGY_BINARY_HEADER,self.offset)
+        self.segyBinHeader = self.scan(SEGY_BINARY_HEADER, self.offset)
         self.offset += 400
 
         # read in extended textual headers if present
 
         self.CheckSegyHeaders()
-
 
     def CheckSegyHeaders(self):
         # check revision number
@@ -195,18 +190,19 @@ class SegyReader(SeismicReader):
 
         # check trace length
         if FIXEDLENGTH:
-            assert bool(self.segyBinHeader.FixedLengthTraceFlag)==bool(FIXEDLENGTH)
-
+            assert bool(self.segyBinHeader.FixedLengthTraceFlag) == bool(
+                FIXEDLENGTH)
 
 
 class SuReader(SeismicReader):
     """ Seismic Unix file reader
     """
-    def __init__(self,fname,endian=None):
-        SeismicReader.__init__(self,fname,endian)
 
-        self.dtype  = 'float'
-        self.dsize  = mysize(self.dtype)
+    def __init__(self, fname, endian=None):
+        SeismicReader.__init__(self, fname, endian)
+
+        self.dtype = 'float'
+        self.dsize = mysize(self.dtype)
         self.offset = 0
 
         # check byte order
@@ -219,7 +215,7 @@ class SuReader(SeismicReader):
 def readsegy(filename):
     """ SEGY convenience function
     """
-    obj = SegyReader(filename,endian='>')
+    obj = SegyReader(filename, endian='>')
     obj.ReadSegyHeaders()
     obj.ReadSeismicData()
 
@@ -231,7 +227,7 @@ def readsegy(filename):
 def readsu(filename):
     """ SU convenience function
     """
-    obj = SuReader(filename,endian='<')
+    obj = SuReader(filename, endian='<')
     obj.ReadSeismicData()
 
     d = obj.data

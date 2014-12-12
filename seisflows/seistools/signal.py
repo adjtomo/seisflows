@@ -4,35 +4,35 @@ import numpy as np
 import scipy.signal as signal
 
 
-def sbandpass(s,h,freqlo,freqhi):
+def sbandpass(s, h, freqlo, freqhi):
     nr = h.nr
     dt = h.dt
     fs = 1/dt
 
-    for ir in range(0,nr):
+    for ir in range(0, nr):
         s[:,ir] = bandpass(s[:,ir],freqlo,freqhi,fs)
     return s
 
 
-def slowpass(s,h,freq):
+def slowpass(s, h, freq):
     raise NotImplementedError
 
 
-def shighpass(s,h,freq):
+def shighpass(s, h, freq):
     raise NotImplementedError
 
 
-def smute(s,h,vel,toff,xoff=0,constant_spacing=False):
+def smute(s, h, vel, toff, xoff=0, constant_spacing=False):
     nt = h.nt
     dt = h.dt
     nr = h.nr
 
     # construct tapered window
     length = 400
-    win = np.sin(np.linspace(0,1,2*length))
+    win = np.sin(np.linspace(0, 1, 2*length))
     win = win[0:length]
 
-    for ir in range(0,nr):
+    for ir in range(0, nr):
 
         # calculate slope
         if vel!=0:
@@ -66,7 +66,7 @@ def smute(s,h,vel,toff,xoff=0,constant_spacing=False):
     return s
 
 
-def swindow(s,h,tmin,tmax,alpha=0.05,units='samples'):
+def swindow(s, h, tmin, tmax, alpha=0.05, units='samples'):
     nt = h.nt
     dt = h.dt
     nr = h.nr
@@ -89,37 +89,36 @@ def swindow(s,h,tmin,tmax,alpha=0.05,units='samples'):
     return s
 
 
+# --
 
-###
-
-def correlate(u,v):
-    w = np.convolve(u,np.flipud(v))
+def correlate(u, v):
+    w = np.convolve(u, np.flipud(v))
     return
 
 
-def bandpass(w,freqlo,freqhi,fs,npass=2):
+def bandpass(w, freqlo, freqhi, fs, npass=2):
     wn = [2*freqlo/fs,2*freqhi/fs]
-    (b,a) = signal.butter(npass,wn)
+    (b,a) = signal.butter(npass, wn)
     w = signal.filtfilt(b,a,w)
     return w
 
 
-def highpass(w,freq,df,npass=2):
+def highpass(w, freq, df, npass=2):
     raise Exception('Not yet implemented.')
 
 
-def lowpass(w,freq,df,npass=2):
+def lowpass(w, freq, df, npass=2):
     raise Exception('Not yet implemented.')
 
 
-def window(nt,type='sine',**kwargs):
-    if type=='sine':
-        return np.sin(np.linspace(0,1,2*length))
-    elif type=='tukey':
+def window(nt, type='sine', **kwargs):
+    if type == 'sine':
+        return np.sin(np.linspace(0, 1, 2*length))
+    elif type == 'tukey':
         return tukeywin
 
 
-def tukeywin(nt,imin,imax,alpha=0.05):
+def tukeywin(nt, imin, imax, alpha=0.05):
     t = np.linspace(0,1,imax-imin)
     w = np.zeros(imax-imin)
     p = alpha/2.

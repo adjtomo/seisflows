@@ -1,4 +1,3 @@
-
 import copy as _copy
 import glob as _glob
 import string as _string
@@ -13,13 +12,13 @@ import segy.reader as segyreader
 import segy.writer as segywriter
 
 
-### reading and writing ASCII data
+# -- reading and writing ASCII data
 
 def read(**kwargs):
     """ Reads seismic traces from text files
     """
     files = glob(**kwargs)
-    t = _np.loadtxt(files[0])[:,0]
+    t = _np.loadtxt(files[0])[:, 0]
     h = Struct()
     h['t0'] = t[0]
     h['nr'] = len(files)
@@ -28,10 +27,10 @@ def read(**kwargs):
     h['nt'] = len(t)
 
     # read data
-    s = _np.zeros((h['nt'],h['nr']))
+    s = _np.zeros((h['nt'], h['nr']))
     i = 0
     for file in files:
-        s[:,i] = _np.loadtxt(file)[:,1]
+        s[:, i] = _np.loadtxt(file)[:, 1]
         i += 1
 
     # keep track of file names
@@ -40,64 +39,65 @@ def read(**kwargs):
         file = unix.basename(file)
         h.files.append(file)
 
-    return s,h
+    return s, h
 
 
-def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):
+def write(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''):
     """ Writes seismic traces to text files
     """
 
     files = []
 
-    if opt=='legacy':
+    if opt == 'legacy':
         if channel in ['x']:
-            fmt = '%s/S%s.AA.%sX.%s' % (prefix,'%04d',char,suffix)
+            fmt = '%s/S%s.AA.%sX.%s' % (prefix, '%04d', char, suffix)
         elif channel in ['y']:
-            fmt = '%s/S%s.AA.%sY.%s' % (prefix,'%04d',char,suffix)
+            fmt = '%s/S%s.AA.%sY.%s' % (prefix, '%04d', char, suffix)
         elif channel in ['z']:
-            fmt = '%s/S%s.AA.%sZ.%s' % (prefix,'%04d',char,suffix)
+            fmt = '%s/S%s.AA.%sZ.%s' % (prefix, '%04d', char, suffix)
         elif channel in ['p']:
-            fmt = '%s/S%s.AA.%sP.%s' % (prefix,'%04d',char,suffix)
+            fmt = '%s/S%s.AA.%sP.%s' % (prefix, '%04d', char, suffix)
         for i in range(h.nr):
-            files.append( fmt % (i+1) )
+            files.append(fmt % (i + 1))
 
         # write data to files
         imin = int(_np.floor(h['t0']/h['dt']))
-        imax = int(imin+h['nt'])
-        t = _np.arange(imin,imax)*h['dt']
+        imax = int(imin + h['nt'])
+        t = _np.arange(imin, imax)*h['dt']
 
         for i in range(h.nr):
-            w = f[:,i]
-            _np.savetxt(files[i],_np.column_stack((t,w)),'%11.4e')
+            w = f[:, i]
+            _np.savetxt(files[i], _np.column_stack((t, w)), '%11.4e')
 
     else:
         for file in h.files:
-            parts = _string.split(file,'.')
+            parts = _string.split(file, '.')
             if channel in ['x']:
-                label = ''.join([parts[2][:-1],'X'])
+                label = ''.join([parts[2][:-1], 'X'])
             elif channel in ['y']:
-                label = ''.join([parts[2][:-1],'Y'])
+                label = ''.join([parts[2][:-1], 'Y'])
             elif channel in ['z']:
-                label = ''.join([parts[2][:-1],'Z'])
+                label = ''.join([parts[2][:-1], 'Z'])
             elif channel in ['p']:
-                label = ''.join([parts[2][:-1],'P'])
+                label = ''.join([parts[2][:-1], 'P'])
 
             parts[-2] = label
             parts[-1] = 'adj'
 
-            files.append( prefix+'.'.join(parts) )
+            files.append(prefix + '.'.join(parts))
 
         # write data to files
         imin = int(_np.floor(h['t0']/h['dt']))
-        imax = int(imin+h['nt'])
-        t = _np.arange(imin,imax)*h['dt']
+        imax = int(imin + h['nt'])
+        t = _np.arange(imin, imax)*h['dt']
 
-        for i,file in enumerate(files):
-            w = f[:,i]
-            _np.savetxt(file,_np.column_stack((t,w)),'%11.4e')
+        for i, file in enumerate(files):
+            w = f[:, i]
+            _np.savetxt(file, _np.column_stack((t, w)), '%11.4e')
 
 
-def glob(files=None,filetype='ascii',channel=None,prefix='SEM',suffix='semd'):
+def glob(files=None, filetype='ascii', channel=None, prefix='SEM',
+         suffix='semd'):
     """ Checks for seismic traces in current directory
     """
     if files:
@@ -105,14 +105,21 @@ def glob(files=None,filetype='ascii',channel=None,prefix='SEM',suffix='semd'):
 
     elif filetype == 'ascii':
         if 'sem' in suffix:
-            if channel in ['x']:  wildcard = '%s/*.?XX.%s' % (prefix,suffix)
-            elif channel in ['y']:  wildcard = '%s/*.?XY.%s' % (prefix,suffix)
-            elif channel in ['z']:  wildcard = '%s/*.?XZ.%s' % (prefix,suffix)
-            else: wildcard = '%s/*.?X?.%s' % (prefix,suffix)
+            if channel in ['x']:
+                wildcard = '%s/*.?XX.%s' % (prefix, suffix)
+            elif channel in ['y']:
+                wildcard = '%s/*.?XY.%s' % (prefix, suffix)
+            elif channel in ['z']:
+                wildcard = '%s/*.?XZ.%s' % (prefix, suffix)
+            else:
+                wildcard = '%s/*.?X?.%s' % (prefix, suffix)
         else:
-            if channel in ['x']:  wildcard = '%s/*[xX]*.%s' % (prefix,suffix)
-            elif channel in ['y']:  wildcard = '%s/*[yY]*.%s' % (prefix,suffix)
-            elif channel in ['z']:  wildcard = '%s/*[zZ]*.%s' % (prefix,suffix)
+            if channel in ['x']:
+                wildcard = '%s/*[xX]*.%s' % (prefix, suffix)
+            elif channel in ['y']:
+                wildcard = '%s/*[yY]*.%s' % (prefix, suffix)
+            elif channel in ['z']:
+                wildcard = '%s/*[zZ]*.%s' % (prefix, suffix)
         files = _glob.glob(wildcard)
         if files:
             files.sort()
@@ -121,33 +128,36 @@ def glob(files=None,filetype='ascii',channel=None,prefix='SEM',suffix='semd'):
         return files
 
     elif filetype == 'su':
-        if channel in ['x']:  file = '%s/Ux_file_single.%s' % (prefix,suffix)
-        elif channel in ['y']:  file = '%s/Uy_file_single.%s' % (prefix,suffix)
-        elif channel in ['z']:  file = '%s/Uz_file_single.%s' % (prefix,suffix)
+        if channel in ['x']:
+            file = '%s/Ux_file_single.%s' % (prefix, suffix)
+        elif channel in ['y']:
+            file = '%s/Uy_file_single.%s' % (prefix, suffix)
+        elif channel in ['z']:
+            file = '%s/Uz_file_single.%s' % (prefix, suffix)
         return file
 
 
-###  reading and writing seismograms Seismic Unix data
+# --  reading and writing seismograms Seismic Unix data
 
-def readsu(channel=None,prefix='SEM',suffix='',verbose=False):
+def readsu(channel=None, prefix='SEM', suffix='', verbose=False):
     """ Reads Seismic Unix file
     """
     if channel in ['x']:
-        wildcard = '%s/*_dx_SU%s' % (prefix,suffix)
+        wildcard = '%s/*_dx_SU%s' % (prefix, suffix)
     elif channel in ['y']:
-        wildcard = '%s/*_dy_SU%s' % (prefix,suffix)
+        wildcard = '%s/*_dy_SU%s' % (prefix, suffix)
     elif channel in ['z']:
-        wildcard = '%s/*_dz_SU%s' % (prefix,suffix)
+        wildcard = '%s/*_dz_SU%s' % (prefix, suffix)
     elif channel in ['p']:
-        wildcard = '%s/*_dp_SU%s' % (prefix,suffix)
+        wildcard = '%s/*_dp_SU%s' % (prefix, suffix)
     else:
         raise Exception("Undefined Exception")
 
     files = _glob.glob(wildcard)
-    files = sorted(files,key=lambda x:int(unix.basename(x).split('_')[0]))
+    files = sorted(files, key=lambda x: int(unix.basename(x).split('_')[0]))
 
     file = files.pop(0)
-    d,h = segyreader.readsu(file)
+    d, h = segyreader.readsu(file)
 
     if verbose:
         print file
@@ -166,10 +176,10 @@ def readsu(channel=None,prefix='SEM',suffix='',verbose=False):
     nr = h.nr
 
     for file in files:
-        d_,h_ = segyreader.readsu(file)
+        d_, h_ = segyreader.readsu(file)
 
         # combine arrays
-        d = _np.column_stack((d,d_))
+        d = _np.column_stack((d, d_))
 
         if verbose:
             print file
@@ -197,14 +207,13 @@ def readsu(channel=None,prefix='SEM',suffix='',verbose=False):
     h.nn = nn
     h.nr = nr
 
-    return d,h
+    return d, h
 
 
-def writesu(d,h,channel=None,prefix='SEM',suffix='.adj',verbose=False):
-
+def writesu(d, h, channel=None, prefix='SEM', suffix='.adj', verbose=False):
     nproc = len(h.nn)
 
-    if suffix=='':
+    if suffix == '':
         suffix = '.adj'
 
     if channel in ['x']:
@@ -218,16 +227,17 @@ def writesu(d,h,channel=None,prefix='SEM',suffix='.adj',verbose=False):
     else:
         raise Exception("Undefined Exception")
 
-    imax=0
+    imax = 0
 
     for iproc in range(nproc):
 
-        file = wildcard % (prefix,iproc,suffix)
+        file = wildcard % (prefix, iproc, suffix)
         imin = imax
-        imax = imax+h.nn[iproc]
+        imax = imax + h.nn[iproc]
 
-        d_ = d[:,imin:imax]
-        h_ = SeisStruct(nr=h.nr,nt=h.nt,dt=h.dt,ts=h.ts,nrec=h.nrec,nsrc=h.nsrc)
+        d_ = d[:, imin:imax]
+        h_ = SeisStruct(nr=h.nr, nt=h.nt, dt=h.dt, ts=h.ts, nrec=h.nrec,
+                        nsrc=h.nsrc)
         h_.rx = h.rx[imin:imax]
         h_.ry = h.ry[imin:imax]
         h_.rz = h.rz[imin:imax]
@@ -235,36 +245,35 @@ def writesu(d,h,channel=None,prefix='SEM',suffix='.adj',verbose=False):
         h_.sy = h.sy[imin:imax]
         h_.sz = h.sz[imin:imax]
 
-        h_.nr = imax-imin
+        h_.nr = imax - imin
 
         if verbose:
             print file
-            print (imin,imax)
+            print (imin, imax)
             print ''
 
-        segywriter.writesu(file,d_,h_)
+        segywriter.writesu(file, d_, h_)
 
 
-### input file writers
+# -- input file writers
 
-def write_sources(PAR,h,path='.'):
+def write_sources(PAR, h, path='.'):
     """ Writes source information to text file
     """
-    file = findpath('seistools')+'/'+'specfem3d/FORCESOLUTION'
-    with open(file,'r') as f:
+    file = findpath('seistools') + '/' + 'specfem3d/FORCESOLUTION'
+    with open(file, 'r') as f:
         lines = f.readlines()
 
     file = 'DATA/FORCESOURCE'
-    _writelines(file,lines)
+    _writelines(file, lines)
 
     # adjust coordinates
-    setpar( 'xs', h.sx[0], file )
-    setpar( 'zs', h.sz[0], file )
-    setpar( 'ts', h.ts, file )
+    setpar('xs', h.sx[0], file)
+    setpar('zs', h.sz[0], file)
+    setpar('ts', h.ts, file)
 
     # adjust wavelet
-    setpar( 'f0', PAR['F0'], file )
-
+    setpar('f0', PAR['F0'], file)
 
 
 def write_receivers(h):
@@ -276,76 +285,76 @@ def write_receivers(h):
     # loop over receivers
     for ir in range(h.nr):
         line = ''
-        line += 'S%06d'  % ir       + ' '
-        line += 'AA'                + ' '
+        line += 'S%06d' % ir + ' '
+        line += 'AA' + ' '
         line += '%11.5e' % h.rx[ir] + ' '
         line += '%11.5e' % h.rz[ir] + ' '
-        line += '%3.1f'  % 0.       + ' '
-        line += '%3.1f'  % 0.       + '\n'
+        line += '%3.1f' % 0. + ' '
+        line += '%3.1f' % 0. + '\n'
         lines.extend(line)
 
     # write file
-    _writelines(file,lines)
+    _writelines(file, lines)
 
 
-def write_parameters(par,version):
+def write_parameters(par, version):
     """ Writes parameters to text file
     """
     raise NotImplementedError
 
 
-def getpar(key,file='DATA/Par_file',sep='='):
+def getpar(key, file='DATA/Par_file', sep='='):
     """ Reads parameter from SPECFEM parfile
     """
-    with open(file,'r') as f:
+    with open(file, 'r') as f:
 
         # read line by line
         for line in f:
-            if _string.find(line,key) == 0:
-            # read key
-                key,val = _split(line,sep)
+            if _string.find(line, key) == 0:
+                # read key
+                key, val = _split(line, sep)
                 if not key:
                     continue
                 # read val
-                val,_ = _split(val,'#')
+                val, _ = _split(val, '#')
                 return val.strip()
 
         raise Exception
 
 
-def setpar(key,val,file='DATA/Par_file',path='.',sep='='):
+def setpar(key, val, file='DATA/Par_file', path='.', sep='='):
     """ Writes parameter to SPECFEM parfile
     """
 
     val = str(val)
 
     # read line by line
-    with open(path+'/'+file,'r') as f:
+    with open(path + '/' + file, 'r') as f:
         lines = []
         for line in f:
-            if _string.find(line,key) == 0:
+            if _string.find(line, key) == 0:
                 # read key
-                key,_ = _split(line,sep)
+                key, _ = _split(line, sep)
                 # read comment
-                _,comment = _split(line,'#')
-                n = len(line)-len(key)-len(val)-len(comment)-2
+                _, comment = _split(line, '#')
+                n = len(line) - len(key) - len(val) - len(comment) - 2
                 # replace line
                 if comment:
-                    line = _merge(key,sep,val,' '*n,'#',comment)
+                    line = _merge(key, sep, val, ' '*n, '#', comment)
                 else:
-                    line = _merge(key,sep,str(val),'\n')
+                    line = _merge(key, sep, str(val), '\n')
             lines.append(line)
 
     # write file
-    _writelines(path+'/'+file,lines)
+    _writelines(path + '/' + file, lines)
 
 
-### utility functions
+# -- utility functions
 
-def _writelines(file,lines):
+def _writelines(file, lines):
     """ Writes text file
     """
-    with open(file,'w') as f:
+    with open(file, 'w') as f:
         f.writelines(lines)
 
 
@@ -354,12 +363,12 @@ def _list(array):
     return list(array2)
 
 
-def _split(str,sep):
+def _split(str, sep):
     from string import find
 
-    n = find(str,sep)
+    n = find(str, sep)
     if n >= 0:
-        return str[:n], str[n+len(sep):]
+        return str[:n], str[n + len(sep):]
     else:
         return str, ''
 
@@ -377,8 +386,8 @@ def _cmp(names):
     return [names[ii] for ii in rank]
 
 
-def _stack(a1,a2):
+def _stack(a1, a2):
     if a1.size > 0:
-        return _np.column_stack((a1,a2))
+        return _np.column_stack((a1, a2))
     else:
         return a2
