@@ -5,7 +5,7 @@ from seisflows.tools.array import gridplot
 
 
 def splot(s,h,normalize=True,nxmax=1000,nymax=1000):
-    "Plots seismic record section"
+    """Plots seismic record section"""
     ny = s.shape[0]
     nx = s.shape[1]
     iy = range(ny)
@@ -31,7 +31,7 @@ def splot(s,h,normalize=True,nxmax=1000,nymax=1000):
 
 
 def wplot(w):
-    "Plots seismic waveform"
+    """Plots seismic waveform"""
 
     import pylab
 

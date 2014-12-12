@@ -68,7 +68,6 @@ class specfem3d_ChenTromp(loadclass('extensions.solver','specfem3d_legacy')):
         'N':'N_kernel',
         'L':'L_kernel',
         'F':'F_kernel',
-        'F':'F_kernel',
         'Jc':'Jc_kernel',
         'Js':'Js_kernel',
         'Kc':'Kc_kernel',

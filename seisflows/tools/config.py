@@ -25,17 +25,17 @@ class ConfigObj(object):
         return iter(sorted(list(self.keys)))
 
     def register(self,key,val):
-        "Registers an object"
+        """Registers an object"""
         sys.modules[key] = val
         self.keys.add(key)
 
     def unregister(self,key):
-        "Unregisters an object"
+        """Unregisters an object"""
         sys.modules.__delattr__(key)
         self.keys.remove(key)
 
     def save(self,name,path='.'):
-        "Saves current state"
+        """Saves current state"""
         try:
             fullpath = join(abspath(path),name)
         except:
@@ -167,7 +167,7 @@ def findpath(obj):
 ### utility functions
 
 def _import(string,path=None):
-    "Imports from string"
+    """Imports from string"""
     if path:
         # temporarily adjust python path
         sys.path.append(path)
@@ -181,7 +181,7 @@ def _import(string,path=None):
 
 
 def _vars(obj):
-    "Returns an object's __dict__ with private varibles removed"
+    """Returns an object's __dict__ with private varibles removed"""
     mydict = {}
     for key,val in vars(obj).items():
         if key[0] != '_':
@@ -190,7 +190,7 @@ def _vars(obj):
 
 
 def _parse(args,package=None):
-    "Determines path of module relative to package directory"
+    """Determines path of module relative to package directory"""
     arglist = []
     for arg in args:
         arglist.extend(arg.split('.'))
@@ -205,7 +205,7 @@ def _parse(args,package=None):
 
 
 def _exists(parts):
-    "Checks if a module exists without importing it"
+    """Checks if a module exists without importing it"""
     try:
         path = None
         for part in parts[:-1]:

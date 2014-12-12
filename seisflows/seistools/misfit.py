@@ -14,7 +14,7 @@ def wtime(wsyn,wobs,nt,dt):
             cmax = cc[it]
             ioff = it
             misfit = (ioff-nt+1)*dt
-    if ioff != None:
+    if ioff is not None:
         misfit = (ioff-nt+1)*dt
     return misfit
 

@@ -109,7 +109,7 @@ def select(items,prompt=''):
             print("%2d) %s" % (i+1,item))
         reply = int(raw_input().strip())
         try:
-            status = (1 <= reply and reply <= len(items))
+            status = (1 <= reply <= len(items))
         except:
             status = 0
         if status:

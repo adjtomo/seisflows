@@ -55,9 +55,9 @@ def smute(s,h,vel,toff,xoff=0,constant_spacing=False):
         if 1 < itmin and itmax < nt:
             s[0:itmin,ir] = 0.
             s[itmin:itmax,ir] = win*s[itmin:itmax,ir]
-        elif itmin < 1 and itmax >= 1:
+        elif itmin < 1 <= itmax:
             s[1:itmax,ir] = win[length-itmax+1:length]*s[1:itmax,ir]
-        elif itmin < nt and itmax > nt:
+        elif itmin < nt < itmax:
             s[0:itmin,ir] = 0.
             s[itmin:nt,ir] = win[1:nt-itmin+1]*s[itmin:nt,ir]
         elif itmin > nt:

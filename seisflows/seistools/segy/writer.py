@@ -81,7 +81,7 @@ class SeismicWriter(BinaryWriter):
 
 
     def getarray(self,h,key,constant):
-        if h[key] == []:
+        if not h[key]:
             return [0]*self.ntraces
 
         array = [int(f*constant) for f in h[key]]

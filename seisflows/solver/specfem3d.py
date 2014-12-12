@@ -248,7 +248,7 @@ class specfem3d(object):
         """ Performs meshing and model interpolation using SPECFEM3D's builtin
           mesher and database generation utility
         """
-        assert(model_type)
+        assert model_type
         unix.cd(self.path)
 
         # run builtin mesher and generate databases

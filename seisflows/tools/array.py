@@ -8,7 +8,7 @@ import scipy.interpolate as _interp
 
 
 def gridplot(Z):
-    "Plots values on 2-D rectangular grid."
+    """Plots values on 2-D rectangular grid."""
 
     import pylab
     pylab.pcolor(Z)
@@ -16,7 +16,7 @@ def gridplot(Z):
 
 
 def gridsmooth(Z,span):
-    "Smooths values on 2-D rectangular grid."
+    """Smooths values on 2-D rectangular grid."""
 
     import warnings
     warnings.filterwarnings('ignore')
@@ -36,12 +36,12 @@ def gridsmooth(Z,span):
 
 
 def meshplot(x,y,z):
-    "Plots values on 2-D unstructured mesh."
+    """Plots values on 2-D unstructured mesh."""
     import pylab
 
     r = (max(x)-min(x))/(max(y)-min(y))
-    rx = r/np.sqrt(1+r**2);
-    ry = 1/np.sqrt(1+r**2);
+    rx = r/np.sqrt(1+r**2)
+    ry = 1/np.sqrt(1+r**2)
 
     pylab.figure(figsize=(10*rx,10*ry))
     p = pylab.tricontourf(x,y,z,125)
@@ -50,7 +50,7 @@ def meshplot(x,y,z):
 
 
 def meshsmooth(x,z,v,span,nx,nz):
-    "Smooths values on 2-D unstructured mesh."
+    """Smooths values on 2-D unstructured mesh."""
 
     # construct rectangular grid
     xi = np.linspace(x.min(),x.max(),nx)
@@ -81,7 +81,7 @@ def meshsmooth(x,z,v,span,nx,nz):
 
 
 def gauss2(X,Y,mu,sigma):
-    "Evaluates Gaussian over points of X,Y."
+    """Evaluates Gaussian over points of X,Y."""
     # evaluates Gaussian over X,Y
     D = sigma[0,0]*sigma[1,1] - sigma[0,1]*sigma[1,0]
     B = np.linalg.inv(sigma)
@@ -94,7 +94,7 @@ def gauss2(X,Y,mu,sigma):
 
 
 def sortrows(a, return_index=False, return_inverse=False):
-    "Sorts rows of numpy array."
+    """Sorts rows of numpy array."""
     si = np.lexsort(a.T)
     if return_inverse:
         sj = np.argsort(si)
@@ -110,7 +110,7 @@ def sortrows(a, return_index=False, return_inverse=False):
 
 
 def uniquerows(a, sort_array=False, return_index=False):
-    "Finds unique rows of numpy array."
+    """Finds unique rows of numpy array."""
     if sort_array:
         if return_index:
             sa, si = sortrows(a, return_index=True)
@@ -137,11 +137,11 @@ def uniquerows(a, sort_array=False, return_index=False):
 
 
 def loadnpy(filename):
-    "Loads numpy binary file."
+    """Loads numpy binary file."""
     return np.load(filename)
 
 
 def savenpy(filename,v):
-    "Saves numpy binary file."
+    """Saves numpy binary file."""
     np.save(filename,v)
     os.rename(filename+'.npy',filename)

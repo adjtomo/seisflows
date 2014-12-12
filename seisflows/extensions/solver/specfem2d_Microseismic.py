@@ -207,9 +207,7 @@ class specfem2d_Microseismic(loadclass('solver','specfem2d')):
         neg = self.load('OUTPUT_FILES/kernel_neg')
         pos = self.load('OUTPUT_FILES/kernel_pos')
 
-        sum = {}
-        sum['x'] = neg['x']
-        sum['z'] = neg['z']
+        sum = {'x': neg['x'], 'z': neg['z']}
 
         for key in ['rho','vp','vs']:
             sum[key] = pos[key] + neg[key]

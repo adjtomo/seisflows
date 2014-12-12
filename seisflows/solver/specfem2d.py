@@ -236,7 +236,7 @@ class specfem2d(object):
         """ Performs meshing and model interpolation
         """
         assert(exists(model_path))
-        assert(model_type)
+        assert model_type
 
         unix.cd(self.path)
         unix.cp(model_path,'DATA/model_velocity.dat_input')
@@ -379,7 +379,7 @@ class specfem2d(object):
 
 
     def save(self,filename,parts,type='model'):
-        "writes SPECFEM2D kernel or model"
+        """writes SPECFEM2D kernel or model"""
         # allocate array
         if type == 'model':
             nrow = len(parts[parts.keys().pop()][0])
@@ -405,7 +405,7 @@ class specfem2d(object):
     ### vector/dictionary conversion
 
     def merge(self,parts):
-        "merges parts into vector"
+        """merges parts into vector"""
         v = np.array([])
         for key in parts:
             if key in self.inversion_parameters:
@@ -415,10 +415,10 @@ class specfem2d(object):
 
 
     def split(self,v):
-        "split vector into parts"
+        """split vector into parts"""
         parts = {}
         nrow = len(v)/(PAR.NPROC*len(self.inversion_parameters))
-        i = 0; j = 0;
+        i = 0; j = 0
         for key in ['x','z','rho','vp','vs']:
             parts[key] = []
             if key in self.inversion_parameters:
@@ -439,15 +439,15 @@ class specfem2d(object):
     ### postprocessing utilities
 
     def combine(self,path=''):
-        "combines SPECFEM2D kernels"
-        subprocess.call(\
-               [self.path+'/'+'bin/xsmooth_sem'] + \
-               [str(len(unix.ls(path)))] + \
-               [path])
+        """combines SPECFEM2D kernels"""
+        subprocess.call(
+            [self.path+'/'+'bin/xsmooth_sem'] +
+            [str(len(unix.ls(path)))] +
+            [path])
 
 
     def smooth(self,path='',tag='grad',span=0):
-        "smooths SPECFEM2D kernels by convolving them with a Gaussian"
+        """smooths SPECFEM2D kernels by convolving them with a Gaussian"""
         from seisflows.tools.array import meshsmooth
 
         parts = self.load(path+'/'+tag)

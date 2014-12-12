@@ -113,7 +113,7 @@ class LCG:
 ### utility functions
 
 def loadtxt(filename):
-    return (np.loadtxt(filename))
+    return np.loadtxt(filename)
 
 def savetxt(filename,v):
     np.savetxt(filename,[v],'%e')

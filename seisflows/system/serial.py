@@ -104,21 +104,21 @@ class serial(object):
 
 
     def getnode(self):
-        "Gets number of running task"
+        """Gets number of running task"""
         return int(np.loadtxt(PATH.SYSTEM+'/'+'nodenum'))
 
 
     def setnode(self,itask):
-        "Sets number of running task"
+        """Sets number of running task"""
         np.savetxt(PATH.SYSTEM+'/'+'nodenum',[itask])
 
 
     def mpiexec(self):
-        "Wrapper for mpiexec"
+        """Wrapper for mpiexec"""
         return 'mpiexec -np %d ' % PAR.NPROC
 
 
     def progress(self,itask=None):
-        "Prints status updates"
+        """Prints status updates"""
         if PAR.VERBOSE and PAR.NTASK > 1:
             print ' task '+'%02d'%(itask+1)+' of '+'%02d'%PAR.NTASK

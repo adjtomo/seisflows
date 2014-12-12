@@ -271,7 +271,7 @@ class specfem3d_globe(object):
         """ Performs meshing and model interpolation using SPECFEM3D's builtin
           mesher and database generation utility
         """
-        assert(model_type)
+        assert model_type
         print 'model_path:', model_path
         print 'model_name:', model_name
         print 'model_type:', model_type

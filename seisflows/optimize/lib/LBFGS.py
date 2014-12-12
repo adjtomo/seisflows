@@ -99,7 +99,7 @@ class LBFGS:
         time.sleep(2)
 
         unix.cd(self.path+'/'+'LBFGS')
-        k = savetxt('k',0)
+        savetxt('k',0)
         S = np.memmap('S',mode='r+')
         Y = np.memmap('Y',mode='r+')
         S[:] = 0.

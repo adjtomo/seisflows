@@ -32,7 +32,7 @@ def read(**kwargs):
     i = 0
     for file in files:
         s[:,i] = _np.loadtxt(file)[:,1]
-        i = i+1
+        i += 1
 
     # keep track of file names
     h.files = []
@@ -40,7 +40,7 @@ def read(**kwargs):
         file = unix.basename(file)
         h.files.append(file)
 
-    return (s,h)
+    return s,h
 
 
 def write(f,h,channel,char='FX',prefix='SEM',suffix='adj',opt=''):

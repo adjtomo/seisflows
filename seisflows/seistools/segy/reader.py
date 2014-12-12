@@ -46,7 +46,7 @@ class SeismicReader(BinaryReader):
     def ReadSeismicData(self):
         nsamples = int(self.read('int16',1,self.offset+114)[0])
         nbytes = int(nsamples*self.dsize+240)
-        ntraces = int((self.size-self.offset)/nbytes);
+        ntraces = int((self.size-self.offset)/nbytes)
 
         # prepare offset pointers
         if FIXEDLENGTH:
@@ -56,8 +56,7 @@ class SeismicReader(BinaryReader):
         else:
             ntraces = 1
             tracelen = []
-            traceptr = []
-            traceptr.append(self.offset)
+            traceptr = [self.offset]
 
             while 1:
                 ntraces += 1
@@ -68,7 +67,7 @@ class SeismicReader(BinaryReader):
 
                 if ntraces > NMAX:
                     raise Exception
-                elif (traceptr[-1] >= self.size):
+                elif traceptr[-1] >= self.size:
                     raise Exception
                 traceptr = traceptr[:-1]
                 tracelen = tracelen[:-1]

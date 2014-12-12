@@ -8,7 +8,7 @@ from seisflows.tools.code import Struct
 
 
 def loadbin(filename):
-    "Reads Fortran style binary data"
+    """Reads Fortran style binary data"""
     with open(filename,'rb') as file:
 
         # read size of record
@@ -23,7 +23,7 @@ def loadbin(filename):
 
 
 def savebin(v,filename):
-    "Writes Fortran style binary data"
+    """Writes Fortran style binary data"""
     n = _np.array([4*len(v)],dtype='int32')
     v = _np.array(v,dtype='float32')
 
@@ -34,7 +34,7 @@ def savebin(v,filename):
 
 
 class BinaryReader(object):
-    "Generic binary file reader"
+    """Generic binary file reader"""
 
     def __init__(self,fname,endian='|'):
         # opens binary file
@@ -93,7 +93,7 @@ class BinaryReader(object):
 
 
 class BinaryWriter(object):
-    "Generic binary file writer"
+    """Generic binary file writer"""
 
     def __init__(self,fname,endian='|'):
         # open binary file
@@ -176,7 +176,7 @@ class OutputWriter(object):
         # format column headers
         line ='' 
         for key in self.keys:
-            line += ('%10s  ') % (key)
+            line += '%10s  ' % key
 
         # write headers to file
         if _os.path.exists(filename):
@@ -203,7 +203,7 @@ class OutputWriter(object):
     def apply_format(self,val):
         if val == '':
             return 12*' '
-        if val == []:
+        if not val:
             return 12*' '
         if type(val) is int:
             return '%10d  ' % val
