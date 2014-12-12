@@ -1,4 +1,3 @@
-
 import numpy as np
 
 from seisflows.tools import unix
@@ -27,15 +26,14 @@ class migration(object):
             raise Exception
 
         if 'LOCAL' not in PATH:
-            setattr(PATH,'LOCAL',None)
+            setattr(PATH, 'LOCAL', None)
 
         if 'IMAGE' not in PATH:
-            setattr(PATH,'IMAGE',join(PATH.GLOBAL,'image'))
-
+            setattr(PATH, 'IMAGE', join(PATH.GLOBAL, 'image'))
 
         # check input paths
         if 'DATA' not in PATH:
-            setattr(PATH,'DATA',None)
+            setattr(PATH, 'DATA', None)
 
         if not exists(PATH.DATA):
             assert 'MODEL_TRUE' in PATH
@@ -43,20 +41,18 @@ class migration(object):
         if 'MODEL_INIT' not in PATH:
             raise Exception
 
-
         # check output paths
         if 'OUTPUT' not in PATH:
             raise Exception
 
         if 'SAVEIMAGE' not in PAR:
-            setattr(PAR,'SAVEIMAGE',1)
+            setattr(PAR, 'SAVEIMAGE', 1)
 
         if 'SAVEKERNELS' not in PAR:
-            setattr(PAR,'SAVEKERNELS',0)
+            setattr(PAR, 'SAVEKERNELS', 0)
 
         if 'SAVETRACES' not in PAR:
-            setattr(PAR,'SAVETRACES',0)
-
+            setattr(PAR, 'SAVETRACES', 0)
 
         # check dependencies
         if 'postprocess' not in OBJ:
@@ -77,7 +73,6 @@ class migration(object):
         global system
         import system
 
-
     def main(self):
         """ Migrates seismic data
         """
@@ -88,21 +83,21 @@ class migration(object):
 
         # prepare solver
         print 'Preparing solver...'
-        system.run( 'solver','setup',
-            hosts='all' )
+        system.run('solver', 'setup',
+                   hosts='all')
 
         self.prepare_model()
 
-        system.run( 'solver','eval_func',
-            hosts='all',
-            path=PATH.IMAGE )
+        system.run('solver', 'eval_func',
+                   hosts='all',
+                   path=PATH.IMAGE)
 
         # backproject data
         print 'Backprojecting data...'
-        system.run( 'solver','eval_grad',
-              hosts='all',
-              path=PATH.IMAGE,
-              export_traces=PAR.SAVETRACES )
+        system.run('solver', 'eval_grad',
+                   hosts='all',
+                   path=PATH.IMAGE,
+                   export_traces=PAR.SAVETRACES)
 
         # process image
         postprocess.process_kernels(
@@ -121,27 +116,26 @@ class migration(object):
 
         print 'Finished\n'
 
-
-    ### utility functions
+    # -- utility functions
 
     def prepare_model(self):
-        model = PATH.OUTPUT+'/'+'model_init'
+        model = PATH.OUTPUT + '/' + 'model_init'
         assert exists(model)
-        unix.cp(model,PATH.IMAGE+'/'+'model')
+        unix.cp(model, PATH.IMAGE + '/' + 'model')
 
     def save_image(self):
-        src = glob(join(PATH.IMAGE,'image*'))
+        src = glob(join(PATH.IMAGE, 'image*'))
         dst = join(PATH.OUTPUT)
-        unix.mv(src,dst)
+        unix.mv(src, dst)
 
     def save_kernels(self):
-        src = join(PATH.IMAGE,'kernels')
+        src = join(PATH.IMAGE, 'kernels')
         dst = join(PATH.OUTPUT)
         unix.mkdir(dst)
-        unix.mv(src,dst)
+        unix.mv(src, dst)
 
     def save_traces(self):
-        src = join(PATH.IMAGE,'traces')
+        src = join(PATH.IMAGE, 'traces')
         dst = join(PATH.OUTPUT)
-        unix.mv(src,dst)
+        unix.mv(src, dst)
 

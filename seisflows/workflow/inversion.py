@@ -1,4 +1,3 @@
-
 import numpy as np
 
 from seisflows.tools import unix
@@ -35,7 +34,6 @@ class inversion(object):
       rmodrak -at- princeton -dot- edu
     """
 
-
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
@@ -48,32 +46,30 @@ class inversion(object):
             raise Exception
 
         if 'VERBOSE' not in PAR:
-            setattr(PAR,'VERBOSE',1)
-
+            setattr(PAR, 'VERBOSE', 1)
 
         # check paths
         if 'GLOBAL' not in PATH:
             raise Exception
 
         if 'LOCAL' not in PATH:
-            setattr(PATH,'LOCAL',None)
+            setattr(PATH, 'LOCAL', None)
 
         if 'FUNC' not in PATH:
-            setattr(PATH,'FUNC',join(PATH.GLOBAL,'func'))
+            setattr(PATH, 'FUNC', join(PATH.GLOBAL, 'func'))
 
         if 'GRAD' not in PATH:
-            setattr(PATH,'GRAD',join(PATH.GLOBAL,'grad'))
+            setattr(PATH, 'GRAD', join(PATH.GLOBAL, 'grad'))
 
         if 'HESS' not in PATH:
-            setattr(PATH,'HESS',join(PATH.GLOBAL,'hess'))
+            setattr(PATH, 'HESS', join(PATH.GLOBAL, 'hess'))
 
         if 'OPTIMIZE' not in PATH:
-            setattr(PATH,'OPTIMIZE',join(PATH.GLOBAL,'optimize'))
-
+            setattr(PATH, 'OPTIMIZE', join(PATH.GLOBAL, 'optimize'))
 
         # check input settings
         if 'DATA' not in PATH:
-            setattr(PATH,'DATA',None)
+            setattr(PATH, 'DATA', None)
 
         if not exists(PATH.DATA):
             assert 'MODEL_TRUE' in PATH
@@ -81,28 +77,26 @@ class inversion(object):
         if 'MODEL_INIT' not in PATH:
             raise Exception
 
-
         # check output settings
         if 'OUTPUT' not in PATH:
             raise Exception
 
         if 'SAVEMODEL' not in PAR:
-            setattr(PAR,'SAVEMODEL',1)
+            setattr(PAR, 'SAVEMODEL', 1)
 
         if 'SAVEGRADIENT' not in PAR:
-            setattr(PAR,'SAVEGRADIENT',0)
+            setattr(PAR, 'SAVEGRADIENT', 0)
 
         if 'SAVEKERNELS' not in PAR:
-            setattr(PAR,'SAVEKERNELS',0)
+            setattr(PAR, 'SAVEKERNELS', 0)
 
         if 'SAVETRACES' not in PAR:
-            setattr(PAR,'SAVETRACES',0)
+            setattr(PAR, 'SAVETRACES', 0)
 
         if 'SAVERESIDUALS' not in PAR:
-            setattr(PAR,'SAVERESIDUALS',0)
+            setattr(PAR, 'SAVERESIDUALS', 0)
 
-
-       # check dependencies
+            # check dependencies
         if 'optimize' not in OBJ:
             raise Exception
 
@@ -127,14 +121,12 @@ class inversion(object):
         global system
         import system
 
-
-
     def main(self):
         """ Carries out seismic inversion
         """
         self.setup()
 
-        for self.iter in irange(PAR.BEGIN,PAR.END):
+        for self.iter in irange(PAR.BEGIN, PAR.END):
             optimize.iter = self.iter
 
             print "Starting iteration", self.iter
@@ -152,11 +144,10 @@ class inversion(object):
             if self.isdone:
                 return
 
-
     def setup(self):
         """ Lays groundwork for inversion
         """
-        if PAR.BEGIN==1:
+        if PAR.BEGIN == 1:
             # prepare directory structure
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
@@ -164,23 +155,21 @@ class inversion(object):
             # prepare optimization and solver directories
             optimize.setup()
 
-            system.run( 'solver','setup',
-                hosts='all' )
+            system.run('solver', 'setup',
+                       hosts='all')
 
             # prepare starting model
-            src = PATH.OUTPUT+'/'+'model_init'
-            dst = PATH.OPTIMIZE+'/'+'m_new'
-            savenpy(dst,solver.merge(solver.load(src)))
-
+            src = PATH.OUTPUT + '/' + 'model_init'
+            dst = PATH.OPTIMIZE + '/' + 'm_new'
+            savenpy(dst, solver.merge(solver.load(src)))
 
         else:
             # prepare optimization and solver directories
             optimize.setup()
 
             if PATH.LOCAL:
-                system.run( 'solver','setup',
-                    hosts='all' )
-
+                system.run('solver', 'setup',
+                           hosts='all')
 
     def initialize(self):
         """ Prepares for next model update iteration
@@ -192,12 +181,11 @@ class inversion(object):
             self.prepare_model(path=PATH.GRAD, suffix='new')
 
             # forward simulation
-            system.run( 'solver','eval_func',
-                hosts='all',
-                path=PATH.GRAD )
+            system.run('solver', 'eval_func',
+                       hosts='all',
+                       path=PATH.GRAD)
 
             self.sum_residuals(path=PATH.GRAD, suffix='new')
-
 
     def compute_direction(self):
         """ Computes search direction
@@ -205,42 +193,40 @@ class inversion(object):
         self.evaluate_gradient()
         optimize.compute_direction()
 
-
     def line_search(self):
         """ Conducts line search in given search direction
         """
         optimize.initialize_search()
 
-        for optimize.step in irange(1,PAR.SRCHMAX):
+        for optimize.step in irange(1, PAR.SRCHMAX):
             isdone = self.search_status()
 
-            if isdone==1:
+            if isdone == 1:
                 optimize.finalize_search()
                 break
-            elif isdone==0:
+            elif isdone == 0:
                 optimize.compute_step()
                 continue
-            elif isdone==-1:
+            elif isdone == -1:
                 self.isdone = -1
                 print ' line search failed'
-
 
     def search_status(self):
         """ Checks line search status
         """
-        if PAR.VERBOSE: print " trial step", optimize.step
+        if PAR.VERBOSE:
+            print " trial step", optimize.step
         self.evaluate_function()
         isdone, isbest = optimize.search_status()
 
         if not PATH.LOCAL:
             if isbest and isdone:
-                unix.mv(PATH.SOLVER,PATH.SOLVER+'_best')
+                unix.mv(PATH.SOLVER, PATH.SOLVER + '_best')
             elif isbest:
-                unix.rm(PATH.SOLVER+'_best')
-                unix.cp(PATH.SOLVER,PATH.SOLVER+'_best')
+                unix.rm(PATH.SOLVER + '_best')
+                unix.cp(PATH.SOLVER, PATH.SOLVER + '_best')
 
         return isdone
-
 
     def evaluate_function(self):
         """ Calls forward solver and writes misfit
@@ -248,53 +234,51 @@ class inversion(object):
         self.prepare_model(path=PATH.FUNC, suffix='try')
 
         # forward simulation
-        system.run( 'solver','eval_func',
-            hosts='all',
-            path=PATH.FUNC )
+        system.run('solver', 'eval_func',
+                   hosts='all',
+                   path=PATH.FUNC)
 
         self.sum_residuals(path=PATH.FUNC, suffix='try')
-
 
     def evaluate_gradient(self):
         """ Calls adjoint solver and runs process_kernels
         """
         # adjoint simulation
-        system.run( 'solver','eval_grad',
-            hosts='all',
-            path=PATH.GRAD,
-            export_traces=divides(self.iter,PAR.SAVETRACES) )
+        system.run('solver', 'eval_grad',
+                   hosts='all',
+                   path=PATH.GRAD,
+                   export_traces=divides(self.iter, PAR.SAVETRACES))
 
         postprocess.process_kernels(
             path=PATH.GRAD,
-            optim_path=PATH.OPTIMIZE+'/'+'g_new')
-
+            optim_path=PATH.OPTIMIZE + '/' + 'g_new')
 
     def finalize(self):
         """ Saves results from most recent model update iteration
         """
-        if divides(self.iter,PAR.SAVEMODEL):
+        if divides(self.iter, PAR.SAVEMODEL):
             self.save_model()
 
-        if divides(self.iter,PAR.SAVEGRADIENT):
+        if divides(self.iter, PAR.SAVEGRADIENT):
             self.save_gradient()
 
-        if divides(self.iter,PAR.SAVEKERNELS):
+        if divides(self.iter, PAR.SAVEKERNELS):
             self.save_kernels()
 
-        if divides(self.iter,PAR.SAVETRACES):
+        if divides(self.iter, PAR.SAVETRACES):
             self.save_traces()
 
-        if divides(self.iter,PAR.SAVERESIDUALS):
+        if divides(self.iter, PAR.SAVERESIDUALS):
             self.save_residuals()
 
         # clean up directories for next iteration
         if not PATH.LOCAL:
             unix.rm(PATH.GRAD)
-            unix.mv(PATH.FUNC,PATH.GRAD)
+            unix.mv(PATH.FUNC, PATH.GRAD)
             unix.mkdir(PATH.FUNC)
 
             unix.rm(PATH.SOLVER)
-            unix.mv(PATH.SOLVER+'_best',PATH.SOLVER)
+            unix.mv(PATH.SOLVER + '_best', PATH.SOLVER)
 
         else:
             unix.rm(PATH.GRAD)
@@ -302,34 +286,29 @@ class inversion(object):
             unix.mkdir(PATH.GRAD)
             unix.mkdir(PATH.FUNC)
 
-
         self.isdone = False
 
+    # -- utility functions
 
-
-    ### utility functions
-
-    def prepare_model(self,path='',suffix=''):
+    def prepare_model(self, path='', suffix=''):
         """ Writes model in format used by solver
         """
         unix.mkdir(path)
-        src = PATH.OPTIMIZE+'/'+'m_'+suffix
-        dst = path+'/'+'model'
+        src = PATH.OPTIMIZE + '/' + 'm_' + suffix
+        dst = path + '/' + 'model'
         parts = solver.split(loadnpy(src))
-        solver.save(dst,parts)
+        solver.save(dst, parts)
 
-
-    def sum_residuals(self,path='',suffix=''):
+    def sum_residuals(self, path='', suffix=''):
         """ Sums residuals to obtain misfit function value
         """
-        src = path+'/'+'residuals'
-        dst = PATH.OPTIMIZE+'/'+'f_'+suffix
+        src = path + '/' + 'residuals'
+        dst = PATH.OPTIMIZE + '/' + 'f_' + suffix
         residuals = []
         for file in unix.ls(src):
-            fromfile = np.loadtxt(src+'/'+file)
+            fromfile = np.loadtxt(src + '/' + file)
             residuals.append(fromfile**2.)
-        np.savetxt(dst,[np.sum(residuals)])
-
+        np.savetxt(dst, [np.sum(residuals)])
 
     def solver_status(self):
         """ Decides if solver prerequisites are in place
@@ -342,33 +321,28 @@ class inversion(object):
             isready = True
         return isready
 
-
     def save_model(self):
-        src = PATH.OPTIMIZE+'/'+'m_new'
-        dst = join(PATH.OUTPUT,'model_%04d'%self.iter)
-        solver.save(dst,solver.split(loadnpy(src)))
-
+        src = PATH.OPTIMIZE + '/' + 'm_new'
+        dst = join(PATH.OUTPUT, 'model_%04d' % self.iter)
+        solver.save(dst, solver.split(loadnpy(src)))
 
     def save_gradient(self):
-        src = glob(join(PATH.POSTPROCESS,'grad*'))
-        dst = join(PATH.OUTPUT,'gradient_%04d'%self.iter)
-        unix.mv(src,dst)
-
+        src = glob(join(PATH.POSTPROCESS, 'grad*'))
+        dst = join(PATH.OUTPUT, 'gradient_%04d' % self.iter)
+        unix.mv(src, dst)
 
     def save_kernels(self):
-        src = join(PATH.GRAD,'kernels')
-        dst = join(PATH.OUTPUT,'kernels_%04d'%self.iter)
+        src = join(PATH.GRAD, 'kernels')
+        dst = join(PATH.OUTPUT, 'kernels_%04d' % self.iter)
         unix.mkdir(dst)
-        unix.mv(src,dst)
-
+        unix.mv(src, dst)
 
     def save_traces(self):
-        src = join(PATH.GRAD,'traces')
-        dst = join(PATH.OUTPUT,'traces_%04d'%self.iter)
-        unix.mv(src,dst)
-
+        src = join(PATH.GRAD, 'traces')
+        dst = join(PATH.OUTPUT, 'traces_%04d' % self.iter)
+        unix.mv(src, dst)
 
     def save_residuals(self):
-        src = join(PATH.GRAD,'residuals')
-        dst = join(PATH.OUTPUT,'residuals_%04d'%self.iter)
-        unix.mv(src,dst)
+        src = join(PATH.GRAD, 'residuals')
+        dst = join(PATH.OUTPUT, 'residuals_%04d' % self.iter)
+        unix.mv(src, dst)

@@ -1,4 +1,3 @@
-
 import numpy as np
 
 from seisflows.tools import unix
@@ -23,18 +22,15 @@ class forward_modeling(object):
             raise Exception
 
         if 'LOCAL' not in PATH:
-            setattr(PATH,'LOCAL',None)
-
+            setattr(PATH, 'LOCAL', None)
 
         # check input settings
         if 'MODEL' not in PATH:
             raise Exception
 
-
         # check output settings
         if 'OUTPUT' not in PATH:
             raise Exception
-
 
         # check dependencies
         if 'solver' not in OBJ:
@@ -49,23 +45,21 @@ class forward_modeling(object):
         global system
         import system
 
-
-
     def main(self):
         """ Generates seismic data
         """
-       
+
         print 'Preparing solver directories...'
 
-        system.run('solver','prepare_dirs',
-          hosts = 'all')
+        system.run('solver', 'prepare_dirs',
+                   hosts='all')
 
         print 'Running solver...'
 
-        system.run('solver','prepare_data',
-          hosts = 'all',
-          model_path = PATH.MODEL,
-          model_type = 'gll',
-          model_name = None)
+        system.run('solver', 'prepare_data',
+                   hosts='all',
+                   model_path=PATH.MODEL,
+                   model_type='gll',
+                   model_name=None)
 
         print "Finished"
