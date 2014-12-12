@@ -105,7 +105,7 @@ class slurm_big_job(object):
           + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
           + PATH.OUTPUT)
 
-        subprocess.call(args, shell=1)
+        subprocess.call(args, shell=True)
 
 
     def run(self,classname,funcname,hosts='all',**kwargs):
@@ -167,14 +167,14 @@ class slurm_big_job(object):
                   + '--array=%d-%d ' % (0,PAR.NTASK-1)
                   + '--output %s ' % (PATH.OUTPUT+'/'+'SeisflowsOutput/'+'%A_%a')
                   + args,
-                  shell=1,stdout=f)
+                  shell=True,stdout=f)
         elif hosts == 'head':
             with open(PATH.SYSTEM+'/'+'job_id','w') as f:
                 subprocess.call(sbatch
                   + '--export='+'MY_JOB_ID=0 '
                   + '--output %s ' % (PATH.OUTPUT+'/'+'SeisflowsOutput/'+'%A_0')
                   + args,
-                  shell=1,stdout=f)
+                  shell=True,stdout=f)
         else:
             itask = str(hosts)
             with open(PATH.SYSTEM+'/'+'job_id','w') as f:
@@ -182,7 +182,7 @@ class slurm_big_job(object):
                   + '--export='+'MY_JOB_ID'+'='+itask + ' '
                   + '--output %s ' % (PATH.SYSTEM+'/'+'output.log'+itask)
                   + args,
-                  shell=1,stdout=f)
+                  shell=True,stdout=f)
 
         # collect job info
         with open(PATH.SYSTEM+'/'+'job_id','r') as f:
@@ -202,7 +202,7 @@ class slurm_big_job(object):
         # query job database
         with open(PATH.SYSTEM+'/'+'job_status','w') as f:
             subprocess.call('sacct -n -o jobid,state',
-              shell=1,stdout=f)
+              shell=True,stdout=f)
         with open(PATH.SYSTEM+'/'+'job_status','r') as f:
             lines = f.readlines()
 

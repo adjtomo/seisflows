@@ -103,7 +103,7 @@ class pbs_torque(object):
 
         print args
 
-        subprocess.call(args, shell=1)
+        subprocess.call(args, shell=True)
 
 
     def run(self,task,hosts='all',**kwargs):
@@ -136,7 +136,7 @@ class pbs_torque(object):
         else:
             raise Exception
 
-        subprocess.call(args, shell=1)
+        subprocess.call(args, shell=True)
 
 
     def getnode(self):

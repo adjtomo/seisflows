@@ -89,7 +89,7 @@ class slurm(object):
           + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
           + PATH.OUTPUT)
 
-        subprocess.call(args, shell=1)
+        subprocess.call(args, shell=True)
 
 
     def run(self,classname,funcname,hosts='all',**kwargs):
@@ -127,7 +127,7 @@ class slurm(object):
         else:
             raise Exception
 
-        subprocess.call(args, shell=1)
+        subprocess.call(args, shell=True)
 
 
     def getnode(self):
