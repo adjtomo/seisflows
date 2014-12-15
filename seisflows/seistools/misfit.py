@@ -21,6 +21,7 @@ def wtime(wsyn, wobs, nt, dt):
 
 def wampl(wsyn, wobs, nt, dt):
     # cross correlation amplitude
+    # FIXME: unitialized ioff, missing ioff == 0 case
     cc = np.convolve(wobs, np.flipud(wsyn))
     cmax = 0
     for it in range(2*nt-1):

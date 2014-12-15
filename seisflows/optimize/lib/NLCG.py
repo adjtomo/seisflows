@@ -59,6 +59,10 @@ class NLCG:
             p_old = self.load('p_old')
 
             unix.cd('NLCG')
+
+            # FIXME: do the following two 'if' clauses need to be separated ?
+            #        is it important to know that in some case we have periodic
+            #        restart AND loss of conjugacy?
             if self.itercg > self.itercgmax:
                 # require periodic restarts
                 print 'restarting NLCG... [periodic restart]'

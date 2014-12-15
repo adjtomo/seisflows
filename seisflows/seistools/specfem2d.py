@@ -53,6 +53,8 @@ def write(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''):
             fmt = '%s/S%s.AA.%sZ.%s' % (prefix, '%04d', char, suffix)
         elif channel == ['p']:
             fmt = '%s/S%s.AA.%sP.%s' % (prefix, '%04d', char, suffix)
+        else:
+            raise ValueError("Unknown channel type.")
         for i in range(h.nr):
             files.append(fmt % (i + 1))
 
@@ -76,6 +78,8 @@ def write(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''):
                 label = ''.join([parts[2][:-1], 'Z'])
             elif channel == ['p']:
                 label = ''.join([parts[2][:-1], 'P'])
+            else:
+                raise ValueError("Unknown channel type.")
 
             parts[-2] = label
             parts[-1] = 'adj'
@@ -116,6 +120,8 @@ def glob(files=None, filetype='ascii', channel=None, prefix='SEM',
                 wildcard = '%s/*[yY]*.%s' % (prefix, suffix)
             elif channel in ['z']:
                 wildcard = '%s/*[zZ]*.%s' % (prefix, suffix)
+            else:
+                raise ValueError("Unknown channel type.")
         files = _glob.glob(wildcard)
         if files:
             files.sort()
@@ -130,6 +136,8 @@ def glob(files=None, filetype='ascii', channel=None, prefix='SEM',
             file = '%s/Uy_file_single.%s' % (prefix, suffix)
         elif channel in ['z']:
             file = '%s/Uz_file_single.%s' % (prefix, suffix)
+        else:
+            raise ValueError("Unknown channel type.")
         return file
 
 

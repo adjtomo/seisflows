@@ -26,6 +26,7 @@ class LCG:
             self.LBFGS = LBFGS(path+'/'+'LCG', load, save, itermax)
 
     def precond(self, r):
+        # FIXME: Default case for precond_type?
         if self.precond_type == 0:
             y = r
 

@@ -37,7 +37,7 @@ def smute(s, h, vel, toff, xoff=0, constant_spacing=False):
         # calculate slope
         if vel!=0:
             slope = 1./vel
-        elif vel==0:
+        else:
             slope = 0
 
         # calculate offsets
@@ -80,7 +80,9 @@ def swindow(s, h, tmin, tmax, alpha=0.05, units='samples'):
         itmin = int(tmin)
         itmax = int(tmax)
 
-    win = tukeywin(nt,itmin,itmax,alpha)
+    # FIXME: Raise exception or set default values for itmin / itmax ?
+
+    win = tukeywin(nt, itmin, itmax, alpha)
 
     # apply window
     for ir in range(0,nr):

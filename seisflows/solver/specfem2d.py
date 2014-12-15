@@ -352,6 +352,8 @@ class specfem2d(object):
             ioff = 0
         elif ncol == 6:
             ioff = 1
+        else:
+            raise ValueError("Wrong number of columns.")
 
         # fill in dictionary
         parts = {}
@@ -374,6 +376,9 @@ class specfem2d(object):
             ncol = 5
             ioff = 0
             M = np.zeros((nrow, ncol))
+
+        else:
+            raise ValueError("Wrong model type.")
 
         # fill in array
         for icol, key in enumerate(['x', 'z', 'rho', 'vp', 'vs']):
