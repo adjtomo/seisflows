@@ -28,7 +28,7 @@ def wampl(wsyn, wobs, nt, dt):
         if cc[it] > cmax:
             cmax = cc[it]
             ioff = it
-    if ioff =< 0:
+    if ioff <= 0:
         wdiff = wsyn[ioff:] - wobs[:-ioff]
     else:
         wdiff = wsyn[:-ioff] - wobs[ioff:]
