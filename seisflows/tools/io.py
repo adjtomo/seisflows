@@ -2,7 +2,7 @@
 import os as _os
 import struct as _struct
 
-from collections import mapping
+from collections import Mapping
 
 import numpy as _np
 
