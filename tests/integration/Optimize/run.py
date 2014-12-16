@@ -4,10 +4,9 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import abspath, irange, join, loadtxt, savetxt
+from seisflows.tools.code import abspath, irange, savetxt
 from seisflows.tools.config import loadclass, loadvars, ParameterObj
-
-from problems import rosenbrock as problem
+from tests.integration.Optimize.problems import rosenbrock as problem
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
