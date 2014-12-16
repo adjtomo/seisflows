@@ -1,34 +1,12 @@
+
 import os as _os
 import struct as _struct
+
+from collections import mapping
 
 import numpy as _np
 
 from seisflows.tools.code import Struct
-
-
-def loadbin(filename):
-    """Reads Fortran style binary data"""
-    with open(filename, 'rb') as file:
-        # read size of record
-        file.seek(0)
-        n = _np.fromfile(file, dtype='int32', count=1)[0]
-
-        # read contents of record
-        file.seek(4)
-        v = _np.fromfile(file, dtype='float32')
-
-    return v[:-1]
-
-
-def savebin(v, filename):
-    """Writes Fortran style binary data"""
-    n = _np.array([4*len(v)], dtype='int32')
-    v = _np.array(v, dtype='float32')
-
-    with open(filename, 'wb') as file:
-        n.tofile(file)
-        v.tofile(file)
-        n.tofile(file)
 
 
 class BinaryReader(object):
@@ -139,23 +117,19 @@ class BinaryWriter(object):
             self.write(fmt, val, length)
 
 
-def mychar(fmt):
-    chars = {'int8': 'b',
-             'uint8': 'B',
-             'int16': 'h',
-             'uint16': 'H',
-             'int32': 'i',
-             'uint32': 'I',
-             'int64': 'q',
-             'uint64': 'Q',
-             'float': 'f',
-             'float32': 'f',
-             'double': 'd',
-             'char': 's'}
-    if fmt in chars:
-        return chars[fmt]
-    else:
-        return fmt
+class LazyReader(Mapping):
+    def __init__(self, reader):
+        self.reader = reader
+
+    def __getitem__(self, *args, **kwargs):
+        val = self.reader(*args, **kwargs)
+        return val
+
+    def __iter__(self):
+        return None
+
+    def __len__(self):
+        return None
 
 
 class OutputWriter(object):
@@ -192,11 +166,11 @@ class OutputWriter(object):
             raise Exception
         line = ''
         for val in vals:
-            line += self.apply_format(val)
+            line += self._getline(val)
         fileobj.write(line + '\n')
         fileobj.close()
 
-    def apply_format(self, val):
+    def _getline(self, val):
         if val == '':
             return 12*' '
         if not val:
@@ -208,6 +182,49 @@ class OutputWriter(object):
         if type(val) is str:
             return '%10s  ' % val
 
+
+def loadbin(filename):
+    """Reads Fortran style binary data"""
+    with open(filename, 'rb') as file:
+        # read size of record
+        file.seek(0)
+        n = _np.fromfile(file, dtype='int32', count=1)[0]
+
+        # read contents of record
+        file.seek(4)
+        v = _np.fromfile(file, dtype='float32')
+
+    return v[:-1]
+
+
+def savebin(v, filename):
+    """Writes Fortran style binary data"""
+    n = _np.array([4*len(v)], dtype='int32')
+    v = _np.array(v, dtype='float32')
+
+    with open(filename, 'wb') as file:
+        n.tofile(file)
+        v.tofile(file)
+        n.tofile(file)
+
+
+def mychar(fmt):
+    chars = {'int8': 'b',
+             'uint8': 'B',
+             'int16': 'h',
+             'uint16': 'H',
+             'int32': 'i',
+             'uint32': 'I',
+             'int64': 'q',
+             'uint64': 'Q',
+             'float': 'f',
+             'float32': 'f',
+             'double': 'd',
+             'char': 's'}
+    if fmt in chars:
+        return chars[fmt]
+    else:
+        return fmt
 
 def mysize(fmt):
     return _struct.calcsize(mychar(fmt))
