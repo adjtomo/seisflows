@@ -152,9 +152,7 @@ class default(object):
             if PAR.STEPLEN != 0.:
                 alpha = PAR.STEPLEN*cls.step_ratio
         elif PAR.SCHEME in ['GradientDescent', 'ConjugateGradient']:
-            # FIXME: rhs 'alpha' coming from nowhere? Is is a bug or does it
-            #        just need a comment?
-            alpha = 2.*alpha*s_old/s_new
+            alpha *= 2.*s_old/s_new
         else:
             alpha = 1.
 
@@ -244,7 +242,8 @@ class default(object):
         elif PAR.SRCHTYPE == 'FixedStep':
             alpha = cls.step_ratio*(step + 1)*PAR.STEPLEN
 
-        # FIXME: Default case / ValueError ?
+        else:
+            raise ValueError
 
         # write trial model
         savetxt('alpha', alpha)

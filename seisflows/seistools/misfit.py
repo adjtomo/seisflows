@@ -21,20 +21,17 @@ def wtime(wsyn, wobs, nt, dt):
 
 def wampl(wsyn, wobs, nt, dt):
     # cross correlation amplitude
-    # FIXME: unitialized ioff, missing ioff == 0 case
     cc = np.convolve(wobs, np.flipud(wsyn))
     cmax = 0
+    ioff = 0
     for it in range(2*nt-1):
         if cc[it] > cmax:
             cmax = cc[it]
             ioff = it
-    try:
-        if ioff < 0:
-            wdiff = wsyn[ioff:]-wobs[:-ioff]
-        if ioff > 0:
-            wdiff = wsyn[:-ioff]-wobs[ioff:]
-    except ArithmeticError:
-        wdiff = wsyn-wobs
+    if ioff =< 0:
+        wdiff = wsyn[ioff:] - wobs[:-ioff]
+    else:
+        wdiff = wsyn[:-ioff] - wobs[ioff:]
     return np.sqrt(np.sum(wdiff*wdiff*dt))
 
 

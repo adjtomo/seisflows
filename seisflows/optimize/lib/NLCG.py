@@ -27,6 +27,8 @@ class NLCG:
 
     def compute(self):
 
+        # utility functions
+
         def fletcher_reeves():
             # fletcher-reeves update
             top = np.dot(g_new, g_new)
@@ -36,13 +38,16 @@ class NLCG:
 
         def pollak_ribere():
             # pollack-riebere update
-            top = np.dot(g_new, g_new - g_old)
+            top = np.dot(g_new, g_new-g_old)
             bot = np.dot(g_old, g_old)
             beta = top/bot
             return -g_new + beta*p_old
 
         def rho():
             return abs(np.dot(g_new, g_old) / np.dot(g_new, g_new))
+
+
+        # method starts here
 
         self.itercg += 1
         unix.cd(self.path)
@@ -60,9 +65,6 @@ class NLCG:
 
             unix.cd('NLCG')
 
-            # FIXME: do the following two 'if' clauses need to be separated ?
-            #        is it important to know that in some case we have periodic
-            #        restart AND loss of conjugacy?
             if self.itercg > self.itercgmax:
                 # require periodic restarts
                 print 'restarting NLCG... [periodic restart]'
@@ -72,17 +74,17 @@ class NLCG:
             else:
                 p_new = pollak_ribere()
 
-            if rho() > self.thresh:
-                # require orthogonality
-                print 'restarting NLCG... [loss of conjugacy]'
-                self.itercg = 1
-                p_new = -g_new
+                if rho() > self.thresh:
+                    # require orthogonality
+                    print 'restarting NLCG... [loss of conjugacy]'
+                    self.itercg = 1
+                    p_new = -g_new
 
-            elif np.dot(p_new, g_new) > 0:
-                # require descent direction
-                print 'restarting NLCG... [not a descent direction]'
-                self.itercg = 1
-                p_new = -g_new
+                elif np.dot(p_new, g_new) > 0:
+                    # require descent direction
+                    print 'restarting NLCG... [not a descent direction]'
+                    self.itercg = 1
+                    p_new = -g_new
 
         savetxt(self.path+'/'+'NLCG/itercg', self.itercg)
         return p_new

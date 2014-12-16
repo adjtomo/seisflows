@@ -80,11 +80,10 @@ def swindow(s, h, tmin, tmax, alpha=0.05, units='samples'):
         itmin = int(tmin)
         itmax = int(tmax)
 
-    # FIXME: Raise exception or set default values for itmin / itmax ?
+    else:
+        raise ValueError
 
     win = tukeywin(nt, itmin, itmax, alpha)
-
-    # apply window
     for ir in range(0,nr):
         s[:,ir] = win*s[:,ir]
 

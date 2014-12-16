@@ -26,10 +26,11 @@ class LCG:
             self.LBFGS = LBFGS(path+'/'+'LCG', load, save, itermax)
 
     def precond(self, r):
-        # FIXME: Default case for precond_type?
+        # no preconditioner
         if self.precond_type == 0:
             y = r
 
+        # LBFGS without restarts
         elif self.prcond_type == 1:
             if self.iter == 1:
                 self.LBFGS = LBFGS()
@@ -38,6 +39,7 @@ class LCG:
                 self.LBFGS.update()
                 y = self.LBFGS.solve(r)
 
+        # LBFGS with restarts
         elif self.precond_type == 2:
             if self.iter == 1:
                 y = r
