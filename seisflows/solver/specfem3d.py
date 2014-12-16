@@ -191,12 +191,12 @@ class specfem3d(object):
         unix.mkdir('traces/adj')
 
         # copy binaries
-        src = glob(PATH.SOLVER_BINARIES + '/' + '*')
+        src = glob(PATH.SOLVER_BINARIES +'/'+ '*')
         dst = 'bin/'
         unix.cp(src, dst)
 
         # copy input files
-        src = glob(PATH.SOLVER_FILES + '/' + '*')
+        src = glob(PATH.SOLVER_FILES +'/'+ '*')
         dst = 'DATA/'
         unix.cp(src, dst)
 
@@ -222,7 +222,7 @@ class specfem3d(object):
 
         if data_path:
             # copy user supplied data
-            src = glob(data_path + '/' + self.getshot() + '/' + '*')
+            src = glob(data_path +'/'+ self.getshot() +'/'+ '*')
             dst = 'traces/obs/'
             unix.cp(src, dst)
             self.initialize_adjoint()
@@ -246,16 +246,16 @@ class specfem3d(object):
         if model_type == 'gll':
             assert (exists(model_path))
             # copy files
-            src = glob(model_path + '/' + '*')
+            src = glob(model_path +'/'+ '*')
             dst = 'OUTPUT_FILES/DATABASES_MPI/'
             unix.cp(src, dst)
 
         elif model_type == 'sep':
             assert (exists(model_path))
             # copy files
-            src = glob(model_path + '/' + '*')
+            src = glob(model_path +'/'+ '*')
             dst = 'DATA/'
-            unix.cp(glob(model_path + '/' + '*'), 'DATA/')
+            unix.cp(glob(model_path +'/'+ '*'), 'DATA/')
 
         elif model_type == 'default':
             pass
@@ -270,21 +270,22 @@ class specfem3d(object):
         parts = self.load('OUTPUT_FILES/DATABASES_MPI')
         if system.getnode() == 0:
             if model_name and model_type == 'gll':
-                unix.ln(model_path, PATH.OUTPUT + '/' + model_name)
+                unix.ln(model_path, PATH.OUTPUT +'/'+ model_name)
             elif model_name:
-                self.save(PATH.OUTPUT + '/' + model_name, parts)
+                self.save(PATH.OUTPUT +'/'+ model_name, parts)
             if not exists(PATH.MESH):
                 set1 = set(self.model_parameters)
                 set2 = set(self.inversion_parameters)
                 keys = list(set1.difference(set2))
                 for key in keys:
-                    unix.mkdir(PATH.MESH + '/' + key)
+                    unix.mkdir(PATH.MESH +'/'+ key)
                     for proc in range(PAR.NPROC):
-                        with open(PATH.MESH + '/' + key + '/' + '%06d' % proc,
+                        with open(PATH.MESH +'/'+ key +'/'+ '%06d' % proc,
                                   'w') as file:
                             np.save(file, parts[key][proc])
 
-    # -- high-level solver interface
+
+    ### high-level solver interface
 
     def eval_func(self, path='', export_traces=False):
         """ Evaluates misfit function by carrying out forward simulation and
@@ -336,7 +337,8 @@ class specfem3d(object):
         # save results
         self.export_kernels(path)
 
-    # -- low-level solver interface
+
+    ### low-level solver interface
 
     def forward(self):
         """ Calls SPECFEM3D forward solver
@@ -369,7 +371,8 @@ class specfem3d(object):
         self.mpirun('bin/xmeshfem3D')
         self.mpirun('bin/xgenerate_databases')
 
-    # -- model input/output
+
+    ### model input/output
 
     def load(self, dirname, type='model'):
         """ reads SPECFEM3D kernel or model to dictionary
@@ -409,7 +412,8 @@ class specfem3d(object):
                 filename = 'proc%06d_%s.bin' % (ii, key)
                 savebin(parts[key][ii], join(dirname, filename))
 
-    # -- vector/dictionary conversion
+
+    ### vector/dictionary conversion
 
     def merge(self, parts):
         """ merges dictionary into vector
@@ -439,10 +443,11 @@ class specfem3d(object):
                 for i in range(PAR.NPROC):
                     proc = '%06d' % i
                     parts[key].append(
-                        np.load(PATH.MESH + '/' + key + '/' + proc))
+                        np.load(PATH.MESH +'/'+ key +'/'+ proc))
         return parts
 
-    # -- postprocessing utilities
+
+    ### postprocessing utilities
 
     def combine(self, path=''):
         """ combines SPECFEM3D kernels
@@ -456,13 +461,13 @@ class specfem3d(object):
         unix.mkdir('INPUT_KERNELS')
         unix.mkdir('OUTPUT_SUM')
         for dir in dirs:
-            src = path + '/' + dir
-            dst = unix.pwd() + '/' + 'INPUT_KERNELS' + '/' + dir
+            src = path +'/'+ dir
+            dst = unix.pwd() +'/'+ 'INPUT_KERNELS' +'/'+ dir
             unix.ln(src, dst)
 
         # sum kernels
-        self.mpirun(PATH.SOLVER_BINARIES + '/' + 'xsum_kernels')
-        unix.mv('OUTPUT_SUM', path + '/' + 'sum')
+        self.mpirun(PATH.SOLVER_BINARIES +'/'+ 'xsum_kernels')
+        unix.mv('OUTPUT_SUM', path +'/'+ 'sum')
 
         # remove temporary files and directories
         unix.rm('INPUT_KERNELS')
@@ -475,8 +480,8 @@ class specfem3d(object):
         """
         unix.cd(self.path)
 
-        unix.mv(path + '/' + tag, path + '/' + tag + '_nosmooth')
-        unix.mkdir(path + '/' + tag)
+        unix.mv(path +'/'+ tag, path +'/'+ tag + '_nosmooth')
+        unix.mkdir(path +'/'+ tag)
 
         # prepare list
         kernel_list = []
@@ -492,24 +497,25 @@ class specfem3d(object):
                 # run smoothing
                 print ' smoothing', kernel_name
                 self.mpirun(
-                    PATH.SOLVER_BINARIES + '/' + 'xsmooth_sem '
+                    PATH.SOLVER_BINARIES +'/'+ 'xsmooth_sem '
                     + str(span) + ' '
                     + str(span) + ' '
                     + kernel_name + ' '
-                    + path + '/' + tag + '_nosmooth/' + ' '
-                    + path + '/' + tag + '/' + ' ')
+                    + path +'/'+ tag + '_nosmooth/' + ' '
+                    + path +'/'+ tag +'/'+ ' ')
             else:
                 src = glob(
-                    path + '/' + tag + '_nosmooth/*' + kernel_name + '.bin')
-                dst = path + '/' + tag + '/'
+                    path +'/'+ tag + '_nosmooth/*' + kernel_name + '.bin')
+                dst = path +'/'+ tag + '/'
                 unix.cp(src, dst)
 
-        unix.rename('_smooth', '', glob(path + '/' + tag + '/*_smooth.bin'))
+        unix.rename('_smooth', '', glob(path +'/'+ tag + '/*_smooth.bin'))
         print ''
 
         unix.cd(path)
 
-    # -- input file writers
+
+    ### input file writers
 
     def write_parameters(self):
         unix.cd(self.path)
@@ -535,7 +541,8 @@ class specfem3d(object):
         _, h = preprocess.load(dir='traces/obs')
         write_sources(vars(PAR), h)
 
-    # -- file transfer utilities
+
+    ### file transfer utilities
 
     def import_model(self, path):
         src = glob(join(path, 'model', '*'))
@@ -551,8 +558,7 @@ class specfem3d(object):
         if system.getnode() != 0:
             return
         for name in self.model_parameters:
-            src = glob(join(unix.pwd(), 'OUTPUT_FILES/DATABASES_MPI',
-                            '*_' + name + '.bin'))
+            src = glob(join(unix.pwd(), 'OUTPUT_FILES/DATABASES_MPI', '*_'+name+'.bin'))
             dst = path
             unix.mkdir(dst)
             unix.cp(src, dst)
@@ -565,15 +571,15 @@ class specfem3d(object):
         unix.mkdir(join(path, 'kernels', '%06d' % system.getnode()))
         for name in self.kernel_map.values():
             src = join(glob(
-                unix.pwd() + '/' + 'OUTPUT_FILES/DATABASES_MPI'
-                + '/' + '*' + name + '.bin'))
+                unix.pwd() +'/'+ 'OUTPUT_FILES/DATABASES_MPI'
+                +'/'+ '*' + name + '.bin'))
             dst = join(path, 'kernels', '%06d' % system.getnode())
             unix.mv(src, dst)
         try:
             name = 'rhop_kernel'
             src = join(glob(
-                unix.pwd() + '/' + 'OUTPUT_FILES/DATABASES_MPI'
-                + '/' + '*' + name + '.bin'))
+                unix.pwd() +'/'+ 'OUTPUT_FILES/DATABASES_MPI'
+                +'/'+ '*' + name + '.bin'))
             dst = join(path, 'kernels', '%06d' % system.getnode())
             unix.mv(src, dst)
         except OSError:
@@ -603,7 +609,8 @@ class specfem3d(object):
         for channel in ['x', 'y', 'z']:
             self.writer(zeros, h, channel=channel, prefix='traces/adj')
 
-    # -- utility functions
+
+    ### utility functions
 
     def cleanup(self):
         """ Cleans up directory after simulation
@@ -632,7 +639,7 @@ class specfem3d(object):
     def gettype(self):
         try:
             return seistools.specfem3d.getpar(
-                'MODEL', file=PATH.SOLVER_FILES + '/' + 'Par_file')
+                'MODEL', file=PATH.SOLVER_FILES +'/'+ 'Par_file')
         except:
             return None
 

@@ -179,12 +179,12 @@ class specfem2d(object):
 
         # copy binaries
         assert exists(PATH.SOLVER_BINARIES)
-        src = glob(PATH.SOLVER_BINARIES + '/' + '*')
+        src = glob(PATH.SOLVER_BINARIES +'/'+ '*')
         dst = 'bin/'
         unix.cp(src, dst)
 
         # copy input files
-        src = glob(PATH.SOLVER_FILES + '/' + '*')
+        src = glob(PATH.SOLVER_FILES +'/'+ '*')
         dst = 'DATA/'
         unix.cp(src, dst)
 
@@ -210,7 +210,7 @@ class specfem2d(object):
 
         if data_path:
             # copy user supplied data
-            src = glob(data_path + '/' + self.getshot() + '/' + '*')
+            src = glob(data_path +'/'+ self.getshot() +'/'+ '*')
             dst = 'traces/obs/'
             unix.cp(src, dst)
             self.initialize_adjoint()
@@ -236,17 +236,18 @@ class specfem2d(object):
         parts = self.load('DATA/model_velocity.dat_input')
         if system.getnode() == 0:
             if model_name:
-                self.save(PATH.OUTPUT + '/' + model_name, parts)
+                self.save(PATH.OUTPUT +'/'+ model_name, parts)
             if not exists(PATH.MESH):
                 for key in setdiff(['x', 'z', 'rho', 'vp', 'vs'],
                                    self.inversion_parameters):
-                    unix.mkdir(PATH.MESH + '/' + key)
+                    unix.mkdir(PATH.MESH +'/'+ key)
                     for proc in range(PAR.NPROC):
-                        with open(PATH.MESH + '/' + key + '/' + '%06d' % proc,
+                        with open(PATH.MESH +'/'+ key +'/'+ '%06d' % proc,
                                   'w') as file:
                             np.save(file, parts[key][proc])
 
-    # -- high-level solver interface
+
+    ### high-level solver interface
 
     def eval_func(self, path='', export_traces=False):
         """ Evaluates misfit function by carrying out forward simulation and
@@ -299,7 +300,8 @@ class specfem2d(object):
         # save results
         self.export_kernels(path)
 
-    # -- low-level solver interface
+
+    ### low-level solver interface
 
     def forward(self):
         """ Calls forward solver
@@ -333,7 +335,8 @@ class specfem2d(object):
         with open('log.adj', 'w') as f:
             subprocess.call(self.mesher_binary, stdout=f)
 
-    # -- model input/output
+
+    ### model input/output
 
     def load(self, filename, type=''):
         """Reads SPECFEM2D kernel or model
@@ -387,7 +390,8 @@ class specfem2d(object):
         # write array
         np.savetxt(filename, M, '%10.4e')
 
-    # -- vector/dictionary conversion
+
+    ### vector/dictionary conversion
 
     def merge(self, parts):
         """merges parts into vector"""
@@ -416,15 +420,16 @@ class specfem2d(object):
                 for i in range(PAR.NPROC):
                     proc = '%06d' % i
                     parts[key].append(
-                        np.load(PATH.MESH + '/' + key + '/' + proc))
+                        np.load(PATH.MESH +'/'+ key +'/'+ proc))
         return parts
 
-    # -- postprocessing utilities
+
+    ### postprocessing utilities
 
     def combine(self, path=''):
         """combines SPECFEM2D kernels"""
         subprocess.call(
-            [self.path + '/' + 'bin/xsmooth_sem'] +
+            [self.path +'/'+ 'bin/xsmooth_sem'] +
             [str(len(unix.ls(path)))] +
             [path])
 
@@ -432,7 +437,7 @@ class specfem2d(object):
         """smooths SPECFEM2D kernels by convolving them with a Gaussian"""
         from seisflows.tools.array import meshsmooth
 
-        parts = self.load(path + '/' + tag)
+        parts = self.load(path +'/'+ tag)
         if not span:
             return parts
 
@@ -448,10 +453,11 @@ class specfem2d(object):
         # perform smoothing
         for key in self.inversion_parameters:
             parts[key] = [meshsmooth(x, z, parts[key][0], span, nx, nz)]
-        unix.mv(path + '/' + tag, path + '/' + tag + '_nosmooth')
-        self.save(path + '/' + tag, parts)
+        unix.mv(path +'/'+ tag, path +'/'+ tag + '_nosmooth')
+        self.save(path +'/'+ tag, parts)
 
-    # -- file transfer utilities
+
+    ### file transfer utilities
 
     def import_model(self, path):
         src = join(path, 'model')
@@ -468,8 +474,7 @@ class specfem2d(object):
             unix.mkdir(join(path, 'kernels'))
         except OSError:
             pass
-        src = join(unix.pwd(),
-                   'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
+        src = join(unix.pwd(), 'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
         dst = join(path, 'kernels', '%06d' % system.getnode())
         unix.cp(src, dst)
 
@@ -497,7 +502,8 @@ class specfem2d(object):
         for channel in ['x', 'y', 'z']:
             self.writer(zeros, h, channel=channel, prefix='traces/adj')
 
-    # -- utility functions
+
+    ### utility functions
 
     @property
     def path(self):
