@@ -450,7 +450,7 @@ class specfem3d_globe(object):
             if key in self.inversion_parameters:
                 for i in range(PAR.NPROC):
                     imin = nrow*PAR.NPROC*j + nrow*i
-                    imax = nrow*PAR.NPROC*j + nrow*(i + 1)
+                    imax = nrow*PAR.NPROC*j + nrow*(i+1)
                     i += 1
                     parts[key].append(v[imin:imax])
                 j += 1
@@ -475,9 +475,9 @@ class specfem3d_globe(object):
             if key not in self.inversion_parameters:
                 for i in range(PAR.NPROC):
                     proc = '%06d' % i
+                    name = self.kernel_map[key]
                     src = PATH.MESH +'/'+ key +'/'+ proc
-                    dst = path +'/'+ 'sum' +'/'+ 'proc' + proc + '_' + \
-                        self.kernel_map[key] + '.bin'
+                    dst = path +'/'+ 'sum' +'/'+ 'proc'+proc+'_'+name+'.bin'
                     savebin(np.load(src), dst)
 
         # create temporary files and directories needed by xsum_kernels
@@ -600,29 +600,27 @@ class specfem3d_globe(object):
     def export_kernels(self, path):
         try:
             unix.mkdir(join(path, 'kernels'))
-        except OSError:
+        except IOError:
             pass
         unix.mkdir(join(path, 'kernels', '%06d' % system.getnode()))
         for name in self.kernel_map.values():
             src = join(glob(
-                unix.pwd() +'/'+ 'OUTPUT_FILES/DATABASES_MPI'
-                +'/'+ '*' + name + '.bin'))
+                unix.pwd() +'/'+ 'OUTPUT_FILES/DATABASES_MPI' +'/'+ '*'+name+'.bin'))
             dst = join(path, 'kernels', '%06d' % system.getnode())
             unix.mv(src, dst)
         try:
             name = 'rhop_kernel'
             src = join(glob(
-                unix.pwd() +'/'+ 'OUTPUT_FILES/DATABASES_MPI'
-                +'/'+ '*' + name + '.bin'))
+                unix.pwd() +'/'+ 'OUTPUT_FILES/DATABASES_MPI' +'/'+ '*'+name+'.bin'))
             dst = join(path, 'kernels', '%06d' % system.getnode())
             unix.mv(src, dst)
-        except OSError:
+        except IOError:
             pass
 
     def export_residuals(self, path):
         try:
             unix.mkdir(join(path, 'residuals'))
-        except OSError:
+        except IOError:
             pass
         src = join(unix.pwd(), 'residuals')
         dst = join(path, 'residuals', '%06d' % system.getnode())
@@ -631,7 +629,7 @@ class specfem3d_globe(object):
     def export_traces(self, path, prefix='traces/obs'):
         try:
             unix.mkdir(join(path, 'traces'))
-        except OSError:
+        except IOError:
             pass
         src = join(unix.pwd(), prefix)
         dst = join(path, 'traces', '%06d' % system.getnode())

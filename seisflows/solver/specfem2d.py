@@ -361,7 +361,7 @@ class specfem2d(object):
         # fill in dictionary
         parts = {}
         for key in ['x', 'z', 'rho', 'vp', 'vs']:
-            parts[key] = [M[:, ioff]]
+            parts[key] = [M[:,ioff]]
             ioff += 1
         return parts
 
@@ -385,7 +385,7 @@ class specfem2d(object):
 
         # fill in array
         for icol, key in enumerate(['x', 'z', 'rho', 'vp', 'vs']):
-            M[:, icol + ioff] = parts[key][0]
+            M[:,icol+ioff] = parts[key][0]
 
         # write array
         np.savetxt(filename, M, '%10.4e')
@@ -412,7 +412,7 @@ class specfem2d(object):
             if key in self.inversion_parameters:
                 for i in range(PAR.NPROC):
                     imin = nrow*PAR.NPROC*j + nrow*i
-                    imax = nrow*PAR.NPROC*j + nrow*(i + 1)
+                    imax = nrow*PAR.NPROC*j + nrow*(i+1)
                     i += 1
                     parts[key].append(v[imin:imax])
                 j += 1

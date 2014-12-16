@@ -435,7 +435,7 @@ class specfem3d(object):
             if key in self.inversion_parameters:
                 for i in range(PAR.NPROC):
                     imin = nrow*PAR.NPROC*j + nrow*i
-                    imax = nrow*PAR.NPROC*j + nrow*(i + 1)
+                    imax = nrow*PAR.NPROC*j + nrow*(i+1)
                     i += 1
                     parts[key].append(v[imin:imax])
                 j += 1
