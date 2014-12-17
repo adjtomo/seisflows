@@ -29,11 +29,14 @@ def cp(src='', dst='', opt=''):
 
         for sub in src:
             cp(sub, dst)
-
         return
 
     if isdir(dst):
         dst = join(dst, basename(src))
+        if isdir(dst):
+            for sub in ls(src):
+                cp(join(src,sub), dst)
+            return
 
     if isfile(src):
         _shutil.copy(src, dst)
