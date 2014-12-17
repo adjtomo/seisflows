@@ -119,23 +119,23 @@ class migration(object):
     # -- utility functions
 
     def prepare_model(self):
-        model = PATH.OUTPUT + '/' + 'model_init'
+        model = PATH.OUTPUT +'/'+ 'model_init'
         assert exists(model)
-        unix.cp(model, PATH.IMAGE + '/' + 'model')
+        unix.cp(model, PATH.IMAGE +'/'+ 'model')
 
     def save_image(self):
-        src = glob(join(PATH.IMAGE, 'image*'))
-        dst = join(PATH.OUTPUT)
+        src = glob(PATH.IMAGE +'/'+ 'image*')
+        dst = PATH.OUTPUT
         unix.mv(src, dst)
 
     def save_kernels(self):
-        src = join(PATH.IMAGE, 'kernels')
-        dst = join(PATH.OUTPUT)
+        src = PATH.IMAGE +'/'+ 'kernels'
+        dst = PATH.OUTPUT
         unix.mkdir(dst)
         unix.mv(src, dst)
 
     def save_traces(self):
-        src = join(PATH.IMAGE, 'traces')
-        dst = join(PATH.OUTPUT)
+        src = PATH.IMAGE +'/'+ 'traces'
+        dst = PATH.OUTPUT
         unix.mv(src, dst)
 

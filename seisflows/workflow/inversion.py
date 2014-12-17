@@ -159,8 +159,8 @@ class inversion(object):
                        hosts='all')
 
             # prepare starting model
-            src = PATH.OUTPUT + '/' + 'model_init'
-            dst = PATH.OPTIMIZE + '/' + 'm_new'
+            src = PATH.OUTPUT +'/'+ 'model_init'
+            dst = PATH.OPTIMIZE +'/'+ 'm_new'
             savenpy(dst, solver.merge(solver.load(src)))
 
         else:
@@ -251,7 +251,7 @@ class inversion(object):
 
         postprocess.process_kernels(
             path=PATH.GRAD,
-            optim_path=PATH.OPTIMIZE + '/' + 'g_new')
+            optim_path=PATH.OPTIMIZE +'/'+ 'g_new')
 
     def finalize(self):
         """ Saves results from most recent model update iteration
@@ -294,19 +294,19 @@ class inversion(object):
         """ Writes model in format used by solver
         """
         unix.mkdir(path)
-        src = PATH.OPTIMIZE + '/' + 'm_' + suffix
-        dst = path + '/' + 'model'
+        src = PATH.OPTIMIZE +'/'+ 'm_' + suffix
+        dst = path +'/'+ 'model'
         parts = solver.split(loadnpy(src))
         solver.save(dst, parts)
 
     def sum_residuals(self, path='', suffix=''):
         """ Sums residuals to obtain misfit function value
         """
-        src = path + '/' + 'residuals'
-        dst = PATH.OPTIMIZE + '/' + 'f_' + suffix
+        src = path +'/'+ 'residuals'
+        dst = PATH.OPTIMIZE +'/'+ 'f_' + suffix
         residuals = []
         for file in unix.ls(src):
-            fromfile = np.loadtxt(src + '/' + file)
+            fromfile = np.loadtxt(src +'/'+ file)
             residuals.append(fromfile**2.)
         np.savetxt(dst, [np.sum(residuals)])
 
@@ -322,7 +322,7 @@ class inversion(object):
         return isready
 
     def save_model(self):
-        src = PATH.OPTIMIZE + '/' + 'm_new'
+        src = PATH.OPTIMIZE +'/'+ 'm_new'
         dst = join(PATH.OUTPUT, 'model_%04d' % self.iter)
         solver.save(dst, solver.split(loadnpy(src)))
 
