@@ -6,13 +6,15 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 OBJ = ConfigObj('SeisflowsObjects')
 
-PAR.update(loadvars('parameters','.'))
-PATH.update(loadvars('paths','.'))
-
 
 if __name__ == '__main__':
     """ Loads and checks parameters and objects and submits SeisFlows workflow
     """
+
+    # load parameters from working directory
+    PAR.update(loadvars('parameters','.'))
+    PATH.update(loadvars('paths','.'))
+
 
     # check parameters
     if 'SYSTEM' not in PAR:
