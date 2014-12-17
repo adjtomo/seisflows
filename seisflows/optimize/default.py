@@ -88,10 +88,11 @@ class default(object):
 
         # prepare output writer
         cls.writer = OutputWriter(PATH.SUBMIT + '/' + 'output.optim',
-                                  ['iter', 'step len', 'data fit'])
+                                  ['iter', 'steplen', 'datafit'])
 
     def compute_direction(cls):
-        """ Computes model update direction from function and gradient values
+        """ Computes model update direction from stored function and gradient 
+          values
         """
         unix.cd(cls.path)
         m_new = loadnpy('m_new')
