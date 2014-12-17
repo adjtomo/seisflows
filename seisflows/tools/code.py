@@ -79,8 +79,7 @@ def savejson(filename, obj):
 def setdiff(list1, list2):
     set1 = set(list1)
     set2 = set(list2)
-    diff = set1.difference(set2)
-    return list(diff)
+    return set1.difference(set2)
 
 
 def unique(mylist):
@@ -88,11 +87,11 @@ def unique(mylist):
     return list(set(mylist))
 
 
-#
-
 def loadtxt(filename):
+    """Load scalar from text file"""
     return float(np.loadtxt(filename))
 
 
 def savetxt(filename, v):
+    """Save scalar to text file"""
     np.savetxt(filename, [v], '%11.6e')
