@@ -117,23 +117,6 @@ class BinaryWriter(object):
             self.write(fmt, val, length)
 
 
-class LazyDict(Mapping):
-    def __init__(self, reader):
-        self.reader = reader
-        self.keys = set()
-
-    def __getitem__(self, key):
-        self.keys.add(key)
-        val = self.reader(key)
-        return val
-
-    def __iter__(self):
-        return self.keys
-
-    def __len__(self):
-        return len(self.keys)
-
-
 class OutputWriter(object):
     def __init__(self, filename, keys):
 

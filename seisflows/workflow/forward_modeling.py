@@ -51,7 +51,7 @@ class forward_modeling(object):
 
         print 'Preparing solver directories...'
 
-        system.run('solver', 'prepare_dirs',
+        system.run('solver', 'setup',
                    hosts='all')
 
         print 'Running solver...'

@@ -16,6 +16,27 @@ class SeisStruct(Struct):
              ['nrec', nrec], ['nsrc', nsrc]])
 
 
+class ModelStuct(Mapping):
+    def __init__(self, reader):
+        self.reader = reader
+        self.keys = set()
+
+    def __getitem__(self, key, verbose=False):
+        self.keys.add(key)
+        val = self.reader(key)
+
+        if verbose:
+            print '%s: %e %e' % (key, val.min(), val.max())
+
+        return val
+
+    def __iter__(self):
+        return self.keys
+
+    def __len__(self):
+        return len(self.keys)
+
+
 def loadascii(dir):
     wildcard = os.path.join(dir, '*.ascii')
     model = {}
