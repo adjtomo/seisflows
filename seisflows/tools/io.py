@@ -158,7 +158,7 @@ class OutputWriter(object):
     def _getline(self, val):
         if val == '':
             return 12*' '
-        if not val:
+        if val == []:
             return 12*' '
         if type(val) is int:
             return '%10d  ' % val
