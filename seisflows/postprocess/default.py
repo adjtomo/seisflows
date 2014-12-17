@@ -36,14 +36,18 @@ class default(object):
         import system
 
         # check postprocessing settings
-        if 'PRECOND' not in PATH:
-            setattr(PATH, 'PRECOND', None)
+        if 'CLIP' not in PAR:
+            setattr(PAR, 'CLIP', 0.)
 
         if 'SMOOTH' not in PAR:
             setattr(PAR, 'SMOOTH', 0.)
 
+        if 'PRECOND' not in PATH:
+            setattr(PATH, 'PRECOND', None)
+
         if 'SCALE' not in PAR:
             setattr(PAR, 'SCALE', 1.)
+
 
     def process_kernels(self, tag='grad', path=None, optim_path=None):
         """ Computes gradient and performs smoothing, preconditioning, and then
@@ -62,6 +66,10 @@ class default(object):
         m = solver.merge(solver.load('../model', type='model'))
         g *= m
         solver.save(path + '/' + tag, solver.split(g))
+
+        # apply clipping
+        if PAR.CLIP > 0.:
+            raise NotImplementedError
 
         # apply smoothing
         if PAR.SMOOTH > 0.:
