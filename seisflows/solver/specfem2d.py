@@ -124,12 +124,12 @@ class specfem2d(object):
           generated on the fly. In both cases, all necessary SPECFEM2D input
           files must be provided.
         """
-        unix.rm(self.event_path)
+        unix.rm(self.spath)
 
         # prepare data
         if PATH.DATA:
             self.initialize_solver_directories()
-            src = glob(PATH.DATA +'/'+ self.event_name +'/'+ '*')
+            src = glob(PATH.DATA +'/'+ self.sname +'/'+ '*')
             dst = 'traces/obs/'
             unix.cp(src, dst)
 
@@ -154,7 +154,7 @@ class specfem2d(object):
         """
         self.generate_mesh(**model_kwargs)
 
-        unix.cd(self.event_path)
+        unix.cd(self.spath)
         solvertools.setpar('SIMULATION_TYPE', '1')
         solvertools.setpar('SAVE_FORWARD', '.true.')
         self.mpirun('bin/xmeshfem2d')
@@ -182,12 +182,12 @@ class specfem2d(object):
         """ Evaluates misfit function by carrying out forward simulation and
             making measurements on observations and synthetics.
         """
-        unix.cd(self.event_path)
+        unix.cd(self.spath)
         self.import_model(path)
 
         self.forward()
         unix.mv(self.wildcard, 'traces/syn')
-        preprocess.prepare_eval_grad(self.event_path)
+        preprocess.prepare_eval_grad(self.spath)
 
         self.export_residuals(path)
         if export_traces:
@@ -198,7 +198,7 @@ class specfem2d(object):
         """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
             must be in place prior to calling this method.
         """
-        unix.cd(self.event_path)
+        unix.cd(self.spath)
 
         self.adjoint()
 
@@ -210,12 +210,12 @@ class specfem2d(object):
     def apply_hess(self, path='', hessian='Newton'):
         """ Evaluates action of Hessian on a given model vector.
         """
-        unix.cd(self.event_path)
+        unix.cd(self.spath)
         self.imprt(path, 'model')
 
         self.forward()
         unix.mv(self.wildcard, 'traces/lcg')
-        preprocess.prepare_apply_hess(self.event_path)
+        preprocess.prepare_apply_hess(self.spath)
         self.adjoint()
 
         self.export_kernels(path)
@@ -346,7 +346,7 @@ class specfem2d(object):
     def combine(self, path=''):
         """combines SPECFEM2D kernels"""
         subprocess.call(
-            [self.event_path +'/'+ 'bin/xsmooth_sem'] +
+            [self.spath +'/'+ 'bin/xsmooth_sem'] +
             [str(len(unix.ls(path)))] +
             [path])
 
@@ -379,17 +379,17 @@ class specfem2d(object):
 
     def import_model(self, path):
         src = join(path +'/'+ 'model')
-        dst = join(self.event_path, 'DATA/model_velocity.dat_input')
+        dst = join(self.spath, 'DATA/model_velocity.dat_input')
         unix.cp(src, dst)
 
     def import_traces(self, path):
-        src = glob(join(path, 'traces', self.event_name, '*'))
-        dst = join(self.event_path, 'traces/obs')
+        src = glob(join(path, 'traces', self.sname, '*'))
+        dst = join(self.spath, 'traces/obs')
         unix.cp(src, dst)
 
     def export_model(self, path):
         if system.getnode() == 0:
-            src = join(self.event_path, 'DATA/model_velocity.dat_input')
+            src = join(self.spath, 'DATA/model_velocity.dat_input')
             dst = path
             unix.cp(src, dst)
 
@@ -398,8 +398,8 @@ class specfem2d(object):
             unix.mkdir(join(path, 'kernels'))
         except:
             pass
-        src = join(self.event_path, 'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
-        dst = join(path, 'kernels', self.event_name)
+        src = join(self.spath, 'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
+        dst = join(path, 'kernels', self.sname)
         unix.cp(src, dst)
 
     def export_residuals(self, path):
@@ -407,8 +407,8 @@ class specfem2d(object):
             unix.mkdir(join(path, 'residuals'))
         except:
             pass
-        src = join(self.event_path, 'residuals')
-        dst = join(path, 'residuals', self.event_name)
+        src = join(self.spath, 'residuals')
+        dst = join(path, 'residuals', self.sname)
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
@@ -416,8 +416,8 @@ class specfem2d(object):
             unix.mkdir(join(path, 'traces'))
         except:
             pass
-        src = join(self.event_path, prefix)
-        dst = join(path, 'traces', self.event_name)
+        src = join(self.spath, prefix)
+        dst = join(path, 'traces', self.sname)
         unix.cp(src, dst)
 
 
@@ -429,8 +429,8 @@ class specfem2d(object):
           by user as there is currently no mechanism to automatically compile 
           from source.
         """
-        unix.mkdir(self.event_path)
-        unix.cd(self.event_path)
+        unix.mkdir(self.spath)
+        unix.cd(self.spath)
 
         # create directory structure
         unix.mkdir('bin')
@@ -452,7 +452,7 @@ class specfem2d(object):
         dst = 'DATA/'
         unix.cp(src, dst)
 
-        src = 'DATA/SOURCE_' + self.event_name
+        src = 'DATA/SOURCE_' + self.sname
         dst = 'DATA/SOURCE'
         unix.cp(src, dst)
 
@@ -507,11 +507,11 @@ class specfem2d(object):
     ### input file writers
 
     def write_parameters(self):
-        unix.cd(self.event_path)
+        unix.cd(self.spath)
         write_parameters(vars(PAR))
 
     def write_receivers(self):
-        unix.cd(self.event_path)
+        unix.cd(self.spath)
         key = 'use_existing_STATIONS'
         val = '.true.'
         solvertools.setpar(key, val)
@@ -519,7 +519,7 @@ class specfem2d(object):
         write_receivers(h.nr, h.rx, h.rz)
 
     def write_sources(self):
-        unix.cd(self.event_path)
+        unix.cd(self.spath)
         _, h = preprocess.load(dir='traces/obs')
         write_sources(vars(PAR), h)
 
@@ -536,16 +536,19 @@ class specfem2d(object):
                 stdout=f)
 
     @property
-    def event_list(self):
+    def slist(self):
+        """list of all sources"""
         return NotImplementedError
 
     @ property
-    def event_name(self):
+    def sname(self):
+        """name of current source"""
         return '%06d' % system.getnode()
 
     @property
-    def event_path(self):
-        return join(PATH.SOLVER, self.event_name)
+    def spath(self):
+        """path of current source"""
+        return join(PATH.SOLVER, self.sname)
 
     @property
     def wildcard(self):
@@ -553,6 +556,6 @@ class specfem2d(object):
 
     @property
     def databases(self):
-        return join(self.event_path, 'OUTPUT_FILES/DATABASES_MPI')
+        return join(self.spath, 'OUTPUT_FILES/DATABASES_MPI')
 
 
