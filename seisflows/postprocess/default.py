@@ -49,7 +49,7 @@ class default(object):
             setattr(PAR, 'SCALE', 1.)
 
 
-    def process_kernels(self, tag='grad', path=None, optim_path=None):
+    def process_kernels(self, tag='grad', path=None):
         """ Computes gradient and performs smoothing, preconditioning, and then
             scaling operations
         """
@@ -93,6 +93,6 @@ class default(object):
             g *= PAR.SCALE
             solver.save(tag, solver.split(g))
 
-        if optim_path:
-            savenpy(optim_path, g)
+        if 'OPTIMIZE' in PATH:
+            savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 

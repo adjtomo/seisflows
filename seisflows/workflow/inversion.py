@@ -250,8 +250,7 @@ class inversion(object):
                    export_traces=divides(self.iter, PAR.SAVETRACES))
 
         postprocess.process_kernels(
-            path=PATH.GRAD,
-            optim_path=PATH.OPTIMIZE +'/'+ 'g_new')
+            path=PATH.GRAD)
 
     def finalize(self):
         """ Saves results from most recent model update iteration
