@@ -540,8 +540,7 @@ class specfem3d(object):
             except:
                 return
             if not exists(path):
-                for key in inversion_set:
-                    savenpy(path, self.merge(parts))
+                savenpy(path, self.merge(parts))
             #if not exists(path):
             #    for key in inversion_set:
             #        unix.mkdir(path +'/'+ key)
