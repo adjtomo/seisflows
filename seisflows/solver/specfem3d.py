@@ -16,7 +16,7 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 
-class specfem3d_debug(object):
+class specfem3d(object):
     """ Python interface for SPECFEM3D
 
       eval_func, eval_grad, apply_hess
@@ -273,7 +273,6 @@ class specfem3d_debug(object):
 
         # read database files
         parts = {}
-        print dirname
         for key in self.model_parameters:
             parts[key] = []
             for iproc in range(PAR.NPROC):
