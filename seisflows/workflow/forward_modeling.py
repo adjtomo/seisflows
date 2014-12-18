@@ -49,14 +49,9 @@ class forward_modeling(object):
         """ Generates seismic data
         """
 
-        print 'Preparing solver directories...'
-
-        system.run('solver', 'setup',
-                   hosts='all')
-
         print 'Running solver...'
 
-        system.run('solver', 'prepare_data',
+        system.run('solver', 'generate_data',
                    hosts='all',
                    model_path=PATH.MODEL,
                    model_type='gll',

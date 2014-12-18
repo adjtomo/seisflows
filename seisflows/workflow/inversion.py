@@ -159,9 +159,9 @@ class inversion(object):
                        hosts='all')
 
             # prepare starting model
-            src = PATH.OUTPUT +'/'+ 'model_init'
-            dst = PATH.OPTIMIZE +'/'+ 'm_new'
-            savenpy(dst, solver.merge(solver.load(src)))
+            #src = PATH.OUTPUT +'/'+ 'model_init'
+            #dst = PATH.OPTIMIZE +'/'+ 'm_new'
+            #savenpy(dst, solver.merge(solver.load(src)))
 
         else:
             # prepare optimization and solver directories
