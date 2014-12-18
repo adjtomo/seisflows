@@ -172,8 +172,8 @@ class specfem2d(object):
         assert (exists(model_path))
 
         self.initialize_solver_directories()
-        unix.cd(self.event_path)
         unix.cp(model_path, 'DATA/model_velocity.dat_input')
+        self.export_model(PATH.OUTPUT +'/'+ model_name)
 
 
     ### high-level solver interface
@@ -378,25 +378,28 @@ class specfem2d(object):
     ### file transfer utilities
 
     def import_model(self, path):
-        src = join(path, 'model')
-        dst = join(unix.pwd(), 'DATA/model_velocity.dat_input')
+        src = join(path +'/'+ 'model')
+        dst = join(self.event_path, 'DATA/model_velocity.dat_input')
         unix.cp(src, dst)
 
     def import_traces(self, path):
         src = glob(join(path, 'traces', self.event_name, '*'))
-        dst = join(unix.pwd(), 'traces/obs')
+        dst = join(self.event_path, 'traces/obs')
         unix.cp(src, dst)
 
     def export_model(self, path):
-        pass
+        if system.getnode() == 0:
+            src = join(self.event_path, 'DATA/model_velocity.dat_input')
+            dst = path
+            unix.cp(src, dst)
 
     def export_kernels(self, path):
         try:
             unix.mkdir(join(path, 'kernels'))
         except:
             pass
-        src = join(unix.pwd(), 'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
-        dst = join(path, 'kernels', '%06d' % system.getnode())
+        src = join(self.event_path, 'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
+        dst = join(path, 'kernels', self.event_name)
         unix.cp(src, dst)
 
     def export_residuals(self, path):
@@ -404,7 +407,7 @@ class specfem2d(object):
             unix.mkdir(join(path, 'residuals'))
         except:
             pass
-        src = join(unix.pwd(), 'residuals')
+        src = join(self.event_path, 'residuals')
         dst = join(path, 'residuals', self.event_name)
         unix.mv(src, dst)
 
@@ -413,7 +416,7 @@ class specfem2d(object):
             unix.mkdir(join(path, 'traces'))
         except:
             pass
-        src = join(unix.pwd(), prefix)
+        src = join(self.event_path, prefix)
         dst = join(path, 'traces', self.event_name)
         unix.cp(src, dst)
 
