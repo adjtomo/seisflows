@@ -416,17 +416,16 @@ class specfem3d(object):
 
     def import_traces(self, path):
         src = glob(join(path, 'traces', self.event_name, '*'))
-        dst = join(unix.pwd(), 'traces/obs')
+        dst = join(self.event_path, 'traces/obs')
         unix.cp(src, dst)
 
     def export_model(self, path):
-        if system.getnode() != 0:
-            return
-        for name in self.model_parameters:
-            src = glob(join(self.databases, '*_'+name+'.bin'))
-            dst = path
-            unix.mkdir(dst)
-            unix.cp(src, dst)
+        if system.getnode() == 0:
+            for name in self.model_parameters:
+                src = glob(join(self.databases, '*_'+name+'.bin'))
+                dst = path
+                unix.mkdir(dst)
+                unix.cp(src, dst)
 
     def export_kernels(self, path):
         try:
@@ -452,7 +451,7 @@ class specfem3d(object):
             unix.mkdir(join(path, 'residuals'))
         except:
             pass
-        src = join(unix.pwd(), 'residuals')
+        src = join(self.event_path, 'residuals')
         dst = join(path, 'residuals', self.event_name)
         unix.mv(src, dst)
 
@@ -461,7 +460,7 @@ class specfem3d(object):
             unix.mkdir(join(path, 'traces'))
         except:
             pass
-        src = join(unix.pwd(), prefix)
+        src = join(self.event_path, prefix)
         dst = join(path, 'traces', self.event_name)
         unix.cp(src, dst)
 
