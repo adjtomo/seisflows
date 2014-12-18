@@ -28,10 +28,10 @@ class migration(object):
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
 
-        if 'IMAGE' not in PATH:
-            setattr(PATH, 'IMAGE', join(PATH.GLOBAL, 'image'))
+        if 'OUTPUT' not in PATH:
+            raise Exception
 
-        # check input paths
+        # check input
         if 'DATA' not in PATH:
             setattr(PATH, 'DATA', None)
 
@@ -41,10 +41,7 @@ class migration(object):
         if 'MODEL_INIT' not in PATH:
             raise Exception
 
-        # check output paths
-        if 'OUTPUT' not in PATH:
-            raise Exception
-
+        # check output
         if 'SAVEIMAGE' not in PAR:
             setattr(PAR, 'SAVEIMAGE', 1)
 
@@ -79,7 +76,6 @@ class migration(object):
         # prepare directory structure
         unix.rm(PATH.GLOBAL)
         unix.mkdir(PATH.GLOBAL)
-        unix.mkdir(PATH.IMAGE)
 
         # prepare solver
         print 'Preparing solver...'
@@ -90,18 +86,18 @@ class migration(object):
 
         system.run('solver', 'eval_func',
                    hosts='all',
-                   path=PATH.IMAGE)
+                   path=PATH.GLOBAL)
 
         # backproject data
         print 'Backprojecting data...'
         system.run('solver', 'eval_grad',
                    hosts='all',
-                   path=PATH.IMAGE,
+                   path=PATH.GLOBAL,
                    export_traces=PAR.SAVETRACES)
 
         # process image
         postprocess.process_kernels(
-            path=PATH.IMAGE,
+            path=PATH.GLOBAL,
             tag='image')
 
         # save results
@@ -121,21 +117,21 @@ class migration(object):
     def prepare_model(self):
         model = PATH.OUTPUT +'/'+ 'model_init'
         assert exists(model)
-        unix.cp(model, PATH.IMAGE +'/'+ 'model')
+        unix.cp(model, PATH.GLOBAL +'/'+ 'model')
 
     def save_image(self):
-        src = glob(PATH.IMAGE +'/'+ 'image*')
+        src = glob(PATH.GLOBAL +'/'+ 'image*')
         dst = PATH.OUTPUT
         unix.mv(src, dst)
 
     def save_kernels(self):
-        src = PATH.IMAGE +'/'+ 'kernels'
+        src = PATH.GLOBAL +'/'+ 'kernels'
         dst = PATH.OUTPUT
         unix.mkdir(dst)
         unix.mv(src, dst)
 
     def save_traces(self):
-        src = PATH.IMAGE +'/'+ 'traces'
+        src = PATH.GLOBAL +'/'+ 'traces'
         dst = PATH.OUTPUT
         unix.mv(src, dst)
 
