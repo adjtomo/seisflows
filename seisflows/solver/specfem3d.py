@@ -273,7 +273,7 @@ class specfem3d(object):
                 unix.ln(model_path, PATH.OUTPUT +'/'+ model_name)
             elif model_name:
                 self.save(PATH.OUTPUT +'/'+ model_name, parts)
-            if not exists(PATH.MESH):
+            if model_name == 'model_init':
                 set1 = set(self.model_parameters)
                 set2 = set(self.inversion_parameters)
                 keys = list(set1.difference(set2))
@@ -293,6 +293,7 @@ class specfem3d(object):
         """
         unix.cd(self.path)
         self.import_model(path)
+        self.load(path+'/'+'model') # DEBUG
 
         # forward simulation
         self.forward()
@@ -377,28 +378,30 @@ class specfem3d(object):
     def load(self, dirname, type='model'):
         """ reads SPECFEM3D kernel or model to dictionary
         """
-        mapping = lambda key: self.kernel_map[key]
-        parts = {}
-
         if type == 'model':
-            for key in self.model_parameters:
-                parts[key] = []
-                # read database files
-                for iproc in range(PAR.NPROC):
-                    filename = 'proc%06d_%s.bin' % (iproc, key)
-                    part = loadbin(join(dirname, filename))
-                    parts[key].append(part)
-
+            mapping = lambda key: key
         elif type == 'kernel':
-            for key in self.model_parameters:
-                parts[key] = []
-                # read database files
-                for iproc in range(PAR.NPROC):
-                    filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
-                    part = loadbin(join(dirname, filename))
-                    parts[key].append(part)
+            mapping = lambda key: self.kernel_map[key]
+        else:
+            raise ValueError
 
+        # read database files
+        parts = {}
+        print dirname
+        for key in self.model_parameters:
+            minval = +np.Inf
+            maxval = -np.Inf
+            parts[key] = []
+            for iproc in range(PAR.NPROC):
+                filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
+                part = loadbin(join(dirname, filename))
+                parts[key].append(part)
+                if part.min() < minval: minval = part.min() # DEBUG
+                if part.max() > maxval: maxval = part.max() # DEBUG
+            print key, 'min, max:', minval, maxval # DEBUG
+        print ''
         return parts
+
 
     def save(self, dirname, parts):
         """ writes SPECFEM3D model

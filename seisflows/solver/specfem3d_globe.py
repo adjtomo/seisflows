@@ -291,7 +291,7 @@ class specfem3d_globe(object):
                 unix.ln(model_path, PATH.OUTPUT +'/'+ model_name)
             elif model_name:
                 self.save(PATH.OUTPUT +'/'+ model_name, parts)
-            if not exists(PATH.MESH):
+            if model_name == 'model_init':
                 set1 = set(self.model_parameters)
                 set2 = set(self.inversion_parameters)
                 keys = list(set1.difference(set2))
