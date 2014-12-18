@@ -57,12 +57,6 @@ class specfem3d_globe(object):
         model_parameters += ['reg1_rho']
         model_parameters += ['reg1_vp']
         model_parameters += ['reg1_vs']
-        # model_parameters += ['reg2_rho']
-        # model_parameters += ['reg2_vp']
-        # model_parameters += ['reg2_vs']
-        # model_parameters += ['reg3_rho']
-        # model_parameters += ['reg3_vp']
-        # model_parameters += ['reg3_vs']
 
         inversion_parameters = []
         inversion_parameters += ['reg1_rho']
@@ -73,12 +67,6 @@ class specfem3d_globe(object):
             'reg1_rho': 'reg1_rho_kernel',
             'reg1_vp': 'reg1_alpha_kernel',
             'reg1_vs': 'reg1_beta_kernel'}
-        # 'reg2_rho':'reg2_rho_kernel',
-        # 'reg2_vp':'reg2_alpha_kernel',
-        # 'reg2_vs':'reg2_beta_kernel',
-        # 'reg3_rho':'reg3_rho_kernel',
-        # 'reg3_vp':'reg3_alpha_kernel',
-        # 'reg3_vs':'reg3_beta_kernel'}
 
     else:
         # transversely isotropic
@@ -89,12 +77,6 @@ class specfem3d_globe(object):
         model_parameters += ['reg1_vsv']
         model_parameters += ['reg1_vsh']
         model_parameters += ['reg1_eta']
-        # model_parameters += ['reg2_rho']
-        # model_parameters += ['reg2_vp']
-        # model_parameters += ['reg2_vs']
-        # model_parameters += ['reg3_rho']
-        # model_parameters += ['reg3_vp']
-        # model_parameters += ['reg3_vs']
 
         inversion_parameters = []
         inversion_parameters += ['reg1_rho']
@@ -106,17 +88,11 @@ class specfem3d_globe(object):
 
         kernel_map = {
             'reg1_rho': 'reg1_rho_kernel',
-            'reg1_eta': 'reg1_rho_kernel',
-            'reg1_vph': 'reg1_alpha_kernel',
-            'reg1_vpv': 'reg1_alpha_kernel',
-            'reg1_vsv': 'reg1_beta_kernel',
-            'reg1_vsh': 'reg1_beta_kernel'}
-        # 'reg2_rho':'reg2_rho_kernel',
-        # 'reg2_vp':'reg2_alpha_kernel',
-        # 'reg2_vs':'reg2_beta_kernel',
-        # 'reg3_rho':'reg3_rho_kernel',
-        # 'reg3_vp':'reg3_alpha_kernel',
-        # 'reg3_vs':'reg3_beta_kernel'}
+            'reg1_eta': 'reg1_eta_kernel',
+            'reg1_vph': 'reg1_alphah_kernel',
+            'reg1_vpv': 'reg1_alphav_kernel',
+            'reg1_vsv': 'reg1_betav_kernel',
+            'reg1_vsh': 'reg1_betah_kernel'}
 
     # data channels
     channels = []
