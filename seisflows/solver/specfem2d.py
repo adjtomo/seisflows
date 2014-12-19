@@ -250,7 +250,7 @@ class specfem2d(object):
 
     ### model input/output
 
-    def load(self, filename, type=''):
+    def load(self, filename, type='', verbose=False):
         """Reads SPECFEM2D kernel or model
 
            Models and kernels are read from 5 or 6 column text files whose
@@ -271,13 +271,10 @@ class specfem2d(object):
             raise ValueError("Wrong number of columns.")
 
         # fill in dictionary
-        #if system.getnode()==0: print filename # DEBUG
         parts = {}
         for key in ['x', 'z', 'rho', 'vp', 'vs']:
             parts[key] = [M[:,ioff]]
-            #if system.getnode()==0: print key, 'min, max:', min(M[:,ioff]), max(M[:,ioff]) # DEBUG
             ioff += 1
-        #if system.getnode()==0: print '' # DEBUG
         return parts
 
     def save(self, filename, parts, type='model'):

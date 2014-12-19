@@ -7,7 +7,7 @@ import seisflows.seistools.specfem3d as solvertools
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists, glob, join, setdiff
+from seisflows.tools.code import abspath, exists, glob, join, setdiff
 from seisflows.tools.config import findpath, ConfigObj, ParameterObj
 from seisflows.tools.io import loadbin, savebin
 
@@ -261,7 +261,7 @@ class specfem3d(object):
 
     ### model input/output
 
-    def load(self, dirname, type='model'):
+    def load(self, dirname, type='model', verbose=False):
         """ reads SPECFEM3D model
         """
         if type == 'model':
@@ -273,18 +273,25 @@ class specfem3d(object):
 
         # read database files
         parts = {}
+        minmax = {}
         for key in self.model_parameters:
             parts[key] = []
+            minmax[key] = [+np.Inf,-np.Inf]
             for iproc in range(PAR.NPROC):
                 filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
                 part = loadbin(join(dirname, filename))
                 parts[key].append(part)
-                if iproc==0: minval = +np.Inf # DEBUG
-                if iproc==0: maxval = -np.Inf # DEBUG
-                if part.min() < minval: minval = part.min() # DEBUG
-                if part.max() > maxval: maxval = part.max() # DEBUG
-                #print key, 'min, max:', minval, maxval # DEBUG
-        #print '' # DEBUG
+                # keep track of min, max
+                if part.min() < minmax[key][0]: minmax[key][0] = part.min()
+                if part.max() > minmax[key][1]: minmax[key][1] = part.max()
+
+        # print min, max
+        if verbose:
+            with open(PATH.SUBMIT + '/' + 'output.minmax','a') as output:
+                output.write(abspath(dirname)+'\n')
+                for key,val in minmax.items():
+                    output.write('%-10s %10.3e %10.3e\n' % (key, val[0], val[1]))
+                output.write('\n')
         return parts
 
 

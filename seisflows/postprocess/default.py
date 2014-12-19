@@ -46,7 +46,7 @@ class default(object):
             setattr(PATH, 'PRECOND', None)
 
         if 'SCALE' not in PAR:
-            setattr(PAR, 'SCALE', 1.)
+            setattr(PAR, 'SCALE', False)
 
 
     def process_kernels(self, tag='grad', path=None):
@@ -62,8 +62,9 @@ class default(object):
 
         # write gradient
         unix.cd(path + '/' + 'kernels')
-        g = solver.merge(solver.load('sum', type='kernel'))
-        m = solver.merge(solver.load('../model', type='model'))
+        m = solver.merge(solver.load('../model', type='model', verbose=True))
+        g = solver.merge(solver.load('sum', type='kernel', verbose=True))
+
         g *= m
         solver.save(path + '/' + tag, solver.split(g))
 
@@ -87,7 +88,7 @@ class default(object):
             solver.save(tag, solver.split(g/p))
 
         # apply scaling
-        if PAR.SCALE:
+        if PAR.SCALE and float(PAR.SCALE) != 1.:
             unix.cd(path)
             g = solver.merge(solver.load(tag, type='model'))
             g *= PAR.SCALE
