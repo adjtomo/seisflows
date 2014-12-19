@@ -22,22 +22,23 @@ class SeisStruct(Struct):
 class ModelStruct(Mapping):
     def __init__(self, reader):
         self.reader = reader
-        self.keys = set()
+        self.cached_key = None
+        self.cached_val = None
 
-    def __getitem__(self, key, verbose=False):
-        self.keys.add(key)
-        val = self.reader(key)
-
-        if verbose:
-            print '%s: %e %e' % (key, val.min(), val.max())
-
-        return val
+    def __getitem__(self, key):
+        if key == self.cached_key:
+            return self.cached_val
+        else:
+            array = self.reader(key)
+            self.cached_key = key
+            self.cached_val = array
+        return array
 
     def __iter__(self):
-        return self.keys
+        return []
 
     def __len__(self):
-        return len(self.keys)
+        return len([])
 
 
 def loadascii(dir):
