@@ -81,12 +81,12 @@ class ParameterObj(object):
 
     def __setattr__(self, key, val):
         if key in self.__dict__:
-            raise TypeError
+            raise TypeError("Once defined, parameters cannot be changed.")
         self.__dict__[key] = val
 
     def __delattr__(self, key):
         if key in self.__dict__:
-            raise TypeError
+            raise TypeError("Once defined, parameters cannot deleted.")
         raise KeyError
 
     def update(self, newdict):
