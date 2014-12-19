@@ -87,7 +87,7 @@ class default(object):
             cls.LBFGS = lib.LBFGS(cls.path, PAR.LBFGSMAX, PAR.BEGIN)
 
         # prepare output writer
-        cls.writer = OutputWriter(PATH.SUBMIT + '/' + 'output.optimize',
+        cls.writer = OutputWriter(PATH.SUBMIT + '/' + 'output.optim',
                                   ['iter', 'steplen', 'datafit'])
 
     def compute_direction(cls):

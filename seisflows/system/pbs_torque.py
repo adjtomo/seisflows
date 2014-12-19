@@ -95,7 +95,7 @@ class pbs_torque(object):
           + resources
           + variables
           + '-N %s ' %  PAR.TITLE
-          + '-o %s ' % (PATH.SUBMIT_DIR+'/'+'output.workflow')
+          + '-o %s ' % (PATH.SUBMIT_DIR+'/'+'output.log')
           + '-j %s ' % 'oe'
           + getpath('system') +'/'+ 'pbs/wrapper_qsub '
           + PATH.SUBMIT_DIR + ' '

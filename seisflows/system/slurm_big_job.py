@@ -98,7 +98,7 @@ class slurm_big_job(object):
 
         args = ('sbatch '
           + '--job-name=%s ' % PAR.TITLE
-          + '--output %s ' % (PATH.SUBMIT+'/'+'output.workflow')
+          + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
           + '--ntasks-per-node=%d ' % PAR.CPUS_PER_NODE
           + '--nodes=%d ' % 1
           + '--time=%d ' % PAR.WALLTIME
