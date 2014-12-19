@@ -19,7 +19,7 @@ class SeisStruct(Struct):
              ['nrec', nrec], ['nsrc', nsrc]])
 
 
-class ModelStuct(Mapping):
+class ModelStruct(Mapping):
     def __init__(self, reader):
         self.reader = reader
         self.keys = set()
