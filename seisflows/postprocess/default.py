@@ -13,9 +13,9 @@ PATH = ParameterObj('SeisflowsPaths')
 class default(object):
     """ Postprocessing class
 
-      First, combines kernels (i.e. contributions from individual sources) to
-      obtain the gradient direction. Next, performs smoothing, preconditioning,
-      and scaling operations on gradient in accordance with parameter settings.
+      Combines contributions from individual sources to obtain the gradient
+      direction, and performs clipping, smoothing, preconditioning, and 
+      scaling operations on gradient in accordance with parameter settings.
     """
 
     def check(self):
