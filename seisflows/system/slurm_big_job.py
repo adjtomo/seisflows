@@ -98,7 +98,7 @@ class slurm_big_job(object):
 
         args = ('sbatch '
           + '--job-name=%s ' % PAR.TITLE
-          + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
+          + '--output %s ' % (PATH.SUBMIT+'/'+'output.workflow')
           + '--ntasks-per-node=%d ' % PAR.CPUS_PER_NODE
           + '--nodes=%d ' % 1
           + '--time=%d ' % PAR.WALLTIME
@@ -173,14 +173,6 @@ class slurm_big_job(object):
                 subprocess.call(sbatch
                   + '--export='+'MY_JOB_ID=0 '
                   + '--output %s ' % (PATH.OUTPUT+'/'+'SeisflowsOutput/'+'%A_0')
-                  + args,
-                  shell=1,stdout=f)
-        else:
-            itask = str(hosts)
-            with open(PATH.SYSTEM+'/'+'job_id','w') as f:
-                subprocess.call(sbatch
-                  + '--export='+'MY_JOB_ID'+'='+itask + ' '
-                  + '--output %s ' % (PATH.SYSTEM+'/'+'output.log'+itask)
                   + args,
                   shell=1,stdout=f)
 

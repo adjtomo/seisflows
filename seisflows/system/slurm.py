@@ -82,7 +82,7 @@ class slurm(object):
         # submit job
         args = ('sbatch '
           + '--job-name=%s ' %  PAR.TITLE
-          + '--output=%s ' % (PATH.SUBMIT+'/'+'output.log')
+          + '--output=%s ' % (PATH.SUBMIT+'/'+'output.workflow')
           + '--cpus-per-task=%d ' % PAR.NPROC
           + '--ntasks=%d ' % PAR.NTASK
           + '--time=%d ' % PAR.WALLTIME
