@@ -401,13 +401,13 @@ class specfem3d_globe(object):
                 flag = True
             else:
                 flag = False
-            region, name = key.split('_')
+            region, name = name.split('_')
             kernels = kernels + [[name, flag]]
 
         # smooth kernels
         for name, flag in kernels:
             if flag:
-                print ' smoothing', kernel_name
+                print ' smoothing', name
                 self.mpirun(
                     PATH.SOLVER_BINARIES +'/'+ 'xsmooth_sem '
                     + str(span) + ' '
