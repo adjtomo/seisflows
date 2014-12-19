@@ -262,20 +262,6 @@ class specfem3d(object):
     ### model input/output
 
     def load(self, dirname, type='model'):
-
-        def reader(key):
-            parts = []
-            for iproc in range(PAR.NPROC):
-                filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
-                part = loadbin(join(dirname, filename))
-                parts.append(part)
-            return parts
-
-        from seisflows.tools.core import ModelStruct
-        return ModelStruct(reader)
-
-
-    def load(self, dirname, type='model'):
         """ reads SPECFEM3D model
         """
         if type == 'model':
