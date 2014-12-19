@@ -262,6 +262,20 @@ class specfem3d(object):
     ### model input/output
 
     def load(self, dirname, type='model'):
+
+        def reader(key):
+            parts = []
+            for iproc in range(PAR.NPROC):
+                filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
+                part = loadbin(join(dirname, filename))
+                parts.append(part)
+            return parts
+
+        from seisflows.tools.core import ModelStruct
+        return ModelStruct(reader)
+
+
+    def load(self, dirname, type='model'):
         """ reads SPECFEM3D model
         """
         if type == 'model':
@@ -299,7 +313,6 @@ class specfem3d(object):
             for ii in range(nn):
                 filename = 'proc%06d_%s.bin' % (ii, key)
                 savebin(parts[key][ii], join(dirname, filename))
-
 
 
     ### vector/dictionary conversion
@@ -345,7 +358,7 @@ class specfem3d(object):
         """
         unix.cd(self.spath)
 
-        # create temporary files and directories expected by xsum_kernels
+        # create temporary files and directories
         dirs = unix.ls(path)
         with open('kernels_list.txt', 'w') as file:
             file.write('\n'.join(dirs) + '\n')
@@ -353,7 +366,7 @@ class specfem3d(object):
         unix.mkdir('OUTPUT_SUM')
         for dir in dirs:
             src = path +'/'+ dir
-            dst = unix.pwd() +'/'+ 'INPUT_KERNELS' +'/'+ dir
+            dst = 'INPUT_KERNELS' +'/'+ dir
             unix.ln(src, dst)
 
         # sum kernels
@@ -367,40 +380,42 @@ class specfem3d(object):
         unix.cd(path)
 
 
-    def smooth(self, path='', tag='grad', span=0):
+    def smooth(self, path='', tag='grad', span=0.):
         """ smooths SPECFEM3D kernels
         """
         unix.cd(self.spath)
 
-        unix.mv(path +'/'+ tag, path +'/'+ tag + '_nosmooth')
-        unix.mkdir(path +'/'+ tag)
-
-        # prepare list
-        kernel_list = []
-        for key in self.model_parameters:
-            if key in self.inversion_parameters:
-                smoothing_flag = True
+        # list kernels
+        kernels = []
+        for name in self.model_parameters:
+            if name in self.inversion_parameters:
+                flag = True
             else:
-                smoothing_flag = False
-            kernel_list = kernel_list + [[key, smoothing_flag]]
+                flag = False
+            kernels = kernels + [[name, flag]]
 
-        for kernel_name, smoothing_flag in kernel_list:
-            if smoothing_flag:
-                # run smoothing
-                print ' smoothing', kernel_name
+        # smooth kernels
+        for name, flag in kernels:
+            if flag:
+                print ' smoothing', name
                 self.mpirun(
                     PATH.SOLVER_BINARIES +'/'+ 'xsmooth_sem '
                     + str(span) + ' '
                     + str(span) + ' '
-                    + kernel_name + ' '
-                    + path +'/'+ tag + '_nosmooth/' + ' '
-                    + path +'/'+ tag +'/'+ ' ')
-            else:
-                src = glob(path +'/'+ tag+'_nosmooth/*' + kernel_name+'.bin')
-                dst = path +'/'+ tag + '/' 
-                unix.cp(src, dst)
+                    + name + ' '
+                    + path +'/'+ tag + '/ '
+                    + path +'/'+ tag + '/ ')
 
-        unix.rename('_smooth', '', glob(path +'/'+ tag + '/*_smooth.bin'))
+        # move kernels
+        src = path +'/'+ tag
+        dst = path +'/'+ tag + '_nosmooth'
+        unix.mkdir(dst)
+        for name, flag in kernels:
+            if flag:
+                unix.mv(glob(src+'/*'+name+'.bin'), dst)
+            else:
+                unix.cp(glob(src+'/*'+name+'.bin'), dst)
+        unix.rename('_smooth', '', glob(src+'/*'))
         print ''
 
         unix.cd(path)

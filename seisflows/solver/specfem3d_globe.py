@@ -7,7 +7,7 @@ import seisflows.seistools.specfem3d_globe as solvertools
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists, glob, join, setdiff
+from seisflows.tools.code import exists, glob, join
 from seisflows.tools.config import findpath, ConfigObj, ParameterObj
 from seisflows.tools.io import loadbin, savebin
 
@@ -17,7 +17,7 @@ PATH = ParameterObj('SeisflowsPaths')
 
 
 class specfem3d_globe(object):
-    """ Python interface for SPECFEM3D_GLOBE_GLOBE
+    """ Python interface for SPECFEM3D_GLOBE
 
       eval_func, eval_grad, apply_hess
         These methods deal with evaluation of the misfit function or its
@@ -52,7 +52,7 @@ class specfem3d_globe(object):
     """
 
     if 0:
-        # isotropic
+        # use isotropic model
         model_parameters = []
         model_parameters += ['reg1_rho']
         model_parameters += ['reg1_vp']
@@ -69,7 +69,7 @@ class specfem3d_globe(object):
             'reg1_vs': 'reg1_beta_kernel'}
 
     else:
-        # transversely isotropic
+        # use transversely isotropic model
         model_parameters = []
         model_parameters += ['reg1_rho']
         model_parameters += ['reg1_vpv']
@@ -357,16 +357,17 @@ class specfem3d_globe(object):
         dirs = unix.ls(path)
 
         # initialize kernels
+        unix.cd(path)
         for key in self.model_parameters:
             if key not in self.inversion_parameters:
                 for i in range(PAR.NPROC):
                     proc = '%06d' % i
                     name = self.kernel_map[key]
-                    src = PATH.MESH +'/'+ key +'/'+ proc
+                    src = PATH.GLOBAL +'/'+ 'mesh' +'/'+ key +'/'+ proc
                     dst = path +'/'+ 'sum' +'/'+ 'proc'+proc+'_'+name+'.bin'
                     savebin(np.load(src), dst)
 
-        # create temporary files and directories expected by xsum_kernels
+        # create temporary files and directories
         unix.cd(self.spath)
         with open('kernels_list.txt', 'w') as file:
             file.write('\n'.join(dirs) + '\n')
@@ -374,7 +375,7 @@ class specfem3d_globe(object):
         unix.mkdir('OUTPUT_SUM')
         for dir in dirs:
             src = path +'/'+ dir
-            dst = unix.pwd() +'/'+ 'INPUT_KERNELS' +'/'+ dir
+            dst = 'INPUT_KERNELS' +'/'+ dir
             unix.ln(src, dst)
 
         # sum kernels
@@ -388,40 +389,43 @@ class specfem3d_globe(object):
         unix.cd(path)
 
 
-    def smooth(self, path='', tag='grad', span=0):
+    def smooth(self, path='', tag='grad', span=0.):
         """ smooths SPECFEM3D_GLOBE kernels
         """
         unix.cd(self.spath)
 
-        unix.mv(path +'/'+ tag, path +'/'+ tag + '_nosmooth')
-        unix.mkdir(path +'/'+ tag)
-
-        # prepare list
-        kernel_list = []
-        for key in self.model_parameters:
-            if key in self.inversion_parameters:
-                smoothing_flag = True
+        # list kernels
+        kernels = []
+        for name in self.model_parameters:
+            if name in self.inversion_parameters:
+                flag = True
             else:
-                smoothing_flag = False
-            kernel_list = kernel_list + [[key, smoothing_flag]]
+                flag = False
+            region, name = key.split('_')
+            kernels = kernels + [[name, flag]]
 
-        for kernel_name, smoothing_flag in kernel_list:
-            if smoothing_flag:
-                # run smoothing
+        # smooth kernels
+        for name, flag in kernels:
+            if flag:
                 print ' smoothing', kernel_name
                 self.mpirun(
                     PATH.SOLVER_BINARIES +'/'+ 'xsmooth_sem '
                     + str(span) + ' '
                     + str(span) + ' '
-                    + kernel_name + ' '
-                    + path +'/'+ tag + '_nosmooth/' + ' '
-                    + path +'/'+ tag +'/'+ ' ')
-            else:
-                src = glob(path +'/'+ tag+'_nosmooth/*' + kernel_name+'.bin')
-                dst = path +'/'+ tag + '/' 
-                unix.cp(src, dst)
+                    + name + ' '
+                    + path +'/'+ tag + '/ '
+                    + self.databases + '/ ')
 
-        unix.rename('_smooth', '', glob(path +'/'+ tag + '/*_smooth.bin'))
+        # move kernels
+        src = path +'/'+ tag
+        dst = path +'/'+ tag + '_nosmooth'
+        unix.mkdir(dst)
+        for name, flag in kernels:
+            if flag:
+                unix.mv(glob(src+'/*'+name+'.bin'), dst)
+            else:
+                unix.cp(glob(src+'/*'+name+'.bin'), dst)
+        unix.rename('_smooth', '', glob(src+'/*'))
         print ''
 
         unix.cd(path)
@@ -534,21 +538,18 @@ class specfem3d_globe(object):
         """ Writes mesh files expected by input/output methods
         """
         if system.getnode() == 0:
-
-            model_set = set(self.model_parameters)
-            inversion_set = set(self.inversion_parameters)
-
             parts = self.load(PATH.MODEL_INIT)
             try:
                 path = PATH.GLOBAL +'/'+ 'mesh'
             except:
                 raise Exception
             if not exists(path):
-                for key in setdiff(model_set, inversion_set):
-                    unix.mkdir(path +'/'+ key)
-                    for proc in range(PAR.NPROC):
-                        with open(path +'/'+ key +'/'+ '%06d' % proc, 'w') as file:
-                            np.save(file, parts[key][proc])
+                for key in self.model_parameters:
+                    if key not in self.inversion_parameters:
+                        unix.mkdir(path +'/'+ key)
+                        for proc in range(PAR.NPROC):
+                            with open(path +'/'+ key +'/'+ '%06d' % proc, 'w') as file:
+                                np.save(file, parts[key][proc])
 
             try:
                 path = PATH.OPTIMIZE +'/'+ 'm_new'
