@@ -16,7 +16,7 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 
-class specfem3d(object):
+class specfem3d_debug(object):
     """ Python interface for SPECFEM3D
 
       eval_func, eval_grad, apply_hess
@@ -261,9 +261,7 @@ class specfem3d(object):
 
     ### model input/output
 
-    def load(self, dirname, type='model'):
-        """ reads SPECFEM3D model
-        """
+    def load(self, dirname, type='model',verbose=True):
         if type == 'model':
             mapping = lambda key: key
         elif type == 'kernel':
@@ -271,21 +269,22 @@ class specfem3d(object):
         else:
             raise ValueError
 
-        # read database files
-        parts = {}
-        for key in self.model_parameters:
-            parts[key] = []
+        def helper(key):
+            parts = []
             for iproc in range(PAR.NPROC):
                 filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
                 part = loadbin(join(dirname, filename))
-                parts[key].append(part)
+                parts.append(part)
                 if iproc==0: minval = +np.Inf # DEBUG
                 if iproc==0: maxval = -np.Inf # DEBUG
                 if part.min() < minval: minval = part.min() # DEBUG
                 if part.max() > maxval: maxval = part.max() # DEBUG
-                #print key, 'min, max:', minval, maxval # DEBUG
-        #print '' # DEBUG
-        return parts
+            if verbose:
+                print 'min,max %-10s %10.3e %10.3e' % (key+':', minval, maxval)
+            return parts
+
+        from seisflows.seistools.core import ModelStruct
+        return ModelStruct(helper)
 
 
     def save(self, dirname, parts):
@@ -303,7 +302,7 @@ class specfem3d(object):
 
     ### vector/dictionary conversion
 
-    def merge(self, parts):
+    def merge(self, parts, type='model'):
         """ merges dictionary into vector
         """
         v = np.array([])
