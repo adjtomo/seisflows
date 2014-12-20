@@ -135,7 +135,8 @@ class default(object):
 
         return s
 
-    # -- misfit/adjoint wrappers
+
+    ### misfit/adjoint wrappers
 
     def call_adjoint(self, wsyn, wobs, nt, dt):
         """ Wrapper for generating adjoint traces
@@ -181,7 +182,8 @@ class default(object):
             e = 0.
         return float(e)
 
-    # -- input/output
+
+    ### input/output
 
     def load(self, prefix=''):
         """ Reads seismic data from disk
@@ -190,8 +192,7 @@ class default(object):
         f = Struct()
 
         for channel in solver.channels:
-            f[channel], h[channel] = solver.reader(prefix=prefix,
-                                                   channel=channel)
+            f[channel], h[channel] = solver.reader(prefix=prefix, channel=channel)
 
         # check headers
         h = self.check_headers(h)
@@ -202,10 +203,10 @@ class default(object):
         """ Writes seismic data to disk
         """
         for channel in solver.channels:
-            solver.writer(s[channel], h, channel=channel, prefix=prefix,
-                          suffix=suffix)
+            solver.writer(s[channel], h, channel=channel, prefix=prefix, suffix=suffix)
 
-    # -- utility functions
+
+    ### utility functions
 
     def apply(self, func, arrays, input, inplace=True):
         """ Applies function to multi-component data
