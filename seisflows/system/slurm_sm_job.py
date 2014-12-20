@@ -17,7 +17,7 @@ save_parameters = PAR.save
 save_paths = PATH.save
 
 
-class slurm(object):
+class slurm_sm_job(object):
     """ System interface class
 
       Provides an interface through which to submit jobs, run tasks in serial

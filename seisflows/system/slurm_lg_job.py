@@ -18,7 +18,7 @@ save_parameters = PAR.save
 save_paths = PATH.save
 
 
-class slurm_big_job(object):
+class slurm_lg_job(object):
     """ System interface class
 
       Provides an interface through which to submit jobs, run tasks in serial
@@ -48,7 +48,7 @@ class slurm_big_job(object):
         if 'NPROC' not in PAR:
             raise Exception
 
-        if 'CPUS_PER_NODE' not in PAR:
+        if 'NPROC_PER_NODE' not in PAR:
             raise Exception
 
         if 'WALLTIME' not in PAR:
@@ -99,7 +99,7 @@ class slurm_big_job(object):
         args = ('sbatch '
           + '--job-name=%s ' % PAR.TITLE
           + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
-          + '--ntasks-per-node=%d ' % PAR.CPUS_PER_NODE
+          + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE
           + '--nodes=%d ' % 1
           + '--time=%d ' % PAR.WALLTIME
           + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
@@ -151,8 +151,8 @@ class slurm_big_job(object):
         # prepare sbatch arguments
         sbatch = 'sbatch '                                           \
             + '--job-name=%s ' % PAR.TITLE                           \
-            + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.CPUS_PER_NODE)) \
-            + '--ntasks-per-node=%d ' % PAR.CPUS_PER_NODE            \
+            + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NPROC_PER_NODE)) \
+            + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE            \
             + '--time=%d ' % PAR.STEPTIME
 
         args = findpath('system') +'/'+ 'slurm/wrapper_srun '        \

@@ -11,7 +11,7 @@ save_parameters = PAR.save
 save_paths = PATH.save
 
 
-class Tiger(loadclass('system', 'slurm')):
+class tiger_sm_job(loadclass('system', 'slurm_sm_job')):
     def check(self):
         """ Checks parameters and paths
         """
@@ -33,6 +33,7 @@ class Tiger(loadclass('system', 'slurm')):
             setattr(PATH, 'LOCAL', '')
 
         super(self.__class__, self).check()
+
 
     def submit(self, *args, **kwargs):
         """Submits job

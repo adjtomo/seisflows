@@ -11,7 +11,7 @@ save_parameters = PAR.save
 save_paths = PATH.save
 
 
-class TigerBigJob(loadclass('system', 'slurm_big_job')):
+class tiger_lg_job(loadclass('system', 'slurm_lg_job')):
     def check(self):
         """ Checks parameters and paths
         """
@@ -32,10 +32,11 @@ class TigerBigJob(loadclass('system', 'slurm_big_job')):
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', '')
 
-        if 'CPUS_PER_NODE' not in PAR:
+        if 'NPROC_PER_NODE' not in PAR:
             setattr(PAR, 'CPUS_PER_NODE', 16)
 
         super(self.__class__, self).check()
+
 
     def submit(self, *args, **kwargs):
         """Submits job
