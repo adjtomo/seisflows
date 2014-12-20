@@ -12,4 +12,4 @@ To submit a job, type ``sfrun`` from within the directory containing ``parameter
 
 After trying the example once to make sure everything is working, users can explore different inversion settings by modifying the values in ``parameters.py``. Values in ``paths.py``, on the other hand, correspond to locations on the tigress filesystem and cannot be changed.
 
-
+If you experience problems, first check that you are using the latest version of SeisFlows. To update to the latest version, type `git pull` within the package directory.
