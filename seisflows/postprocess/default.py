@@ -36,6 +36,9 @@ class default(object):
         import system
 
         # check postprocessing settings
+        if 'SCALE' not in PAR:
+            setattr(PAR, 'SCALE', False)
+
         if 'CLIP' not in PAR:
             setattr(PAR, 'CLIP', 0.)
 
@@ -45,12 +48,9 @@ class default(object):
         if 'PRECOND' not in PATH:
             setattr(PATH, 'PRECOND', None)
 
-        if 'SCALE' not in PAR:
-            setattr(PAR, 'SCALE', False)
-
 
     def process_kernels(self, tag='grad', path=None):
-        """ Computes gradient and performs smoothing, preconditioning, and then
+        """ Computes gradient and performs smoothing, preconditioning, and
             scaling operations
         """
         assert (exists(path))
@@ -62,10 +62,11 @@ class default(object):
 
         # write gradient
         unix.cd(path + '/' + 'kernels')
-        m = solver.merge(solver.load('../model', type='model', verbose=True))
-        g = solver.merge(solver.load('sum', type='kernel', verbose=True))
 
-        g *= m
+        g = solver.merge(solver.load('sum', type='kernel', verbose=True))
+        g *= solver.merge(solver.load('../model', type='model', verbose=True))
+
+        if float(PAR.SCALE) != 1.: g *= PAR.SCALE
         solver.save(path + '/' + tag, solver.split(g))
 
         # apply clipping
@@ -82,18 +83,12 @@ class default(object):
         # apply preconditioner
         if PATH.PRECOND:
             unix.cd(path)
-            g = solver.merge(solver.load(tag))
-            p = solver.merge(solver.load(PATH.PRECOND))
-            unix.mv(tag, tag + '_noscale')
-            solver.save(tag, solver.split(g/p))
-
-        # apply scaling
-        if PAR.SCALE and float(PAR.SCALE) != 1.:
-            unix.cd(path)
-            g = solver.merge(solver.load(tag, type='model'))
-            g *= PAR.SCALE
+            g /= solver.merge(solver.load(PATH.PRECOND))
+            unix.mv(tag, tag + '_noprecond')
             solver.save(tag, solver.split(g))
 
         if 'OPTIMIZE' in PATH:
-            savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
+            if tag == 'grad':
+                g = solver.merge(solver.load(path +'/'+ tag, type='model', verbose=True))
+                savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
