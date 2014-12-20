@@ -38,7 +38,7 @@ class specfem3d_legacy(loadclass('solver', 'specfem3d')):
     def combine(self, path=''):
         """ combines SPECFEM3D kernels
         """
-        unix.cd(self.path)
+        unix.cd(self.spath)
 
         # create temporary files and directories needed by xsum_kernels
         dirs = unix.ls(path)
@@ -61,10 +61,10 @@ class specfem3d_legacy(loadclass('solver', 'specfem3d')):
 
         unix.cd(path)
 
-    def smooth(self, path='', tag='grad', span=0):
+    def smooth(self, path='', tag='grad', span=0.):
         """ smooths SPECFEM3D kernels
         """
-        unix.cd(self.path)
+        unix.cd(self.spath)
 
         unix.mv(path + '/' + tag, path + '/' + tag + '_nosmooth')
         unix.mkdir(path + '/' + tag)
