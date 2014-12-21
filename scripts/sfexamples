@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     # prompt user for path
     home = '/home/rmodrak/data/'
-    opts = ['Examples2d','Examples3d','Examples3dGlobe','Imaging3d']
+    opts = ['Examples2d','Examples3d','Examples3dGlobe']
     print ''
     path = join(home,unix.select(opts))
     print ''
