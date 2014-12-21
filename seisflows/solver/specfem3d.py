@@ -516,8 +516,8 @@ class specfem3d(object):
           Components actually in use during an inversion or migration will
           be overwritten with nonzero values later on.
         """
-        zeros = np.zeros((PAR.NT, PAR.NREC))
         _, h = preprocess.load('traces/obs')
+        zeros = np.zeros((h.nt, h.nr))
         for channel in ['x', 'y', 'z']:
             self.writer(zeros, h, channel=channel, prefix='traces/adj')
 
