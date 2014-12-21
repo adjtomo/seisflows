@@ -4,7 +4,7 @@ import numpy as _np
 
 from seisflows.tools import unix
 
-from seisflows.seistools.core import SeisStruct
+from seisflows.seistools.shared import SeisStruct
 from seisflows.seistools.segy import segywriter
 
 
