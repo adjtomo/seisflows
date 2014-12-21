@@ -1,12 +1,13 @@
 
+import copy as _copy
 import glob as _glob
 import string as _string
 import numpy as _np
 
 from seisflows.tools import unix
 from seisflows.tools.code import Struct
-from seisflows.tools.config import findpath
-from seisflows.seistools.segy import segyreader, segywriter
+
+from seisflows.seistools.segy import segyreader
 
 
 def ascii_specfem2d(**kwargs):
@@ -230,4 +231,9 @@ def glob(files=None, channel=None, prefix='SEM', suffix='semd', solver='3d'):
 
     files.sort()
     return files
+
+
+def _list(array):
+    array2 = (_copy.copy(array))
+    return list(array2)
 

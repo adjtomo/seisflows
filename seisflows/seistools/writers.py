@@ -1,11 +1,11 @@
-import glob as _glob
+
 import string as _string
 import numpy as _np
 
 from seisflows.tools import unix
-from seisflows.tools.code import Struct
-from seisflows.tools.config import findpath
-from seisflows.seistools.segy import segyreader, segywriter
+
+from seisflows.seistools.core import SeisStruct
+from seisflows.seistools.segy import segywriter
 
 
 def ascii_specfem2d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''):
