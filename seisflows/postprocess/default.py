@@ -17,8 +17,8 @@ class default(object):
     """ Postprocessing class
 
       Combines contributions from individual sources to obtain the gradient
-      direction, and performs clipping, smoothing, preconditioning, and 
-      scaling operations on gradient in accordance with parameter settings.
+      direction, and performs scaling, clipping, smoothing, and preconditioning
+      operations on gradient in accordance with parameter settings.
     """
 
     def check(self):
@@ -44,8 +44,8 @@ class default(object):
 
 
     def process_kernels(self, tag='grad', path=None):
-        """ Computes gradient and performs smoothing, preconditioning, and
-            scaling operations
+        """ Computes gradient and performs scaling, smoothing, and 
+          preconditioning operations
         """
         assert (exists(path))
 
@@ -54,12 +54,13 @@ class default(object):
                    hosts='head',
                    path=path + '/' + 'kernels')
 
-        # write gradient
+        # compute gradient from logarithmic sensitivity kernels
         unix.cd(path + '/' + 'kernels')
-
         g = solver.merge(solver.load('sum', type='kernel', verbose=True))
-        g *= solver.merge(solver.load('../model', type='model', verbose=True))
+        m = solver.merge(solver.load('../model', type='model'))
+        g *= m
 
+        # apply ad hoc scaling
         if float(PAR.SCALE) != 1.: g *= PAR.SCALE
         solver.save(path + '/' + tag, solver.split(g))
 
