@@ -9,6 +9,11 @@ OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
+import system
+import solver
+import preprocess
+import postprocess
+
 
 class migration(object):
     """ Migration base class.
@@ -51,24 +56,6 @@ class migration(object):
         if 'SAVETRACES' not in PAR:
             setattr(PAR, 'SAVETRACES', 0)
 
-        # check dependencies
-        if 'postprocess' not in OBJ:
-            raise Exception
-
-        if 'solver' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        if 'system' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        global postprocess
-        import postprocess
-
-        global solver
-        import solver
-
-        global system
-        import system
 
     def main(self):
         """ Migrates seismic data

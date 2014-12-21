@@ -9,6 +9,9 @@ OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
+import system
+import solver
+
 
 class default(object):
     """ Postprocessing class
@@ -21,20 +24,6 @@ class default(object):
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
-
-        # check dependencies
-        if 'solver' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        if 'system' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        global solver
-        import solver
-
-        global system
-        import system
-
         # check postprocessing settings
         if 'SCALE' not in PAR:
             setattr(PAR, 'SCALE', False)

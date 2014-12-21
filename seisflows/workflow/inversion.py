@@ -9,6 +9,12 @@ OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
+import system
+import solver
+import optimize
+import preprocess
+import postprocess
+
 
 class inversion(object):
     """ Seismic inversion base class.
@@ -96,33 +102,6 @@ class inversion(object):
         if 'SAVERESIDUALS' not in PAR:
             setattr(PAR, 'SAVERESIDUALS', 0)
 
-            # check dependencies
-        if 'optimize' not in OBJ:
-            raise Exception
-
-        if 'postprocess' not in OBJ:
-            raise Exception
-
-        if 'solver' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        if 'system' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        global optimize
-        import optimize
-
-        global preprocess
-        import preprocess
-
-        global postprocess
-        import postprocess
-
-        global solver
-        import solver
-
-        global system
-        import system
 
     def main(self):
         """ Carries out seismic inversion
