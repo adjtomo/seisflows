@@ -15,6 +15,9 @@ OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
+import system
+import preprocess
+
 
 class specfem3d(object):
     """ Python interface for SPECFEM3D
@@ -67,6 +70,7 @@ class specfem3d(object):
         'vp': 'alpha_kernel',
         'vs': 'beta_kernel'}
 
+
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
@@ -92,19 +96,6 @@ class specfem3d(object):
                 setattr(PATH, 'SOLVER', join(PATH.LOCAL, 'solver'))
             else:
                 setattr(PATH, 'SOLVER', join(PATH.GLOBAL, 'solver'))
-
-        # check dependencies
-        if 'preprocess' not in OBJ:
-            raise Exception
-
-        if 'system' not in OBJ:
-            raise Exception
-
-        global preprocess
-        import preprocess
-
-        global system
-        import system
 
 
     def setup(self):
@@ -510,7 +501,7 @@ class specfem3d(object):
         _, h = preprocess.load('traces/obs')
         zeros = np.zeros((h.nt, h.nr))
         for channel in ['x', 'y', 'z']:
-            self.writer(zeros, h, channel=channel, prefix='traces/adj')
+            preprocess.writer(zeros, h, channel=channel, prefix='traces/adj')
 
 
     def initialize_io_machinery(self):

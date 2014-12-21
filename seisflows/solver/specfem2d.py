@@ -15,6 +15,9 @@ OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
+import system
+import preprocess
+
 
 class specfem2d(object):
     """ Python interface for SPECFEM2D
@@ -92,19 +95,6 @@ class specfem2d(object):
                 setattr(PATH, 'SOLVER', join(PATH.LOCAL, 'solver'))
             else:
                 setattr(PATH, 'SOLVER', join(PATH.GLOBAL, 'solver'))
-
-        # check dependencies
-        if 'preprocess' not in OBJ:
-            raise Exception
-
-        if 'system' not in OBJ:
-            raise Exception
-
-        global preprocess
-        import preprocess
-
-        global system
-        import system
 
 
     def setup(self):
