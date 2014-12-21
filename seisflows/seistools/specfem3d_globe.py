@@ -11,120 +11,7 @@ import segy.reader as segyreader
 import segy.writer as segywriter
 
 
-# -- reading and writing ASCII data
-
-def read(**kwargs):
-    """ Reads seismic traces from text files
-    """
-    files = glob(**kwargs)
-    t = _np.loadtxt(files[0])[:, 0]
-    h = Struct()
-    h['t0'] = t[0]
-    h['nr'] = len(files)
-    h['ns'] = 1
-    h['dt'] = _np.mean(_np.diff(t))
-    h['nt'] = len(t)
-
-    # read data
-    s = _np.zeros((h['nt'], h['nr']))
-    i = 0
-    for file in files:
-        s[:, i] = _np.loadtxt(file)[:, 1]
-        i += 1
-
-    # keep track of file names
-    h.files = []
-    for file in files:
-        file = unix.basename(file)
-        h.files.append(file)
-
-    return s, h
-
-
-def write(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''):
-    """ Writes seismic traces to text files
-    """
-
-    files = []
-
-    if opt == 'legacy':
-        if channel in ['x']:
-            fmt = '%s/S%s.AA.%sE.%s' % (prefix, '%04d', char, suffix)
-        elif channel in ['y']:
-            fmt = '%s/S%s.AA.%sN.%s' % (prefix, '%04d', char, suffix)
-        elif channel in ['z']:
-            fmt = '%s/S%s.AA.%sZ.%s' % (prefix, '%04d', char, suffix)
-        elif channel in ['p']:
-            fmt = '%s/S%s.AA.%sP.%s' % (prefix, '%04d', char, suffix)
-        else:
-            raise ValueError("Unknown channel type.")
-        for i in range(h.nr):
-            files.append(fmt % (i + 1))
-
-        # write data to files
-        imin = int(_np.floor(h['t0']/h['dt']))
-        imax = int(imin + h['nt'])
-        t = _np.arange(imin, imax)*h['dt']
-
-        for i in range(h.nr):
-            w = f[:, i]
-            _np.savetxt(files[i], _np.column_stack((t, w)), '%11.4e')
-
-    else:
-        for file in h.files:
-            parts = _string.split(file, '.')[:-1]
-            if channel in ['x']:
-                label = ''.join([parts[2][:-1], 'E'])
-            elif channel in ['y']:
-                label = ''.join([parts[2][:-1], 'N'])
-            elif channel in ['z']:
-                label = ''.join([parts[2][:-1], 'Z'])
-            elif channel in ['p']:
-                label = ''.join([parts[2][:-1], 'P'])
-            else:
-                raise ValueError("Unknown channel type.")
-
-            parts[-2] = label
-            parts[-1] = 'adj'
-
-            files.append(prefix + '/' + '.'.join(parts))
-
-        # write data to files
-        imin = int(_np.floor(h['t0']/h['dt']))
-        imax = int(imin + h['nt'])
-        t = _np.arange(imin, imax)*h['dt']
-
-        for i, file in enumerate(files):
-            w = f[:, i]
-            _np.savetxt(file, _np.column_stack((t, w)), '%11.4e')
-
-
-def glob(files=None, filetype='ascii', channel=None, prefix='SEM',
-         suffix='sem.ascii'):
-    """ Checks for seismic traces in current directory
-    """
-    if files:
-        return files
-
-    elif filetype == 'ascii':
-        if 'sem' in suffix:
-            if channel in ['e']:
-                wildcard = '%s/*.?XE.%s' % (prefix, suffix)
-            elif channel in ['n']:
-                wildcard = '%s/*.?XN.%s' % (prefix, suffix)
-            elif channel in ['z']:
-                wildcard = '%s/*.?XZ.%s' % (prefix, suffix)
-            else:
-                wildcard = '%s/*.?X?.%s' % (prefix, suffix)
-        files = _glob.glob(wildcard)
-        if files:
-            files.sort()
-        else:
-            raise Exception
-        return files
-
-
-# -- input file writers
+### input file writers
 
 def write_sources(PAR, h, path='.'):
     """ Writes source information to text file
@@ -218,7 +105,7 @@ def setpar(key, val, file='DATA/Par_file', path='.', sep='='):
     _writelines(path + '/' + file, lines)
 
 
-# -- utility functions
+### utility functions
 
 def _writelines(file, lines):
     """ Writes text file

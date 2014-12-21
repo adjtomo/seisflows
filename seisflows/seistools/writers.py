@@ -1,0 +1,247 @@
+import glob as _glob
+import string as _string
+import numpy as _np
+
+from seisflows.tools import unix
+from seisflows.tools.code import Struct
+from seisflows.tools.config import findpath
+from seisflows.seistools.segy import segyreader, segywriter
+
+
+def ascii_specfem2d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''):
+    """ Writes seismic traces to text files
+    """
+
+    files = []
+
+    if opt == 'legacy':
+        if channel in ['x']:
+            fmt = '%s/S%s.AA.%sX.%s' % (prefix, '%04d', char, suffix)
+        elif channel in ['y']:
+            fmt = '%s/S%s.AA.%sY.%s' % (prefix, '%04d', char, suffix)
+        elif channel in ['z']:
+            fmt = '%s/S%s.AA.%sZ.%s' % (prefix, '%04d', char, suffix)
+        elif channel == ['p']:
+            fmt = '%s/S%s.AA.%sP.%s' % (prefix, '%04d', char, suffix)
+        else:
+            raise ValueError("Unknown channel type.")
+        for i in range(h.nr):
+            files.append(fmt % (i + 1))
+
+        # write data to files
+        imin = int(_np.floor(h['t0']/h['dt']))
+        imax = int(imin + h['nt'])
+        t = _np.arange(imin, imax)*h['dt']
+
+        for i in range(h.nr):
+            w = f[:, i]
+            _np.savetxt(files[i], _np.column_stack((t, w)), '%11.4e')
+
+    else:
+        for file in h.files:
+            parts = _string.split(file, '.')
+            if channel in ['x']:
+                label = ''.join([parts[2][:-1], 'X'])
+            elif channel in ['y']:
+                label = ''.join([parts[2][:-1], 'Y'])
+            elif channel in ['z']:
+                label = ''.join([parts[2][:-1], 'Z'])
+            elif channel == ['p']:
+                label = ''.join([parts[2][:-1], 'P'])
+            else:
+                raise ValueError("Unknown channel type.")
+
+            parts[-2] = label
+            parts[-1] = 'adj'
+
+            files.append(prefix + '/' + '.'.join(parts))
+
+        # write data to files
+        imin = int(_np.floor(h['t0']/h['dt']))
+        imax = int(imin + h['nt'])
+        t = _np.arange(imin, imax)*h['dt']
+
+        for i, file in enumerate(files):
+            w = f[:, i]
+            _np.savetxt(file, _np.column_stack((t, w)), '%11.4e')
+
+
+def su_specfem2d(d, h, channel=None, prefix='SEM', suffix='.su.adj'):
+    """ Writes Seismic Unix file
+    """
+    if suffix == '':
+        suffix = '.su.adj'
+
+    if channel in ['x']:
+        file = '%s/Ux_file_single%s' % (prefix, suffix)
+    elif channel in ['y']:
+        file = '%s/Uy_file_single%s' % (prefix, suffix)
+    elif channel in ['z']:
+        file = '%s/Uz_file_single%s' % (prefix, suffix)
+    elif channel in ['p']:
+        file = '%s/Up_file_single%s' % (prefix, suffix)
+    else:
+        raise Exception("Undefined Exception")
+
+    # write data to file
+    segywriter.writesu(file, d, h)
+
+
+def ascii_specfem3d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''):
+    """ Writes seismic traces to text files
+    """
+
+    files = []
+
+    if opt == 'legacy':
+        if channel in ['x']:
+            fmt = '%s/S%s.AA.%sX.%s' % (prefix, '%04d', char, suffix)
+        elif channel in ['y']:
+            fmt = '%s/S%s.AA.%sY.%s' % (prefix, '%04d', char, suffix)
+        elif channel in ['z']:
+            fmt = '%s/S%s.AA.%sZ.%s' % (prefix, '%04d', char, suffix)
+        elif channel in ['p']:
+            fmt = '%s/S%s.AA.%sP.%s' % (prefix, '%04d', char, suffix)
+        else:
+            raise ValueError("Unknown channel type.")
+        for i in range(h.nr):
+            files.append(fmt % (i + 1))
+
+        # write data to files
+        imin = int(_np.floor(h['t0']/h['dt']))
+        imax = int(imin + h['nt'])
+        t = _np.arange(imin, imax)*h['dt']
+
+        for i in range(h.nr):
+            w = f[:, i]
+            _np.savetxt(files[i], _np.column_stack((t, w)), '%11.4e')
+
+    else:
+        for file in h.files:
+            parts = _string.split(file, '.')
+            if channel in ['x']:
+                label = ''.join([parts[2][:-1], 'X'])
+            elif channel in ['y']:
+                label = ''.join([parts[2][:-1], 'Y'])
+            elif channel in ['z']:
+                label = ''.join([parts[2][:-1], 'Z'])
+            elif channel in ['p']:
+                label = ''.join([parts[2][:-1], 'P'])
+
+            parts[-2] = label
+            parts[-1] = 'adj'
+
+            files.append(prefix + '.'.join(parts))
+
+        # write data to files
+        imin = int(_np.floor(h['t0']/h['dt']))
+        imax = int(imin + h['nt'])
+        t = _np.arange(imin, imax)*h['dt']
+
+        for i, file in enumerate(files):
+            w = f[:, i]
+            _np.savetxt(file, _np.column_stack((t, w)), '%11.4e')
+
+
+def su_specfem3d(d, h, channel=None, prefix='SEM', suffix='.adj', verbose=False):
+    nproc = len(h.nn)
+
+    if suffix == '':
+        suffix = '.adj'
+
+    if channel in ['x']:
+        wildcard = '%s/%d_dx_SU%s'
+    elif channel in ['y']:
+        wildcard = '%s/%d_dy_SU%s'
+    elif channel in ['z']:
+        wildcard = '%s/%d_dz_SU%s'
+    elif channel in ['p']:
+        wildcard = '%s/%d_dp_SU%s'
+    else:
+        raise Exception("Undefined Exception")
+
+    imax = 0
+
+    for iproc in range(nproc):
+
+        file = wildcard % (prefix, iproc, suffix)
+        imin = imax
+        imax = imax + h.nn[iproc]
+
+        d_ = d[:, imin:imax]
+        h_ = SeisStruct(nr=h.nr, nt=h.nt, dt=h.dt, ts=h.ts, nrec=h.nrec,
+                        nsrc=h.nsrc)
+        h_.rx = h.rx[imin:imax]
+        h_.ry = h.ry[imin:imax]
+        h_.rz = h.rz[imin:imax]
+        h_.sx = h.sx[imin:imax]
+        h_.sy = h.sy[imin:imax]
+        h_.sz = h.sz[imin:imax]
+
+        h_.nr = imax - imin
+
+        if verbose:
+            print file
+            print (imin, imax)
+            print ''
+
+        segywriter.writesu(file, d_, h_)
+
+
+def ascii_specfem3d_globe(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''):
+    """ Writes seismic traces to text files
+    """
+
+    files = []
+
+    if opt == 'legacy':
+        if channel in ['x']:
+            fmt = '%s/S%s.AA.%sE.%s' % (prefix, '%04d', char, suffix)
+        elif channel in ['y']:
+            fmt = '%s/S%s.AA.%sN.%s' % (prefix, '%04d', char, suffix)
+        elif channel in ['z']:
+            fmt = '%s/S%s.AA.%sZ.%s' % (prefix, '%04d', char, suffix)
+        elif channel in ['p']:
+            fmt = '%s/S%s.AA.%sP.%s' % (prefix, '%04d', char, suffix)
+        else:
+            raise ValueError("Unknown channel type.")
+        for i in range(h.nr):
+            files.append(fmt % (i + 1))
+
+        # write data to files
+        imin = int(_np.floor(h['t0']/h['dt']))
+        imax = int(imin + h['nt'])
+        t = _np.arange(imin, imax)*h['dt']
+
+        for i in range(h.nr):
+            w = f[:, i]
+            _np.savetxt(files[i], _np.column_stack((t, w)), '%11.4e')
+
+    else:
+        for file in h.files:
+            parts = _string.split(file, '.')[:-1]
+            if channel in ['x']:
+                label = ''.join([parts[2][:-1], 'E'])
+            elif channel in ['y']:
+                label = ''.join([parts[2][:-1], 'N'])
+            elif channel in ['z']:
+                label = ''.join([parts[2][:-1], 'Z'])
+            elif channel in ['p']:
+                label = ''.join([parts[2][:-1], 'P'])
+            else:
+                raise ValueError("Unknown channel type.")
+
+            parts[-2] = label
+            parts[-1] = 'adj'
+
+            files.append(prefix + '/' + '.'.join(parts))
+
+        # write data to files
+        imin = int(_np.floor(h['t0']/h['dt']))
+        imax = int(imin + h['nt'])
+        t = _np.arange(imin, imax)*h['dt']
+
+        for i, file in enumerate(files):
+            w = f[:, i]
+            _np.savetxt(file, _np.column_stack((t, w)), '%11.4e')
+
