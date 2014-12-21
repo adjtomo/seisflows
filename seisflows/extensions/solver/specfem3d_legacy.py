@@ -59,37 +59,39 @@ class specfem3d_legacy(loadclass('solver', 'specfem3d')):
         """
         unix.cd(self.spath)
 
-        unix.mv(path + '/' + tag, path + '/' + tag + '_nosmooth')
-        unix.mkdir(path + '/' + tag)
-
-        # prepare list
-        kernel_list = []
-        for key in self.model_parameters:
-            if key in self.inversion_parameters:
-                smoothing_flag = True
+        # list kernels
+        kernels = []
+        for name in self.model_parameters:
+            if name in self.inversion_parameters:
+                flag = True
             else:
-                smoothing_flag = False
-            kernel_list = kernel_list + [[key, smoothing_flag]]
+                flag = False
+            kernels = kernels + [[name, flag]]
 
-        for kernel_name, smoothing_flag in kernel_list:
-            if smoothing_flag:
-                # run smoothing
-                print ' smoothing', kernel_name
+        # smooth kernels
+        for name, flag in kernels:
+            if flag:
+                print ' smoothing', name
                 self.mpirun(
                     PATH.SOLVER_BINARIES + '/' + 'xsmooth_vol_data ',
-                    kernel_name + ' '
+                    name + ' '
                     + path + '/' + tag + '_nosmooth/' + ' '
                     + path + '/' + tag + '/' + ' '
                     + str(span) + ' '
                     + str(span) + ' ' + '1')
-            else:
-                src = glob(
-                    path + '/' + tag + '_nosmooth/*' + kernel_name + '.bin')
-                dst = path + '/' + tag + '/'
-                unix.cp(src, dst)
 
-        unix.rename('_smooth', '', glob(path + '/' + tag + '/*_smooth.bin'))
+        # move kernels
+        src = path +'/'+ tag
+        dst = path +'/'+ tag + '_nosmooth'
+        unix.mkdir(dst)
+        for name, flag in kernels:
+            if flag:
+                unix.mv(glob(src+'/*'+name+'.bin'), dst)
+            else:
+                unix.cp(glob(src+'/*'+name+'.bin'), dst)
+        unix.rename('_smooth', '', glob(src+'/*'))
         print ''
+
 
         unix.cd(path)
 
