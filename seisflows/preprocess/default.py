@@ -4,7 +4,7 @@ from seisflows.tools import unix
 from seisflows.tools.code import Struct
 from seisflows.tools.config import ConfigObj, ParameterObj
 
-from seisflows.seistools import adjoint, misfit, sbandpass, smute
+from seisflows.seistools import adjoint, misfit, sbandpass, smute, readers, writers
 
 OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
@@ -19,27 +19,19 @@ class default(object):
         """ Checks parameters, paths, and dependencies
         """
 
-        # check dependencies
-        if 'solver' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        if 'system' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        global solver
-        import solver
-
-        global system
-        import system
-
         # check parameters
         if 'MISFIT' not in PAR:
             setattr(PAR, 'MISFIT', 'wav')
 
+        if 'FORMAT' not in PAR:
+            raise Exception
+
+        if 'CHANNELS' not in PAR:
+            raise Exception
+
         if 'NORMALIZE' not in PAR:
             setattr(PAR, 'NORMALIZE', True)
 
-        # mute settings
         if 'MUTE' not in PAR:
             setattr(PAR, 'MUTE', False)
 
@@ -67,8 +59,11 @@ class default(object):
 
 
     def setup(self):
-        # nothing to do
-        pass
+        """ Performs any required setup tasks
+        """
+        self.reader = getattr(readers, PAR.FORMAT)
+        self.writer = getattr(writers, PAR.FORMAT)
+        self.channels = [char for char in PAR.CHANNELS]
 
 
     def prepare_eval_grad(self, path='.'):
@@ -87,6 +82,7 @@ class default(object):
 
         s = self.apply(self.generate_adjoint_traces, [s, d], [h])
         self.save(s, h, prefix='traces/adj/')
+
 
     def process_traces(self, s, h):
         """ Performs data processing operations on traces
@@ -108,12 +104,14 @@ class default(object):
             s = smute(s, h, vel, off, constant_spacing=False)
 
         elif PAR.MUTE == 2:
+            import system
             vel = PAR.MUTESLOPE*(PAR.NREC + 1)/(PAR.XMAX - PAR.XMIN)
             off = PAR.MUTECONST
             src = system.getnode()
             s = smute(s, h, vel, off, src, constant_spacing=True)
 
         return s
+
 
     def write_residuals(self, s, d, h):
         """ Computes residuals from observations and synthetics
@@ -126,6 +124,7 @@ class default(object):
         np.savetxt('residuals', r)
 
         return np.array(r)
+
 
     def generate_adjoint_traces(self, s, d, h):
         """ Generates adjoint traces from observed and synthetic traces
@@ -197,8 +196,8 @@ class default(object):
         h = Struct()
         f = Struct()
 
-        for channel in solver.channels:
-            f[channel], h[channel] = solver.reader(prefix=prefix, channel=channel)
+        for channel in self.channels:
+            f[channel], h[channel] = self.reader(prefix=prefix, channel=channel)
 
         # check headers
         h = self.check_headers(h)
@@ -208,8 +207,8 @@ class default(object):
     def save(self, s, h, prefix='traces/adj/', suffix=''):
         """ Writes seismic data to disk
         """
-        for channel in solver.channels:
-            solver.writer(s[channel], h, channel=channel, prefix=prefix, suffix=suffix)
+        for channel in self.channels:
+            self.writer(s[channel], h, channel=channel, prefix=prefix, suffix=suffix)
 
 
     ### utility functions
@@ -223,7 +222,7 @@ class default(object):
         else:
             output = Struct()
 
-        for channel in solver.channels:
+        for channel in self.channels:
             args = [array[channel] for array in arrays] + input
             output[channel] = func(*args)
 
