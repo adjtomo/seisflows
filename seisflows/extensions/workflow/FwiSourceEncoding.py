@@ -10,6 +10,9 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 OBJ = ConfigObj('SeisflowsObjects')
 
+import system
+import preprocess
+
 
 class FwiSourceEncoding(loadclass('workflow', 'inversion')):
     """ Source encoding subclass
@@ -35,28 +38,17 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
         else:
             PAR.NT_PADDED = PAR.NT
 
-        # check dependencies
-        if 'preprocess' not in OBJ:
-            raise Exception
-
-        if 'system' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        global preprocess
-        import preprocess
-
-        global solver
-        import solver
-
         # assertions
         assert ('SourceEncoding' in PAR.SOLVER)
         assert (PAR.PREPROCESS in ['default'])
+
 
     def setup(self):
         """ Lays groundwork for inversion
         """
         super(FwiSourceEncoding, self).setup()
         self.multiload(path=PATH.DATA, tag='obs')
+
 
     def initialize(self):
         """ Prepares for next model update iteration
@@ -85,6 +77,7 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
 
         # generate synthetics
         super(FwiSourceEncoding, self).initialize()
+
 
     def prepare_sources(self):
         """ Generates source encoding factors
@@ -123,6 +116,7 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
 
         return s
 
+
     def prepare_receivers(self):
         """ Generates receiver factors
         """
@@ -142,12 +136,14 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
             r.append(rs[:, i])
         return r
 
+
     def solver_status(self):
         """ Because source encoding factors change each iteration, the adjoint
             simulation is never "ready to go" at the start of a new iteration
         """
         isready = False
         return isready
+
 
     # -- data processing utilities
 
@@ -172,6 +168,7 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
             sum, h, prefix=PATH.SOLVER + '/' + '000000/traces/' + tag,
             suffix='.bin')
 
+
     def combine_traces(self, sum, d, sinfo, rinfo):
         """ Applies source encoding factors to one source gather and adds it to
             another source gather
@@ -188,7 +185,9 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
 
         return sum
 
+
     def multiload(self, path='', tag='obs', inplace=0, debug=0):
+
         """ Loads data from multiple sources and keeps it in memory
         """
         if tag in globals():
@@ -214,6 +213,7 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
                 print key
 
         globals()[tag] = obj
+
 
     def headers(self, tag='obs'):
         obj = globals()[tag]

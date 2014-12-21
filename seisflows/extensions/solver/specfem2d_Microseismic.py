@@ -12,6 +12,9 @@ OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
+import system
+import preprocess
+
 
 class specfem2d_Microseismic(loadclass('solver', 'specfem2d')):
     # model parameters
@@ -24,33 +27,8 @@ class specfem2d_Microseismic(loadclass('solver', 'specfem2d')):
     inversion_parameters = []
     inversion_parameters += ['vs']
 
-    # data input/output
-    reader = staticmethod(seistools.specfem2d.read)
-    writer = staticmethod(seistools.specfem2d.write)
-
-    # data channels
-    channels = []
-    channels += ['y']
-
     glob = lambda _: glob('OUTPUT_FILES/*.semd')
 
-    def check(self):
-        """ Checks parameters, paths, and dependencies
-        """
-        super(self.__class__, self).check()
-
-        # check dependencies
-        if 'preprocess' not in OBJ:
-            raise Exception
-
-        if 'system' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        global preprocess
-        import preprocess
-
-        global system
-        import system
 
     def prepare_dirs(self, **kwargs):
         super(self.__class__, self).prepare_dirs()

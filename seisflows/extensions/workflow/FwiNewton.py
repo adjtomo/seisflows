@@ -8,18 +8,11 @@ from seisflows.tools.config import loadclass, ParameterObj
 PAR = ParameterObj('parameters')
 PATH = ParameterObj('paths')
 
-system = loadclass('system', PAR.SYSTEM)()
-solver = loadclass('solver', PAR.SOLVER)()
 
 
 class FwiNewton(loadclass('workflow', 'inversion')):
     """ Inversion with truncated Newton model updates
     """
-
-    def __init__(self):
-        """ Constructor
-        """
-        super(FwiNewton, self).__init__()
 
     def compute_direction(self):
         """ Computes search direction

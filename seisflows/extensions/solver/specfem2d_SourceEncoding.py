@@ -10,6 +10,9 @@ OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
+import system
+import preprocess
+
 
 class specfem2d_SourceEncoding(loadclass('solver', 'specfem2d')):
     def check(self):
@@ -17,22 +20,8 @@ class specfem2d_SourceEncoding(loadclass('solver', 'specfem2d')):
         """
         super(self.__class__, self).check()
 
-        # check parameters
         if 'NT_PADDED' not in PAR:
             raise Exception
-
-        # check dependencies
-        if 'system' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        if 'preprocess' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        global system
-        import system
-
-        global preprocess
-        import preprocess
 
     def prepare_dirs(self):
         """ Sets up directory in which to run solver

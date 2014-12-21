@@ -8,18 +8,11 @@ OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
+import system
+import preprocess
+
 
 class specfem3d_legacy(loadclass('solver', 'specfem3d')):
-    def check(self):
-        """ Checks parameters, paths, and dependencies
-        """
-        super(specfem3d_legacy, self).check()
-
-        if 'system' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        global system
-        import system
 
     def mpirun(self, runfile, args='', outfile='/dev/null'):
         """ Wrapper for mpirun

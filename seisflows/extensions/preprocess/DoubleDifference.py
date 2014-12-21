@@ -9,6 +9,9 @@ OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
+import system
+import solver
+
 
 class DoubleDifference(loadclass('preprocess', 'default')):
     """ Data preprocessing class
@@ -19,18 +22,6 @@ class DoubleDifference(loadclass('preprocess', 'default')):
         """
         super(DoubleDifference, self).check()
 
-        # check dependencies
-        if 'solver' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        if 'system' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        global solver
-        import solver
-
-        global system
-        import system
 
     def prepare_eval_grad(self, path='.'):
         """ Prepares solver for gradient evaluation by writing residuals and
