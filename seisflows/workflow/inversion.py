@@ -152,16 +152,12 @@ class inversion(object):
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
 
-            # prepare optimization and solver directories
+            preprocess.setup()
+            postprocess.setup()
             optimize.setup()
 
             system.run('solver', 'setup',
                        hosts='all')
-
-            # prepare starting model
-            #src = PATH.OUTPUT +'/'+ 'model_init'
-            #dst = PATH.OPTIMIZE +'/'+ 'm_new'
-            #savenpy(dst, solver.merge(solver.load(src)))
 
         else:
             # prepare optimization and solver directories

@@ -49,6 +49,11 @@ class default(object):
             setattr(PATH, 'PRECOND', None)
 
 
+    def setup(self):
+        # nothing to do
+        pass
+
+
     def process_kernels(self, tag='grad', path=None):
         """ Computes gradient and performs smoothing, preconditioning, and
             scaling operations

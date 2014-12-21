@@ -65,6 +65,12 @@ class default(object):
         if 'FREQHI' not in PAR:
             setattr(PAR, 'FREQHI', 0.)
 
+
+    def setup(self):
+        # nothing to do
+        pass
+
+
     def prepare_eval_grad(self, path='.'):
         """ Prepares solver for gradient evaluation by writing residuals and
           adjoint traces
