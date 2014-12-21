@@ -94,14 +94,6 @@ class specfem3d_globe(object):
             'reg1_vsv': 'reg1_betav_kernel',
             'reg1_vsh': 'reg1_betah_kernel'}
 
-    # data channels
-    channels = []
-    channels += ['z']
-
-    # data input/output
-    reader = staticmethod(solvertools.read)
-    writer = staticmethod(solvertools.write)
-
 
     def check(self):
         """ Checks parameters, paths, and dependencies

@@ -67,15 +67,6 @@ class specfem3d(object):
         'vp': 'alpha_kernel',
         'vs': 'beta_kernel'}
 
-    # data channels
-    channels = []
-    channels += ['z']
-
-    # data input/output
-    reader = staticmethod(solvertools.readsu)
-    writer = staticmethod(solvertools.writesu)
-
-
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
