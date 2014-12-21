@@ -45,13 +45,21 @@ class ConfigObj(object):
         for key in self.keys:
             saveobj(fullpath + '/' + key + '.p', sys.modules[key])
 
-    def load(self, name, path='.'):
+    def load(self, name, path='.', files=None):
         try:
             fullpath = join(abspath(path), name)
         except:
             raise IOError(path)
 
-        files = glob(join(fullpath, '*.p'))
+        if not files:
+            files = []
+            files += [fullpath+'/'+'system.p']
+            files += [fullpath+'/'+'preprocess.p']
+            files += [fullpath+'/'+'solver.p']
+            files += [fullpath+'/'+'postprocess.p']
+            files += [fullpath+'/'+'optimize.p']
+            files += [fullpath+'/'+'workflow.p']
+
         for file in files:
             key, _ = os.path.splitext(unix.basename(file))
             self.keys.add(key)

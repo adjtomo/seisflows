@@ -20,9 +20,6 @@ if __name__ == '__main__':
     if 'SYSTEM' not in PAR:
         raise Exception
 
-    if 'OPTIMIZE' not in PAR:
-        setattr(PAR,'OPTIMIZE','default')
-
     if 'PREPROCESS' not in PAR:
         setattr(PAR,'PREPROCESS','default')
 
@@ -32,28 +29,32 @@ if __name__ == '__main__':
     if 'SOLVER' not in PAR:
         raise Exception
 
+    if 'OPTIMIZE' not in PAR:
+        setattr(PAR,'OPTIMIZE','default')
+
     if 'WORKFLOW' not in PAR:
         raise Exception
 
+    register=OBJ.register
 
     # load objects
     system = loadclass('system',PAR.SYSTEM)()
-    workflow = loadclass('workflow',PAR.WORKFLOW)()
-    solver = loadclass('solver',PAR.SOLVER)()
-    optimize = loadclass('optimize',PAR.OPTIMIZE)()
-    preprocess = loadclass('preprocess',PAR.PREPROCESS)()
-    postprocess = loadclass('postprocess',PAR.POSTPROCESS)()
-
-
-    # register objects
-    register=OBJ.register
     register('system',system)
-    register('workflow',workflow)
-    register('solver',solver)
-    register('optimize',optimize)
+
+    preprocess = loadclass('preprocess',PAR.PREPROCESS)()
     register('preprocess',preprocess)
+
+    solver = loadclass('solver',PAR.SOLVER)()
+    register('solver',solver)
+
+    postprocess = loadclass('postprocess',PAR.POSTPROCESS)()
     register('postprocess',postprocess)
 
+    optimize = loadclass('optimize',PAR.OPTIMIZE)()
+    register('optimize',optimize)
+
+    workflow = loadclass('workflow',PAR.WORKFLOW)()
+    register('workflow',workflow)
 
     # check objects
     system.check()

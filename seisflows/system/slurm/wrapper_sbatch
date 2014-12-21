@@ -23,18 +23,18 @@ if __name__ == '__main__':
     PATH.update(loadjson(pathfile))
     OBJ.load(objname, mypath)
 
-    import optimize
-    import preprocess
-    import postprocess
-    import solver
     import system
+    import preprocess
+    import solver
+    import postprocess
+    import optimize
     import workflow
 
     system.check()
-    solver.check()
-    optimize.check()
     preprocess.check()
     postprocess.check()
+    solver.check()
+    optimize.check()
     workflow.check()
 
     workflow.main()
