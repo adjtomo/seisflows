@@ -1,14 +1,10 @@
-import copy as _copy
-import glob as _glob
+
 import string as _string
 import numpy as _np
 
 from seisflows.tools import unix
 from seisflows.tools.code import Struct
 from seisflows.tools.config import findpath
-
-import segy.reader as segyreader
-import segy.writer as segywriter
 
 
 ### input file writers

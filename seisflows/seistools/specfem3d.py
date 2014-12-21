@@ -1,15 +1,9 @@
-import copy as _copy
 import glob as _glob
 import string as _string
 import numpy as _np
 
 from seisflows.tools import unix
-from seisflows.tools.code import Struct
 from seisflows.tools.config import findpath
-from seisflows.seistools.core import SeisStruct
-
-import segy.reader as segyreader
-import segy.writer as segywriter
 
 
 ### input file writers
@@ -113,11 +107,6 @@ def _writelines(file, lines):
     """
     with open(file, 'w') as f:
         f.writelines(lines)
-
-
-def _list(array):
-    array2 = (_copy.copy(array))
-    return list(array2)
 
 
 def _split(str, sep):
