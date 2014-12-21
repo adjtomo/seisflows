@@ -62,13 +62,13 @@ class inversion(object):
             setattr(PATH, 'LOCAL', None)
 
         if 'FUNC' not in PATH:
-            setattr(PATH, 'FUNC', join(PATH.GLOBAL, 'func'))
+            setattr(PATH, 'FUNC', join(PATH.GLOBAL, 'evalfunc'))
 
         if 'GRAD' not in PATH:
-            setattr(PATH, 'GRAD', join(PATH.GLOBAL, 'grad'))
+            setattr(PATH, 'GRAD', join(PATH.GLOBAL, 'evalgrad'))
 
         if 'HESS' not in PATH:
-            setattr(PATH, 'HESS', join(PATH.GLOBAL, 'hess'))
+            setattr(PATH, 'HESS', join(PATH.GLOBAL, 'evalhess'))
 
         if 'OPTIMIZE' not in PATH:
             setattr(PATH, 'OPTIMIZE', join(PATH.GLOBAL, 'optimize'))
