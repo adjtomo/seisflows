@@ -112,6 +112,9 @@ class inversion(object):
         global optimize
         import optimize
 
+        global preprocess
+        import preprocess
+
         global postprocess
         import postprocess
 
