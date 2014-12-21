@@ -159,11 +159,10 @@ def su_specfem3d(channel=None, prefix='SEM', suffix='', verbose=False):
     return d, h
 
 
-
 def ascii_specfem3d_globe(**kwargs):
     """ Reads seismic traces from text files
     """
-    files = glob(solver='3d_globe',**kwargs)
+    files = glob(solver='3d_globe', suffix='sem.ascii', **kwargs)
     t = _np.loadtxt(files[0])[:, 0]
     h = Struct()
     h['t0'] = t[0]
