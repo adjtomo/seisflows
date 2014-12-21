@@ -4,6 +4,7 @@ import subprocess
 import numpy as np
 
 import seisflows.seistools.specfem3d as solvertools
+from seisflows.seistools.shared import load
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
@@ -243,7 +244,7 @@ class specfem3d(object):
 
     ### model input/output
 
-    def load(self, dirname, type='model', verbose=False):
+    def load(self, dirname, type='model', new_version=True, verbose=False):
         """ reads SPECFEM3D model
         """
         if type == 'model':
@@ -253,28 +254,24 @@ class specfem3d(object):
         else:
             raise ValueError
 
-        # read database files
-        parts = {}
-        minmax = {}
-        for key in self.model_parameters:
-            parts[key] = []
-            minmax[key] = [+np.Inf,-np.Inf]
-            for iproc in range(PAR.NPROC):
-                filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
-                part = loadbin(join(dirname, filename))
-                parts[key].append(part)
-                # keep track of min, max
-                if part.min() < minmax[key][0]: minmax[key][0] = part.min()
-                if part.max() > minmax[key][1]: minmax[key][1] = part.max()
+        if new_version:
+           # provides the same functionality as before, but with more 
+           # sophisticated debugging features
+           if verbose:
+               logfile = PATH.SUBMIT +'/'+ 'output.minmax'
+           else:
+               logfile = None
+           return load(dirname, self.model_parameters, mapping, PAR.NPROC, logfile)
 
-        # print min, max
-        if verbose:
-            with open(PATH.SUBMIT + '/' + 'output.minmax','a') as output:
-                output.write(abspath(dirname)+'\n')
-                for key,val in minmax.items():
-                    output.write('%-10s %10.3e %10.3e\n' % (key, val[0], val[1]))
-                output.write('\n')
-        return parts
+        else: # old_version
+            parts = {}
+            for key in self.model_parameters:
+                parts[key] = []
+                for iproc in range(PAR.NPROC):
+                    filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
+                    part = loadbin(join(dirname, filename))
+                    parts[key].append(part)
+            return parts
 
 
     def save(self, dirname, parts):
