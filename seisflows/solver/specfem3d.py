@@ -500,21 +500,18 @@ class specfem3d(object):
         """ Writes mesh files expected by input/output methods
         """
         if system.getnode() == 0:
-
-            model_set = set(self.model_parameters)
-            inversion_set = set(self.inversion_parameters)
-
             parts = self.load(PATH.MODEL_INIT)
             try:
                 path = PATH.GLOBAL +'/'+ 'mesh'
             except:
                 raise Exception
             if not exists(path):
-                for key in setdiff(model_set, inversion_set):
-                    unix.mkdir(path +'/'+ key)
-                    for proc in range(PAR.NPROC):
-                        with open(path +'/'+ key +'/'+ '%06d' % proc, 'w') as file:
-                            np.save(file, parts[key][proc])
+                for key in self.model_parameters: 
+                    if key not in self.inversion_parameters:
+                        unix.mkdir(path +'/'+ key)
+                        for proc in range(PAR.NPROC):
+                            with open(path +'/'+ key +'/'+ '%06d' % proc, 'w') as file:
+                                np.save(file, parts[key][proc])
 
             try:
                 path = PATH.OPTIMIZE +'/'+ 'm_new'
