@@ -244,7 +244,7 @@ class specfem3d(object):
 
     ### model input/output
 
-    def load(self, dirname, type='model', new_version=True, verbose=False):
+    def load(self, dirname, type='model', verbose=False):
         """ reads SPECFEM3D model
         """
         if type == 'model':
@@ -254,24 +254,20 @@ class specfem3d(object):
         else:
             raise ValueError
 
-        if new_version:
-           # provides the same functionality as before, but with more 
-           # sophisticated debugging features
-           if verbose:
-               logfile = PATH.SUBMIT +'/'+ 'output.minmax'
-           else:
-               logfile = None
-           return load(dirname, self.model_parameters, mapping, PAR.NPROC, logfile)
+        if verbose:
+            logfile = PATH.SUBMIT +'/'+ 'output.minmax'
+        else:
+            logfile = None
 
-        else: # old_version
-            parts = {}
-            for key in self.model_parameters:
-                parts[key] = []
-                for iproc in range(PAR.NPROC):
-                    filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
-                    part = loadbin(join(dirname, filename))
-                    parts[key].append(part)
-            return parts
+        # construct arguments list
+        args = []
+        args += [dirname]
+        args += [self.model_parameters]
+        args += [mapping]
+        args += [PAR.NPROC]
+        args += [logfile]
+
+        return load(*args)
 
 
     def save(self, dirname, parts):
@@ -397,9 +393,9 @@ class specfem3d(object):
     ### file transfer utilities
 
     def import_model(self, path):
-        src = glob(join(path, 'model', '*'))
+        src = join(path, 'model')
         dst = self.databases
-        unix.cp(src, dst)
+        self.save(dst, self.load(src, verbose=True))
 
     def import_traces(self, path):
         src = glob(join(path, 'traces', self.sname, '*'))

@@ -23,29 +23,30 @@ class SeisStruct(Struct):
 
 
 class ModelStruct(Mapping):
-    def __init__(self, reader):
-        self.reader = reader
-        self.cached_key = None
-        self.cached_val = None
-
-    def __getitem__(self, key):
-        if key == self.cached_key:
-            return self.cached_val
-        else:
-            array = self.reader(key)
-            self.cached_key = key
-            self.cached_val = array
-        return array
-
-    def __iter__(self):
-        return []
-
-    def __len__(self):
-        return len([])
+    def __init__(self):
+        raise NotImplementedError
 
 
-def load(dirname, parameters, mapping, nproc, output):
+def load1(dirname, parameters, mapping, nproc, logfile=None):
     """ reads SPECFEM model
+
+      Models are stored as a Fortran binary files and separated according to
+      material parameter and processor rank.
+    """
+    parts = {}
+    for key in parameters:
+        parts[key] = []
+        for iproc in range(nproc):
+            filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
+            part = loadbin(join(dirname, filename))
+            parts[key].append(part)
+    return parts
+
+
+def load2(dirname, parameters, mapping, nproc, logfile):
+    """ reads SPECFEM model
+
+      Provides the same functionality as load1 but with debugging output.
     """
     # read database files
     parts = {}
@@ -62,11 +63,65 @@ def load(dirname, parameters, mapping, nproc, output):
             if part.max() > minmax[key][1]: minmax[key][1] = part.max()
 
     # print min, max
-    if output:
-        with open(output,'a') as f:
+    if logfile:
+        with open(logfile,'a') as f:
             f.write(abspath(dirname)+'\n')
             for key,val in minmax.items():
                 f.write('%-10s %10.3e %10.3e\n' % (key, val[0], val[1]))
             f.write('\n')
     return parts
+
+
+def load3(dirname, parameters, mapping, nproc, logfile):
+    """ reads SPECFEM model
+
+      Provides the same functionality as load1 but with debugging output and
+      sophisticated memory management.
+    """
+    minmax = {}
+
+    def helper_func(key):
+        parts = []
+        minmax[key] = [+np.Inf,-np.Inf]
+        for iproc in range(nproc):
+            filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
+            part = loadbin(join(dirname, filename))
+            parts.append(part)
+            # keep track of min, max
+            if part.min() < minmax[key][0]: minmax[key][0] = part.min()
+            if part.max() > minmax[key][1]: minmax[key][1] = part.max()
+        return parts
+
+    class helper_class(Mapping):
+        def __init__(self):
+            self.cached_key = None
+            self.cached_val = None
+
+        def __getitem__(self, key):
+            if key == self.cached_key:
+                return self.cached_val
+            else:
+                parts = helper_func(key)
+                self.cached_key = key
+                self.cached_val = parts
+            return parts
+
+        def __iter__(self):
+            return []
+
+        def __len__(self):
+            return len([])
+
+        def __del__(self):
+            if logfile:
+                with open(logfile,'a') as f:
+                    f.write(abspath(dirname)+'\n')
+                    for key,val in minmax.items():
+                        f.write('%-10s %10.3e %10.3e\n' % (key, val[0], val[1]))
+                    f.write('\n')
+
+    return helper_class()
+
+
+load = load3
 
