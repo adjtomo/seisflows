@@ -30,8 +30,8 @@ class ModelStruct(Mapping):
 def load1(dirname, parameters, mapping, nproc, logfile=None):
     """ reads SPECFEM model
 
-      Models are stored as a Fortran binary files and separated according to
-      material parameter and processor rank.
+      Models are stored as a Fortran binary fomrat and and separated into 
+      mulitple files according to material parameter and processor rank.
     """
     parts = {}
     for key in parameters:
@@ -53,21 +53,21 @@ def load2(dirname, parameters, mapping, nproc, logfile):
     minmax = {}
     for key in parameters:
         parts[key] = []
-        minmax[key] = [+np.Inf,-np.Inf]
+        minmax[mapping(key)] = [+np.Inf,-np.Inf]
         for iproc in range(nproc):
             filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
             part = loadbin(join(dirname, filename))
             parts[key].append(part)
             # keep track of min, max
-            if part.min() < minmax[key][0]: minmax[key][0] = part.min()
-            if part.max() > minmax[key][1]: minmax[key][1] = part.max()
+            if part.min() < minmax[mapping(key)][0]: minmax[mapping(key)][0] = part.min()
+            if part.max() > minmax[mapping(key)][1]: minmax[mapping(key)][1] = part.max()
 
     # print min, max
     if logfile:
         with open(logfile,'a') as f:
             f.write(abspath(dirname)+'\n')
             for key,val in minmax.items():
-                f.write('%-10s %10.3e %10.3e\n' % (key, val[0], val[1]))
+                f.write('%-15s %10.3e %10.3e\n' % (key, val[0], val[1]))
             f.write('\n')
     return parts
 
@@ -82,14 +82,14 @@ def load3(dirname, parameters, mapping, nproc, logfile):
 
     def helper_func(key):
         parts = []
-        minmax[key] = [+np.Inf,-np.Inf]
+        minmax[mapping(key)] = [+np.Inf,-np.Inf]
         for iproc in range(nproc):
             filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
             part = loadbin(join(dirname, filename))
             parts.append(part)
             # keep track of min, max
-            if part.min() < minmax[key][0]: minmax[key][0] = part.min()
-            if part.max() > minmax[key][1]: minmax[key][1] = part.max()
+            if part.min() < minmax[mapping(key)][0]: minmax[mapping(key)][0] = part.min()
+            if part.max() > minmax[mapping(key)][1]: minmax[mapping(key)][1] = part.max()
         return parts
 
     class helper_class(Mapping):
@@ -117,7 +117,7 @@ def load3(dirname, parameters, mapping, nproc, logfile):
                 with open(logfile,'a') as f:
                     f.write(abspath(dirname)+'\n')
                     for key,val in minmax.items():
-                        f.write('%-10s %10.3e %10.3e\n' % (key, val[0], val[1]))
+                        f.write('%-15s %10.3e %10.3e\n' % (key, val[0], val[1]))
                     f.write('\n')
 
     return helper_class()
