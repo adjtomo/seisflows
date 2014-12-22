@@ -91,11 +91,11 @@ Solver Integration
 
 Integration of the solver with the other workflow components can be challenging. Here we try to give an idea of the issues involved from both a developer and a user standpoint.
 
-- Solver computations account for most of the cost of an inversion. As a result, the solver must be written in an efficient compiled language, and wrappers must be written to integrate integrate Python code with compiled language code. 
+- Solver computations account for most of the cost of an inversion. As a result, the solver must be written in an efficient compiled language, and wrappers must be written to integrate the compiled code with other software components. 
 
 - Because compilation of SPECFEM2D, SPECFEM3D, or SPECFEM3D_GLOBE depends on input files, there is currently no mechanism for automatically compiling binary files. Users must prepare their own SPECFEM input files and then follow the procedure from the SPECFEM documentation to compile binary files.
 
-- As described :ref:`above <job_submission>`, SeisFlows uses input files to determine runtime settings.  Problems could arise if parameters from SeisFlows input files conflict with parameters from SPECFEM input files. Users must make sure that there are no conflicts between SeisFlows parameters and solver parameters.
+- As described :ref:`above <job_submission>`, SeisFlows uses its own unique input files to determine runtime settings.  Problems could arise if parameters from SeisFlows input files conflict with parameters from SPECFEM input files. Users must make sure that there are no conflicts between SeisFlows parameters and solver parameters.
 
 - In the solver routines, it is natural to represent velocity models as dictionaries, with different keys corresponding to different material parameters.  In the optimization routines, it natural to represent velocity models as vectors. To convert back and forth between these two representations, a pair of utility functions--``split`` and ``merge``--are included in each in the SeisFlows package as part of the solver interfaces.
 
@@ -117,7 +117,7 @@ While there are many similarities between job management systems, there are also
 
 Besides different job submission and management systems, different filesystem configurations may exist as well.  Filesystem settings can be adjusted by modifying values in the ``PATH`` dictionary, which is populated from ``paths.py``.  Output files and temporary files, by default, are written to the working directory.  If a value for ``PATH.GLOBAL`` is supplied, temporary files are written there instead.  If each compute node has its own local filesystem and if a value for ``PATH.LOCAL`` is supplied, some temporary files will be written to ``PATH.LOCAL`` and others to ``PATH.GLOBAL``.
 
-As the size of an inversion grows, scalability and fault tolerance become increasingly important.  If a single forward simulation spans more than one node, users must select ``pbs_big_job`` or ``slurm_big_job`` system configurations in ``parameters.py``.  If a forward simulation fits onto a single node, users must select ``pbs`` or ``slurm`` instead.
+As the size of an inversion grows, scalability and fault tolerance become increasingly important.  If a single forward simulation spans more than one node, users must select ``pbs_lg_job`` or ``slurm_lg_job`` system configurations in ``parameters.py``.  If a forward simulation fits onto a single node, users must select ``pbs_lg_job`` or ``slurm_sm_job`` instead.
 
 
 Heavyweight Solutions
@@ -137,6 +137,8 @@ To allow classes to work with one another, each class must conform to an establi
 ``solver`` classes must implement
 
 - check
+
+- setup
 
 - eval_func
 
@@ -168,6 +170,8 @@ To allow classes to work with one another, each class must conform to an establi
 
 - check
 
+- setup
+
 - prepare_eval_grad
 
 - process_traces
@@ -179,12 +183,16 @@ To allow classes to work with one another, each class must conform to an establi
 
 - check
 
+- setup
+
 - process_kernels
 
 
 ``optimize`` classes must implement
 
 - check
+
+- setup
 
 - compute_direction
 
@@ -196,6 +204,15 @@ To allow classes to work with one another, each class must conform to an establi
 
 - search_status
 
+
+``workflow`` classes must implement
+
+- check
+
+- main
+
+
+`setup` methods are generic methods, called from the `main` workflow script and meant to provide users the flexibility to perform any required setup tasks. `check` methods are the default mechanism for parameter declaration and checking and are called just once, prior to a job being submitted through the scheduler.
 
 Besides required methods, classes may include any number of private methods or utility functions.
 
