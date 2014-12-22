@@ -2,11 +2,10 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.code import Struct
-from seisflows.tools.config import ConfigObj, ParameterObj
+from seisflows.tools.config import ParameterObj
 
 from seisflows.seistools import adjoint, misfit, sbandpass, smute, readers, writers
 
-OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
@@ -216,7 +215,6 @@ class default(object):
     def apply(self, func, arrays, input, inplace=True):
         """ Applies function to multi-component data
         """
-
         if inplace:
             output = Struct(arrays[0])
         else:

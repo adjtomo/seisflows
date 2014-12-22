@@ -4,11 +4,10 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.code import Struct, exists
-from seisflows.tools.config import loadclass, ConfigObj, ParameterObj
+from seisflows.tools.config import loadclass, ParameterObj
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
-OBJ = ConfigObj('SeisflowsObjects')
 
 import system
 import preprocess
