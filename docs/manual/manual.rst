@@ -212,7 +212,7 @@ To allow classes to work with one another, each class must conform to an establi
 - main
 
 
-`setup` methods are generic methods, called from the `main` workflow script and meant to provide users the flexibility to perform any required setup tasks. `check` methods are the default mechanism for parameter declaration and checking and are called just once, prior to a job being submitted through the scheduler.
+In the above list, ``setup`` methods are generic methods, called from the ``main`` workflow script and meant to provide users the flexibility to perform any required setup tasks. ``check`` methods are the default mechanism for parameter declaration and checking and are called just once, prior to a job being submitted through the scheduler.
 
 Besides required methods, classes may include any number of private methods or utility functions.
 
