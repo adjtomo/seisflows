@@ -46,21 +46,23 @@ class Thomsen(object):
         """ Converts kernel dictionary to gradient vector
         """
         unix.cd(path + '/' + 'kernels')
-        kernels = solver.load('sum', type='kernel', verbose=True)
-        weights = solver.load('../model', type='model')
-
-        g = np.array([])
-        for key in solver.inversion_parameters:
-            if key in ['rho','vp','vs']:
-                print ' weighting', key
-                for iproc in range(PAR.NPROC):
-                    g = np.append(g, kernels[key][iproc] * weights[key][iproc])
-            else:
-                for iproc in range(PAR.NPROC):
-                    g = np.append(g, kernels[key][iproc])
-        print ''
-
+        g = solver.merge(solver.load('sum', type='kernel', verbose=True))
         return g
+        #unix.cd(path + '/' + 'kernels')
+        #kernels = solver.load('sum', type='kernel', verbose=True)
+        #weights = solver.load('../model', type='model')
+
+        #g = np.array([])
+        #for key in solver.inversion_parameters:
+        #    if key in ['rho','vp','vs']:
+        #        print ' weighting', key
+        #        for iproc in range(PAR.NPROC):
+        #            g = np.append(g, kernels[key][iproc] * weights[key][iproc])
+        #    else:
+        #        for iproc in range(PAR.NPROC):
+        #            g = np.append(g, kernels[key][iproc])
+        #print ''
+        #return g
 
 
     def process_kernels(self, tag='grad', path=None):
