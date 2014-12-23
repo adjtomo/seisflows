@@ -40,7 +40,7 @@ Access to a computer cluster is required for most applications.  Base classes ar
 Job Submission
 ==============
 
-Each job must be submitted from a `working directory`.  Within a working directory, users must supply two input files, ``paths.py`` and ``paramters.py``. Output files, by default, are written to the working directory, along with scratch files created by the solver and optimization routines. Different output and scratch directories can be specified by adding or modifying entries in ``paths.py``.
+Each job must be submitted from a `working directory`.  Within a working directory, users must supply two input files, ``paths.py`` and ``parameters.py``. Output files, by default, are written to the working directory, along with scratch files created by the solver and optimization routines. Different output and scratch directories can be specified by adding or modifying entries in ``paths.py``.
 
 ``parameters.py`` contains a list of parameter names and values. Prior to a job being submitted, parameters are checked so that errors can be detected without loss of queue time or wall time. Parameters are stored in a dictionary that is accessible from anywhere in the Python code. By convention, all parameter names must be upper case. Parameter values can be floats, integers, strings or any other Python data type. Parameters can be listed in any order.
 
