@@ -267,7 +267,7 @@ class specfem3d_globe(object):
     ### model input/output
 
     def load(self, dirname, type='model', verbose=False):
-        """ reads SPECFEM3D model
+        """ reads SPECFEM3D_GLOBE model
         """
         if type == 'model':
             mapping = lambda key: key
@@ -276,28 +276,13 @@ class specfem3d_globe(object):
         else:
             raise ValueError
 
-        # read database files
-        parts = {}
-        minmax = {}
-        for key in self.model_parameters:
-            parts[key] = []
-            minmax[key] = [+np.Inf,-np.Inf]
-            for iproc in range(PAR.NPROC):
-                filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
-                part = loadbin(join(dirname, filename))
-                parts[key].append(part)
-                # keep track of min, max
-                if part.min() < minmax[key][0]: minmax[key][0] = part.min()
-                if part.max() > minmax[key][1]: minmax[key][1] = part.max()
-
-        # print min, max
         if verbose:
-            with open(PATH.SUBMIT + '/' + 'output.minmax','a') as output:
-                output.write(abspath(dirname)+'\n')
-                for key,val in minmax.items():
-                    output.write('%-10s %10.3e %10.3e\n' % (key, val[0], val[1]))
-                output.write('\n')
-        return parts
+            logfile = PATH.SUBMIT +'/'+ 'output.minmax'
+        else:
+            logfile = None
+
+        return load(dirname, self.model_parameters, mapping, PAR.NPROC, logfile)
+
 
 
     def save(self, dirname, parts):

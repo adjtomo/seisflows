@@ -34,7 +34,7 @@ def load1(dirname, parameters, mapping, nproc, logfile=None):
       mulitple files according to material parameter and processor rank.
     """
     parts = {}
-    for key in parameters:
+    for key in sorted(parameters):
         parts[key] = []
         for iproc in range(nproc):
             filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
@@ -51,7 +51,7 @@ def load2(dirname, parameters, mapping, nproc, logfile):
     # read database files
     parts = {}
     minmax = {}
-    for key in parameters:
+    for key in sorted(parameters):
         parts[key] = []
         minmax[mapping(key)] = [+np.Inf,-np.Inf]
         for iproc in range(nproc):
@@ -116,7 +116,8 @@ def load3(dirname, parameters, mapping, nproc, logfile):
             if logfile:
                 with open(logfile,'a') as f:
                     f.write(abspath(dirname)+'\n')
-                    for key,val in minmax.items():
+                    for key in sorted(minmax):
+                        val = minmax[key]
                         f.write('%-15s %10.3e %10.3e\n' % (key, val[0], val[1]))
                     f.write('\n')
 

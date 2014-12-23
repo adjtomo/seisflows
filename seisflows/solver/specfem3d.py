@@ -258,15 +258,7 @@ class specfem3d(object):
         else:
             logfile = None
 
-        # construct arguments list
-        args = []
-        args += [dirname]
-        args += [self.model_parameters]
-        args += [mapping]
-        args += [PAR.NPROC]
-        args += [logfile]
-
-        return load(*args)
+        return load(dirname, self.model_parameters, mapping, PAR.NPROC, logfile)
 
 
     def save(self, dirname, parts):
@@ -506,7 +498,7 @@ class specfem3d(object):
             except:
                 raise Exception
             if not exists(path):
-                for key in self.model_parameters: 
+                for key in self.model_parameters:
                     if key not in self.inversion_parameters:
                         unix.mkdir(path +'/'+ key)
                         for proc in range(PAR.NPROC):
