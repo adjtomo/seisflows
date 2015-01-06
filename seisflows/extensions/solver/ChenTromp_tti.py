@@ -14,8 +14,8 @@ class ChenTromp_tti(loadclass('extensions.solver', 'specfem3d_legacy')):
     model_parameters += ['rho']
     model_parameters += ['A']
     model_parameters += ['C']
-    model_parameters += ['N']
     model_parameters += ['L']
+    model_parameters += ['N']
     model_parameters += ['F']
     model_parameters += ['Jc']
     model_parameters += ['Js']
@@ -82,14 +82,4 @@ class ChenTromp_tti(loadclass('extensions.solver', 'specfem3d_legacy')):
         'Ec': 'Ec_kernel',
         'Es': 'Es_kernel'}
 
-
-    def export_kernels(self, path):
-        super(specfem3d_ChenTromp, self).export_kernels(path)
-        try:
-            name = 'azimuth'
-            src = join(glob(self.databases +'/'+ '*'+ name+'.bin'))
-            dst = join(path, 'azimuth')
-            unix.mv(src, dst)
-        except:
-            pass
 

@@ -4,7 +4,7 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 
-class ChenTromp_tti(loadclass('extensions.solver', 'specfem3d_legacy')):
+class ChenTromp_vti(loadclass('extensions.solver', 'specfem3d_legacy')):
     # data channels
     channels = []
     channels += ['x']
@@ -14,8 +14,8 @@ class ChenTromp_tti(loadclass('extensions.solver', 'specfem3d_legacy')):
     model_parameters += ['rho']
     model_parameters += ['A']
     model_parameters += ['C']
-    model_parameters += ['N']
     model_parameters += ['L']
+    model_parameters += ['N']
     model_parameters += ['F']
     model_parameters += ['Jc']
     model_parameters += ['Js']
@@ -41,22 +41,6 @@ class ChenTromp_tti(loadclass('extensions.solver', 'specfem3d_legacy')):
     inversion_parameters += ['L']
     inversion_parameters += ['N']
     inversion_parameters += ['F']
-    inversion_parameters += ['Jc']
-    inversion_parameters += ['Js']
-    inversion_parameters += ['Kc']
-    inversion_parameters += ['Ks']
-    inversion_parameters += ['Mc']
-    inversion_parameters += ['Ms']
-    inversion_parameters += ['Gc']
-    inversion_parameters += ['Gs']
-    inversion_parameters += ['Bc']
-    inversion_parameters += ['Bs']
-    inversion_parameters += ['Hc']
-    inversion_parameters += ['Hs']
-    inversion_parameters += ['Dc']
-    inversion_parameters += ['Ds']
-    inversion_parameters += ['Ec']
-    inversion_parameters += ['Es']
 
     kernel_map = {
         'rho': 'rho_kernel',
@@ -82,14 +66,4 @@ class ChenTromp_tti(loadclass('extensions.solver', 'specfem3d_legacy')):
         'Ec': 'Ec_kernel',
         'Es': 'Es_kernel'}
 
-
-    def export_kernels(self, path):
-        super(specfem3d_ChenTromp, self).export_kernels(path)
-        try:
-            name = 'azimuth'
-            src = join(glob(self.databases +'/'+ '*'+ name+'.bin'))
-            dst = join(path, 'azimuth')
-            unix.mv(src, dst)
-        except:
-            pass
 
