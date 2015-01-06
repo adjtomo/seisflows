@@ -4,6 +4,7 @@ from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
 from seisflows.tools.config import ParameterObj
+from seisflows.tools.io import savebin
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
@@ -42,15 +43,7 @@ class ChenTromp(object):
         pass
 
 
-    def merge_kernels(self, tag, path):
-        """ Converts kernel dictionary to gradient vector
-        """
-        unix.cd(path + '/' + 'kernels')
-        g = solver.merge(solver.load('sum', type='kernel', verbose=True))
-        return g
-
-
-    def process_kernels(self, tag='grad', path=None):
+    def process_kernels(self, tag='gradient', path=None):
         """ Computes gradient and performs scaling, smoothing, and 
           preconditioning operations
         """
@@ -59,13 +52,37 @@ class ChenTromp(object):
         # combine kernels
         system.run('solver', 'combine',
                    hosts='head',
-                   path=path + '/' + 'kernels')
+                   path=path +'/'+ 'kernels')
 
-        g = self.merge_kernels(tag, path)
+        g = solver.merge(
+                solver.load(
+                    path +'/'+ 'kernels/sum', 
+                    type='kernel', 
+                    verbose=True))
 
-        # apply ad hoc scaling
-        if float(PAR.SCALE) != 1.: g *= PAR.SCALE
-        solver.save(path + '/' + tag, solver.split(g))
+        # write gradient
+        solver.save(path +'/'+ tag, solver.split(g))
+
+        # compute azimuth
+        try:
+            parts = solver.load(path +'/'+ 'kernels/sum', type='kernel')
+            for iproc in range(PAR.NPROC):
+                y = parts['Gs'][iproc]
+                x = - parts['Gc'][iproc]
+                t = 0.5*np.arctan2(y, x)
+                dirname = path +'/'+ tag
+                filename = 'proc%06d_%s.bin' % (iproc, 'azimuth')
+                savebin(t, dirname +'/'+ filename)
+        except:
+            pass
+
+        # apply scaling
+        if float(PAR.SCALE) == 1.:
+            pass
+        elif not PAR.SCALE:
+            pass
+        else:
+            g *= PAR.SCALE
 
         # apply clipping
         if PAR.CLIP > 0.:
@@ -82,11 +99,11 @@ class ChenTromp(object):
         if PATH.PRECOND:
             unix.cd(path)
             g /= solver.merge(solver.load(PATH.PRECOND))
-            unix.mv(tag, tag + '_noprecond')
+            unix.mv(tag, '_noprecond')
             solver.save(tag, solver.split(g))
 
         if 'OPTIMIZE' in PATH:
-            if tag == 'grad':
+            if tag == 'gradient':
                 g = solver.merge(solver.load(path +'/'+ tag, type='model', verbose=True))
                 savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
