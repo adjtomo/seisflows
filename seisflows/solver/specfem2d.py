@@ -128,7 +128,6 @@ class specfem2d(object):
         self.initialize_adjoint_traces()
         self.initialize_io_machinery()
 
-
     def generate_data(self, **model_kwargs):
         """ Generates data
         """
@@ -327,7 +326,7 @@ class specfem2d(object):
             [str(len(unix.ls(path)))] +
             [path])
 
-    def smooth(self, path='', tag='grad', span=0):
+    def smooth(self, path='', tag='gradient', span=0.):
         """smooths SPECFEM2D kernels by convolving them with a Gaussian"""
         from seisflows.tools.array import meshsmooth
 
@@ -347,7 +346,7 @@ class specfem2d(object):
         # perform smoothing
         for key in self.inversion_parameters:
             parts[key] = [meshsmooth(x, z, parts[key][0], span, nx, nz)]
-        unix.mv(path +'/'+ tag, path +'/'+ tag + '_nosmooth')
+        unix.mv(path +'/'+ tag, path +'/'+ '_nosmooth')
         self.save(path +'/'+ tag, parts)
 
 
@@ -371,28 +370,19 @@ class specfem2d(object):
             unix.cp(src, dst)
 
     def export_kernels(self, path):
-        try:
-            unix.mkdir(join(path, 'kernels'))
-        except:
-            pass
+        unix.mkdir_gpfs(join(path, 'kernels'))
         src = join(self.spath, 'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
         dst = join(path, 'kernels', self.sname)
         unix.cp(src, dst)
 
     def export_residuals(self, path):
-        try:
-            unix.mkdir(join(path, 'residuals'))
-        except:
-            pass
+        unix.mkdir_gpfs(join(path, 'residuals'))
         src = join(self.spath, 'residuals')
         dst = join(path, 'residuals', self.sname)
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
-        try:
-            unix.mkdir(join(path, 'traces'))
-        except:
-            pass
+        unix.mkdir_gpfs(join(path, 'traces'))
         src = join(self.spath, prefix)
         dst = join(path, 'traces', self.sname)
         unix.cp(src, dst)

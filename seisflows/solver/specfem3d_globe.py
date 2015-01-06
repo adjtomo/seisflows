@@ -404,7 +404,7 @@ class specfem3d_globe(object):
 
         # move kernels
         src = path +'/'+ tag
-        dst = path +'/'+ tag + '_nosmooth'
+        dst = path +'/'+ '_nosmooth'
         unix.mkdir(dst)
         for name, flag in kernels:
             if flag:
@@ -417,13 +417,15 @@ class specfem3d_globe(object):
         unix.cd(path)
 
 
-
     ### file transfer utilities
 
     def import_model(self, path):
         src = glob(join(path, 'model', '*'))
         dst = self.databases
-        unix.cp(src, dst)
+        if system.getnode()==0:
+            self.save(dst, self.load(src, verbose=True))
+        else:
+            self.save(dst, self.load(src))
 
     def export_model(self, path):
         if system.getnode() == 0:
@@ -434,13 +436,9 @@ class specfem3d_globe(object):
                 unix.cp(src, dst)
 
     def export_kernels(self, path):
-        try:
-            unix.mkdir(join(path, 'kernels'))
-        except:
-            pass
-        unix.mkdir(join(path, 'kernels', self.sname))
-        kernel_names = self.kernel_map.values()
-        for name in kernel_names:
+        unix.mkdir_gpfs(join(path, 'kernels'))
+        unix.mkdir_gpfs(join(path, 'kernels', self.sname))
+        for name in self.kernel_map.values():
             src = join(glob(self.databases  +'/'+ '*'+ name+'.bin'))
             dst = join(path, 'kernels', self.sname)
             unix.mv(src, dst)
@@ -453,19 +451,13 @@ class specfem3d_globe(object):
             pass
 
     def export_residuals(self, path):
-        try:
-            unix.mkdir(join(path, 'residuals'))
-        except:
-            pass
+        unix.mkdir_gpfs(join(path, 'residuals'))
         src = join(unix.pwd(), 'residuals')
         dst = join(path, 'residuals', self.sname)
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
-        try:
-            unix.mkdir(join(path, 'traces'))
-        except:
-            pass
+        unix.mkdir_gpfs(join(path, 'traces'))
         src = join(unix.pwd(), prefix)
         dst = join(path, 'traces', self.sname)
         unix.cp(src, dst)

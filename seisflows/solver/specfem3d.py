@@ -386,7 +386,11 @@ class specfem3d(object):
     def import_model(self, path):
         src = join(path, 'model')
         dst = self.databases
-        self.save(dst, self.load(src, verbose=True))
+
+        if system.getnode()==0:
+            self.save(dst, self.load(src, verbose=True))
+        else:
+            self.save(dst, self.load(src))
 
     def import_traces(self, path):
         src = glob(join(path, 'traces', self.sname, '*'))
@@ -402,13 +406,9 @@ class specfem3d(object):
                 unix.cp(src, dst)
 
     def export_kernels(self, path):
-        try:
-            unix.mkdir(join(path, 'kernels'))
-        except:
-            pass
+        unix.mkdir_gpfs(join(path, 'kernels'))
         unix.mkdir(join(path, 'kernels', self.sname))
-        kernel_names = self.kernel_map.values()
-        for name in kernel_names:
+        for name in self.kernel_map.values():
             src = join(glob(self.databases  +'/'+ '*'+ name+'.bin'))
             dst = join(path, 'kernels', self.sname)
             unix.mv(src, dst)
@@ -421,19 +421,13 @@ class specfem3d(object):
             pass
 
     def export_residuals(self, path):
-        try:
-            unix.mkdir(join(path, 'residuals'))
-        except:
-            pass
+        unix.mkdir_gpfs(join(path, 'residuals'))
         src = join(self.spath, 'residuals')
         dst = join(path, 'residuals', self.sname)
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
-        try:
-            unix.mkdir(join(path, 'traces'))
-        except:
-            pass
+        unix.mkdir_gpfs(join(path, 'traces'))
         src = join(self.spath, prefix)
         dst = join(path, 'traces', self.sname)
         unix.cp(src, dst)
