@@ -20,7 +20,7 @@ class default(object):
 
      Available line search algorithms include a backtracking line search based
      on quadratic interpolation and a bracketing and interpolation procedure
-     (abbreviated as 'Backtrack' and 'BracketMinimum' respectively.)
+     (abbreviated as 'Backtrack' and 'Bracket' respectively.)
 
      To reduce memory overhead, input vectors are read from the directory
      cls.path rather than passed from a calling routine. At the start of each
@@ -88,7 +88,7 @@ class default(object):
 
         # prepare output writer
         cls.writer = OutputWriter(PATH.SUBMIT + '/' + 'output.optim',
-                                  ['iter', 'steplen', 'datafit'])
+                                  ['iter', 'step', 'misfit'])
 
     def compute_direction(cls):
         """ Computes model update direction from stored function and gradient 
@@ -199,14 +199,14 @@ class default(object):
             if any(f[1:] < f[0]):
                 cls.isdone = 1
 
-        elif PAR.SRCHTYPE == 'BracketMinimum':
+        elif PAR.SRCHTYPE == 'Bracket':
             if cls.isbrak:
                 cls.isbest = 1
                 cls.isdone = 1
             elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 cls.isbrak = 1
 
-        elif PAR.SRCHTYPE == 'FixedStep':
+        elif PAR.SRCHTYPE == 'Fixed':
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 cls.isdone = 1
 
@@ -232,7 +232,7 @@ class default(object):
         if PAR.SRCHTYPE == 'Backtrack':
             alpha = lib.backtrack2(f0, g0, x[1], f[1], b1=0.1, b2=0.5)
 
-        elif PAR.SRCHTYPE == 'BracketMinimum':
+        elif PAR.SRCHTYPE == 'Bracket':
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 alpha = lib.polyfit2(x, f)
             elif any(f[1:] < f[0]):
@@ -240,7 +240,7 @@ class default(object):
             else:
                 alpha = loadtxt('alpha')*GOLDENRATIO**-1
 
-        elif PAR.SRCHTYPE == 'FixedStep':
+        elif PAR.SRCHTYPE == 'Fixed':
             alpha = cls.step_ratio*(step + 1)*PAR.STEPLEN
 
         else:

@@ -4,6 +4,7 @@ from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
 from seisflows.tools.config import ParameterObj
+from seisflows.tools.io import savebin
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
@@ -42,7 +43,7 @@ class default(object):
         pass
 
 
-    def process_kernels(self, tag='grad', path=None):
+    def process_kernels(self, tag='gradient', path=None):
         """ Computes gradient and performs scaling, smoothing, and 
           preconditioning operations
         """
@@ -51,17 +52,31 @@ class default(object):
         # combine kernels
         system.run('solver', 'combine',
                    hosts='head',
-                   path=path + '/' + 'kernels')
+                   path=path +'/'+ 'kernels')
 
-        # compute gradient from logarithmic sensitivity kernels
-        unix.cd(path + '/' + 'kernels')
-        g = solver.merge(solver.load('sum', type='kernel', verbose=True))
-        m = solver.merge(solver.load('../model', type='model'))
+        g = solver.merge(
+                solver.load(
+                    path +'/'+ 'kernels/sum', 
+                    type='kernel', 
+                    verbose=True))
+
+        # write gradient
+        solver.save(path +'/'+ tag, solver.split(g))
+
+        # convert logarithmic perturbations
+        m = solver.merge(
+                solver.load(
+                    path +'/'+ 'model',
+                    type='kernel'))
         g *= m
 
-        # apply ad hoc scaling
-        if float(PAR.SCALE) != 1.: g *= PAR.SCALE
-        solver.save(path + '/' + tag, solver.split(g))
+        # apply scaling
+        if float(PAR.SCALE) == 1.:
+            pass
+        elif not PAR.SCALE:
+            pass
+        else:
+            g *= PAR.SCALE
 
         # apply clipping
         if PAR.CLIP > 0.:
@@ -78,11 +93,11 @@ class default(object):
         if PATH.PRECOND:
             unix.cd(path)
             g /= solver.merge(solver.load(PATH.PRECOND))
-            unix.mv(tag, tag + '_noprecond')
+            unix.mv(tag, '_noprecond')
             solver.save(tag, solver.split(g))
 
         if 'OPTIMIZE' in PATH:
-            if tag == 'grad':
+            if tag == 'gradient':
                 g = solver.merge(solver.load(path +'/'+ tag, type='model', verbose=True))
                 savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
