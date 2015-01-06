@@ -76,7 +76,7 @@ def load3(dirname, parameters, mapping, nproc, logfile):
     """ reads SPECFEM model
 
       Provides the same functionality as load1 but with debugging output and
-      sophisticated memory management.
+      improved memory usage.
     """
     minmax = {}
 

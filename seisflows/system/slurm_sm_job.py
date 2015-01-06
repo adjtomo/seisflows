@@ -34,12 +34,6 @@ class slurm_sm_job(object):
         """ Checks parameters and paths
         """
 
-        if 'TITLE' not in PAR:
-            setattr(PAR,'TITLE',unix.basename(abspath('.')))
-
-        if 'SUBTITLE' not in PAR:
-            setattr(PAR,'SUBTITLE',unix.basename(abspath('..')))
-
         # check parameters
         if 'NTASK' not in PAR:
             raise Exception
@@ -52,6 +46,12 @@ class slurm_sm_job(object):
 
         if 'VERBOSE' not in PAR:
             setattr(PAR,'VERBOSE',1)
+
+        if 'TITLE' not in PAR:
+            setattr(PAR,'TITLE',unix.basename(abspath('.')))
+
+        if 'SUBTITLE' not in PAR:
+            setattr(PAR,'SUBTITLE',unix.basename(abspath('..')))
 
         # check paths
         if 'GLOBAL' not in PATH:
@@ -67,8 +67,7 @@ class slurm_sm_job(object):
             setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
 
 
-
-    def submit(self,workflow):
+    def submit(self, workflow):
         """ Submits job
         """
         unix.mkdir(PATH.OUTPUT)
@@ -92,7 +91,7 @@ class slurm_sm_job(object):
         subprocess.call(args, shell=1)
 
 
-    def run(self,classname,funcname,hosts='all',**kwargs):
+    def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
         """
         if PAR.VERBOSE >= 2:
