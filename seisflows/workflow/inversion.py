@@ -128,25 +128,28 @@ class inversion(object):
     def setup(self):
         """ Lays groundwork for inversion
         """
+        # clean scratch directories
         if PAR.BEGIN == 1:
-            # prepare directory structure
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
 
-            preprocess.setup()
-            postprocess.setup()
-            optimize.setup()
+        # set up optimization
+        optimize.setup()
 
+        # set up pre- and post-processing
+        preprocess.setup()
+        postprocess.setup()
+
+        # set up solver
+        if PAR.BEGIN == 1:
             system.run('solver', 'setup',
                        hosts='all')
+            return
 
-        else:
-            # prepare optimization and solver directories
-            optimize.setup()
-
-            if PATH.LOCAL:
-                system.run('solver', 'setup',
-                           hosts='all')
+        if PATH.LOCAL:
+             system.run('solver', 'setup',
+                        hosts='all')
+ 
 
     def initialize(self):
         """ Prepares for next model update iteration
@@ -157,7 +160,6 @@ class inversion(object):
 
             self.prepare_model(path=PATH.GRAD, suffix='new')
 
-            # forward simulation
             system.run('solver', 'eval_func',
                        hosts='all',
                        path=PATH.GRAD)
@@ -297,15 +299,16 @@ class inversion(object):
             isready = True
         return isready
 
+    def save_gradient(self):
+        src = join(PATH.GRAD, 'gradient')
+        dst = join(PATH.OUTPUT, 'gradient_%04d' % self.iter)
+        unix.mkdir(dst)
+        unix.mv(src, dst)
+
     def save_model(self):
         src = PATH.OPTIMIZE +'/'+ 'm_new'
         dst = join(PATH.OUTPUT, 'model_%04d' % self.iter)
         solver.save(dst, solver.split(loadnpy(src)))
-
-    def save_gradient(self):
-        src = glob(join(PATH.POSTPROCESS, 'grad*'))
-        dst = join(PATH.OUTPUT, 'gradient_%04d' % self.iter)
-        unix.mv(src, dst)
 
     def save_kernels(self):
         src = join(PATH.GRAD, 'kernels')

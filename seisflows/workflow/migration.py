@@ -46,8 +46,8 @@ class migration(object):
             raise Exception
 
         # check output
-        if 'SAVEIMAGE' not in PAR:
-            setattr(PAR, 'SAVEIMAGE', 1)
+        if 'SAVEGRADIENT' not in PAR:
+            setattr(PAR, 'SAVEGRADIENT', 1)
 
         if 'SAVEKERNELS' not in PAR:
             setattr(PAR, 'SAVEKERNELS', 0)
@@ -62,6 +62,10 @@ class migration(object):
         # prepare directory structure
         unix.rm(PATH.GLOBAL)
         unix.mkdir(PATH.GLOBAL)
+
+        # set up pre- and post-processing
+        preprocess.setup()
+        postprocess.setup()
 
         # prepare solver
         print 'Preparing solver...'
@@ -81,14 +85,14 @@ class migration(object):
                    path=PATH.GLOBAL,
                    export_traces=PAR.SAVETRACES)
 
-        # process image
+        # process gradient
         postprocess.process_kernels(
             path=PATH.GLOBAL,
-            tag='image')
+            tag='gradient')
 
         # save results
-        if PAR.SAVEIMAGE:
-            self.save_image()
+        if PAR.SAVEGRADIENT:
+            self.save_gradient()
 
         if PAR.SAVETRACES:
             self.save_traces()
@@ -105,8 +109,8 @@ class migration(object):
         assert exists(model)
         unix.cp(model, PATH.GLOBAL +'/'+ 'model')
 
-    def save_image(self):
-        src = glob(PATH.GLOBAL +'/'+ 'image*')
+    def save_gradient(self):
+        src = glob(PATH.GLOBAL +'/'+ 'gradient')
         dst = PATH.OUTPUT
         unix.mv(src, dst)
 
