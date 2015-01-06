@@ -68,6 +68,13 @@ def mkdir(dirs):
         if not _os.path.isdir(dir):
             _os.makedirs(dir)
 
+def mkdir_gpfs(dirs):
+    try:
+        for dir in _strlist(dirs):
+            if not _os.path.isdir(dir):
+                _os.makedirs(dir)
+    except:
+        pass
 
 def mv(src='', dst=''):
     if isinstance(src, (list, tuple)):
