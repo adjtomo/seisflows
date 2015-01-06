@@ -6,7 +6,7 @@ import subprocess
 
 from seisflows.tools import unix
 from seisflows.tools.code import abspath, join, saveobj
-from seisflows.tools.config import getmodule, getpath, ParameterObj
+from seisflows.tools.config import getmodule, findpath, ParameterObj
 
 PAR = ParameterObj('parameters')
 PATH = ParameterObj('paths')
@@ -26,7 +26,7 @@ class pbs_torque(object):
 
 
     def __init__(self):
-        """ Class constructor
+        """ Checks parameters and paths
         """
 
         # check parameters
@@ -58,55 +58,51 @@ class pbs_torque(object):
         if 'SYSTEM' not in PATH:
             setattr(PATH,'SYSTEM',join(PATH.GLOBAL,'system'))
 
-        if 'SUBMIT_DIR' not in PATH:
-            setattr(PATH,'SUBMIT_DIR',unix.pwd())
+        if 'SUBMIT' not in PATH:
+            setattr(PATH,'SUBMIT',unix.pwd())
 
-        if 'SUBMIT_HOST' not in PATH:
-            setattr(PATH,'SUBMIT_HOST',unix.hostname())
+        if 'OUTPUT' not in PATH:
+            setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
 
 
-    def submit(self,workflow):
+    def submit(self, workflow):
         """Submits job
         """
-        unix.cd(PATH.SUBMIT_DIR)
+        unix.mkdir(PATH.OUTPUT)
+        unix.cd(PATH.OUTPUT)
 
-        # store parameters
-        saveobj(join(PATH.SUBMIT_DIR,'parameters.p'),PAR.vars)
-        saveobj(join(PATH.SUBMIT_DIR,'paths.p'),PATH.vars)
+        # save current state
+        save_objects('SeisflowsObjects')
+        save_parameters('SeisflowsParameters.json')
+        save_paths('SeisflowsPaths.json')
 
-        # construct resource list
         nodes = PAR.NTASK/16
         cores = PAR.NTASK%16
+        hours = PAR.WALLTIME/60
+        minutes = PAR.WALLTIME%60
+
+        # construct resource list
+        resources = 'walltime=%02d:%02d:00 ' % (hours, minutes)
         if nodes == 0:
-            rlist = 'nodes=1:ppn=%d' % cores
+            resources += ',nodes=1:ppn=%d' % cores
         elif cores == 0:
-            rlist = 'nodes=%d:ppn=16'% nodes
+            resources += ',nodes=%d:ppn=16'% nodes
         else:
-            rlist = 'nodes=%d:ppn=16+1:ppn=%d' % (nodes,cores)
-
-        hh = PAR.WALLTIME/60
-        mm = PAR.WALLTIME%60
-        resources = "-l %s,walltime=%02d:%02d:00 " % (rlist,hh,mm)
-
-        # construct variables list
-        variables = ''
+            resources += ',nodes=%d:ppn=16+1:ppn=%d' % (nodes, cores)
 
         args = ('qsub '
-          + resources
-          + variables
-          + '-N %s ' %  PAR.TITLE
-          + '-o %s ' % (PATH.SUBMIT_DIR+'/'+'output.log')
+          + '-N %s ' % PAR.TITLE
+          + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
+          + '-l %s ' % resources
           + '-j %s ' % 'oe'
-          + getpath('system') +'/'+ 'pbs/wrapper_qsub '
-          + PATH.SUBMIT_DIR + ' '
-          + getmodule(workflow))
-
-        print args
+          + findpath('system') +'/'+ 'pbs/wrapper_qsub '
+          + PATH.OUTPUT)
+        print args # DEBUG
 
         subprocess.call(args, shell=1)
 
 
-    def run(self,task,hosts='all',**kwargs):
+    def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
         """
         name = task.__name__
@@ -114,25 +110,29 @@ class pbs_torque(object):
         if PAR.VERBOSE >= 2:
             print 'running',name
 
-        # store function arguments
-        unix.mkdir(PATH.SYSTEM)
-        file = PATH.SYSTEM+'/'+name+'.p'
-        saveobj(file,kwargs)
+        # save current state
+        save_objects(join(PATH.OUTPUT,'SeisflowsObjects'))
+
+        # save keyword arguments
+        kwargspath = join(PATH.OUTPUT,'SeisflowsObjects',classname+'_kwargs')
+        kwargsfile = join(kwargspath,funcname+'.p')
+        unix.mkdir(kwargspath)
+        saveobj(kwargsfile,kwargs)
 
         if hosts == 'all':
             # run on all available nodes
             args = ('pbsdsh '
-              + getpath('system') +'/'+ 'pbs/wrapper_pbsdsh '
-              + PATH.SUBMIT_DIR + ' '
-              + getmodule(task) + ' '
-              + name)
+              + findpath('system') +'/'+ 'pbs/wrapper_pbsdsh '
+              + PATH.OUTPUT + ' '
+              + classname + ' '
+              + funcname)
         elif hosts == 'head':
             # run on head node
             args = ('pbsdsh '
-              + getpath('system') +'/'+ 'slurm/wrapper_pbsdsh '
-              + PATH.SUBMIT_DIR + ' '
-              + getmodule(task) + ' '
-              + name)
+              + findpath('system') +'/'+ 'slurm/wrapper_pbsdsh '
+              + PATH.OUTPUT + ' '
+              + classname + ' '
+              + funcname)
         else:
             raise Exception
 

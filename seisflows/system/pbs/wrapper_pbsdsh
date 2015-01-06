@@ -1,4 +1,3 @@
-#!/usr/bin/python -u
 
 import os
 import sys
@@ -9,20 +8,45 @@ myfunc = sys.argv[3]
 
 os.chdir(mypath)
 
-from seisflows.tools.code import loadobj
-from seisflows.tools.config import loadclass, ParameterObj
+from seisflows.tools.code import join, loadjson, loadobj
+from seisflows.tools.config import ConfigObj, ParameterObj
 
-PAR = ParameterObj('parameters', mypath)
-PATH = ParameterObj('paths', mypath)
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
+OBJ = ConfigObj('SeisflowsObjects')
 
 if __name__ == '__main__':
-    # load function
-    obj = loadclass(myobj)()
-    func = getattr(obj, myfunc)
+    parname = 'SeisflowsParameters.json'
+    pathname = 'SeisflowsPaths.json'
+    objname = 'SeisflowsObjects'
+
+    parfile = join(mypath, parname)
+    pathfile = join(mypath, pathname)
+
+    PAR.update(loadjson(parfile))
+    PATH.update(loadjson(pathfile))
+    OBJ.load(objname, mypath)
+
+    import optimize
+    import preprocess
+    import postprocess
+    import solver
+    import system
+    import workflow
+
+    system.check()
+    solver.check()
+    optimize.check()
+    preprocess.check()
+    postprocess.check()
+    workflow.check()
 
     # load function arguments
-    kwargs = loadobj(PATH.SYSTEM + '/' + myfunc + '.p')
+    kwargspath = join(mypath, 'SeisflowsObjects', myobj + '_kwargs')
+    kwargs = loadobj(join(kwargspath, myfunc + '.p'))
 
-    # call function
+    # load function
+    func = getattr(sys.modules[myobj], myfunc)
+
     func(**kwargs)
 
