@@ -33,14 +33,21 @@ class default(object):
     def check(cls):
         """ Checks parameters, paths, and dependencies
         """
-
-        # check optimization parameters
+        # check parameters
         if 'BEGIN' not in PAR:
             raise Exception
 
         if 'END' not in PAR:
             raise Exception
 
+        # check paths
+        if 'SUBMIT' not in PATH:
+            raise Exception
+
+        if 'OPTIMIZE' not in PATH:
+            setattr(PATH, 'OPTIMIZE', join(PATH.GLOBAL, 'optimize'))
+
+        # search direction parameters
         if 'SCHEME' not in PAR:
             setattr(PAR, 'SCHEME', 'QuasiNewton')
 
@@ -53,7 +60,7 @@ class default(object):
         if 'LBFGSMAX' not in PAR:
             setattr(PAR, 'LBFGSMAX', 6)
 
-        # check line search parameters
+        # line search parameters
         if 'SRCHTYPE' not in PAR:
             setattr(PAR, 'SRCHTYPE', 'Backtrack')
 
@@ -66,12 +73,10 @@ class default(object):
         if 'STEPMAX' not in PAR:
             setattr(PAR, 'STEPMAX', 0.)
 
-        # check paths
-        if 'SUBMIT' not in PATH:
-            raise Exception
+        if 'ADHOCSCALING' not in PAR:
+            setattr(PAR, 'ADHOCSCALING', 0.)
 
-        if 'OPTIMIZE' not in PATH:
-            setattr(PATH, 'OPTIMIZE', join(PATH.GLOBAL, 'optimize'))
+
 
     def setup(cls):
         """ Sets up directory in which to store optimization vectors
@@ -88,7 +93,10 @@ class default(object):
 
         # prepare output writer
         cls.writer = OutputWriter(PATH.SUBMIT + '/' + 'output.optim',
-                                  ['iter', 'step', 'misfit'])
+            ['iter', 'step', 'misfit'])
+
+
+    ### search direction methods
 
     def compute_direction(cls):
         """ Computes model update direction from stored function and gradient 
@@ -119,7 +127,8 @@ class default(object):
         savenpy('p_new', p_new)
         savetxt('s_new', np.dot(g_new, p_new))
 
-    # -- line search methods
+
+    ### line search methods
 
     def initialize_search(cls):
         """ Determines initial step length for line search
@@ -144,7 +153,7 @@ class default(object):
         cls.isbest = 0
         cls.isbrak = 0
 
-        # compute length ratio
+        # determine initial step length
         len_m = max(abs(m))
         len_d = max(abs(p))
         cls.step_ratio = float(len_m/len_d)
@@ -158,8 +167,8 @@ class default(object):
             alpha = 1.
 
         # ad hoc scaling
-        if 0:
-            alpha *= 1
+        if PAR.ADHOCSCALING:
+            alpha *= PAR.ADHOCSCALING
 
         # limit maximum step length
         if PAR.STEPMAX > 0.:
@@ -171,6 +180,7 @@ class default(object):
         savetxt('alpha', alpha)
 
         cls.writer(cls.iter, 0., f_new)
+
 
     def search_status(cls):
         """ Determines status of line search
@@ -214,6 +224,7 @@ class default(object):
 
         return cls.isdone, cls.isbest
 
+
     def compute_step(cls):
         """ Computes next trial step length
         """
@@ -249,6 +260,7 @@ class default(object):
         # write trial model
         savetxt('alpha', alpha)
         savenpy('m_try', m0 + p*alpha)
+
 
     def finalize_search(cls):
         """ Cleans working directory and writes updated model
@@ -286,7 +298,8 @@ class default(object):
 
         cls.writer([], [], [])
 
-    # -- line search utilities
+
+    ### line search utilities
 
     def step_lens(cls, sort=True):
         x, f = zip(*cls.search_history)
@@ -298,6 +311,7 @@ class default(object):
             return x_sorted
         else:
             return x
+
 
     def func_vals(cls, sort=True):
         x, f = zip(*cls.search_history)
