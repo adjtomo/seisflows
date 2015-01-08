@@ -125,6 +125,7 @@ class inversion(object):
             if self.isdone:
                 return
 
+
     def setup(self):
         """ Lays groundwork for inversion
         """
