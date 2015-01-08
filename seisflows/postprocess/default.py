@@ -93,6 +93,9 @@ class default(object):
                        path=path,
                        span=PAR.SMOOTH)
 
+            g = solver.merge(solver.load(path +'/'+ tag))
+
+
         # apply preconditioner
         if PATH.PRECOND:
             unix.cd(path)
