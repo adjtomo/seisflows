@@ -59,6 +59,9 @@ class default(object):
 
     def setup(self):
         """ Performs any required setup tasks
+
+          Called at beginning of an inversion, prior to any model update 
+          iterations.
         """
         self.reader = getattr(readers, PAR.FORMAT)
         self.writer = getattr(writers, PAR.FORMAT)

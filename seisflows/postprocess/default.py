@@ -39,7 +39,11 @@ class default(object):
 
 
     def setup(self):
-        # nothing to do
+        """ Performs any required setup tasks
+
+          Called at beginning of an inversion, prior to any model update 
+          iterations.
+        """
         pass
 
 
