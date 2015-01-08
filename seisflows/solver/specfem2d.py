@@ -61,7 +61,6 @@ class specfem2d(object):
 
     # inversion parameters
     inversion_parameters = []
-    inversion_parameters += ['vp']
     inversion_parameters += ['vs']
 
     kernel_map = {
