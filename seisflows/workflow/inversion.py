@@ -72,7 +72,7 @@ class inversion(object):
         if 'OPTIMIZE' not in PATH:
             setattr(PATH, 'OPTIMIZE', join(PATH.GLOBAL, 'optimize'))
 
-        # check input settings
+        # input settings
         if 'DATA' not in PATH:
             setattr(PATH, 'DATA', None)
 
@@ -82,7 +82,7 @@ class inversion(object):
         if 'MODEL_INIT' not in PATH:
             raise Exception
 
-        # check output settings
+        # output settings
         if 'OUTPUT' not in PATH:
             raise Exception
 
@@ -166,11 +166,13 @@ class inversion(object):
 
             self.sum_residuals(path=PATH.GRAD, suffix='new')
 
+
     def compute_direction(self):
         """ Computes search direction
         """
         self.evaluate_gradient()
         optimize.compute_direction()
+
 
     def line_search(self):
         """ Conducts line search in given search direction
@@ -190,6 +192,7 @@ class inversion(object):
                 self.isdone = -1
                 print ' line search failed'
 
+
     def search_status(self):
         """ Checks line search status
         """
@@ -200,12 +203,14 @@ class inversion(object):
 
         if not PATH.LOCAL:
             if isbest and isdone:
+                unix.rm(PATH.SOLVER + '_best')
                 unix.mv(PATH.SOLVER, PATH.SOLVER + '_best')
             elif isbest:
                 unix.rm(PATH.SOLVER + '_best')
                 unix.cp(PATH.SOLVER, PATH.SOLVER + '_best')
 
         return isdone
+
 
     def evaluate_function(self):
         """ Calls forward solver and writes misfit
@@ -219,6 +224,7 @@ class inversion(object):
 
         self.sum_residuals(path=PATH.FUNC, suffix='try')
 
+
     def evaluate_gradient(self):
         """ Calls adjoint solver and runs process_kernels
         """
@@ -230,6 +236,7 @@ class inversion(object):
 
         postprocess.process_kernels(
             path=PATH.GRAD)
+
 
     def finalize(self):
         """ Saves results from most recent model update iteration
@@ -266,7 +273,8 @@ class inversion(object):
 
         self.isdone = False
 
-    # -- utility functions
+
+    ### utility functions
 
     def prepare_model(self, path='', suffix=''):
         """ Writes model in format used by solver
@@ -276,6 +284,7 @@ class inversion(object):
         dst = path +'/'+ 'model'
         parts = solver.split(loadnpy(src))
         solver.save(dst, parts)
+
 
     def sum_residuals(self, path='', suffix=''):
         """ Sums residuals to obtain misfit function value
@@ -288,6 +297,7 @@ class inversion(object):
             residuals.append(fromfile**2.)
         np.savetxt(dst, [np.sum(residuals)])
 
+
     def solver_status(self):
         """ Decides if solver prerequisites are in place
         """
@@ -299,27 +309,30 @@ class inversion(object):
             isready = True
         return isready
 
+
     def save_gradient(self):
         src = join(PATH.GRAD, 'gradient')
         dst = join(PATH.OUTPUT, 'gradient_%04d' % self.iter)
-        unix.mkdir(dst)
         unix.mv(src, dst)
+
 
     def save_model(self):
         src = PATH.OPTIMIZE +'/'+ 'm_new'
         dst = join(PATH.OUTPUT, 'model_%04d' % self.iter)
         solver.save(dst, solver.split(loadnpy(src)))
 
+
     def save_kernels(self):
         src = join(PATH.GRAD, 'kernels')
         dst = join(PATH.OUTPUT, 'kernels_%04d' % self.iter)
-        unix.mkdir(dst)
         unix.mv(src, dst)
+
 
     def save_traces(self):
         src = join(PATH.GRAD, 'traces')
         dst = join(PATH.OUTPUT, 'traces_%04d' % self.iter)
         unix.mv(src, dst)
+
 
     def save_residuals(self):
         src = join(PATH.GRAD, 'residuals')
