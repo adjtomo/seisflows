@@ -10,3 +10,5 @@ SeisFlows is an open source seismic inversion package with three main goals:
 - avoid code duplication across 2D, 3D, and global solver packages
 
 Documentation is available online at [readthedocs.org](http://seisflows.readthedocs.org/en/latest/)
+
+[![Build Status](https://travis-ci.org/PrincetonUniversity/seisflows.svg?branch=master)](https://travis-ci.org/PrincetonUniversity/seisflows)
