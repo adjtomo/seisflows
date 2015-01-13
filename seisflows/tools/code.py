@@ -29,7 +29,7 @@ def divides(i, j):
 
 def exists(name):
     """Wrapper for os.path.exists"""
-    if not name:
+    if not isinstance(name, basestring):
         return False
     else:
         return os.path.exists(name)
