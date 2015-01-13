@@ -1,8 +1,9 @@
 import numpy as np
+import glob
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import divides, exists, glob, join
+from seisflows.tools.code import divides, exists, join
 from seisflows.tools.config import ParameterObj
 
 PAR = ParameterObj('SeisflowsParameters')

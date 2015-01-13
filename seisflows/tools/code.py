@@ -1,4 +1,3 @@
-import glob as _glob
 import json
 import os
 import pickle
@@ -13,6 +12,7 @@ class Struct(dict):
         self.__dict__ = self
 
 
+# FIXME: use standard function.
 def abspath(*args, **kwargs):
     return os.path.abspath(*args, **kwargs)
 
@@ -35,11 +35,7 @@ def exists(name):
         return os.path.exists(name)
 
 
-def glob(*args):
-    """Wrapper for glob.glob"""
-    return _glob.glob(*args)
-
-
+# FIXME: use standard function.
 def join(*args):
     """Wrapper for os.path.join"""
     return os.path.join(*args)

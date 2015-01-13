@@ -3,9 +3,10 @@ import imp
 import inspect
 import sys
 import types
+import glob
 
 from seisflows.tools import unix
-from seisflows.tools.code import Struct, abspath, exists, glob, join, loadjson, \
+from seisflows.tools.code import Struct, abspath, exists, join, loadjson, \
     loadobj, savejson, saveobj
 
 

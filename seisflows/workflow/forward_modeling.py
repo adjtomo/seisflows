@@ -1,7 +1,8 @@
 import numpy as np
+import glob
 
 from seisflows.tools import unix
-from seisflows.tools.code import exists, glob, join
+from seisflows.tools.code import exists, join
 from seisflows.tools.config import loadclass, ConfigObj, ParameterObj
 
 OBJ = ConfigObj('SeisflowsObjects')

@@ -1,9 +1,10 @@
 #!/usr/bin/python
 
 import os
+import glob
 
 from seisflows.tools import unix
-from seisflows.tools.code import glob, join
+from seisflows.tools.code import join
 
 
 def listdir(dir):
