@@ -2,7 +2,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import divides, exists, glob, irange, join
+from seisflows.tools.code import divides, exists, glob, join
 from seisflows.tools.config import loadclass, ParameterObj
 
 PAR = ParameterObj('parameters')
@@ -20,7 +20,7 @@ class FwiNewton(loadclass('workflow', 'inversion')):
         self.evaluate_gradient()
 
         self.optimize.initialize_newton()
-        for self.ilcg in irange(1, PAR.LCGMAX):
+        for self.ilcg in range(1, PAR.LCGMAX+1):
             self.apply_hessian()
             isdone = self.optimize.update_newton()
             if isdone:

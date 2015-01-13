@@ -4,7 +4,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import abspath, irange, savetxt
+from seisflows.tools.code import abspath, savetxt
 from seisflows.tools.config import loadclass, loadvars, ParameterObj
 from tests.integration.Optimize.problems import rosenbrock as problem
 
@@ -56,7 +56,7 @@ class run(object):
     def main(cls):
         cls.setup()
 
-        for cls.iter in irange(PAR.BEGIN,PAR.END):
+        for cls.iter in range(PAR.BEGIN, PAR.END+1):
             print 'Starting iteration', cls.iter
             optimize.iter = cls.iter
 
@@ -94,7 +94,7 @@ class run(object):
     def line_search(cls):
         optimize.initialize_search()
 
-        for cls.step in irange(1,PAR.SRCHMAX):
+        for cls.step in range(1, PAR.SRCHMAX+1):
             isdone = cls.search_status()
 
             if isdone==1:

@@ -2,7 +2,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import divides, exists, glob, irange, join
+from seisflows.tools.code import divides, exists, glob, join
 from seisflows.tools.config import ParameterObj
 
 PAR = ParameterObj('SeisflowsParameters')
@@ -107,7 +107,7 @@ class inversion(object):
         """
         self.setup()
 
-        for self.iter in irange(PAR.BEGIN, PAR.END):
+        for self.iter in range(PAR.BEGIN, PAR.END+1):
             optimize.iter = self.iter
 
             print "Starting iteration", self.iter
@@ -180,7 +180,7 @@ class inversion(object):
         """
         optimize.initialize_search()
 
-        for optimize.step in irange(1, PAR.SRCHMAX):
+        for optimize.step in range(1, PAR.SRCHMAX+1):
             isdone = self.search_status()
 
             if isdone == 1:

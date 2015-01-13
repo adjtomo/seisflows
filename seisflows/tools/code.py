@@ -40,13 +40,6 @@ def glob(*args):
     return _glob.glob(*args)
 
 
-def irange(*args):
-    if len(args) == 1:
-        return range(1, args[0] + 1)
-    elif len(args) == 2:
-        return range(args[0], args[1] + 1)
-
-
 def join(*args):
     """Wrapper for os.path.join"""
     return os.path.join(*args)
