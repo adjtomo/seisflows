@@ -3,7 +3,7 @@ import glob
 
 from seisflows import seistools
 from seisflows.tools import unix
-from seisflows.tools.code import exists, join
+from seisflows.tools.code import exists
 from seisflows.tools.config import loadclass, findpath, ParameterObj
 from seisflows.seistools.shared import SeisStruct
 

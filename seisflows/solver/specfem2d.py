@@ -1,5 +1,6 @@
 
 import subprocess
+from os.path import join
 
 import numpy as np
 import glob
@@ -8,7 +9,7 @@ import seisflows.seistools.specfem2d as solvertools
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists, join, setdiff
+from seisflows.tools.code import exists, setdiff
 from seisflows.tools.config import findpath, ParameterObj
 from seisflows.tools.io import loadbin, savebin
 

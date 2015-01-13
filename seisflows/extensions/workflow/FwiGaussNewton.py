@@ -3,7 +3,7 @@ import glob
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import divides, exists, join
+from seisflows.tools.code import divides, exists
 from seisflows.tools.config import loadclass, ParameterObj
 
 PAR = ParameterObj('parameters')

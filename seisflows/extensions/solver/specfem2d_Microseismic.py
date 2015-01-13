@@ -5,7 +5,7 @@ from scipy.interpolate import griddata
 
 from seisflows import seistools
 from seisflows.tools import unix
-from seisflows.tools.code import exists, join, setdiff, Struct
+from seisflows.tools.code import exists, setdiff, Struct
 from seisflows.tools.config import loadclass, ParameterObj
 import glob
 

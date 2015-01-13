@@ -3,10 +3,10 @@ import os
 import pickle
 import sys
 import subprocess
-from os.path import abspath
+from os.path import abspath, join
 
 from seisflows.tools import unix
-from seisflows.tools.code import join, saveobj
+from seisflows.tools.code import saveobj
 from seisflows.tools.config import getmodule, findpath, ParameterObj
 
 PAR = ParameterObj('parameters')

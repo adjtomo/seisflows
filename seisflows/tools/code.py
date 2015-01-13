@@ -30,12 +30,6 @@ def exists(name):
         return os.path.exists(name)
 
 
-# FIXME: use standard function.
-def join(*args):
-    """Wrapper for os.path.join"""
-    return os.path.join(*args)
-
-
 def loadobj(filename):
     """Load object using pickle"""
     with open(filename, 'rb') as file:

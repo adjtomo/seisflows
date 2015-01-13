@@ -3,13 +3,13 @@ import subprocess
 
 import numpy as np
 import glob
-from os.path import abspath
+from os.path import join
 
 import seisflows.seistools.specfem3d_globe as solvertools
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists, join
+from seisflows.tools.code import exists
 from seisflows.tools.config import findpath, ParameterObj
 from seisflows.tools.io import loadbin, savebin
 
