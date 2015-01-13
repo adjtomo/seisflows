@@ -1,11 +1,12 @@
 
 import subprocess
 import sys
+from os.path import abspath
 
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.code import abspath, join
+from seisflows.tools.code import join
 from seisflows.tools.config import ConfigObj, ParameterObj
 
 OBJ = ConfigObj('SeisflowsObjects')

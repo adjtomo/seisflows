@@ -1,5 +1,6 @@
 
 import subprocess
+from os.path import abspath
 
 import numpy as np
 import glob
@@ -9,7 +10,7 @@ from seisflows.seistools.shared import load
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import abspath, exists, join, setdiff
+from seisflows.tools.code import exists, join, setdiff
 from seisflows.tools.config import findpath, ParameterObj
 from seisflows.tools.io import loadbin, savebin
 

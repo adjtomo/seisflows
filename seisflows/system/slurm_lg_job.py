@@ -4,9 +4,10 @@ import math
 import sys
 import subprocess
 import time
+from os.path import abspath
 
 from seisflows.tools import unix
-from seisflows.tools.code import abspath, join, saveobj
+from seisflows.tools.code import join, saveobj
 from seisflows.tools.config import findpath, ConfigObj, ParameterObj
 
 OBJ = ConfigObj('SeisflowsObjects')

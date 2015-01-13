@@ -12,11 +12,6 @@ class Struct(dict):
         self.__dict__ = self
 
 
-# FIXME: use standard function.
-def abspath(*args, **kwargs):
-    return os.path.abspath(*args, **kwargs)
-
-
 def divides(i, j):
     """Returns true if j divides i"""
     if j is 0:

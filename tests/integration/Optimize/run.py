@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
+from os.path import abspath
 import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import abspath, savetxt
+from seisflows.tools.code import savetxt
 from seisflows.tools.config import loadclass, loadvars, ParameterObj
 from tests.integration.Optimize.problems import rosenbrock as problem
 

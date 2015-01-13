@@ -1,9 +1,10 @@
+from os.path import abspath
 
 import numpy as np
 
 from collections import Mapping
 
-from seisflows.tools.code import Struct, abspath, join
+from seisflows.tools.code import Struct, join
 from seisflows.tools.io import loadbin
 
 
