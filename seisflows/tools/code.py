@@ -55,6 +55,11 @@ def savejson(filename, obj):
 
 
 def setdiff(list1, list2):
+    """Returns the difference of two list in a set.
+    :param list1:
+    :param list2:
+    :return:
+    """
     set1 = set(list1)
     set2 = set(list2)
     return set1.difference(set2)
