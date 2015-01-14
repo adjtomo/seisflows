@@ -42,5 +42,13 @@ class TestToolsCode(unittest.TestCase):
         self.assertEqual(obj_read, obj_init)
         os.remove(filename)
 
+    def test_saveload_json(self):
+        filename = "tmp_json_file"
+        obj_init =[u'foo', {u'bar': [u'baz', None, 1.0, 2]}]
+        tools.savejson(filename, obj_init)
+        obj_read = tools.loadjson(filename)
+        self.assertEqual(obj_read, obj_init)
+        os.remove(filename)
+
 if __name__ == '__main__':
     unittest.main()
