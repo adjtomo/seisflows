@@ -34,6 +34,13 @@ class TestToolsCode(unittest.TestCase):
         for name in not_names:
             self.assertFalse(tools.exists(name))
 
+    def test_saveload(self):
+        filename = "tmp_pickle_file"
+        obj_init = "Something"
+        tools.saveobj(filename, obj_init)
+        obj_read = tools.loadobj(filename)
+        self.assertEqual(obj_read, obj_init)
+        os.remove(filename)
 
 if __name__ == '__main__':
     unittest.main()
