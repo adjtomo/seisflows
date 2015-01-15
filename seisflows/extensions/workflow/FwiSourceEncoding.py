@@ -10,6 +10,7 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 import system
+import solver
 import preprocess
 
 
@@ -154,7 +155,7 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
         sum = Struct()
 
         # allocate arrays
-        for channel in solver.channels:
+        for channel in preprocess.channels:
             sum[channel] = np.zeros((h.nt, h.nr))
 
         # combine gathers
