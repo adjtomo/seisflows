@@ -120,7 +120,7 @@ class default(object):
         """
         r = []
         for i in range(h.nr):
-            r.append(self.call_misfit(s[:, i], d[:, i], h.nt, h.dt))
+            r.append(self.call_misfit(s[:,i], d[:,i], h.nt, h.dt))
 
         # write residuals
         np.savetxt('residuals', r)
@@ -133,12 +133,14 @@ class default(object):
         """
         # generate adjoint traces
         for i in range(h.nr):
-            s[:, i] = self.call_adjoint(s[:, i], d[:, i], h.nt, h.dt)
+            s[:,i] = self.call_adjoint(s[:,i], d[:,i], h.nt, h.dt)
 
         # normalize traces
         if PAR.NORMALIZE:
             for ir in range(h.nr):
-                s[:, ir] = s[:, ir]/np.linalg.norm(d[:, ir], ord=2)
+                w = np.linalg.norm(d[:,ir], ord=2)
+                if w > 0: 
+                    s[:,ir] /= w
 
         return s
 
