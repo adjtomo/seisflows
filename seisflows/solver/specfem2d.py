@@ -137,8 +137,8 @@ class specfem2d(object):
         unix.cd(self.spath)
         solvertools.setpar('SIMULATION_TYPE', '1')
         solvertools.setpar('SAVE_FORWARD', '.true.')
-        self.mpirun('bin/xmeshfem2d')
-        self.mpirun('bin/xspecfem2d')
+        self.mpirun('bin/xmeshfem2D')
+        self.mpirun('bin/xspecfem2D')
 
         unix.mv(self.wildcard, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
