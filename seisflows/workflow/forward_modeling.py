@@ -56,6 +56,6 @@ class forward_modeling(object):
                    hosts='all',
                    model_path=PATH.MODEL,
                    model_type='gll',
-                   model_name=None)
+                   model_name='model')
 
         print "Finished"
