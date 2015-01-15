@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/bin/env python
 
 from seisflows.tools import unix
 from seisflows.tools.config import getclass, ParameterObject

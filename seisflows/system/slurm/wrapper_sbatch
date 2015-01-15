@@ -1,4 +1,4 @@
-#!/usr/bin/python -u
+#!/bin/env python
 
 import sys
 from os.path import join
