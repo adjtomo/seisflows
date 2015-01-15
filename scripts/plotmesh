@@ -3,6 +3,7 @@
 import sys
 
 import numpy as np
+import pylab
 
 from seisflows.tools.array import uniquerows, meshplot
 
