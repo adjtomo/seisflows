@@ -57,6 +57,22 @@ class TestToolsCode(unittest.TestCase):
 
         self.assertEqual(set(list_odds), tools.setdiff(list_ints, list_evens))
         self.assertEqual(set(list_evens), tools.setdiff(list_ints, list_odds))
+        self.assertEqual(set(list_ints), tools.setdiff(list_ints, []))
+
+    def test_unique(self):
+        self.assertEqual([], tools.unique([]))
+        self.assertEqual([1,2,3,4], tools.unique([1,2,3,4]))
+        self.assertEqual([1], tools.unique([1,1,1,1]))
+
+    def test_savetxt(self):
+        filename = "tmp_savetxt"
+        x = 3.14159265359
+        tools.savetxt(filename, x)
+        with open(filename, 'r') as f:
+           y = float(f.readline())
+        os.remove(filename)
+        self.assertAlmostEqual(x, y, places=6)
+
 
 if __name__ == '__main__':
     unittest.main()
