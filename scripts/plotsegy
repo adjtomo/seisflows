@@ -46,8 +46,8 @@ if __name__ == '__main__':
   elif filetype(filename) == 'su':
      s,h = readsu(filename)
 
-  print 'ntraces:', s.shape[0]
-  print 'nsamples:', s.shape[1]
+  print 'ntraces:', s.shape[1]
+  print 'nsamples:', s.shape[0]
 
   if len(sys.argv[1:]) == 1:
      print 'min, max:', s.min(), s.max()
