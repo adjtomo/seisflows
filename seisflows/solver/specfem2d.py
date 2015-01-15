@@ -351,6 +351,20 @@ class specfem2d(object):
         self.save(path +'/'+ tag, parts)
 
 
+    def clip(self, path='', tag='gradient', thresh=1.):
+        """clips SPECFEM2D kernels"""
+        parts = self.load(path +'/'+ tag)
+        if thresh >= 1.:
+            return parts
+
+        for key in self.inversion_parameters:
+            # scale to [-1,1]
+            minval = parts[key][0].min()
+            maxval = parts[key][0].max()
+            np.clip(parts[key][0], thresh*minval, thresh*maxval, out=parts[key][0])
+        unix.mv(path +'/'+ tag, path +'/'+ '_noclip')
+        self.save(path +'/'+ tag, parts)
+
 
     ### file transfer utilities
 
