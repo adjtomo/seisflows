@@ -44,10 +44,10 @@ def meshplot(x, y, z):
     rx = r/np.sqrt(1 + r**2)
     ry = 1/np.sqrt(1 + r**2)
 
-    pylab.figure(figsize=(10*rx, 10*ry))
+    f = pylab.figure(figsize=(10*rx, 10*ry))
     p = pylab.tricontourf(x, y, z, 125)
     pylab.axis('image')
-    pylab.show()
+    return f,p
 
 
 def meshsmooth(x, z, v, span, nx, nz):

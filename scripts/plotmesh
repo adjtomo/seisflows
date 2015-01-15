@@ -44,5 +44,7 @@ if __name__ == '__main__':
     for i in isnonzero(Z):
         z = np.squeeze(Z[:,i])
 	print 'min, max:', min(z), max(z)
-        meshplot(x,y,z)
+        _,p = meshplot(x,y,z)
+        pylab.show()
+
 
