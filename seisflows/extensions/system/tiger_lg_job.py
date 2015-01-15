@@ -1,6 +1,5 @@
-from os.path import abspath, join
-
 from seisflows.tools import unix
+from seisflows.tools.code import abspath, join
 from seisflows.tools.config import loadclass, ConfigObj, ParameterObj
 
 OBJ = ConfigObj('SeisflowsObjects')
@@ -23,12 +22,9 @@ class tiger_lg_job(loadclass('system', 'slurm_lg_job')):
         if 'SUBTITLE' not in PAR:
             setattr(PAR, 'SUBTITLE', unix.basename(abspath('..')))
 
-        if 'SUBDIRS' not in PATH:
-            setattr(PATH, 'SUBDIRS', join(PAR.SUBTITLE, PAR.TITLE))
-
         if 'GLOBAL' not in PATH:
             setattr(PATH, 'GLOBAL',
-                    join('/scratch/gpfs', unix.whoami(), PATH.SUBDIRS))
+                    join('/scratch/gpfs', unix.whoami(), PATH.PAR.SUBTITLE, PAR.TITLE))
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', '')
@@ -36,11 +32,12 @@ class tiger_lg_job(loadclass('system', 'slurm_lg_job')):
         if 'NPROC_PER_NODE' not in PAR:
             setattr(PAR, 'CPUS_PER_NODE', 16)
 
-        super(self.__class__, self).check()
+        super(tiger_lg_job, self).check()
 
 
     def submit(self, *args, **kwargs):
         """Submits job
         """
         unix.ln(PATH.GLOBAL, PATH.SUBMIT + '/' + 'scratch')
-        super(self.__class__, self).submit(*args, **kwargs)
+        super(tiger_lg_job, self).submit(*args, **kwargs)
+

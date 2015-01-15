@@ -1,5 +1,5 @@
-from os.path import abspath, join
 
+from os.path import abspath, join
 from seisflows.tools import unix
 from seisflows.tools.code import exists
 from seisflows.tools.config import loadclass, ConfigObj, ParameterObj
@@ -24,17 +24,14 @@ class tiger_sm_job(loadclass('system', 'slurm_sm_job')):
         if 'SUBTITLE' not in PAR:
             setattr(PAR, 'SUBTITLE', unix.basename(abspath('..')))
 
-        if 'SUBDIRS' not in PATH:
-            setattr(PATH, 'SUBDIRS', join(PAR.SUBTITLE, PAR.TITLE))
-
         if 'GLOBAL' not in PATH:
             setattr(PATH, 'GLOBAL',
-                    join('/scratch/gpfs', unix.whoami(), PATH.SUBDIRS))
+                    join('/scratch/gpfs', unix.whoami(), PAR.SUBTITLE, PAR.TITLE))
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', '')
 
-        super(self.__class__, self).check()
+        super(tiger_sm_job, self).check()
 
 
     def submit(self, *args, **kwargs):
@@ -43,4 +40,4 @@ class tiger_sm_job(loadclass('system', 'slurm_sm_job')):
         if not exists(PATH.SUBMIT + '/' + 'scratch'):
             unix.ln(PATH.GLOBAL, PATH.SUBMIT + '/' + 'scratch')
 
-        super(self.__class__, self).submit(*args, **kwargs)
+        super(tiger_sm_job, self).submit(*args, **kwargs)
