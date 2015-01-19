@@ -33,7 +33,7 @@ class ConfigObj(object):
 
     def unregister(self, key):
         """Unregisters an object"""
-        sys.modules.__delattr__(key)
+        sys.modules.pop(key)
         self.keys.remove(key)
 
     def save(self, name, path='.'):

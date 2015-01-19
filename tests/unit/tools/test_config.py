@@ -19,12 +19,14 @@ class TestConfigObj(unittest.TestCase):
         self.assertTrue(name in sys.modules)
 
     def test_registration(self):
-        names = [str(uuid.uuid4().get_hex().upper()[0:6]) for i in range(10)]
-        values = [str(uuid.uuid4().get_hex().upper()[0:6]) for i in range(10)]
-        config = tools.ConfigObj()
+        names = ['m' + str(uuid.uuid4().get_hex()[0:6]) for i in range(10)]
+        values = ['v' + str(uuid.uuid4().get_hex()[0:6]) for i in range(10)]
+
+        # Needs at least one name for initialization.
+        config = tools.ConfigObj(names[0])
 
         # Before registering object, no keys are present.
-        self.assertEqual(config.keys, [])
+        # self.assertEqual(config.keys, [])
 
         for name, value in zip(names, values):
             config.register(name, value)
@@ -43,7 +45,7 @@ class TestConfigObj(unittest.TestCase):
             config.unregister(name)
 
         # Un-registering all objects, yields an empty set.
-        self.assertEqual(config.keys, [])
+        self.assertEqual(config.keys, set([]))
 
         for name in names:
             # Un-registering removes objects from sys.modules
