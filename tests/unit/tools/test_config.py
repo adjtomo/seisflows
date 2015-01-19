@@ -104,3 +104,29 @@ class TestParameterObj(unittest.TestCase):
         # No attributes deletion
         for k, v in zip(keys, values):
             self.assertRaises(Exception, param.__delattr__, k)
+
+    def test_update(self):
+        name = 'm' + str(uuid.uuid4().get_hex()[0:6])
+        param = tools.ParameterObj(name)
+
+        keys = ['k' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+        values = ['v' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+        dic = dict(zip(keys, values))
+
+        param.update(dic)
+
+        # Checking initial dictionary update
+        for (k, v) in dic.iteritems():
+            self.assertEqual(v, param.__getattr__(k))
+
+        keys = ['k' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+        values = ['v' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+        new_dic = dict(zip(keys, values))
+
+        param.update(new_dic)
+        # Checking second dictionary update
+        for (k, v) in new_dic.iteritems():
+            self.assertEqual(v, param.__getattr__(k))
+        # Checking old dictionary items have been erased.
+        for (k, v) in dic.iteritems():
+            self.assertRaises(KeyError, param.__getattr__, k)
