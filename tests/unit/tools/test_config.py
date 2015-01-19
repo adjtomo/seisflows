@@ -130,3 +130,24 @@ class TestParameterObj(unittest.TestCase):
         # Checking old dictionary items have been erased.
         for (k, v) in dic.iteritems():
             self.assertRaises(KeyError, param.__getattr__, k)
+
+    def test_save(self):
+        # Fill a ParamObj with a random dictionary
+        name = 'm' + str(uuid.uuid4().get_hex()[0:6])
+        param = tools.ParameterObj(name)
+
+        keys = ['k' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+        values = ['v' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+        dic = dict(zip(keys, values))
+
+        param.update(dic)
+
+        # Save the object dictionary to file
+        file_name = 'f' + str(uuid.uuid4().get_hex()[0:6])
+        param.save(file_name)
+
+        # Read back the file
+        from seisflows.tools.code import loadjson
+        read_dic = loadjson(file_name)
+
+        self.assertEqual(dic, read_dic)
