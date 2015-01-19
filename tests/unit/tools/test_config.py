@@ -60,3 +60,47 @@ class TestConfigObj(unittest.TestCase):
         #       seisflows structures. It will be troublesome if we need to
         #       change it.
         pass
+
+
+class TestParameterObj(unittest.TestCase):
+    def setUp(self):
+        self.sys_modules_bck = sys.modules.copy()
+
+    def tearDown(self):
+        sys.modules = self.sys_modules_bck.copy()
+
+    def test_init_non_exisiting(self):
+        name = 'm' + str(uuid.uuid4().get_hex()[0:6])
+        param = tools.ParameterObj(name)
+
+        self.assertEqual(param, sys.modules[name])
+
+    def test_init_exisiting(self):
+        name = 'm' + str(uuid.uuid4().get_hex()[0:6])
+        # Registering the same object twice
+        param1 = tools.ParameterObj(name)
+
+        param2 = tools.ParameterObj(name)
+
+        self.assertEqual(param1, sys.modules[name])
+        self.assertEqual(param2, sys.modules[name])
+        self.assertEqual(param1, param2)
+
+    def test_attr(self):
+        name = 'm' + str(uuid.uuid4().get_hex()[0:6])
+        param = tools.ParameterObj(name)
+
+        keys = ['k' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+        values = ['v' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+
+        for k, v in zip(keys, values):
+            param.__setattr__(k, v)
+            self.assertEqual(param.__getattr__(k), v)
+
+        # No attributes modification
+        for k, v in zip(keys, values):
+            self.assertRaises(Exception, param.__setattr__, k, v)
+
+        # No attributes deletion
+        for k, v in zip(keys, values):
+            self.assertRaises(Exception, param.__delattr__, k)
