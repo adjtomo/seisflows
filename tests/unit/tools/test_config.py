@@ -50,3 +50,13 @@ class TestConfigObj(unittest.TestCase):
         for name in names:
             # Un-registering removes objects from sys.modules
             self.assertNotIn(name, sys.modules.keys())
+
+    def test_saveload(self):
+        # FIXME: too be completed.
+        # Save and load might need some modifications. In particular:
+        #     * save appends a ".p" to the name of the file being saved,
+        #        while load does not.
+        #     * load uses a hardcoded list of modules to look for. It matches
+        #       seisflows structures. It will be troublesome if we need to
+        #       change it.
+        pass
