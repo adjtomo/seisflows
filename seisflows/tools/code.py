@@ -1,7 +1,6 @@
 import json
 import os
 import pickle
-import sys
 
 import numpy as np
 
