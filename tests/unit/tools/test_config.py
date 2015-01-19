@@ -151,3 +151,29 @@ class TestParameterObj(unittest.TestCase):
         read_dic = loadjson(file_name)
 
         self.assertEqual(dic, read_dic)
+
+
+class TestNull(unittest.TestCase):
+    def test_init(self):
+        self.assertDictEqual(tools.Null().__dict__, {})
+        self.assertDictEqual(tools.Null('args').__dict__, {})
+
+    def test_call(self):
+        n = tools.Null()
+        self.assertEqual(n, n())
+        self.assertEqual(n, n(1))
+
+    def test_nonzero(self):
+        self.assertFalse(bool(tools.Null()))
+
+    def test_getattr(self):
+        n = tools.Null()
+        self.assertEqual(n, n.__getattr__('key'))
+
+    def test_setattr(self):
+        n = tools.Null()
+        self.assertEqual(n, n.__setattr__('key', 'value'))
+
+    def test_delattr(self):
+        n = tools.Null()
+        self.assertEqual(n, n.__delattr__('key'))

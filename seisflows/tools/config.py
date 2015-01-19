@@ -125,7 +125,7 @@ class Null(object):
     def __setattr__(self, key, val):
         return self
 
-    def __delattr__(self):
+    def __delattr__(self, key):
         return self
 
 
