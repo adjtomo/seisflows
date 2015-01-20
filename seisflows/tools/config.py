@@ -133,7 +133,7 @@ def loadclass(*args):
     """ Given name of module relative to package directory, returns
         corresponding class
     """
-    if not args[-1]:
+    if not args:
         return Null
 
     # first, try importing relative to main package directory
