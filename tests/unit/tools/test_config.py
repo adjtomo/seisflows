@@ -2,6 +2,9 @@ import unittest
 
 import sys
 import uuid
+import imp
+import os
+import os.path
 
 import seisflows.tools.config as tools
 
@@ -151,6 +154,7 @@ class TestParameterObj(unittest.TestCase):
         read_dic = loadjson(file_name)
 
         self.assertEqual(dic, read_dic)
+        os.remove(file_name)
 
 
 class TestNull(unittest.TestCase):
@@ -177,3 +181,33 @@ class TestNull(unittest.TestCase):
     def test_delattr(self):
         n = tools.Null()
         self.assertEqual(n, n.__delattr__('key'))
+
+
+class TestLoadClass(unittest.TestCase):
+    def test_noargs(self):
+        self.assertEqual(tools.Null, tools.loadclass())
+
+    def test_load_base_module(self):
+        # Get a class from one of seisflow module
+        cls = tools.loadclass('system', 'serial')
+        # Check if we can instanciate the class.
+        self.assertIsInstance(cls(), cls),
+
+    def test_load_extension_module(self):
+        # Get a class from one of seisflow module
+        cls = tools.loadclass('system', 'tiger_sm_job')
+        # Check if we can instanciate the class.
+        self.assertIsInstance(cls(), cls),
+
+
+class TestParse(unittest.TestCase):
+    def test_no_package(self):
+        args = ['m' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+        self.assertEqual(args, tools._parse(tuple(args)))
+
+    def test_with_package(self):
+        package = 'p' + str(uuid.uuid4().get_hex()[0:6])
+        args = ['m' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+        self.assertEqual([package] + args,
+                         tools._parse(tuple(args), package=package))
+

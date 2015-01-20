@@ -132,6 +132,8 @@ class Null(object):
 def loadclass(*args):
     """ Given name of module relative to package directory, returns
         corresponding class
+
+        Note: The module should have a class with the exact same name.
     """
     if not args:
         return Null
