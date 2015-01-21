@@ -5,6 +5,7 @@ import sys
 import types
 import glob
 from os.path import abspath, join
+from importlib import import_module
 
 from seisflows.tools import unix
 from seisflows.tools.code import Struct, exists, loadjson, \
@@ -191,7 +192,7 @@ def _import(string, path=None):
 
 
 def _vars(obj):
-    """Returns an object's __dict__ with private varibles removed"""
+    """Returns an object's __dict__ with private variables removed"""
     mydict = {}
     for key, val in vars(obj).items():
         if key[0] != '_':
@@ -215,7 +216,10 @@ def _parse(args, package=None):
 
 
 def _exists(parts):
-    """Checks if a module exists without importing it"""
+    """Checks if a module exists without importing it
+
+    Takes an array of strings.
+    """
     try:
         path = None
         for part in parts[:-1]:

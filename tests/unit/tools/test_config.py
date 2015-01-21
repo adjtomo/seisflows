@@ -200,6 +200,63 @@ class TestLoadClass(unittest.TestCase):
         self.assertIsInstance(cls(), cls),
 
 
+class TestLoadVars(unittest.TestCase):
+    # TODO: tests...
+    def test_noargs(self):
+        # From the signature it should not be failing. But it will, beacause
+        # of the _import function
+        pass
+
+
+class TestFindpath(unittest.TestCase):
+    # TODO: tests...
+    def test(self):
+        pass
+
+
+class TestImport(unittest.TestCase):
+    def test_import_std(self):
+        # Try importing a module and using a function from it.
+        mod = tools._import('math')
+        self.assertEqual(1, mod.ceil(0.5))
+
+    def test_import_seisflows(self):
+        mod = tools._import("seisflows.tools.code")
+        self.assertEqual(True, mod.divides(4, 2))
+
+
+class TestVars(unittest.TestCase):
+    def test_empty_object(self):
+        class Empty(object):
+            pass
+        e = Empty()
+        self.assertEqual(e.__dict__, tools._vars(e))
+
+    def test_public_vars_only(self):
+        class Public(object):
+            def __init__(self):
+                self.__dict__ = {'a': 1, 'b': 2}
+        o = Public()
+        self.assertEqual(o.__dict__, tools._vars(o))
+
+    def test_private_vars_only(self):
+        class Private(object):
+            def __init__(self):
+                self.__dict__ = {'_a': 1, '_b': 2}
+        o = Private()
+        self.assertEqual({}, tools._vars(o))
+
+    def test_mixed_private_public(self):
+        public = {'a': 1, 'b': 2}
+        private = {'_c': 3, '_d': 4}
+
+        class Mixed(object):
+            def __init__(self):
+                self.__dict__ = dict(public.items() + private.items())
+        o = Mixed()
+        self.assertEqual(public, tools._vars(o))
+
+
 class TestParse(unittest.TestCase):
     def test_no_package(self):
         args = ['m' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
@@ -211,3 +268,10 @@ class TestParse(unittest.TestCase):
         self.assertEqual([package] + args,
                          tools._parse(tuple(args), package=package))
 
+
+class TestExists(unittest.TestCase):
+    def test_exist_std(self):
+        self.assertTrue(tools._exists(['math']))
+
+    def test_exist_seisflows(self):
+        self.assertTrue(tools._exists(['seisflows', 'system', 'serial']))
