@@ -1,11 +1,8 @@
 import os
 import imp
-import inspect
 import sys
 import types
-import glob
 from os.path import abspath, join
-from importlib import import_module
 
 from seisflows.tools import unix
 from seisflows.tools.code import Struct, exists, loadjson, \
