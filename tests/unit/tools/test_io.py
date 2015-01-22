@@ -74,7 +74,7 @@ class TestBinaryWriter(unittest.TestCase):
 
     def test_write_int_array(self):
         writer = tools.BinaryWriter(self.tmp_file.name, endian='=')
-        values = [2,4,6,8,10]
+        values = [2, 4, 6, 8, 10]
         writer.write('i', values, length=len(values))
         del writer
 
@@ -87,7 +87,6 @@ class TestBinaryWriter(unittest.TestCase):
             ['h', 1, 4, 'Int16Bits'],
             ['c', 1, 6, 'Character']]
         values = (42, 33, 'a')
-        endian = '='  # native
 
         writer = tools.BinaryWriter(self.tmp_file.name, endian='=')
         writer.printf(fmts, values)
