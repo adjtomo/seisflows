@@ -186,7 +186,7 @@ class OutputWriter(object):
 
 
 def loadbin(filename):
-    """Reads Fortran style binary data"""
+    """Reads Fortran style binary data and return a numpy array."""
     with open(filename, 'rb') as file:
         # read size of record
         file.seek(0)
@@ -200,7 +200,10 @@ def loadbin(filename):
 
 
 def savebin(v, filename):
-    """Writes Fortran style binary data"""
+    """Writes Fortran style binary data.
+
+    Data will be written as single precision floating point numbers.
+    """
     n = _np.array([4*len(v)], dtype='int32')
     v = _np.array(v, dtype='float32')
 

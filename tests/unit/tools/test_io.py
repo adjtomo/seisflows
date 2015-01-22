@@ -3,6 +3,8 @@ import unittest
 import os
 import struct
 from tempfile import NamedTemporaryFile
+from random import uniform
+import numpy as np
 
 import seisflows.tools.io as tools
 
@@ -96,3 +98,28 @@ class TestBinaryWriter(unittest.TestCase):
         self.assertEqual(r['Int32Bits'], 42)
         self.assertEqual(r['Int16Bits'], 33)
         self.assertEqual(r['Character'], 'a')
+
+
+class TestOutputWriter(unittest.TestCase):
+    # TODO: Check if a logging mechanism would not be more appropriate.
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+
+class TestSaveLoadBin(unittest.TestCase):
+    def test_save_load(self):
+        # Create array of random values
+        values = [uniform(0, 1) for i in range(1, 100)]
+
+        tmp_file = NamedTemporaryFile(mode='wb', delete=False)
+        tmp_file.close()
+
+        # Calling functions to test
+        tools.savebin(values, tmp_file.name)
+        ret = tools.loadbin(tmp_file.name)
+
+        # Should raise un exception if not true:
+        np.testing.assert_array_almost_equal(values, ret, decimal=7)
