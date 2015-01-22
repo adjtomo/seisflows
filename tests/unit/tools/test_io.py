@@ -47,14 +47,35 @@ class TestBinaryReader(unittest.TestCase):
         self.assertEqual(r['Character'], 'a')
 
 
-class TestBinaryWriter(object):
+class TestBinaryWriter(unittest.TestCase):
     def setUp(self):
         # Create a temporary binary file. Make sure it is not deleted upon
         # closing.
         self.tmp_file = NamedTemporaryFile(mode='wb', delete=False)
+        self.tmp_file.close()
 
     def tearDown(self):
         os.remove(self.tmp_file.name)
 
-    def test_write(self):
-        pass
+    def test_write_single_values(self):
+        writer = tools.BinaryWriter(self.tmp_file.name, endian='=')
+        writer.write('i', 42)
+        writer.write('h', 33)
+        writer.write('c', 'a')
+        del writer
+
+        reader = tools.BinaryReader(self.tmp_file.name, endian='=')
+        self.assertEqual([42], reader.read('i', 1, 0))
+        self.assertEqual([33], reader.read('h', 1, 4))
+        self.assertEqual(['a'], reader.read('c', 1, 6))
+
+    def test_write_int_array(self):
+        writer = tools.BinaryWriter(self.tmp_file.name, endian='=')
+        values = [2,4,6,8,10]
+        writer.write('i', values, length=len(values))
+        del writer
+
+        reader = tools.BinaryReader(self.tmp_file.name, endian='=')
+        self.assertEqual(values, reader.read('i', length=len(values)))
+
+
