@@ -11,8 +11,13 @@ from seisflows.tools.code import Struct
 
 class BinaryReader(object):
     """Generic binary file reader"""
+    # TODO: Seems very fragile. More robust implementation?
 
     def __init__(self, fname, endian='|'):
+        """
+        For endianness values, see:
+         docs.python.org/2/library/struct.html#byte-order-size-and-alignment
+        """
         # opens binary file
         self.file = open(fname, 'r')
         path = _os.path.abspath(self.file.name)
@@ -25,6 +30,10 @@ class BinaryReader(object):
         self.file.close()
 
     def read(self, fmt, length=1, offset=0):
+        """
+        For fmt values, see:
+         docs.python.org/2/library/struct.html#format-characters
+        """
         # reads binary file
         if offset != 0:
             self.file.seek(offset)
@@ -43,6 +52,12 @@ class BinaryReader(object):
         return val
 
     def scan(self, fmtlist, origin=0, contiguous=1):
+        """
+        Take a list of formats:
+            [[fmt, origin, offset, description], [...], ...]
+        and returns a dictionary:
+            {description: value, ...}
+        """
         # reads binary file
         self.file.seek(origin)
 
