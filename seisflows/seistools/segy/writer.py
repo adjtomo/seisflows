@@ -90,7 +90,8 @@ class SeismicWriter(BinaryWriter):
 
         for k in range(nr):
             # write trace header
-            self.printf(SEGY_TRACE_HEADER, self.vals[k], k*nbytes, contiguous=0)
+            self.printf(SEGY_TRACE_HEADER, self.vals[k],
+                        k*nbytes, contiguous=False)
 
             # write trace data
             self.write(self.dtype, d[:, k], nsamples, k*nbytes + 240)

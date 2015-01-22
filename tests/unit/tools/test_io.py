@@ -48,6 +48,7 @@ class TestBinaryReader(unittest.TestCase):
 
 
 class TestBinaryWriter(unittest.TestCase):
+    # Since the reader is tested above, we use it in the writer tests.
     def setUp(self):
         # Create a temporary binary file. Make sure it is not deleted upon
         # closing.
@@ -78,4 +79,20 @@ class TestBinaryWriter(unittest.TestCase):
         reader = tools.BinaryReader(self.tmp_file.name, endian='=')
         self.assertEqual(values, reader.read('i', length=len(values)))
 
+    def test_printf_continuous(self):
+        fmts = [
+            ['i', 1, 0, 'Int32Bits'],
+            ['h', 1, 4, 'Int16Bits'],
+            ['c', 1, 6, 'Character']]
+        values = (42, 33, 'a')
+        endian = '='  # native
 
+        writer = tools.BinaryWriter(self.tmp_file.name, endian='=')
+        writer.printf(fmts, values)
+        del writer
+
+        reader = tools.BinaryReader(self.tmp_file.name, endian='=')
+        r = reader.scan(fmts)
+        self.assertEqual(r['Int32Bits'], 42)
+        self.assertEqual(r['Int16Bits'], 33)
+        self.assertEqual(r['Character'], 'a')

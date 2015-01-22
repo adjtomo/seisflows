@@ -99,6 +99,7 @@ class BinaryWriter(object):
         self.file.close()
 
     def write(self, fmt, vals, length=1, offset=0):
+        """Write binary data, all with the same format to file. """
         # write binary data
         if offset != 0:
             self.file.seek(offset)
@@ -114,7 +115,8 @@ class BinaryWriter(object):
         for val in vals:
             self.file.write(_struct.pack(fmtlist, val))
 
-    def printf(self, fmts, vals, origin=0, contiguous=1):
+    def printf(self, fmts, vals, origin=0, contiguous=True):
+        """Write binary data, according to a list of formats to file."""
         # write binary data
         self.file.seek(origin)
         position = 0
