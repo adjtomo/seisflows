@@ -30,7 +30,7 @@ class TestBinaryReader(unittest.TestCase):
     def test_scan(self):
         # Write some binary values
         fmts = [
-            ['o', 1, 0, 'Int32Bits'],
+            ['i', 1, 0, 'Int32Bits'],
             ['h', 1, 4, 'Int16Bits'],
             ['c', 1, 6, 'Character']]
         values = (42, 33, 'a')
@@ -45,3 +45,16 @@ class TestBinaryReader(unittest.TestCase):
         self.assertEqual(r['Int32Bits'], 42)
         self.assertEqual(r['Int16Bits'], 33)
         self.assertEqual(r['Character'], 'a')
+
+
+class TestBinaryWriter(object):
+    def setUp(self):
+        # Create a temporary binary file. Make sure it is not deleted upon
+        # closing.
+        self.tmp_file = NamedTemporaryFile(mode='wb', delete=False)
+
+    def tearDown(self):
+        os.remove(self.tmp_file.name)
+
+    def test_write(self):
+        pass
