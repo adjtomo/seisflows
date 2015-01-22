@@ -30,9 +30,9 @@ class TestBinaryReader(unittest.TestCase):
     def test_scan(self):
         # Write some binary values
         fmts = [
-            ['int32', 1, 0, 'Int32Bits'],
-            ['int16', 1, 4, 'Int16Bits'],
-            ['char', 1, 6, 'Character']]
+            ['o', 1, 0, 'Int32Bits'],
+            ['h', 1, 4, 'Int16Bits'],
+            ['c', 1, 6, 'Character']]
         values = (42, 33, 'a')
         endian = '='  # native
         s = struct.Struct(endian + 'i h c')
