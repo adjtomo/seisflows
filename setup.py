@@ -1,4 +1,16 @@
 from setuptools import setup, find_packages
+from setuptools.command.build_ext import build_ext as _build_ext
+
+
+# Numpy trick, see:
+# http://stackoverflow.com/questions/19919905/how-to-bootstrap-numpy-installation-in-setup-py
+class build_ext(_build_ext):
+    def finalize_options(self):
+        _build_ext.finalize_options(self)
+        # Prevent numpy from thinking it is still in its setup process:
+        __builtins__.__NUMPY_SETUP__ = False
+        import numpy
+
 
 setup(
     name='seisflows',
@@ -6,8 +18,9 @@ setup(
     description='a seismic inversion package',
     long_description='',
     url='https://github.com/PrincetonUniversity/seisflows',
-    author='Tromp group, Princeton University',
-    license='bsd-2',
+    # author='Tromp group, Princeton University',
+    # author_email='rmodrak@princeton.edu',
+    license='bsd',
 
     # Classifiers, see list at:
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -25,10 +38,14 @@ setup(
 
     packages=find_packages(exclude=['docs', 'tests']),
 
+    # Trick numpy distutils
+    cmdclass={'build_ext':build_ext},
+    setup_requires=['numpy'],
+
     install_requires=[
         'numpy',
-        'pylab',
-        'scipy'
+        'scipy',
+        'matplotlib'
     ],
 
     scripts=[
