@@ -2,6 +2,7 @@ import unittest
 
 import os
 import uuid
+from tempfile import NamedTemporaryFile
 
 import seisflows.tools.code as tools
 
@@ -71,6 +72,14 @@ class TestToolsCode(unittest.TestCase):
            y = float(f.readline())
         os.remove(filename)
         self.assertAlmostEqual(x, y, places=6)
+
+    def test_saveloadtxt(self):
+        tmp_file = NamedTemporaryFile(mode='wb', delete=False)
+        tmp_file.close()
+
+        x = 3.14159265359
+        tools.savetxt(tmp_file.name, x)
+        self.assertAlmostEqual(x, tools.loadtxt(tmp_file.name), 6)
 
 
 if __name__ == '__main__':

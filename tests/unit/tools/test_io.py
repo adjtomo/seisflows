@@ -122,3 +122,7 @@ class TestSaveLoadBin(unittest.TestCase):
 
         # Should raise un exception if not true:
         np.testing.assert_array_almost_equal(values, ret, decimal=7)
+
+
+if __name__ == '__main__':
+    unittest.main()

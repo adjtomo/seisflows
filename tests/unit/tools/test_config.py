@@ -275,3 +275,7 @@ class TestExists(unittest.TestCase):
 
     def test_exist_seisflows(self):
         self.assertTrue(tools._exists(['seisflows', 'system', 'serial']))
+
+
+if __name__ == '__main__':
+    unittest.main()
