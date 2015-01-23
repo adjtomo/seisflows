@@ -158,8 +158,10 @@ def loadvars(*args, **kwargs):
 
 
 def findpath(obj):
-    """ Determines absolute path of module from name, relative path, or
-      ModuleObject
+    """ Determines absolute path of either:
+            * a module, from an instance
+            * a file, from its name
+            * a seisflow module, from its full (doted) name
     """
     if isinstance(obj, types.ModuleType):
         path = obj.__file__

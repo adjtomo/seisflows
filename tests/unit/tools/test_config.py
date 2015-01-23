@@ -5,6 +5,7 @@ import uuid
 import imp
 import os
 import os.path
+from tempfile import NamedTemporaryFile, gettempdir
 
 import seisflows.tools.config as tools
 
@@ -108,6 +109,24 @@ class TestParameterObj(unittest.TestCase):
         for k, v in zip(keys, values):
             self.assertRaises(Exception, param.__delattr__, k)
 
+        # Raise an exception for an unexisting key
+        self.assertRaises(KeyError,
+                          param.__getattr__,
+                          str(uuid.uuid4().get_hex()))
+
+    def test_iter(self):
+        name = 'm' + str(uuid.uuid4().get_hex()[0:6])
+        param = tools.ParameterObj(name)
+
+        keys = ['k' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+        values = ['v' + str(uuid.uuid4().get_hex()[0:6]) for i in range(1, 10)]
+        dic = dict(zip(keys, values))
+
+        param.update(dic)
+
+        for k in param:  # implitely calls '__iter__'
+            self.assertIn(k, keys)
+
     def test_update(self):
         name = 'm' + str(uuid.uuid4().get_hex()[0:6])
         param = tools.ParameterObj(name)
@@ -199,6 +218,11 @@ class TestLoadClass(unittest.TestCase):
         # Check if we can instanciate the class.
         self.assertIsInstance(cls(), cls),
 
+    def test_load_unexisting(self):
+        self.assertRaises(ImportError,
+                          tools.loadclass,
+                          uuid.uuid4().get_hex())
+
 
 class TestLoadVars(unittest.TestCase):
     # TODO: tests...
@@ -209,9 +233,21 @@ class TestLoadVars(unittest.TestCase):
 
 
 class TestFindpath(unittest.TestCase):
-    # TODO: tests...
-    def test(self):
-        pass
+    def test_find_std_module_path(self):
+        mod = __import__('math')
+        self.assertTrue(os.path.exists(tools.findpath(mod)))
+
+    def test_find_file_path_by_name(self):
+        tmp_file = NamedTemporaryFile(mode='wb', delete=True)
+        self.assertEqual(gettempdir(), tools.findpath(tmp_file.name))
+
+    def test_find_seisflows_module_path_by_names(self):
+        names = 'seisflows.tools.code'
+        self.assertIsNotNone(tools.findpath(names))
+
+    def test_find_unexisting(self):
+        name = uuid.uuid4().get_hex()
+        self.assertRaises(Exception, tools.findpath, name)
 
 
 class TestImport(unittest.TestCase):
