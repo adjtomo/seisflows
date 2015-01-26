@@ -164,6 +164,8 @@ class default(object):
         if cls.iter == 1:
             if PAR.STEPLEN != 0.:
                 alpha = PAR.STEPLEN*cls.step_ratio
+            else:
+                alpha = 1.
         elif PAR.SCHEME in ['GradientDescent', 'ConjugateGradient']:
             alpha *= 2.*s_old/s_new
         else:

@@ -7,7 +7,7 @@ from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import savetxt
 from seisflows.tools.config import loadclass, loadvars, ParameterObj
-from tests.integration.Optimize.problems import rosenbrock as problem
+import problems.rosenbrock as problem
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
