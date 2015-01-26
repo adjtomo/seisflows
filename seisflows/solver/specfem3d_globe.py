@@ -1,9 +1,9 @@
 
 import subprocess
+from glob import glob
+from os.path import join
 
 import numpy as np
-import glob
-from os.path import join
 
 import seisflows.seistools.specfem3d_globe as solvertools
 
