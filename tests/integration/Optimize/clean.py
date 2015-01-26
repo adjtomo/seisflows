@@ -1,11 +1,16 @@
 #!/bin/env python
 
-import glob
+from glob import glob
+import os
+import shutil
 
-from seisflows.tools import unix
+try:
+    shutil.rmtree('scratch')
+except:
+    pass
 
-unix.rm('scratch')
+print glob('output*')
 
-unix.rm(glob('output*'))
-unix.rm(glob('*.pyc'))
+[os.remove(f) for f in glob('output*')]
+[os.remove(f) for f in glob('*.pyc')]
 
