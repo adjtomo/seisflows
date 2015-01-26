@@ -71,7 +71,7 @@ class default(object):
         m = solver.merge(
                 solver.load(
                     path +'/'+ 'model',
-                    type='kernel'))
+                    type='model'))
         g *= m
 
         # apply scaling

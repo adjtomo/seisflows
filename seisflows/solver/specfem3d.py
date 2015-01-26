@@ -341,7 +341,7 @@ class specfem3d(object):
         unix.cd(path)
 
 
-    def smooth(self, path='', tag='grad', span=0.):
+    def smooth(self, path='', tag='gradient', span=0.):
         """ smooths SPECFEM3D kernels
         """
         unix.cd(self.getpath)

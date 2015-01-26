@@ -377,7 +377,7 @@ class specfem3d_globe(object):
         unix.cd(path)
 
 
-    def smooth(self, path='', tag='grad', span=0.):
+    def smooth(self, path='', tag='gradient', span=0.):
         """ smooths SPECFEM3D_GLOBE kernels
         """
         unix.cd(self.getpath)
