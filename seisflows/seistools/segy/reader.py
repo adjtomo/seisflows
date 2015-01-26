@@ -158,7 +158,7 @@ class SegyReader(SeismicReader):
         if endian:
             self.endian = endian
         else:
-            self.endian = checkByteOrder()
+            raise ValueError("SU Reader should specify the endianness")
 
     def ReadSegyHeaders(self):
         # read in tape label header if present
