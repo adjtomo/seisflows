@@ -137,12 +137,12 @@ class specfem3d_globe(object):
           generated on the fly. In both cases, all necessary SPECFEM3D_GLOBE input
           files must be provided.
         """
-        unix.rm(self.spath)
+        unix.rm(self.getpath)
 
         # prepare data
         if PATH.DATA:
             self.initialize_solver_directories()
-            src = glob(PATH.DATA +'/'+ self.sname +'/'+ '*')
+            src = glob(PATH.DATA +'/'+ self.getname +'/'+ '*')
             dst = 'traces/obs/'
             unix.cp(src, dst)
 
@@ -167,7 +167,7 @@ class specfem3d_globe(object):
         """
         self.generate_mesh(**model_kwargs)
 
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
         solvertools.setpar('SIMULATION_TYPE', '1')
         solvertools.setpar('SAVE_FORWARD', '.true.')
         self.mpirun('bin/xspecfem3D')
@@ -183,7 +183,7 @@ class specfem3d_globe(object):
         assert(model_type)
 
         self.initialize_solver_directories()
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
 
         if model_type == 'gll':
             assert (exists(model_path))
@@ -202,12 +202,12 @@ class specfem3d_globe(object):
         """ Evaluates misfit function by carrying out forward simulation and
             making measurements on observations and synthetics.
         """
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
         self.import_model(path)
 
         self.forward()
         unix.mv(self.wildcard, 'traces/syn')
-        preprocess.prepare_eval_grad(self.spath)
+        preprocess.prepare_eval_grad(self.getpath)
 
         self.export_residuals(path)
         if export_traces:
@@ -218,7 +218,7 @@ class specfem3d_globe(object):
         """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
             must be in place prior to calling this method.
         """
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
 
         self.adjoint()
 
@@ -230,12 +230,12 @@ class specfem3d_globe(object):
     def apply_hess(self, path='', hessian='Newton'):
         """ Evaluates action of Hessian on a given model vector.
         """
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
         self.imprt(path, 'model')
 
         self.forward()
         unix.mv(self.wildcard, 'traces/lcg')
-        preprocess.prepare_apply_hess(self.spath)
+        preprocess.prepare_apply_hess(self.getpath)
         self.adjoint()
 
         self.export_kernels(path)
@@ -356,7 +356,7 @@ class specfem3d_globe(object):
                     savebin(np.load(src), dst)
 
         # create temporary files and directories
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
         with open('kernels_list.txt', 'w') as file:
             file.write('\n'.join(dirs) + '\n')
         unix.mkdir('INPUT_KERNELS')
@@ -380,7 +380,7 @@ class specfem3d_globe(object):
     def smooth(self, path='', tag='grad', span=0.):
         """ smooths SPECFEM3D_GLOBE kernels
         """
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
 
         # list kernels
         kernels = []
@@ -439,15 +439,15 @@ class specfem3d_globe(object):
 
     def export_kernels(self, path):
         unix.mkdir_gpfs(join(path, 'kernels'))
-        unix.mkdir_gpfs(join(path, 'kernels', self.sname))
+        unix.mkdir_gpfs(join(path, 'kernels', self.getname))
         for name in self.kernel_map.values():
             src = join(glob(self.databases  +'/'+ '*'+ name+'.bin'))
-            dst = join(path, 'kernels', self.sname)
+            dst = join(path, 'kernels', self.getname)
             unix.mv(src, dst)
         try:
             name = 'rhop_kernel'
             src = join(glob(self.databases +'/'+ '*'+ name+'.bin'))
-            dst = join(path, 'kernels', self.sname)
+            dst = join(path, 'kernels', self.getname)
             unix.mv(src, dst)
         except:
             pass
@@ -455,13 +455,13 @@ class specfem3d_globe(object):
     def export_residuals(self, path):
         unix.mkdir_gpfs(join(path, 'residuals'))
         src = join(unix.pwd(), 'residuals')
-        dst = join(path, 'residuals', self.sname)
+        dst = join(path, 'residuals', self.getname)
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
         unix.mkdir_gpfs(join(path, 'traces'))
         src = join(unix.pwd(), prefix)
-        dst = join(path, 'traces', self.sname)
+        dst = join(path, 'traces', self.getname)
         unix.cp(src, dst)
 
 
@@ -473,8 +473,8 @@ class specfem3d_globe(object):
           by user as there is currently no mechanism to automatically compile 
           from source.
         """
-        unix.mkdir(self.spath)
-        unix.cd(self.spath)
+        unix.mkdir(self.getpath)
+        unix.cd(self.getpath)
 
         # create directory structure
         unix.mkdir('bin')
@@ -496,7 +496,7 @@ class specfem3d_globe(object):
         dst = 'DATA/'
         unix.cp(src, dst)
 
-        #src = 'DATA/CMTSOLUTION_' + self.sname
+        #src = 'DATA/CMTSOLUTION_' + self.getname
         #dst = 'DATA/CMTSOLUTION'
         #unix.cp(src, dst)
 
@@ -548,11 +548,11 @@ class specfem3d_globe(object):
     ### input file writers
 
     def write_parameters(self):
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
         write_parameters(vars(PAR))
 
     def write_receivers(self):
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
         key = 'use_existing_STATIONS'
         val = '.true.'
         solvertools.setpar(key, val)
@@ -560,7 +560,7 @@ class specfem3d_globe(object):
         write_receivers(h.nr, h.rx, h.rz)
 
     def write_sources(self):
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
         _, h = preprocess.load(dir='traces/obs')
         write_sources(vars(PAR), h)
 
@@ -577,19 +577,19 @@ class specfem3d_globe(object):
                 stdout=f)
 
     @property
-    def slist(self):
+    def getlist(self):
         """list of all sources"""
         return NotImplementedError
 
     @ property
-    def sname(self):
+    def getname(self):
         """name of current source"""
         return '%06d' % system.getnode()
 
     @property
-    def spath(self):
+    def getpath(self):
         """path of current source"""
-        return join(PATH.SOLVER, self.sname)
+        return join(PATH.SOLVER, self.getname)
 
     @property
     def wildcard(self):
@@ -597,6 +597,6 @@ class specfem3d_globe(object):
 
     @property
     def databases(self):
-        return join(self.spath, 'OUTPUT_FILES/DATABASES_MPI')
+        return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
 
 
