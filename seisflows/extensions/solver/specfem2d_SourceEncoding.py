@@ -1,7 +1,8 @@
+
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.code import exists, glob, join
+from seisflows.tools.code import exists
 from seisflows.tools.config import loadclass, findpath, ParameterObj
 from seisflows.seistools.shared import SeisStruct
 
@@ -18,10 +19,14 @@ class specfem2d_SourceEncoding(loadclass('solver', 'specfem2d')):
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
-        super(self.__class__, self).check()
+        super(specfem2d_SourceEncoding, self).check()
 
         if 'NT_PADDED' not in PAR:
             raise Exception
+
+        if 'DATA' not in PATH:
+            raise Exception
+
 
     def initialize_solver_directories(self):
         """ Sets up directory in which to run solver
@@ -30,10 +35,11 @@ class specfem2d_SourceEncoding(loadclass('solver', 'specfem2d')):
         solvertools.setpar('NSOURCES', PAR.NSRC)
         solvertools.setpar('nt', PAR.NT_PADDED)
 
+
     def write_receivers(self):
         """ Writes receivers file
         """
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
 
         _, hdr = preprocess.load('traces/obs')
         solvertools.write_receivers(hdr)
@@ -41,7 +47,7 @@ class specfem2d_SourceEncoding(loadclass('solver', 'specfem2d')):
     def write_sources(self, sinfo=[], mapping=lambda i: [i]):
         """ Writes sources file
         """
-        unix.cd(self.spath)
+        unix.cd(self.getpath)
 
         nodes = mapping(system.getnode())
         lines = []

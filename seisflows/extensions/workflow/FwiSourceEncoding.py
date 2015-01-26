@@ -11,13 +11,13 @@ PATH = ParameterObj('SeisflowsPaths')
 
 import system
 import solver
+import optimize
 import preprocess
 
 
 class FwiSourceEncoding(loadclass('workflow', 'inversion')):
     """ Source encoding subclass
     """
-
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
@@ -30,13 +30,14 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
         if 'FAILRATE' not in PAR:
             setattr(PAR, 'FAILRATE', 0.)
 
-        if 'SHIFT' not in PAR and PAR.ENCODING in [3, 4]:
+        if 'SHIFT' not in PAR and PAR.ENCODING in [3,4]:
             raise Exception
 
-        if PAR.ENCODING in [3, 4]:
-            PAR.NT_PADDED = PAR.NT + (PAR.NSRC - 1)*PAR.SHIFT
-        else:
-            PAR.NT_PADDED = PAR.NT
+        if 'NT_PADDED' not in PAR:
+            if PAR.ENCODING in [3,4]:
+                PAR.NT_PADDED = PAR.NT + (PAR.NSRC-1)*PAR.SHIFT
+            else:
+                PAR.NT_PADDED = PAR.NT
 
         # assertions
         assert ('SourceEncoding' in PAR.SOLVER)
@@ -145,7 +146,7 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
         return isready
 
 
-    # -- data processing utilities
+    ### data processing utilities
 
     def combine(self, h, sinfo, rinfo, tag='obs', inplace=0):
         """ Combines multiple source gathers into a single supergather
@@ -165,8 +166,7 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
 
         # save results
         preprocess.save(
-            sum, h, prefix=PATH.SOLVER + '/' + '000000/traces/' + tag,
-            suffix='.bin')
+            sum, h, prefix=PATH.SOLVER +'/'+ '000000/traces/' + tag, suffix='.su')
 
 
     def combine_traces(self, sum, d, sinfo, rinfo):
@@ -187,7 +187,6 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
 
 
     def multiload(self, path='', tag='obs', inplace=0, debug=0):
-
         """ Loads data from multiple sources and keeps it in memory
         """
         if tag in globals():
