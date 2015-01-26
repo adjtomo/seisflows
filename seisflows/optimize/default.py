@@ -162,10 +162,10 @@ class default(object):
         cls.step_ratio = float(len_m/len_d)
 
         if cls.iter == 1:
-            if PAR.STEPLEN != 0.:
-                alpha = PAR.STEPLEN*cls.step_ratio
-            else:
-                alpha = 1.
+            assert PAR.STEPLEN != 0.
+            alpha = PAR.STEPLEN*cls.step_ratio
+        elif PAR.SRCHTYPE in ['Bracket']:
+            alpha *= 2.*s_old/s_new
         elif PAR.SCHEME in ['GradientDescent', 'ConjugateGradient']:
             alpha *= 2.*s_old/s_new
         else:
@@ -242,19 +242,18 @@ class default(object):
         x = cls.step_lens()
         f = cls.func_vals()
 
-        GOLDENRATIO = 1.618034
-
         # compute trial step length
         if PAR.SRCHTYPE == 'Backtrack':
             alpha = lib.backtrack2(f0, g0, x[1], f[1], b1=0.1, b2=0.5)
 
         elif PAR.SRCHTYPE == 'Bracket':
+            FACTOR = 2.
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 alpha = lib.polyfit2(x, f)
             elif any(f[1:] < f[0]):
-                alpha = loadtxt('alpha')*GOLDENRATIO
+                alpha = loadtxt('alpha')*FACTOR
             else:
-                alpha = loadtxt('alpha')*GOLDENRATIO**-1
+                alpha = loadtxt('alpha')*FACTOR**-1
 
         elif PAR.SRCHTYPE == 'Fixed':
             alpha = cls.step_ratio*(step + 1)*PAR.STEPLEN
