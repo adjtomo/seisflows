@@ -61,6 +61,7 @@ class pbs_torque(object):
         if 'OUTPUT' not in PATH:
             setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
 
+
     def submit(self, workflow):
         """Submits job
         """
@@ -96,6 +97,7 @@ class pbs_torque(object):
         print args  # DEBUG
 
         subprocess.call(args, shell=1)
+
 
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
@@ -133,6 +135,7 @@ class pbs_torque(object):
             raise Exception
 
         subprocess.call(args, shell=1)
+
 
     def getnode(self):
         """ Gets number of running task

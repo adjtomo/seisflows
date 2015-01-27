@@ -63,6 +63,7 @@ class slurm_sm_job(object):
         if 'OUTPUT' not in PATH:
             setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
 
+
     def submit(self, workflow):
         """ Submits job
         """
@@ -86,6 +87,7 @@ class slurm_sm_job(object):
 
         subprocess.call(args, shell=1)
 
+
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
         """
@@ -96,8 +98,7 @@ class slurm_sm_job(object):
         save_objects(join(PATH.OUTPUT, 'SeisflowsObjects'))
 
         # save keyword arguments
-        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects',
-                          classname + '_kwargs')
+        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
         kwargsfile = join(kwargspath, funcname + '.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
@@ -123,6 +124,7 @@ class slurm_sm_job(object):
             raise Exception
 
         subprocess.call(args, shell=1)
+
 
     def getnode(self):
         """ Gets number of running task

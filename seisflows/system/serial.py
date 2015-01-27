@@ -62,6 +62,7 @@ class serial(object):
         if 'SYSTEM' not in PATH:
             setattr(PATH, 'SYSTEM', join(PATH.GLOBAL, 'system'))
 
+
     def submit(self, workflow):
         """ Submits job
         """
@@ -73,6 +74,7 @@ class serial(object):
         save_paths('SeisflowsPaths.json')
 
         workflow.main()
+
 
     def run(self, classname, funcname, hosts='all', **kwargs):
         """ Runs tasks in serial or parallel on specified hosts
@@ -94,6 +96,7 @@ class serial(object):
 
         else:
             task(**kwargs)
+
 
     def getnode(self):
         """Gets number of running task"""

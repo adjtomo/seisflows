@@ -1,5 +1,7 @@
+
 import os
 import math
+import sys
 import subprocess
 import time
 from os.path import abspath, join
@@ -28,6 +30,7 @@ class slurm_lg_job(object):
       standard sets of methods, hiding the details associated with, for example,
       a particular filesystem or job scheduler.
     """
+
 
     def check(self):
         """ Checks parameters and paths
@@ -80,6 +83,7 @@ class slurm_lg_job(object):
         if 'SYSTEM' not in PATH:
             setattr(PATH, 'SYSTEM', join(PATH.GLOBAL, 'system'))
 
+
     def submit(self, workflow):
         """ Submits job
         """
@@ -91,18 +95,19 @@ class slurm_lg_job(object):
         save_parameters('SeisflowsParameters.json')
         save_paths('SeisflowsPaths.json')
 
-        unix.mkdir(PATH.SUBMIT + '/' + 'output.slurm')
+        unix.mkdir(PATH.SUBMIT+'/'+'output.slurm')
 
         args = ('sbatch '
-                + '--job-name=%s '%PAR.TITLE
-                + '--output %s '%(PATH.SUBMIT + '/' + 'output.log')
-                + '--ntasks-per-node=%d '%PAR.NPROC_PER_NODE
-                + '--nodes=%d '%1
-                + '--time=%d '%PAR.WALLTIME
-                + findpath('system') + '/' + 'slurm/wrapper_sbatch '
-                + PATH.OUTPUT)
+          + '--job-name=%s ' % PAR.TITLE
+          + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
+          + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE
+          + '--nodes=%d ' % 1
+          + '--time=%d ' % PAR.WALLTIME
+          + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
+          + PATH.OUTPUT)
 
         subprocess.call(args, shell=1)
+
 
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
@@ -116,9 +121,8 @@ class slurm_lg_job(object):
         save_objects(join(PATH.OUTPUT, 'SeisflowsObjects'))
 
         # save keyword arguments
-        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects',
-                          classname + '_kwargs')
-        kwargsfile = join(kwargspath, funcname + '.p')
+        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
+        kwargsfile = join(kwargspath, funcname+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
 
@@ -143,56 +147,56 @@ class slurm_lg_job(object):
         else:
             raise Exception
 
+
     def launch(self, classname, funcname, hosts='all'):
         # prepare sbatch arguments
-        sbatch = 'sbatch ' \
-                 + '--job-name=%s '%PAR.TITLE \
-                 + '--nodes=%d '%math.ceil(PAR.NPROC/float(PAR.NPROC_PER_NODE)) \
-                 + '--ntasks-per-node=%d '%PAR.NPROC_PER_NODE \
-                 + '--time=%d '%PAR.STEPTIME
+        sbatch = 'sbatch '                                                   \
+            + '--job-name=%s ' % PAR.TITLE                                   \
+            + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NPROC_PER_NODE)) \
+            + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE                   \
+            + '--time=%d ' % PAR.STEPTIME
 
-        args = findpath('system') + '/' + 'slurm/wrapper_srun ' \
-               + PATH.OUTPUT + ' ' \
-               + classname + ' ' \
-               + funcname + ' '
+        args = findpath('system') +'/'+ 'slurm/wrapper_srun '        \
+            + PATH.OUTPUT + ' '                                      \
+            + classname + ' '                                        \
+            + funcname + ' '
 
         # call sbatch
         if hosts == 'all':
-            with open(PATH.SYSTEM + '/' + 'job_id', 'w') as f:
+            with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
                 subprocess.call(sbatch
-                                + '--array=%d-%d '%(0, PAR.NTASK - 1)
-                                + '--output %s '%(
-                                    PATH.SUBMIT + '/' + 'output.slurm/' + '%A_%a')
-                                + args,
-                                shell=1, stdout=f)
+                  + '--array=%d-%d ' % (0,PAR.NTASK-1)
+                  + '--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A_%a')
+                  + args,
+                  shell=1, stdout=f)
         elif hosts == 'head':
-            with open(PATH.SYSTEM + '/' + 'job_id', 'w') as f:
+            with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
                 subprocess.call(sbatch
-                                + '--export=' + 'MY_JOB_ID=0 '
-                                + '--output %s '%(
-                                    PATH.SUBMIT + '/' + 'output.slurm/' + '%A_0')
-                                + args,
-                                shell=1, stdout=f)
+                  + '--export='+'MY_JOB_ID=0 '
+                  + '--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A_0')
+                  + args,
+                  shell=1, stdout=f)
 
         # collect job info
-        with open(PATH.SYSTEM + '/' + 'job_id', 'r') as f:
+        with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
             line = f.readline()
-        job_id = int(line.split()[-1].strip())
 
-        job_ids = [str(id) for id in range(job_id, job_id + self.mylen(hosts))]
+        job_id = line.split()[-1].strip()
+        job_ids = [job_id+'_'+str(id) for id in range(self.mylen(hosts))]
         task_ids = range(self.mylen(hosts))
 
         return dict(zip(job_ids, task_ids))
+
 
     def task_status(self, classname, funcname, jobs):
         job_ids = jobs.keys()
         task_ids = jobs.values()
 
         # query job database
-        with open(PATH.SYSTEM + '/' + 'job_status', 'w') as f:
-            subprocess.call('sacct -n -o jobid,state',
-                            shell=1, stdout=f)
-        with open(PATH.SYSTEM + '/' + 'job_status', 'r') as f:
+        with open(PATH.SYSTEM+'/'+'job_status','w') as f:
+            subprocess.call('sacct -n -o jobid,state', shell=1, stdout=f)
+
+        with open(PATH.SYSTEM+'/'+'job_status', 'r') as f:
             lines = f.readlines()
 
         isdone = 1
@@ -218,6 +222,7 @@ class slurm_lg_job(object):
                     raise Exception
         return isdone, jobs
 
+
     def mpiargs(self):
         return 'srun '
 
@@ -228,15 +233,14 @@ class slurm_lg_job(object):
             return int(os.getenv('SLURM_ARRAY_TASK_ID'))
         except:
             return int(os.getenv('MY_JOB_ID'))
-
     def mylen(self, hosts):
-        if hosts == 'all':
+        if hosts=='all':
             return PAR.NTASK
         else:
             return 1
 
     def timestamp(self):
-        with open(PATH.SYSTEM + '/' + 'timestamps', 'a') as f:
-            line = time.strftime('%H:%M:%S') + '\n'
+        with open(PATH.SYSTEM+'/'+'timestamps', 'a') as f:
+            line = time.strftime('%H:%M:%S')+'\n'
             f.write(line)
 
