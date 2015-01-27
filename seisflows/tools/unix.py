@@ -2,7 +2,7 @@ import os as _os
 import shutil as _shutil
 import socket as _socket
 
-from os.path import abspath, basename, dirname, isdir, isfile, join
+from os.path import abspath, basename, isdir, isfile, join
 
 
 def cat(src, *dst):
@@ -35,7 +35,7 @@ def cp(src='', dst='', opt=''):
         dst = join(dst, basename(src))
         if isdir(dst):
             for sub in ls(src):
-                cp(join(src,sub), dst)
+                cp(join(src, sub), dst)
             return
 
     if isfile(src):
@@ -68,6 +68,7 @@ def mkdir(dirs):
         if not _os.path.isdir(dir):
             _os.makedirs(dir)
 
+
 def mkdir_gpfs(dirs):
     try:
         for dir in _strlist(dirs):
@@ -75,6 +76,7 @@ def mkdir_gpfs(dirs):
                 _os.makedirs(dir)
     except:
         pass
+
 
 def mv(src='', dst=''):
     if isinstance(src, (list, tuple)):

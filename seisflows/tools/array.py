@@ -1,5 +1,4 @@
 import os
-import glob
 
 import numpy as np
 import scipy.signal as _signal
@@ -47,7 +46,7 @@ def meshplot(x, y, z):
     f = pylab.figure(figsize=(10*rx, 10*ry))
     p = pylab.tricontourf(x, y, z, 125)
     pylab.axis('image')
-    return f,p
+    return f, p
 
 
 def meshsmooth(x, z, v, span, nx, nz):
@@ -90,7 +89,7 @@ def gauss2(X, Y, mu, sigma):
     Y = Y - mu[1]
     Z = B[0, 0]*X**2. + B[0, 1]*X*Y + B[1, 0]*X*Y + B[1, 1]*Y**2.
     Z = np.exp(-0.5*Z)
-    Z = (2.*np.pi*np.sqrt(D))**(-1.)*Z
+    Z *= (2.*np.pi*np.sqrt(D))**(-1.)
     return Z
 
 

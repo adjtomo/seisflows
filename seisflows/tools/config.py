@@ -5,8 +5,7 @@ import types
 from os.path import abspath, join
 
 from seisflows.tools import unix
-from seisflows.tools.code import Struct, exists, loadjson, \
-    loadobj, savejson, saveobj
+from seisflows.tools.code import Struct, loadobj, savejson, saveobj
 
 
 class ConfigObj(object):

@@ -2,8 +2,6 @@
 import os as _os
 import struct as _struct
 
-from collections import Mapping
-
 import numpy as _np
 
 from seisflows.tools.code import Struct
@@ -230,6 +228,7 @@ def mychar(fmt):
         return chars[fmt]
     else:
         return fmt
+
 
 def mysize(fmt):
     return _struct.calcsize(mychar(fmt))
