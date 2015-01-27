@@ -1,7 +1,7 @@
 
 WORKFLOW=None        # not used
 SOLVER=None          # not used
-SYSTEM=None          # not used
+SYSTEM='serial'      # not used
 OPTIMIZE='default'   # default, Newton, GaussNewton
 PREPROCESS=None      # not used
 POSTPROCESS=None     # not used
@@ -12,5 +12,5 @@ END=50               # last iteration
 
 SRCHMAX=10           # maximum number of steps
 STEPMAX=0.           # maximum step length
-STEPLEN=0.           # initial step length
+STEPLEN=0.01         # initial step length
 
