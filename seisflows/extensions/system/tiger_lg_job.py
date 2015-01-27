@@ -1,5 +1,7 @@
+
+from os.path import abspath, join
+
 from seisflows.tools import unix
-from seisflows.tools.code import abspath, join
 from seisflows.tools.config import loadclass, ConfigObj, ParameterObj
 
 OBJ = ConfigObj('SeisflowsObjects')
@@ -24,7 +26,7 @@ class tiger_lg_job(loadclass('system', 'slurm_lg_job')):
 
         if 'GLOBAL' not in PATH:
             setattr(PATH, 'GLOBAL',
-                    join('/scratch/gpfs', unix.whoami(), PATH.PAR.SUBTITLE, PAR.TITLE))
+                    join('/scratch/gpfs', unix.whoami(), PAR.SUBTITLE, PAR.TITLE))
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', '')
