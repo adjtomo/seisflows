@@ -12,49 +12,48 @@ if __name__ == '__main__':
     """
 
     # load parameters from working directory
-    PAR.update(loadvars('parameters','.'))
-    PATH.update(loadvars('paths','.'))
-
+    PAR.update(loadvars('parameters', '.'))
+    PATH.update(loadvars('paths', '.'))
 
     # check parameters
     if 'SYSTEM' not in PAR:
         raise Exception
 
     if 'PREPROCESS' not in PAR:
-        setattr(PAR,'PREPROCESS','default')
+        setattr(PAR, 'PREPROCESS', 'default')
 
     if 'POSTPROCESS' not in PAR:
-        setattr(PAR,'POSTPROCESS','default')
+        setattr(PAR, 'POSTPROCESS', 'default')
 
     if 'SOLVER' not in PAR:
         raise Exception
 
     if 'OPTIMIZE' not in PAR:
-        setattr(PAR,'OPTIMIZE','default')
+        setattr(PAR, 'OPTIMIZE', 'default')
 
     if 'WORKFLOW' not in PAR:
         raise Exception
 
-    register=OBJ.register
+    register = OBJ.register
 
     # load objects
-    system = loadclass('system',PAR.SYSTEM)()
-    register('system',system)
+    system = loadclass('system', PAR.SYSTEM)()
+    register('system', system)
 
-    preprocess = loadclass('preprocess',PAR.PREPROCESS)()
-    register('preprocess',preprocess)
+    preprocess = loadclass('preprocess', PAR.PREPROCESS)()
+    register('preprocess', preprocess)
 
-    solver = loadclass('solver',PAR.SOLVER)()
-    register('solver',solver)
+    solver = loadclass('solver', PAR.SOLVER)()
+    register('solver', solver)
 
-    postprocess = loadclass('postprocess',PAR.POSTPROCESS)()
-    register('postprocess',postprocess)
+    postprocess = loadclass('postprocess', PAR.POSTPROCESS)()
+    register('postprocess', postprocess)
 
-    optimize = loadclass('optimize',PAR.OPTIMIZE)()
-    register('optimize',optimize)
+    optimize = loadclass('optimize', PAR.OPTIMIZE)()
+    register('optimize', optimize)
 
-    workflow = loadclass('workflow',PAR.WORKFLOW)()
-    register('workflow',workflow)
+    workflow = loadclass('workflow', PAR.WORKFLOW)()
+    register('workflow', workflow)
 
     # check objects
     system.check()
@@ -63,7 +62,6 @@ if __name__ == '__main__':
     optimize.check()
     preprocess.check()
     postprocess.check()
-
 
     # submit job
     system.submit(workflow)

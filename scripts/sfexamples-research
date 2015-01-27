@@ -9,9 +9,9 @@ from seisflows.tools import unix
 def listdir(dir):
     subdirs = []
     for subdir in unix.ls(dir):
-      if os.path.isdir(dir+'/'+subdir):
-        if subdir[0] != '_':
-          subdirs += [subdir]
+        if os.path.isdir(dir+'/'+subdir):
+            if subdir[0] != '_':
+                subdirs += [subdir]
     subdirs.sort()
     return subdirs
 
@@ -27,29 +27,29 @@ if __name__ == '__main__':
     # prompt user for path
     home = '/home/rmodrak/data/'
     opts = ['Imaging3d']
-    #opts = ['FwiSourceEncoding','Imaging3d','Noise2d']
+    # opts = ['FwiSourceEncoding','Imaging3d','Noise2d']
     print ''
-    path = join(home,unix.select(opts))
+    path = join(home, unix.select(opts))
     print ''
 
     # prompt user for directory
     dirs = listdir(path)
     prompt = 'select directory:'
-    dir = unix.select(dirs,prompt)
+    dir = unix.select(dirs, prompt)
     print ''
 
     # prompt user for sudirectory
     items = unix.ls(path+'/'+dir)
     if 'parameters.py' in items:
-      subdir = ''
+        subdir = ''
     else:
-      subdirs = listdir(path+'/'+dir)
-      prompt = 'select subdirectory:'
-      subdir = unix.select(subdirs,prompt)
-      print ''
+        subdirs = listdir(path+'/'+dir)
+        prompt = 'select subdirectory:'
+        subdir = unix.select(subdirs, prompt)
+        print ''
 
     # set up working directory
     fullpath = path+'/'+dir+'/'+subdir
-    unix.cp(fullpath+'/'+'parameters.py','.')
-    unix.cp(fullpath+'/'+'paths.py','.')
+    unix.cp(fullpath+'/'+'parameters.py', '.')
+    unix.cp(fullpath+'/'+'paths.py', '.')
 

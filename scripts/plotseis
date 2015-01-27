@@ -13,13 +13,13 @@ if __name__ == '__main__':
 
     for filename in sys.argv[1:]:
 
-      w = np.loadtxt(filename)
+        w = np.loadtxt(filename)
 
-      print ''
-      print filename
-      print 'min, max:', w[:,1].min(), w[:,1].max()
-      print ''
+        print ''
+        print filename
+        print 'min, max:', w[:, 1].min(), w[:, 1].max()
+        print ''
 
-      # plot waveform
-      wplot(w)
+        # plot waveform
+        wplot(w)
 

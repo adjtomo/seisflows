@@ -14,53 +14,54 @@ def filetype(filename):
      SPECFEM2D and SPECFEM3D. 
     """
 
-    if ('.segy' in filename.lower()):
+    if '.segy' in filename.lower():
         return 'segy'
 
-    elif ('.su' in filename.lower()):
+    elif '.su' in filename.lower():
         return 'su'
 
-    elif ('single.bin' in filename):
+    elif 'single.bin' in filename:
         return 'su'
 
-    elif ('single.adj' in filename):
+    elif 'single.adj' in filename:
         return 'su'
 
-    elif ('_SU' in filename):
+    elif '_SU' in filename:
         return 'su'
 
     else:
         return None
 
 
-
 if __name__ == '__main__':
-  """ Plots record section read from SU or SEGY file
-  """
+    """ Plots record section read from SU or SEGY file
+    """
 
-  filename = sys.argv[1]
+    filename = sys.argv[1]
 
-  if filetype(filename) == 'segy':
-     s,h = readsegy(filename)
+    if filetype(filename) == 'segy':
+        s, h = readsegy(filename)
+    elif filetype(filename) == 'su':
+        s, h = readsu(filename)
+    else:
+        print "Only SEG-Y and SU files."
+        sys.exit(1)
 
-  elif filetype(filename) == 'su':
-     s,h = readsu(filename)
+    print 'ntraces:', s.shape[1]
+    print 'nsamples:', s.shape[0]
 
-  print 'ntraces:', s.shape[1]
-  print 'nsamples:', s.shape[0]
+    if len(sys.argv[1:]) == 1:
+        print 'min, max:', s.min(), s.max()
 
-  if len(sys.argv[1:]) == 1:
-     print 'min, max:', s.min(), s.max()
+        # plot record section
+        splot(s, h)
 
-     # plot record section
-     splot(s,h)
+    else:
+        for ii in sys.argv[2:]:
+            w = np.zeros((h.nt, 2))
+            w[:, 0] = np.linspace(0, h.nt*h.dt, h.nt)
+            w[:, 1] = s[:, ii]
 
-  else:
-    for ii in sys.argv[2:]:
-      w = np.zeros((h.nt,2))
-      w[:,0] = np.linspace(0,h.nt*h.dt,h.nt)
-      w[:,1] = s[:,ii]
-
-      # plot waveform
-      wplot(w)
+            # plot waveform
+            wplot(w)
 
