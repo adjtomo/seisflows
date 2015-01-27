@@ -1,33 +1,34 @@
 #!/bin/env python
 
 from seisflows.tools import unix
-from seisflows.tools.config import getclass, ParameterObject
+from seisflows.tools.config import loadclass, loadvars, ConfigObj, ParameterObj, Null
 
-PAR = ParameterObject('parameters')
-PATH = ParameterObject('paths')
+OBJ = ConfigObj('SeisflowsObjects')
+PAR = ParameterObj('SeisflowsParameters')
+PATH = ParameterObj('SeisflowsPaths')
 
-system = getclass('system',PAR.SYSTEM)()
+register = OBJ.register
+
+null = Null()
 
 
 class run:
   """ Tests system interface.
   """
 
-  def __init__(self):
-
-    # check parameters
+  def check(self):
     if 'NTASK' not in PAR:
         raise Exception
 
     if 'NPROC' not in PAR:
         setattr(PAR,'NPROC',1)
 
-    if PAR.VERBOSE != 0:
+    if 'VERBOSE' not in PAR:
         setattr(PAR,'VERBOSE',0)
 
 
   def main(self):
-    system.run(self.hello, hosts='all')
+    system.run('workflow', 'hello', hosts='all')
     print ''
 
 
@@ -43,5 +44,21 @@ class run:
 # run test
 if __name__ == '__main__':
 
-    system.submit(run)
+    PAR.update(loadvars('parameters','.'))
+    PATH.update(loadvars('paths','.'))
+
+    workflow = run()
+    workflow.check()
+    register('workflow',workflow)
+
+    system = loadclass('system',PAR.SYSTEM)()
+    system.check()
+    register('system',system)
+
+    register('preprocess',null)
+    register('solver',null)
+    register('postprocess',null)
+    register('optimize',null)
+
+    system.submit(workflow)
 

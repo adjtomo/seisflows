@@ -1,6 +1,6 @@
 #!/bin/env python
 
-import glob
+from glob import glob
 
 from seisflows.tools import unix
 
