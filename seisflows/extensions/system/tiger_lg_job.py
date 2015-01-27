@@ -32,7 +32,7 @@ class tiger_lg_job(loadclass('system', 'slurm_lg_job')):
             setattr(PATH, 'LOCAL', '')
 
         if 'NPROC_PER_NODE' not in PAR:
-            setattr(PAR, 'CPUS_PER_NODE', 16)
+            setattr(PAR, 'NPROC_PER_NODE', 16)
 
         super(tiger_lg_job, self).check()
 
