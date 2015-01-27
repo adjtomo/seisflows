@@ -13,7 +13,7 @@ import system
 import solver
 
 
-class default(object):
+class base(object):
     """ Postprocessing class
 
       Combines contributions from individual sources to obtain the gradient

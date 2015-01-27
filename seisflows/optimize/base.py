@@ -14,7 +14,7 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 
-class default(object):
+class base(object):
     """ Nonlinear optimization base class.
 
      Available nonlinear optimization algorithms include gradient descent,

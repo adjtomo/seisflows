@@ -1,3 +1,4 @@
+
 import numpy as np
 
 from seisflows.tools import unix
@@ -10,7 +11,7 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 
-class default(object):
+class base(object):
     """ Data preprocessing class
     """
 
@@ -18,7 +19,6 @@ class default(object):
         """ Checks parameters, paths, and dependencies
         """
 
-        # check parameters
         if 'MISFIT' not in PAR:
             setattr(PAR, 'MISFIT', 'wav')
 
@@ -31,6 +31,7 @@ class default(object):
         if 'NORMALIZE' not in PAR:
             setattr(PAR, 'NORMALIZE', True)
 
+        # mute settings
         if 'MUTE' not in PAR:
             setattr(PAR, 'MUTE', False)
 
