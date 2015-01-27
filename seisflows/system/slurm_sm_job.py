@@ -1,7 +1,4 @@
-
 import os
-import pickle
-import sys
 import subprocess
 from os.path import abspath, join
 
@@ -30,7 +27,6 @@ class slurm_sm_job(object):
       a particular filesystem or job scheduler.
     """
 
-
     def check(self):
         """ Checks parameters and paths
         """
@@ -43,30 +39,29 @@ class slurm_sm_job(object):
             raise Exception
 
         if 'WALLTIME' not in PAR:
-            setattr(PAR,'WALLTIME',30.)
+            setattr(PAR, 'WALLTIME', 30.)
 
         if 'VERBOSE' not in PAR:
-            setattr(PAR,'VERBOSE',1)
+            setattr(PAR, 'VERBOSE', 1)
 
         if 'TITLE' not in PAR:
-            setattr(PAR,'TITLE',unix.basename(abspath('.')))
+            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
 
         if 'SUBTITLE' not in PAR:
-            setattr(PAR,'SUBTITLE',unix.basename(abspath('..')))
+            setattr(PAR, 'SUBTITLE', unix.basename(abspath('..')))
 
         # check paths
         if 'GLOBAL' not in PATH:
-            setattr(PATH,'GLOBAL',join(abspath('.'),'scratch'))
+            setattr(PATH, 'GLOBAL', join(abspath('.'), 'scratch'))
 
         if 'LOCAL' not in PATH:
-            setattr(PATH,'LOCAL','')
+            setattr(PATH, 'LOCAL', '')
 
         if 'SUBMIT' not in PATH:
-            setattr(PATH,'SUBMIT',unix.pwd())
+            setattr(PATH, 'SUBMIT', unix.pwd())
 
         if 'OUTPUT' not in PATH:
-            setattr(PATH,'OUTPUT',join(PATH.SUBMIT,'output'))
-
+            setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
 
     def submit(self, workflow):
         """ Submits job
@@ -81,54 +76,53 @@ class slurm_sm_job(object):
 
         # submit job
         args = ('sbatch '
-          + '--job-name=%s ' %  PAR.TITLE
-          + '--output=%s ' % (PATH.SUBMIT+'/'+'output.log')
-          + '--cpus-per-task=%d ' % PAR.NPROC
-          + '--ntasks=%d ' % PAR.NTASK
-          + '--time=%d ' % PAR.WALLTIME
-          + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
-          + PATH.OUTPUT)
+                + '--job-name=%s '%PAR.TITLE
+                + '--output=%s '%(PATH.SUBMIT + '/' + 'output.log')
+                + '--cpus-per-task=%d '%PAR.NPROC
+                + '--ntasks=%d '%PAR.NTASK
+                + '--time=%d '%PAR.WALLTIME
+                + findpath('system') + '/' + 'slurm/wrapper_sbatch '
+                + PATH.OUTPUT)
 
         subprocess.call(args, shell=1)
-
 
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
         """
         if PAR.VERBOSE >= 2:
-            print 'running',funcname
+            print 'running', funcname
 
         # save current state
-        save_objects(join(PATH.OUTPUT,'SeisflowsObjects'))
+        save_objects(join(PATH.OUTPUT, 'SeisflowsObjects'))
 
         # save keyword arguments
-        kwargspath = join(PATH.OUTPUT,'SeisflowsObjects',classname+'_kwargs')
-        kwargsfile = join(kwargspath,funcname+'.p')
+        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects',
+                          classname + '_kwargs')
+        kwargsfile = join(kwargspath, funcname + '.p')
         unix.mkdir(kwargspath)
-        saveobj(kwargsfile,kwargs)
+        saveobj(kwargsfile, kwargs)
 
         if hosts == 'all':
             # run on all available nodes
             args = ('srun '
-              + '--wait=0 '
-              + join(findpath('system'),'slurm/wrapper_srun ')
-              + PATH.OUTPUT + ' '
-              + classname + ' '
-              + funcname)
+                    + '--wait=0 '
+                    + join(findpath('system'), 'slurm/wrapper_srun ')
+                    + PATH.OUTPUT + ' '
+                    + classname + ' '
+                    + funcname)
 
         elif hosts == 'head':
             # run on head node
             args = ('srun '
-              + '--wait=0 '
-              + join(findpath('system'),'slurm/wrapper_srun_head ')
-              + PATH.OUTPUT + ' '
-              + classname + ' '
-              + funcname)
+                    + '--wait=0 '
+                    + join(findpath('system'), 'slurm/wrapper_srun_head ')
+                    + PATH.OUTPUT + ' '
+                    + classname + ' '
+                    + funcname)
         else:
             raise Exception
 
         subprocess.call(args, shell=1)
-
 
     def getnode(self):
         """ Gets number of running task
@@ -137,6 +131,5 @@ class slurm_sm_job(object):
         lid = int(os.getenv('SLURM_LOCALID'))
         return int(gid[lid])
 
-
     def mpiargs(self):
-        return 'mpirun -np %d ' % PAR.NPROC
+        return 'mpirun -np %d '%PAR.NPROC
