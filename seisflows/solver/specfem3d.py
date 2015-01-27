@@ -551,7 +551,7 @@ class specfem3d(object):
         """name of current source"""
         if not hasattr(self, 'sources'):
             # generate list of all sources
-            paths = glob(PATH.SOLVER_FILES +'/'+ 'SOURCE_*')
+            paths = glob(PATH.SOLVER_FILES +'/'+ 'FORCESOLUTION_*')
             self.sources = []
             for path in paths:
                 self.sources += [unix.basename(path).split('_')[-1]]
