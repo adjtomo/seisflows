@@ -41,7 +41,7 @@ class FwiSourceEncoding(loadclass('workflow', 'inversion')):
 
         # assertions
         assert ('SourceEncoding' in PAR.SOLVER)
-        assert (PAR.PREPROCESS in ['default'])
+        assert (PAR.PREPROCESS in ['base'])
 
 
     def setup(self):

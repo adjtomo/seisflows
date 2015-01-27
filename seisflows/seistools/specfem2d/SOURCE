@@ -1,0 +1,13 @@
+source_surf = .false. 
+xs = 0.
+zs = 0.
+source_type = 1
+time_function_type = 1
+f0 = 0.084
+tshift = 0.000e+00
+anglesource = 0.00
+Mxx = 1.000000
+Mzz = 1.000000
+Mxz = 0.000000
+factor = 1.000e+10
+
