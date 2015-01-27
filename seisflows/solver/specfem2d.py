@@ -492,7 +492,7 @@ class specfem2d(object):
 
     def write_parameters(self):
         unix.cd(self.getpath)
-        write_parameters(vars(PAR))
+        solvertools.write_parameters(vars(PAR))
 
     def write_receivers(self):
         unix.cd(self.getpath)
@@ -500,12 +500,12 @@ class specfem2d(object):
         val = '.true.'
         solvertools.setpar(key, val)
         _, h = preprocess.load('traces/obs')
-        write_receivers(h.nr, h.rx, h.rz)
+        solvertools.write_receivers(h.nr, h.rx, h.rz)
 
     def write_sources(self):
         unix.cd(self.getpath)
         _, h = preprocess.load(dir='traces/obs')
-        write_sources(vars(PAR), h)
+        solvertools.write_sources(vars(PAR), h)
 
 
     ### utility functions
@@ -519,23 +519,18 @@ class specfem2d(object):
                 shell=True,
                 stdout=f)
 
-    @property
-    def getlist(self):
-        """list of all sources"""
-        try:
-            return self.events
-        except:
-            paths = glob(PATH.SOLVER_FILES +'/'+ 'SOURCE_*')
-            names = [unix.basename(name) for name in paths]
-            events = [name.split('_')[-1] for name in names]
-            events.sort()
-            self.events = events
-            return self.events
-
     @ property
     def getname(self):
         """name of current source"""
-        return self.getlist[system.getnode()]
+        if not hasattr(self, 'sources'):
+            # generate list of all sources
+            paths = glob(PATH.SOLVER_FILES +'/'+ 'SOURCE_*')
+            self.sources = []
+            for path in paths:
+                self.sources += [unix.basename(path).split('_')[-1]]
+            self.sources.sort()
+
+        return self.sources[system.getnode()]
 
     @property
     def getpath(self):

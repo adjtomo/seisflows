@@ -519,7 +519,7 @@ class specfem3d(object):
 
     def write_parameters(self):
         unix.cd(self.getpath)
-        write_parameters(vars(PAR))
+        solvertools.write_parameters(vars(PAR))
 
     def write_receivers(self):
         unix.cd(self.getpath)
@@ -527,12 +527,12 @@ class specfem3d(object):
         val = '.true.'
         solvertools.setpar(key, val)
         _, h = preprocess.load('traces/obs')
-        write_receivers(h.nr, h.rx, h.rz)
+        solvertools.write_receivers(h.nr, h.rx, h.rz)
 
     def write_sources(self):
         unix.cd(self.getpath)
         _, h = preprocess.load(dir='traces/obs')
-        write_sources(vars(PAR), h)
+        solvertools.write_sources(vars(PAR), h)
 
 
     ### utility functions
@@ -547,14 +547,17 @@ class specfem3d(object):
                 stdout=f)
 
     @property
-    def getlist(self):
-        """list of all sources"""
-        return NotImplementedError
-
-    @ property
     def getname(self):
         """name of current source"""
-        return '%06d' % system.getnode()
+        if not hasattr(self, 'sources'):
+            # generate list of all sources
+            paths = glob(PATH.SOLVER_FILES +'/'+ 'SOURCE_*')
+            self.sources = []
+            for path in paths:
+                self.sources += [unix.basename(path).split('_')[-1]]
+            self.sources.sort()
+
+        return self.sources[system.getnode()]
 
     @property
     def getpath(self):
