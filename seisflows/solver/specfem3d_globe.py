@@ -115,19 +115,6 @@ class specfem3d_globe(object):
             else:
                 setattr(PATH, 'SOLVER', join(PATH.GLOBAL, 'solver'))
 
-        # check dependencies
-        if 'preprocess' not in OBJ:
-            raise Exception
-
-        if 'system' not in OBJ:
-            raise Exception
-
-        global preprocess
-        import preprocess
-
-        global system
-        import system
-
 
     def setup(self):
         """ Prepares solver for inversion or migration
