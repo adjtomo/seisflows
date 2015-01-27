@@ -135,6 +135,9 @@ def loadclass(*args):
     if not args:
         return Null
 
+    if not args[-1]:
+        return Null
+
     # first, try importing relative to main package directory
     list = _parse(args, package='seisflows')
     string = '.'.join(list)
