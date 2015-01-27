@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 
 from seisflows.tools import unix
 from seisflows.tools.config import loadclass, loadvars, ConfigObj, ParameterObj, Null
