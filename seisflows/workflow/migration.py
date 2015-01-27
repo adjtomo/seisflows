@@ -1,3 +1,4 @@
+
 from glob import glob
 
 from seisflows.tools import unix
@@ -54,6 +55,7 @@ class migration(object):
         if 'SAVETRACES' not in PAR:
             setattr(PAR, 'SAVETRACES', 0)
 
+
     def main(self):
         """ Migrates seismic data
         """
@@ -100,7 +102,8 @@ class migration(object):
 
         print 'Finished\n'
 
-    # -- utility functions
+
+    ### utility functions
 
     def prepare_model(self):
         model = PATH.OUTPUT + '/' + 'model_init'

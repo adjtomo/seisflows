@@ -1,8 +1,9 @@
-import numpy as np
+
 from os.path import join
+import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.array import loadnpy
+from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import divides, exists
 from seisflows.tools.config import ParameterObj
 
@@ -102,6 +103,7 @@ class inversion(object):
         if 'SAVERESIDUALS' not in PAR:
             setattr(PAR, 'SAVERESIDUALS', 0)
 
+
     def main(self):
         """ Carries out seismic inversion
         """
@@ -125,6 +127,7 @@ class inversion(object):
             if self.isdone:
                 return
 
+
     def setup(self):
         """ Lays groundwork for inversion
         """
@@ -147,9 +150,10 @@ class inversion(object):
             return
 
         if PATH.LOCAL:
-            system.run('solver', 'setup',
-                       hosts='all')
+             system.run('solver', 'setup',
+                        hosts='all')
  
+
     def initialize(self):
         """ Prepares for next model update iteration
         """
@@ -165,11 +169,13 @@ class inversion(object):
 
             self.sum_residuals(path=PATH.GRAD, suffix='new')
 
+
     def compute_direction(self):
         """ Computes search direction
         """
         self.evaluate_gradient()
         optimize.compute_direction()
+
 
     def line_search(self):
         """ Conducts line search in given search direction
@@ -189,6 +195,7 @@ class inversion(object):
                 self.isdone = -1
                 print ' line search failed'
 
+
     def search_status(self):
         """ Checks line search status
         """
@@ -207,6 +214,7 @@ class inversion(object):
 
         return isdone
 
+
     def evaluate_function(self):
         """ Calls forward solver and writes misfit
         """
@@ -219,6 +227,7 @@ class inversion(object):
 
         self.sum_residuals(path=PATH.FUNC, suffix='try')
 
+
     def evaluate_gradient(self):
         """ Calls adjoint solver and runs process_kernels
         """
@@ -230,6 +239,7 @@ class inversion(object):
 
         postprocess.process_kernels(
             path=PATH.GRAD)
+
 
     def finalize(self):
         """ Saves results from most recent model update iteration
@@ -266,27 +276,30 @@ class inversion(object):
 
         self.isdone = False
 
-    # -- utility functions
+
+    ### utility functions
 
     def prepare_model(self, path='', suffix=''):
         """ Writes model in format used by solver
         """
         unix.mkdir(path)
-        src = PATH.OPTIMIZE + '/' + 'm_' + suffix
-        dst = path + '/' + 'model'
+        src = PATH.OPTIMIZE +'/'+ 'm_' + suffix
+        dst = path +'/'+ 'model'
         parts = solver.split(loadnpy(src))
         solver.save(dst, parts)
+
 
     def sum_residuals(self, path='', suffix=''):
         """ Sums residuals to obtain misfit function value
         """
-        src = path + '/' + 'residuals'
-        dst = PATH.OPTIMIZE + '/' + 'f_' + suffix
+        src = path +'/'+ 'residuals'
+        dst = PATH.OPTIMIZE +'/'+ 'f_' + suffix
         residuals = []
         for file in unix.ls(src):
-            fromfile = np.loadtxt(src + '/' + file)
+            fromfile = np.loadtxt(src +'/'+ file)
             residuals.append(fromfile**2.)
         np.savetxt(dst, [np.sum(residuals)])
+
 
     def solver_status(self):
         """ Decides if solver prerequisites are in place
@@ -299,27 +312,33 @@ class inversion(object):
             isready = True
         return isready
 
+
     def save_gradient(self):
         src = join(PATH.GRAD, 'gradient')
         dst = join(PATH.OUTPUT, 'gradient_%04d' % self.iter)
         unix.mv(src, dst)
 
+
     def save_model(self):
-        src = PATH.OPTIMIZE + '/' + 'm_new'
+        src = PATH.OPTIMIZE +'/'+ 'm_new'
         dst = join(PATH.OUTPUT, 'model_%04d' % self.iter)
         solver.save(dst, solver.split(loadnpy(src)))
+
 
     def save_kernels(self):
         src = join(PATH.GRAD, 'kernels')
         dst = join(PATH.OUTPUT, 'kernels_%04d' % self.iter)
         unix.mv(src, dst)
 
+
     def save_traces(self):
         src = join(PATH.GRAD, 'traces')
         dst = join(PATH.OUTPUT, 'traces_%04d' % self.iter)
         unix.mv(src, dst)
 
+
     def save_residuals(self):
         src = join(PATH.GRAD, 'residuals')
         dst = join(PATH.OUTPUT, 'residuals_%04d' % self.iter)
         unix.mv(src, dst)
+

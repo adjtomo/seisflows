@@ -4,6 +4,9 @@ OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
+import system
+import solver
+
 
 class forward_modeling(object):
     """ Forward modeling base class
@@ -35,11 +38,6 @@ class forward_modeling(object):
         if 'system' not in OBJ:
             raise Exception("Undefined Exception")
 
-        global solver
-        import solver
-
-        global system
-        import system
 
     def main(self):
         """ Generates seismic data
