@@ -172,8 +172,8 @@ class slurm_lg_job(object):
         elif hosts == 'head':
             with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
                 subprocess.call(sbatch
-                  + '--export='+'MY_JOB_ID=0 '
-                  + '--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A_0')
+                  + '--array=%d-%d ' % (0,0)
+                  + '--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A_%a')
                   + args,
                   shell=1, stdout=f)
 
@@ -232,7 +232,7 @@ class slurm_lg_job(object):
         try:
             return int(os.getenv('SLURM_ARRAY_TASK_ID'))
         except:
-            return int(os.getenv('MY_JOB_ID'))
+            raise Exception
     def mylen(self, hosts):
         if hosts=='all':
             return PAR.NTASK

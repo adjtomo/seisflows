@@ -11,7 +11,6 @@ PATH = ParameterObj('SeisflowsPaths')
 OBJ = ConfigObj('SeisflowsObjects')
 
 if __name__ == '__main__':
-
     mypath = sys.argv[1]
     myobj = sys.argv[2]
     myfunc = sys.argv[3]
@@ -34,11 +33,11 @@ if __name__ == '__main__':
     import system
     import workflow
 
+    system.check()
+    solver.check()
     optimize.check()
     preprocess.check()
     postprocess.check()
-    solver.check()
-    system.check()
     workflow.check()
 
     if system.getnode() == 0:
