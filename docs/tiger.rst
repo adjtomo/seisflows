@@ -2,7 +2,7 @@
 Loading examples
 ----------------
 
-After installing SeisFlows, users with accounts on ``tiger.princeton.edu`` can type ``sfexamples`` at the command line to interactively choose an example. Once an example is chosen, a ``parameters.py`` file and ``paths.py`` file are created in the current directory.
+After installing SeisFlows, users with accounts on ``tiger.princeton.edu`` can type ``sfexamples`` or ``sfexamples-research`` at the command line to interactively choose an example. Once an example is chosen, a ``parameters.py`` file and ``paths.py`` file are created in the current directory.
 
 
 Running examples
