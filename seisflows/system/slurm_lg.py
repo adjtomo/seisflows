@@ -27,7 +27,6 @@ class slurm_lg(object):
       http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-interfaces
     """
 
-
     def check(self):
         """ Checks parameters and paths
         """
@@ -125,12 +124,11 @@ class slurm_lg(object):
                    +'--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A_%a'))
 
         elif hosts == 'head':
-            args = ('--array=%d-%d ' % (0,PAR.NTASK-1)
+            args = ('--array=%d-%d ' % (0,0)
                    +'--output=%s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%j'))
             #args = ('--export=SEISFLOWS_TASK_ID=%s ' % 0
             #       +'--get-user-env '
             #       +'--output=%s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%j'))
-
 
         args = ('sbatch '
                 + '--job-name=%s ' % PAR.TITLE
