@@ -15,16 +15,16 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 
-class slurm_lg_job(object):
-    """ System interface class
+class slurm_lg(object):
+    """ An interface through which to submit workflows, run tasks in serial or 
+      parallel, and perform other system functions.
 
-      Provides an interface through which to submit jobs, run tasks in serial
-      or parallel, and perform other system functions.
+      By hiding environment details behind a python interface layer, these 
+      classes provide a consistent command set across different computing
+      environments.
 
-      One of several system interface classes that together provide a consistent
-      interface across different computer environemnts. Each class implements a
-      standard sets of methods, hiding the details associated with, for example,
-      a particular filesystem or job scheduler.
+      For more informations, see 
+      http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-interfaces
     """
 
 
@@ -57,9 +57,6 @@ class slurm_lg_job(object):
         if 'SLEEPTIME' not in PAR:
             PAR.SLEEPTIME = 1.
 
-        if 'RETRY' not in PAR:
-            PAR.RETRY = False
-
         if 'VERBOSE' not in PAR:
             setattr(PAR, 'VERBOSE', 1)
 
@@ -81,7 +78,7 @@ class slurm_lg_job(object):
 
 
     def submit(self, workflow):
-        """ Submits job
+        """ Submits workflow
         """
         unix.mkdir(PATH.OUTPUT)
         unix.cd(PATH.OUTPUT)
@@ -93,23 +90,22 @@ class slurm_lg_job(object):
 
         # prepare sbatch arguments
         args = ('sbatch '
-            + '--job-name=%s ' % PAR.TITLE
-            + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
-            + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE
-            + '--nodes=%d ' % 1
-            + '--time=%d ' % PAR.WALLTIME
-            + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
-            + PATH.OUTPUT)
+                + '--job-name=%s ' % PAR.TITLE
+                + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
+                + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE
+                + '--nodes=%d ' % 1
+                + '--time=%d ' % PAR.WALLTIME
+                + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
+                + PATH.OUTPUT)
 
         subprocess.call(args, shell=1)
 
 
     def run(self, classname, funcname, hosts='all', **kwargs):
-        """  Runs tasks in serial or parallel on specified hosts
+        """  Runs tasks in serial or parallel on specified hosts.
         """
         self.save_objects()
 
-        # run task
         self.save_kwargs(classname, funcname, kwargs)
         jobs = self.launch(classname, funcname, hosts)
         while 1:
@@ -129,39 +125,37 @@ class slurm_lg_job(object):
                    +'--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A_%a'))
 
         elif hosts == 'head':
-            args = ('--export SEISFLOWS_TASK_ID=0'
-                   +'--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A'))
+            args = ('--array=%d-%d ' % (0,PAR.NTASK-1)
+                   +'--output=%s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%j'))
+            #args = ('--export=SEISFLOWS_TASK_ID=%s ' % 0
+            #       +'--get-user-env '
+            #       +'--output=%s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%j'))
 
-        else:
-            args = ('--export SEISFLOWS_TASK_ID=' + hosts
-                   +'--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A'))
 
         args = ('sbatch '
-            + '--job-name=%s ' % PAR.TITLE
-            + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NPROC_PER_NODE))
-            + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE
-            + '--time=%d ' % PAR.STEPTIME
-            + args
-            + findpath('system') +'/'+ 'slurm/wrapper_srun '
-            + PATH.OUTPUT + ' '
-            + classname + ' '
-            + funcname + ' ')
+                + '--job-name=%s ' % PAR.TITLE
+                + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NPROC_PER_NODE))
+                + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE
+                + '--time=%d ' % PAR.STEPTIME
+                + args
+                + findpath('system') +'/'+ 'slurm/wrapper_srun '
+                + PATH.OUTPUT + ' '
+                + classname + ' '
+                + funcname + ' ')
 
         # submit jobs
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
             subprocess.call(args, shell=1, stdout=f)
 
-        # collect job ids
+        # return job ids
         with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
             line = f.readline()
             job = line.split()[-1].strip()
-        if hosts == 'all':
+        if hosts == 'all' and PAR.NTASK > 1:
             nn = range(PAR.NTASK)
-            jobs = [job+'_'+str(ii) for ii in nn]
+            return [job+'_'+str(ii) for ii in nn]
         else:
-            jobs = [job]
-
-        return jobs
+            return [job]
 
 
     def task_status(self, classname, funcname, jobs):
@@ -174,31 +168,37 @@ class slurm_lg_job(object):
                 states += [1]
             else:
                 states += [0]
-
-            if state in ['FAILED', 'TIMEOUT']:
+            if state in ['FAILED', 'NODE_FAIL', 'TIMEOUT']:
                 raise Exception
 
-        return all(states), jobs
+        isdone = all(states)
+
+        return isdone, jobs
 
 
     def mpiargs(self):
         return 'srun '
 
     def getstate(self, jobid):
-        with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
-            subprocess.call('squeue -h -o "%T" -j '+jobid, shell=True, stdout=f)
+        """ Retrives job state from SLURM database
+        """
+        with open(PATH.SYSTEM+'/'+'job_status', 'w') as f:
+            subprocess.call('sacct -n -o state -j '+jobid, shell=True, stdout=f)
+
+        with open(PATH.SYSTEM+'/'+'job_status', 'r') as f:
             line = f.readline()
             state = line.strip()
+
         return state
 
     def getnode(self):
         """ Gets number of running task
         """
         try:
-            return int(os.getenv('SLURM_ARRAY_TASK_ID'))
+            return int(os.getenv('SEISFLOWS_TASK_ID'))
         except:
             try:
-                return int(os.getenv('SEISFLOWS_TASK_ID'))
+                return int(os.getenv('SLURM_ARRAY_TASK_ID'))
             except:
                 raise Exception("TASK_ID environment variable not defined.")
 
@@ -206,6 +206,7 @@ class slurm_lg_job(object):
         with open(PATH.SYSTEM+'/'+'timestamps', 'a') as f:
             line = time.strftime('%H:%M:%S')+'\n'
             f.write(line)
+
 
     ### utility functions
 

@@ -6,20 +6,20 @@ PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
 
-# ensure that NPROC (number of processers per source) is defined
+# ensure number of processers per source is defined
 if 'NPROC' not in PAR:
     raise Exception
 
-# on tiger.princeton.edu, there are 16 processers per node
+# there are 16 processers per node on tiger
 if 'NPROC_PER_NODE' in PAR:
     assert(PAR.NPROC_PER_NODE == 16)
 else:
     PAR.NPROC_PER_NODE = 16
 
-# if processers per source exceeds processers per node, use tiger_lg_job, 
-# otherwise, use tiger_sm_job
+# if nproc per source exceeds nproc per node, use tiger_lg
+# otherwise, use tiger_sm
 if PAR.NPROC > PAR.NPROC_PER_NODE:
-    tiger = loadclass('system','tiger_lg_job')
+    tiger = loadclass('system','tiger_lg')
 else:
-    tiger = loadclass('system','tiger_sm_job')
+    tiger = loadclass('system','tiger_sm')
 

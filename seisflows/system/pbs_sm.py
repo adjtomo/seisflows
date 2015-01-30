@@ -4,30 +4,25 @@ from os.path import abspath, join
 
 from seisflows.tools import unix
 from seisflows.tools.code import saveobj
-from seisflows.tools.config import findpath, ConfigObj, ParameterObj
+from seisflows.tools.config import getmodule, findpath, ParameterObj
 
-OBJ = ConfigObj('SeisflowsObjects')
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
-
-save_objects = OBJ.save
-save_parameters = PAR.save
-save_paths = PATH.save
+PAR = ParameterObj('parameters')
+PATH = ParameterObj('paths')
 
 
-class slurm_sm_job(object):
-    """ System interface class
+class pbs_sm(object):
+    """ An interface through which to submit workflows, run tasks in serial or 
+      parallel, and perform other system functions.
 
-      Provides an interface through which to submit jobs, run tasks in serial
-      or parallel, and perform other system functions.
+      By hiding environment details behind a python interface layer, these 
+      classes provide a consistent command set across different computing
+      environments.
 
-      One of several system interface classes that together provide a consistent
-      interface across different computer environemnts. Each class implements a
-      standard sets of methods, hiding the details associated with, for example,
-      a particular filesystem or job scheduler.
+      For more informations, see 
+      http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-interfaces
     """
 
-    def check(self):
+    def __init__(self):
         """ Checks parameters and paths
         """
 
@@ -57,6 +52,9 @@ class slurm_sm_job(object):
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', '')
 
+        if 'SYSTEM' not in PATH:
+            setattr(PATH, 'SYSTEM', join(PATH.GLOBAL, 'system'))
+
         if 'SUBMIT' not in PATH:
             setattr(PATH, 'SUBMIT', unix.pwd())
 
@@ -65,7 +63,7 @@ class slurm_sm_job(object):
 
 
     def submit(self, workflow):
-        """ Submits job
+        """Submits job
         """
         unix.mkdir(PATH.OUTPUT)
         unix.cd(PATH.OUTPUT)
@@ -75,15 +73,28 @@ class slurm_sm_job(object):
         save_parameters('SeisflowsParameters.json')
         save_paths('SeisflowsPaths.json')
 
-        # submit job
-        args = ('sbatch '
-                + '--job-name=%s '%PAR.TITLE
-                + '--output=%s '%(PATH.SUBMIT + '/' + 'output.log')
-                + '--cpus-per-task=%d '%PAR.NPROC
-                + '--ntasks=%d '%PAR.NTASK
-                + '--time=%d '%PAR.WALLTIME
-                + findpath('system') + '/' + 'slurm/wrapper_sbatch '
+        nodes = PAR.NTASK/16
+        cores = PAR.NTASK%16
+        hours = PAR.WALLTIME/60
+        minutes = PAR.WALLTIME%60
+
+        # construct resource list
+        resources = 'walltime=%02d:%02d:00 '%(hours, minutes)
+        if nodes == 0:
+            resources += ',nodes=1:ppn=%d'%cores
+        elif cores == 0:
+            resources += ',nodes=%d:ppn=16'%nodes
+        else:
+            resources += ',nodes=%d:ppn=16+1:ppn=%d'%(nodes, cores)
+
+        args = ('qsub '
+                + '-N %s '%PAR.TITLE
+                + '-o %s '%(PATH.SUBMIT + '/' + 'output.log')
+                + '-l %s '%resources
+                + '-j %s '%'oe'
+                + findpath('system') + '/' + 'pbs/wrapper_qsub '
                 + PATH.OUTPUT)
+        print args  # DEBUG
 
         subprocess.call(args, shell=1)
 
@@ -91,32 +102,32 @@ class slurm_sm_job(object):
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
         """
+        name = task.__name__
+
         if PAR.VERBOSE >= 2:
-            print 'running', funcname
+            print 'running', name
 
         # save current state
         save_objects(join(PATH.OUTPUT, 'SeisflowsObjects'))
 
         # save keyword arguments
-        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
+        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects',
+                          classname + '_kwargs')
         kwargsfile = join(kwargspath, funcname + '.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
 
         if hosts == 'all':
             # run on all available nodes
-            args = ('srun '
-                    + '--wait=0 '
-                    + join(findpath('system'), 'slurm/wrapper_srun ')
+            args = ('pbsdsh '
+                    + findpath('system') + '/' + 'pbs/wrapper_pbsdsh '
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname)
-
         elif hosts == 'head':
             # run on head node
-            args = ('srun '
-                    + '--wait=0 '
-                    + join(findpath('system'), 'slurm/wrapper_srun_head ')
+            args = ('pbsdsh '
+                    + findpath('system') + '/' + 'slurm/wrapper_pbsdsh '
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname)
@@ -129,9 +140,7 @@ class slurm_sm_job(object):
     def getnode(self):
         """ Gets number of running task
         """
-        gid = os.getenv('SLURM_GTIDS').split(',')
-        lid = int(os.getenv('SLURM_LOCALID'))
-        return int(gid[lid])
+        return int(os.getenv('PBS_VNODENUM'))
 
     def mpiargs(self):
         return 'mpirun -np %d '%PAR.NPROC

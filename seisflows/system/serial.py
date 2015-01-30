@@ -15,15 +15,15 @@ save_paths = PATH.save
 
 
 class serial(object):
-    """ System interface class
+    """ An interface through which to submit workflows, run tasks in serial or 
+      parallel, and perform other system functions.
 
-      Provides an interface through which to submit jobs, run tasks in serial
-      or parallel, and perform other system functions.
+      By hiding environment details behind a python interface layer, these 
+      classes provide a consistent command set across different computing
+      environments.
 
-      One of several system interface classes that together provide a consistent
-      interface across different computer environemnts. Each class implements a
-      standard sets of methods, hiding the details associated with, for example,
-      a particular filesystem or job scheduler.
+      For more informations, see 
+      http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-interfaces
     """
 
     def check(self):
