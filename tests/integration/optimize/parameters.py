@@ -2,7 +2,7 @@
 WORKFLOW=None        # not used
 SOLVER=None          # not used
 SYSTEM='serial'      # not used
-OPTIMIZE='default'   # default, Newton, GaussNewton
+OPTIMIZE='base'      # base, Newton, GaussNewton
 PREPROCESS=None      # not used
 POSTPROCESS=None     # not used
 
