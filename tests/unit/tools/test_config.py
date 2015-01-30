@@ -214,7 +214,7 @@ class TestLoadClass(unittest.TestCase):
 
     def test_load_extension_module(self):
         # Get a class from one of seisflow module
-        cls = tools.loadclass('system', 'tiger_sm_job')
+        cls = tools.loadclass('system', 'tiger_sm')
         # Check if we can instanciate the class.
         self.assertIsInstance(cls(), cls),
 
