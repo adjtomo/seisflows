@@ -146,7 +146,7 @@ def loadclass(*args):
         return obj
 
     # next, try importing relative to extensions directory
-    list = _parse(args, package='seisflows.extensions')
+    list = _parse(args, package='seisflows_research')
     string = '.'.join(list)
     if _exists(list):
         obj = getattr(_import(string), list[-1])
