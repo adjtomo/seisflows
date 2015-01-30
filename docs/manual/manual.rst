@@ -216,3 +216,21 @@ In the above list, ``setup`` methods are generic methods, called from the ``main
 
 Besides required methods, classes may include any number of private methods or utility functions.
 
+
+System Interfaces
+-----------------
+
+A list of available system interface classes follows. By hiding environment details behind a python interface layer, these classes provide a consistent command set across different computing environments.
+
+PBS_SM - For small inversions on PBS clusters. All resources are allocated at the beginning and all simulations are run at the same time, within a single job. Because of limitations of pbsdsh, individual wavefield simulations cannot span more than one core.
+
+PBS_LG - For large inversions on SLURM clusters. The work of the inversion is divided between multiple jobs, which are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
+
+SLURM_SM - For small inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run at the same time, within a single job. Individual wavefield simulations can span more than one core, but span more than one node.
+
+SLURM_LG - For large inversions on SLURM clusters. The work of the inversion is divided between multiple jobs, which are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
+
+SLURM_XL - For very large inversions on SLURM clusters. In addition to the features of SLURM_LG, provides fault tolerence: Tasks that end in failure or timeout are automatically resumbitted. (Can be dangerous to use on code that is not well tested.)
+
+SERIAL - Tasks that are normally run in parallel, such as multiple wavefield simulations, are carried out one at a time. Useful for debugging, among other things.
+
