@@ -24,8 +24,9 @@ if __name__ == '__main__':
         that runs on any Unix machine is being developed.
     """
 
+    home = '/home/rmodrak/packages/seisflows-examples'
+
     # prompt user for path
-    home = '/home/rmodrak/data/'
     opts = ['Examples2d', 'Examples3d', 'Examples3dGlobe']
     print ''
     path = join(home, unix.select(opts))
