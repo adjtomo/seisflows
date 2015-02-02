@@ -1,44 +1,54 @@
 #!/usr/bin/env python
 
 import os
+from sys import exit
 from os.path import join
 
 from seisflows.tools import unix
+from seisflows.tools.code import exists
 
+msg = """
+To run examples, please install the seisflows-examples repository,
+following the instructions at
+http://seisflows-examples.readthedocs.org/en/latest/
 
-def listdir(dir):
-    subdirs = []
-    for subdir in unix.ls(dir):
-        if os.path.isdir(dir+'/'+subdir):
-            if subdir[0] != '_':
-                subdirs += [subdir]
-    subdirs.sort()
-    return subdirs
+Alternatively, tiger users can simply set the environment variable
+SEISFLOWS_EXAMPLES to /home/rmodrak/packages/seisflows-examples
+"""
 
 
 if __name__ == '__main__':
-    """ Prompts user to select SEISFLOWS example, then sets up current working
-        directory to run example. 
-
-        Currently, this script only works on tiger.princeton.edu, but a version 
-        that runs on any Unix machine is being developed.
+    """ Prompts user to select SEISFLOWS example, then sets up working
+      directory to run example.
     """
 
-    home = '/home/rmodrak/packages/seisflows-examples'
+    def listdir(dir):
+        subdirs = []
+        for subdir in unix.ls(dir):
+            if os.path.isdir(dir+'/'+subdir):
+                if subdir[0] != '_':
+                    subdirs += [subdir]
+        subdirs.sort()
+        return subdirs
 
-    # prompt user for path
+    path = os.getenv('SFEXAMPLES')
+    if not exists(path):
+       print(msg)
+       exit()
+
+    # prompt user for selections
+    #opts = unix.ls(path)
     opts = ['Examples2d', 'Examples3d', 'Examples3dGlobe']
+    opt = unix.select(opts)
     print ''
-    path = join(home, unix.select(opts))
+    path = join(path, opt)
     print ''
 
-    # prompt user for directory
     dirs = listdir(path)
     prompt = 'select directory:'
     dir = unix.select(dirs, prompt)
     print ''
 
-    # prompt user for sudirectory
     items = unix.ls(path+'/'+dir)
     if 'parameters.py' in items:
         subdir = ''
@@ -50,6 +60,6 @@ if __name__ == '__main__':
 
     # set up working directory
     fullpath = path+'/'+dir+'/'+subdir
-    unix.cp(fullpath+'/'+'parameters.py', '.')
+    unix.cp(fullpath+'/'+'parameters', '.')
     unix.cp(fullpath+'/'+'paths.py', '.')
 

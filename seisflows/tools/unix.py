@@ -60,7 +60,11 @@ def ln(src, dst):
 
 
 def ls(path):
-    return _os.listdir(path)
+    dirs = _os.listdir(path)
+    for dir in dirs:
+        if dir[0] == '.':
+            dirs.remove(dir)
+    return dirs
 
 
 def mkdir(dirs):
