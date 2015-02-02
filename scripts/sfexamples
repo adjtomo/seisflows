@@ -13,7 +13,7 @@ following the instructions at
 http://seisflows-examples.readthedocs.org/en/latest/
 
 Alternatively, tiger users can simply set the environment variable
-SEISFLOWS_EXAMPLES to /home/rmodrak/packages/seisflows-examples
+SFEXAMPLES to /home/rmodrak/packages/seisflows-examples
 """
 
 
