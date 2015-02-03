@@ -7,37 +7,45 @@ from os.path import join
 from seisflows.tools import unix
 from seisflows.tools.code import exists
 
-msg = """
-To run examples, please install the seisflows-examples repository,
-following the instructions at
-http://seisflows-examples.readthedocs.org/en/latest/
+class EnvironmentError(Exception):
+      msg = """
+      Currently, an account on tiger.princeton.edu is required to run examples.
+      For a possible workaround, contact rmodrak@gmail.com about downloading 
+      examples from the tigress.princeton.edu ftp server.
+      """
 
-Alternatively, tiger users can simply set the environment variable
-SFEXAMPLES to /home/rmodrak/packages/seisflows-examples
-"""
+      def __init__(self):
+          print self.msg
+
+
+def listdir(dir):
+    subdirs = []
+    for subdir in unix.ls(dir):
+        if os.path.isdir(dir+'/'+subdir):
+            if subdir[0] != '_':
+                subdirs += [subdir]
+    subdirs.sort()
+    return subdirs
+
+
+def getpath():
+    path = os.getenv('SFEXAMPLES')
+    if not exists(path):  
+       raise EnvironmentError()
+    return path
 
 
 if __name__ == '__main__':
-    """ Prompts user to select SEISFLOWS example, then sets up working
-      directory to run example.
+    """ Prompts user to select SEISFLOWS example, then sets up working directory
+      to run example.
     """
-
-    def listdir(dir):
-        subdirs = []
-        for subdir in unix.ls(dir):
-            if os.path.isdir(dir+'/'+subdir):
-                if subdir[0] != '_':
-                    subdirs += [subdir]
-        subdirs.sort()
-        return subdirs
-
-    path = os.getenv('SFEXAMPLES')
-    if not exists(path):
-       print(msg)
-       exit()
+    hostname = unix.hostname()
+    if hostname in ['tiger1', 'tiger2']:
+        path = '/home/rmodrak/data'
+    else:
+        path = getpath()
 
     # prompt user for selections
-    #opts = unix.ls(path)
     opts = ['Examples2d', 'Examples3d', 'Examples3dGlobe']
     opt = unix.select(opts)
     print ''
