@@ -27,6 +27,7 @@ Then set environment variables. If using bash, add the following lines to ``.bas
 
     export PATH=$PATH:/path/to/seisflows/scripts
     export PYTHONPATH=$PYTHONPATH:/path/to/seisflows
+    export PYTHONUNBUFFERED="TRUE"
 
 
 Getting Started
