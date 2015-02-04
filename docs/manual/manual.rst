@@ -21,6 +21,7 @@ Then set environment variables. If using bash, add the following lines to ``.bas
 
     export PATH=$PATH:/path/to/seisflows/scripts
     export PYTHONPATH=$PYTHONPATH:/path/to/seisflows
+    export PYTHONUNBUFFERED="TRUE"
 
 
 Software Prerequisites
@@ -224,7 +225,7 @@ A list of available system interface classes follows. By hiding environment deta
 
 PBS_SM - For small inversions on PBS clusters. All resources are allocated at the beginning and all simulations are run at the same time, within a single job. Because of limitations of pbsdsh, individual wavefield simulations cannot span more than one core.
 
-PBS_LG - For large inversions on SLURM clusters. The work of the inversion is divided between multiple jobs, which are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
+PBS_LG - For large inversions on PBS clusters. The work of the inversion is divided between multiple jobs, which are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
 
 SLURM_SM - For small inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run at the same time, within a single job. Individual wavefield simulations can span more than one core, but span more than one node.
 
