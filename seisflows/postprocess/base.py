@@ -53,7 +53,7 @@ class base(object):
         """
         assert (exists(path))
 
-        # combine kernels
+        # sum kernels
         system.run('solver', 'combine',
                    hosts='head',
                    path=path +'/'+ 'kernels')
@@ -63,9 +63,6 @@ class base(object):
                     path +'/'+ 'kernels/sum', 
                     type='kernel', 
                     verbose=True))
-
-        # write gradient
-        solver.save(path +'/'+ tag, solver.split(g))
 
         # convert logarithmic perturbations
         m = solver.merge(
@@ -82,6 +79,9 @@ class base(object):
         else:
             g *= PAR.SCALE
 
+        # write gradient
+        solver.save(path +'/'+ tag, solver.split(g))
+
         # apply clipping
         if PAR.CLIP > 0.:
             raise NotImplementedError
@@ -91,17 +91,17 @@ class base(object):
             system.run('solver', 'smooth',
                        hosts='head',
                        path=path,
+                       tag=tag,
                        span=PAR.SMOOTH)
 
             g = solver.merge(solver.load(path +'/'+ tag))
-
 
         # apply preconditioner
         if PATH.PRECOND:
             unix.cd(path)
             g /= solver.merge(solver.load(PATH.PRECOND))
             unix.mv(tag, '_noprecond')
-            solver.save(tag, solver.split(g))
+            solver.save(path +'/'+ tag, solver.split(g))
 
         if 'OPTIMIZE' in PATH:
             if tag == 'gradient':
