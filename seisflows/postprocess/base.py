@@ -84,7 +84,11 @@ class base(object):
 
         # apply clipping
         if PAR.CLIP > 0.:
-            raise NotImplementedError
+            system.run('solver', 'clip',
+                       hosts='head',
+                       path=path,
+                       tag=tag,
+                       thresh=PAR.CLIP)
 
         # apply smoothing
         if PAR.SMOOTH > 0.:
