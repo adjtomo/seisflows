@@ -75,7 +75,6 @@ class test_optimize(object):
         optimize.check()
         optimize.setup()
 
-        # prepare starting model
         unix.cd(cls.path)
         m = np.array([-1.2,1])
         savenpy('m_new',m)
@@ -83,7 +82,20 @@ class test_optimize(object):
 
     def compute_direction(cls):
         cls.evaluate_gradient()
-        optimize.compute_direction()
+        if PAR.OPTIMIZE == 'Newton':
+            cls.compute_direction_newton()
+        else:
+            optimize.compute_direction()
+
+
+    def compute_direction_newton(cls):
+        optimize.initialize_newton()
+
+        for ilcg in range(PAR.LCGMAX):
+            m = loadnpy('m_lcg')
+            g = problem.grad(m)
+            savenpy('g_lcg', g)
+            optimize.iterate_newton()
 
 
     def line_search(cls):
@@ -123,17 +135,12 @@ class test_optimize(object):
         savenpy('g_new',g)
 
 
-    def apply_hessian(cls):
-        raise NotImplementedError
-
-
     def finalize(cls):
         print '%14.7e %14.7e'%tuple(loadnpy('m_new'))
 
         m_new = loadnpy('m_new')
         m_old = loadnpy('m_old')
 
-        # check stopping condition
         d = np.linalg.norm(m_new-m_old)/np.linalg.norm(m_new)
         if d < 1.e-6:
             cls.isdone = True
@@ -141,7 +148,3 @@ class test_optimize(object):
         else:
             cls.isdone = False
 
-
-# run
-if __name__ == '__main__':
-    run().main()
