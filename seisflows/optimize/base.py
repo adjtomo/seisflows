@@ -65,7 +65,10 @@ class base(object):
 
         # line search parameters
         if 'SRCHTYPE' not in PAR:
-            setattr(PAR, 'SRCHTYPE', 'Backtrack')
+            if PAR.SCHEME in ['GradientDescent', 'ConjugateGradient']:
+                setattr(PAR, 'SRCHTYPE', 'Bracket')
+            else:
+                setattr(PAR, 'SRCHTYPE', 'Backtrack')
 
         if 'SRCHMAX' not in PAR:
             setattr(PAR, 'SRCHMAX', 10)
@@ -117,7 +120,7 @@ class base(object):
             # compute NLCG udpate
             p_new = cls.NLCG.compute()
 
-        elif PAR.SCHEME == 'QuasiNewton':
+        else:
             # compute L-BFGS update
             if cls.iter == 1:
                 p_new = -g_new
@@ -137,6 +140,7 @@ class base(object):
         """ Determines initial step length for line search
         """
         unix.cd(cls.path)
+
         if cls.iter == 1:
             s_new = loadtxt('s_new')
             f_new = loadtxt('f_new')
