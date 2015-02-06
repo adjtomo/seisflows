@@ -163,8 +163,8 @@ class specfem2d(object):
             making measurements on observations and synthetics.
         """
         unix.cd(self.getpath)
-        self.import_model(path)
 
+        self.import_model(path)
         self.forward()
         unix.mv(self.wildcard, 'traces/syn')
         preprocess.prepare_eval_grad(self.getpath)
@@ -187,17 +187,18 @@ class specfem2d(object):
             self.export_traces(path, prefix='traces/syn')
 
 
-    def apply_hess(self, path='', hessian='Newton'):
-        """ Evaluates action of Hessian on a given model vector.
+    def apply_hess(self, path=''):
+        """ Computes action of Hessian on a given model vector.
         """
         unix.cd(self.getpath)
-        self.imprt(path, 'model')
+        unix.mkdir('traces/lcg')
 
+        self.import_model(path)
         self.forward()
         unix.mv(self.wildcard, 'traces/lcg')
         preprocess.prepare_apply_hess(self.getpath)
-        self.adjoint()
 
+        self.adjoint()
         self.export_kernels(path)
 
 
@@ -209,10 +210,8 @@ class specfem2d(object):
         """
         solvertools.setpar('SIMULATION_TYPE', '1')
         solvertools.setpar('SAVE_FORWARD', '.true.')
-
         self.mpirun('bin/xmeshfem2D')
         self.mpirun('bin/xspecfem2D')
-        unix.mv(self.wildcard, 'traces/syn')
 
 
     def adjoint(self):
@@ -278,7 +277,7 @@ class specfem2d(object):
             M[:,icol+ioff] = parts[key][0]
 
         # write array
-        np.savetxt(filename, M, '%10.4e')
+        np.savetxt(filename, M, '%16.10e')
 
 
 

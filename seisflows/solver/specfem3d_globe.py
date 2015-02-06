@@ -214,17 +214,18 @@ class specfem3d_globe(object):
             self.export_traces(path, prefix='traces/syn')
 
 
-    def apply_hess(self, path='', hessian='Newton'):
-        """ Evaluates action of Hessian on a given model vector.
+    def apply_hess(self, path=''):
+        """ Computes action of Hessian on a given model vector.
         """
         unix.cd(self.getpath)
-        self.imprt(path, 'model')
+        unix.mkdir('traces/lcg')
 
+        self.import_model(path)
         self.forward()
         unix.mv(self.wildcard, 'traces/lcg')
         preprocess.prepare_apply_hess(self.getpath)
-        self.adjoint()
 
+        self.adjoint()
         self.export_kernels(path)
 
 
@@ -236,9 +237,7 @@ class specfem3d_globe(object):
         """
         solvertools.setpar('SIMULATION_TYPE', '1')
         solvertools.setpar('SAVE_FORWARD', '.true.')
-
         self.mpirun('bin/xspecfem3D')
-        unix.mv(self.wildcard, 'traces/syn')
 
 
     def adjoint(self):
@@ -248,7 +247,6 @@ class specfem3d_globe(object):
         solvertools.setpar('SAVE_FORWARD', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
-
         self.mpirun('bin/xspecfem3D')
 
 
