@@ -2,89 +2,89 @@
 import numpy as np
 
 from seisflows.tools import unix
+from seisflows.tools.array import loadnpy, savenpy
+from seisflows.tools.code import loadtxt, savetxt
 
-import LBFGS
+from seisflows.optimize.lib.LBFGS import LBFGS
 
 
 class LCG:
     """ Linear conjugate gradient method
     """
-
-    def __init__(self, path, thresh, itermax, precond_type=0):
+    def __init__(self, path, thresh, lcgmax, precond_type=0):
         self.path = path
         unix.mkdir(self.path+'/'+'LCG')
 
-        self.load = load
-        self.save = save
-
+        self.ilcg = 0
         self.iter = 0
         self.thresh = thresh
-        self.itermax = itermax
+        self.lcgmax = lcgmax
 
         self.precond_type = precond_type
         if precond_type in [1, 2]:
-            self.LBFGS = LBFGS(path+'/'+'LCG', load, save, itermax)
+            self.LBFGS = LBFGS(path, 3)
+
 
     def precond(self, r):
-        # no preconditioner
         if self.precond_type == 0:
-            y = r
+            return r
 
-        # LBFGS without restarts
-        elif self.prcond_type == 1:
+        elif self.precond_type == 1:
             if self.iter == 1:
-                self.LBFGS = LBFGS()
-                y = r
-            else:
-                self.LBFGS.update()
-                y = self.LBFGS.solve(r)
+                #print ' made it here-1'
+                return r
 
-        # LBFGS with restarts
-        elif self.precond_type == 2:
-            if self.iter == 1:
-                y = r
-            else:
+            elif self.ilcg == 0:
+                #print ' made it here-2'
                 self.LBFGS.update()
-                y = -self.LBFGS.solve()
 
-        return y
+            y = self.LBFGS.solve(r)
+            return y
+
 
     def initialize(self):
-
         unix.cd(self.path)
-        self.iter = 0
+        self.iter += 1
+        self.ilcg = 0
 
-        r = self.load('g_new')
+        r = loadnpy('g_new')
         x = np.zeros(r.size)
         y = self.precond(r)
         p = -y
 
-        self.save('LCG/x', x)
-        self.save('LCG/r', r)
-        self.save('LCG/y', y)
-        self.save('LCG/p', p)
+        unix.cd(self.path)
+        savenpy('LCG/x', x)
+        savenpy('LCG/r', r)
+        savenpy('LCG/y', y)
+        savenpy('LCG/p', p)
         savetxt('LCG/ry', np.dot(r, y))
 
         return p
 
+
     def update(self, ap):
-
         unix.cd(self.path)
-        self.iter += 1
+        self.ilcg += 1
 
-        x = self.load('LCG/x')
-        r = self.load('LCG/r')
-        y = self.load('LCG/y')
-        p = self.load('LCG/p')
+        x = loadnpy('LCG/x')
+        r = loadnpy('LCG/r')
+        y = loadnpy('LCG/y')
+        p = loadnpy('LCG/p')
         ry = loadtxt('LCG/ry')
 
         pap = np.dot(p, ap)
+        if pap < 0:
+            print ' Newton failed [negative curvature]'
+            isdone = True
+            return p, isdone
+                       
+
         alpha = ry/pap
         x = x + alpha*p
         r = r + alpha*ap
 
         # check status
-        if self.iter == self.itermax:
+        if self.ilcg == self.lcgmax:
             isdone = True
         elif np.linalg.norm(r) > self.thresh:
             isdone = True
@@ -101,29 +101,10 @@ class LCG:
         beta = ry/ry_old
         p = -y + beta*p
 
-        self.save('LCG/x', x)
-        self.save('LCG/r', r)
-        self.save('LCG/y', y)
-        self.save('LCG/p', p)
+        savenpy('LCG/x', x)
+        savenpy('LCG/r', r)
+        savenpy('LCG/y', y)
+        savenpy('LCG/p', p)
         savetxt('LCG/ry', np.dot(r, y))
 
         return p, isdone
-
-
-# -- utility functions
-
-def loadtxt(filename):
-    return np.loadtxt(filename)
-
-
-def savetxt(filename, v):
-    np.savetxt(filename, [v], '%e')
-
-
-def load(filename):
-    return np.load(filename)
-
-
-def save(filename, v):
-    np.save(filename, v)
-    unix.mv(filename+'.npy', filename)
