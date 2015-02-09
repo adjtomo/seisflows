@@ -156,19 +156,24 @@ class specfem3d(object):
         self.initialize_solver_directories()
         unix.cd(self.getpath)
 
-        if model_type == 'gll':
+        if model_type in ['gll']:
             assert (exists(model_path))
             unix.cp(glob(model_path +'/'+ '*'), self.databases)
-        elif model_type == 'sep':
-            pass
-        elif model_type == 'default':
-            pass
-        elif model_type == 'tomo':
-            pass
+            self.mpirun('bin/xmeshfem3D')
+            self.mpirun('bin/xgenerate_databases')
+            self.export_model(PATH.OUTPUT +'/'+ model_name)
 
-        #self.mpirun('bin/xmeshfem3D')
-        #self.mpirun('bin/xgenerate_databases')
-        self.export_model(PATH.OUTPUT +'/'+ model_name)
+        elif model_type in ['sep']:
+            self.mpirun('bin/xmeshfem3D')
+            self.mpirun('bin/xgenerate_databases')
+            self.export_model(PATH.OUTPUT +'/'+ model_name)
+
+        elif model_type in ['cubit', 'default']:
+            assert (exists(model_path))
+            unix.cp(glob(model_path +'/'+ '*'), self.databases)
+
+        elif model_type == 'tomo':
+            raise NotImplementedError
 
 
 
