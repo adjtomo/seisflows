@@ -36,14 +36,12 @@ class base(object):
     def check(cls):
         """ Checks parameters, paths, and dependencies
         """
-        # check parameters
         if 'BEGIN' not in PAR:
             raise Exception
 
         if 'END' not in PAR:
             raise Exception
 
-        # check paths
         if 'SUBMIT' not in PATH:
             raise Exception
 
@@ -65,10 +63,10 @@ class base(object):
 
         # line search parameters
         if 'SRCHTYPE' not in PAR:
-            if PAR.SCHEME in ['GradientDescent', 'ConjugateGradient']:
-                setattr(PAR, 'SRCHTYPE', 'Bracket')
-            else:
+            if 'Newton' in PAR.SCHEME:
                 setattr(PAR, 'SRCHTYPE', 'Backtrack')
+            else:
+                setattr(PAR, 'SRCHTYPE', 'Bracket')
 
         if 'SRCHMAX' not in PAR:
             setattr(PAR, 'SRCHMAX', 10)
@@ -120,13 +118,16 @@ class base(object):
             # compute NLCG udpate
             p_new = cls.NLCG.compute()
 
-        else:
+        elif PAR.SCHEME =='QuasiNewton':
             # compute L-BFGS update
             if cls.iter == 1:
                 p_new = -g_new
             else:
                 cls.LBFGS.update()
                 p_new = -cls.LBFGS.solve()
+
+        else:
+            raise Excpetion
 
         # save results
         unix.cd(cls.path)
