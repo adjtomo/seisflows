@@ -106,23 +106,23 @@ class migration(object):
     ### utility functions
 
     def prepare_model(self):
-        model = PATH.OUTPUT + '/' + 'model_init'
+        model = PATH.OUTPUT +'/'+ 'model_init'
         assert exists(model)
-        unix.cp(model, PATH.GLOBAL + '/' + 'model')
+        unix.cp(model, PATH.GLOBAL +'/'+ 'model')
 
     def save_gradient(self):
-        src = glob(PATH.GLOBAL + '/' + 'gradient')
+        src = glob(PATH.GLOBAL +'/'+ 'gradient')
         dst = PATH.OUTPUT
         unix.mv(src, dst)
 
     def save_kernels(self):
-        src = PATH.GLOBAL + '/' + 'kernels'
+        src = PATH.GLOBAL +'/'+ 'kernels'
         dst = PATH.OUTPUT
         unix.mkdir(dst)
         unix.mv(src, dst)
 
     def save_traces(self):
-        src = PATH.GLOBAL + '/' + 'traces'
+        src = PATH.GLOBAL +'/'+ 'traces'
         dst = PATH.OUTPUT
         unix.mv(src, dst)
 
