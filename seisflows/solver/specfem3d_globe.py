@@ -84,7 +84,7 @@ class specfem3d_globe(loadclass('solver', 'base')):
         setpar('SAVE_FORWARD', '.true.')
         self.mpirun('bin/xspecfem3D')
 
-        unix.mv(self.data_path, 'traces/obs')
+        unix.mv(self.data_wildcard, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
 
 
