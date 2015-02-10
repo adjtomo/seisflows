@@ -194,6 +194,10 @@ class base(object):
 
     def search_status(cls):
         """ Determines status of line search
+
+            Maintains line search history by keeping track of step length and
+            function value from each trial model evaluation. From line search
+            history, determines whether stopping criteria have been satisfied.
         """
         unix.cd(cls.path)
         f0 = loadtxt('f_new')
@@ -230,6 +234,7 @@ class base(object):
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 cls.isdone = 1
 
+        # pass latest information to output writer
         cls.writer([], x_, f_)
 
         return cls.isdone, cls.isbest

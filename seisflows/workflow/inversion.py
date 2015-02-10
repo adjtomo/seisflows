@@ -5,7 +5,7 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import divides, exists
-from seisflows.tools.config import ParameterObj
+from seisflows.tools.config import ParameterError, ParameterObj
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
@@ -197,13 +197,19 @@ class inversion(object):
 
 
     def search_status(self):
-        """ Checks line search status
+        """ Evaluates trial model and checks line search status
+
+          Evaluates trial model by calling evalute_function, which results in
+          a forward simulation.  
+
+          After that, queries line search status and keeps track of which trial
+          model is the best so far.
         """
         if PAR.VERBOSE:
             print " trial step", optimize.step
         self.evaluate_function()
-        isdone, isbest = optimize.search_status()
 
+        isdone, isbest = optimize.search_status()
         if not PATH.LOCAL:
             if isbest and isdone:
                 unix.rm(PATH.SOLVER + '_best')
