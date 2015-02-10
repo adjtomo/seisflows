@@ -16,7 +16,7 @@ class base(object):
     """
 
     def check(self):
-        """ Checks parameters, paths, and dependencies
+        """ Checks parameters and paths
         """
 
         if 'MISFIT' not in PAR:
@@ -92,13 +92,17 @@ class base(object):
         """
         # filter data
         if PAR.BANDPASS:
-            s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
+            if PAR.FREQLO and PAR.FREQHI:
+                s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
 
-        if PAR.HIGHPASS:
-            s = shighpass(s, h, PAR.FREQLO)
+            elif PAR.FREQHI:
+                s = shighpass(s, h, PAR.FREQLO)
 
-        if PAR.HIGHPASS:
-            s = slowpass(s, h, PAR.FREQHI)
+            elif PAR.FREQHI:
+                s = slowpass(s, h, PAR.FREQHI)
+
+            else:
+                raise ValueError
 
         # mute direct arrival
         if PAR.MUTE == 1:
