@@ -74,7 +74,7 @@ class LCG:
 
         pap = np.dot(p, ap)
         if pap < 0:
-            print ' Newton failed [negative curvature]'
+            print ' Stopping LCG [negative curvature]'
             isdone = True
             return p, isdone
                        
