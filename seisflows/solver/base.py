@@ -30,12 +30,12 @@ class base(object):
         derivatives and provide the primary interface between the solver and
         other workflow components.
 
-      forward, adjoint
+      forward, adjoint, generate_data, generate_mesh
         These methods allow direct access to individual SPECFEM3D components.
         Together, they provide a secondary interface users can employ for
         specialized tasks not covered by high level methods.
 
-      prepare_solver, prepare_data, prepare_model
+     initialize_solver_directories, initialize_adjoint_traces, initialize_io_machinery
         SPECFEM3D requires a particular directory structure in which to run and
         particular file formats for models, data, and parameter files. These
         methods help put in place all these prerequisites.
@@ -106,7 +106,7 @@ class base(object):
 
           As input for an inversion or migration, users can choose between
           supplying data or providing a target model from which data are
-          generated on the fly. In both cases, all necessary SPECFEM3D input
+          generated on the fly. In both cases, all necessary SPECFEM input
           files must be provided.
         """
         unix.rm(self.getpath)
@@ -134,47 +134,16 @@ class base(object):
         self.initialize_io_machinery()
 
 
-    def generate_data(self, **model_kwargs):
+    def generate_data(self, *args, **kwargs):
         """ Generates data
         """
-        self.generate_mesh(**model_kwargs)
-
-        unix.cd(self.getpath)
-        setpar('SIMULATION_TYPE', '1')
-        setpar('SAVE_FORWARD', '.true.')
-        self.mpirun('bin/xspecfem3D')
-
-        unix.mv(self.wildcard, 'traces/obs')
-        self.export_traces(PATH.OUTPUT, 'traces/obs')
+        raise NotImplementedError
 
 
-    def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
+    def generate_mesh(self, *args, **kwargs):
         """ Performs meshing and database generation
         """
-        assert(model_name)
-        assert(model_type)
-
-        self.initialize_solver_directories()
-        unix.cd(self.getpath)
-
-        if model_type in ['gll']:
-            assert (exists(model_path))
-            unix.cp(glob(model_path +'/'+ '*'), self.databases)
-            self.mpirun('bin/xmeshfem3D')
-            self.mpirun('bin/xgenerate_databases')
-            self.export_model(PATH.OUTPUT +'/'+ model_name)
-
-        elif model_type in ['sep']:
-            self.mpirun('bin/xmeshfem3D')
-            self.mpirun('bin/xgenerate_databases')
-            self.export_model(PATH.OUTPUT +'/'+ model_name)
-
-        elif model_type in ['cubit', 'default']:
-            assert (exists(model_path))
-            unix.cp(glob(model_path +'/'+ '*'), self.databases)
-
-        elif model_type == 'tomo':
-            raise NotImplementedError
+        raise NotImplementedError
 
 
 
@@ -188,7 +157,7 @@ class base(object):
         self.import_model(path)
 
         self.forward()
-        unix.mv(self.wildcard, 'traces/syn')
+        unix.mv(self.data_path, 'traces/syn')
         preprocess.prepare_eval_grad(self.getpath)
 
         self.export_residuals(path)
@@ -217,7 +186,7 @@ class base(object):
 
         self.import_model(path)
         self.forward()
-        unix.mv(self.wildcard, 'traces/lcg')
+        unix.mv(self.data_path, 'traces/lcg')
         preprocess.prepare_apply_hess(self.getpath)
 
         self.adjoint()
@@ -228,29 +197,24 @@ class base(object):
     ### low-level solver interface
 
     def forward(self):
-        """ Calls SPECFEM3D forward solver
+        """ Calls forward solver
         """
-        setpar('SIMULATION_TYPE', '1')
-        setpar('SAVE_FORWARD', '.true.')
-        self.mpirun('bin/xgenerate_databases')
-        self.mpirun('bin/xspecfem3D')
+        # must be implemented by subclass
+        raise NotImplementedError
 
 
     def adjoint(self):
-        """ Calls SPECFEM3D adjoint solver
+        """ Calls adjoint solver
         """
-        setpar('SIMULATION_TYPE', '3')
-        setpar('SAVE_FORWARD', '.false.')
-        unix.rm('SEM')
-        unix.ln('traces/adj', 'SEM')
-        self.mpirun('bin/xspecfem3D')
+        # must be implemented by subclass
+        raise NotImplementedError
 
 
 
     ### model input/output
 
     def load(self, dirname, type='model', verbose=False):
-        """ reads SPECFEM3D model
+        """ reads model
         """
         if type == 'model':
             mapping = lambda key: key
@@ -391,7 +355,7 @@ class base(object):
 
     def import_model(self, path):
         src = join(path, 'model')
-        dst = self.databases
+        dst = self.model_path
 
         if system.getnode()==0:
             self.save(dst, self.load(src, verbose=True))
@@ -406,7 +370,7 @@ class base(object):
     def export_model(self, path):
         if system.getnode() == 0:
             for name in self.model_parameters:
-                src = glob(join(self.databases, '*_'+name+'.bin'))
+                src = glob(join(self.model_path, '*_'+name+'.bin'))
                 dst = path
                 unix.mkdir(dst)
                 unix.cp(src, dst)
@@ -415,12 +379,12 @@ class base(object):
         unix.mkdir_gpfs(join(path, 'kernels'))
         unix.mkdir(join(path, 'kernels', self.getname))
         for name in self.kernel_map.values():
-            src = join(glob(self.databases  +'/'+ '*'+ name+'.bin'))
+            src = join(glob(self.model_path  +'/'+ '*'+ name+'.bin'))
             dst = join(path, 'kernels', self.getname)
             unix.mv(src, dst)
         try:
             name = 'rhop_kernel'
-            src = join(glob(self.databases +'/'+ '*'+ name+'.bin'))
+            src = join(glob(self.model_path +'/'+ '*'+ name+'.bin'))
             dst = join(path, 'kernels', self.getname)
             unix.mv(src, dst)
         except:
@@ -457,8 +421,7 @@ class base(object):
         unix.mkdir('traces/obs')
         unix.mkdir('traces/syn')
         unix.mkdir('traces/adj')
-
-        unix.mkdir(self.databases)
+        unix.mkdir(self.model_path)
 
         # copy exectuables
         src = glob(PATH.SOLVER_BINARIES +'/'+ '*')
@@ -470,8 +433,8 @@ class base(object):
         dst = 'DATA/'
         unix.cp(src, dst)
 
-        src = 'DATA/FORCESOLUTION_' + self.getname
-        dst = 'DATA/FORCESOLUTION'
+        src = 'DATA/' + self.source_prefix +'_'+ self.getname
+        dst = 'DATA/' + self.source_prefix
         unix.cp(src, dst)
 
 
@@ -493,10 +456,8 @@ class base(object):
         """
         if system.getnode() == 0:
             parts = self.load(PATH.MODEL_INIT)
-            try:
-                path = PATH.GLOBAL +'/'+ 'mesh'
-            except:
-                raise Exception
+            path = PATH.GLOBAL +'/'+ 'mesh'
+
             if not exists(path):
                 for key in self.model_parameters:
                     if key not in self.inversion_parameters:
@@ -505,18 +466,9 @@ class base(object):
                             with open(path +'/'+ key +'/'+ '%06d' % proc, 'w') as file:
                                 np.save(file, parts[key][proc])
 
-            try:
-                path = PATH.OPTIMIZE +'/'+ 'm_new'
-            except:
-                return
-            if not exists(path):
-                savenpy(path, self.merge(parts))
-            #if not exists(path):
-            #    for key in inversion_set:
-            #        unix.mkdir(path +'/'+ key)
-            #        for proc in range(PAR.NPROC):
-            #            with open(path +'/'+ key +'/'+ '%06d' % proc, 'w') as file:
-            #                np.save(file, parts[key][proc])
+            if 'OPTIMIZE' in PATH:
+                if not exists(PATH.OPTIMIZE +'/'+ 'm_new'):
+                    savenpy(PATH.OPTIMIZE +'/'+ 'm_new', self.merge(parts))
 
 
     ### utility functions
@@ -532,28 +484,33 @@ class base(object):
 
     @property
     def getname(self):
-        """name of current source"""
+        """Returns name of source currently under consideration"""
         if not hasattr(self, 'sources'):
-            # generate list of all sources
-            paths = glob(PATH.SOLVER_FILES +'/'+ 'FORCESOLUTION_*')
+            paths = glob(PATH.SOLVER_FILES +'/'+ self.source_prefix+'_*')
             self.sources = []
             for path in paths:
                 self.sources += [unix.basename(path).split('_')[-1]]
             self.sources.sort()
-
         return self.sources[system.getnode()]
 
     @property
     def getpath(self):
-        """path of current source"""
+        """Returns working directory corresponding to current source"""
         return join(PATH.SOLVER, self.getname)
 
-    @property
-    def wildcard(self):
-        return glob('OUTPUT_FILES/*SU')
 
     @property
-    def databases(self):
-        return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
+    def data_path(self):
+        # must be implemented by subclass
+        return NotImplementedError
 
+    @property
+    def model_path(self):
+        # must be implemented by subclass
+        return NotImplementedError
+
+    @property
+    def source_prefix(self):
+        # must be implemented by subclass
+        return NotImplementedError
 

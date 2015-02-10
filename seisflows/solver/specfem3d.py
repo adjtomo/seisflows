@@ -56,7 +56,7 @@ class specfem3d(loadclass('solver', 'base')):
         setpar('SAVE_FORWARD', '.true.')
         self.mpirun('bin/xspecfem3D')
 
-        unix.mv(self.wildcard, 'traces/obs')
+        unix.mv(self.data_path, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
 
 
@@ -71,7 +71,7 @@ class specfem3d(loadclass('solver', 'base')):
 
         if model_type in ['gll']:
             assert (exists(model_path))
-            unix.cp(glob(model_path +'/'+ '*'), self.databases)
+            unix.cp(glob(model_path +'/'+ '*'), self.model_path)
             self.mpirun('bin/xmeshfem3D')
             self.mpirun('bin/xgenerate_databases')
             self.export_model(PATH.OUTPUT +'/'+ model_name)
@@ -81,13 +81,8 @@ class specfem3d(loadclass('solver', 'base')):
             self.mpirun('bin/xgenerate_databases')
             self.export_model(PATH.OUTPUT +'/'+ model_name)
 
-        elif model_type in ['cubit']:
-            assert (exists(model_path))
-            unix.cp(glob(model_path +'/'+ '*'), self.databases)
-
         elif model_type == 'tomo':
             raise NotImplementedError
-
 
 
     ### low-level solver interface
@@ -111,7 +106,6 @@ class specfem3d(loadclass('solver', 'base')):
         self.mpirun('bin/xspecfem3D')
 
 
-
     ### input file writers
 
     def write_parameters(self):
@@ -132,14 +126,19 @@ class specfem3d(loadclass('solver', 'base')):
         solvertools.write_sources(vars(PAR), h)
 
 
-
     ### miscellaneous
 
     @property
-    def wildcard(self):
+    def data_path(self):
         return glob('OUTPUT_FILES/*SU')
 
     @property
-    def prefix(self):
+    def model_path(self):
+        return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
+
+    @property
+    def source_prefix(self):
         return 'FORCESOLUTION'
+
+
 
