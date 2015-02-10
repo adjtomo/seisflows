@@ -157,7 +157,7 @@ class base(object):
         self.import_model(path)
 
         self.forward()
-        unix.mv(self.data_path, 'traces/syn')
+        unix.mv(self.data_wildcard, 'traces/syn')
         preprocess.prepare_eval_grad(self.getpath)
 
         self.export_residuals(path)
@@ -186,7 +186,7 @@ class base(object):
 
         self.import_model(path)
         self.forward()
-        unix.mv(self.data_path, 'traces/lcg')
+        unix.mv(self.data_wildcard, 'traces/lcg')
         preprocess.prepare_apply_hess(self.getpath)
 
         self.adjoint()
@@ -355,7 +355,7 @@ class base(object):
 
     def import_model(self, path):
         src = join(path, 'model')
-        dst = self.model_path
+        dst = self.model_databases
 
         if system.getnode()==0:
             self.save(dst, self.load(src, verbose=True))
@@ -370,7 +370,7 @@ class base(object):
     def export_model(self, path):
         if system.getnode() == 0:
             for name in self.model_parameters:
-                src = glob(join(self.model_path, '*_'+name+'.bin'))
+                src = glob(join(self.model_databases, '*_'+name+'.bin'))
                 dst = path
                 unix.mkdir(dst)
                 unix.cp(src, dst)
@@ -379,12 +379,12 @@ class base(object):
         unix.mkdir_gpfs(join(path, 'kernels'))
         unix.mkdir(join(path, 'kernels', self.getname))
         for name in self.kernel_map.values():
-            src = join(glob(self.model_path  +'/'+ '*'+ name+'.bin'))
+            src = join(glob(self.model_databases  +'/'+ '*'+ name+'.bin'))
             dst = join(path, 'kernels', self.getname)
             unix.mv(src, dst)
         try:
             name = 'rhop_kernel'
-            src = join(glob(self.model_path +'/'+ '*'+ name+'.bin'))
+            src = join(glob(self.model_databases +'/'+ '*'+ name+'.bin'))
             dst = join(path, 'kernels', self.getname)
             unix.mv(src, dst)
         except:
@@ -421,7 +421,7 @@ class base(object):
         unix.mkdir('traces/obs')
         unix.mkdir('traces/syn')
         unix.mkdir('traces/adj')
-        unix.mkdir(self.model_path)
+        unix.mkdir(self.model_databases)
 
         # copy exectuables
         src = glob(PATH.SOLVER_BINARIES +'/'+ '*')
@@ -500,12 +500,12 @@ class base(object):
 
 
     @property
-    def data_path(self):
+    def data_wildcard(self):
         # must be implemented by subclass
         return NotImplementedError
 
     @property
-    def model_path(self):
+    def model_databases(self):
         # must be implemented by subclass
         return NotImplementedError
 

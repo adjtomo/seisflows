@@ -20,7 +20,7 @@ PATH = ParameterObj('SeisflowsPaths')
 class specfem3d(loadclass('solver', 'base')):
     """ Python interface for SPECFEM3D
 
-      For method descriptions, see base class
+      See base class for method descriptions
     """
 
     # model parameters
@@ -56,7 +56,7 @@ class specfem3d(loadclass('solver', 'base')):
         setpar('SAVE_FORWARD', '.true.')
         self.mpirun('bin/xspecfem3D')
 
-        unix.mv(self.data_path, 'traces/obs')
+        unix.mv(self.data_wildcard, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
 
 
@@ -71,7 +71,7 @@ class specfem3d(loadclass('solver', 'base')):
 
         if model_type in ['gll']:
             assert (exists(model_path))
-            unix.cp(glob(model_path +'/'+ '*'), self.model_path)
+            unix.cp(glob(model_path +'/'+ '*'), self.model_databases)
             self.mpirun('bin/xmeshfem3D')
             self.mpirun('bin/xgenerate_databases')
             self.export_model(PATH.OUTPUT +'/'+ model_name)
@@ -129,11 +129,11 @@ class specfem3d(loadclass('solver', 'base')):
     ### miscellaneous
 
     @property
-    def data_path(self):
+    def data_wildcard(self):
         return glob('OUTPUT_FILES/*SU')
 
     @property
-    def model_path(self):
+    def model_databases(self):
         return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
 
     @property
