@@ -126,6 +126,18 @@ class Null(object):
         return self
 
 
+class ParameterError(ValueError):
+
+    def __init__(self, obj, key):
+        if key not in obj:
+            message = '%s is not defined.' % key
+        elif key in obj:
+            message = '%s has bad value: ' % key, obj.__getattr__(key)
+
+        super(ParameterError, self).__init__(message)
+
+
+
 def loadclass(*args):
     """ Given name of module relative to package directory, returns
         corresponding class
@@ -160,10 +172,10 @@ def loadvars(*args, **kwargs):
 
 
 def findpath(obj):
-    """ Determines absolute path of either:
-            * a module, from an instance
-            * a file, from its name
-            * a seisflow module, from its full (doted) name
+    """ Determines absolute path of
+            - a module, from an instance
+            - a file, from its name
+            - a seisflow module, from its full (dotted) name
     """
     if isinstance(obj, types.ModuleType):
         path = obj.__file__
