@@ -6,7 +6,8 @@ from os.path import join
 import numpy as np
 
 import seisflows.seistools.specfem3d as solvertools
-from seisflows.seistools.shared import load
+from seisflows.seistools.io import load
+from seisflows.seistools.shared import getpar, setpar
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
@@ -139,8 +140,8 @@ class specfem3d(object):
         self.generate_mesh(**model_kwargs)
 
         unix.cd(self.getpath)
-        solvertools.setpar('SIMULATION_TYPE', '1')
-        solvertools.setpar('SAVE_FORWARD', '.true.')
+        setpar('SIMULATION_TYPE', '1')
+        setpar('SAVE_FORWARD', '.true.')
         self.mpirun('bin/xspecfem3D')
 
         unix.mv(self.wildcard, 'traces/obs')
@@ -229,8 +230,8 @@ class specfem3d(object):
     def forward(self):
         """ Calls SPECFEM3D forward solver
         """
-        solvertools.setpar('SIMULATION_TYPE', '1')
-        solvertools.setpar('SAVE_FORWARD', '.true.')
+        setpar('SIMULATION_TYPE', '1')
+        setpar('SAVE_FORWARD', '.true.')
         self.mpirun('bin/xgenerate_databases')
         self.mpirun('bin/xspecfem3D')
 
@@ -238,8 +239,8 @@ class specfem3d(object):
     def adjoint(self):
         """ Calls SPECFEM3D adjoint solver
         """
-        solvertools.setpar('SIMULATION_TYPE', '3')
-        solvertools.setpar('SAVE_FORWARD', '.false.')
+        setpar('SIMULATION_TYPE', '3')
+        setpar('SAVE_FORWARD', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
         self.mpirun('bin/xspecfem3D')
@@ -528,7 +529,7 @@ class specfem3d(object):
         unix.cd(self.getpath)
         key = 'use_existing_STATIONS'
         val = '.true.'
-        solvertools.setpar(key, val)
+        setpar(key, val)
         _, h = preprocess.load('traces/obs')
         solvertools.write_receivers(h.nr, h.rx, h.rz)
 

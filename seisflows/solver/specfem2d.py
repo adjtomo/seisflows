@@ -13,6 +13,8 @@ from seisflows.tools.code import exists, setdiff
 from seisflows.tools.config import findpath, ParameterObj
 from seisflows.tools.io import loadbin, savebin
 
+from seisflows.seistools.shared import getpar, setpar
+
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
@@ -135,8 +137,8 @@ class specfem2d(object):
         self.generate_mesh(**model_kwargs)
 
         unix.cd(self.getpath)
-        solvertools.setpar('SIMULATION_TYPE', '1')
-        solvertools.setpar('SAVE_FORWARD', '.true.')
+        setpar('SIMULATION_TYPE', '1')
+        setpar('SAVE_FORWARD', '.true.')
         self.mpirun('bin/xmeshfem2D')
         self.mpirun('bin/xspecfem2D')
 
@@ -208,8 +210,8 @@ class specfem2d(object):
     def forward(self):
         """ Calls SPECFEM2D forward solver
         """
-        solvertools.setpar('SIMULATION_TYPE', '1')
-        solvertools.setpar('SAVE_FORWARD', '.true.')
+        setpar('SIMULATION_TYPE', '1')
+        setpar('SAVE_FORWARD', '.true.')
         self.mpirun('bin/xmeshfem2D')
         self.mpirun('bin/xspecfem2D')
 
@@ -217,8 +219,8 @@ class specfem2d(object):
     def adjoint(self):
         """ Calls SPECFEM2D adjoint solver
         """
-        solvertools.setpar('SIMULATION_TYPE', '3')
-        solvertools.setpar('SAVE_FORWARD', '.false.')
+        setpar('SIMULATION_TYPE', '3')
+        setpar('SAVE_FORWARD', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
 
@@ -437,7 +439,7 @@ class specfem2d(object):
         dst = 'DATA/SOURCE'
         unix.cp(src, dst)
 
-        solvertools.setpar('f0', PAR.F0, 'DATA/SOURCE')
+        setpar('f0', PAR.F0, 'DATA/SOURCE')
 
 
     def initialize_adjoint_traces(self):
@@ -497,7 +499,7 @@ class specfem2d(object):
         unix.cd(self.getpath)
         key = 'use_existing_STATIONS'
         val = '.true.'
-        solvertools.setpar(key, val)
+        setpar(key, val)
         _, h = preprocess.load('traces/obs')
         solvertools.write_receivers(h.nr, h.rx, h.rz)
 
