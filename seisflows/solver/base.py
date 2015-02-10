@@ -137,12 +137,14 @@ class base(object):
     def generate_data(self, *args, **kwargs):
         """ Generates data
         """
+        # must be implemented by subclass
         raise NotImplementedError
 
 
     def generate_mesh(self, *args, **kwargs):
         """ Performs meshing and database generation
         """
+        # must be implemented by subclass
         raise NotImplementedError
 
 
@@ -456,8 +458,8 @@ class base(object):
         """
         if system.getnode() == 0:
             parts = self.load(PATH.MODEL_INIT)
-            path = PATH.GLOBAL +'/'+ 'mesh'
 
+            path = PATH.GLOBAL +'/'+ 'mesh'
             if not exists(path):
                 for key in self.model_parameters:
                     if key not in self.inversion_parameters:
@@ -484,18 +486,21 @@ class base(object):
 
     @property
     def getname(self):
-        """Returns name of source currently under consideration"""
+        """ Returns name of source currently under consideration
+        """
+        isrc = system.getnode()
         if not hasattr(self, 'sources'):
             paths = glob(PATH.SOLVER_FILES +'/'+ self.source_prefix+'_*')
             self.sources = []
             for path in paths:
                 self.sources += [unix.basename(path).split('_')[-1]]
             self.sources.sort()
-        return self.sources[system.getnode()]
+        return self.sources[isrc]
 
     @property
     def getpath(self):
-        """Returns working directory corresponding to current source"""
+        """ Returns working directory corresponding to current source
+        """
         return join(PATH.SOLVER, self.getname)
 
 
