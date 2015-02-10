@@ -12,49 +12,16 @@ from seisflows.seistools.shared import getpar, setpar
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
-from seisflows.tools.config import findpath, ParameterObj
-from seisflows.tools.io import loadbin, savebin
+from seisflows.tools.config import loadclass, ParameterObj
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
-import system
-import preprocess
 
-
-class specfem3d_globe(object):
+class specfem3d_globe(loadclass('solver', 'base')):
     """ Python interface for SPECFEM3D_GLOBE
 
-      eval_func, eval_grad, apply_hess
-        These methods deal with evaluation of the misfit function or its
-        derivatives and provide the primary interface between the solver and
-        other workflow components.
-
-      forward, adjoint
-        These methods allow direct access to individual SPECFEM3D_GLOBE components.
-        Together, they provide a secondary interface users can employ for
-        specialized tasks not covered by high level methods.
-
-      prepare_solver, prepare_data, prepare_model
-        SPECFEM3D_GLOBE requires a particular directory structure in which to run and
-        particular file formats for models, data, and parameter files. These
-        methods help put in place all these prerequisites.
-
-      load, save
-        For reading and writing SPECFEM3D_GLOBE models and kernels. On the disk,
-        models and kernels are stored as binary files, and in memory, as
-        dictionaries with different keys corresponding to different material
-        parameters.
-
-      split, merge
-        In the solver routines, it is possible to store models as dictionaries,
-        but for the optimization routines, it is necessary to merge all model
-        values together into a single vector. Two methods, 'split' and 'merge',
-        are used to convert back and forth between these two representations.
-
-      combine, smooth
-        Utilities for combining and smoothing kernels, meant to be called from
-        external postprocessing routines.
+      See base class for method descriptions
     """
 
     if 0:
@@ -104,51 +71,7 @@ class specfem3d_globe(object):
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
-        # check paths
-        if 'GLOBAL' not in PATH:
-            raise Exception
-
-        if 'LOCAL' not in PATH:
-            setattr(PATH, 'LOCAL', None)
-
-        if 'SOLVER' not in PATH:
-            if PATH.LOCAL:
-                setattr(PATH, 'SOLVER', join(PATH.LOCAL, 'solver'))
-            else:
-                setattr(PATH, 'SOLVER', join(PATH.GLOBAL, 'solver'))
-
-
-    def setup(self):
-        """ Prepares solver for inversion or migration
-
-          As input for an inversion or migration, users can choose between
-          supplying data or providing a target model from which data are
-          generated on the fly. In both cases, all necessary SPECFEM3D_GLOBE input
-          files must be provided.
-        """
-        unix.rm(self.getpath)
-
-        # prepare data
-        if PATH.DATA:
-            self.initialize_solver_directories()
-            src = glob(PATH.DATA +'/'+ self.getname +'/'+ '*')
-            dst = 'traces/obs/'
-            unix.cp(src, dst)
-
-        else:
-            self.generate_data(
-                model_path=PATH.MODEL_TRUE,
-                model_name='model_true',
-                model_type='gll')
-
-        # prepare model
-        self.generate_mesh(
-            model_path=PATH.MODEL_INIT,
-            model_name='model_init',
-            model_type='gll')
-
-        self.initialize_adjoint_traces()
-        self.initialize_io_machinery()
+        super(specfem3d_globe, self).check()
 
 
     def generate_data(self, **model_kwargs):
@@ -157,11 +80,11 @@ class specfem3d_globe(object):
         self.generate_mesh(**model_kwargs)
 
         unix.cd(self.getpath)
-        solvertools.setpar('SIMULATION_TYPE', '1')
-        solvertools.setpar('SAVE_FORWARD', '.true.')
+        setpar('SIMULATION_TYPE', '1')
+        setpar('SAVE_FORWARD', '.true.')
         self.mpirun('bin/xspecfem3D')
 
-        unix.mv(self.wildcard, 'traces/obs')
+        unix.mv(self.data_path, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
 
 
@@ -176,60 +99,12 @@ class specfem3d_globe(object):
 
         if model_type == 'gll':
             assert (exists(model_path))
-            unix.cp(glob(model_path +'/'+ '*'), self.databases)
+            unix.cp(glob(model_path +'/'+ '*'), self.model_databases)
+            self.mpirun('bin/xmeshfem3D')
+            self.export_model(PATH.OUTPUT +'/'+ model_name)
+
         else:
-            pass
-
-        self.mpirun('bin/xmeshfem3D')
-        self.export_model(PATH.OUTPUT +'/'+ model_name)
-
-
-
-    ### high-level solver interface
-
-    def eval_func(self, path='', export_traces=False):
-        """ Evaluates misfit function by carrying out forward simulation and
-            making measurements on observations and synthetics.
-        """
-        unix.cd(self.getpath)
-        self.import_model(path)
-
-        self.forward()
-        unix.mv(self.wildcard, 'traces/syn')
-        preprocess.prepare_eval_grad(self.getpath)
-
-        self.export_residuals(path)
-        if export_traces:
-            self.export_traces(path, prefix='traces/syn')
-
-
-    def eval_grad(self, path='', export_traces=False):
-        """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
-            must be in place prior to calling this method.
-        """
-        unix.cd(self.getpath)
-
-        self.adjoint()
-
-        self.export_kernels(path)
-        if export_traces:
-            self.export_traces(path, prefix='traces/syn')
-
-
-    def apply_hess(self, path=''):
-        """ Computes action of Hessian on a given model vector.
-        """
-        unix.cd(self.getpath)
-        unix.mkdir('traces/lcg')
-
-        self.import_model(path)
-        self.forward()
-        unix.mv(self.wildcard, 'traces/lcg')
-        preprocess.prepare_apply_hess(self.getpath)
-
-        self.adjoint()
-        self.export_kernels(path)
-
+            raise NotImplementedError
 
 
     ### low-level solver interface
@@ -240,6 +115,7 @@ class specfem3d_globe(object):
         solvertools.setpar('SIMULATION_TYPE', '1')
         solvertools.setpar('SAVE_FORWARD', '.true.')
         self.mpirun('bin/xspecfem3D')
+        unix.mv(self.data_wildcard, 'traces/syn')
 
 
     def adjoint(self):
@@ -250,78 +126,6 @@ class specfem3d_globe(object):
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
         self.mpirun('bin/xspecfem3D')
-
-
-
-    ### model input/output
-
-    def load(self, dirname, type='model', verbose=False):
-        """ reads SPECFEM3D_GLOBE model
-        """
-        if type == 'model':
-            mapping = lambda key: key
-        elif type == 'kernel':
-            mapping = lambda key: self.kernel_map[key]
-        else:
-            raise ValueError
-
-        if verbose:
-            logfile = PATH.SUBMIT +'/'+ 'output.minmax'
-        else:
-            logfile = None
-
-        return load(dirname, self.model_parameters, mapping, PAR.NPROC, logfile)
-
-
-
-    def save(self, dirname, parts):
-        """ writes SPECFEM3D_GLOBE model
-        """
-        unix.mkdir(dirname)
-
-        # write database files
-        for key in self.model_parameters:
-            nn = len(parts[key])
-            for ii in range(nn):
-                filename = 'proc%06d_%s.bin' % (ii, key)
-                savebin(parts[key][ii], join(dirname, filename))
-
-
-
-    ### vector/dictionary conversion
-
-    def merge(self, parts):
-        """ merges dictionary into vector
-        """
-        v = np.array([])
-        for key in self.inversion_parameters:
-            for iproc in range(PAR.NPROC):
-                v = np.append(v, parts[key][iproc])
-        return v
-
-
-    def split(self, v):
-        """ splits vector into dictionary
-        """
-        parts = {}
-        nrow = len(v)/(PAR.NPROC*len(self.inversion_parameters))
-        j = 0
-        for key in self.model_parameters:
-            parts[key] = []
-            if key in self.inversion_parameters:
-                for i in range(PAR.NPROC):
-                    imin = nrow*PAR.NPROC*j + nrow*i
-                    imax = nrow*PAR.NPROC*j + nrow*(i + 1)
-                    i += 1
-                    parts[key].append(v[imin:imax])
-                j += 1
-            else:
-                for i in range(PAR.NPROC):
-                    proc = '%06d' % i
-                    parts[key].append(
-                        np.load(PATH.GLOBAL +'/'+ 'mesh' +'/'+ key +'/'+ proc))
-        return parts
-
 
 
     ### postprocessing utilities
@@ -389,7 +193,7 @@ class specfem3d_globe(object):
                     + str(span) + ' '
                     + name + ' '
                     + path +'/'+ tag + '/ '
-                    + self.databases + '/ ')
+                    + self.model_databases + '/ ')
 
         # move kernels
         src = path +'/'+ tag
@@ -406,187 +210,18 @@ class specfem3d_globe(object):
         unix.cd(path)
 
 
-    ### file transfer utilities
-
-    def import_model(self, path):
-        src = glob(join(path, 'model', '*'))
-        dst = self.databases
-        if system.getnode()==0:
-            self.save(dst, self.load(src, verbose=True))
-        else:
-            self.save(dst, self.load(src))
-
-    def export_model(self, path):
-        if system.getnode() == 0:
-            for name in self.model_parameters:
-                src = glob(join(self.databases, '*_'+name+'.bin'))
-                dst = path
-                unix.mkdir(dst)
-                unix.cp(src, dst)
-
-    def export_kernels(self, path):
-        unix.mkdir_gpfs(join(path, 'kernels'))
-        unix.mkdir_gpfs(join(path, 'kernels', self.getname))
-        for name in self.kernel_map.values():
-            src = join(glob(self.databases  +'/'+ '*'+ name+'.bin'))
-            dst = join(path, 'kernels', self.getname)
-            unix.mv(src, dst)
-        try:
-            name = 'rhop_kernel'
-            src = join(glob(self.databases +'/'+ '*'+ name+'.bin'))
-            dst = join(path, 'kernels', self.getname)
-            unix.mv(src, dst)
-        except:
-            pass
-
-    def export_residuals(self, path):
-        unix.mkdir_gpfs(join(path, 'residuals'))
-        src = join(unix.pwd(), 'residuals')
-        dst = join(path, 'residuals', self.getname)
-        unix.mv(src, dst)
-
-    def export_traces(self, path, prefix='traces/obs'):
-        unix.mkdir_gpfs(join(path, 'traces'))
-        src = join(unix.pwd(), prefix)
-        dst = join(path, 'traces', self.getname)
-        unix.cp(src, dst)
-
-
-    ### setup utilities
-
-    def initialize_solver_directories(self):
-        """ Creates directory structure expected by SPECFEM3D_GLOBE, copies 
-          executables, and prepares input files. Executables must be supplied 
-          by user as there is currently no mechanism to automatically compile 
-          from source.
-        """
-        unix.mkdir(self.getpath)
-        unix.cd(self.getpath)
-
-        # create directory structure
-        unix.mkdir('bin')
-        unix.mkdir('DATA')
-
-        unix.mkdir('traces/obs')
-        unix.mkdir('traces/syn')
-        unix.mkdir('traces/adj')
-
-        unix.mkdir(self.databases)
-
-        # copy exectuables
-        src = glob(PATH.SOLVER_BINARIES +'/'+ '*')
-        dst = 'bin/'
-        unix.cp(src, dst)
-
-        # copy input files
-        src = glob(PATH.SOLVER_FILES +'/'+ '*')
-        dst = 'DATA/'
-        unix.cp(src, dst)
-
-        #src = 'DATA/CMTSOLUTION_' + self.getname
-        #dst = 'DATA/CMTSOLUTION'
-        #unix.cp(src, dst)
-
-
-    def initialize_adjoint_traces(self):
-        """ Adjoint traces must be initialized by writing zeros for all 
-          components. This is because when reading traces at the start of an
-          adjoint simulation, SPECFEM3D_GLOBE expects that all components exist.
-          Components actually in use during an inversion or migration will
-          be overwritten with nonzero values later on.
-        """
-        _, h = preprocess.load('traces/obs')
-        zeros = np.zeros((h.nt, h.nr))
-        for channel in ['x', 'y', 'z']:
-            preprocess.writer(zeros, h, channel=channel, prefix='traces/adj')
-
-
-    def initialize_io_machinery(self):
-        """ Writes mesh files expected by input/output methods
-        """
-        if system.getnode() == 0:
-            parts = self.load(PATH.MODEL_INIT)
-            try:
-                path = PATH.GLOBAL +'/'+ 'mesh'
-            except:
-                raise Exception
-            if not exists(path):
-                for key in self.model_parameters:
-                    if key not in self.inversion_parameters:
-                        unix.mkdir(path +'/'+ key)
-                        for proc in range(PAR.NPROC):
-                            with open(path +'/'+ key +'/'+ '%06d' % proc, 'w') as file:
-                                np.save(file, parts[key][proc])
-
-            try:
-                path = PATH.OPTIMIZE +'/'+ 'm_new'
-            except:
-                return
-            if not exists(path):
-                savenpy(path, self.merge(parts))
-            #if not exists(path):
-            #    for key in inversion_set:
-            #        unix.mkdir(path +'/'+ key)
-            #        for proc in range(PAR.NPROC):
-            #            with open(path +'/'+ key +'/'+ '%06d' % proc, 'w') as file:
-            #                np.save(file, parts[key][proc])
-
-
-    ### input file writers
-
-    def write_parameters(self):
-        unix.cd(self.getpath)
-        solvertools.write_parameters(vars(PAR))
-
-    def write_receivers(self):
-        unix.cd(self.getpath)
-        key = 'use_existing_STATIONS'
-        val = '.true.'
-        solvertools.setpar(key, val)
-        _, h = preprocess.load('traces/obs')
-        solvertools.write_receivers(h.nr, h.rx, h.rz)
-
-    def write_sources(self):
-        unix.cd(self.getpath)
-        _, h = preprocess.load(dir='traces/obs')
-        solvertools.write_sources(vars(PAR), h)
-
-
     ### utility functions
 
-    def mpirun(self, script, output='/dev/null'):
-        """ Wrapper for mpirun
-        """
-        with open(output,'w') as f:
-            subprocess.call(
-                system.mpiargs() + script,
-                shell=True,
-                stdout=f)
-
     @property
-    def getname(self):
-        """name of current source"""
-        if not hasattr(self, 'sources'):
-            # generate list of all sources
-            paths = glob(PATH.SOLVER_FILES +'/'+ 'SOURCE_*')
-            self.sources = []
-            for path in paths:
-                self.sources += [unix.basename(path).split('_')[-1]]
-            self.sources.sort()
-
-        return self.sources[system.getnode()]
-
-    @property
-    def getpath(self):
-        """path of current source"""
-        return join(PATH.SOLVER, self.getname)
-
-    @property
-    def wildcard(self):
+    def data_wildcard(self):
         return glob('OUTPUT_FILES/*.sem.ascii')
 
     @property
-    def databases(self):
+    def model_databases(self):
         return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
+
+    @property
+    def source_prefix(self):
+        return 'CMTSOLUTION'
 
 
