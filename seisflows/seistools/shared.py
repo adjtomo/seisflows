@@ -1,11 +1,9 @@
-from os.path import abspath, join
 
-import numpy as np
+from string import find
 
 from collections import Mapping
 
 from seisflows.tools.code import Struct
-from seisflows.tools.io import loadbin
 
 
 class SeisStruct(Struct):
@@ -28,102 +26,69 @@ class ModelStruct(Mapping):
         raise NotImplementedError
 
 
-def load1(dirname, parameters, mapping, nproc, logfile=None):
-    """ reads SPECFEM model
-
-      Models are stored as a Fortran binary fomrat and and separated into 
-      mulitple files according to material parameter and processor rank.
+def getpar(key, file='DATA/Par_file', sep='='):
+    """ Reads parameter from SPECFEM parfile
     """
-    parts = {}
-    for key in sorted(parameters):
-        parts[key] = []
-        for iproc in range(nproc):
-            filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
-            part = loadbin(join(dirname, filename))
-            parts[key].append(part)
-    return parts
+    with open(file, 'r') as f:
+
+        # read line by line
+        for line in f:
+            if find(line, key) == 0:
+                # read key
+                key, val = _split(line, sep)
+                if not key:
+                    continue
+                # read val
+                val, _ = _split(val, '#')
+                return val.strip()
+
+        raise Exception
 
 
-def load2(dirname, parameters, mapping, nproc, logfile):
-    """ reads SPECFEM model
-
-      Provides the same functionality as load1 but with debugging output.
+def setpar(key, val, file='DATA/Par_file', path='.', sep='='):
+    """ Writes parameter to SPECFEM parfile
     """
-    # read database files
-    parts = {}
-    minmax = {}
-    for key in sorted(parameters):
-        parts[key] = []
-        minmax[mapping(key)] = [+np.Inf,-np.Inf]
-        for iproc in range(nproc):
-            filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
-            part = loadbin(join(dirname, filename))
-            parts[key].append(part)
-            # keep track of min, max
-            if part.min() < minmax[mapping(key)][0]: minmax[mapping(key)][0] = part.min()
-            if part.max() > minmax[mapping(key)][1]: minmax[mapping(key)][1] = part.max()
 
-    # print min, max
-    if logfile:
-        with open(logfile,'a') as f:
-            f.write(abspath(dirname)+'\n')
-            for key,val in minmax.items():
-                f.write('%-15s %10.3e %10.3e\n' % (key, val[0], val[1]))
-            f.write('\n')
-    return parts
+    val = str(val)
+
+    # read line by line
+    with open(path + '/' + file, 'r') as f:
+        lines = []
+        for line in f:
+            if find(line, key) == 0:
+                # read key
+                key, _ = _split(line, sep)
+                # read comment
+                _, comment = _split(line, '#')
+                n = len(line) - len(key) - len(val) - len(comment) - 2
+                # replace line
+                if comment:
+                    line = _merge(key, sep, val, ' '*n, '#', comment)
+                else:
+                    line = _merge(key, sep, str(val), '\n')
+            lines.append(line)
+
+    # write file
+    _writelines(path + '/' + file, lines)
 
 
-def load3(dirname, parameters, mapping, nproc, logfile):
-    """ reads SPECFEM model
+### utility functions
 
-      Provides the same functionality as load1 but with debugging output and
-      improved memory usage.
+def _split(str, sep):
+    n = find(str, sep)
+    if n >= 0:
+        return str[:n], str[n + len(sep):]
+    else:
+        return str, ''
+
+
+def _merge(*parts):
+    return ''.join(parts)
+
+
+def _writelines(file, lines):
+    """ Writes text file
     """
-    minmax = {}
-
-    def helper_func(key):
-        parts = []
-        minmax[mapping(key)] = [+np.Inf,-np.Inf]
-        for iproc in range(nproc):
-            filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
-            part = loadbin(join(dirname, filename))
-            parts.append(part)
-            # keep track of min, max
-            if part.min() < minmax[mapping(key)][0]: minmax[mapping(key)][0] = part.min()
-            if part.max() > minmax[mapping(key)][1]: minmax[mapping(key)][1] = part.max()
-        return parts
-
-    class helper_class(Mapping):
-        def __init__(self):
-            self.cached_key = None
-            self.cached_val = None
-
-        def __getitem__(self, key):
-            if key == self.cached_key:
-                return self.cached_val
-            else:
-                parts = helper_func(key)
-                self.cached_key = key
-                self.cached_val = parts
-            return parts
-
-        def __iter__(self):
-            return []
-
-        def __len__(self):
-            return len([])
-
-        def __del__(self):
-            if logfile:
-                with open(logfile,'a') as f:
-                    f.write(abspath(dirname)+'\n')
-                    for key in sorted(minmax):
-                        val = minmax[key]
-                        f.write('%-15s %10.3e %10.3e\n' % (key, val[0], val[1]))
-                    f.write('\n')
-
-    return helper_class()
-
-
-load = load3
+    with open(file, 'w') as f:
+        f.writelines(lines)
 
