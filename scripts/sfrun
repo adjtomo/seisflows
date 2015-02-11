@@ -11,7 +11,7 @@ register = OBJ.register
 
 
 if __name__ == '__main__':
-     """ First, loads parameters and paths from the current working directory.
+    """ First, loads parameters and paths from the working directory.
 
       Second, loads the following seisflows objects: system, preprocess, 
       solver, postprocess, optimize, worfklow.  This list is effectively

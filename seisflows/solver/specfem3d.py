@@ -60,7 +60,7 @@ class specfem3d(loadclass('solver', 'base')):
             pass #raise Exception
 
         # check solver input files directory
-       if 'SPECFEM3D_DATA' not in PATH:
+        if 'SPECFEM3D_DATA' not in PATH:
            pass #raise Exception
 
 
