@@ -32,31 +32,31 @@ class slurm_sm(object):
         """ Checks parameters and paths
         """
 
-        # check parameters
-        if 'NTASK' not in PAR:
-            raise Exception
-
-        if 'NPROC' not in PAR:
-            raise Exception
-
-        if 'WALLTIME' not in PAR:
-            setattr(PAR, 'WALLTIME', 30.)
-
-        if 'VERBOSE' not in PAR:
-            setattr(PAR, 'VERBOSE', 1)
-
         if 'TITLE' not in PAR:
             setattr(PAR, 'TITLE', unix.basename(abspath('.')))
 
         if 'SUBTITLE' not in PAR:
             setattr(PAR, 'SUBTITLE', unix.basename(abspath('..')))
 
+        # check parameters
+        if 'WALLTIME' not in PAR:
+            setattr(PAR, 'WALLTIME', 30.)
+
+        if 'VERBOSE' not in PAR:
+            setattr(PAR, 'VERBOSE', 1)
+
+        if 'NPROC' not in PAR:
+            raise ParameterError(PAR, 'NPROC')
+
+        if 'NTASK' not in PAR:
+            raise ParameterError(PAR, 'NTASK')
+
         # check paths
         if 'GLOBAL' not in PATH:
             setattr(PATH, 'GLOBAL', join(abspath('.'), 'scratch'))
 
         if 'LOCAL' not in PATH:
-            setattr(PATH, 'LOCAL', '')
+            setattr(PATH, 'LOCAL', None)
 
         if 'SUBMIT' not in PATH:
             setattr(PATH, 'SUBMIT', unix.pwd())

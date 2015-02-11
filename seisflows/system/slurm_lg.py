@@ -38,15 +38,6 @@ class slurm_lg(object):
             setattr(PAR, 'SUBTITLE', unix.basename(abspath('..')))
 
         # check parameters
-        if 'NTASK' not in PAR:
-            raise Exception
-
-        if 'NPROC' not in PAR:
-            raise Exception
-
-        if 'NPROC_PER_NODE' not in PAR:
-            raise Exception
-
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
@@ -59,12 +50,21 @@ class slurm_lg(object):
         if 'VERBOSE' not in PAR:
             setattr(PAR, 'VERBOSE', 1)
 
+        if 'NPROC' not in PAR:
+            raise ParameterError(PAR, 'NPROC')
+
+        if 'NPROC_PER_NODE' not in PAR:
+            raise ParameterError(PAR, 'NPROC_PER_NODE')
+
+        if 'NTASK' not in PAR:
+            raise ParameterError(PAR, 'NTASK')
+
         # check paths
         if 'GLOBAL' not in PATH:
             setattr(PATH, 'GLOBAL', join(abspath('.'), 'scratch'))
 
         if 'LOCAL' not in PATH:
-            setattr(PATH, 'LOCAL', '')
+            setattr(PATH, 'LOCAL', None)
 
         if 'SUBMIT' not in PATH:
             setattr(PATH, 'SUBMIT', unix.pwd())
