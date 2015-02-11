@@ -42,7 +42,7 @@ class inversion(object):
     """
 
     def check(self):
-        """ Checks parameters, paths, and dependencies
+        """ Checks parameters and paths
         """
 
         # check parameters
@@ -142,14 +142,9 @@ class inversion(object):
         postprocess.setup()
 
         # set up solver machinery
-        if PAR.BEGIN == 1:
+        if PAR.BEGIN == 1 or PATH.LOCAL:
             system.run('solver', 'setup',
                        hosts='all')
-            return
-
-        if PATH.LOCAL:
-             system.run('solver', 'setup',
-                        hosts='all')
  
 
     def initialize(self):
@@ -195,9 +190,7 @@ class inversion(object):
 
 
     def search_status(self):
-        """ Evaluates trial model and checks line search status
-
-          Evaluates trial model by calling evalute_function, which results in
+        """  Evaluates trial model by calling evalute_function, which performs
           a forward simulation. After that, queries line search status and keeps
           track of which trial model is the best so far.
         """
@@ -218,7 +211,7 @@ class inversion(object):
 
 
     def evaluate_function(self):
-        """ Calls forward solver and writes misfit
+        """ Performs forward simulation to evaluate objective function
         """
         self.prepare_model(path=PATH.FUNC, suffix='try')
 
@@ -230,9 +223,8 @@ class inversion(object):
 
 
     def evaluate_gradient(self):
-        """ Calls adjoint solver and runs process_kernels
+        """ Performs adjoint simulation to evaluate gradient
         """
-        # adjoint simulation
         system.run('solver', 'eval_grad',
                    hosts='all',
                    path=PATH.GRAD,
@@ -243,7 +235,7 @@ class inversion(object):
 
 
     def finalize(self):
-        """ Saves results from most recent model update iteration
+        """ Saves results from current model update iteration
         """
         if divides(self.iter, PAR.SAVEMODEL):
             self.save_model()
@@ -291,7 +283,8 @@ class inversion(object):
 
 
     def sum_residuals(self, path='', suffix=''):
-        """ Sums residuals to obtain misfit function value
+        """ Computes sum of squares of residuals to obtain objective function 
+          value
         """
         src = path +'/'+ 'residuals'
         dst = PATH.OPTIMIZE +'/'+ 'f_' + suffix
@@ -301,9 +294,9 @@ class inversion(object):
             residuals.append(fromfile**2.)
         np.savetxt(dst, [np.sum(residuals)])
 
-
     def solver_status(self):
-        """ Decides if solver prerequisites are in place
+        """  Return value indicates whether prerequisites are in place for the
+          next gradient evaluation
         """
         if self.iter <= 1:
             isready = False
