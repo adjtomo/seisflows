@@ -1,14 +1,15 @@
-#!/bin/env python
+#!/usr/bin/env python
 
 import sys
-from os.path import join
 
+from os.path import join
 from seisflows.tools.code import loadjson
 from seisflows.tools.config import ConfigObj, ParameterObj
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 OBJ = ConfigObj('SeisflowsObjects')
+
 
 if __name__ == '__main__':
     mypath = sys.argv[1]

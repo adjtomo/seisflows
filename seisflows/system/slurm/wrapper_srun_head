@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 
-import sys
-from os.path import join
-
-from seisflows.tools.code import loadjson, loadobj
-from seisflows.tools.config import ConfigObj, ParameterObj
-
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
-OBJ = ConfigObj('SeisflowsObjects')
-
 if __name__ == '__main__':
+    import sys
+
     mypath = sys.argv[1]
     myobj = sys.argv[2]
     myfunc = sys.argv[3]
+
+    from os.path import join
+    from seisflows.tools.code import loadjson, loadobj
+    from seisflows.tools.config import ConfigObj, ParameterObj
+
+    PAR = ParameterObj('SeisflowsParameters')
+    PATH = ParameterObj('SeisflowsPaths')
+    OBJ = ConfigObj('SeisflowsObjects')
 
     parname = 'SeisflowsParameters.json'
     pathname = 'SeisflowsPaths.json'
@@ -48,5 +48,6 @@ if __name__ == '__main__':
         # load function
         func = getattr(sys.modules[myobj], myfunc)
 
+        # load function
         func(**kwargs)
 
