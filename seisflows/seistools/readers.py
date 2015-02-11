@@ -53,7 +53,7 @@ def su_specfem2d(channel=None, prefix='SEM', suffix='.su'):
     elif channel in ['p']:
         file = '%s/Up_file_single%s' % (prefix, suffix)
     else:
-        raise Exception("Undefined Exception")
+        raise ValueError('CHANNEL must be one of the following: x y z p')
 
     # read data from file
     d, h = segyreader.readsu(file)
@@ -100,7 +100,7 @@ def su_specfem3d(channel=None, prefix='SEM', suffix='', verbose=False):
     elif channel in ['p']:
         wildcard = '%s/*_dp_SU%s' % (prefix, suffix)
     else:
-        raise Exception("Undefined Exception")
+        raise ValueError('CHANNEL must be one of the following: x y z p')
 
     files = _glob.glob(wildcard)
     files = sorted(files, key=lambda x: int(unix.basename(x).split('_')[0]))
@@ -212,7 +212,7 @@ def glob(files=None, channel=None, prefix='SEM', suffix='semd', solver='3d'):
         elif channel in ['z']:
             wildcard = '%s/*[zZ]*.%s' % (prefix, suffix)
         else:
-            raise ValueError("Unknown channel type.")
+            raise ValueError('CHANNEL must be one of the following: x y z p')
     elif solver=='3d_globe':
         if channel in ['e']:
             wildcard = '%s/*.?XE.%s' % (prefix, suffix)

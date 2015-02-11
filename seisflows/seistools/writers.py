@@ -24,7 +24,7 @@ def ascii_specfem2d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''
         elif channel == ['p']:
             fmt = '%s/S%s.AA.%sP.%s' % (prefix, '%04d', char, suffix)
         else:
-            raise ValueError("Unknown channel type.")
+            raise ValueError('CHANNEL must be one of the following: x y z p')
         for i in range(h.nr):
             files.append(fmt % (i + 1))
 
@@ -49,7 +49,7 @@ def ascii_specfem2d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''
             elif channel == ['p']:
                 label = ''.join([parts[2][:-1], 'P'])
             else:
-                raise ValueError("Unknown channel type.")
+                raise ValueError('CHANNEL must be one of the following: x y z p')
 
             parts[-2] = label
             parts[-1] = 'adj'
@@ -81,7 +81,7 @@ def su_specfem2d(d, h, channel=None, prefix='SEM', suffix='.su.adj'):
     elif channel in ['p']:
         file = '%s/Up_file_single%s' % (prefix, suffix)
     else:
-        raise Exception("Undefined Exception")
+        raise ValueError('CHANNEL must be one of the following: x y z p')
 
     # write data to file
     segywriter.writesu(file, d, h)
@@ -103,7 +103,7 @@ def ascii_specfem3d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''
         elif channel in ['p']:
             fmt = '%s/S%s.AA.%sP.%s' % (prefix, '%04d', char, suffix)
         else:
-            raise ValueError("Unknown channel type.")
+            raise ValueError('CHANNEL must be one of the following: x y z p')
         for i in range(h.nr):
             files.append(fmt % (i + 1))
 
@@ -158,7 +158,8 @@ def su_specfem3d(d, h, channel=None, prefix='SEM', suffix='.adj', verbose=False)
     elif channel in ['p']:
         wildcard = '%s/%d_dp_SU%s'
     else:
-        raise Exception("Undefined Exception")
+        raise ValueError('CHANNEL must be one of the following: x y z p')
+
 
     imax = 0
 
@@ -204,7 +205,7 @@ def ascii_specfem3d_globe(f, h, channel, char='FX', prefix='SEM', suffix='adj', 
         elif channel in ['p']:
             fmt = '%s/S%s.AA.%sP.%s' % (prefix, '%04d', char, suffix)
         else:
-            raise ValueError("Unknown channel type.")
+            raise ValueError('CHANNEL must be one of the following: x y z p')
         for i in range(h.nr):
             files.append(fmt % (i + 1))
 
@@ -229,7 +230,7 @@ def ascii_specfem3d_globe(f, h, channel, char='FX', prefix='SEM', suffix='adj', 
             elif channel in ['p']:
                 label = ''.join([parts[2][:-1], 'P'])
             else:
-                raise ValueError("Unknown channel type.")
+                raise ValueError('CHANNEL must be one of the following: x y z p')
 
             parts[-2] = label
             parts[-1] = 'adj'
