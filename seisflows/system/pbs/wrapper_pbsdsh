@@ -1,21 +1,23 @@
-
-import os
-import sys
-
-mypath = sys.argv[1]
-myobj = sys.argv[2]
-myfunc = sys.argv[3]
-
-os.chdir(mypath)
-
-from seisflows.tools.code import join, loadjson, loadobj
-from seisflows.tools.config import ConfigObj, ParameterObj
-
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
-OBJ = ConfigObj('SeisflowsObjects')
+#!/usr/bin/env python
 
 if __name__ == '__main__':
+    import sys
+
+    mypath = sys.argv[1]
+    myobj = sys.argv[2]
+    myfunc = sys.argv[3]
+    pythonpath = sys.argv[4:]
+
+    sys.path.append(pythonpath)
+
+    from os.path import join
+    from seisflows.tools.code import loadjson, loadobj
+    from seisflows.tools.config import ConfigObj, ParameterObj
+
+    PAR = ParameterObj('SeisflowsParameters')
+    PATH = ParameterObj('SeisflowsPaths')
+    OBJ = ConfigObj('SeisflowsObjects')
+
     parname = 'SeisflowsParameters.json'
     pathname = 'SeisflowsPaths.json'
     objname = 'SeisflowsObjects'
@@ -48,5 +50,6 @@ if __name__ == '__main__':
     # load function
     func = getattr(sys.modules[myobj], myfunc)
 
+    # call function
     func(**kwargs)
 
