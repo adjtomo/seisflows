@@ -6,14 +6,13 @@ from glob import glob
 import numpy as np
 
 import seisflows.seistools.specfem2d as solvertools
+from seisflows.seistools.shared import getpar, setpar
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists, setdiff
-from seisflows.tools.config import findpath, ParameterObj
+from seisflows.tools.config import findpath, loadclass, ParameterObj
 from seisflows.tools.io import loadbin, savebin
-
-from seisflows.seistools.shared import getpar, setpar
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
@@ -58,51 +57,14 @@ class specfem2d(loadclass('solver', 'base')):
         if 'F0' not in PAR:
             raise Exception
 
-        # check paths
-        if 'GLOBAL' not in PATH:
-            raise Exception
+        # check solver executables directory
+        if 'SPECFEM2D_BIN' not in PATH:
+            pass #raise Exception
 
-        if 'LOCAL' not in PATH:
-            setattr(PATH, 'LOCAL', None)
+        # check solver input files directory
+        if 'SPECFEM2D_DATA' not in PATH:
+            pass #raise Exception
 
-        if 'SOLVER' not in PATH:
-            if PATH.LOCAL:
-                setattr(PATH, 'SOLVER', join(PATH.LOCAL, 'solver'))
-            else:
-                setattr(PATH, 'SOLVER', join(PATH.GLOBAL, 'solver'))
-
-
-    def setup(self):
-        """ Prepares solver for inversion or migration
-
-          As input for an inversion or migration, users can choose between
-          supplying data or providing a target model from which data are
-          generated on the fly. In both cases, all necessary SPECFEM2D input
-          files must be provided.
-        """
-        unix.rm(self.getpath)
-
-        # prepare data
-        if PATH.DATA:
-            self.initialize_solver_directories()
-            src = glob(PATH.DATA +'/'+ self.getname +'/'+ '*')
-            dst = 'traces/obs/'
-            unix.cp(src, dst)
-
-        else:
-            self.generate_data(
-                model_path=PATH.MODEL_TRUE,
-                model_name='model_true',
-                model_type='gll')
-
-        # prepare model
-        self.generate_mesh(
-            model_path=PATH.MODEL_INIT,
-            model_name='model_init',
-            model_type='gll')
-
-        self.initialize_adjoint_traces()
-        self.initialize_io_machinery()
 
     def generate_data(self, **model_kwargs):
         """ Generates data
@@ -115,7 +77,7 @@ class specfem2d(loadclass('solver', 'base')):
         self.mpirun('bin/xmeshfem2D')
         self.mpirun('bin/xspecfem2D')
 
-        unix.mv(self.wildcard, 'traces/obs')
+        unix.mv(self.data_wildcard, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
 
 
@@ -129,53 +91,6 @@ class specfem2d(loadclass('solver', 'base')):
         self.initialize_solver_directories()
         unix.cp(model_path, 'DATA/model_velocity.dat_input')
         self.export_model(PATH.OUTPUT +'/'+ model_name)
-
-
-    ### high-level solver interface
-
-    def eval_func(self, path='', export_traces=False):
-        """ Evaluates misfit function by carrying out forward simulation and
-            making measurements on observations and synthetics.
-        """
-        unix.cd(self.getpath)
-
-        self.import_model(path)
-        self.forward()
-        unix.mv(self.wildcard, 'traces/syn')
-        preprocess.prepare_eval_grad(self.getpath)
-
-        self.export_residuals(path)
-        if export_traces:
-            self.export_traces(path, prefix='traces/syn')
-
-
-    def eval_grad(self, path='', export_traces=False):
-        """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
-            must be in place prior to calling this method.
-        """
-        unix.cd(self.getpath)
-
-        self.adjoint()
-
-        self.export_kernels(path)
-        if export_traces:
-            self.export_traces(path, prefix='traces/syn')
-
-
-    def apply_hess(self, path=''):
-        """ Computes action of Hessian on a given model vector.
-        """
-        unix.cd(self.getpath)
-        unix.mkdir('traces/lcg')
-
-        self.import_model(path)
-        self.forward()
-        unix.mv(self.wildcard, 'traces/lcg')
-        preprocess.prepare_apply_hess(self.getpath)
-
-        self.adjoint()
-        self.export_kernels(path)
-
 
 
     ### low-level solver interface
@@ -396,7 +311,7 @@ class specfem2d(loadclass('solver', 'base')):
         unix.mkdir('traces/syn')
         unix.mkdir('traces/adj')
 
-        unix.mkdir(self.databases)
+        unix.mkdir(self.model_databases)
 
         # copy exectuables
         src = glob(PATH.SOLVER_BINARIES +'/'+ '*')
@@ -413,19 +328,6 @@ class specfem2d(loadclass('solver', 'base')):
         unix.cp(src, dst)
 
         setpar('f0', PAR.F0, 'DATA/SOURCE')
-
-
-    def initialize_adjoint_traces(self):
-        """ Adjoint traces must be initialized by writing zeros for all 
-          components. This is because when reading traces at the start of an
-          adjoint simulation, SPECFEM2D expects that all components exist.
-          Components actually in use during an inversion or migration will
-          be overwritten with nonzero values later on.
-        """
-        _, h = preprocess.load('traces/obs')
-        zeros = np.zeros((h.nt, h.nr))
-        for channel in ['x', 'y', 'z']:
-            preprocess.writer(zeros, h, channel=channel, prefix='traces/adj')
 
 
     def initialize_io_machinery(self):
@@ -493,30 +395,18 @@ class specfem2d(loadclass('solver', 'base')):
                 shell=True,
                 stdout=f)
 
-    @ property
-    def getname(self):
-        """name of current source"""
-        if not hasattr(self, 'sources'):
-            # generate list of all sources
-            paths = glob(PATH.SOLVER_FILES +'/'+ 'SOURCE_*')
-            self.sources = []
-            for path in paths:
-                self.sources += [unix.basename(path).split('_')[-1]]
-            self.sources.sort()
-
-        return self.sources[system.getnode()]
+    ### miscellaneous
 
     @property
-    def getpath(self):
-        """path of current source"""
-        return join(PATH.SOLVER, self.getname)
-
-    @property
-    def wildcard(self):
+    def data_wildcard(self):
         return glob('OUTPUT_FILES/U?_file_single.su')
 
     @property
-    def databases(self):
+    def model_databases(self):
         return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
+
+    @property
+    def source_prefix(self):
+        return 'SOURCE'
 
 
