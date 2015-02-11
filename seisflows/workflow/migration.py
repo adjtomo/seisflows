@@ -22,7 +22,7 @@ class migration(object):
     """
 
     def check(self):
-        """ Checks parameters, paths, and dependencies
+        """ Checks parameters and paths
         """
 
         # check paths
@@ -63,11 +63,11 @@ class migration(object):
         unix.rm(PATH.GLOBAL)
         unix.mkdir(PATH.GLOBAL)
 
-        # set up pre- and post-processing
+        # set up workflow machinery
         preprocess.setup()
         postprocess.setup()
 
-        # prepare solver
+        # set up solver machinery
         print 'Preparing solver...'
         system.run('solver', 'setup',
                    hosts='all')

@@ -136,14 +136,12 @@ class inversion(object):
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
 
-        # set up optimization
+        # set up workflow machinery
         optimize.setup()
-
-        # set up pre- and post-processing
         preprocess.setup()
         postprocess.setup()
 
-        # set up solver
+        # set up solver machinery
         if PAR.BEGIN == 1:
             system.run('solver', 'setup',
                        hosts='all')
