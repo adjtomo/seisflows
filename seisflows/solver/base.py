@@ -75,21 +75,10 @@ class base(object):
 
 
     def check(self):
-        """ Checks parameters, paths, and dependencies
+        """ Checks parameters and paths
         """
-        # check time stepping parameters
-        if 'NT' not in PAR:
-            raise Exception
-
-        if 'DT' not in PAR:
-            raise Exception
-
-        if 'F0' not in PAR:
-            raise Exception
-
-        # check paths
         if 'GLOBAL' not in PATH:
-            raise Exception
+            raise ParameterError(PATH, 'GLOBAL')
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)

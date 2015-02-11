@@ -45,6 +45,16 @@ class specfem3d(loadclass('solver', 'base')):
         """
         super(specfem3d, self).check()
 
+        # check time stepping parameters
+        if 'NT' not in PAR:
+            raise Exception
+
+        if 'DT' not in PAR:
+            raise Exception
+
+        if 'F0' not in PAR:
+            raise Exception
+
 
     def generate_data(self, **model_kwargs):
         """ Generates data
