@@ -22,7 +22,7 @@ class base(object):
     """
 
     def check(self):
-        """ Checks parameters, paths, and dependencies
+        """ Checks parameters and paths
         """
         # check postprocessing settings
         if 'SCALE' not in PAR:
@@ -39,10 +39,8 @@ class base(object):
 
 
     def setup(self):
-        """ Performs any required setup tasks
-
-          Called at beginning of an inversion, prior to any model update 
-          iterations.
+        """ Called once at beginning of workflow to perform any required
+          initialization or setup tasks
         """
         pass
 

@@ -59,10 +59,8 @@ class base(object):
 
 
     def setup(self):
-        """ Performs any required setup tasks
-
-          Called at beginning of an inversion, prior to any model update 
-          iterations.
+        """ Called once at beginning of workflow to perform any required
+          initialization or setup tasks
         """
         self.reader = getattr(readers, PAR.FORMAT)
         self.writer = getattr(writers, PAR.FORMAT)
