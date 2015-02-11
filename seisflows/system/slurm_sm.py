@@ -72,9 +72,9 @@ class slurm_sm(object):
         unix.cd(PATH.OUTPUT)
 
         # save current state
-        save_objects('SeisflowsObjects')
-        save_parameters('SeisflowsParameters.json')
-        save_paths('SeisflowsPaths.json')
+        self.save_objects()
+        self.save_parameters()
+        self.save_paths()
 
         # submit workflow
         args = ('sbatch '
@@ -92,17 +92,8 @@ class slurm_sm(object):
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
         """
-        if PAR.VERBOSE >= 2:
-            print 'running', funcname
-
-        # save current state
-        save_objects(join(PATH.OUTPUT, 'SeisflowsObjects'))
-
-        # save keyword arguments
-        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
-        kwargsfile = join(kwargspath, funcname + '.p')
-        unix.mkdir(kwargspath)
-        saveobj(kwargsfile, kwargs)
+        self.save_objects()
+        self.save_kwargs(classname, funcname, kwargs)
 
         if hosts == 'all':
             # run on all available nodes
@@ -121,8 +112,9 @@ class slurm_sm(object):
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname)
+
         else:
-            raise Exception
+            raise ValueError()
 
         subprocess.call(args, shell=1)
 
@@ -136,3 +128,22 @@ class slurm_sm(object):
 
     def mpiargs(self):
         return 'mpirun -np %d '%PAR.NPROC
+
+
+    ### utility functions
+
+    def save_kwargs(self, classname, funcname, kwargs):
+        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
+        kwargsfile = join(kwargspath, funcname+'.p')
+        unix.mkdir(kwargspath)
+        saveobj(kwargsfile, kwargs)
+
+    def save_objects(self):
+        OBJ.save(join(PATH.OUTPUT, 'SeisflowsObjects'))
+
+    def save_parameters(self):
+        PAR.save('SeisflowsParameters.json')
+
+    def save_paths(self):
+        PATH.save('SeisflowsPaths.json')
+
