@@ -200,10 +200,8 @@ class inversion(object):
         """ Evaluates trial model and checks line search status
 
           Evaluates trial model by calling evalute_function, which results in
-          a forward simulation.  
-
-          After that, queries line search status and keeps track of which trial
-          model is the best so far.
+          a forward simulation. After that, queries line search status and keeps
+          track of which trial model is the best so far.
         """
         if PAR.VERBOSE:
             print " trial step", optimize.step
@@ -226,7 +224,6 @@ class inversion(object):
         """
         self.prepare_model(path=PATH.FUNC, suffix='try')
 
-        # forward simulation
         system.run('solver', 'eval_func',
                    hosts='all',
                    path=PATH.FUNC)
