@@ -126,9 +126,7 @@ class slurm_lg(object):
         elif hosts == 'head':
             args = ('--array=%d-%d ' % (0,0)
                    +'--output=%s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%j'))
-            #args = ('--export=SEISFLOWS_TASK_ID=%s ' % 0
-            #       +'--get-user-env '
-            #       +'--output=%s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%j'))
+                   #+('--export=SEISFLOWS_TASK_ID=%s ' % 0
 
         args = ('sbatch '
                 + '--job-name=%s ' % PAR.TITLE

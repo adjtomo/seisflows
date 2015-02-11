@@ -23,10 +23,10 @@ class base(object):
             setattr(PAR, 'MISFIT', 'wav')
 
         if 'FORMAT' not in PAR:
-            raise Exception
+            raise ParameterError(PAR, 'FORMAT')
 
         if 'CHANNELS' not in PAR:
-            raise Exception
+            raise ParameterError(PAR, 'CHANNELS')
 
         if 'NORMALIZE' not in PAR:
             setattr(PAR, 'NORMALIZE', True)
@@ -79,9 +79,9 @@ class base(object):
         d = self.apply(self.process_traces, [d], [h])
         s = self.apply(self.process_traces, [s], [h])
 
-        self.apply(self.write_residuals, [s, d], [h], inplace=False)
-
+        r = self.apply(self.write_residuals, [s, d], [h], inplace=False)
         s = self.apply(self.generate_adjoint_traces, [s, d], [h])
+
         self.save(s, h, prefix='traces/adj/')
 
 

@@ -113,9 +113,6 @@ class slurm_sm(object):
                     + classname + ' '
                     + funcname)
 
-        else:
-            raise ValueError()
-
         subprocess.call(args, shell=1)
 
 
