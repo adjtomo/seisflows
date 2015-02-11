@@ -8,12 +8,12 @@ import system
 import solver
 
 
-class forward_modeling(object):
-    """ Forward modeling base class
+class test_solver(object):
+    """ Tests solver by running forward simulation
     """
 
     def check(self):
-        """ Checks parameters, paths, and dependencies
+        """ Checks parameters and paths
         """
 
         # check paths
@@ -23,20 +23,11 @@ class forward_modeling(object):
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
 
-        # check input settings
         if 'MODEL' not in PATH:
             raise Exception
 
-        # check output settings
         if 'OUTPUT' not in PATH:
             raise Exception
-
-        # check dependencies
-        if 'solver' not in OBJ:
-            raise Exception("Undefined Exception")
-
-        if 'system' not in OBJ:
-            raise Exception("Undefined Exception")
 
 
     def main(self):
