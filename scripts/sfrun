@@ -1,42 +1,52 @@
 #!/usr/bin/env python
 
-from seisflows.tools.config import loadclass, loadvars, ConfigObj, ParameterObj
+from seisflows.tools.config import loadclass, loadvars, ConfigObj, \
+    ParameterObj, ParameterError
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 OBJ = ConfigObj('SeisflowsObjects')
 
+register = OBJ.register
+
 
 if __name__ == '__main__':
-    """ Loads and checks parameters and objects and submits SeisFlows workflow
+     """ First, loads parameters and paths from the current working directory.
+
+      Second, loads the following seisflows objects: system, preprocess, 
+      solver, postprocess, optimize, worfklow.  This list is effectively
+      hardcoded; changing the names of seisflows objects or the order in which
+      objects are loaded can result in circular imports or other errors.
+
+      Third, peforms parameter checking.
+
+      Fourth, executes workflow.main via system.submit
     """
 
-    # load parameters from working directory
+    # load parameters and paths from working directory
     PAR.update(loadvars('parameters', '.'))
     PATH.update(loadvars('paths', '.'))
 
-    # check parameters
     if 'SYSTEM' not in PAR:
-        raise Exception
+        raise ParameterError(PAR, 'SYSTEM')
 
     if 'PREPROCESS' not in PAR:
-        setattr(PAR, 'PREPROCESS', 'default')
-
-    if 'POSTPROCESS' not in PAR:
-        setattr(PAR, 'POSTPROCESS', 'default')
+        raise ParameterError(PAR, 'PREPROCESS')
 
     if 'SOLVER' not in PAR:
-        raise Exception
+        raise ParameterError(PAR, 'SOLVER')
+
+    if 'POSTPROCESS' not in PAR:
+        raise ParameterError(PAR, 'POSTPROCESS')
 
     if 'OPTIMIZE' not in PAR:
-        setattr(PAR, 'OPTIMIZE', 'default')
+        raise ParameterError(PAR, 'OPTIMIZE')
 
     if 'WORKFLOW' not in PAR:
-        raise Exception
+        raise ParameterError(PAR, 'WORKFLOW')
 
-    register = OBJ.register
 
-    # load objects
+    # load seisflows objects
     system = loadclass('system', PAR.SYSTEM)()
     register('system', system)
 
@@ -55,7 +65,8 @@ if __name__ == '__main__':
     workflow = loadclass('workflow', PAR.WORKFLOW)()
     register('workflow', workflow)
 
-    # check objects
+
+    # carry out parameter checks
     system.check()
     workflow.check()
     solver.check()
@@ -63,6 +74,7 @@ if __name__ == '__main__':
     preprocess.check()
     postprocess.check()
 
-    # submit job
+
+    # submit "workflow" via "system"
     system.submit(workflow)
 
