@@ -23,38 +23,36 @@ import preprocess
 
 
 class base(object):
-    """ Base class for SPECFEM3D and SPECFEM3D_GLOBE
+    """ Base class for SPECFEM2D, SPECFEM3D and SPECFEM3D_GLOBE
 
       eval_func, eval_grad, apply_hess
         These methods deal with evaluation of the misfit function or its
-        derivatives and provide the primary interface between the solver and
-        other workflow components.
+        derivatives.  Together, they provide the primary interface through which
+        workflow methods interact with the solver.
 
       forward, adjoint, generate_data, generate_mesh
-        These methods allow direct access to individual SPECFEM3D components.
-        Together, they provide a secondary interface users can employ for
-        specialized tasks not covered by high level methods.
+        These methods allow direct access to low-level SPECFEM components,
+        providing another interface through which to interact with the solver.
 
      initialize_solver_directories, initialize_adjoint_traces, initialize_io_machinery
-        SPECFEM3D requires a particular directory structure in which to run and
+        SPECFEM requires a particular directory structure in which to run and
         particular file formats for models, data, and parameter files. These
         methods help put in place all these prerequisites.
 
       load, save
-        For reading and writing SPECFEM3D models and kernels. On the disk,
+        For reading and writing SPECFEM models and kernels. On the disk,
         models and kernels are stored as binary files, and in memory, as
         dictionaries with different keys corresponding to different material
         parameters.
 
       split, merge
-        In the solver routines, it is possible to store models as dictionaries,
-        but for the optimization routines, it is necessary to merge all model
-        values together into a single vector. Two methods, 'split' and 'merge',
-        are used to convert back and forth between these two representations.
+        Within the solver routines, it is natural to store models as 
+        dictionaries. Within the optimization routines, it is natural to store
+        models as vectors. Two methods, 'split' and 'merge', are used to convert 
+        back and forth between these two representations.
 
       combine, smooth
-        Utilities for combining and smoothing kernels, meant to be called from
-        external postprocessing routines.
+        Utilities for combining and smoothing kernels.
     """
 
     # model parameters
@@ -77,6 +75,7 @@ class base(object):
     def check(self):
         """ Checks parameters and paths
         """
+        # check scratch paths
         if 'GLOBAL' not in PATH:
             raise ParameterError(PATH, 'GLOBAL')
 
@@ -94,9 +93,8 @@ class base(object):
         """ Prepares solver for inversion or migration
 
           As input for an inversion or migration, users can choose between
-          supplying data or providing a target model from which data are
-          generated on the fly. In both cases, all necessary SPECFEM input
-          files must be provided.
+          supplying data, or providing a target model from which data are
+          generated on the fly.
         """
         unix.rm(self.getpath)
 

@@ -22,39 +22,10 @@ import system
 import preprocess
 
 
-class specfem2d(object):
+class specfem2d(loadclass('solver', 'base')):
     """ Python interface for SPECFEM2D
 
-      eval_func, eval_grad, apply_hess
-        These methods deal with evaluation of the misfit function or its
-        derivatives and provide the primary interface between the solver and
-        other workflow components.
-
-      forward, adjoint
-        These methods allow direct access to individual SPECFEM2D components.
-        Together, they provide a secondary interface users can employ for
-        specialized tasks not covered by high level methods.
-
-      prepare_solver, prepare_data, prepare_model
-        SPECFEM2D requires a particular directory structure in which to run and
-        particular file formats for models, data, and parameter files. These
-        methods help put in place all these prerequisites.
-
-      load, save
-        For reading and writing SPECFEM2D models and kernels. On the disk,
-        models and kernels are stored as binary files, and in memory, as
-        dictionaries with different keys corresponding to different material
-        parameters.
-
-      split, merge
-        In the solver routines, it is possible to store models as dictionaries,
-        but for the optimization routines, it is necessary to merge all model
-        values together into a single vector. Two methods, 'split' and 'merge',
-        are used to convert back and forth between these two representations.
-
-      combine, smooth
-        Utilities for combining and smoothing kernels, meant to be called from
-        external postprocessing routines.
+      See base class for method descriptions
     """
 
     # model parameters
