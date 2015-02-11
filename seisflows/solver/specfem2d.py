@@ -46,6 +46,8 @@ class specfem2d(loadclass('solver', 'base')):
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
+        super(specfem2d, self).check()
+
         # check time stepping parameters
         if 'NT' not in PAR:
             raise Exception

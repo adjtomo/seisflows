@@ -55,6 +55,14 @@ class specfem3d(loadclass('solver', 'base')):
         if 'F0' not in PAR:
             raise Exception
 
+        # check solver executables directory
+        if 'SPECFEM3D_BIN' not in PATH:
+            pass #raise Exception
+
+        # check solver input files directory
+       if 'SPECFEM3D_DATA' not in PATH:
+           pass #raise Exception
+
 
     def generate_data(self, **model_kwargs):
         """ Generates data
@@ -149,6 +157,4 @@ class specfem3d(loadclass('solver', 'base')):
     @property
     def source_prefix(self):
         return 'FORCESOLUTION'
-
-
 

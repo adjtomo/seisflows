@@ -73,6 +73,14 @@ class specfem3d_globe(loadclass('solver', 'base')):
         """
         super(specfem3d_globe, self).check()
 
+        # check solver executables directory
+        if 'SPECFEM3D_GLOBE_BIN' not in PATH:
+            pass #raise Exception
+
+        # check solver input files directory
+       if 'SPECFEM3D_GLOBE_DATA' not in PATH:
+           pass #raise Exception
+
 
     def generate_data(self, **model_kwargs):
         """ Generates data
