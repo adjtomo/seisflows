@@ -27,13 +27,13 @@ class migration(object):
 
         # check paths
         if 'GLOBAL' not in PATH:
-            raise Exception
+            raise ParameterError(PATH, 'GLOBAL')
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
 
         if 'OUTPUT' not in PATH:
-            raise Exception
+            raise ParameterError(PATH, 'OUTPUT')
 
         # check input
         if 'DATA' not in PATH:
@@ -43,7 +43,7 @@ class migration(object):
             assert 'MODEL_TRUE' in PATH
 
         if 'MODEL_INIT' not in PATH:
-            raise Exception
+            raise ParameterError(PATH, 'MODEL_INIT')
 
         # check output
         if 'SAVEGRADIENT' not in PAR:

@@ -37,8 +37,8 @@ class inversion(object):
       are abstracted through the 'system' interface so that the code can be
       easily ported.
 
-      For assistance using this package, please browse comments or email
-      rmodrak -at- princeton -dot- edu
+      For assistance using this package, please view online documentation, 
+      browse comments, or email rmodrak -at- princeton -dot- edu
     """
 
     def check(self):
@@ -47,17 +47,17 @@ class inversion(object):
 
         # check parameters
         if 'BEGIN' not in PAR:
-            raise Exception
+            raise ParameterError(PAR, 'BEGIN')
 
         if 'END' not in PAR:
-            raise Exception
+            raise ParameterError(PAR, 'END')
 
         if 'VERBOSE' not in PAR:
             setattr(PAR, 'VERBOSE', 1)
 
         # check paths
         if 'GLOBAL' not in PATH:
-            raise Exception
+            raise ParameterError(PATH, 'GLOBAL')
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
@@ -82,11 +82,11 @@ class inversion(object):
             assert 'MODEL_TRUE' in PATH
 
         if 'MODEL_INIT' not in PATH:
-            raise Exception
+            raise ParameterError(PATH, 'MODEL_INIT')
 
         # output settings
         if 'OUTPUT' not in PATH:
-            raise Exception
+            raise ParameterError(PATH, 'OUTPUT')
 
         if 'SAVEMODEL' not in PAR:
             setattr(PAR, 'SAVEMODEL', 1)
