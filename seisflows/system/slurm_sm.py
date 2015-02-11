@@ -79,11 +79,11 @@ class slurm_sm(object):
         # submit workflow
         args = ('sbatch '
                 + '--job-name=%s '%PAR.TITLE
-                + '--output=%s '%(PATH.SUBMIT + '/' + 'output.log')
+                + '--output=%s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '--cpus-per-task=%d '%PAR.NPROC
                 + '--ntasks=%d '%PAR.NTASK
                 + '--time=%d '%PAR.WALLTIME
-                + findpath('system') + '/' + 'slurm/wrapper_sbatch '
+                + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
                 + PATH.OUTPUT)
 
         subprocess.call(args, shell=1)

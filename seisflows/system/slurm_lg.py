@@ -45,19 +45,19 @@ class slurm_lg(object):
             setattr(PAR, 'STEPTIME', 30.)
 
         if 'SLEEPTIME' not in PAR:
-            PAR.SLEEPTIME = 1.
+            setattr(PAR, 'SLEEPTIME', 1.)
 
         if 'VERBOSE' not in PAR:
             setattr(PAR, 'VERBOSE', 1)
+
+        if 'NTASK' not in PAR:
+            raise ParameterError(PAR, 'NTASK')
 
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
         if 'NPROC_PER_NODE' not in PAR:
             raise ParameterError(PAR, 'NPROC_PER_NODE')
-
-        if 'NTASK' not in PAR:
-            raise ParameterError(PAR, 'NTASK')
 
         # check paths
         if 'GLOBAL' not in PATH:
@@ -104,7 +104,6 @@ class slurm_lg(object):
         """  Runs tasks in serial or parallel on specified hosts.
         """
         self.save_objects()
-
         self.save_kwargs(classname, funcname, kwargs)
         jobs = self.launch(classname, funcname, hosts)
         while 1:
