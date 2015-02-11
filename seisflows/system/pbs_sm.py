@@ -39,11 +39,14 @@ class pbs_sm(object):
         if 'VERBOSE' not in PAR:
             setattr(PAR, 'VERBOSE', 1)
 
+        if 'NTASK' not in PAR:
+            raise ParameterError(PAR, 'NTASK')
+
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
-        if 'NTASK' not in PAR:
-            raise ParameterError(PAR, 'NTASK')
+        if 'NPROC_PER_NODE' not in PAR:
+            raise ParameterError(PAR, 'NPROC_PER_NODE')
 
         # check paths
         if 'GLOBAL' not in PATH:
@@ -69,16 +72,15 @@ class pbs_sm(object):
         unix.cd(PATH.OUTPUT)
 
         # save current state
-        save_objects('SeisflowsObjects')
-        save_parameters('SeisflowsParameters.json')
-        save_paths('SeisflowsPaths.json')
-
-        nodes = PAR.NTASK/16
-        cores = PAR.NTASK%16
-        hours = PAR.WALLTIME/60
-        minutes = PAR.WALLTIME%60
+        self.save_objects()
+        self.save_parameters()
+        self.save_paths()
 
         # construct resource list
+        nodes = PAR.NTASK/PAR.NPROC_PER_NODE
+        cores = PAR.NTASK%PAR.NPROC_PER_NODE
+        hours = PAR.WALLTIME/60
+        minutes = PAR.WALLTIME%60
         resources = 'walltime=%02d:%02d:00 '%(hours, minutes)
         if nodes == 0:
             resources += ',nodes=1:ppn=%d'%cores
@@ -87,14 +89,14 @@ class pbs_sm(object):
         else:
             resources += ',nodes=%d:ppn=16+1:ppn=%d'%(nodes, cores)
 
+        # construct arguments list
         args = ('qsub '
                 + '-N %s '%PAR.TITLE
-                + '-o %s '%(PATH.SUBMIT + '/' + 'output.log')
+                + '-o %s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '-l %s '%resources
                 + '-j %s '%'oe'
-                + findpath('system') + '/' + 'pbs/wrapper_qsub '
+                + findpath('system') +'/'+ 'pbs/wrapper_qsub '
                 + PATH.OUTPUT)
-        print args  # DEBUG
 
         subprocess.call(args, shell=1)
 
@@ -102,37 +104,25 @@ class pbs_sm(object):
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
         """
-        name = task.__name__
-
-        if PAR.VERBOSE >= 2:
-            print 'running', name
-
-        # save current state
-        save_objects(join(PATH.OUTPUT, 'SeisflowsObjects'))
-
-        # save keyword arguments
-        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects',
-                          classname + '_kwargs')
-        kwargsfile = join(kwargspath, funcname + '.p')
-        unix.mkdir(kwargspath)
-        saveobj(kwargsfile, kwargs)
+        self.save_objects()
+        self.save_kwargs(classname, funcname, kwargs)
 
         if hosts == 'all':
-            # run on all available nodes
-            args = ('pbsdsh '
-                    + findpath('system') + '/' + 'pbs/wrapper_pbsdsh '
-                    + PATH.OUTPUT + ' '
-                    + classname + ' '
-                    + funcname)
+            myscript = 'pbs/wrapper_pbsdsh '
+
         elif hosts == 'head':
-            # run on head node
-            args = ('pbsdsh '
-                    + findpath('system') + '/' + 'slurm/wrapper_pbsdsh '
-                    + PATH.OUTPUT + ' '
-                    + classname + ' '
-                    + funcname)
+            myscript = 'pbs/wrapper_pbsdsh_head '
+
         else:
-            raise Exception
+            raise ValueError
+
+        # construct arguments list
+        args = ('pbsdsh ' 
+                + findpath('system') +'/'+ myscript + ' '
+                + PATH.OUTPUT + ' '
+                + classname + ' '
+                + funcname  + ' '
+                + findpath('seisflows'))
 
         subprocess.call(args, shell=1)
 
@@ -144,3 +134,22 @@ class pbs_sm(object):
 
     def mpiargs(self):
         return 'mpirun -np %d '%PAR.NPROC
+
+
+    ### utility functions
+
+    def save_kwargs(self, classname, funcname, kwargs):
+        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
+        kwargsfile = join(kwargspath, funcname+'.p')
+        unix.mkdir(kwargspath)
+        saveobj(kwargsfile, kwargs)
+
+    def save_objects(self):
+        OBJ.save(join(PATH.OUTPUT, 'SeisflowsObjects'))
+
+    def save_parameters(self):
+        PAR.save('SeisflowsParameters.json')
+
+    def save_paths(self):
+        PATH.save('SeisflowsPaths.json')
+
