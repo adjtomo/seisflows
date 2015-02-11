@@ -45,12 +45,6 @@ class base(object):
         if 'BANDPASS' not in PAR:
             setattr(PAR, 'BANDPASS', False)
 
-        if 'HIGHPASS' not in PAR:
-            setattr(PAR, 'HIGHPASS', False)
-
-        if 'LOWPASS' not in PAR:
-            setattr(PAR, 'LOWPASS', False)
-
         if 'FREQLO' not in PAR:
             setattr(PAR, 'FREQLO', 0.)
 
@@ -100,7 +94,7 @@ class base(object):
                 s = slowpass(s, h, PAR.FREQHI)
 
             else:
-                raise ValueError
+                raise ParameterError(PAR, 'BANDPASS')
 
         # mute direct arrival
         if PAR.MUTE == 1:
