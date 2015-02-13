@@ -107,53 +107,6 @@ class specfem2d(loadclass('solver', 'base')):
         self.mpirun('bin/xspecfem2D')
 
 
-    ### input/output method
-
-    def split(self, v):
-        """ Converts model from vector to dictionary representation
-
-            The following code works on isotropic acoustic and elastic models.
-            For code that works on transversely isotropic models, see 
-            solver.specfem3d_globe.
-
-            There is a large tradeoff here between being simple and being 
-            flexible.  In this case we opt for a simple hardwired approach. For
-            a much more flexible approach, see seisflows-research.
-        """
-        nproc = PAR.NPROC
-        ndim = len(self.parameters)
-        npts = len(v)/(nproc*ndim)
-        path = PATH.OUTPUT +'/'+ 'model_init'
-
-        idim = 0
-        model = {}
-        if 'vp' in self.parameters:
-            model['vp'] = splitvec(v, nproc, npts, idim)
-            idim += 1
-        else:
-            model['vp'] = loadbyproc(path, 'vp', nproc)
-
-        if 'vs' in self.parameters:
-            model['vs'] = splitvec(v, nproc, npts, idim)
-            idim += 1
-        else:
-            model['vs'] = loadbyproc(path, 'vs', nproc)
-
-        if 'rho' in self.parameters:
-            model['rho'] = splitvec(v, nproc, npts, idim)
-            idim += 1
-        elif self.density_scaling:
-            raise NotImplementedError
-        else:
-            model['rho'] = loadbyproc(path, 'rho', nproc)
-
-        model['x'] = loadbyproc(path, 'x', nproc)
-        model['z'] = loadbyproc(path, 'z', nproc)
-
-        return model
-
-
-
     ### model input/output
 
     def load(self, filename, mapping=None, suffix='', verbose=False):
@@ -177,23 +130,24 @@ class specfem2d(loadclass('solver', 'base')):
             raise Exception('Bad SPECFEM2D model or kernel.')
 
         # fill in dictionary
-        parts = {}
+        model = {}
         for key in ['x', 'z', 'rho', 'vp', 'vs']:
-            parts[key] = [M[:,ioff]]
+            model[key] = [M[:,ioff]]
             ioff += 1
-        return parts
+        return model
 
 
-    def save(self, filename, parts, type='model'):
-        """writes SPECFEM2D kernel or model"""
+    def save(self, filename, model, type='model'):
+        """ writes SPECFEM2D kernel or model
+        """
         # allocate array
         if type == 'model':
-            nrow = len(parts[parts.keys().pop()][0])
+            nrow = len(model[model.keys().pop()][0])
             ncol = 6
             ioff = 1
             M = np.zeros((nrow, ncol))
         elif type == 'kernel':
-            nrow = len(parts[parts.keys().pop()][0])
+            nrow = len(model[model.keys().pop()][0])
             ncol = 5
             ioff = 0
             M = np.zeros((nrow, ncol))
@@ -202,7 +156,10 @@ class specfem2d(loadclass('solver', 'base')):
 
         # fill in array
         for icol, key in enumerate(('x', 'z', 'rho', 'vp', 'vs')):
-            M[:,icol+ioff] = parts[key][0]
+            if key in model.keys():
+                M[:,icol+ioff] = model[key][0]
+            else:
+                M[:,icol+ioff] = loadbyproc(PATH.MODEL_INIT, key)
 
         # write array
         np.savetxt(filename, M, '%16.10e')
@@ -212,14 +169,17 @@ class specfem2d(loadclass('solver', 'base')):
     ### postprocessing utilities
 
     def combine(self, path=''):
-        """combines SPECFEM2D kernels"""
+        """ Combines SPECFEM2D kernels
+        """
         subprocess.call(
             [self.getpath +'/'+ 'bin/xsmooth_sem'] +
             [str(len(unix.ls(path)))] +
             [path])
 
+
     def smooth(self, path='', tag='gradient', span=0.):
-        """smooths SPECFEM2D kernels by convolving them with a Gaussian"""
+        """ Smooths SPECFEM2D kernels by convolving them with a Gaussian
+        """
         from seisflows.tools.array import meshsmooth
 
         parts = self.load(path +'/'+ tag)
@@ -378,7 +338,7 @@ class specfem2d(loadclass('solver', 'base')):
         return 'SOURCE'
 
 
-def loadbyproc(filename, key, nproc):
+def loadbyproc(filename, key, nproc=None):
     # read text file
     M = np.loadtxt(filename)
     nrow = M.shape[0]
@@ -392,15 +352,15 @@ def loadbyproc(filename, key, nproc):
         raise Exception('Bad SPECFEM2D model or kernel.')
 
     if key == 'x':
-        return [M[:, ioff+0]]
+        return M[:, ioff+0]
     elif key == 'z':
-        return [M[:, ioff+1]]
+        return M[:, ioff+1]
     elif key == 'rho':
-        return [M[:, ioff+2]]
+        return M[:, ioff+2]
     elif key == 'vp':
-        return [M[:, ioff+3]]
+        return M[:, ioff+3]
     elif key == 'vs':
-        return [M[:, ioff+4]]
+        return M[:, ioff+4]
 
 
 

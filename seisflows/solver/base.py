@@ -6,8 +6,9 @@ from os.path import join
 import numpy as np
 
 import seisflows.seistools.specfem3d as solvertools
-from seisflows.seistools.io import load, loadbyproc, savebin, applymap, splitvec
 from seisflows.seistools.shared import getpar, setpar
+from seisflows.seistools.io import loadbypar, loadbyproc, copybin, savebin, \
+    applymap, splitvec, ModelStruct, MinmaxStruct
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
@@ -64,6 +65,9 @@ class base(object):
     def check(self):
         """ Checks parameters and paths
         """
+        if 'NPROC' not in PAR:
+            raise ParameterError(PAR, 'NPROC')
+
         # check scratch paths
         if 'GLOBAL' not in PATH:
             raise ParameterError(PATH, 'GLOBAL')
@@ -195,19 +199,67 @@ class base(object):
 
           Models are stored in Fortran binary format and separated into multiple
           files according to material parameter and processor rank.
+
+          Optionally, 'mapping' can be used to convert on the fly from one set
+          of material parameters to another.
         """
-        model = load(path, self.parameters, PAR.NPROC, mapping, suffix, verbose, PATH.SUBMIT)
+        parameters = self.parameters
+        model = ModelStruct(parameters, mapping)
+        minmax = MinmaxStruct(parameters, mapping)
+
+        for iproc in range(PAR.NPROC):
+            keys, vals = loadbypar(path, parameters, iproc, suffix)
+
+            # keep track of min, max
+            minmax.update(keys, vals)
+
+            # apply optional mapping
+            if mapping:
+                keys, vals = applymap(vals, mapping)
+
+            # append latest values
+            for key, val in zip(keys, vals):
+                model[key] += [val]
+
+        if verbose:
+            minmax.write(path, logpath=PATH.SUBMIT)
+
         return model
 
 
     def save(self, path, model):
-        """ writes SPECFEM3D model
+        """ writes SPECFEM model
+
+            The following code writes SPECFEM acoustic and elastic models.
+            For code that writes transversely isotropic models, see 
+            solver.specfem3d_globe.
+
+            There is a large tradeoff here between being simple and being 
+            flexible.  In this case we opt for a simple hardwired approach. For
+            a much more flexible approach, see seisflows-research.
         """
         unix.mkdir(path)
 
-        for key in self.parameters:
-            for iproc in range(PAR.NPROC):
-                savebin(model[key][iproc], path, iproc, key)
+        src = PATH.OUTPUT +'/'+ 'model_init'
+        dst = path
+
+        for iproc in range(PAR.NPROC):
+            if 'vp' in self.parameters:
+                savebin(model['vp'][iproc], path, iproc, 'vp')
+            else:
+                copybin(src, dst, iproc, 'vp')
+
+            if 'vs' in self.parameters:
+                savebin(model['vs'][iproc], path, iproc, 'vs')
+            else:
+                copybin(src, dst, iproc, 'vp')
+
+            if 'rho' in self.parameters:
+                savebin(model['rho'][iproc], path, iproc, 'rho')
+            elif self.density_scaling:
+                raise NotImplementedError
+            else:
+                copybin(src, dst, iproc, 'rho')
 
 
     ### vector/dictionary conversion
@@ -224,42 +276,15 @@ class base(object):
 
     def split(self, v):
         """ Converts model from vector to dictionary representation
-
-            The following code works on SPECFEM3D acoustic and elastic models.
-            For code that works on transversely isotropic models, see 
-            solver.specfem3d_globe.
-
-            There is a large tradeoff here between being simple and being 
-            flexible.  In this case we opt for a simple hardwired approach. For
-            a much more flexible approach, see seisflows-research.
         """
         nproc = PAR.NPROC
         ndim = len(self.parameters)
         npts = len(v)/(nproc*ndim)
-        path = PATH.OUTPUT +'/'+ 'model_init'
 
         idim = 0
         model = {}
-        if 'vp' in self.parameters:
-            model['vp'] = splitvec(v, nproc, npts, idim)
-            idim += 1
-        else:
-            model['vp'] = loadbyproc(path, 'vp', nproc)
-
-        if 'vs' in self.parameters:
-            model['vs'] = splitvec(v, nproc, npts, idim)
-            idim += 1
-        else:
-            model['vs'] = loadbyproc(path, 'vs', nproc)
-
-        if 'rho' in self.parameters:
-            model['rho'] = splitvec(v, nproc, npts, idim)
-            idim += 1
-        elif self.density_scaling:
-            raise NotImplementedError
-        else:
-            model['rho'] = loadbyproc(path, 'rho', nproc)
-
+        for key in self.parameters:
+            model[key] = splitvec(v, nproc, npts, idim)
         return model
 
 

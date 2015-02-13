@@ -1,40 +1,8 @@
 
+from shutil import copyfile
 from os.path import abspath, join
 
 import numpy as np
-
-
-def load(path, parameters, nproc, mapping=None, suffix='', verbose=False, logpath='.'):
-    """ reads SPECFEM model
-
-      Models are stored in Fortran binary format and separated into multiple
-      files according to material parameter and processor rank.
-
-      Optionally, 'mapping' can be used to convert on the fly from one set of
-      material parameters to another.
-    """
-    model = ModelStruct(parameters, mapping)
-    minmax = MinmaxStruct(parameters, mapping)
-    verbose = True
-
-    for iproc in range(nproc):
-        keys, vals = loadbypar(path, parameters, iproc, suffix)
-
-        # keep track of min, max
-        minmax.update(keys, vals)
-
-        # apply optional mapping
-        if mapping:
-            keys, vals = _apply(vals, mapping)
-
-        # append latest values
-        for key, val in zip(keys, vals):
-            model[key] += [val]
-
-    if verbose:
-        minmax.write(path, logpath)
-
-    return model
 
 
 def loadbypar(path, parameters, iproc, suffix=''):
