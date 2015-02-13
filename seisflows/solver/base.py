@@ -6,14 +6,13 @@ from os.path import join
 import numpy as np
 
 import seisflows.seistools.specfem3d as solvertools
-from seisflows.seistools.io import load
+from seisflows.seistools.io import load, loadbyproc, savebin, applymap, splitvec
 from seisflows.seistools.shared import getpar, setpar
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists, setdiff
+from seisflows.tools.code import exists
 from seisflows.tools.config import findpath, ParameterObj
-from seisflows.tools.io import loadbin, savebin
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
@@ -55,21 +54,11 @@ class base(object):
         Utilities for combining and smoothing kernels.
     """
 
-    # model parameters
-    model_parameters = []
-    model_parameters += ['rho']
-    model_parameters += ['vp']
-    model_parameters += ['vs']
+    parameters = []
+    parameters += ['vp']
+    parameters += ['vs']
 
-    # inversion parameters
-    inversion_parameters = []
-    inversion_parameters += ['vp']
-    inversion_parameters += ['vs']
-
-    kernel_map = {
-        'rho': 'rho_kernel',
-        'vp': 'alpha_kernel',
-        'vs': 'beta_kernel'}
+    density_scaling = None
 
 
     def check(self):
@@ -91,14 +80,13 @@ class base(object):
 
     def setup(self):
         """ Prepares solver for inversion or migration
-
-          As input for an inversion or migration, users can choose between
-          supplying data, or providing a target model from which data are
-          generated on the fly.
         """
         unix.rm(self.getpath)
 
-        # prepare data
+        # As input for an inversion or migration, users can choose between
+        # providing data, or providing a target model from which data are
+        # generated on the fly. In the former case, a value for PATH.DATA must
+        # be provided, and in the latter case, a value for PATH.MODEL_TRUE
         if PATH.DATA:
             self.initialize_solver_directories()
             src = glob(PATH.DATA +'/'+ self.getname +'/'+ '*')
@@ -140,7 +128,7 @@ class base(object):
 
     def eval_func(self, path='', export_traces=False):
         """ Evaluates misfit function by carrying out forward simulation and
-            making measurements on observations and synthetics.
+            comparing observations and synthetics.
         """
         unix.cd(self.getpath)
         self.import_model(path)
@@ -156,7 +144,7 @@ class base(object):
 
     def eval_grad(self, path='', export_traces=False):
         """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
-            must be in place prior to calling this method.
+            must be in place beforehand.
         """
         unix.cd(self.getpath)
 
@@ -164,7 +152,7 @@ class base(object):
 
         self.export_kernels(path)
         if export_traces:
-            self.export_traces(path, prefix='traces/syn')
+            self.export_traces(path, prefix='traces/adj')
 
 
     def apply_hess(self, path=''):
@@ -202,77 +190,84 @@ class base(object):
 
     ### model input/output
 
-    def load(self, dirname, type='model', verbose=False):
-        """ reads model
+    def load(self, path, mapping=None, suffix='', verbose=False):
+        """ reads SPECFEM model
+
+          Models are stored in Fortran binary format and separated into multiple
+          files according to material parameter and processor rank.
         """
-        if type == 'model':
-            mapping = lambda key: key
-        elif type == 'kernel':
-            mapping = lambda key: self.kernel_map[key]
-        else:
-            raise ValueError
-
-        if verbose:
-            logfile = PATH.SUBMIT +'/'+ 'output.minmax'
-        else:
-            logfile = None
-
-        return load(dirname, self.model_parameters, mapping, PAR.NPROC, logfile)
+        model = load(path, self.parameters, PAR.NPROC, mapping, suffix, verbose, PATH.SUBMIT)
+        return model
 
 
-    def save(self, dirname, parts):
+    def save(self, path, model):
         """ writes SPECFEM3D model
         """
-        unix.mkdir(dirname)
+        unix.mkdir(path)
 
-        # write database files
-        for key in self.model_parameters:
-            nn = len(parts[key])
-            for ii in range(nn):
-                filename = 'proc%06d_%s.bin' % (ii, key)
-                savebin(parts[key][ii], join(dirname, filename))
+        for key in self.parameters:
+            for iproc in range(PAR.NPROC):
+                savebin(model[key][iproc], path, iproc, key)
 
 
     ### vector/dictionary conversion
 
-    def merge(self, parts):
-        """ merges dictionary into vector
+    def merge(self, model):
+        """ Converts model from dictionary to vector representation
         """
         v = np.array([])
-        for key in self.inversion_parameters:
+        for key in self.parameters:
             for iproc in range(PAR.NPROC):
-                v = np.append(v, parts[key][iproc])
+                v = np.append(v, model[key][iproc])
         return v
 
 
     def split(self, v):
-        """ splits vector into dictionary
+        """ Converts model from vector to dictionary representation
+
+            The following code works on SPECFEM3D acoustic and elastic models.
+            For code that works on transversely isotropic models, see 
+            solver.specfem3d_globe.
+
+            There is a large tradeoff here between being simple and being 
+            flexible.  In this case we opt for a simple hardwired approach. For
+            a much more flexible approach, see seisflows-research.
         """
-        parts = {}
-        nrow = len(v)/(PAR.NPROC*len(self.inversion_parameters))
-        j = 0
-        for key in self.model_parameters:
-            parts[key] = []
-            if key in self.inversion_parameters:
-                for i in range(PAR.NPROC):
-                    imin = nrow*PAR.NPROC*j + nrow*i
-                    imax = nrow*PAR.NPROC*j + nrow*(i + 1)
-                    i += 1
-                    parts[key].append(v[imin:imax])
-                j += 1
-            else:
-                for i in range(PAR.NPROC):
-                    proc = '%06d' % i
-                    parts[key].append(
-                        np.load(PATH.GLOBAL +'/'+ 'mesh' +'/'+ key +'/'+ proc))
-        return parts
+        nproc = PAR.NPROC
+        ndim = len(self.parameters)
+        npts = len(v)/(nproc*ndim)
+        path = PATH.OUTPUT +'/'+ 'model_init'
+
+        idim = 0
+        model = {}
+        if 'vp' in self.parameters:
+            model['vp'] = splitvec(v, nproc, npts, idim)
+            idim += 1
+        else:
+            model['vp'] = loadbyproc(path, 'vp', nproc)
+
+        if 'vs' in self.parameters:
+            model['vs'] = splitvec(v, nproc, npts, idim)
+            idim += 1
+        else:
+            model['vs'] = loadbyproc(path, 'vs', nproc)
+
+        if 'rho' in self.parameters:
+            model['rho'] = splitvec(v, nproc, npts, idim)
+            idim += 1
+        elif self.density_scaling:
+            raise NotImplementedError
+        else:
+            model['rho'] = loadbyproc(path, 'rho', nproc)
+
+        return model
 
 
 
     ### postprocessing utilities
 
     def combine(self, path=''):
-        """ combines SPECFEM3D kernels
+        """ Sums SPECFEM3D kernels by wrapping xsum_kernels utility
         """
         unix.cd(self.getpath)
 
@@ -303,40 +298,25 @@ class base(object):
         """
         unix.cd(self.getpath)
 
-        # list kernels
-        kernels = []
-        for name in self.model_parameters:
-            if name in self.inversion_parameters:
-                flag = True
-            else:
-                flag = False
-            kernels = kernels + [[name, flag]]
+        # apply smoothing operator
+        for name in self.parameters:
+            print ' smoothing', name
+            self.mpirun(
+                PATH.SOLVER_BINARIES +'/'+ 'xsmooth_sem '
+                + str(span) + ' '
+                + str(span) + ' '
+                + name + ' '
+                + path +'/'+ tag + '/ '
+                + path +'/'+ tag + '/ ')
 
-        # smooth kernels
-        for name, flag in kernels:
-            if flag:
-                print ' smoothing', name
-                self.mpirun(
-                    PATH.SOLVER_BINARIES +'/'+ 'xsmooth_sem '
-                    + str(span) + ' '
-                    + str(span) + ' '
-                    + name + ' '
-                    + path +'/'+ tag + '/ '
-                    + path +'/'+ tag + '/ ')
-
-        # move kernels
+        # remove old kernels
         src = path +'/'+ tag
         dst = path +'/'+ tag + '_nosmooth'
         unix.mkdir(dst)
-        for name, flag in kernels:
-            if flag:
-                unix.mv(glob(src+'/*'+name+'.bin'), dst)
-            else:
-                unix.cp(glob(src+'/*'+name+'.bin'), dst)
+        for name in self.parameters:
+            unix.mv(glob(src+'/*'+name+'.bin'), dst)
         unix.rename('_smooth', '', glob(src+'/*'))
         print ''
-
-        unix.cd(path)
 
 
 
@@ -358,26 +338,27 @@ class base(object):
 
     def export_model(self, path):
         if system.getnode() == 0:
-            for name in self.model_parameters:
-                src = glob(join(self.model_databases, '*_'+name+'.bin'))
-                dst = path
-                unix.mkdir(dst)
-                unix.cp(src, dst)
+            src = glob(join(self.model_databases, '*.bin'))
+            dst = path
+            unix.mkdir(dst)
+            unix.cp(src, dst)
 
     def export_kernels(self, path):
+        # workaround inconsistent conventions
+        if 'vp' in self.parameters:
+            files = glob(self.model_databases +'/'+ '*alpha_kernel.bin')
+            unix.rename('alpha_kernel', 'vp_kernel', files)
+
+        if 'vp' in self.parameters:
+            files = glob(self.model_databases +'/'+ '*beta_kernel.bin')
+            unix.rename('beta_kernel', 'vs_kernel', files)
+
+        # export kernels
         unix.mkdir_gpfs(join(path, 'kernels'))
         unix.mkdir(join(path, 'kernels', self.getname))
-        for name in self.kernel_map.values():
-            src = join(glob(self.model_databases  +'/'+ '*'+ name+'.bin'))
-            dst = join(path, 'kernels', self.getname)
-            unix.mv(src, dst)
-        try:
-            name = 'rhop_kernel'
-            src = join(glob(self.model_databases +'/'+ '*'+ name+'.bin'))
-            dst = join(path, 'kernels', self.getname)
-            unix.mv(src, dst)
-        except:
-            pass
+        src = join(glob(self.model_databases +'/'+ '*kernel.bin'))
+        dst = join(path, 'kernels', self.getname)
+        unix.mv(src, dst)
 
     def export_residuals(self, path):
         unix.mkdir_gpfs(join(path, 'residuals'))
@@ -428,11 +409,9 @@ class base(object):
 
 
     def initialize_adjoint_traces(self):
-        """ Adjoint traces must be initialized by writing zeros for all 
-          components. This is because when reading traces at the start of an
-          adjoint simulation, SPECFEM3D expects that all components exist.
-          Components actually in use during an inversion or migration will
-          be overwritten with nonzero values later on.
+        """ Adjoint traces are initialized by writing zeros for all components.
+            Components actually in use during an inversion or migration will be
+            overwritten with nonzero values later on.
         """
         _, h = preprocess.load('traces/obs')
         zeros = np.zeros((h.nt, h.nr))
@@ -444,23 +423,13 @@ class base(object):
         """ Writes mesh files expected by input/output methods
         """
         if system.getnode() == 0:
-            parts = self.load(PATH.MODEL_INIT)
-
-            path = PATH.GLOBAL +'/'+ 'mesh'
-            if not exists(path):
-                for key in self.model_parameters:
-                    if key not in self.inversion_parameters:
-                        unix.mkdir(path +'/'+ key)
-                        for proc in range(PAR.NPROC):
-                            with open(path +'/'+ key +'/'+ '%06d' % proc, 'w') as file:
-                                np.save(file, parts[key][proc])
-
+            model = self.load(PATH.MODEL_INIT)
             if 'OPTIMIZE' in PATH:
                 if not exists(PATH.OPTIMIZE +'/'+ 'm_new'):
-                    savenpy(PATH.OPTIMIZE +'/'+ 'm_new', self.merge(parts))
+                    savenpy(PATH.OPTIMIZE +'/'+ 'm_new', self.merge(model))
 
 
-    ### utility functions
+    ### miscellaneous
 
     def mpirun(self, script, output='/dev/null'):
         """ Wrapper for mpirun
