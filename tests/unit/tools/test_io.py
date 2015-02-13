@@ -108,21 +108,5 @@ class TestOutputWriter(unittest.TestCase):
         pass
 
 
-class TestSaveLoadBin(unittest.TestCase):
-    def test_save_load(self):
-        # Create array of random values
-        values = [uniform(0, 1) for i in range(1, 100)]
-
-        tmp_file = NamedTemporaryFile(mode='wb', delete=False)
-        tmp_file.close()
-
-        # Calling functions to test
-        tools.savebin(values, tmp_file.name)
-        ret = tools.loadbin(tmp_file.name)
-
-        # Should raise un exception if not true:
-        np.testing.assert_array_almost_equal(values, ret, decimal=7)
-
-
 if __name__ == '__main__':
     unittest.main()
