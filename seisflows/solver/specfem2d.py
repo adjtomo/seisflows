@@ -7,12 +7,12 @@ import numpy as np
 
 import seisflows.seistools.specfem2d as solvertools
 from seisflows.seistools.shared import getpar, setpar
+from seisflows.seistools.io import splitvec
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists, setdiff
+from seisflows.tools.code import exists
 from seisflows.tools.config import findpath, loadclass, ParameterObj
-from seisflows.tools.io import loadbin, savebin
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
@@ -27,20 +27,11 @@ class specfem2d(loadclass('solver', 'base')):
       See base class for method descriptions
     """
 
-    # model parameters
-    model_parameters = []
-    model_parameters += ['rho']
-    model_parameters += ['vp']
-    model_parameters += ['vs']
+    parameters = []
+    parameters += ['vs']
 
-    # inversion parameters
-    inversion_parameters = []
-    inversion_parameters += ['vs']
+    density_scaling = None
 
-    kernel_map = {
-        'rho': 'rho_kernel',
-        'vp': 'alpha_kernel',
-        'vs': 'beta_kernel'}
 
     def check(self):
         """ Checks parameters, paths, and dependencies
@@ -116,10 +107,56 @@ class specfem2d(loadclass('solver', 'base')):
         self.mpirun('bin/xspecfem2D')
 
 
+    ### input/output method
+
+    def split(self, v):
+        """ Converts model from vector to dictionary representation
+
+            The following code works on isotropic acoustic and elastic models.
+            For code that works on transversely isotropic models, see 
+            solver.specfem3d_globe.
+
+            There is a large tradeoff here between being simple and being 
+            flexible.  In this case we opt for a simple hardwired approach. For
+            a much more flexible approach, see seisflows-research.
+        """
+        nproc = PAR.NPROC
+        ndim = len(self.parameters)
+        npts = len(v)/(nproc*ndim)
+        path = PATH.OUTPUT +'/'+ 'model_init'
+
+        idim = 0
+        model = {}
+        if 'vp' in self.parameters:
+            model['vp'] = splitvec(v, nproc, npts, idim)
+            idim += 1
+        else:
+            model['vp'] = loadbyproc(path, 'vp', nproc)
+
+        if 'vs' in self.parameters:
+            model['vs'] = splitvec(v, nproc, npts, idim)
+            idim += 1
+        else:
+            model['vs'] = loadbyproc(path, 'vs', nproc)
+
+        if 'rho' in self.parameters:
+            model['rho'] = splitvec(v, nproc, npts, idim)
+            idim += 1
+        elif self.density_scaling:
+            raise NotImplementedError
+        else:
+            model['rho'] = loadbyproc(path, 'rho', nproc)
+
+        model['x'] = loadbyproc(path, 'x', nproc)
+        model['z'] = loadbyproc(path, 'z', nproc)
+
+        return model
+
+
 
     ### model input/output
 
-    def load(self, filename, type='', verbose=False):
+    def load(self, filename, mapping=None, suffix='', verbose=False):
         """Reads SPECFEM2D kernel or model
 
            Models and kernels are read from 5 or 6 column text files whose
@@ -137,7 +174,7 @@ class specfem2d(loadclass('solver', 'base')):
         elif ncol == 6:
             ioff = 1
         else:
-            raise ValueError("Wrong number of columns.")
+            raise Exception('Bad SPECFEM2D model or kernel.')
 
         # fill in dictionary
         parts = {}
@@ -145,6 +182,7 @@ class specfem2d(loadclass('solver', 'base')):
             parts[key] = [M[:,ioff]]
             ioff += 1
         return parts
+
 
     def save(self, filename, parts, type='model'):
         """writes SPECFEM2D kernel or model"""
@@ -163,47 +201,11 @@ class specfem2d(loadclass('solver', 'base')):
             raise ValueError
 
         # fill in array
-        for icol, key in enumerate(['x', 'z', 'rho', 'vp', 'vs']):
+        for icol, key in enumerate(('x', 'z', 'rho', 'vp', 'vs')):
             M[:,icol+ioff] = parts[key][0]
 
         # write array
         np.savetxt(filename, M, '%16.10e')
-
-
-
-    ### vector/dictionary conversion
-
-    def merge(self, parts):
-        """ merges dictionary into vector
-        """
-        v = np.array([])
-        for key in self.inversion_parameters:
-            for iproc in range(PAR.NPROC):
-                v = np.append(v, parts[key][iproc])
-        return v
-
-
-    def split(self, v):
-        """ splits vector into dictionary
-        """
-        parts = {}
-        nrow = len(v)/(PAR.NPROC*len(self.inversion_parameters))
-        j = 0
-        for key in ['x', 'z', 'rho', 'vp', 'vs']:
-            parts[key] = []
-            if key in self.inversion_parameters:
-                for i in range(PAR.NPROC):
-                    imin = nrow*PAR.NPROC*j + nrow*i
-                    imax = nrow*PAR.NPROC*j + nrow*(i + 1)
-                    i += 1
-                    parts[key].append(v[imin:imax])
-                j += 1
-            else:
-                for i in range(PAR.NPROC):
-                    proc = '%06d' % i
-                    part = np.load(PATH.GLOBAL +'/'+ 'mesh' +'/'+ key +'/'+ proc)
-                    parts[key].append(part)
-        return parts
 
 
 
@@ -234,7 +236,7 @@ class specfem2d(loadclass('solver', 'base')):
         nz = np.around(np.sqrt(nn*lx/lz))
 
         # perform smoothing
-        for key in self.inversion_parameters:
+        for key in self.parameters:
             parts[key] = [meshsmooth(x, z, parts[key][0], span, nx, nz)]
         unix.mv(path +'/'+ tag, path +'/'+ '_nosmooth')
         self.save(path +'/'+ tag, parts)
@@ -246,7 +248,7 @@ class specfem2d(loadclass('solver', 'base')):
         if thresh >= 1.:
             return parts
 
-        for key in self.inversion_parameters:
+        for key in self.parameters:
             # scale to [-1,1]
             minval = parts[key][0].min()
             maxval = parts[key][0].max()
@@ -330,40 +332,6 @@ class specfem2d(loadclass('solver', 'base')):
         setpar('f0', PAR.F0, 'DATA/SOURCE')
 
 
-    def initialize_io_machinery(self):
-        """ Writes mesh files expected by input/output methods
-        """
-        if system.getnode() == 0:
-
-            model_set = set(self.model_parameters)
-            inversion_set = set(self.inversion_parameters)
-
-            parts = self.load(PATH.MODEL_INIT)
-            try:
-                path = PATH.GLOBAL +'/'+ 'mesh'
-            except:
-                raise Exception
-            if not exists(path):
-                for key in list(setdiff(model_set, inversion_set)) + ['x', 'z']:
-                    unix.mkdir(path +'/'+ key)
-                    for proc in range(PAR.NPROC):
-                        with open(path +'/'+ key +'/'+ '%06d' % proc, 'w') as file:
-                            np.save(file, parts[key][proc])
-
-            try:
-                path = PATH.OPTIMIZE +'/'+ 'm_new'
-            except:
-                return
-            if not exists(path):
-                savenpy(path, self.merge(parts))
-            #if not exists(path):
-            #    for key in inversion_set:
-            #        unix.mkdir(path +'/'+ key)
-            #        for proc in range(PAR.NPROC):
-            #            with open(path +'/'+ key +'/'+ '%06d' % proc, 'w') as file:
-            #                np.save(file, parts[key][proc])
-
-
     ### input file writers
 
     def write_parameters(self):
@@ -408,5 +376,31 @@ class specfem2d(loadclass('solver', 'base')):
     @property
     def source_prefix(self):
         return 'SOURCE'
+
+
+def loadbyproc(filename, key, nproc):
+    # read text file
+    M = np.loadtxt(filename)
+    nrow = M.shape[0]
+    ncol = M.shape[1]
+
+    if ncol == 5:
+        ioff = 0
+    elif ncol == 6:
+        ioff = 1
+    else:
+        raise Exception('Bad SPECFEM2D model or kernel.')
+
+    if key == 'x':
+        return [M[:, ioff+0]]
+    elif key == 'z':
+        return [M[:, ioff+1]]
+    elif key == 'rho':
+        return [M[:, ioff+2]]
+    elif key == 'vp':
+        return [M[:, ioff+3]]
+    elif key == 'vs':
+        return [M[:, ioff+4]]
+
 
 

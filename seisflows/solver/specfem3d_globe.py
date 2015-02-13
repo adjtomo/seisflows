@@ -6,7 +6,7 @@ from os.path import join
 import numpy as np
 
 import seisflows.seistools.specfem3d_globe as solvertools
-from seisflows.seistools.io import load
+from seisflows.seistools.io import load, savebin
 from seisflows.seistools.shared import getpar, setpar
 
 from seisflows.tools import unix
@@ -26,59 +26,33 @@ class specfem3d_globe(loadclass('solver', 'base')):
 
     if 0:
         # use isotropic model
-        model_parameters = []
-        model_parameters += ['reg1_rho']
-        model_parameters += ['reg1_vp']
-        model_parameters += ['reg1_vs']
-
-        inversion_parameters = []
-        inversion_parameters += ['reg1_rho']
-        inversion_parameters += ['reg1_vp']
-        inversion_parameters += ['reg1_vs']
-
-        kernel_map = {
-            'reg1_rho': 'reg1_rho_kernel',
-            'reg1_vp': 'reg1_alpha_kernel',
-            'reg1_vs': 'reg1_beta_kernel'}
+        parameters = []
+        parameters += ['reg1_rho']
+        parameters += ['reg1_vp']
+        parameters += ['reg1_vs']
 
     else:
         # use transversely isotropic model
-        model_parameters = []
-        model_parameters += ['reg1_rho']
-        model_parameters += ['reg1_vpv']
-        model_parameters += ['reg1_vph']
-        model_parameters += ['reg1_vsv']
-        model_parameters += ['reg1_vsh']
-        model_parameters += ['reg1_eta']
-
-        inversion_parameters = []
-        inversion_parameters += ['reg1_rho']
-        inversion_parameters += ['reg1_vpv']
-        inversion_parameters += ['reg1_vph']
-        inversion_parameters += ['reg1_vsv']
-        inversion_parameters += ['reg1_vsh']
-        inversion_parameters += ['reg1_eta']
-
-        kernel_map = {
-            'reg1_rho': 'reg1_rho_kernel',
-            'reg1_eta': 'reg1_eta_kernel',
-            'reg1_vph': 'reg1_alphah_kernel',
-            'reg1_vpv': 'reg1_alphav_kernel',
-            'reg1_vsv': 'reg1_betav_kernel',
-            'reg1_vsh': 'reg1_betah_kernel'}
+        parameters = []
+        parameters += ['reg1_rho']
+        parameters += ['reg1_vpv']
+        parameters += ['reg1_vph']
+        parameters += ['reg1_vsv']
+        parameters += ['reg1_vsh']
+        parameters += ['reg1_eta']
 
 
     def check(self):
-        """ Checks parameters, paths, and dependencies
+        """ Checks parameters and paths
         """
         super(specfem3d_globe, self).check()
 
         # check solver executables directory
-        if 'SPECFEM3D_GLOBE_BIN' not in PATH:
+        if 'SPECFEM_BIN' not in PATH:
             pass #raise Exception
 
         # check solver input files directory
-       if 'SPECFEM3D_GLOBE_DATA' not in PATH:
+       if 'SPECFEM_DATA' not in PATH:
            pass #raise Exception
 
 
@@ -145,14 +119,13 @@ class specfem3d_globe(loadclass('solver', 'base')):
 
         # initialize kernels
         unix.cd(path)
-        for key in self.model_parameters:
-            if key not in self.inversion_parameters:
-                for i in range(PAR.NPROC):
-                    proc = '%06d' % i
-                    name = self.kernel_map[key]
-                    src = PATH.GLOBAL +'/'+ 'mesh' +'/'+ key +'/'+ proc
-                    dst = path +'/'+ 'sum' +'/'+ 'proc'+proc+'_'+name+'.bin'
-                    savebin(np.load(src), dst)
+        for key in self.parameters:
+            for iproc in range(PAR.NPROC):
+                proc = '%06d' % iproc
+                name = self.kernel_map[key]
+                src = PATH.GLOBAL +'/'+ 'mesh' +'/'+ key +'/'+ proc
+                dst = path +'/'+ 'sum' +'/'+ 'proc'+proc+'_'+name+'.bin'
+                savebin(np.load(src), dst)
 
         # create temporary files and directories
         unix.cd(self.getpath)
@@ -181,41 +154,26 @@ class specfem3d_globe(loadclass('solver', 'base')):
         """
         unix.cd(self.getpath)
 
-        # list kernels
-        kernels = []
-        for name in self.model_parameters:
-            if name in self.inversion_parameters:
-                flag = True
-            else:
-                flag = False
-            region, name = name.split('_')
-            kernels = kernels + [[name, flag]]
-
         # smooth kernels
-        for name, flag in kernels:
-            if flag:
-                print ' smoothing', name
-                self.mpirun(
-                    PATH.SOLVER_BINARIES +'/'+ 'xsmooth_sem '
-                    + str(span) + ' '
-                    + str(span) + ' '
-                    + name + ' '
-                    + path +'/'+ tag + '/ '
-                    + self.model_databases + '/ ')
+        for name in self.parameters:
+            _, name = name.split('_')
+            print ' smoothing', name
+            self.mpirun(
+                PATH.SOLVER_BINARIES +'/'+ 'xsmooth_sem '
+                + str(span) + ' '
+                + str(span) + ' '
+                + name + ' '
+                + path +'/'+ tag + '/ '
+                + self.model_databases + '/ ')
 
-        # move kernels
+        # remove old kernels
         src = path +'/'+ tag
-        dst = path +'/'+ '_nosmooth'
+        dst = path +'/'+ tag + '_nosmooth'
         unix.mkdir(dst)
-        for name, flag in kernels:
-            if flag:
-                unix.mv(glob(src+'/*'+name+'.bin'), dst)
-            else:
-                unix.cp(glob(src+'/*'+name+'.bin'), dst)
+        for name in self.parameters:
+            unix.mv(glob(src+'/*'+name+'.bin'), dst)
         unix.rename('_smooth', '', glob(src+'/*'))
         print ''
-
-        unix.cd(path)
 
 
     ### utility functions

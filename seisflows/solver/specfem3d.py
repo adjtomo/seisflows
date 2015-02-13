@@ -23,21 +23,11 @@ class specfem3d(loadclass('solver', 'base')):
       See base class for method descriptions
     """
 
-    # model parameters
-    model_parameters = []
-    model_parameters += ['rho']
-    model_parameters += ['vp']
-    model_parameters += ['vs']
+    parameters = []
+    parameters += ['vp']
+    parameters += ['vs']
 
-    # inversion parameters
-    inversion_parameters = []
-    inversion_parameters += ['vp']
-    inversion_parameters += ['vs']
-
-    kernel_map = {
-        'rho': 'rho_kernel',
-        'vp': 'alpha_kernel',
-        'vs': 'beta_kernel'}
+    density_scaling = None
 
 
     def check(self):
