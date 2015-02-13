@@ -73,6 +73,13 @@ def savebin(v, path, proc, par):
     write_fortran(v, join(path, filename))
 
 
+def copybin(src, dst, proc, par):
+    """ Copies SPECFEM database file
+    """
+    filename = 'proc%06d_%s.bin' % (proc, par)
+    copyfile(join(src, filename), join(dst, filename))
+
+
 def applymap(vals, mapping):
     mapped_keys = []
     mapped_vals = []
