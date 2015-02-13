@@ -3,107 +3,155 @@ from os.path import abspath, join
 
 import numpy as np
 
-from collections import Mapping
 
-from seisflows.tools.io import loadbin
-
-
-def load1(dirname, parameters, mapping, nproc, logfile=None):
+def load(path, parameters, nproc, mapping=None, suffix='', verbose=False, logpath='.'):
     """ reads SPECFEM model
 
-      Models are stored as a Fortran binary fomrat and and separated into 
-      mulitple files according to material parameter and processor rank.
+      Models are stored in Fortran binary format and separated into multiple
+      files according to material parameter and processor rank.
+
+      Optionally, 'mapping' can be used to convert on the fly from one set of
+      material parameters to another.
     """
-    parts = {}
+    model = ModelStruct(parameters, mapping)
+    minmax = MinmaxStruct(parameters, mapping)
+    verbose = True
+
+    for iproc in range(nproc):
+        keys, vals = loadbypar(path, parameters, iproc, suffix)
+
+        # keep track of min, max
+        minmax.update(keys, vals)
+
+        # apply optional mapping
+        if mapping:
+            keys, vals = _apply(vals, mapping)
+
+        # append latest values
+        for key, val in zip(keys, vals):
+            model[key] += [val]
+
+    if verbose:
+        minmax.write(path, logpath)
+
+    return model
+
+
+def loadbypar(path, parameters, iproc, suffix=''):
+    """ Reads SPECFEM database files for given processor rank, callable by a
+        single mpi process
+    """
+    keys = []
+    vals = []
     for key in sorted(parameters):
-        parts[key] = []
-        for iproc in range(nproc):
-            filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
-            part = loadbin(join(dirname, filename))
-            parts[key].append(part)
+        val = loadbin(path, iproc, key+suffix)
+        keys += [key]
+        vals += [val]
+    return keys, vals
+
+
+def loadbyproc(path, parameter, nproc):
+    """ Reads SPECFEM database files for given material parameter
+    """
+    vals = []
+    for iproc in range(nproc):
+        vals += [loadbin(path, iproc, parameter)]
+    return vals
+
+
+def loadbin(path, proc, par):
+    """ Reads a single SPECFEM database file
+    """
+    filename = 'proc%06d_%s.bin' % (proc, par)
+    return read_fortran(join(path, filename))
+
+
+def savebin(v, path, proc, par):
+    """ Writes a single SPECFEM database file
+    """
+    filename = 'proc%06d_%s.bin' % (proc, par)
+    write_fortran(v, join(path, filename))
+
+
+def applymap(vals, mapping):
+    mapped_keys = []
+    mapped_vals = []
+    for key,map in mapping:
+        mapped_keys += [key]
+        mapped_vals += [map(*vals)]
+    return mapped_keys, mapped_vals
+
+
+def splitvec(v,  nproc, npts, idim):
+    parts = []
+    for iproc in range(nproc):
+        imin = nproc*npts*idim + npts*iproc 
+        imax = nproc*npts*idim + npts*(iproc+1)
+        parts += [v[imin:imax]]
     return parts
 
 
-def load2(dirname, parameters, mapping, nproc, logfile):
-    """ reads SPECFEM model
-
-      Provides the same functionality as load1 but with debugging output.
+def read_fortran(filename):
+    """ Reads Fortran style binary data and returns a numpy array.
     """
-    # read database files
-    parts = {}
-    minmax = {}
-    for key in sorted(parameters):
-        parts[key] = []
-        minmax[mapping(key)] = [+np.Inf,-np.Inf]
-        for iproc in range(nproc):
-            filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
-            part = loadbin(join(dirname, filename))
-            parts[key].append(part)
-            # keep track of min, max
-            if part.min() < minmax[mapping(key)][0]: minmax[mapping(key)][0] = part.min()
-            if part.max() > minmax[mapping(key)][1]: minmax[mapping(key)][1] = part.max()
+    with open(filename, 'rb') as file:
+        # read size of record
+        file.seek(0)
+        n = np.fromfile(file, dtype='int32', count=1)[0]
 
-    # print min, max
-    if logfile:
-        with open(logfile,'a') as f:
-            f.write(abspath(dirname)+'\n')
-            for key,val in minmax.items():
-                f.write('%-15s %10.3e %10.3e\n' % (key, val[0], val[1]))
+        # read contents of record
+        file.seek(4)
+        v = np.fromfile(file, dtype='float32')
+
+    return v[:-1]
+
+
+def write_fortran(v, filename):
+    """ Writes Fortran style binary data. Data are written as single precision
+        floating point numbers.
+    """
+    n = np.array([4*len(v)], dtype='int32')
+    v = np.array(v, dtype='float32')
+
+    with open(filename, 'wb') as file:
+        n.tofile(file)
+        v.tofile(file)
+        n.tofile(file)
+
+
+def ModelStruct(parameters, mapping=None):
+    if mapping:
+        return dict((key, []) for key in dict(mapping))
+    else:
+        return dict((key, []) for key in parameters)
+
+
+class MinmaxStruct(object):
+    def __init__(self, parameters, mapping=None):
+        self.keys = parameters
+        self.minvals = dict((key, +np.Inf) for key in parameters)
+        self.maxvals = dict((key, -np.Inf) for key in parameters)
+
+    def items(self):
+        return ((key, self.minvals[key], self.minvals[key]) for key in self.keys)
+
+    def update(self, keys, vals):
+        for key,val in zip(keys, vals):
+            minval = val.min()
+            maxval = val.max()
+            minval_all = self.minvals[key]
+            maxval_all = self.maxvals[key]
+            if minval < minval_all: self.minvals.update({key: minval})
+            if maxval > maxval_all: self.maxvals.update({key: maxval})
+
+    def write(self, path, logpath):
+        if not logpath:
+            return
+        filename = join(logpath, 'output.minmax')
+        with open(filename, 'a') as f:
+            f.write(abspath(path)+'\n')
+            for key,minval,maxval in self.items():
+                f.write('%-15s %10.3e %10.3e\n' % (key, minval, maxval))
             f.write('\n')
-    return parts
 
-
-def load3(dirname, parameters, mapping, nproc, logfile):
-    """ reads SPECFEM model
-
-      Provides the same functionality as load1 but with debugging output and
-      improved memory usage.
-    """
-    minmax = {}
-
-    def helper_func(key):
-        parts = []
-        minmax[mapping(key)] = [+np.Inf,-np.Inf]
-        for iproc in range(nproc):
-            filename = 'proc%06d_%s.bin' % (iproc, mapping(key))
-            part = loadbin(join(dirname, filename))
-            parts.append(part)
-            # keep track of min, max
-            if part.min() < minmax[mapping(key)][0]: minmax[mapping(key)][0] = part.min()
-            if part.max() > minmax[mapping(key)][1]: minmax[mapping(key)][1] = part.max()
-        return parts
-
-    class helper_class(Mapping):
-        def __init__(self):
-            self.cached_key = None
-            self.cached_val = None
-
-        def __getitem__(self, key):
-            if key == self.cached_key:
-                return self.cached_val
-            else:
-                parts = helper_func(key)
-                self.cached_key = key
-                self.cached_val = parts
-            return parts
-
-        def __iter__(self):
-            return []
-
-        def __len__(self):
-            return len([])
-
-        def __del__(self):
-            if logfile:
-                with open(logfile,'a') as f:
-                    f.write(abspath(dirname)+'\n')
-                    for key in sorted(minmax):
-                        val = minmax[key]
-                        f.write('%-15s %10.3e %10.3e\n' % (key, val[0], val[1]))
-                    f.write('\n')
-
-    return helper_class()
-
-
-load = load3
 

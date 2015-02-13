@@ -183,34 +183,6 @@ class OutputWriter(object):
             return '%10s  ' % val
 
 
-def loadbin(filename):
-    """Reads Fortran style binary data and return a numpy array."""
-    with open(filename, 'rb') as file:
-        # read size of record
-        file.seek(0)
-        n = _np.fromfile(file, dtype='int32', count=1)[0]
-
-        # read contents of record
-        file.seek(4)
-        v = _np.fromfile(file, dtype='float32')
-
-    return v[:-1]
-
-
-def savebin(v, filename):
-    """Writes Fortran style binary data.
-
-    Data will be written as single precision floating point numbers.
-    """
-    n = _np.array([4*len(v)], dtype='int32')
-    v = _np.array(v, dtype='float32')
-
-    with open(filename, 'wb') as file:
-        n.tofile(file)
-        v.tofile(file)
-        n.tofile(file)
-
-
 def mychar(fmt):
     chars = {'int8': 'b',
              'uint8': 'B',
