@@ -4,7 +4,6 @@ from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
 from seisflows.tools.config import ParameterObj
-from seisflows.tools.io import savebin
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
@@ -59,14 +58,13 @@ class base(object):
         g = solver.merge(
                 solver.load(
                     path +'/'+ 'kernels/sum', 
-                    type='kernel', 
+                    suffix='_kernel', 
                     verbose=True))
 
         # convert logarithmic perturbations
         m = solver.merge(
                 solver.load(
-                    path +'/'+ 'model',
-                    type='model'))
+                    path +'/'+ 'model'))
         g *= m
 
         # apply scaling
@@ -107,6 +105,6 @@ class base(object):
 
         if 'OPTIMIZE' in PATH:
             if tag == 'gradient':
-                g = solver.merge(solver.load(path +'/'+ tag, type='model', verbose=True))
+                g = solver.merge(solver.load(path +'/'+ tag, verbose=True))
                 savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
