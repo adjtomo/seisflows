@@ -252,7 +252,7 @@ class base(object):
             if 'vs' in self.parameters:
                 savebin(model['vs'][iproc], path, iproc, 'vs')
             else:
-                copybin(src, dst, iproc, 'vp')
+                copybin(src, dst, iproc, 'vs')
 
             if 'rho' in self.parameters:
                 savebin(model['rho'][iproc], path, iproc, 'rho')
@@ -281,9 +281,8 @@ class base(object):
         ndim = len(self.parameters)
         npts = len(v)/(nproc*ndim)
 
-        idim = 0
         model = {}
-        for key in self.parameters:
+        for idim, key in enumerate(self.parameters):
             model[key] = splitvec(v, nproc, npts, idim)
         return model
 
@@ -292,7 +291,8 @@ class base(object):
     ### postprocessing utilities
 
     def combine(self, path=''):
-        """ Sums SPECFEM3D kernels by wrapping xsum_kernels utility
+        """ Sums individual source contributions. Wrapper over xsum_kernels 
+            utility.
         """
         unix.cd(self.getpath)
 
@@ -319,7 +319,8 @@ class base(object):
 
 
     def smooth(self, path='', tag='gradient', span=0.):
-        """ smooths SPECFEM3D kernels
+        """ Smooths kernels by convolving them with a Gaussian.  Wrapper over 
+            xsmooth_sem utility.
         """
         unix.cd(self.getpath)
 
@@ -369,7 +370,7 @@ class base(object):
             unix.cp(src, dst)
 
     def export_kernels(self, path):
-        # workaround inconsistent conventions
+        # work around SPECFEM inconsistencies
         if 'vp' in self.parameters:
             files = glob(self.model_databases +'/'+ '*alpha_kernel.bin')
             unix.rename('alpha_kernel', 'vp_kernel', files)
@@ -403,8 +404,8 @@ class base(object):
     def initialize_solver_directories(self):
         """ Creates directory structure expected by SPECFEM3D, copies 
           executables, and prepares input files. Executables must be supplied 
-          by user as there is currently no mechanism to automatically compile 
-          from source.
+          by user as there is currently no mechanism for automatically
+          compiling from source.
         """
         unix.mkdir(self.getpath)
         unix.cd(self.getpath)
