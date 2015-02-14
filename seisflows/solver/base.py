@@ -308,7 +308,7 @@ class base(object):
             unix.ln(src, dst)
 
         # sum kernels
-        self.mpirun(PATH.SOLVER_BINARIES +'/'+ 'xsum_kernels')
+        self.mpirun(PATH.SPECFEM_BIN +'/'+ 'xsum_kernels')
         unix.mv('OUTPUT_SUM', path +'/'+ 'sum')
 
         # remove temporary files and directories
@@ -328,7 +328,7 @@ class base(object):
         for name in self.parameters:
             print ' smoothing', name
             self.mpirun(
-                PATH.SOLVER_BINARIES +'/'+ 'xsmooth_sem '
+                PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
                 + str(span) + ' '
                 + str(span) + ' '
                 + name + ' '
@@ -420,12 +420,12 @@ class base(object):
         unix.mkdir(self.model_databases)
 
         # copy exectuables
-        src = glob(PATH.SOLVER_BINARIES +'/'+ '*')
+        src = glob(PATH.SPECFEM_BIN +'/'+ '*')
         dst = 'bin/'
         unix.cp(src, dst)
 
         # copy input files
-        src = glob(PATH.SOLVER_FILES +'/'+ '*')
+        src = glob(PATH.SPECFEM_DATA +'/'+ '*')
         dst = 'DATA/'
         unix.cp(src, dst)
 
@@ -472,7 +472,7 @@ class base(object):
         """
         isrc = system.getnode()
         if not hasattr(self, 'sources'):
-            paths = glob(PATH.SOLVER_FILES +'/'+ self.source_prefix+'_*')
+            paths = glob(PATH.SPECFEM_DATA +'/'+ self.source_prefix+'_*')
             self.sources = []
             for path in paths:
                 self.sources += [unix.basename(path).split('_')[-1]]
