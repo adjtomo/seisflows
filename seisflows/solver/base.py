@@ -90,7 +90,7 @@ class base(object):
         # As input for an inversion or migration, users can choose between
         # providing data, or providing a target model from which data are
         # generated on the fly. In the former case, a value for PATH.DATA must
-        # be provided, and in the latter case, a value for PATH.MODEL_TRUE
+        # be supplied; in the latter case, a value for PATH.MODEL_TRUE
         if PATH.DATA:
             self.initialize_solver_directories()
             src = glob(PATH.DATA +'/'+ self.getname +'/'+ '*')
@@ -263,8 +263,6 @@ class base(object):
             else:
                 copybin(src, dst, iproc, 'rho')
 
-
-    ### vector/dictionary conversion
 
     def merge(self, model):
         """ Converts model from dictionary to vector representation
