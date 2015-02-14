@@ -194,7 +194,7 @@ class base(object):
 
     ### model input/output
 
-    def load(self, path, mapping=None, suffix='', verbose=False):
+    def load(self, path, parameters=None, mapping=None, suffix='', verbose=False):
         """ reads SPECFEM model
 
           Models are stored in Fortran binary format and separated into multiple
@@ -203,7 +203,9 @@ class base(object):
           Optionally, 'mapping' can be used to convert on the fly from one set
           of material parameters to another.
         """
-        parameters = self.parameters
+        if not parameters:
+            parameters = self.parameters
+
         model = ModelStruct(parameters, mapping)
         minmax = MinmaxStruct(parameters, mapping)
 
