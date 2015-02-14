@@ -47,14 +47,6 @@ class specfem3d_globe(loadclass('solver', 'base')):
         """
         super(specfem3d_globe, self).check()
 
-        # check solver executables directory
-        if 'SPECFEM_BIN' not in PATH:
-            pass #raise Exception
-
-        # check solver input files directory
-       if 'SPECFEM_DATA' not in PATH:
-           pass #raise Exception
-
 
     def generate_data(self, **model_kwargs):
         """ Generates data
@@ -139,7 +131,7 @@ class specfem3d_globe(loadclass('solver', 'base')):
             unix.ln(src, dst)
 
         # sum kernels
-        self.mpirun(PATH.SOLVER_BINARIES +'/'+ 'xsum_kernels')
+        self.mpirun(PATH.SPECFEM_BIN +'/'+ 'xsum_kernels')
         unix.mv('OUTPUT_SUM', path +'/'+ 'sum')
 
         # remove temporary files and directories
@@ -159,7 +151,7 @@ class specfem3d_globe(loadclass('solver', 'base')):
             _, name = name.split('_')
             print ' smoothing', name
             self.mpirun(
-                PATH.SOLVER_BINARIES +'/'+ 'xsmooth_sem '
+                PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
                 + str(span) + ' '
                 + str(span) + ' '
                 + name + ' '

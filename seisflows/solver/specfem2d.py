@@ -48,14 +48,6 @@ class specfem2d(loadclass('solver', 'base')):
         if 'F0' not in PAR:
             raise Exception
 
-        # check solver executables directory
-        if 'SPECFEM2D_BIN' not in PATH:
-            pass #raise Exception
-
-        # check solver input files directory
-        if 'SPECFEM2D_DATA' not in PATH:
-            pass #raise Exception
-
 
     def generate_data(self, **model_kwargs):
         """ Generates data
@@ -276,12 +268,12 @@ class specfem2d(loadclass('solver', 'base')):
         unix.mkdir(self.model_databases)
 
         # copy exectuables
-        src = glob(PATH.SOLVER_BINARIES +'/'+ '*')
+        src = glob(PATH.SPECFEM_BIN +'/'+ '*')
         dst = 'bin/'
         unix.cp(src, dst)
 
         # copy input files
-        src = glob(PATH.SOLVER_FILES +'/'+ '*')
+        src = glob(PATH.SPECFEM_DATA +'/'+ '*')
         dst = 'DATA/'
         unix.cp(src, dst)
 

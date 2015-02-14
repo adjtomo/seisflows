@@ -81,6 +81,13 @@ class base(object):
             else:
                 setattr(PATH, 'SOLVER', join(PATH.GLOBAL, 'solver'))
 
+        # check solver input paths
+        if 'SPECFEM_BIN' not in PATH:
+            raise ParameterError(PATH, 'SPECFEM_BIN')
+
+        if 'SPECFEM_DATA' not in PATH:
+            raise ParameterError(PATH, 'SPECFEM_DATA')
+
 
     def setup(self):
         """ Prepares solver for inversion or migration
