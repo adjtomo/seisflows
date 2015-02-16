@@ -249,26 +249,23 @@ class base(object):
         """
         unix.mkdir(path)
 
-        src = PATH.OUTPUT +'/'+ 'model_init'
-        dst = path
-
         for iproc in range(PAR.NPROC):
             if 'vp' in self.parameters:
                 savebin(model['vp'][iproc], path, iproc, 'vp')
             else:
-                copybin(src, dst, iproc, 'vp')
+                self.copybin(path, iproc, 'vp')
 
             if 'vs' in self.parameters:
                 savebin(model['vs'][iproc], path, iproc, 'vs')
             else:
-                copybin(src, dst, iproc, 'vs')
+                self.copybin(path, iproc, 'vs')
 
             if 'rho' in self.parameters:
                 savebin(model['rho'][iproc], path, iproc, 'rho')
             elif self.density_scaling:
                 raise NotImplementedError
             else:
-                copybin(src, dst, iproc, 'rho')
+                self.copybin(path, iproc, 'rho')
 
 
     def merge(self, model):
@@ -472,6 +469,17 @@ class base(object):
                 system.mpiargs() + script,
                 shell=True,
                 stdout=f)
+
+
+    def copybin(self, path, iproc, par):
+        """ Copies SPECFEM database file
+        """
+        src = PATH.OUTPUT +'/'+ 'model_init'
+        dst = path
+
+        filename = 'proc%06d_%s.bin' % (iproc, par)
+        unix.cp(join(src, filename), join(dst, filename))
+
 
     @property
     def getname(self):

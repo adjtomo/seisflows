@@ -1,5 +1,4 @@
 
-from shutil import copyfile
 from os.path import abspath, join
 
 import numpy as np
