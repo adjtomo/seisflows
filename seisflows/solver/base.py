@@ -7,7 +7,7 @@ import numpy as np
 
 import seisflows.seistools.specfem3d as solvertools
 from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import loadbypar, loadbyproc, copybin, savebin, \
+from seisflows.seistools.io import loadbypar, loadbyproc, savebin, \
     applymap, splitvec, ModelStruct, MinmaxStruct
 
 from seisflows.tools import unix
