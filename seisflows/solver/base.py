@@ -56,7 +56,7 @@ class base(object):
     """
 
     #  By default, SPECFEM reads velocity models specified in terms of rho, vp, 
-    #  and vs. For variable density elastic simulations, include all three moduli
+    #  and vs. For variable density elastic simulations, include all three
     #  in the 'parameters' list below. For constant density elastic simulations,
     #  remove 'rho' from the list. For variable density acoustic simulations, 
     #  remove 'vs' from the list. For constant desnity acoustic simulations, 
@@ -67,13 +67,12 @@ class base(object):
     parameters += ['vs']
     parameters += ['rho']
 
-    # Because desnity is not well constrained by travel time measurements, it is 
-    # conventional to employ empirical scaling relations between density and 
+    # Because density is not well constrained by travel time measurements, it is
+    # conventional to apply empirical scaling relations between density and 
     # compressional wave velocity.
-
     density_scaling = None
 
-    #  In seismic inversion, it can be advantageous to express the derivatives
+    #  For seismic inversion, it can be advantageous to express the derivatives
     #  of an objective function in terms of parameters other than vp and vs.
     #  For examples of this approach, see SEISFLOWS-RESEARCH.
 
