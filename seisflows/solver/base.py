@@ -28,13 +28,13 @@ class base(object):
       eval_func, eval_grad, apply_hess
         These methods deal with evaluation of the misfit function or its
         derivatives.  Together, they provide the primary interface through which
-        workflow methods interact with the solver.
+        the solver interacts with other SeisFlows objects.
 
       forward, adjoint, generate_data, generate_mesh
         These methods allow direct access to low-level SPECFEM components,
         providing another interface through which to interact with the solver.
 
-     initialize_solver_directories, initialize_adjoint_traces, initialize_io_machinery
+     initialize_solver_directories, initialize_adjoint_traces
         SPECFEM requires a particular directory structure in which to run and
         particular file formats for models, data, and parameter files. These
         methods help put in place all these prerequisites.
@@ -55,11 +55,27 @@ class base(object):
         Utilities for combining and smoothing kernels.
     """
 
+    #  By default, SPECFEM reads velocity models specified in terms of rho, vp, 
+    #  and vs. For variable density elastic simulations, include all three moduli
+    #  in the 'parameters' list below. For constant density elastic simulations,
+    #  remove 'rho' from the list. For variable density acoustic simulations, 
+    #  remove 'vs' from the list. For constant desnity acoustic simulations, 
+    #  remove 'rho' and 'vs' from the list.
+
     parameters = []
     parameters += ['vp']
     parameters += ['vs']
+    parameters += ['rho']
+
+    # Because desnity is not well constrained by travel time measurements, it is 
+    # conventional to employ empirical scaling relations between density and 
+    # compressional wave velocity.
 
     density_scaling = None
+
+    #  In seismic inversion, it can be advantageous to express the derivatives
+    #  of an objective function in terms of parameters other than vp and vs.
+    #  For examples of this approach, see SEISFLOWS-RESEARCH.
 
 
     def check(self):
