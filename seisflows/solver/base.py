@@ -13,7 +13,7 @@ from seisflows.seistools.io import loadbypar, loadbyproc, savebin, \
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
-from seisflows.tools.config import findpath, ParameterObj
+from seisflows.tools.config import findpath, ParameterObj, ParameterError
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
@@ -315,26 +315,15 @@ class base(object):
         """
         unix.cd(self.getpath)
 
-        # create temporary files and directories
-        dirs = unix.ls(path)
-        with open('kernels_list.txt', 'w') as file:
-            file.write('\n'.join(dirs) + '\n')
-        unix.mkdir('INPUT_KERNELS')
-        unix.mkdir('OUTPUT_SUM')
-        for dir in dirs:
-            src = path +'/'+ dir
-            dst = 'INPUT_KERNELS' +'/'+ dir
-            unix.ln(src, dst)
+        with open('kernel_paths', 'w') as f:
+            f.writelines([join(path, dir)+'\n' for dir in unix.ls(path)])
 
-        # sum kernels
-        self.mpirun(PATH.SPECFEM_BIN +'/'+ 'xsum_kernels')
-        unix.mv('OUTPUT_SUM', path +'/'+ 'sum')
-
-        # remove temporary files and directories
-        unix.rm('INPUT_KERNELS')
-        unix.rm('kernels_list.txt')
-
-        unix.cd(path)
+        unix.mkdir(path +'/'+ 'sum')
+        for name in self.parameters:
+            self.mpirun(PATH.SPECFEM_BIN +'/'+ 'xsum_kernels ' 
+                        + 'kernel_paths' + ' '
+                        + path +'/'+ 'sum' + ' '
+                        + name + '_kernel')
 
 
     def smooth(self, path='', tag='gradient', span=0.):
@@ -353,15 +342,17 @@ class base(object):
                 + name + ' '
                 + path +'/'+ tag + '/ '
                 + path +'/'+ tag + '/ ')
+        print ''
 
-        # remove old kernels
+        # move input files
         src = path +'/'+ tag
         dst = path +'/'+ tag + '_nosmooth'
         unix.mkdir(dst)
         for name in self.parameters:
             unix.mv(glob(src+'/*'+name+'.bin'), dst)
+
+        # rename output files
         unix.rename('_smooth', '', glob(src+'/*'))
-        print ''
 
 
 
