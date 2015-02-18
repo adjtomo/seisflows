@@ -127,40 +127,21 @@ class specfem3d_globe(loadclass('solver', 'base')):
     ### postprocessing utilities
 
     def combine(self, path=''):
-        """ combines SPECFEM3D_GLOBE kernels
+        """ Sums individual source contributions. Wrapper over xsum_kernels 
+            utility.
         """
-        dirs = unix.ls(path)
-
-        # initialize kernels
-        unix.cd(path)
-        for key in self.parameters:
-            for iproc in range(PAR.NPROC):
-                proc = '%06d' % iproc
-                name = self.kernel_map[key]
-                src = PATH.GLOBAL +'/'+ 'mesh' +'/'+ key +'/'+ proc
-                dst = path +'/'+ 'sum' +'/'+ 'proc'+proc+'_'+name+'.bin'
-                savebin(np.load(src), dst)
-
-        # create temporary files and directories
         unix.cd(self.getpath)
-        with open('kernels_list.txt', 'w') as file:
-            file.write('\n'.join(dirs) + '\n')
-        unix.mkdir('INPUT_KERNELS')
-        unix.mkdir('OUTPUT_SUM')
-        for dir in dirs:
-            src = path +'/'+ dir
-            dst = 'INPUT_KERNELS' +'/'+ dir
-            unix.ln(src, dst)
 
-        # sum kernels
-        self.mpirun(PATH.SPECFEM_BIN +'/'+ 'xsum_kernels')
-        unix.mv('OUTPUT_SUM', path +'/'+ 'sum')
+        with open('kernel_paths', 'w') as f:
+            f.writelines([join(path, dir)+'\n' for dir in unix.ls(path)])
 
-        # remove temporary files and directories
-        unix.rm('INPUT_KERNELS')
-        unix.rm('kernels_list.txt')
-
-        unix.cd(path)
+        unix.mkdir(path +'/'+ 'sum')
+        for name in self.parameters:
+            _, name = name.split('_')
+            self.mpirun(PATH.SPECFEM_BIN +'/'+ 'xsum_kernels '
+                        + 'kernel_paths' + ' '
+                        + path +'/'+ 'sum' + ' '
+                        + name + '_kernel')
 
 
     def smooth(self, path='', tag='gradient', span=0.):
