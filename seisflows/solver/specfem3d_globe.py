@@ -81,6 +81,28 @@ class specfem3d_globe(loadclass('solver', 'base')):
             raise NotImplementedError
 
 
+    ### model input/output
+
+    def save(self, path, model):
+        """ writes SPECFEM3D_GLOBE transerverly isotropic model
+        """
+        unix.mkdir(path)
+
+        for iproc in range(PAR.NPROC):
+            for key in ['reg1_vpv', 'reg1_vph', 'reg1_vsv', 'reg1_vsh', 'reg1_eta']:
+                if key in self.parameters:
+                    savebin(model[key][iproc], path, iproc, key)
+                else:
+                    self.copybin(path, iproc, key)
+
+            if 'reg1_rho' in self.parameters:
+                savebin(model['reg1_rho'][iproc], path, iproc, 'reg1_rho')
+            elif self.density_scaling:
+                raise NotImplementedError
+            else:
+                self.copybin(path, iproc, 'reg1_rho')
+
+
     ### low-level solver interface
 
     def forward(self):
