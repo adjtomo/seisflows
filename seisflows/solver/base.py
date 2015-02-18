@@ -380,14 +380,15 @@ class base(object):
             unix.cp(src, dst)
 
     def export_kernels(self, path):
-        # work around SPECFEM inconsistencies
-        if 'vp' in self.parameters:
-            files = glob(self.model_databases +'/'+ '*alpha_kernel.bin')
-            unix.rename('alpha_kernel', 'vp_kernel', files)
+        # work around SPECFEM convetions
+        try:
+            files = glob(self.model_databases +'/'+ '*alpha*_kernel.bin')
+            unix.rename('alpha', 'vp', files)
 
-        if 'vp' in self.parameters:
             files = glob(self.model_databases +'/'+ '*beta_kernel.bin')
-            unix.rename('beta_kernel', 'vs_kernel', files)
+            unix.rename('beta', 'vs', files)
+        except:
+            pass
 
         # export kernels
         unix.mkdir_gpfs(join(path, 'kernels'))
