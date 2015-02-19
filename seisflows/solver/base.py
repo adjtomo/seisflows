@@ -454,7 +454,7 @@ class base(object):
         _, h = preprocess.load('traces/obs')
         zeros = np.zeros((h.nt, h.nr))
         for channel in ['x', 'y', 'z']:
-            preprocess.writer(zeros, h, channel=channel, prefix='traces/adj')
+            preprocess.writer(zeros, h, channel=channel, prefix='traces/adj/')
 
 
     def initialize_io_machinery(self):
