@@ -216,7 +216,7 @@ class base(object):
 
     ### model input/output
 
-    def load(self, path, parameters=None, mapping=None, suffix='', verbose=False):
+    def load(self, path, parameters=None, mapping=None, prefix='', suffix='', verbose=False):
         """ reads SPECFEM model
 
           Models are stored in Fortran binary format and separated into multiple
@@ -320,10 +320,11 @@ class base(object):
 
         unix.mkdir(path +'/'+ 'sum')
         for name in self.parameters:
-            self.mpirun(PATH.SPECFEM_BIN +'/'+ 'xsum_kernels ' 
-                        + 'kernel_paths' + ' '
-                        + path +'/'+ 'sum' + ' '
-                        + name + '_kernel')
+            self.mpirun(
+                PATH.SPECFEM_BIN +'/'+ 'xsum_kernels ' 
+                + 'kernel_paths' + ' '
+                + path +'/'+ 'sum' + ' '
+                + name + '_kernel')
 
 
     def smooth(self, path='', tag='gradient', span=0.):
@@ -339,9 +340,9 @@ class base(object):
                 PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
                 + str(span) + ' '
                 + str(span) + ' '
-                + name + ' '
                 + path +'/'+ tag + '/ '
-                + path +'/'+ tag + '/ ')
+                + path +'/'+ tag + '/ ' 
+                + name)
         print ''
 
         # move input files
@@ -460,8 +461,8 @@ class base(object):
         """ Writes mesh files expected by input/output methods
         """
         if system.getnode() == 0:
-            model = self.load(PATH.MODEL_INIT)
             if 'OPTIMIZE' in PATH:
+                model = self.load(PATH.MODEL_INIT)
                 if not exists(PATH.OPTIMIZE +'/'+ 'm_new'):
                     savenpy(PATH.OPTIMIZE +'/'+ 'm_new', self.merge(model))
 
