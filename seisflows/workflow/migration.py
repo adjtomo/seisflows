@@ -74,6 +74,7 @@ class migration(object):
 
         self.prepare_model()
 
+        print 'Generating synthetics...'
         system.run('solver', 'eval_func',
                    hosts='all',
                    path=PATH.GLOBAL)
@@ -108,7 +109,7 @@ class migration(object):
     def prepare_model(self):
         model = PATH.OUTPUT +'/'+ 'model_init'
         assert exists(model)
-        unix.cp(model, PATH.GLOBAL +'/'+ 'model')
+        unix.ln(model, PATH.GLOBAL +'/'+ 'model')
 
     def save_gradient(self):
         src = glob(PATH.GLOBAL +'/'+ 'gradient')
