@@ -164,7 +164,7 @@ def loadclass(*args):
         obj = getattr(_import(string), list[-1])
         return obj
 
-    raise ImportError
+    raise ImportError('Not found in SeisFlows path.')
 
 
 def loadvars(*args, **kwargs):
