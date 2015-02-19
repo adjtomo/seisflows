@@ -131,6 +131,11 @@ def select(items, prompt=''):
             return items[reply - 1]
 
 
+def touch(filename, times=None):
+    with open(filename, 'a'):
+        _os.utime(filename, times)
+
+
 def whoami():
     import getpass
 
