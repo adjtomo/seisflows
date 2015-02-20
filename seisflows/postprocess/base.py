@@ -15,10 +15,6 @@ import solver
 
 class base(object):
     """ Postprocessing class
-
-      Combines contributions from individual sources to obtain the gradient
-      direction, and performs scaling, clipping, smoothing, and preconditioning
-      operations on gradient in accordance with parameter settings.
     """
 
     def check(self):
@@ -56,27 +52,10 @@ class base(object):
         self.combine_kernels(path)
         self.process_kernels(path)
 
-        g = solver.merge(solver.load(path +'/'+ 'gradient', verbose=True))
-        savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
-
-
-    def combine_kernels(self, path):
-        """ Sums individual source contributions
-        """
-        system.run('solver', 'combine',
-                   hosts='head',
-                   path=path +'/'+ 'kernels')
-
-
-    def process_kernels(self, path=None, tag='gradient'):
-        """ Performs scaling, smoothing, and preconditioning operations
-        """
-        assert (exists(path))
-
         # convert from relative to absolute perturbations
         g = solver.merge(solver.load(
-                path +'/'+ 'kernels/sum', 
-                suffix='_kernel', 
+                path +'/'+ 'kernels/sum',
+                suffix='_kernel',
                 verbose=True))
 
         m = solver.merge(solver.load(
@@ -92,29 +71,50 @@ class base(object):
         else:
             g *= PAR.SCALE
 
-        solver.save(path +'/'+ tag, solver.split(g))
+        # write gradient
+        savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
+
+
+    def combine_kernels(self, path):
+        """ Sums individual source contributions
+        """
+        system.run('solver', 'combine',
+                   hosts='head',
+                   path=path +'/'+ 'kernels')
+
+
+    def process_kernels(self, path=None, tag='gradient'):
+        """ Performs scaling, smoothing, and preconditioning operations in
+            accordance with parameter settings
+        """
+        assert (exists(path))
 
         # apply clipping
         if PAR.CLIP > 0.:
             system.run('solver', 'clip',
                        hosts='head',
-                       path=path + '/' + tag,
+                       path=path + '/' + 'kernels/sum',
                        thresh=PAR.CLIP)
 
         # apply smoothing
         if PAR.SMOOTH > 0.:
             system.run('solver', 'smooth',
                        hosts='head',
-                       path=path + '/' + tag,
+                       path=path + '/' + 'kernels/sum',
                        span=PAR.SMOOTH)
-
-            g = solver.merge(solver.load(path +'/'+ tag))
 
         # apply preconditioner
         if PATH.PRECOND:
-            unix.cd(path)
+            g = solver.merge(solver.load(path +'/'+ 'kernels/sum'))
             g /= solver.merge(solver.load(PATH.PRECOND))
-            unix.mv(tag, '_noprecond')
-            solver.save(path +'/'+ tag, solver.split(g))
+
+            src = path +'/'+ 'kernels/sum'
+            dst = path +'/'+ 'kernels/sum_noprecond'
+            unix.mv(src, dst)
+            unix.mkdir(src)
+
+            solver.save(path +'/'+ 'kernels/sum',
+                        solver.split(g),
+                        sufix='_kernel')
 
 

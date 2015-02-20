@@ -55,8 +55,8 @@ class base(object):
         Utilities for combining and smoothing kernels.
     """
 
-    #  By default, SPECFEM reads velocity models specified in terms of rho, vp, 
-    #  and vs. For variable density elastic simulations, include all three
+    #  By default, SPECFEM reads velocity models are specified in terms of rho,
+    #  vp, and vs. For variable density elastic simulations, include all three
     #  in the 'parameters' list below. For constant density elastic simulations,
     #  remove 'rho' from the list. For variable density acoustic simulations, 
     #  remove 'vs' from the list. For constant desnity acoustic simulations, 
@@ -251,7 +251,7 @@ class base(object):
         return model
 
 
-    def save(self, path, model):
+    def save(self, path, model, suffix=''):
         """ writes SPECFEM model
 
             The following code writes SPECFEM acoustic and elastic models.
@@ -343,7 +343,7 @@ class base(object):
                 + str(span) + ' '
                 + path + '/ '
                 + path + '/ ' 
-                + name)
+                + name + '_kernel')
         print ''
 
         # move input files
@@ -382,7 +382,7 @@ class base(object):
             unix.cp(src, dst)
 
     def export_kernels(self, path):
-        # work around SPECFEM convetions
+        # work around unfortunate SPECFEM conventions
         try:
             files = glob(self.model_databases +'/'+ '*alpha*_kernel.bin')
             unix.rename('alpha', 'vp', files)
