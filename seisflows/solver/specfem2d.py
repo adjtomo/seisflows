@@ -169,12 +169,12 @@ class specfem2d(loadclass('solver', 'base')):
             [path])
 
 
-    def smooth(self, path='', tag='gradient', span=0.):
+    def smooth(self, path='', span=0.):
         """ Smooths SPECFEM2D kernels by convolving them with a Gaussian
         """
         from seisflows.tools.array import meshsmooth
 
-        parts = self.load(path +'/'+ tag)
+        parts = self.load(path)
         if not span:
             return parts
 
@@ -190,13 +190,13 @@ class specfem2d(loadclass('solver', 'base')):
         # perform smoothing
         for key in self.parameters:
             parts[key] = [meshsmooth(x, z, parts[key][0], span, nx, nz)]
-        unix.mv(path +'/'+ tag, path +'/'+ '_nosmooth')
-        self.save(path +'/'+ tag, parts)
+        unix.mv(path, path + '_nosmooth')
+        self.save(path, parts)
 
 
-    def clip(self, path='', tag='gradient', thresh=1.):
+    def clip(self, path='', thresh=1.):
         """clips SPECFEM2D kernels"""
-        parts = self.load(path +'/'+ tag)
+        parts = self.load(path)
         if thresh >= 1.:
             return parts
 
@@ -205,8 +205,8 @@ class specfem2d(loadclass('solver', 'base')):
             minval = parts[key][0].min()
             maxval = parts[key][0].max()
             np.clip(parts[key][0], thresh*minval, thresh*maxval, out=parts[key][0])
-        unix.mv(path +'/'+ tag, path +'/'+ '_noclip')
-        self.save(path +'/'+ tag, parts)
+        unix.mv(path, path + '_noclip')
+        self.save(path, parts)
 
 
     ### file transfer utilities

@@ -327,27 +327,28 @@ class base(object):
                 + name + '_kernel')
 
 
-    def smooth(self, path='', tag='gradient', span=0.):
+    def smooth(self, path='', span=0.):
         """ Smooths kernels by convolving them with a Gaussian.  Wrapper over 
             xsmooth_sem utility.
         """
-        unix.cd(self.getpath)
+        assert (exists(path))
 
         # apply smoothing operator
+        unix.cd(self.getpath)
         for name in self.parameters:
             print ' smoothing', name
             self.mpirun(
                 PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
                 + str(span) + ' '
                 + str(span) + ' '
-                + path +'/'+ tag + '/ '
-                + path +'/'+ tag + '/ ' 
+                + path + '/ '
+                + path + '/ ' 
                 + name)
         print ''
 
         # move input files
-        src = path +'/'+ tag
-        dst = path +'/'+ tag + '_nosmooth'
+        src = path
+        dst = path + '_nosmooth'
         unix.mkdir(dst)
         for name in self.parameters:
             unix.mv(glob(src+'/*'+name+'.bin'), dst)

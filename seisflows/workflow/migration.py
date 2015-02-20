@@ -87,13 +87,8 @@ class migration(object):
                    export_traces=PAR.SAVETRACES)
 
         # process gradient
-        postprocess.process_kernels(
-            path=PATH.GLOBAL,
-            tag='gradient')
-
-        # save results
-        if PAR.SAVEGRADIENT:
-            self.save_gradient()
+        postprocess.combine_kernels(
+            path=PATH.GLOBAL)
 
         if PAR.SAVETRACES:
             self.save_traces()
@@ -110,11 +105,6 @@ class migration(object):
         model = PATH.OUTPUT +'/'+ 'model_init'
         assert exists(model)
         unix.ln(model, PATH.GLOBAL +'/'+ 'model')
-
-    def save_gradient(self):
-        src = glob(PATH.GLOBAL +'/'+ 'gradient')
-        dst = PATH.OUTPUT
-        unix.mv(src, dst)
 
     def save_kernels(self):
         src = PATH.GLOBAL +'/'+ 'kernels'

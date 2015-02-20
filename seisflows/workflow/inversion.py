@@ -230,7 +230,7 @@ class inversion(object):
                    path=PATH.GRAD,
                    export_traces=divides(self.iter, PAR.SAVETRACES))
 
-        postprocess.process_kernels(
+        postprocess.write_gradient(
             path=PATH.GRAD)
 
 

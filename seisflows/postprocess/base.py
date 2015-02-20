@@ -1,9 +1,10 @@
+
 import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
-from seisflows.tools.config import ParameterObj
+from seisflows.tools.config import ParameterObj, ParameterError
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
@@ -38,33 +39,49 @@ class base(object):
 
 
     def setup(self):
-        """ Called once at beginning of workflow to perform any required
-          initialization or setup tasks
+        """ Performs any required initialization or setup tasks
         """
         pass
 
 
-    def process_kernels(self, tag='gradient', path=None):
-        """ Computes gradient and performs scaling, smoothing, and 
-          preconditioning operations
+    def write_gradient(self, path):
+        """ Writes gradient of objective function
         """
-        assert (exists(path))
+        if 'OPTIMIZE' not in PATH:
+            raise ParameterError(PATH, 'OPTIMIZE')
 
-        # sum kernels
+        if not exists(path):
+            raise Exception()
+
+        self.combine_kernels(path)
+        self.process_kernels(path)
+
+        g = solver.merge(solver.load(path +'/'+ 'gradient', verbose=True))
+        savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
+
+
+    def combine_kernels(self, path):
+        """ Sums individual source contributions
+        """
         system.run('solver', 'combine',
                    hosts='head',
                    path=path +'/'+ 'kernels')
 
-        g = solver.merge(
-                solver.load(
-                    path +'/'+ 'kernels/sum', 
-                    suffix='_kernel', 
-                    verbose=True))
 
-        # convert logarithmic perturbations
-        m = solver.merge(
-                solver.load(
-                    path +'/'+ 'model'))
+    def process_kernels(self, path=None, tag='gradient'):
+        """ Performs scaling, smoothing, and preconditioning operations
+        """
+        assert (exists(path))
+
+        # convert from relative to absolute perturbations
+        g = solver.merge(solver.load(
+                path +'/'+ 'kernels/sum', 
+                suffix='_kernel', 
+                verbose=True))
+
+        m = solver.merge(solver.load(
+                path +'/'+ 'model'))
+
         g *= m
 
         # apply scaling
@@ -75,23 +92,20 @@ class base(object):
         else:
             g *= PAR.SCALE
 
-        # write gradient
         solver.save(path +'/'+ tag, solver.split(g))
 
         # apply clipping
         if PAR.CLIP > 0.:
             system.run('solver', 'clip',
                        hosts='head',
-                       path=path,
-                       tag=tag,
+                       path=path + '/' + tag,
                        thresh=PAR.CLIP)
 
         # apply smoothing
         if PAR.SMOOTH > 0.:
             system.run('solver', 'smooth',
                        hosts='head',
-                       path=path,
-                       tag=tag,
+                       path=path + '/' + tag,
                        span=PAR.SMOOTH)
 
             g = solver.merge(solver.load(path +'/'+ tag))
@@ -103,8 +117,4 @@ class base(object):
             unix.mv(tag, '_noprecond')
             solver.save(path +'/'+ tag, solver.split(g))
 
-        if 'OPTIMIZE' in PATH:
-            if tag == 'gradient':
-                g = solver.merge(solver.load(path +'/'+ tag, verbose=True))
-                savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
