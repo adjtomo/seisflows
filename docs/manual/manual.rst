@@ -181,6 +181,10 @@ To allow classes to work with one another, each class must conform to an establi
 
 - setup
 
+- write_graident
+
+- combine_kernels
+
 - process_kernels
 
 
