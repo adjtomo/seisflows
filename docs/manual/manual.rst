@@ -119,10 +119,6 @@ Besides different job submission and management systems, different filesystem co
 
 As the size of an inversion grows, scalability and fault tolerance become increasingly important.  If a single forward simulation spans more than one node, users must select ``pbs_lg_job`` or ``slurm_lg_job`` system configurations in ``parameters.py``.  If a forward simulation fits onto a single node, users must select ``pbs_lg_job`` or ``slurm_sm_job`` instead.
 
-
-Heavyweight Solutions
----------------------
-
 In writing system interfaces, the approach taken by SeisFlows developers has been to write lightweight Python wrappers on top of PBS and SLURM commands.  For some cases involving nonstandard cluster configurations or restrictive usage policies, heavyweight solutions may be required instead.  Users are referred to distributed computing projects such as SAGA or PATHOS for ideas.
 
 
