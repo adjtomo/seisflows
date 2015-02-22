@@ -43,9 +43,11 @@ class base(object):
     def write_gradient(self, path):
         """ Writes gradient of objective function
         """
+        # check parameters
         if 'OPTIMIZE' not in PATH:
             raise ParameterError(PATH, 'OPTIMIZE')
 
+        # check input arguments
         if not exists(path):
             raise Exception()
 
@@ -58,10 +60,8 @@ class base(object):
                 suffix='_kernel',
                 verbose=True))
 
-        m = solver.merge(solver.load(
+        g *= solver.merge(solver.load(
                 path +'/'+ 'model'))
-
-        g *= m
 
         # apply scaling
         if float(PAR.SCALE) == 1.:
@@ -72,6 +72,7 @@ class base(object):
             g *= PAR.SCALE
 
         # write gradient
+        solver.save(PATH.GRAD +'/'+ 'gradient', solver.split(g))
         savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
 
@@ -115,6 +116,6 @@ class base(object):
 
             solver.save(path +'/'+ 'kernels/sum',
                         solver.split(g),
-                        sufix='_kernel')
+                        suffix='_kernel')
 
 
