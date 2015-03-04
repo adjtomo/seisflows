@@ -124,36 +124,6 @@ class specfem3d_globe(loadclass('solver', 'base')):
         self.mpirun('bin/xspecfem3D')
 
 
-    ### postprocessing utilities
-
-    def lsmooth(self, path='', span=0.):
-        """ smooths SPECFEM3D_GLOBE kernels
-        """
-        unix.cd(self.getpath)
-
-        # smooth kernels
-        for name in self.parameters:
-            _, name = name.split('_')
-            print ' smoothing', name
-            self.mpirun(
-                PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
-                + str(span) + ' '
-                + str(span) + ' '
-                + name + '_kernel' + ' '
-                + path + '/ '
-                + self.model_databases + '/ ',
-                output=self.getpath+'/'+'OUTPUT_FILES/output_smooth_sem.txt')
-
-        # remove old kernels
-        src = path
-        dst = path + '_nosmooth'
-        unix.mkdir(dst)
-        for name in self.parameters:
-            unix.mv(glob(src+'/*'+name+'.bin'), dst)
-        unix.rename('_smooth', '', glob(src+'/*'))
-        print ''
-
-
     ### utility functions
 
     @property
