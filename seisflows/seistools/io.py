@@ -107,7 +107,7 @@ class MinmaxStruct(object):
         self.maxvals = dict((key, -np.Inf) for key in parameters)
 
     def items(self):
-        return ((key, self.minvals[key], self.minvals[key]) for key in self.keys)
+        return ((key, self.minvals[key], self.maxvals[key]) for key in self.keys)
 
     def update(self, keys, vals):
         for key,val in zip(keys, vals):

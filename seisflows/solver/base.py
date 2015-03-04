@@ -67,14 +67,14 @@ class base(object):
     parameters += ['vs']
     parameters += ['rho']
 
-    # Because density is not well constrained by travel time measurements, it is
-    # conventional to apply empirical scaling relations between density and 
-    # compressional wave velocity.
+    # Because density is not well constrained by seismic measurments, it is
+    # empirical scaling relations between density and compressional wave 
+    # velocity are typically applied.
     density_scaling = None
 
     #  For seismic inversion, it can be advantageous to express the derivatives
-    #  of an objective function in terms of parameters other than vp and vs.
-    #  For examples of this approach, see SEISFLOWS-RESEARCH.
+    #  of an objective function in terms of parameters such as bulk c and 
+    #  bulk mu. For examples of this approach, see SEISFLOWS-RESEARCH.
 
 
     def check(self):
@@ -310,7 +310,7 @@ class base(object):
     ### postprocessing utilities
 
     def combine(self, path=''):
-        """ Sums individual source contributions. Wrapper over xsum_kernels 
+        """ Sums individual source contributions. Wrapper over xcombine_sem
             utility.
         """
         unix.cd(self.getpath)
@@ -321,10 +321,10 @@ class base(object):
         unix.mkdir(path +'/'+ 'sum')
         for name in self.parameters:
             self.mpirun(
-                PATH.SPECFEM_BIN +'/'+ 'xsum_kernels ' 
+                PATH.SPECFEM_BIN +'/'+ 'xcombine_sem '
+                + name + '_kernel' + ' '
                 + 'kernel_paths' + ' '
-                + path +'/'+ 'sum' + ' '
-                + name + '_kernel')
+                + path +'/'+ 'sum')
 
 
     def smooth(self, path='', span=0.):
@@ -341,9 +341,11 @@ class base(object):
                 PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
                 + str(span) + ' '
                 + str(span) + ' '
+                + name + '_kernel' + ' '
                 + path + '/ '
-                + path + '/ ' 
-                + name + '_kernel')
+                + path + '/ ',
+                output=self.getpath+'/'+'OUTPUT_FILES/output_smooth_sem.txt')
+
         print ''
 
         # move input files
@@ -356,6 +358,33 @@ class base(object):
         # rename output files
         unix.rename('_smooth', '', glob(src+'/*'))
 
+
+    def clip(self, path='', minval=-999999., maxval=999999., thresh='dummy'):
+        """ Clips kernels by convolving them with a Gaussian.  Wrapper over 
+            xclip_sem utility.
+        """
+        assert (exists(path))
+
+        # apply smoothing operator
+        unix.cd(self.getpath)
+        for name in self.parameters:
+            self.mpirun(
+                PATH.SPECFEM_BIN +'/'+ 'xclip_sem '
+                + str(minval) + ' '
+                + str(maxval) + ' '
+                + name + '_kernel' + ' '
+                + path + '/ '
+                + path + '/ ')
+
+        # move input files
+        src = path
+        dst = path + '_noclip'
+        unix.mkdir(dst)
+        for name in self.parameters:
+            unix.mv(glob(src+'/*'+name+'.bin'), dst)
+
+        # rename output files
+        unix.rename('_clip', '', glob(src+'/*'))
 
 
     ### file transfer utilities
@@ -387,7 +416,7 @@ class base(object):
             files = glob(self.model_databases +'/'+ '*alpha*_kernel.bin')
             unix.rename('alpha', 'vp', files)
 
-            files = glob(self.model_databases +'/'+ '*beta_kernel.bin')
+            files = glob(self.model_databases +'/'+ '*beta*_kernel.bin')
             unix.rename('beta', 'vs', files)
         except:
             pass

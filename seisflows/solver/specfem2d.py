@@ -34,7 +34,7 @@ class specfem2d(loadclass('solver', 'base')):
 
 
     def check(self):
-        """ Checks parameters, paths, and dependencies
+        """ Checks parameters and paths
         """
         super(specfem2d, self).check()
 
@@ -129,7 +129,7 @@ class specfem2d(loadclass('solver', 'base')):
         return model
 
 
-    def save(self, filename, model, type='model'):
+    def save(self, filename, model, type='model', suffix='dummy'):
         """ writes SPECFEM2D kernel or model
         """
         # allocate array
@@ -164,7 +164,7 @@ class specfem2d(loadclass('solver', 'base')):
         """ Combines SPECFEM2D kernels
         """
         subprocess.call(
-            [self.getpath +'/'+ 'bin/xsmooth_sem'] +
+            [self.getpath +'/'+ 'bin/xcombine_sem'] +
             [str(len(unix.ls(path)))] +
             [path])
 

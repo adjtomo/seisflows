@@ -126,25 +126,7 @@ class specfem3d_globe(loadclass('solver', 'base')):
 
     ### postprocessing utilities
 
-    def combine(self, path=''):
-        """ Sums individual source contributions. Wrapper over xsum_kernels 
-            utility.
-        """
-        unix.cd(self.getpath)
-
-        with open('kernel_paths', 'w') as f:
-            f.writelines([join(path, dir)+'\n' for dir in unix.ls(path)])
-
-        unix.mkdir(path +'/'+ 'sum')
-        for name in self.parameters:
-            _, name = name.split('_')
-            self.mpirun(PATH.SPECFEM_BIN +'/'+ 'xsum_kernels '
-                        + 'kernel_paths' + ' '
-                        + path +'/'+ 'sum' + ' '
-                        + name + '_kernel')
-
-
-    def smooth(self, path='', tag='gradient', span=0.):
+    def lsmooth(self, path='', span=0.):
         """ smooths SPECFEM3D_GLOBE kernels
         """
         unix.cd(self.getpath)
@@ -157,13 +139,14 @@ class specfem3d_globe(loadclass('solver', 'base')):
                 PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
                 + str(span) + ' '
                 + str(span) + ' '
-                + name + ' '
-                + path +'/'+ tag + '/ '
-                + self.model_databases + '/ ')
+                + name + '_kernel' + ' '
+                + path + '/ '
+                + self.model_databases + '/ ',
+                output=self.getpath+'/'+'OUTPUT_FILES/output_smooth_sem.txt')
 
         # remove old kernels
-        src = path +'/'+ tag
-        dst = path +'/'+ tag + '_nosmooth'
+        src = path
+        dst = path + '_nosmooth'
         unix.mkdir(dst)
         for name in self.parameters:
             unix.mv(glob(src+'/*'+name+'.bin'), dst)
