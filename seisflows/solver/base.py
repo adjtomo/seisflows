@@ -232,7 +232,7 @@ class base(object):
         minmax = MinmaxStruct(parameters, mapping)
 
         for iproc in range(PAR.NPROC):
-            keys, vals = loadbypar(path, parameters, iproc, suffix)
+            keys, vals = loadbypar(path, parameters, iproc, prefix, suffix)
 
             # keep track of min, max
             minmax.update(keys, vals)
@@ -251,7 +251,7 @@ class base(object):
         return model
 
 
-    def save(self, path, model, suffix=''):
+    def save(self, path, model, prefix='', suffix=''):
         """ writes SPECFEM model
 
             The following code writes SPECFEM acoustic and elastic models.

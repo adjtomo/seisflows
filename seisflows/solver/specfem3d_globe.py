@@ -8,6 +8,8 @@ import numpy as np
 import seisflows.seistools.specfem3d_globe as solvertools
 from seisflows.seistools.io import savebin
 from seisflows.seistools.shared import getpar, setpar
+from seisflows.seistools.io import loadbypar, loadbyproc, savebin, \
+    applymap, ModelStruct, MinmaxStruct
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
@@ -24,22 +26,14 @@ class specfem3d_globe(loadclass('solver', 'base')):
       See base class for method descriptions
     """
 
-    if 0:
-        # use isotropic model
-        parameters = []
-        parameters += ['reg1_rho']
-        parameters += ['reg1_vp']
-        parameters += ['reg1_vs']
-
-    else:
-        # use transversely isotropic model
-        parameters = []
-        parameters += ['reg1_rho']
-        parameters += ['reg1_vpv']
-        parameters += ['reg1_vph']
-        parameters += ['reg1_vsv']
-        parameters += ['reg1_vsh']
-        parameters += ['reg1_eta']
+    # By default, use transversely isotropic model updates.
+    parameters = []
+    parameters += ['rho']
+    parameters += ['vpv']
+    parameters += ['vph']
+    parameters += ['vsv']
+    parameters += ['vsh']
+    parameters += ['eta']
 
 
     def check(self):
@@ -83,24 +77,59 @@ class specfem3d_globe(loadclass('solver', 'base')):
 
     ### model input/output
 
-    def save(self, path, model):
+    def load(self, path, parameters=None, mapping=None, prefix='reg1_', suffix='', verbose=False):
+        """ reads SPECFEM model
+
+          Models are stored in Fortran binary format and separated into multiple
+          files according to material parameter and processor rank.
+
+          Optionally, 'mapping' can be used to convert on the fly from one set
+          of material parameters to another.
+        """
+        if not parameters:
+            parameters = self.parameters
+
+        model = ModelStruct(parameters, mapping)
+        minmax = MinmaxStruct(parameters, mapping)
+
+        for iproc in range(PAR.NPROC):
+            keys, vals = loadbypar(path, parameters, iproc, prefix, suffix)
+
+            # keep track of min, max
+            minmax.update(keys, vals)
+
+            # apply optional mapping
+            if mapping:
+                keys, vals = applymap(vals, mapping)
+
+            # append latest values
+            for key, val in zip(keys, vals):
+                model[key] += [val]
+
+        if verbose:
+            minmax.write(path, logpath=PATH.SUBMIT)
+
+        return model
+
+
+    def save(self, path, model, prefix='reg1_', suffix=''):
         """ writes SPECFEM3D_GLOBE transerverly isotropic model
         """
         unix.mkdir(path)
 
         for iproc in range(PAR.NPROC):
-            for key in ['reg1_vpv', 'reg1_vph', 'reg1_vsv', 'reg1_vsh', 'reg1_eta']:
+            for key in ['vpv', 'vph', 'vsv', 'vsh', 'eta']:
                 if key in self.parameters:
-                    savebin(model[key][iproc], path, iproc, key)
+                    savebin(model[key][iproc], path, iproc, prefix + key)
                 else:
                     self.copybin(path, iproc, key)
 
-            if 'reg1_rho' in self.parameters:
-                savebin(model['reg1_rho'][iproc], path, iproc, 'reg1_rho')
+            if 'rho' in self.parameters:
+                savebin(model['rho'][iproc], path, iproc, prefix + 'rho')
             elif self.density_scaling:
                 raise NotImplementedError
             else:
-                self.copybin(path, iproc, 'reg1_rho')
+                self.copybin(path, iproc, prefix + 'rho')
 
 
     ### low-level solver interface

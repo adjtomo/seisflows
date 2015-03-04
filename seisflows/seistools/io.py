@@ -4,14 +4,14 @@ from os.path import abspath, join
 import numpy as np
 
 
-def loadbypar(path, parameters, iproc, suffix=''):
+def loadbypar(path, parameters, iproc, prefix='', suffix=''):
     """ Reads SPECFEM database files for given processor rank, callable by a
         single mpi process
     """
     keys = []
     vals = []
     for key in sorted(parameters):
-        val = loadbin(path, iproc, key+suffix)
+        val = loadbin(path, iproc, prefix+key+suffix)
         keys += [key]
         vals += [val]
     return keys, vals
