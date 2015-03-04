@@ -216,11 +216,6 @@ class specfem2d(loadclass('solver', 'base')):
         dst = join(self.getpath, 'DATA/model_velocity.dat_input')
         unix.cp(src, dst)
 
-    def import_traces(self, path):
-        src = glob(join(path, 'traces', self.getname, '*'))
-        dst = join(self.getpath, 'traces/obs')
-        unix.cp(src, dst)
-
     def export_model(self, path):
         if system.getnode() == 0:
             src = join(self.getpath, 'DATA/model_velocity.dat_input')
@@ -232,56 +227,6 @@ class specfem2d(loadclass('solver', 'base')):
         src = join(self.getpath, 'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
         dst = join(path, 'kernels', '%06d' % system.getnode())
         unix.cp(src, dst)
-
-    def export_residuals(self, path):
-        unix.mkdir_gpfs(join(path, 'residuals'))
-        src = join(self.getpath, 'residuals')
-        dst = join(path, 'residuals', self.getname)
-        unix.mv(src, dst)
-
-    def export_traces(self, path, prefix='traces/obs'):
-        unix.mkdir_gpfs(join(path, 'traces'))
-        src = join(self.getpath, prefix)
-        dst = join(path, 'traces', self.getname)
-        unix.cp(src, dst)
-
-
-    ### setup utilities
-
-    def initialize_solver_directories(self):
-        """ Creates directory structure expected by SPECFEM2D, copies 
-          executables, and prepares input files. Executables must be supplied 
-          by user as there is currently no mechanism to automatically compile 
-          from source.
-        """
-        unix.mkdir(self.getpath)
-        unix.cd(self.getpath)
-
-        # create directory structure
-        unix.mkdir('bin')
-        unix.mkdir('DATA')
-
-        unix.mkdir('traces/obs')
-        unix.mkdir('traces/syn')
-        unix.mkdir('traces/adj')
-
-        unix.mkdir(self.model_databases)
-
-        # copy exectuables
-        src = glob(PATH.SPECFEM_BIN +'/'+ '*')
-        dst = 'bin/'
-        unix.cp(src, dst)
-
-        # copy input files
-        src = glob(PATH.SPECFEM_DATA +'/'+ '*')
-        dst = 'DATA/'
-        unix.cp(src, dst)
-
-        src = 'DATA/SOURCE_' + self.getname
-        dst = 'DATA/SOURCE'
-        unix.cp(src, dst)
-
-        setpar('f0', PAR.F0, 'DATA/SOURCE')
 
 
     ### input file writers
