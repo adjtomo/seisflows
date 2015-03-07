@@ -2,7 +2,7 @@
 Overview
 ========
 
-SeisFlows is a Python adjoint tomography and full waveform inversion package designed to be flexible enough to use in a variety of contexts, including scientific research.
+SeisFlows is a Python adjoint tomography and full waveform inversion package designed to be flexible enough for use in both scientific research and large scale regional, global, and exploration inversions.
 
 To provide this flexibility, users are offered choices in each of the following categories: workflow, system, solver, optimization, preprocessing, and postprocessing.  Within each category, different classes are interchangeable. If desired functionality is missing from the main package, users can customize default classes by overloading methods, or contribute their own classes.  This combination of extensibility, modular design, and object oriented programming allows multiple users to work productively within the same framework.
 
@@ -93,11 +93,11 @@ Integration of the solver with the other workflow components can be challenging.
 
 - Solver computations account for most of the cost of an inversion. As a result, the solver must be written in an efficient compiled language, and wrappers must be written to integrate the compiled code with other software components. 
 
-- Because compilation of SPECFEM2D, SPECFEM3D, or SPECFEM3D_GLOBE depends on input files, there is currently no mechanism for automatically compiling binary files. Users must prepare their own SPECFEM input files and then follow the procedure from the SPECFEM documentation to compile binary files.
+- There is currently no mechanism for automatically compiling binary files for SPECFEM2D, SPECFEM3D, or SPECFEM3D_GLOBE. Users must prepare their own SPECFEM input files and then follow the procedure from the SPECFEM documentation to compile binary files.
 
-- As described :ref:`above <job_submission>`, SeisFlows uses its own unique input files to determine runtime settings.  Problems could arise if parameters from SeisFlows input files conflict with parameters from SPECFEM input files. Users must make sure that there are no conflicts between SeisFlows parameters and solver parameters.
+- As described :ref:`above <job_submission>`, SeisFlows uses two input files, paths and parameter.  Problems could arise if parameters from SeisFlows input files conflict with parameters from SPECFEM input files. Users must make sure that there are no conflicts between SeisFlows parameters and solver parameters.
 
-- In the solver routines, it is natural to represent velocity models as dictionaries, with different keys corresponding to different material parameters.  In the optimization routines, it natural to represent velocity models as vectors. To convert back and forth between these two representations, a pair of utility functions--``split`` and ``merge``--are included in each in the SeisFlows package as part of the solver interfaces.
+- In the solver routines, it is natural to represent velocity models as dictionaries, with different keys corresponding to different material parameters.  In the optimization routines, it natural to represent velocity models as vectors. To convert back and forth between these two representations, a pair of utility functions--``split`` and ``merge``--are included in solver.base.
 
 
 Writing Custom Solver Interfaces

@@ -10,8 +10,8 @@ from seisflows.tools.code import exists
 class EnvironmentError(Exception):
       msg = """
       Currently, an account on tiger.princeton.edu is required to run examples.
-      For a possible workaround, contact rmodrak@gmail.com about downloading 
-      examples from the tigress.princeton.edu ftp server.
+      For a workaround, contact rmodrak@gmail.com about downloading examples 
+      from the tigress.princeton.edu ftp server.
       """
 
       def __init__(self):
@@ -29,7 +29,7 @@ def listdir(dir):
 
 
 def getpath():
-    path = os.getenv('SFEXAMPLES')
+    path = os.getenv('SEISFLOWS_EXAMPLES')
     if not exists(path):  
        raise EnvironmentError()
     return path
