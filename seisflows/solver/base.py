@@ -55,9 +55,9 @@ class base(object):
         Utilities for combining and smoothing kernels.
     """
 
-    #  By default, SPECFEM reads velocity models are specified in terms of rho,
-    #  vp, and vs. For variable density elastic simulations, include all three
-    #  in the 'parameters' list below. For constant density elastic simulations,
+    #  By default, SPECFEM reads velocity models specified in terms of rho, vp,
+    #  and vs. For variable density elastic simulations, include all three in
+    #  the 'parameters' list below. For constant density elastic simulations,
     #  remove 'rho' from the list. For variable density acoustic simulations, 
     #  remove 'vs' from the list. For constant desnity acoustic simulations, 
     #  remove 'rho' and 'vs' from the list.
@@ -67,14 +67,14 @@ class base(object):
     parameters += ['vs']
     parameters += ['rho']
 
-    # Because density is not well constrained by seismic measurments, it is
-    # empirical scaling relations between density and compressional wave 
-    # velocity are typically applied.
+    # Because density is often not well constrained, empirical scaling
+    # relations between density and compressional wave velocity are
+    # commonly applied.
     density_scaling = None
 
-    #  For seismic inversion, it can be advantageous to express the derivatives
-    #  of an objective function in terms of parameters such as bulk c and 
-    #  bulk mu. For examples of this approach, see SEISFLOWS-RESEARCH.
+    # It is sometimes advantageous to use alternate elastic moduli, such as
+    # bulk c and bulk mu instead of vp and vs.  For more information, see 
+    # solver.FwiElastic in SEISFLOWS-RESEARCH.
 
 
     def check(self):
