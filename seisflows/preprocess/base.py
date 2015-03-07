@@ -191,14 +191,14 @@ class base(object):
 
     ### input/output
 
-    def load(self, prefix=''):
+    def load(self, prefix='', suffix=''):
         """ Reads seismic data from disk
         """
         h = Struct()
         f = Struct()
 
         for channel in self.channels:
-            f[channel], h[channel] = self.reader(prefix=prefix, channel=channel)
+            f[channel], h[channel] = self.reader(channel=channel, prefix=prefix, suffix=suffix)
 
         # check headers
         h = self.check_headers(h)
