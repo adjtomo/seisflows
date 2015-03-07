@@ -2,6 +2,8 @@
 from glob import glob
 from os.path import join
 
+import numpy as np
+
 from seisflows.tools import unix
 from seisflows.tools.code import exists
 from seisflows.tools.config import ParameterObj
@@ -74,13 +76,15 @@ class test_adjoint(object):
                    path=PATH.GLOBAL)
 
         # collect observations and synthetics
-        src = join(PATH.OUTPUT, 'traces', '*')
-        dst = join(PATH.OUTPUT, 'traces_obs')
-        unix.mv(glob(src), dst)
+        event = unix.basename(glob(PATH.OUTPUT+'/'+'traces/*')[0])
 
-        src = join(PATH.GLOBAL, 'traces', '*')
+        src = join(PATH.OUTPUT, 'traces', event)
+        dst = join(PATH.OUTPUT, 'traces_obs')
+        unix.mv(src, dst)
+
+        src = join(PATH.GLOBAL, 'traces', event)
         dst = join(PATH.OUTPUT, 'traces_syn')
-        unix.mv(glob(src), dst)
+        unix.mv(src, dst)
 
         obs = join(PATH.OUTPUT, 'traces_obs')
         syn = join(PATH.OUTPUT, 'traces_syn')
@@ -88,12 +92,13 @@ class test_adjoint(object):
         d = preprocess.load(obs)
         s = preprocess.load(syn)
 
+        # collect model and kernels
         model = solver.load(PATH.MODEL_INIT)
-        kernels = solver.load(PATH.GLOBAL+'/'+'kernels/sum', suffix='_kernel')
+        kernels = solver.load(PATH.GLOBAL+'/'+'kernels'+'/'+event, suffix='_kernel')
 
-        print 'd', d.keys()
-        print 'd', d.keys()
-        print 'model', model.keys()
+        print 'd', d
+        print 's', s
+        print 'model', model
         print 'kernels', kernels.keys()
 
         # LHS terms
@@ -111,5 +116,4 @@ class test_adjoint(object):
         model = PATH.OUTPUT +'/'+ 'model_init'
         assert exists(model)
         unix.ln(model, PATH.GLOBAL +'/'+ 'model')
-
 
