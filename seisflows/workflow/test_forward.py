@@ -8,7 +8,7 @@ import system
 import solver
 
 
-class test_solver(object):
+class test_forward(object):
     """ Tests solver by running forward simulation
     """
 
