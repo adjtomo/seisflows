@@ -16,6 +16,28 @@ import solver
 import preprocess
 
 
+def DotProductLHS(keys, x, y):
+    val = 0
+    for key in keys:
+        a = x[key].flatten()
+        b = y[key].flatten()
+        val += np.dot(a,b)
+    return val
+
+
+def DotProductRHS(keys, x, y):
+    val = 0
+    for key in keys:
+        a = np.array([])
+        b = np.array([])
+        for iproc in range(PAR.NPROC):
+            a = np.append(a, x[key][iproc])
+            b = np.append(b, y[key][iproc])
+        val += np.dot(a,b)
+    return val
+
+
+
 class test_adjoint(object):
 
     def check(self):
@@ -32,6 +54,8 @@ class test_adjoint(object):
         if 'OUTPUT' not in PATH:
             raise ParameterError(PATH, 'OUTPUT')
 
+        if 'SOLVER' not in PATH:
+            raise ParameterError(PATH, 'SOLVER')
 
         # check input
         if 'DATA' not in PATH:
@@ -50,64 +74,53 @@ class test_adjoint(object):
 
 
     def main(self):
-        # prepare directory structure
         unix.rm(PATH.GLOBAL)
         unix.mkdir(PATH.GLOBAL)
-
-        # set up workflow machinery
         preprocess.setup()
 
-        # set up solver machinery
-        print 'Preparing solver...'
+
+        print 'SIMULATION 1 OF 3'
         system.run('solver', 'setup',
                    hosts='all')
 
+        print 'SIMULATION 2 OF 3'
         self.prepare_model()
-
-        print 'Generating synthetics...'
         system.run('solver', 'eval_func',
                    hosts='all',
-                   path=PATH.GLOBAL,
-                   export_traces=True)
+                   path=PATH.GLOBAL)
 
-        print 'Backprojecting data...'
+        print 'SIMULATION 3 OF 3'
         system.run('solver', 'eval_grad',
                    hosts='all',
                    path=PATH.GLOBAL)
 
-        # collect observations and synthetics
-        event = unix.basename(glob(PATH.OUTPUT+'/'+'traces/*')[0])
 
-        src = join(PATH.OUTPUT, 'traces', event)
-        dst = join(PATH.OUTPUT, 'traces_obs')
-        unix.mv(src, dst)
+        # collect traces
+        obs = join(PATH.SOLVER, self.event, 'traces/obs')
+        syn = join(PATH.SOLVER, self.event, 'traces/syn')
+        adj = join(PATH.SOLVER, self.event, 'traces/adj')
 
-        src = join(PATH.GLOBAL, 'traces', event)
-        dst = join(PATH.OUTPUT, 'traces_syn')
-        unix.mv(src, dst)
-
-        obs = join(PATH.OUTPUT, 'traces_obs')
-        syn = join(PATH.OUTPUT, 'traces_syn')
-
-        d = preprocess.load(obs)
-        s = preprocess.load(syn)
+        obs,_ = preprocess.load(obs)
+        syn,_ = preprocess.load(syn)
+        adj,_ = preprocess.load(adj, suffix='.su.adj')
 
         # collect model and kernels
         model = solver.load(PATH.MODEL_INIT)
-        kernels = solver.load(PATH.GLOBAL+'/'+'kernels'+'/'+event, suffix='_kernel')
+        kernels = solver.load(PATH.GLOBAL+'/'+'kernels'+'/'+self.event, suffix='_kernel')
 
-        print 'd', d
-        print 's', s
-        print 'model', model
-        print 'kernels', kernels.keys()
+        # LHS dot prodcut
+        keys = obs.keys()
+        LHS = DotProductLHS(keys, syn, adj)
 
-        # LHS terms
-        Ax = s
-        y = d - s
+        # RHS dot product
+        keys = ['rho', 'vp', 'vs'] # model.keys()
+        RHS = DotProductRHS(keys, model, kernels)
 
-        # RHS terms
-        x = model
-        Ay = kernels
+        print 
+        print 'LHS:', LHS
+        print 'RHS:', RHS
+        print 'RELATIVE DIFFERENCE:', (LHS-RHS)/RHS
+        print
 
 
     ### utility functions
@@ -116,4 +129,10 @@ class test_adjoint(object):
         model = PATH.OUTPUT +'/'+ 'model_init'
         assert exists(model)
         unix.ln(model, PATH.GLOBAL +'/'+ 'model')
+
+    @property
+    def event(self):
+        if not hasattr(self, '_event'):
+            self._event = unix.basename(glob(PATH.OUTPUT+'/'+'traces/*')[0])
+        return self._event
 
