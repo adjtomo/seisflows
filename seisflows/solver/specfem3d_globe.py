@@ -120,12 +120,12 @@ class specfem3d_globe(loadclass('solver', 'base')):
         for iproc in range(PAR.NPROC):
             for key in ['vpv', 'vph', 'vsv', 'vsh', 'eta']:
                 if key in self.parameters:
-                    savebin(model[key][iproc], path, iproc, prefix + key)
+                    savebin(model[key][iproc], path, iproc, prefix + key + suffix)
                 else:
                     self.copybin(path, iproc, key)
 
             if 'rho' in self.parameters:
-                savebin(model['rho'][iproc], path, iproc, prefix + 'rho')
+                savebin(model['rho'][iproc], path, iproc, prefix + 'rho' + suffix)
             elif self.density_scaling:
                 raise NotImplementedError
             else:

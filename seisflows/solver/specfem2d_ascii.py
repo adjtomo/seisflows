@@ -126,7 +126,7 @@ class specfem2d_ascii(loadclass('solver', 'base')):
         return model
 
 
-    def save(self, filename, model, type='model', suffix='dummy'):
+    def save(self, filename, model, type='dummy', prefix='dummy', suffix='dummy'):
         """ writes SPECFEM2D kernel or model
         """
         nrow = len(model[model.keys().pop()][0])
@@ -281,6 +281,4 @@ def loadbyproc(filename, key, nproc=None):
         return M[:, 3]
     elif key == 'vs':
         return M[:, 4]
-
-
 
