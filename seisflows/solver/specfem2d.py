@@ -21,7 +21,7 @@ import system
 import preprocess
 
 
-class specfem2d(loadclass('solver', 'base')):
+class specfem2d_ascii(loadclass('solver', 'base')):
     """ Python interface for SPECFEM2D
 
       See base class for method descriptions
@@ -36,7 +36,7 @@ class specfem2d(loadclass('solver', 'base')):
     def check(self):
         """ Checks parameters and paths
         """
-        super(specfem2d, self).check()
+        super(specfem2d_ascii, self).check()
 
         # check time stepping parameters
         if 'NT' not in PAR:
@@ -72,7 +72,7 @@ class specfem2d(loadclass('solver', 'base')):
         assert (exists(model_path))
 
         self.initialize_solver_directories()
-        unix.cp(model_path, 'DATA/model_velocity.dat_input')
+        unix.cp(model_path, 'DATA/proc000000_rho_vp_vs.dat')
         self.export_model(PATH.OUTPUT +'/'+ model_name)
 
 
@@ -114,14 +114,11 @@ class specfem2d(loadclass('solver', 'base')):
         nrow = M.shape[0]
         ncol = M.shape[1]
 
-        if ncol == 5:
-            ioff = 0
-        elif ncol == 6:
-            ioff = 1
-        else:
+        if ncol != 5:
             raise Exception('Bad SPECFEM2D model or kernel.')
 
         # fill in dictionary
+        ioff = 0
         model = {}
         for key in ['x', 'z', 'rho', 'vp', 'vs']:
             model[key] = [M[:,ioff]]
@@ -129,29 +126,19 @@ class specfem2d(loadclass('solver', 'base')):
         return model
 
 
-    def save(self, filename, model, type='model', suffix='dummy'):
+    def save(self, filename, model, type='dummy', prefix='dummy', suffix='dummy'):
         """ writes SPECFEM2D kernel or model
         """
-        # allocate array
-        if type == 'model':
-            nrow = len(model[model.keys().pop()][0])
-            ncol = 6
-            ioff = 1
-            M = np.zeros((nrow, ncol))
-        elif type == 'kernel':
-            nrow = len(model[model.keys().pop()][0])
-            ncol = 5
-            ioff = 0
-            M = np.zeros((nrow, ncol))
-        else:
-            raise ValueError
+        nrow = len(model[model.keys().pop()][0])
+        ncol = 5
+        M = np.zeros((nrow, ncol))
 
         # fill in array
         for icol, key in enumerate(('x', 'z', 'rho', 'vp', 'vs')):
             if key in model.keys():
-                M[:,icol+ioff] = model[key][0]
+                M[:,icol] = model[key][0]
             else:
-                M[:,icol+ioff] = loadbyproc(PATH.MODEL_INIT, key)
+                M[:,icol] = loadbyproc(PATH.MODEL_INIT, key)
 
         # write array
         np.savetxt(filename, M, '%16.10e')
@@ -213,12 +200,12 @@ class specfem2d(loadclass('solver', 'base')):
 
     def import_model(self, path):
         src = join(path +'/'+ 'model')
-        dst = join(self.getpath, 'DATA/model_velocity.dat_input')
+        dst = join(self.getpath, 'DATA/proc000000_rho_vp_vs.dat')
         unix.cp(src, dst)
 
     def export_model(self, path):
         if system.getnode() == 0:
-            src = join(self.getpath, 'DATA/model_velocity.dat_input')
+            src = join(self.getpath, 'DATA/proc000000_rho_vp_vs.dat')
             dst = path
             unix.cp(src, dst)
 
@@ -281,23 +268,17 @@ def loadbyproc(filename, key, nproc=None):
     nrow = M.shape[0]
     ncol = M.shape[1]
 
-    if ncol == 5:
-        ioff = 0
-    elif ncol == 6:
-        ioff = 1
-    else:
+    if ncol != 5:
         raise Exception('Bad SPECFEM2D model or kernel.')
 
     if key == 'x':
-        return M[:, ioff+0]
+        return M[:, 0]
     elif key == 'z':
-        return M[:, ioff+1]
+        return M[:, 1]
     elif key == 'rho':
-        return M[:, ioff+2]
+        return M[:, 2]
     elif key == 'vp':
-        return M[:, ioff+3]
+        return M[:, 3]
     elif key == 'vs':
-        return M[:, ioff+4]
-
-
+        return M[:, 4]
 
