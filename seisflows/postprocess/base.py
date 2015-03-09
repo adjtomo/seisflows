@@ -112,7 +112,6 @@ class base(object):
             src = path +'/'+ 'kernels/sum'
             dst = path +'/'+ 'kernels/sum_noprecond'
             unix.mv(src, dst)
-            unix.mkdir(src)
 
             solver.save(path +'/'+ 'kernels/sum',
                         solver.split(g),
