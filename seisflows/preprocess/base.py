@@ -191,25 +191,36 @@ class base(object):
 
     ### input/output
 
-    def load(self, prefix='', suffix=''):
+    def load(self, prefix=None, suffix=None):
         """ Reads seismic data from disk
         """
-        h = Struct()
-        f = Struct()
+        kwargs = dict()
+        if prefix != None:
+            kwargs['prefix'] = prefix
+        if suffix != None:
+            kwargs['suffix'] = suffix
 
+        f = Struct()
+        h = Struct()
         for channel in self.channels:
-            f[channel], h[channel] = self.reader(channel=channel, prefix=prefix, suffix=suffix)
+            f[channel], h[channel] = self.reader(channel=channel, **kwargs)
 
         # check headers
         h = self.check_headers(h)
 
         return f, h
 
-    def save(self, s, h, prefix='traces/adj/', suffix=''):
+    def save(self, s, h, prefix='traces/adj/', suffix=None):
         """ Writes seismic data to disk
         """
+        kwargs = dict()
+        if prefix != None:
+            kwargs['prefix'] = prefix
+        if suffix != None:
+            kwargs['suffix'] = suffix
+
         for channel in self.channels:
-            self.writer(s[channel], h, channel=channel, prefix=prefix, suffix=suffix)
+            self.writer(s[channel], h, channel=channel, **kwargs)
 
 
     ### utility functions

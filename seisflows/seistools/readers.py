@@ -41,9 +41,6 @@ def ascii_specfem2d(**kwargs):
 def su_specfem2d(channel=None, prefix='SEM', suffix='.su'):
     """ Reads Seismic Unix file
     """
-    if suffix == '':
-        suffix = '.su'
-
     if channel in ['x']:
         file = '%s/Ux_file_single%s' % (prefix, suffix)
     elif channel in ['y']:

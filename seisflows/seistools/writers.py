@@ -69,9 +69,6 @@ def ascii_specfem2d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''
 def su_specfem2d(d, h, channel=None, prefix='SEM', suffix='.su.adj'):
     """ Writes Seismic Unix file
     """
-    if suffix == '':
-        suffix = '.su.adj'
-
     if channel in ['x']:
         file = '%s/Ux_file_single%s' % (prefix, suffix)
     elif channel in ['y']:
@@ -145,9 +142,6 @@ def ascii_specfem3d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''
 
 def su_specfem3d(d, h, channel=None, prefix='SEM', suffix='.adj', verbose=False):
     nproc = len(h.nn)
-
-    if suffix == '':
-        suffix = '.adj'
 
     if channel in ['x']:
         wildcard = '%s/%d_dx_SU%s'
