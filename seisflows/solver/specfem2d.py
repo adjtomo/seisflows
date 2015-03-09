@@ -21,7 +21,7 @@ import system
 import preprocess
 
 
-class specfem2d_ascii(loadclass('solver', 'base')):
+class specfem2d(loadclass('solver', 'base')):
     """ Python interface for SPECFEM2D
 
       See base class for method descriptions
@@ -36,7 +36,7 @@ class specfem2d_ascii(loadclass('solver', 'base')):
     def check(self):
         """ Checks parameters and paths
         """
-        super(specfem2d_ascii, self).check()
+        super(specfem2d, self).check()
 
         # check time stepping parameters
         if 'NT' not in PAR:
