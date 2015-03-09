@@ -55,7 +55,7 @@ Once a working directory and input files have been created, users can type ``sfr
 Solver Configuration
 ====================
 
-SeisFlows includes Python interfaces for SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE.  While the Python interfaces are part of the SeisFlows package, the solver source code itself is located in other repositories and must be downloaded separately.  
+SeisFlows includes Python interfaces for SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE.  While the Python interfaces are part of the SeisFlows package, the solver source code must be downloaded separately through the CIG website [https://geodynamics.org/cig/software/].  
 
 After downloading the solver source code, users must configure and compile it, following the instructions in the solver user manual. Summarized briefly, the configuration and compilation procedure is as follows:
 
