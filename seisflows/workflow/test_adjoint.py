@@ -22,6 +22,7 @@ def DotProductLHS(keys, x, y):
         a = x[key].flatten()
         b = y[key].flatten()
         val += np.dot(a,b)
+    val *= PAR.DT**2
     return val
 
 
@@ -94,7 +95,6 @@ class test_adjoint(object):
                    hosts='all',
                    path=PATH.GLOBAL)
 
-
         # collect traces
         obs = join(PATH.SOLVER, self.event, 'traces/obs')
         syn = join(PATH.SOLVER, self.event, 'traces/syn')
@@ -108,11 +108,11 @@ class test_adjoint(object):
         model = solver.load(PATH.MODEL_INIT)
         kernels = solver.load(PATH.GLOBAL+'/'+'kernels'+'/'+self.event, suffix='_kernel')
 
-        # LHS dot prodcut
+        # dot prodcut in data space
         keys = obs.keys()
         LHS = DotProductLHS(keys, syn, adj)
 
-        # RHS dot product
+        # dot product in model space
         keys = ['rho', 'vp', 'vs'] # model.keys()
         RHS = DotProductRHS(keys, model, kernels)
 
