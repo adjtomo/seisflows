@@ -4,10 +4,10 @@ Overview
 
 SeisFlows is a Python adjoint tomography and full waveform inversion package designed to be flexible enough for use in both scientific research and large scale regional, global, and exploration inversions.
 
-To provide this flexibility, users are offered choices in each of the following categories: workflow, system, solver, optimization, preprocessing, and postprocessing.  Within each category, different classes are interchangeable. If desired functionality is missing from the main package, users can customize default classes by overloading methods, or contribute their own classes.  This combination of extensibility, modular design, and object oriented programming allows multiple users to work productively within the same framework.
+To provide this flexibility, users are offered choices in each of the following categories: workflow, system, solver, optimization, preprocessing, and postprocessing.  Within each category, different classes are interchangeable. 
 
 To illustrate how it works, consider an example from regional tomography.  A typical regional setup involves a 3D Cartesian solver run on a PBS cluster.  Under SeisFlows, if the study area expands, users can replace the 3D Cartesian solver with a 3D spherical solver.  If a faster SLURM cluster comes online, users can substitute the PBS system interface for a SLURM system interface. If a new type of data becomes available, users can modify the misfit function by overloading appropriate methods.  
-
+If desired functionality is missing from the main package, users can overload existing classes or contribute their own custom classes.
 
 Installation
 ============
