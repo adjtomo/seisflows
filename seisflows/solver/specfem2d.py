@@ -150,10 +150,16 @@ class specfem2d(loadclass('solver', 'base')):
     def combine(self, path=''):
         """ Combines SPECFEM2D kernels
         """
-        subprocess.call(
-            [self.getpath +'/'+ 'bin/xcombine_sem'] +
-            [str(len(unix.ls(path)))] +
-            [path])
+        unix.cd(self.getpath)
+
+        with open('kernel_paths', 'w') as f:
+            f.writelines([join(path, dir)+'\n' for dir in unix.ls(path)])
+
+        for name in self.parameters:
+            self.mpirun(
+                'bin/xcombine_rho_vp_vs '
+                + 'kernel_paths' + ' '
+                + path +'/'+ 'sum')
 
 
     def smooth(self, path='', span=0.):
