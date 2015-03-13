@@ -66,7 +66,7 @@ class specfem2d(loadclass('solver', 'base')):
         
         if f0 != PAR.F0:
             if system.getnode() == 0: print "WARNING: f0 != PAR.F0"
-            setpar('f0', PAR.F0, file='SOURCE')
+            setpar('f0', PAR.F0, file='DATA/SOURCE')
 
 
     def generate_data(self, **model_kwargs):
