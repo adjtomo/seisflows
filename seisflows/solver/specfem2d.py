@@ -49,6 +49,26 @@ class specfem2d(loadclass('solver', 'base')):
             raise Exception
 
 
+    def check_solver_parameter_files(self):
+        """ Checks solver parameters
+        """
+        nt = getpar('nt', cast=int)
+        dt = getpar('deltat', cast=float)
+        f0 = getpar('f0', file='DATA/SOURCE', cast=float)
+
+        if nt != PAR.NT:
+            if system.getnode() == 0: print "WARNING: nt != PAR.NT"
+            setpar('nt', PAR.NT)
+
+        if dt != PAR.DT:
+            if system.getnode() == 0: print "WARNING: dt != PAR.DT"
+            setpar('dt', PAR.DT)
+        
+        if f0 != PAR.F0:
+            if system.getnode() == 0: print "WARNING: f0 != PAR.F0"
+            setpar('f0', PAR.F0, file='SOURCE')
+
+
     def generate_data(self, **model_kwargs):
         """ Generates data
         """

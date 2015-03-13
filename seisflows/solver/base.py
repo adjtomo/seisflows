@@ -475,6 +475,8 @@ class base(object):
         dst = 'DATA/' + self.source_prefix
         unix.cp(src, dst)
 
+        self.check_solver_parameter_files()
+
 
     def initialize_adjoint_traces(self):
         """ Adjoint traces are initialized by writing zeros for all components.
@@ -495,6 +497,11 @@ class base(object):
                 model = self.load(PATH.MODEL_INIT)
                 if not exists(PATH.OPTIMIZE +'/'+ 'm_new'):
                     savenpy(PATH.OPTIMIZE +'/'+ 'm_new', self.merge(model))
+
+
+    def check_solver_parameter_files(self):
+        # must be implemented by subclass
+        pass
 
 
     ### miscellaneous
