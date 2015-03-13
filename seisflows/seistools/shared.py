@@ -26,11 +26,11 @@ class ModelStruct(Mapping):
         raise NotImplementedError
 
 
-def getpar(key, file='DATA/Par_file', sep='='):
+def getpar(key, file='DATA/Par_file', sep='=', cast=str):
     """ Reads parameter from SPECFEM parfile
     """
+    val = None
     with open(file, 'r') as f:
-
         # read line by line
         for line in f:
             if find(line, key) == 0:
@@ -40,8 +40,16 @@ def getpar(key, file='DATA/Par_file', sep='='):
                     continue
                 # read val
                 val, _ = _split(val, '#')
-                return val.strip()
+                val.strip()
+                break
 
+    if val:
+        if cast == float:
+            val = val.replace('d', 'e')
+        return cast(val)
+
+    else:
+        print 'Not found in parameter file: %s\n' % key
         raise Exception
 
 
