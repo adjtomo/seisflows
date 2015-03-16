@@ -107,7 +107,7 @@ class base(object):
         # apply preconditioner
         if PATH.PRECOND:
             g = solver.merge(solver.load(path +'/'+ 'kernels/sum'))
-            g /= solver.merge(solver.load(PATH.PRECOND))
+            g *= solver.merge(solver.load(PATH.PRECOND))
 
             src = path +'/'+ 'kernels/sum'
             dst = path +'/'+ 'kernels/sum_noprecond'
