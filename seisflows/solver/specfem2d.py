@@ -68,6 +68,12 @@ class specfem2d(loadclass('solver', 'base')):
             if system.getnode() == 0: print "WARNING: f0 != PAR.F0"
             setpar('f0', PAR.F0, file='DATA/SOURCE')
 
+        if 'MULTIPLES' in PAR:
+            if PAR.MULTIPLES:
+                setpar('absorbtop', '.false.')
+            else:
+                setpar('absorbtop', '.true.')
+
 
     def generate_data(self, **model_kwargs):
         """ Generates data
@@ -121,7 +127,7 @@ class specfem2d(loadclass('solver', 'base')):
 
     ### model input/output
 
-    def load(self, filename, mapping=None, suffix='', verbose=False):
+    def load(self, filename, prefix='', suffix='', verbose=False):
         """Reads SPECFEM2D kernel or model
 
            Models and kernels are read from 5 or 6 column text files whose

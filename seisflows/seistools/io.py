@@ -48,15 +48,6 @@ def copybin(src, dst, proc, par):
     copyfile(join(src, filename), join(dst, filename))
 
 
-def applymap(vals, mapping):
-    mapped_keys = []
-    mapped_vals = []
-    for key,map in mapping:
-        mapped_keys += [key]
-        mapped_vals += [map(*vals)]
-    return mapped_keys, mapped_vals
-
-
 def splitvec(v,  nproc, npts, idim):
     parts = []
     for iproc in range(nproc):
@@ -94,18 +85,15 @@ def write_fortran(v, filename):
         n.tofile(file)
 
 
-def ModelStruct(parameters, mapping=None):
-    if mapping:
-        return dict((key, []) for key in dict(mapping))
-    else:
-        return dict((key, []) for key in parameters)
+def ModelStruct(keys):
+    return dict((key, []) for key in keys)
 
 
 class MinmaxStruct(object):
-    def __init__(self, parameters, mapping=None):
-        self.keys = parameters
-        self.minvals = dict((key, +np.Inf) for key in parameters)
-        self.maxvals = dict((key, -np.Inf) for key in parameters)
+    def __init__(self, keys):
+        self.keys = keys
+        self.minvals = dict((key, +np.Inf) for key in keys)
+        self.maxvals = dict((key, -np.Inf) for key in keys)
 
     def items(self):
         return ((key, self.minvals[key], self.maxvals[key]) for key in self.keys)

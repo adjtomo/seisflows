@@ -7,8 +7,8 @@ import numpy as np
 
 import seisflows.seistools.specfem3d as solvertools
 from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import loadbypar, loadbyproc, savebin, \
-    applymap, splitvec, ModelStruct, MinmaxStruct
+from seisflows.seistools.io import loadbypar, loadbyproc, copybin, savebin, \
+    splitvec, ModelStruct, MinmaxStruct
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
@@ -62,6 +62,10 @@ class base(object):
     #  remove 'vs' from the list. For constant desnity acoustic simulations, 
     #  remove 'rho' and 'vs' from the list.
 
+    # By default, SPECFEM reads velocity models specified in terms of vp and vs.
+    # For elastic simulations, include both 'vp' and 'vs' in the list below.
+    # For acoustic simulations include only 'vp'.
+
     parameters = []
     parameters += ['vp']
     parameters += ['vs']
@@ -69,11 +73,10 @@ class base(object):
 
     # Because density is often not well constrained, empirical scaling
     # relations between density and compressional wave velocity are
-    # commonly applied.
-    density_scaling = None
+    # commonly applied. Determined by PAR.DENSITY.
 
     # It is sometimes advantageous to use alternate elastic moduli, such as
-    # bulk c and bulk mu instead of vp and vs.  For more information, see 
+    # bulk c and bulk mu, instead of vp and vs.  For more information, see 
     # solver.FwiElastic in SEISFLOWS-RESEARCH.
 
 
@@ -103,6 +106,9 @@ class base(object):
         if 'SPECFEM_DATA' not in PATH:
             raise ParameterError(PATH, 'SPECFEM_DATA')
 
+        if 'DENSITY' not in PAR:
+            pass
+
 
     def setup(self):
         """ Prepares solver for inversion or migration
@@ -112,7 +118,8 @@ class base(object):
         # As input for an inversion or migration, users can choose between
         # providing data, or providing a target model from which data are
         # generated on the fly. In the former case, a value for PATH.DATA must
-        # be supplied; in the latter case, a value for PATH.MODEL_TRUE
+        # be supplied; in the latter case, a value for PATH.MODEL_TRUE must be
+        # provided
         if PATH.DATA:
             self.initialize_solver_directories()
             src = glob(PATH.DATA +'/'+ self.getname +'/'+ '*')
@@ -216,34 +223,22 @@ class base(object):
 
     ### model input/output
 
-    def load(self, path, parameters=None, mapping=None, prefix='', suffix='', verbose=False):
-        """ reads SPECFEM model
+    def load(self, path, prefix='', suffix='', verbose=False):
+        """ reads SPECFEM model or kernel
 
           Models are stored in Fortran binary format and separated into multiple
           files according to material parameter and processor rank.
-
-          Optionally, 'mapping' can be used to convert on the fly from one set
-          of material parameters to another.
         """
-        if not parameters:
-            parameters = self.parameters
-
-        model = ModelStruct(parameters, mapping)
-        minmax = MinmaxStruct(parameters, mapping)
+        model = ModelStruct(self.parameters)
+        minmax = MinmaxStruct(self.parameters)
 
         for iproc in range(PAR.NPROC):
-            keys, vals = loadbypar(path, parameters, iproc, prefix, suffix)
-
-            # keep track of min, max
-            minmax.update(keys, vals)
-
-            # apply optional mapping
-            if mapping:
-                keys, vals = applymap(vals, mapping)
-
-            # append latest values
+            # read database files
+            keys, vals = loadbypar(path, self.parameters, iproc, prefix, suffix)
             for key, val in zip(keys, vals):
                 model[key] += [val]
+
+            minmax.update(keys, vals)
 
         if verbose:
             minmax.write(path, logpath=PATH.SUBMIT)
@@ -258,7 +253,7 @@ class base(object):
             For code that writes transversely isotropic models, see 
             solver.specfem3d_globe.
 
-            There is a large tradeoff here between being simple and being 
+            There is a tradeoff here between being simple and being 
             flexible.  In this case we opt for a simple hardwired approach. For
             a much more flexible approach, see seisflows-research.
         """
@@ -266,21 +261,27 @@ class base(object):
 
         for iproc in range(PAR.NPROC):
             if 'vp' in self.parameters:
-                savebin(model['vp'][iproc], path, iproc, 'vp')
+                savebin(model['vp'][iproc], path, iproc, prefix+'vp'+suffix)
             else:
-                self.copybin(path, iproc, 'vp')
+                src = PATH.OUTPUT +'/'+ 'model_init'
+                dst = path
+                copybin(src, dst, iproc, 'vp')
 
             if 'vs' in self.parameters:
-                savebin(model['vs'][iproc], path, iproc, 'vs')
+                savebin(model['vs'][iproc], path, iproc, prefix+'vs'+suffix)
             else:
-                self.copybin(path, iproc, 'vs')
+                src = PATH.OUTPUT +'/'+ 'model_init'
+                dst = path
+                copybin(src, dst, iproc, 'vs')
 
             if 'rho' in self.parameters:
-                savebin(model['rho'][iproc], path, iproc, 'rho')
+                savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
             elif self.density_scaling:
                 raise NotImplementedError
             else:
-                self.copybin(path, iproc, 'rho')
+                src = PATH.OUTPUT +'/'+ 'model_init'
+                dst = path
+                copybin(src, dst, iproc, 'rho')
 
 
     def merge(self, model):
@@ -405,9 +406,9 @@ class base(object):
 
     def export_model(self, path):
         if system.getnode() == 0:
+            unix.mkdir(path)
             src = glob(join(self.model_databases, '*.bin'))
             dst = path
-            unix.mkdir(dst)
             unix.cp(src, dst)
 
     def export_kernels(self, path):
@@ -514,17 +515,6 @@ class base(object):
                 system.mpiargs() + script,
                 shell=True,
                 stdout=f)
-
-
-    def copybin(self, path, iproc, par):
-        """ Copies SPECFEM database file
-        """
-        src = PATH.OUTPUT +'/'+ 'model_init'
-        dst = path
-
-        filename = 'proc%06d_%s.bin' % (iproc, par)
-        unix.cp(join(src, filename), join(dst, filename))
-
 
     @property
     def getname(self):

@@ -122,14 +122,19 @@ class specfem3d_globe(loadclass('solver', 'base')):
                 if key in self.parameters:
                     savebin(model[key][iproc], path, iproc, prefix + key + suffix)
                 else:
-                    self.copybin(path, iproc, key)
+                    src = PATH.OUTPUT +'/'+ 'model_init'
+                    dst = path
+                    copybin(src, dst, iproc, 'vp')
 
             if 'rho' in self.parameters:
                 savebin(model['rho'][iproc], path, iproc, prefix + 'rho' + suffix)
             elif self.density_scaling:
                 raise NotImplementedError
             else:
-                self.copybin(path, iproc, prefix + 'rho')
+                src = PATH.OUTPUT +'/'+ 'model_init'
+                dst = path
+                copybin(src, dst, iproc, 'vp')
+
 
 
     ### low-level solver interface
