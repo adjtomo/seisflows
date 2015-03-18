@@ -124,7 +124,10 @@ class base(object):
                 p_new = -g_new
             else:
                 cls.LBFGS.update()
-                p_new = -cls.LBFGS.solve()
+                p_new = cls.LBFGS.solve()
+
+                if cls.LBFGS.restarted:
+                    cls.restart_search = True
 
         else:
             raise Excpetion
@@ -155,12 +158,6 @@ class base(object):
         m = loadnpy('m_new')
         p = loadnpy('p_new')
 
-        # reset search history
-        cls.search_history = [[0., f_new]]
-        cls.isdone = 0
-        cls.isbest = 0
-        cls.isbrak = 0
-
         # determine initial step length
         len_m = max(abs(m))
         len_d = max(abs(p))
@@ -169,6 +166,8 @@ class base(object):
         if cls.iter == 1:
             assert PAR.STEPLEN != 0.
             alpha = PAR.STEPLEN*cls.step_ratio
+        elif cls.restart_search:
+            alpha *= 2.*s_old/s_new
         elif PAR.SRCHTYPE in ['Bracket']:
             alpha *= 2.*s_old/s_new
         elif PAR.SCHEME in ['GradientDescent', 'ConjugateGradient']:
@@ -184,6 +183,13 @@ class base(object):
         if PAR.STEPMAX > 0.:
             if alpha/cls.step_ratio > PAR.STEPMAX:
                 alpha = PAR.STEPMAX*cls.step_ratio
+
+        # reset search history
+        cls.search_history = [[0., f_new]]
+        cls.restart_search = 0
+        cls.isdone = 0
+        cls.isbest = 0
+        cls.isbrak = 0
 
         # write trial model
         savenpy('m_try', m + p*alpha)

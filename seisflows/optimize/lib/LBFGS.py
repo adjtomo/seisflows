@@ -82,11 +82,15 @@ class LBFGS:
             r = r + S[:, i]*(al[i] - be)
 
         # check for ill conditioning
-        if np.dot(g, -r) >= 0:
+        if np.dot(g, -r)/np.dot(g, g) >= 0:
             self.restart()
-            return g
+            r = g
+            self.restarted = True
+        else:
+            self.restarted = False
 
-        return r
+        return -r
+
 
     def restart(self):
 
