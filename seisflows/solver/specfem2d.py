@@ -187,7 +187,7 @@ class specfem2d(loadclass('solver', 'base')):
         """
         from seisflows.tools.array import meshsmooth
 
-        parts = self.load(path)
+        parts = self.load(path, suffix='_kernel')
         if not span:
             return parts
 
