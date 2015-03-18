@@ -72,7 +72,7 @@ class base(object):
             g *= PAR.SCALE
 
         # write gradient
-        solver.save(PATH.GRAD +'/'+ 'gradient', solver.split(g))
+        solver.save(PATH.GRAD +'/'+ 'gradient', solver.split(g), suffix='_kernel')
         savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
 
