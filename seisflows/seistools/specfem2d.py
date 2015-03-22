@@ -17,7 +17,7 @@ def write_sources(par, hdr, path='.', suffix=''):
 
     # adjust source coordinates
     setpar('xs', hdr.sx[0], file)
-    setpar('zs', hdr.sz[0], file)
+    setpar('zs', hdr.sy[0], file)
     setpar('ts', hdr.ts, file)
 
     # adjust source amplitude
@@ -59,7 +59,7 @@ def write_receivers(h):
         line += 'S%06d' % ir + ' '
         line += 'AA' + ' '
         line += '%11.5e' % h.rx[ir] + ' '
-        line += '%11.5e' % h.rz[ir] + ' '
+        line += '%11.5e' % h.ry[ir] + ' '
         line += '%3.1f' % 0. + ' '
         line += '%3.1f' % 0. + '\n'
         lines.extend(line)
