@@ -56,7 +56,7 @@ class base(object):
             setattr(PAR, 'NLCGMAX', 10)
 
         if 'NLCGTHRESH' not in PAR:
-            setattr(PAR, 'NLCGTHRESH', 0.5)
+            setattr(PAR, 'NLCGTHRESH', 1.0)
 
         if 'LBFGSMAX' not in PAR:
             setattr(PAR, 'LBFGSMAX', 6)
@@ -189,7 +189,9 @@ class base(object):
 
         # reset search history
         cls.search_history = [[0., f_new]]
+        cls.step_count = 0
         cls.restart_search = 0
+
         cls.isdone = 0
         cls.isbest = 0
         cls.isbrak = 0
@@ -218,6 +220,7 @@ class base(object):
             raise ValueError
 
         cls.search_history += [[x_, f_]]
+        cls.step_count += 1
 
         x = cls.step_lens()
         f = cls.func_vals()
@@ -245,6 +248,10 @@ class base(object):
 
         # pass latest information to output writer
         cls.writer([], x_, f_)
+
+        if cls.step_count >= PAR.SRCHMAX:
+            cls.isdone = -1
+            print ' line search failed [max iter]'
 
         return cls.isdone, cls.isbest
 

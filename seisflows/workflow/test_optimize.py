@@ -79,6 +79,8 @@ class test_optimize(object):
         m = np.array([-1.2,1])
         savenpy('m_new',m)
 
+        cls.isdone = False
+
 
     def compute_direction(cls):
         cls.evaluate_gradient()
@@ -95,7 +97,9 @@ class test_optimize(object):
             m = loadnpy('m_lcg')
             g = problem.grad(m)
             savenpy('g_lcg', g)
-            optimize.iterate_newton()
+            isdone = optimize.iterate_newton()
+            if isdone:
+                break
 
 
     def line_search(cls):
@@ -103,7 +107,6 @@ class test_optimize(object):
 
         for cls.step in range(1, PAR.SRCHMAX+1):
             isdone = cls.search_status()
-
             if isdone==1:
                 optimize.finalize_search()
                 break
@@ -111,8 +114,7 @@ class test_optimize(object):
                 optimize.compute_step()
                 continue
             elif isdone==-1:
-                cls.isdone = -1
-                print ' line search failed'
+                cls.isdone = True
 
 
     def search_status(cls):
@@ -142,9 +144,7 @@ class test_optimize(object):
         m_old = loadnpy('m_old')
 
         d = np.linalg.norm(m_new-m_old)/np.linalg.norm(m_new)
-        if d < 1.e-6:
+        if d < 1.e-5:
             cls.isdone = True
             cls.msg = 'Stopping criteria met.\n'
-        else:
-            cls.isdone = False
 
