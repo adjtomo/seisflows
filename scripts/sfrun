@@ -33,11 +33,11 @@ if __name__ == '__main__':
     if 'PREPROCESS' not in PAR:
         raise ParameterError(PAR, 'PREPROCESS')
 
-    if 'SOLVER' not in PAR:
-        raise ParameterError(PAR, 'SOLVER')
-
     if 'POSTPROCESS' not in PAR:
         raise ParameterError(PAR, 'POSTPROCESS')
+
+    if 'SOLVER' not in PAR:
+        raise ParameterError(PAR, 'SOLVER')
 
     if 'OPTIMIZE' not in PAR:
         raise ParameterError(PAR, 'OPTIMIZE')
@@ -68,11 +68,11 @@ if __name__ == '__main__':
 
     # carry out parameter checks
     system.check()
+    workflow.check()
     solver.check()
     preprocess.check()
     postprocess.check()
     optimize.check()
-    workflow.check()
 
 
     # submit "workflow" via "system"
