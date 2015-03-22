@@ -130,7 +130,7 @@ class base(object):
                     cls.restart_search = True
 
         else:
-            raise Excpetion
+            raise Exception
 
         # save results
         unix.cd(cls.path)
@@ -162,6 +162,9 @@ class base(object):
         len_m = max(abs(m))
         len_d = max(abs(p))
         cls.step_ratio = float(len_m/len_d)
+
+        if not hasattr(cls, 'restart_search'):
+            cls.restart_search = 0
 
         if cls.iter == 1:
             assert PAR.STEPLEN != 0.
