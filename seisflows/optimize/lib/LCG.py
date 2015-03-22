@@ -31,14 +31,12 @@ class LCG:
 
         elif self.precond_type == 1:
             if self.iter == 1:
-                #print ' made it here-1'
-                return r
-
+                y = r
             elif self.ilcg == 0:
-                #print ' made it here-2'
                 self.LBFGS.update()
-
-            y = self.LBFGS.solve(r)
+                y = -self.LBFGS.solve('LCG/r')
+            else:
+                y = -self.LBFGS.solve('LCG/r')
             return y
 
 
@@ -49,12 +47,11 @@ class LCG:
 
         r = loadnpy('g_new')
         x = np.zeros(r.size)
-        y = self.precond(r)
-        p = -y
-
-        unix.cd(self.path)
         savenpy('LCG/x', x)
         savenpy('LCG/r', r)
+
+        y = self.precond(r)
+        p = -y
         savenpy('LCG/y', y)
         savenpy('LCG/p', p)
         savetxt('LCG/ry', np.dot(r, y))
@@ -78,10 +75,11 @@ class LCG:
             isdone = True
             return p, isdone
                        
-
         alpha = ry/pap
         x = x + alpha*p
         r = r + alpha*ap
+        savenpy('LCG/x', x)
+        savenpy('LCG/r', r)
 
         # check status
         if self.ilcg == self.lcgmax:
@@ -101,8 +99,6 @@ class LCG:
         beta = ry/ry_old
         p = -y + beta*p
 
-        savenpy('LCG/x', x)
-        savenpy('LCG/r', r)
         savenpy('LCG/y', y)
         savenpy('LCG/p', p)
         savetxt('LCG/ry', np.dot(r, y))

@@ -53,10 +53,9 @@ class LBFGS:
         del Y
 
 
-    def solve(self):
+    def solve(self, path='g_new'):
         unix.cd(self.path)
-        g = loadnpy('g_new')
-        q = np.copy(g)
+        q = loadnpy(path)
         n = len(q)
 
         S = np.memmap('LBFGS/S', mode='r', dtype='float32', shape=(n, self.kmax))
@@ -80,6 +79,7 @@ class LBFGS:
             r = r + S[:, i]*(al[i] - be)
 
         # check for ill conditioning
+        g = loadnpy('g_new')
         if np.dot(g, -r)/np.dot(g, g) >= 0:
             self.restart()
             r = g
