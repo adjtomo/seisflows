@@ -97,17 +97,10 @@ class base(object):
                 raise ParameterError(PAR, 'BANDPASS')
 
         # mute direct arrival
-        if PAR.MUTE == 1:
+        if PAR.MUTE:
             vel = PAR.MUTESLOPE
             off = PAR.MUTECONST
             s = smute(s, h, vel, off, constant_spacing=False)
-
-        elif PAR.MUTE == 2:
-            import system
-            vel = PAR.MUTESLOPE*(PAR.NREC + 1)/(PAR.XMAX - PAR.XMIN)
-            off = PAR.MUTECONST
-            src = system.getnode()
-            s = smute(s, h, vel, off, src, constant_spacing=True)
 
         return s
 
