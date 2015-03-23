@@ -55,29 +55,32 @@ class base(object):
         Utilities for combining and smoothing kernels.
     """
 
-    #  By default, SPECFEM reads velocity models specified in terms of rho, vp,
-    #  and vs. For variable density elastic simulations, include all three in
-    #  the 'parameters' list below. For constant density elastic simulations,
-    #  remove 'rho' from the list. For variable density acoustic simulations, 
-    #  remove 'vs' from the list. For constant desnity acoustic simulations, 
-    #  remove 'rho' and 'vs' from the list.
-
     # By default, SPECFEM reads velocity models specified in terms of vp and vs.
     # For elastic simulations, include both 'vp' and 'vs' in the list below.
     # For acoustic simulations include only 'vp'.
-
     parameters = []
     parameters += ['vp']
     parameters += ['vs']
-    parameters += ['rho']
-
-    # Because density is often not well constrained, empirical scaling
-    # relations between density and compressional wave velocity are
-    # commonly applied. Determined by PAR.DENSITY.
 
     # It is sometimes advantageous to use alternate elastic moduli, such as
     # bulk c and bulk mu, instead of vp and vs.  For more information, see 
     # solver.FwiElastic in SEISFLOWS-RESEARCH.
+
+    # Because density is sometimes not well constrained, empirical scaling
+    # relations between density and compressional wave velocity are
+    # commonly applied.
+    if 'DENSITY' not in PAR:
+        PAR.DENSITY = 'constant'
+
+    if PAR.DENSITY == 'constant':
+        map_density = None
+
+    elif PAR.DENSITY == 'variable':
+        map_density = None
+        parameters += ['rho']
+
+    else:
+        ParameterError(PAR, 'DENSITY')
 
 
     def check(self):
