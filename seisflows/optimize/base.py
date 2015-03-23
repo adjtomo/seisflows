@@ -250,7 +250,7 @@ class base(object):
 
         if cls.step_count >= PAR.SRCHMAX:
             cls.isdone = -1
-            print ' line search failed [max iter]'
+            print ' line search failed [max iter]\n'
 
         return cls.isdone, cls.isbest
 
