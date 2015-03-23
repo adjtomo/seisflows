@@ -67,7 +67,7 @@ Prior to compilation, users need to run the ``configure`` script and prepare inp
 
 - stations file.
 
-The result of compilation is a set of binaries files, including
+To run the ``configure`` script to successfully, MPI executables and libraries may need to be available. The result of compilation is a set of binaries files, including
 
 - mesher binary
 
