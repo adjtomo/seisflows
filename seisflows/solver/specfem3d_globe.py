@@ -6,10 +6,8 @@ from os.path import join
 import numpy as np
 
 import seisflows.seistools.specfem3d_globe as solvertools
-from seisflows.seistools.io import savebin
 from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import loadbypar, loadbyproc, savebin, \
-    applymap, ModelStruct, MinmaxStruct
+from seisflows.seistools.io import loadbypar, copybin, savebin, ModelStruct, MinmaxStruct
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
@@ -77,34 +75,22 @@ class specfem3d_globe(loadclass('solver', 'base')):
 
     ### model input/output
 
-    def load(self, path, parameters=None, mapping=None, prefix='reg1_', suffix='', verbose=False):
-        """ reads SPECFEM model
+    def load(self, path, prefix='reg1_', suffix='', verbose=False):
+        """ reads SPECFEM model or kernel
 
           Models are stored in Fortran binary format and separated into multiple
           files according to material parameter and processor rank.
-
-          Optionally, 'mapping' can be used to convert on the fly from one set
-          of material parameters to another.
         """
-        if not parameters:
-            parameters = self.parameters
-
-        model = ModelStruct(parameters, mapping)
-        minmax = MinmaxStruct(parameters, mapping)
+        model = ModelStruct(self.parameters)
+        minmax = MinmaxStruct(self.parameters)
 
         for iproc in range(PAR.NPROC):
-            keys, vals = loadbypar(path, parameters, iproc, prefix, suffix)
-
-            # keep track of min, max
-            minmax.update(keys, vals)
-
-            # apply optional mapping
-            if mapping:
-                keys, vals = applymap(vals, mapping)
-
-            # append latest values
+            # read database files
+            keys, vals = loadbypar(path, self.parameters, iproc, prefix, suffix)
             for key, val in zip(keys, vals):
                 model[key] += [val]
+
+            minmax.update(keys, vals)
 
         if verbose:
             minmax.write(path, logpath=PATH.SUBMIT)
@@ -128,8 +114,6 @@ class specfem3d_globe(loadclass('solver', 'base')):
 
             if 'rho' in self.parameters:
                 savebin(model['rho'][iproc], path, iproc, prefix + 'rho' + suffix)
-            elif self.density_scaling:
-                raise NotImplementedError
             else:
                 src = PATH.OUTPUT +'/'+ 'model_init'
                 dst = path
