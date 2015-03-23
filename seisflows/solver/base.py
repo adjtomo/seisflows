@@ -109,9 +109,6 @@ class base(object):
         if 'SPECFEM_DATA' not in PATH:
             raise ParameterError(PATH, 'SPECFEM_DATA')
 
-        if 'DENSITY' not in PAR:
-            pass
-
 
     def setup(self):
         """ Prepares solver for inversion or migration
@@ -252,35 +249,27 @@ class base(object):
     def save(self, path, model, prefix='', suffix=''):
         """ writes SPECFEM model
 
-            The following code writes SPECFEM acoustic and elastic models.
-            For code that writes transversely isotropic models, see 
+            The following method writes acoustic and elastic models. For an
+            example of how to write transversely isotropic models, see 
             solver.specfem3d_globe.
 
             There is a tradeoff here between being simple and being 
             flexible.  In this case we opt for a simple hardwired approach. For
-            a much more flexible approach, see seisflows-research.
+            a more flexible, more complex approach, see SEISFLOWS-RESEARCH.
         """
         unix.mkdir(path)
 
         for iproc in range(PAR.NPROC):
-            if 'vp' in self.parameters:
-                savebin(model['vp'][iproc], path, iproc, prefix+'vp'+suffix)
-            else:
-                src = PATH.OUTPUT +'/'+ 'model_init'
-                dst = path
-                copybin(src, dst, iproc, 'vp')
-
-            if 'vs' in self.parameters:
-                savebin(model['vs'][iproc], path, iproc, prefix+'vs'+suffix)
-            else:
-                src = PATH.OUTPUT +'/'+ 'model_init'
-                dst = path
-                copybin(src, dst, iproc, 'vs')
+            for key in ['vp', 'vs']:
+                if key in self.parameters:
+                    savebin(model[key][iproc], path, iproc, prefix+key+suffix)
+                else:
+                    src = PATH.OUTPUT +'/'+ 'model_init'
+                    dst = path
+                    copybin(src, dst, iproc, prefix+key+suffix)
 
             if 'rho' in self.parameters:
                 savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
-            elif self.density_scaling:
-                raise NotImplementedError
             else:
                 src = PATH.OUTPUT +'/'+ 'model_init'
                 dst = path
