@@ -1,5 +1,7 @@
 
 from os.path import join
+import sys
+
 import numpy as np
 
 from seisflows.tools import unix
@@ -124,9 +126,6 @@ class inversion(object):
             self.finalize()
             print ''
 
-            if self.isdone:
-                return
-
 
     def setup(self):
         """ Lays groundwork for inversion
@@ -185,8 +184,7 @@ class inversion(object):
                 optimize.compute_step()
                 continue
             elif isdone == -1:
-                self.isdone = -1
-                print ' line search failed'
+                sys.exit()
 
 
     def search_status(self):
@@ -206,7 +204,6 @@ class inversion(object):
             elif isbest:
                 unix.rm(PATH.SOLVER + '_best')
                 unix.cp(PATH.SOLVER, PATH.SOLVER + '_best')
-
         return isdone
 
 
@@ -266,8 +263,6 @@ class inversion(object):
             unix.rm(PATH.FUNC)
             unix.mkdir(PATH.GRAD)
             unix.mkdir(PATH.FUNC)
-
-        self.isdone = False
 
 
     ### utility functions
