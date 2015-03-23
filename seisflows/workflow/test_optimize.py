@@ -1,6 +1,6 @@
-#!/usr/bin/env python
 
 from os.path import abspath
+import sys
 
 import numpy as np
 
@@ -19,7 +19,7 @@ import optimize
 class test_optimize(object):
     """ Optimization unit test.
 
-        Tests nonlinear optimization procedure using inexpensive test function.
+        Tests nonlinear optimization procedure with inexpensive test function.
     """
 
     def check(cls):
@@ -64,9 +64,6 @@ class test_optimize(object):
             cls.finalize()
             print ''
 
-            if cls.isdone:
-                return
-
 
     def setup(cls):
         unix.mkdir(cls.path)
@@ -78,8 +75,6 @@ class test_optimize(object):
         unix.cd(cls.path)
         m = np.array([-1.2,1])
         savenpy('m_new',m)
-
-        cls.isdone = False
 
 
     def compute_direction(cls):
@@ -114,7 +109,7 @@ class test_optimize(object):
                 optimize.compute_step()
                 continue
             elif isdone==-1:
-                cls.isdone = True
+                sys.exit()
 
 
     def search_status(cls):
@@ -145,6 +140,6 @@ class test_optimize(object):
 
         d = np.linalg.norm(m_new-m_old)/np.linalg.norm(m_new)
         if d < 1.e-5:
-            cls.isdone = True
-            cls.msg = 'Stopping criteria met.\n'
+            print 'Stopping criteria met.\n'
+            sys.exit()
 
