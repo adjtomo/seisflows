@@ -494,7 +494,10 @@ class base(object):
         """ Writes mesh files expected by input/output methods
         """
         if system.getnode() == 0:
-            if 'OPTIMIZE' in PATH:
+            if PAR.OPTIMIZE:
+                assert PATH.OPTIMIZE
+                assert exists(PATH.MODEL_INIT)
+
                 model = self.load(PATH.MODEL_INIT)
                 if not exists(PATH.OPTIMIZE +'/'+ 'm_new'):
                     savenpy(PATH.OPTIMIZE +'/'+ 'm_new', self.merge(model))

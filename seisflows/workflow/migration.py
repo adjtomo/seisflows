@@ -24,7 +24,6 @@ class migration(object):
     def check(self):
         """ Checks parameters and paths
         """
-
         # check paths
         if 'GLOBAL' not in PATH:
             raise ParameterError(PATH, 'GLOBAL')
@@ -54,6 +53,10 @@ class migration(object):
 
         if 'SAVETRACES' not in PAR:
             setattr(PAR, 'SAVETRACES', 0)
+
+        # assertions
+        if 'OPTIMIZE' in PAR:
+            assert not PAR.OPTIMIZE, "To run a migration, set PAR.OPTIMIZE = None"
 
 
     def main(self):
