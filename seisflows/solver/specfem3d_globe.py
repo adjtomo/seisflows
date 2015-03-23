@@ -106,11 +106,11 @@ class specfem3d_globe(loadclass('solver', 'base')):
         for iproc in range(PAR.NPROC):
             for key in ['vpv', 'vph', 'vsv', 'vsh', 'eta']:
                 if key in self.parameters:
-                    savebin(model[key][iproc], path, iproc, prefix + key + suffix)
+                    savebin(model[key][iproc], path, iproc, prefix+key+suffix)
                 else:
                     src = PATH.OUTPUT +'/'+ 'model_init'
                     dst = path
-                    copybin(src, dst, iproc, 'vp')
+                    copybin(src, dst, iproc, prefix+key+suffix)
 
             if 'rho' in self.parameters:
                 savebin(model['rho'][iproc], path, iproc, prefix + 'rho' + suffix)
