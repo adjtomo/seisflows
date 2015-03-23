@@ -107,6 +107,21 @@ class specfem3d(loadclass('solver', 'base')):
 
     ### input file writers
 
+    def check_solver_parameter_files(self):
+        """ Checks solver parameters
+        """
+        nt = getpar('NSTEP', cast=int)
+        dt = getpar('DT', cast=float)
+
+        if nt != PAR.NT:
+            if system.getnode() == 0: print "WARNING: nt != PAR.NT"
+            setpar('NSTEP', PAR.NT)
+
+        if dt != PAR.DT:
+            if system.getnode() == 0: print "WARNING: dt != PAR.DT"
+            setpar('DT', PAR.DT)
+
+
     def write_parameters(self):
         unix.cd(self.getpath)
         solvertools.write_parameters(vars(PAR))
