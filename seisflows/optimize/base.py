@@ -127,7 +127,7 @@ class base(object):
                 p_new = cls.LBFGS.solve()
 
                 if cls.LBFGS.restarted:
-                    cls.restart_search = True
+                    cls.restart_search = 0
 
         else:
             raise Exception
@@ -158,13 +158,12 @@ class base(object):
         m = loadnpy('m_new')
         p = loadnpy('p_new')
 
-        # determine initial step length
+        if not hasattr(cls, 'restart_search'):
+            cls.restart_search = 0
+
         len_m = max(abs(m))
         len_d = max(abs(p))
         cls.step_ratio = float(len_m/len_d)
-
-        if not hasattr(cls, 'restart_search'):
-            cls.restart_search = 0
 
         if cls.iter == 1:
             assert PAR.STEPLEN != 0.
