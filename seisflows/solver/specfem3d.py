@@ -15,6 +15,8 @@ from seisflows.tools.config import loadclass, ParameterObj
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
+import system
+
 
 class specfem3d(loadclass('solver', 'base')):
     """ Python interface for SPECFEM3D
