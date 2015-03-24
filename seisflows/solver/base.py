@@ -80,7 +80,7 @@ class base(object):
         parameters += ['rho']
 
     else:
-        ParameterError(PAR, 'DENSITY')
+        raise NotImplementedError
 
 
     def check(self):

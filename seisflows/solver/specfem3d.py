@@ -24,13 +24,6 @@ class specfem3d(loadclass('solver', 'base')):
       See base class for method descriptions
     """
 
-    parameters = []
-    parameters += ['vp']
-    parameters += ['vs']
-
-    density_scaling = None
-
-
     def check(self):
         """ Checks parameters and paths
         """

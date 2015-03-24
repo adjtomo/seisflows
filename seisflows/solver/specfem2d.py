@@ -30,8 +30,6 @@ class specfem2d(loadclass('solver', 'base')):
     parameters = []
     parameters += ['vs']
 
-    density_scaling = None
-
 
     def check(self):
         """ Checks parameters and paths
