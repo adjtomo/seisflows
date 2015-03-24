@@ -116,6 +116,9 @@ class specfem3d(loadclass('solver', 'base')):
             if system.getnode() == 0: print "WARNING: dt != PAR.DT"
             setpar('DT', PAR.DT)
 
+        if 'MULTIPLES' in PAR:
+            raise NotImplementedError
+
 
     def write_parameters(self):
         unix.cd(self.getpath)
