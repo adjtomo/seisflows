@@ -137,6 +137,15 @@ class ParameterError(ValueError):
         super(ParameterError, self).__init__(message)
 
 
+TaskErrorMsg = """\
+
+Task failed: %s.%s
+
+For more information, see output.slurm/%s
+
+Stopping workflow...\n"""
+
+
 
 def loadclass(*args):
     """ Given name of module relative to package directory, returns

@@ -8,7 +8,7 @@ from os.path import abspath, join
 
 from seisflows.tools import unix
 from seisflows.tools.code import saveobj
-from seisflows.tools.config import findpath, ConfigObj, ParameterObj
+from seisflows.tools.config import findpath, ConfigObj, ParameterObj, TaskErrorMsg
 
 OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
@@ -164,7 +164,8 @@ class slurm_lg(object):
             else:
                 states += [0]
             if state in ['FAILED', 'NODE_FAIL', 'TIMEOUT']:
-                raise Exception
+                print TaskErrorMsg % (classname, funcname, job)
+                sys.exit(0)
 
         isdone = all(states)
 
