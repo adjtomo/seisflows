@@ -354,7 +354,7 @@ class base(object):
         unix.rename('_smooth', '', glob(src+'/*'))
 
 
-    def clip(self, path='', minval=-np.inf., maxval=np.inf, thresh='dummy'):
+    def clip(self, path='', minval=-np.inf, maxval=np.inf, thresh='dummy'):
         """ Clips kernels by convolving them with a Gaussian.  Wrapper over 
             xclip_sem utility.
         """
