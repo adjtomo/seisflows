@@ -1,5 +1,6 @@
 
 import subprocess
+import sys
 from glob import glob
 from os.path import join
 
@@ -14,6 +15,7 @@ from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
 from seisflows.tools.config import findpath, ParameterObj, ParameterError
+from seisflows.tools.msg import MsgSourceInputError
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
@@ -511,25 +513,36 @@ class base(object):
                 shell=True,
                 stdout=f)
 
+
     @property
     def getname(self):
         """ Returns name of source currently under consideration
         """
-        isrc = system.getnode()
-        if not hasattr(self, 'sources'):
-            paths = glob(PATH.SPECFEM_DATA +'/'+ self.source_prefix+'_*')
-            self.sources = []
-            for path in paths:
-                self.sources += [unix.basename(path).split('_')[-1]]
-            self.sources.sort()
-        return self.sources[isrc]
+        self.getnames()
+        return self.names[system.getnode()]
+
+
+    def getnames(self):
+        """ Loads names of sources
+        """
+        if not hasattr(self, 'names'):
+            path = PATH.SPECFEM_DATA
+            wildcard = self.source_prefix+'_*'
+            globstar = glob(path +'/'+ wildcard)
+            if not globstar:
+                 print MsgSourcInputError % (path, wildcard)
+                 sys.exit(-1)
+            self.names = []
+            for path in globstar:
+                self.names += [unix.basename(path).split('_')[-1]]
+            self.names.sort()
+
 
     @property
     def getpath(self):
         """ Returns working directory corresponding to current source
         """
         return join(PATH.SOLVER, self.getname)
-
 
     @property
     def data_wildcard(self):
