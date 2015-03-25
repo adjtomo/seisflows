@@ -9,7 +9,7 @@ from os.path import abspath, join
 from seisflows.tools import unix
 from seisflows.tools.code import saveobj
 from seisflows.tools.config import findpath, ConfigObj, ParameterObj, TaskErrorMsg
-from seisflows.tools.messages import MsgTaskError
+from seisflows.tools.msg import MsgTaskError
 
 OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
@@ -96,9 +96,7 @@ class slurm_lg(object):
                 + '--nodes=%d ' % 1
                 + '--time=%d ' % PAR.WALLTIME
                 + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
-                + PATH.OUTPUT,
-                shell=1,
-                stdout=f)
+                + PATH.OUTPUT)
 
 
     def run(self, classname, funcname, hosts='all', **kwargs):
