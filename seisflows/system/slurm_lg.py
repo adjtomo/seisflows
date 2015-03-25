@@ -9,6 +9,7 @@ from os.path import abspath, join
 from seisflows.tools import unix
 from seisflows.tools.code import saveobj
 from seisflows.tools.config import findpath, ConfigObj, ParameterObj, TaskErrorMsg
+from seisflows.tools.messages import MsgTaskError
 
 OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
@@ -88,16 +89,16 @@ class slurm_lg(object):
         self.save_paths()
 
         # prepare sbatch arguments
-        args = ('sbatch '
+        unix.run('sbatch '
                 + '--job-name=%s ' % PAR.TITLE
                 + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
                 + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE
                 + '--nodes=%d ' % 1
                 + '--time=%d ' % PAR.WALLTIME
                 + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
-                + PATH.OUTPUT)
-
-        subprocess.call(args, shell=1)
+                + PATH.OUTPUT,
+                shell=1,
+                stdout=f)
 
 
     def run(self, classname, funcname, hosts='all', **kwargs):
@@ -127,7 +128,9 @@ class slurm_lg(object):
                    +'--output=%s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%j'))
                    #+('--export=SEISFLOWS_TASK_ID=%s ' % 0
 
-        args = ('sbatch '
+        # submit job
+        with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
+            subprocess.call('sbatch '
                 + '--job-name=%s ' % PAR.TITLE
                 + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NPROC_PER_NODE))
                 + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE
@@ -136,13 +139,11 @@ class slurm_lg(object):
                 + findpath('system') +'/'+ 'slurm/wrapper_srun '
                 + PATH.OUTPUT + ' '
                 + classname + ' '
-                + funcname + ' ')
+                + funcname + ' ',
+                shell=1,
+                stdout=f)
 
-        # submit jobs
-        with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
-            subprocess.call(args, shell=1, stdout=f)
-
-        # return job ids
+        # retrieve job ids
         with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
             line = f.readline()
             job = line.split()[-1].strip()
@@ -157,16 +158,14 @@ class slurm_lg(object):
         # query slurm database
         for job in jobs:
             state = self.getstate(job)
-
             states = []
             if state in ['COMPLETED']:
                 states += [1]
             else:
                 states += [0]
             if state in ['FAILED', 'NODE_FAIL', 'TIMEOUT']:
-                print TaskErrorMsg % (classname, funcname, job)
-                sys.exit(0)
-
+                print MsgTaskError % (classname, funcname, job)
+                sys.exit(-1)
         isdone = all(states)
 
         return isdone, jobs
@@ -174,6 +173,7 @@ class slurm_lg(object):
 
     def mpiargs(self):
         return 'srun '
+
 
     def getstate(self, jobid):
         """ Retrives job state from SLURM database
@@ -186,6 +186,7 @@ class slurm_lg(object):
             state = line.strip()
 
         return state
+
 
     def getnode(self):
         """ Gets number of running task
