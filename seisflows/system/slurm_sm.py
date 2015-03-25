@@ -1,5 +1,7 @@
+
 import os
 import subprocess
+import sys
 from os.path import abspath, join
 
 from seisflows.tools import unix
@@ -77,7 +79,7 @@ class slurm_sm(object):
         self.save_paths()
 
         # submit workflow
-        args = ('sbatch '
+        unix.run('sbatch '
                 + '--job-name=%s '%PAR.TITLE
                 + '--output=%s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '--cpus-per-task=%d '%PAR.NPROC
@@ -85,8 +87,6 @@ class slurm_sm(object):
                 + '--time=%d '%PAR.WALLTIME
                 + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
                 + PATH.OUTPUT)
-
-        subprocess.call(args, shell=1)
 
 
     def run(self, classname, funcname, hosts='all', **kwargs):
@@ -97,7 +97,7 @@ class slurm_sm(object):
 
         if hosts == 'all':
             # run on all available nodes
-            args = ('srun '
+            unix.run('srun '
                     + '--wait=0 '
                     + join(findpath('system'), 'slurm/wrapper_srun ')
                     + PATH.OUTPUT + ' '
@@ -106,14 +106,12 @@ class slurm_sm(object):
 
         elif hosts == 'head':
             # run on head node
-            args = ('srun '
+            unix.run('srun '
                     + '--wait=0 '
                     + join(findpath('system'), 'slurm/wrapper_srun_head ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname)
-
-        subprocess.call(args, shell=1)
 
 
     def getnode(self):
@@ -122,6 +120,7 @@ class slurm_sm(object):
         gid = os.getenv('SLURM_GTIDS').split(',')
         lid = int(os.getenv('SLURM_LOCALID'))
         return int(gid[lid])
+
 
     def mpiargs(self):
         return 'mpirun -np %d '%PAR.NPROC

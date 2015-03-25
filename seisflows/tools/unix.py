@@ -1,6 +1,9 @@
-import os as _os
-import shutil as _shutil
-import socket as _socket
+
+import os
+import shutil
+import socket
+import subprocess
+import sys
 
 from os.path import abspath, basename, isdir, isfile, join
 
@@ -19,7 +22,7 @@ def cat(src, *dst):
 
 
 def cd(path):
-    _os.chdir(path)
+    os.chdir(path)
 
 
 def cp(src='', dst='', opt=''):
@@ -39,28 +42,28 @@ def cp(src='', dst='', opt=''):
             return
 
     if isfile(src):
-        _shutil.copy(src, dst)
+        shutil.copy(src, dst)
 
     elif isdir(src):
-        _shutil.copytree(src, dst)
+        shutil.copytree(src, dst)
 
 
 def hostname():
-    return _socket.gethostname()
+    return socket.gethostname()
 
 
 def ln(src, dst):
-    if _os.path.isdir(dst):
+    if os.path.isdir(dst):
         for name in _strlist(src):
             s = abspath(name)
             d = join(dst, basename(name))
-            _os.symlink(s, d)
+            os.symlink(s, d)
     else:
-        _os.symlink(src, dst)
+        os.symlink(src, dst)
 
 
 def ls(path):
-    dirs = _os.listdir(path)
+    dirs = os.listdir(path)
     for dir in dirs:
         if dir[0] == '.':
             dirs.remove(dir)
@@ -69,16 +72,16 @@ def ls(path):
 
 def mkdir(dirs):
     for dir in _strlist(dirs):
-        if not _os.path.isdir(dir):
-            _os.makedirs(dir)
+        if not os.path.isdir(dir):
+            os.makedirs(dir)
 
 
 def mkdir_gpfs(dirs):
     # hack to deal with race condition
     try:
         for dir in _strlist(dirs):
-            if not _os.path.isdir(dir):
-                _os.makedirs(dir)
+            if not os.path.isdir(dir):
+                os.makedirs(dir)
     except:
         pass
 
@@ -94,27 +97,34 @@ def mv(src='', dst=''):
     if isdir(dst):
         dst = join(dst, basename(src))
 
-    _shutil.move(src, dst)
+    shutil.move(src, dst)
 
 
 def pwd():
-    return _os.getcwd()
+    return os.getcwd()
 
 
 def rename(old, new, names):
     for name in names:
         if name.find(old) >= 0:
-            _os.rename(name, name.replace(old, new))
+            os.rename(name, name.replace(old, new))
 
 
 def rm(path=''):
     for name in _strlist(path):
-        if _os.path.isfile(name):
-            _os.remove(name)
-        elif _os.path.islink(name):
-            _os.remove(name)
-        elif _os.path.isdir(name):
-            _shutil.rmtree(name)
+        if os.path.isfile(name):
+            os.remove(name)
+        elif os.path.islink(name):
+            os.remove(name)
+        elif os.path.isdir(name):
+            shutil.rmtree(name)
+
+
+def run(args):
+    child = subprocess.Popen(args, shell=1)
+    streamdata = child.communicate()[0]
+    if child.returncode!=0:
+        sys.exit(-1)
 
 
 def select(items, prompt=''):
@@ -134,7 +144,7 @@ def select(items, prompt=''):
 
 def touch(filename, times=None):
     with open(filename, 'a'):
-        _os.utime(filename, times)
+        os.utime(filename, times)
 
 
 def whoami():
