@@ -354,13 +354,15 @@ class base(object):
         unix.rename('_smooth', '', glob(src+'/*'))
 
 
-    def clip(self, path='', minval=-999999., maxval=999999., thresh='dummy'):
+    def clip(self, path='', minval=-np.inf., maxval=np.inf, thresh='dummy'):
         """ Clips kernels by convolving them with a Gaussian.  Wrapper over 
             xclip_sem utility.
         """
         assert (exists(path))
 
-        # apply smoothing operator
+        if minval == -np.inf or maxval == np.inf:
+            return
+
         unix.cd(self.getpath)
         for name in self.parameters:
             self.mpirun(
