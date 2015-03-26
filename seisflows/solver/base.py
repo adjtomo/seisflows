@@ -8,8 +8,7 @@ import numpy as np
 
 import seisflows.seistools.specfem3d as solvertools
 from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import loadbypar, copybin, savebin, \
-    splitvec, ModelStruct, MinmaxStruct
+from seisflows.seistools.io import loadbypar, copybin, savebin, splitvec, Model, Minmax
 
 from seisflows.tools import msg
 from seisflows.tools import unix
@@ -231,8 +230,8 @@ class base(object):
           Models are stored in Fortran binary format and separated into multiple
           files according to material parameter and processor rank.
         """
-        model = ModelStruct(self.parameters)
-        minmax = MinmaxStruct(self.parameters)
+        model = Model(self.parameters)
+        minmax = Minmax(self.parameters)
 
         for iproc in range(PAR.NPROC):
             # read database files

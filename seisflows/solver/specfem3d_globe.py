@@ -7,7 +7,7 @@ import numpy as np
 
 import seisflows.seistools.specfem3d_globe as solvertools
 from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import loadbypar, copybin, savebin, ModelStruct, MinmaxStruct
+from seisflows.seistools.io import loadbypar, copybin, savebin, Model, Minmax
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
@@ -81,8 +81,8 @@ class specfem3d_globe(loadclass('solver', 'base')):
           Models are stored in Fortran binary format and separated into multiple
           files according to material parameter and processor rank.
         """
-        model = ModelStruct(self.parameters)
-        minmax = MinmaxStruct(self.parameters)
+        model = Model(self.parameters)
+        minmax = Minmax(self.parameters)
 
         for iproc in range(PAR.NPROC):
             # read database files

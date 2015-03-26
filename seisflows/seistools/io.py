@@ -85,11 +85,11 @@ def write_fortran(v, filename):
         n.tofile(file)
 
 
-def ModelStruct(keys):
+def Model(keys):
     return dict((key, []) for key in keys)
 
 
-class MinmaxStruct(object):
+class Minmax(object):
     def __init__(self, keys):
         self.keys = keys
         self.minvals = dict((key, +np.Inf) for key in keys)
