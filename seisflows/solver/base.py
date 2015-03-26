@@ -265,7 +265,7 @@ class base(object):
             for key in ['vp', 'vs']:
                 if key in self.parameters:
                     savebin(model[key][iproc], path, iproc, prefix+key+suffix)
-                else:
+                elif 'kernel' not in suffix:
                     src = PATH.OUTPUT +'/'+ 'model_init'
                     dst = path
                     copybin(src, dst, iproc, prefix+key+suffix)
