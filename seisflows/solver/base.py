@@ -8,14 +8,14 @@ import numpy as np
 
 import seisflows.seistools.specfem3d as solvertools
 from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import loadbypar, loadbyproc, copybin, savebin, \
+from seisflows.seistools.io import loadbypar, copybin, savebin, \
     splitvec, ModelStruct, MinmaxStruct
 
+from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
 from seisflows.tools.config import findpath, ParameterObj, ParameterError
-from seisflows.tools.msg import MsgSourceInputError
 
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
@@ -408,7 +408,7 @@ class base(object):
             unix.cp(src, dst)
 
     def export_kernels(self, path):
-        # work around unfortunate SPECFEM conventions
+        # work around kernel name conventions
         try:
             files = glob(self.model_databases +'/'+ '*alpha*_kernel.bin')
             unix.rename('alpha', 'vp', files)
@@ -532,7 +532,7 @@ class base(object):
             wildcard = self.source_prefix+'_*'
             globstar = glob(path +'/'+ wildcard)
             if not globstar:
-                 print MsgSourcInputError % (path, wildcard)
+                 print msg.SourcInputError % (path, wildcard)
                  sys.exit(-1)
             self.names = []
             for path in globstar:

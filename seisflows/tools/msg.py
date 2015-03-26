@@ -2,7 +2,7 @@
 
 ###
 
-MsgTaskError = """
+TaskError = """
 TASK ERROR
 
     Task failed:  %s.%s
@@ -15,7 +15,7 @@ TASK ERROR
 
 ###
 
-MsgSourceInputError = """
+SourceInputError = """
 SOURCE INPUT ERROR
 
     In DIRECTORY, there must be one or more files matching WILDCARD.
@@ -24,3 +24,15 @@ SOURCE INPUT ERROR
     WILDCARD:  "%s"
 """
 
+
+###
+
+SolverParameterOverwriteWarning = """
+SOLVER PARAMETER OVERWRITE WARNING
+
+    There is a conflict between SeisFlows and solver parameters.
+
+    Solver Parameter:  "%s"
+    Old Value:  %s
+    New Value:  %s
+"""
