@@ -18,8 +18,8 @@ class base(object):
     """ Nonlinear optimization base class.
 
      Available nonlinear optimization algorithms include gradient descent,
-     nonlinear conjugate gradient, and a quasi-Newton method
-     (limited-memory BFGS).
+     nonlinear conjugate gradient method, and limited-memory BFGS 
+     (a quasi-Newton method).
 
      Available line search algorithms include a backtracking line search based
      on quadratic interpolation and a bracketing and interpolation procedure
@@ -30,7 +30,7 @@ class base(object):
      search direction computation, the current model and gradient are read from
      'm_new' and 'g_new'; the resulting search direction is written to 'p_new'.
      As the optimization procedure progresses, other information is stored in
-     the cls.path directory.
+     the cls.path directory as well.
     """
 
     def check(cls):
@@ -102,6 +102,23 @@ class base(object):
 
     ### search direction methods
 
+     # The following name conventions are used in the search direction methods
+     # and for writing data to cls.path:
+     #    m_new - current model
+     #    m_old - previous model
+     #    m_try - trial model
+     #    f_new - current objective function value
+     #    f_old - previous objective function value
+     #    f_try - trial objective function value
+     #    g_new - current gradient direction
+     #    g_old - previous gradient direction
+     #    p_new - current search direction
+     #    p_old - previous search direction
+     #    s_new - current slope along search direction
+     #    s_old - previous slope along search direction
+     #    alpha - trial step length
+
+
     def compute_direction(cls):
         """ Computes model update direction from stored function and gradient 
           values
@@ -140,40 +157,45 @@ class base(object):
 
     ### line search methods
 
+    # The following alternate name conventions are used in the line search 
+    # methods:
+    #     m - model
+    #     p - search direction
+    #     s - slope along search direction
+    #     f - objective function value
+    #     x - step length
+    #     p_ratio - ratio of model norm to search direction norm
+    #     s_ratio - ratio of current slope to previous slope
+
     def initialize_search(cls):
         """ Determines initial step length for line search
         """
         unix.cd(cls.path)
 
-        if cls.iter == 1:
-            s_new = loadtxt('s_new')
-            f_new = loadtxt('f_new')
-        else:
-            s_old = loadtxt('s_old')
-            s_new = loadtxt('s_new')
-            f_old = loadtxt('f_old')
-            f_new = loadtxt('f_new')
-            alpha = loadtxt('alpha')
-
         m = loadnpy('m_new')
         p = loadnpy('p_new')
+        f = loadtxt('f_new')
+
+        norm_m = max(abs(m))
+        norm_p = max(abs(p))
+        p_ratio = float(norm_m/norm_p)
+
+        if cls.iter > 1:
+            s_ratio = loadtxt('s_new')/loadtxt('s_old')
+            alpha = loadtxt('alpha')
 
         if not hasattr(cls, 'restart_search'):
             cls.restart_search = 0
 
-        len_m = max(abs(m))
-        len_d = max(abs(p))
-        cls.step_ratio = float(len_m/len_d)
-
         if cls.iter == 1:
-            assert PAR.STEPLEN != 0.
-            alpha = PAR.STEPLEN*cls.step_ratio
+            assert PAR.STEPLEN > 0.
+            alpha = p_ratio * PAR.STEPLEN
         elif cls.restart_search:
-            alpha *= 2.*s_old/s_new
+            alpha *= 2.*s_ratio
         elif PAR.SRCHTYPE in ['Bracket']:
-            alpha *= 2.*s_old/s_new
+            alpha *= 2.*s_ratio
         elif PAR.SCHEME in ['GradientDescent', 'ConjugateGradient']:
-            alpha *= 2.*s_old/s_new
+            alpha *= 2.*s_ratio
         else:
             alpha = 1.
 
@@ -183,11 +205,11 @@ class base(object):
 
         # limit maximum step length
         if PAR.STEPMAX > 0.:
-            if alpha/cls.step_ratio > PAR.STEPMAX:
-                alpha = PAR.STEPMAX*cls.step_ratio
+            if alpha/p_ratio > PAR.STEPMAX:
+                alpha = p_ratio * PAR.STEPMAX
 
         # reset search history
-        cls.search_history = [[0., f_new]]
+        cls.search_history = [[0., f]]
         cls.step_count = 0
         cls.restart_search = 0
 
@@ -199,7 +221,7 @@ class base(object):
         savenpy('m_try', m + p*alpha)
         savetxt('alpha', alpha)
 
-        cls.writer(cls.iter, 0., f_new)
+        cls.writer(cls.iter, 0., f)
 
 
     def search_status(cls):
@@ -210,8 +232,8 @@ class base(object):
             history, determines whether stopping criteria have been satisfied.
         """
         unix.cd(cls.path)
-        f0 = loadtxt('f_new')
-        g0 = loadtxt('s_new')
+
+        # update search history
         x_ = loadtxt('alpha')
         f_ = loadtxt('f_try')
 
@@ -259,17 +281,20 @@ class base(object):
         """ Computes next trial step length
         """
         unix.cd(cls.path)
-        m0 = loadnpy('m_new')
+        m = loadnpy('m_new')
         p = loadnpy('p_new')
-        f0 = loadtxt('f_new')
-        g0 = loadtxt('s_new')
+        s = loadtxt('s_new')
+
+        norm_m = max(abs(m))
+        norm_p = max(abs(p))
+        p_ratio = float(norm_m/norm_p)
 
         x = cls.step_lens()
         f = cls.func_vals()
 
         # compute trial step length
         if PAR.SRCHTYPE == 'Backtrack':
-            alpha = lib.backtrack2(f0, g0, x[1], f[1], b1=0.1, b2=0.5)
+            alpha = lib.backtrack2(f[0], s, x[1], f[1], b1=0.1, b2=0.5)
 
         elif PAR.SRCHTYPE == 'Bracket':
             FACTOR = 2.
@@ -281,21 +306,21 @@ class base(object):
                 alpha = loadtxt('alpha')*FACTOR**-1
 
         elif PAR.SRCHTYPE == 'Fixed':
-            alpha = cls.step_ratio*(step + 1)*PAR.STEPLEN
+            alpha = p_ratio*(step + 1)*PAR.STEPLEN
 
         else:
             raise ValueError
 
         # write trial model
         savetxt('alpha', alpha)
-        savenpy('m_try', m0 + p*alpha)
+        savenpy('m_try', m + p*alpha)
 
 
     def finalize_search(cls):
         """ Cleans working directory and writes updated model
         """
         unix.cd(cls.path)
-        m0 = loadnpy('m_new')
+        m = loadnpy('m_new')
         p = loadnpy('p_new')
 
         x = cls.step_lens()
@@ -322,7 +347,7 @@ class base(object):
         # write updated model
         alpha = x[f.argmin()]
         savetxt('alpha', alpha)
-        savenpy('m_new', m0 + p*alpha)
+        savenpy('m_new', m + p*alpha)
         savetxt('f_new', f.min())
 
         cls.writer([], [], [])
