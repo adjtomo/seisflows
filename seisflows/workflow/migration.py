@@ -98,6 +98,8 @@ class migration(object):
 
         if PAR.SAVEKERNELS:
             self.save_kernels()
+        else:
+            self.save_kernels_sum()
 
         print 'Finished\n'
 
@@ -108,6 +110,12 @@ class migration(object):
         model = PATH.OUTPUT +'/'+ 'model_init'
         assert exists(model)
         unix.ln(model, PATH.GLOBAL +'/'+ 'model')
+
+    def save_kernels_sum(self):
+        src = PATH.GLOBAL +'/'+ 'kernels/sum'
+        dst = PATH.OUTPUT +'/'+ 'kernels/sum'
+        unix.mkdir(dst)
+        unix.mv(src, dst)
 
     def save_kernels(self):
         src = PATH.GLOBAL +'/'+ 'kernels'
