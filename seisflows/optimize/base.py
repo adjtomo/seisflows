@@ -102,7 +102,7 @@ class base(object):
 
     ### search direction methods
 
-     # The following name conventions are used in the search direction methods
+     # The following names are used in the search direction methods
      # and for writing data to cls.path:
      #    m_new - current model
      #    m_old - previous model
@@ -120,12 +120,9 @@ class base(object):
 
 
     def compute_direction(cls):
-        """ Computes model update direction from stored function and gradient 
-          values
+        """ Computes model update direction from stored gradient direction
         """
         unix.cd(cls.path)
-        m_new = loadnpy('m_new')
-        f_new = loadtxt('f_new')
         g_new = loadnpy('g_new')
 
         if PAR.SCHEME == 'GradientDescent':
@@ -157,8 +154,7 @@ class base(object):
 
     ### line search methods
 
-    # The following alternate name conventions are used in the line search 
-    # methods:
+    # The following names are used in the line search methods:
     #     m - model
     #     p - search direction
     #     s - slope along search direction
@@ -205,7 +201,7 @@ class base(object):
 
         # limit maximum step length
         if PAR.STEPMAX > 0.:
-            if alpha/p_ratio > PAR.STEPMAX:
+            if alpha > p_ratio * PAR.STEPMAX:
                 alpha = p_ratio * PAR.STEPMAX
 
         # reset search history
