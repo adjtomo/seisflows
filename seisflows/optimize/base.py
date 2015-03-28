@@ -6,7 +6,7 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import loadtxt, savetxt
-from seisflows.tools.config import ParameterObj
+from seisflows.tools.config import ParameterObj, ParameterError
 from seisflows.tools.io import OutputWriter
 from seisflows.optimize import lib
 
@@ -37,13 +37,13 @@ class base(object):
         """ Checks parameters, paths, and dependencies
         """
         if 'BEGIN' not in PAR:
-            raise Exception
+            raise ParameterError
 
         if 'END' not in PAR:
-            raise Exception
+            raise ParameterError
 
         if 'SUBMIT' not in PATH:
-            raise Exception
+            raise ParameterError
 
         if 'OPTIMIZE' not in PATH:
             setattr(PATH, 'OPTIMIZE', join(PATH.GLOBAL, 'optimize'))
@@ -62,11 +62,11 @@ class base(object):
             setattr(PAR, 'LBFGSMAX', 6)
 
         # line search parameters
-        if 'SRCHTYPE' not in PAR:
+        if 'LINESEARCH' not in PAR:
             if 'Newton' in PAR.SCHEME:
-                setattr(PAR, 'SRCHTYPE', 'Backtrack')
+                setattr(PAR, 'LINESEARCH', 'Backtrack')
             else:
-                setattr(PAR, 'SRCHTYPE', 'Bracket')
+                setattr(PAR, 'LINESEARCH', 'Bracket')
 
         if 'SRCHMAX' not in PAR:
             setattr(PAR, 'SRCHMAX', 10)
@@ -74,8 +74,8 @@ class base(object):
         if 'STEPLEN' not in PAR:
             setattr(PAR, 'STEPLEN', 0.05)
 
-        if 'STEPMAX' not in PAR:
-            setattr(PAR, 'STEPMAX', 0.)
+        if 'STEPLENMAX' not in PAR:
+            setattr(PAR, 'STEPLENMAX', None)
 
         if 'ADHOCSCALING' not in PAR:
             setattr(PAR, 'ADHOCSCALING', 0.)
@@ -144,7 +144,7 @@ class base(object):
                     cls.restart_search = 0
 
         else:
-            raise Exception
+            raise ParameterError
 
         # save results
         unix.cd(cls.path)
@@ -188,7 +188,7 @@ class base(object):
             alpha = p_ratio * PAR.STEPLEN
         elif cls.restart_search:
             alpha *= 2.*s_ratio
-        elif PAR.SRCHTYPE in ['Bracket']:
+        elif PAR.LINESEARCH in ['Bracket']:
             alpha *= 2.*s_ratio
         elif PAR.SCHEME in ['GradientDescent', 'ConjugateGradient']:
             alpha *= 2.*s_ratio
@@ -200,9 +200,9 @@ class base(object):
             alpha *= PAR.ADHOCSCALING
 
         # limit maximum step length
-        if PAR.STEPMAX > 0.:
-            if alpha > p_ratio * PAR.STEPMAX:
-                alpha = p_ratio * PAR.STEPMAX
+        if PAR.STEPLENMAX:
+            if alpha > p_ratio * PAR.STEPLENMAX:
+                alpha = p_ratio * PAR.STEPLENMAX
 
         # reset search history
         cls.search_history = [[0., f]]
@@ -248,18 +248,18 @@ class base(object):
             cls.isbest = 1
 
         # are stopping criteria satisfied?
-        if PAR.SRCHTYPE == 'Backtrack':
+        if PAR.LINESEARCH == 'Backtrack':
             if any(f[1:] < f[0]):
                 cls.isdone = 1
 
-        elif PAR.SRCHTYPE == 'Bracket':
+        elif PAR.LINESEARCH == 'Bracket':
             if cls.isbrak:
                 cls.isbest = 1
                 cls.isdone = 1
             elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 cls.isbrak = 1
 
-        elif PAR.SRCHTYPE == 'Fixed':
+        elif PAR.LINESEARCH == 'Fixed':
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 cls.isdone = 1
 
@@ -289,10 +289,10 @@ class base(object):
         f = cls.func_vals()
 
         # compute trial step length
-        if PAR.SRCHTYPE == 'Backtrack':
+        if PAR.LINESEARCH == 'Backtrack':
             alpha = lib.backtrack2(f[0], s, x[1], f[1], b1=0.1, b2=0.5)
 
-        elif PAR.SRCHTYPE == 'Bracket':
+        elif PAR.LINESEARCH == 'Bracket':
             FACTOR = 2.
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 alpha = lib.polyfit2(x, f)
@@ -301,7 +301,7 @@ class base(object):
             else:
                 alpha = loadtxt('alpha')*FACTOR**-1
 
-        elif PAR.SRCHTYPE == 'Fixed':
+        elif PAR.LINESEARCH == 'Fixed':
             alpha = p_ratio*(step + 1)*PAR.STEPLEN
 
         else:
