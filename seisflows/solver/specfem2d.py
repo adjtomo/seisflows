@@ -30,6 +30,19 @@ class specfem2d(loadclass('solver', 'base')):
     parameters = []
     parameters += ['vs']
 
+    if 'DENSITY' not in PAR:
+        PAR.DENSITY = 'constant'
+
+    if PAR.DENSITY == 'constant':
+        map_density = None
+
+    elif PAR.DENSITY == 'variable':
+        map_density = None
+        parameters += ['rho']
+
+    else:
+        raise NotImplementedError
+
 
     def check(self):
         """ Checks parameters and paths
