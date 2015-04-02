@@ -7,15 +7,15 @@
 
 from seisflows.seistools.shared import Struct
 
-def forward_bulk_c_bulk_mu():
+def bulk_c_bulk_mu():
     raise NotImplementedError
 
 
-def inverse_bulk_c_bulk_mu():
+def bulk_c_bulk_mu():
     raise NotImplementedError
 
 
-def forward_kappa_mu(dummy, keys, vals):
+def kappa_mu_forward(dummy, keys, vals):
     input = Struct(zip(keys, vals))
     output = Struct()
 
@@ -30,7 +30,7 @@ def forward_kappa_mu(dummy, keys, vals):
     return output
 
 
-def inverse_kappa_mu(dummy, keys, vals):
+def kappa_mu_inverse(dummy, keys, vals):
     input = Struct(zip(keys, vals))
     output = Struct()
 
@@ -45,25 +45,25 @@ def inverse_kappa_mu(dummy, keys, vals):
     return output
 
 
-def forward_vp_vs(dummy, keys, vals):
+def vp_vs_forward(dummy, keys, vals):
     input = Struct(zip(keys, vals))
     output = input
     return output
 
 
-def inverse_vp_vs(dummy, keys, vals):
+def vp_vs_inverse(dummy, keys, vals):
     input = Struct(zip(keys, vals))
     output = input
     return output
 
 
-def forward_vs(dummy, keys, vals):
+def vs_forward(dummy, keys, vals):
     input = Struct(zip(keys, vals))
     output = input
     return output
 
 
-def inverse_vs(dummy, keys, vals):
+def vs_inverse(dummy, keys, vals):
     input = Struct(zip(keys, vals))
     output = input
     return output
