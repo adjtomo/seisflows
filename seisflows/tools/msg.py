@@ -34,5 +34,6 @@ SOLVER PARAMETER OVERWRITE WARNING
 
     Solver Parameter:  "%s"
     Old Value:  %s
-    New Value:  %s
+    Overwriting with:  %s
 """
+

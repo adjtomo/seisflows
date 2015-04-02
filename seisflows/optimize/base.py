@@ -120,7 +120,7 @@ class base(object):
 
 
     def compute_direction(cls):
-        """ Computes model update direction from stored gradient direction
+        """ Computes model update direction from stored gradient
         """
         unix.cd(cls.path)
         g_new = loadnpy('g_new')
@@ -171,7 +171,6 @@ class base(object):
         m = loadnpy('m_new')
         p = loadnpy('p_new')
         f = loadtxt('f_new')
-
         norm_m = max(abs(m))
         norm_p = max(abs(p))
         p_ratio = float(norm_m/norm_p)
