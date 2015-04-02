@@ -69,5 +69,16 @@ def inverse_vs(dummy, keys, vals):
     return output
 
 
+def rho_gardner(dummy, keys, vals):
+    input = Struct(zip(keys, vals))
 
+    output = Struct()
+    for key in input:
+        if key != 'rho':
+            output[key] = input[key]
 
+    vp = input.vp
+
+    output.rho = 0.31*vp**0.25
+
+    return output
