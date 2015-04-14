@@ -208,18 +208,11 @@ class specfem2d(loadclass('solver', 'base')):
         if not span:
             return parts
 
-        # set up grid
+        # perform smoothing
         x = parts['x'][0]
         z = parts['z'][0]
-        lx = x.max() - x.min()
-        lz = z.max() - z.min()
-        nn = x.size
-        nx = np.around(np.sqrt(nn*lx/lz))
-        nz = np.around(np.sqrt(nn*lx/lz))
-
-        # perform smoothing
         for key in self.parameters:
-            parts[key] = [meshsmooth(x, z, parts[key][0], span, nx, nz)]
+            parts[key] = [meshsmooth(x, z, parts[key][0], span)]
         unix.mv(path, path + '_nosmooth')
         self.save(path, parts)
 

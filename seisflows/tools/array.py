@@ -49,37 +49,6 @@ def meshplot(x, y, z):
     return f, p
 
 
-def meshsmooth(x, z, v, span, nx, nz):
-    """Smooths values on 2-D unstructured mesh."""
-
-    # construct rectangular grid
-    xi = np.linspace(x.min(), x.max(), nx)
-    zi = np.linspace(z.min(), z.max(), nz)
-    xi, zi = np.meshgrid(xi, zi)
-    xi = xi.flatten()
-    zi = zi.flatten()
-
-    # go from unstructured 'mesh' to rectangular 'grid'
-    meshcoords = np.column_stack([x, z])
-    gridcoords = np.column_stack([xi, zi])
-    vi = _interp.griddata(meshcoords, v, gridcoords, 'linear')
-
-    # smooth
-    xi = np.reshape(xi, (nz, nx))
-    zi = np.reshape(zi, (nz, nx))
-    vi = np.reshape(vi, (nz, nx))
-    vs = gridsmooth(vi, span)
-
-    # back to unstructured mesh
-    xi = xi.flatten()
-    zi = zi.flatten()
-    gridcoords = np.column_stack([xi, zi])
-    vs = vs.flatten()
-    vs = _interp.griddata(gridcoords, vs, meshcoords, 'linear')
-
-    return vs
-
-
 def gauss2(X, Y, mu, sigma):
     """Evaluates Gaussian over points of X,Y."""
     # evaluates Gaussian over X,Y
@@ -91,6 +60,53 @@ def gauss2(X, Y, mu, sigma):
     Z = np.exp(-0.5*Z)
     Z *= (2.*np.pi*np.sqrt(D))**(-1.)
     return Z
+
+
+def meshsmooth(x, z, v, span):
+    """Smooths values on 2-D unstructured mesh."""
+
+    lx = x.max() - x.min()
+    lz = z.max() - z.min()
+    nn = v.size
+
+    # calculate number of mesh points along x, z
+    nx = np.around(np.sqrt(nn*lx/lz))
+    nz = np.around(np.sqrt(nn*lz/lx))
+
+    # calculate typical spacing between mesh points along x, z
+    dx = lx/nx
+    dz = lz/nz
+
+    # construct 'grid'
+    xi = np.linspace(x.min(), x.max(), nx)
+    zi = np.linspace(z.min(), z.max(), nz)
+    xi, zi = np.meshgrid(xi, zi)
+    xi = xi.flatten()
+    zi = zi.flatten()
+
+    # from 'mesh' to 'grid'
+    meshcoords = np.column_stack([x, z])
+    gridcoords = np.column_stack([xi, zi])
+    vi = _interp.griddata(meshcoords, v, gridcoords, 'linear')
+
+    xi = np.reshape(xi, (nz, nx))
+    zi = np.reshape(zi, (nz, nx))
+    vi = np.reshape(vi, (nz, nx))
+    wi = np.ones((nz, nx))
+
+    # apply smoother
+    vs = gridsmooth(vi, span)
+    ws = gridsmooth(wi, span)
+    vs = vs/ws
+
+    # back to 'mesh'
+    xi = xi.flatten()
+    zi = zi.flatten()
+    gridcoords = np.column_stack([xi, zi])
+    vs = vs.flatten()
+    vs = _interp.griddata(gridcoords, vs, meshcoords, 'linear')
+
+    return vs
 
 
 def sortrows(a, return_index=False, return_inverse=False):
