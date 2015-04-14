@@ -94,10 +94,19 @@ def meshsmooth(x, z, v, span):
     vi = np.reshape(vi, (nz, nx))
     wi = np.ones((nz, nx))
 
+    # maks NaNs
+    inan = np.isnan(vi)
+    if np.any(inan):
+        vi[inan] = 0.
+        wi[inan] = 0.
+
     # apply smoother
     vs = gridsmooth(vi, span)
     ws = gridsmooth(wi, span)
     vs = vs/ws
+
+    if np.any(inan):
+        vi[inan] = 0.
 
     # back to 'mesh'
     xi = xi.flatten()
