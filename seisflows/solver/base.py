@@ -31,9 +31,13 @@ class base(object):
         derivatives.  Together, they provide the primary interface through which
         the solver interacts with other SeisFlows objects.
 
-      forward, adjoint, generate_data, generate_mesh
+      forward, adjoint
         These methods allow direct access to low-level SPECFEM components,
         providing another interface through which to interact with the solver.
+
+     generate_data, generate_mesh, generate_precond
+        One time operations performed at beginning of an inversion or 
+        migration.
 
      initialize_solver_directories, initialize_adjoint_traces
         SPECFEM requires a particular directory structure in which to run and
@@ -157,6 +161,13 @@ class base(object):
         raise NotImplementedError
 
 
+    def generate_precond(self, *args, **kwargs):
+        """ Computes preconditioner
+        """
+        # must be implemented by subclass
+        raise NotImplementedError
+
+
 
     ### high-level solver interface
 
@@ -256,7 +267,7 @@ class base(object):
 
             There is a tradeoff here between being simple and being 
             flexible.  In this case we opt for a simple hardwired approach. For
-            a more flexible, more complex approach, see SEISFLOWS-RESEARCH.
+            a more flexible, more complex approach see SEISFLOWS-RESEARCH.
         """
         unix.mkdir(path)
 
@@ -474,12 +485,12 @@ class base(object):
         self.check_solver_parameter_files()
 
 
-    def initialize_adjoint_traces(self):
+    def initialize_adjoint_traces(self, path='traces/obs'):
         """ Adjoint traces are initialized by writing zeros for all components.
             Components actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
         """
-        _, h = preprocess.load('traces/obs')
+        _, h = preprocess.load(path)
         zeros = np.zeros((h.nt, h.nr))
         for channel in ['x', 'y', 'z']:
             preprocess.writer(zeros, h, channel=channel, prefix='traces/adj/')
@@ -488,14 +499,17 @@ class base(object):
     def initialize_io_machinery(self):
         """ Writes mesh files expected by input/output methods
         """
-        if system.getnode() == 0:
-            if PAR.OPTIMIZE:
-                assert PATH.OPTIMIZE
-                assert exists(PATH.MODEL_INIT)
+        if not PAR.OPTIMIZE:
+            return
 
+        if system.getnode() == 0:
+            assert PATH.OPTIMIZE
+            assert exists(PATH.MODEL_INIT)
+
+            unix.mkdir(PATH.OPTIMIZE)
+            if not exists(PATH.OPTIMIZE +'/'+ 'm_new'):
                 model = self.load(PATH.MODEL_INIT)
-                if not exists(PATH.OPTIMIZE +'/'+ 'm_new'):
-                    savenpy(PATH.OPTIMIZE +'/'+ 'm_new', self.merge(model))
+                savenpy(PATH.OPTIMIZE +'/'+ 'm_new', self.merge(model))
 
 
     def check_solver_parameter_files(self):
