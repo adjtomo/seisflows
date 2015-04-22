@@ -75,7 +75,6 @@ class base(object):
 
         r = self.apply(self.write_residuals, [s, d], [h], inplace=False)
         s = self.apply(self.generate_adjoint_traces, [s, d], [h])
-
         self.save(s, h, prefix='traces/adj/')
 
 
