@@ -54,10 +54,6 @@ class migration(object):
         if 'SAVETRACES' not in PAR:
             setattr(PAR, 'SAVETRACES', 0)
 
-        # assertions
-        if 'OPTIMIZE' in PAR:
-            assert not PAR.OPTIMIZE, "To run a migration, set PAR.OPTIMIZE = None"
-
 
     def main(self):
         """ Migrates seismic data
