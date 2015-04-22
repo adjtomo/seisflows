@@ -84,7 +84,7 @@ class base(object):
                    path=path +'/'+ 'kernels')
 
 
-    def process_kernels(self, path=None, tag='gradient'):
+    def process_kernels(self, path):
         """ Performs scaling, smoothing, and preconditioning operations in
             accordance with parameter settings
         """
