@@ -66,7 +66,7 @@ class generate_precond(object):
 
         # save preconditioner
         src = PATH.GLOBAL +'/'+ 'kernels/absval'
-        dst = PATH.OUTPUT
+        dst = PATH.OUTPUT +'/'+ 'precond'
         unix.cp(src, dst)
 
         print 'Finished\n'
