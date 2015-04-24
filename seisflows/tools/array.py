@@ -69,11 +69,11 @@ def meshsmooth(x, z, v, span):
     lz = z.max() - z.min()
     nn = v.size
 
-    # calculate number of mesh points along x, z
+    # number of 'mesh' points
     nx = np.around(np.sqrt(nn*lx/lz))
     nz = np.around(np.sqrt(nn*lz/lx))
 
-    # calculate typical spacing between mesh points along x, z
+    # typical spacing between 'mesh' points
     dx = lx/nx
     dz = lz/nz
 
