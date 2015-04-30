@@ -5,20 +5,19 @@ import scipy.signal as _signal
 import scipy.interpolate as _interp
 
 
-def gridplot(z):
-    """Plots values on 2-D rectangular grid."""
-
+def gridplot(Z):
+    """ Plots values on 2D rectangular grid
+    """
     import pylab
 
-    pylab.pcolor(z)
+    pylab.pcolor(Z)
     pylab.show()
 
 
 def gridsmooth(Z, span):
-    """Smooths values on 2-D rectangular grid."""
-
+    """ Smooths values on 2D rectangular grid
+    """
     import warnings
-
     warnings.filterwarnings('ignore')
 
     x = np.linspace(-2.*span, 2.*span, 2.*span + 1.)
@@ -35,8 +34,40 @@ def gridsmooth(Z, span):
     return Z
 
 
+def nabla(Z, order=1):
+    """ Returns n-th order spatial derivatives of a function defined on a 
+        2D rectangular grid; generalizes Laplacian
+    """
+    if order == 1:
+      Zx = Z[:,2:]-Z[:,:-1]
+      Zy = Z[2:,:]-Z[:-1,:]
+    else:
+      raise NotImplementedError
+
+    Z = Zx+Zy
+    Z[:,-1] = Zx[:,-1]
+    Z[-1,:] = Zy[-1,:]
+    Z[-1,-1] = (Zx[-1,-1] + Zx[-1,-1])/2.
+    return Z
+
+
+def gauss2(X, Y, mu, sigma):
+    """ Evaluates Gaussian over points of X,Y
+    """
+    # evaluates Gaussian over X,Y
+    D = sigma[0, 0]*sigma[1, 1] - sigma[0, 1]*sigma[1, 0]
+    B = np.linalg.inv(sigma)
+    X = X - mu[0]
+    Y = Y - mu[1]
+    Z = B[0, 0]*X**2. + B[0, 1]*X*Y + B[1, 0]*X*Y + B[1, 1]*Y**2.
+    Z = np.exp(-0.5*Z)
+    Z *= (2.*np.pi*np.sqrt(D))**(-1.)
+    return Z
+
+
 def meshplot(x, y, z):
-    """Plots values on 2-D unstructured mesh."""
+    """ Plots values on 2D unstructured mesh
+    """
     import pylab
 
     r = (max(x) - min(x))/(max(y) - min(y))
@@ -49,77 +80,69 @@ def meshplot(x, y, z):
     return f, p
 
 
-def gauss2(X, Y, mu, sigma):
-    """Evaluates Gaussian over points of X,Y."""
-    # evaluates Gaussian over X,Y
-    D = sigma[0, 0]*sigma[1, 1] - sigma[0, 1]*sigma[1, 0]
-    B = np.linalg.inv(sigma)
-    X = X - mu[0]
-    Y = Y - mu[1]
-    Z = B[0, 0]*X**2. + B[0, 1]*X*Y + B[1, 0]*X*Y + B[1, 1]*Y**2.
-    Z = np.exp(-0.5*Z)
-    Z *= (2.*np.pi*np.sqrt(D))**(-1.)
-    return Z
+def meshsmooth(v, mesh, span):
+    """ Smooths values on 2D unstructured mesh
+    """
+    V, grid = mesh2grid(v, mesh)
+    nz, nx = V.shape
+    W = np.ones((nz, nx))
+
+    # maks nans
+    inan = np.isnan(V)
+    if np.any(inan):
+        V[inan] = 0.
+        W[inan] = 0.
+
+    # apply smoother
+    V = gridsmooth(V, span)
+    W = gridsmooth(W, span)
+    V = V/W
+
+    if np.any(inan):
+        V[inan] = 0.
+
+    vs = grid2mesh(V, grid, mesh)
+    return vs
 
 
-def meshsmooth(x, z, v, span):
-    """Smooths values on 2-D unstructured mesh."""
-
+def mesh2grid(v, mesh):
+    """ Interpolates from an unstructured coordinates (mesh) to a structured 
+        coordinates (grid)
+    """
+    x = mesh[:,0]
+    z = mesh[:,1]
     lx = x.max() - x.min()
     lz = z.max() - z.min()
     nn = v.size
 
-    # number of 'mesh' points
     nx = np.around(np.sqrt(nn*lx/lz))
     nz = np.around(np.sqrt(nn*lz/lx))
-
-    # typical spacing between 'mesh' points
     dx = lx/nx
     dz = lz/nz
 
-    # construct 'grid'
-    xi = np.linspace(x.min(), x.max(), nx)
-    zi = np.linspace(z.min(), z.max(), nz)
-    xi, zi = np.meshgrid(xi, zi)
-    xi = xi.flatten()
-    zi = zi.flatten()
+    # construct structured grid
+    x = np.linspace(x.min(), x.max(), nx)
+    z = np.linspace(z.min(), z.max(), nz)
+    X, Z = np.meshgrid(x, z)
+    grid = stack(X.flatten(), Z.flatten())
 
-    # from 'mesh' to 'grid'
-    meshcoords = np.column_stack([x, z])
-    gridcoords = np.column_stack([xi, zi])
-    vi = _interp.griddata(meshcoords, v, gridcoords, 'linear')
+    # interpolate to structured grid
+    V = _interp.griddata(mesh, v, grid, 'linear')
+    V = np.reshape(V, (nz, nx))
 
-    xi = np.reshape(xi, (nz, nx))
-    zi = np.reshape(zi, (nz, nx))
-    vi = np.reshape(vi, (nz, nx))
-    wi = np.ones((nz, nx))
+    return V, grid
 
-    # maks NaNs
-    inan = np.isnan(vi)
-    if np.any(inan):
-        vi[inan] = 0.
-        wi[inan] = 0.
 
-    # apply smoother
-    vs = gridsmooth(vi, span)
-    ws = gridsmooth(wi, span)
-    vs = vs/ws
-
-    if np.any(inan):
-        vi[inan] = 0.
-
-    # back to 'mesh'
-    xi = xi.flatten()
-    zi = zi.flatten()
-    gridcoords = np.column_stack([xi, zi])
-    vs = vs.flatten()
-    vs = _interp.griddata(gridcoords, vs, meshcoords, 'linear')
-
-    return vs
+def grid2mesh(V, grid, mesh):
+    """ Interpolates from unstructured coordinates (mesh) to structured 
+        coordinates (grid)
+    """
+    return _interp.griddata(grid, V.flatten(), mesh, 'linear')
 
 
 def sortrows(a, return_index=False, return_inverse=False):
-    """Sorts rows of numpy array."""
+    """ Sorts rows of numpy array
+    """
     si = np.lexsort(a.T)
     if return_inverse:
         sj = np.argsort(si)
@@ -135,7 +158,8 @@ def sortrows(a, return_index=False, return_inverse=False):
 
 
 def uniquerows(a, sort_array=False, return_index=False):
-    """Finds unique rows of numpy array."""
+    """ Finds unique rows of numpy array
+    """
     if sort_array:
         if return_index:
             sa, si = sortrows(a, return_index=True)
@@ -170,3 +194,7 @@ def savenpy(filename, v):
     """Saves numpy binary file."""
     np.save(filename, v)
     os.rename(filename + '.npy', filename)
+
+
+def stack(*args):
+    return np.column_stack(args)
