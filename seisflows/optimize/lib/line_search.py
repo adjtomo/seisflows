@@ -3,11 +3,12 @@ import numpy as np
 
 
 def backtrack2(f0, g0, x1, f1, b1=0.1, b2=0.5):
-
+    """ Safeguarded parabolic backtrack
+    """
     # parabolic backtrack
     x2 = -g0*x1**2/(2*(f1-f0-g0*x1))
 
-    # apply constraints
+    # apply safeguards
     if x2 > b2*x1:
         x2 = b2*x1
     elif x2 < b1*x1:
@@ -16,7 +17,8 @@ def backtrack2(f0, g0, x1, f1, b1=0.1, b2=0.5):
 
 
 def backtrack3(f0, g0, x1, f1, x2, f2):
-    # cubic backtrack
+    """ Safeguarded cubic backtrack
+    """
     raise NotImplementedError
 
 
