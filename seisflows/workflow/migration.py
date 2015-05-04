@@ -109,7 +109,7 @@ class migration(object):
 
     def save_kernels_sum(self):
         src = PATH.GLOBAL +'/'+ 'kernels/sum'
-        dst = PATH.OUTPUT +'/'+ 'kernels/sum'
+        dst = PATH.OUTPUT +'/'+ 'kernels'
         unix.mkdir(dst)
         unix.mv(src, dst)
 
