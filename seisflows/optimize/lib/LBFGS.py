@@ -70,11 +70,13 @@ class LBFGS:
             al[i] = rh[i]*np.dot(S[:, i], q)
             q = q - al[i]*Y[:, i]
 
-        sty = np.dot(Y[:, 0], S[:, 0])
-        yty = np.dot(Y[:, 0], Y[:, 0])
+        # initialize inverse Hessian using scaling proposed by 
+        # Liu and Nocedal 1989
+        sty = np.dot(Y[:,0], S[:,0])
+        yty = np.dot(Y[:,0], Y[:,0])
         r = sty/yty*q
 
-        for i in range(k - 1, -1, -1):
+        for i in range(k-1, -1, -1):
             be = rh[i]*np.dot(Y[:, i], r)
             r = r + S[:, i]*(al[i] - be)
 
