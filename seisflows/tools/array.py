@@ -5,6 +5,11 @@ import scipy.signal as _signal
 import scipy.interpolate as _interp
 
 
+# in the function and variable names, we use 'grid' to describe a set of
+# structured coordinates, and 'mesh' to describe a set of unstructured 
+# coordinates
+
+
 def gridplot(Z):
     """ Plots values on 2D rectangular grid
     """
@@ -35,19 +40,23 @@ def gridsmooth(Z, span):
 
 
 def nabla(Z, order=1):
-    """ Returns n-th order spatial derivatives of a function defined on a 
-        2D rectangular grid; generalizes Laplacian
+    """ Returns sum of n-th order spatial derivatives of a function defined on
+        a 2D rectangular grid; generalizes Laplacian
     """
     if order == 1:
-      Zx = Z[:,2:]-Z[:,:-1]
-      Zy = Z[2:,:]-Z[:-1,:]
+      Zx = Z[:,1:]-Z[:,:-1]
+      Zy = Z[1:,:]-Z[:-1,:]
     else:
       raise NotImplementedError
 
-    Z = Zx+Zy
+    Z[:,:] = 0.
+    Z[:,1:] += Zx
+    Z[1:,:] += Zy
+
     Z[:,-1] = Zx[:,-1]
     Z[-1,:] = Zy[-1,:]
     Z[-1,-1] = (Zx[-1,-1] + Zx[-1,-1])/2.
+
     return Z
 
 

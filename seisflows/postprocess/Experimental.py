@@ -55,7 +55,7 @@ class Experimental(loadclass('postprocess', 'base')):
                        span=PAR.SMOOTH)
 
         # regularize
-        if PAR.REGULARIZE:
+        if 0:#PAR.REGULARIZE:
             parts = solver.load(path +'/'+ 'kernels/sum')
             assert 'x' in parts
             assert 'z' in parts
@@ -74,6 +74,25 @@ class Experimental(loadclass('postprocess', 'base')):
             solver.save(path +'/'+ 'kernels/sum',
                         parts,
                         suffix='_kernel')
+
+        # DEBUG REGULARIZATION
+        for Lambda in np.arange(8,9,0.1):
+            parts = solver.load(path +'/'+ 'kernels/sum')
+            vmax = np.max(np.abs(parts['vs']))
+            assert 'x' in parts
+            assert 'z' in parts
+            x = parts['x'][0]
+            z = parts['z'][0]
+            mesh = stack(x, z)
+
+            for key in solver.parameters:
+                for iproc in range(PAR.NPROC):
+                    parts[key][iproc] -= (10.**Lambda)*vmax*self.regularize(parts[key][0], mesh)
+
+            solver.save(PATH.OUTPUT +'/'+ 'kernels/sum_lambda_%04d' % (10*Lambda),
+                        parts,
+                        suffix='_kernel')
+
  
         # precondition
         if PATH.PRECOND:
