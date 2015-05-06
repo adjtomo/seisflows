@@ -4,6 +4,7 @@ import sys
 
 import numpy as np
 
+from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import divides, exists
@@ -104,6 +105,9 @@ class inversion(object):
 
         if 'SAVERESIDUALS' not in PAR:
             setattr(PAR, 'SAVERESIDUALS', 0)
+
+        # assertions
+        assert 1 <= PAR.BEGIN <= PAR.END
 
 
     def main(self):

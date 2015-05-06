@@ -545,7 +545,7 @@ class base(object):
             wildcard = self.source_prefix+'_*'
             globstar = glob(path +'/'+ wildcard)
             if not globstar:
-                 print msg.SourcInputError % (path, wildcard)
+                 print msg.SPECFEM.SourceError % (path, wildcard)
                  sys.exit(-1)
             self.names = []
             for path in globstar:
