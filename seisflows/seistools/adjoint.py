@@ -37,7 +37,8 @@ def ediff(wsyn, wobs, nt, dt, eps=0.05):
     # envelope difference
     esyn = abs(_signal.hilbert(wsyn))
     eobs = abs(_signal.hilbert(wobs))
-    wadj = - (esyn - eobs)/(esyn + eps*esyn.max())
+    etmp = (esyn - eobs)/(esyn + eps*esyn.max())
+    wadj = etmp*wsyn - _np.imag(_signal.hilbert(etmp*_np.imag(_signal.hilbert(wsyn))))
     return wadj
 
 
