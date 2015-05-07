@@ -139,19 +139,21 @@ class base(object):
     def call_adjoint(self, wsyn, wobs, nt, dt):
         """ Wrapper for generating adjoint traces
         """
-        if PAR.MISFIT in ['wav', 'wdiff']:
+        misfit = PAR.MISFIT.lower()
+
+        if misfit in ['waveform', 'wav', 'wdiff']:
             # waveform difference
             w = adjoint.wdiff(wsyn, wobs, nt, dt)
-        elif PAR.MISFIT in ['tt', 'wtime']:
+        elif misfit in ['traveltime', 'tt', 'wtime']:
             # traveltime
             w = adjoint.wtime(wsyn, wobs, nt, dt)
-        elif PAR.MISFIT in ['ampl', 'wampl']:
+        elif misfit in ['amplitude', 'ampl', 'wampl']:
             # amplitude
             w = adjoint.wampl(wsyn, wobs, nt, dt)
-        elif PAR.MISFIT in ['env', 'ediff']:
+        elif misfit in ['envelope', 'env', 'ediff']:
             # envelope
             w = adjoint.ediff(wsyn, wobs, nt, dt, eps=0.05)
-        elif PAR.MISFIT in ['cdiff']:
+        elif misfit in ['cdiff']:
             # cross correlation
             w = adjoint.cdiff(wsyn, wobs, nt, dt)
         else:
@@ -161,19 +163,21 @@ class base(object):
     def call_misfit(self, wsyn, wobs, nt, dt):
         """ Wrapper for evaluating misfit function
         """
-        if PAR.MISFIT in ['wav', 'wdiff']:
+        misfit = PAR.MISFIT.lower()
+
+        if misfit in ['waveform', 'wav', 'wdiff']:
             # waveform difference
             e = misfit.wdiff(wsyn, wobs, nt, dt)
-        elif PAR.MISFIT in ['tt', 'wtime']:
+        elif misfit in ['traveltime', 'tt', 'wtime']:
             # traveltime
             e = misfit.wtime(wsyn, wobs, nt, dt)
-        elif PAR.MISFIT in ['ampl', 'wampl']:
+        elif misfit in ['amplitude', 'ampl', 'wampl']:
             # amplitude
             e = misfit.wampl(wsyn, wobs, nt, dt)
-        elif PAR.MISFIT in ['env', 'ediff']:
+        elif misfit in ['envelope', 'env', 'ediff']:
             # envelope
             e = misfit.ediff(wsyn, wobs, nt, dt, eps=0.05)
-        elif PAR.MISFIT in ['cdiff']:
+        elif misfit in ['cdiff']:
             # cross correlation
             e = misfit.cdiff(wsyn, wobs, nt, dt)
         else:
