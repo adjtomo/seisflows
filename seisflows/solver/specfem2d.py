@@ -26,23 +26,8 @@ class specfem2d(loadclass('solver', 'base')):
 
       See base class for method descriptions
     """
-
     parameters = []
     parameters += ['vs']
-
-    if 'DENSITY' not in PAR:
-        PAR.DENSITY = 'constant'
-
-    if PAR.DENSITY == 'constant':
-        map_density = None
-
-    elif PAR.DENSITY == 'variable':
-        map_density = None
-        parameters += ['rho']
-
-    else:
-        raise NotImplementedError
-
 
     def check(self):
         """ Checks parameters and paths
@@ -222,19 +207,19 @@ class specfem2d(loadclass('solver', 'base')):
         """
         from seisflows.tools.array import meshsmooth, stack
 
-        parts = self.load(path, suffix='_kernel')
+        kernels = self.load(path, suffix='_kernel')
         if not span:
-            return parts
+            return kernels
 
-        x = parts['x'][0]
-        z = parts['z'][0]
+        x = kernels['x'][0]
+        z = kernels['z'][0]
         mesh = stack(x, z)
 
         for key in self.parameters:
-            parts[key] = [meshsmooth(parts[key][0], mesh, span)]
+            kernels[key] = [meshsmooth(kernels[key][0], mesh, span)]
 
         unix.mv(path, path + '_nosmooth')
-        self.save(path, parts)
+        self.save(path, kernels)
 
 
     def clip(self, path='', thresh=1.):

@@ -66,16 +66,12 @@ class specfem3d(loadclass('solver', 'base')):
         if model_type in ['gll']:
             assert (exists(model_path))
             unix.cp(glob(model_path +'/'+ '*'), self.model_databases)
+
             self.mpirun('bin/xmeshfem3D')
             self.mpirun('bin/xgenerate_databases')
             self.export_model(PATH.OUTPUT +'/'+ model_name)
 
-        elif model_type in ['sep']:
-            self.mpirun('bin/xmeshfem3D')
-            self.mpirun('bin/xgenerate_databases')
-            self.export_model(PATH.OUTPUT +'/'+ model_name)
-
-        elif model_type == 'tomo':
+        else:
             raise NotImplementedError
 
 

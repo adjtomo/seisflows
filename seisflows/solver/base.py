@@ -199,7 +199,7 @@ class base(object):
 
 
     def apply_hess(self, path=''):
-        """ Computes action of Hessian on a given model vector.
+        """ Computes action of Hessian on a given model vector
         """
         unix.cd(self.getpath)
         unix.mkdir('traces/lcg')
@@ -256,7 +256,7 @@ class base(object):
         return model
 
 
-    def save(self, path, model, prefix='', suffix=''):
+    def save(self, path, model, prefix='', suffix='', solver_parameters=['vp', 'vs']):
         """ writes SPECFEM model
 
             The following method writes acoustic and elastic models. For an
@@ -270,7 +270,7 @@ class base(object):
         unix.mkdir(path)
 
         for iproc in range(PAR.NPROC):
-            for key in ['vp', 'vs']:
+            for key in solver_parameters:
                 if key in self.parameters:
                     savebin(model[key][iproc], path, iproc, prefix+key+suffix)
                 elif 'kernel' not in suffix:
@@ -408,12 +408,12 @@ class base(object):
         dst = join(self.getpath, 'traces/obs')
         unix.cp(src, dst)
 
-    def export_model(self, path):
+    def export_model(self, path, solver_parameters=['rho', 'vp', 'vs']):
         if system.getnode() == 0:
             unix.mkdir(path)
-            src = glob(join(self.model_databases, '*.bin'))
-            dst = path
-            unix.cp(src, dst)
+            for key in solver_parameters:
+                files = glob(join(self.model_databases, '*'+key+'.bin'))
+                unix.cp(files, path)
 
     def export_kernels(self, path):
         # work around kernel name conventions

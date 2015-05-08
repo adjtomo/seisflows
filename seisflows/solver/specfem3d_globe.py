@@ -66,6 +66,7 @@ class specfem3d_globe(loadclass('solver', 'base')):
         if model_type == 'gll':
             assert (exists(model_path))
             unix.cp(glob(model_path +'/'+ '*'), self.model_databases)
+
             self.mpirun('bin/xmeshfem3D')
             self.export_model(PATH.OUTPUT +'/'+ model_name)
 
