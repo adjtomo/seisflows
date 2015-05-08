@@ -9,11 +9,28 @@ from seisflows.tools.code import Struct, loadobj, savejson, saveobj
 
 
 class ConfigObj(object):
-    """ Makes objects globally accessible by registering them in sys.modules
+    """ SeisFlows consists of interacting 'system', 'preprocess', 'solver',
+      'postprocess', 'optimize', and 'workflow' objects. The role of the
+      ConfigObj utility is to initialize these objects and make them accessible
+      via the standard Python import system.
 
-        Provides methods for saving state (i.e. all objects) to disk
-    """
+      Objects are first created via the 'ConfigObj.initialize' method.  In the 
+      course of executing a workflow, it is often necessary to read or write 
+      objects to disk, for example, to copy an object to a remote node or to 
+      pause and resume executation. Methods 'ConfigObj.save' and 
+      'ConfigObj.load' are provided for this purpose.
 
+      Objects themselves are customizable, with different choices available for
+      each object. For example, in the main package, two workflows, 'inversion'
+      and 'migration', are provided. Users can choose between the two through 
+      the 'WORKFLOW' setting in the  parameters file. If desired functionality
+      is missing from the main package, users can create their own workflows or
+      customize existing workflows.
+"""
+    # Because each 'object' is itself customizable, it is rarely necessary to 
+    # modify the following list. If it modifications are desired anyway, caution
+    # should be excercised, as changing the names of objects or the order in
+    # which they loaded can result in circular imports or other problems.
     objects = []
     objects += ['system']
     objects += ['preprocess']
@@ -22,44 +39,53 @@ class ConfigObj(object):
     objects += ['optimize']
     objects += ['workflow']
 
-
-    def __init__(self, name):
-        if name not in sys.modules:
-            sys.modules[name] = set()
-
+    def __init__(self, name='SeisflowsObjects', path=None):
         self.name = name
-        self.keys = sys.modules[name]
 
     def __iter__(self):
-        return iter(sorted(list(self.keys)))
+        return iter(list(self.objects))
 
     def initialize(self):
-        """Initialize entire state from scratch"""
-        pass
+        """ Instantiates objects, registers objects in sys.modules, and calls 
+            objects' check methods
+        """
+        # instantiate and register
+        for obj in self.objects:
+            par = sys.modules['SeisflowsParameters'][obj.upper()]
+            sys.modules[obj] = loadclass(obj, par)()
+
+        # check
+        for obj in self.objects:
+            sys.modules[obj].check()
 
     def register(self, key, val):
-        """Registers an object"""
+        """ Makes object globally accessible by registering it in sys.modules
+        """
+        #if key in sys.modules:
+        #    raise Exception
+
         sys.modules[key] = val
-        self.keys.add(key)
 
     def unregister(self, key):
-        """Unregisters an object"""
+        """ Removes object from sys.modules
+        """
         sys.modules.pop(key)
-        self.keys.remove(key)
 
     def save(self, name, path='.'):
-        """Saves entire state to disk"""
+        """ Saves all objects to disk
+        """
         try:
             fullpath = join(abspath(path), name)
         except:
             raise IOError(path)
 
         unix.mkdir(fullpath)
-        for key in self.keys:
-            saveobj(fullpath + '/' + key + '.p', sys.modules[key])
+        for key in self.objects:
+            saveobj(fullpath + '/' + key+'.p', sys.modules[key])
 
     def load(self, name, path='.'):
-        """Loads entire state from disk"""
+        """ Loads objects from disk
+        """
         try:
             fullpath = join(abspath(path), name)
         except:
@@ -67,8 +93,11 @@ class ConfigObj(object):
 
         for obj in self.objects:
             fullfile = join(fullpath, obj+'.p')
-            self.keys.add(obj)
             sys.modules[obj] = loadobj(fullfile)
+
+        for obj in self.objects:
+            sys.modules[obj].check()
+
 
 
 class ParameterObj(object):
@@ -76,15 +105,18 @@ class ParameterObj(object):
         accessible by registering itself in sys.modules
     """
 
-    def __new__(self, name, path='.'):
+    def __new__(self, name, path=None):
         if name in sys.modules:
             return sys.modules[name]
         else:
             return object.__new__(self)
 
-    def __init__(self, name, path='.'):
+    def __init__(self, name, path=None):
         if name not in sys.modules:
             sys.modules[name] = self
+
+        if path:
+            self.update(loadvars(path, '.'))
 
     def __iter__(self):
         return iter(sorted(self.__dict__.keys()))

@@ -3,30 +3,15 @@
 from seisflows.tools.config import loadclass, loadvars, ConfigObj, \
     ParameterObj, ParameterError
 
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+PAR = ParameterObj('SeisflowsParameters', 'parameters')
+PATH = ParameterObj('SeisflowsPaths', 'paths')
 OBJ = ConfigObj('SeisflowsObjects')
 
 register = OBJ.register
 
 
 if __name__ == '__main__':
-    """ First, loads parameters and paths from the working directory.
-
-      Second, loads the following seisflows objects: system, preprocess, 
-      solver, postprocess, optimize, worfklow.  This list is effectively
-      hardcoded; changing the names of seisflows objects or the order in which
-      objects are loaded can result in circular imports or other errors.
-
-      Third, peforms parameter checking.
-
-      Fourth, executes workflow.main via system.submit
-    """
-
     # load parameters and paths from working directory
-    PAR.update(loadvars('parameters', '.'))
-    PATH.update(loadvars('paths', '.'))
-
     if 'SYSTEM' not in PAR:
         raise ParameterError(PAR, 'SYSTEM')
 
@@ -47,6 +32,7 @@ if __name__ == '__main__':
 
 
     # load seisflows objects
+    import sys
     system = loadclass('system', PAR.SYSTEM)()
     register('system', system)
 
