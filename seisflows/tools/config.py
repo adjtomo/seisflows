@@ -9,9 +9,19 @@ from seisflows.tools.code import Struct, loadobj, savejson, saveobj
 
 
 class ConfigObj(object):
-    """ Makes objects globally accessible by registering them in sys.modules,
-        and provides methods for reading and writing registered objects to disk
+    """ Makes objects globally accessible by registering them in sys.modules
+
+        Provides methods for saving state (i.e. all objects) to disk
     """
+
+    objects = []
+    objects += ['system']
+    objects += ['preprocess']
+    objects += ['solver']
+    objects += ['postprocess']
+    objects += ['optimize']
+    objects += ['workflow']
+
 
     def __init__(self, name):
         if name not in sys.modules:
@@ -22,6 +32,10 @@ class ConfigObj(object):
 
     def __iter__(self):
         return iter(sorted(list(self.keys)))
+
+    def initialize(self):
+        """Initialize entire state from scratch"""
+        pass
 
     def register(self, key, val):
         """Registers an object"""
@@ -34,7 +48,7 @@ class ConfigObj(object):
         self.keys.remove(key)
 
     def save(self, name, path='.'):
-        """Saves current state"""
+        """Saves entire state to disk"""
         try:
             fullpath = join(abspath(path), name)
         except:
@@ -44,25 +58,17 @@ class ConfigObj(object):
         for key in self.keys:
             saveobj(fullpath + '/' + key + '.p', sys.modules[key])
 
-    def load(self, name, path='.', files=None):
+    def load(self, name, path='.'):
+        """Loads entire state from disk"""
         try:
             fullpath = join(abspath(path), name)
         except:
             raise IOError(path)
 
-        if not files:
-            files = []
-            files += [fullpath+'/'+'system.p']
-            files += [fullpath+'/'+'preprocess.p']
-            files += [fullpath+'/'+'solver.p']
-            files += [fullpath+'/'+'postprocess.p']
-            files += [fullpath+'/'+'optimize.p']
-            files += [fullpath+'/'+'workflow.p']
-
-        for file in files:
-            key, _ = os.path.splitext(unix.basename(file))
-            self.keys.add(key)
-            sys.modules[key] = loadobj(file)
+        for obj in self.objects:
+            fullfile = join(fullpath, obj+'.p')
+            self.keys.add(obj)
+            sys.modules[obj] = loadobj(fullfile)
 
 
 class ParameterObj(object):
