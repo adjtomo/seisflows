@@ -33,10 +33,10 @@ class slurm_lg(object):
         """
 
         if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+            setattr(PAR, 'TITLE', unix.basename(abspath('..')))
 
         if 'SUBTITLE' not in PAR:
-            setattr(PAR, 'SUBTITLE', unix.basename(abspath('..')))
+            setattr(PAR, 'SUBTITLE', unix.basename(abspath('.')))
 
         # check parameters
         if 'WALLTIME' not in PAR:

@@ -12,10 +12,6 @@ OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')
 PATH = ParameterObj('SeisflowsPaths')
 
-save_objects = OBJ.save
-save_parameters = PAR.save
-save_paths = PATH.save
-
 
 class slurm_sm(object):
     """ An interface through which to submit workflows, run tasks in serial or 
@@ -35,10 +31,10 @@ class slurm_sm(object):
         """
 
         if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+            setattr(PAR, 'TITLE', unix.basename(abspath('..')))
 
         if 'SUBTITLE' not in PAR:
-            setattr(PAR, 'SUBTITLE', unix.basename(abspath('..')))
+            setattr(PAR, 'SUBTITLE', unix.basename(abspath('.')))
 
         # check parameters
         if 'WALLTIME' not in PAR:

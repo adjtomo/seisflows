@@ -24,14 +24,14 @@ class tiger_sm(loadclass('system', 'slurm_sm')):
         """
 
         if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+            setattr(PAR, 'TITLE', unix.basename(abspath('..')))
 
         if 'SUBTITLE' not in PAR:
-            setattr(PAR, 'SUBTITLE', unix.basename(abspath('..')))
+            setattr(PAR, 'SUBTITLE', unix.basename(abspath('.')))
 
         if 'GLOBAL' not in PATH:
             setattr(PATH, 'GLOBAL',
-                    join('/scratch/gpfs', unix.whoami(), PAR.SUBTITLE, PAR.TITLE))
+                    join('/scratch/gpfs', unix.whoami(), PAR.TITLE, PAR.SUBTITLE))
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', '')
