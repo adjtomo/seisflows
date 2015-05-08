@@ -1,66 +1,25 @@
 #!/usr/bin/env python
 
-from seisflows.tools.config import loadclass, loadvars, ConfigObj, \
-    ParameterObj, ParameterError
-
-PAR = ParameterObj('SeisflowsParameters', 'parameters')
-PATH = ParameterObj('SeisflowsPaths', 'paths')
-OBJ = ConfigObj('SeisflowsObjects')
-
-register = OBJ.register
+from seisflows.tools.config import ConfigObj, ParameterObj
 
 
-if __name__ == '__main__':
-    # load parameters and paths from working directory
-    if 'SYSTEM' not in PAR:
-        raise ParameterError(PAR, 'SYSTEM')
-
-    if 'PREPROCESS' not in PAR:
-        raise ParameterError(PAR, 'PREPROCESS')
-
-    if 'POSTPROCESS' not in PAR:
-        raise ParameterError(PAR, 'POSTPROCESS')
-
-    if 'SOLVER' not in PAR:
-        raise ParameterError(PAR, 'SOLVER')
-
-    if 'OPTIMIZE' not in PAR:
-        raise ParameterError(PAR, 'OPTIMIZE')
-
-    if 'WORKFLOW' not in PAR:
-        raise ParameterError(PAR, 'WORKFLOW')
+# The ParameterObj utility reads parameter files and stores each file's contents
+# in a globally accessible dictionary.
+ParameterObj('SeisflowsParameters').init('parameters')
+ParameterObj('SeisflowsPaths').init('paths')
 
 
-    # load seisflows objects
-    import sys
-    system = loadclass('system', PAR.SYSTEM)()
-    register('system', system)
+# SeisFlows consists of interacting 'system', 'preprocess', 'solver', 
+# 'postprocess', 'optimize', and 'workflow' objects. The ConfigObj utility 
+# initializes these objects and makes them accessible through the standard 
+# Python import system.
+ConfigObj('SeisflowsObjects').init()
 
-    preprocess = loadclass('preprocess', PAR.PREPROCESS)()
-    register('preprocess', preprocess)
-
-    solver = loadclass('solver', PAR.SOLVER)()
-    register('solver', solver)
-
-    postprocess = loadclass('postprocess', PAR.POSTPROCESS)()
-    register('postprocess', postprocess)
-
-    optimize = loadclass('optimize', PAR.OPTIMIZE)()
-    register('optimize', optimize)
-
-    workflow = loadclass('workflow', PAR.WORKFLOW)()
-    register('workflow', workflow)
+import system
+import workflow
 
 
-    # carry out parameter checks
-    system.check()
-    workflow.check()
-    solver.check()
-    preprocess.check()
-    postprocess.check()
-    optimize.check()
-
-
-    # submit "workflow" via "system"
-    system.submit(workflow)
+# Now all that remains is to execute the workflow. Depending on system details,
+# the workflow may be executed immediately or passed to a scheduler.
+system.submit(workflow)
 

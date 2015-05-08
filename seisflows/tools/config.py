@@ -42,12 +42,8 @@ class ConfigObj(object):
     def __init__(self, name='SeisflowsObjects'):
         self.name = name
 
-    def __iter__(self):
-        return iter(list(self.objects))
-
     def init(self):
-        """ Instantiates objects, registers objects in sys.modules, and calls 
-            objects' check methods
+        """ Instantiates objects
         """
         try:
             parameters = sys.modules['SeisflowsParameters']
@@ -63,21 +59,8 @@ class ConfigObj(object):
         for obj in self.objects:
             sys.modules[obj].check()
 
-    def register(self, key, val):
-        """ Makes object globally accessible by registering it in sys.modules
-        """
-        #if key in sys.modules:
-        #    raise Exception
-
-        sys.modules[key] = val
-
-    def unregister(self, key):
-        """ Removes object from sys.modules
-        """
-        sys.modules.pop(key)
-
     def save(self, name, path='.'):
-        """ Saves all objects to disk
+        """ Saves objects to disk
         """
         try:
             fullpath = join(abspath(path), name)
@@ -130,8 +113,8 @@ class ParameterObj(object):
     def __getattr__(self, key):
         return self.__dict__[key]
 
-    #def __getitem__(self, key):
-    #    return self.__dict__[key]
+    def __getitem__(self, key):
+        return self.__dict__[key]
 
     def __setattr__(self, key, val):
         if key in self.__dict__:
