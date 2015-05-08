@@ -139,16 +139,21 @@ class inversion(object):
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
 
-        # set up workflow machinery
         optimize.setup()
         preprocess.setup()
         postprocess.setup()
 
+        # has solver machinery been set up?
+        if PATH.LOCAL:
+            pass
+        elif PAR.BEGIN > 1:
+            return
+
         # set up solver machinery
-        if PAR.BEGIN == 1 or PATH.LOCAL:
-            system.run('solver', 'setup',
-                       hosts='all')
- 
+        system.run('solver', 'setup', hosts='all')
+        model = solver.load(PATH.MODEL_INIT)
+        savenpy(PATH.OPTIMIZE +'/'+ 'm_new', solver.merge(model))
+
 
     def initialize(self):
         """ Prepares for next model update iteration

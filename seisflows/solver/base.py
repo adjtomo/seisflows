@@ -12,7 +12,6 @@ from seisflows.seistools.io import loadbypar, copybin, savebin, splitvec, Model,
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
 from seisflows.tools.config import findpath, ParameterObj, ParameterError
 
@@ -144,7 +143,6 @@ class base(object):
             model_type='gll')
 
         self.initialize_adjoint_traces()
-        self.initialize_io_machinery()
 
 
     def generate_data(self, *args, **kwargs):
@@ -494,22 +492,6 @@ class base(object):
         zeros = np.zeros((h.nt, h.nr))
         for channel in ['x', 'y', 'z']:
             preprocess.writer(zeros, h, channel=channel, prefix='traces/adj/')
-
-
-    def initialize_io_machinery(self):
-        """ Writes mesh files expected by input/output methods
-        """
-        if not PAR.OPTIMIZE:
-            return
-
-        if system.getnode() == 0:
-            assert PATH.OPTIMIZE
-            assert exists(PATH.MODEL_INIT)
-
-            unix.mkdir(PATH.OPTIMIZE)
-            if not exists(PATH.OPTIMIZE +'/'+ 'm_new'):
-                model = self.load(PATH.MODEL_INIT)
-                savenpy(PATH.OPTIMIZE +'/'+ 'm_new', self.merge(model))
 
 
     def check_solver_parameter_files(self):
