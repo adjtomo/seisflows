@@ -39,22 +39,27 @@ class ConfigObj(object):
     objects += ['optimize']
     objects += ['workflow']
 
-    def __init__(self, name='SeisflowsObjects', path=None):
+    def __init__(self, name='SeisflowsObjects'):
         self.name = name
 
     def __iter__(self):
         return iter(list(self.objects))
 
-    def initialize(self):
+    def init(self):
         """ Instantiates objects, registers objects in sys.modules, and calls 
             objects' check methods
         """
-        # instantiate and register
+        try:
+            parameters = sys.modules['SeisflowsParameters']
+        except:
+            raise Exception
+
+        # instantiate objects
         for obj in self.objects:
-            par = sys.modules['SeisflowsParameters'][obj.upper()]
+            par = parameters[obj.upper()]
             sys.modules[obj] = loadclass(obj, par)()
 
-        # check
+        # check objects
         for obj in self.objects:
             sys.modules[obj].check()
 
@@ -115,14 +120,18 @@ class ParameterObj(object):
         if name not in sys.modules:
             sys.modules[name] = self
 
-        if path:
-            self.update(loadvars(path, '.'))
+    def init(self, path):
+        self.update(loadvars(path, '.'))
+        return self
 
     def __iter__(self):
         return iter(sorted(self.__dict__.keys()))
 
     def __getattr__(self, key):
         return self.__dict__[key]
+
+    #def __getitem__(self, key):
+    #    return self.__dict__[key]
 
     def __setattr__(self, key, val):
         if key in self.__dict__:
@@ -144,7 +153,6 @@ class ParameterObj(object):
 class Null(object):
     """ Always and reliably does nothing
     """
-
     def __init__(self, *args, **kwargs):
         pass
 
@@ -165,7 +173,6 @@ class Null(object):
 
 
 class ParameterError(ValueError):
-
     def __init__(self, obj, key):
         if key not in obj:
             message = '%s is not defined.' % key
