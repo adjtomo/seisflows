@@ -1,3 +1,5 @@
+
+import os
 from os.path import abspath, join
 
 import numpy as np
@@ -100,11 +102,11 @@ class serial(object):
 
     def getnode(self):
         """Gets number of running task"""
-        return int(np.loadtxt(PATH.SYSTEM + '/' + 'nodenum'))
+        return int(os.environ['SEISFLOWS_TASKID'])
 
     def setnode(self, itask):
         """Sets number of running task"""
-        np.savetxt(PATH.SYSTEM + '/' + 'nodenum', [itask])
+        os.environ['SEISFLOWS_TASKID'] = str(itask)
 
     def mpiexec(self):
         """Wrapper for mpiexec"""
