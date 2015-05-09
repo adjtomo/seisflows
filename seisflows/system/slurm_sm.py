@@ -76,7 +76,7 @@ class slurm_sm(object):
 
         # submit workflow
         unix.run('sbatch '
-                + '--job-name=%s '%PAR.TITLE
+                + '--job-name=%s '%PAR.SUBTITLE
                 + '--output=%s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '--cpus-per-task=%d '%PAR.NPROC
                 + '--ntasks=%d '%PAR.NTASK

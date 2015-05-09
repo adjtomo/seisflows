@@ -90,7 +90,7 @@ class slurm_lg(object):
 
         # prepare sbatch arguments
         unix.run('sbatch '
-                + '--job-name=%s ' % PAR.TITLE
+                + '--job-name=%s ' % PAR.SUBTITLE
                 + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
                 + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE
                 + '--nodes=%d ' % 1
