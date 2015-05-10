@@ -9,36 +9,15 @@ if __name__ == '__main__':
 
     from os.path import join
     from seisflows.tools.code import loadjson, loadobj
-    from seisflows.tools.config import ConfigObj, ParameterObj
+    from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
-    PAR = ParameterObj('SeisflowsParameters')
-    PATH = ParameterObj('SeisflowsPaths')
-    OBJ = ConfigObj('SeisflowsObjects')
+    PAR = SeisflowsParameters()
+    PATH = SeisflowsPaths()
+    OBJ = SeisflowsObjects()
 
-    parname = 'SeisflowsParameters.json'
-    pathname = 'SeisflowsPaths.json'
-    objname = 'SeisflowsObjects'
-
-    parfile = join(mypath, parname)
-    pathfile = join(mypath, pathname)
-
-    PAR.update(loadjson(parfile))
-    PATH.update(loadjson(pathfile))
-    OBJ.load(objname, mypath)
-
-    import optimize
-    import preprocess
-    import postprocess
-    import solver
-    import system
-    import workflow
-
-    system.check()
-    solver.check()
-    optimize.check()
-    preprocess.check()
-    postprocess.check()
-    workflow.check()
+    PAR.reload(mypath)
+    PATH.reload(mypath)
+    OBJ.reload(mypath)
 
     # load function arguments
     kwargspath = join(mypath, 'SeisflowsObjects', myobj + '_kwargs')

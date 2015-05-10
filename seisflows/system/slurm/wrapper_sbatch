@@ -4,40 +4,25 @@ import sys
 
 from os.path import join
 from seisflows.tools.code import loadjson
-from seisflows.tools.config import ConfigObj, ParameterObj
+from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
-OBJ = ConfigObj('SeisflowsObjects')
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
+OBJ = SeisflowsObjects()
 
 
 if __name__ == '__main__':
     mypath = sys.argv[1]
 
-    parname = 'SeisflowsParameters.json'
-    pathname = 'SeisflowsPaths.json'
-    objname = 'SeisflowsObjects'
+    PAR = SeisflowsParameters()
+    PATH = SeisflowsPaths()
+    OBJ = SeisflowsObjects()
 
-    parfile = join(mypath, parname)
-    pathfile = join(mypath, pathname)
+    PAR.reload(mypath)
+    PATH.reload(mypath)
+    OBJ.reload(mypath)
 
-    PAR.update(loadjson(parfile))
-    PATH.update(loadjson(pathfile))
-    OBJ.load(objname, mypath)
-
-    import system
-    import preprocess
-    import solver
-    import postprocess
-    import optimize
     import workflow
-
-    system.check()
-    preprocess.check()
-    postprocess.check()
-    solver.check()
-    optimize.check()
-    workflow.check()
 
     workflow.main()
 
