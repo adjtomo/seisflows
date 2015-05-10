@@ -1,9 +1,9 @@
 
-from seisflows.tools.config import ConfigObj, ParameterObj, loadclass
+from seisflows.tools.config import loadclass
+from seisflows.tools.config import ParameterError, SeisflowsParameters, SeisflowsPaths
 
-OBJ = ConfigObj('SeisflowsObjects')
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 
 # ensure number of processers per source is defined

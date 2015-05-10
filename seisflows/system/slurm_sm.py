@@ -6,11 +6,12 @@ from os.path import abspath, join
 
 from seisflows.tools import unix
 from seisflows.tools.code import saveobj
-from seisflows.tools.config import findpath, ConfigObj, ParameterObj
+from seisflows.tools.config import findpath, ParameterError, \
+    SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
-OBJ = ConfigObj('SeisflowsObjects')
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+OBJ = SeisflowsObjects()
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 
 class slurm_sm(object):
@@ -134,8 +135,8 @@ class slurm_sm(object):
         OBJ.save(join(PATH.OUTPUT, 'SeisflowsObjects'))
 
     def save_parameters(self):
-        PAR.save('SeisflowsParameters.json')
+        PAR.save(PATH.OUTPUT)
 
     def save_paths(self):
-        PATH.save('SeisflowsPaths.json')
+        PATH.save(PATH.OUTPUT)
 

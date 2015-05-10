@@ -1,10 +1,11 @@
 
 from os.path import abspath, join
 from seisflows.tools import unix
-from seisflows.tools.config import loadclass, ParameterObj
+from seisflows.tools.config import loadclass
+from seisflows.tools.config import ParameterError, SeisflowsParameters, SeisflowsPaths
 
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 
 class tiger_lg(loadclass('system', 'slurm_lg')):
