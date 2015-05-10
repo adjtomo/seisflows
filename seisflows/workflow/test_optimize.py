@@ -7,13 +7,16 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import savetxt
-from seisflows.tools.config import ParameterObj
-import problems.rosenbrock as problem
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+    ParameterError
 
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 import optimize
+
+import problems.rosenbrock as problem
+
 
 
 class test_optimize(object):

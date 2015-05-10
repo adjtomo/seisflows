@@ -5,12 +5,13 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.code import exists
-from seisflows.tools.config import ParameterObj
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+    ParameterError
 
 from seisflows.seistools import adjoint
 
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 import system
 import solver

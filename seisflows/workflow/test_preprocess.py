@@ -1,8 +1,9 @@
-from seisflows.tools.config import ConfigObj, ParameterObj
 
-OBJ = ConfigObj('SeisflowsObjects')
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+    ParameterError
+
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 import preprocess
 

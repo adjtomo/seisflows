@@ -8,10 +8,11 @@ from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import divides, exists
-from seisflows.tools.config import ParameterError, ParameterObj
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+    ParameterError
 
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 import system
 import solver
@@ -149,7 +150,7 @@ class inversion(object):
         elif PAR.BEGIN > 1:
             return
 
-        # set up solver machinery
+        # if not, then set up solver machinery
         system.run('solver', 'setup', hosts='all')
         model = solver.load(PATH.MODEL_INIT)
         savenpy(PATH.OPTIMIZE +'/'+ 'm_new', solver.merge(model))
