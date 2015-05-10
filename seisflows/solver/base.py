@@ -13,10 +13,11 @@ from seisflows.seistools.io import loadbypar, copybin, savebin, splitvec, Model,
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.code import exists
-from seisflows.tools.config import findpath, ParameterObj, ParameterError
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+    ParameterError, loadclass
 
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 import system
 import preprocess
