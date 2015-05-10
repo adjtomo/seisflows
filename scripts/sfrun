@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 
-from seisflows.tools.config import ConfigObj, ParameterObj
+from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
 
-# The ParameterObj utility reads parameter files and stores each file's contents
-# in a globally accessible dictionary.
-ParameterObj('SeisflowsParameters').init('parameters')
-ParameterObj('SeisflowsPaths').init('paths')
+# The SeisflowsParameters and SeisflowsPaths utilities read parameter files 
+# and stores each file's contents in a globally accessible dictionary.
+SeisflowsParameters().initialize()
+SeisflowsPaths().initialize()
 
 
 # SeisFlows consists of interacting 'system', 'preprocess', 'solver', 
-# 'postprocess', 'optimize', and 'workflow' objects. The ConfigObj utility 
+# 'postprocess', 'optimize', and 'workflow' objects. The SeisflowObjects utility
 # initializes these objects and makes them accessible through the standard 
 # Python import system.
-ConfigObj('SeisflowsObjects').init()
+SeisflowsObjects().initialize()
 
 import system
 import workflow
@@ -22,4 +22,5 @@ import workflow
 # Now all that remains is to execute the workflow. Depending on system details,
 # the workflow may be executed immediately or passed to a scheduler.
 system.submit(workflow)
+
 
