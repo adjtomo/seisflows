@@ -6,15 +6,14 @@ from os.path import abspath, join
 
 from seisflows.tools import unix
 from seisflows.tools.code import saveobj
-from seisflows.tools.config import findpath, ParameterError, \
+from seisflows.tools.config import ParameterError, findpath, loadclass, \
     SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
-OBJ = SeisflowsObjects()
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class slurm_sm(object):
+class slurm_sm(loadclass('system', 'base')):
     """ An interface through which to submit workflows, run tasks in serial or 
       parallel, and perform other system functions.
 
@@ -123,20 +122,9 @@ class slurm_sm(object):
         return 'mpirun -np %d '%PAR.NPROC
 
 
-    ### utility functions
-
     def save_kwargs(self, classname, funcname, kwargs):
         kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
         kwargsfile = join(kwargspath, funcname+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
-
-    def save_objects(self):
-        OBJ.save(join(PATH.OUTPUT, 'SeisflowsObjects'))
-
-    def save_parameters(self):
-        PAR.save(PATH.OUTPUT)
-
-    def save_paths(self):
-        PATH.save(PATH.OUTPUT)
 

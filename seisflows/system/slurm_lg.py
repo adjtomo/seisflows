@@ -10,14 +10,13 @@ from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.code import saveobj
 from seisflows.tools.config import findpath, ParameterError, \
-    SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+    SeisflowsParameters, SeisflowsPaths
 
 OBJ = SeisflowsObjects()
-PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class slurm_lg(object):
+class slurm_lg(loadclass('system', 'base')):
     """ An interface through which to submit workflows, run tasks in serial or 
       parallel, and perform other system functions.
 
@@ -204,20 +203,9 @@ class slurm_lg(object):
             f.write(line)
 
 
-    ### utility functions
-
     def save_kwargs(self, classname, funcname, kwargs):
         kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
         kwargsfile = join(kwargspath, funcname+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
-
-    def save_objects(self):
-        OBJ.save(join(PATH.OUTPUT, 'SeisflowsObjects'))
-
-    def save_parameters(self):
-        PAR.save(PATH.OUTPUT)
-
-    def save_paths(self):
-        PATH.save(PATH.OUTPUT)
 

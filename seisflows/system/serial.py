@@ -5,7 +5,8 @@ from os.path import abspath, join
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.config import ConfigObj, ParameterObj
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths
+
 
 OBJ = ConfigObj('SeisflowsObjects')
 PAR = ParameterObj('SeisflowsParameters')

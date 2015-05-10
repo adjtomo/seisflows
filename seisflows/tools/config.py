@@ -56,11 +56,11 @@ class SeisflowsObjects(object):
         for obj in self.objects:
             sys.modules[obj].check()
 
-    def save(self, name, path='.'):
+    def save(self, path):
         """ Saves objects to disk
         """
         try:
-            fullpath = join(abspath(path), name)
+            fullpath = join(abspath(path), 'SeisflowsObjects')
         except:
             raise IOError(path)
 
@@ -68,16 +68,16 @@ class SeisflowsObjects(object):
         for key in self.objects:
             saveobj(fullpath +'/'+ key+'.p', sys.modules[key])
 
-    def reload(self, name, path='.'):
+    def reload(self, path):
         """ Loads saved objects from disk
         """
         try:
-            fullpath = join(abspath(path), name)
+            fullpath = join(abspath(path), 'SeisflowsObjects')
         except:
             raise IOError(path)
 
         for obj in self.objects:
-            fullfile = join(fullpath, 'SeisflowsObjects', obj+'.p')
+            fullfile = join(fullpath, obj+'.p')
             sys.modules[obj] = loadobj(fullfile)
 
         for obj in self.objects:
