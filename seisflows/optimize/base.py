@@ -6,12 +6,13 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import loadtxt, savetxt
-from seisflows.tools.config import ParameterObj, ParameterError
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+    ParameterError
 from seisflows.tools.io import OutputWriter
 from seisflows.optimize import lib
 
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 
 class base(object):
