@@ -5,20 +5,20 @@ import types
 from os.path import abspath, join
 
 from seisflows.tools import unix
-from seisflows.tools.code import Struct, loadobj, savejson, saveobj
+from seisflows.tools.code import Struct, loadjson, loadobj, savejson, saveobj
 
 
-class ConfigObj(object):
+class SeisflowsObjects(object):
     """ SeisFlows consists of interacting 'system', 'preprocess', 'solver',
       'postprocess', 'optimize', and 'workflow' objects. The role of the
-      ConfigObj utility is to initialize these objects and make them accessible
-      via the standard Python import system.
+      SeisflowsObjects utility is to initialize these objects and make them 
+      accessible via the standard Python import system.
 
-      Objects are first created via the 'ConfigObj.initialize' method.  In the 
-      course of executing a workflow, it is often necessary to read or write 
-      objects to disk, for example, to copy an object to a remote node or to 
-      pause and resume executation. Methods 'ConfigObj.save' and 
-      'ConfigObj.load' are provided for this purpose.
+      Objects are first created via the 'SeisflowsObjects.initialize' method. 
+      In the  course of executing a workflow, it is often necessary to read or
+      write objects to disk, for example, to copy an object to a remote node or
+      to pause and resume executation. Methods 'SeisflowsObjects.save' and
+      'SeisflowsObjects.reload' are provided for this purpose.
 
       Objects themselves are customizable, with different choices available for
       each object. For example, in the main package, two workflows, 'inversion'
@@ -27,7 +27,7 @@ class ConfigObj(object):
       is missing from the main package, users can create their own workflows or
       customize existing workflows.
 """
-    # Because each 'object' is itself customizable, it is rarely necessary to 
+    # Because 'objects' themselves are customizable, it is rarely necessary to 
     # modify the following list. If it modifications are desired anyway, caution
     # should be excercised, as changing the names of objects or the order in
     # which they loaded can result in circular imports or other problems.
@@ -39,10 +39,7 @@ class ConfigObj(object):
     objects += ['optimize']
     objects += ['workflow']
 
-    def __init__(self, name='SeisflowsObjects'):
-        self.name = name
-
-    def init(self):
+    def initialize(self):
         """ Instantiates objects
         """
         try:
@@ -69,10 +66,10 @@ class ConfigObj(object):
 
         unix.mkdir(fullpath)
         for key in self.objects:
-            saveobj(fullpath + '/' + key+'.p', sys.modules[key])
+            saveobj(fullpath +'/'+ key+'.p', sys.modules[key])
 
-    def load(self, name, path='.'):
-        """ Loads objects from disk
+    def reload(self, name, path='.'):
+        """ Loads saved objects from disk
         """
         try:
             fullpath = join(abspath(path), name)
@@ -80,7 +77,7 @@ class ConfigObj(object):
             raise IOError(path)
 
         for obj in self.objects:
-            fullfile = join(fullpath, obj+'.p')
+            fullfile = join(fullpath, 'SeisflowsObjects', obj+'.p')
             sys.modules[obj] = loadobj(fullfile)
 
         for obj in self.objects:
@@ -89,24 +86,8 @@ class ConfigObj(object):
 
 
 class ParameterObj(object):
-    """ Dictionary like object for holding parameters. Makes parameters globally 
-        accessible by registering itself in sys.modules
+    """ Dictionary like object for holding parameters
     """
-
-    def __new__(self, name, path=None):
-        if name in sys.modules:
-            return sys.modules[name]
-        else:
-            return object.__new__(self)
-
-    def __init__(self, name, path=None):
-        if name not in sys.modules:
-            sys.modules[name] = self
-
-    def init(self, path):
-        self.update(loadvars(path, '.'))
-        return self
-
     def __iter__(self):
         return iter(sorted(self.__dict__.keys()))
 
@@ -129,8 +110,57 @@ class ParameterObj(object):
     def update(self, newdict):
         super(ParameterObj, self).__setattr__('__dict__', newdict)
 
-    def save(self, name):
-        savejson(name, self.__dict__)
+
+class SeisflowsParameters(ParameterObj):
+    def __new__(self):
+        if 'SeisflowsParameters' in sys.modules:
+            return sys.modules['SeisflowsParameters']
+        else:
+            return object.__new__(self)
+
+    def __init__(self):
+        if 'SeisflowsParameters' not in sys.modules:
+            sys.modules['SeisflowsParameters'] = self
+
+    def initialize(self):
+        mydict = loadvars('parameters', '.')
+        self.update(mydict)
+        return self
+
+    def save(self, path):
+        fullfile = join(path, 'SeisflowsParameters.json')
+        savejson(fullfile, self.__dict__)
+
+    def reload(self, path):
+        fullfile = join(path, 'SeisflowsParameters.json')
+        mydict = loadjson(fullfile)
+        self.update(mydict)
+
+
+class SeisflowsPaths(ParameterObj):
+    def __new__(self):
+        if 'SeisflowsPaths' in sys.modules:
+            return sys.modules['SeisflowsPaths']
+        else:
+            return object.__new__(self)
+
+    def __init__(self):
+        if 'SeisflowsPaths' not in sys.modules:
+            sys.modules['SeisflowsPaths'] = self
+
+    def initialize(self):
+        mydict = loadvars('paths', '.')
+        super(ParameterObj, self).__setattr__('__dict__', mydict)
+        return self
+
+    def save(self, path):
+        fullfile = join(path, 'SeisflowsPaths.json')
+        savejson(fullfile, self.__dict__)
+
+    def reload(self, path):
+        fullfile = join(path, 'SeisflowsPaths.json')
+        mydict = loadjson(fullfile)
+        self.update(mydict)
 
 
 class Null(object):
