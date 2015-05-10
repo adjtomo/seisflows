@@ -3,12 +3,13 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.code import Struct
-from seisflows.tools.config import ParameterObj
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+    ParameterError
 
 from seisflows.seistools import adjoint, misfit, sbandpass, smute, readers, writers
 
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 
 class base(object):
