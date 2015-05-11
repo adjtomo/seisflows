@@ -4,10 +4,11 @@ from os.path import abspath, join
 
 from seisflows.tools import unix
 from seisflows.tools.code import saveobj
-from seisflows.tools.config import getmodule, findpath, ParameterObj
+from seisflows.tools.config import ParameterError, findpath, loadclass, \
+    SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
-PAR = ParameterObj('parameters')
-PATH = ParameterObj('paths')
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 
 class pbs_sm(object):
@@ -45,8 +46,8 @@ class pbs_sm(object):
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
-        if 'NPROC_PER_NODE' not in PAR:
-            raise ParameterError(PAR, 'NPROC_PER_NODE')
+        if 'NODESIZE' not in PAR:
+            raise ParameterError(PAR, 'NODESIZE')
 
         # check paths
         if 'GLOBAL' not in PATH:
@@ -77,8 +78,8 @@ class pbs_sm(object):
         self.save_paths()
 
         # construct resource list
-        nodes = PAR.NTASK/PAR.NPROC_PER_NODE
-        cores = PAR.NTASK%PAR.NPROC_PER_NODE
+        nodes = PAR.NTASK/PAR.NODESIZE
+        cores = PAR.NTASK%PAR.NODESIZE
         hours = PAR.WALLTIME/60
         minutes = PAR.WALLTIME%60
         resources = 'walltime=%02d:%02d:00 '%(hours, minutes)
@@ -90,15 +91,14 @@ class pbs_sm(object):
             resources += ',nodes=%d:ppn=16+1:ppn=%d'%(nodes, cores)
 
         # construct arguments list
-        args = ('qsub '
+        unix.run('qsub '
                 + '-N %s '%PAR.TITLE
                 + '-o %s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '-l %s '%resources
                 + '-j %s '%'oe'
                 + findpath('system') +'/'+ 'pbs/wrapper_qsub '
-                + PATH.OUTPUT)
-
-        subprocess.call(args, shell=1)
+                + PATH.OUTPUT,
+                shell=True)
 
 
     def run(self, classname, funcname, hosts='all', **kwargs):
@@ -108,23 +108,24 @@ class pbs_sm(object):
         self.save_kwargs(classname, funcname, kwargs)
 
         if hosts == 'all':
-            myscript = 'pbs/wrapper_pbsdsh '
+            # run on all available nodes
+            unix.run('srun '
+                    + '--wait=0 '
+                    + join(findpath('system'), 'slurm/wrapper_pbsdsh ')
+                    + PATH.OUTPUT + ' '
+                    + classname + ' '
+                    + funcname)
 
         elif hosts == 'head':
-            myscript = 'pbs/wrapper_pbsdsh_head '
-
-        else:
-            raise ValueError
-
-        # construct arguments list
-        args = ('pbsdsh ' 
-                + findpath('system') +'/'+ myscript + ' '
-                + PATH.OUTPUT + ' '
-                + classname + ' '
-                + funcname  + ' '
-                + findpath('seisflows'))
-
-        subprocess.call(args, shell=1)
+            # run on head node
+            unix.run('srun '
+                    + '--wait=0 '
+                    + join(findpath('system'), 'slurm/wrapper_pbsdsh_head ')
+                    + PATH.OUTPUT + ' '
+                    + classname + ' '
+                    + funcname + ' '
+                    + findpath('seisflows'),
+                    shell=True)
 
 
     def getnode(self):
@@ -136,20 +137,9 @@ class pbs_sm(object):
         return 'mpirun -np %d '%PAR.NPROC
 
 
-    ### utility functions
-
     def save_kwargs(self, classname, funcname, kwargs):
         kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
         kwargsfile = join(kwargspath, funcname+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
-
-    def save_objects(self):
-        OBJ.save(join(PATH.OUTPUT, 'SeisflowsObjects'))
-
-    def save_parameters(self):
-        PAR.save('SeisflowsParameters.json')
-
-    def save_paths(self):
-        PATH.save('SeisflowsPaths.json')
 
