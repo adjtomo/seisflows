@@ -48,7 +48,7 @@ class test_optimize(object):
         if 'OPTIMIZE' not in PATH:
             setattr(PATH,'OPTIMIZE',PATH.GLOBAL)
 
-        cls.path = PATH.GLOBAL
+        cls.path = PATH.OPTIMIZE
 
 
     def main(cls):
