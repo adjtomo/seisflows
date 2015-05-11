@@ -9,10 +9,10 @@ from os.path import abspath, join
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.code import saveobj
-from seisflows.tools.config import findpath, ParameterError, \
-    SeisflowsParameters, SeisflowsPaths
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+    ParameterError, findpath, loadclass
 
-OBJ = SeisflowsObjects()
+PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
@@ -57,8 +57,8 @@ class slurm_lg(loadclass('system', 'base')):
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
-        if 'NPROC_PER_NODE' not in PAR:
-            raise ParameterError(PAR, 'NPROC_PER_NODE')
+        if 'NODESIZE' not in PAR:
+            raise ParameterError(PAR, 'NODESIZE')
 
         # check paths
         if 'GLOBAL' not in PATH:
@@ -92,7 +92,7 @@ class slurm_lg(loadclass('system', 'base')):
         unix.run('sbatch '
                 + '--job-name=%s ' % PAR.SUBTITLE
                 + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
-                + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE
+                + '--ntasks-per-node=%d ' % PAR.NODESIZE
                 + '--nodes=%d ' % 1
                 + '--time=%d ' % PAR.WALLTIME
                 + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
@@ -130,8 +130,8 @@ class slurm_lg(loadclass('system', 'base')):
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
             subprocess.call('sbatch '
                 + '--job-name=%s ' % PAR.TITLE
-                + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NPROC_PER_NODE))
-                + '--ntasks-per-node=%d ' % PAR.NPROC_PER_NODE
+                + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
+                + '--ntasks-per-node=%d ' % PAR.NODESIZE
                 + '--time=%d ' % PAR.STEPTIME
                 + args
                 + findpath('system') +'/'+ 'slurm/wrapper_srun '

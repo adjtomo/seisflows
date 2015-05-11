@@ -3,9 +3,10 @@ from os.path import join
  
 from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
-OBJ = SeisflowsObjects()
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
+OBJ = SeisflowsObjects()
+
 
 
 class base(object):
