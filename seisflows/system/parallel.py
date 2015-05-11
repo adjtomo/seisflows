@@ -1,13 +1,19 @@
+
+import os
+
 from os.path import abspath, join
+from subprocess import Popen
+from time import sleep
 
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.config import ConfigObj, ParameterObj
+from seisflows.tools.code import saveobj
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+    ParameterError, findpath, loadclass
 
-OBJ = ConfigObj('SeisflowsObjects')
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 
 class parallel(loadclass('system', 'serial')):
@@ -27,7 +33,7 @@ class parallel(loadclass('system', 'serial')):
         """
         super(parallel, self).check()
 
-        if 'NPROC_MAX' not in PAR:
+        if 'NPROCMAX' not in PAR:
             raise Exception
 
 
@@ -36,26 +42,32 @@ class parallel(loadclass('system', 'serial')):
         """
         unix.mkdir(PATH.SYSTEM)
 
+        self.save_objects()
+        self.save_kwargs(classname, funcname, kwargs)
+
         if hosts == 'all':
-            itask = 0
-            running_tasks = []
-            queued_tasks = range(min(PAR.NPROC_MAX/PAR.NPROC, PAR.NTASK))
+            running_tasks = dict()
+            queued_tasks = range(PAR.NTASK)
 
             while 1:
                 # check running tasks
-                for i, p in running_tasks:
-                    if p.poll():
-                        itask += 1
+                for i, p in running_tasks.items():
+                    if p.poll() != None:
                         running_tasks.pop(i)
-                        queued_tasks.append(itask)
-
-                if itask == PAR.NTASK-1:
-                    break
 
                 # launch new tasks
-                for i in queued_tasks:
+                while len(running_tasks) < PAR.NPROCMAX and queued_tasks:
+                    i = queued_tasks.pop(0)
                     p = self.launch(classname, funcname, itask=i)
-                    running_tasks.add(i, p)
+                    running_tasks[i] = p
+
+                if running_tasks:
+                    sleep(1)
+                    continue
+
+                if not queued_tasks:
+                    break
+
             print ''
 
         elif hosts == 'head':
@@ -67,19 +79,26 @@ class parallel(loadclass('system', 'serial')):
             task(**kwargs)
 
 
-    def launch(classname, funcname, itask=0):
+    def launch(self, classname, funcname, itask=0):
         self.progress(itask)
 
         env = os.environ.copy().items()
-        env += ['SEIFLOWS_TASKID', itask]
+        env += [['SEISFLOWS_TASKID', str(itask)]]
 
-        p = subprocess.call(myscript
+        p = Popen(
+            findpath('system') +'/'+ 'slurm/wrapper_srun '
+            + PATH.OUTPUT + ' '
             + classname + ' '
-            + funcname + ' '
+            + funcname,
             shell=True,
             env=dict(env))
 
         return p
 
 
+    def save_kwargs(self, classname, funcname, kwargs):
+        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
+        kwargsfile = join(kwargspath, funcname+'.p')
+        unix.mkdir(kwargspath)
+        saveobj(kwargsfile, kwargs)
 
