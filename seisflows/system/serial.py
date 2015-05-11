@@ -5,19 +5,14 @@ from os.path import abspath, join
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+    ParameterError, loadclass
+
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 
-OBJ = ConfigObj('SeisflowsObjects')
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
-
-save_objects = OBJ.save
-save_parameters = PAR.save
-save_paths = PATH.save
-
-
-class serial(object):
+class serial(loadclass('system', 'base')):
     """ An interface through which to submit workflows, run tasks in serial or 
       parallel, and perform other system functions.
 
@@ -73,8 +68,8 @@ class serial(object):
         unix.cd(PATH.OUTPUT)
 
         # save current state
-        save_parameters('SeisflowsParameters.json')
-        save_paths('SeisflowsPaths.json')
+        self.save_parameters()
+        self.save_paths()
 
         workflow.main()
 
