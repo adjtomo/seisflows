@@ -1,44 +1,39 @@
 #!/bin/env python
 
-from seisflows.tools.config import loadclass, loadvars, ConfigObj, ParameterObj, Null
+from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths, \
+    loadclass
 
-OBJ = ConfigObj('SeisflowsObjects')
-PAR = ParameterObj('SeisflowsParameters')
-PATH = ParameterObj('SeisflowsPaths')
+SeisflowsParameters().initialize()
+SeisflowsPaths().initialize()
+
+PAR = SeisflowsParameters()
+PATH = SeisflowsPaths()
 
 
 # run test
 if __name__ == '__main__':
 
-    PAR.update(loadvars('parameters','.'))
-    PATH.update(loadvars('paths','.'))
+    if 'SYSTEM' not in PAR:
+        PAR.SYSTEM = 'serial'
 
-    register=OBJ.register
+    if 'PREPROCESS' not in PAR:
+        PAR.PREPROCESS = None
 
-    system = loadclass('system',PAR.SYSTEM)()
-    register('system',system)
+    if 'SOLVER' not in PAR:
+        PAR.SOLVER = None
 
-    preprocess = Null()
-    register('preprocess',preprocess)
+    if 'POSTPROCESS' not in PAR:
+        PAR.POSTPROCESS = None
 
-    solver = Null()
-    register('solver',solver)
+    if 'OPTIMIZE' not in PAR:
+        PAR.OPTIMIZE = None
 
-    postprocess = Null()
-    register('postprocess',postprocess)
+    if 'WORKFLOW' not in PAR:
+        PAR.WORKFLOW = 'test_system'
 
-    optimize = Null()
-    register('optimize',optimize)
-
-    workflow = loadclass('workflow','test_system')()
-    register('workflow',workflow)
-
-    system.check()
-    workflow.check()
-    solver.check()
-    optimize.check()
-    preprocess.check()
-    postprocess.check()
+    SeisflowsObjects().initialize()
+    import system
+    import workflow
 
     system.submit(workflow)
 
