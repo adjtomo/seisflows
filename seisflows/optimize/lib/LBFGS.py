@@ -56,20 +56,26 @@ class LBFGS:
             S[:, 0] = s
             Y[:, 0] = y
 
-        savetxt('LBFGS/k', k)
+        savetxt('LBFGS/iter', self.iter)
         del S
         del Y
 
 
     def solve(self, path='g_new'):
         unix.cd(self.path)
+        g = loadnpy('g_new')
+
+        if self.iter > self.itermax:
+            print 'restarting LBFGS... [perdioc restart]'
+            self.restart()
+            return -g
+
+        # compute L-BFSGS direction
         q = loadnpy(path)
         n = len(q)
-
         S = np.memmap('LBFGS/S', mode='r', dtype='float32', shape=(n, self.kmax))
         Y = np.memmap('LBFGS/Y', mode='r', dtype='float32', shape=(n, self.kmax))
-        k = int(loadtxt('LBFGS/k'))
-
+        k = min(self.iter, self.kmax)
         rh = np.zeros(k)
         al = np.zeros(k)
 
