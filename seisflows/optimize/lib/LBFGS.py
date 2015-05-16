@@ -7,32 +7,40 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import loadtxt, savetxt
+from seisflows.tools.code import loadtxt, savetxt, exists
 
 
 class LBFGS:
     """ Limited memory BFGS
     """
 
-    def __init__(self, path='.', kmax=5, iter=1):
+    def __init__(self, path='.', kmax=5, itermax=np.inf, thresh=np.inf):
         self.path = path
         self.kmax = kmax
+        self.itermax = itermax
+
+        if itermax == 0:
+            self.itermax = np.inf
 
         unix.cd(self.path)
-        unix.mkdir('LBFGS')
 
-        if iter == 1:
-            savetxt('LBFGS/k', 0)
+        if exists('LBFGS/iter'):
+            self.iter = int(loadtxt('LBFGS/iter'))
+        else:
+            self.iter = 0
+            unix.mkdir('LBFGS')
+            savetxt('LBFGS/iter', 0)
 
 
     def update(self):
         unix.cd(self.path)
+
+        self.iter += 1
+        k = min(self.iter, self.kmax)
+
         s = loadnpy('m_new') - loadnpy('m_old')
         y = loadnpy('g_new') - loadnpy('g_old')
         n = len(s)
-
-        k = int(loadtxt('LBFGS/k'))
-        k = min(k+1, self.kmax)
 
         if k == 1:
             S = np.memmap('LBFGS/S', mode='w+', dtype='float32', shape=(n, self.kmax))
@@ -80,27 +88,29 @@ class LBFGS:
             be = rh[i]*np.dot(Y[:, i], r)
             r = r + S[:, i]*(al[i] - be)
 
-        # check for ill conditioning
-        g = loadnpy('g_new')
+        # check restart conditions
         if np.dot(g, -r)/np.dot(g, g) >= 0:
+            print 'restarting LBFGS... [not a descent direction]'
             self.restart()
-            r = g
-            self.restarted = True
+            return -g
+
         else:
             self.restarted = False
-
-        return -r
+            return -r
 
 
     def restart(self):
-        print 'restarting LBFGS...'
-        time.sleep(2)
+        self.restarted = True
+        self.iter = 0
+        savetxt('LBFGS/iter', 0)
 
         unix.cd(self.path)
-        savetxt('LBFGS/k', 0)
         S = np.memmap('LBFGS/S', mode='r+')
         Y = np.memmap('LBFGS/Y', mode='r+')
         S[:] = 0.
         Y[:] = 0.
+
+        time.sleep(2)
+
 
 

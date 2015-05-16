@@ -54,13 +54,16 @@ class base(object):
             setattr(PAR, 'SCHEME', 'QuasiNewton')
 
         if 'NLCGMAX' not in PAR:
-            setattr(PAR, 'NLCGMAX', 10)
+            setattr(PAR, 'NLCGMAX', np.inf)
 
         if 'NLCGTHRESH' not in PAR:
-            setattr(PAR, 'NLCGTHRESH', 1.0)
+            setattr(PAR, 'NLCGTHRESH', 5)
+
+        if 'LBFGSMEMORY' not in PAR:
+            setattr(PAR, 'LBFGSMEMORY', 6)
 
         if 'LBFGSMAX' not in PAR:
-            setattr(PAR, 'LBFGSMAX', 6)
+            setattr(PAR, 'LBFGSMAX', 0)
 
         # line search parameters
         if 'LINESEARCH' not in PAR:
@@ -94,7 +97,7 @@ class base(object):
             cls.NLCG = lib.NLCG(cls.path, PAR.NLCGTHRESH, PAR.NLCGMAX)
 
         elif PAR.SCHEME in ['QuasiNewton']:
-            cls.LBFGS = lib.LBFGS(cls.path, PAR.LBFGSMAX, PAR.BEGIN)
+            cls.LBFGS = lib.LBFGS(cls.path, PAR.LBFGSMEMORY, PAR.LBFGSMAX)
 
         # prepare output writer
         cls.writer = OutputWriter(PATH.SUBMIT + '/' + 'output.optim',
