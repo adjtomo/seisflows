@@ -419,10 +419,10 @@ class base(object):
     def export_kernels(self, path):
         # work around kernel name conventions
         try:
-            files = glob(self.model_databases +'/'+ '*alpha*_kernel.bin')
+            files = glob(self.model_databases +'/'+ '*proc??????_alpha_kernel.bin')
             unix.rename('alpha', 'vp', files)
 
-            files = glob(self.model_databases +'/'+ '*beta*_kernel.bin')
+            files = glob(self.model_databases +'/'+ '*proc??????_beta_kernel.bin')
             unix.rename('beta', 'vs', files)
         except:
             pass
