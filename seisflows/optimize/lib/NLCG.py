@@ -47,47 +47,45 @@ class NLCG:
             return abs(np.dot(g_new, g_old) / np.dot(g_new, g_new))
 
 
-        # method starts here
-
+        # algorithm starts here
         self.itercg += 1
+        savetxt(self.path+'/'+'NLCG/itercg', self.itercg)
+
         unix.cd(self.path)
+        g_new = self.load('g_new')
 
         if self.itercg == 1:
-            g_new = self.load('g_new')
+            return -g_new
 
-            unix.cd('NLCG')
-            p_new = -g_new
+        if self.itercg > self.itercgmax:
+            print 'restarting NLCG... [periodic restart]'
+            self.restart()
+            return -g_new
 
-        elif self.itercg > 1:
-            g_new = self.load('g_new')
-            g_old = self.load('g_old')
-            p_old = self.load('p_old')
+        # compute NLCG direction
+        g_old = self.load('g_old')
+        p_old = self.load('p_old')
+        p_new = pollak_ribere()
 
-            unix.cd('NLCG')
+        # check restart conditions
+        if rho() > self.thresh:
+            print 'restarting NLCG... [loss of conjugacy]'
+            self.restart()
+            return -g_new
 
-            if self.itercg > self.itercgmax:
-                # require periodic restarts
-                print 'restarting NLCG... [periodic restart]'
-                self.itercg = 1
-                p_new = -g_new
+        elif np.dot(p_new, g_new) > 0:
+            print 'restarting NLCG... [not a descent direction]'
+            self.restart()
+            return -g_new
 
-            else:
-                p_new = pollak_ribere()
+        else:
+            return p_new
 
-                if rho() > self.thresh:
-                    # require orthogonality
-                    print 'restarting NLCG... [loss of conjugacy]'
-                    self.itercg = 1
-                    p_new = -g_new
 
-                elif np.dot(p_new, g_new) > 0:
-                    # require descent direction
-                    print 'restarting NLCG... [not a descent direction]'
-                    self.itercg = 1
-                    p_new = -g_new
-
+    def restart(self):
+        self.itercg = 1
         savetxt(self.path+'/'+'NLCG/itercg', self.itercg)
-        return p_new
+
 
 
 def loadtxt(filename):

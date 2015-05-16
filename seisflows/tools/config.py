@@ -26,17 +26,17 @@ class SeisflowsObjects(object):
       the 'WORKFLOW' setting in the  parameters file. If desired functionality
       is missing from the main package, users can create their own workflows or
       customize existing workflows.
-"""
+    """
     # Because 'objects' themselves are customizable, it is rarely necessary to 
     # modify the following list. If it modifications are desired anyway, caution
     # should be excercised, as changing the names of objects or the order in
     # which they loaded can result in circular imports or other problems.
     objects = []
     objects += ['system']
+    objects += ['optimize']
     objects += ['preprocess']
     objects += ['solver']
     objects += ['postprocess']
-    objects += ['optimize']
     objects += ['workflow']
 
     def initialize(self):
@@ -47,14 +47,12 @@ class SeisflowsObjects(object):
         except:
             raise Exception
 
-        # instantiate objects
         for obj in self.objects:
             par = parameters[obj.upper()]
             sys.modules[obj] = loadclass(obj, par)()
 
-        # check objects
-        for obj in self.objects:
-            sys.modules[obj].check()
+        self.check()
+
 
     def save(self, path):
         """ Saves objects to disk
@@ -80,7 +78,11 @@ class SeisflowsObjects(object):
             fullfile = join(fullpath, obj+'.p')
             sys.modules[obj] = loadobj(fullfile)
 
-        for obj in self.objects:
+        self.check()
+
+
+    def check(self):
+        for obj in ['system', 'optimize', 'workflow', 'solver', 'preprocess', 'postprocess']:
             sys.modules[obj].check()
 
 
