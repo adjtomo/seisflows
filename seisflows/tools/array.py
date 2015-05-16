@@ -14,9 +14,7 @@ def gridplot(Z):
     """ Plots values on 2D rectangular grid
     """
     import pylab
-
     pylab.pcolor(Z)
-    pylab.show()
 
 
 def gridsmooth(Z, span):
