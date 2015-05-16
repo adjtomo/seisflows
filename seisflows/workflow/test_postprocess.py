@@ -44,8 +44,8 @@ class test_postprocess(object):
     def main(self):
         """ Writes gradient of objective function
         """
-        print 'Combining kernels...'
-        postprocess.combine_kernels(PATH.KERNELS)
+        #print 'Combining kernels...'
+        #postprocess.combine_kernels(PATH.KERNELS)
 
         print 'Processing kernels...'
         postprocess.process_kernels(PATH.KERNELS)

@@ -22,17 +22,23 @@ class base(object):
         """ Checks parameters and paths
         """
         # check postprocessing settings
-        if 'SCALE' not in PAR:
-            setattr(PAR, 'SCALE', False)
-
         if 'CLIP' not in PAR:
             setattr(PAR, 'CLIP', 0.)
 
         if 'SMOOTH' not in PAR:
             setattr(PAR, 'SMOOTH', 0.)
 
+        if 'REGULARIZE' not in PAR:
+            setattr(PAR, 'REGULARIZE', False)
+
         if 'PRECOND' not in PATH:
             setattr(PATH, 'PRECOND', None)
+
+        if 'FACTOR' not in PAR:
+            setattr(PAR, 'FACTOR', False)
+
+        if PATH.PRECOND:
+            assert exists(PATH.PRECOND)
 
 
     def setup(self):
@@ -44,6 +50,8 @@ class base(object):
     def write_gradient(self, path):
         """ Writes gradient of objective function
         """
+        assert exists(path)
+
         # check parameters
         if 'OPTIMIZE' not in PATH:
             raise ParameterError(PATH, 'OPTIMIZE')
@@ -64,17 +72,27 @@ class base(object):
         g *= solver.merge(solver.load(
                 path +'/'+ 'model'))
 
-        # apply scaling
-        if float(PAR.SCALE) == 1.:
+        # normalize gradient
+        if float(PAR.FACTOR) == 1.:
             pass
-        elif not PAR.SCALE:
+        elif not PAR.FACTOR:
             pass
         else:
-            g *= PAR.SCALE
+            g *= PAR.FACTOR
 
         # write gradient
-        solver.save(PATH.GRAD +'/'+ 'gradient', solver.split(g), suffix='_kernel')
-        savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
+        solver.save(PATH.GRAD +'/'+ 'gradient', 
+                    solver.split(g), 
+                    suffix='_kernel')
+
+        if PAR.REGULARIZE:
+            self.regularize(path)
+
+        if PATH.PRECOND:
+            self.precondition(path)
+
+        savenpy(PATH.OPTIMIZE +'/'+ 'g_new',
+                solver.merge(solver.load(path +'/'+ 'gradient', suffix='_kernel')))
 
 
     def combine_kernels(self, path):
@@ -89,8 +107,6 @@ class base(object):
         """ Performs scaling, smoothing, and preconditioning operations in
             accordance with parameter settings
         """
-        assert (exists(path))
-
         # apply clipping
         if PAR.CLIP > 0.:
             system.run('solver', 'clip',
@@ -105,17 +121,20 @@ class base(object):
                        path=path + '/' + 'kernels/sum',
                        span=PAR.SMOOTH)
 
-        # apply preconditioner
-        if PATH.PRECOND:
-            g = solver.merge(solver.load(path +'/'+ 'kernels/sum'))
-            g *= solver.merge(solver.load(PATH.PRECOND))
 
-            src = path +'/'+ 'kernels/sum'
-            dst = path +'/'+ 'kernels/sum_noprecond'
-            unix.mv(src, dst)
+    def precondition(self, path):
+        g = solver.merge(solver.load(path +'/'+ 'gradient'))
+        g *= solver.merge(solver.load(PATH.PRECOND))
 
-            solver.save(path +'/'+ 'kernels/sum',
-                        solver.split(g),
-                        suffix='_kernel')
+        src = path +'/'+ 'gradient'
+        dst = path +'/'+ 'gradient_noprecond'
+        unix.mv(src, dst)
+
+        solver.save(path +'/'+ 'gradient',
+                    solver.split(g),
+                    suffix='_kernel')
 
 
+
+    def regularize(self, path):
+        raise NotImplementedError
