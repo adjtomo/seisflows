@@ -162,7 +162,7 @@ class slurm_lg(loadclass('system', 'base')):
             else:
                 states += [0]
             if state in ['FAILED', 'NODE_FAIL', 'TIMEOUT']:
-                print msg.SLURM.TaskError % (classname, funcname, job)
+                print msg.TaskError_SLURM % (classname, funcname, job)
                 sys.exit(-1)
         isdone = all(states)
 

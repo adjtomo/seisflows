@@ -7,7 +7,7 @@ globals()['SPECFEM'] = Struct()
 
 ###
 
-SPECFEM.ReceiverError = """
+ReceiverError_SPECFEM = """
 ERROR READING RECEIVERS
 
     Error reading receivers.
@@ -15,7 +15,7 @@ ERROR READING RECEIVERS
 """
 
 
-SPECFEM.SourceError = """
+SourceError_SPECFEM = """
 ERROR READING SOURCES
 
     In DIRECTORY, there must be one or more files matching WILDCARD.
@@ -26,7 +26,7 @@ ERROR READING SOURCES
 """
 
 
-SPECFEM.ParameterWarning = """
+ParameterWarning_SPECFEM = """
 PARAMETER WARNING
 
     There is a conflict between parameters.
@@ -40,8 +40,8 @@ PARAMETER WARNING
 
 ###
 
-PBS.TaskError = """
-SYSTEM ERROR
+TaskError_PBS = """
+TASK ERROR
 
     Task failed:  %s.%s
 
@@ -52,8 +52,8 @@ SYSTEM ERROR
 """
 
 
-SLURM.TaskError = """
-SYSTEM ERROR
+TaskError_SLURM = """
+TASK ERROR
 
     Task failed:  %s.%s
 
@@ -63,4 +63,6 @@ SYSTEM ERROR
 
 """
 
+
+###
 
