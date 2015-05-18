@@ -66,7 +66,7 @@ class LBFGS:
         g = loadnpy('g_new')
 
         if self.iter > self.itermax:
-            print 'restarting LBFGS... [perdioc restart]'
+            print 'restarting LBFGS... [periodic restart]'
             self.restart()
             return -g
 
