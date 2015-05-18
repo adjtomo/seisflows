@@ -108,21 +108,38 @@ def lambda_mu_inverse(dummy, keys, vals):
 
 ### VTI maps
 
-def thomsen2voigt(dummy, keys, vals):
+def thomsen_voigt_2d(dummy, keys, vals):
+    input = Struct(zip(keys, vals))
+    output = Struct()
 
-    raise NotImplementedError
+    vp = input.vp
+    vs = input.vs
+    rho = input.rho
+    epslion = input.epsilon
+    delta = input.delta
 
-    c11 = rho * vp**2. * (1. + 2.*epsilon)
-    c12 = rho * vp**2. * (1. + 2.*epsilon) - 2.*rho * vs**2. * (1. + 2.*epsilon)
-    c13 = rho * vp**2. * (1. + 2.*delta) - 2.*rho * vs**2.
-    c33 = rho * vp**2.
-    c55 = rho * vs**2.
+    output.c11 = rho * vp**2. * (1. + 2.*epsilon)
+    output.c12 = rho * vp**2. * (1. + 2.*epsilon) - 2.*rho * vs**2. * (1. + 2.*epsilon)
+    output.c13 = rho * vp**2. * (1. + 2.*delta) - 2.*rho * vs**2.
+    output.c33 = rho * vp**2.
+    output.c55 = rho * vs**2.
+
+    return output
 
 
 
 ### TTI maps
 
-def tti2voight(dummy, keys, vals):
+def tti_voight_2d(dummy, keys, vals):
+    input = Struct(zip(keys, vals))
+    output = Struct()
+
+    vp = input.vp
+    vs = input.vs
+    rho = input.rho
+    epslion = input.epsilon
+    delta = input.delta
+    theta = input.theta
 
     c11 = rho * vp**2. * (1. + 2.*epsilon)
     c12 = rho * vp**2. * (1. + 2.*epsilon) - 2.*rho * vs**2. * (1. + 2.*epsilon)
@@ -130,27 +147,38 @@ def tti2voight(dummy, keys, vals):
     c33 = rho * vp**2.
     c55 = rho * vs**2.
 
-    raise NotImplementedError
+    sint = sin(PI/180. * theta)
+    cost = cos(PI/180. * theta)
+    sin2t = sin(2.*PI/180. * theta)
+    cos2t = cos(2.*PI/180. * theta)
 
-    c11 = c11*cost**4 + c33*sint**4 + 2*c13*sint**2*cost**2 + c55*sin2t**2
-    c12 = TINYVAL
-    c13 = c13*(cost**4+sint**4) + (c11+c33)*sint**2*cost**2 - c55*sin2t**2
-    c15 = ((c11-c13)*cost**2 + (c13-c33)*sint**2)*sint**2*cost**2 - c55*sin2t*cos2t
-    c23 = TINYVAL
-    c25 = TINYVAL
-    c33 = inf
-    c55 = inf
+
+    output.c11 = c11*cost**4 + c33*sint**4 + 2*c13*sint**2*cost**2 + c55*sin2t**2
+    output.c12 = 1.e-6
+    output.c13 = c13*(cost**4+sint**4) + (c11+c33)*sint**2*cost**2 - c55*sin2t**2
+    output.c15 = ((c11-c13)*cost**2 + (c13-c33)*sint**2)*sint**2*cost**2 - c55*sin2t*cos2t
+    output.c23 = 1.e-6
+    output.c25 = 1.e-6
+    output.c33 = c11*sint**4 + c33*sint**4 + 2*c13*sint**2*cost**2 + c55*sin2t**2
+    output.c55 = (c11 - 2.*c13*c33)*sint**2*cost**2 + c55*cos2t**2
+
+    return output
 
 
 
 ### anisotropic maps
 
-def chentromp2voigt(dummy, keys, vals):
+def chentromp_voigt_2d(dummy, keys, vals):
     pass
 
 
-def voigt2chentromp(dummy, keys, vals):
+def voigt_chentromp_2d(dummy, keys, vals):
     pass
+
+def voigt_voigt_2d(dummy, keys, vals):
+    input = Struct(zip(keys, vals))
+    output = input
+    return output
 
 
 
