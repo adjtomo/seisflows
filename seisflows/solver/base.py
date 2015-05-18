@@ -60,32 +60,27 @@ class base(object):
         Utilities for combining and smoothing kernels.
     """
 
-    # By default, SPECFEM reads velocity models specified in terms of vp and vs.
-    # For elastic simulations, include both 'vp' and 'vs' in the list below.
-    # For acoustic simulations include only 'vp'.
-    parameters = []
-    parameters += ['vp']
-    parameters += ['vs']
+    if 'MATERIALS' not in PAR:
+        raise Exception
 
-    # It is sometimes advantageous to use alternate elastic moduli, such as
-    # bulk c and bulk mu, instead of vp and vs.  For more information, see 
-    # solver.FwiElastic in SEISFLOWS-RESEARCH.
-
-    # Because density is sometimes not well constrained, empirical scaling
-    # relations between density and compressional wave velocity are
-    # commonly applied.
     if 'DENSITY' not in PAR:
-        PAR.DENSITY = 'constant'
+        raise Exception
 
-    if PAR.DENSITY == 'constant':
+    if PAR.MATERIALS == 'Elastic':
+        parameters = []
+        parameters += ['vp']
+        parameters += ['vs']
+
+    elif PAR.MATERIALS == 'Acoustic':
+        parameters = []
+        parameters += ['vp']
+
+    if PAR.DENSITY == 'Constant':
         map_density = None
 
-    elif PAR.DENSITY == 'variable':
+    elif PAR.DENSITY == 'Variable':
         map_density = None
         parameters += ['rho']
-
-    else:
-        raise NotImplementedError
 
 
     def check(self):
@@ -113,6 +108,9 @@ class base(object):
 
         if 'SPECFEM_DATA' not in PATH:
             raise ParameterError(PATH, 'SPECFEM_DATA')
+
+        # assertions
+        assert self.parameters != []
 
 
     def setup(self):
@@ -528,7 +526,7 @@ class base(object):
             wildcard = self.source_prefix+'_*'
             globstar = glob(path +'/'+ wildcard)
             if not globstar:
-                 print msg.SPECFEM.SourceError % (path, wildcard)
+                 print msg.SourceError_SPECFEM % (path, wildcard)
                  sys.exit(-1)
             self.names = []
             for path in globstar:
