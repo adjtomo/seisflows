@@ -67,12 +67,12 @@ class base(object):
         self.process_kernels(path)
 
         # convert from relative to absolute perturbations
-        if PAR.LOGARITHMIC:
-            g = solver.merge(solver.load(
-                    path +'/'+ 'kernels/sum',
-                    suffix='_kernel',
-                    verbose=True))
+        g = solver.merge(solver.load(
+                path +'/'+ 'kernels/sum',
+                suffix='_kernel',
+                verbose=True))
 
+        if PAR.LOGARITHMIC:
             g *= solver.merge(solver.load(
                     path +'/'+ 'model'))
 
