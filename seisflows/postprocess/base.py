@@ -34,6 +34,9 @@ class base(object):
         if 'PRECOND' not in PATH:
             setattr(PATH, 'PRECOND', None)
 
+        if 'LOGARITHMIC' not in PAR:
+            setattr(PAR, 'LOGARITHMIC', True)
+
         if 'FACTOR' not in PAR:
             setattr(PAR, 'FACTOR', False)
 
@@ -64,13 +67,14 @@ class base(object):
         self.process_kernels(path)
 
         # convert from relative to absolute perturbations
-        g = solver.merge(solver.load(
-                path +'/'+ 'kernels/sum',
-                suffix='_kernel',
-                verbose=True))
+        if PAR.LOGARITHMIC:
+            g = solver.merge(solver.load(
+                    path +'/'+ 'kernels/sum',
+                    suffix='_kernel',
+                    verbose=True))
 
-        g *= solver.merge(solver.load(
-                path +'/'+ 'model'))
+            g *= solver.merge(solver.load(
+                    path +'/'+ 'model'))
 
         # normalize gradient
         if float(PAR.FACTOR) == 1.:
