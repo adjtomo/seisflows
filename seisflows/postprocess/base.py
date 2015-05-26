@@ -123,7 +123,7 @@ class base(object):
 
 
     def precondition(self, path):
-        g = solver.merge(solver.load(path +'/'+ 'gradient'))
+        g = solver.merge(solver.load(path +'/'+ 'gradient'), suffix='_kernel')
         g *= solver.merge(solver.load(PATH.PRECOND))
 
         src = path +'/'+ 'gradient'
