@@ -29,7 +29,7 @@ class base(object):
       eval_func, eval_grad, apply_hess
         These methods deal with evaluation of the misfit function or its
         derivatives.  Together, they provide the primary interface through which
-        the solver interacts with other SeisFlows objects.
+        SeisFlows interacts with SPECFEM.
 
       forward, adjoint
         These methods allow direct access to low-level SPECFEM components,

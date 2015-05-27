@@ -31,7 +31,7 @@ class specfem2d_legacy(loadclass('solver', 'base')):
     if PAR.MATERIALS == 'Acoustic':
         # SPECFEM2D consists of separate acoustic, elastic and anisotropic 
         # solvers. Prior to the addition of the acoustic solver, acoustic 
-        # simulations used to be carried out through the elastic solver as SH-
+        # simulations could be carried out through the elastic solver as SH-
         # simulations, the mathematics being essentially the same.
         parameters = []
         parameters += ['vs']
