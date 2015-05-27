@@ -143,15 +143,13 @@ class inversion(object):
         postprocess.setup()
 
         # has solver machinery been set up?
-        if PATH.LOCAL:
-            pass
-        elif PAR.BEGIN > 1:
-            return
+        isready = self.solver_status()
 
         # if not, then set up solver machinery
-        system.run('solver', 'setup', hosts='all')
-        model = solver.load(PATH.MODEL_INIT)
-        savenpy(PATH.OPTIMIZE +'/'+ 'm_new', solver.merge(model))
+        if not isready:
+            system.run('solver', 'setup', hosts='all')
+            model = solver.load(PATH.MODEL_INIT)
+            savenpy(PATH.OPTIMIZE +'/'+ 'm_new', solver.merge(model))
 
 
     def initialize(self):
@@ -301,7 +299,7 @@ class inversion(object):
         """  Return value indicates whether prerequisites are in place for the
           next gradient evaluation
         """
-        if self.iter <= 1:
+        if self.iter == 1:
             isready = False
         elif PATH.LOCAL:
             isready = False
