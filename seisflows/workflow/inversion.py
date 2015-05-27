@@ -24,22 +24,20 @@ import postprocess
 class inversion(object):
     """ Seismic inversion base class.
 
-      Computes iterative model updates using any of a variety of possible 
+      Computes iterative model updates in accordance with parameter file 
       settings, and provides a base class on top of which custom inversion 
       strategies can be implemented.
 
-      To allow overriding, separate methods are provided for each step in the
-      inversion, including 'evaluate_function', 'evaluate_gradient',
-      'compute_direction', and 'line_search' as well as generic 'initialize'
-      and 'finalize' methods.
+      To allow customization, the inversion workflow is divided into generic 
+      methods such as 'initialize', 'finalize', 'evaluate_function', 
+      'evaluate_gradient' that can easily be overloaded.
 
       Calls to forward and adjoint solvers are abstracted through the 'solver'
       interface so that various forward modeling packages can be used
       interchangeably.
 
-      Commands for launching serial or parallel jobs on a workstation or cluster
-      are abstracted through the 'system' interface so that the code can be
-      easily ported.
+      Commands for running in serial or parallel on a workstation or cluster
+      are abstracted through the 'system' interface.
 
       For assistance using this package, please view online documentation, 
       browse comments, or email rmodrak -at- princeton -dot- edu
