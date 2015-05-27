@@ -44,27 +44,17 @@ if __name__ == '__main__':
         path = '/home/rmodrak/data'
     else:
         path = getpath()
-
-    # prompt user for selections
-    opts = ['Examples2d', 'Examples3d', 'Examples3dGlobe']
-    opt = unix.select(opts)
-    print ''
-    path = join(path, opt)
     print ''
 
-    dirs = listdir(path)
-    prompt = 'select directory:'
-    dir = unix.select(dirs, prompt)
+    # select directory
+    dirs = ['Examples2d', 'Examples3d', 'Examples3dGlobe']
+    dir = unix.select(dirs)
     print ''
 
-    items = unix.ls(path+'/'+dir)
-    if 'parameters.py' in items:
-        subdir = ''
-    else:
-        subdirs = listdir(path+'/'+dir)
-        prompt = 'select subdirectory:'
-        subdir = unix.select(subdirs, prompt)
-        print ''
+    # select subdirectory
+    subdirs = listdir(path+'/'+dir)
+    subdir = unix.select(subdirs)
+    print ''
 
     # set up working directory
     fullpath = path+'/'+dir+'/'+subdir
