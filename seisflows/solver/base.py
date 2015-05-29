@@ -76,10 +76,10 @@ class base(object):
         parameters += ['vp']
 
     if PAR.DENSITY == 'Constant':
-        map_density = None
+        density_scaling = None
 
     elif PAR.DENSITY == 'Variable':
-        map_density = None
+        density_scaling = None
         parameters += ['rho']
 
 

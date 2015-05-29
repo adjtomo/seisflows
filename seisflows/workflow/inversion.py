@@ -301,8 +301,7 @@ class inversion(object):
 
 
     def sum_residuals(self, path='', suffix=''):
-        """ Computes sum of squares of residuals to obtain objective function 
-          value
+        """ Returns sum of squares of residuals
         """
         src = path +'/'+ 'residuals'
         dst = PATH.OPTIMIZE +'/'+ 'f_' + suffix
@@ -311,18 +310,6 @@ class inversion(object):
             fromfile = np.loadtxt(src +'/'+ file)
             residuals.append(fromfile**2.)
         np.savetxt(dst, [np.sum(residuals)])
-
-    def solver_status(self):
-        """  Return value indicates whether prerequisites are in place for the
-          next gradient evaluation
-        """
-        if self.iter == 1:
-            isready = False
-        elif PATH.LOCAL:
-            isready = False
-        else:
-            isready = True
-        return isready
 
 
     def save_gradient(self):
