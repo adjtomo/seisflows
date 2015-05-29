@@ -143,7 +143,12 @@ class inversion(object):
         postprocess.setup()
 
         # has solver machinery been set up?
-        isready = self.solver_status()
+        if PAR.BEGIN == 1:
+            isready = False
+        elif PATH.LOCAL:
+            isready = False
+        else:
+            isready = True
 
         # if not, then set up solver machinery
         if not isready:
@@ -155,7 +160,14 @@ class inversion(object):
     def initialize(self):
         """ Prepares for next model update iteration
         """
-        isready = self.solver_status()
+        # are prerequisites for gradient evaulation in place?
+        if self.iter == 1:
+            isready = False
+        elif PATH.LOCAL:
+            isready = False
+        else:
+            isready = True
+
         if not isready:
             print 'Generating synthetics'
 
@@ -194,15 +206,19 @@ class inversion(object):
 
 
     def search_status(self):
-        """  Evaluates trial model by calling evalute_function, which performs
-          a forward simulation. After that, queries line search status and keeps
-          track of which trial model is the best so far.
+        """ Determines line search status 
+
+          First, calls self.evaluate_function, which carries out a forward 
+          simulation given the current trial model. Then calls
+          optimize.search_status, which maintains search history and checks
+          stopping conditions.
         """
         if PAR.VERBOSE:
             print " trial step", optimize.step
         self.evaluate_function()
-
         isdone, isbest = optimize.search_status()
+
+        # save files associated with 'best' trial model
         if not PATH.LOCAL:
             if isbest and isdone:
                 unix.rm(PATH.SOLVER + '_best')
@@ -210,6 +226,7 @@ class inversion(object):
             elif isbest:
                 unix.rm(PATH.SOLVER + '_best')
                 unix.cp(PATH.SOLVER, PATH.SOLVER + '_best')
+
         return isdone
 
 
