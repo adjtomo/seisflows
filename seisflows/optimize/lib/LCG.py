@@ -60,13 +60,15 @@ class LCG:
         """
 
         # utility function
-        def EinsenstatWalker(eta=.999, verbose=True):
+        def EisenstatWalker(eta=.999, verbose=True):
 
-            g_new = np.linalg.norm(loadnpy('g_new'))
-            g_old = np.linalg.norm(loadnpy('g_old'))
-            g_ratio = g_new/g_old
+            g = loadnpy('g_new')
+            if self.iter > 1:
+                g_new = np.linalg.norm(g)
+                g_old = np.linalg.norm(loadnpy('g_old'))
+                g_ratio = g_new/g_old
 
-            LHS = np.linalg.norm(g+u)
+            LHS = np.linalg.norm(g+ap)
             RHS = np.linalg.norm(g)
 
             if verbose:
@@ -84,7 +86,6 @@ class LCG:
 
         unix.cd(self.path)
         self.ilcg += 1
-        print self.ilcg
 
         x = loadnpy('LCG/x')
         r = loadnpy('LCG/r')
@@ -106,10 +107,8 @@ class LCG:
 
         # check status
         if self.ilcg >= self.lcgmax:
-            print ' made it here-1'
             isdone = True
         elif EisenstatWalker():
-            print ' made it here-2'
             isdone = True
         else:
             isdone = False
