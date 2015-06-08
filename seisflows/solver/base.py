@@ -8,7 +8,7 @@ import numpy as np
 
 import seisflows.seistools.specfem3d as solvertools
 from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import loadbypar, copybin, savebin, splitvec, Model, Minmax
+from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin, splitvec, Model, Minmax
 
 from seisflows.tools import msg
 from seisflows.tools import unix
@@ -367,9 +367,6 @@ class base(object):
         """
         assert (exists(path))
 
-        if minval == -np.inf or maxval == np.inf:
-            return
-
         unix.cd(self.getpath)
         for name in self.parameters:
             self.mpirun(
@@ -415,13 +412,13 @@ class base(object):
                 unix.cp(files, path)
 
     def export_kernels(self, path):
-        # work around kernel name conventions
+        # work around name conventions
         try:
             files = glob(self.model_databases +'/'+ '*proc??????_alpha_kernel.bin')
-            unix.rename('alpha', 'vp', files)
+            unix.rename('alpha_kernel.bin', 'vp_kernel.bin', files)
 
             files = glob(self.model_databases +'/'+ '*proc??????_beta_kernel.bin')
-            unix.rename('beta', 'vs', files)
+            unix.rename('beta_kernel.bin', 'vs_kernel.bin', files)
         except:
             pass
 
