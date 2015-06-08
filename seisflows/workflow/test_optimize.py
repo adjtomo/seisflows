@@ -82,7 +82,7 @@ class test_optimize(object):
 
     def compute_direction(cls):
         cls.evaluate_gradient()
-        if PAR.OPTIMIZE == 'Newton':
+        if PAR.OPTIMIZE in ['Newton', 'GaussNewton']:
             cls.compute_direction_newton()
         else:
             optimize.compute_direction()
