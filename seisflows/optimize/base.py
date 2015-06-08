@@ -148,7 +148,7 @@ class base(object):
                     cls.restart_search = 0
 
         else:
-            raise ParameterError
+            raise Exception
 
         # save results
         unix.cd(cls.path)

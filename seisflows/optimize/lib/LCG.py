@@ -9,28 +9,23 @@ from seisflows.optimize.lib.LBFGS import LBFGS
 
 
 class LCG:
-    """ Linear conjugate gradient method
+    """ Truncated-Newton CG solver
     """
-    def __init__(self, path, thresh, lcgmax, precond_type=0):
+    def __init__(self, path, eta0, lcgmax, precond_type=None):
         self.path = path
         unix.mkdir(self.path+'/'+'LCG')
 
         self.ilcg = 0
         self.iter = 0
-        self.thresh = thresh
+        self.eta0 = eta0
         self.lcgmax = lcgmax
-
         self.precond_type = precond_type
-        if precond_type in [1, 2]:
-            self.LBFGS = LBFGS(path, 3)
 
 
     def precond(self, r):
-        if self.precond_type == 0:
-            return r
-
-        elif self.precond_type == 1:
+        if self.precond_type in ['NonlinearLBFGS']:
             if self.iter == 1:
+                self.LBFGS = LBFGS(path, 3)
                 y = r
             elif self.ilcg == 0:
                 self.LBFGS.update()
@@ -38,6 +33,9 @@ class LCG:
             else:
                 y = -self.LBFGS.solve('LCG/r')
             return y
+
+        else:
+            return r
 
 
     def initialize(self):
@@ -56,10 +54,34 @@ class LCG:
         savenpy('LCG/p', p)
         savetxt('LCG/ry', np.dot(r, y))
 
-        return p
-
 
     def update(self, ap):
+        """ performs CG update
+        """
+
+        # utility function
+        def EinsenstatWalker(eta=1., verbose=True):
+            try:
+                f_ratio = loadnpy('f_new')/loadtxt('f_old')
+            except:
+                print 'MADE IT HERE'
+
+            LHS = np.linalg.norm(g+u)
+            RHS = np.linalg.norm(g)
+
+            if verbose:
+                print ' LHS:  ', LHS
+                print ' RHS:  ', RHS
+                print ' RATIO:', LHS/RHS
+                print ''
+
+            if LHS < eta * RHS:
+                isdone = True
+            else:
+                isdone = False
+            return isdone
+
+
         unix.cd(self.path)
         self.ilcg += 1
 
@@ -73,7 +95,7 @@ class LCG:
         if pap < 0:
             print ' Stopping LCG [negative curvature]'
             isdone = True
-            return p, isdone
+            return isdone
                        
         alpha = ry/pap
         x = x + alpha*p
@@ -82,25 +104,22 @@ class LCG:
         savenpy('LCG/r', r)
 
         # check status
-        if self.ilcg == self.lcgmax:
+        if self.ilcg <= self.lcgmax:
             isdone = True
-        elif np.linalg.norm(r) > self.thresh:
+        elif EisenstatWalker():
             isdone = True
         else:
             isdone = False
-        if isdone:
-            return x, isdone
 
-        # apply preconditioner
-        y = self.precond(r)
+        if not isdone:
+            y = self.precond(r)
+            ry_old = ry
+            ry = np.dot(r, y)
+            beta = ry/ry_old
+            p = -y + beta*p
 
-        ry_old = ry
-        ry = np.dot(r, y)
-        beta = ry/ry_old
-        p = -y + beta*p
+            savenpy('LCG/y', y)
+            savenpy('LCG/p', p)
+            savetxt('LCG/ry', np.dot(r, y))
 
-        savenpy('LCG/y', y)
-        savenpy('LCG/p', p)
-        savetxt('LCG/ry', np.dot(r, y))
-
-        return p, isdone
+        return isdone
