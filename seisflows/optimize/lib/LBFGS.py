@@ -11,21 +11,26 @@ from seisflows.tools.code import loadtxt, savetxt, exists
 
 
 class LBFGS:
-    """ Limited memory BFGS
+    """ Limited memory BFGS algorithm
+
+        Includes optional safeguards in the form of periodic restart and descent
+        direction conditions.
+
+        To conserve memory, vectors are read from disk rather than passed from a
+        calling routine.
     """
 
-    def __init__(self, path='.', kmax=5, itermax=np.inf, thresh=np.inf):
+    def __init__(self, path='.', step_memory=5, itermax=np.inf, thresh=0.):
         self.path = path
-        self.kmax = kmax
+        self.kmax = step_memory
         self.itermax = itermax
-
-        if itermax == 0:
-            self.itermax = np.inf
+        self.thresh = thresh
 
         unix.cd(self.path)
 
         if exists('LBFGS/iter'):
             self.iter = int(loadtxt('LBFGS/iter'))
+
         else:
             self.iter = 0
             unix.mkdir('LBFGS')
@@ -33,6 +38,8 @@ class LBFGS:
 
 
     def update(self):
+        """ Updates L-BFGS inverse Hessian
+        """
         unix.cd(self.path)
 
         self.iter += 1
@@ -61,41 +68,45 @@ class LBFGS:
         del Y
 
 
-    def solve(self, path='g_new'):
+    def solve(self, path='g_new', require_descent=True):
+        """ Applies L-BFGS inverse Hessian to vector read from given path
+        """
         unix.cd(self.path)
         g = loadnpy('g_new')
+        n = len(g)
 
         if self.iter > self.itermax:
             print 'restarting LBFGS... [periodic restart]'
             self.restart()
             return -g
 
-        # compute L-BFSGS direction
-        q = loadnpy(path)
-        n = len(q)
+        # load stored vector pairs
         S = np.memmap('LBFGS/S', mode='r', dtype='float32', shape=(n, self.kmax))
         Y = np.memmap('LBFGS/Y', mode='r', dtype='float32', shape=(n, self.kmax))
+
+        q = loadnpy(path)
         k = min(self.iter, self.kmax)
         rh = np.zeros(k)
         al = np.zeros(k)
 
+        # first matrix product
         for i in range(0, k):
             rh[i] = 1/np.dot(Y[:, i], S[:, i])
             al[i] = rh[i]*np.dot(S[:, i], q)
             q = q - al[i]*Y[:, i]
 
-        # initialize inverse Hessian using scaling proposed by 
-        # Liu and Nocedal 1989
+        # use scaled identity matrix to initialize inverse Hessian, as proposed
+        # by Liu and Nocedal 1989
         sty = np.dot(Y[:,0], S[:,0])
         yty = np.dot(Y[:,0], Y[:,0])
         r = sty/yty*q
 
+        # second matrix product
         for i in range(k-1, -1, -1):
             be = rh[i]*np.dot(Y[:, i], r)
             r = r + S[:, i]*(al[i] - be)
 
-        # check restart conditions
-        if np.dot(g, -r)/np.dot(g, g) >= 0:
+        if self.check_status(g, r, require_descent) != 0:
             print 'restarting LBFGS... [not a descent direction]'
             self.restart()
             return -g
@@ -106,6 +117,8 @@ class LBFGS:
 
 
     def restart(self):
+        """ Discards history and resets counters, thereby restarting algorithm
+        """
         self.restarted = True
         self.iter = 0
         savetxt('LBFGS/iter', 0)
@@ -118,5 +131,13 @@ class LBFGS:
 
         time.sleep(2)
 
+
+    def check_status(self, g, r, require_descent):
+        if not require_descent:
+            return 0
+        elif np.dot(g,r)/np.dot(g,g) > self.thresh:
+            return 0
+        else:
+            return -1
 
 
