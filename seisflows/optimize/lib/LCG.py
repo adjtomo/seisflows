@@ -9,33 +9,22 @@ from seisflows.optimize.lib.LBFGS import LBFGS
 
 
 class LCG:
-    """ Truncated-Newton CG solver
+    """ Generic CG solver
     """
     def __init__(self, path, eta0, lcgmax, precond_type=None):
         self.path = path
-        unix.mkdir(self.path+'/'+'LCG')
-
-        self.ilcg = 0
-        self.iter = 0
         self.eta0 = eta0
         self.lcgmax = lcgmax
         self.precond_type = precond_type
 
+        self.ilcg = 0
+        self.iter = 0
+
+        unix.mkdir(self.path+'/'+'LCG')
+
 
     def precond(self, r):
-        if self.precond_type in ['NonlinearLBFGS']:
-            if self.iter == 1:
-                self.LBFGS = LBFGS(path, 3)
-                y = r
-            elif self.ilcg == 0:
-                self.LBFGS.update()
-                y = -self.LBFGS.solve('LCG/r')
-            else:
-                y = -self.LBFGS.solve('LCG/r')
-            return y
-
-        else:
-            return r
+        return r
 
 
     def initialize(self):
@@ -58,32 +47,6 @@ class LCG:
     def update(self, ap):
         """ performs CG update
         """
-
-        # utility function
-        def EisenstatWalker(eta=.999, verbose=True):
-
-            g = loadnpy('g_new')
-            if self.iter > 1:
-                g_new = np.linalg.norm(g)
-                g_old = np.linalg.norm(loadnpy('g_old'))
-                g_ratio = g_new/g_old
-
-            LHS = np.linalg.norm(g+ap)
-            RHS = np.linalg.norm(g)
-
-            if verbose:
-                print ' LHS:  ', LHS
-                print ' RHS:  ', RHS
-                print ' RATIO:', LHS/RHS
-                print ''
-
-            if LHS < eta * RHS:
-                isdone = True
-            else:
-                isdone = False
-            return isdone
-
-
         unix.cd(self.path)
         self.ilcg += 1
 
@@ -106,9 +69,9 @@ class LCG:
         savenpy('LCG/r', r)
 
         # check status
-        if self.ilcg >= self.lcgmax:
+        if self.check_status(ap) == 0:
             isdone = True
-        elif EisenstatWalker():
+        elif self.ilcg >= self.lcgmax:
             isdone = True
         else:
             isdone = False
@@ -125,3 +88,35 @@ class LCG:
             savetxt('LCG/ry', np.dot(r, y))
 
         return isdone
+
+
+    def check_status(self, ap, eta=0.9999, verbose=True):
+        """ Checks Eisenstat-Walker termination status
+        """
+        g = loadnpy('g_new')
+        LHS = np.linalg.norm(g+ap)
+        RHS = np.linalg.norm(g)
+
+        # for comparison, calculate forcing term proposed by 
+        # Eisenstat & Walker 1996
+        if self.iter > 1:
+            g_new = np.linalg.norm(g)
+            g_old = np.linalg.norm(loadnpy('g_old'))
+            g_ratio = g_new/g_old
+        else:
+            g_ratio = np.nan
+
+        if verbose:
+            # print numerical statistics
+            print ' k+1/k:', g_ratio
+            print ' LHS:  ', LHS
+            print ' RHS:  ', RHS
+            print ' RATIO:', LHS/RHS
+            print ''
+
+        # check termination condition
+        if LHS < eta * RHS:
+            return 0
+        else:
+            return 1
+
