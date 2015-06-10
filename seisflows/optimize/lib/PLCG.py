@@ -6,12 +6,13 @@ from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import loadtxt, savetxt
 
 from seisflows.optimize.lib.LBFGS import LBFGS
+from seisflows.optimize.lib.LCG import LCG
 
 
-class PLCG:
+class PLCG(LCG):
     """ Truncated-Newton CG solver
 
-      Adds preconditioning and adaptive stopping conditions to LCG base class
+      Adds preconditioning and adaptive stopping to LCG base class
     """
     def __init__(self, *args, **kwargs):
         super(self, PLCG).__init__.(*args, **kwargs)

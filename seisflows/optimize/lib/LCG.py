@@ -23,10 +23,6 @@ class LCG:
         unix.mkdir(self.path+'/'+'LCG')
 
 
-    def precond(self, r):
-        return r
-
-
     def initialize(self):
         unix.cd(self.path)
         self.iter += 1
@@ -90,33 +86,13 @@ class LCG:
         return isdone
 
 
-    def check_status(self, ap, eta=0.9999, verbose=True):
-        """ Checks Eisenstat-Walker termination status
-        """
-        g = loadnpy('g_new')
-        LHS = np.linalg.norm(g+ap)
-        RHS = np.linalg.norm(g)
+    ### dummy methods, can be overloaded
 
-        # for comparison, calculate forcing term proposed by 
-        # Eisenstat & Walker 1996
-        if self.iter > 1:
-            g_new = np.linalg.norm(g)
-            g_old = np.linalg.norm(loadnpy('g_old'))
-            g_ratio = g_new/g_old
-        else:
-            g_ratio = np.nan
+    def check_status(self, *args, **kwargs):
+        return -1
 
-        if verbose:
-            # print numerical statistics
-            print ' k+1/k:', g_ratio
-            print ' LHS:  ', LHS
-            print ' RHS:  ', RHS
-            print ' RATIO:', LHS/RHS
-            print ''
+    def precond(self, r):
+        return r
 
-        # check termination condition
-        if LHS < eta * RHS:
-            return 0
-        else:
-            return 1
+
 
