@@ -133,37 +133,17 @@ class BinaryWriter(object):
 
 
 class OutputWriter(object):
-    def __init__(self, filename, keys):
-
+    """ Writes text file consisting of one or more columns. Column width is 
+      fixed at 10 and column spacing is fixed at 2.
+    """
+    def __init__(self, filename):
         try:
             self.filename = _os.path.abspath(filename)
         except:
             raise IOError
 
-        self.nkey = len(keys)
-        self.keys = []
-        for key in keys:
-            self.keys += [key.upper()]
-
-        # format column headers
-        line = ''
-        for key in self.keys:
-            line += '%10s  ' % key
-
-        # write headers to file
-        if _os.path.exists(filename):
-            fileobj = open(filename, 'a')
-        else:
-            fileobj = open(filename, 'w')
-            fileobj.write(line + '\n')
-            fileobj.write((self.nkey*((10*'=') + '  ')) + '\n')
-        fileobj.close()
-
     def __call__(self, *vals):
         fileobj = open(self.filename, 'a')
-        nval = len(vals)
-        if nval != self.nkey:
-            raise Exception
         line = ''
         for val in vals:
             line += self._getline(val)
@@ -173,17 +153,33 @@ class OutputWriter(object):
     def _getline(self, val):
         if type(val) is int:
             return '%10d  ' % val
-        if type(val) is float:
+        elif type(val) is float:
             return '%10.3e  ' % val
-        if type(val) is str:
+        elif type(val) is str:
             return '%10s  ' % val
-        if val == None:
+        else:
             return 12*' '
 
     def newline(self):
+        # writes newline
         fileobj = open(self.filename, 'a')
         fileobj.write('\n')
         fileobj.close()
+
+    def header(self, *keys):
+        # writes column headers
+        line = ''
+        for key in keys:
+            line += '%10s  ' % key.upper()
+
+        if _os.path.exists(self.filename):
+            fileobj = open(self.filename, 'a')
+        else:
+            fileobj = open(self.filename, 'w')
+            fileobj.write(line + '\n')
+            fileobj.write((len(keys)*((10*'=') + '  ')) + '\n')
+        fileobj.close()
+
 
 
 def mychar(fmt):

@@ -92,11 +92,12 @@ class base(object):
     def setup(cls):
         """ Sets up nonlinear optimization machinery
         """
+        # specify paths
         cls.path = PATH.OPTIMIZE
-        cls.logpath = PATH.SUBMIT +'/'+ 'output.optim'
+        cls.logpath = join(PATH.SUBMIT, 'output.optim')
+        cls.writer = OutputWriter(cls.logpath)
 
-        # create directory in which to store algorithm history
-        unix.mkdir(PATH.OPTIMIZE)
+        unix.mkdir(cls.path)
 
         # prepare algorithm machinery
         if PAR.SCHEME in ['ConjugateGradient']:
@@ -110,12 +111,6 @@ class base(object):
                 cls.path, 
                 step_memory=PAR.LBFGSMEMORY, 
                 itermax=PAR.LBFGSMAX)
-
-        # prepare output writer
-        cls.writer = OutputWriter(cls.logpath,
-               ['iter', 
-                'step', 
-                'misfit'])
 
 
     ### search direction methods
@@ -233,6 +228,10 @@ class base(object):
         # write trial model
         savenpy('m_try', m + p*alpha)
         savetxt('alpha', alpha)
+
+        # write numerical output
+        if iter == 1:
+            cls.writer.header('iter', 'eval', 'misfit')
 
         cls.writer(cls.iter, 0., f)
 
