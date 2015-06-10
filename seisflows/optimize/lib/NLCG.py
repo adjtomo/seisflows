@@ -14,16 +14,14 @@ class NLCG:
     """
 
     def __init__(self, path, thresh, itermax):
-
         self.path = path
-        unix.mkdir(self.path+'/'+'NLCG')
-
         self.itermax = itermax
         self.thresh = thresh
 
         try:
             self.iter = loadtxt(self.path+'/'+'NLCG/iter')
         except IOError:
+            unix.mkdir(self.path+'/'+'NLCG')
             self.iter = 0
 
 

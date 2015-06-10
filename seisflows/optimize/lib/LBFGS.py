@@ -13,11 +13,11 @@ from seisflows.tools.code import loadtxt, savetxt, exists
 class LBFGS:
     """ Limited memory BFGS algorithm
 
-        Includes optional safeguards in the form of periodic restart and descent
-        direction conditions.
+        Includes optional safeguards: periodic restarting and descent
+        conditions.
 
-        To conserve memory, vectors are read from disk rather than passed from a
-        calling routine.
+        To conserve memory, most vectors are read from disk rather than 
+        passed from a calling routine.
     """
 
     def __init__(self, path='.', step_memory=5, itermax=np.inf, thresh=0.):
