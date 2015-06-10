@@ -108,7 +108,7 @@ class base(object):
         elif PAR.SCHEME in ['QuasiNewton']:
             cls.LBFGS = LBFGS(
                 cls.path, 
-                thresh=PAR.LBFGSMEMORY, 
+                step_memory=PAR.LBFGSMEMORY, 
                 itermax=PAR.LBFGSMAX)
 
         # prepare output writer
