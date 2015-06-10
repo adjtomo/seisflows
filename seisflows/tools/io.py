@@ -171,16 +171,19 @@ class OutputWriter(object):
         fileobj.close()
 
     def _getline(self, val):
-        if val == '':
-            return 12*' '
-        if val == []:
-            return 12*' '
         if type(val) is int:
             return '%10d  ' % val
         if type(val) is float:
             return '%10.3e  ' % val
         if type(val) is str:
             return '%10s  ' % val
+        if val == None:
+            return 12*' '
+
+    def newline(self):
+        fileobj = open(self.filename, 'a')
+        fileobj.write('\n')
+        fileobj.close()
 
 
 def mychar(fmt):

@@ -9,8 +9,10 @@ from seisflows.tools.code import loadtxt, savetxt
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 from seisflows.tools.io import OutputWriter
+
 from seisflows.tools.math import polyfit2, backtrack2
-from seisflows.optimize import lib
+from seisflows.optimize.lib.LBFGS import LBFGS
+from seisflows.optimize.lib.NLCG import NLCG
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -98,13 +100,13 @@ class base(object):
 
         # prepare algorithm machinery
         if PAR.SCHEME in ['ConjugateGradient']:
-            cls.NLCG = lib.NLCG(
+            cls.NLCG = NLCG(
                 cls.path,
                 thresh=PAR.NLCGTHRESH, 
                 itermax=PAR.NLCGMAX)
 
         elif PAR.SCHEME in ['QuasiNewton']:
-            cls.LBFGS = lib.LBFGS(
+            cls.LBFGS = LBFGS(
                 cls.path, 
                 thresh=PAR.LBFGSMEMORY, 
                 itermax=PAR.LBFGSMAX)
@@ -305,12 +307,12 @@ class base(object):
 
         # compute trial step length
         if PAR.LINESEARCH == 'Backtrack':
-            alpha = lib.backtrack2(f[0], s, x[1], f[1], b1=0.1, b2=0.5)
+            alpha = backtrack2(f[0], s, x[1], f[1], b1=0.1, b2=0.5)
 
         elif PAR.LINESEARCH == 'Bracket':
             FACTOR = 2.
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
-                alpha = lib.polyfit2(x, f)
+                alpha = polyfit2(x, f)
             elif any(f[1:] < f[0]):
                 alpha = loadtxt('alpha')*FACTOR
             else:
