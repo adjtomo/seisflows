@@ -9,6 +9,7 @@ from seisflows.tools.code import loadtxt, savetxt
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 from seisflows.tools.io import OutputWriter
+from seisflows.tools.math import polyfit2, backtrack2
 from seisflows.optimize import lib
 
 PAR = SeisflowsParameters()
@@ -63,7 +64,7 @@ class base(object):
             setattr(PAR, 'LBFGSMEMORY', 6)
 
         if 'LBFGSMAX' not in PAR:
-            setattr(PAR, 'LBFGSMAX', 0)
+            setattr(PAR, 'LBFGSMAX', np.inf)
 
         # line search parameters
         if 'LINESEARCH' not in PAR:
@@ -87,21 +88,32 @@ class base(object):
 
 
     def setup(cls):
-        """ Sets up directory in which to store optimization vectors
+        """ Sets up nonlinear optimization machinery
         """
         cls.path = PATH.OPTIMIZE
-        unix.mkdir(cls.path)
+        cls.logpath = PATH.SUBMIT +'/'+ 'output.optim'
+
+        # create directory in which to store algorithm history
+        unix.mkdir(PATH.OPTIMIZE)
 
         # prepare algorithm machinery
         if PAR.SCHEME in ['ConjugateGradient']:
-            cls.NLCG = lib.NLCG(cls.path, PAR.NLCGTHRESH, PAR.NLCGMAX)
+            cls.NLCG = lib.NLCG(
+                cls.path,
+                thresh=PAR.NLCGTHRESH, 
+                itermax=PAR.NLCGMAX)
 
         elif PAR.SCHEME in ['QuasiNewton']:
-            cls.LBFGS = lib.LBFGS(cls.path, PAR.LBFGSMEMORY, PAR.LBFGSMAX)
+            cls.LBFGS = lib.LBFGS(
+                cls.path, 
+                thresh=PAR.LBFGSMEMORY, 
+                itermax=PAR.LBFGSMAX)
 
         # prepare output writer
-        cls.writer = OutputWriter(PATH.SUBMIT + '/' + 'output.optim',
-            ['iter', 'step', 'misfit'])
+        cls.writer = OutputWriter(cls.logpath,
+               ['iter', 
+                'step', 
+                'misfit'])
 
 
     ### search direction methods
@@ -267,7 +279,7 @@ class base(object):
                 cls.isdone = 1
 
         # pass latest information to output writer
-        cls.writer([], x_, f_)
+        cls.writer(None, x_, f_)
 
         if cls.step_count >= PAR.SRCHMAX:
             cls.isdone = -1
@@ -349,7 +361,7 @@ class base(object):
         savenpy('m_new', m + p*alpha)
         savetxt('f_new', f.min())
 
-        cls.writer([], [], [])
+        cls.writer.newline()
 
 
     ### line search utilities
