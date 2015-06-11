@@ -10,8 +10,8 @@ from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import loadtxt, savetxt, exists
 
 
-class LBFGS:
-    """ Limited memory BFGS algorithm
+class LBFGS(object):
+    """ Limited-memory BFGS algorithm
 
         Includes optional safeguards: periodic restarting and descent
         conditions.
@@ -68,10 +68,12 @@ class LBFGS:
         del Y
 
 
-    def solve(self, path='g_new', require_descent=True):
-        """ Applies L-BFGS inverse Hessian to vector read from given path
+    def solve(self):
+        """ Applies L-BFGS inverse Hessian to gradient
         """
         unix.cd(self.path)
+
+        # load gradient vector
         g = loadnpy('g_new')
         n = len(g)
 
@@ -80,11 +82,11 @@ class LBFGS:
             self.restart()
             return -g
 
-        # load stored vector pairs
+        # load algorithm history
         S = np.memmap('LBFGS/S', mode='r', dtype='float32', shape=(n, self.kmax))
         Y = np.memmap('LBFGS/Y', mode='r', dtype='float32', shape=(n, self.kmax))
 
-        q = loadnpy(path)
+        q = loadnpy('g_new')
         k = min(self.iter, self.kmax)
         rh = np.zeros(k)
         al = np.zeros(k)
@@ -106,7 +108,7 @@ class LBFGS:
             be = rh[i]*np.dot(Y[:, i], r)
             r = r + S[:, i]*(al[i] - be)
 
-        if self.check_status(g, r, require_descent) != 0:
+        if self.check_status(g, r) != 0:
             print 'restarting LBFGS... [not a descent direction]'
             self.restart()
             return -g
@@ -117,7 +119,7 @@ class LBFGS:
 
 
     def restart(self):
-        """ Discards history and resets counters, thereby restarting algorithm
+        """ Discards history and resets counters
         """
         self.restarted = True
         self.iter = 0
@@ -132,7 +134,7 @@ class LBFGS:
         time.sleep(2)
 
 
-    def check_status(self, g, r, require_descent):
+    def check_status(self, g, r, require_descent=True):
         if not require_descent:
             return 0
         elif np.dot(g,r)/np.dot(g,g) > self.thresh:

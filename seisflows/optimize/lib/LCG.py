@@ -8,23 +8,22 @@ from seisflows.tools.code import loadtxt, savetxt
 from seisflows.optimize.lib.LBFGS import LBFGS
 
 
-class LCG:
-    """ Generic CG solver
+class LCG(object):
+    """ CG solver
     """
-    def __init__(self, path, eta0, lcgmax, precond_type=None):
+    def __init__(self, path, thresh=np.inf, itermax=np.inf, precond_type=None):
         self.path = path
-        self.eta0 = eta0
-        self.lcgmax = lcgmax
+        self.itermax = itermax
         self.precond_type = precond_type
 
         self.ilcg = 0
         self.iter = 0
 
-        unix.mkdir(self.path+'/'+'LCG')
-
 
     def initialize(self):
+        unix.mkdir(self.path+'/'+'LCG')
         unix.cd(self.path)
+
         self.iter += 1
         self.ilcg = 0
 
@@ -41,9 +40,8 @@ class LCG:
 
 
     def update(self, ap):
-        """ performs CG update
-        """
         unix.cd(self.path)
+
         self.ilcg += 1
 
         x = loadnpy('LCG/x')
@@ -67,7 +65,7 @@ class LCG:
         # check status
         if self.check_status(ap) == 0:
             isdone = True
-        elif self.ilcg >= self.lcgmax:
+        elif self.ilcg >= self.itermax:
             isdone = True
         else:
             isdone = False
@@ -93,6 +91,5 @@ class LCG:
 
     def precond(self, r):
         return r
-
 
 

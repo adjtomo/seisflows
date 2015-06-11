@@ -1,12 +1,68 @@
 
+from os.path import join
+
 import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import loadtxt, savetxt
+from seisflows.tools.io import OutputWriter
 
-from seisflows.optimize.lib.LBFGS import LBFGS
+from seisflows.optimize.lib.LBFGS import LBFGS as LBFGS_base
 from seisflows.optimize.lib.LCG import LCG
+
+
+class LBFGS(LBFGS_base):
+    """ Adapts L-BFGS functionality from nonlinear optimization to
+     preconditioning
+    """
+
+    def solve(self, path, require_descent=True):
+        """ Applies L-BFGS inverse Hessian to vector read from given path
+        """
+        unix.cd(self.path)
+        g = loadnpy('g_new')
+        n = len(g)
+
+        if self.iter > self.itermax:
+            print 'restarting LBFGS... [periodic restart]'
+            self.restart()
+            return -g
+
+        # load stored vector pairs
+        S = np.memmap('LBFGS/S', mode='r', dtype='float32', shape=(n, self.kmax))
+        Y = np.memmap('LBFGS/Y', mode='r', dtype='float32', shape=(n, self.kmax))
+
+        q = loadnpy(path)
+        k = min(self.iter, self.kmax)
+        rh = np.zeros(k)
+        al = np.zeros(k)
+
+        # first matrix product
+        for i in range(0, k):
+            rh[i] = 1/np.dot(Y[:, i], S[:, i])
+            al[i] = rh[i]*np.dot(S[:, i], q)
+            q = q - al[i]*Y[:, i]
+
+        # use scaled identity matrix to initialize inverse Hessian, as proposed
+        # by Liu and Nocedal 1989
+        sty = np.dot(Y[:,0], S[:,0])
+        yty = np.dot(Y[:,0], Y[:,0])
+        r = sty/yty*q
+
+        # second matrix product
+        for i in range(k-1, -1, -1):
+            be = rh[i]*np.dot(Y[:, i], r)
+            r = r + S[:, i]*(al[i] - be)
+
+        if self.check_status(g, r, require_descent) != 0:
+            print 'restarting LBFGS... [not a descent direction]'
+            self.restart()
+            return -g
+
+        else:
+            self.restarted = False
+            return -r
 
 
 class PLCG(LCG):
@@ -14,16 +70,14 @@ class PLCG(LCG):
 
       Adds preconditioning and adaptive stopping to LCG base class
     """
-    def __init__(self, *args, **kwargs):
-        super(self, PLCG).__init__.(*args, **kwargs)
+    def __init__(self, path, eta=1., **kwargs):
+        self.eta = eta
 
-        self.logpath = self.path +'/'+ 'output.plcg'
+        super(PLCG, self).__init__(path, **kwargs)
 
-        self.writer = OutputWriter(self.logpath,
-            ['nonlinear',
-            'linear',
-            'eta'])
-            
+        # prepare output writer
+        self.logpath = join(path, 'output.plcg')
+        self.writer = OutputWriter(self.logpath, width=14)
 
 
     def precond(self, r):
@@ -82,22 +136,26 @@ class PLCG(LCG):
         LHS = np.linalg.norm(g+ap)
         RHS = np.linalg.norm(g)
 
-        # for comparison, calculate forcing term proposed by 
+        # for comparison, calculates forcing term proposed by 
         # Eisenstat & Walker 1996
-        if self.iter > 1:
+        try:
             g_new = np.linalg.norm(g)
             g_old = np.linalg.norm(loadnpy('g_old'))
-            g_ratio = g_new/g_old
-        else:
-            g_ratio = np.nan
+            eta1996 = g_new/g_old
+        except:
+            eta1996 = np.nan       
 
         if verbose:
-            # print numerical statistics
-            print ' k+1/k:', g_ratio
-            print ' LHS:  ', LHS
-            print ' RHS:  ', RHS
             print ' RATIO:', LHS/RHS
             print ''
+
+        self.writer(
+            self.iter,
+            self.ilcg,
+            LHS,
+            RHS,
+            LHS/RHS,
+            eta1996)
 
         # check termination condition
         if LHS < eta * RHS:
