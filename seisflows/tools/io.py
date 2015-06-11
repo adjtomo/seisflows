@@ -97,7 +97,7 @@ class BinaryWriter(object):
         self.file.close()
 
     def write(self, fmt, vals, length=1, offset=0):
-        """Write binary data, all with the same format to file. """
+        """Write binary data to file, all with the same format"""
         # write binary data
         if offset != 0:
             self.file.seek(offset)
@@ -114,7 +114,7 @@ class BinaryWriter(object):
             self.file.write(_struct.pack(fmtlist, val))
 
     def printf(self, fmts, vals, origin=0, contiguous=True):
-        """Write binary data, according to a list of formats to file."""
+        """Write binary data to file, with variable format"""
         # write binary data
         self.file.seek(origin)
         position = 0
@@ -133,14 +133,17 @@ class BinaryWriter(object):
 
 
 class OutputWriter(object):
-    """ Writes text file consisting of one or more columns. Column width is 
-      fixed at 10 and column spacing is fixed at 2.
+    """ Utility for writing one or more columns to text file
     """
-    def __init__(self, filename):
+    def __init__(self, filename, width=10):
         try:
             self.filename = _os.path.abspath(filename)
         except:
             raise IOError
+
+        # column width
+        self.width = width
+
 
     def __call__(self, *vals):
         fileobj = open(self.filename, 'a')
@@ -151,14 +154,18 @@ class OutputWriter(object):
         fileobj.close()
 
     def _getline(self, val):
+        w = self.width
+
         if type(val) is int:
-            return '%10d  ' % val
+            fmt = '%%%dd  ' % w
         elif type(val) is float:
-            return '%10.3e  ' % val
+            fmt = '%%%d.%de  ' % (w,w-7)
         elif type(val) is str:
-            return '%10s  ' % val
+            fmt = '%%%ds  ' % w
         else:
-            return 12*' '
+            return (w+2)*' '
+
+        return fmt % val
 
     def newline(self):
         # writes newline
@@ -170,14 +177,15 @@ class OutputWriter(object):
         # writes column headers
         line = ''
         for key in keys:
-            line += '%10s  ' % key.upper()
+            fmt = '%%%ds  ' % self.width
+            line += fmt % key.upper()
 
         if _os.path.exists(self.filename):
             fileobj = open(self.filename, 'a')
         else:
             fileobj = open(self.filename, 'w')
             fileobj.write(line + '\n')
-            fileobj.write((len(keys)*((10*'=') + '  ')) + '\n')
+            fileobj.write((len(keys)*((self.width*'=') + '  ')) + '\n')
         fileobj.close()
 
 

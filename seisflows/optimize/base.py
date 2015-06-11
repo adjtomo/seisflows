@@ -229,8 +229,8 @@ class base(object):
         savenpy('m_try', m + p*alpha)
         savetxt('alpha', alpha)
 
-        # write line search details
-        if iter == 1:
+        # write line search info
+        if cls.iter == 1:
             cls.writer.header('iter', 'steplen', 'misfit')
         cls.writer(cls.iter, 0., f)
 
@@ -278,9 +278,9 @@ class base(object):
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 cls.isdone = 1
 
-        # write line search details
+        # write line search info
         cls.writer(None, x_, f_)
-        if isdone:
+        if cls.isdone:
             cls.writer.newline()
 
         if cls.step_count >= PAR.SRCHMAX:
