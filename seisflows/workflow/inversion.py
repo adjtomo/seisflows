@@ -30,7 +30,7 @@ class inversion(object):
 
       To allow customization, the inversion workflow is divided into generic 
       methods such as 'initialize', 'finalize', 'evaluate_function', 
-      'evaluate_gradient' that can easily be overloaded.
+      'evaluate_gradient', which can be easily overloaded.
 
       Calls to forward and adjoint solvers are abstracted through the 'solver'
       interface so that various forward modeling packages can be used
