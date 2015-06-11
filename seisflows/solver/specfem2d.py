@@ -131,6 +131,9 @@ class specfem2d(loadclass('solver', 'base')):
         """
         from seisflows.tools.array import meshsmooth, stack
 
+        # implementing PAR.NPROC > 1 would be straightforward, but a bit tedious
+        assert PAR.NPROC == 1
+
         kernels = self.load(path, suffix='_kernel')
         if not span:
             return kernels
