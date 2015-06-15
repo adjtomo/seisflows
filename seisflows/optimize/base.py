@@ -68,6 +68,9 @@ class base(object):
         if 'LBFGSMAX' not in PAR:
             setattr(PAR, 'LBFGSMAX', np.inf)
 
+        if 'LBFGSTHRESH' not in PAR:
+            setattr(PAR, 'LBFGSTHRESH', 0.)
+
         # line search parameters
         if 'LINESEARCH' not in PAR:
             if 'Newton' in PAR.SCHEME:
@@ -109,7 +112,8 @@ class base(object):
         elif PAR.SCHEME in ['QuasiNewton']:
             cls.LBFGS = LBFGS(
                 cls.path, 
-                step_memory=PAR.LBFGSMEMORY, 
+                memory=PAR.LBFGSMEMORY, 
+                thresh=PAR.LBFGSTHRESH,
                 itermax=PAR.LBFGSMAX)
 
 
@@ -142,22 +146,10 @@ class base(object):
             p_new = -g_new
 
         elif PAR.SCHEME == 'ConjugateGradient':
-            # compute NLCG udpate
             p_new = cls.NLCG.compute()
 
         elif PAR.SCHEME =='QuasiNewton':
-            # compute L-BFGS update
-            if cls.iter == 1:
-                p_new = -g_new
-            else:
-                cls.LBFGS.update()
-                p_new = cls.LBFGS.solve()
-
-                if cls.LBFGS.restarted:
-                    cls.restart_search = 0
-
-        else:
-            raise Exception
+            p_new, cls.restart_status = cls.LBFGS.compute()
 
         # save results
         unix.cd(cls.path)
@@ -192,14 +184,15 @@ class base(object):
             s_ratio = loadtxt('s_new')/loadtxt('s_old')
             alpha = loadtxt('alpha')
 
-        if not hasattr(cls, 'restart_search'):
-            cls.restart_search = 0
+        if not hasattr(cls, 'restart_status'):
+            cls.restart_status = 0
 
         if cls.iter == 1:
             assert PAR.STEPLEN > 0.
             alpha = p_ratio * PAR.STEPLEN
-        elif cls.restart_search:
-            alpha *= 2.*s_ratio
+        elif cls.restart_status:
+            #alpha *= 2.*s_ratio
+            alpha = p_ratio * PAR.STEPLEN
         elif PAR.LINESEARCH in ['Bracket']:
             alpha *= 2.*s_ratio
         elif PAR.SCHEME in ['GradientDescent', 'ConjugateGradient']:
@@ -219,7 +212,7 @@ class base(object):
         # reset search history
         cls.search_history = [[0., f]]
         cls.step_count = 0
-        cls.restart_search = 0
+        cls.restart_status = 0
 
         cls.isdone = 0
         cls.isbest = 0

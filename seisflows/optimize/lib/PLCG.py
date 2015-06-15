@@ -17,23 +17,57 @@ class LBFGS(LBFGS_base):
      preconditioning
     """
 
+    def update(self):
+        """ Updates L-BFGS inverse Hessian
+        """
+        unix.cd(self.path)
+
+        self.iter += 1
+        savetxt('LBFGS/iter', self.iter)
+
+        k = min(self.iter, self.kmax)
+
+        s = loadnpy('m_new') - loadnpy('m_old')
+        y = loadnpy('g_new') - loadnpy('g_old')
+        n = len(s)
+
+        if k == 1:
+            S = np.memmap('LBFGS/S', mode='w+', dtype='float32', shape=(n, self.kmax))
+            Y = np.memmap('LBFGS/Y', mode='w+', dtype='float32', shape=(n, self.kmax))
+            S[:, 0] = s
+            Y[:, 0] = y
+
+        else:
+            S = np.memmap('LBFGS/S', mode='r+', dtype='float32', shape=(n, self.kmax))
+            Y = np.memmap('LBFGS/Y', mode='r+', dtype='float32', shape=(n, self.kmax))
+            S[:, 1:] = S[:, :-1]
+            Y[:, 1:] = Y[:, :-1]
+            S[:, 0] = s
+            Y[:, 0] = y
+
+        del S
+        del Y
+
+
     def solve(self, path, require_descent=True):
         """ Applies L-BFGS inverse Hessian to vector read from given path
         """
         unix.cd(self.path)
+
         g = loadnpy('g_new')
-        n = len(g)
 
         if self.iter > self.itermax:
             print 'restarting LBFGS... [periodic restart]'
             self.restart()
             return -g
 
-        # load stored vector pairs
+        q = loadnpy(path)
+        n = len(q)
+
+        # load algorithm history
         S = np.memmap('LBFGS/S', mode='r', dtype='float32', shape=(n, self.kmax))
         Y = np.memmap('LBFGS/Y', mode='r', dtype='float32', shape=(n, self.kmax))
 
-        q = loadnpy(path)
         k = min(self.iter, self.kmax)
         rh = np.zeros(k)
         al = np.zeros(k)
@@ -54,6 +88,8 @@ class LBFGS(LBFGS_base):
         for i in range(k-1, -1, -1):
             be = rh[i]*np.dot(Y[:, i], r)
             r = r + S[:, i]*(al[i] - be)
+        del S
+        del Y
 
         if self.check_status(g, r, require_descent) != 0:
             print 'restarting LBFGS... [not a descent direction]'
@@ -66,7 +102,7 @@ class LBFGS(LBFGS_base):
 
 
 class PLCG(LCG):
-    """ Truncated-Newton CG solver
+    """ Preconditioned truncated-Newton CG solver
 
       Adds preconditioning and adaptive stopping to LCG base class
     """
@@ -83,7 +119,7 @@ class PLCG(LCG):
     def precond(self, r):
         if self.precond_type in ['LBFGS_3']:
             if self.iter == 1:
-                self.LBFGS = LBFGS(self.path, step_memory=3)
+                self.LBFGS = LBFGS(self.path, memory=3)
                 y = r
             elif self.ilcg == 0:
                 self.LBFGS.update()
@@ -94,7 +130,7 @@ class PLCG(LCG):
 
         elif self.precond_type in ['LBFGS_6']:
             if self.iter == 1:
-                self.LBFGS = LBFGS(self.path, step_memory=6)
+                self.LBFGS = LBFGS(self.path, memory=6)
                 y = r
             elif self.ilcg == 0:
                 self.LBFGS.update()
@@ -105,7 +141,7 @@ class PLCG(LCG):
 
         elif self.precond_type in ['LBFGS_9']:
             if self.iter == 1:
-                self.LBFGS = LBFGS(self.path, step_memory=9)
+                self.LBFGS = LBFGS(self.path, memory=9)
                 y = r
             elif self.ilcg == 0:
                 self.LBFGS.update()
@@ -116,7 +152,7 @@ class PLCG(LCG):
 
         elif self.precond_type in ['LBFGS_3_norestart']:
             if self.iter == 1:
-                self.LBFGS = LBFGS(self.path, step_memory=3)
+                self.LBFGS = LBFGS(self.path, memory=3)
                 y = r
             elif self.ilcg == 0:
                 self.LBFGS.update()
@@ -133,20 +169,22 @@ class PLCG(LCG):
         """ Checks Eisenstat-Walker termination status
         """
         g = loadnpy('g_new')
-        LHS = np.linalg.norm(g+ap)
-        RHS = np.linalg.norm(g)
+        r = loadnpy('LCG/r')
+
+        LHS = _norm(g)
+        RHS = _norm(r)
 
         # for comparison, calculates forcing term proposed by 
         # Eisenstat & Walker 1996
         try:
-            g_new = np.linalg.norm(g)
-            g_old = np.linalg.norm(loadnpy('g_old'))
+            g_new = _norm(g)
+            g_old = _norm(loadnpy('g_old'))
             eta1996 = g_new/g_old
         except:
-            eta1996 = np.nan       
+            eta1996 = 1.
 
         if verbose:
-            print ' RATIO:', LHS/RHS
+            print ' RATIO:', RHS/LHS
             print ''
 
         self.writer(
@@ -158,8 +196,14 @@ class PLCG(LCG):
             eta1996)
 
         # check termination condition
-        if LHS < eta * RHS:
+        if LHS > eta * RHS:
             return 0
         else:
-            return 1
+            return -1
 
+
+
+### utility functions
+
+def _norm(v):
+    return float(np.linalg.norm(v))

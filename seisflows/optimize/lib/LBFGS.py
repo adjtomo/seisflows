@@ -20,9 +20,9 @@ class LBFGS(object):
         passed from a calling routine.
     """
 
-    def __init__(self, path='.', step_memory=5, itermax=np.inf, thresh=0.):
+    def __init__(self, path='.', memory=5, itermax=np.inf, thresh=0.):
         self.path = path
-        self.kmax = step_memory
+        self.kmax = memory
         self.itermax = itermax
         self.thresh = thresh
 
@@ -42,8 +42,7 @@ class LBFGS(object):
         """
         unix.cd(self.path)
 
-        self.iter += 1
-        k = min(self.iter, self.kmax)
+        k = min(self.iter-1, self.kmax)
 
         s = loadnpy('m_new') - loadnpy('m_old')
         y = loadnpy('g_new') - loadnpy('g_old')
@@ -63,31 +62,32 @@ class LBFGS(object):
             S[:, 0] = s
             Y[:, 0] = y
 
-        savetxt('LBFGS/iter', self.iter)
-        del S
-        del Y
+        return S, Y
 
 
-    def solve(self):
+    def compute(self):
         """ Applies L-BFGS inverse Hessian to gradient
         """
         unix.cd(self.path)
 
-        # load gradient vector
-        g = loadnpy('g_new')
-        n = len(g)
+        self.iter += 1
+        savetxt('LBFGS/iter', self.iter)
 
-        if self.iter > self.itermax:
+        g = loadnpy('g_new')
+
+        if self.iter == 1:
+            return -g, 1
+
+        elif self.iter > self.itermax:
             print 'restarting LBFGS... [periodic restart]'
             self.restart()
-            return -g
+            return -g, 1
 
-        # load algorithm history
-        S = np.memmap('LBFGS/S', mode='r', dtype='float32', shape=(n, self.kmax))
-        Y = np.memmap('LBFGS/Y', mode='r', dtype='float32', shape=(n, self.kmax))
+        # update algorithm history
+        S, Y = self.update()
 
         q = loadnpy('g_new')
-        k = min(self.iter, self.kmax)
+        k = min(self.iter-1, self.kmax)
         rh = np.zeros(k)
         al = np.zeros(k)
 
@@ -107,15 +107,17 @@ class LBFGS(object):
         for i in range(k-1, -1, -1):
             be = rh[i]*np.dot(Y[:, i], r)
             r = r + S[:, i]*(al[i] - be)
+        del S
+        del Y
 
         if self.check_status(g, r) != 0:
             print 'restarting LBFGS... [not a descent direction]'
             self.restart()
-            return -g
+            return -g, 1
 
         else:
             self.restarted = False
-            return -r
+            return -r, 0
 
 
     def restart(self):
@@ -135,9 +137,13 @@ class LBFGS(object):
 
 
     def check_status(self, g, r, require_descent=True):
+
+        theta = np.dot(g,r)/(np.dot(g,g)*np.dot(r,r))**0.5
+        #print ' theta: %e' % theta
+
         if not require_descent:
             return 0
-        elif np.dot(g,r)/np.dot(g,g) > self.thresh:
+        elif theta > self.thresh:
             return 0
         else:
             return -1
