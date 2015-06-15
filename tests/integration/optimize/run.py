@@ -26,7 +26,7 @@ if __name__ == '__main__':
         PAR.POSTPROCESS = None
 
     if 'OPTIMIZE' not in PAR:
-        PAR.OPTIMIZE = 'optimize'
+        PAR.OPTIMIZE = 'base'
 
     if 'WORKFLOW' not in PAR:
         PAR.WORKFLOW = 'test_optimize'
