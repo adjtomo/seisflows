@@ -74,19 +74,18 @@ class migration(object):
 
         self.prepare_model()
 
+        # perform migration
         print 'Generating synthetics...'
         system.run('solver', 'eval_func',
                    hosts='all',
                    path=PATH.GLOBAL)
 
-        # backproject data
         print 'Backprojecting data...'
         system.run('solver', 'eval_grad',
                    hosts='all',
                    path=PATH.GLOBAL,
                    export_traces=PAR.SAVETRACES)
 
-        # process gradient
         postprocess.combine_kernels(
             path=PATH.GLOBAL)
 

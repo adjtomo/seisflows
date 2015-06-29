@@ -30,14 +30,14 @@ class base(object):
      (abbreviated as 'Backtrack' and 'Bracket' respectively.)
 
      To reduce memory overhead, input vectors are read from the directory
-     cls.path rather than passed from a calling routine. At the start of each
+     self.path rather than passed from a calling routine. At the start of each
      search direction computation, the current model and gradient are read from
      'm_new' and 'g_new'; the resulting search direction is written to 'p_new'.
      As the optimization procedure progresses, other information is stored in
-     the cls.path directory as well.
+     the self.path directory as well.
     """
 
-    def check(cls):
+    def check(self):
         """ Checks parameters, paths, and dependencies
         """
         if 'BEGIN' not in PAR:
@@ -52,18 +52,30 @@ class base(object):
         if 'OPTIMIZE' not in PATH:
             setattr(PATH, 'OPTIMIZE', join(PATH.GLOBAL, 'optimize'))
 
-        # search direction parameters
+        # search direction algorithm
         if 'SCHEME' not in PAR:
-            setattr(PAR, 'SCHEME', 'QuasiNewton')
+            setattr(PAR, 'SCHEME', 'LBFGS')
 
+        # line search algorithm
+        if 'LINESEARCH' not in PAR:
+            if  PAR.SCHEME in ['LBFGS']:
+                setattr(PAR, 'LINESEARCH', 'Backtrack')
+
+            elif 'Newton' in PAR.SCHEME:
+                setattr(PAR, 'LINESEARCH', 'Backtrack')
+
+            else:
+                setattr(PAR, 'LINESEARCH', 'Bracket')
+
+        # search direction fine tuning
         if 'NLCGMAX' not in PAR:
             setattr(PAR, 'NLCGMAX', np.inf)
 
         if 'NLCGTHRESH' not in PAR:
-            setattr(PAR, 'NLCGTHRESH', 5)
+            setattr(PAR, 'NLCGTHRESH', np.inf)
 
         if 'LBFGSMEMORY' not in PAR:
-            setattr(PAR, 'LBFGSMEMORY', 6)
+            setattr(PAR, 'LBFGSMEMORY', 5)
 
         if 'LBFGSMAX' not in PAR:
             setattr(PAR, 'LBFGSMAX', np.inf)
@@ -71,56 +83,54 @@ class base(object):
         if 'LBFGSTHRESH' not in PAR:
             setattr(PAR, 'LBFGSTHRESH', 0.)
 
-        # line search parameters
-        if 'LINESEARCH' not in PAR:
-            if 'Newton' in PAR.SCHEME:
-                setattr(PAR, 'LINESEARCH', 'Backtrack')
-            else:
-                setattr(PAR, 'LINESEARCH', 'Bracket')
+        # line search fine tuning
+        if 'STEPMAX' not in PAR:
+            setattr(PAR, 'STEPMAX', 10)
 
-        if 'SRCHMAX' not in PAR:
-            setattr(PAR, 'SRCHMAX', 10)
+        if 'STEPTHRESH' not in PAR:
+            setattr(PAR, 'STEPTHRESH', None)
 
-        if 'STEPLEN' not in PAR:
-            setattr(PAR, 'STEPLEN', 0.05)
+        if 'STEPINIT' not in PAR:
+            setattr(PAR, 'STEPINIT', 0.05)
 
-        if 'STEPLENMAX' not in PAR:
-            setattr(PAR, 'STEPLENMAX', None)
+        if 'STEPFACTOR' not in PAR:
+            setattr(PAR, 'STEPFACTOR', 0.25)
 
-        if 'ADHOCSCALING' not in PAR:
-            setattr(PAR, 'ADHOCSCALING', 0.)
+        if 'STEPOVERSHOOT' not in PAR:
+            setattr(PAR, 'STEPOVERSHOOT', 0.)
 
 
-
-    def setup(cls):
+    def setup(self):
         """ Sets up nonlinear optimization machinery
         """
         # specify paths
-        cls.path = PATH.OPTIMIZE
-        cls.logpath = join(PATH.SUBMIT, 'output.optim')
-        cls.writer = OutputWriter(cls.logpath)
-
-        unix.mkdir(cls.path)
+        self.path = PATH.OPTIMIZE
+        self.logpath = join(PATH.SUBMIT, 'output.optim')
+        self.writer = OutputWriter(self.logpath)
+        unix.mkdir(self.path)
 
         # prepare algorithm machinery
-        if PAR.SCHEME in ['ConjugateGradient']:
-            cls.NLCG = NLCG(
-                cls.path,
+        if PAR.SCHEME in ['NLCG']:
+            self.NLCG = NLCG(
+                self.path,
                 thresh=PAR.NLCGTHRESH, 
                 itermax=PAR.NLCGMAX)
 
-        elif PAR.SCHEME in ['QuasiNewton']:
-            cls.LBFGS = LBFGS(
-                cls.path, 
+        elif PAR.SCHEME in ['LBFGS']:
+            self.LBFGS = LBFGS(
+                self.path, 
                 memory=PAR.LBFGSMEMORY, 
                 thresh=PAR.LBFGSTHRESH,
                 itermax=PAR.LBFGSMAX)
+
+        self.restart = 0
+        self.restart_count = 0
 
 
     ### search direction methods
 
      # The following names are used in the search direction methods
-     # and for writing data to cls.path:
+     # and for writing data to self.path:
      #    m_new - current model
      #    m_old - previous model
      #    m_try - trial model
@@ -136,23 +146,27 @@ class base(object):
      #    alpha - trial step length
 
 
-    def compute_direction(cls):
+    def compute_direction(self):
         """ Computes model update direction from stored gradient
         """
-        unix.cd(cls.path)
+        unix.cd(self.path)
         g_new = loadnpy('g_new')
 
-        if PAR.SCHEME == 'GradientDescent':
+        if PAR.SCHEME == 'SD':
             p_new = -g_new
 
-        elif PAR.SCHEME == 'ConjugateGradient':
-            p_new = cls.NLCG.compute()
+        elif PAR.SCHEME == 'NLCG':
+            p_new, self.restart = self.NLCG.compute()
 
-        elif PAR.SCHEME =='QuasiNewton':
-            p_new, cls.restart_status = cls.LBFGS.compute()
+        elif PAR.SCHEME =='LBFGS':
+            p_new, self.restart = self.LBFGS.compute()
+
+        # keep track of number of restarts
+        if self.restart:
+            self.restart_count += 1
 
         # save results
-        unix.cd(cls.path)
+        unix.cd(self.path)
         savenpy('p_new', p_new)
         savetxt('s_new', np.dot(g_new, p_new))
 
@@ -160,18 +174,18 @@ class base(object):
     ### line search methods
 
     # The following names are used in the line search methods:
-    #     m - model
-    #     p - search direction
+    #     m - model vector
+    #     p - search direction vector
     #     s - slope along search direction
-    #     f - objective function value
-    #     x - step length
+    #     f - value of objective function, evaluated at m
+    #     x - step length along search direction
     #     p_ratio - ratio of model norm to search direction norm
     #     s_ratio - ratio of current slope to previous slope
 
-    def initialize_search(cls):
+    def initialize_search(self):
         """ Determines initial step length for line search
         """
-        unix.cd(cls.path)
+        unix.cd(self.path)
 
         m = loadnpy('m_new')
         p = loadnpy('p_new')
@@ -180,62 +194,49 @@ class base(object):
         norm_p = max(abs(p))
         p_ratio = float(norm_m/norm_p)
 
-        if cls.iter > 1:
-            s_ratio = loadtxt('s_new')/loadtxt('s_old')
-            alpha = loadtxt('alpha')
-
-        if not hasattr(cls, 'restart_status'):
-            cls.restart_status = 0
-
-        if cls.iter == 1:
-            assert PAR.STEPLEN > 0.
-            alpha = p_ratio * PAR.STEPLEN
-        elif cls.restart_status:
-            #alpha *= 2.*s_ratio
-            alpha = p_ratio * PAR.STEPLEN
-        elif PAR.LINESEARCH in ['Bracket']:
-            alpha *= 2.*s_ratio
-        elif PAR.SCHEME in ['GradientDescent', 'ConjugateGradient']:
-            alpha *= 2.*s_ratio
-        else:
-            alpha = 1.
-
-        # ad hoc scaling
-        if PAR.ADHOCSCALING:
-            alpha *= PAR.ADHOCSCALING
-
-        # limit maximum step length
-        if PAR.STEPLENMAX:
-            if alpha > p_ratio * PAR.STEPLENMAX:
-                alpha = p_ratio * PAR.STEPLENMAX
-
         # reset search history
-        cls.search_history = [[0., f]]
-        cls.step_count = 0
-        cls.restart_status = 0
+        self.search_history = [[0., f]]
+        self.step_count = 0
+        self.isdone = 0
+        self.isbest = 0
+        self.isbrak = 0
 
-        cls.isdone = 0
-        cls.isbest = 0
-        cls.isbrak = 0
+        # determine initial step length
+        if self.iter == 1:
+            alpha = p_ratio * PAR.STEPINIT
+        elif self.restart:
+            alpha = self.step_init()
+        elif PAR.LINESEARCH in ['Backtrack']:
+            alpha = 1.
+        else:
+            alpha = self.step_init()
+
+        # optional ad hoc scaling
+        if PAR.STEPOVERSHOOT:
+            alpha *= PAR.STEPOVERSHOOT
+
+        # optional maximum step length safegaurd
+        if PAR.STEPTHRESH:
+            if alpha > p_ratio * PAR.STEPTHRESH:
+                alpha = p_ratio * PAR.STEPTHRESH
 
         # write trial model
         savenpy('m_try', m + p*alpha)
         savetxt('alpha', alpha)
 
-        # write line search info
-        if cls.iter == 1:
-            cls.writer.header('iter', 'steplen', 'misfit')
-        cls.writer(cls.iter, 0., f)
+        if self.iter == 1:
+            self.writer.header('iter', 'steplen', 'misfit')
+        self.writer(self.iter, 0., f)
 
 
-    def search_status(cls):
+    def search_status(self):
         """ Determines status of line search
 
             Maintains line search history by keeping track of step length and
             function value from each trial model evaluation. From line search
             history, determines whether stopping criteria have been satisfied.
         """
-        unix.cd(cls.path)
+        unix.cd(self.path)
 
         # update search history
         x_ = loadtxt('alpha')
@@ -244,49 +245,50 @@ class base(object):
         if np.isnan(f_):
             raise ValueError
 
-        cls.search_history += [[x_, f_]]
-        cls.step_count += 1
+        self.search_history += [[x_, f_]]
+        self.step_count += 1
 
-        x = cls.step_lens()
-        f = cls.func_vals()
+        x = self.step_lens()
+        f = self.func_vals()
 
         # is current step length the best so far?
-        vals = cls.func_vals(sort=False)
+        vals = self.func_vals(sort=False)
         if np.all(vals[-1] < vals[:-1]):
-            cls.isbest = 1
+            self.isbest = 1
 
         # are stopping criteria satisfied?
-        if PAR.LINESEARCH == 'Backtrack':
-            if any(f[1:] < f[0]):
-                cls.isdone = 1
-
-        elif PAR.LINESEARCH == 'Bracket':
-            if cls.isbrak:
-                cls.isbest = 1
-                cls.isdone = 1
+        if PAR.LINESEARCH == 'Bracket' or\
+           self.restart:
+            if self.isbrak:
+                self.isbest = 1
+                self.isdone = 1
             elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
-                cls.isbrak = 1
+                self.isbrak = 1
+
+        elif PAR.LINESEARCH == 'Backtrack':
+            if any(f[1:] < f[0]):
+                self.isdone = 1
 
         elif PAR.LINESEARCH == 'Fixed':
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
-                cls.isdone = 1
+                self.isdone = 1
 
-        # write line search info
-        cls.writer(None, x_, f_)
-        if cls.isdone:
-            cls.writer.newline()
+        # append latest line search values
+        self.writer(None, x_, f_)
+        if self.isdone:
+            self.writer.newline()
 
-        if cls.step_count >= PAR.SRCHMAX:
-            cls.isdone = -1
+        if self.step_count >= PAR.STEPMAX:
+            self.isdone = -1
             print ' line search failed [max iter]\n'
 
-        return cls.isdone, cls.isbest
+        return self.isdone, self.isbest
 
 
-    def compute_step(cls):
+    def compute_step(self):
         """ Computes next trial step length
         """
-        unix.cd(cls.path)
+        unix.cd(self.path)
         m = loadnpy('m_new')
         p = loadnpy('p_new')
         s = loadtxt('s_new')
@@ -295,49 +297,46 @@ class base(object):
         norm_p = max(abs(p))
         p_ratio = float(norm_m/norm_p)
 
-        x = cls.step_lens()
-        f = cls.func_vals()
+        x = self.step_lens()
+        f = self.func_vals()
 
         # compute trial step length
-        if PAR.LINESEARCH == 'Backtrack':
-            alpha = backtrack2(f[0], s, x[1], f[1], b1=0.1, b2=0.5)
-
-        elif PAR.LINESEARCH == 'Bracket':
-            FACTOR = 2.
+        if PAR.LINESEARCH == 'Bracket' or\
+           self.restart:
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 alpha = polyfit2(x, f)
             elif any(f[1:] < f[0]):
-                alpha = loadtxt('alpha')*FACTOR
+                alpha = loadtxt('alpha')*PAR.STEPFACTOR**-1
             else:
-                alpha = loadtxt('alpha')*FACTOR**-1
+                alpha = loadtxt('alpha')*PAR.STEPFACTOR
+
+        elif PAR.LINESEARCH == 'Backtrack':
+            alpha = backtrack2(f[0], s, x[1], f[1], b1=0.1, b2=0.5)
 
         elif PAR.LINESEARCH == 'Fixed':
-            alpha = p_ratio*(step + 1)*PAR.STEPLEN
-
-        else:
-            raise ValueError
+            alpha = p_ratio*(step + 1)*PAR.STEPINIT
 
         # write trial model
         savetxt('alpha', alpha)
         savenpy('m_try', m + p*alpha)
 
 
-    def finalize_search(cls):
+    def finalize_search(self):
         """ Cleans working directory and writes updated model
         """
-        unix.cd(cls.path)
+        unix.cd(self.path)
         m = loadnpy('m_new')
         p = loadnpy('p_new')
 
-        x = cls.step_lens()
-        f = cls.func_vals()
+        x = self.step_lens()
+        f = self.func_vals()
 
         # clean working directory
         unix.rm('alpha')
         unix.rm('m_try')
         unix.rm('f_try')
 
-        if cls.iter > 1:
+        if self.iter > 1:
             unix.rm('m_old')
             unix.rm('f_old')
             unix.rm('g_old')
@@ -359,8 +358,16 @@ class base(object):
 
     ### line search utilities
 
-    def step_lens(cls, sort=True):
-        x, f = zip(*cls.search_history)
+    def step_init(self):
+        alpha = loadtxt('alpha')
+        s_new = loadtxt('s_new')
+        s_old = loadtxt('s_old')
+        s_ratio = s_new/s_old
+        return 2.*s_ratio*alpha
+
+
+    def step_lens(self, sort=True):
+        x, f = zip(*self.search_history)
         x = np.array(x)
         f = np.array(f)
         f_sorted = f[abs(x).argsort()]
@@ -371,8 +378,8 @@ class base(object):
             return x
 
 
-    def func_vals(cls, sort=True):
-        x, f = zip(*cls.search_history)
+    def func_vals(self, sort=True):
+        x, f = zip(*self.search_history)
         x = np.array(x)
         f = np.array(f)
         f_sorted = f[abs(x).argsort()]

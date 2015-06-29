@@ -13,8 +13,7 @@ from seisflows.optimize.lib.LCG import LCG
 
 
 class LBFGS(LBFGS_base):
-    """ Adapts L-BFGS functionality from nonlinear optimization to
-     preconditioning
+    """ Adapts L-BFGS from nonlinear optimization to preconditioning
     """
 
     def update(self):
@@ -91,7 +90,7 @@ class LBFGS(LBFGS_base):
         del S
         del Y
 
-        if self.check_status(g, r, require_descent) != 0:
+        if self.check_status(g, r, require_descent) != _done:
             print 'restarting LBFGS... [not a descent direction]'
             self.restart()
             return -g
@@ -165,14 +164,14 @@ class PLCG(LCG):
             return r
 
 
-    def check_status(self, ap, eta=0.9999, verbose=True):
+    def check_status(self, ap, verbose=True):
         """ Checks Eisenstat-Walker termination status
         """
-        g = loadnpy('g_new')
-        r = loadnpy('LCG/r')
+        g0 = loadnpy('g_new')
+        g1 = loadnpy('LCG/r')
 
-        LHS = _norm(g)
-        RHS = _norm(r)
+        LHS = _norm(g1)
+        RHS = _norm(g0)
 
         # for comparison, calculates forcing term proposed by 
         # Eisenstat & Walker 1996
@@ -184,7 +183,7 @@ class PLCG(LCG):
             eta1996 = 1.
 
         if verbose:
-            print ' RATIO:', RHS/LHS
+            print ' RATIO:', LHS/RHS
             print ''
 
         self.writer(
@@ -196,14 +195,16 @@ class PLCG(LCG):
             eta1996)
 
         # check termination condition
-        if LHS > eta * RHS:
-            return 0
+        if LHS < self.eta * RHS:
+            return _done
         else:
-            return -1
+            return not _done
 
 
 
 ### utility functions
+
+_done = 0
 
 def _norm(v):
     return float(np.linalg.norm(v))

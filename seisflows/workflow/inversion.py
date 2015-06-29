@@ -192,7 +192,7 @@ class inversion(object):
         """
         optimize.initialize_search()
 
-        for optimize.step in range(1, PAR.SRCHMAX+1):
+        for optimize.step in range(1, PAR.STEPMAX+1):
             isdone = self.search_status()
 
             if isdone == 1:
@@ -212,9 +212,15 @@ class inversion(object):
           simulation given the current trial model. Then calls
           optimize.search_status, which maintains search history and checks
           stopping conditions.
+
+          To avoid having to perform a redundant forward simulation later on, 
+          we keep track of which trial model is the best so far and save solver
+          files associated with it.
         """
         if PAR.VERBOSE:
             print " trial step", optimize.step
+
+        # given current trial model, evaluate misfit function
         self.evaluate_function()
         isdone, isbest = optimize.search_status()
 

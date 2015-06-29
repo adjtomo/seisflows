@@ -57,8 +57,8 @@ class LCG(object):
             return isdone
                        
         alpha = ry/pap
-        x = x + alpha*p
-        r = r + alpha*ap
+        x += alpha*p
+        r += alpha*ap
         savenpy('LCG/x', x)
         savenpy('LCG/r', r)
 

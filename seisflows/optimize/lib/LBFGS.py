@@ -111,19 +111,16 @@ class LBFGS(object):
         del Y
 
         if self.check_status(g, r) != 0:
-            print 'restarting LBFGS... [not a descent direction]'
             self.restart()
             return -g, 1
 
         else:
-            self.restarted = False
             return -r, 0
 
 
     def restart(self):
         """ Discards history and resets counters
         """
-        self.restarted = True
         self.iter = 0
         savetxt('LBFGS/iter', 0)
 
@@ -143,9 +140,13 @@ class LBFGS(object):
 
         if not require_descent:
             return 0
-        elif theta > self.thresh:
-            return 0
-        else:
+        elif theta < 0.:
+            print 'restarting LBFGS... [not a descent direction]'
             return -1
+        elif theta < self.thresh:
+            print 'restarting LBFGS... [practical safeguard]'
+            return -1
+        else:
+            return 0
 
 
