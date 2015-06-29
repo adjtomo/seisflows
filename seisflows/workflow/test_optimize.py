@@ -103,7 +103,7 @@ class test_optimize(object):
     def line_search(cls):
         optimize.initialize_search()
 
-        for cls.step in range(1, PAR.SRCHMAX+1):
+        for cls.step in range(1, PAR.STEPMAX+1):
             isdone = cls.search_status()
             if isdone==1:
                 optimize.finalize_search()
