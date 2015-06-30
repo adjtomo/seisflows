@@ -70,21 +70,17 @@ def ls(path):
     return dirs
 
 
-def mkdir(dirs):
-    for dir in _strlist(dirs):
-        if not os.path.isdir(dir):
-            os.makedirs(dir)
-
-
-def mkdir_gpfs(dirs):
-    # hack to deal with race condition
+def mkdir(dirs, noexit=False):
     try:
         for dir in _strlist(dirs):
             if not os.path.isdir(dir):
                 os.makedirs(dir)
-    except:
-        pass
-
+    except EnvironmentError as e:
+        # hack to deal with race conditions on parallel file system
+        if noexit:
+            pass
+        else:
+            raise e
 
 def mv(src='', dst=''):
     if isinstance(src, (list, tuple)):

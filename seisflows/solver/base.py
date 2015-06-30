@@ -412,31 +412,41 @@ class base(object):
                 unix.cp(files, path)
 
     def export_kernels(self, path):
-        # work around name conventions
-        try:
-            files = glob(self.model_databases +'/'+ '*proc??????_alpha_kernel.bin')
-            unix.rename('alpha_kernel.bin', 'vp_kernel.bin', files)
+        # work around disparate name conventions
+        files = []
+        files += glob(self.model_databases +'/'+ '*proc??????_alpha_kernel.bin')
+        files += glob(self.model_databases +'/'+ '*proc??????_alpha[hv]_kernel.bin')
+        files += glob(self.model_databases +'/'+ '*proc??????_reg1_alpha_kernel.bin')
+        files += glob(self.model_databases +'/'+ '*proc??????_reg1_alpha[hv]_kernel.bin')
+        unix.rename('alpha', 'vp', files)
 
-            files = glob(self.model_databases +'/'+ '*proc??????_beta_kernel.bin')
-            unix.rename('beta_kernel.bin', 'vs_kernel.bin', files)
-        except:
-            pass
+        files = []
+        files += glob(self.model_databases +'/'+ '*proc??????_beta_kernel.bin') 
+        files += glob(self.model_databases +'/'+ '*proc??????_beta[hv]_kernel.bin')
+        files += glob(self.model_databases +'/'+ '*proc??????_reg1_beta_kernel.bin')
+        files += glob(self.model_databases +'/'+ '*proc??????_reg1_beta[hv]_kernel.bin')
+        unix.rename('beta', 'vs', files)
 
-        # export kernels
-        unix.mkdir_gpfs(join(path, 'kernels'))
+        # noexit hack deals with problems on parallel filesystem
+        unix.mkdir(join(path, 'kernels'), noexit=True)
+
         unix.mkdir(join(path, 'kernels', self.getname))
         src = join(glob(self.model_databases +'/'+ '*kernel.bin'))
         dst = join(path, 'kernels', self.getname)
         unix.mv(src, dst)
 
     def export_residuals(self, path):
-        unix.mkdir_gpfs(join(path, 'residuals'))
+        # noexit hack deals with problems on parallel filesystem
+        unix.mkdir(join(path, 'residuals'), noexit=True)
+
         src = join(self.getpath, 'residuals')
         dst = join(path, 'residuals', self.getname)
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
-        unix.mkdir_gpfs(join(path, 'traces'))
+        # noexit hack deals with problems on parallel filesystem
+        unix.mkdir(join(path, 'traces'), noexit=True)
+
         src = join(self.getpath, prefix)
         dst = join(path, 'traces', self.getname)
         unix.cp(src, dst)
