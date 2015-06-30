@@ -90,10 +90,10 @@ class base(object):
                     suffix='_kernel')
 
         if PAR.REGULARIZE:
-            self.regularize(path)
+            g = self.regularize(path)
 
         if PATH.PRECOND:
-            self.precondition(path)
+            g *= self.load_preconditioner(path)
 
         savenpy(PATH.OPTIMIZE +'/'+ 'g_new',
                 solver.merge(solver.load(path +'/'+ 'gradient', suffix='_kernel')))
@@ -108,8 +108,8 @@ class base(object):
 
 
     def process_kernels(self, path):
-        """ Performs scaling, smoothing, and preconditioning operations in
-            accordance with parameter settings
+        """ Performs clipping and smoothing operations in accordance with 
+          parameter settings
         """
         # apply clipping
         if PAR.CLIP > 0.:
@@ -126,18 +126,8 @@ class base(object):
                        span=PAR.SMOOTH)
 
 
-    def precondition(self, path):
-        g = solver.merge(solver.load(path +'/'+ 'gradient', suffix='_kernel'))
-        g *= solver.merge(solver.load(PATH.PRECOND))
-
-        src = path +'/'+ 'gradient'
-        dst = path +'/'+ 'gradient_noprecond'
-        unix.mv(src, dst)
-
-        solver.save(path +'/'+ 'gradient',
-                    solver.split(g),
-                    suffix='_kernel')
-
+    def load_preconditioner(self, path):
+        return solver.merge(solver.load(PATH.PRECOND))
 
 
     def regularize(self, path):
