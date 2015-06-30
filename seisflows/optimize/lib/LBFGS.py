@@ -30,20 +30,43 @@ class LBFGS(object):
 
         if exists('LBFGS/iter'):
             self.iter = int(loadtxt('LBFGS/iter'))
-
         else:
             self.iter = 0
             unix.mkdir('LBFGS')
             savetxt('LBFGS/iter', 0)
 
 
+    def __call__(self):
+        """ Returns L-BFGS search direction
+        """
+        self.iter += 1
+        savetxt('LBFGS/iter', self.iter)
+
+        g = loadnpy('g_new')
+        if self.iter == 1:
+            return -g, 1
+        elif self.iter > self.itermax:
+            print 'restarting LBFGS... [periodic restart]'
+            self.restart()
+            return -g, 1
+
+        S, Y, k = self.update()
+        q = self.apply(g, S, Y, k)
+
+        if self.check_status(g, q) != 0:
+            self.restart()
+            return -g, 1
+
+        else:
+            return -q, 0
+
+
     def update(self):
-        """ Updates L-BFGS inverse Hessian
+        """ Updates L-BFGS algorithm history
         """
         unix.cd(self.path)
 
         k = min(self.iter-1, self.kmax)
-
         s = loadnpy('m_new') - loadnpy('m_old')
         y = loadnpy('g_new') - loadnpy('g_old')
         n = len(s)
@@ -53,7 +76,6 @@ class LBFGS(object):
             Y = np.memmap('LBFGS/Y', mode='w+', dtype='float32', shape=(n, self.kmax))
             S[:, 0] = s
             Y[:, 0] = y
-
         else:
             S = np.memmap('LBFGS/S', mode='r+', dtype='float32', shape=(n, self.kmax))
             Y = np.memmap('LBFGS/Y', mode='r+', dtype='float32', shape=(n, self.kmax))
@@ -62,36 +84,17 @@ class LBFGS(object):
             S[:, 0] = s
             Y[:, 0] = y
 
-        return S, Y
+        return S, Y, k
 
 
-    def compute(self):
-        """ Applies L-BFGS inverse Hessian to gradient
+    def apply(self, q, S, Y, k):
+        """ Applies L-BFGS inverse Hessian to given vector
         """
         unix.cd(self.path)
 
-        self.iter += 1
-        savetxt('LBFGS/iter', self.iter)
-
-        g = loadnpy('g_new')
-
-        if self.iter == 1:
-            return -g, 1
-
-        elif self.iter > self.itermax:
-            print 'restarting LBFGS... [periodic restart]'
-            self.restart()
-            return -g, 1
-
-        # update algorithm history
-        S, Y = self.update()
-
-        q = loadnpy('g_new')
-        k = min(self.iter-1, self.kmax)
+        # first matrix product
         rh = np.zeros(k)
         al = np.zeros(k)
-
-        # first matrix product
         for i in range(0, k):
             rh[i] = 1/np.dot(Y[:, i], S[:, i])
             al[i] = rh[i]*np.dot(S[:, i], q)
@@ -107,15 +110,8 @@ class LBFGS(object):
         for i in range(k-1, -1, -1):
             be = rh[i]*np.dot(Y[:, i], r)
             r = r + S[:, i]*(al[i] - be)
-        del S
-        del Y
 
-        if self.check_status(g, r) != 0:
-            self.restart()
-            return -g, 1
-
-        else:
-            return -r, 0
+        return r
 
 
     def restart(self):

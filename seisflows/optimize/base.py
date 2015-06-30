@@ -159,17 +159,15 @@ class base(object):
             p_new = -g_new
 
         elif PAR.SCHEME == 'NLCG':
-            p_new, self.restart = self.NLCG.compute()
+            p_new, self.restart = self.NLCG()
 
         elif PAR.SCHEME =='LBFGS':
-            p_new, self.restart = self.LBFGS.compute()
+            p_new, self.restart = self.LBFGS()
 
         # keep track of number of restarts
         if self.restart:
             self.restart_count += 1
 
-        # save results
-        unix.cd(self.path)
         savenpy('p_new', p_new)
         savetxt('s_new', np.dot(g_new, p_new))
 
