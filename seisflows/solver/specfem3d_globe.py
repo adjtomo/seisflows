@@ -25,14 +25,17 @@ class specfem3d_globe(loadclass('solver', 'base')):
       See base class for method descriptions
     """
 
-    # By default, use transversely isotropic model updates.
-    parameters = []
-    parameters += ['rho']
-    parameters += ['vpv']
-    parameters += ['vph']
-    parameters += ['vsv']
-    parameters += ['vsh']
-    parameters += ['eta']
+    if PAR.MATERIALS in ['Isotropic']:
+        parameters = []
+        parameters += ['vp']
+        parameters += ['vs']
+    else:
+        parameters = []
+        parameters += ['vpv']
+        parameters += ['vph']
+        parameters += ['vsv']
+        parameters += ['vsh']
+        parameters += ['eta']
 
 
     def check(self):
@@ -115,11 +118,11 @@ class specfem3d_globe(loadclass('solver', 'base')):
                     copybin(src, dst, iproc, prefix+key+suffix)
 
             if 'rho' in self.parameters:
-                savebin(model['rho'][iproc], path, iproc, prefix + 'rho' + suffix)
+                savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
             else:
                 src = PATH.OUTPUT +'/'+ 'model_init'
                 dst = path
-                copybin(src, dst, iproc, 'vp')
+                copybin(src, dst, iproc, prefix+'rho'+suffix)
 
 
 

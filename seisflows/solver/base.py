@@ -60,11 +60,8 @@ class base(object):
         Utilities for combining and smoothing kernels.
     """
 
-    if 'MATERIALS' not in PAR:
-        raise Exception
-
-    if 'DENSITY' not in PAR:
-        raise Exception
+    assert 'MATERIALS' in PAR
+    assert 'DENSITY' in PAR
 
     if PAR.MATERIALS == 'Elastic':
         parameters = []
@@ -75,12 +72,12 @@ class base(object):
         parameters = []
         parameters += ['vp']
 
-    if PAR.DENSITY == 'Constant':
-        density_scaling = None
-
-    elif PAR.DENSITY == 'Variable':
+    if PAR.DENSITY == 'Variable':
         density_scaling = None
         parameters += ['rho']
+
+    elif PAR.DENSITY == 'Constant':
+        density_scaling = None
 
 
     def check(self):
@@ -116,6 +113,7 @@ class base(object):
     def setup(self):
         """ Prepares solver for inversion or migration
         """
+        # clean up for new inversion
         unix.rm(self.getpath)
 
         # As input for an inversion or migration, users can choose between
@@ -123,19 +121,22 @@ class base(object):
         # generated on the fly. In the former case, a value for PATH.DATA must
         # be supplied; in the latter case, a value for PATH.MODEL_TRUE must be
         # provided
+
         if PATH.DATA:
+            # copy user supplied data
             self.initialize_solver_directories()
             src = glob(PATH.DATA +'/'+ self.getname +'/'+ '*')
             dst = 'traces/obs/'
             unix.cp(src, dst)
 
         else:
+            # generate data on the fly
             self.generate_data(
                 model_path=PATH.MODEL_TRUE,
                 model_name='model_true',
                 model_type='gll')
 
-        # prepare model
+        # prepare initial model
         self.generate_mesh(
             model_path=PATH.MODEL_INIT,
             model_name='model_init',
