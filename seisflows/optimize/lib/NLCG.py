@@ -25,8 +25,8 @@ class NLCG:
             self.iter = 0
 
 
-    def compute(self):
-        """ Given gradient, returns NLCG search direction
+    def __call__(self):
+        """ Returns NLCG search direction
         """
         self.iter += 1
         savetxt(self.path+'/'+'NLCG/iter', self.iter)
@@ -35,12 +35,12 @@ class NLCG:
         g_new = loadnpy('g_new')
 
         if self.iter == 1:
-            return -g_new
+            return -g_new, 0
 
         elif self.iter > self.itermax:
             print 'restarting NLCG... [periodic restart]'
             self.restart()
-            return -g_new
+            return -g_new, 1
 
         # compute search direction
         g_old = loadnpy('g_old')
@@ -52,15 +52,15 @@ class NLCG:
         if check_conjugacy(g_new, g_old) > self.thresh:
             print 'restarting NLCG... [loss of conjugacy]'
             self.restart()
-            return -g_new
+            return -g_new, 1
 
         elif check_descent(p_new, g_new) > 0.:
             print 'restarting NLCG... [not a descent direction]'
             self.restart()
-            return -g_new
+            return -g_new, 1
 
         else:
-            return p_new
+            return p_new, 0
 
 
     def restart(self):
