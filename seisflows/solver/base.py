@@ -269,21 +269,31 @@ class base(object):
         """
         unix.mkdir(path)
 
-        for iproc in range(PAR.NPROC):
-            for key in solver_parameters:
-                if key in self.parameters:
-                    savebin(model[key][iproc], path, iproc, prefix+key+suffix)
-                elif 'kernel' not in suffix:
+        if 'kernel' in suffix:
+            for iproc in range(PAR.NPROC):
+                for key in solver_parameters:
+                    if key in self.parameters:
+                        savebin(model[key][iproc], path, iproc, prefix+key+suffix)
+                if 'rho' in self.parameters:
+                    savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
+
+        else:
+            for iproc in range(PAR.NPROC):
+                for key in solver_parameters:
+                    if key in self.parameters:
+                        savebin(model[key][iproc], path, iproc, prefix+key+suffix)
+                    else:
+                        src = PATH.OUTPUT +'/'+ 'model_init'
+                        dst = path
+                        copybin(src, dst, iproc, prefix+key+suffix)
+
+                if 'rho' in self.parameters:
+                    savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
+                else:
                     src = PATH.OUTPUT +'/'+ 'model_init'
                     dst = path
-                    copybin(src, dst, iproc, prefix+key+suffix)
+                    copybin(src, dst, iproc, 'rho')
 
-            if 'rho' in self.parameters:
-                savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
-            else:
-                src = PATH.OUTPUT +'/'+ 'model_init'
-                dst = path
-                copybin(src, dst, iproc, 'rho')
 
 
     def merge(self, model):
