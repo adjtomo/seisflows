@@ -20,11 +20,11 @@ class LBFGS(object):
         passed from a calling routine.
     """
 
-    def __init__(self, path='.', memory=5, itermax=np.inf, thresh=0.):
+    def __init__(self, path='.', memory=5, thresh=0.):
         self.path = path
-        self.kmax = memory
-        self.itermax = itermax
         self.thresh = thresh
+        self.kk = 0
+        self.nn = memory
 
         unix.cd(self.path)
 
@@ -45,13 +45,9 @@ class LBFGS(object):
         g = loadnpy('g_new')
         if self.iter == 1:
             return -g, 1
-        elif self.iter > self.itermax:
-            print 'restarting LBFGS... [periodic restart]'
-            self.restart()
-            return -g, 1
 
-        S, Y, k = self.update()
-        q = self.apply(g, S, Y, k)
+        S, Y = self.update()
+        q = self.apply(g, S, Y)
 
         if self.check_status(g, q) != 0:
             self.restart()
@@ -66,39 +62,42 @@ class LBFGS(object):
         """
         unix.cd(self.path)
 
-        k = min(self.iter-1, self.kmax)
+        self.kk += 1
+        self.kk = min(self.kk, self.nn)
+
         s = loadnpy('m_new') - loadnpy('m_old')
         y = loadnpy('g_new') - loadnpy('g_old')
-        n = len(s)
+        d = len(s)
 
-        if k == 1:
-            S = np.memmap('LBFGS/S', mode='w+', dtype='float32', shape=(n, self.kmax))
-            Y = np.memmap('LBFGS/Y', mode='w+', dtype='float32', shape=(n, self.kmax))
+        if self.kk == 1:
+            S = np.memmap('LBFGS/S', mode='w+', dtype='float32', shape=(d, self.nn))
+            Y = np.memmap('LBFGS/Y', mode='w+', dtype='float32', shape=(d, self.nn))
             S[:, 0] = s
             Y[:, 0] = y
         else:
-            S = np.memmap('LBFGS/S', mode='r+', dtype='float32', shape=(n, self.kmax))
-            Y = np.memmap('LBFGS/Y', mode='r+', dtype='float32', shape=(n, self.kmax))
+            S = np.memmap('LBFGS/S', mode='r+', dtype='float32', shape=(d, self.nn))
+            Y = np.memmap('LBFGS/Y', mode='r+', dtype='float32', shape=(d, self.nn))
             S[:, 1:] = S[:, :-1]
             Y[:, 1:] = Y[:, :-1]
             S[:, 0] = s
             Y[:, 0] = y
 
-        return S, Y, k
+        return S, Y
 
 
-    def apply(self, q, S, Y, k):
+    def apply(self, q, S, Y):
         """ Applies L-BFGS inverse Hessian to given vector
         """
         unix.cd(self.path)
 
         # first matrix product
-        rh = np.zeros(k)
-        al = np.zeros(k)
-        for i in range(0, k):
-            rh[i] = 1/np.dot(Y[:, i], S[:, i])
-            al[i] = rh[i]*np.dot(S[:, i], q)
-            q = q - al[i]*Y[:, i]
+        kk = self.kk
+        rh = np.zeros(kk)
+        al = np.zeros(kk)
+        for ii in range(0, kk):
+            rh[ii] = 1/np.dot(Y[:,ii], S[:,ii])
+            al[ii] = rh[ii]*np.dot(S[:,ii], q)
+            q = q - al[ii]*Y[:,ii]
 
         # use scaled identity matrix to initialize inverse Hessian, as proposed
         # by Liu and Nocedal 1989
@@ -107,9 +106,9 @@ class LBFGS(object):
         r = sty/yty*q
 
         # second matrix product
-        for i in range(k-1, -1, -1):
-            be = rh[i]*np.dot(Y[:, i], r)
-            r = r + S[:, i]*(al[i] - be)
+        for ii in range(kk-1, -1, -1):
+            be = rh[ii]*np.dot(Y[:,ii], r)
+            r = r + S[:,ii]*(al[ii] - be)
 
         return r
 
@@ -129,19 +128,14 @@ class LBFGS(object):
         time.sleep(2)
 
 
-    def check_status(self, g, r, require_descent=True):
-
+    def check_status(self, g, r):
         theta = np.dot(g,r)/(np.dot(g,g)*np.dot(r,r))**0.5
-        #print ' theta: %e' % theta
-
-        if not require_descent:
-            return 0
-        elif theta < 0.:
+        if theta < 0.:
             print 'restarting LBFGS... [not a descent direction]'
             return -1
         elif theta < self.thresh:
             print 'restarting LBFGS... [practical safeguard]'
-            return -1
+            return -2
         else:
             return 0
 

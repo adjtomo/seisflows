@@ -80,9 +80,6 @@ class base(object):
         if 'LBFGSMEMORY' not in PAR:
             setattr(PAR, 'LBFGSMEMORY', 5)
 
-        if 'LBFGSMAX' not in PAR:
-            setattr(PAR, 'LBFGSMAX', np.inf)
-
         if 'LBFGSTHRESH' not in PAR:
             setattr(PAR, 'LBFGSTHRESH', 0.)
 
@@ -116,15 +113,14 @@ class base(object):
         if PAR.SCHEME in ['NLCG']:
             self.NLCG = NLCG(
                 self.path,
-                thresh=PAR.NLCGTHRESH, 
-                itermax=PAR.NLCGMAX)
+                max=PAR.NLCGMAX,
+                thresh=PAR.NLCGTHRESH)
 
         elif PAR.SCHEME in ['LBFGS']:
             self.LBFGS = LBFGS(
                 self.path, 
                 memory=PAR.LBFGSMEMORY, 
-                thresh=PAR.LBFGSTHRESH,
-                itermax=PAR.LBFGSMAX)
+                thresh=PAR.LBFGSTHRESH)
 
         self.restart = 0
         self.restart_count = 0

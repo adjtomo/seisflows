@@ -8,96 +8,18 @@ from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import loadtxt, savetxt
 from seisflows.tools.io import OutputWriter
 
-from seisflows.optimize.lib.LBFGS import LBFGS as LBFGS_base
+from seisflows.optimize.lib.LBFGS import LBFGS
 from seisflows.optimize.lib.LCG import LCG
 
-
+from seisflows.optimize.lib.LBFGS import LBFGS as LBFGS_base
+from seisflows.optimize.lib.LCG import LCG
+ 
+ 
 class LBFGS(LBFGS_base):
     """ Adapts L-BFGS from nonlinear optimization to preconditioning
     """
+    pass
 
-    def update(self):
-        """ Updates L-BFGS inverse Hessian
-        """
-        unix.cd(self.path)
-
-        self.iter += 1
-        savetxt('LBFGS/iter', self.iter)
-
-        k = min(self.iter, self.kmax)
-
-        s = loadnpy('m_new') - loadnpy('m_old')
-        y = loadnpy('g_new') - loadnpy('g_old')
-        n = len(s)
-
-        if k == 1:
-            S = np.memmap('LBFGS/S', mode='w+', dtype='float32', shape=(n, self.kmax))
-            Y = np.memmap('LBFGS/Y', mode='w+', dtype='float32', shape=(n, self.kmax))
-            S[:, 0] = s
-            Y[:, 0] = y
-
-        else:
-            S = np.memmap('LBFGS/S', mode='r+', dtype='float32', shape=(n, self.kmax))
-            Y = np.memmap('LBFGS/Y', mode='r+', dtype='float32', shape=(n, self.kmax))
-            S[:, 1:] = S[:, :-1]
-            Y[:, 1:] = Y[:, :-1]
-            S[:, 0] = s
-            Y[:, 0] = y
-
-        del S
-        del Y
-
-
-    def solve(self, path, require_descent=True):
-        """ Applies L-BFGS inverse Hessian to vector read from given path
-        """
-        unix.cd(self.path)
-
-        g = loadnpy('g_new')
-
-        if self.iter > self.itermax:
-            print 'restarting LBFGS... [periodic restart]'
-            self.restart()
-            return -g
-
-        q = loadnpy(path)
-        n = len(q)
-
-        # load algorithm history
-        S = np.memmap('LBFGS/S', mode='r', dtype='float32', shape=(n, self.kmax))
-        Y = np.memmap('LBFGS/Y', mode='r', dtype='float32', shape=(n, self.kmax))
-
-        k = min(self.iter, self.kmax)
-        rh = np.zeros(k)
-        al = np.zeros(k)
-
-        # first matrix product
-        for i in range(0, k):
-            rh[i] = 1/np.dot(Y[:, i], S[:, i])
-            al[i] = rh[i]*np.dot(S[:, i], q)
-            q = q - al[i]*Y[:, i]
-
-        # use scaled identity matrix to initialize inverse Hessian, as proposed
-        # by Liu and Nocedal 1989
-        sty = np.dot(Y[:,0], S[:,0])
-        yty = np.dot(Y[:,0], Y[:,0])
-        r = sty/yty*q
-
-        # second matrix product
-        for i in range(k-1, -1, -1):
-            be = rh[i]*np.dot(Y[:, i], r)
-            r = r + S[:, i]*(al[i] - be)
-        del S
-        del Y
-
-        if self.check_status(g, r, require_descent) != _done:
-            print 'restarting LBFGS... [not a descent direction]'
-            self.restart()
-            return -g
-
-        else:
-            self.restarted = False
-            return -r
 
 
 class PLCG(LCG):
@@ -116,15 +38,18 @@ class PLCG(LCG):
 
 
     def precond(self, r):
-        if self.precond_type in ['LBFGS_3']:
+        if not self.precond_type:
+            return r
+
+        elif self.precond_type in ['LBFGS_3']:
             if self.iter == 1:
                 self.LBFGS = LBFGS(self.path, memory=3)
                 y = r
             elif self.ilcg == 0:
-                self.LBFGS.update()
-                y = -self.LBFGS.solve('LCG/r', require_descent=True)
+                S, Y = self.LBFGS.update()
+                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
             else:
-                y = -self.LBFGS.solve('LCG/r', require_descent=False)
+                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
             return y
 
         elif self.precond_type in ['LBFGS_6']:
@@ -132,10 +57,10 @@ class PLCG(LCG):
                 self.LBFGS = LBFGS(self.path, memory=6)
                 y = r
             elif self.ilcg == 0:
-                self.LBFGS.update()
-                y = -self.LBFGS.solve('LCG/r', require_descent=True)
+                S, Y = self.LBFGS.update()
+                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
             else:
-                y = -self.LBFGS.solve('LCG/r', require_descent=False)
+                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
             return y
 
         elif self.precond_type in ['LBFGS_9']:
@@ -143,25 +68,15 @@ class PLCG(LCG):
                 self.LBFGS = LBFGS(self.path, memory=9)
                 y = r
             elif self.ilcg == 0:
-                self.LBFGS.update()
-                y = -self.LBFGS.solve('LCG/r', require_descent=True)
+                S, Y = self.LBFGS.update()
+                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
             else:
-                y = -self.LBFGS.solve('LCG/r', require_descent=False)
-            return y
-
-        elif self.precond_type in ['LBFGS_3_norestart']:
-            if self.iter == 1:
-                self.LBFGS = LBFGS(self.path, memory=3)
-                y = r
-            elif self.ilcg == 0:
-                self.LBFGS.update()
-                y = -self.LBFGS.solve('LCG/r', require_descent=False)
-            else:
-                y = -self.LBFGS.solve('LCG/r', require_descent=False)
+                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
             return y
 
         else:
-            return r
+            raise ValueError
+
 
 
     def check_status(self, ap, verbose=True):
