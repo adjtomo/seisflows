@@ -21,13 +21,16 @@ PATH = SeisflowsPaths()
 class base(object):
     """ Nonlinear optimization base class.
 
-     Available nonlinear optimization algorithms include gradient descent,
-     nonlinear conjugate gradient method, and limited-memory BFGS 
-     (a quasi-Newton method).
+     Available nonlinear optimization algorithms include steepest descent (SD),
+     nonlinear conjugate gradient (NLCG), and LBFGS. Associated step control 
+     algorithms include a backtracking line search and a bracketing line search.
 
-     Available line search algorithms include a backtracking line search based
-     on quadratic interpolation and a bracketing and interpolation procedure
-     (abbreviated as 'Backtrack' and 'Bracket' respectively.)
+     While NLCG (a Krylov method) and LBFGS (a quasi-Newton metod) are both 
+     widely used for geophysical inversion, LBFGS is more efficient and more
+     robust. NLCG requires occasional restarts to avoid numerical stagnation. 
+     LBFGS generally requires fewer restarts. Restarts are controlled by 
+     numerical tuning parameters. Default values provided for these parameters 
+     (see below) should work well for most geophyscial inversions.
 
      To reduce memory overhead, input vectors are read from the directory
      self.path rather than passed from a calling routine. At the start of each
@@ -67,7 +70,7 @@ class base(object):
             else:
                 setattr(PAR, 'LINESEARCH', 'Bracket')
 
-        # search direction fine tuning
+        # search direction tuning parameters
         if 'NLCGMAX' not in PAR:
             setattr(PAR, 'NLCGMAX', np.inf)
 
@@ -83,7 +86,7 @@ class base(object):
         if 'LBFGSTHRESH' not in PAR:
             setattr(PAR, 'LBFGSTHRESH', 0.)
 
-        # line search fine tuning
+        # line search tuning paraemters
         if 'STEPMAX' not in PAR:
             setattr(PAR, 'STEPMAX', 10)
 
@@ -220,10 +223,11 @@ class base(object):
             if alpha > p_ratio * PAR.STEPTHRESH:
                 alpha = p_ratio * PAR.STEPTHRESH
 
-        # write trial model
+        # prepare trial model
         savenpy('m_try', m + p*alpha)
         savetxt('alpha', alpha)
 
+        # prepare output writer
         if self.iter == 1:
             self.writer.header('iter', 'steplen', 'misfit')
         self.writer(self.iter, 0., f)
