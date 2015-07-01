@@ -69,10 +69,7 @@ class slurm_sm(loadclass('system', 'base')):
         unix.mkdir(PATH.OUTPUT)
         unix.cd(PATH.OUTPUT)
 
-        # save current state
-        self.save_objects()
-        self.save_parameters()
-        self.save_paths()
+        self.checkpoint()
 
         # submit workflow
         unix.run('sbatch '
@@ -88,7 +85,7 @@ class slurm_sm(loadclass('system', 'base')):
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
         """
-        self.save_objects()
+        self.checkpoint()
         self.save_kwargs(classname, funcname, kwargs)
 
         if hosts == 'all':

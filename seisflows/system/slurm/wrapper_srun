@@ -11,13 +11,9 @@ if __name__ == '__main__':
     from seisflows.tools.code import loadjson, loadobj
     from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
-    PAR = SeisflowsParameters()
-    PATH = SeisflowsPaths()
-    OBJ = SeisflowsObjects()
-
-    PAR.reload(mypath)
-    PATH.reload(mypath)
-    OBJ.reload(mypath)
+    # resume from last checkpoint
+    for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
+       obj.reload(mypath)
 
     # load function arguments
     kwargspath = join(mypath, 'SeisflowsObjects', myobj + '_kwargs')

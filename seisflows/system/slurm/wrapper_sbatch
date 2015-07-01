@@ -14,13 +14,8 @@ OBJ = SeisflowsObjects()
 if __name__ == '__main__':
     mypath = sys.argv[1]
 
-    PAR = SeisflowsParameters()
-    PATH = SeisflowsPaths()
-    OBJ = SeisflowsObjects()
-
-    PAR.reload(mypath)
-    PATH.reload(mypath)
-    OBJ.reload(mypath)
+    for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
+       obj.reload(mypath)
 
     import workflow
 

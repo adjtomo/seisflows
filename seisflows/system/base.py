@@ -1,12 +1,12 @@
 
 from os.path import join
- 
+
+from seisflows.tools import unix
+
 from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
-OBJ = SeisflowsObjects()
-
 
 
 class base(object):
@@ -25,12 +25,7 @@ class base(object):
     def getnode(self):
         raise NotImplementedError('Must be implemented by subclass.')
 
-    def save_objects(self):
-        OBJ.save(PATH.OUTPUT)
-
-    def save_parameters(self):
-        PAR.save(PATH.OUTPUT)
-
-    def save_paths(self):
-        PATH.save(PATH.OUTPUT)
+    def checkpoint(self):
+        for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
+           obj.save(PATH.OUTPUT)
 

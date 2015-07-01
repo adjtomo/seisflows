@@ -73,9 +73,7 @@ class pbs_sm(object):
         unix.cd(PATH.OUTPUT)
 
         # save current state
-        self.save_objects()
-        self.save_parameters()
-        self.save_paths()
+        self.checkpoint()
 
         # construct resource list
         nodes = PAR.NTASK/PAR.NODESIZE
@@ -104,7 +102,7 @@ class pbs_sm(object):
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
         """
-        self.save_objects()
+        self.checkpoint()
         self.save_kwargs(classname, funcname, kwargs)
 
         if hosts == 'all':
@@ -135,7 +133,6 @@ class pbs_sm(object):
 
     def mpiargs(self):
         return 'mpirun -np %d '%PAR.NPROC
-
 
     def save_kwargs(self, classname, funcname, kwargs):
         kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')

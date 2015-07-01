@@ -42,7 +42,7 @@ class parallel(loadclass('system', 'serial')):
         """
         unix.mkdir(PATH.SYSTEM)
 
-        self.save_objects()
+        self.checkpoint()
         self.save_kwargs(classname, funcname, kwargs)
 
         if hosts == 'all':

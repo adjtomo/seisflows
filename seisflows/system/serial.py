@@ -67,10 +67,7 @@ class serial(loadclass('system', 'base')):
         unix.mkdir(PATH.OUTPUT)
         unix.cd(PATH.OUTPUT)
 
-        # save current state
-        self.save_parameters()
-        self.save_paths()
-
+        self.checkpoint()
         workflow.main()
 
 

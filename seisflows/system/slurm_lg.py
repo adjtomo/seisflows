@@ -84,9 +84,7 @@ class slurm_lg(loadclass('system', 'base')):
         unix.cd(PATH.OUTPUT)
         unix.mkdir(PATH.SUBMIT+'/'+'output.slurm')
 
-        self.save_objects()
-        self.save_parameters()
-        self.save_paths()
+        self.checkpoint()
 
         # prepare sbatch arguments
         unix.run('sbatch '
@@ -102,7 +100,8 @@ class slurm_lg(loadclass('system', 'base')):
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts.
         """
-        self.save_objects()
+        self.checkpoint()
+
         self.save_kwargs(classname, funcname, kwargs)
         jobs = self.launch(classname, funcname, hosts)
         while 1:
