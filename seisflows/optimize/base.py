@@ -22,22 +22,21 @@ class base(object):
     """ Nonlinear optimization base class.
 
      Available nonlinear optimization algorithms include steepest descent (SD),
-     nonlinear conjugate gradient (NLCG), and LBFGS. Associated step control 
+     nonlinear conjugate gradient (NLCG), and LBFGS. Available step control 
      algorithms include a backtracking line search and a bracketing line search.
 
-     While NLCG (a Krylov method) and LBFGS (a quasi-Newton metod) are both 
+     Though NLCG (a Krylov method) and LBFGS (a quasi-Newton metod) are both 
      widely used for geophysical inversion, LBFGS is more efficient and more
-     robust. NLCG requires occasional restarts to avoid numerical stagnation. 
-     LBFGS generally requires fewer restarts. Restarts are controlled by 
-     numerical tuning parameters. Default values provided for these parameters 
-     (see below) should work well for most geophyscial inversions.
+     robust. NLCG requires occasional restarts to avoid numerical stagnation, 
+     while LBFGS generally requires few restarts. Restarts are controlled by 
+     numerical parameters. Default values provided below should work well 
+     for a wide range inversions without the need for manual tuning.
 
-     To reduce memory overhead, input vectors are read from the directory
-     self.path rather than passed from a calling routine. At the start of each
-     search direction computation, the current model and gradient are read from
-     'm_new' and 'g_new'; the resulting search direction is written to 'p_new'.
-     As the optimization procedure progresses, other information is stored in
-     the self.path directory as well.
+     To reduce memory overhead, vectors are read from disk rather than passed
+     from a calling routine. At the start of each search direction computation
+     the current model and gradient are read from files 'm_new' and 'g_new';
+     the resulting search direction is written to 'p_new'. As the inversion
+     progresses, other information is stored to disk as well.
     """
 
     def check(self):
@@ -126,10 +125,8 @@ class base(object):
         self.restart_count = 0
 
 
-    ### search direction methods
-
-     # The following names are used in the search direction methods
-     # and for writing data to self.path:
+     # The following names are used in the 'compute_direction' method and for
+     # writing information to disk:
      #    m_new - current model
      #    m_old - previous model
      #    m_try - trial model
@@ -144,20 +141,19 @@ class base(object):
      #    s_old - previous slope along search direction
      #    alpha - trial step length
 
-
     def compute_direction(self):
         """ Computes model update direction from stored gradient
         """
         unix.cd(self.path)
         g_new = loadnpy('g_new')
 
-        if PAR.SCHEME == 'SD':
+        if PAR.SCHEME in ['SD']:
             p_new = -g_new
 
-        elif PAR.SCHEME == 'NLCG':
+        elif PAR.SCHEME in ['NLCG']:
             p_new, self.restart = self.NLCG()
 
-        elif PAR.SCHEME =='LBFGS':
+        elif PAR.SCHEME in ['LBFGS']:
             p_new, self.restart = self.LBFGS()
 
         # keep track of number of restarts
@@ -168,9 +164,7 @@ class base(object):
         savetxt('s_new', np.dot(g_new, p_new))
 
 
-    ### line search methods
-
-    # The following names are used in the line search methods:
+    # The following names are used exclusively for the line search:
     #     m - model vector
     #     p - search direction vector
     #     s - slope along search direction
@@ -217,11 +211,10 @@ class base(object):
             if alpha > p_ratio * PAR.STEPTHRESH:
                 alpha = p_ratio * PAR.STEPTHRESH
 
-        # prepare trial model
+        # write trial model corresponding to chosen step length
         savenpy('m_try', m + p*alpha)
         savetxt('alpha', alpha)
 
-        # prepare output writer
         if self.iter == 1:
             self.writer.header('iter', 'steplen', 'misfit')
         self.writer(self.iter, 0., f)
@@ -236,16 +229,14 @@ class base(object):
         """
         unix.cd(self.path)
 
-        # update search history
         x_ = loadtxt('alpha')
         f_ = loadtxt('f_try')
-
         if np.isnan(f_):
             raise ValueError
 
+        # update search history
         self.search_history += [[x_, f_]]
         self.step_count += 1
-
         x = self.step_lens()
         f = self.func_vals()
 
@@ -271,7 +262,6 @@ class base(object):
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 self.isdone = 1
 
-        # append latest line search values
         self.writer(None, x_, f_)
         if self.isdone:
             self.writer.newline()
@@ -314,7 +304,7 @@ class base(object):
         elif PAR.LINESEARCH == 'Fixed':
             alpha = p_ratio*(step + 1)*PAR.STEPINIT
 
-        # write trial model
+        # write trial model corresponding to chosen step length
         savetxt('alpha', alpha)
         savenpy('m_try', m + p*alpha)
 
