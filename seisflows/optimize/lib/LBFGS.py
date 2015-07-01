@@ -20,7 +20,7 @@ class LBFGS(object):
         passed from a calling routine.
     """
 
-    def __init__(self, path='.', memory=5, thresh=0.):
+    def __init__(self, path='.', mem=5, thresh=0., maxiter=np.inf):
         assert exists(path)
         unix.cd(path)
         unix.mkdir('LBFGS')
@@ -28,9 +28,10 @@ class LBFGS(object):
         self.path = path
         self.thresh = thresh
         self.iter = 0
+        self.maxiter = maxiter
 
         self.kk = 0
-        self.nn = memory
+        self.nn = mem
 
 
     def __call__(self):
@@ -43,10 +44,16 @@ class LBFGS(object):
         if self.iter == 1:
             return -g, 1
 
+        elif self.iter > self.maxiter:
+            print 'restarting LBFGS... [periodic restart]'
+            self.restart()
+            return -g, 0
+
         S, Y = self.update()
         q = self.apply(g, S, Y)
 
         if self.check_status(g, q) != 0:
+            print 'restarting LBFGS... [not a descent direction]'
             self.restart()
             return -g, 1
 

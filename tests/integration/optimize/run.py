@@ -3,8 +3,8 @@
 from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths, \
     loadclass
 
-SeisflowsParameters().initialize()
-SeisflowsPaths().initialize()
+SeisflowsParameters().load()
+SeisflowsPaths().load()
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     if 'WORKFLOW' not in PAR:
         PAR.WORKFLOW = 'test_optimize'
 
-    SeisflowsObjects().initialize()
+    SeisflowsObjects().load()
     import system
     import workflow
 

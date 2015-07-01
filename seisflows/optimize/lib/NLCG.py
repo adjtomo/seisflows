@@ -13,9 +13,9 @@ class NLCG:
     """ Nonlinear conjugate gradient method
     """
 
-    def __init__(self, path, thresh, itermax):
+    def __init__(self, path='.', thresh=1., maxiter=np.inf):
         self.path = path
-        self.itermax = itermax
+        self.maxiter = maxiter
         self.thresh = thresh
 
         try:
@@ -37,7 +37,7 @@ class NLCG:
         if self.iter == 1:
             return -g_new, 0
 
-        elif self.iter > self.itermax:
+        elif self.iter > self.maxiter:
             print 'restarting NLCG... [periodic restart]'
             self.restart()
             return -g_new, 1
