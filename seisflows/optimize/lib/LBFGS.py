@@ -7,7 +7,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import loadtxt, savetxt, exists
+from seisflows.tools.code import savetxt, exists
 
 
 class LBFGS(object):
@@ -21,19 +21,16 @@ class LBFGS(object):
     """
 
     def __init__(self, path='.', memory=5, thresh=0.):
+        assert exists(path)
+        unix.cd(path)
+        unix.mkdir('LBFGS')
+
         self.path = path
         self.thresh = thresh
+        self.iter = 0
+
         self.kk = 0
         self.nn = memory
-
-        unix.cd(self.path)
-
-        if exists('LBFGS/iter'):
-            self.iter = int(loadtxt('LBFGS/iter'))
-        else:
-            self.iter = 0
-            unix.mkdir('LBFGS')
-            savetxt('LBFGS/iter', 0)
 
 
     def __call__(self):
