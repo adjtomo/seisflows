@@ -26,6 +26,7 @@ class test_optimize(object):
     """
 
     def check(cls):
+        cls.path = PATH.OPTIMIZE
 
         # check parameters
         if 'OPTIMIZE' not in PAR: 
@@ -37,7 +38,6 @@ class test_optimize(object):
         if 'END' not in PAR:
             raise Exception
 
-
         # check paths
         if 'GLOBAL' not in PATH:
             setattr(PATH,'GLOBAL',abspath('./scratch'))
@@ -48,7 +48,9 @@ class test_optimize(object):
         if 'OPTIMIZE' not in PATH:
             setattr(PATH,'OPTIMIZE',PATH.GLOBAL)
 
-        cls.path = PATH.OPTIMIZE
+        # assertions
+        assert PAR.BEGIN == 1
+        assert PAR.BEGIN < PAR.END
 
 
     def main(cls):

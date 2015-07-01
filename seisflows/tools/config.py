@@ -27,10 +27,7 @@ class SeisflowsObjects(object):
       is missing from the main package, users can create their own workflows or
       customize existing workflows.
     """
-    # Because 'objects' themselves are customizable, it is rarely necessary to 
-    # modify the following list. If it modifications are desired anyway, caution
-    # should be excercised, as changing the names of objects or the order in
-    # which they loaded can result in circular imports or other problems.
+    # It probably won't be necessary to modify the following list. If it modifications are made anyway, care should be taken, as changing the names of objects or the order in which they loaded can result in circular imports or other problems.
     objects = []
     objects += ['system']
     objects += ['optimize']
@@ -39,17 +36,15 @@ class SeisflowsObjects(object):
     objects += ['postprocess']
     objects += ['workflow']
 
-    def initialize(self):
+    def load(self):
         """ Instantiates objects
         """
-        try:
-            parameters = sys.modules['SeisflowsParameters']
-        except:
+        if 'SeisflowsParameters' not in sys.modules.keys():
             raise Exception
 
         for obj in self.objects:
-            par = parameters[obj.upper()]
-            sys.modules[obj] = loadclass(obj, par)()
+            key = sys.modules['SeisflowsParameters'][obj.upper()]
+            sys.modules[obj] = loadclass(obj, key)()
 
         self.check()
 
@@ -124,7 +119,7 @@ class SeisflowsParameters(ParameterObj):
         if 'SeisflowsParameters' not in sys.modules:
             sys.modules['SeisflowsParameters'] = self
 
-    def initialize(self):
+    def load(self):
         mydict = loadvars('parameters', '.')
         self.update(mydict)
         return self
@@ -150,7 +145,7 @@ class SeisflowsPaths(ParameterObj):
         if 'SeisflowsPaths' not in sys.modules:
             sys.modules['SeisflowsPaths'] = self
 
-    def initialize(self):
+    def load(self):
         mydict = loadvars('paths', '.')
         super(ParameterObj, self).__setattr__('__dict__', mydict)
         return self

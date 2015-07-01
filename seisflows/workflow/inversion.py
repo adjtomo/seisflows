@@ -137,10 +137,9 @@ class inversion(object):
         if PAR.BEGIN == 1:
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
-
-        optimize.setup()
-        preprocess.setup()
-        postprocess.setup()
+            optimize.setup()
+            preprocess.setup()
+            postprocess.setup()
 
         # has solver machinery been set up?
         if PAR.BEGIN == 1:
@@ -168,6 +167,7 @@ class inversion(object):
         else:
             isready = True
 
+        # if not, then prepare for gradient evaluation
         if not isready:
             print 'Generating synthetics'
 
@@ -263,6 +263,9 @@ class inversion(object):
     def finalize(self):
         """ Saves results from current model update iteration
         """
+        system.checkpoint()
+
+        # copy results from scratch path to output path
         if divides(self.iter, PAR.SAVEMODEL):
             self.save_model()
 
@@ -278,7 +281,7 @@ class inversion(object):
         if divides(self.iter, PAR.SAVERESIDUALS):
             self.save_residuals()
 
-        # clean up directories for next iteration
+        # clean up for next iteration
         if not PATH.LOCAL:
             unix.rm(PATH.GRAD)
             unix.mv(PATH.FUNC, PATH.GRAD)
