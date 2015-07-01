@@ -1,5 +1,4 @@
-SYSTEM = 'parallel'
-NPROC = 1
-NTASK = 16
-NPROCMAX = 16
+SYSTEM='serial'
+NPROC=1
+NTASK=1
 
