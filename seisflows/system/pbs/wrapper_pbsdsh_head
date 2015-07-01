@@ -3,6 +3,7 @@
 if __name__ == '__main__':
     import sys
 
+    # parse command line arguments
     mypath = sys.argv[1]
     myobj = sys.argv[2]
     myfunc = sys.argv[3]
@@ -24,9 +25,7 @@ if __name__ == '__main__':
         kwargspath = join(mypath, 'SeisflowsObjects', myobj + '_kwargs')
         kwargs = loadobj(join(kwargspath, myfunc + '.p'))
 
-        # load function
+        # call function
         func = getattr(sys.modules[myobj], myfunc)
-
-        # load function
         func(**kwargs)
 

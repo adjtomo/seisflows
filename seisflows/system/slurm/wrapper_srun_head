@@ -3,6 +3,7 @@
 if __name__ == '__main__':
     import sys
 
+    # parse command line arguments
     mypath = sys.argv[1]
     myobj = sys.argv[2]
     myfunc = sys.argv[3]
@@ -11,7 +12,7 @@ if __name__ == '__main__':
     from seisflows.tools.code import loadjson, loadobj
     from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
-    # resume from last checkpoint
+    # reload from last checkpoint
     for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
        obj.reload(mypath)
 
@@ -22,9 +23,7 @@ if __name__ == '__main__':
         kwargspath = join(mypath, 'SeisflowsObjects', myobj + '_kwargs')
         kwargs = loadobj(join(kwargspath, myfunc + '.p'))
 
-        # load function
+        # call function
         func = getattr(sys.modules[myobj], myfunc)
-
-        # load function
         func(**kwargs)
 
