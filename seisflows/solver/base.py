@@ -159,7 +159,7 @@ class base(object):
         raise NotImplementedError
 
 
-    def generate_precond(self, *args, **kwargs):
+    def generate_preconditioner(self, *args, **kwargs):
         """ Computes preconditioner
         """
         # must be implemented by subclass
