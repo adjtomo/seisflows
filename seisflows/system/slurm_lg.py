@@ -103,21 +103,39 @@ class slurm_lg(loadclass('system', 'base')):
         self.checkpoint()
 
         self.save_kwargs(classname, funcname, kwargs)
-        jobs = self.launch(classname, funcname, hosts)
+        jobs = self._launch(classname, funcname, hosts)
         while 1:
             time.sleep(60.*PAR.SLEEPTIME)
-            self.timestamp()
-            isdone, jobs = self.task_status(classname, funcname, jobs)
+            self._timestamp()
+            isdone, jobs = self._status(classname, funcname, jobs)
             if isdone:
                 return
 
 
-    def launch(self, classname, funcname, hosts='all'):
+    def mpiargs(self):
+        return 'srun '
+
+
+    def getnode(self):
+        """ Gets number of running task
+        """
+        try:
+            return int(os.getenv('SEISFLOWS_TASK_ID'))
+        except:
+            try:
+                return int(os.getenv('SLURM_ARRAY_TASK_ID'))
+            except:
+                raise Exception("TASK_ID environment variable not defined.")
+
+
+    ### private methods
+
+    def _launch(self, classname, funcname, hosts='all'):
         unix.mkdir(PATH.SYSTEM)
 
         # prepare sbatch arguments
         if hosts == 'all':
-            args = ('--array=%d-%d ' % (0,PAR.NTASK-1)                             
+            args = ('--array=%d-%d ' % (0,PAR.NTASK-1)
                    +'--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A_%a'))
 
         elif hosts == 'head':
@@ -151,10 +169,11 @@ class slurm_lg(loadclass('system', 'base')):
             return [job]
 
 
-    def task_status(self, classname, funcname, jobs):
-        # query slurm database
+    def _status(self, classname, funcname, jobs):
+        """ Determines completion status of one or more jobs
+        """
         for job in jobs:
-            state = self.getstate(job)
+            state = self._query(job)
             states = []
             if state in ['COMPLETED']:
                 states += [1]
@@ -168,12 +187,8 @@ class slurm_lg(loadclass('system', 'base')):
         return isdone, jobs
 
 
-    def mpiargs(self):
-        return 'srun '
-
-
-    def getstate(self, jobid):
-        """ Retrives job state from SLURM database
+    def _query(self, jobid):
+        """ Queries job state from SLURM database
         """
         with open(PATH.SYSTEM+'/'+'job_status', 'w') as f:
             subprocess.call('sacct -n -o state -j '+jobid, shell=True, stdout=f)
@@ -185,18 +200,9 @@ class slurm_lg(loadclass('system', 'base')):
         return state
 
 
-    def getnode(self):
-        """ Gets number of running task
-        """
-        try:
-            return int(os.getenv('SEISFLOWS_TASK_ID'))
-        except:
-            try:
-                return int(os.getenv('SLURM_ARRAY_TASK_ID'))
-            except:
-                raise Exception("TASK_ID environment variable not defined.")
+    ### utility function
 
-    def timestamp(self):
+    def _timestamp(self):
         with open(PATH.SYSTEM+'/'+'timestamps', 'a') as f:
             line = time.strftime('%H:%M:%S')+'\n'
             f.write(line)
