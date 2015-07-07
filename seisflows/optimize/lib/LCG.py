@@ -11,10 +11,10 @@ from seisflows.optimize.lib.LBFGS import LBFGS
 class LCG(object):
     """ CG solver
     """
-    def __init__(self, path, thresh=np.inf, itermax=np.inf, precond_type=None):
+    def __init__(self, path, thresh=np.inf, maxiter=np.inf, precond=None):
         self.path = path
-        self.itermax = itermax
-        self.precond_type = precond_type
+        self.maxiter = maxiter
+        self.precond = precond
 
         self.ilcg = 0
         self.iter = 0
@@ -32,7 +32,7 @@ class LCG(object):
         savenpy('LCG/x', x)
         savenpy('LCG/r', r)
 
-        y = self.precond(r)
+        y = self.apply_precond(r)
         p = -y
         savenpy('LCG/y', y)
         savenpy('LCG/p', p)
@@ -65,13 +65,13 @@ class LCG(object):
         # check status
         if self.check_status(ap) == 0:
             isdone = True
-        elif self.ilcg >= self.itermax:
+        elif self.ilcg >= self.maxiter:
             isdone = True
         else:
             isdone = False
 
         if not isdone:
-            y = self.precond(r)
+            y = self.apply_precond(r)
             ry_old = ry
             ry = np.dot(r, y)
             beta = ry/ry_old
@@ -89,7 +89,7 @@ class LCG(object):
     def check_status(self, *args, **kwargs):
         return -1
 
-    def precond(self, r):
+    def apply_precond(self, r):
         return r
 
 

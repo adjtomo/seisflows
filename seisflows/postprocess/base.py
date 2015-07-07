@@ -21,18 +21,12 @@ class base(object):
     def check(self):
         """ Checks parameters and paths
         """
-        # check postprocessing settings
+        # check parameters
         if 'CLIP' not in PAR:
             setattr(PAR, 'CLIP', 0.)
 
         if 'SMOOTH' not in PAR:
             setattr(PAR, 'SMOOTH', 0.)
-
-        if 'REGULARIZE' not in PAR:
-            setattr(PAR, 'REGULARIZE', False)
-
-        if 'PRECOND' not in PATH:
-            setattr(PATH, 'PRECOND', None)
 
         if 'LOGARITHMIC' not in PAR:
             setattr(PAR, 'LOGARITHMIC', True)
@@ -40,7 +34,31 @@ class base(object):
         if 'FACTOR' not in PAR:
             setattr(PAR, 'FACTOR', False)
 
+        if 'REGULARIZE' not in PAR:
+            setattr(PAR, 'REGULARIZE', False)
+
+        if 'PRECOND' not in PAR:
+            setattr(PAR, 'PRECOND', False)
+
+        # check paths
+        if 'MASK' not in PATH:
+            setattr(PATH, 'MASK', None)
+
+        if 'PRECOND' not in PATH:
+            setattr(PATH, 'PRECOND', None)
+
+        # assertions
+        if PAR.FACTOR:
+            assert isinstance(PAR.FACTOR, float)
+
+        if PAR.PRECOND:
+            assert exists(PATH.PRECOND)
+
+        if PATH.MASK:
+            assert exists(PATH.MASK)
+
         if PATH.PRECOND:
+            assert PAR.PRECOND
             assert exists(PATH.PRECOND)
 
 
@@ -53,13 +71,9 @@ class base(object):
     def write_gradient(self, path):
         """ Writes gradient of objective function
         """
-        assert exists(path)
-
-        # check parameters
         if 'OPTIMIZE' not in PATH:
             raise ParameterError(PATH, 'OPTIMIZE')
 
-        # check input arguments
         if not exists(path):
             raise Exception()
 
@@ -67,36 +81,40 @@ class base(object):
         self.process_kernels(path)
 
         g = solver.merge(solver.load(
-                path +'/'+ 'kernels/sum',
-                suffix='_kernel',
-                verbose=True))
+                         path +'/'+ 'kernels/sum',
+                         suffix='_kernel',
+                         verbose=True))
 
         if PAR.LOGARITHMIC:
             # convert from logarithmic to absolute perturbations
-            g *= solver.merge(solver.load(
-                    path +'/'+ 'model'))
+            g *= solver.merge(solver.load(path +'/'+ 'model'))
+            self.write(path, g)
 
-        # normalize gradient
-        if float(PAR.FACTOR) == 1.:
-            pass
-        elif not PAR.FACTOR:
-            pass
-        else:
+        if PAR.FACTOR:
+            # apply optional scaling factor
             g *= PAR.FACTOR
+            self.write(path, g)
 
-        # write gradient
-        solver.save(PATH.GRAD +'/'+ 'gradient', 
-                    solver.split(g), 
-                    suffix='_kernel')
+        if PATH.MASK:
+            # apply mask
+            g *= solver.merge(solver.load(PATH.MASK))
+            self.write(path, g, backup='nomask')
 
         if PAR.REGULARIZE:
+            # apply regularization
             g = self.regularize(path)
+            self.write(path, g, backup='noregularize')
 
-        if PATH.PRECOND:
-            g *= self.load_preconditioner(path)
+        # write gradient
+        savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
-        savenpy(PATH.OPTIMIZE +'/'+ 'g_new',
-                solver.merge(solver.load(path +'/'+ 'gradient', suffix='_kernel')))
+
+    def write_preconditioner(self):
+        if 'OPTIMIZE' not in PATH:
+            raise ParameterError(PATH, 'OPTIMIZE')
+
+        savenpy(PATH.OPTIMIZE +'/'+ 'precond', 
+                solver.merge(solver.load(PATH.PRECOND)))
 
 
     def combine_kernels(self, path):
@@ -126,9 +144,17 @@ class base(object):
                        span=PAR.SMOOTH)
 
 
-    def load_preconditioner(self, path):
-        return solver.merge(solver.load(PATH.PRECOND))
+    def regularize(self, *args, **kwargs):
+        raise NotImplementedError("Must be implemented by subclass")
 
 
-    def regularize(self, path):
-        raise NotImplementedError
+    def write(self, path, v, backup=None):
+        if backup:
+            src = path +'/'+ 'gradient'
+            dst = path +'/'+ 'gradient_'+backup
+            unix.mv(src, dst)
+
+        solver.save(path +'/'+ 'gradient',
+                    solver.split(v),
+                    suffix='_kernel')
+

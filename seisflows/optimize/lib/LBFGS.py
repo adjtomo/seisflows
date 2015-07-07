@@ -1,8 +1,4 @@
 
-import os
-import pickle
-import time
-
 import numpy as np
 
 from seisflows.tools import unix
@@ -20,7 +16,7 @@ class LBFGS(object):
         passed from a calling routine.
     """
 
-    def __init__(self, path='.', mem=5, thresh=0., maxiter=np.inf):
+    def __init__(self, path='.', stepmem=5, thresh=0., maxiter=np.inf, precond=False):
         assert exists(path)
         unix.cd(path)
         unix.mkdir('LBFGS')
@@ -29,9 +25,10 @@ class LBFGS(object):
         self.thresh = thresh
         self.iter = 0
         self.maxiter = maxiter
+        self.precond = precond
 
         self.kk = 0
-        self.nn = mem
+        self.nn = stepmem
 
 
     def __call__(self):
@@ -53,7 +50,6 @@ class LBFGS(object):
         q = self.apply(g, S, Y)
 
         if self.check_status(g, q) != 0:
-            print 'restarting LBFGS... [not a descent direction]'
             self.restart()
             return -g, 1
 
@@ -103,11 +99,15 @@ class LBFGS(object):
             al[ii] = rh[ii]*np.dot(S[:,ii], q)
             q = q - al[ii]*Y[:,ii]
 
-        # use scaled identity matrix to initialize inverse Hessian, as proposed
-        # by Liu and Nocedal 1989
+        if self.precond:
+            r = loadnpy('precond')*q
+        else:
+            r = q
+
+        # use scaling proposed by Liu and Nocedal 1989
         sty = np.dot(Y[:,0], S[:,0])
         yty = np.dot(Y[:,0], Y[:,0])
-        r = sty/yty*q
+        r *= sty/yty
 
         # second matrix product
         for ii in range(kk-1, -1, -1):
@@ -128,8 +128,6 @@ class LBFGS(object):
         Y = np.memmap('LBFGS/Y', mode='r+')
         S[:] = 0.
         Y[:] = 0.
-
-        time.sleep(2)
 
 
     def check_status(self, g, r):

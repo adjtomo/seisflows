@@ -58,6 +58,9 @@ class base(object):
         if 'SCHEME' not in PAR:
             setattr(PAR, 'SCHEME', 'LBFGS')
 
+        if 'PRECOND' not in PAR:
+            setattr(PAR, 'PRECOND', False)
+
         # line search algorithm
         if 'LINESEARCH' not in PAR:
             if  PAR.SCHEME in ['LBFGS']:
@@ -116,14 +119,16 @@ class base(object):
             self.NLCG = NLCG(
                 self.path,
                 maxiter=PAR.NLCGMAX,
-                thresh=PAR.NLCGTHRESH)
+                thresh=PAR.NLCGTHRESH,
+                precond=PAR.PRECOND)
 
         elif PAR.SCHEME in ['LBFGS']:
             self.LBFGS = LBFGS(
                 self.path, 
-                mem=PAR.LBFGSMEM, 
+                stepmem=PAR.LBFGSMEM, 
                 maxiter=PAR.LBFGSMAX,   
-                thresh=PAR.LBFGSTHRESH)
+                thresh=PAR.LBFGSTHRESH,
+                precond=PAR.PRECOND)
 
         self.restart = 0
         self.restart_count = 0
@@ -253,7 +258,6 @@ class base(object):
         if PAR.LINESEARCH == 'Bracket' or\
            self.restart:
             if self.isbrak:
-                self.isbest = 1
                 self.isdone = 1
             elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 self.isbrak = 1

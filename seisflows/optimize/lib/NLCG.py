@@ -13,7 +13,7 @@ class NLCG:
     """ Nonlinear conjugate gradient method
     """
 
-    def __init__(self, path='.', thresh=1., maxiter=np.inf):
+    def __init__(self, path='.', thresh=1., maxiter=np.inf, precond=False):
         self.path = path
         self.maxiter = maxiter
         self.thresh = thresh

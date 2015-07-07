@@ -37,13 +37,13 @@ class PLCG(LCG):
         self.writer = OutputWriter(self.logpath, width=14)
 
 
-    def precond(self, r):
-        if not self.precond_type:
+    def apply_precond(self, r):
+        if not self.precond:
             return r
 
-        elif self.precond_type in ['LBFGS_3']:
+        elif self.precond in ['LBFGS_3']:
             if self.iter == 1:
-                self.LBFGS = LBFGS(self.path, memory=3)
+                self.LBFGS = LBFGS(self.path, stepmem=3)
                 y = r
             elif self.ilcg == 0:
                 S, Y = self.LBFGS.update()
@@ -52,9 +52,9 @@ class PLCG(LCG):
                 y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
             return y
 
-        elif self.precond_type in ['LBFGS_6']:
+        elif self.precond in ['LBFGS_6']:
             if self.iter == 1:
-                self.LBFGS = LBFGS(self.path, memory=6)
+                self.LBFGS = LBFGS(self.path, stepmem=6)
                 y = r
             elif self.ilcg == 0:
                 S, Y = self.LBFGS.update()
@@ -63,9 +63,9 @@ class PLCG(LCG):
                 y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
             return y
 
-        elif self.precond_type in ['LBFGS_9']:
+        elif self.precond in ['LBFGS_9']:
             if self.iter == 1:
-                self.LBFGS = LBFGS(self.path, memory=9)
+                self.LBFGS = LBFGS(self.path, stepmem=9)
                 y = r
             elif self.ilcg == 0:
                 S, Y = self.LBFGS.update()
