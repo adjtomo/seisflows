@@ -225,13 +225,14 @@ class inversion(object):
         isdone, isbest = optimize.search_status()
 
         # save files associated with 'best' trial model
-        if not PATH.LOCAL:
-            if isbest and isdone:
-                unix.rm(PATH.SOLVER + '_best')
-                unix.mv(PATH.SOLVER, PATH.SOLVER + '_best')
-            elif isbest:
-                unix.rm(PATH.SOLVER + '_best')
-                unix.cp(PATH.SOLVER, PATH.SOLVER + '_best')
+        if PATH.LOCAL:
+            pass
+        elif isbest and isdone:
+            unix.rm(PATH.SOLVER+'_best')
+            unix.mv(PATH.SOLVER, PATH.SOLVER+'_best')
+        elif isbest:
+            unix.rm(PATH.SOLVER + '_best')
+            unix.cp(PATH.SOLVER, PATH.SOLVER+'_best')
 
         return isdone
 
@@ -258,6 +259,9 @@ class inversion(object):
 
         postprocess.write_gradient(
             path=PATH.GRAD)
+
+        if PAR.PRECOND:
+            postprocess.write_preconditioner()
 
 
     def finalize(self):
@@ -286,9 +290,8 @@ class inversion(object):
             unix.rm(PATH.GRAD)
             unix.mv(PATH.FUNC, PATH.GRAD)
             unix.mkdir(PATH.FUNC)
-
             unix.rm(PATH.SOLVER)
-            unix.mv(PATH.SOLVER + '_best', PATH.SOLVER)
+            unix.mv(PATH.SOLVER+'_best', PATH.SOLVER)
 
         else:
             unix.rm(PATH.GRAD)
