@@ -58,7 +58,7 @@ class parallel(loadclass('system', 'serial')):
                 # launch new tasks
                 while len(running_tasks) < PAR.NPROCMAX and queued_tasks:
                     i = queued_tasks.pop(0)
-                    p = self.launch(classname, funcname, itask=i)
+                    p = self._launch(classname, funcname, itask=i)
                     running_tasks[i] = p
 
                 if running_tasks:
@@ -79,7 +79,9 @@ class parallel(loadclass('system', 'serial')):
             task(**kwargs)
 
 
-    def launch(self, classname, funcname, itask=0):
+    ### private methods
+
+    def _launch(self, classname, funcname, itask=0):
         self.progress(itask)
 
         env = os.environ.copy().items()
