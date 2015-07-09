@@ -8,9 +8,9 @@ What is SeisFlows?
 
 SeisFlows is an open source seismic inversion package that:
 
-- delivers a complete, customizable adjoint tomography and full waveform inversion workflow
+- delivers a complete, customizable waveform inversion workflow
 
-- provides a framework for research in regional, global, and exploration tomography
+- provides a framework for research in regional, global, and exploration seismology
 
 
 Getting Started
