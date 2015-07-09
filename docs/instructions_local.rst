@@ -1,4 +1,18 @@
 
+Installation
+------------
+
+To install Seisflows, first clone the repository::
+
+    git clone https://github.com/PrincetonUniversity/seisflows
+
+
+Then set environment variables. If using bash, add the following lines to ``.bash_profile`` or ``.bashrc`` (or modify accordingly, if you are using a different shell)::
+
+    export PATH=$PATH:/path/to/seisflows/scripts
+    export PYTHONPATH=$PYTHONPATH:/path/to/seisflows
+
+
 Loading examples
 ----------------
 

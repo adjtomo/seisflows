@@ -107,4 +107,4 @@ For now, the inversion will run on the local host using only a single event and 
 
 8. Run FWI checkerboard test in parrallel
 -----------------------------------------
-If you have access to a multicore laptop or desktop, SeisFlows can be used to carry out an inversion running multiple wavefield simulations in parallel.  To run the FWI checkerboard example in this manner, change the ``SYSTEM`` entry in ``parameters.py`` from ``serial`` to ``parallel`` and change the ``NPROCMAX`` entry to the number of processors available.
+If you have access to a multicore laptop or desktop, SeisFlows can be used to carry out an inversion running multiple wavefield simulations in parallel.  To run the FWI checkerboard example in this manner, change the ``SYSTEM`` entry in ``parameters.py`` from ``serial`` to ``parallel`` and change the ``NPROCMAX`` entry to the number of processors available. Finally, to invert all available events instead of just one event, change ``NTASK`` from ``1`` to ``25``.
