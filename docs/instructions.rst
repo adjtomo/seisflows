@@ -81,7 +81,7 @@ If there are no compilation errors, then proceed to the next step.
 6. Set up FWI checkerboard test
 -------------------------------
 
-Download the starting model and other input files required for the checkerboard test.  For simplicity, let us assume these files will be placed in ``/home/tests`` (if you prefer a different location, then modify the following commands accordingly)::
+Download the starting model and other input files required for the full waveform inversion (FWI) checkerboard test.  For simplicity, let us assume these files will be placed in ``/home/tests`` (if you prefer a different location, then modify the following commands accordingly)::
  
         mkdir /home/tests/
         cd /home/tests/
