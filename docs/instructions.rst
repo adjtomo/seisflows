@@ -1,7 +1,7 @@
 1. download seisflows
 ---------------------
 
-To run seisflows you'll need a Unix system with Python and standard utilities.  From the command line type
+To run seisflows you'll need a Unix system with Python and standard utilities.  From the command line type::
  
         mkdir /home/packages
         cd /home/packages
@@ -13,7 +13,7 @@ If you prefer a location other than ``/home/packages`` , modify the commands abo
 2. set environment variables
 ----------------------------
 
-Add the following lines to ``~/.bash_profile``, if you are using bash (or modify accordingly, if you are using a different shell):
+Add the following lines to ``~/.bash_profile``, if you are using bash (or modify accordingly, if you are using a different shell)::
 
         export PATH=$PATH:/home/packages/seisflows/scripts
         export PYTHONPATH=$PYTHONPATH:/home/packages/seisflows
@@ -30,7 +30,7 @@ Don't forget to update any open shells:
 ---------------------
 
  
-Run the following test to make sure everything is working:
+Run the following test to make sure everything is working::
 
         cd /home/packages/seisflows/tests/integration/system
         ./clean; ./run
@@ -46,7 +46,7 @@ If no error message is displayed, then the test was successful and it's alright 
 --------------------------
 
 
-Run the following test to make sure everything is working:
+Run the following test to make sure everything is working::
 
         cd /home/packages/seisflows/tests/integration/system
         ./clean; ./run
@@ -61,9 +61,7 @@ If the optimization problem is solved in 50 iterations or fewer, the test was su
 5. configure and compile SPECFEM2D
 ----------------------------------
 
-First, download SPECFEM2D from github (to avoid possible version differences, let us both use version d745c542):
-
- 
+First, download SPECFEM2D from github (to avoid possible version differences, let us both use version d745c542)::
 
         cd /home/packages
         git clone --recursive --branch devel https://github.com/geodynamics/specfem2d.git specfem2d-d745c542
@@ -71,7 +69,7 @@ First, download SPECFEM2D from github (to avoid possible version differences, le
         git checkout d745c542
 
 
-Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran.
+Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
 
         cd /home/packages/specfem2d-d745c542
         ./configure FC=ifort
@@ -83,21 +81,20 @@ If there are no compilation errors, then proceed to the next step.
 6. set up FWI checkerboard test
 -------------------------------
 
-Download the starting model and other input files required for the checkerboard test.  For simplicity, let us assume these files will be placed in /home/tests (if you prefer a different location, then modify the following commands accordingly).
-
+Download the starting model and other input files required for the checkerboard test.  For simplicity, let us assume these files will be placed in /home/tests (if you prefer a different location, then modify the following commands accordingly)::
  
         mkdir /home/tests/
         cd /home/tests/
         wget --recursive --no-parent --no-host-directories --cut-dirs=2 --reject "index.html*" http://tigress-web.princeton.edu/~rmodrak/Examples2d/
 
 
-After the download completes, make sure that all paths specified in /home/tests/checkers/paths.py  are correct.  For example, if you cloned SPECFEM2D somewhere other than /home/packages/specfem2d-d745c542, you will need to modify the SPECFEM2D_BIN entry accordingly.
+After the download completes, make sure that all paths specified in /home/tests/checkers/paths.py  are correct.  For example, if you compiled SPECFEM2D somewhere other than /home/packages/specfem2d-d745c542, you will need to modify the entry SPECFEM2D binary file entry accordingly.
 
  
 7. run FWI checkerboard test in serial
 --------------------------------------
 
-To run the checkboard test, simply type
+To run the checkboard test, simply type::
 
         sfclean ; sfrun
 
