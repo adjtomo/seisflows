@@ -13,15 +13,15 @@ If you prefer a location other than ``/home/packages`` , modify the commands abo
 2. Set environment variables
 ----------------------------
 
-Add the following lines to ``~/.bash_profile``, if you are using bash (or modify accordingly, if you are using a different shell)::
+Add the following lines to ``/home/.bash_profile``, if you are using bash (or modify accordingly, if you are using a different shell)::
 
         export PATH=$PATH:/home/packages/seisflows/scripts
         export PYTHONPATH=$PYTHONPATH:/home/packages/seisflows
  
 
-Don't forget to update any open shells:
+Don't forget to update any open shells::
 
-        source ~/.bash_profile
+        source /home/.bash_profile
  
 
  
@@ -36,7 +36,7 @@ Run the following test to make sure everything is working::
         ./clean; ./run
 
 
-If no error message is displayed, then the test was successful and it's alright to move on.
+If an hello message is displayed, then the test was successful and it's alright to move on.
 
  
 
@@ -61,7 +61,7 @@ If the optimization problem is solved in 50 iterations or fewer, the test was su
 5. Configure and compile SPECFEM2D
 ----------------------------------
 
-First, download SPECFEM2D from github (to avoid possible version differences, let us both use version d745c542)::
+First, download SPECFEM2D from github (to avoid possible version differences, let us use version ``d745c542``)::
 
         cd /home/packages
         git clone --recursive --branch devel https://github.com/geodynamics/specfem2d.git specfem2d-d745c542
@@ -81,14 +81,14 @@ If there are no compilation errors, then proceed to the next step.
 6. Set up FWI checkerboard test
 -------------------------------
 
-Download the starting model and other input files required for the checkerboard test.  For simplicity, let us assume these files will be placed in /home/tests (if you prefer a different location, then modify the following commands accordingly)::
+Download the starting model and other input files required for the checkerboard test.  For simplicity, let us assume these files will be placed in ``/home/tests`` (if you prefer a different location, then modify the following commands accordingly)::
  
         mkdir /home/tests/
         cd /home/tests/
         wget --recursive --no-parent --no-host-directories --cut-dirs=2 --reject "index.html*" http://tigress-web.princeton.edu/~rmodrak/Examples2d/
 
 
-After the download completes, make sure that all paths specified in /home/tests/checkers/paths.py  are correct.  For example, if you compiled SPECFEM2D somewhere other than /home/packages/specfem2d-d745c542, you will need to modify the entry SPECFEM2D binary file entry accordingly.
+After the download completes, make sure that all paths specified in ``home/tests/checkers/paths.py``  are correct.  For example, if you compiled SPECFEM2D somewhere other than ``/home/packages/specfem2d-d745c542``, you will need to modify the entry SPECFEM2D binary file entry accordingly.
 
  
 7. Run FWI checkerboard test in serial
@@ -100,7 +100,7 @@ To run the checkboard test, simply type::
 
 within the directory ``/home/tests/checkers``.
 
-For now, the inversion will run on the local host using only a single event and only a single processor.  Once we verify that everything is working correctly in this simple case, we can move to the case of multiple events and multiple processors by changing the 'system' setting in /home/tests/checkers/parameters.py.
+For now, the inversion will run on the local host using only a single event and only a single processor.  Once we verify that everything is working correctly in this simple case, we can move to the case of multiple events and multiple processors by changing the 'system' setting in ``/home/tests/checkers/parameters.py``.
 
 
 
