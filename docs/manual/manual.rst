@@ -2,7 +2,7 @@
 Overview
 ========
 
-SeisFlows is a Python adjoint tomography and full waveform inversion package designed to be flexible enough for use in both scientific research and large scale regional, global, and exploration inversions.
+SeisFlows is a Python adjoint tomography and full waveform inversion package designed to be flexible enough for use in scientific research and large scale regional, global, and exploration inversions.
 
 To provide this flexibility, users are offered choices in each of the following categories: workflow, system, solver, optimization, preprocessing, and postprocessing.  Within each category, different classes are interchangeable. 
 
@@ -17,7 +17,7 @@ To install Seisflows, first clone the repository::
     git clone github.com/PrincetonUniversity/seisflows
 
 
-Then set environment variables. If using bash, add the following lines to ``.bash_profile`` or ``.bashrc``::
+Then set environment variables. Add the following lines to ``.bash_profile`` if using bash (or modify accordingly if using a different shell)::
 
     export PATH=$PATH:/path/to/seisflows/scripts
     export PYTHONPATH=$PYTHONPATH:/path/to/seisflows
@@ -222,6 +222,10 @@ System Interfaces
 
 A list of available system interface classes follows. By hiding environment details behind a python interface layer, these classes provide a consistent command set across different computing environments.
 
+SERIAL - Tasks that are normally run in parallel, such as multiple wavefield simulations, are carried out one at a time. Useful for debugging, among other things.
+
+PARALLEL [under development]
+
 PBS_SM - For small inversions on PBS clusters. All resources are allocated at the beginning and all simulations are run at the same time, within a single job. Because of limitations of pbsdsh, individual wavefield simulations cannot span more than one core.
 
 PBS_LG - For large inversions on PBS clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
@@ -230,7 +234,5 @@ SLURM_SM - For small inversions on SLURM clusters. All resources are allocated a
 
 SLURM_LG - For large inversions on SLURM clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
 
-SLURM_XL - For very large inversions on SLURM clusters. In addition to the features of SLURM_LG, provides fault tolerence: Tasks that end in failure or timeout are automatically resumbitted. (Can be dangerous to use on code that is not well tested.)
-
-SERIAL - Tasks that are normally run in parallel, such as multiple wavefield simulations, are carried out one at a time. Useful for debugging, among other things.
+SLURM_XL [temporarily unavailable] - For very large inversions on SLURM clusters. In addition to the features of SLURM_LG, provides fault tolerence: Tasks that end in failure or timeout are automatically resumbitted. (Can be dangerous to use on code that is not well tested.)
 
