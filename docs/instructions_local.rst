@@ -1,6 +1,6 @@
 
-1. Install SeisFlows
---------------------
+1. Download SeisFlows
+---------------------
 
 To install Seisflows, first clone the repository::
 
@@ -13,8 +13,8 @@ Then set environment variables. If using bash, add the following lines to ``.bas
     export PYTHONPATH=$PYTHONPATH:/path/to/seisflows
 
 
-2. Loading example
-------------------
+2. Load example
+---------------
 
 After installing SeisFlows, users with accounts on ``tiger.princeton.edu`` can type ``sfexamples`` at the command line to interactively choose an example. Once an example is chosen, a ``parameters.py`` file and ``paths.py`` file will be copied to the current directory.
 
