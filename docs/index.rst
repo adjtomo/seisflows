@@ -21,17 +21,18 @@ To install Seisflows, first clone the repository::
     git clone https://github.com/PrincetonUniversity/seisflows
 
 
-Then set environment variables. If using bash, add the following lines to ``.bash_profile`` or ``.bashrc``::
+Then set environment variables. If using bash, add the following lines to ``.bash_profile`` or ``.bashrc`` (or modify accordingly, if you are using a different shell)::
 
     export PATH=$PATH:/path/to/seisflows/scripts
     export PYTHONPATH=$PYTHONPATH:/path/to/seisflows
-    export PYTHONUNBUFFERED="TRUE"
 
 
 Getting Started
 ===============
 
-Perhaps the easiest way to get started is to run a few examples.  Users with accounts on ``tiger.princeton.edu`` can start directly with these :doc:`instructions <tiger>`.  Other users must await the arrival of an ftp download server. 
+Perhaps the easiest way to get started is to run a few examples.  Users with accounts on ``tiger.princeton.edu`` can run a number of ready-to-go test cases following these :doc:`instructions <tiger>`.  
+
+Users without access to ``tiger.princeton.edu`` can download and run an example following the alternate :doc:`instructions <instructions>`.
 
 
 Documentation
