@@ -32,9 +32,9 @@ Getting Started
 
 Perhaps the easiest way to get started is to run a few examples.  
 
-Users with accounts on ``tiger.princeton.edu`` can run a number of ready-to-go test cases following these :doc:`instructions <tiger>`.  
+Users with accounts on ``tiger.princeton.edu`` can run a number of ready-to-go test cases following these :doc:`instructions <instructions_local>`.  
 
-Other users can download and run an example following these :doc:`alternate instructions <instructions>`.
+Other users can download and run an example following these :doc:`alternate instructions <instructions_remote>`.
 
 
 Documentation

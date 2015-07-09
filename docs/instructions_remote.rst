@@ -1,3 +1,4 @@
+
 1. Download seisflows
 ---------------------
 
@@ -48,7 +49,7 @@ If an hello message is displayed, then the test was successful and it's alright 
 
 Run the following test to make sure everything is working::
 
-        cd /home/packages/seisflows/tests/integration/system
+        cd /home/packages/seisflows/tests/integration/optimize
         ./clean; ./run
 
 
