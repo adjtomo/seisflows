@@ -1,4 +1,4 @@
-1. download seisflows
+1. Download seisflows
 ---------------------
 
 To run seisflows you'll need a Unix system with Python and standard utilities.  From the command line type::
@@ -10,7 +10,7 @@ To run seisflows you'll need a Unix system with Python and standard utilities.  
 If you prefer a location other than ``/home/packages`` , modify the commands above and below accordingly.
 
 
-2. set environment variables
+2. Set environment variables
 ----------------------------
 
 Add the following lines to ``~/.bash_profile``, if you are using bash (or modify accordingly, if you are using a different shell)::
@@ -26,7 +26,7 @@ Don't forget to update any open shells:
 
  
 
-3.  run "system" test
+3. Run "system" test
 ---------------------
 
  
@@ -42,7 +42,7 @@ If no error message is displayed, then the test was successful and it's alright 
 
  
 
-4. run "optimization" test
+4. Run "optimization" test
 --------------------------
 
 
@@ -58,7 +58,7 @@ If the optimization problem is solved in 50 iterations or fewer, the test was su
 
  
 
-5. configure and compile SPECFEM2D
+5. Configure and compile SPECFEM2D
 ----------------------------------
 
 First, download SPECFEM2D from github (to avoid possible version differences, let us both use version d745c542)::
@@ -78,7 +78,7 @@ Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
 If there are no compilation errors, then proceed to the next step.
 
 
-6. set up FWI checkerboard test
+6. Set up FWI checkerboard test
 -------------------------------
 
 Download the starting model and other input files required for the checkerboard test.  For simplicity, let us assume these files will be placed in /home/tests (if you prefer a different location, then modify the following commands accordingly)::
@@ -91,7 +91,7 @@ Download the starting model and other input files required for the checkerboard 
 After the download completes, make sure that all paths specified in /home/tests/checkers/paths.py  are correct.  For example, if you compiled SPECFEM2D somewhere other than /home/packages/specfem2d-d745c542, you will need to modify the entry SPECFEM2D binary file entry accordingly.
 
  
-7. run FWI checkerboard test in serial
+7. Run FWI checkerboard test in serial
 --------------------------------------
 
 To run the checkboard test, simply type::
@@ -104,6 +104,6 @@ For now, the inversion will run on the local host using only a single event and 
 
 
 
-8. run FWI checkerboard test in parrallel
+8. Run FWI checkerboard test in parrallel
 -----------------------------------------
 If you have access to a multicore laptop or desktop, SeisFlows can be used to carry out an inversion running multiple wavefield simulations in parallel.  To run the FWI checkerboard example in this manner, change the ``SYSTEM`` entry in ``parameters.py`` from ``serial`` to ``parallel`` and change the ``NPROCMAX`` entry to the number of processors available.

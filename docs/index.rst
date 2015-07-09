@@ -30,9 +30,11 @@ Then set environment variables. If using bash, add the following lines to ``.bas
 Getting Started
 ===============
 
-Perhaps the easiest way to get started is to run a few examples.  Users with accounts on ``tiger.princeton.edu`` can run a number of ready-to-go test cases following these :doc:`instructions <tiger>`.  
+Perhaps the easiest way to get started is to run a few examples.  
 
-Other users can download and run an example following the alternate :doc:`instructions <instructions>`.
+Users with accounts on ``tiger.princeton.edu`` can run a number of ready-to-go test cases following these :doc:`instructions <tiger>`.  
+
+Other users can download and run an example following the alternate :doc:`alternate instructions <instructions>`.
 
 
 Documentation
