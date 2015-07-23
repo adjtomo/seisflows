@@ -27,6 +27,10 @@ class specfem2d(loadclass('solver', 'base')):
 
       See base class for method descriptions
     """
+    if PAR.MATERIALS == 'LegacyAcoustic':
+        parameters = []
+        parameters += ['vs']
+
 
     def check(self):
         """ Checks parameters and paths
