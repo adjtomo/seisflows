@@ -39,12 +39,12 @@ class LBFGS(object):
 
         g = loadnpy('g_new')
         if self.iter == 1:
-            return -g, 1
+            return -g, 0
 
         elif self.iter > self.maxiter:
             print 'restarting LBFGS... [periodic restart]'
             self.restart()
-            return -g, 0
+            return -g, 1
 
         S, Y = self.update()
         q = self.apply(g, S, Y)
@@ -120,8 +120,8 @@ class LBFGS(object):
     def restart(self):
         """ Discards history and resets counters
         """
-        self.iter = 0
-        savetxt('LBFGS/iter', 0)
+        self.iter = 1
+        savetxt('LBFGS/iter', 1)
 
         unix.cd(self.path)
         S = np.memmap('LBFGS/S', mode='r+')

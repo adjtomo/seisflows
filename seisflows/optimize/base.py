@@ -99,7 +99,7 @@ class base(object):
             setattr(PAR, 'STEPINIT', 0.05)
 
         if 'STEPFACTOR' not in PAR:
-            setattr(PAR, 'STEPFACTOR', 0.25)
+            setattr(PAR, 'STEPFACTOR', 0.5)
 
         if 'STEPOVERSHOOT' not in PAR:
             setattr(PAR, 'STEPOVERSHOOT', 0.)
@@ -203,9 +203,9 @@ class base(object):
 
         # determine initial step length
         if self.iter == 1:
-            alpha = p_ratio * PAR.STEPINIT
+            alpha = p_ratio*PAR.STEPINIT
         elif self.restart:
-            alpha = self.step_init()
+            alpha = p_ratio*PAR.STEPINIT
         elif PAR.LINESEARCH in ['Backtrack']:
             alpha = 1.
         else:
@@ -217,7 +217,8 @@ class base(object):
 
         # optional maximum step length safegaurd
         if PAR.STEPTHRESH:
-            if alpha > p_ratio * PAR.STEPTHRESH:
+            if alpha > p_ratio * PAR.STEPTHRESH and\
+            self.iter > 1:
                 alpha = p_ratio * PAR.STEPTHRESH
 
         # write trial model corresponding to chosen step length
@@ -256,7 +257,7 @@ class base(object):
 
         # are stopping criteria satisfied?
         if PAR.LINESEARCH == 'Bracket' or\
-           self.restart:
+           self.iter==1 or self.restart:
             if self.isbrak:
                 self.isdone = 1
             elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
@@ -298,10 +299,10 @@ class base(object):
 
         # compute trial step length
         if PAR.LINESEARCH == 'Bracket' or\
-           self.restart:
+            self.iter==1 or self.restart:
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 alpha = polyfit2(x, f)
-            elif any(f[1:] < f[0]):
+            elif any(f[1:] <= f[0]):
                 alpha = loadtxt('alpha')*PAR.STEPFACTOR**-1
             else:
                 alpha = loadtxt('alpha')*PAR.STEPFACTOR
