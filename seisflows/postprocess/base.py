@@ -54,12 +54,12 @@ class base(object):
         if PAR.PRECOND:
             assert exists(PATH.PRECOND)
 
-        if PATH.MASK:
-            assert exists(PATH.MASK)
-
         if PATH.PRECOND:
             assert PAR.PRECOND
             assert exists(PATH.PRECOND)
+
+        if PATH.MASK:
+            assert exists(PATH.MASK)
 
 
     def setup(self):
@@ -69,7 +69,7 @@ class base(object):
 
 
     def write_gradient(self, path):
-        """ Writes gradient of objective function
+        """ Reads kernels and writes gradient of objective function
         """
         if 'OPTIMIZE' not in PATH:
             raise ParameterError(PATH, 'OPTIMIZE')
@@ -88,28 +88,29 @@ class base(object):
         if PAR.LOGARITHMIC:
             # convert from logarithmic to absolute perturbations
             g *= solver.merge(solver.load(path +'/'+ 'model'))
-            self.write(path, g)
+            self.save(path, g)
 
         if PAR.FACTOR:
             # apply optional scaling factor
             g *= PAR.FACTOR
-            self.write(path, g)
+            self.save(path, g)
 
         if PATH.MASK:
             # apply mask
             g *= solver.merge(solver.load(PATH.MASK))
-            self.write(path, g, backup='nomask')
+            self.save(path, g, backup='nomask')
 
         if PAR.REGULARIZE:
             # apply regularization
-            g = self.regularize(path)
-            self.write(path, g, backup='noregularize')
+            g = self.apply_regularization(path)
+            self.save(path, g, backup='noregularize')
 
-        # write gradient
         savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
 
     def write_preconditioner(self):
+        """ Reads and writes user-supplied diagonal preconditioner
+        """
         if 'OPTIMIZE' not in PATH:
             raise ParameterError(PATH, 'OPTIMIZE')
 
@@ -118,25 +119,13 @@ class base(object):
 
 
     def combine_kernels(self, path):
-        """ Sums individual source contributions
-        """
+        # sum kernels
         system.run('solver', 'combine',
                    hosts='head',
                    path=path +'/'+ 'kernels')
 
 
     def process_kernels(self, path):
-        """ Performs clipping and smoothing operations in accordance with 
-          parameter settings
-        """
-        # apply clipping
-        if PAR.CLIP > 0.:
-            system.run('solver', 'clip',
-                       hosts='head',
-                       path=path + '/' + 'kernels/sum',
-                       thresh=PAR.CLIP)
-
-        # apply smoothing
         if PAR.SMOOTH > 0.:
             system.run('solver', 'smooth',
                        hosts='head',
@@ -144,11 +133,11 @@ class base(object):
                        span=PAR.SMOOTH)
 
 
-    def regularize(self, *args, **kwargs):
+    def apply_regularization(self, *args, **kwargs):
         raise NotImplementedError("Must be implemented by subclass")
 
 
-    def write(self, path, v, backup=None):
+    def save(self, path, v, backup=None):
         if backup:
             src = path +'/'+ 'gradient'
             dst = path +'/'+ 'gradient_'+backup
