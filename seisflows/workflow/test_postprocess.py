@@ -5,12 +5,15 @@ from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError
+    loadclass, ParameterError
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
+import solver
 import postprocess
+
+migration = loadclass('workflow','migration')()
 
 
 class test_postprocess(object):
@@ -20,33 +23,17 @@ class test_postprocess(object):
     def check(self):
         """ Checks parameters and paths
         """
-        if 'KERNELS' not in PATH:
-            raise ParameterError(PATH, 'KERNELS')
+        migration.check()
 
-        if not exists(PATH.KERNELS +'/'+ 'kernels'):
-            raise Exception('Bad path: ' % PATH.KERNELS)
-
-
-        # check postprocessing settings
-        if 'SCALE' not in PAR:
-            setattr(PAR, 'SCALE', False)
-
-        if 'CLIP' not in PAR:
-            setattr(PAR, 'CLIP', 0.)
-
-        if 'SMOOTH' not in PAR:
-            setattr(PAR, 'SMOOTH', 0.)
-
-        if 'PRECOND' not in PATH:
-            setattr(PATH, 'PRECOND', None)
+        if PATH.INPUT not in PAR:
+            setattr(PATH, 'INPUT', None)
 
 
     def main(self):
         """ Writes gradient of objective function
         """
-        #print 'Combining kernels...'
-        #postprocess.combine_kernels(PATH.KERNELS)
+        if not PATH.INPUT:
+            migration.main()
 
-        print 'Processing kernels...'
-        postprocess.process_kernels(PATH.KERNELS)
+        postprocess.process_kernels()
 

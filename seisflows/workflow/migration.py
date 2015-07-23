@@ -111,16 +111,16 @@ class migration(object):
         src = PATH.GLOBAL +'/'+ 'kernels/sum'
         dst = PATH.OUTPUT +'/'+ 'kernels'
         unix.mkdir(dst)
-        unix.mv(src, dst)
+        unix.cp(src, dst)
 
     def save_kernels(self):
         src = PATH.GLOBAL +'/'+ 'kernels'
         dst = PATH.OUTPUT
         unix.mkdir(dst)
-        unix.mv(src, dst)
+        unix.cp(src, dst)
 
     def save_traces(self):
         src = PATH.GLOBAL +'/'+ 'traces'
         dst = PATH.OUTPUT
-        unix.mv(src, dst)
+        unix.cp(src, dst)
 
