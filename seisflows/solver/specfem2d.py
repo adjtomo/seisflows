@@ -57,7 +57,7 @@ class specfem2d(loadclass('solver', 'base')):
 
         if dt != PAR.DT:
             if system.getnode() == 0: print "WARNING: dt != PAR.DT"
-            setpar('dt', PAR.DT)
+            setpar('deltat', PAR.DT)
 
         if f0 != PAR.F0:
             if system.getnode() == 0: print "WARNING: f0 != PAR.F0"
