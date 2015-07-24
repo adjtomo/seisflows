@@ -263,7 +263,7 @@ class specfem2d_legacy(loadclass('solver', 'base')):
     def export_kernels(self, path):
         unix.mkdir(join(path, 'kernels'), noexit=True)
         src = join(self.getpath, 'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
-        dst = join(path, 'kernels', '%s' % system.getname)
+        dst = join(path, 'kernels', '%s' % self.getname)
         unix.cp(src, dst)
 
 
