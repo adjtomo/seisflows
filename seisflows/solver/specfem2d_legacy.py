@@ -200,8 +200,9 @@ class specfem2d_legacy(loadclass('solver', 'base')):
         """
         unix.cd(self.getpath)
 
+        self.getnames()
         with open('kernel_paths', 'w') as f:
-            f.writelines([join(path, dir)+'\n' for dir in unix.ls(path)])
+            f.writelines([join(path, dir)+'\n' for dir in self.names])
 
         for name in self.parameters:
             self.mpirun(
@@ -262,7 +263,7 @@ class specfem2d_legacy(loadclass('solver', 'base')):
     def export_kernels(self, path):
         unix.mkdir(join(path, 'kernels'), noexit=True)
         src = join(self.getpath, 'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
-        dst = join(path, 'kernels', '%06d' % system.getnode())
+        dst = join(path, 'kernels', '%s' % system.getname)
         unix.cp(src, dst)
 
 
