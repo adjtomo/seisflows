@@ -16,26 +16,25 @@ class LBFGS(object):
         passed from a calling routine.
     """
 
-    def __init__(self, path='.', stepmem=5, thresh=0., maxiter=np.inf, precond=False):
+    def __init__(self, path='.', memory=5, thresh=0., maxiter=np.inf, precond=False):
         assert exists(path)
         unix.cd(path)
         unix.mkdir('LBFGS')
 
         self.path = path
         self.thresh = thresh
-        self.iter = 0
         self.maxiter = maxiter
         self.precond = precond
+        self.memory = memory
 
-        self.kk = 0
-        self.nn = stepmem
+        self.iter = 0
+        self.memory_used = 0
 
 
     def __call__(self):
         """ Returns L-BFGS search direction
         """
         self.iter += 1
-        savetxt('LBFGS/iter', self.iter)
 
         g = loadnpy('g_new')
         if self.iter == 1:
@@ -62,25 +61,29 @@ class LBFGS(object):
         """
         unix.cd(self.path)
 
-        self.kk += 1
-        self.kk = min(self.kk, self.nn)
-
         s = loadnpy('m_new') - loadnpy('m_old')
         y = loadnpy('g_new') - loadnpy('g_old')
-        d = len(s)
 
-        if self.kk == 1:
-            S = np.memmap('LBFGS/S', mode='w+', dtype='float32', shape=(d, self.nn))
-            Y = np.memmap('LBFGS/Y', mode='w+', dtype='float32', shape=(d, self.nn))
+        m = len(s)
+        n = self.memory
+
+        if self.memory_used == 0:
+            S = np.memmap('LBFGS/S', mode='w+', dtype='float32', shape=(m, n))
+            Y = np.memmap('LBFGS/Y', mode='w+', dtype='float32', shape=(m, n))
             S[:, 0] = s
             Y[:, 0] = y
+            self.memory_used = 1
+
         else:
-            S = np.memmap('LBFGS/S', mode='r+', dtype='float32', shape=(d, self.nn))
-            Y = np.memmap('LBFGS/Y', mode='r+', dtype='float32', shape=(d, self.nn))
+            S = np.memmap('LBFGS/S', mode='r+', dtype='float32', shape=(m, n))
+            Y = np.memmap('LBFGS/Y', mode='r+', dtype='float32', shape=(m, n))
             S[:, 1:] = S[:, :-1]
             Y[:, 1:] = Y[:, :-1]
             S[:, 0] = s
             Y[:, 0] = y
+
+            if self.memory_used < self.memory:
+                self.memory_used += 1
 
         return S, Y
 
@@ -91,10 +94,10 @@ class LBFGS(object):
         unix.cd(self.path)
 
         # first matrix product
-        kk = self.kk
+        kk = self.memory_used
         rh = np.zeros(kk)
         al = np.zeros(kk)
-        for ii in range(0, kk):
+        for ii in range(kk):
             rh[ii] = 1/np.dot(Y[:,ii], S[:,ii])
             al[ii] = rh[ii]*np.dot(S[:,ii], q)
             q = q - al[ii]*Y[:,ii]
@@ -121,7 +124,7 @@ class LBFGS(object):
         """ Discards history and resets counters
         """
         self.iter = 1
-        savetxt('LBFGS/iter', 1)
+        self.memory_used = 0
 
         unix.cd(self.path)
         S = np.memmap('LBFGS/S', mode='r+')

@@ -126,7 +126,7 @@ class base(object):
         elif PAR.SCHEME in ['LBFGS']:
             self.LBFGS = LBFGS(
                 path=PATH.OPTIMIZE, 
-                stepmem=PAR.LBFGSMEM, 
+                memory=PAR.LBFGSMEM, 
                 maxiter=PAR.LBFGSMAX,   
                 thresh=PAR.LBFGSTHRESH,
                 precond=PAR.PRECOND)
