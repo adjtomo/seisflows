@@ -8,11 +8,12 @@ from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import loadtxt, savetxt
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
-from seisflows.tools.io import Writer, LogWriter
 
-from seisflows.tools.math import polyfit2, backtrack2
+from seisflows.tools.math import angle, polyfit2, backtrack2
 from seisflows.optimize.lib.LBFGS import LBFGS
 from seisflows.optimize.lib.NLCG import NLCG
+from seisflows.optimize.lib.io import Writer, StepWriter
+
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -110,7 +111,7 @@ class base(object):
         self.writer = Writer(
                 path=PATH.OUTPUT)
 
-        self.logwriter = LogWriter(
+        self.stepwriter = StepWriter(
                 path=PATH.SUBMIT)
 
         # prepare algorithm machinery
@@ -226,7 +227,7 @@ class base(object):
         savetxt('alpha', alpha)
 
         # upate log
-        self.logwriter(steplen=0., funcval=f)
+        self.stepwriter(steplen=0., funcval=f)
 
 
     def search_status(self):
@@ -271,7 +272,7 @@ class base(object):
                 self.isdone = 1
 
         # update log
-        self.logwriter(steplen=x_, funcval=f_)
+        self.stepwriter(steplen=x_, funcval=f_)
 
         if self.step_count >= PAR.STEPMAX:
             self.isdone = -1
