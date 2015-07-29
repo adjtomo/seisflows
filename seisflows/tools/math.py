@@ -5,6 +5,13 @@ import scipy.signal as _signal
 import scipy.interpolate as _interp
 
 
+def angle(g,p):
+    gp = np.dot(g,p)
+    gg = np.dot(g,g)
+    pp = np.dot(p,p)
+    return np.arccos(gp/(gg*pp)**0.5)
+
+
 def nabla(Z, order=1):
     """ Returns sum of n-th order spatial derivatives of a function defined on
         a 2D rectangular grid; generalizes Laplacian

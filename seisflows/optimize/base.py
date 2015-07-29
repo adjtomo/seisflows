@@ -326,6 +326,7 @@ class base(object):
         m = loadnpy('m_new')
         g = loadnpy('g_new')
         p = loadnpy('p_new')
+        s = loadtxt('s_new')
 
         x = self.step_lens()
         f = self.func_vals()
@@ -354,14 +355,16 @@ class base(object):
         savenpy('m_new', m + p*alpha)
         savetxt('f_new', f.min())
 
-        # append latest values
+        # append latest output
+        self.writer('adhoc', (s/np.dot(p,p)**0.5)**-1 * (f[1]-f[0])/(x[1]-x[0]))
         self.writer('gradient_norm_L1', np.linalg.norm(g, 1))
         self.writer('gradient_norm_L2', np.linalg.norm(g, 2))
         self.writer('misfit', f[0])
         self.writer('restart_count', self.restart_count)
+        self.writer('slope', (f[1]-f[0])/(x[1]-x[0]))
         self.writer('step_count', self.step_count)
         self.writer('step_length', x[f.argmin()])
-        self.writer('theta', np.dot(g,p)/(np.dot(g,g)*np.dot(p,p))**0.5)
+        self.writer('theta', 180.*np.pi**-1*angle(g,p))
 
 
     ### line search utilities
