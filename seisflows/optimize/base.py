@@ -8,7 +8,7 @@ from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import loadtxt, savetxt
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
-from seisflows.tools.io import OutputWriter
+from seisflows.tools.io import Writer, LogWriter
 
 from seisflows.tools.math import polyfit2, backtrack2
 from seisflows.optimize.lib.LBFGS import LBFGS
@@ -65,10 +65,6 @@ class base(object):
         if 'LINESEARCH' not in PAR:
             if  PAR.SCHEME in ['LBFGS']:
                 setattr(PAR, 'LINESEARCH', 'Backtrack')
-
-            elif 'Newton' in PAR.SCHEME:
-                setattr(PAR, 'LINESEARCH', 'Backtrack')
-
             else:
                 setattr(PAR, 'LINESEARCH', 'Bracket')
 
@@ -108,23 +104,26 @@ class base(object):
     def setup(self):
         """ Sets up nonlinear optimization machinery
         """
-        # specify paths
-        self.path = PATH.OPTIMIZE
-        self.logpath = join(PATH.SUBMIT, 'output.optim')
-        self.writer = OutputWriter(self.logpath)
-        unix.mkdir(self.path)
+        unix.mkdir(PATH.OPTIMIZE)
+
+        # prepare output writers
+        self.writer = Writer(
+                path=PATH.OUTPUT)
+
+        self.logwriter = LogWriter(
+                path=PATH.SUBMIT)
 
         # prepare algorithm machinery
         if PAR.SCHEME in ['NLCG']:
             self.NLCG = NLCG(
-                self.path,
+                path=PATH.OPTIMIZE,
                 maxiter=PAR.NLCGMAX,
                 thresh=PAR.NLCGTHRESH,
                 precond=PAR.PRECOND)
 
         elif PAR.SCHEME in ['LBFGS']:
             self.LBFGS = LBFGS(
-                self.path, 
+                path=PATH.OPTIMIZE, 
                 stepmem=PAR.LBFGSMEM, 
                 maxiter=PAR.LBFGSMAX,   
                 thresh=PAR.LBFGSTHRESH,
@@ -153,7 +152,8 @@ class base(object):
     def compute_direction(self):
         """ Computes model update direction from stored gradient
         """
-        unix.cd(self.path)
+        unix.cd(PATH.OPTIMIZE)
+
         g_new = loadnpy('g_new')
 
         if PAR.SCHEME in ['SD']:
@@ -185,7 +185,7 @@ class base(object):
     def initialize_search(self):
         """ Determines initial step length for line search
         """
-        unix.cd(self.path)
+        unix.cd(PATH.OPTIMIZE)
 
         m = loadnpy('m_new')
         p = loadnpy('p_new')
@@ -217,17 +217,16 @@ class base(object):
 
         # optional maximum step length safegaurd
         if PAR.STEPTHRESH:
-            if alpha > p_ratio * PAR.STEPTHRESH and\
-            self.iter > 1:
+            if alpha > p_ratio * PAR.STEPTHRESH and \
+                self.iter > 1:
                 alpha = p_ratio * PAR.STEPTHRESH
 
         # write trial model corresponding to chosen step length
         savenpy('m_try', m + p*alpha)
         savetxt('alpha', alpha)
 
-        if self.iter == 1:
-            self.writer.header('iter', 'steplen', 'misfit')
-        self.writer(self.iter, 0., f)
+        # upate log
+        self.logwriter(steplen=0., funcval=f)
 
 
     def search_status(self):
@@ -237,7 +236,7 @@ class base(object):
             function value from each trial model evaluation. From line search
             history, determines whether stopping criteria have been satisfied.
         """
-        unix.cd(self.path)
+        unix.cd(PATH.OPTIMIZE)
 
         x_ = loadtxt('alpha')
         f_ = loadtxt('f_try')
@@ -256,7 +255,11 @@ class base(object):
             self.isbest = 1
 
         # are stopping criteria satisfied?
-        if PAR.LINESEARCH == 'Bracket' or\
+        if PAR.LINESEARCH == 'Fixed':
+            if any(f[1:] < f[0]) and (f[-2] < f[-1]):
+                self.isdone = 1
+
+        elif PAR.LINESEARCH == 'Bracket' or \
            self.iter==1 or self.restart:
             if self.isbrak:
                 self.isdone = 1
@@ -267,13 +270,8 @@ class base(object):
             if any(f[1:] < f[0]):
                 self.isdone = 1
 
-        elif PAR.LINESEARCH == 'Fixed':
-            if any(f[1:] < f[0]) and (f[-2] < f[-1]):
-                self.isdone = 1
-
-        self.writer(None, x_, f_)
-        if self.isdone:
-            self.writer.newline()
+        # update log
+        self.logwriter(steplen=x_, funcval=f_)
 
         if self.step_count >= PAR.STEPMAX:
             self.isdone = -1
@@ -285,7 +283,8 @@ class base(object):
     def compute_step(self):
         """ Computes next trial step length
         """
-        unix.cd(self.path)
+        unix.cd(PATH.OPTIMIZE)
+
         m = loadnpy('m_new')
         p = loadnpy('p_new')
         s = loadtxt('s_new')
@@ -298,7 +297,10 @@ class base(object):
         f = self.func_vals()
 
         # compute trial step length
-        if PAR.LINESEARCH == 'Bracket' or\
+        if PAR.LINESEARCH == 'Fixed':
+            alpha = p_ratio*(self.step_count + 1)*PAR.STEPINIT
+
+        elif PAR.LINESEARCH == 'Bracket' or \
             self.iter==1 or self.restart:
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 alpha = polyfit2(x, f)
@@ -310,9 +312,6 @@ class base(object):
         elif PAR.LINESEARCH == 'Backtrack':
             alpha = backtrack2(f[0], s, x[1], f[1], b1=0.1, b2=0.5)
 
-        elif PAR.LINESEARCH == 'Fixed':
-            alpha = p_ratio*(step + 1)*PAR.STEPINIT
-
         # write trial model corresponding to chosen step length
         savetxt('alpha', alpha)
         savenpy('m_try', m + p*alpha)
@@ -321,8 +320,10 @@ class base(object):
     def finalize_search(self):
         """ Cleans working directory and writes updated model
         """
-        unix.cd(self.path)
+        unix.cd(PATH.OPTIMIZE)
+
         m = loadnpy('m_new')
+        g = loadnpy('g_new')
         p = loadnpy('p_new')
 
         x = self.step_lens()
@@ -351,6 +352,15 @@ class base(object):
         savetxt('alpha', alpha)
         savenpy('m_new', m + p*alpha)
         savetxt('f_new', f.min())
+
+        # append latest values
+        self.writer('gradient_norm_L1', np.linalg.norm(g, 1))
+        self.writer('gradient_norm_L2', np.linalg.norm(g, 2))
+        self.writer('misfit', f[0])
+        self.writer('restart_count', self.restart_count)
+        self.writer('step_count', self.step_count)
+        self.writer('step_length', x[f.argmin()])
+        self.writer('theta', np.dot(g,p)/(np.dot(g,g)*np.dot(p,p))**0.5)
 
 
     ### line search utilities
@@ -385,3 +395,4 @@ class base(object):
             return f_sorted
         else:
             return f
+

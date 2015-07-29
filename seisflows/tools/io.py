@@ -1,6 +1,7 @@
 
-import os as _os
-import struct as _struct
+from os import mkdir
+from os.path import abspath, basename, dirname, exists, getsize, join
+from struct import calcsize, pack, unpack
 
 import numpy as _np
 
@@ -18,10 +19,10 @@ class BinaryReader(object):
         """
         # opens binary file
         self.file = open(fname, 'r')
-        path = _os.path.abspath(self.file.name)
-        self.path = _os.path.dirname(path)
-        self.name = _os.path.basename(path)
-        self.size = _os.path.getsize(path)
+        path = abspath(self.file.name)
+        self.path = dirname(path)
+        self.name = basename(path)
+        self.size = getsize(path)
         self.endian = endian
 
     def __del__(self):
@@ -45,7 +46,7 @@ class BinaryReader(object):
 
         for _ in range(length):
             string = self.file.read(size)
-            val.append(_struct.unpack(fmtlist, string)[0])
+            val.append(unpack(fmtlist, string)[0])
 
         return val
 
@@ -87,10 +88,10 @@ class BinaryWriter(object):
     def __init__(self, fname, endian='|'):
         # open binary file
         self.file = open(fname, 'w')
-        path = _os.path.abspath(self.file.name)
-        self.path = _os.path.dirname(path)
-        self.name = _os.path.basename(path)
-        self.size = _os.path.getsize(path)
+        path = abspath(self.file.name)
+        self.path = dirname(path)
+        self.name = basename(path)
+        self.size = getsize(path)
         self.endian = endian
 
     def __del__(self):
@@ -111,7 +112,7 @@ class BinaryWriter(object):
             vals = [vals]
 
         for val in vals:
-            self.file.write(_struct.pack(fmtlist, val))
+            self.file.write(pack(fmtlist, val))
 
     def printf(self, fmts, vals, origin=0, contiguous=True):
         """Write binary data to file, with variable format"""
@@ -132,62 +133,73 @@ class BinaryWriter(object):
             self.write(fmt, val, length)
 
 
-class OutputWriter(object):
+class LogWriter(object):
     """ Utility for writing one or more columns to text file
     """
-    def __init__(self, filename, width=10):
+    def __init__(self, path='.', filename='output.evals'):
+        self.iter = 0
+        self.filename = self.fullfile(path, filename)
+
+        self.write_header()
+
+
+    def __call__(self, steplen=None, funcval=None):
+        with open(self.filename, 'a') as fileobj:
+            if self.iter == 0:
+                self.iter += 1
+                fmt = '%10d  %10.3e  %10.3e\n'
+                fileobj.write(fmt % (self.iter, steplen, funcval))
+            elif steplen == 0.:
+                self.iter += 1
+                fileobj.write('\n')
+                fmt = '%10d  %10.3e  %10.3e\n'
+                fileobj.write(fmt % (self.iter, steplen, funcval))
+            else:
+                fmt = 12*' ' + '%10.3e  %10.3e\n'
+                fileobj.write(fmt % (steplen, funcval))
+
+    def write_header(self):
+        # write header
+        headers = []
+        headers += ['ITER']
+        headers += ['STEPLEN']
+        headers += ['MISFIT']
+
+        fileobj = open(self.filename, 'w')
+        for header in headers:
+            fmt = '%%%ds  ' % 10
+            fileobj.write('%10s  ' % header)
+        fileobj.write('\n')
+
+        for _ in range(len(headers)):
+            fileobj.write('%10s  ' % (10*'='))
+        fileobj.write('\n')
+
+        fileobj.close()
+
+
+    def fullfile(self, path, filename):
         try:
-            self.filename = _os.path.abspath(filename)
+            fullpath = abspath(path)
         except:
             raise IOError
-
-        # column width
-        self.width = width
+        return join(fullpath, filename)
 
 
-    def __call__(self, *vals):
-        fileobj = open(self.filename, 'a')
-        line = ''
-        for val in vals:
-            line += self._getline(val)
-        fileobj.write(line + '\n')
-        fileobj.close()
+class Writer(object):
+    """Utility for appending values to text files"""
 
-    def _getline(self, val):
-        w = self.width
+    def __init__(self, path='.'):
+        if not exists(path):
+            raise Exception
+        self.path = join(path, 'NonlinearOptimization')
 
-        if type(val) is int:
-            fmt = '%%%dd  ' % w
-        elif type(val) is float:
-            fmt = '%%%d.%de  ' % (w,w-7)
-        elif type(val) is str:
-            fmt = '%%%ds  ' % w
-        else:
-            return (w+2)*' '
-
-        return fmt % val
-
-    def newline(self):
-        # writes newline
-        fileobj = open(self.filename, 'a')
-        fileobj.write('\n')
-        fileobj.close()
-
-    def header(self, *keys):
-        # writes column headers
-        line = ''
-        for key in keys:
-            fmt = '%%%ds  ' % self.width
-            line += fmt % key.upper()
-
-        if _os.path.exists(self.filename):
-            fileobj = open(self.filename, 'a')
-        else:
-            fileobj = open(self.filename, 'w')
-            fileobj.write(line + '\n')
-            fileobj.write((len(keys)*((self.width*'=') + '  ')) + '\n')
-        fileobj.close()
-
+        mkdir(self.path)
+        
+    def __call__(self, filename, val):
+        fullfile = join(self.path, filename)
+        with open(fullfile, 'a') as f:
+            f.write('%e\n' % val)
 
 
 def mychar(fmt):
@@ -210,5 +222,5 @@ def mychar(fmt):
 
 
 def mysize(fmt):
-    return _struct.calcsize(mychar(fmt))
+    return calcsize(mychar(fmt))
 
