@@ -52,6 +52,10 @@ class test_optimize(object):
         assert PAR.BEGIN == 1
         assert PAR.BEGIN < PAR.END
 
+        assert 'func' in dir(problem)
+        assert 'grad' in dir(problem)
+        assert 'model_init' in dir(problem)
+
 
     def main(cls):
         cls.setup()
@@ -78,7 +82,7 @@ class test_optimize(object):
         optimize.setup()
 
         unix.cd(cls.path)
-        m = np.array([-1.2,1])
+        m = problem.model_init()
         savenpy('m_new',m)
 
 
