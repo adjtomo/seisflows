@@ -23,8 +23,9 @@ class base(object):
     """ Nonlinear optimization base class.
 
      Available nonlinear optimization algorithms include steepest descent (SD),
-     nonlinear conjugate gradient (NLCG), and LBFGS. Available step control 
-     algorithms include a backtracking line search and a bracketing line search.
+     nonlinear conjugate gradient (NLCG), and limited-memory BFGS (LBFGS). 
+     Available step control algorithms include a backtracking line search and a
+     bracketing line search.
 
      Though NLCG (a Krylov method) and LBFGS (a quasi-Newton metod) are both 
      widely used for geophysical inversion, LBFGS is more efficient and more
