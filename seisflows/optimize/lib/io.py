@@ -7,7 +7,7 @@ import numpy as np
 class StepWriter(object):
     """ Utility for writing one or more columns to text file
     """
-    def __init__(self, path='.', filename='output.evals'):
+    def __init__(self, path='.', filename='output.optim'):
         self.iter = 0
         self.filename = self.fullfile(path, filename)
 
@@ -21,7 +21,6 @@ class StepWriter(object):
                 fileobj.write(fmt % (self.iter, steplen, funcval))
             elif steplen == 0.:
                 self.iter += 1
-                fileobj.write('\n')
                 fmt = '%10d  %10.3e  %10.3e\n'
                 fileobj.write(fmt % (self.iter, steplen, funcval))
             else:
@@ -43,6 +42,11 @@ class StepWriter(object):
             for _ in range(len(headers)):
                 fileobj.write('%10s  ' % (10*'='))
             fileobj.write('\n')
+
+    def newline(self):
+        with open(self.filename, 'a') as fileobj:
+                fileobj.write('\n')
+
 
     def fullfile(self, path, filename):
         try:

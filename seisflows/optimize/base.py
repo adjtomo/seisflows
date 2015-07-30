@@ -1,6 +1,6 @@
 
 from os.path import join
-
+import sys
 import numpy as np
 
 from seisflows.tools import unix
@@ -131,9 +131,6 @@ class base(object):
                 thresh=PAR.LBFGSTHRESH,
                 precond=PAR.PRECOND)
 
-        self.restart = 0
-        self.restart_count = 0
-
 
      # The following names are used in the 'compute_direction' method and for
      # writing information to disk:
@@ -160,16 +157,13 @@ class base(object):
 
         if PAR.SCHEME in ['SD']:
             p_new = -g_new
+            self.restarted = 0
 
         elif PAR.SCHEME in ['NLCG']:
-            p_new, self.restart = self.NLCG()
+            p_new, self.restarted = self.NLCG()
 
         elif PAR.SCHEME in ['LBFGS']:
-            p_new, self.restart = self.LBFGS()
-
-        # keep track of number of restarts
-        if self.restart:
-            self.restart_count += 1
+            p_new, self.restarted = self.LBFGS()
 
         savenpy('p_new', p_new)
         savetxt('s_new', np.dot(g_new, p_new))
@@ -206,7 +200,7 @@ class base(object):
         # determine initial step length
         if self.iter == 1:
             alpha = p_ratio*PAR.STEPINIT
-        elif self.restart:
+        elif self.restarted:
             alpha = p_ratio*PAR.STEPINIT
         elif PAR.LINESEARCH in ['Backtrack']:
             alpha = 1.
@@ -224,13 +218,14 @@ class base(object):
                 alpha = p_ratio * PAR.STEPTHRESH
 
         # write trial model corresponding to chosen step length
-        savenpy('m_try', m + p*alpha)
+        savenpy('m_try', m + alpha*p)
         savetxt('alpha', alpha)
 
         # upate log
         self.stepwriter(steplen=0., funcval=f)
 
 
+    @property
     def search_status(self):
         """ Determines status of line search
 
@@ -262,7 +257,7 @@ class base(object):
                 self.isdone = 1
 
         elif PAR.LINESEARCH == 'Bracket' or \
-           self.iter==1 or self.restart:
+           self.iter == 1 or self.restarted:
             if self.isbrak:
                 self.isdone = 1
             elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
@@ -274,10 +269,6 @@ class base(object):
 
         # update log
         self.stepwriter(steplen=x_, funcval=f_)
-
-        if self.step_count >= PAR.STEPMAX:
-            self.isdone = -1
-            print ' line search failed [max iter]\n'
 
         return self.isdone, self.isbest
 
@@ -303,7 +294,7 @@ class base(object):
             alpha = p_ratio*(self.step_count + 1)*PAR.STEPINIT
 
         elif PAR.LINESEARCH == 'Bracket' or \
-            self.iter==1 or self.restart:
+            self.iter==1 or self.restarted:
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 alpha = polyfit2(x, f)
             elif any(f[1:] <= f[0]):
@@ -316,7 +307,7 @@ class base(object):
 
         # write trial model corresponding to chosen step length
         savetxt('alpha', alpha)
-        savenpy('m_try', m + p*alpha)
+        savenpy('m_try', m + alpha*p)
 
 
     def finalize_search(self):
@@ -353,19 +344,61 @@ class base(object):
         # write updated model
         alpha = x[f.argmin()]
         savetxt('alpha', alpha)
-        savenpy('m_new', m + p*alpha)
+        savenpy('m_new', m + alpha*p)
         savetxt('f_new', f.min())
 
         # append latest output
-        self.writer('adhoc', (s/np.dot(p,p)**0.5)**-1 * (f[1]-f[0])/(x[1]-x[0]))
+        self.writer('adhoc', np.dot(g,g)**-0.5 * (f[1]-f[0])/(x[1]-x[0]))
         self.writer('gradient_norm_L1', np.linalg.norm(g, 1))
         self.writer('gradient_norm_L2', np.linalg.norm(g, 2))
         self.writer('misfit', f[0])
-        self.writer('restart_count', self.restart_count)
+        self.writer('restarted', self.restarted)
         self.writer('slope', (f[1]-f[0])/(x[1]-x[0]))
         self.writer('step_count', self.step_count)
         self.writer('step_length', x[f.argmin()])
-        self.writer('theta', 180.*np.pi**-1*angle(g,p))
+        self.writer('theta', 180.*np.pi**-1*angle(p,-g))
+
+        self.stepwriter.newline()
+
+
+    @property
+    def retry_status(self):
+        """ Returns false if search direction was the same as gradient
+          direction. Returns true otherwise.
+        """
+        unix.cd(PATH.OPTIMIZE)
+
+        g = loadnpy('g_new')
+        p = loadnpy('p_new')
+
+        thresh = 1.e-3
+        theta = angle(p,-g)
+        #print ' theta: %6.3f' % theta
+
+        if abs(theta) < thresh:
+            return 0
+        else:
+            return 1
+
+
+    def restart(self):
+        """ Discards history of algorithm; prepares to starts again from 
+          gradient direction
+        """
+        unix.cd(PATH.OPTIMIZE)
+
+        g = loadnpy('g_new')
+
+        savenpy('p_new', -g)
+        savetxt('s_new', np.dot(g,g))
+
+        if PAR.SCHEME in ['NLCG']:
+            self.NLCG.restart()
+        elif PAR.SCHEME in ['LBFGS']:
+            self.LBFGS.restart()
+
+        self.restarted = 1
+        self.stepwriter.iter -= 1
 
 
     ### line search utilities

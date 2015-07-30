@@ -1,7 +1,6 @@
 
 from os.path import join
 import sys
-
 import numpy as np
 
 from seisflows.tools import msg
@@ -192,23 +191,30 @@ class inversion(object):
         """
         optimize.initialize_search()
 
-        for optimize.step in range(1, PAR.STEPMAX+1):
-            isdone = self.search_status()
-
-            if isdone == 1:
+        while True:
+            isdone = self.iterate_search()
+            if isdone:
                 optimize.finalize_search()
                 break
-            elif isdone == 0:
+
+            elif optimize.step_count < PAR.STEPMAX:
                 optimize.compute_step()
                 continue
-            elif isdone == -1:
-                sys.exit()
+
+            else:
+                retry = optimize.retry_status
+                if retry:
+                    print ' Line search failed...\n Retrying...'
+                    optimize.restart()
+                    self.line_search()
+                    break
+                else:
+                    print ' Line search failed...\n Aborting...'
+                    sys.exit(-1)
 
 
-    def search_status(self):
-        """ Determines line search status 
-
-          First, calls self.evaluate_function, which carries out a forward 
+    def iterate_search(self):
+        """ First, calls self.evaluate_function, which carries out a forward 
           simulation given the current trial model. Then calls
           optimize.search_status, which maintains search history and checks
           stopping conditions.
@@ -218,11 +224,11 @@ class inversion(object):
           files associated with it.
         """
         if PAR.VERBOSE:
-            print " trial step", optimize.step
+            print " trial step", optimize.step_count+1
 
         # given current trial model, evaluate misfit function
         self.evaluate_function()
-        isdone, isbest = optimize.search_status()
+        isdone, isbest = optimize.search_status
 
         # save files associated with 'best' trial model
         if PATH.LOCAL:

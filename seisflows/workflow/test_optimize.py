@@ -109,28 +109,35 @@ class test_optimize(object):
     def line_search(cls):
         optimize.initialize_search()
 
-        for cls.step in range(1, PAR.STEPMAX+1):
-            isdone = cls.search_status()
-            if isdone==1:
+        while True:
+            cls.evaluate_function()
+            isdone, _ = optimize.search_status
+
+            if isdone:
                 optimize.finalize_search()
                 break
-            elif isdone==0:
+
+            elif optimize.step_count < PAR.STEPMAX:
                 optimize.compute_step()
                 continue
-            elif isdone==-1:
-                sys.exit()
 
+            else:
+                if optimize.restart_status:
+                    print ' Line search failed... retry'
+                    optimize.restart()
+                    cls.line_search()
+                    break
+                else:
+                    print ' Line search failed... abort'
+                    sys.exit(-1)
 
-    def search_status(cls):
-        cls.evaluate_function()
-        isdone, _ = optimize.search_status()
-        return isdone
 
 
     def evaluate_function(cls):
         m = loadnpy('m_try')
         f = problem.func(m)
         savetxt('f_try',f)
+        print f
 
 
     def evaluate_gradient(cls):

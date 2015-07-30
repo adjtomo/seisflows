@@ -4,6 +4,7 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import savetxt, exists
+from seisflows.tools.math import angle
 
 
 class LBFGS(object):
@@ -48,12 +49,12 @@ class LBFGS(object):
         S, Y = self.update()
         q = self.apply(g, S, Y)
 
-        if self.check_status(g, q) != 0:
+        status = self.check_status(g,q)
+        if status != 0:
             self.restart()
-            return -g, 1
-
+            return -g, status
         else:
-            return -q, 0
+            return -q, status
 
 
     def update(self):
@@ -134,13 +135,13 @@ class LBFGS(object):
 
 
     def check_status(self, g, r):
-        theta = np.dot(g,r)/(np.dot(g,g)*np.dot(r,r))**0.5
+        theta = angle(g,r)
         if theta < 0.:
             print 'restarting LBFGS... [not a descent direction]'
-            return -1
+            return 1
         elif theta < self.thresh:
             print 'restarting LBFGS... [practical safeguard]'
-            return -2
+            return 1
         else:
             return 0
 
