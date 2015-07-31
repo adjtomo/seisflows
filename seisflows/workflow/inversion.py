@@ -204,12 +204,12 @@ class inversion(object):
             else:
                 retry = optimize.retry_status
                 if retry:
-                    print ' Line search failed...\n Retrying...'
+                    print ' Line search failed...\n\n Retrying...'
                     optimize.restart()
                     self.line_search()
                     break
                 else:
-                    print ' Line search failed...\n Aborting...'
+                    print ' Line search failed...\n\n Aborting...'
                     sys.exit(-1)
 
 
