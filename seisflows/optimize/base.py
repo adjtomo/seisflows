@@ -102,6 +102,9 @@ class base(object):
         if 'STEPOVERSHOOT' not in PAR:
             setattr(PAR, 'STEPOVERSHOOT', 0.)
 
+        if 'ADHOCFACTOR' not in PAR:
+            setattr(PAR, 'ADHOCFACTOR', 1.)
+
 
     def setup(self):
         """ Sets up nonlinear optimization machinery
@@ -218,8 +221,8 @@ class base(object):
                 alpha = p_ratio * PAR.STEPTHRESH
 
         # write trial model corresponding to chosen step length
-        savenpy('m_try', m + alpha*p)
         savetxt('alpha', alpha)
+        savenpy('m_try', m + alpha*p)
 
         # upate log
         self.stepwriter(steplen=0., funcval=f)
@@ -279,6 +282,7 @@ class base(object):
         unix.cd(PATH.OPTIMIZE)
 
         m = loadnpy('m_new')
+        g = loadnpy('g_new')
         p = loadnpy('p_new')
         s = loadtxt('s_new')
 
@@ -297,13 +301,19 @@ class base(object):
             self.iter==1 or self.restarted:
             if any(f[1:] < f[0]) and (f[-2] < f[-1]):
                 alpha = polyfit2(x, f)
+
             elif any(f[1:] <= f[0]):
                 alpha = loadtxt('alpha')*PAR.STEPFACTOR**-1
             else:
                 alpha = loadtxt('alpha')*PAR.STEPFACTOR
 
         elif PAR.LINESEARCH == 'Backtrack':
-            alpha = backtrack2(f[0], s, x[1], f[1], b1=0.1, b2=0.5)
+            # calculate slope along 1D profile
+            slope = s/np.dot(g,g)**0.5
+            if PAR.ADHOCFACTOR:
+                slope *= PAR.ADHOCFACTOR            
+
+            alpha = backtrack2(f[0], slope, x[1], f[1], b1=0.1, b2=0.5)
 
         # write trial model corresponding to chosen step length
         savetxt('alpha', alpha)
@@ -348,7 +358,7 @@ class base(object):
         savetxt('f_new', f.min())
 
         # append latest output
-        self.writer('adhoc', np.dot(g,g)**-0.5 * (f[1]-f[0])/(x[1]-x[0]))
+        self.writer('factor', -np.dot(g,g)**-0.5 * (f[1]-f[0])/(x[1]-x[0]))
         self.writer('gradient_norm_L1', np.linalg.norm(g, 1))
         self.writer('gradient_norm_L2', np.linalg.norm(g, 2))
         self.writer('misfit', f[0])
@@ -399,6 +409,9 @@ class base(object):
 
         self.restarted = 1
         self.stepwriter.iter -= 1
+
+        self.stepwriter.newline()
+
 
 
     ### line search utilities

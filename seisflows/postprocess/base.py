@@ -31,9 +31,6 @@ class base(object):
         if 'LOGARITHMIC' not in PAR:
             setattr(PAR, 'LOGARITHMIC', True)
 
-        if 'FACTOR' not in PAR:
-            setattr(PAR, 'FACTOR', False)
-
         if 'REGULARIZE' not in PAR:
             setattr(PAR, 'REGULARIZE', False)
 
@@ -48,9 +45,6 @@ class base(object):
             setattr(PATH, 'PRECOND', None)
 
         # assertions
-        if PAR.FACTOR:
-            assert isinstance(PAR.FACTOR, float)
-
         if PAR.PRECOND:
             assert exists(PATH.PRECOND)
 
@@ -88,11 +82,6 @@ class base(object):
         if PAR.LOGARITHMIC:
             # convert from logarithmic to absolute perturbations
             g *= solver.merge(solver.load(path +'/'+ 'model'))
-            self.save(path, g)
-
-        if PAR.FACTOR:
-            # apply optional scaling factor
-            g *= PAR.FACTOR
             self.save(path, g)
 
         if PATH.MASK:
