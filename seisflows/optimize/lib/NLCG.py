@@ -17,6 +17,7 @@ class NLCG:
         self.path = path
         self.maxiter = maxiter
         self.thresh = thresh
+        self.precond = precond
 
         try:
             self.iter = loadtxt(self.path+'/'+'NLCG/iter')
@@ -45,8 +46,14 @@ class NLCG:
         # compute search direction
         g_old = loadnpy('g_old')
         p_old = loadnpy('p_old')
-        beta = pollak_ribere(g_new, g_old)
-        p_new = -g_new + beta*p_old
+
+        if self.precond:
+            d = loadnpy('precond')
+            beta = pollak_ribere(d**0.5 * g_new, d**0.5 * g_old)
+            p_new = -d*g_new + beta*p_old
+        else:
+            beta = pollak_ribere(g_new, g_old)
+            p_new = -g_new + beta*p_old
 
         # check restart conditions
         if check_conjugacy(g_new, g_old) > self.thresh:
