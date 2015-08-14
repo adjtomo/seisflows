@@ -5,7 +5,7 @@ import socket
 import subprocess
 import sys
 
-from os.path import abspath, basename, isdir, isfile, join
+from os.path import abspath, basename, dirname, isdir, isfile, join
 
 
 def cat(src, *dst):

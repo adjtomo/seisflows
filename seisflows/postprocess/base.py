@@ -108,7 +108,6 @@ class base(object):
 
 
     def combine_kernels(self, path):
-        # sum kernels
         system.run('solver', 'combine',
                    hosts='head',
                    path=path +'/'+ 'kernels')

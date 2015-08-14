@@ -105,7 +105,7 @@ class migration(object):
     def prepare_model(self):
         model = PATH.OUTPUT +'/'+ 'model_init'
         assert exists(model)
-        unix.ln(model, PATH.GLOBAL +'/'+ 'model')
+        unix.cp(model, PATH.GLOBAL +'/'+ 'model')
 
     def save_kernels_sum(self):
         src = PATH.GLOBAL +'/'+ 'kernels/sum'
