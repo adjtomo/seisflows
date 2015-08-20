@@ -166,8 +166,14 @@ def mesh2grid(v, mesh):
 
     # interpolate to structured grid
     V = _interp.griddata(mesh, v, grid, 'linear')
-    V = np.reshape(V, (nz, nx))
 
+    # workaround edge issues
+    if np.any(np.isnan(V)):
+        W = _interp.griddata(mesh, v, grid, 'nearest')
+        for i in np.where(np.isnan(V)):
+            V[i] = W[i]
+
+    V = np.reshape(V, (nz, nx))
     return V, grid
 
 
@@ -176,3 +182,4 @@ def grid2mesh(V, grid, mesh):
         coordinates (mesh)
     """
     return _interp.griddata(grid, V.flatten(), mesh, 'linear')
+
