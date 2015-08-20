@@ -142,6 +142,10 @@ class specfem3d(loadclass('solver', 'base')):
         return glob('OUTPUT_FILES/*SU')
 
     @property
+    def kernel_databases(self):
+        return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
+
+    @property
     def model_databases(self):
         return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
 

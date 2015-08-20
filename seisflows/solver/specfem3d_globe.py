@@ -158,6 +158,10 @@ class specfem3d_globe(loadclass('solver', 'base')):
         return glob('OUTPUT_FILES/*.sem.ascii')
 
     @property
+    def kernel_databases(self):
+        return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
+
+    @property
     def model_databases(self):
         return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
 

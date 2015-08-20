@@ -208,6 +208,10 @@ class specfem2d(loadclass('solver', 'base')):
 
     @property
     def model_databases(self):
+        return join(self.getpath, 'DATA')
+
+    @property
+    def kernel_databases(self):
         return join(self.getpath, 'OUTPUT_FILES')
 
     @property

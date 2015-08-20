@@ -489,11 +489,14 @@ class base(object):
         # create directory structure
         unix.mkdir('bin')
         unix.mkdir('DATA')
+        unix.mkdir('OUTPUT_FILES')
 
         unix.mkdir('traces/obs')
         unix.mkdir('traces/syn')
         unix.mkdir('traces/adj')
+
         unix.mkdir(self.model_databases)
+        unix.mkdir(self.kernel_databases)
 
         # copy exectuables
         src = glob(PATH.SPECFEM_BIN +'/'+ '*')

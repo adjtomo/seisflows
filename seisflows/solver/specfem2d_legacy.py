@@ -306,7 +306,11 @@ class specfem2d_legacy(loadclass('solver', 'base')):
 
     @property
     def model_databases(self):
-        return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
+        return join(self.getpath, 'DATA')
+
+    @property
+    def kernel_databases(self):
+        return join(self.getpath, 'OUTPUT_FILES')
 
     @property
     def source_prefix(self):
