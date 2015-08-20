@@ -159,12 +159,24 @@ class base(object):
         raise NotImplementedError
 
 
-    def generate_preconditioner(self, *args, **kwargs):
-        """ Computes preconditioner
-        """
-        # must be implemented by subclass
-        raise NotImplementedError
+    def generate_precond(self, process_traces=None, model_path=None, model_name=None, model_type='gll'):
+        assert(model_name)
+        assert(model_type)
+        assert (exists(model_path))
 
+        self.initialize_solver_directories()
+
+        src = model_path
+        dst = self.model_databases
+        self.save(dst, self.load(src))
+
+        self.forward()
+        unix.mv(self.data_wildcard, 'traces/syn')
+        self.initialize_adjoint_traces('traces/syn')
+        process_traces(self.getpath)
+
+        self.adjoint()
+        self.export_kernels(PATH.GLOBAL)
 
 
     ### high-level solver interface
