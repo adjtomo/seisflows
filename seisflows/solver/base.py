@@ -63,19 +63,16 @@ class base(object):
     assert 'MATERIALS' in PAR
     assert 'DENSITY' in PAR
 
+    parameters = []
     if PAR.MATERIALS == 'Elastic':
-        parameters = []
         parameters += ['vp']
         parameters += ['vs']
-
     elif PAR.MATERIALS == 'Acoustic':
-        parameters = []
         parameters += ['vp']
 
     if PAR.DENSITY == 'Variable':
         density_scaling = None
         parameters += ['rho']
-
     elif PAR.DENSITY == 'Constant':
         density_scaling = None
 
@@ -340,8 +337,9 @@ class base(object):
         """
         unix.cd(self.getpath)
 
+        self.getnames()
         with open('kernel_paths', 'w') as f:
-            f.writelines([join(path, dir)+'\n' for dir in unix.ls(path)])
+            f.writelines([join(path, dir)+'\n' for dir in self.names])
 
         unix.mkdir(path +'/'+ 'sum')
         for name in self.parameters:
@@ -435,26 +433,28 @@ class base(object):
                 unix.cp(files, path)
 
     def export_kernels(self, path):
-        # work around disparate name conventions
+        unix.cd(self.kernel_databases)
+
+        # work around conflicting name conventions
         files = []
-        files += glob(self.model_databases +'/'+ '*proc??????_alpha_kernel.bin')
-        files += glob(self.model_databases +'/'+ '*proc??????_alpha[hv]_kernel.bin')
-        files += glob(self.model_databases +'/'+ '*proc??????_reg1_alpha_kernel.bin')
-        files += glob(self.model_databases +'/'+ '*proc??????_reg1_alpha[hv]_kernel.bin')
+        files += glob('*proc??????_alpha_kernel.bin')
+        files += glob('*proc??????_alpha[hv]_kernel.bin')
+        files += glob('*proc??????_reg1_alpha_kernel.bin')
+        files += glob('*proc??????_reg1_alpha[hv]_kernel.bin')
         unix.rename('alpha', 'vp', files)
 
         files = []
-        files += glob(self.model_databases +'/'+ '*proc??????_beta_kernel.bin') 
-        files += glob(self.model_databases +'/'+ '*proc??????_beta[hv]_kernel.bin')
-        files += glob(self.model_databases +'/'+ '*proc??????_reg1_beta_kernel.bin')
-        files += glob(self.model_databases +'/'+ '*proc??????_reg1_beta[hv]_kernel.bin')
+        files += glob('*proc??????_beta_kernel.bin') 
+        files += glob('*proc??????_beta[hv]_kernel.bin')
+        files += glob('*proc??????_reg1_beta_kernel.bin')
+        files += glob('*proc??????_reg1_beta[hv]_kernel.bin')
         unix.rename('beta', 'vs', files)
 
-        # noexit hack deals with problems on parallel filesystem
+        # noexit hack to deal with problems on parallel filesystem
         unix.mkdir(join(path, 'kernels'), noexit=True)
 
         unix.mkdir(join(path, 'kernels', self.getname))
-        src = join(glob(self.model_databases +'/'+ '*kernel.bin'))
+        src = join(glob('*_kernel.bin'))
         dst = join(path, 'kernels', self.getname)
         unix.mv(src, dst)
 
