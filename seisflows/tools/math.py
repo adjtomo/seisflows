@@ -5,13 +5,6 @@ import scipy.signal as _signal
 import scipy.interpolate as _interp
 
 
-def angle(g,p):
-    gp = np.dot(g,p)
-    gg = np.dot(g,g)
-    pp = np.dot(p,p)
-    return np.arccos(gp/(gg*pp)**0.5)
-
-
 def nabla(Z, order=1, dx=1., dy=1.):
     """ Returns sum of n-th order spatial derivatives of a function defined on
         a 2D rectangular grid; generalizes Laplacian
@@ -30,8 +23,8 @@ def nabla(Z, order=1, dx=1., dy=1.):
         Z[-1,-1] = (Zx[-1,-1] + Zy[-1,-1])/2.
 
     elif order == 2:
-        Zx = (-Z[:,:-2] + 2.*Z[:,1:-1] - Z[:,2:])/(dx*dx)
-        Zy = (-Z[:-2,:] + 2.*Z[1:-1,:] - Z[2:,:])/(dy*dy)
+        Zx = (Z[:,2:] - 2.*Z[:,1:-1] + Z[:,:-2])/(dx*dx)
+        Zy = (Z[2:,:] - 2.*Z[1:-1,:] + Z[:-2,:])/(dy*dy)
 
         Z[:,:] = 0.
         Z[:,1:-1] += Zx
@@ -104,4 +97,11 @@ def lsq2(x, f):
     else:
         print -1
         raise Exception()
+
+
+def angle(g,p):
+    gp = np.dot(g,p)
+    gg = np.dot(g,g)
+    pp = np.dot(p,p)
+    return np.arccos(gp/(gg*pp)**0.5)
 
