@@ -91,7 +91,7 @@ class base(object):
 
         if PAR.REGULARIZE:
             # apply regularization
-            g = self.apply_regularization(path)
+            g = self.regularize(path)
             self.save(path, g, backup='noregularize')
 
         savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
@@ -121,7 +121,7 @@ class base(object):
                        span=PAR.SMOOTH)
 
 
-    def apply_regularization(self, *args, **kwargs):
+    def regularize(self, *args, **kwargs):
         raise NotImplementedError("Must be implemented by subclass")
 
 
