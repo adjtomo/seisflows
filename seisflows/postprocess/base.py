@@ -31,9 +31,6 @@ class base(object):
         if 'LOGARITHMIC' not in PAR:
             setattr(PAR, 'LOGARITHMIC', True)
 
-        if 'REGULARIZE' not in PAR:
-            setattr(PAR, 'REGULARIZE', False)
-
         if 'PRECOND' not in PAR:
             setattr(PAR, 'PRECOND', False)
 
@@ -82,22 +79,17 @@ class base(object):
         if PAR.LOGARITHMIC:
             # convert from logarithmic to absolute perturbations
             g *= solver.merge(solver.load(path +'/'+ 'model'))
-            self.save(path, g)
+        self.save(path, g)
 
         if PATH.MASK:
             # apply mask
             g *= solver.merge(solver.load(PATH.MASK))
             self.save(path, g, backup='nomask')
 
-        if PAR.REGULARIZE:
-            # apply regularization
-            g = self.regularize(path)
-            self.save(path, g, backup='noregularize')
-
         savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
 
-    def write_preconditioner(self):
+    def write_precond(self):
         """ Reads and writes user-supplied diagonal preconditioner
         """
         if 'OPTIMIZE' not in PATH:
@@ -119,10 +111,6 @@ class base(object):
                        hosts='head',
                        path=path + '/' + 'kernels/sum',
                        span=PAR.SMOOTH)
-
-
-    def regularize(self, *args, **kwargs):
-        raise NotImplementedError("Must be implemented by subclass")
 
 
     def save(self, path, v, backup=None):

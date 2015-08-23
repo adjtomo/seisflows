@@ -44,10 +44,13 @@ class regularize(loadclass('postprocess', 'base')):
             setattr(PAR, 'LAMBDA', 0.)
 
 
-    def setup(self):
-        """ Performs any required initialization or setup tasks
-        """
-        pass
+    def write_gradient(self, path):
+        super(regularize, self).write_gradient(path)
+
+        g = self.regularize(path)
+        self.save(path, g, backup='noregularize')
+
+        savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
 
     def process_kernels(self, path):
@@ -80,16 +83,8 @@ class regularize(loadclass('postprocess', 'base')):
         if not PAR.FIXRADIUS:
             return
 
-        try:
-            x = g['x'][0]
-            z = g['z'][0]
-            mesh = stack(x, z)
-        except:
-            from seisflows.seistools.io import loadbin
-            model_path = PATH.OUTPUT +'/'+ 'model_true'
-            x = loadbin(model_path, 0, 'x')
-            z = loadbin(model_path, 0, 'z')
-            mesh = stack(x, z)
+        mesh = self.getmesh()
+        x,z = self.getxz()
 
         lx = x.max() - x.min()
         lz = z.max() - z.min()
@@ -128,21 +123,13 @@ class regularize(loadclass('postprocess', 'base')):
             return solver.merge(g)
 
         m = solver.load(path +'/'+ 'model')
-        try:
-            x = m['x'][0]
-            z = m['z'][0]
-            mesh = stack(x, z)
-        except:
-            from seisflows.seistools.io import loadbin
-            model_path = PATH.OUTPUT +'/'+ 'model_true'
-            x = loadbin(model_path, 0, 'x')
-            z = loadbin(model_path, 0, 'z')
-            mesh = stack(x, z)
+        mesh = self.getmesh()
 
         for key in solver.parameters:            
             for iproc in range(PAR.NPROC):
                 g[key][iproc] += PAR.LAMBDA *\
                     self.nabla(mesh, m[key][iproc], g[key][iproc])
+                    #self.nabla(m[key][iproc], g[key][iproc] , mesh, h)
 
         return solver.merge(g)
 
@@ -150,3 +137,45 @@ class regularize(loadclass('postprocess', 'base')):
     def nabla(self, mesh, m, g):
         raise NotImplementedError("Must be implemented by subclass.")
 
+
+    def getmesh(self):
+        model_path = PATH.OUTPUT +'/'+ 'model_true'
+        try:
+            m = solver.load(model_path)
+            x = m['x'][0]
+            z = m['z'][0]
+            mesh = stack(x, z)
+        except:
+            from seisflows.seistools.io import loadbin
+            x = loadbin(model_path, 0, 'x')
+            z = loadbin(model_path, 0, 'z')
+            mesh = stack(x, z)
+        return mesh
+
+
+    def getxz(self):
+        model_path = PATH.OUTPUT +'/'+ 'model_true'
+        try:
+            m = solver.load(model_path)
+            x = m['x'][0]
+            z = m['z'][0]
+        except:
+            from seisflows.seistools.io import loadbin
+            x = loadbin(model_path, 0, 'x')
+            z = loadbin(model_path, 0, 'z')
+        return x,z
+
+
+      #if PAR.SOLVER in ['specfem2d', 'elastic2d']:
+      #    from seisflows.seistools.io import loadbin
+      #    x = loadbin(model_path, 0, 'x')
+      #    z = loadbin(model_path, 0, 'z')
+      #    mesh = stack(x, z)
+      #elif PAR.SOLVER in ['specfem2d_legacy']:
+      #    m = solver.load(model_path)
+      #    x = g['x'][0]
+      #    z = g['z'][0]
+      #    mesh = stack(x, z)
+      #else:
+      #    msg = "postprocess.regularize can only be used with solver.specfem2d"
+      #    raise Exception(msg)

@@ -12,13 +12,13 @@ def angle(g,p):
     return np.arccos(gp/(gg*pp)**0.5)
 
 
-def nabla(Z, order=1):
+def nabla(Z, order=1, dx=1., dy=1.):
     """ Returns sum of n-th order spatial derivatives of a function defined on
         a 2D rectangular grid; generalizes Laplacian
     """
     if order == 1:
-        Zx = Z[:,1:] - Z[:,:-1]
-        Zy = Z[1:,:] - Z[:-1,:]
+        Zx = (Z[:,1:] - Z[:,:-1])/dx
+        Zy = (Z[1:,:] - Z[:-1,:])/dy
 
         Z[:,:] = 0.
         Z[:,1:] += Zx
@@ -30,8 +30,8 @@ def nabla(Z, order=1):
         Z[-1,-1] = (Zx[-1,-1] + Zy[-1,-1])/2.
 
     elif order == 2:
-        Zx = -Z[:,:-2] + 2.*Z[:,1:-1] - Z[:,2:]
-        Zy = -Z[:-2,:] + 2.*Z[1:-1,:] - Z[2:,:]
+        Zx = (-Z[:,:-2] + 2.*Z[:,1:-1] - Z[:,2:])/(dx*dx)
+        Zy = (-Z[:-2,:] + 2.*Z[1:-1,:] - Z[2:,:])/(dy*dy)
 
         Z[:,:] = 0.
         Z[:,1:-1] += Zx

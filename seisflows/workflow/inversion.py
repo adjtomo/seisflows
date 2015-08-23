@@ -267,7 +267,7 @@ class inversion(object):
             path=PATH.GRAD)
 
         if PAR.PRECOND:
-            postprocess.write_preconditioner()
+            postprocess.write_precond()
 
 
     def finalize(self):
