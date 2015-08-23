@@ -26,6 +26,10 @@ class regularize(loadclass('postprocess', 'base')):
         unstructured numerical grids is quite new.
 
         SO FAR, CAN ONLY BE USED FOR 2D WAVEFORM INVERSION.
+
+        Prior to regularizing gradient, near field artifacts must be corrected.
+        The "FIXRADIUS" parameter specifies the radius, in number of GLL points,
+        within which the correction is applied.
     """
 
     def check(self):
@@ -33,8 +37,8 @@ class regularize(loadclass('postprocess', 'base')):
         """
         super(regularize, self).check()
 
-        if 'RADIUS' not in PAR:
-            raise ParameterError(PAR, 'RADIUS')
+        if 'FIXRADIUS' not in PAR:
+            setattr(PAR, 'FIXRADIUS', 7.5)
 
         if 'LAMBDA' not in PAR:
             setattr(PAR, 'LAMBDA', 0.)
@@ -47,16 +51,16 @@ class regularize(loadclass('postprocess', 'base')):
 
 
     def process_kernels(self, path):
-        """ Masks source and receiver artifacts
+        """ Processes kernels in accordance with parameter settings
         """
         fullpath = path +'/'+ 'kernels'
         assert exists(path)
 
         if exists(fullpath +'/'+ 'sum'):
-            unix.mv(fullpath +'/'+ 'sum', fullpath +'/'+ 'sum_nomask')
+            unix.mv(fullpath +'/'+ 'sum', fullpath +'/'+ 'sum_nofix')
 
         # mask sources and receivers
-        system.run('postprocess', 'mask', 
+        system.run('postprocess', 'fix_near_field', 
                    hosts='all', 
                    path=fullpath)
 
@@ -65,13 +69,15 @@ class regularize(loadclass('postprocess', 'base')):
                    path=fullpath)
 
 
-    def mask(self, path=''):
+    def fix_near_field(self, path=''):
+        """
+        """
         import preprocess
         preprocess.setup()
 
         fullpath = path +'/'+  solver.getname
         g = solver.load(fullpath, suffix='_kernel')
-        if not PAR.RADIUS:
+        if not PAR.FIXRADIUS:
             return
 
         try:
@@ -93,7 +99,7 @@ class regularize(loadclass('postprocess', 'base')):
         dx = lx/nx
         dz = lz/nz
 
-        sigma = 0.5*PAR.RADIUS*(dx+dz)
+        sigma = 0.5*PAR.FIXRADIUS*(dx+dz)
         _, h = preprocess.load(solver.getpath +'/'+ 'traces/obs')
 
         # mask sources
