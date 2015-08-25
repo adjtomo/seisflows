@@ -25,7 +25,7 @@ def cd(path):
     os.chdir(path)
 
 
-def cp(src='', dst='', opt=''):
+def cp(src='', dst=''):
     if isinstance(src, (list, tuple)):
         if len(src) > 1:
             assert isdir(dst)

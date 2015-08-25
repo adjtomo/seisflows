@@ -43,7 +43,7 @@ def nabla(Z, order=1, dx=1., dy=1.):
     return Z
 
 
-def gauss2(X, Y, mu, sigma):
+def gauss2(X, Y, mu, sigma, normalize=True):
     """ Evaluates Gaussian over points of X,Y
     """
     # evaluates Gaussian over X,Y
@@ -53,7 +53,10 @@ def gauss2(X, Y, mu, sigma):
     Y = Y - mu[1]
     Z = B[0, 0]*X**2. + B[0, 1]*X*Y + B[1, 0]*X*Y + B[1, 1]*Y**2.
     Z = np.exp(-0.5*Z)
-    Z *= (2.*np.pi*np.sqrt(D))**(-1.)
+
+    if normalize:
+        Z *= (2.*np.pi*np.sqrt(D))**(-1.)
+
     return Z
 
 
