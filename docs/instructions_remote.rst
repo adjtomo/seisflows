@@ -1,5 +1,5 @@
 
-1. Download seisflows
+1. Download SeisFlows
 ---------------------
 
 To run seisflows you'll need a Unix system with Python and standard utilities.  From the command line type::
