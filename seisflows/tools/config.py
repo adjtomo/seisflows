@@ -30,10 +30,10 @@ class SeisflowsObjects(object):
     # It probably won't be necessary to modify the following list. If it modifications are made anyway, care should be taken, as changing the names of objects or the order in which they loaded can result in circular imports or other problems.
     objects = []
     objects += ['system']
-    objects += ['optimize']
     objects += ['preprocess']
     objects += ['solver']
     objects += ['postprocess']
+    objects += ['optimize']
     objects += ['workflow']
 
     def load(self):
