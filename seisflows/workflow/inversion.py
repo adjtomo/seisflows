@@ -149,7 +149,7 @@ class base(object):
     def initialize(self):
         """ Prepares for next model update iteration
         """
-        self.prepare_model(path=PATH.GRAD, suffix='new')
+        self.write_model(path=PATH.GRAD, suffix='new')
 
         print 'Generating synthetics'
         system.run('solver', 'eval_func',
@@ -177,11 +177,9 @@ class base(object):
             if optimize.isdone:
                 optimize.finalize_search()
                 break
-
             elif optimize.step_count < PAR.STEPMAX:
                 optimize.compute_step()
                 continue
-
             else:
                 retry = optimize.retry_status
                 if retry:
@@ -203,7 +201,6 @@ class base(object):
         if PAR.VERBOSE:
             print " trial step", optimize.step_count+1
 
-        # given current trial model, evaluate misfit function
         self.evaluate_function()
         optimize.update_status()
 
@@ -211,7 +208,7 @@ class base(object):
     def evaluate_function(self):
         """ Performs forward simulation to evaluate objective function
         """
-        self.prepare_model(path=PATH.FUNC, suffix='try')
+        self.write_model(path=PATH.FUNC, suffix='try')
 
         system.run('solver', 'eval_func',
                    hosts='all',
@@ -263,7 +260,7 @@ class base(object):
         unix.mkdir(PATH.FUNC)
 
 
-    def prepare_model(self, path='', suffix=''):
+    def write_model(self, path='', suffix=''):
         """ Writes model in format used by solver
         """
         unix.mkdir(path)
@@ -319,7 +316,7 @@ class thrifty(base):
     """ Thrifty inversion worflow
 
       Provides additional savings by avoiding redundant forward simulations.
-      Otherwise, exactly the same as regular inversion workflow.
+      Otherwise, the same as regular inversion workflow.
     """
 
     def initialize(self):
@@ -357,8 +354,7 @@ class thrifty(base):
 
 
     def solver_status(self, off=1):
-        """ Keeps track of whether a forward simulation next model update
-          iteration would be redundant
+        """ Keeps track of whether a forward simulation would be redundant
         """
         if self.iter <= off:
             # solver files do not exist prior to first iteration
@@ -366,7 +362,7 @@ class thrifty(base):
 
         elif PATH.LOCAL:
             # solver files cannot be retrieved from local disks
-            exists = False
+            return False
 
         elif PAR.LINESEARCH != 'Backtrack':
             return False
