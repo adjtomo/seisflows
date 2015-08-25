@@ -111,9 +111,9 @@ class test_optimize(object):
 
         while True:
             cls.evaluate_function()
-            isdone, _ = optimize.search_status
+            optimize.update_status()
 
-            if isdone:
+            if optimize.isdone:
                 optimize.finalize_search()
                 break
 
@@ -122,7 +122,8 @@ class test_optimize(object):
                 continue
 
             else:
-                if optimize.restart_status:
+                retry = optimize.retry_status
+                if retry:
                     print ' Line search failed... retry'
                     optimize.restart()
                     cls.line_search()

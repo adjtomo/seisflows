@@ -1,11 +1,11 @@
 
-from os.path import join, exists
+from os.path import join
 import sys
 import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import loadtxt, savetxt
+from seisflows.tools.code import exists, loadtxt, savetxt
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
