@@ -324,7 +324,7 @@ class thrifty(base):
 
     def initialize(self):
         # are prerequisites for gradient evaluation in place?
-        isready = self.solver_status()
+        isready = self.solver_status(off=2)
 
         # if not, then prepare for gradient evaluation
         if not isready:
@@ -337,8 +337,8 @@ class thrifty(base):
         isdone = optimize.isdone
         isready = self.solver_status()
 
-        # to avoid redundant forward simulation, save files associated with
-        # 'best' trial model
+        # to avoid redundant forward simulation, save solver files associated
+        # with 'best' trial model
         if isready and isdone:
             unix.rm(PATH.SOLVER+'_best')
             unix.mv(PATH.SOLVER, PATH.SOLVER+'_best')
@@ -356,11 +356,11 @@ class thrifty(base):
             super(thrifty, self).clean()
 
 
-    def solver_status(self):
+    def solver_status(self, off=1):
         """ Keeps track of whether a forward simulation next model update
           iteration would be redundant
         """
-        if self.iter == 1:
+        if self.iter <= off:
             # solver files do not exist prior to first iteration
             return False
 
