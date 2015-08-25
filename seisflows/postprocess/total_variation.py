@@ -17,7 +17,7 @@ import system
 import solver
 
 
-class tikhonov1(loadclass('postprocess', 'regularize')):
+class total_variation(loadclass('postprocess', 'regularize')):
     """ Adds regularization options to base class
 
         Available options include 0-, 1-, and 2- order Tikhonov and total
@@ -38,8 +38,8 @@ class tikhonov1(loadclass('postprocess', 'regularize')):
 
 
     def nabla(self, mesh, m, g):
-        G, grid = mesh2grid(g, mesh)
-        DG = nabla(G, order=1)
-        dg = grid2mesh(DG, grid, mesh)
-        return np.sign(dg)/np.mean(m)
+        M, grid = mesh2grid(g, mesh)
+        DM = nabla(M, order=1)
+        dm = grid2mesh(DM, grid, mesh)
+        return np.sign(dm)/np.mean(m)
 
