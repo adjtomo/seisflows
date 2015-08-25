@@ -72,9 +72,9 @@ class base(object):
         self.process_kernels(path)
 
         g = solver.merge(solver.load(
-                         path +'/'+ 'kernels/sum',
-                         suffix='_kernel',
-                         verbose=True))
+                 path +'/'+ 'kernels/sum',
+                 suffix='_kernel',
+                 verbose=True))
 
         if PAR.LOGARITHMIC:
             # convert from logarithmic to absolute perturbations

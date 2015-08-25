@@ -19,7 +19,6 @@ class base(object):
     def check(self):
         """ Checks parameters and paths
         """
-
         if 'MISFIT' not in PAR:
             setattr(PAR, 'MISFIT', 'wav')
 
