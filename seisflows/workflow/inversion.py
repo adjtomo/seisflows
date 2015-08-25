@@ -20,7 +20,7 @@ import preprocess
 import postprocess
 
 
-class inversion(object):
+class base(object):
     """ Seismic inversion base class.
 
       Computes iterative model updates in accordance with parameter file 
@@ -126,6 +126,7 @@ class inversion(object):
             self.line_search()
 
             self.finalize()
+            self.clean()
             print ''
 
 
@@ -136,47 +137,26 @@ class inversion(object):
         if PAR.BEGIN == 1:
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
-            optimize.setup()
+
             preprocess.setup()
             postprocess.setup()
+            optimize.setup()
 
-        # has solver machinery been set up?
-        if PAR.BEGIN == 1:
-            isready = False
-        elif PATH.LOCAL:
-            isready = False
-        else:
-            isready = True
-
-        # if not, then set up solver machinery
-        if not isready:
-            system.run('solver', 'setup', hosts='all')
-            model = solver.load(PATH.MODEL_INIT)
-            savenpy(PATH.OPTIMIZE +'/'+ 'm_new', solver.merge(model))
+        system.run('solver', 'setup', 
+                   hosts='all')
 
 
     def initialize(self):
         """ Prepares for next model update iteration
         """
-        # are prerequisites for gradient evaulation in place?
-        if self.iter == 1:
-            isready = False
-        elif PATH.LOCAL:
-            isready = False
-        else:
-            isready = True
+        self.prepare_model(path=PATH.GRAD, suffix='new')
 
-        # if not, then prepare for gradient evaluation
-        if not isready:
-            print 'Generating synthetics'
+        print 'Generating synthetics'
+        system.run('solver', 'eval_func',
+                   hosts='all',
+                   path=PATH.GRAD)
 
-            self.prepare_model(path=PATH.GRAD, suffix='new')
-
-            system.run('solver', 'eval_func',
-                       hosts='all',
-                       path=PATH.GRAD)
-
-            self.sum_residuals(path=PATH.GRAD, suffix='new')
+        self.sum_residuals(path=PATH.GRAD, suffix='new')
 
 
     def compute_direction(self):
@@ -192,8 +172,9 @@ class inversion(object):
         optimize.initialize_search()
 
         while True:
-            isdone = self.iterate_search()
-            if isdone:
+            self.iterate_search()
+
+            if optimize.isdone:
                 optimize.finalize_search()
                 break
 
@@ -216,31 +197,15 @@ class inversion(object):
     def iterate_search(self):
         """ First, calls self.evaluate_function, which carries out a forward 
           simulation given the current trial model. Then calls
-          optimize.search_status, which maintains search history and checks
+          optimize.update_status, which maintains search history and checks
           stopping conditions.
-
-          To avoid having to perform a redundant forward simulation later on, 
-          we keep track of which trial model is the best so far and save solver
-          files associated with it.
         """
         if PAR.VERBOSE:
             print " trial step", optimize.step_count+1
 
         # given current trial model, evaluate misfit function
         self.evaluate_function()
-        isdone, isbest = optimize.search_status
-
-        # save files associated with 'best' trial model
-        if PATH.LOCAL:
-            pass
-        elif isbest and isdone:
-            unix.rm(PATH.SOLVER+'_best')
-            unix.mv(PATH.SOLVER, PATH.SOLVER+'_best')
-        elif isbest:
-            unix.rm(PATH.SOLVER + '_best')
-            unix.cp(PATH.SOLVER, PATH.SOLVER+'_best')
-
-        return isdone
+        optimize.update_status()
 
 
     def evaluate_function(self):
@@ -275,7 +240,6 @@ class inversion(object):
         """
         system.checkpoint()
 
-        # copy results from scratch path to output path
         if divides(self.iter, PAR.SAVEMODEL):
             self.save_model()
 
@@ -291,22 +255,13 @@ class inversion(object):
         if divides(self.iter, PAR.SAVERESIDUALS):
             self.save_residuals()
 
-        # clean up for next iteration
-        if not PATH.LOCAL:
-            unix.rm(PATH.GRAD)
-            unix.mv(PATH.FUNC, PATH.GRAD)
-            unix.mkdir(PATH.FUNC)
-            unix.rm(PATH.SOLVER)
-            unix.mv(PATH.SOLVER+'_best', PATH.SOLVER)
 
-        else:
-            unix.rm(PATH.GRAD)
-            unix.rm(PATH.FUNC)
-            unix.mkdir(PATH.GRAD)
-            unix.mkdir(PATH.FUNC)
+    def clean(self):
+        unix.rm(PATH.GRAD)
+        unix.rm(PATH.FUNC)
+        unix.mkdir(PATH.GRAD)
+        unix.mkdir(PATH.FUNC)
 
-
-    ### utility functions
 
     def prepare_model(self, path='', suffix=''):
         """ Writes model in format used by solver
@@ -358,4 +313,70 @@ class inversion(object):
         src = join(PATH.GRAD, 'residuals')
         dst = join(PATH.OUTPUT, 'residuals_%04d' % self.iter)
         unix.mv(src, dst)
+
+
+class thrifty(base):
+    """ Thrifty inversion worflow
+
+      Provides additional savings by avoiding redundant forward simulations.
+      Otherwise, exactly the same as regular inversion workflow.
+    """
+
+    def initialize(self):
+        # are prerequisites for gradient evaluation in place?
+        isready = self.solver_status()
+
+        # if not, then prepare for gradient evaluation
+        if not isready:
+            super(thrifty, self).initialize()
+
+
+    def iterate_search(self):
+        super(thrifty, self).iterate_search()
+
+        isdone = optimize.isdone
+        isready = self.solver_status()
+
+        # to avoid redundant forward simulation, save files associated with
+        # 'best' trial model
+        if isready and isdone:
+            unix.rm(PATH.SOLVER+'_best')
+            unix.mv(PATH.SOLVER, PATH.SOLVER+'_best')
+
+
+    def clean(self):
+        isready = self.solver_status()
+        if isready:
+            unix.rm(PATH.GRAD)
+            unix.mv(PATH.FUNC, PATH.GRAD)
+            unix.mkdir(PATH.FUNC)
+            unix.rm(PATH.SOLVER)
+            unix.mv(PATH.SOLVER+'_best', PATH.SOLVER)
+        else:
+            super(thrifty, self).clean()
+
+
+    def solver_status(self):
+        """ Keeps track of whether a forward simulation next model update
+          iteration would be redundant
+        """
+        if self.iter == 1:
+            # solver files do not exist prior to first iteration
+            return False
+
+        elif PATH.LOCAL:
+            # solver files cannot be retrieved from local disks
+            exists = False
+
+        elif PAR.LINESEARCH != 'Backtrack':
+            return False
+
+        elif optimize.restarted:
+            return False
+
+        else:
+            return True
+
+
+inversion = thrifty
 

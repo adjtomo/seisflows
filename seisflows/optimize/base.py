@@ -1,5 +1,5 @@
 
-from os.path import join
+from os.path import join, exists
 import sys
 import numpy as np
 
@@ -17,6 +17,8 @@ from seisflows.optimize.lib.io import Writer, StepWriter
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
+
+import solver
 
 
 class base(object):
@@ -56,6 +58,9 @@ class base(object):
         if 'OPTIMIZE' not in PATH:
             setattr(PATH, 'OPTIMIZE', join(PATH.GLOBAL, 'optimize'))
 
+        if 'MODEL_INIT' not in PATH:
+            setattr(PATH, 'MODEL_INIT', None)
+
         # search direction algorithm
         if 'SCHEME' not in PAR:
             setattr(PAR, 'SCHEME', 'LBFGS')
@@ -78,7 +83,7 @@ class base(object):
             setattr(PAR, 'NLCGTHRESH', np.inf)
 
         if 'LBFGSMEM' not in PAR:
-            setattr(PAR, 'LBFGSMEM', 5)
+            setattr(PAR, 'LBFGSMEM', 3)
 
         if 'LBFGSMAX' not in PAR:
             setattr(PAR, 'LBFGSMAX', np.inf)
@@ -133,6 +138,12 @@ class base(object):
                 maxiter=PAR.LBFGSMAX,   
                 thresh=PAR.LBFGSTHRESH,
                 precond=PAR.PRECOND)
+
+        # write initial model
+        if exists(PATH.MODEL_INIT):
+            src = PATH.MODEL_INIT
+            dst = join(PATH.OPTIMIZE, 'm_new')
+            savenpy(dst, solver.merge(solver.load(src)))
 
 
      # The following names are used in the 'compute_direction' method and for
@@ -205,10 +216,10 @@ class base(object):
             alpha = p_ratio*PAR.STEPINIT
         elif self.restarted:
             alpha = p_ratio*PAR.STEPINIT
-        elif PAR.LINESEARCH in ['Backtrack']:
+        elif PAR.SCHEME in ['LBFGS']:
             alpha = 1.
         else:
-            alpha = self.step_init()
+            alpha = self.initial_step()
 
         # optional ad hoc scaling
         if PAR.STEPOVERSHOOT:
@@ -228,9 +239,8 @@ class base(object):
         self.stepwriter(steplen=0., funcval=f)
 
 
-    @property
-    def search_status(self):
-        """ Determines status of line search
+    def update_status(self):
+        """ Updates line search status
 
             Maintains line search history by keeping track of step length and
             function value from each trial model evaluation. From line search
@@ -273,7 +283,7 @@ class base(object):
         # update log
         self.stepwriter(steplen=x_, funcval=f_)
 
-        return self.isdone, self.isbest
+        return self.isdone
 
 
     def compute_step(self):
@@ -416,7 +426,7 @@ class base(object):
 
     ### line search utilities
 
-    def step_init(self):
+    def initial_step(self):
         alpha = loadtxt('alpha')
         s_new = loadtxt('s_new')
         s_old = loadtxt('s_old')
