@@ -51,5 +51,5 @@ class tikhonov2(loadclass('postprocess', 'regularize')):
             M, grid = mesh2grid(m, mesh)
             DM = nabla(M, order=2)
             dm = grid2mesh(DM, grid, mesh)
-            return -dm/np.mean(m)
+            return dm/np.mean(m)
 

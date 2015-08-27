@@ -36,8 +36,8 @@ class tikhonov1(loadclass('postprocess', 'regularize')):
         if 'UPDATETYPE' not in PAR:
             setattr(PAR, 'UPDATETYPE', 'Creeping')
 
-        if not PAR.LAMBDA:
-            raise ValueError
+        #if not PAR.LAMBDA:
+        #    raise ValueError
 
 
     def nabla(self, mesh, m, g):
@@ -49,7 +49,7 @@ class tikhonov1(loadclass('postprocess', 'regularize')):
 
         elif PAR.UPDATETYPE in ['Jumping']:
             M, grid = mesh2grid(m, mesh)
-            DM = nabla(M, order=2)
+            DM = nabla(M, order=1)
             dm = grid2mesh(DM, grid, mesh)
-            return -dm/np.mean(m)
+            return dm/np.mean(m)
 
