@@ -453,7 +453,7 @@ class base(object):
         files += glob('*proc??????_reg1_beta[hv]_kernel.bin')
         unix.rename('beta', 'vs', files)
 
-        # noexit hack to deal with problems on parallel filesystem
+        # hack to deal with problems on parallel filesystem
         unix.mkdir(join(path, 'kernels'), noexit=True)
 
         unix.mkdir(join(path, 'kernels', basename(self.getpath)))
@@ -462,7 +462,7 @@ class base(object):
         unix.mv(src, dst)
 
     def export_residuals(self, path):
-        # noexit hack deals with problems on parallel filesystem
+        # hack deals with problems on parallel filesystem
         unix.mkdir(join(path, 'residuals'), noexit=True)
 
         src = join(self.getpath, 'residuals')
@@ -470,7 +470,7 @@ class base(object):
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
-        # noexit hack deals with problems on parallel filesystem
+        # hack deals with problems on parallel filesystem
         unix.mkdir(join(path, 'traces'), noexit=True)
 
         src = join(self.getpath, prefix)
