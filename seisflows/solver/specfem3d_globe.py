@@ -69,6 +69,8 @@ class specfem3d_globe(loadclass('solver', 'base')):
 
         if model_type == 'gll':
             assert (exists(model_path))
+            self.check_mesh_properties(model_path)
+
             unix.cp(glob(model_path +'/'+ '*'), self.model_databases)
 
             self.mpirun('bin/xmeshfem3D')
@@ -89,7 +91,7 @@ class specfem3d_globe(loadclass('solver', 'base')):
         model = Model(self.parameters)
         minmax = Minmax(self.parameters)
 
-        for iproc in range(PAR.NPROC):
+        for iproc in range(self.mesh.nproc):
             # read database files
             keys, vals = loadbypar(path, self.parameters, iproc, prefix, suffix)
             for key, val in zip(keys, vals):
@@ -108,7 +110,7 @@ class specfem3d_globe(loadclass('solver', 'base')):
         """
         unix.mkdir(path)
 
-        for iproc in range(PAR.NPROC):
+        for iproc in range(self.mesh.nproc):
             for key in ['vpv', 'vph', 'vsv', 'vsh', 'eta']:
                 if key in self.parameters:
                     savebin(model[key][iproc], path, iproc, prefix+key+suffix)

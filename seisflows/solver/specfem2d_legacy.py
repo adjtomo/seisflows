@@ -1,6 +1,6 @@
 
 import subprocess
-from os.path import join
+from os.path import basename, join
 from glob import glob
 
 import numpy as np
@@ -11,7 +11,7 @@ from seisflows.seistools.io import splitvec
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists
+from seisflows.tools.code import Struct, exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, loadclass
 
@@ -79,6 +79,29 @@ class specfem2d_legacy(loadclass('solver', 'base')):
                 setpar('absorbtop', '.true.')
 
 
+    def check_mesh_properties(self, path=None, parameters=None):
+        if not hasattr(self, '_mesh_properties'):
+            if not path:
+                path = PATH.MODEL_INIT
+
+            if not parameters:
+                parameters = self.parameters
+
+            M = np.loadtxt(path)
+            nrow = M.shape[0]
+            ncol = M.shape[1]
+
+            if PAR.NPROC != 1:
+                if system.getnode() == 0: print 'Warning'
+
+            self.mesh_properties = Struct([
+                ['nproc', 1],
+                ['ngll', nrow]])
+
+        return self.mesh_properties
+        
+
+
     def generate_data(self, **model_kwargs):
         """ Generates data
         """
@@ -99,10 +122,17 @@ class specfem2d_legacy(loadclass('solver', 'base')):
         """
         assert(model_name)
         assert(model_type)
-        assert (exists(model_path))
 
         self.initialize_solver_directories()
-        unix.cp(model_path, 'DATA/proc000000_rho_vp_vs.dat')
+        unix.cd(self.getpath)
+
+        assert(exists(model_path))
+        self.check_mesh_properties(model_path)
+
+        src = model_path
+        dst = join(self.getpath, 'DATA/proc000000_rho_vp_vs.dat')
+        unix.cp(src, dst)
+
         self.export_model(PATH.OUTPUT +'/'+ model_name)
 
 
@@ -112,7 +142,15 @@ class specfem2d_legacy(loadclass('solver', 'base')):
         assert (exists(model_path))
 
         self.initialize_solver_directories()
-        unix.cp(model_path, 'DATA/proc000000_rho_vp_vs.dat')
+        unix.cd(self.getpath)
+
+        assert(exists(model_path))
+        self.check_mesh_properties(model_path)
+
+        src = model_path
+        dst = join(self.getpath, 'DATA/proc000000_rho_vp_vs.dat')
+        unix.cp(src, dst)
+
         self.export_model(PATH.OUTPUT +'/'+ model_name)
 
         self.forward()
@@ -200,9 +238,9 @@ class specfem2d_legacy(loadclass('solver', 'base')):
         """
         unix.cd(self.getpath)
 
-        self.getnames()
+        names = self.check_source_names()
         with open('kernel_paths', 'w') as f:
-            f.writelines([join(path, dir)+'\n' for dir in self.names])
+            f.writelines([join(path, dir)+'\n' for dir in names])
 
         for name in self.parameters:
             self.mpirun(
@@ -263,7 +301,7 @@ class specfem2d_legacy(loadclass('solver', 'base')):
     def export_kernels(self, path):
         unix.mkdir(join(path, 'kernels'), noexit=True)
         src = join(self.getpath, 'OUTPUT_FILES/proc000000_rhop_alpha_beta_kernel.dat')
-        dst = join(path, 'kernels', '%s' % self.getname)
+        dst = join(path, 'kernels', '%s' % basename(self.getpath))
         unix.cp(src, dst)
 
 
@@ -306,7 +344,7 @@ class specfem2d_legacy(loadclass('solver', 'base')):
 
     @property
     def model_databases(self):
-        return join(self.getpath, 'DATA')
+        return join(self.getpath)
 
     @property
     def kernel_databases(self):

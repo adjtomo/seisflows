@@ -65,8 +65,12 @@ class specfem3d(loadclass('solver', 'base')):
         unix.cd(self.getpath)
 
         if model_type in ['gll']:
-            assert (exists(model_path))
-            unix.cp(glob(model_path +'/'+ '*'), self.model_databases)
+            assert(exists(model_path))
+            self.check_mesh_properties(model_path)
+
+            src = glob(model_path +'/'+ '*')
+            dst = self.model_databases
+            unix.cp(src, dst)
 
             self.mpirun('bin/xmeshfem3D')
             self.mpirun('bin/xgenerate_databases')

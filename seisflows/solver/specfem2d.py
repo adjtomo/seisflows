@@ -94,9 +94,12 @@ class specfem2d(loadclass('solver', 'base')):
         """
         assert(model_name)
         assert(model_type)
-        assert (exists(model_path))
 
         self.initialize_solver_directories()
+        unix.cd(self.getpath)
+
+        assert(exists(model_path))
+        self.check_mesh_properties(model_path)
 
         src = glob(join(model_path, '*'))
         dst = join(self.getpath, 'DATA')
@@ -135,8 +138,8 @@ class specfem2d(loadclass('solver', 'base')):
         """
         from seisflows.tools.array import meshsmooth, stack
 
-        # implementing PAR.NPROC > 1 would be straightforward, but a bit tedious
-        assert PAR.NPROC == 1
+        # implementing nproc > 1 would be straightforward, but a bit tedious
+        assert self.mesh.nproc == 1
 
         kernels = self.load(path, suffix='_kernel')
         if not span:

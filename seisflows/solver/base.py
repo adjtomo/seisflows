@@ -2,7 +2,7 @@
 import subprocess
 import sys
 from glob import glob
-from os.path import join
+from os.path import basename, join
 
 import numpy as np
 
@@ -12,7 +12,7 @@ from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin, splitve
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import exists
+from seisflows.tools.code import Struct, exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, loadclass
 
@@ -35,7 +35,7 @@ class base(object):
         These methods allow direct access to low-level SPECFEM components,
         providing another interface through which to interact with the solver.
 
-     generate_data, generate_mesh, generate_precond
+     generate_data, generate_model, generate_precond
         One time operations performed at beginning of an inversion or 
         migration.
 
@@ -122,7 +122,8 @@ class base(object):
         if PATH.DATA:
             # copy user supplied data
             self.initialize_solver_directories()
-            src = glob(PATH.DATA +'/'+ self.getname +'/'+ '*')
+
+            src = glob(PATH.DATA +'/'+ basename(self.getpath) +'/'+ '*')
             dst = 'traces/obs/'
             unix.cp(src, dst)
 
@@ -140,6 +141,12 @@ class base(object):
             model_type='gll')
 
         self.initialize_adjoint_traces()
+
+
+    def clean(self):
+        pass
+        #unix.rm('OUTPUT_FILES')
+        #unix.mkdir('OUTPUT_FILES')
 
 
     def generate_data(self, *args, **kwargs):
@@ -248,10 +255,10 @@ class base(object):
           Models are stored in Fortran binary format and separated into multiple
           files according to material parameter and processor rank.
         """
-        model = Model(self.parameters)
         minmax = Minmax(self.parameters)
+        model = Model(self.parameters)
 
-        for iproc in range(PAR.NPROC):
+        for iproc in range(self.mesh.nproc):
             # read database files
             keys, vals = loadbypar(path, self.parameters, iproc, prefix, suffix)
             for key, val in zip(keys, vals):
@@ -279,7 +286,7 @@ class base(object):
         unix.mkdir(path)
 
         if 'kernel' in suffix:
-            for iproc in range(PAR.NPROC):
+            for iproc in range(self.mesh.nproc):
                 for key in solver_parameters:
                     if key in self.parameters:
                         savebin(model[key][iproc], path, iproc, prefix+key+suffix)
@@ -287,7 +294,7 @@ class base(object):
                     savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
 
         else:
-            for iproc in range(PAR.NPROC):
+            for iproc in range(self.mesh.nproc):
                 for key in solver_parameters:
                     if key in self.parameters:
                         savebin(model[key][iproc], path, iproc, prefix+key+suffix)
@@ -310,7 +317,7 @@ class base(object):
         """
         v = np.array([])
         for key in self.parameters:
-            for iproc in range(PAR.NPROC):
+            for iproc in range(self.mesh.nproc):
                 v = np.append(v, model[key][iproc])
         return v
 
@@ -318,13 +325,12 @@ class base(object):
     def split(self, v):
         """ Converts model from vector to dictionary representation
         """
-        nproc = PAR.NPROC
         ndim = len(self.parameters)
-        npts = len(v)/(nproc*ndim)
+        npts = len(v)/(self.mesh.nproc*ndim)
 
         model = {}
         for idim, key in enumerate(self.parameters):
-            model[key] = splitvec(v, nproc, npts, idim)
+            model[key] = splitvec(v, self.mesh.nproc, npts, idim)
         return model
 
 
@@ -337,9 +343,9 @@ class base(object):
         """
         unix.cd(self.getpath)
 
-        self.getnames()
+        names = self.check_source_names()
         with open('kernel_paths', 'w') as f:
-            f.writelines([join(path, dir)+'\n' for dir in self.names])
+            f.writelines([join(path, dir)+'\n' for dir in names])
 
         unix.mkdir(path +'/'+ 'sum')
         for name in self.parameters:
@@ -354,7 +360,7 @@ class base(object):
         """ Smooths kernels by convolving them with a Gaussian.  Wrapper over 
             xsmooth_sem utility.
         """
-        assert (exists(path))
+        assert(exists(path))
 
         # apply smoothing operator
         unix.cd(self.getpath)
@@ -421,7 +427,7 @@ class base(object):
             self.save(dst, self.load(src))
 
     def import_traces(self, path):
-        src = glob(join(path, 'traces', self.getname, '*'))
+        src = glob(join(path, 'traces', basename(self.getpath), '*'))
         dst = join(self.getpath, 'traces/obs')
         unix.cp(src, dst)
 
@@ -453,9 +459,9 @@ class base(object):
         # noexit hack to deal with problems on parallel filesystem
         unix.mkdir(join(path, 'kernels'), noexit=True)
 
-        unix.mkdir(join(path, 'kernels', self.getname))
+        unix.mkdir(join(path, 'kernels', basename(self.getpath)))
         src = join(glob('*_kernel.bin'))
-        dst = join(path, 'kernels', self.getname)
+        dst = join(path, 'kernels', basename(self.getpath))
         unix.mv(src, dst)
 
     def export_residuals(self, path):
@@ -463,7 +469,7 @@ class base(object):
         unix.mkdir(join(path, 'residuals'), noexit=True)
 
         src = join(self.getpath, 'residuals')
-        dst = join(path, 'residuals', self.getname)
+        dst = join(path, 'residuals', basename(self.getpath))
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
@@ -471,7 +477,7 @@ class base(object):
         unix.mkdir(join(path, 'traces'), noexit=True)
 
         src = join(self.getpath, prefix)
-        dst = join(path, 'traces', self.getname)
+        dst = join(path, 'traces', basename(self.getpath))
         unix.cp(src, dst)
 
 
@@ -508,7 +514,7 @@ class base(object):
         dst = 'DATA/'
         unix.cp(src, dst)
 
-        src = 'DATA/' + self.source_prefix +'_'+ self.getname
+        src = 'DATA/' + self.source_prefix +'_'+ basename(self.getpath)
         dst = 'DATA/' + self.source_prefix
         unix.cp(src, dst)
 
@@ -524,6 +530,55 @@ class base(object):
         zeros = np.zeros((h.nt, h.nr))
         for channel in ['x', 'y', 'z']:
             preprocess.writer(zeros, h, channel=channel, prefix='traces/adj/')
+
+
+    def check_mesh_properties(self, path=None, parameters=None):
+        if not hasattr(self, '_mesh_properties'):
+            if not path:
+                path = PATH.MODEL_INIT
+
+            if not parameters:
+                parameters = self.parameters
+
+            nproc = 0
+            ngll = []
+            while True:
+                dummy = loadbin(path, nproc, parameters[0])
+                ngll += [len(dummy)]
+                nproc += 1
+                if not exists('%s/proc%06d_%s.bin' % (path, nproc, parameters[0])):
+                    break
+
+            if nproc != PAR.NPROC:
+                if system.getnode() == 0:
+                    print 'Warning: mesh.nproc != PAR.NPROC'
+                    print 'mesh.nproc:', nproc
+                    print 'PAR.NPROC:', PAR.NPROC
+                    print ''
+
+            self._mesh_properties = Struct([
+                ['nproc', nproc],
+                ['ngll', ngll]])
+
+        return self._mesh_properties
+
+
+    def check_source_names(self):
+        """ Checks names of sources
+        """
+        if not hasattr(self, '_source_names'):
+            path = PATH.SPECFEM_DATA
+            wildcard = self.source_prefix+'_*'
+            globstar = sorted(glob(path +'/'+ wildcard))
+            if not globstar:
+                 print msg.SourceError_SPECFEM % (path, wildcard)
+                 sys.exit(-1)
+            names = []
+            for path in globstar:
+                names += [basename(path).split('_')[-1]]
+            self._source_names = names[:PAR.NTASK]
+
+        return self._source_names
 
 
     def check_solver_parameter_files(self):
@@ -544,39 +599,19 @@ class base(object):
 
 
     @property
-    def getname(self):
-        """ Returns name of source currently under consideration
-        """
-        self.getnames()
-        return self.names[system.getnode()]
-
-
-    def getnames(self):
-        """ Loads names of sources
-        """
-        if not hasattr(self, 'names'):
-            path = PATH.SPECFEM_DATA
-            wildcard = self.source_prefix+'_*'
-            globstar = glob(path +'/'+ wildcard)
-            if not globstar:
-                 print msg.SourceError_SPECFEM % (path, wildcard)
-                 sys.exit(-1)
-            self.names = []
-            for path in globstar:
-                self.names += [unix.basename(path).split('_')[-1]]
-            self.names.sort()
-
-
-    @property
     def getpath(self):
-        """ Returns working directory corresponding to current source
-        """
-        return join(PATH.SOLVER, self.getname)
+        name = self.check_source_names()[system.getnode()]
+        return join(PATH.SOLVER, name)
 
     @property
     def data_wildcard(self):
         # must be implemented by subclass
         return NotImplementedError
+
+    @property
+    def mesh(self):
+        mesh = self.check_mesh_properties()
+        return mesh
 
     @property
     def model_databases(self):
