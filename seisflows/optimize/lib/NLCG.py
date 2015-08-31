@@ -48,7 +48,7 @@ class NLCG:
         p_old = loadnpy('p_old')
 
         if self.precond:
-            raise NotImplementedError
+            raise NotImplementedError("Updated LBFGS, but not NLCG.")
             d = loadnpy('precond')
             beta = pollak_ribere(d**0.5 * g_new, d**0.5 * g_old)
             p_new = -d*g_new + beta*p_old
