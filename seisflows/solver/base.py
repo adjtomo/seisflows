@@ -325,12 +325,9 @@ class base(object):
     def split(self, v):
         """ Converts model from vector to dictionary representation
         """
-        ndim = len(self.parameters)
-        npts = len(v)/(self.mesh.nproc*ndim)
-
         model = {}
         for idim, key in enumerate(self.parameters):
-            model[key] = splitvec(v, self.mesh.nproc, npts, idim)
+            model[key] = splitvec(v, self.mesh.nproc, self.mesh.ngll, idim)
         return model
 
 

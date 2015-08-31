@@ -48,11 +48,20 @@ def copybin(src, dst, proc, par):
     copyfile(join(src, filename), join(dst, filename))
 
 
-def splitvec(v,  nproc, npts, idim):
+def splitvec(v,  nproc, ngll, idim):
     parts = []
     for iproc in range(nproc):
-        imin = nproc*npts*idim + npts*iproc 
-        imax = nproc*npts*idim + npts*(iproc+1)
+        imin = nproc*ngll*idim + ngll*iproc 
+        imax = nproc*ngll*idim + ngll*(iproc+1)
+        parts += [v[imin:imax]]
+    return parts
+
+
+def splitvec(v,  nproc, ngll, idim):
+    parts = []
+    for iproc in range(nproc):
+        imin = sum(ngll)*idim + sum(ngll[:iproc])
+        imax = sum(ngll)*idim + sum(ngll[:iproc+1])
         parts += [v[imin:imax]]
     return parts
 

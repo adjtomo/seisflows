@@ -96,7 +96,7 @@ class specfem2d_legacy(loadclass('solver', 'base')):
 
             self.mesh_properties = Struct([
                 ['nproc', 1],
-                ['ngll', nrow]])
+                ['ngll', [nrow]]])
 
         return self.mesh_properties
         
