@@ -41,14 +41,6 @@ class base(object):
         if 'PRECOND' not in PATH:
             setattr(PATH, 'PRECOND', None)
 
-        # assertions
-        if PAR.PRECOND:
-            assert exists(PATH.PRECOND)
-
-        if PATH.PRECOND:
-            assert PAR.PRECOND
-            assert exists(PATH.PRECOND)
-
         if PATH.MASK:
             assert exists(PATH.MASK)
 
@@ -89,16 +81,6 @@ class base(object):
         savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
 
-    def write_precond(self):
-        """ Reads and writes user-supplied diagonal preconditioner
-        """
-        if 'OPTIMIZE' not in PATH:
-            raise ParameterError(PATH, 'OPTIMIZE')
-
-        savenpy(PATH.OPTIMIZE +'/'+ 'precond', 
-                solver.merge(solver.load(PATH.PRECOND)))
-
-
     def combine_kernels(self, path):
         system.run('solver', 'combine',
                    hosts='head',
@@ -122,4 +104,9 @@ class base(object):
         solver.save(path +'/'+ 'gradient',
                     solver.split(v),
                     suffix='_kernel')
+
+
+    def precond(q):
+        p = solver.merge(solver.load(PATH.PRECOND))
+        return p*q
 

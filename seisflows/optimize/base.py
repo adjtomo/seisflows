@@ -19,6 +19,7 @@ PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 import solver
+import postprocess
 
 
 class base(object):
@@ -123,13 +124,20 @@ class base(object):
         self.stepwriter = StepWriter(
                 path=PATH.SUBMIT)
 
+        # check preconditioner
+        if PAR.PRECOND:
+            assert(hasattr(postprocess, 'precond'))
+            precond = postprocess.precond
+        else:
+            precond = None
+
         # prepare algorithm machinery
         if PAR.SCHEME in ['NLCG']:
             self.NLCG = NLCG(
                 path=PATH.OPTIMIZE,
                 maxiter=PAR.NLCGMAX,
                 thresh=PAR.NLCGTHRESH,
-                precond=PAR.PRECOND)
+                precond=precond)
 
         elif PAR.SCHEME in ['LBFGS']:
             self.LBFGS = LBFGS(
@@ -137,7 +145,7 @@ class base(object):
                 memory=PAR.LBFGSMEM, 
                 maxiter=PAR.LBFGSMAX,   
                 thresh=PAR.LBFGSTHRESH,
-                precond=PAR.PRECOND)
+                precond=precond)
 
         # write initial model
         if exists(PATH.MODEL_INIT):

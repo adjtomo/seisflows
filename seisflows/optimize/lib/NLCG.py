@@ -13,7 +13,7 @@ class NLCG:
     """ Nonlinear conjugate gradient method
     """
 
-    def __init__(self, path='.', thresh=1., maxiter=np.inf, precond=False):
+    def __init__(self, path='.', thresh=1., maxiter=np.inf, precond=None):
         self.path = path
         self.maxiter = maxiter
         self.thresh = thresh
@@ -48,6 +48,7 @@ class NLCG:
         p_old = loadnpy('p_old')
 
         if self.precond:
+            raise NotImplementedError
             d = loadnpy('precond')
             beta = pollak_ribere(d**0.5 * g_new, d**0.5 * g_old)
             p_new = -d*g_new + beta*p_old

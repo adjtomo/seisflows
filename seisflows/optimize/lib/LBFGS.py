@@ -17,7 +17,7 @@ class LBFGS(object):
         passed from a calling routine.
     """
 
-    def __init__(self, path='.', memory=5, thresh=0., maxiter=np.inf, precond=False):
+    def __init__(self, path='.', memory=5, thresh=0., maxiter=np.inf, precond=None):
         assert exists(path)
         unix.cd(path)
         unix.mkdir('LBFGS')
@@ -104,7 +104,7 @@ class LBFGS(object):
             q = q - al[ii]*Y[:,ii]
 
         if self.precond:
-            r = loadnpy('precond')*q
+            r = self.precond(q)
         else:
             r = q
 

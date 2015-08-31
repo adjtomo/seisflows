@@ -138,9 +138,9 @@ class base(object):
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
 
-            optimize.setup()
             preprocess.setup()
             postprocess.setup()
+            optimize.setup()
 
         system.run('solver', 'setup', 
                    hosts='all')
@@ -227,9 +227,6 @@ class base(object):
 
         postprocess.write_gradient(
             path=PATH.GRAD)
-
-        if PAR.PRECOND:
-            postprocess.write_precond()
 
 
     def finalize(self):
