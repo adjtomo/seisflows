@@ -92,7 +92,9 @@ class specfem2d_legacy(loadclass('solver', 'base')):
             ncol = M.shape[1]
 
             if PAR.NPROC != 1:
-                if system.getnode() == 0: print 'Warning'
+                if system.getnode() == 0:
+                    print 'Warning: mesh.nproc != PAR.NPROC'
+
 
             self.mesh_properties = Struct([
                 ['nproc', 1],

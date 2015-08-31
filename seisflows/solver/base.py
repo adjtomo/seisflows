@@ -549,9 +549,6 @@ class base(object):
             if nproc != PAR.NPROC:
                 if system.getnode() == 0:
                     print 'Warning: mesh.nproc != PAR.NPROC'
-                    print 'mesh.nproc:', nproc
-                    print 'PAR.NPROC:', PAR.NPROC
-                    print ''
 
             self._mesh_properties = Struct([
                 ['nproc', nproc],
