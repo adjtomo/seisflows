@@ -48,7 +48,7 @@ class base(object):
     def setup(self):
         """ Performs any required initialization or setup tasks
         """
-        self.precond = precond
+        pass
 
 
     def write_gradient(self, path):
@@ -105,8 +105,4 @@ class base(object):
                     solver.split(v),
                     suffix='_kernel')
 
-
-def precond(q):
-    p = solver.merge(solver.load(PATH.PRECOND))
-    return p*q
 

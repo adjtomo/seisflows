@@ -19,7 +19,6 @@ PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 import solver
-import postprocess
 
 
 class base(object):
@@ -67,7 +66,7 @@ class base(object):
             setattr(PAR, 'SCHEME', 'LBFGS')
 
         if 'PRECOND' not in PAR:
-            setattr(PAR, 'PRECOND', False)
+            setattr(PAR, 'PRECOND', None)
 
         # line search algorithm
         if 'LINESEARCH' not in PAR:
@@ -124,20 +123,13 @@ class base(object):
         self.stepwriter = StepWriter(
                 path=PATH.SUBMIT)
 
-        # check preconditioner
-        if PAR.PRECOND:
-            assert(hasattr(postprocess, 'precond'))
-            precond = postprocess.precond
-        else:
-            precond = None
-
         # prepare algorithm machinery
         if PAR.SCHEME in ['NLCG']:
             self.NLCG = NLCG(
                 path=PATH.OPTIMIZE,
                 maxiter=PAR.NLCGMAX,
                 thresh=PAR.NLCGTHRESH,
-                precond=precond)
+                precond=self.precond)
 
         elif PAR.SCHEME in ['LBFGS']:
             self.LBFGS = LBFGS(
@@ -145,7 +137,7 @@ class base(object):
                 memory=PAR.LBFGSMEM, 
                 maxiter=PAR.LBFGSMAX,   
                 thresh=PAR.LBFGSTHRESH,
-                precond=precond)
+                precond=self.precond)
 
         # write initial model
         if exists(PATH.MODEL_INIT):
@@ -154,21 +146,56 @@ class base(object):
             savenpy(dst, solver.merge(solver.load(src)))
 
 
-     # The following names are used in the 'compute_direction' method and for
-     # writing information to disk:
-     #    m_new - current model
-     #    m_old - previous model
-     #    m_try - trial model
-     #    f_new - current objective function value
-     #    f_old - previous objective function value
-     #    f_try - trial objective function value
-     #    g_new - current gradient direction
-     #    g_old - previous gradient direction
-     #    p_new - current search direction
-     #    p_old - previous search direction
-     #    s_new - current slope along search direction
-     #    s_old - previous slope along search direction
-     #    alpha - trial step length
+    @property
+    def precond(self):
+        """ Loads preconditioner machinery
+        """
+        from seisflows.seistools import preconds
+
+        if not PAR.PRECOND:
+            precond = None
+
+        elif PAR.PRECOND in ['materials']:
+            # diagonal scaling based on user supplied material parameters weights
+            assert(exists(PATH.PRECOND))
+            factory = getattr(preconds, PAR.PRECOND)
+            precond = factory(
+                 path=PATH.PRECOND,
+                 solver=solver)
+
+        elif PAR.PRECOND in ['pca']:
+            # equivalent to a change of material parameters, with choice of
+            # new parameters based on principle component analysis 
+            factory = getattr(preconds, PAR.PRECOND)
+            precond = factory(
+                 solver=solver)
+
+        else:
+            # diagonal scaling based on user supplied weights
+            assert(exists(PATH.PRECOND))
+            factory = getattr(preconds, 'diagonal')
+            precond = factory(
+                 path=PATH.PRECOND,
+                 solver=solver)
+
+        return precond
+
+
+    # The following names are used in the 'compute_direction' method and for
+    # writing information to disk:
+    #    m_new - current model
+    #    m_old - previous model
+    #    m_try - trial model
+    #    f_new - current objective function value
+    #    f_old - previous objective function value
+    #    f_try - trial objective function value
+    #    g_new - current gradient direction
+    #    g_old - previous gradient direction
+    #    p_new - current search direction
+    #    p_old - previous search direction
+    #    s_new - current slope along search direction
+    #    s_old - previous slope along search direction
+    #    alpha - trial step length
 
     def compute_direction(self):
         """ Computes model update direction from stored gradient
