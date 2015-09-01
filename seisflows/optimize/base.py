@@ -153,9 +153,9 @@ class base(object):
         from seisflows.seistools import preconds
 
         if not PAR.PRECOND:
-            precond = None
+            return None
 
-        elif PAR.PRECOND in ['materials']:
+        if PAR.PRECOND in ['materials']:
             # diagonal scaling based on user supplied material parameters weights
             assert(exists(PATH.PRECOND))
             factory = getattr(preconds, PAR.PRECOND)
