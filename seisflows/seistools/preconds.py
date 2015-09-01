@@ -1,6 +1,15 @@
 
+import numpy as np
+
+
+### user supplied preconditioners
 
 class diagonal(object):
+    """ User supplied diagonal preconditioner
+
+        Rescales model parameters based on user supplied weights
+    """
+
     def __init__(self, path=None, solver=None):
         """ Loads any required dependencies
         """
@@ -20,8 +29,16 @@ class diagonal(object):
         return p*q
 
 
+### geophysics preconditioners
+
 class pca(object):
-    def __init__(solver=None):
+    """ PCA diagonal preconditioner
+
+        Equivalent to a change of material parameters, with choice of
+        new parameters based on principle component analysis 
+    """
+
+    def __init__(self, solver=None):
         """ Loads any required dependencies
         """
         # solver methods
@@ -33,27 +50,35 @@ class pca(object):
         self.parameters = solver.parameters
  
 
-    def __call__(q):
+    def __call__(self, q):
         """ Applies preconditioner to given vector
         """
         r = self.split(q)
+        nn = len(self.parameters)
 
         # compute covariance
-        c = {}
-        for key1 in self.parameters:
-            c[key1] = {}
-            for key2 in self.parameters:
-                c[key1][key2] = np.dot(r[key1], r[key2])
+        cov = np.zeros((nn,nn))
+        for ii,ikey in enumerate(self.parameters):
+            for jj,jkey in enumerate(self.parameters):
+                cov[ii][jj] = np.dot(r[ikey], r[jkey])
 
         # diagonalize
-        a = eig(c)
-        b = inv(a)
+        eigval,eigvec = np.linalg.eig(cov)
+        w = np.linalg.inv(eigvec)
 
         # apply preconditioner
         s = {}
-        for key1 in self.parameters:
-            for key2 in self.parameters:
-                for iproc in range(self.nproc):
-                    s[key1][iproc] +=  [d[key2]*r[key][iproc]]
+        for ii,ikey in enumerate(self.parameters):
+            for jj,jkey in enumerate(self.parameters):
+                    for iproc in range(self.nproc):
+                        s[ikey][iproc] += [w[ii,jj]*r[jkey][iproc]]
         return s
+
+
+### general numerical preconditioners
+
+class LBFGS(object):
+    def __init__(self):
+        raise NotImplementedError
+
 
