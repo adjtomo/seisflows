@@ -75,7 +75,7 @@ class pca(object):
                     for iproc in range(self.nproc):
                         s[ikey] += [w[ii,jj]*r[jkey][iproc]]
 
-        return solver.merge(s)
+        return self.merge(s)
 
 
 ### general numerical preconditioners
