@@ -106,7 +106,33 @@ def lambda_mu_inverse(dummy, keys, vals):
     return output
 
 
-### VTI maps
+def vs_forward(dummy, keys, vals):
+    input = Struct(zip(keys, vals))
+    output = input
+    return output
+
+
+def vs_inverse(dummy, keys, vals):
+    input = Struct(zip(keys, vals))
+    output = input
+    return output
+
+
+def vp_vs_forward(dummy, keys, vals):
+    input = Struct(zip(keys, vals))
+    output = input
+    return output
+
+
+def vp_vs_inverse(dummy, keys, vals):
+    input = Struct(zip(keys, vals))
+    output = input
+    return output
+
+
+
+
+### transverse isotropy
 
 def thomsen_voigt_2d(dummy, keys, vals):
     input = Struct(zip(keys, vals))
@@ -128,7 +154,7 @@ def thomsen_voigt_2d(dummy, keys, vals):
 
 
 
-### TTI maps
+### rotated transverse istoropy
 
 def tti_voight_2d(dummy, keys, vals):
     input = Struct(zip(keys, vals))
@@ -191,32 +217,5 @@ def rho_gardner(dummy, keys, vals):
     rho = 310.*vp**0.25
 
     return rho
-
-
-### debugging
-
-def vs_forward(dummy, keys, vals):
-    input = Struct(zip(keys, vals))
-    output = input
-    return output
-
-
-def vs_inverse(dummy, keys, vals):
-    input = Struct(zip(keys, vals))
-    output = input
-    return output
-
-
-def vp_vs_forward(dummy, keys, vals):
-    input = Struct(zip(keys, vals))
-    output = input
-    return output
-
-
-def vp_vs_inverse(dummy, keys, vals):
-    input = Struct(zip(keys, vals))
-    output = input
-    return output
-
 
 

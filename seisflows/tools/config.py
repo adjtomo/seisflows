@@ -302,7 +302,7 @@ def _exists(parts):
         return False
 
 
-# changes how instance methods are handled by pickle. this change will always be in effect, because config is always imported prior to using SeisFlows.
+# changes how instance methods are handled by pickle. these changes will always be in effect, because tools.config is always executed prior to using SeisFlows.
 
 def _pickle_method(method):
     func_name = method.im_func.__name__
