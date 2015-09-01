@@ -546,10 +546,6 @@ class base(object):
                 if not exists('%s/proc%06d_%s.bin' % (path, nproc, parameters[0])):
                     break
 
-            if nproc != PAR.NPROC:
-                if system.getnode() == 0:
-                    print 'Warning: mesh.nproc != PAR.NPROC'
-
             self._mesh_properties = Struct([
                 ['nproc', nproc],
                 ['ngll', ngll]])

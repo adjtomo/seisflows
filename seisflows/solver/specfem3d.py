@@ -117,6 +117,10 @@ class specfem3d(loadclass('solver', 'base')):
             if system.getnode() == 0: print "WARNING: dt != PAR.DT"
             setpar('DT', PAR.DT)
 
+        if self.mesh.nproc != PAR.NPROC:
+            if system.getnode() == 0:
+                print 'Warning: mesh.nproc != PAR.NPROC'
+
         if 'MULTIPLES' in PAR:
             raise NotImplementedError
 

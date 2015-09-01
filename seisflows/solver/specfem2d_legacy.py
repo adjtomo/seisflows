@@ -72,6 +72,11 @@ class specfem2d_legacy(loadclass('solver', 'base')):
             if system.getnode() == 0: print "WARNING: f0 != PAR.F0"
             setpar('f0', PAR.F0, file='DATA/SOURCE')
 
+        if self.mesh.nproc != PAR.NPROC:
+            if system.getnode() == 0:
+                print 'WARNING: mesh.nproc != PAR.NPROC'
+
+
         if 'MULTIPLES' in PAR:
             if PAR.MULTIPLES:
                 setpar('absorbtop', '.false.')
