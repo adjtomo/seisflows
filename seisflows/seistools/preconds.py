@@ -70,10 +70,12 @@ class pca(object):
         # apply preconditioner
         s = {}
         for ii,ikey in enumerate(self.parameters):
+            s[ikey] = []
             for jj,jkey in enumerate(self.parameters):
                     for iproc in range(self.nproc):
-                        s[ikey][iproc] += [w[ii,jj]*r[jkey][iproc]]
-        return s
+                        s[ikey] += [w[ii,jj]*r[jkey][iproc]]
+
+        return solver.merge(s)
 
 
 ### general numerical preconditioners

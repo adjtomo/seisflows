@@ -65,6 +65,12 @@ class specfem3d(loadclass('solver', 'base')):
         unix.cd(self.getpath)
 
         if model_type in ['gll']:
+            par = getpar('MODEL').strip()
+            if par != 'gll':
+                if system.getnode() == 0:
+                    print 'WARNING: Unexpected Par_file setting:'
+                    print 'MODEL =', par
+            
             assert(exists(model_path))
             self.check_mesh_properties(model_path)
 
