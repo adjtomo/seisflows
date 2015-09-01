@@ -60,7 +60,8 @@ class pca(object):
         cov = np.zeros((nn,nn))
         for ii,ikey in enumerate(self.parameters):
             for jj,jkey in enumerate(self.parameters):
-                cov[ii,jj] = np.dot(r[ikey], r[jkey])
+                for iproc in range(self.nproc):
+                    cov[ii,jj] += np.dot(r[ikey][iproc], r[jkey][iproc])
 
         # diagonalize
         eigval,eigvec = np.linalg.eig(cov)
