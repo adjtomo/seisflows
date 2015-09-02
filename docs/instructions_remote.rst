@@ -86,10 +86,12 @@ Download the starting model and other input files required for the full waveform
  
         mkdir /home/tests/
         cd /home/tests/
-        wget --recursive --no-parent --no-host-directories --cut-dirs=2 --reject "index.html*" http://tigress-web.princeton.edu/~rmodrak/Examples2d/
+        wget --recursive --no-parent --no-host-directories --cut-dirs=2 --reject "index.html*" http://tigress-web.princeton.edu/~rmodrak/2dAcoustic/
 
 
-After the download completes, make sure that all paths specified in ``home/tests/checkers/paths.py``  are correct.  For example, if you compiled SPECFEM2D somewhere other than ``/home/packages/specfem2d-d745c542``, you will need to modify the entry SPECFEM2D binary file entry accordingly.
+Among other files, note that a ``parameters.py`` file and ``paths.py`` file have been created in ``/home/tests/``.
+
+After the download completes, make sure that all paths specified in ``paths.py``  are correct.  If you compiled SPECFEM2D somewhere other than ``/home/packages/specfem2d-d745c542``, you will need to modify the ``SPECFEM2D_BIN`` entry in ``paths.py`` accordingly.
 
  
 7. Run FWI checkerboard test in serial
@@ -99,12 +101,20 @@ To run the checkboard test, simply type::
 
         sfclean ; sfrun
 
-within the directory ``/home/tests/checkers``.
+within within ``/home/tests/checkers``.
 
-For now, the inversion will run on the local host using only a single event and only a single processor.  Once we verify that everything is working correctly in this simple case, we can move to the case of multiple events and multiple processors by changing the 'system' setting in ``/home/tests/checkers/parameters.py``.
+For now, the inversion will run on the local host with only a single event on only a single processor.  Once we verify that everything is working correctly in this case, we can move on to multiple events and multiple processors by modifying ``parameters.py`` settings, as described below.
 
 
 
-8. Run FWI checkerboard test in parrallel
+8. Run FWI checkerboard test in parallel
 -----------------------------------------
-If you have access to a multicore laptop or desktop, SeisFlows can be used to carry out an inversion running multiple wavefield simulations in parallel.  To run the FWI checkerboard example in this manner, change the ``SYSTEM`` entry in ``parameters.py`` from ``serial`` to ``parallel`` and change the ``NPROCMAX`` entry to the number of processors available. Finally, to invert all available events instead of just one event, change ``NTASK`` from ``1`` to ``25``.
+On a laptop or desktop with multiple cores, the work of an inversion can be carried out in parallel.  To run the FWI checkerboard example in parallel over events (that is, with multiple event simulations running at the same time in exactly the same way), make the following changes to the ``parameters.py`` filed created above:
+
+- to invert all available events instead of just one event, change ``NTASK`` from ``1`` to ``25``
+- change the ``SYSTEM`` entry in ``parameters.py`` from ``serial`` to ``parallel``
+- change the ``NPROCMAX`` entry to the number of processors available.
+
+Besides running in parallel over events (an embarrasingly parallel strategy), the work of individual event simulations can be parallelized over model regions. See the SPECFEM3D user manual for more information. 
+
+Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates the former.
