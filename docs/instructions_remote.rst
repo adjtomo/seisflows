@@ -115,6 +115,7 @@ On a laptop or desktop with multiple cores, the work of an inversion can be carr
 - change the ``SYSTEM`` entry in ``parameters.py`` from ``serial`` to ``parallel``
 - change the ``NPROCMAX`` entry to the number of processors available.
 
-Besides running in parallel over events (an embarrasingly parallel strategy), the work of individual event simulations can be parallelized over model regions. See the SPECFEM3D user manual for more information. 
+Besides running in parallel over events (an embarrasingly parallel strategy), the work of individual event simulations can be parallelized over model regions. See the SPECFEM3D user manual for more information. Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates the former.
 
-Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates the former.
+Besides ``serial`` and ``parallel`` settings for running SeisFlows on laptops and desktops, there are also ``pbs``, ``slurm``, ``lsf`` options for running on computer clusters. See `here` [http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration] for more information about running on clusters.  As with the current example, ``serial`` and ``parallel`` options are used primarily for illustration and debugging.
+
