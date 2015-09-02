@@ -35,7 +35,7 @@ Hardware Prerequisites
 Access to a computer cluster is required for most applications.  Base classes are provided for several common cluster configurations, including PBS and SLURM.  Nonstandard configurations can often be accommodated through modifications to one of the base classes; see :ref:`system` for details.
 
 
-.. _job_submission:
+.. _submission:
 
 Job Submission
 ==============
@@ -111,15 +111,16 @@ Besides SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE, SeisFlows can interface with 
 System Configuration
 ====================
 
-SeisFlows can run on SLURM, PBS TORQUE, and PBS Pro clusters.  For debugging, an option to run simulations in serial is also provided.  
+SeisFlows can run on SLURM, PBS, and LSF (coming soon) clusters.
 
-While there are many similarities between job management systems, there are also many differences.  Our approach to such differences is to try to hide them behind a consistent Python interface.  For example, by creating a thin Python layer over system commands such as ``qsub`` on PBS or ``sbatch`` on SLURM, it is possible to abstract the machinery for submitting and managing jobs.
+To make SeisFlows work across different environments, our approach is to wrap system commands with a thin Python layer.  To handle job submission, for example, we wrap the PBS command ``qsub`` and the SLURM command ``sbatch`` with a  python utility called `system.submit`.  The result is a consistent python interface across different clusters.
 
-Besides different job submission and management systems, different filesystem configurations may exist as well.  Filesystem settings can be adjusted by modifying values in the ``PATH`` dictionary, which is populated from ``paths.py``.  Output files and temporary files, by default, are written to the working directory.  If a value for ``PATH.GLOBAL`` is supplied, temporary files are written there instead.  If each compute node has its own local filesystem and if a value for ``PATH.LOCAL`` is supplied, some temporary files will be written to ``PATH.LOCAL`` and others to ``PATH.GLOBAL``.
+Filesystem settings can be adjusted by modifying values in the ``PATH`` dictionary, which is populated from ``paths.py``.  Output files and temporary files, by default, are written to the working directory.  If a value for ``PATH.GLOBAL`` is supplied, temporary files are written there instead.  If each compute node has its own local filesystem, a value for ``PATH.LOCAL`` can be supplied so that temporary files required only for a local process need not be written to the global filesystem.
 
-As the size of an inversion grows, scalability and fault tolerance become increasingly important.  If a single forward simulation spans more than one node, users must select ``pbs_lg_job`` or ``slurm_lg_job`` system configurations in ``parameters.py``.  If a forward simulation fits onto a single node, users must select ``pbs_lg_job`` or ``slurm_sm_job`` instead.
+As the size of an inversion grows, scalability and fault tolerance become increasingly important.  If a single forward simulation spans more than one node, users must select ``pbs_lg`` or ``slurm_lg`` system configurations in ``parameters.py``.  If a forward simulation fits onto a single node, users should select ``pbs_sm`` or ``slurm_sm`` instead.
 
-In writing system interfaces, the approach taken by SeisFlows developers has been to write lightweight Python wrappers on top of PBS and SLURM commands.  For some cases involving nonstandard cluster configurations or restrictive usage policies, heavyweight solutions may be required instead.  Users are referred to distributed computing projects such as SAGA or PATHOS for ideas.
+In SeisFlows, the overall approach to solving system interface problems is to use lightweight Python wrappers.  For complex cluster configurations, heavier-weight solutions may be required.  Users are referred to SAGA or Pegasus projects for ideas.
+
 
 
 
