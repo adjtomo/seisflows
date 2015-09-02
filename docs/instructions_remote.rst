@@ -2,7 +2,7 @@
 1. Download SeisFlows
 ---------------------
 
-To run seisflows you'll need a Unix system with Python and standard utilities.  From the command line type::
+To run seisflows you'll need a Unix system with Python and standard Unix utilities.  From the command line type::
  
         mkdir /home/packages
         cd /home/packages
