@@ -223,10 +223,6 @@ System Interfaces
 
 A list of available system interface classes follows. By hiding environment details behind a python interface layer, these classes provide a consistent command set across different computing environments.
 
-SERIAL - Tasks that are normally run in parallel, such as multiple wavefield simulations, are carried out one at a time. Useful for debugging, among other things.
-
-PARALLEL [under development]
-
 PBS_SM - For small inversions on PBS clusters. All resources are allocated at the beginning and all simulations are run at the same time, within a single job. Because of limitations of pbsdsh, individual wavefield simulations cannot span more than one core.
 
 PBS_LG - For large inversions on PBS clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
@@ -235,5 +231,9 @@ SLURM_SM - For small inversions on SLURM clusters. All resources are allocated a
 
 SLURM_LG - For large inversions on SLURM clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
 
-SLURM_XL [temporarily unavailable] - For very large inversions on SLURM clusters. In addition to the features of SLURM_LG, provides fault tolerence: Tasks that end in failure or timeout are automatically resumbitted. (Can be dangerous to use on code that is not well tested.)
+SLURM_XL [under development] - For very large inversions on SLURM clusters. In addition to the features of SLURM_LG, provides fault tolerence: Tasks that end in failure or timeout are automatically resumbitted. (Can be dangerous to use on code that is not well tested.)
+
+SERIAL - Tasks that are normally carried out all at once are instead carried out one at a time. Useful for debugging, among other things.
+
+PARALLEL - On desktops or laptops with multiple cores, allows embarrassingly parallel tasks to be carried out several at a time, rather than one at a time.
 
