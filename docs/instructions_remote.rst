@@ -76,7 +76,7 @@ Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
         ./configure FC=ifort
         make all
  
-If there are no compilation errors, then proceed to the next step.
+If there are no compilation errors, then it is okay to proceed to the next step.
 
 
 6. Set up FWI checkerboard test
@@ -101,7 +101,7 @@ To run the checkboard test, simply type::
 
         sfclean ; sfrun
 
-within within ``/home/tests/checkers``.
+within ``/home/tests/checkers``.
 
 For now, the inversion will run on the local host with only a single event on only a single processor.  Once we verify that everything is working correctly in this case, we can move on to multiple events and multiple processors by modifying ``parameters.py`` settings, as described below.
 
