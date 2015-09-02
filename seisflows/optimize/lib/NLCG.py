@@ -48,10 +48,8 @@ class NLCG:
         p_old = loadnpy('p_old')
 
         if self.precond:
-            raise NotImplementedError("Updated LBFGS, but not NLCG.")
-            d = loadnpy('precond')
-            beta = pollak_ribere(d**0.5 * g_new, d**0.5 * g_old)
-            p_new = -d*g_new + beta*p_old
+            beta = pollak_ribere(g_new, g_old, self.precond)
+            p_new = -self.precond(g_new) + beta*p_old
         else:
             beta = pollak_ribere(g_new, g_old)
             p_new = -g_new + beta*p_old
@@ -81,14 +79,14 @@ class NLCG:
 
 ### utility functions
 
-def fletcher_reeves(g_new, g_old):
-    num = np.dot(g_new, g_new)
+def fletcher_reeves(g_new, g_old, precond=lambda x : x):
+    num = np.dot(precond(g_new), g_new)
     den = np.dot(g_old, g_old)
     beta = num/den
     return beta
 
-def pollak_ribere(g_new, g_old):
-    num = np.dot(g_new, g_new-g_old)
+def pollak_ribere(g_new, g_old, precond=lambda x : x):
+    num = np.dot(precond(g_new), g_new-g_old)
     den = np.dot(g_old, g_old)
     beta = num/den
     return beta

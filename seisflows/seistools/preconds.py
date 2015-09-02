@@ -9,7 +9,6 @@ class diagonal(object):
 
         Rescales model parameters based on user supplied weights
     """
-
     def __init__(self, path=None, solver=None):
         """ Loads any required dependencies
         """
@@ -29,15 +28,14 @@ class diagonal(object):
         return p*q
 
 
-### geophysics preconditioners
+### experimental
 
 class pca(object):
-    """ PCA diagonal preconditioner
+    """ PCA preconditioner
 
         Equivalent to a change of material parameters, with choice of
         new parameters based on principle component analysis 
     """
-
     def __init__(self, solver=None):
         """ Loads any required dependencies
         """
@@ -53,7 +51,7 @@ class pca(object):
     def __call__(self, q):
         """ Applies preconditioner to given vector
         """
-        r = self.split(q)
+        old = self.split(q)
         nn = len(self.parameters)
 
         # compute covariance
@@ -61,27 +59,21 @@ class pca(object):
         for ii,ikey in enumerate(self.parameters):
             for jj,jkey in enumerate(self.parameters):
                 for iproc in range(self.nproc):
-                    cov[ii,jj] += np.dot(r[ikey][iproc], r[jkey][iproc])
+                    cov[ii,jj] += np.dot(old[ikey][iproc], old[jkey][iproc])
 
         # diagonalize
         eigval,eigvec = np.linalg.eig(cov)
-        w = np.linalg.inv(eigvec)
+        precond = np.dot(eigvec.T, eigvec)
+        inv = np.linalg.inv(precond)
 
         # apply preconditioner
-        s = {}
+        new = {}
         for ii,ikey in enumerate(self.parameters):
-            s[ikey] = []
+            new[ikey] = []
             for jj,jkey in enumerate(self.parameters):
                     for iproc in range(self.nproc):
-                        s[ikey] += [w[ii,jj]*r[jkey][iproc]]
+                        new[ikey] += [inv[ii,jj]*old[jkey][iproc]]
 
-        return self.merge(s)
-
-
-### general numerical preconditioners
-
-class LBFGS(object):
-    def __init__(self):
-        raise NotImplementedError
+        return self.merge(new)
 
 
