@@ -37,7 +37,7 @@ Run the following test to make sure everything is working::
         ./clean; ./run
 
 
-If an hello message is displayed, then the test was successful and it's alright to move on.
+If n hello message is displayed, the test was successful and it's alright to move on.
 
  
 
