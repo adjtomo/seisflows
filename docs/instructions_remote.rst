@@ -37,7 +37,7 @@ Run the following test to make sure everything is working::
         ./clean; ./run
 
 
-If n hello message is displayed, the test was successful and it's alright to move on.
+If n hello message is displayed, the test was successful and it's alright to continue.
 
  
 
@@ -76,7 +76,7 @@ Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
         ./configure FC=ifort
         make all
  
-If there are no compilation errors, then it is okay to proceed to the next step.
+If there are no compilation errors, then it's okay to proceed.
 
 
 6. Set up FWI checkerboard test
@@ -109,7 +109,7 @@ For now, the inversion will run on the local host with only a single event on on
 
 8. Run FWI checkerboard test in parallel
 -----------------------------------------
-On a laptop or desktop with multiple cores, the work of an inversion can be carried out in parallel.  To run the FWI checkerboard example in parallel over events (that is, with multiple event simulations running at the same time in exactly the same way), make the following changes to the ``parameters.py`` filed created above:
+On a laptop or desktop with multiple cores, the work of an inversion can be carried out in parallel.  To run the FWI checkerboard example in parallel over events (that is, with multiple event simulations running at the same time in exactly the same way), make the following changes to the ``parameters.py`` file created above:
 
 - to invert all available events instead of just one event, change ``NTASK`` from ``1`` to ``25``
 - change the ``SYSTEM`` entry in ``parameters.py`` from ``serial`` to ``parallel``
