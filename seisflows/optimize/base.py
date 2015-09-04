@@ -163,7 +163,7 @@ class base(object):
                  path=PATH.PRECOND,
                  solver=solver)
 
-        elif PAR.PRECOND in ['pca']:
+        elif 'pca' in PAR.PRECOND:
             # equivalent to a change of material parameters, with choice of
             # new parameters based on principle component analysis 
             factory = getattr(preconds, PAR.PRECOND)

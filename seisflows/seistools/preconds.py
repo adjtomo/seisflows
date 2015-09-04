@@ -45,6 +45,7 @@ class pca(object):
 
         # solver properties
         self.nproc = solver.mesh.nproc
+        self.ngll = solver.mesh.ngll
         self.parameters = solver.parameters
  
 
@@ -62,18 +63,58 @@ class pca(object):
                     cov[ii,jj] += np.dot(old[ikey][iproc], old[jkey][iproc])
 
         # diagonalize
-        eigval,eigvec = np.linalg.eig(cov)
-        precond = np.dot(eigvec.T, eigvec)
-        inv = np.linalg.inv(precond)
+        #eigval,eigvec = np.linalg.eig(cov)
+        #precond = np.dot(eigvec.T, eigvec)
+        #inv = np.linalg.inv(precond)
+
+        inv = self.invert(cov)
+
+        if True:
+            print 'cov:', cov
+            print 'inv:', inv
 
         # apply preconditioner
         new = {}
         for ii,ikey in enumerate(self.parameters):
+            # initialize with zeros
             new[ikey] = []
-            for jj,jkey in enumerate(self.parameters):
-                    for iproc in range(self.nproc):
-                        new[ikey] += [inv[ii,jj]*old[jkey][iproc]]
+            for iproc in range(self.nproc):
+                ngll = self.ngll[iproc]
+                new[ikey] += [np.zeros(ngll)]
+
+            for iproc in range(self.nproc):
+                for jj,jkey in enumerate(self.parameters):
+                            new[ikey][iproc] += inv[ii,jj]*old[jkey][iproc]
 
         return self.merge(new)
+
+
+    def invert(self, cov):
+        inv = np.linalg.inv(cov)
+        inv /= (np.trace(inv)/len(self.parameters))
+        return inv
+        
+
+class pca2(pca):
+    def invert(self, cov):
+        inv = np.linalg.inv(cov)
+        inv /= (np.trace(inv)/len(self.parameters))
+        return np.diag(np.diag(inv))
+
+
+class pca3(pca):
+    def invert(self, cov):
+        inv = np.linalg.inv(cov)
+        inv /= (np.trace(inv)/len(self.parameters))
+        return np.diag(np.diag(inv)**0.5)
+
+
+class pca4(pca):
+    def invert(self, cov):
+        nn = len(self.parameters)
+        cov += np.trace(cov)/nn * np.eye(nn)
+        inv = np.linalg.inv(cov)
+        inv /= (np.trace(inv)/len(self.parameters))
+        return inv
 
 
