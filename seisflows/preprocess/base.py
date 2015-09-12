@@ -120,9 +120,23 @@ class base(object):
     def generate_adjoint_traces(self, s, d, h):
         """ Generates adjoint traces from observed and synthetic traces
         """
-        # generate adjoint traces
+
         for i in range(h.nr):
             s[:,i] = self.call_adjoint(s[:,i], d[:,i], h.nt, h.dt)
+
+        # bandpass once more
+        if PAR.BANDPASS:
+            if PAR.FREQLO and PAR.FREQHI:
+                s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI, 'reverse')
+
+            elif PAR.FREQHI:
+                s = shighpass(s, h, PAR.FREQLO, 'reverse')
+
+            elif PAR.FREQHI:
+                s = slowpass(s, h, PAR.FREQHI, 'reverse')
+
+            else:
+                raise ParameterError(PAR, 'BANDPASS')
 
         # normalize traces
         if PAR.NORMALIZE:
