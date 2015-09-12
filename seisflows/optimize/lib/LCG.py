@@ -11,8 +11,10 @@ from seisflows.optimize.lib.LBFGS import LBFGS
 class LCG(object):
     """ CG solver
     """
-    def __init__(self, path, thresh=np.inf, maxiter=np.inf, precond=None):
+    def __init__(self, path, load=loadnpy, save=savenpy, thresh=np.inf, maxiter=np.inf, precond=None):
         self.path = path
+        self.load = loadnpy
+        self.save = savenpy
         self.maxiter = maxiter
         self.precond = precond
 
@@ -27,15 +29,15 @@ class LCG(object):
         self.iter += 1
         self.ilcg = 0
 
-        r = loadnpy('g_new')
+        r = self.load('g_new')
         x = np.zeros(r.size)
-        savenpy('LCG/x', x)
-        savenpy('LCG/r', r)
+        self.save('LCG/x', x)
+        self.save('LCG/r', r)
 
         y = self.apply_precond(r)
         p = -y
-        savenpy('LCG/y', y)
-        savenpy('LCG/p', p)
+        self.save('LCG/y', y)
+        self.save('LCG/p', p)
         savetxt('LCG/ry', np.dot(r, y))
 
 
@@ -44,10 +46,10 @@ class LCG(object):
 
         self.ilcg += 1
 
-        x = loadnpy('LCG/x')
-        r = loadnpy('LCG/r')
-        y = loadnpy('LCG/y')
-        p = loadnpy('LCG/p')
+        x = self.load('LCG/x')
+        r = self.load('LCG/r')
+        y = self.load('LCG/y')
+        p = self.load('LCG/p')
         ry = loadtxt('LCG/ry')
 
         pap = np.dot(p, ap)
@@ -59,8 +61,8 @@ class LCG(object):
         alpha = ry/pap
         x += alpha*p
         r += alpha*ap
-        savenpy('LCG/x', x)
-        savenpy('LCG/r', r)
+        self.save('LCG/x', x)
+        self.save('LCG/r', r)
 
         # check status
         if self.check_status(ap) == 0:
@@ -77,8 +79,8 @@ class LCG(object):
             beta = ry/ry_old
             p = -y + beta*p
 
-            savenpy('LCG/y', y)
-            savenpy('LCG/p', p)
+            self.save('LCG/y', y)
+            self.save('LCG/p', p)
             savetxt('LCG/ry', np.dot(r, y))
 
         return isdone

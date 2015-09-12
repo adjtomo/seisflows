@@ -202,7 +202,7 @@ class base(object):
         """
         unix.cd(PATH.OPTIMIZE)
 
-        g_new = loadnpy('g_new')
+        g_new = self.load('g_new')
 
         if PAR.SCHEME in ['SD']:
             p_new = -g_new
@@ -214,8 +214,10 @@ class base(object):
         elif PAR.SCHEME in ['LBFGS']:
             p_new, self.restarted = self.LBFGS()
 
-        savenpy('p_new', p_new)
-        savetxt('s_new', np.dot(g_new, p_new))
+        self.save('p_new', p_new)
+        savetxt('s_new', self.dot(g_new, p_new))
+
+        return p_new
 
 
     # The following names are used exclusively for the line search:
@@ -232,8 +234,8 @@ class base(object):
         """
         unix.cd(PATH.OPTIMIZE)
 
-        m = loadnpy('m_new')
-        p = loadnpy('p_new')
+        m = self.load('m_new')
+        p = self.load('p_new')
         f = loadtxt('f_new')
         norm_m = max(abs(m))
         norm_p = max(abs(p))
@@ -268,7 +270,7 @@ class base(object):
 
         # write trial model corresponding to chosen step length
         savetxt('alpha', alpha)
-        savenpy('m_try', m + alpha*p)
+        self.save('m_try', m + alpha*p)
 
         # upate log
         self.stepwriter(steplen=0., funcval=f)
@@ -326,9 +328,9 @@ class base(object):
         """
         unix.cd(PATH.OPTIMIZE)
 
-        m = loadnpy('m_new')
-        g = loadnpy('g_new')
-        p = loadnpy('p_new')
+        m = self.load('m_new')
+        g = self.load('g_new')
+        p = self.load('p_new')
         s = loadtxt('s_new')
 
         norm_m = max(abs(m))
@@ -354,7 +356,7 @@ class base(object):
 
         elif PAR.LINESEARCH == 'Backtrack':
             # calculate slope along 1D profile
-            slope = s/np.dot(g,g)**0.5
+            slope = s/self.dot(g,g)**0.5
             if PAR.ADHOCFACTOR:
                 slope *= PAR.ADHOCFACTOR            
 
@@ -362,7 +364,7 @@ class base(object):
 
         # write trial model corresponding to chosen step length
         savetxt('alpha', alpha)
-        savenpy('m_try', m + alpha*p)
+        self.save('m_try', m + alpha*p)
 
 
     def finalize_search(self):
@@ -370,9 +372,9 @@ class base(object):
         """
         unix.cd(PATH.OPTIMIZE)
 
-        m = loadnpy('m_new')
-        g = loadnpy('g_new')
-        p = loadnpy('p_new')
+        m = self.load('m_new')
+        g = self.load('g_new')
+        p = self.load('p_new')
         s = loadtxt('s_new')
 
         x = self.step_lens()
@@ -399,11 +401,11 @@ class base(object):
         # write updated model
         alpha = x[f.argmin()]
         savetxt('alpha', alpha)
-        savenpy('m_new', m + alpha*p)
+        self.save('m_new', m + alpha*p)
         savetxt('f_new', f.min())
 
         # append latest output
-        self.writer('factor', -np.dot(g,g)**-0.5 * (f[1]-f[0])/(x[1]-x[0]))
+        self.writer('factor', -self.dot(g,g)**-0.5 * (f[1]-f[0])/(x[1]-x[0]))
         self.writer('gradient_norm_L1', np.linalg.norm(g, 1))
         self.writer('gradient_norm_L2', np.linalg.norm(g, 2))
         self.writer('misfit', f[0])
@@ -423,8 +425,8 @@ class base(object):
         """
         unix.cd(PATH.OPTIMIZE)
 
-        g = loadnpy('g_new')
-        p = loadnpy('p_new')
+        g = self.load('g_new')
+        p = self.load('p_new')
 
         thresh = 1.e-3
         theta = angle(p,-g)
@@ -442,10 +444,10 @@ class base(object):
         """
         unix.cd(PATH.OPTIMIZE)
 
-        g = loadnpy('g_new')
+        g = self.load('g_new')
 
-        savenpy('p_new', -g)
-        savetxt('s_new', np.dot(g,g))
+        self.save('p_new', -g)
+        savetxt('s_new', self.dot(g,g))
 
         if PAR.SCHEME in ['NLCG']:
             self.NLCG.restart()
@@ -491,4 +493,16 @@ class base(object):
             return f_sorted
         else:
             return f
+
+
+    ### utilities
+
+    def dot(self,x,y):
+        return np.dot(
+            np.squeeze(x),
+            np.squeeze(y))
+
+    load = staticmethod(loadnpy)
+    save = staticmethod(savenpy)
+
 

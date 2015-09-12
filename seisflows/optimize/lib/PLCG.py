@@ -4,7 +4,6 @@ from os.path import join
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import loadtxt, savetxt
 from seisflows.tools.io import OutputWriter
 
@@ -47,9 +46,9 @@ class PLCG(LCG):
                 y = r
             elif self.ilcg == 0:
                 S, Y = self.LBFGS.update()
-                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
+                y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
             else:
-                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
+                y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
             return y
 
         elif self.precond in ['LBFGS_6']:
@@ -58,9 +57,9 @@ class PLCG(LCG):
                 y = r
             elif self.ilcg == 0:
                 S, Y = self.LBFGS.update()
-                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
+                y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
             else:
-                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
+                y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
             return y
 
         elif self.precond in ['LBFGS_9']:
@@ -69,9 +68,9 @@ class PLCG(LCG):
                 y = r
             elif self.ilcg == 0:
                 S, Y = self.LBFGS.update()
-                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
+                y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
             else:
-                y = -self.LBFGS.apply(loadnpy('LCG/r'), S, Y)
+                y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
             return y
 
         else:
@@ -82,8 +81,8 @@ class PLCG(LCG):
     def check_status(self, ap, verbose=True):
         """ Checks Eisenstat-Walker termination status
         """
-        g0 = loadnpy('g_new')
-        g1 = loadnpy('LCG/r')
+        g0 = self.load('g_new')
+        g1 = self.load('LCG/r')
 
         LHS = _norm(g1)
         RHS = _norm(g0)
@@ -92,7 +91,7 @@ class PLCG(LCG):
         # Eisenstat & Walker 1996
         try:
             g_new = _norm(g)
-            g_old = _norm(loadnpy('g_old'))
+            g_old = _norm(self.load('g_old'))
             eta1996 = g_new/g_old
         except:
             eta1996 = 1.

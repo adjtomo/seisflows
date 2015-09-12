@@ -5,6 +5,7 @@ import numpy as np
 from seisflows.tools import unix
 
 from seisflows.tools.array import loadnpy, savenpy
+from seisflows.tools.math import dot
 from seisflows.tools.code import loadtxt, savetxt
 
 
@@ -13,8 +14,10 @@ class NLCG:
     """ Nonlinear conjugate gradient method
     """
 
-    def __init__(self, path='.', thresh=1., maxiter=np.inf, precond=None):
+    def __init__(self, path='.', load=loadnpy, save=savenpy, thresh=1., maxiter=np.inf, precond=None):
         self.path = path
+        self.load = load
+        self.save = save
         self.maxiter = maxiter
         self.thresh = thresh
         self.precond = precond
@@ -33,7 +36,7 @@ class NLCG:
         savetxt(self.path+'/'+'NLCG/iter', self.iter)
 
         unix.cd(self.path)
-        g_new = loadnpy('g_new')
+        g_new = self.load('g_new')
 
         if self.iter == 1:
             return -g_new, 0
@@ -44,8 +47,8 @@ class NLCG:
             return -g_new, 1
 
         # compute search direction
-        g_old = loadnpy('g_old')
-        p_old = loadnpy('p_old')
+        g_old = self.load('g_old')
+        p_old = self.load('p_old')
 
         if self.precond:
             beta = pollak_ribere(g_new, g_old, self.precond)
@@ -80,22 +83,22 @@ class NLCG:
 ### utility functions
 
 def fletcher_reeves(g_new, g_old, precond=lambda x : x):
-    num = np.dot(precond(g_new), g_new)
-    den = np.dot(g_old, g_old)
+    num = dot(precond(g_new), g_new)
+    den = dot(g_old, g_old)
     beta = num/den
     return beta
 
 def pollak_ribere(g_new, g_old, precond=lambda x : x):
-    num = np.dot(precond(g_new), g_new-g_old)
-    den = np.dot(g_old, g_old)
+    num = dot(precond(g_new), g_new-g_old)
+    den = dot(g_old, g_old)
     beta = num/den
     return beta
 
 def check_conjugacy(g_new, g_old):
-    return abs(np.dot(g_new, g_old) / np.dot(g_new, g_new))
+    return abs(dot(g_new, g_old) / dot(g_new, g_new))
 
 def check_descent(p_new, g_new):
-    return np.dot(p_new, g_new) / np.dot(g_new, g_new)
+    return dot(p_new, g_new) / dot(g_new, g_new)
 
 
 

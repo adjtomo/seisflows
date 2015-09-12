@@ -17,12 +17,14 @@ class LBFGS(object):
         passed from a calling routine.
     """
 
-    def __init__(self, path='.', memory=5, thresh=0., maxiter=np.inf, precond=None):
+    def __init__(self, path='.', load=loadnpy, save=savenpy, memory=5, thresh=0., maxiter=np.inf, precond=None):
         assert exists(path)
         unix.cd(path)
         unix.mkdir('LBFGS')
 
         self.path = path
+        self.load = load
+        self.save = save
         self.thresh = thresh
         self.maxiter = maxiter
         self.precond = precond
@@ -37,7 +39,7 @@ class LBFGS(object):
         """
         self.iter += 1
 
-        g = loadnpy('g_new')
+        g = self.load('g_new')
         if self.iter == 1:
             return -g, 0
 
@@ -62,8 +64,8 @@ class LBFGS(object):
         """
         unix.cd(self.path)
 
-        s = loadnpy('m_new') - loadnpy('m_old')
-        y = loadnpy('g_new') - loadnpy('g_old')
+        s = self.load('m_new') - self.load('m_old')
+        y = self.load('g_new') - self.load('g_old')
 
         m = len(s)
         n = self.memory

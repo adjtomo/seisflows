@@ -102,9 +102,16 @@ def lsq2(x, f):
         raise Exception()
 
 
-def angle(g,p):
-    gp = np.dot(g,p)
-    gg = np.dot(g,g)
-    pp = np.dot(p,p)
-    return np.arccos(gp/(gg*pp)**0.5)
+def angle(x,y):
+    xy = dot(x,y)
+    xx = dot(x,x)
+    yy = dot(y,y)
+    return np.arccos(xy/(xx*yy)**0.5)
+
+
+def dot(x,y):
+    return np.dot(
+        np.squeeze(x),
+        np.squeeze(y))
+
 

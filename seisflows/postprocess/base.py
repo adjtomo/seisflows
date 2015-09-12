@@ -1,8 +1,9 @@
 
+from os.path import join
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.array import loadnpy, savenpy
+from seisflows.tools.array import savenpy
 from seisflows.tools.code import exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
@@ -78,7 +79,8 @@ class base(object):
             g *= solver.merge(solver.load(PATH.MASK))
             self.save(path, g, backup='nomask')
 
-        savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
+        filename = join(PATH.OPTIMIZE, 'g_new')
+        savenpy(filename, g)
 
 
     def combine_kernels(self, path):
