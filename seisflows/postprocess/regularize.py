@@ -78,7 +78,8 @@ class regularize(loadclass('postprocess', 'base')):
         import preprocess
         preprocess.setup()
 
-        fullpath = path +'/'+  solver.getname
+        name = solver.check_source_names()[system.getnode()]
+        fullpath = path +'/'+ name
         g = solver.load(fullpath, suffix='_kernel')
         if not PAR.FIXRADIUS:
             return
