@@ -9,19 +9,21 @@ class diagonal(object):
 
         Rescales model parameters based on user supplied weights
     """
-    def __init__(self, path=None, solver=None):
+    def __init__(self):
         """ Loads any required dependencies
         """
-        # path to user supplied preconditioner
-        assert path
-        self.path = path
+        from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths
+        import solver
 
-        # solver methods
+        PAR = SeisflowsParameters()
+        PATH = SeisflowsPaths()
+
+        self.path = PATH.PRECOND
         self.load = solver.load
         self.merge = solver.merge
 
 
-    def __call__(self,q):
+    def __call__(self, q):
         """ Applies preconditioner to given vector
         """
         p = self.merge(self.load(self.path))
@@ -30,15 +32,26 @@ class diagonal(object):
 
 ### experimental
 
+def fix(A):
+    nrow = A.shape[0]
+    ncol = A.shape[1]
+    for i in range(ncol):
+       if A[i,i] < 0.:
+           A[:,i] *= -1
+    return A
+
+
 class pca(object):
     """ PCA preconditioner
 
         Equivalent to a change of material parameters, with choice of
         new parameters based on principle component analysis 
     """
-    def __init__(self, solver=None):
+    def __init__(self):
         """ Loads any required dependencies
         """
+        import solver
+
         # solver methods
         self.merge = solver.merge
         self.split = solver.split
@@ -62,16 +75,13 @@ class pca(object):
                 for iproc in range(self.nproc):
                     cov[ii,jj] += np.dot(old[ikey][iproc], old[jkey][iproc])
 
-        # diagonalize
-        #eigval,eigvec = np.linalg.eig(cov)
-        #precond = np.dot(eigvec.T, eigvec)
-        #inv = np.linalg.inv(precond)
-
         inv = self.invert(cov)
 
         if True:
-            print 'cov:', cov
-            print 'inv:', inv
+            print 'cov:'
+            print cov
+            print 'inv:'
+            print inv
 
         # apply preconditioner
         new = {}
@@ -96,25 +106,13 @@ class pca(object):
         
 
 class pca2(pca):
-    def invert(self, cov):
-        inv = np.linalg.inv(cov)
-        inv /= (np.trace(inv)/len(self.parameters))
-        return np.diag(np.diag(inv))
+    def invert(self, C):
 
+        d,E = np.linalg.eig(C)
+        E = fix(E)
+        D = np.diag(d)
+        W = np.dot(D**0.1, E)
 
-class pca3(pca):
-    def invert(self, cov):
-        inv = np.linalg.inv(cov)
-        inv /= (np.trace(inv)/len(self.parameters))
-        return np.diag(np.diag(inv)**0.5)
-
-
-class pca4(pca):
-    def invert(self, cov):
-        nn = len(self.parameters)
-        cov += np.trace(cov)/nn * np.eye(nn)
-        inv = np.linalg.inv(cov)
-        inv /= (np.trace(inv)/len(self.parameters))
-        return inv
+        return np.linalg.inv(np.dot(W.T, W))
 
 

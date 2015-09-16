@@ -152,33 +152,12 @@ class base(object):
         """
         from seisflows.seistools import preconds
 
-        if not PAR.PRECOND:
-            return None
-
-        if PAR.PRECOND in ['materials']:
-            # diagonal scaling based on user supplied material parameters weights
-            assert(exists(PATH.PRECOND))
-            factory = getattr(preconds, PAR.PRECOND)
-            precond = factory(
-                 path=PATH.PRECOND,
-                 solver=solver)
-
-        elif 'pca' in PAR.PRECOND:
-            # equivalent to a change of material parameters, with choice of
-            # new parameters based on principle component analysis 
-            factory = getattr(preconds, PAR.PRECOND)
-            precond = factory(
-                 solver=solver)
-
+        if PAR.PRECOND in dir(preconds):
+            return getattr(preconds, PAR.PRECOND)()
+        elif PAR.PRECOND:
+            return getattr(preconds, 'diagonal')()
         else:
-            # diagonal scaling based on user supplied weights
-            assert(exists(PATH.PRECOND))
-            factory = getattr(preconds, 'diagonal')
-            precond = factory(
-                 path=PATH.PRECOND,
-                 solver=solver)
-
-        return precond
+            return None
 
 
     # The following names are used in the 'compute_direction' method and for
