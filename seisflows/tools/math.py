@@ -20,7 +20,7 @@ def nabla(Z, order=1, dx=1., dy=1.):
         Z[ :,-1] += Zx[:,-1]
         Z[-1, :] += Zy[-1,:]
 
-        Z[-1,-1] = (Zx[-1,-1] + Zy[-1,-1])/2.
+        Z[-1,-1] = (Zx[-1,-1] + Zy[-1,-1])
 
     elif order == 2:
         Zx = (Z[:,2:] - 2.*Z[:,1:-1] + Z[:,:-2])/dx**2
@@ -35,12 +35,38 @@ def nabla(Z, order=1, dx=1., dy=1.):
         Z[ :,-1] += Zx[ :,-1]
         Z[-1, :] += Zy[-1, :]
 
-        Z[ 0, 0] = (Zx[ 0, 0] + Zy[ 0, 0])/2.
-        Z[ 0,-1] = (Zx[ 0,-1] + Zy[ 0,-1])/2.
-        Z[-1, 0] = (Zx[-1, 0] + Zy[-1, 0])/2.
-        Z[-1,-1] = (Zx[-1,-1] + Zy[-1,-1])/2.
+        Z[ 0, 0] = (Zx[ 0, 0] + Zy[ 0, 0])
+        Z[ 0,-1] = (Zx[ 0,-1] + Zy[ 0,-1])
+        Z[-1, 0] = (Zx[-1, 0] + Zy[-1, 0])
+        Z[-1,-1] = (Zx[-1,-1] + Zy[-1,-1])
 
     return Z
+
+
+def tv(Z, dx=1., dy=1., epsilon=0.):
+    nrow = Z.shape[0]
+    ncol = Z.shape[1]
+
+    Zx = (Z[:,1:] - Z[:,:-1])/dx
+    Zy = (Z[1:,:] - Z[:-1,:])/dy
+
+    top = np.zeros((nrow, ncol))
+    bot = np.zeros((nrow, ncol))
+
+    top[:,1:] += Zx
+    top[1:,:] += Zy
+    top[ :,-1] += Zx[:,-1]
+    top[-1, :] += Zy[-1,:]
+
+    bot[:,1:] += Zx**2
+    bot[1:,:] += Zy**2
+    bot[ :,-1] += Zx[:,-1]**2
+    bot[-1, :] += Zy[-1,:]**2
+
+    if not epsilon:
+        epsilon = 1.e-6
+
+    return top/(bot + epsilon*bot.max())**0.5
 
 
 def gauss2(X, Y, mu, sigma, normalize=True):

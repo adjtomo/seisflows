@@ -7,7 +7,7 @@ from seisflows.tools.array import grid2mesh, mesh2grid, stack
 from seisflows.tools.code import exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, loadclass
-from seisflows.tools.math import nabla
+from seisflows.tools.math import nabla, tv
 
 
 PAR = SeisflowsParameters()
@@ -36,10 +36,13 @@ class total_variation(loadclass('postprocess', 'regularize')):
         if not PAR.LAMBDA:
             raise ValueError
 
+        if not hasattr(PAR, 'EPSILON'):
+            setattr(PAR, 'EPSILON', 0.)
+
 
     def nabla(self, mesh, m, g):
         M, grid = mesh2grid(g, mesh)
-        DM = nabla(M, order=1)
+        DM = tv(M, epsilon=1.e-2)#PAR.EPSILON
         dm = grid2mesh(DM, grid, mesh)
-        return np.sign(dm)/np.mean(m)
+        return dm/np.mean(m)
 
