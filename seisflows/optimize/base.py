@@ -21,7 +21,7 @@ PATH = SeisflowsPaths()
 import solver
 
 
-class debug(object):
+class base(object):
     """ Nonlinear optimization base class.
 
      Available nonlinear optimization algorithms include steepest descent (SD),
