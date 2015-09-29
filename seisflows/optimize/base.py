@@ -21,7 +21,7 @@ PATH = SeisflowsPaths()
 import solver
 
 
-class base(object):
+class debug(object):
     """ Nonlinear optimization base class.
 
      Available nonlinear optimization algorithms include steepest descent (SD),
@@ -275,6 +275,9 @@ class base(object):
         x = self.step_lens()
         f = self.func_vals()
 
+        fmin = f.min()
+        imin = f.argmin()
+
         # is current step length the best so far?
         vals = self.func_vals(sort=False)
         if np.all(vals[-1] < vals[:-1]):
@@ -282,18 +285,18 @@ class base(object):
 
         # are stopping criteria satisfied?
         if PAR.LINESEARCH == 'Fixed':
-            if any(f[1:] < f[0]) and (f[-2] < f[-1]):
+            if (fmin < f[0]) and any(fmin < f[imin:]):
                 self.isdone = 1
 
         elif PAR.LINESEARCH == 'Bracket' or \
-           self.iter == 1 or self.restarted:
+            self.iter == 1 or self.restarted:
             if self.isbrak:
                 self.isdone = 1
-            elif any(f[1:] < f[0]) and (f[-2] < f[-1]):
+            elif (fmin < f[0]) and any(fmin < f[imin:]):
                 self.isbrak = 1
 
         elif PAR.LINESEARCH == 'Backtrack':
-            if any(f[1:] < f[0]):
+            if fmin < f[0]:
                 self.isdone = 1
 
         # update log
