@@ -14,23 +14,20 @@ from seisflows.tools.code import Struct, loadjson, loadobj, savejson, saveobj
 class SeisflowsObjects(object):
     """ SeisFlows consists of interacting 'system', 'preprocess', 'solver',
       'postprocess', 'optimize', and 'workflow' objects. The role of the
-      SeisflowsObjects utility is to initialize these objects and make them 
-      accessible via the standard Python import system.
+      SeisflowsObjects utility is to load these objects into memory and make 
+      them accessible via the standard Python import system. Once in memory,
+      these objects can be thought of as comprising the complete 'state' of a
+      SeisFlows session.
 
-      Objects are first created via the 'SeisflowsObjects.initialize' method. 
-      In the  course of executing a workflow, it is often necessary to read or
-      write objects to disk, for example, to copy an object to a remote node or
-      to pause and resume executation. Methods 'SeisflowsObjects.save' and
-      'SeisflowsObjects.reload' are provided for this purpose.
+      Each entry in 'objects' below corresponds simultaneously to a parameter in
+      SeisflowsParameters; a module in the SeisFlows package; and a class that
+      is instantiated and made accessible via the Python import system.
 
-      Objects themselves are customizable, with different choices available for
-      each object. For example, in the main package, two workflows, 'inversion'
-      and 'migration', are provided. Users can choose between the two through 
-      the 'WORKFLOW' setting in the  parameters file. If desired functionality
-      is missing from the main package, users can create their own workflows or
-      customize existing workflows.
+      The list 'objects' is is one of the few hardwired aspects of the whole
+      SeisFlows package. Any changes may result in circular imports or other
+      problems.
     """
-    # It probably won't be necessary to modify the following list. If it modifications are made anyway, care should be taken, as changing the names of objects or the order in which they loaded can result in circular imports or other problems.
+
     objects = []
     objects += ['system']
     objects += ['preprocess']
@@ -39,50 +36,69 @@ class SeisflowsObjects(object):
     objects += ['optimize']
     objects += ['workflow']
 
+
     def load(self):
-        """ Instantiates objects
+        """ Load objects from the above list into memeory
         """
         if 'SeisflowsParameters' not in sys.modules.keys():
             raise Exception
 
+        if 'SeisflowsPaths' not in sys.modules.keys():
+            raise Exception
+
+        # check if objects from previous run exist on disk
+        if os.path.isdir(self.fullpath()):
+            print WarningOverwrite
+            sys.exit()
+
         for obj in self.objects:
+            # instantiate objects
             key = sys.modules['SeisflowsParameters'][obj.upper()]
+
+            # make them accessible via the stanard Python import system
             sys.modules[obj] = loadclass(obj, key)()
 
         self.check()
 
 
     def save(self, path):
-        """ Saves objects to disk
+        """ Save objects to disk for later reference
         """
-        try:
-            fullpath = join(abspath(path), 'SeisflowsObjects')
-        except:
-            raise IOError(path)
-
+        fullpath = self.fullpath(path)
         unix.mkdir(fullpath)
         for key in self.objects:
             saveobj(fullpath +'/'+ key+'.p', sys.modules[key])
 
-    def reload(self, path):
-        """ Loads saved objects from disk
-        """
-        try:
-            fullpath = join(abspath(path), 'SeisflowsObjects')
-        except:
-            raise IOError(path)
 
+    def reload(self, path):
+        """ Load saved objects from disk
+        """
+        fullpath = self.fullpath(path)
         for obj in self.objects:
             fullfile = join(fullpath, obj+'.p')
             sys.modules[obj] = loadobj(fullfile)
-
         self.check()
 
 
     def check(self):
         for obj in ['system', 'optimize', 'workflow', 'solver', 'preprocess', 'postprocess']:
+        #for obj in self.objects:
             sys.modules[obj].check()
 
+
+    def fullpath(self, path=None):
+        if not path:
+            try:
+                path = sys.modules['SeisflowsParameters']['OUTPUT']
+            except:
+                path = './output'
+
+        try:
+            fullpath = join(abspath(path), 'SeisflowsObjects')
+        except:
+            raise IOError(path)
+
+        return fullpath
 
 
 class ParameterObj(object):
@@ -195,11 +211,22 @@ class ParameterError(ValueError):
         super(ParameterError, self).__init__(message)
 
 
+WarningOverwrite = """
+WARNING: Data from previous workflow found in working directory.
+
+To delete data and start a new workflow type:
+  sfclean; sfrun
+
+To resume existing workflow type:
+  sfresume
+"""
+
+
 def loadclass(*args):
     """ Given name of module relative to package directory, returns
         corresponding class
 
-        Note: The module should have a class with the exact same name.
+        Note: The module should have a class with exactly the same name.
     """
     if not args:
         return Null
@@ -245,7 +272,7 @@ def findpath(obj):
     return os.path.dirname(path)
 
 
-# -- utility functions
+### utility functions
 
 def _import(string, path=None):
     """Imports from string"""
@@ -302,13 +329,12 @@ def _exists(parts):
         return False
 
 
-# changes how instance methods are handled by pickle. these changes will always be in effect, because tools.config is always executed prior to using SeisFlows.
-
 def _pickle_method(method):
     func_name = method.im_func.__name__
     obj = method.im_self
     cls = method.im_class
     return _unpickle_method, (func_name, obj, cls)
+
 
 def _unpickle_method(func_name, obj, cls):
     for cls in cls.mro():
@@ -319,6 +345,9 @@ def _unpickle_method(func_name, obj, cls):
         else:
             break
     return func.__get__(obj, cls)
+
+
+# the following code changes how instance methods are handled by pickle.  placing it here, in this module, ensures that these changes will be in effect for all SeisFlows workflows
 
 copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
