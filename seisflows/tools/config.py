@@ -347,7 +347,7 @@ def _unpickle_method(func_name, obj, cls):
     return func.__get__(obj, cls)
 
 
-# the following changes how instance methods are handled by pickle.  placing it here, in this module, ensures that these changes will be in effect for all SeisFlows workflows
+# the following changes how instance methods are handled by pickle.  placing it here, in this module, ensures that pickle changes will be in effect for all SeisFlows workflows
 
 copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 

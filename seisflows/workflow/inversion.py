@@ -318,14 +318,46 @@ class thrifty(base):
     """ Thrifty inversion subclass
 
       Provides additional savings by avoiding redundant forward simulations
-      associated with sufficient decrease and curvature condition tests in a
-      safeguarded backtracking line search. Otherwise, the same as regular
-      inversion workflow.
+      associated with sufficient decrease and curvature tests in a safeguarded
+      backtracking line search. Otherwise, the same as regular inversion
+      workflow.
 
-      If code readability is valued more than computational efficiency for a 
-      particular problem, feel free to revert to the parent class via the final
-      line of this module.
+      Feel free to revert to the parent class, if code readability is valued
+      more than computational efficiency for a particular problem.
     """
+
+    def solver_status(self, maxiter=1):
+        """ Keeps track of whether a forward simulation would be redundant
+        """
+        if optimize.iter <= maxiter:
+            # forward simulation not redundant because solver files do not exist
+            # prior to first iteration
+            return False
+
+        elif optimize.iter == PAR.BEGIN:
+            # forward simulation not redundant because solver files need to be
+            # reinstated after possible multiscale transition
+            return False
+
+        elif PATH.LOCAL:
+            # forward simulation not redundant because solver files need to be
+            # reinstated on local filesystems
+            return False
+
+        elif PAR.LINESEARCH != 'Backtrack':
+            # thrifty inversion only implemented for backtracking line search,
+            # not bracketing line search
+            return False
+
+        elif optimize.restarted:
+            # forward simulation not redundant following optimization algorithm
+            # restart
+            return False
+
+        else:
+            # if none of the above conditions are triggered, then forward 
+            # simulation is redundant, can be skipped
+            return True
 
     def setup(self):
         """ Lays groundwork for inversion
@@ -377,34 +409,6 @@ class thrifty(base):
             unix.mv(PATH.SOLVER+'_best', PATH.SOLVER)
         else:
             super(thrifty, self).clean()
-
-
-    def solver_status(self, maxiter=1):
-        """ Keeps track of whether a forward simulation would be redundant
-        """
-        if optimize.iter <= maxiter:
-            # forward simulation not redundant because solver files do not exist prior to first iteration
-            return False
-
-        elif optimize.iter == PAR.BEGIN:
-            # forward simulation not redundant because solver files need to be rinstated after possible multiscale transition
-            return False
-
-        elif PATH.LOCAL:
-            # forward simulation not redundant because solver files need to be reinstated on local filesystems
-            return False
-
-        elif PAR.LINESEARCH != 'Backtrack':
-            # thrifty inversion only implemented for backtracking line search, not bracketing line search
-            return False
-
-        elif optimize.restarted:
-            # forward simulation not redundant following optimization algorithm restart
-            return False
-
-        else:
-            # if none of the above conditions are triggered, then forward simulation is redundant, can be skipped
-            return True
 
 
 inversion = thrifty
