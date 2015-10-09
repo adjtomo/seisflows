@@ -24,7 +24,7 @@ class base(object):
     """ Seismic inversion base class.
 
       Computes iterative model updates in accordance with parameter file 
-      settings, and provides a base class on top of which custom inversion 
+      settings and provides a base class on top of which custom inversion 
       strategies can be implemented.
 
       To allow customization, the inversion workflow is divided into generic 
@@ -111,12 +111,11 @@ class base(object):
     def main(self):
         """ Carries out seismic inversion
         """
+        optimize.iter = PAR.BEGIN
         self.setup()
 
-        for self.iter in range(PAR.BEGIN, PAR.END+1):
-            optimize.iter = self.iter
-
-            print "Starting iteration", self.iter
+        while optimize.iter <= PAR.END:
+            print "Starting iteration", optimize.iter
             self.initialize()
 
             print "Computing search direction"
@@ -127,6 +126,8 @@ class base(object):
 
             self.finalize()
             self.clean()
+
+            optimize.iter += 1
             print ''
 
 
@@ -138,9 +139,9 @@ class base(object):
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
 
+            optimize.setup()
             preprocess.setup()
             postprocess.setup()
-            optimize.setup()
 
         system.run('solver', 'setup', 
                    hosts='all')
@@ -223,7 +224,7 @@ class base(object):
         system.run('solver', 'eval_grad',
                    hosts='all',
                    path=PATH.GRAD,
-                   export_traces=divides(self.iter, PAR.SAVETRACES))
+                   export_traces=divides(optimize.iter, PAR.SAVETRACES))
 
         postprocess.write_gradient(
             path=PATH.GRAD)
@@ -234,23 +235,26 @@ class base(object):
         """
         system.checkpoint()
 
-        if divides(self.iter, PAR.SAVEMODEL):
+        if divides(optimize.iter, PAR.SAVEMODEL):
             self.save_model()
 
-        if divides(self.iter, PAR.SAVEGRADIENT):
+        if divides(optimize.iter, PAR.SAVEGRADIENT):
             self.save_gradient()
 
-        if divides(self.iter, PAR.SAVEKERNELS):
+        if divides(optimize.iter, PAR.SAVEKERNELS):
             self.save_kernels()
 
-        if divides(self.iter, PAR.SAVETRACES):
+        if divides(optimize.iter, PAR.SAVETRACES):
             self.save_traces()
 
-        if divides(self.iter, PAR.SAVERESIDUALS):
+        if divides(optimize.iter, PAR.SAVERESIDUALS):
             self.save_residuals()
 
 
     def clean(self):
+        """ Cleans directories in which function and gradient evaluations were
+          carried out
+        """
         unix.rm(PATH.GRAD)
         unix.rm(PATH.FUNC)
         unix.mkdir(PATH.GRAD)
@@ -281,44 +285,69 @@ class base(object):
 
     def save_gradient(self):
         src = join(PATH.GRAD, 'gradient')
-        dst = join(PATH.OUTPUT, 'gradient_%04d' % self.iter)
+        dst = join(PATH.OUTPUT, 'gradient_%04d' % optimize.iter)
         unix.mv(src, dst)
 
 
     def save_model(self):
         src = PATH.OPTIMIZE +'/'+ 'm_new'
-        dst = join(PATH.OUTPUT, 'model_%04d' % self.iter)
+        dst = join(PATH.OUTPUT, 'model_%04d' % optimize.iter)
         solver.save(dst, solver.split(loadnpy(src)))
 
 
     def save_kernels(self):
         src = join(PATH.GRAD, 'kernels')
-        dst = join(PATH.OUTPUT, 'kernels_%04d' % self.iter)
+        dst = join(PATH.OUTPUT, 'kernels_%04d' % optimize.iter)
         unix.mv(src, dst)
 
 
     def save_traces(self):
         src = join(PATH.GRAD, 'traces')
-        dst = join(PATH.OUTPUT, 'traces_%04d' % self.iter)
+        dst = join(PATH.OUTPUT, 'traces_%04d' % optimize.iter)
         unix.mv(src, dst)
 
 
     def save_residuals(self):
         src = join(PATH.GRAD, 'residuals')
-        dst = join(PATH.OUTPUT, 'residuals_%04d' % self.iter)
+        dst = join(PATH.OUTPUT, 'residuals_%04d' % optimize.iter)
         unix.mv(src, dst)
 
 
-class thrifty(base):
-    """ Thrifty inversion worflow
 
-      Provides additional savings by avoiding redundant forward simulations.
-      Otherwise, the same as regular inversion workflow.
+class thrifty(base):
+    """ Thrifty inversion subclass
+
+      Provides additional savings by avoiding redundant forward simulations
+      associated with sufficient decrease and curvature condition tests in a
+      safeguarded backtracking line search. Otherwise, the same as regular
+      inversion workflow.
+
+      If code readability is valued more than computational efficiency for a 
+      particular problem, feel free to revert to the parent class via the final
+      line of this module.
     """
+
+    def setup(self):
+        """ Lays groundwork for inversion
+        """
+        # clean scratch directories
+        if PAR.BEGIN == 1:
+            unix.rm(PATH.GLOBAL)
+            unix.mkdir(PATH.GLOBAL)
+
+            optimize.setup()
+            preprocess.setup()
+            postprocess.setup()
+
+        isready = self.solver_status()
+        if not isready:
+            system.run('solver', 'setup',
+                       hosts='all')
+
 
     def initialize(self):
         # are prerequisites for gradient evaluation in place?
-        isready = self.solver_status(off=2)
+        isready = self.solver_status(maxiter=2)
 
         # if not, then prepare for gradient evaluation
         if not isready:
@@ -350,24 +379,31 @@ class thrifty(base):
             super(thrifty, self).clean()
 
 
-    def solver_status(self, off=1):
+    def solver_status(self, maxiter=1):
         """ Keeps track of whether a forward simulation would be redundant
         """
-        if self.iter <= off:
-            # solver files do not exist prior to first iteration
+        if optimize.iter <= maxiter:
+            # forward simulation not redundant because solver files do not exist prior to first iteration
+            return False
+
+        elif optimize.iter == PAR.BEGIN:
+            # forward simulation not redundant because solver files need to be rinstated after possible multiscale transition
             return False
 
         elif PATH.LOCAL:
-            # solver files cannot be retrieved from local disks
+            # forward simulation not redundant because solver files need to be reinstated on local filesystems
             return False
 
         elif PAR.LINESEARCH != 'Backtrack':
+            # thrifty inversion only implemented for backtracking line search, not bracketing line search
             return False
 
         elif optimize.restarted:
+            # forward simulation not redundant following optimization algorithm restart
             return False
 
         else:
+            # if none of the above conditions are triggered, then forward simulation is redundant, can be skipped
             return True
 
 
