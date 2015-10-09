@@ -56,8 +56,12 @@ class base(object):
         """ Called once at beginning of workflow to perform any required
           initialization or setup tasks
         """
+        assert PAR.FORMAT in dir(readers)
+        assert PAR.FORMAT in dir(writers)
+
         self.reader = getattr(readers, PAR.FORMAT)
         self.writer = getattr(writers, PAR.FORMAT)
+
         self.channels = [char for char in PAR.CHANNELS]
 
 
