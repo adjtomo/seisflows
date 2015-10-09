@@ -334,7 +334,7 @@ class base(object):
 
     ### postprocessing utilities
 
-    def combine(self, path=''):
+    def combine(self, path='', parameters=[]):
         """ Sums individual source contributions. Wrapper over xcombine_sem
             utility.
         """
@@ -345,7 +345,7 @@ class base(object):
             f.writelines([join(path, dir)+'\n' for dir in names])
 
         unix.mkdir(path +'/'+ 'sum')
-        for name in self.parameters:
+        for name in parameters:
             self.mpirun(
                 PATH.SPECFEM_BIN +'/'+ 'xcombine_sem '
                 + name + '_kernel' + ' '
@@ -353,7 +353,7 @@ class base(object):
                 + path +'/'+ 'sum')
 
 
-    def smooth(self, path='', span=0.):
+    def smooth(self, path='', span=0., parameters=[]):
         """ Smooths kernels by convolving them with a Gaussian.  Wrapper over 
             xsmooth_sem utility.
         """
@@ -361,7 +361,7 @@ class base(object):
 
         # apply smoothing operator
         unix.cd(self.getpath)
-        for name in self.parameters:
+        for name in parameters:
             print ' smoothing', name
             self.mpirun(
                 PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
@@ -383,33 +383,6 @@ class base(object):
 
         # rename output files
         unix.rename('_smooth', '', glob(src+'/*'))
-
-
-    def clip(self, path='', minval=-np.inf, maxval=np.inf, thresh='dummy'):
-        """ Clips kernels by convolving them with a Gaussian.  Wrapper over 
-            xclip_sem utility.
-        """
-        assert (exists(path))
-
-        unix.cd(self.getpath)
-        for name in self.parameters:
-            self.mpirun(
-                PATH.SPECFEM_BIN +'/'+ 'xclip_sem '
-                + str(minval) + ' '
-                + str(maxval) + ' '
-                + name + '_kernel' + ' '
-                + path + '/ '
-                + path + '/ ')
-
-        # move input files
-        src = path
-        dst = path + '_noclip'
-        unix.mkdir(dst)
-        for name in self.parameters:
-            unix.mv(glob(src+'/*'+name+'.bin'), dst)
-
-        # rename output files
-        unix.rename('_clip', '', glob(src+'/*'))
 
 
     ### file transfer utilities

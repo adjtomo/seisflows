@@ -137,10 +137,12 @@ class specfem2d(loadclass('solver', 'base')):
 
     ### postprocessing utilities
 
-    def smooth(self, path='', span=0.):
+    def smooth(self, path='', span=0., parameters=[]):
         """ Smooths SPECFEM2D kernels by convolving them with a Gaussian
         """
         from seisflows.tools.array import meshsmooth, stack
+
+        assert parameters != []
 
         # implementing nproc > 1 would be straightforward, but a bit tedious
         assert self.mesh.nproc == 1
@@ -224,4 +226,49 @@ class specfem2d(loadclass('solver', 'base')):
     @property
     def source_prefix(self):
         return 'SOURCE'
+
+
+    def combine(self, path='', parameters=[]):
+        """ Sums individual source contributions. Wrapper over xcombine_sem
+            utility.
+        """
+        unix.cd(self.getpath)
+
+        names = self.check_source_names()
+        with open('kernel_paths', 'w') as f:
+            f.writelines([join(path, dir)+'\n' for dir in names])
+
+        unix.mkdir(path +'/'+ 'sum')
+        for name in parameters:
+            self.mpirun(
+                PATH.SPECFEM_BIN +'/'+ 'xcombine_sem '
+                + name + '_kernel' + ' '
+                + 'kernel_paths' + ' '
+                + path +'/'+ 'sum')
+
+
+    def generate_precond(self, process_traces=None, model_path=None, model_name=None, model_type='gll'):
+        assert(model_name)
+        assert(model_type)
+        assert (exists(model_path))
+
+        self.initialize_solver_directories()
+        unix.cd(self.getpath)
+
+        assert(exists(model_path))
+        self.check_mesh_properties(model_path)
+
+        src = glob(join(model_path, '*'))
+        dst = join(self.getpath, 'DATA')
+        unix.cp(src, dst)
+
+        self.export_model(PATH.OUTPUT +'/'+ model_name)
+
+        self.forward()
+        unix.mv(self.data_wildcard, 'traces/syn')
+        self.initialize_adjoint_traces('traces/syn')
+        process_traces(self.getpath)
+
+        self.adjoint()
+        self.export_kernels(PATH.GLOBAL)
 

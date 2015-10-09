@@ -23,9 +23,16 @@ import preprocess
 
 
 class specfem2d_legacy(loadclass('solver', 'base')):
-    """ Python interface for SPECFEM2D
+    """ Legacy Python interface for SPECFEM2D
 
-      See base class for method descriptions
+      This legacy class can be used only for 2D acoustic simulations.
+
+      Aside from this limitation, differences between the new class and the
+      old class have to do mainly with the way models and kernels are written:
+      the new class uses a binary format and the old class uses a text format.
+
+      Note: the Acoustic setting in the old class corresponds to AcousticLegacgy
+      setting in the new class.
     """
 
     if PAR.MATERIALS == 'Acoustic':
@@ -240,7 +247,7 @@ class specfem2d_legacy(loadclass('solver', 'base')):
 
     ### postprocessing utilities
 
-    def combine(self, path=''):
+    def combine(self, path='', parameters=[]):
         """ Combines SPECFEM2D kernels
         """
         unix.cd(self.getpath)
@@ -249,14 +256,13 @@ class specfem2d_legacy(loadclass('solver', 'base')):
         with open('kernel_paths', 'w') as f:
             f.writelines([join(path, dir)+'\n' for dir in names])
 
-        for name in self.parameters:
-            self.mpirun(
-                'bin/xcombine_rho_vp_vs '
-                + 'kernel_paths' + ' '
-                + path +'/'+ 'sum')
+        self.mpirun(
+            'bin/xcombine_rho_vp_vs '
+            + 'kernel_paths' + ' '
+            + path +'/'+ 'sum')
 
 
-    def smooth(self, path='', span=0.):
+    def smooth(self, path='', span=0., parameters=[]):
         """ Smooths SPECFEM2D kernels by convolving them with a Gaussian
         """
         from seisflows.tools.array import meshsmooth, stack
@@ -269,7 +275,7 @@ class specfem2d_legacy(loadclass('solver', 'base')):
         z = kernels['z'][0]
         mesh = stack(x, z)
 
-        for key in self.parameters:
+        for key in parameters:
             kernels[key] = [meshsmooth(kernels[key][0], mesh, span)]
 
         unix.mv(path, path + '_nosmooth')

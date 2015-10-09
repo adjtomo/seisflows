@@ -61,8 +61,8 @@ class base(object):
         if not exists(path):
             raise Exception()
 
-        self.combine_kernels(path)
-        self.process_kernels(path)
+        self.combine_kernels(path, solver.parameters)
+        self.process_kernels(path, solver.parameters)
 
         g = solver.merge(solver.load(
                  path +'/'+ 'kernels/sum',
@@ -83,18 +83,20 @@ class base(object):
         savenpy(filename, g)
 
 
-    def combine_kernels(self, path):
+    def combine_kernels(self, path, parameters):
         system.run('solver', 'combine',
                    hosts='head',
-                   path=path +'/'+ 'kernels')
+                   path=path +'/'+ 'kernels',
+                   parameters=parameters)
 
 
-    def process_kernels(self, path):
+    def process_kernels(self, path, parameters):
         if PAR.SMOOTH > 0.:
             system.run('solver', 'smooth',
                        hosts='head',
                        path=path + '/' + 'kernels/sum',
-                       span=PAR.SMOOTH)
+                       span=PAR.SMOOTH,
+                       parameters=parameters)
 
 
     def save(self, path, v, backup=None):
