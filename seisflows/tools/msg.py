@@ -7,6 +7,17 @@ globals()['SPECFEM'] = Struct()
 
 ###
 
+WarningOverwrite = """
+WARNING: Data from previous workflow found in working directory.
+
+To delete data and start a new workflow type:
+  sfclean; sfrun
+
+To resume existing workflow type:
+  sfresume
+"""
+
+
 ReceiverError_SPECFEM = """
 ERROR READING RECEIVERS
 

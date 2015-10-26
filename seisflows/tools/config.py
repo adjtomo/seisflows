@@ -9,6 +9,7 @@ from os.path import abspath, join
 
 from seisflows.tools import unix
 from seisflows.tools.code import Struct, loadjson, loadobj, savejson, saveobj
+from seisflows.tools.msg import WarningOverwrite
 
 
 class SeisflowsObjects(object):
@@ -209,17 +210,6 @@ class ParameterError(ValueError):
             message = '%s has bad value: ' % key, obj.__getattr__(key)
 
         super(ParameterError, self).__init__(message)
-
-
-WarningOverwrite = """
-WARNING: Data from previous workflow found in working directory.
-
-To delete data and start a new workflow type:
-  sfclean; sfrun
-
-To resume existing workflow type:
-  sfresume
-"""
 
 
 def loadclass(*args):
