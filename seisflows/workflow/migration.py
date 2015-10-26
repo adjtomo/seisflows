@@ -87,7 +87,16 @@ class migration(object):
                    export_traces=PAR.SAVETRACES)
 
         postprocess.combine_kernels(
-            path=PATH.GLOBAL)
+            path=PATH.GLOBAL,
+            parameters=solver.parameters)
+
+        try:
+            postprocess.combine_kernels(
+                path=PATH.GLOBAL,
+                parameters=['rhop'])
+        except:
+            pass
+
 
         if PAR.SAVETRACES:
             self.save_traces()
