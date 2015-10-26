@@ -322,8 +322,8 @@ class thrifty(base):
       backtracking line search. Otherwise, the same as regular inversion
       workflow.
 
-      Feel free to revert to the parent class, if code readability is valued
-      more than computational efficiency for a particular problem.
+      For more readable but less efficient inversion workflow, feel free to
+      revert to the parent class.
     """
 
     def solver_status(self, maxiter=1):
