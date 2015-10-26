@@ -137,15 +137,15 @@ class specfem2d(loadclass('solver', 'base')):
 
     ### postprocessing utilities
 
-    def smooth(self, path='', span=0., parameters=[]):
+    def smooth(self, path='', parameters='dummy', span=0. ):
         """ Smooths SPECFEM2D kernels by convolving them with a Gaussian
         """
         from seisflows.tools.array import meshsmooth, stack
 
-        assert parameters != []
+        #assert parameters == self.parameters
 
         # implementing nproc > 1 would be straightforward, but a bit tedious
-        assert self.mesh.nproc == 1
+        #assert self.mesh.nproc == 1
 
         kernels = self.load(path, suffix='_kernel')
         if not span:

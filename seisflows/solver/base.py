@@ -353,11 +353,12 @@ class base(object):
                 + path +'/'+ 'sum')
 
 
-    def smooth(self, path='', span=0., parameters=[]):
+    def smooth(self, path='', parameters=[], span=0.):
         """ Smooths kernels by convolving them with a Gaussian.  Wrapper over 
             xsmooth_sem utility.
         """
-        assert(exists(path))
+        assert exists(path)
+        assert len(parameters) > 0
 
         # apply smoothing operator
         unix.cd(self.getpath)
@@ -383,6 +384,34 @@ class base(object):
 
         # rename output files
         unix.rename('_smooth', '', glob(src+'/*'))
+
+
+    def clip(self, path='', parameters=[], minval=-np.inf, maxval=np.inf):
+        """ Clips kernels by convolving them with a Gaussian.  Wrapper over 
+            xclip_sem utility.
+        """
+        assert exists(path)
+        assert len(parameters) > 0
+
+        unix.cd(self.getpath)
+        for name in self.parameters:
+            self.mpirun(
+                PATH.SPECFEM_BIN +'/'+ 'xclip_sem '
+                + str(minval) + ' '
+                + str(maxval) + ' '
+                + name + '_kernel' + ' '
+                + path + '/ '
+                + path + '/ ')
+
+        # move input files
+        src = path
+        dst = path + '_noclip'
+        unix.mkdir(dst)
+        for name in self.parameters:
+            unix.mv(glob(src+'/*'+name+'.bin'), dst)
+
+        # rename output files
+        unix.rename('_clip', '', glob(src+'/*'))
 
 
     ### file transfer utilities
