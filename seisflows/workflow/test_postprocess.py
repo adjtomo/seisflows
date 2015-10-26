@@ -25,7 +25,7 @@ class test_postprocess(object):
         """
         migration.check()
 
-        if PATH.INPUT not in PAR:
+        if 'INPUT' not in PATH:
             setattr(PATH, 'INPUT', None)
 
 
