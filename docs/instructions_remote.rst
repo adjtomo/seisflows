@@ -118,5 +118,5 @@ On a laptop or desktop with multiple cores, the work of an inversion can be carr
 
 Besides running in parallel over events, the work of an individual event simulation can be parallelized over model regions. See the SPECFEM3D user manual for more information. Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates the former.
 
-Besides ``serial`` and ``parallel`` settings for running SeisFlows on laptops and desktops, there are also ``pbs``, ``slurm``, ``lsf`` options for running on computer clusters. See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information.
+Besides ``serial`` and ``parallel`` settings for running SeisFlows on laptops and desktops, there are also ``pbs``, ``slurm``, and ``lsf`` options for running on computer clusters. See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information.
 

@@ -42,12 +42,7 @@ Job Submission
 
 Each job must be submitted from a `working directory`.  Within a working directory, users must supply two input files, ``paths.py`` and ``parameters.py``. Output files, by default, are written to the working directory, along with scratch files created by the solver and optimization routines. Different output and scratch directories can be specified by adding or modifying entries in ``paths.py``.
 
-``parameters.py`` contains a list of parameter names and values. Prior to a job being submitted, parameters are checked so that errors can be detected without loss of queue time or wall time. Parameters are stored in a dictionary that is accessible from anywhere in the Python code. By convention, all parameter names must be upper case. Parameter values can be floats, integers, strings or any other Python data type. Parameters can be listed in any order.
-
-``paths.py`` contains a list of path names and values. Prior to a job being submitted, paths are checked so that errors can be detected without loss of queue time or wall time. Paths are stored in a dictionary that is accessible from anywhere in the Python code. By convention, all names must be upper case, and all values must be absolute paths. Paths can be listed in any order.
-
 Once a working directory and input files have been created, users can type ``sfrun`` from within the working directory to submit a job. If the ``serial`` system configuration is specified in ``parameters.py``, the job will begin executing immediately. If ``pbs`` or ``slurm`` configurations are specified, the job will run when resources become available. Once the job starts running, status information will be displayed either to the terminal or to the file ``output.log``.
-
 
 
 .. _solver:
@@ -125,6 +120,16 @@ In SeisFlows, the overall approach to solving system interface problems is to us
 
 
 .. _developer:
+
+
+Parameter Files
+===============
+
+``parameters.py`` contains a list of parameter names and values. Prior to a job being submitted, parameters are checked so that errors can be detected without loss of queue time or wall time. Parameters are stored in a dictionary that is accessible from anywhere in the Python code. By convention, all parameter names must be upper case. Parameter values can be floats, integers, strings or any other Python data type. Parameters can be listed in any order.
+
+``paths.py`` contains a list of path names and values. Prior to a job being submitted, paths are checked so that errors can be detected without loss of queue time or wall time. Paths are stored in a dictionary that is accessible from anywhere in the Python code. By convention, all names must be upper case, and all values must be absolute paths. Paths can be listed in any order.
+
+
 
 Developer Reference
 ===================
