@@ -184,8 +184,7 @@ class base(object):
         g_new = self.load('g_new')
 
         if PAR.SCHEME in ['SD']:
-            p_new = -g_new
-            self.restarted = 0
+            p_new, self.restarted = -g_new, False
 
         elif PAR.SCHEME in ['NLCG']:
             p_new, self.restarted = self.NLCG()
@@ -421,7 +420,7 @@ class base(object):
 
 
     def restart(self):
-        """ Discards history of algorithm; prepares to starts again from 
+        """ Discards history of algorithm; prepares to start again from 
           gradient direction
         """
         unix.cd(PATH.OPTIMIZE)
