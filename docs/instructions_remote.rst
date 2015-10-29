@@ -83,14 +83,14 @@ For troubleshooting any compilation issues, please view the SPECFEM2D manual and
 6. Set up checkerboard test
 -------------------------------
 
-Download the starting model and other input files required for the waveform inversion checkerboard test.  For simplicity, let's assume these files will be placed in ``/home/tests`` (if you prefer a different location, then modify the following commands accordingly)::
+Download the starting model and other input files required for the waveform inversion checkerboard test.  For simplicity, let's assume the checkerboard working directory be placed in ``/home/tests`` (if you prefer a different location, then modify the following commands accordingly)::
  
         mkdir /home/tests/
         cd /home/tests/
         wget --recursive --no-parent --no-host-directories --cut-dirs=2 --reject "index.html*" http://tigress-web.princeton.edu/~rmodrak/2dAcoustic/
 
 
-Among other files, note that a ``parameters.py`` file and ``paths.py`` file have been downloaded ``/home/tests/``.
+A directory ``home/tests/checkers`` is now being created.  Among other files, ``parameters.py`` and ``paths.py`` are being downloaded to this directory.
 
 After the download completes, make sure that all paths specified in ``paths.py``  are correct.  For example, if you compiled SPECFEM2D somewhere other than ``/home/packages/specfem2d-d745c542``, you will need to modify the ``SPECFEM2D_BIN`` entry accordingly.
 
