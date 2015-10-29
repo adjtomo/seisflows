@@ -4,9 +4,18 @@ Overview
 
 SeisFlows is a Python waveform inversion package designed to be flexible enough for use in both research and production.
 
-To provide this flexibility, SeisFlows is very modular.  Users are offered choices for each of the following basic modules: workflow, system, solver, optimization, preprocessing, and postprocessing.
+To provide this flexibility, SeisFlows is very modular.  Users are offered choices for each of the following basic modules: 
 
-Consider an example from earthquake tomography.  Under SeisFlows, if the study area expands, users can replace a 3D regional solver with a 3D global solver by changing the 'solver' module.  If a new computer allocation becomes available, users can migrate from, say, an old PBS cluster to a new SLURM cluster by changing the 'system' module.
+- workflow
+- system
+- solver
+- optimization
+- preprocessing
+- postprocessing
+
+The thing that ties everything together is the workflow module.  Execution of a workflow is equivalent to stepping through the code contained in workflow.main.  Users are free to customize the available 'inversion' and 'migration' default workflow modules.
+
+Consider an example from earthquake tomography.  Under SeisFlows, if the study area expands, users can replace a 3D regional solver with a 3D global solver by changing the 'solver' module.  If a new computer system becomes available, users can migrate from, say, an old PBS cluster to a new SLURM cluster by changing the 'system' module.  
 
 If desired functionality is missing from the main package, users can overload existing modules or contribute their own custom modules.
 
@@ -64,7 +73,9 @@ Prior to compilation, users need to run the ``configure`` script and prepare inp
 
 - stations file.
 
-To run the ``configure`` script to successfully, MPI executables and libraries may need to be available. The result of compilation is a set of binaries files, including
+To successfully run the ``configure`` script, MPI libraries and exectuable may need to be available in your environment.
+
+The result of compilation is a set of binaries files, including
 
 - mesher binary
 
