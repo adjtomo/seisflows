@@ -2,13 +2,14 @@
 Overview
 ========
 
-SeisFlows is a Python adjoint tomography and full waveform inversion package designed to be flexible enough for use in scientific research and large scale regional, global, and exploration inversions.
+SeisFlows is a Python waveform inversion package designed to be flexible enough for use in both research and production.
 
-To provide this flexibility, users are offered choices in each of the following categories: workflow, system, solver, optimization, preprocessing, and postprocessing.
+To provide this flexibility, SeisFlows is very modular.  Users are offered choices for each of the following basic modules: workflow, system, solver, optimization, preprocessing, and postprocessing.
 
-To illustrate how it works, consider an example from regional tomography.  A typical regional setup involves a 3D Cartesian solver run on a PBS cluster.  Under SeisFlows, if the study area expands, users can replace the 3D Cartesian solver with a 3D spherical solver.  If a faster SLURM cluster comes online, users can substitute the PBS system interface for a SLURM system interface.
+Consider an example from earthquake tomography.  Under SeisFlows, if the study area expands, users can replace a 3D regional solver with a 3D global solver by changing the 'solver' module.  If a new computer allocation becomes available, users can migrate from, say, an old PBS cluster to a new SLURM cluster by changing the 'system' module.
 
-If desired functionality is missing from the main package, users can overload existing classes or contribute their own custom classes.
+If desired functionality is missing from the main package, users can overload existing modules or contribute their own custom modules.
+
 
 Installation
 ============
@@ -78,8 +79,8 @@ Note that if input files change, binary files may need to be recompiled.
 
 After compilation, input files must be gathered together in one directory and binary files in another.  The absolute paths to input file and binary file directories must be given in ``paths.py`` as follows::
 
-    SOLVER_INPUT = '/path/to/solver/input/files'
-    SOLVER_BINARIES = '/path/to/solver/binary/files'
+    SPECFEM_DATA = '/path/to/spcefem/input/files'
+    SPECFEM_BIN = '/path/to/specfem/binary/files'
 
 
 Solver Integration
