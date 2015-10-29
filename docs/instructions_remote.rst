@@ -83,14 +83,14 @@ For troubleshooting any compilation issues, please view the SPECFEM2D manual and
 6. Set up checkerboard test
 -------------------------------
 
-Download the starting model and other input files required for the waveform inversion checkerboard test.  For simplicity, let's assume the checkerboard working directory be placed in ``/home/tests`` (if you prefer a different location, then modify the following commands accordingly)::
+Download the starting model and other input files required for the waveform inversion checkerboard test.  For simplicity, let's assume the checkerboard working directory will be placed in ``/home/tests`` (if you prefer a different location, then modify the following commands accordingly)::
  
         mkdir /home/tests/
         cd /home/tests/
         wget --recursive --no-parent --no-host-directories --cut-dirs=2 --reject "index.html*" http://tigress-web.princeton.edu/~rmodrak/2dAcoustic/
 
 
-A directory ``home/tests/checkers`` is now being created.  Among other files, ``parameters.py`` and ``paths.py`` are being downloaded to this directory.
+A directory ``home/tests/checkers`` is now being created.  Among other files, ``parameters.py`` and ``paths.py`` are being downloaded.
 
 After the download completes, make sure that all paths specified in ``paths.py``  are correct.  For example, if you compiled SPECFEM2D somewhere other than ``/home/packages/specfem2d-d745c542``, you will need to modify the ``SPECFEM2D_BIN`` entry accordingly.
 
@@ -104,7 +104,7 @@ To run the checkboard test type::
 
 within ``/home/tests/checkers``.
 
-For now, the inversion will run only a single event on only a single processor.  Once we verify that everything is working correctly in thise case, we can move on to multiple events and multiple processors by modifying ``parameters.py``.
+For now, the inversion will run only a single event on only a single processor.  Once we verify that everything is working correctly in this case, we can move on to multiple events and multiple processors by modifying ``parameters.py``.
 
 
 
@@ -116,7 +116,7 @@ On a laptop or desktop with multiple cores, the work of an inversion can be carr
 - change ``SYSTEM`` from ``serial`` to ``parallel``
 - add a parameter ``NPROCMAX`` and set it equal to the number of cores available on your machine.
 
-Besides running in parallel over events, the work of an individual event simulation can be parallelized over model regions. See the SPECFEM3D user manual for more information. Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates the former.
+Besides running in parallel over events, the work of an individual event simulation can be parallelized over model regions. See the SPECFEM3D user manual for more information. Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates parallelization over events.
 
 Besides ``serial`` and ``parallel`` settings for running SeisFlows on laptops and desktops, there are also ``pbs``, ``slurm``, and ``lsf`` options for running on computer clusters. See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information.
 
