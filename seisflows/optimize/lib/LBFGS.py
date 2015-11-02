@@ -91,10 +91,16 @@ class LBFGS(object):
         return S, Y
 
 
-    def apply(self, q, S, Y):
+    def apply(self, q, S=[], Y=[]):
         """ Applies L-BFGS inverse Hessian to given vector
         """
         unix.cd(self.path)
+
+        if S==[] or Y==[]:
+            m = len(q)
+            n = self.memory
+            S = np.memmap('LBFGS/S', mode='w+', dtype='float32', shape=(m, n))
+            Y = np.memmap('LBFGS/Y', mode='w+', dtype='float32', shape=(m, n))
 
         # first matrix product
         kk = self.memory_used
