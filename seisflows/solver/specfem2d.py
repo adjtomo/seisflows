@@ -56,19 +56,19 @@ class specfem2d(loadclass('solver', 'base')):
         f0 = getpar('f0', file='DATA/SOURCE', cast=float)
 
         if nt != PAR.NT:
-            if system.getnode() == 0: print "WARNING: nt != PAR.NT"
+            if self.getnode == 0: print "WARNING: nt != PAR.NT"
             setpar('nt', PAR.NT)
 
         if dt != PAR.DT:
-            if system.getnode() == 0: print "WARNING: dt != PAR.DT"
+            if self.getnode == 0: print "WARNING: dt != PAR.DT"
             setpar('deltat', PAR.DT)
 
         if f0 != PAR.F0:
-            if system.getnode() == 0: print "WARNING: f0 != PAR.F0"
+            if self.getnode == 0: print "WARNING: f0 != PAR.F0"
             setpar('f0', PAR.F0, file='DATA/SOURCE')
 
         if self.mesh.nproc != PAR.NPROC:
-            if system.getnode() == 0:
+            if self.getnode == 0:
                 print 'Warning: mesh.nproc != PAR.NPROC'
 
         if 'MULTIPLES' in PAR:
@@ -159,6 +159,7 @@ class specfem2d(loadclass('solver', 'base')):
         for key in self.parameters:
             kernels[key] = [meshsmooth(kernels[key][0], mesh, span)]
 
+        unix.rm(path + '_nosmooth')
         unix.mv(path, path + '_nosmooth')
         self.save(path, kernels, suffix='_kernel')
 
@@ -171,7 +172,7 @@ class specfem2d(loadclass('solver', 'base')):
         unix.cp(src, dst)
 
     def export_model(self, path):
-        if system.getnode() == 0:
+        if self.getnode == 0:
             unix.mkdir(path)
             src = glob(join(self.getpath, 'DATA/*.bin'))
             dst = path
@@ -214,6 +215,7 @@ class specfem2d(loadclass('solver', 'base')):
     @property
     def data_wildcard(self):
         return glob('OUTPUT_FILES/U?_file_single.su')
+        #return glob('OUTPUT_FILES/*semd')
 
     @property
     def model_databases(self):

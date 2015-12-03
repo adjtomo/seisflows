@@ -168,8 +168,6 @@ class base(object):
         assert(model_type)
         assert (exists(model_path))
 
-        self.initialize_solver_directories()
-
         src = model_path
         dst = self.model_databases
         self.save(dst, self.load(src))
@@ -420,7 +418,7 @@ class base(object):
         src = join(path, 'model')
         dst = self.model_databases
 
-        if system.getnode()==0:
+        if self.getnode==0:
             self.save(dst, self.load(src, verbose=True))
         else:
             self.save(dst, self.load(src))
@@ -431,7 +429,7 @@ class base(object):
         unix.cp(src, dst)
 
     def export_model(self, path, solver_parameters=['rho', 'vp', 'vs']):
-        if system.getnode() == 0:
+        if self.getnode == 0:
             unix.mkdir(path)
             for key in solver_parameters:
                 files = glob(join(self.model_databases, '*'+key+'.bin'))
@@ -589,10 +587,13 @@ class base(object):
                 shell=True,
                 stdout=f)
 
+    @property
+    def getnode(self):
+        return system.getnode()
 
     @property
     def getpath(self):
-        name = self.check_source_names()[system.getnode()]
+        name = self.check_source_names()[self.getnode]
         return join(PATH.SOLVER, name)
 
     @property
