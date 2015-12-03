@@ -42,7 +42,7 @@ class total_variation(loadclass('postprocess', 'regularize')):
 
     def nabla(self, mesh, m, g):
         M, grid = mesh2grid(g, mesh)
-        DM = tv(M, epsilon=1.e-2)#PAR.EPSILON
+        DM = tv(M, epsilon=PAR.EPSILON)
         dm = grid2mesh(DM, grid, mesh)
         return dm/np.mean(m)
 

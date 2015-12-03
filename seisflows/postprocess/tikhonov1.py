@@ -33,21 +33,21 @@ class tikhonov1(loadclass('postprocess', 'regularize')):
         """
         super(tikhonov1, self).check()
 
-        if 'UPDATETYPE' not in PAR:
-            setattr(PAR, 'UPDATETYPE', 'Creeping')
+        if 'CREEPING' not in PAR:
+            setattr(PAR, 'CREEPING', False)
 
-        #if not PAR.LAMBDA:
-        #    raise ValueError
+        if not PAR.LAMBDA:
+            raise ValueError
 
 
     def nabla(self, mesh, m, g):
-        if PAR.UPDATETYPE in ['Creeping']:
+        if PAR.CREEPING:
             G, grid = mesh2grid(g, mesh)
             DG = nabla(G, order=1)
             dg = grid2mesh(DG, grid, mesh)
             return -dg/np.mean(m)
 
-        elif PAR.UPDATETYPE in ['Jumping']:
+        else:
             M, grid = mesh2grid(m, mesh)
             DM = nabla(M, order=1)
             dm = grid2mesh(DM, grid, mesh)

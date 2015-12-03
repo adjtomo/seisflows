@@ -53,7 +53,7 @@ class regularize(loadclass('postprocess', 'base')):
         savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
 
 
-    def process_kernels(self, path):
+    def process_kernels(self, path, parameters):
         """ Processes kernels in accordance with parameter settings
         """
         fullpath = path +'/'+ 'kernels'
@@ -69,7 +69,8 @@ class regularize(loadclass('postprocess', 'base')):
 
         system.run('solver', 'combine',
                    hosts='head',
-                   path=fullpath)
+                   path=fullpath,
+                   parameters=parameters)
 
 
     def fix_near_field(self, path=''):
@@ -78,7 +79,7 @@ class regularize(loadclass('postprocess', 'base')):
         import preprocess
         preprocess.setup()
 
-        name = solver.check_source_names()[system.getnode()]
+        name = solver.check_source_names()[solver.getnode]
         fullpath = path +'/'+ name
         g = solver.load(fullpath, suffix='_kernel')
         if not PAR.FIXRADIUS:
@@ -140,7 +141,7 @@ class regularize(loadclass('postprocess', 'base')):
 
 
     def getmesh(self):
-        model_path = PATH.OUTPUT +'/'+ 'model_true'
+        model_path = PATH.OUTPUT +'/'+ 'model_init'
         try:
             m = solver.load(model_path)
             x = m['x'][0]
@@ -155,7 +156,7 @@ class regularize(loadclass('postprocess', 'base')):
 
 
     def getxz(self):
-        model_path = PATH.OUTPUT +'/'+ 'model_true'
+        model_path = PATH.OUTPUT +'/'+ 'model_init'
         try:
             m = solver.load(model_path)
             x = m['x'][0]
