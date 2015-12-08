@@ -50,8 +50,6 @@ class regularize(loadclass('postprocess', 'base')):
         g = self.regularize(path)
         self.save(path, g, backup='noregularize')
 
-        savenpy(PATH.OPTIMIZE +'/'+ 'g_new', g)
-
 
     def process_kernels(self, path, parameters):
         """ Processes kernels in accordance with parameter settings

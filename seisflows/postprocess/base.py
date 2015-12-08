@@ -55,9 +55,6 @@ class base(object):
     def write_gradient(self, path):
         """ Reads kernels and writes gradient of objective function
         """
-        if 'OPTIMIZE' not in PATH:
-            raise ParameterError(PATH, 'OPTIMIZE')
-
         if not exists(path):
             raise Exception()
 
@@ -78,9 +75,6 @@ class base(object):
             # apply mask
             g *= solver.merge(solver.load(PATH.MASK))
             self.save(path, g, backup='nomask')
-
-        filename = join(PATH.OPTIMIZE, 'g_new')
-        savenpy(filename, g)
 
 
     def combine_kernels(self, path, parameters):

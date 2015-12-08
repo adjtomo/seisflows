@@ -229,6 +229,10 @@ class base(object):
         postprocess.write_gradient(
             path=PATH.GRAD)
 
+        src = join(PATH.GRAD, 'gradient')
+        dst = join(PATH.OPTIMIZE, 'g_new')
+        savenpy(src, solver.load(dst))
+
 
     def finalize(self):
         """ Saves results from current model update iteration
