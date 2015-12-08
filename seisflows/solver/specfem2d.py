@@ -249,28 +249,3 @@ class specfem2d(loadclass('solver', 'base')):
                 + path +'/'+ 'sum')
 
 
-    def generate_precond(self, process_traces=None, model_path=None, model_name=None, model_type='gll'):
-        assert(model_name)
-        assert(model_type)
-        assert (exists(model_path))
-
-        self.initialize_solver_directories()
-        unix.cd(self.getpath)
-
-        assert(exists(model_path))
-        self.check_mesh_properties(model_path)
-
-        src = glob(join(model_path, '*'))
-        dst = join(self.getpath, 'DATA')
-        unix.cp(src, dst)
-
-        self.export_model(PATH.OUTPUT +'/'+ model_name)
-
-        self.forward()
-        unix.mv(self.data_wildcard, 'traces/syn')
-        self.initialize_adjoint_traces('traces/syn')
-        process_traces(self.getpath)
-
-        self.adjoint()
-        self.export_kernels(PATH.GLOBAL)
-

@@ -35,7 +35,7 @@ class base(object):
         These methods allow direct access to low-level SPECFEM components,
         providing another interface through which to interact with the solver.
 
-     generate_data, generate_model, generate_precond
+     generate_data, generate_model
         One time operations performed at beginning of an inversion or 
         migration.
 
@@ -163,24 +163,6 @@ class base(object):
         raise NotImplementedError
 
 
-    def generate_precond(self, process_traces=None, model_path=None, model_name=None, model_type='gll'):
-        assert(model_name)
-        assert(model_type)
-        assert (exists(model_path))
-
-        src = model_path
-        dst = self.model_databases
-        self.save(dst, self.load(src))
-
-        self.forward()
-        unix.mv(self.data_wildcard, 'traces/syn')
-        self.initialize_adjoint_traces('traces/syn')
-        process_traces(self.getpath)
-
-        self.adjoint()
-        self.export_kernels(PATH.GLOBAL)
-
-
     ### high-level solver interface
 
     def eval_func(self, path='', export_traces=False):
@@ -213,8 +195,9 @@ class base(object):
 
 
     def apply_hess(self, path=''):
-        """ Computes action of Hessian on a given model vector
+        """ Computes action of Hessian on a given model vector.
         """
+        # a gradient evaluation must have already been carried out
         unix.cd(self.getpath)
         unix.mkdir('traces/lcg')
 
