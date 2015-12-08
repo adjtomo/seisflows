@@ -113,9 +113,9 @@ def correlate(u, v):
 
 
 def bandpass(w, freqlo, freqhi, fs, npass=2):
-    wn = [2*freqlo/fs,2*freqhi/fs]
-    (b,a) = signal.butter(npass, wn)
-    w = signal.filtfilt(b,a,w)
+    wn = [2*freqlo/fs, 2*freqhi/fs]
+    b, a = signal.butter(npass, wn, btype='band')
+    w = signal.lfilter(b, a, w)
     return w
 
 
