@@ -14,6 +14,21 @@ def sbandpass(s, h, freqlo, freqhi):
     return s
 
 
+def sconvolve(s, h, w, inplace=True):
+    nt = h.nt
+    nr = h.nr
+
+    if inplace:
+        for ir in range(nr):
+            s[:,ir] = np.convolve(s[:,ir], w, 'same')
+        return s
+    else:
+        s2 = np.zeros((nt,nr))
+        for ir in range(nr):
+            s2[:,ir] = np.convolve(s[:,ir], w, 'same')
+        return s2
+
+
 def slowpass(s, h, freq):
     raise NotImplementedError
 
