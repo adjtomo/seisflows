@@ -51,10 +51,14 @@ def cdiff(wsyn, wobs, nt, dt):
 
 ###
 
-def precond(s, h):
+def precond1(d, s, h):
     s[1:-1,:] = (s[2:,:] - s[0:-2,:])/(2.*h.dt)
     s[1:-1,:] *= 1./(_np.sum(s[1:-1,:]**2,axis=0)*h.dt)
     s[0,:] = 0.
     s[-1,:] = 0.
     return s
+
+
+def precond2(d, s, h):
+    return -s
 

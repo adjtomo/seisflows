@@ -5,7 +5,6 @@ from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
-
 import system
 import solver
 
@@ -44,4 +43,4 @@ class test_forward(object):
                    model_type='gll',
                    model_name='model')
 
-        print "Finished"
+        print "Finished\n"

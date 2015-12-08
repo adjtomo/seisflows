@@ -139,9 +139,9 @@ class base(object):
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
 
-            optimize.setup()
             preprocess.setup()
             postprocess.setup()
+            optimize.setup()
 
         system.run('solver', 'setup', 
                    hosts='all')
@@ -367,9 +367,9 @@ class thrifty(base):
             unix.rm(PATH.GLOBAL)
             unix.mkdir(PATH.GLOBAL)
 
-            optimize.setup()
             preprocess.setup()
             postprocess.setup()
+            optimize.setup()
 
         isready = self.solver_status()
         if not isready:
