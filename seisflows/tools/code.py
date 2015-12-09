@@ -11,6 +11,17 @@ class Struct(dict):
         self.__dict__ = self
 
 
+def cast(var):
+    if isinstance(var, list):
+        return var
+    elif isinstance(var, float):
+        return [var]
+    elif isinstance(var, int):
+        return [var]
+    else:
+        raise TypeError
+
+
 def divides(i, j):
     """Returns true if j divides i"""
     if j is 0:
