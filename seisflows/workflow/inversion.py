@@ -231,7 +231,7 @@ class base(object):
 
         src = join(PATH.GRAD, 'gradient')
         dst = join(PATH.OPTIMIZE, 'g_new')
-        savenpy(dst, solver.merge(solver.load(src)))
+        savenpy(dst, solver.merge(solver.load(src, suffix='_kernel')))
 
 
     def finalize(self):
