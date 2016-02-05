@@ -5,7 +5,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.code import loadtxt, savetxt
-from seisflows.tools.io import OutputWriter
+#from seisflows.tools.io import OutputWriter
 
 from seisflows.optimize.lib.LBFGS import LBFGS
 from seisflows.optimize.lib.LCG import LCG
@@ -33,7 +33,7 @@ class PLCG(LCG):
 
         # prepare output writer
         self.logpath = join(path, 'output.plcg')
-        self.writer = OutputWriter(self.logpath, width=14)
+        #self.writer = OutputWriter(self.logpath, width=14)
 
 
     def apply_precond(self, r):
@@ -42,35 +42,35 @@ class PLCG(LCG):
 
         elif self.precond in ['LBFGS_3']:
             if self.iter == 1:
-                self.LBFGS = LBFGS(self.path, stepmem=3)
+                self.LBFGS = LBFGS(self.path, memory=3)
                 y = r
             elif self.ilcg == 0:
                 S, Y = self.LBFGS.update()
                 y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
             else:
-                y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
+                y = -self.LBFGS.apply(self.load('LCG/r'))
             return y
 
         elif self.precond in ['LBFGS_6']:
             if self.iter == 1:
-                self.LBFGS = LBFGS(self.path, stepmem=6)
+                self.LBFGS = LBFGS(self.path, memory=6)
                 y = r
             elif self.ilcg == 0:
                 S, Y = self.LBFGS.update()
                 y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
             else:
-                y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
+                y = -self.LBFGS.apply(self.load('LCG/r'))
             return y
 
         elif self.precond in ['LBFGS_9']:
             if self.iter == 1:
-                self.LBFGS = LBFGS(self.path, stepmem=9)
+                self.LBFGS = LBFGS(self.path, memory=9)
                 y = r
             elif self.ilcg == 0:
                 S, Y = self.LBFGS.update()
                 y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
             else:
-                y = -self.LBFGS.apply(self.load('LCG/r'), S, Y)
+                y = -self.LBFGS.apply(self.load('LCG/r'))
             return y
 
         else:
@@ -100,13 +100,13 @@ class PLCG(LCG):
             print ' RATIO:', LHS/RHS
             print ''
 
-        self.writer(
-            self.iter,
-            self.ilcg,
-            LHS,
-            RHS,
-            LHS/RHS,
-            eta1996)
+        #self.writer(
+        #    self.iter,
+        #    self.ilcg,
+        #    LHS,
+        #    RHS,
+        #    LHS/RHS,
+        #    eta1996)
 
         # check termination condition
         if LHS < self.eta * RHS:
