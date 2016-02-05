@@ -183,7 +183,7 @@ class base(object):
 
         g_new = self.load('g_new')
 
-        if PAR.SCHEME in ['SD']:
+        if PAR.SCHEME in ['GradientDescent', 'SteepestDescent']:
             p_new, self.restarted = -g_new, False
 
         elif PAR.SCHEME in ['NLCG']:

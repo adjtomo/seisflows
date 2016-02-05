@@ -116,7 +116,7 @@ class LBFGS(object):
         else:
             r = q
 
-        # use scaling proposed by Liu and Nocedal 1989
+        # use scaling M3 proposed by Liu and Nocedal 1989
         sty = np.dot(Y[:,0], S[:,0])
         yty = np.dot(Y[:,0], Y[:,0])
         r *= sty/yty
@@ -143,11 +143,11 @@ class LBFGS(object):
 
 
     def check_status(self, g, r):
-        theta = angle(g,r)
-        if theta < 0.:
+        theta = 180.*np.pi**-1*angle(g,r)
+        if not 0. < theta < 90.:
             print 'restarting LBFGS... [not a descent direction]'
             return 1
-        elif theta < self.thresh:
+        elif theta > 90. - self.thresh:
             print 'restarting LBFGS... [practical safeguard]'
             return 1
         else:
