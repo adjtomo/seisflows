@@ -28,9 +28,9 @@ class thrifty_inversion(loadclass('workflow', 'inversion')):
       safeguarded backtracking line search.
 
       The results of 'inversion' and 'thrifty_inversion' should be exactly the
-      same.  Users who value a simple, readable, easily extensible workflow 
-      should choose 'inversion'. Users who value efficiency should choose 
-      'thrifty_inversion.'
+      same.  Users who prefer a simpler but less efficient workflow can choose
+      choose 'inversion'. Users who prefer a more efficient but more complicated
+      workflow can choose 'thrifty_inversion.'
     """
 
     def solver_status(self, maxiter=1):
