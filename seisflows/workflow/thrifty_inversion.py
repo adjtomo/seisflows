@@ -23,13 +23,14 @@ import postprocess
 class thrifty_inversion(loadclass('workflow', 'inversion')):
     """ Thrifty inversion subclass
 
-      Provides additional savings by avoiding redundant forward simulations
-      associated with sufficient decrease and curvature tests in a safeguarded
-      backtracking line search. Otherwise, the same as regular inversion
-      workflow.
+      Provides savings over conventional inversion by avoiding redundant forward
+      simulations associated with sufficient decrease and curvature tests in a 
+      safeguarded backtracking line search.
 
-      For more readable but less efficient inversion workflow, feel free to
-      revert to the parent class.
+      The results of 'inversion' and 'thrifty_inversion' should be exactly the
+      same.  Users who value a simple, readable, easily extensible workflow 
+      should choose 'inversion'. Users who value efficiency should choose 
+      'thrifty_inversion.'
     """
 
     def solver_status(self, maxiter=1):
