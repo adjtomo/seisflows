@@ -8,7 +8,7 @@ from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import divides, exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError
+    ParameterError, loadclass
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -90,11 +90,11 @@ class thrifty_inversion(loadclass('workflow', 'inversion')):
 
         # if not, then prepare for gradient evaluation
         if not isready:
-            super(thrifty, self).initialize()
+            super(thrifty_inversion, self).initialize()
 
 
     def iterate_search(self):
-        super(thrifty, self).iterate_search()
+        super(thrifty_inversion, self).iterate_search()
 
         isdone = optimize.isdone
         isready = self.solver_status()
@@ -115,6 +115,6 @@ class thrifty_inversion(loadclass('workflow', 'inversion')):
             unix.rm(PATH.SOLVER)
             unix.mv(PATH.SOLVER+'_best', PATH.SOLVER)
         else:
-            super(thrifty, self).clean()
+            super(thrifty_inversion, self).clean()
 
 
