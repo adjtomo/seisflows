@@ -50,7 +50,7 @@ If a ''hello'' message is displayed, the test was successful.
 Run the following test to make sure everything is working::
 
         cd /home/packages/seisflows/tests/integration/optimize
-        ./clean; ./run
+        ./clean.py; ./run.py
 
 
 If the optimization problem is solved in 50 iterations or fewer, the test was successful.
