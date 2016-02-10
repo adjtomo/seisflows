@@ -13,7 +13,7 @@ To provide this flexibility, SeisFlows is very modular.  Users are offered choic
 - preprocessing
 - postprocessing
 
-The thing that ties everything together is the workflow module.  Execution of a workflow is equivalent to stepping through the code contained in workflow.main.  Users are free to customize the available 'inversion' and 'migration' default workflow modules.
+The thing that ties everything together is the workflow module.  Execution of a workflow is equivalent to stepping through the code contained in ``workflow.main``.  Users are free to customize the available 'inversion' and 'migration' default workflow modules.
 
 Consider an example from earthquake tomography.  Under SeisFlows, if the study area expands, users can replace a 3D regional solver with a 3D global solver by changing the 'solver' module.  If a new computer system becomes available, users can migrate from, say, an old PBS cluster to a new SLURM cluster by changing the 'system' module.  
 
@@ -73,25 +73,25 @@ Prior to compilation, users need to run the ``configure`` script and prepare inp
 
 - stations file.
 
-To successfully run the ``configure`` script, MPI libraries and exectuable may need to be available in your environment.
+To successfully run the ``configure``, you may need to install compilers, libraries, and other software in your environment.
 
-The result of compilation is a set of binaries files, including
+The result of compilation is a set of binary excutables, such as
 
-- mesher binary
+- mesher
 
-- solver binary
+- solver
 
 - smoothing utility
 
 - summing utility.
 
 
-Note that if input files change, binary files may need to be recompiled.
+Note that if solver input files change, solver executables may need to be recompiled.
 
-After compilation, input files must be gathered together in one directory and binary files in another.  The absolute paths to input file and binary file directories must be given in ``paths.py`` as follows::
+After compilation, solver input files must be gathered together in one directory and solver executables in another.  The absolute paths to the directories containing input files and executables must be given in ``paths.py`` as follows::
 
     SPECFEM_DATA = '/path/to/spcefem/input/files'
-    SPECFEM_BIN = '/path/to/specfem/binary/files'
+    SPECFEM_BIN = '/path/to/specfem/exectuable/files'
 
 
 Solver Integration
@@ -101,9 +101,9 @@ Integration of the solver with the other workflow components can be challenging.
 
 - Solver computations account for most of the cost of an inversion. As a result, the solver must be written in an efficient compiled language, and wrappers must be written to integrate the compiled code with other software components. 
 
-- There is currently no mechanism for automatically compiling binary files for SPECFEM2D, SPECFEM3D, or SPECFEM3D_GLOBE. Users must prepare their own SPECFEM input files and then follow the procedure from the SPECFEM documentation to compile binary files.
+- There is currently no mechanism for automatically compiling executables for SPECFEM2D, SPECFEM3D, or SPECFEM3D_GLOBE. Users must prepare their own SPECFEM input files and then follow the compilation procedure in the SPECFEM documentation.
 
-- As described :ref:`above <job_submission>`, SeisFlows uses two input files, paths and parameter.  Problems could arise if parameters from SeisFlows input files conflict with parameters from SPECFEM input files. Users must make sure that there are no conflicts between SeisFlows parameters and solver parameters.
+- As described :ref:`above <job_submission>`, SeisFlows uses two input files, paths and parameter.  Problems could arise if parameters from SeisFlows input files conflict with parameters from solver input file. Users must make sure that there are no conflicts between SeisFlows parameters and solver parameters.
 
 - In the solver routines, it is natural to represent velocity models as dictionaries, with different keys corresponding to different material parameters.  In the optimization routines, it natural to represent velocity models as vectors. To convert back and forth between these two representations, a pair of utility functions--``split`` and ``merge``--are included in solver.base.
 
@@ -119,7 +119,7 @@ Besides SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE, SeisFlows can interface with 
 System Configuration
 ====================
 
-SeisFlows can run on SLURM, PBS, and LSF (coming soon) clusters.
+SeisFlows can run on SLURM, PBS, and LSF clusters.
 
 To make SeisFlows work across different environments, our approach is to wrap system commands with a thin Python layer.  To handle job submission, for example, we wrap the PBS command ``qsub`` and the SLURM command ``sbatch`` with a  python utility called `system.submit`.  The result is a consistent python interface across different clusters.
 
@@ -231,7 +231,9 @@ To allow classes to work with one another, each class must conform to an establi
 - main
 
 
-In the above list, ``setup`` methods are generic methods, called from the ``main`` workflow script and meant to provide users the flexibility to perform any required setup tasks. ``check`` methods are the default mechanism for parameter declaration and checking and are called just once, prior to a job being submitted through the scheduler.
+In the above list, ``setup`` methods are generic methods, called from the ``main`` workflow script and meant to provide users the flexibility to perform any required setup tasks. 
+
+``check`` methods are the default mechanism for parameter declaration and checking and are called just once, prior to a job being submitted through the scheduler.
 
 Besides required methods, classes may include any number of private methods or utility functions.
 
@@ -245,7 +247,7 @@ PBS_SM - For small inversions on PBS clusters. All resources are allocated at th
 
 PBS_LG - For large inversions on PBS clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
 
-SLURM_SM - For small inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run at the same time, within a single job. Individual wavefield simulations can span more than one core, but span more than one node.
+SLURM_SM - For small inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run at the same time, within a single job. Individual wavefield simulations can span more than one core, but not more than one node.
 
 SLURM_LG - For large inversions on SLURM clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
 

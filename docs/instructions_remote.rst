@@ -120,3 +120,7 @@ Besides running in parallel over events, the work of an individual event simulat
 
 Besides ``serial`` and ``parallel`` settings for running SeisFlows on laptops and desktops, there are also ``pbs``, ``slurm``, and ``lsf`` options for running on computer clusters. See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information.
 
+
+9. Visualize inversion results
+-----------------------------------------
+Sample visualization scripts (coming soon).
