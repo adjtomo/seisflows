@@ -3,7 +3,7 @@ import numpy as np
 import scipy.signal
 
 
-def wtime(wsyn, wobs, nt, dt):
+def traveltime(wsyn, wobs, nt, dt):
     # cross correlation time
     cc = abs(np.convolve(wobs, np.flipud(wsyn)))
     cmax = 0
@@ -19,7 +19,7 @@ def wtime(wsyn, wobs, nt, dt):
     return misfit
 
 
-def wampl(wsyn, wobs, nt, dt):
+def amplitude(wsyn, wobs, nt, dt):
     # cross correlation amplitude
     cc = np.convolve(wobs, np.flipud(wsyn))
     cmax = 0
@@ -35,18 +35,13 @@ def wampl(wsyn, wobs, nt, dt):
     return np.sqrt(np.sum(wdiff*wdiff*dt))
 
 
-def wdiff(wsyn, wobs, nt, dt):
+def waveform(wsyn, wobs, nt, dt):
     # waveform difference
     wdiff = wsyn-wobs
     return np.sqrt(np.sum(wdiff*wdiff*dt))
 
 
-def etime(wsyn, wobs, nt, dt):
-    # envelope cross correlation
-    pass
-
-
-def ediff(wsyn, wobs, nt, dt, eps=0.05):
+def envelope(wsyn, wobs, nt, dt, eps=0.05):
     # envelope difference
     esyn = abs(scipy.signal.hilbert(wsyn))
     eobs = abs(scipy.signal.hilbert(wobs))
@@ -54,6 +49,3 @@ def ediff(wsyn, wobs, nt, dt, eps=0.05):
     return np.sqrt(np.sum(ediff*ediff*dt))
 
 
-def cdiff(wsyn, wobs, nt, dt):
-    cdiff = np.correlate(wobs, wsyn) - np.correlate(wobs, wobs)
-    return np.sqrt(np.sum(cdiff*cdiff*dt))

@@ -159,23 +159,20 @@ class base(object):
         """
         opt = PAR.MISFIT.lower()
 
-        if opt in ['waveform', 'wav', 'wdiff']:
+        if opt in ['waveform']:
             # waveform difference
-            w = adjoint.wdiff(wsyn, wobs, nt, dt)
-        elif opt in ['traveltime', 'tt', 'wtime']:
+            w = adjoint.waveform(wsyn, wobs, nt, dt)
+        elif opt in ['traveltime']:
             # traveltime
-            w = adjoint.wtime(wsyn, wobs, nt, dt)
-        elif opt in ['amplitude', 'ampl', 'wampl']:
+            w = adjoint.traveltime(wsyn, wobs, nt, dt)
+        elif opt in ['amplitude']:
             # amplitude
-            w = adjoint.wampl(wsyn, wobs, nt, dt)
-        elif opt in ['envelope', 'env', 'ediff']:
+            w = adjoint.amplitude(wsyn, wobs, nt, dt)
+        elif opt in ['envelope']:
             # envelope
-            w = adjoint.ediff(wsyn, wobs, nt, dt, eps=0.05)
-        elif opt in ['cdiff']:
-            # cross correlation
-            w = adjoint.cdiff(wsyn, wobs, nt, dt)
+            w = adjoint.envelope(wsyn, wobs, nt, dt, eps=0.05)
         else:
-            w = wobs
+            raise ParameterError()
         return w
 
     def call_misfit(self, wsyn, wobs, nt, dt):
@@ -183,23 +180,20 @@ class base(object):
         """
         opt = PAR.MISFIT.lower()
 
-        if opt in ['waveform', 'wav', 'wdiff']:
+        if opt in ['waveform']:
             # waveform difference
-            e = misfit.wdiff(wsyn, wobs, nt, dt)
-        elif opt in ['traveltime', 'tt', 'wtime']:
+            e = misfit.waveform(wsyn, wobs, nt, dt)
+        elif opt in ['traveltime']:
             # traveltime
-            e = misfit.wtime(wsyn, wobs, nt, dt)
-        elif opt in ['amplitude', 'ampl', 'wampl']:
+            e = misfit.traveltime(wsyn, wobs, nt, dt)
+        elif opt in ['amplitude']:
             # amplitude
-            e = misfit.wampl(wsyn, wobs, nt, dt)
-        elif opt in ['envelope', 'env', 'ediff']:
+            e = misfit.amplitude(wsyn, wobs, nt, dt)
+        elif opt in ['envelope']:
             # envelope
-            e = misfit.ediff(wsyn, wobs, nt, dt, eps=0.05)
-        elif opt in ['cdiff']:
-            # cross correlation
-            e = misfit.cdiff(wsyn, wobs, nt, dt)
+            e = misfit.envelope(wsyn, wobs, nt, dt, eps=0.05)
         else:
-            e = 0.
+            raise ParameterError()
         return float(e)
 
 
