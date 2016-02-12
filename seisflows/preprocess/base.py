@@ -25,6 +25,12 @@ class base(object):
         if 'CHANNELS' not in PAR:
             raise ParameterError(PAR, 'CHANNELS')
 
+        if 'READER' not in PAR:
+            raise ParameterError(PAR, 'CHANNELS')
+
+        if 'WRITER' not in PAR:
+            setattr(PAR, 'WRITER', PAR.READER)
+
         if 'NORMALIZE' not in PAR:
             setattr(PAR, 'NORMALIZE', True)
 
@@ -47,6 +53,19 @@ class base(object):
 
         if 'FREQHI' not in PAR:
             setattr(PAR, 'FREQHI', 0.)
+
+        # assertions
+        if PAR.READER not in dir(readers):
+            #print msg.ReaderError
+            raise ParameterError()
+
+        if PAR.WRITER not in dir(writers):
+            #print msg.WriterError
+            raise ParameterError()
+
+        if type(PAR.CHANNELS) not in [str, unicode]:
+            #print msg.ChannelError
+            raise ParameterError()
 
 
     def setup(self):
