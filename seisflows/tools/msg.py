@@ -1,8 +1,5 @@
 
 from seisflows.tools.code import Struct
-globals()['PBS'] = Struct()
-globals()['SLURM'] = Struct()
-globals()['SPECFEM'] = Struct()
 
 
 ###
@@ -47,6 +44,27 @@ PARAMETER WARNING
     Overwriting with:  %s
 
 """
+
+
+ReaderError = """
+READER ERROR
+
+   Seismic data reader not found.
+
+   PAR.READER must correspond to an entry in seisflows.seistools.readers
+
+"""
+
+
+WriterError = """
+WRITER ERROR
+
+   Seismic data writer not found.
+
+   PAR.WRITER must correspond to an entry in seisflows.seistools.writers
+
+"""
+
 
 
 ###
