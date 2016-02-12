@@ -2,7 +2,7 @@
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.code import exists, Struct, string_types
+from seisflows.tools.code import Struct, string_types
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
@@ -12,7 +12,7 @@ PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class base(object):
+class legacy(object):
     """ Data preprocessing class
     """
 
@@ -56,11 +56,11 @@ class base(object):
 
         # assertions
         if PAR.READER.lower() not in dir(readers):
-            print msg.ReaderError
+            #print msg.ReaderError
             raise ParameterError()
 
         if PAR.WRITER.lower() not in dir(writers):
-            print msg.WriterError
+            #print msg.WriterError
             raise ParameterError()
 
         if type(PAR.CHANNELS) not in string_types:
@@ -71,12 +71,16 @@ class base(object):
     def setup(self):
         """ Sets up data preprocessing machinery
         """
-        # define misfit function and adjoint trace generator
+        # define misfit function
         self.misfit = getattr(misfit, PAR.MISFIT.lower())
+
+        # define adjoint trace generator
         self.adjoint = getattr(adjoint, PAR.MISFIT.lower())
 
-        # define seismic data reader and writer
+        # define seismic data reader
         self.reader = getattr(readers, PAR.READER)
+
+        # define seismic data writer
         self.writer = getattr(writers, PAR.WRITER)
 
         # prepare channels list
@@ -89,15 +93,17 @@ class base(object):
         """ Prepares solver for gradient evaluation by writing residuals and
           adjoint traces
         """
-        for channel in self.channels:
-            obs = self.reader(path+'/'+'traces/obs/', channel)
-            syn = self.reader(path+'/'+'traces/syn/', channel)
+        unix.cd(path)
 
-            #obs = self.process_traces(obs)
-            #syn = self.process_traces(syn)
+        d, h = self.load(prefix='traces/obs/')
+        s, _ = self.load(prefix='traces/syn/')
 
-            self.write_residuals(path, syn, obs)
-            self.write_adjoint_traces(path+'/'+'traces/adj/', syn, obs, channel)
+        d = self.multichannel(self.process_traces, [d], [h])
+        s = self.multichannel(self.process_traces, [s], [h])
+
+        r = self.multichannel(self.write_residuals, [s, d], [h], inplace=False)
+        s = self.multichannel(self.generate_adjoint_traces, [s, d], [h])
+        self.save(s, h, prefix='traces/adj/')
 
 
     def process_traces(self, s, h):
@@ -126,41 +132,82 @@ class base(object):
         return s
 
 
-    def write_residuals(self, path, s, d):
+    def write_residuals(self, s, d, h):
         """ Computes residuals from observations and synthetics
         """
-        nt, dt, _ = get_time_scheme(s)
-        n, _ = get_network_size(s)
+        r = []
+        for i in range(h.nr):
+            r.append(self.misfit(s[:,i], d[:,i], h.nt, h.dt))
 
-        filename = path +'/'+ 'residuals'
-        if exists(filename):
-            r = np.loadtxt(filename)
-        else:
-            r = []
+        # write residuals
+        np.savetxt('residuals', r)
 
-        for i in range(n):
-            r.append(self.misfit(s[i].data, d[i].data, nt, dt))
-
-        np.savetxt(filename, r)
+        return np.array(r)
 
 
-    def write_adjoint_traces(self, path, s, d, channel):
+    def generate_adjoint_traces(self, s, d, h):
         """ Generates adjoint traces from observed and synthetic traces
         """
-        nt, dt, _ = get_time_scheme(s)
-        n, _ = get_network_size(s)
 
-        for i in range(n):
-            s[i].data = self.adjoint(s[i].data, d[i].data, nt, dt)
+        for i in range(h.nr):
+            s[:,i] = self.adjoint(s[:,i], d[:,i], h.nt, h.dt)
+
+        # bandpass once more
+        if PAR.BANDPASS:
+            if PAR.FREQLO and PAR.FREQHI:
+                s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI, 'reverse')
+
+            elif PAR.FREQHI:
+                s = shighpass(s, h, PAR.FREQLO, 'reverse')
+
+            elif PAR.FREQHI:
+                s = slowpass(s, h, PAR.FREQHI, 'reverse')
+
+            else:
+                raise ParameterError(PAR, 'BANDPASS')
 
         # normalize traces
         if PAR.NORMALIZE:
-            for ir in range(n):
-                w = np.linalg.norm(d[i], ord=2)
+            for ir in range(h.nr):
+                w = np.linalg.norm(d[:,ir], ord=2)
                 if w > 0: 
                     s[:,ir] /= w
 
-        self.writer(s, path, channel)
+        return s
+
+
+    ### input/output
+
+    def load(self, prefix=None, suffix=None):
+        """ Reads seismic data from disk
+        """
+        kwargs = dict()
+        if prefix != None:
+            kwargs['prefix'] = prefix
+        if suffix != None:
+            kwargs['suffix'] = suffix
+
+        f = Struct()
+        h = Struct()
+        for channel in self.channels:
+            f[channel], h[channel] = self.reader(channel=channel, **kwargs)
+
+        # check headers
+        h = self.check_headers(h)
+
+        return f, h
+
+    def save(self, s, h, prefix='traces/adj/', suffix=None):
+        """ Writes seismic data to disk
+        """
+        kwargs = dict()
+        if prefix != None:
+            kwargs['prefix'] = prefix
+        if suffix != None:
+            kwargs['suffix'] = suffix
+
+        for channel in self.channels:
+            self.writer(s[channel], h, channel=channel, **kwargs)
 
 
     ### utility functions
@@ -179,58 +226,23 @@ class base(object):
 
         return output
 
-    def check_headers(self, data):
+    def check_headers(self, headers):
         """ Checks headers for consistency
         """
-        nt, dt, _ = get_time_scheme(data)
-        n, _ = get_network_size(data)
+        h = headers.values()[0]
 
         if 'DT' in PAR:
-            if dt != PAR.DT:
-                print 'Warning: dt != PAR.DT'
+            if h.dt != PAR.DT:
+                h.dt = PAR.DT
 
         if 'NT' in PAR:
-            if nt != PAR.NT:
-                print 'Warning: nt != PAR.NT'
+            if h.nt != PAR.NT:
+                print 'Warning: h.nt != PAR.NT'
 
         if 'NREC' in PAR:
-            if nr != PAR.NREC:
-                print 'Warning: nr != PAR.NREC'
+            if h.nr != PAR.NREC:
+                print 'Warning: h.nr != PAR.NREC'
 
         return h
 
 
-    def zeros(self, nt, nr):
-        from obspy.core.stream import Stream
-        from obspy.core.trace import Trace
-        t = Trace(data=np.zeros(nt, dtype='float32'))
-        t.stats.delta = PAR.DT
-        s = Stream(t)*nr
-        return s
-
-
-def get_time_scheme(streamobj):
-    dt = PAR.DT
-    nt = PAR.NT
-    t0 = 0.
-    return dt, nt, t0
-
-
-def get_network_size(streamobj):
-    nrec = len(streamobj)
-    nsrc = 1
-    return nrec, nsrc
-
-
-def get_receiver_coords(streamobj):
-    xr = []
-    yr = []
-    zr = []
-    return xr, yr, zr
-
-
-def get_source_coords(streamobj):
-    xr = []
-    yr = []
-    zr = []
-    return xs, ys, zs

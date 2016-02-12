@@ -506,10 +506,9 @@ class base(object):
             Components actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
         """
-        _, h = preprocess.load(path)
-        zeros = np.zeros((h.nt, h.nr))
+        zeros = preprocess.zeros(PAR.NT, PAR.NREC)
         for channel in ['x', 'y', 'z']:
-            preprocess.writer(zeros, h, channel=channel, prefix='traces/adj/')
+            preprocess.writer(zeros, channel=channel, prefix='traces/adj/')
 
 
     def check_mesh_properties(self, path=None, parameters=None):

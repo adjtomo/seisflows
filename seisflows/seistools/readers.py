@@ -38,6 +38,24 @@ def ascii_specfem2d(**kwargs):
     return s, h
 
 
+def su_specfem2d_obspy(prefix='SEM', channel=None, suffix='.su'):
+    import obspy
+
+    if channel in ['x']:
+        filename = '%s/Ux_file_single%s' % (prefix, suffix)
+    elif channel in ['y']:
+        filename = '%s/Uy_file_single%s' % (prefix, suffix)
+    elif channel in ['z']:
+        filename = '%s/Uz_file_single%s' % (prefix, suffix)
+    elif channel in ['p']:
+        filename = '%s/Up_file_single%s' % (prefix, suffix)
+    else:
+        raise ValueError('CHANNEL must be one of the following: x y z p')
+
+    streamobj = obspy.segy.core.readSU(filename, byteorder='<')
+    return streamobj
+
+
 def su_specfem2d(channel=None, prefix='SEM', suffix='.su'):
     """ Reads Seismic Unix file
     """
