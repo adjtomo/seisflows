@@ -203,13 +203,19 @@ class Null(object):
 
 
 class ParameterError(ValueError):
-    def __init__(self, obj, key):
-        if key not in obj:
-            message = '%s is not defined.' % key
+    def __init__(self, *args):
+        if len(args) == 0:
+            msg = 'Bad parameter.'
+            super(ParameterError, self).__init__(msg)
+        elif len(args) == 1:
+            msg = 'Bad parameter: %s' % args[0]
+            super(ParameterError, self).__init__(msg)
+        elif args[0] not in args[1]:
+            msg = '%s is not defined.' % args[0]
+            super(ParameterError, self).__init__(msg)
         elif key in obj:
-            message = '%s has bad value: ' % key, obj.__getattr__(key)
-
-        super(ParameterError, self).__init__(message)
+            msg = '%s has bad value: ' % args[0], args[1].__getattr__(args[0])
+            super(ParameterError, self).__init__(msg)
 
 
 def loadclass(*args):

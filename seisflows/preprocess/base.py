@@ -2,7 +2,7 @@
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.code import Struct
+from seisflows.tools.code import Struct, string_types
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
@@ -55,45 +55,38 @@ class base(object):
             setattr(PAR, 'FREQHI', 0.)
 
         # assertions
-        if PAR.READER not in dir(readers):
+        if PAR.READER.lower() not in dir(readers):
             #print msg.ReaderError
             raise ParameterError()
 
-        if PAR.WRITER not in dir(writers):
+        if PAR.WRITER.lower() not in dir(writers):
             #print msg.WriterError
             raise ParameterError()
 
-        if type(PAR.CHANNELS) not in [str, unicode]:
+        if type(PAR.CHANNELS) not in string_types:
             #print msg.ChannelError
             raise ParameterError()
 
 
     def setup(self):
-        """ Called once at beginning of workflow to perform any required
-          initialization or setup tasks
+        """ Sets up data preprocessing machinery
         """
-        # setup seismic data reader
+        # define misfit function
+        self.misfit = getattr(misfit, PAR.MISFIT.lower())
+
+        # define adjoint trace generator
+        self.adjoint = getattr(adjoint, PAR.MISFIT.lower())
+
+        # define seismic data reader
         self.reader = getattr(readers, PAR.READER)
 
-        # setup seismic data writer
+        # define seismic data writer
         self.writer = getattr(writers, PAR.WRITER)
 
-        # setup channels list
+        # prepare channels list
         self.channels = []
         for char in PAR.CHANNELS:
             self.channels += [char]
-
-        # setup misfit function
-        if PAR.MISFIT.lower() in dir(misfit):
-            self.misfit = getattr(misfit, PAR.MISFIT.lower())
-        else:
-            raise Exception
-
-        # setup adjoint trace generator
-        if PAR.MISFIT.lower() in dir(adjoint):
-            self.adjoint = getattr(adjoint, PAR.MISFIT.lower())
-        else:
-            raise Exception
 
 
     def prepare_eval_grad(self, path='.'):
@@ -105,11 +98,11 @@ class base(object):
         d, h = self.load(prefix='traces/obs/')
         s, _ = self.load(prefix='traces/syn/')
 
-        d = self.apply(self.process_traces, [d], [h])
-        s = self.apply(self.process_traces, [s], [h])
+        d = self.multichannel(self.process_traces, [d], [h])
+        s = self.multichannel(self.process_traces, [s], [h])
 
-        r = self.apply(self.write_residuals, [s, d], [h], inplace=False)
-        s = self.apply(self.generate_adjoint_traces, [s, d], [h])
+        r = self.multichannel(self.write_residuals, [s, d], [h], inplace=False)
+        s = self.multichannel(self.generate_adjoint_traces, [s, d], [h])
         self.save(s, h, prefix='traces/adj/')
 
 
@@ -219,7 +212,7 @@ class base(object):
 
     ### utility functions
 
-    def apply(self, func, arrays, input, inplace=True):
+    def multichannel(self, func, arrays, input, inplace=True):
         """ Applies function to multi-component data
         """
         if inplace:

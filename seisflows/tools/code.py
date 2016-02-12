@@ -88,3 +88,10 @@ def loadtxt(filename):
 def savetxt(filename, v):
     """Save scalar to text file"""
     np.savetxt(filename, [v], '%11.6e')
+
+
+string_types = [
+    str,
+    unicode
+    ]
+
