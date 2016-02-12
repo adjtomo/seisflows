@@ -20,10 +20,7 @@ class base(object):
         """ Checks parameters and paths
         """
         if 'MISFIT' not in PAR:
-            setattr(PAR, 'MISFIT', 'wav')
-
-        if 'FORMAT' not in PAR:
-            raise ParameterError(PAR, 'FORMAT')
+            setattr(PAR, 'MISFIT', 'waveform')
 
         if 'CHANNELS' not in PAR:
             raise ParameterError(PAR, 'CHANNELS')
@@ -56,13 +53,28 @@ class base(object):
         """ Called once at beginning of workflow to perform any required
           initialization or setup tasks
         """
-        assert PAR.FORMAT in dir(readers)
-        assert PAR.FORMAT in dir(writers)
+        # setup seismic data reader
+        self.reader = getattr(readers, PAR.READER)
 
-        self.reader = getattr(readers, PAR.FORMAT)
-        self.writer = getattr(writers, PAR.FORMAT)
+        # setup seismic data writer
+        self.writer = getattr(writers, PAR.WRITER)
 
-        self.channels = [char for char in PAR.CHANNELS]
+        # setup channels list
+        self.channels = []
+        for char in PAR.CHANNELS:
+            self.channels += [char]
+
+        # setup misfit function
+        if PAR.MISFIT.lower() in dir(misfit):
+            self.misfit = getattr(misfit, PAR.MISFIT.lower())
+        else:
+            raise Exception
+
+        # setup adjoint trace generator
+        if PAR.MISFIT.lower() in dir(adjoint):
+            self.adjoint = getattr(adjoint, PAR.MISFIT.lower())
+        else:
+            raise Exception
 
 
     def prepare_eval_grad(self, path='.'):
@@ -113,7 +125,7 @@ class base(object):
         """
         r = []
         for i in range(h.nr):
-            r.append(self.call_misfit(s[:,i], d[:,i], h.nt, h.dt))
+            r.append(self.misfit(s[:,i], d[:,i], h.nt, h.dt))
 
         # write residuals
         np.savetxt('residuals', r)
@@ -126,7 +138,7 @@ class base(object):
         """
 
         for i in range(h.nr):
-            s[:,i] = self.call_adjoint(s[:,i], d[:,i], h.nt, h.dt)
+            s[:,i] = self.adjoint(s[:,i], d[:,i], h.nt, h.dt)
 
         # bandpass once more
         if PAR.BANDPASS:
@@ -150,51 +162,6 @@ class base(object):
                     s[:,ir] /= w
 
         return s
-
-
-    ### misfit/adjoint wrappers
-
-    def call_adjoint(self, wsyn, wobs, nt, dt):
-        """ Wrapper for generating adjoint traces
-        """
-        opt = PAR.MISFIT.lower()
-
-        if opt in ['waveform']:
-            # waveform difference
-            w = adjoint.waveform(wsyn, wobs, nt, dt)
-        elif opt in ['traveltime']:
-            # traveltime
-            w = adjoint.traveltime(wsyn, wobs, nt, dt)
-        elif opt in ['amplitude']:
-            # amplitude
-            w = adjoint.amplitude(wsyn, wobs, nt, dt)
-        elif opt in ['envelope']:
-            # envelope
-            w = adjoint.envelope(wsyn, wobs, nt, dt, eps=0.05)
-        else:
-            raise ParameterError()
-        return w
-
-    def call_misfit(self, wsyn, wobs, nt, dt):
-        """ Wrapper for evaluating misfit function
-        """
-        opt = PAR.MISFIT.lower()
-
-        if opt in ['waveform']:
-            # waveform difference
-            e = misfit.waveform(wsyn, wobs, nt, dt)
-        elif opt in ['traveltime']:
-            # traveltime
-            e = misfit.traveltime(wsyn, wobs, nt, dt)
-        elif opt in ['amplitude']:
-            # amplitude
-            e = misfit.amplitude(wsyn, wobs, nt, dt)
-        elif opt in ['envelope']:
-            # envelope
-            e = misfit.envelope(wsyn, wobs, nt, dt, eps=0.05)
-        else:
-            raise ParameterError()
-        return float(e)
 
 
     ### input/output
