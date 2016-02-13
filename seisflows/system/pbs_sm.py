@@ -94,7 +94,7 @@ class pbs_sm(object):
                 + '-o %s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '-l %s '%resources
                 + '-j %s '%'oe'
-                + findpath('system') +'/'+ 'pbs/wrapper_qsub '
+                + findpath('system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT,
                 shell=True)
 
@@ -109,7 +109,7 @@ class pbs_sm(object):
             # run on all available nodes
             unix.run('srun '
                     + '--wait=0 '
-                    + join(findpath('system'), 'slurm/wrapper_pbsdsh ')
+                    + join(findpath('system'), 'wrappers/run_pbsdsh ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname)
@@ -118,7 +118,7 @@ class pbs_sm(object):
             # run on head node
             unix.run('srun '
                     + '--wait=0 '
-                    + join(findpath('system'), 'slurm/wrapper_pbsdsh_head ')
+                    + join(findpath('system'), 'wrappers/run_pbsdsh_head ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname + ' '
