@@ -13,7 +13,11 @@ PATH = SeisflowsPaths()
 
 
 class legacy(object):
-    """ Data preprocessing class
+    """ Legacy data preprocessing class
+
+      Legacy methods differ from base methods mainly in that the former depend
+      depend on scipy and the latter depend on obspy I/O and signal processing
+      functions.
     """
 
     def check(self):
@@ -55,12 +59,12 @@ class legacy(object):
             setattr(PAR, 'FREQHI', 0.)
 
         # assertions
-        if PAR.READER.lower() not in dir(readers):
-            #print msg.ReaderError
+        if PAR.READER not in dir(readers):
+            print msg.ReaderError
             raise ParameterError()
 
-        if PAR.WRITER.lower() not in dir(writers):
-            #print msg.WriterError
+        if PAR.WRITER not in dir(writers):
+            print msg.WriterError
             raise ParameterError()
 
         if type(PAR.CHANNELS) not in string_types:
@@ -72,10 +76,10 @@ class legacy(object):
         """ Sets up data preprocessing machinery
         """
         # define misfit function
-        self.misfit = getattr(misfit, PAR.MISFIT.lower())
+        self.misfit = getattr(misfit, PAR.MISFIT)
 
         # define adjoint trace generator
-        self.adjoint = getattr(adjoint, PAR.MISFIT.lower())
+        self.adjoint = getattr(adjoint, PAR.MISFIT)
 
         # define seismic data reader
         self.reader = getattr(readers, PAR.READER)
@@ -226,6 +230,7 @@ class legacy(object):
 
         return output
 
+
     def check_headers(self, headers):
         """ Checks headers for consistency
         """
@@ -245,4 +250,14 @@ class legacy(object):
 
         return h
 
+
+    def write_zero_traces(self, path, channel):
+        from seisflows.seistools.shared import SeisStruct
+
+        # construct seismic data and header
+        zeros = np.zeros((PAR.NT, PAR.NREC))
+        h = SeisStruct(nt=PAR.NT, dt=PAR.DT, nr=PAR.NREC)
+
+        # write to disk
+        self.writer(zeros, h, path, channel)
 

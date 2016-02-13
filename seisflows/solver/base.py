@@ -501,14 +501,14 @@ class base(object):
         self.check_solver_parameter_files()
 
 
-    def initialize_adjoint_traces(self, path='traces/obs'):
+    def initialize_adjoint_traces(self):
         """ Adjoint traces are initialized by writing zeros for all components.
             Components actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
         """
-        zeros = preprocess.zeros(PAR.NT, PAR.NREC)
+        path = self.getpath+'/'+'traces/adj/'
         for channel in ['x', 'y', 'z']:
-            preprocess.writer(zeros, channel=channel, prefix='traces/adj/')
+            preprocess.write_zero_traces(path, channel)
 
 
     def check_mesh_properties(self, path=None, parameters=None):

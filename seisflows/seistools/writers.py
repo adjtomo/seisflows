@@ -93,7 +93,7 @@ def su_specfem2d_obspy(d, prefix='SEM', channel=None, suffix='.su.adj'):
 
 
 
-def su_specfem2d(d, h, channel=None, prefix='SEM', suffix='.su.adj'):
+def su_specfem2d(d, h, prefix='SEM', channel=None, suffix='.su.adj'):
     """ Writes Seismic Unix file
     """
     if channel in ['x']:

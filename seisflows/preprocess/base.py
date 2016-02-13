@@ -55,11 +55,11 @@ class base(object):
             setattr(PAR, 'FREQHI', 0.)
 
         # assertions
-        if PAR.READER.lower() not in dir(readers):
+        if PAR.READER not in dir(readers):
             print msg.ReaderError
             raise ParameterError()
 
-        if PAR.WRITER.lower() not in dir(writers):
+        if PAR.WRITER not in dir(writers):
             print msg.WriterError
             raise ParameterError()
 
@@ -67,13 +67,19 @@ class base(object):
             #print msg.ChannelError
             raise ParameterError()
 
+        try:
+            import obspy
+        except:
+            #print msg.obspyError
+            raise ImportError
+
 
     def setup(self):
         """ Sets up data preprocessing machinery
         """
         # define misfit function and adjoint trace generator
-        self.misfit = getattr(misfit, PAR.MISFIT.lower())
-        self.adjoint = getattr(adjoint, PAR.MISFIT.lower())
+        self.misfit = getattr(misfit, PAR.MISFIT)
+        self.adjoint = getattr(adjoint, PAR.MISFIT)
 
         # define seismic data reader and writer
         self.reader = getattr(readers, PAR.READER)
@@ -200,13 +206,17 @@ class base(object):
         return h
 
 
-    def zeros(self, nt, nr):
+    def write_zero_traces(self, path, channel):
         from obspy.core.stream import Stream
         from obspy.core.trace import Trace
-        t = Trace(data=np.zeros(nt, dtype='float32'))
+
+        # construct seismic data and headers
+        t = Trace(data=np.zeros(PAR.NT, dtype='float32'))
         t.stats.delta = PAR.DT
-        s = Stream(t)*nr
-        return s
+        s = Stream(t)*PAR.NREC
+
+        # write to disk
+        self.writer(s, path, channel)
 
 
 def get_time_scheme(streamobj):

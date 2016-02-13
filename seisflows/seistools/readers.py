@@ -56,7 +56,7 @@ def su_specfem2d_obspy(prefix='SEM', channel=None, suffix='.su'):
     return streamobj
 
 
-def su_specfem2d(channel=None, prefix='SEM', suffix='.su'):
+def su_specfem2d(prefix='SEM', channel=None, suffix='.su'):
     """ Reads Seismic Unix file
     """
     if channel in ['x']:
