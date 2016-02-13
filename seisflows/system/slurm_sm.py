@@ -78,7 +78,7 @@ class slurm_sm(loadclass('system', 'base')):
                 + '--cpus-per-task=%d '%PAR.NPROC
                 + '--ntasks=%d '%PAR.NTASK
                 + '--time=%d '%PAR.WALLTIME
-                + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
+                + findpath('system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
 
 
@@ -92,7 +92,7 @@ class slurm_sm(loadclass('system', 'base')):
             # run on all available nodes
             unix.run('srun '
                     + '--wait=0 '
-                    + join(findpath('system'), 'slurm/wrapper_srun ')
+                    + join(findpath('system'), 'wrappers/run ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname)
@@ -101,7 +101,7 @@ class slurm_sm(loadclass('system', 'base')):
             # run on head node
             unix.run('srun '
                     + '--wait=0 '
-                    + join(findpath('system'), 'slurm/wrapper_srun_head ')
+                    + join(findpath('system'), 'wrappers/run_head ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname)

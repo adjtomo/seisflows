@@ -93,7 +93,7 @@ class slurm_lg(loadclass('system', 'base')):
                 + '--ntasks-per-node=%d ' % PAR.NODESIZE
                 + '--nodes=%d ' % 1
                 + '--time=%d ' % PAR.WALLTIME
-                + findpath('system') +'/'+ 'slurm/wrapper_sbatch '
+                + findpath('system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
 
 
@@ -151,7 +151,7 @@ class slurm_lg(loadclass('system', 'base')):
                 + '--ntasks-per-node=%d ' % PAR.NODESIZE
                 + '--time=%d ' % PAR.STEPTIME
                 + args
-                + findpath('system') +'/'+ 'slurm/wrapper_srun '
+                + findpath('system') +'/'+ 'wrappers/run '
                 + PATH.OUTPUT + ' '
                 + classname + ' '
                 + funcname + ' ',
