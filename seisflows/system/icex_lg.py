@@ -42,9 +42,38 @@ class icex_lg(loadclass('system', 'lsf_lg')):
         super(icex_lg, self).check()
 
 
-    def submit(self, *args, **kwargs):
-        """Submits job
+    def submit(self, workflow):
+        """ Submits workflow
         """
-        #unix.ln(PATH.GLOBAL, PATH.SUBMIT + '/' + 'scratch')
-        super(icex_lg, self).submit(*args, **kwargs)
+        unix.mkdir(PATH.OUTPUT)
+        unix.cd(PATH.OUTPUT)
+        unix.mkdir(PATH.SUBMIT+'/'+'output.lsf')
+
+        self.save_objects()
+        self.save_parameters()
+        self.save_paths()
+
+        # prepare bsub arguments
+        unix.run('bsub '
+                + '-a intelmpi '
+                + '-J %s ' % PAR.SUBTITLE
+                + '-q LAURE_USERS '
+                + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
+                + '-n %d ' % 16
+                + '-e %s ' % (PATH.SUBMIT+'/'+'error.log')
+                + '-R "span[ptile=%d' % PAR.NODESIZE + ']" '
+                + '-W %d:00 ' % PAR.WALLTIME
+                +  findpath('system') +'/'+ 'wrappers/submit '
+                + PATH.OUTPUT)
+
+
+    def mpiargs(self):
+        #return 'mpirun '
+        #return ('/apps/lsf/cluster_ICEX/8.3/linux2.6-glibc2.3-x86_64/bin/mpirun.lsf '
+        #        + '-genv I_MPI_EXTRA_FILESYSTEM 1 -genv I_MPI_EXTRA_FILESYSTEM_LIST lustre '
+        #        + '-genv I_MPI_PIN 0 -genv I_MPI_FALLBACK 0 -_MSG_SIZE 4194304 -pam ')
+        return ('/apps/lsf/cluster_ICEX/8.3/linux2.6-glibc2.3-x86_64/bin/mpirun.lsf '
+                + '-genv I_MPI_EXTRA_FILESYSTEM 1 -genv I_MPI_EXTRA_FILESYSTEM_LIST lustre '
+                + '-genv I_MPI_PIN 0 -genv I_MPI_FALLBACK 0 -genv I_MPI_RDMA_RNDV_WRITE 1 -genv I_MPI_RDMA_MAX_MSG_SIZE 4194304 -pam '
+                + ' "-n %s " ' % PAR.NPROC )
 

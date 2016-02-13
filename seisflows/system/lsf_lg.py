@@ -92,13 +92,12 @@ class lsf_lg(loadclass('system', 'base')):
         unix.run('bsub '
                 + '-a intelmpi '
                 + '-J %s ' % PAR.SUBTITLE
-                + '-q LAURE_USERS '
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
                 + '-n %d ' % 16
                 + '-e %s ' % (PATH.SUBMIT+'/'+'error.log')
                 + '-R "span[ptile=%d' % PAR.NODESIZE + ']" '
                 + '-W %d:00 ' % PAR.WALLTIME
-                +  findpath('system') +'/'+ 'lsf/wrapper_bsub '
+                +  findpath('system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
 
 
@@ -141,7 +140,7 @@ class lsf_lg(loadclass('system', 'base')):
                 + '-W %d:00 ' % PAR.STEPTIME
                 + '-J "%s' %PAR.SUBTITLE
                 + args
-                + findpath('system') +'/'+ 'lsf/wrapper_srun '
+                + findpath('system') +'/'+ 'wrapper/run '
                 + PATH.OUTPUT + ' '
                 + classname + ' '
                 + funcname + ' ',
@@ -162,9 +161,6 @@ class lsf_lg(loadclass('system', 'base')):
             return [job]
 
 
-
-
-
     def task_status(self, classname, funcname, jobs):
         # query lsf database
         for job in jobs:
@@ -176,71 +172,42 @@ class lsf_lg(loadclass('system', 'base')):
                 states += [0]
             if state in ['EXIT']:
                 print 'LSF job failed: %s ' %job
-                #print msg.TaskError_SLURM % (classname, funcname, job)
+                #print msg.TaskError_LSF % (classname, funcname, job)
                 sys.exit(-1)
 
-	# return True if all elements of the states are true (or if the state is empty). 
+        # return True if all elements of the states are true
+        # (or if the state is empty)
         isdone = all(states)
 
         return isdone, jobs
 
 
-
-
     def mpiargs(self):
-        #return 'mpirun '
-        #return ('/apps/lsf/cluster_ICEX/8.3/linux2.6-glibc2.3-x86_64/bin/mpirun.lsf '
-        #        + '-genv I_MPI_EXTRA_FILESYSTEM 1 -genv I_MPI_EXTRA_FILESYSTEM_LIST lustre '
-        #        + '-genv I_MPI_PIN 0 -genv I_MPI_FALLBACK 0 -_MSG_SIZE 4194304 -pam ')
-        return ('/apps/lsf/cluster_ICEX/8.3/linux2.6-glibc2.3-x86_64/bin/mpirun.lsf '
-		+ '-genv I_MPI_EXTRA_FILESYSTEM 1 -genv I_MPI_EXTRA_FILESYSTEM_LIST lustre '
-		+ '-genv I_MPI_PIN 0 -genv I_MPI_FALLBACK 0 -genv I_MPI_RDMA_RNDV_WRITE 1 -genv I_MPI_RDMA_MAX_MSG_SIZE 4194304 -pam '
-		+ ' "-n %s " ' % PAR.NPROC )
+        return 'mpirun '
 
 
     def getstate(self, jobid):
         """ Retrives job state from LSF database
         """
-        # sacct - report job (or job step) accounting info about active or completed jobs 
         with open(PATH.SYSTEM+'/'+'job_status', 'w') as f:
-            # subprocess.call('sacct -n -o state -j '+jobid, shell=True, stdout=f)
-            # SLURM: 
-            # -n, --noheader: No heading will be added to the output
-            # -o, --format: Comma separated list of fields.
-            # LSF:
-            # -N host_name
-            #subprocess.call('bjobs -noheader -a -d ' + jobid, shell=True, stdout=f)
             subprocess.call('bjobs -a -d "' + jobid + '"', shell=True, stdout=f)
         with open(PATH.SYSTEM+'/'+'job_status', 'r') as f:
-            line_buf = f.readline()
-            line = f.readline()
-	    state = line.split()[2].strip()
-            #state = line.strip()
-
+            lines = f.readlines()
+            state = lines[1].split()[2].strip()
         return state
 
-
-
-#    def getnode(self):
-#        """ Gets number of running task
-#        """
-#        try:
-#            return int(os.getenv('SEISFLOWS_TASK_ID'))
-#        except:
-#            try:
-#                return int(os.getenv('SLURM_ARRAY_TASK_ID'))
-#            except:
-#                raise Exception("TASK_ID environment variable not defined.")
 
     def getnode(self):
         """ Gets number of running task
         """
         return int(os.getenv('LSB_JOBINDEX'))-1
 
+
     def timestamp(self):
         with open(PATH.SYSTEM+'/'+'timestamps', 'a') as f:
             line = time.strftime('%H:%M:%S')+'\n'
             f.write(line)
+
 
     def save_kwargs(self, classname, funcname, kwargs):
         kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
