@@ -1,9 +1,9 @@
 
 import numpy as np
-import scipy.signal
+from scipy.signal import hilbert
 
 
-def traveltime(wsyn, wobs, nt, dt):
+def Traveltime(wsyn, wobs, nt, dt):
     # cross correlation time
     cc = abs(np.convolve(wobs, np.flipud(wsyn)))
     cmax = 0
@@ -19,7 +19,7 @@ def traveltime(wsyn, wobs, nt, dt):
     return misfit
 
 
-def amplitude(wsyn, wobs, nt, dt):
+def Amplitude(wsyn, wobs, nt, dt):
     # cross correlation amplitude
     cc = np.convolve(wobs, np.flipud(wsyn))
     cmax = 0
@@ -29,23 +29,36 @@ def amplitude(wsyn, wobs, nt, dt):
             cmax = cc[it]
             ioff = it
     if ioff <= 0:
-        wdiff = wsyn[ioff:] - wobs[:-ioff]
+        wrsd = wsyn[ioff:] - wobs[:-ioff]
     else:
-        wdiff = wsyn[:-ioff] - wobs[ioff:]
-    return np.sqrt(np.sum(wdiff*wdiff*dt))
+        wrsd = wsyn[:-ioff] - wobs[ioff:]
+    return np.sqrt(np.sum(wrsd*wrsd*dt))
 
 
-def waveform(wsyn, wobs, nt, dt):
-    # waveform difference
-    wdiff = wsyn-wobs
-    return np.sqrt(np.sum(wdiff*wdiff*dt))
+def Waveform(wsyn, wobs, nt, dt):
+    # waveform rsderence
+    wrsd = wsyn-wobs
+    return np.sqrt(np.sum(wrsd*wrsd*dt))
 
 
-def envelope(wsyn, wobs, nt, dt, eps=0.05):
-    # envelope difference
-    esyn = abs(scipy.signal.hilbert(wsyn))
-    eobs = abs(scipy.signal.hilbert(wobs))
-    ediff = esyn-eobs
-    return np.sqrt(np.sum(ediff*ediff*dt))
+def Envelope(wsyn, wobs, nt, dt, eps=0.05):
+    # envelope rsderence
+    esyn = abs(hilbert(wsyn))
+    eobs = abs(hilbert(wobs))
+    ersd = esyn-eobs
+    return np.sqrt(np.sum(ersd*ersd*dt))
 
+
+def InstantaneousPhase(wsyn, wobs, nt, dt, eps=0.05):
+    # instantaneous phase 
+    r = np.real(hilbert(wsyn))
+    i = np.imag(hilbert(wsyn))
+    phi_syn = np.arctan2(i,r)
+
+    r = np.real(hilbert(wobs))
+    i = np.imag(hilbert(wobs))
+    phi_obs = np.arctan2(i,r)
+
+    phi_rsd = phi_syn - phi_obs
+    return np.sqrt(np.sum(phi_rsd*phi_rsd*dt))
 
