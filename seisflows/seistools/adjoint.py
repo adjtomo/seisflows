@@ -14,14 +14,14 @@ def Traveltime(wsyn, wobs, nt, dt):
     wadj = np.zeros(nt)
     wadj[1:-1] = (wsyn[2:] - wsyn[0:-2])/(2.*dt)
     wadj *= 1./(sum(wadj*wadj)*dt)
-    wadj *= misfit.wtime(wsyn,wobs,nt,dt)
+    wadj *= misfit.Traveltime(wsyn,wobs,nt,dt)
     return wadj
 
 
 def Amplitude(wsyn, wobs, nt, dt):
     # cross correlation amplitude
     wadj = 1./(sum(wsyn*wsyn)*dt) * wsyn
-    wadj *= misfit.wampl(wsyn,wobs,nt,dt)
+    wadj *= misfit.Amplitude(wsyn,wobs,nt,dt)
     return wadj
 
 
