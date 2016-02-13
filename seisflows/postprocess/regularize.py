@@ -20,12 +20,8 @@ import solver
 class regularize(loadclass('postprocess', 'base')):
     """ Adds regularization options to base class
 
-        Available options include 0-, 1-, and 2- order Tikhonov and total
-        variation regularization. While the underlying theory is classical,
-        these options are experimental in the sense that their application to
-        unstructured numerical grids is quite new.
-
-        SO FAR, CAN ONLY BE USED FOR 2D WAVEFORM INVERSION.
+        This parent class is only an abstract base class; see child classes
+        TIKHONOV1, TIKHONOV1, and TOTAL_VARIATION for usable regularization.
 
         Prior to regularizing gradient, near field artifacts must be corrected.
         The "FIXRADIUS" parameter specifies the radius, in number of GLL points,

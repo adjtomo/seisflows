@@ -25,7 +25,8 @@ class tikhonov1(loadclass('postprocess', 'regularize')):
         these options are experimental in the sense that their application to
         unstructured numerical grids is quite new.
 
-        SO FAR, CAN ONLY BE USED FOR 2D WAVEFORM INVERSION.
+        So far, can only be used for 2D inversion, because the required spatial
+        derivative operator "nabla" is not yet available for 3D grids.
     """
 
     def check(self):
