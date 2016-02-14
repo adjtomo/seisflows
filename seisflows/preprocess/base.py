@@ -20,13 +20,13 @@ class base(object):
         """ Checks parameters and paths
         """
         if 'MISFIT' not in PAR:
-            setattr(PAR, 'MISFIT', 'waveform')
+            setattr(PAR, 'MISFIT', 'Waveform')
 
         if 'CHANNELS' not in PAR:
             raise ParameterError(PAR, 'CHANNELS')
 
         if 'READER' not in PAR:
-            raise ParameterError(PAR, 'CHANNELS')
+            raise ParameterError(PAR, 'READER')
 
         if 'WRITER' not in PAR:
             setattr(PAR, 'WRITER', PAR.READER)
