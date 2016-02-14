@@ -131,6 +131,31 @@ class specfem3d(loadclass('solver', 'base')):
             raise NotImplementedError
 
 
+    def initialize_adjoint_traces(self):
+        """ Works around SPECFEM3D file format issue by overriding base method
+        """
+        try:
+           super(specfem3d, self).initialize_adjoint_traces()
+        except:
+           try:
+                import preprocess
+
+                path_obs = self.getpath+'/'+'traces/obs'
+                path_adj = self.getpath+'/'+'traces/adj'
+
+                # read observed data
+                _, h = preprocess.reader(path_obs, preprocess.channels[0])
+
+                zeros = np.zeros((h.nt, h.nr))
+
+                # write adjoint traces
+                for channel in ['x', 'y', 'z']:
+                        preprocess.writer(zeros, h, path_adj, channel)
+
+            except:
+                raise Exception('Seismic Unix format not supported for SPECFEM3D inversions because SPECFEM3D lacks an adequate parallel reader and writer')
+
+
     def write_parameters(self):
         unix.cd(self.getpath)
         solvertools.write_parameters(vars(PAR))
