@@ -137,7 +137,7 @@ class base(object):
                 memory=PAR.LBFGSMEM, 
                 maxiter=PAR.LBFGSMAX,   
                 thresh=PAR.LBFGSTHRESH,
-                precond=self.precond)
+                precond=self.precond())
 
         # write initial model
         if exists(PATH.MODEL_INIT):
@@ -146,7 +146,6 @@ class base(object):
             savenpy(dst, solver.merge(solver.load(src)))
 
 
-    @property
     def precond(self):
         """ Loads preconditioner machinery
         """
@@ -399,7 +398,6 @@ class base(object):
         self.stepwriter.newline()
 
 
-    @property
     def retry_status(self):
         """ Returns false if search direction was the same as gradient
           direction; returns true otherwise
