@@ -26,14 +26,14 @@ def Amplitude(wsyn, wobs, nt, dt):
 
 
 def Waveform(wsyn, wobs, nt, dt):
-    # waveform rsderence
+    # waveform difference
     # (Tromp et al. 2005, eq 9)
     wadj = wsyn - wobs
     return wadj
 
 
 def Envelope(wsyn, wobs, nt, dt, eps=0.05):
-    # envelope rsderence
+    # envelope difference
     esyn = abs(hilbert(wsyn))
     eobs = abs(hilbert(wobs))
     etmp = (esyn - eobs)/(esyn + eps*esyn.max())
@@ -53,15 +53,13 @@ def InstantaneousPhase(wsyn, wobs, nt, dt, eps=0.05):
 
     phi_rsd = phi_syn - phi_obs
     esyn = abs(hilbert(wsyn))
-    emax = max(esyn)
+    emax = max(esyn**2.)
 
     wadj = phi_rsd*np.imag(hilbert(wsyn))/(esyn**2. + eps*emax) + \
-           np.imag(hilbert(phi_rsd * wsyn)/(esyn**2. + eps*emax))
+           np.imag(hilbert(phi_rsd * wsyn/(esyn**2. + eps*emax)))
 
     return wadj
 
-
-###
 
 def precond1(d, s, h):
     s[1:-1,:] = (s[2:,:] - s[0:-2,:])/(2.*h.dt)
@@ -73,4 +71,5 @@ def precond1(d, s, h):
 
 def precond2(d, s, h):
     return -s
+
 
