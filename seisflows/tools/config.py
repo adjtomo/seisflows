@@ -121,7 +121,7 @@ class ParameterObj(object):
 
     def __delattr__(self, key):
         if key in self.__dict__:
-            raise TypeError("Once defined, parameters cannot deleted.")
+            raise TypeError("Once defined, parameters cannot be deleted.")
         raise KeyError
 
     def update(self, newdict):
@@ -210,8 +210,8 @@ class ParameterError(ValueError):
         elif len(args) == 1:
             msg = 'Bad parameter: %s' % args[0]
             super(ParameterError, self).__init__(msg)
-        elif args[0] not in args[1]:
-            msg = '%s is not defined.' % args[0]
+        elif args[1] not in args[0]:
+            msg = '%s is not defined.' % args[1]
             super(ParameterError, self).__init__(msg)
         elif key in obj:
             msg = '%s has bad value: ' % args[0], args[1].__getattr__(args[0])
