@@ -8,7 +8,7 @@ from seisflows.seistools.shared import SeisStruct
 from seisflows.seistools.segy import segywriter
 
 
-def ascii_specfem2d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''):
+def ascii_specfem2d(f, h, prefix='SEM', channel=None, suffix='adj', char='FX', opt=''):
     """ Writes seismic traces to text files
     """
 
@@ -26,7 +26,7 @@ def ascii_specfem2d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''
         else:
             raise ValueError('CHANNEL must be one of the following: x y z p')
         for i in range(h.nr):
-            files.append(fmt % (i + 1))
+            files.append(fmt % (i+1))
 
         # write data to files
         imin = int(_np.floor(h['t0']/h['dt']))
@@ -111,7 +111,7 @@ def su_specfem2d(d, h, prefix='SEM', channel=None, suffix='.su.adj'):
     segywriter.writesu(file, d, h)
 
 
-def ascii_specfem3d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''):
+def ascii_specfem3d(f, h, prefix='SEM', channel=None, suffix='adj', char='FX', opt=''):
     """ Writes seismic traces to text files
     """
 
@@ -167,7 +167,7 @@ def ascii_specfem3d(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''
             _np.savetxt(file, _np.column_stack((t, w)), '%11.4e')
 
 
-def su_specfem3d(d, h, channel=None, prefix='SEM', suffix='.adj', verbose=False):
+def su_specfem3d(d, h, prefix='SEM', channel=None, suffix='.adj', verbose=False):
     nproc = len(h.nn)
 
     if channel in ['x']:
@@ -210,7 +210,7 @@ def su_specfem3d(d, h, channel=None, prefix='SEM', suffix='.adj', verbose=False)
         segywriter.writesu(file, d_, h_)
 
 
-def ascii_specfem3d_globe(f, h, channel, char='FX', prefix='SEM', suffix='adj', opt=''):
+def ascii_specfem3d_globe(f, h, prefix='SEM', channel=None, suffix='adj', char='FX', opt=''):
     """ Writes seismic traces to text files
     """
 

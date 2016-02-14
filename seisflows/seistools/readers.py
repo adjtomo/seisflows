@@ -10,11 +10,38 @@ from seisflows.tools.code import Struct
 from seisflows.seistools.segy import segyreader
 
 
+def ascii_specfem2d_obspy(**kwargs):
+    """ Reads seismic traces from text files
+    """
+    from obspy.core.stream import Stream
+    from obspy.core.trace import Trace
+
+    filenames = glob(solver='specfem2d', **kwargs)
+
+    t = _np.loadtxt(files[0])[:,0]
+    nt = len(t)
+    nr = len(filenames)
+
+    d = Trace(data=np.zeros(nt, dtype='float32'))
+
+    trace.stats.starttime = t[0]
+    trace.stats.delta = _np.mean(_np.diff(t))
+    trace.stats.nt = len(t)
+
+    # read data
+    stream = Stream(t)*nr
+
+    for filename in filenames:
+        stream.data = _np.loadtxt(filename)[:, 1]
+
+    return stream
+
+
 def ascii_specfem2d(**kwargs):
     """ Reads seismic traces from text files
     """
-    files = glob(solver='2d',**kwargs)
-    t = _np.loadtxt(files[0])[:, 0]
+    files = glob(solver='specfem2d', **kwargs)
+    t = _np.loadtxt(files[0])[:,0]
     h = Struct()
     h['t0'] = t[0]
     h['nr'] = len(files)
@@ -78,7 +105,7 @@ def su_specfem2d(prefix='SEM', channel=None, suffix='.su'):
 def ascii_specfem3d(**kwargs):
     """ Reads seismic traces from text files
     """
-    files = glob(solver='3d',**kwargs)
+    files = glob(solver='specfem3d',**kwargs)
     t = _np.loadtxt(files[0])[:, 0]
     h = Struct()
     h['t0'] = t[0]
@@ -103,7 +130,7 @@ def ascii_specfem3d(**kwargs):
     return s, h
 
 
-def su_specfem3d(channel=None, prefix='SEM', suffix='', verbose=False):
+def su_specfem3d(prefix='SEM', channel=None, suffix='', verbose=False):
     """ Reads Seismic Unix file
     """
     if channel in ['x']:
@@ -174,10 +201,38 @@ def su_specfem3d(channel=None, prefix='SEM', suffix='', verbose=False):
     return d, h
 
 
+def su_specfem3d_obspy(prefix='SEM', channel=None, suffix='', byteorder='<', verbose=False):
+    """ Reads Seismic Unix file
+    """
+    from obspy.segy.core import readSU
+
+    if channel in ['x']:
+        wildcard = '%s/*_dx_SU%s' % (prefix, suffix)
+    elif channel in ['y']:
+        wildcard = '%s/*_dy_SU%s' % (prefix, suffix)
+    elif channel in ['z']:
+        wildcard = '%s/*_dz_SU%s' % (prefix, suffix)
+    elif channel in ['p']:
+        wildcard = '%s/*_dp_SU%s' % (prefix, suffix)
+    else:
+        raise ValueError('CHANNEL must be one of the following: x y z p')
+
+    filenamess = _glob.glob(wildcard)
+
+    sort_by = lambda x: int(unix.basename(x).split('_')[0])
+    filenames = sorted(filenamess, key=sort_by)
+
+    streamobj = readSU(filenames.pop(), byteorder=byteorder)
+    for filename in filenames:
+        streamobj += readSU(filename, byteorder=byteorder)
+
+    return streamobj
+
+
 def ascii_specfem3d_globe(**kwargs):
     """ Reads seismic traces from text files
     """
-    files = glob(solver='3d_globe', suffix='sem.ascii', **kwargs)
+    files = glob(solver='specfem3d_globe', suffix='sem.ascii', **kwargs)
     t = _np.loadtxt(files[0])[:, 0]
     h = Struct()
     h['t0'] = t[0]
@@ -204,13 +259,13 @@ def ascii_specfem3d_globe(**kwargs):
 
 ### utility functions
 
-def glob(files=None, channel=None, prefix='SEM', suffix='semd', solver='3d'):
+def glob(files=None, prefix='SEM', channel=None, suffix='semd', solver='specfem3d'):
     """ Looks for seismic traces in current directory
     """
     if files:
         return files
 
-    if solver=='2d':
+    if solver=='specfem2d':
         if channel in ['x']:
             wildcard = '%s/*.?XX.%s' % (prefix, suffix)
         elif channel in ['y']:
@@ -219,7 +274,7 @@ def glob(files=None, channel=None, prefix='SEM', suffix='semd', solver='3d'):
             wildcard = '%s/*.?XZ.%s' % (prefix, suffix)
         else:
             wildcard = '%s/*.?X?.%s' % (prefix, suffix)
-    elif solver=='3d':
+    elif solver=='specfem3d':
         if channel in ['x']:
             wildcard = '%s/*[xX]*.%s' % (prefix, suffix)
         elif channel in ['y']:
@@ -228,7 +283,7 @@ def glob(files=None, channel=None, prefix='SEM', suffix='semd', solver='3d'):
             wildcard = '%s/*[zZ]*.%s' % (prefix, suffix)
         else:
             raise ValueError('CHANNEL must be one of the following: x y z p')
-    elif solver=='3d_globe':
+    elif solver=='specfem3d_globe':
         if channel in ['e']:
             wildcard = '%s/*.?XE.%s' % (prefix, suffix)
         elif channel in ['n']:
