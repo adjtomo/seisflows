@@ -486,7 +486,7 @@ class base(object):
     ### utilities
 
     def dot(self,x,y):
-        """ Generalizes dot product between two vectors
+        """ Computes inner product between vectors
         """
         return np.dot(
             np.squeeze(x),
