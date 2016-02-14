@@ -114,24 +114,8 @@ class legacy(object):
         """ Performs data processing operations on traces
         """
         # filter data
-        if PAR.BANDPASS:
-            if PAR.FREQLO and PAR.FREQHI:
-                s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
-
-            elif PAR.FREQHI:
-                s = shighpass(s, h, PAR.FREQLO)
-
-            elif PAR.FREQHI:
-                s = slowpass(s, h, PAR.FREQHI)
-
-            else:
-                raise ParameterError(PAR, 'BANDPASS')
-
-        # mute direct arrival
-        if PAR.MUTE:
-            vel = PAR.MUTESLOPE
-            off = PAR.MUTECONST
-            s = smute(s, h, vel, off, constant_spacing=False)
+        if PAR.FREQLO and PAR.FREQHI:
+            s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
 
         return s
 
@@ -156,19 +140,7 @@ class legacy(object):
         for i in range(h.nr):
             s[:,i] = self.adjoint(s[:,i], d[:,i], h.nt, h.dt)
 
-        # bandpass once more
-        if PAR.BANDPASS:
-            if PAR.FREQLO and PAR.FREQHI:
-                s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI, 'reverse')
-
-            elif PAR.FREQHI:
-                s = shighpass(s, h, PAR.FREQLO, 'reverse')
-
-            elif PAR.FREQHI:
-                s = slowpass(s, h, PAR.FREQHI, 'reverse')
-
-            else:
-                raise ParameterError(PAR, 'BANDPASS')
+        # apply adjoint filters
 
         # normalize traces
         if PAR.NORMALIZE:
@@ -176,6 +148,12 @@ class legacy(object):
                 w = np.linalg.norm(d[:,ir], ord=2)
                 if w > 0: 
                     s[:,ir] /= w
+
+        # mute direct arrival
+        if PAR.MUTE:
+            vel = PAR.MUTESLOPE
+            off = PAR.MUTECONST
+            s = smute(s, h, vel, off, constant_spacing=False)
 
         return s
 
