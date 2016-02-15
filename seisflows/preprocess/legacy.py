@@ -75,16 +75,12 @@ class legacy(object):
     def setup(self):
         """ Sets up data preprocessing machinery
         """
-        # define misfit function
+        # define misfit function and adjoint source generator
         self.misfit = getattr(misfit, PAR.MISFIT)
-
-        # define adjoint trace generator
         self.adjoint = getattr(adjoint, PAR.MISFIT)
 
-        # define seismic data reader
+        # define seismic data reader and writer
         self.reader = getattr(readers, PAR.READER)
-
-        # define seismic data writer
         self.writer = getattr(writers, PAR.WRITER)
 
         # prepare channels list

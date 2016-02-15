@@ -107,16 +107,18 @@ class base(object):
     def process_traces(self, stream):
         """ Performs data processing operations on traces
         """
-        for i in len(stream):
-            trace[i].demean()
-            trace[i].detrend()
+        print ' Warning bandpass filter disabled'
 
-            dt = trace[i].stats.delta
-            df = dt**-1        
+        nt, dt, _ = self.get_time_scheme(stream)
+        n, _ = self.get_network_size(stream)
+        df = dt**-1
+
+        #for ir in range(n):
+            #stream[ir].detrend()
 
             # filter data
-            if PAR.FREQLO and PAR.FREQHI:
-                trace[i].filter('bandpass', PAR.PAR.FREQLO, PAR.FREQHI, df)
+            #if PAR.FREQLO and PAR.FREQHI:
+            #    stream[ir].filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
 
         return stream
 
@@ -149,7 +151,7 @@ class base(object):
             s[i].data = self.adjoint(s[i].data, d[i].data, nt, dt)
 
         # apply adjoint of filter
-        #s = self.process_traces()
+        #s = adjoint_filter(self.process_traces)(s)
 
         # normalize traces
         if PAR.NORMALIZE:
@@ -225,7 +227,7 @@ class base(object):
 
 
     def get_network_size(self, stream):
-        nrec = len(self, stream)
+        nrec = len(stream)
         nsrc = 1
         return nrec, nsrc
 
