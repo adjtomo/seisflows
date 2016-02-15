@@ -1,5 +1,4 @@
 *.exe
-*.idea
 *.pyc
 *.swp
 doc/_build

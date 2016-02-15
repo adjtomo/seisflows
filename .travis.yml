@@ -11,3 +11,4 @@ script:
   - coverage run --source seisflows -m unittest discover tests/unit/
 after_success:
   coveralls
+
