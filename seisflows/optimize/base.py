@@ -129,7 +129,7 @@ class base(object):
                 path=PATH.OPTIMIZE,
                 maxiter=PAR.NLCGMAX,
                 thresh=PAR.NLCGTHRESH,
-                precond=self.precond)
+                precond=self.precond())
 
         elif PAR.SCHEME in ['LBFGS']:
             self.LBFGS = LBFGS(
