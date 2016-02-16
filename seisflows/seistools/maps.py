@@ -214,7 +214,15 @@ def rho_gardner(dummy, keys, vals):
     input = Struct(zip(keys, vals))
 
     vp = input.vp
+    vs = input.vs
+
     rho = 310.*vp**0.25
+
+    rho_water = 1050
+
+    thresh = 1.0e-3
+
+    rho[vs < thresh] = rho_water
 
     return rho
 

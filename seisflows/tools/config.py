@@ -220,9 +220,8 @@ class ParameterError(ValueError):
 
 def loadclass(*args):
     """ Given name of module relative to package directory, returns
-        corresponding class
-
-        Note: The module should have a class with exactly the same name.
+        corresponding class. (The module should have a class with exactly the
+        same name.)
     """
     if not args:
         return Null
