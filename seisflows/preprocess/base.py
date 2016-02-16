@@ -1,7 +1,8 @@
 
 import numpy as np
+import obspy
 
-from seisflows.tools import unix
+from seisflows.tools import msg, unix
 from seisflows.tools.code import exists, Struct, string_types
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
@@ -20,13 +21,13 @@ class base(object):
         """ Checks parameters and paths
         """
         if 'MISFIT' not in PAR:
-            setattr(PAR, 'MISFIT', 'waveform')
+            setattr(PAR, 'MISFIT', 'Waveform')
 
         if 'CHANNELS' not in PAR:
             raise ParameterError(PAR, 'CHANNELS')
 
         if 'READER' not in PAR:
-            raise ParameterError(PAR, 'CHANNELS')
+            raise ParameterError(PAR, 'READER')
 
         if 'WRITER' not in PAR:
             setattr(PAR, 'WRITER', PAR.READER)
@@ -64,14 +65,11 @@ class base(object):
             raise ParameterError()
 
         if type(PAR.CHANNELS) not in string_types:
-            #print msg.ChannelError
+            print msg.ChannelError
             raise ParameterError()
 
-        try:
-            import obspy
-        except:
-            #print msg.obspyError
-            raise ImportError
+        if PAR.READER != PAR.WRITER:
+           print msg.DataFormatWarning % (PAR.READER, PAR.WRITER)
 
 
     def setup(self):
@@ -99,44 +97,37 @@ class base(object):
             obs = self.reader(path+'/'+'traces/obs/', channel)
             syn = self.reader(path+'/'+'traces/syn/', channel)
 
-            #obs = self.process_traces(obs)
-            #syn = self.process_traces(syn)
+            obs = self.process_traces(obs)
+            syn = self.process_traces(syn)
 
             self.write_residuals(path, syn, obs)
             self.write_adjoint_traces(path+'/'+'traces/adj/', syn, obs, channel)
 
 
-    def process_traces(self, s, h):
+    def process_traces(self, stream):
         """ Performs data processing operations on traces
         """
-        # filter data
-        if PAR.BANDPASS:
-            if PAR.FREQLO and PAR.FREQHI:
-                s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
+        print ' Warning bandpass filter disabled'
 
-            elif PAR.FREQHI:
-                s = shighpass(s, h, PAR.FREQLO)
+        nt, dt, _ = self.get_time_scheme(stream)
+        n, _ = self.get_network_size(stream)
+        df = dt**-1
 
-            elif PAR.FREQHI:
-                s = slowpass(s, h, PAR.FREQHI)
+        #for ir in range(n):
+            #stream[ir].detrend()
 
-            else:
-                raise ParameterError(PAR, 'BANDPASS')
+            # filter data
+            #if PAR.FREQLO and PAR.FREQHI:
+            #    stream[ir].filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
 
-        # mute direct arrival
-        if PAR.MUTE:
-            vel = PAR.MUTESLOPE
-            off = PAR.MUTECONST
-            s = smute(s, h, vel, off, constant_spacing=False)
-
-        return s
+        return stream
 
 
     def write_residuals(self, path, s, d):
         """ Computes residuals from observations and synthetics
         """
-        nt, dt, _ = get_time_scheme(s)
-        n, _ = get_network_size(s)
+        nt, dt, _ = self.get_time_scheme(s)
+        n, _ = self.get_network_size(s)
 
         filename = path +'/'+ 'residuals'
         if exists(filename):
@@ -153,11 +144,14 @@ class base(object):
     def write_adjoint_traces(self, path, s, d, channel):
         """ Generates adjoint traces from observed and synthetic traces
         """
-        nt, dt, _ = get_time_scheme(s)
-        n, _ = get_network_size(s)
+        nt, dt, _ = self.get_time_scheme(s)
+        n, _ = self.get_network_size(s)
 
         for i in range(n):
             s[i].data = self.adjoint(s[i].data, d[i].data, nt, dt)
+
+        # apply adjoint of filter
+        #s = adjoint_filter(self.process_traces)(s)
 
         # normalize traces
         if PAR.NORMALIZE:
@@ -165,6 +159,12 @@ class base(object):
                 w = np.linalg.norm(d[i], ord=2)
                 if w > 0: 
                     s[:,ir] /= w
+
+        # mute direct arrival
+        if PAR.MUTE:
+            vel = PAR.MUTESLOPE
+            off = PAR.MUTECONST
+            s = smute(s, h, vel, off, constant_spacing=False)
 
         self.writer(s, path, channel)
 
@@ -188,8 +188,8 @@ class base(object):
     def check_headers(self, data):
         """ Checks headers for consistency
         """
-        nt, dt, _ = get_time_scheme(data)
-        n, _ = get_network_size(data)
+        nt, dt, _ = self.get_time_scheme(data)
+        n, _ = self.get_network_size(data)
 
         if 'DT' in PAR:
             if dt != PAR.DT:
@@ -219,28 +219,30 @@ class base(object):
         self.writer(s, path, channel)
 
 
-def get_time_scheme(streamobj):
-    dt = PAR.DT
-    nt = PAR.NT
-    t0 = 0.
-    return dt, nt, t0
+    def get_time_scheme(self, stream):
+        dt = PAR.DT
+        nt = PAR.NT
+        t0 = 0.
+        return dt, nt, t0
 
 
-def get_network_size(streamobj):
-    nrec = len(streamobj)
-    nsrc = 1
-    return nrec, nsrc
+    def get_network_size(self, stream):
+        nrec = len(stream)
+        nsrc = 1
+        return nrec, nsrc
 
 
-def get_receiver_coords(streamobj):
-    xr = []
-    yr = []
-    zr = []
-    return xr, yr, zr
+    def get_receiver_coords(self, stream):
+        xr = []
+        yr = []
+        zr = []
+        return xr, yr, zr
 
 
-def get_source_coords(streamobj):
-    xr = []
-    yr = []
-    zr = []
-    return xs, ys, zs
+    def get_source_coords(self, stream):
+        xr = []
+        yr = []
+        zr = []
+        return xs, ys, zs
+
+

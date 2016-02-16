@@ -46,6 +46,25 @@ PARAMETER WARNING
 """
 
 
+obspyImportError = """
+OBSPY IMPORT ERROR
+
+    The current workflow requires obspy.  Install it and try again, or consider 
+    using legacy data processing class 'preprocess.legacy', which lacks this
+    requirement.
+
+"""
+
+DataFormatWarning = """
+DATA FORMAT WARNING
+
+    reader format: %s
+    writer format: %s
+
+    Incompatible file formats may result in job failure or other problems.
+
+"""
+
 ReaderError = """
 READER ERROR
 

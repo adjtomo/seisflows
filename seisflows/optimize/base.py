@@ -24,7 +24,7 @@ import solver
 class base(object):
     """ Nonlinear optimization base class.
 
-     Available nonlinear optimization algorithms include steepest descent (SD),
+     Available nonlinear optimization algorithms include steepest descent,
      nonlinear conjugate gradient (NLCG), and limited-memory BFGS (LBFGS). 
      Available step control algorithms include a backtracking line search and a
      bracketing line search.
@@ -129,7 +129,7 @@ class base(object):
                 path=PATH.OPTIMIZE,
                 maxiter=PAR.NLCGMAX,
                 thresh=PAR.NLCGTHRESH,
-                precond=self.precond)
+                precond=self.precond())
 
         elif PAR.SCHEME in ['LBFGS']:
             self.LBFGS = LBFGS(
@@ -137,7 +137,7 @@ class base(object):
                 memory=PAR.LBFGSMEM, 
                 maxiter=PAR.LBFGSMAX,   
                 thresh=PAR.LBFGSTHRESH,
-                precond=self.precond)
+                precond=self.precond())
 
         # write initial model
         if exists(PATH.MODEL_INIT):
@@ -146,7 +146,6 @@ class base(object):
             savenpy(dst, solver.merge(solver.load(src)))
 
 
-    @property
     def precond(self):
         """ Loads preconditioner machinery
         """
@@ -385,7 +384,7 @@ class base(object):
         self.save('m_new', m + alpha*p)
         savetxt('f_new', f.min())
 
-        # append latest output
+        # append latest statistics
         self.writer('factor', -self.dot(g,g)**-0.5 * (f[1]-f[0])/(x[1]-x[0]))
         self.writer('gradient_norm_L1', np.linalg.norm(g, 1))
         self.writer('gradient_norm_L2', np.linalg.norm(g, 2))
@@ -399,10 +398,9 @@ class base(object):
         self.stepwriter.newline()
 
 
-    @property
     def retry_status(self):
         """ Returns false if search direction was the same as gradient
-          direction. Returns true otherwise.
+          direction; returns true otherwise
         """
         unix.cd(PATH.OPTIMIZE)
 
@@ -411,7 +409,9 @@ class base(object):
 
         thresh = 1.e-3
         theta = angle(p,-g)
-        #print ' theta: %6.3f' % theta
+
+        if PAR.VERBOSE >= 2:
+            print ' theta: %6.3f' % theta
 
         if abs(theta) < thresh:
             return 0
@@ -445,6 +445,9 @@ class base(object):
     ### line search utilities
 
     def initial_step(self):
+        """ Determines first trial step in line search; see eg Nocedal and 
+          Wright 2e section 3.5
+        """
         alpha = loadtxt('alpha')
         s_new = loadtxt('s_new')
         s_old = loadtxt('s_old')
@@ -453,6 +456,8 @@ class base(object):
 
 
     def step_lens(self, sort=True):
+        """ Returns previous step lengths from search history
+        """
         x, f = zip(*self.search_history)
         x = np.array(x)
         f = np.array(f)
@@ -465,6 +470,8 @@ class base(object):
 
 
     def func_vals(self, sort=True):
+        """ Returns previous function values from search history
+        """
         x, f = zip(*self.search_history)
         x = np.array(x)
         f = np.array(f)
@@ -479,6 +486,8 @@ class base(object):
     ### utilities
 
     def dot(self,x,y):
+        """ Computes inner product between vectors
+        """
         return np.dot(
             np.squeeze(x),
             np.squeeze(y))

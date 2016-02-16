@@ -97,7 +97,6 @@ class migration(object):
         except:
             pass
 
-
         if PAR.SAVETRACES:
             self.save_traces()
 

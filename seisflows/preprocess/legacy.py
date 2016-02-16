@@ -24,13 +24,13 @@ class legacy(object):
         """ Checks parameters and paths
         """
         if 'MISFIT' not in PAR:
-            setattr(PAR, 'MISFIT', 'waveform')
+            setattr(PAR, 'MISFIT', 'Waveform')
 
         if 'CHANNELS' not in PAR:
             raise ParameterError(PAR, 'CHANNELS')
 
         if 'READER' not in PAR:
-            raise ParameterError(PAR, 'CHANNELS')
+            raise ParameterError(PAR, 'READER')
 
         if 'WRITER' not in PAR:
             setattr(PAR, 'WRITER', PAR.READER)
@@ -75,16 +75,12 @@ class legacy(object):
     def setup(self):
         """ Sets up data preprocessing machinery
         """
-        # define misfit function
+        # define misfit function and adjoint source generator
         self.misfit = getattr(misfit, PAR.MISFIT)
-
-        # define adjoint trace generator
         self.adjoint = getattr(adjoint, PAR.MISFIT)
 
-        # define seismic data reader
+        # define seismic data reader and writer
         self.reader = getattr(readers, PAR.READER)
-
-        # define seismic data writer
         self.writer = getattr(writers, PAR.WRITER)
 
         # prepare channels list
@@ -114,24 +110,8 @@ class legacy(object):
         """ Performs data processing operations on traces
         """
         # filter data
-        if PAR.BANDPASS:
-            if PAR.FREQLO and PAR.FREQHI:
-                s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
-
-            elif PAR.FREQHI:
-                s = shighpass(s, h, PAR.FREQLO)
-
-            elif PAR.FREQHI:
-                s = slowpass(s, h, PAR.FREQHI)
-
-            else:
-                raise ParameterError(PAR, 'BANDPASS')
-
-        # mute direct arrival
-        if PAR.MUTE:
-            vel = PAR.MUTESLOPE
-            off = PAR.MUTECONST
-            s = smute(s, h, vel, off, constant_spacing=False)
+        if PAR.FREQLO and PAR.FREQHI:
+            s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
 
         return s
 
@@ -156,19 +136,7 @@ class legacy(object):
         for i in range(h.nr):
             s[:,i] = self.adjoint(s[:,i], d[:,i], h.nt, h.dt)
 
-        # bandpass once more
-        if PAR.BANDPASS:
-            if PAR.FREQLO and PAR.FREQHI:
-                s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI, 'reverse')
-
-            elif PAR.FREQHI:
-                s = shighpass(s, h, PAR.FREQLO, 'reverse')
-
-            elif PAR.FREQHI:
-                s = slowpass(s, h, PAR.FREQHI, 'reverse')
-
-            else:
-                raise ParameterError(PAR, 'BANDPASS')
+        # apply adjoint filters
 
         # normalize traces
         if PAR.NORMALIZE:
@@ -176,6 +144,12 @@ class legacy(object):
                 w = np.linalg.norm(d[:,ir], ord=2)
                 if w > 0: 
                     s[:,ir] /= w
+
+        # mute direct arrival
+        if PAR.MUTE:
+            vel = PAR.MUTESLOPE
+            off = PAR.MUTECONST
+            s = smute(s, h, vel, off, constant_spacing=False)
 
         return s
 

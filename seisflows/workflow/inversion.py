@@ -182,7 +182,7 @@ class inversion(object):
                 optimize.compute_step()
                 continue
             else:
-                retry = optimize.retry_status
+                retry = optimize.retry_status()
                 if retry:
                     print ' Line search failed...\n\n Retrying...'
                     optimize.restart()

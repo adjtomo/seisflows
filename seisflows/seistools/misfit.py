@@ -36,13 +36,13 @@ def Amplitude(wsyn, wobs, nt, dt):
 
 
 def Waveform(wsyn, wobs, nt, dt):
-    # waveform rsderence
+    # waveform difference
     wrsd = wsyn-wobs
     return np.sqrt(np.sum(wrsd*wrsd*dt))
 
 
 def Envelope(wsyn, wobs, nt, dt, eps=0.05):
-    # envelope rsderence
+    # envelope difference
     esyn = abs(hilbert(wsyn))
     eobs = abs(hilbert(wobs))
     ersd = esyn-eobs
@@ -61,4 +61,5 @@ def InstantaneousPhase(wsyn, wobs, nt, dt, eps=0.05):
 
     phi_rsd = phi_syn - phi_obs
     return np.sqrt(np.sum(phi_rsd*phi_rsd*dt))
+
 
