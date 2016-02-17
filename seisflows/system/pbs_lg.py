@@ -141,28 +141,15 @@ class pbs_lg(loadclass('system', 'base')):
         """ Gets number of running task
         """
         try:
-            return int(os.getenv('SEISFLOWS_TASK_ID'))
+            return int(os.getenv('PBS_ARRAY_ID'))
         except:
-            try:
-                return int(os.getenv('PBS_ARRAY_TASK_ID'))
-            except:
-                raise Exception("TASK_ID environment variable not defined.")
+            raise Exception("TASK_ID environment variable not defined.")
 
 
     ### private methods
 
     def _launch(self, classname, funcname, hosts='all'):
         unix.mkdir(PATH.SYSTEM)
-
-        # prepare sbatch arguments
-        if hosts == 'all':
-            args = ('--array=%d-%d ' % (0,PAR.NTASK-1)
-                   +'--output %s ' % (PATH.SUBMIT+'/'+'output.pbs/'+'%A_%a'))
-
-        elif hosts == 'head':
-            args = ('--array=%d-%d ' % (0,0)
-                   +'--output=%s ' % (PATH.SUBMIT+'/'+'output.pbs/'+'%j'))
-                   #+('--export=SEISFLOWS_TASK_ID=%s ' % 0
 
         # submit job
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
@@ -174,6 +161,7 @@ class pbs_lg(loadclass('system', 'base')):
                 + '-l %s '%resources
                 + '-q standard '
                 + '-A ERDCH38424KSC '
+                + '-J 0-%s ' % PAR.NTASK
                 + '-N %s ' % PAR.TITLE
                 + ' -- ' + findpath('system') +'/'+ 'wrappers/runpbsdsh '
                 + PATH.OUTPUT + ' '
