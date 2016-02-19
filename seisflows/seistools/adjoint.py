@@ -1,75 +1,99 @@
 
-import numpy as np
-from scipy.signal import hilbert
+import numpy as _np
+from scipy.signal import hilbert as _analytic
 
-import misfit
+from seisflows.seistools import misfit
+from seisflows.tools.math import hilbert as _hilbert
 
 
 ### adjoint traces generators
 
 
-def Traveltime(wsyn, wobs, nt, dt):
+def Traveltime(syn, obs, nt, dt):
     # cross correlation traveltime
     # (Tromp et al. 2005, eq 45)
-    wadj = np.zeros(nt)
-    wadj[1:-1] = (wsyn[2:] - wsyn[0:-2])/(2.*dt)
+    wadj = _np.zeros(nt)
+    wadj[1:-1] = (syn[2:] - syn[0:-2])/(2.*dt)
     wadj *= 1./(sum(wadj*wadj)*dt)
-    wadj *= misfit.Traveltime(wsyn,wobs,nt,dt)
+    wadj *= misfit.Traveltime(syn,obs,nt,dt)
     return wadj
 
 
-def Amplitude(wsyn, wobs, nt, dt):
+def Amplitude(syn, obs, nt, dt):
     # cross correlation amplitude
-    wadj = 1./(sum(wsyn*wsyn)*dt) * wsyn
-    wadj *= misfit.Amplitude(wsyn,wobs,nt,dt)
+    wadj = 1./(sum(syn*syn)*dt) * syn
+    wadj *= misfit.Amplitude(syn,obs,nt,dt)
     return wadj
 
 
-def Waveform(wsyn, wobs, nt, dt):
+def Waveform(syn, obs, nt, dt):
     # waveform difference
     # (Tromp et al. 2005, eq 9)
-    wadj = wsyn - wobs
+    wadj = syn - obs
     return wadj
 
 
-def Envelope(wsyn, wobs, nt, dt, eps=0.05):
+def Envelope(syn, obs, nt, dt, eps=0.05):
     # envelope difference
-    esyn = abs(hilbert(wsyn))
-    eobs = abs(hilbert(wobs))
+    esyn = abs(_analytic(syn))
+    eobs = abs(_analytic(obs))
     etmp = (esyn - eobs)/(esyn + eps*esyn.max())
-    wadj = etmp*wsyn - np.imag(hilbert(etmp*np.imag(hilbert(wsyn))))
+    wadj = etmp*syn - _np.imag(_analytic(etmp*_np.imag(analytic(syn))))
     return wadj
 
 
-def InstantaneousPhase(wsyn, wobs, nt, dt, eps=0.05):
+def InstantaneousPhase(syn, obs, nt, dt, eps=0.05):
     # instantaneous phase 
-    r = np.real(hilbert(wsyn))
-    i = np.imag(hilbert(wsyn))
-    phi_syn = np.arctan2(i,r)
+    # (Bozdag et al. 2011, eq 27)
 
-    r = np.real(hilbert(wobs))
-    i = np.imag(hilbert(wobs))
-    phi_obs = np.arctan2(i,r)
+    r = _np.real(_analytic(syn))
+    i = _np.imag(_analytic(syn))
+    phi_syn = _np.arctan2(i,r)
+
+    r = _np.real(_analytic(obs))
+    i = _np.imag(_analytic(obs))
+    phi_obs = _np.arctan2(i,r)
 
     phi_rsd = phi_syn - phi_obs
-    esyn = abs(hilbert(wsyn))
+    esyn = abs(_analytic(syn))
     emax = max(esyn**2.)
 
-    wadj = phi_rsd*np.imag(hilbert(wsyn))/(esyn**2. + eps*emax) + \
-           np.imag(hilbert(phi_rsd * wsyn/(esyn**2. + eps*emax)))
+    wadj = phi_rsd*_np.imag(_analytic(syn))/(esyn**2. + eps*emax) + \
+           _np.imag(_analytic(phi_rsd * syn/(esyn**2. + eps*emax)))
 
     return wadj
 
 
-def precond1(d, s, h):
-    s[1:-1,:] = (s[2:,:] - s[0:-2,:])/(2.*h.dt)
-    s[1:-1,:] *= 1./(np.sum(s[1:-1,:]**2,axis=0)*h.dt)
-    s[0,:] = 0.
-    s[-1,:] = 0.
-    return s
+def Envelope3(syn, obs, nt, dt, eps=0.):
+    # envelope cross-correlation lag
+    # (Yuan et al 2015, eqs B-2, B-5)
+    esyn = abs(_analytic(syn))
+    eobs = abs(_analytic(obs))
+
+    erat = _np.zeros(nt)
+    erat[1:-1] = (esyn[2:] - esyn[0:-2])/(2.*dt)
+    erat[1:-1] /= esyn[1:-1]
+    erat *= misfit.Envelope3(syn, obs, nt, dt)
+
+    wadj = -erat*syn + _hilbert(erat*_hilbert(esyn))
+    return wadj
 
 
-def precond2(d, s, h):
-    return -s
+def AnalyticSignal(syn, obs, nt, dt, eps=0.):
+    esyn = abs(_analytic(syn))
+    eobs = abs(_analytic(obs))
+
+    esyn1 = esyn + eps*max(esyn)
+    eobs1 = eobs + eps*max(eobs)
+    esyn3 = esyn**3 + eps*max(esyn**3)
+
+    diff1 = syn/(esyn1) - obs/(eobs1)
+    diff2 = _hilbert(syn)/esyn1 - hilbert(obs)/eobs1
+
+    part1 = diff1*_hilbert(syn)**2/esyn3 - diff2*syn*hilbert(syn)/esyn3
+    part2 = diff1*syn*_hilbert(syn)/esyn3 - diff2*syn**2/esyn3
+
+    wadj = part1 + _hilbert(part2)
+    return wadj
 
 

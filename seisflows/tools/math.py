@@ -4,6 +4,9 @@ import numpy as np
 import scipy.signal as _signal
 import scipy.interpolate as _interp
 
+from scipy.signal import hilbert as analytic
+
+
 
 def nabla(Z, order=1, dx=1., dy=1.):
     """ Returns sum of n-th order spatial derivatives of a function defined on
@@ -139,5 +142,10 @@ def dot(x,y):
     return np.dot(
         np.squeeze(x),
         np.squeeze(y))
+
+
+def hilbert(w):
+    return np.imag(analytic(w))
+
 
 

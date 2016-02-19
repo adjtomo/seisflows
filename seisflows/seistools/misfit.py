@@ -1,11 +1,11 @@
 
-import numpy as np
-from scipy.signal import hilbert
+import numpy as _np
+from scipy.signal import hilbert as analytic
 
 
-def Traveltime(wsyn, wobs, nt, dt):
+def Traveltime(syn, obs, nt, dt):
     # cross correlation time
-    cc = abs(np.convolve(wobs, np.flipud(wsyn)))
+    cc = abs(_np.convolve(obs, _np.flipud(syn)))
     cmax = 0
     misfit = 0.
     ioff = None
@@ -19,9 +19,9 @@ def Traveltime(wsyn, wobs, nt, dt):
     return misfit
 
 
-def Amplitude(wsyn, wobs, nt, dt):
+def Amplitude(syn, obs, nt, dt):
     # cross correlation amplitude
-    cc = np.convolve(wobs, np.flipud(wsyn))
+    cc = _np.convolve(obs, _np.flipud(syn))
     cmax = 0
     ioff = 0
     for it in range(2*nt-1):
@@ -29,37 +29,75 @@ def Amplitude(wsyn, wobs, nt, dt):
             cmax = cc[it]
             ioff = it
     if ioff <= 0:
-        wrsd = wsyn[ioff:] - wobs[:-ioff]
+        wrsd = syn[ioff:] - obs[:-ioff]
     else:
-        wrsd = wsyn[:-ioff] - wobs[ioff:]
-    return np.sqrt(np.sum(wrsd*wrsd*dt))
+        wrsd = syn[:-ioff] - obs[ioff:]
+    return _np.sqrt(_np.sum(wrsd*wrsd*dt))
 
 
-def Waveform(wsyn, wobs, nt, dt):
+def Waveform(syn, obs, nt, dt):
     # waveform difference
-    wrsd = wsyn-wobs
-    return np.sqrt(np.sum(wrsd*wrsd*dt))
+    wrsd = syn-obs
+    return _np.sqrt(_np.sum(wrsd*wrsd*dt))
 
 
-def Envelope(wsyn, wobs, nt, dt, eps=0.05):
+def Envelope(syn, obs, nt, dt, eps=0.05):
     # envelope difference
-    esyn = abs(hilbert(wsyn))
-    eobs = abs(hilbert(wobs))
+    esyn = abs(analytic(syn))
+    eobs = abs(analytic(obs))
     ersd = esyn-eobs
-    return np.sqrt(np.sum(ersd*ersd*dt))
+    return _np.sqrt(_np.sum(ersd*ersd*dt))
 
 
-def InstantaneousPhase(wsyn, wobs, nt, dt, eps=0.05):
+def Traveltime(syn, obs, nt, dt):
+    # cross correlation time
+    cc = abs(_np.convolve(obs, _np.flipud(syn)))
+    cmax = 0
+    misfit = 0.
+    ioff = None
+    for it in range(2*nt-1):
+        if cc[it] > cmax:
+            cmax = cc[it]
+            ioff = it
+            misfit = (ioff-nt+1)*dt
+    if ioff is not None:
+        misfit = (ioff-nt+1)*dt
+    return misfit
+
+
+def InstantaneousPhase(syn, obs, nt, dt, eps=0.05):
     # instantaneous phase 
-    r = np.real(hilbert(wsyn))
-    i = np.imag(hilbert(wsyn))
-    phi_syn = np.arctan2(i,r)
+    # from Bozdag et al. 2011
 
-    r = np.real(hilbert(wobs))
-    i = np.imag(hilbert(wobs))
-    phi_obs = np.arctan2(i,r)
+    r = _np.real(analytic(syn))
+    i = _np.imag(analytic(syn))
+    phi_syn = _np.arctan2(i,r)
+
+    r = _np.real(analytic(obs))
+    i = _np.imag(analytic(obs))
+    phi_obs = _np.arctan2(i,r)
 
     phi_rsd = phi_syn - phi_obs
-    return np.sqrt(np.sum(phi_rsd*phi_rsd*dt))
+    return _np.sqrt(_np.sum(phi_rsd*phi_rsd*dt))
 
+
+def Envelope3(syn, obs, nt, dt, eps=0.):
+    # envelope cross-correlation lag
+    # (Yuan et al 2015, eqs B-2, B-5)
+    esyn = abs(analytic(syn))
+    eobs = abs(analytic(obs))
+    return Traveltime(esyn, eobs, nt, dt)
+
+
+
+def AnalyticSignal(syn, obs, nt, dt, eps=0.):
+    esyn = abs(analytic(syn))
+    eobs = abs(analytic(obs))
+
+    esyn1 = esyn + eps*max(esyn)
+    eobs1 = eobs + eps*max(eobs)
+
+    diff = syn/esyn1 - obs/eobs1
+
+    return _np.sqrt(_np.sum(diff*diff*dt))
 
