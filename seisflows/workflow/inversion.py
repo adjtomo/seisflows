@@ -199,7 +199,7 @@ class inversion(object):
           optimize.update_status, which maintains search history and checks
           stopping conditions.
         """
-        if PAR.VERBOSE:
+        if PAR.VERBOSE > 1:
             print " trial step", optimize.step_count+1
 
         self.evaluate_function()

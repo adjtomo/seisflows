@@ -16,7 +16,7 @@ import solver
 
 
 class base(object):
-    """ Postprocessing class
+    """ Gradient postprocessing class
     """
 
     def check(self):
