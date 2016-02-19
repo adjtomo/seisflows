@@ -88,7 +88,7 @@ class parallel(loadclass('system', 'serial')):
         env += [['SEISFLOWS_TASKID', str(itask)]]
 
         p = Popen(
-            findpath('system') +'/'+ 'slurm/wrapper_srun '
+            findpath('system') +'/'+ 'wrappers/run '
             + PATH.OUTPUT + ' '
             + classname + ' '
             + funcname,
