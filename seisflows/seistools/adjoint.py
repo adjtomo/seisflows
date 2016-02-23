@@ -11,7 +11,7 @@ from seisflows.tools.math import hilbert as _hilbert
 
 def Traveltime(syn, obs, nt, dt):
     # cross correlation traveltime
-    # (Tromp et al. 2005, eq 45)
+    # (Tromp et al 2005, eq 45)
     wadj = _np.zeros(nt)
     wadj[1:-1] = (syn[2:] - syn[0:-2])/(2.*dt)
     wadj *= 1./(sum(wadj*wadj)*dt)
@@ -28,24 +28,24 @@ def Amplitude(syn, obs, nt, dt):
 
 def Waveform(syn, obs, nt, dt):
     # waveform difference
-    # (Tromp et al. 2005, eq 9)
+    # (Tromp et al 2005, eq 9)
     wadj = syn - obs
     return wadj
 
 
 def Envelope(syn, obs, nt, dt, eps=0.05):
     # envelope difference
+    # (Yuan et al 2015, eq 16)
     esyn = abs(_analytic(syn))
     eobs = abs(_analytic(obs))
     etmp = (esyn - eobs)/(esyn + eps*esyn.max())
-    wadj = etmp*syn - _np.imag(_analytic(etmp*_np.imag(analytic(syn))))
+    wadj = etmp*syn - _np.imag(_analytic(etmp*_np.imag(_analytic(syn))))
     return wadj
 
 
 def InstantaneousPhase(syn, obs, nt, dt, eps=0.05):
     # instantaneous phase 
-    # (Bozdag et al. 2011, eq 27)
-
+    # (Bozdag et al 2011, eq 27)
     r = _np.real(_analytic(syn))
     i = _np.imag(_analytic(syn))
     phi_syn = _np.arctan2(i,r)
@@ -64,8 +64,14 @@ def InstantaneousPhase(syn, obs, nt, dt, eps=0.05):
     return wadj
 
 
+def Envelope2(syn, obs, nt, dt, eps=0.):
+    # envelope amplitude ratio
+    # (Yuan et al 2015, eqs B-2, B-3)
+    raise NotImplementedError
+
+
 def Envelope3(syn, obs, nt, dt, eps=0.):
-    # envelope cross-correlation lag
+    # envelope lag
     # (Yuan et al 2015, eqs B-2, B-5)
     esyn = abs(_analytic(syn))
     eobs = abs(_analytic(obs))
@@ -88,9 +94,9 @@ def AnalyticSignal(syn, obs, nt, dt, eps=0.):
     esyn3 = esyn**3 + eps*max(esyn**3)
 
     diff1 = syn/(esyn1) - obs/(eobs1)
-    diff2 = _hilbert(syn)/esyn1 - hilbert(obs)/eobs1
+    diff2 = _hilbert(syn)/esyn1 - _hilbert(obs)/eobs1
 
-    part1 = diff1*_hilbert(syn)**2/esyn3 - diff2*syn*hilbert(syn)/esyn3
+    part1 = diff1*_hilbert(syn)**2/esyn3 - diff2*syn*_hilbert(syn)/esyn3
     part2 = diff1*syn*_hilbert(syn)/esyn3 - diff2*syn**2/esyn3
 
     wadj = part1 + _hilbert(part2)

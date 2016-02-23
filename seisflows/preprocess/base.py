@@ -94,14 +94,14 @@ class base(object):
           adjoint traces
         """
         for channel in self.channels:
-            obs = self.reader(path+'/'+'traces/obs/', channel)
-            syn = self.reader(path+'/'+'traces/syn/', channel)
+            obs = self.reader(path+'/'+'traces/obs', channel)
+            syn = self.reader(path+'/'+'traces/syn', channel)
 
             obs = self.process_traces(obs)
             syn = self.process_traces(syn)
 
             self.write_residuals(path, syn, obs)
-            self.write_adjoint_traces(path+'/'+'traces/adj/', syn, obs, channel)
+            self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, channel)
 
 
     def process_traces(self, stream):
@@ -223,7 +223,7 @@ class base(object):
         dt = PAR.DT
         nt = PAR.NT
         t0 = 0.
-        return dt, nt, t0
+        return nt, dt, t0
 
 
     def get_network_size(self, stream):
