@@ -88,8 +88,7 @@ def su_specfem2d_obspy(d, prefix='SEM', channel=None, suffix='.su.adj'):
             t.stats.delta = dummy_delta
 
     # write data to file
-    from obspy.segy.core import writeSU
-    writeSU(d, file)
+    d.write(file, format='SU')
 
 
 
