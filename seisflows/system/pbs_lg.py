@@ -86,25 +86,16 @@ class pbs_lg(loadclass('system', 'base')):
 
         self.checkpoint()
 
-        # construct resource list
-        nodes = PAR.NTASK/PAR.NODESIZE
-        cores = PAR.NTASK%PAR.NODESIZE
         hours = PAR.WALLTIME/60
         minutes = PAR.WALLTIME%60
-        resources = 'walltime=%02d:%02d:00 '%(hours, 10)
-        #if nodes == 0:
-        #    resources += ',nodes=1:ppn=%d'%cores
-        #lif cores == 0:
-         #   resources += ',nodes=%d:ppn=16'%nodes
-        #else:
-        #    resources += ',nodes=%d:ppn=16+1:ppn=%d'%(nodes, cores)
+        walltime = 'walltime=%02d:%02d:00 '%(hours, minutes)
 
         # prepare qsub arguments
-        print('qsub -l select=1:ncpus=32:mpiprocs=2 -A ERDCH38424KSC -q debug -N %s -o %s -l %s -j %s')%(PAR.SUBTITLE, 'output.log', resources, 'oe'+findpath('system')+'/'+'wrapper/submit ' + PATH.OUTPUT)
+        # print('qsub -l select=1:ncpus=32:mpiprocs=2 -A ERDCH38424KSC -q debug -N %s -o %s -l %s -j %s')%(PAR.SUBTITLE, 'output.log', resources, 'oe'+findpath('system')+'/'+'wrapper/submit ' + PATH.OUTPUT)
 
         args = ('qsub '
-                + '-l select=1:ncpus=32:mpiprocs=4 '
-                + '-l %s '%resources
+                + '-l select=1:ncpus=%d:mpiprocs=32 ' % PAR.NODESIZE
+                + '-l %s ' % walltime
                 + '-q standard '
                 + '-A ERDCH38424KSC '
                 + '-N %s ' % PAR.SUBTITLE
@@ -114,20 +105,20 @@ class pbs_lg(loadclass('system', 'base')):
                 + ' -- ' + findpath('system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
 
-        print 'args:', args
+        # print 'args:', args
 
         subprocess.call(args, shell=True)
 
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts.
         """
-        print("made it to beginning of run")
+        # print("made it to beginning of run")
         self.checkpoint()
 
         self.save_kwargs(classname, funcname, kwargs)
         jobs = self._launch(classname, funcname, hosts)
         while 1:
-            time.sleep(10.*PAR.SLEEPTIME)
+            time.sleep(60.*PAR.SLEEPTIME)
             self._timestamp()
             isdone, jobs = self._status(classname, funcname, jobs)
             if isdone:
@@ -152,14 +143,27 @@ class pbs_lg(loadclass('system', 'base')):
     def _launch(self, classname, funcname, hosts='all'):
         unix.mkdir(PATH.SYSTEM)
 
+        # prepare qsub arguments
+        if hosts == 'all':
+          arg = ('-J 0-%s ' % (PAR.NTASK-1)
+                +'-o %s ' % (PATH.SUBMIT+'/'+'output.pbs/' + '$PBS_ARRAYID')
+                + ' -- ' + findpath('system') +'/'+ 'wrappers/run_pbsdsh ')
+
+        elif hosts == 'head':
+          arg = ('-J 0-0 '
+                 +'-o %s ' % (PATH.SUBMIT+'/'+'output.pbs/' + '$PBS_JOBID')
+                 + ' -- ' + findpath('system') +'/'+ 'wrappers/run_pbsdsh_head ')
+
         # submit job
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
-            hours = PAR.WALLTIME/60
-            minutes = PAR.WALLTIME%60
-            resources = 'walltime=%02d:%02d:00 '%(hours, minutes)
+            nodes = math.ceil(PAR.NTASK/float(PAR.NODESIZE))
+            cores = PAR.NTASK%PAR.NODESIZE
+            hours = PAR.STEPTIME/60
+            minutes = PAR.STEPTIME%60
+            walltime = 'walltime=%02d:%02d:00 '%(hours, minutes)
             args = ('/opt/pbs/12.1.1.131502/bin/qsub '
-                + '-l select=1:ncpus=32:mpiprocs=4 '
-                + '-l %s '%resources
+                + '-l select=%d:ncpus=%d:mpiprocs=%d ' (nodes,PAR.NODESIZE,cores)
+                + '-l %s ' % walltime
                 + '-q standard '
                 + '-A ERDCH38424KSC '
                 + '-J 0-%s ' % (PAR.NTASK-1)
@@ -168,16 +172,16 @@ class pbs_lg(loadclass('system', 'base')):
                 + '-r y '
                 + '-j oe '
                 + '-V '
-                + ' -- ' + findpath('system') +'/'+ 'wrappers/run_pbsdsh '
+                + arg
                 + PATH.OUTPUT + ' '
                 + classname + ' '
                 + funcname + ' '
-                + '/work/jas11/SEISFLOWS')
+                + findpath('seisflows'))
            
-            print(args)
+            # print(args)
             subprocess.call(args, shell=1, stdout=f)
 
-        print("made it here to job id")
+        # print("made it here to job id")
         # retrieve job ids
         with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
             line = f.readline()
@@ -186,7 +190,7 @@ class pbs_lg(loadclass('system', 'base')):
             nn = range(PAR.NTASK)
             # take number[].sdb and replace with number[str(ii)]].sdb
             jobMain = job.split('[',1)[0]
-            print(jobMain)
+            # print(jobMain)
             return [jobMain+'['+str(ii)+'].sdb' for ii in nn]
         else:
             return [job]
