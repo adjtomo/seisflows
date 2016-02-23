@@ -118,6 +118,9 @@ class inversion(object):
             print "Starting iteration", optimize.iter
             self.initialize()
 
+            print "Computing gradient"
+            self.evaluate_gradient()
+
             print "Computing search direction"
             self.compute_direction()
 
@@ -143,6 +146,11 @@ class inversion(object):
             postprocess.setup()
             optimize.setup()
 
+        if PATH.DATA:
+            print 'Copying data...' 
+        else:
+            print 'Generating data...' 
+
         system.run('solver', 'setup', 
                    hosts='all')
 
@@ -163,7 +171,6 @@ class inversion(object):
     def compute_direction(self):
         """ Computes search direction
         """
-        self.evaluate_gradient()
         optimize.compute_direction()
 
 
@@ -199,7 +206,7 @@ class inversion(object):
           optimize.update_status, which maintains search history and checks
           stopping conditions.
         """
-        if PAR.VERBOSE > 1:
+        if PAR.VERBOSE > 0:
             print " trial step", optimize.step_count+1
 
         self.evaluate_function()
