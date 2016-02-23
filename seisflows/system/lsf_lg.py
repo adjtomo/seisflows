@@ -60,6 +60,9 @@ class lsf_lg(loadclass('system', 'base')):
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
+        if 'LSF_ARGS' not in PAR:
+            setattr(PAR, 'LSF_ARGS', '')
+
         # check paths
         if 'GLOBAL' not in PATH:
             setattr(PATH, 'GLOBAL', join(abspath('.'), 'scratch'))
@@ -90,16 +93,15 @@ class lsf_lg(loadclass('system', 'base')):
 
         # prepare bsub arguments
         unix.run('bsub '
-                + '-a intelmpi '
+                + PAR.LSF_ARGS + ' '
                 + '-J %s ' % PAR.SUBTITLE
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
-                + '-n %d ' % 16
+                + '-n %d ' % PAR.NODESIZE
                 + '-e %s ' % (PATH.SUBMIT+'/'+'error.log')
                 + '-R "span[ptile=%d' % PAR.NODESIZE + ']" '
                 + '-W %d:00 ' % PAR.WALLTIME
                 +  findpath('system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
-
 
 
     def run(self, classname, funcname, hosts='all', **kwargs):
@@ -108,43 +110,33 @@ class lsf_lg(loadclass('system', 'base')):
         self.save_objects()
         self.save_kwargs(classname, funcname, kwargs)
         jobs = self.launch(classname, funcname, hosts)
-        while 1:
-            # pauses python program
+        while True:
+            # wait a few seconds before checking status
             time.sleep(60*PAR.SLEEPTIME)
+
             self.timestamp()
             isdone, jobs = self.task_status(classname, funcname, jobs)
             if isdone:
                 return
 
 
-
     def launch(self, classname, funcname, hosts='all'):
         unix.mkdir(PATH.SYSTEM)
-
-        # prepare bsub arguments
-        if hosts == 'all':
-            args = ('[%d-%d]' % (1,PAR.NSRC) + '%' + '%d" ' %(PAR.NTASK)                             
-                   + '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J_%I'))
-
-        elif hosts == 'head':
-            args = ('[%d-%d]" ' % (1,1)
-                   + '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J'))
 
         # submit job
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
             subprocess.call('bsub '
-                + '-a intelmpi '
-                + '-q LAURE_USERS '
+                + PAR.LSF_ARGS + ' '
                 + '-n %d ' % PAR.NPROC 
-                + '-R "span[ptile=%d' % PAR.NODESIZE + ']" '
+                + '-R "span[ptile=%d]" ' % PAR.NODESIZE
                 + '-W %d:00 ' % PAR.STEPTIME
                 + '-J "%s' %PAR.SUBTITLE
-                + args
+                + self.launch_args(hosts)
                 + findpath('system') +'/'+ 'wrapper/run '
                 + PATH.OUTPUT + ' '
                 + classname + ' '
                 + funcname + ' ',
-                shell=1,
+                shell=True,
                 stdout=f)
 
         # retrieve job ids
@@ -172,14 +164,26 @@ class lsf_lg(loadclass('system', 'base')):
                 states += [0]
             if state in ['EXIT']:
                 print 'LSF job failed: %s ' %job
-                #print msg.TaskError_LSF % (classname, funcname, job)
+                print msg.TaskError_LSF % (classname, funcname, job)
                 sys.exit(-1)
-
-        # return True if all elements of the states are true
-        # (or if the state is empty)
         isdone = all(states)
 
         return isdone, jobs
+
+
+    def launch_args(self, hosts):
+        if hosts == 'all':
+            args = ''
+            args += '[%d-%d] %% %d' % (1, PAR.NSRC, PAR.NTASK)
+            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J_%I'))
+
+        elif hosts == 'head':
+            args = ''
+            args += '[%d-%d]' % (1, 1)
+            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J'))
+
+        return args
+
 
 
     def mpiargs(self):
