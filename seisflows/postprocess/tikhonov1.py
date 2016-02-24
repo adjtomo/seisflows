@@ -22,8 +22,8 @@ class tikhonov1(loadclass('postprocess', 'regularize')):
 
         Available options include 0-, 1-, and 2- order Tikhonov and total
         variation regularization. While the underlying theory is classical,
-        these options are experimental in the sense that their application to
-        unstructured numerical grids is quite new.
+        application to unstructured numerical grids via the
+        "seisflows.tools.math.nabla" operator is somewhat complicated. 
 
         So far, can only be used for 2D inversion, because the required spatial
         derivative operator "nabla" is not yet available for 3D grids.
