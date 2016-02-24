@@ -49,6 +49,9 @@ class slurm_sm(loadclass('system', 'base')):
         if 'NTASK' not in PAR:
             raise ParameterError(PAR, 'NTASK')
 
+        if 'SLURM_ARGS' not in PAR:
+            setattr(PAR, 'SLURM_ARGS', '')
+
         # check paths
         if 'GLOBAL' not in PATH:
             setattr(PATH, 'GLOBAL', join(abspath('.'), 'scratch'))
@@ -73,6 +76,7 @@ class slurm_sm(loadclass('system', 'base')):
 
         # submit workflow
         unix.run('sbatch '
+                + PAR.SLURM_ARGS + ' '
                 + '--job-name=%s '%PAR.SUBTITLE
                 + '--output=%s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '--cpus-per-task=%d '%PAR.NPROC

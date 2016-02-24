@@ -49,7 +49,7 @@ class parallel(loadclass('system', 'serial')):
             running_tasks = dict()
             queued_tasks = range(PAR.NTASK)
 
-            while 1:
+            while True:
                 # check running tasks
                 for i, p in running_tasks.items():
                     if p.poll() != None:

@@ -116,7 +116,7 @@ class pbs_lg(loadclass('system', 'base')):
 
         self.save_kwargs(classname, funcname, kwargs)
         jobs = self._launch(classname, funcname, hosts)
-        while 1:
+        while True:
             time.sleep(60.*PAR.SLEEPTIME)
             self._timestamp()
             isdone, jobs = self._status(classname, funcname, jobs)

@@ -90,6 +90,7 @@ class pbs_sm(object):
 
         # construct arguments list
         unix.run('qsub '
+                + PAR.PBS_ARGS + ' '
                 + '-N %s '%PAR.TITLE
                 + '-o %s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '-l %s '%resources
