@@ -217,6 +217,7 @@ class pbs_lg(loadclass('system', 'base')):
     def _query(self, jobid):
         """ Queries job state from PBS database
         """
+        # TODO: replace shell utilities with native Python
         with open(PATH.SYSTEM+'/'+'job_status', 'w') as f:
             subprocess.call('qstat -x -tJ ' + jobid + ' | '
                 + 'tail -n 1 ' + ' | '
