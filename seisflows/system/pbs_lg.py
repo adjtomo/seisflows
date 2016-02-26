@@ -157,7 +157,7 @@ class pbs_lg(loadclass('system', 'base')):
                 + '-l select=%d:ncpus=%d:mpiprocs=%d ' (nodes, ncpus, mpiprocs)
                 + '-l %s ' % walltime
                 + '-J 0-%s ' % (PAR.NTASK-1)
-                + '-N %s ' % PAR.TITLE
+                + '-N %s ' % PAR.SUBTITLE
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.pbs/' + '$PBS_ARRAYID')
                 + '-r y '
                 + '-j oe '

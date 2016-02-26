@@ -126,12 +126,9 @@ class slurm_lg(loadclass('system', 'base')):
         """ Gets number of running task
         """
         try:
-            return int(os.getenv('SEISFLOWS_TASK_ID'))
+            return int(os.getenv('SLURM_ARRAY_TASK_ID'))
         except:
-            try:
-                return int(os.getenv('SLURM_ARRAY_TASK_ID'))
-            except:
-                raise Exception("TASK_ID environment variable not defined.")
+            raise Exception("TASK_ID environment variable not defined.")
 
 
     ### private methods
@@ -139,25 +136,15 @@ class slurm_lg(loadclass('system', 'base')):
     def _launch(self, classname, funcname, hosts='all'):
         unix.mkdir(PATH.SYSTEM)
 
-        # prepare sbatch arguments
-        if hosts == 'all':
-            args = ('--array=%d-%d ' % (0,PAR.NTASK-1)
-                   +'--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A_%a'))
-
-        elif hosts == 'head':
-            args = ('--array=%d-%d ' % (0,0)
-                   +'--output=%s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%j'))
-                   #+('--export=SEISFLOWS_TASK_ID=%s ' % 0
-
-        # submit job
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
             subprocess.call('sbatch '
                 + PAR.SLURM_ARGS + ' '
-                + '--job-name=%s ' % PAR.TITLE
+                + '--job-name=%s ' % PAR.SUBTITLE
                 + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
                 + '--ntasks-per-node=%d ' % PAR.NODESIZE
+                + '--ntasks=%d ' % PAR.NPROC
                 + '--time=%d ' % PAR.STEPTIME
-                + args
+                + self._launch_args(hosts)
                 + findpath('system') +'/'+ 'wrappers/run '
                 + PATH.OUTPUT + ' '
                 + classname + ' '
@@ -173,6 +160,18 @@ class slurm_lg(loadclass('system', 'base')):
             return [job+'_'+str(ii) for ii in range(PAR.NTASK)]
         else:
             return [job]
+
+
+    def _launch_args(self, hosts):
+        if hosts == 'all':
+            args = ('--array=%d-%d ' % (0,PAR.NTASK-1)
+                   +'--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A_%a'))
+
+        elif hosts == 'head':
+            args = ('--array=%d-%d ' % (0,0)
+                   +'--output=%s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%j'))
+
+        return args
 
 
     def _status(self, classname, funcname, jobs):
