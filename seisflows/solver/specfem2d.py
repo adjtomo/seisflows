@@ -229,23 +229,3 @@ class specfem2d(loadclass('solver', 'base')):
     def source_prefix(self):
         return 'SOURCE'
 
-
-    def combine(self, path='', parameters=[]):
-        """ Sums individual source contributions. Wrapper over xcombine_sem
-            utility.
-        """
-        unix.cd(self.getpath)
-
-        names = self.check_source_names()
-        with open('kernel_paths', 'w') as f:
-            f.writelines([join(path, dir)+'\n' for dir in names])
-
-        unix.mkdir(path +'/'+ 'sum')
-        for name in parameters:
-            self.mpirun(
-                PATH.SPECFEM_BIN +'/'+ 'xcombine_sem '
-                + name + '_kernel' + ' '
-                + 'kernel_paths' + ' '
-                + path +'/'+ 'sum')
-
-
