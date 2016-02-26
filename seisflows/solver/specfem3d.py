@@ -152,7 +152,7 @@ class specfem3d(loadclass('solver', 'base')):
                 for channel in ['x', 'y', 'z']:
                         preprocess.writer(zeros, h, path_adj, channel)
 
-            except:
+           except:
                 raise Exception('Seismic Unix format not supported for SPECFEM3D inversions because SPECFEM3D lacks an adequate parallel reader and writer')
 
 

@@ -7,11 +7,11 @@ import numpy as np
 
 import seisflows.seistools.specfem3d_globe as solvertools
 from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import loadbypar, copybin, savebin, Model, Minmax
+from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin, Model, Minmax
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists
+from seisflows.tools.code import Struct, exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, loadclass
 
@@ -151,6 +151,31 @@ class specfem3d_globe(loadclass('solver', 'base')):
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
         self.mpirun('bin/xspecfem3D')
+
+
+    def check_mesh_properties(self, path=None, parameters=None):
+        if not hasattr(self, '_mesh_properties'):
+            if not path:
+                path = PATH.MODEL_INIT
+
+            if not parameters:
+                parameters = self.parameters
+
+            nproc = 0
+            ngll = []
+            while True:
+                dummy = loadbin(path, nproc, 'reg1_'+parameters[0])
+                ngll += [len(dummy)]
+                nproc += 1
+                if not exists('%s/proc%06d_reg1_%s.bin' % (path, nproc, parameters[0])):
+                    break
+
+            self._mesh_properties = Struct([
+                ['nproc', nproc],
+                ['ngll', ngll]])
+
+        return self._mesh_properties
+
 
 
     ### utility functions
