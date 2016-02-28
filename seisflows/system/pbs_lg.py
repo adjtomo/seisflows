@@ -38,13 +38,10 @@ class pbs_lg(loadclass('system', 'base')):
         """ Checks parameters and paths
         """
 
-        if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('..')))
-
-        if 'SUBTITLE' not in PAR:
-            setattr(PAR, 'SUBTITLE', unix.basename(abspath('.')))
-
         # check parameters
+        if 'TITLE' not in PAR:
+            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
@@ -107,7 +104,7 @@ class pbs_lg(loadclass('system', 'base')):
                 + PAR.PBS_ARGS + ' '
                 + '-l select=1:ncpus=%d:mpiprocs=%d ' % (ncpus, mpiprocs)
                 + '-l %s ' % walltime
-                + '-N %s ' % PAR.SUBTITLE
+                + '-N %s ' % PAR.TITLE
                 + '-j %s '%'oe'
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
                 + '-V '
@@ -163,7 +160,7 @@ class pbs_lg(loadclass('system', 'base')):
                 + '-l select=%d:ncpus=%d:mpiprocs=%d ' (nodes, ncpus, mpiprocs)
                 + '-l %s ' % walltime
                 + '-J 0-%s ' % (PAR.NTASK-1)
-                + '-N %s ' % PAR.SUBTITLE
+                + '-N %s ' % PAR.TITLE
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.pbs/' + '$PBS_ARRAYID')
                 + '-r y '
                 + '-j oe '

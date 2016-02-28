@@ -38,13 +38,10 @@ class lsf_lg(loadclass('system', 'base')):
         """ Checks parameters and paths
         """
 
-        if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('..')))
-
-        if 'SUBTITLE' not in PAR:
-            setattr(PAR, 'SUBTITLE', unix.basename(abspath('.')))
-
         # check parameters
+        if 'TITLE' not in PAR:
+            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
@@ -100,7 +97,7 @@ class lsf_lg(loadclass('system', 'base')):
         # prepare bsub arguments
         unix.run('bsub '
                 + PAR.LSF_ARGS + ' '
-                + '-J %s ' % PAR.SUBTITLE
+                + '-J %s ' % PAR.TITLE
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
                 + '-n %d ' % PAR.NODESIZE
                 + '-e %s ' % (PATH.SUBMIT+'/'+'error.log')
@@ -136,7 +133,7 @@ class lsf_lg(loadclass('system', 'base')):
                 + '-n %d ' % PAR.NPROC 
                 + '-R "span[ptile=%d]" ' % PAR.NODESIZE
                 + '-W %d:00 ' % PAR.STEPTIME
-                + '-J "%s' %PAR.SUBTITLE
+                + '-J "%s' %PAR.TITLE
                 + self.launch_args(hosts)
                 + findpath('system') +'/'+ 'wrapper/run '
                 + PATH.OUTPUT + ' '

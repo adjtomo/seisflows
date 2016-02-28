@@ -38,13 +38,10 @@ class slurm_lg(loadclass('system', 'base')):
         """ Checks parameters and paths
         """
 
-        if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('..')))
-
-        if 'SUBTITLE' not in PAR:
-            setattr(PAR, 'SUBTITLE', unix.basename(abspath('.')))
-
         # check parameters
+        if 'TITLE' not in PAR:
+            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
@@ -98,7 +95,7 @@ class slurm_lg(loadclass('system', 'base')):
         # prepare sbatch arguments
         unix.run('sbatch '
                 + PAR.SLURM_ARGS + ' '
-                + '--job-name=%s ' % PAR.SUBTITLE
+                + '--job-name=%s ' % PAR.TITLE
                 + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
                 + '--ntasks-per-node=%d ' % PAR.NODESIZE
                 + '--nodes=%d ' % 1
@@ -145,7 +142,7 @@ class slurm_lg(loadclass('system', 'base')):
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
             subprocess.call('sbatch '
                 + PAR.SLURM_ARGS + ' '
-                + '--job-name=%s ' % PAR.SUBTITLE
+                + '--job-name=%s ' % PAR.TITLE
                 + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
                 + '--ntasks-per-node=%d ' % PAR.NODESIZE
                 + '--ntasks=%d ' % PAR.NPROC

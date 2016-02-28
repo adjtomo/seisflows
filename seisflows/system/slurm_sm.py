@@ -36,13 +36,10 @@ class slurm_sm(loadclass('system', 'base')):
         """ Checks parameters and paths
         """
 
-        if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('..')))
-
-        if 'SUBTITLE' not in PAR:
-            setattr(PAR, 'SUBTITLE', unix.basename(abspath('.')))
-
         # check parameters
+        if 'TITLE' not in PAR:
+            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
@@ -83,7 +80,7 @@ class slurm_sm(loadclass('system', 'base')):
         # submit workflow
         unix.run('sbatch '
                 + PAR.SLURM_ARGS + ' '
-                + '--job-name=%s '%PAR.SUBTITLE
+                + '--job-name=%s '%PAR.TITLE
                 + '--output=%s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '--cpus-per-task=%d '%PAR.NPROC
                 + '--ntasks=%d '%PAR.NTASK

@@ -28,13 +28,10 @@ class serial(loadclass('system', 'base')):
         """ Checks parameters and paths
         """
 
-        if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('..')))
-
-        if 'SUBTITLE' not in PAR:
-            setattr(PAR, 'SUBTITLE', unix.basename(abspath('.')))
-
         # check parameters
+        if 'TITLE' not in PAR:
+            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+
         if 'NTASK' not in PAR:
             setattr(PAR, 'NTASK', 1)
 
