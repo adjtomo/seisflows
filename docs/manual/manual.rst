@@ -123,7 +123,7 @@ SeisFlows can run on SLURM, PBS, and LSF clusters.
 
 To make SeisFlows work across different environments, our approach is to wrap system commands with a thin Python layer.  To handle job submission, for example, we wrap the PBS command ``qsub`` and the SLURM command ``sbatch`` with a  python utility called `system.submit`.  The result is a consistent python interface across different clusters.
 
-Filesystem settings can be adjusted by modifying values in the ``PATH`` dictionary, which is populated from ``paths.py``.  Output files and temporary files, by default, are written to the working directory.  If a value for ``PATH.GLOBAL`` is supplied, temporary files are written there instead.  If each compute node has its own local filesystem, a value for ``PATH.LOCAL`` can be supplied so that temporary files required only for a local process need not be written to the global filesystem.
+Filesystem settings can be adjusted by modifying values in the ``PATH`` dictionary, which is populated from ``paths.py``.  Output files and temporary files, by default, are written to the working directory.  If a value for ``PATH.SCRATCH`` is supplied, temporary files are written there instead.  If each compute node has its own local filesystem, a value for ``PATH.LOCAL`` can be supplied so that temporary files required only for a local process need not be written to the global filesystem.
 
 As the size of an inversion grows, scalability and fault tolerance become increasingly important.  If a single forward simulation spans more than one node, users must select ``pbs_lg`` or ``slurm_lg`` system configurations in ``parameters.py``.  If a forward simulation fits onto a single node, users should select ``pbs_sm`` or ``slurm_sm`` instead.
 

@@ -56,7 +56,7 @@ class base(object):
             raise ParameterError
 
         if 'OPTIMIZE' not in PATH:
-            setattr(PATH, 'OPTIMIZE', join(PATH.GLOBAL, 'optimize'))
+            setattr(PATH, 'OPTIMIZE', join(PATH.SCRATCH, 'optimize'))
 
         if 'MODEL_INIT' not in PATH:
             setattr(PATH, 'MODEL_INIT', None)

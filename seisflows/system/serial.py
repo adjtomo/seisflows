@@ -45,8 +45,8 @@ class serial(loadclass('system', 'base')):
             setattr(PAR, 'VERBOSE', 1)
 
         # check paths
-        if 'GLOBAL' not in PATH:
-            setattr(PATH, 'GLOBAL', join(abspath('.'), 'scratch'))
+        if 'SCRATCH' not in PATH:
+            setattr(PATH, 'SCRATCH', join(abspath('.'), 'scratch'))
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', '')
@@ -58,7 +58,7 @@ class serial(loadclass('system', 'base')):
             setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
 
         if 'SYSTEM' not in PATH:
-            setattr(PATH, 'SYSTEM', join(PATH.GLOBAL, 'system'))
+            setattr(PATH, 'SYSTEM', join(PATH.SCRATCH, 'system'))
 
 
     def submit(self, workflow):

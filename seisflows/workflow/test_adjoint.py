@@ -48,8 +48,8 @@ class test_adjoint(object):
         """
 
         # check paths
-        if 'GLOBAL' not in PATH:
-            raise ParameterError(PATH, 'GLOBAL')
+        if 'SCRATCH' not in PATH:
+            raise ParameterError(PATH, 'SCRATCH')
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
@@ -77,8 +77,8 @@ class test_adjoint(object):
 
 
     def main(self):
-        unix.rm(PATH.GLOBAL)
-        unix.mkdir(PATH.GLOBAL)
+        unix.rm(PATH.SCRATCH)
+        unix.mkdir(PATH.SCRATCH)
         preprocess.setup()
 
 
@@ -90,12 +90,12 @@ class test_adjoint(object):
         self.prepare_model()
         system.run('solver', 'eval_func',
                    hosts='all',
-                   path=PATH.GLOBAL)
+                   path=PATH.SCRATCH)
 
         print 'SIMULATION 3 OF 3'
         system.run('solver', 'eval_grad',
                    hosts='all',
-                   path=PATH.GLOBAL)
+                   path=PATH.SCRATCH)
 
         # collect traces
         obs = join(PATH.SOLVER, self.event, 'traces/obs')
@@ -108,7 +108,7 @@ class test_adjoint(object):
 
         # collect model and kernels
         model = solver.load(PATH.MODEL_INIT)
-        kernels = solver.load(PATH.GLOBAL+'/'+'kernels'+'/'+self.event, suffix='_kernel')
+        kernels = solver.load(PATH.SCRATCH+'/'+'kernels'+'/'+self.event, suffix='_kernel')
 
         # dot prodcut in data space
         keys = obs.keys()
@@ -130,7 +130,7 @@ class test_adjoint(object):
     def prepare_model(self):
         model = PATH.OUTPUT +'/'+ 'model_init'
         assert exists(model)
-        unix.ln(model, PATH.GLOBAL +'/'+ 'model')
+        unix.ln(model, PATH.SCRATCH +'/'+ 'model')
 
     @property
     def event(self):

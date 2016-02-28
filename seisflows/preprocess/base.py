@@ -123,6 +123,26 @@ class base(object):
         return stream
 
 
+    def process_traces_adjoint(self, stream):
+        """ Performs data processing operations on traces
+        """
+        print ' Warning bandpass filter disabled'
+
+        nt, dt, _ = self.get_time_scheme(stream)
+        n, _ = self.get_network_size(stream)
+        df = dt**-1
+
+        #for ir in range(n):
+            #stream[ir].detrend()
+
+            # filter data
+            #if PAR.FREQLO and PAR.FREQHI:
+            #    stream[ir].filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
+
+        return stream
+
+
+
     def write_residuals(self, path, s, d):
         """ Computes residuals from observations and synthetics
         """

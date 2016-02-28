@@ -79,7 +79,7 @@ def su_specfem2d_obspy(prefix='SEM', channel=None, suffix='.su'):
     else:
         raise ValueError('CHANNEL must be one of the following: x y z p')
 
-    streamobj = read(filename, format='SU')
+    streamobj = read(filename, format='SU', byteorder='<')
     return streamobj
 
 

@@ -84,8 +84,8 @@ class base(object):
             raise ParameterError(PAR, 'NPROC')
 
         # check scratch paths
-        if 'GLOBAL' not in PATH:
-            raise ParameterError(PATH, 'GLOBAL')
+        if 'SCRATCH' not in PATH:
+            raise ParameterError(PATH, 'SCRATCH')
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
@@ -94,7 +94,7 @@ class base(object):
             if PATH.LOCAL:
                 setattr(PATH, 'SOLVER', join(PATH.LOCAL, 'solver'))
             else:
-                setattr(PATH, 'SOLVER', join(PATH.GLOBAL, 'solver'))
+                setattr(PATH, 'SOLVER', join(PATH.SCRATCH, 'solver'))
 
         # check solver input paths
         if 'SPECFEM_BIN' not in PATH:

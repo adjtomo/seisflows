@@ -26,8 +26,8 @@ class migration(object):
         """ Checks parameters and paths
         """
         # check paths
-        if 'GLOBAL' not in PATH:
-            raise ParameterError(PATH, 'GLOBAL')
+        if 'SCRATCH' not in PATH:
+            raise ParameterError(PATH, 'SCRATCH')
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
@@ -60,8 +60,8 @@ class migration(object):
         """ Migrates seismic data
         """
         # prepare directory structure
-        unix.rm(PATH.GLOBAL)
-        unix.mkdir(PATH.GLOBAL)
+        unix.rm(PATH.SCRATCH)
+        unix.mkdir(PATH.SCRATCH)
 
         # set up workflow machinery
         preprocess.setup()
@@ -78,21 +78,21 @@ class migration(object):
         print 'Generating synthetics...'
         system.run('solver', 'eval_func',
                    hosts='all',
-                   path=PATH.GLOBAL)
+                   path=PATH.SCRATCH)
 
         print 'Backprojecting data...'
         system.run('solver', 'eval_grad',
                    hosts='all',
-                   path=PATH.GLOBAL,
+                   path=PATH.SCRATCH,
                    export_traces=PAR.SAVETRACES)
 
         postprocess.combine_kernels(
-            path=PATH.GLOBAL,
+            path=PATH.SCRATCH,
             parameters=solver.parameters)
 
         try:
             postprocess.combine_kernels(
-                path=PATH.GLOBAL,
+                path=PATH.SCRATCH,
                 parameters=['rhop'])
         except:
             pass
@@ -113,22 +113,22 @@ class migration(object):
     def prepare_model(self):
         model = PATH.OUTPUT +'/'+ 'model_init'
         assert exists(model)
-        unix.cp(model, PATH.GLOBAL +'/'+ 'model')
+        unix.cp(model, PATH.SCRATCH +'/'+ 'model')
 
     def save_kernels_sum(self):
-        src = PATH.GLOBAL +'/'+ 'kernels/sum'
+        src = PATH.SCRATCH +'/'+ 'kernels/sum'
         dst = PATH.OUTPUT +'/'+ 'kernels'
         unix.mkdir(dst)
         unix.cp(src, dst)
 
     def save_kernels(self):
-        src = PATH.GLOBAL +'/'+ 'kernels'
+        src = PATH.SCRATCH +'/'+ 'kernels'
         dst = PATH.OUTPUT
         unix.mkdir(dst)
         unix.cp(src, dst)
 
     def save_traces(self):
-        src = PATH.GLOBAL +'/'+ 'traces'
+        src = PATH.SCRATCH +'/'+ 'traces'
         dst = PATH.OUTPUT
         unix.cp(src, dst)
 

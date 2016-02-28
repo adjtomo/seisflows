@@ -18,7 +18,7 @@ class test_forward(object):
         """
 
         # check paths
-        if 'GLOBAL' not in PATH:
+        if 'SCRATCH' not in PATH:
             raise Exception
 
         if 'LOCAL' not in PATH:

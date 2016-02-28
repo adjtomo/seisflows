@@ -57,23 +57,23 @@ class inversion(object):
             setattr(PAR, 'VERBOSE', 1)
 
         # check paths
-        if 'GLOBAL' not in PATH:
-            raise ParameterError(PATH, 'GLOBAL')
+        if 'SCRATCH' not in PATH:
+            raise ParameterError(PATH, 'SCRATCH')
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
 
         if 'FUNC' not in PATH:
-            setattr(PATH, 'FUNC', join(PATH.GLOBAL, 'evalfunc'))
+            setattr(PATH, 'FUNC', join(PATH.SCRATCH, 'evalfunc'))
 
         if 'GRAD' not in PATH:
-            setattr(PATH, 'GRAD', join(PATH.GLOBAL, 'evalgrad'))
+            setattr(PATH, 'GRAD', join(PATH.SCRATCH, 'evalgrad'))
 
         if 'HESS' not in PATH:
-            setattr(PATH, 'HESS', join(PATH.GLOBAL, 'evalhess'))
+            setattr(PATH, 'HESS', join(PATH.SCRATCH, 'evalhess'))
 
         if 'OPTIMIZE' not in PATH:
-            setattr(PATH, 'OPTIMIZE', join(PATH.GLOBAL, 'optimize'))
+            setattr(PATH, 'OPTIMIZE', join(PATH.SCRATCH, 'optimize'))
 
         # input settings
         if 'DATA' not in PATH:
@@ -139,8 +139,8 @@ class inversion(object):
         """
         # clean scratch directories
         if PAR.BEGIN == 1:
-            unix.rm(PATH.GLOBAL)
-            unix.mkdir(PATH.GLOBAL)
+            unix.rm(PATH.SCRATCH)
+            unix.mkdir(PATH.SCRATCH)
 
             preprocess.setup()
             postprocess.setup()

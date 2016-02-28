@@ -24,6 +24,12 @@ class slurm_lg(loadclass('system', 'base')):
       classes provide a consistent command set across different computing
       environments.
 
+      Intermediate files are written to a global scratch path PATH.SCRATCH,
+      which must be accessible to all compute nodes.
+
+      Optionally, users can provide a local scratch path PATH.LOCAL if each
+      compute node has its own local filesystem.
+
       For more informations, see 
       http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-interfaces
     """
@@ -64,8 +70,8 @@ class slurm_lg(loadclass('system', 'base')):
             setattr(PAR, 'SLURM_ARGS', '')
 
         # check paths
-        if 'GLOBAL' not in PATH:
-            setattr(PATH, 'GLOBAL', join(abspath('.'), 'scratch'))
+        if 'SCRATCH' not in PATH:
+            setattr(PATH, 'SCRATCH', join(abspath('.'), 'scratch'))
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
@@ -77,7 +83,7 @@ class slurm_lg(loadclass('system', 'base')):
             setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
 
         if 'SYSTEM' not in PATH:
-            setattr(PATH, 'SYSTEM', join(PATH.GLOBAL, 'system'))
+            setattr(PATH, 'SYSTEM', join(PATH.SCRATCH, 'system'))
 
 
     def submit(self, workflow):

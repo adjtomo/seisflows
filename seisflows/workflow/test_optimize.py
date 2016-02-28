@@ -39,14 +39,14 @@ class test_optimize(object):
             raise Exception
 
         # check paths
-        if 'GLOBAL' not in PATH:
-            setattr(PATH,'GLOBAL',abspath('./scratch'))
+        if 'SCRATCH' not in PATH:
+            setattr(PATH,'SCRATCH',abspath('./scratch'))
 
         if 'SUBMIT' not in PATH:
             setattr(PATH,'SUBMIT',abspath('.'))
 
         if 'OPTIMIZE' not in PATH:
-            setattr(PATH,'OPTIMIZE',PATH.GLOBAL)
+            setattr(PATH,'OPTIMIZE',PATH.SCRATCH)
 
         # assertions
         assert PAR.BEGIN == 1
