@@ -13,7 +13,7 @@ PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class slurm_sm(loadclass('system', 'mpi')):
+class slurm_sm(loadclass('system', 'base')):
     """ An interface through which to submit workflows, run tasks in serial or 
       parallel, and perform other system functions.
 
@@ -88,4 +88,51 @@ class slurm_sm(loadclass('system', 'mpi')):
                 + findpath('system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
 
+
+    def run(self, classname, funcname, hosts='all', **kwargs):
+        """  Runs tasks in serial or parallel on specified hosts
+        """
+        self.checkpoint()
+        self.save_kwargs(classname, funcname, kwargs)
+
+        if hosts == 'all':
+            # run on all available nodes
+            unix.run('srun '
+                    + '--wait=0 '
+                    + join(findpath('system'), 'wrappers/run ')
+                    + PATH.OUTPUT + ' '
+                    + classname + ' '
+                    + funcname)
+
+        elif hosts == 'head':
+            # run on head node
+            unix.run('srun '
+                    + '--wait=0 '
+                    + join(findpath('system'), 'wrappers/run_head ')
+                    + PATH.OUTPUT + ' '
+                    + classname + ' '
+                    + funcname)
+
+        else:
+            raise(KeyError('Hosts parameter not set/recognized.'))
+
+
+
+    def getnode(self):
+        """ Gets number of running task
+        """
+        gid = os.getenv('SLURM_GTIDS').split(',')
+        lid = int(os.getenv('SLURM_LOCALID'))
+        return int(gid[lid])
+
+
+    def mpiargs(self):
+        return 'mpirun -np %d '%PAR.NPROC
+
+
+    def save_kwargs(self, classname, funcname, kwargs):
+        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
+        kwargsfile = join(kwargspath, funcname+'.p')
+        unix.mkdir(kwargspath)
+        saveobj(kwargsfile, kwargs)
 

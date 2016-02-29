@@ -31,7 +31,7 @@ class multithreaded(loadclass('system', 'serial')):
     def check(self):
         """ Checks parameters and paths
         """
-        super(parallel, self).check()
+        super(multithreaded, self).check()
 
         if 'NPROCMAX' not in PAR:
             raise Exception

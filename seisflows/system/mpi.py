@@ -30,7 +30,7 @@ class mpi(loadclass('system', 'base')):
         """
 
         if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('..')))
+            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
 
         if 'NTASK' not in PAR:
             setattr(PAR, 'NTASK', 1)
@@ -94,7 +94,8 @@ class mpi(loadclass('system', 'base')):
                     + funcname)
 
         else:
-            raise(KeyError('Hosts parameter not set/recognized'))
+            raise(KeyError('Hosts parameter not set/recognized.'))
+
 
     def getnode(self):
         """Gets number of running task"""

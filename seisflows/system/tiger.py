@@ -5,8 +5,11 @@ from seisflows.tools.config import ParameterError, SeisflowsParameters, Seisflow
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
+""" For users of tiger.princeton.edu, determines whether
+  slurm_sm, slurm_md, or slurm_lg should be used.
+"""
 
-# ensure number of processers per source is defined
+# ensure number of processers per forward simulation is defined
 if 'NPROC' not in PAR:
     raise Exception
 
@@ -16,10 +19,11 @@ if 'NODESIZE' in PAR:
 else:
     PAR.NODESIZE = 16
 
-# if nproc per source exceeds nproc per node, use tiger_lg
-# otherwise, use tiger_sm
+# which system interface is appropriate?
 if PAR.NPROC > PAR.NODESIZE:
     tiger = loadclass('system','tiger_lg')
+elif PAR.NPROC > 1:
+    tiger = loadclass('system','tiger_md')
 else:
     tiger = loadclass('system','tiger_sm')
 
