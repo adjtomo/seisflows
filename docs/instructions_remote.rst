@@ -113,7 +113,7 @@ For now, the inversion will run only a single event on only a single processor. 
 On a laptop or desktop with multiple cores, the work of an inversion can be carried out in parallel.  To run the checkerboard example in parallel over events (that is, with multiple event simulations running at the same time on different cores), make the following changes to ``parameters.py``:
 
 - to invert all available events instead of just one event, change ``NTASK`` from ``1`` to ``25``
-- change ``SYSTEM`` from ``serial`` to ``parallel``
+- change ``SYSTEM`` from ``serial`` to ``multithreaded`` (or, if ``mpi4py`` is installed, users can instead change ``serial`` to ``mpi``)
 - add a parameter ``NPROCMAX`` and set it equal to the number of cores available on your machine.
 
 Besides running in parallel over events, the work of an individual event simulation can be parallelized over model regions. See the SPECFEM3D user manual for more information. Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates parallelization over events.

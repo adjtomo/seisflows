@@ -16,19 +16,13 @@ PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class parallel(loadclass('system', 'serial')):
+class multithreaded(loadclass('system', 'serial')):
     """ An interface through which to submit workflows, run tasks in serial or 
       parallel, and perform other system functions.
 
       By hiding environment details behind a python interface layer, these 
       classes provide a consistent command set across different computing
       environments.
-
-      Intermediate files are written to a global scratch path PATH.SCRATCH,
-      which must be accessible to all compute nodes.
-
-      Optionally, users can provide a local scratch path PATH.LOCAL if each
-      compute node has its own local filesystem.
 
       For more informations, see 
       http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-interfaces
@@ -82,7 +76,7 @@ class parallel(loadclass('system', 'serial')):
             func(**kwargs)
 
         else:
-            task(**kwargs)
+            raise(KeyError('Hosts parameter not set/recognized.'))
 
 
     ### private methods
