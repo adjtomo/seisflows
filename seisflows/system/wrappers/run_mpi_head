@@ -1,0 +1,33 @@
+#!/usr/bin/env python
+
+if __name__ == '__main__':
+    import sys
+    from mpi4py import MPI
+
+    # parse command line arguments
+    mypath = sys.argv[1]
+    myobj = sys.argv[2]
+    myfunc = sys.argv[3]
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+
+    from os.path import join
+    from seisflows.tools.code import loadjson, loadobj
+    from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+
+    # reload from last checkpoint
+    for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
+       obj.reload(mypath)
+
+    import system
+
+    if system.getnode() == 0:
+        # load function arguments
+        kwargspath = join(mypath, 'SeisflowsObjects', myobj + '_kwargs')
+        kwargs = loadobj(join(kwargspath, myfunc + '.p'))
+
+        # call function
+        func = getattr(sys.modules[myobj], myfunc)
+        func(**kwargs)
+
