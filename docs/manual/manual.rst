@@ -255,5 +255,7 @@ SLURM_XL [under development] - For very large inversions on SLURM clusters. In a
 
 SERIAL - Tasks that are normally carried out all at once are instead carried out one at a time. Useful for debugging, among other things.
 
-PARALLEL - On desktops or laptops with multiple cores, allows embarrassingly parallel tasks to be carried out several at a time, rather than one at a time.
+MULTITHREADED - On desktops or laptops with multiple cores, allows embarrassingly parallel tasks to be carried out several at a time, rather than one at a time.
+
+MPI - Functionally the same as multithreaded, except uses MPI processes rather than multithreading under the hood.  Requires Python module ``mpi4py``.
 
