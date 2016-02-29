@@ -90,9 +90,7 @@ class lsf_lg(loadclass('system', 'base')):
         unix.cd(PATH.OUTPUT)
         unix.mkdir(PATH.SUBMIT+'/'+'output.lsf')
 
-        self.save_objects()
-        self.save_parameters()
-        self.save_paths()
+        self.checkpoint()
 
         # prepare bsub arguments
         unix.run('bsub '

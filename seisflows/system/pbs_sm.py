@@ -1,8 +1,6 @@
-
 import os
 import subprocess
-import sys
-from os.path import abspath, join
+from os.path import abspath, join, dirname
 
 from seisflows.tools import unix
 from seisflows.tools.code import saveobj
@@ -13,11 +11,11 @@ PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class slurm_sm(loadclass('system', 'mpi')):
-    """ An interface through which to submit workflows, run tasks in serial or 
+class pbs_sm(loadclass('system', 'mpi')):
+    """ An interface through which to submit workflows, run tasks in serial or
       parallel, and perform other system functions.
 
-      By hiding environment details behind a python interface layer, these 
+      By hiding environment details behind a python interface layer, these
       classes provide a consistent command set across different computing
       environments.
 
@@ -27,10 +25,9 @@ class slurm_sm(loadclass('system', 'mpi')):
       Optionally, users can provide a local scratch path PATH.LOCAL if each
       compute node has its own local filesystem.
 
-      For more informations, see 
+      For more informations, see
       http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-interfaces
     """
-
 
     def check(self):
         """ Checks parameters and paths
@@ -43,17 +40,20 @@ class slurm_sm(loadclass('system', 'mpi')):
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
+        if 'MEMORY' not in PAR:
+            raise ParameterError(PAR, 'MEMORY')
+
         if 'VERBOSE' not in PAR:
             setattr(PAR, 'VERBOSE', 1)
-
-        if 'NPROC' not in PAR:
-            raise ParameterError(PAR, 'NPROC')
 
         if 'NTASK' not in PAR:
             raise ParameterError(PAR, 'NTASK')
 
-        if 'SLURM_ARGS' not in PAR:
-            setattr(PAR, 'SLURM_ARGS', '')
+        if 'NPROC' not in PAR:
+            raise ParameterError(PAR, 'NPROC')
+
+        if 'NODESIZE' not in PAR:
+            raise ParameterError(PAR, 'NODESIZE')
 
         # check paths
         if 'SCRATCH' not in PATH:
@@ -62,30 +62,43 @@ class slurm_sm(loadclass('system', 'mpi')):
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
 
+        if 'SYSTEM' not in PATH:
+            setattr(PATH, 'SYSTEM', join(PATH.SCRATCH, 'system'))
+
         if 'SUBMIT' not in PATH:
             setattr(PATH, 'SUBMIT', unix.pwd())
 
         if 'OUTPUT' not in PATH:
             setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
 
-
     def submit(self, workflow):
-        """ Submits workflow
+        """Submits job
         """
         unix.mkdir(PATH.OUTPUT)
         unix.cd(PATH.OUTPUT)
 
+        # save current state
         self.checkpoint()
 
-        # submit workflow
-        unix.run('sbatch '
-                + PAR.SLURM_ARGS + ' '
-                + '--job-name=%s '%PAR.TITLE
-                + '--output=%s '%(PATH.SUBMIT +'/'+ 'output.log')
-                + '--cpus-per-task=%d '%PAR.NPROC
-                + '--ntasks=%d '%PAR.NTASK
-                + '--time=%d '%PAR.WALLTIME
-                + findpath('system') +'/'+ 'wrappers/submit '
-                + PATH.OUTPUT)
+        # construct resource list
+        nodes = int(PAR.NTASK / PAR.NODESIZE)
+        cores = PAR.NTASK % PAR.NODESIZE
+        hours = int(PAR.WALLTIME / 60)
+        minutes = PAR.WALLTIME % 60
+        resources = 'walltime=%02d:%02d:00'%(hours, minutes)
+        if nodes == 0:
+            resources += ',mem=%dgb,nodes=1:ppn=%d'%(PAR.MEMORY, cores)
+        elif cores == 0:
+            resources += ',mem=%dgb,nodes=%d:ppn=%d'%(PAR.MEMORY, nodes, PAR.NODESIZE)
+        else:
+            resources += ',mem=%dgb,nodes=%d:ppn=%d+1:ppn=%d'%(PAR.MEMORY, nodes, PAR.NODESIZE, cores)
 
+        # construct arguments list
+        unix.run('qsub '
+                + '-N %s '%PAR.TITLE
+                + '-o %s '%(PATH.SUBMIT +'/'+ 'output.log')
+                + '-l %s '%resources
+                + '-j %s '%'oe'
+                + findpath('system') +'/'+ 'wrappers/submit '
+                + '-F %s '%PATH.OUTPUT)
 
