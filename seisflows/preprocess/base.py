@@ -108,9 +108,6 @@ class base(object):
     def process_trace(self, trace):
         """ Performs data processing operations on traces
         """
-        if PAR.MUTE:
-            trace *= smask(trace, PAR.MUTESLOPE, PAR.MUTECONST)
- 
         trace.detrend()
         if PAR.FREQLO and PAR.FREQHI:
             trace.filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
@@ -118,10 +115,16 @@ class base(object):
         # workaround obspy dtype conversion
         trace.data = trace.data.astype(np.float32)
 
+        if PAR.MUTE:
+            trace *= smask(trace, PAR.MUTESLOPE, PAR.MUTECONST)
+
 
     def process_trace_adjoint(self, trace):
         """ Implements adjoint of process_traces method
         """
+        if PAR.MUTE:
+            trace *= smask(trace, PAR.MUTESLOPE, PAR.MUTECONST)
+
         trace.data = trace.data[::-1]
         trace.detrend()
 
@@ -130,9 +133,6 @@ class base(object):
 
         # workaround obspy dtype conversion
         trace.data = trace.data[::-1].astype(np.float32)
-
-        if PAR.MUTE:
-            trace *= smask(trace, PAR.MUTESLOPE, PAR.MUTECONST)
 
 
     def write_residuals(self, path, s, d):
