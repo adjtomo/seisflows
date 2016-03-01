@@ -20,7 +20,7 @@ class tiger_lg(loadclass('system', 'slurm_lg')):
         """ Checks parameters and paths
         """
 
-        if 'UUID':
+        if 'UUID' not in PAR:
             setattr(PAR, 'UUID', str(uuid.uuid4()))
 
         if 'SCRATCH' not in PATH:

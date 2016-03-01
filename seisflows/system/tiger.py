@@ -20,7 +20,7 @@ else:
     PAR.NODESIZE = 16
 
 # which system interface is appropriate?
-if PAR.NPROC > PAR.NODESIZE:
+if PAR.NPROC >= PAR.NODESIZE:
     tiger = loadclass('system','tiger_lg')
 elif PAR.NPROC > 1:
     tiger = loadclass('system','tiger_md')
