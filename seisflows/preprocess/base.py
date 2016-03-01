@@ -97,50 +97,42 @@ class base(object):
             obs = self.reader(path+'/'+'traces/obs', channel)
             syn = self.reader(path+'/'+'traces/syn', channel)
 
-            obs = self.process_traces(obs)
-            syn = self.process_traces(syn)
+            for obs_, syn_ in zip(obs, syn):
+                self.process_trace(obs_)
+                self.process_trace(syn_)
 
             self.write_residuals(path, syn, obs)
             self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, channel)
 
 
-    def process_traces(self, stream):
+    def process_trace(self, trace):
         """ Performs data processing operations on traces
         """
-        print ' Warning bandpass filter disabled'
+        if PAR.MUTE:
+            trace *= smask(trace, PAR.MUTESLOPE, PAR.MUTECONST)
+ 
+        trace.detrend()
+        if PAR.FREQLO and PAR.FREQHI:
+            trace.filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
 
-        nt, dt, _ = self.get_time_scheme(stream)
-        n, _ = self.get_network_size(stream)
-        df = dt**-1
-
-        #for ir in range(n):
-            #stream[ir].detrend()
-
-            # filter data
-            #if PAR.FREQLO and PAR.FREQHI:
-            #    stream[ir].filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
-
-        return stream
+        # workaround obspy dtype conversion
+        trace.data = trace.data.astype(np.float32)
 
 
-    def process_traces_adjoint(self, stream):
-        """ Performs data processing operations on traces
+    def process_trace_adjoint(self, trace):
+        """ Implements adjoint of process_traces method
         """
-        print ' Warning bandpass filter disabled'
+        trace.data = trace.data[::-1]
+        trace.detrend()
 
-        nt, dt, _ = self.get_time_scheme(stream)
-        n, _ = self.get_network_size(stream)
-        df = dt**-1
+        if PAR.FREQLO and PAR.FREQHI:
+            trace.filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
 
-        #for ir in range(n):
-            #stream[ir].detrend()
+        # workaround obspy dtype conversion
+        trace.data = trace.data[::-1].astype(np.float32)
 
-            # filter data
-            #if PAR.FREQLO and PAR.FREQHI:
-            #    stream[ir].filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
-
-        return stream
-
+        if PAR.MUTE:
+            trace *= smask(trace, PAR.MUTESLOPE, PAR.MUTECONST)
 
 
     def write_residuals(self, path, s, d):
@@ -167,64 +159,25 @@ class base(object):
         nt, dt, _ = self.get_time_scheme(s)
         n, _ = self.get_network_size(s)
 
+        # generate adjoint traces
         for i in range(n):
             s[i].data = self.adjoint(s[i].data, d[i].data, nt, dt)
 
-        # apply adjoint of filter
-        #s = adjoint_filter(self.process_traces)(s)
+        # apply adjoint filter
+        for trace in s:
+            self.process_trace_adjoint(trace)
 
         # normalize traces
         if PAR.NORMALIZE:
-            for ir in range(n):
-                w = np.linalg.norm(d[i], ord=2)
+            for i in range(n):
+                w = np.linalg.norm(d[i].data, ord=2)
                 if w > 0: 
-                    s[:,ir] /= w
-
-        # mute direct arrival
-        if PAR.MUTE:
-            vel = PAR.MUTESLOPE
-            off = PAR.MUTECONST
-            s = smute(s, h, vel, off, constant_spacing=False)
+                    s[i].data /= w
 
         self.writer(s, path, channel)
 
 
     ### utility functions
-
-    def multichannel(self, func, arrays, input, inplace=True):
-        """ Applies function to multi-component data
-        """
-        if inplace:
-            output = Struct(arrays[0])
-        else:
-            output = Struct()
-
-        for channel in self.channels:
-            args = [array[channel] for array in arrays] + input
-            output[channel] = func(*args)
-
-        return output
-
-    def check_headers(self, data):
-        """ Checks headers for consistency
-        """
-        nt, dt, _ = self.get_time_scheme(data)
-        n, _ = self.get_network_size(data)
-
-        if 'DT' in PAR:
-            if dt != PAR.DT:
-                print 'Warning: dt != PAR.DT'
-
-        if 'NT' in PAR:
-            if nt != PAR.NT:
-                print 'Warning: nt != PAR.NT'
-
-        if 'NREC' in PAR:
-            if nr != PAR.NREC:
-                print 'Warning: nr != PAR.NREC'
-
-        return h
-
 
     def write_zero_traces(self, path, channel):
         from obspy.core.stream import Stream
