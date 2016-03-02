@@ -99,7 +99,7 @@ class lsf_lg(loadclass('system', 'base')):
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
                 + '-n %d ' % PAR.NODESIZE
                 + '-e %s ' % (PATH.SUBMIT+'/'+'error.log')
-                + '-R "span[ptile=%d' % PAR.NODESIZE + ']" '
+                + '-R "span[ptile=%d]" ' % PAR.NODESIZE
                 + '-W %d:00 ' % PAR.WALLTIME
                 +  findpath('system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
