@@ -16,7 +16,7 @@ PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class lsf_sm(loadclass('system', 'base')):
+class lsf_sm(loadclass('system', 'mpi')):
     """ An interface through which to submit workflows, run tasks in serial or 
       parallel, and perform other system functions.
 
