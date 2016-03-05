@@ -10,13 +10,13 @@ from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.code import findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, loadclass
+    ParameterError, custom_import
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class slurm_lg(loadclass('system', 'base')):
+class slurm_lg(custom_import('system', 'base')):
     """ An interface through which to submit workflows, run tasks in serial or 
       parallel, and perform other system functions.
 

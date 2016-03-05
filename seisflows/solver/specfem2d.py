@@ -13,7 +13,7 @@ from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, loadclass
+    ParameterError, custom_import
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -22,7 +22,7 @@ import system
 import preprocess
 
 
-class specfem2d(loadclass('solver', 'base')):
+class specfem2d(custom_import('solver', 'base')):
     """ Python interface for SPECFEM2D
 
       See base class for method descriptions

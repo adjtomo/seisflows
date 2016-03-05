@@ -4,14 +4,14 @@ import uuid
 from os.path import abspath, join
 from seisflows.tools import unix
 from seisflows.tools.code import exists
-from seisflows.tools.config import loadclass
+from seisflows.tools.config import custom_import
 from seisflows.tools.config import ParameterError, SeisflowsParameters, SeisflowsPaths
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class tiger_sm(loadclass('system', 'slurm_sm')):
+class tiger_sm(custom_import('system', 'slurm_sm')):
     """ Specially designed system interface for tiger.princeton.edu
 
       See parent class for more information.

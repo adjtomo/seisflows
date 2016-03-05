@@ -6,7 +6,7 @@ from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.array import grid2mesh, mesh2grid, stack
 from seisflows.tools.code import exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, loadclass
+    ParameterError, custom_import
 from seisflows.tools.math import nabla
 
 
@@ -17,7 +17,7 @@ import system
 import solver
 
 
-class regularize(loadclass('postprocess', 'base')):
+class regularize(custom_import('postprocess', 'base')):
     """ Adds regularization options to base class
 
         This parent class is only an abstract base class; see child classes

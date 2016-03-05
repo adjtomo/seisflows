@@ -5,7 +5,7 @@ from seisflows.seistools import adjoint, misfit, sbandpass, smute
 from seisflows.tools import unix
 from seisflows.tools.code import Struct
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, loadclass
+    ParameterError, custom_import
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -14,7 +14,7 @@ import system
 import solver
 
 
-class double_difference(loadclass('preprocess', 'legacy')):
+class double_difference(custom_import('preprocess', 'legacy')):
     """ Data preprocessing class
     """
 

@@ -13,13 +13,13 @@ from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import Struct, exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, loadclass
+    ParameterError, custom_import
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class specfem3d_globe(loadclass('solver', 'base')):
+class specfem3d_globe(custom_import('solver', 'base')):
     """ Python interface for SPECFEM3D_GLOBE
 
       See base class for method descriptions

@@ -6,7 +6,7 @@ from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.array import grid2mesh, mesh2grid, stack
 from seisflows.tools.code import exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, loadclass
+    ParameterError, custom_import
 from seisflows.tools.math import nabla, tv
 
 
@@ -17,7 +17,7 @@ import system
 import solver
 
 
-class total_variation(loadclass('postprocess', 'regularize')):
+class total_variation(custom_import('postprocess', 'regularize')):
     """ Adds regularization options to base class
 
         So far, can only be used for 2D inversion, because the required spatial

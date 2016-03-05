@@ -11,7 +11,7 @@ PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class pbs_torque_sm(loadclass('system', 'base')):
+class pbs_torque_sm(custom_import('system', 'base')):
     """ An interface through which to submit workflows, run tasks in serial or
       parallel, and perform other system functions.
 

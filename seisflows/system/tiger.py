@@ -1,5 +1,5 @@
 
-from seisflows.tools.config import loadclass
+from seisflows.tools.config import custom_import
 from seisflows.tools.config import ParameterError, SeisflowsParameters, SeisflowsPaths
 
 PAR = SeisflowsParameters()
@@ -21,9 +21,9 @@ else:
 
 # which system interface is appropriate?
 if PAR.NPROC >= PAR.NODESIZE:
-    tiger = loadclass('system','tiger_lg')
+    tiger = custom_import('system','tiger_lg')
 elif PAR.NPROC > 1:
-    tiger = loadclass('system','tiger_md')
+    tiger = custom_import('system','tiger_md')
 else:
-    tiger = loadclass('system','tiger_sm')
+    tiger = custom_import('system','tiger_sm')
 

@@ -6,13 +6,13 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, loadclass
+    ParameterError, custom_import
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class serial(loadclass('system', 'base')):
+class serial(custom_import('system', 'base')):
     """ An interface through which to submit workflows, run tasks in serial or 
       parallel, and perform other system functions.
 

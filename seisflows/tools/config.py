@@ -58,7 +58,7 @@ class SeisflowsObjects(object):
             key = sys.modules['SeisflowsParameters'][obj.upper()]
 
             # make them accessible via the stanard Python import system
-            sys.modules[obj] = loadclass(obj, key)()
+            sys.modules[obj] = custom_import(obj, key)()
 
         self.check()
 
@@ -219,32 +219,41 @@ class ParameterError(ValueError):
             super(ParameterError, self).__init__(msg)
 
 
-def loadclass(*args):
-    """ Given name of module relative to package directory, returns
-        corresponding class. (The module should have a class with exactly the
-        same name.)
+def custom_import(*names):
+    """ Imports module and extracts class with the same name, e.g.
+
+            custom_import('workflow', 'inversion') 
+
+        imports 'seisflows.workflow.inversion' and, from this module, extracts
+        class 'inversion'.
     """
-    if not args:
+    # parse input arguments
+    if len(names) == 1:
+        names.append(
+            SeisflowsParameters()[name.upper()])
+    if len(names) != 2:
+        raise Exception()
+    if names[0] not in SeisflowsObjects.objects:
+        raise Exception()
+    if not names[1]:
         return Null
+    module = None
 
-    if not args[-1]:
-        return Null
+    # import module
+    for package in ['seisflows', 'seisflows_research']:
+        try:
+            full_dotted_name = package+'.'+names[0]+'.'+names[1]
+            module = import_module(full_dotted_name)
+            break
+        except:
+            pass
 
-    # first, try importing relative to main package directory
-    list = _parse(args, package='seisflows')
-    string = '.'.join(list)
-    if _exists(list):
-        obj = getattr(_import(string), list[-1])
+    try:
+        # from module, extract class
+        obj = getattr(module, names[1])
         return obj
-
-    # next, try importing relative to extensions directory
-    list = _parse(args, package='seisflows_research')
-    string = '.'.join(list)
-    if _exists(list):
-        obj = getattr(_import(string), list[-1])
-        return obj
-
-    raise ImportError('Not found in SeisFlows path.')
+    except:
+        raise Exception()
 
 
 def loadvars(*args, **kwargs):

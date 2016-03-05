@@ -6,7 +6,7 @@ from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.array import grid2mesh, mesh2grid, stack
 from seisflows.tools.code import exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, loadclass
+    ParameterError, custom_import
 from seisflows.tools.math import nabla
 
 
@@ -17,7 +17,7 @@ import system
 import solver
 
 
-class tikhonov1(loadclass('postprocess', 'regularize')):
+class tikhonov1(custom_import('postprocess', 'regularize')):
     """ Adds regularization options to base class
 
         Available options include 0-, 1-, and 2- order Tikhonov and total

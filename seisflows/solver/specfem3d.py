@@ -11,7 +11,7 @@ from seisflows.seistools.shared import getpar, setpar
 from seisflows.tools import unix
 from seisflows.tools.code import exists
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, loadclass
+    ParameterError, custom_import
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -19,7 +19,7 @@ PATH = SeisflowsPaths()
 import system
 
 
-class specfem3d(loadclass('solver', 'base')):
+class specfem3d(custom_import('solver', 'base')):
     """ Python interface for SPECFEM3D
 
       See base class for method descriptions
