@@ -1,11 +1,10 @@
 
-import uuid
+from getpass import getuser
+from os.path import abspath, join, exsits
+from uuid import uuid4
 
-from os.path import abspath, join
 from seisflows.tools import unix
-from seisflows.tools.code import exists
-from seisflows.tools.config import custom_import
-from seisflows.tools.config import ParameterError, SeisflowsParameters, SeisflowsPaths
+from seisflows.tools.config import ParameterError, SeisflowsParameters, SeisflowsPaths, custom_import
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -25,7 +24,7 @@ class tiger_md(custom_import('system', 'slurm_md')):
             setattr(PAR, 'UUID', str(uuid.uuid4()))
  
         if 'SCRATCH' not in PATH:
-            setattr(PATH, 'SCRATCH', join('/scratch/gpfs', unix.whoami(), 'seisflows', PAR.UUID))
+            setattr(PATH, 'SCRATCH', join('/scratch/gpfs', getuser(), 'seisflows', PAR.UUID))
 
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', '')

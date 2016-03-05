@@ -48,10 +48,6 @@ def cp(src='', dst=''):
         shutil.copytree(src, dst)
 
 
-def hostname():
-    return socket.gethostname()
-
-
 def ln(src, dst):
     if os.path.isdir(dst):
         for name in _strlist(src):
@@ -142,11 +138,6 @@ def touch(filename, times=None):
     with open(filename, 'a'):
         os.utime(filename, times)
 
-
-def whoami():
-    import getpass
-
-    return getpass.getuser()
 
 
 def _strlist(object):
