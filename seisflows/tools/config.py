@@ -229,11 +229,11 @@ def custom_import(*names):
         names += (SeisflowsParameters()[names[0].upper()],)
     if len(names) != 2:
         raise Exception()
+
     if names[0] not in SeisflowsObjects.names:
         raise Exception()
     if not names[1]:
         return Null
-    module = None
 
     # import module
     for package in ['seisflows', 'seisflows_research']:
@@ -252,9 +252,9 @@ def custom_import(*names):
         raise Exception()
 
 
-# the following changes how instance methods are handled by pickle.  placing it here, in this module, ensures that pickle changes will be in effect for all SeisFlows workflows
+# the following code changes how instance methods are handled by pickle.  placing it here, in this module, ensures that pickle changes will be in effect for all SeisFlows workflows
 
-# for relevant discussion, see stackoverflow thread "Can't pickle <type 'instancemethod'> when using python's multiprocessing Pool.map():
+# for relevant discussion, see stackoverflow thread "Can't pickle <type 'instancemethod'> when using python's multiprocessing Pool.map()"
 
 def _pickle_method(method):
     func_name = method.im_func.__name__
