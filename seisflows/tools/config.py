@@ -16,9 +16,9 @@ from seisflows.tools.msg import WarningOverwrite
 class SeisflowsObjects(object):
     """ SeisFlows consists of interacting 'system', 'preprocess', 'solver',
       'postprocess', 'optimize', and 'workflow' objects. The role of the
-      SeisflowsObjects utility is to load these objects into memory and make 
-      them accessible via the standard Python import system. Once in memory,
-      these objects can be thought of as comprising the complete 'state' of a
+      SeisflowsObjects utility is to instantiate these objects and make them
+      accessible via the standard Python import system. Once in memory, these
+      objects should be thought of as comprising the complete 'state' of a
       SeisFlows session.
 
       The following list is one of the few hardwired aspects of the whole 
@@ -217,7 +217,7 @@ class ParameterError(ValueError):
 
 
 def custom_import(*names):
-    """ Imports module and extracts class of the same name. For example,
+    """ Imports SeisFlows module and extracts class of same name. For example,
 
             custom_import('workflow', 'inversion') 
 
@@ -230,7 +230,7 @@ def custom_import(*names):
     if names[0] not in SeisflowsObjects.names:
         raise Exception()
     if len(names) == 1:
-        names += (val(names[0]),)
+        names += (_val(names[0]),)
     if not names[1]:
         return Null
 
@@ -250,7 +250,7 @@ def custom_import(*names):
         raise Exception()
 
 
-def val(key):
+def _val(key):
     if key.upper() in SeisflowsParameters():
         return SeisflowsParameters()[key.upper()]
     else:
