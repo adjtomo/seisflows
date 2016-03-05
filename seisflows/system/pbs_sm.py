@@ -3,9 +3,9 @@ import subprocess
 from os.path import abspath, join, dirname
 
 from seisflows.tools import unix
-from seisflows.tools.code import saveobj
-from seisflows.tools.config import ParameterError, findpath, loadclass, \
-    SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.config import ParameterError, loadclass, \
+    SeisflowsParameters, SeisflowsPaths
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -99,6 +99,6 @@ class pbs_sm(loadclass('system', 'mpi')):
                 + '-o %s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '-l %s '%resources
                 + '-j %s '%'oe'
-                + findpath('system') +'/'+ 'wrappers/submit '
+                + findpath('seisflows.system') +'/'+ 'wrappers/submit '
                 + '-F %s '%PATH.OUTPUT)
 

@@ -5,6 +5,7 @@ import os
 import sys
 import types
 
+from importlib import import_module
 from os.path import abspath, join
 
 from seisflows.tools import unix
@@ -248,23 +249,6 @@ def loadclass(*args):
 
 def loadvars(*args, **kwargs):
     return _vars(_import(*args, **kwargs))
-
-
-def findpath(obj):
-    """ Determines absolute path of
-            - a module, from an instance
-            - a file, from its name
-            - a seisflow module, from its full (dotted) name
-    """
-    if isinstance(obj, types.ModuleType):
-        path = obj.__file__
-    elif os.path.isfile(obj):
-        path = os.path.abspath(obj)
-    else:
-        string = '.'.join(_parse([obj], package='seisflows'))
-        moduleobj = _import(string)
-        path = moduleobj.__file__
-    return os.path.dirname(path)
 
 
 ### utility functions

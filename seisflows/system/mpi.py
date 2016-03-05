@@ -5,9 +5,9 @@ from os.path import abspath, join
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.code import saveobj
+from seisflows.tools.code import findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, loadclass, findpath
+    ParameterError, loadclass
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -76,7 +76,7 @@ class mpi(loadclass('system', 'base')):
         self.save_kwargs(classname, funcname, kwargs)
 
         if hosts == 'all':
-            unix.cd(join(findpath('system'), 'wrappers'))
+            unix.cd(join(findpath('seisflows.system'), 'wrappers'))
             unix.run('mpiexec -n {} '.format(PAR.NTASK)
                     + '--mca mpi_warn_on_fork 0' + ' '
                     + 'run_mpi' + ' '
@@ -85,7 +85,7 @@ class mpi(loadclass('system', 'base')):
                     + funcname)
 
         elif hosts == 'head':
-            unix.cd(join(findpath('system'), 'wrappers'))
+            unix.cd(join(findpath('seisflows.system'), 'wrappers'))
             unix.run('mpiexec -n 1 '
                     + '--mca mpi_warn_on_fork 0' + ' '
                     + 'run_mpi_head' + ' '

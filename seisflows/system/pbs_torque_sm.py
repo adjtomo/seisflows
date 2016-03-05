@@ -3,9 +3,9 @@ import subprocess
 from os.path import abspath, join, dirname
 
 from seisflows.tools import unix
-from seisflows.tools.code import saveobj
-from seisflows.tools.config import ParameterError, findpath, loadclass, \
-    SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+    ParameterError
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -99,7 +99,7 @@ class pbs_torque_sm(loadclass('system', 'base')):
                 + '-o %s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '-l %s '%resources
                 + '-j %s '%'oe'
-                + findpath('system') +'/'+ 'wrappers/submit '
+                + findpath('seisflows.system') +'/'+ 'wrappers/submit '
                 + '-F %s '%PATH.OUTPUT)
 
     def run(self, classname, funcname, hosts='all', **kwargs):
@@ -111,10 +111,10 @@ class pbs_torque_sm(loadclass('system', 'base')):
         if hosts == 'all':
             # run on all available nodes
             unix.run('pbsdsh '
-                    + join(findpath('system'), 'wrappers/export_paths.sh ')
+                    + join(findpath('seisflows.system'), 'wrappers/export_paths.sh ')
                     + os.getenv('PATH') + ' '
                     + os.getenv('LD_LIBRARY_PATH') + ' '
-                    + join(findpath('system'), 'wrappers/run_pbsdsh ')
+                    + join(findpath('seisflows.system'), 'wrappers/run_pbsdsh ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname + ' '
@@ -123,10 +123,10 @@ class pbs_torque_sm(loadclass('system', 'base')):
         elif hosts == 'head':
             # run on head node
             unix.run('pbsdsh '
-                    + join(findpath('system'), 'wrappers/export_paths.sh ')
+                    + join(findpath('seisflows.system'), 'wrappers/export_paths.sh ')
                     + os.getenv('PATH') + ' '
                     + os.getenv('LD_LIBRARY_PATH') + ' '
-                    + join(findpath('system'), 'wrappers/run_pbsdsh_head ')
+                    + join(findpath('seisflows.system'), 'wrappers/run_pbsdsh_head ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname + ' '

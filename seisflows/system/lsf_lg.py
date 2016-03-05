@@ -8,9 +8,9 @@ from os.path import abspath, join
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import saveobj
+from seisflows.tools.code import findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, findpath, loadclass
+    ParameterError, loadclass
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -101,7 +101,7 @@ class lsf_lg(loadclass('system', 'base')):
                 + '-e %s ' % (PATH.SUBMIT+'/'+'error.log')
                 + '-R "span[ptile=%d]" ' % PAR.NODESIZE
                 + '-W %d:00 ' % PAR.WALLTIME
-                +  findpath('system') +'/'+ 'wrappers/submit '
+                +  findpath('seisflows.system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
 
 
@@ -133,7 +133,7 @@ class lsf_lg(loadclass('system', 'base')):
                 + '-W %d:00 ' % PAR.STEPTIME
                 + '-J "%s' %PAR.TITLE
                 + self.launch_args(hosts)
-                + findpath('system') +'/'+ 'wrapper/run '
+                + findpath('seisflows.system') +'/'+ 'wrapper/run '
                 + PATH.OUTPUT + ' '
                 + classname + ' '
                 + funcname + ' ',

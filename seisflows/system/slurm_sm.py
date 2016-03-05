@@ -5,9 +5,9 @@ import sys
 from os.path import abspath, join
 
 from seisflows.tools import unix
-from seisflows.tools.code import saveobj
-from seisflows.tools.config import ParameterError, findpath, loadclass, \
-    SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.config import ParameterError, loadclass, \
+    SeisflowsParameters, SeisflowsPaths
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -85,7 +85,7 @@ class slurm_sm(loadclass('system', 'mpi')):
                 + '--cpus-per-task=%d '%PAR.NPROC
                 + '--ntasks=%d '%PAR.NTASK
                 + '--time=%d '%PAR.WALLTIME
-                + findpath('system') +'/'+ 'wrappers/submit '
+                + findpath('seisflows.system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
 
 

@@ -8,9 +8,9 @@ from time import sleep
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.code import saveobj
+from seisflows.tools.code import findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, findpath, loadclass
+    ParameterError, loadclass
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -88,7 +88,7 @@ class multithreaded(loadclass('system', 'serial')):
         env += [['SEISFLOWS_TASKID', str(itask)]]
 
         p = Popen(
-            findpath('system') +'/'+ 'wrappers/run '
+            findpath('seisflows.system') +'/'+ 'wrappers/run '
             + PATH.OUTPUT + ' '
             + classname + ' '
             + funcname,

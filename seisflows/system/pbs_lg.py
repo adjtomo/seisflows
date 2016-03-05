@@ -8,9 +8,9 @@ from os.path import abspath, join
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import saveobj
+from seisflows.tools.code import findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, findpath, loadclass
+    ParameterError, loadclass
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -108,7 +108,7 @@ class pbs_lg(loadclass('system', 'base')):
                 + '-j %s '%'oe'
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
                 + '-V '
-                + ' -- ' + findpath('system') +'/'+ 'wrappers/submit '
+                + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
 
 
@@ -189,12 +189,12 @@ class pbs_lg(loadclass('system', 'base')):
         if hosts == 'all':
           arg = ('-J 0-%s ' % (PAR.NTASK-1)
                 +'-o %s ' % (PATH.SUBMIT+'/'+'output.pbs/' + '$PBS_ARRAYID')
-                + ' -- ' + findpath('system') +'/'+ 'wrappers/run_pbsdsh ')
+                + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/run_pbsdsh ')
 
         elif hosts == 'head':
           arg = ('-J 0-0 '
                  +'-o %s ' % (PATH.SUBMIT+'/'+'output.pbs/' + '$PBS_JOBID')
-                 + ' -- ' + findpath('system') +'/'+ 'wrappers/run_pbsdsh_head ')
+                 + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/run_pbsdsh_head ')
 
         return arg
 

@@ -1,6 +1,9 @@
 import json
 import os
 import pickle
+import re
+
+from importlib import import_module
 
 import numpy as np
 
@@ -38,6 +41,19 @@ def exists(name):
         return False
     else:
         return os.path.exists(name)
+
+
+def findpath(name):
+    """Resolves absolute path of package"""
+    path = import_module(name).__file__
+
+    # adjust file extension
+    path = re.sub('.pyc$', '.py', path)
+
+    # strip trailing "__init__.py"
+    path = re.sub('__init__.py$', '', path)
+
+    return path
 
 
 def loadobj(filename):

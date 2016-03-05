@@ -1,5 +1,5 @@
 
-from seisflows.tools.config import findpath
+from seisflows.tools.code import findpath
 from seisflows.seistools.shared import getpar, setpar
 
 
@@ -8,7 +8,7 @@ from seisflows.seistools.shared import getpar, setpar
 def write_sources(par, hdr, path='.', suffix=''):
     """ Writes source information to text file
     """
-    file = findpath('seistools') + '/' + 'specfem2d/SOURCE'
+    file = findpath('sesiflows.seistools') + '/' + 'specfem2d/SOURCE'
     with open(file, 'r') as f:
         lines = f.readlines()
 
@@ -72,7 +72,7 @@ def write_parameters(par, version='git-devel'):
     """ Writes parameters to text file
     """
     # read template
-    file = findpath('seistools') + '/' + 'specfem2d/par-' + version
+    file = findpath('sesiflows.seistools') + '/' + 'specfem2d/par-' + version
     with open(file, 'r') as f:
         lines = f.readlines()
     lines[-1] = ' '.join(['1', str(par.NX), '1', str(par.NZ), '1'])

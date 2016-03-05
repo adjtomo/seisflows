@@ -8,9 +8,9 @@ from os.path import abspath, join
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import saveobj
+from seisflows.tools.code import findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, findpath, loadclass
+    ParameterError, loadclass
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -100,7 +100,7 @@ class slurm_lg(loadclass('system', 'base')):
                 + '--ntasks-per-node=%d ' % PAR.NODESIZE
                 + '--nodes=%d ' % 1
                 + '--time=%d ' % PAR.WALLTIME
-                + findpath('system') +'/'+ 'wrappers/submit '
+                + findpath('seisflows.system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
 
 
@@ -148,7 +148,7 @@ class slurm_lg(loadclass('system', 'base')):
                 + '--ntasks=%d ' % PAR.NPROC
                 + '--time=%d ' % PAR.STEPTIME
                 + self._launch_args(hosts)
-                + findpath('system') +'/'+ 'wrappers/run '
+                + findpath('seisflows.system') +'/'+ 'wrappers/run '
                 + PATH.OUTPUT + ' '
                 + classname + ' '
                 + funcname + ' ',
