@@ -4,7 +4,8 @@ import glob as _glob
 import string as _string
 import numpy as _np
 
-from seisflows.tools import unix
+from os.path import basename
+
 from seisflows.tools.code import Struct
 
 from seisflows.seistools.segy import segyreader
@@ -59,7 +60,7 @@ def ascii_specfem2d(**kwargs):
     # keep track of file names
     h.files = []
     for file in files:
-        file = unix.basename(file)
+        file = basename(file)
         h.files.append(file)
 
     return s, h
@@ -124,7 +125,7 @@ def ascii_specfem3d(**kwargs):
     # keep track of file names
     h.files = []
     for file in files:
-        file = unix.basename(file)
+        file = basename(file)
         h.files.append(file)
 
     return s, h
@@ -145,7 +146,7 @@ def su_specfem3d(prefix='SEM', channel=None, suffix='', verbose=False):
         raise ValueError('CHANNEL must be one of the following: x y z p')
 
     files = _glob.glob(wildcard)
-    files = sorted(files, key=lambda x: int(unix.basename(x).split('_')[0]))
+    files = sorted(files, key=lambda x: int(basename(x).split('_')[0]))
 
     file = files.pop(0)
     d, h = segyreader.readsu(file)
@@ -219,7 +220,7 @@ def su_specfem3d_obspy(prefix='SEM', channel=None, suffix='', byteorder='<', ver
 
     filenamess = _glob.glob(wildcard)
 
-    sort_by = lambda x: int(unix.basename(x).split('_')[0])
+    sort_by = lambda x: int(basename(x).split('_')[0])
     filenames = sorted(filenamess, key=sort_by)
 
     streamobj = read(filenames.pop(), format='SU', byteorder='<')
@@ -251,7 +252,7 @@ def ascii_specfem3d_globe(**kwargs):
     # keep track of file names
     h.files = []
     for file in files:
-        file = unix.basename(file)
+        file = basename(file)
         h.files.append(file)
 
     return s, h

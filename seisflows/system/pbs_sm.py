@@ -1,6 +1,6 @@
 import os
 import subprocess
-from os.path import abspath, join, dirname
+from os.path import abspath, basename, join, dirname
 
 from seisflows.tools import unix
 from seisflows.tools.code import findpath, saveobj
@@ -35,7 +35,7 @@ class pbs_sm(custom_import('system', 'mpi')):
 
         # check parameters
         if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+            setattr(PAR, 'TITLE', basename(abspath('.')))
 
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)

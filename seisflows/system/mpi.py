@@ -1,6 +1,6 @@
 
 import os
-from os.path import abspath, join
+from os.path import abspath, basename, join
 
 import numpy as np
 
@@ -30,7 +30,7 @@ class mpi(custom_import('system', 'base')):
         """
 
         if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+            setattr(PAR, 'TITLE', basename(abspath('.')))
 
         if 'NTASK' not in PAR:
             setattr(PAR, 'NTASK', 1)

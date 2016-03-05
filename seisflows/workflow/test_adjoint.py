@@ -1,6 +1,6 @@
 
 from glob import glob
-from os.path import join
+from os.path import basename, join
 
 import numpy as np
 
@@ -135,6 +135,6 @@ class test_adjoint(object):
     @property
     def event(self):
         if not hasattr(self, '_event'):
-            self._event = unix.basename(glob(PATH.OUTPUT+'/'+'traces/*')[0])
+            self._event = basename(glob(PATH.OUTPUT+'/'+'traces/*')[0])
         return self._event
 

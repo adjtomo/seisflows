@@ -2,7 +2,7 @@
 import os
 import subprocess
 import sys
-from os.path import abspath, join
+from os.path import abspath, basename, join
 
 from seisflows.tools import unix
 from seisflows.tools.code import findpath, saveobj
@@ -38,7 +38,7 @@ class slurm_sm(custom_import('system', 'mpi')):
 
         # check parameters
         if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+            setattr(PAR, 'TITLE', basename(abspath('.')))
 
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)

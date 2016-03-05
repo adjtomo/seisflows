@@ -4,7 +4,7 @@ import math
 import sys
 import subprocess
 import time
-from os.path import abspath, join
+from os.path import abspath, basename, join
 
 from seisflows.tools import msg
 from seisflows.tools import unix
@@ -40,7 +40,7 @@ class lsf_sm(custom_import('system', 'mpi')):
 
         # check parameters
         if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', unix.basename(abspath('.')))
+            setattr(PAR, 'TITLE', basename(abspath('.')))
 
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
