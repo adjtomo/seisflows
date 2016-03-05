@@ -63,7 +63,7 @@ class slurm_sm(custom_import('system', 'base')):
             setattr(PATH, 'LOCAL', None)
 
         if 'SUBMIT' not in PATH:
-            setattr(PATH, 'SUBMIT', unix.pwd())
+            setattr(PATH, 'SUBMIT', abspath('.'))
 
         if 'OUTPUT' not in PATH:
             setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))

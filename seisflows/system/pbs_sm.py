@@ -66,7 +66,7 @@ class pbs_sm(custom_import('system', 'mpi')):
             setattr(PATH, 'SYSTEM', join(PATH.SCRATCH, 'system'))
 
         if 'SUBMIT' not in PATH:
-            setattr(PATH, 'SUBMIT', unix.pwd())
+            setattr(PATH, 'SUBMIT', abspath('.'))
 
         if 'OUTPUT' not in PATH:
             setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))

@@ -92,10 +92,6 @@ def mv(src='', dst=''):
     shutil.move(src, dst)
 
 
-def pwd():
-    return os.getcwd()
-
-
 def rename(old, new, names):
     for name in names:
         if name.find(old) >= 0:

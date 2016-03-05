@@ -88,7 +88,7 @@ class SeisflowsObjects(object):
     def fullpath(self, path=None):
         if not path:
             try:
-                path = sys.modules['SeisflowsParameters']['OUTPUT']
+                path = SeisflowsParameters()['OUTPUT']
             except:
                 path = './output'
 
