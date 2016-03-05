@@ -10,7 +10,7 @@ SeisFlows is an open source seismic inversion package that
 Documentation is available online at [readthedocs.org](http://seisflows.readthedocs.org/en/latest/)
 
 
-# Acknowledging
+### Acknowledging
 
 We are currently preparing a manuscript on SeisFlows to be submitted to Geophysical Journal International. In the meantime, if you find this package useful, please star it.
 
