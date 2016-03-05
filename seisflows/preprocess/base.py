@@ -3,7 +3,7 @@ import numpy as np
 import obspy
 
 from seisflows.tools import msg, unix
-from seisflows.tools.code import exists, Struct, string_types
+from seisflows.tools.code import exists, Struct
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
@@ -62,10 +62,6 @@ class base(object):
 
         if PAR.WRITER not in dir(writers):
             print msg.WriterError
-            raise ParameterError()
-
-        if type(PAR.CHANNELS) not in string_types:
-            print msg.ChannelError
             raise ParameterError()
 
         if PAR.READER != PAR.WRITER:

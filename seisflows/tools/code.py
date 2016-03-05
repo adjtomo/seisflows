@@ -90,8 +90,3 @@ def savetxt(filename, v):
     np.savetxt(filename, [v], '%11.6e')
 
 
-string_types = [
-    str,
-    unicode
-    ]
-

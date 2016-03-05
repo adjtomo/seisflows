@@ -2,7 +2,7 @@
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.code import Struct, string_types
+from seisflows.tools.code import Struct
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
@@ -65,10 +65,6 @@ class legacy(object):
 
         if PAR.WRITER not in dir(writers):
             print msg.WriterError
-            raise ParameterError()
-
-        if type(PAR.CHANNELS) not in string_types:
-            #print msg.ChannelError
             raise ParameterError()
 
 
