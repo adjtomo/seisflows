@@ -1,7 +1,6 @@
 #!/bin/env python
 
-from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths, \
-    loadclass
+from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
 SeisflowsParameters().load()
 SeisflowsPaths().load()

@@ -225,13 +225,12 @@ def custom_import(*names):
         class 'inversion'.
     """
     # parse input arguments
-    if len(names) == 1:
-        names += (SeisflowsParameters()[names[0].upper()],)
-    if len(names) != 2:
+    if len(names) == 0:
         raise Exception()
-
     if names[0] not in SeisflowsObjects.names:
         raise Exception()
+    if len(names) == 1:
+        names += (val(names[0]),)
     if not names[1]:
         return Null
 
@@ -244,12 +243,18 @@ def custom_import(*names):
         except:
             pass
 
-    try:
-        # from module, extract class
-        obj = getattr(module, names[1])
-        return obj
-    except:
+    # extract class
+    if hasattr(module, names[1]):
+        return getattr(module, names[1])
+    else:
         raise Exception()
+
+
+def val(key):
+    if key.upper() in SeisflowsParameters():
+        return SeisflowsParameters()[key.upper()]
+    else:
+        return ''
 
 
 # the following code changes how instance methods are handled by pickle.  placing it here, in this module, ensures that pickle changes will be in effect for all SeisFlows workflows
