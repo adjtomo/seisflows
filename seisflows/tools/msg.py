@@ -5,6 +5,7 @@ from seisflows.tools.code import Struct
 ###
 
 WarningOverwrite = """
+
 WARNING: Data from previous workflow found in working directory.
 
 To delete data and start a new workflow type:
@@ -16,6 +17,7 @@ To resume existing workflow type:
 
 
 ReceiverError_SPECFEM = """
+
 ERROR READING RECEIVERS
 
     Error reading receivers.
@@ -24,6 +26,7 @@ ERROR READING RECEIVERS
 
 
 SourceError_SPECFEM = """
+
 ERROR READING SOURCES
 
     In DIRECTORY, there must be one or more files matching WILDCARD.
@@ -35,6 +38,7 @@ ERROR READING SOURCES
 
 
 ParameterWarning_SPECFEM = """
+
 PARAMETER WARNING
 
     There is a conflict between parameters.
@@ -47,6 +51,7 @@ PARAMETER WARNING
 
 
 obspyImportError = """
+
 OBSPY IMPORT ERROR
 
     The current workflow requires obspy.  Install it and try again, or consider 
@@ -56,6 +61,7 @@ OBSPY IMPORT ERROR
 """
 
 DataFormatWarning = """
+
 DATA FORMAT WARNING
 
     reader format: %s
@@ -66,6 +72,7 @@ DATA FORMAT WARNING
 """
 
 ReaderError = """
+
 READER ERROR
 
    Seismic data reader not found.
@@ -76,6 +83,7 @@ READER ERROR
 
 
 WriterError = """
+
 WRITER ERROR
 
    Seismic data writer not found.
@@ -89,6 +97,7 @@ WRITER ERROR
 ###
 
 TaskError_LSF = """
+
 TASK ERROR
 
     Task failed:  %s.%s
@@ -101,6 +110,7 @@ TASK ERROR
 
 
 TaskError_PBS = """
+
 TASK ERROR
 
     Task failed:  %s.%s
@@ -113,6 +123,7 @@ TASK ERROR
 
 
 TaskError_SLURM = """
+
 TASK ERROR
 
     Task failed:  %s.%s
