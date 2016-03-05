@@ -36,7 +36,7 @@ class tiger_lg(custom_import('system', 'slurm_lg')):
 
 
     def submit(self, *args, **kwargs):
-        """Submits job
+        """ Submits job
         """
         if not exists(PATH.SUBMIT + '/' + 'scratch'):
             unix.ln(PATH.SCRATCH, PATH.SUBMIT + '/' + 'scratch')

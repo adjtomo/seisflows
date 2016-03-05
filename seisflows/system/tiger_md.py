@@ -29,13 +29,13 @@ class tiger_md(custom_import('system', 'slurm_md')):
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', '')
 
-        super(tiger_sm, self).check()
+        super(tiger_md, self).check()
 
 
     def submit(self, *args, **kwargs):
-        """Submits job
+        """ Submits job
         """
         if not exists(PATH.SUBMIT + '/' + 'scratch'):
             unix.ln(PATH.SCRATCH, PATH.SUBMIT + '/' + 'scratch')
 
-        super(tiger_sm, self).submit(*args, **kwargs)
+        super(tiger_md, self).submit(*args, **kwargs)
