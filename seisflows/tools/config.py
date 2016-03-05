@@ -21,26 +21,24 @@ class SeisflowsObjects(object):
       these objects can be thought of as comprising the complete 'state' of a
       SeisFlows session.
 
-      Each entry in 'objects' below corresponds simultaneously to a parameter in
+      The following list is one of the few hardwired aspects of the whole 
+      SeisFlows package. Any changes may result in circular imports or other
+      problems. Each entry corresponds simultaneously to a parameter in
       SeisflowsParameters; a module in the SeisFlows package; and a class that
       is instantiated and made accessible via the Python import system.
-
-      The list 'objects' is is one of the few hardwired aspects of the whole
-      SeisFlows package. Any changes may result in circular imports or other
-      problems.
     """
 
-    objects = []
-    objects += ['system']
-    objects += ['preprocess']
-    objects += ['solver']
-    objects += ['postprocess']
-    objects += ['optimize']
-    objects += ['workflow']
+    names = []
+    names += ['system']
+    names += ['optimize']
+    names += ['preprocess']
+    names += ['solver']
+    names += ['postprocess']
+    names += ['workflow']
 
 
     def load(self):
-        """ Load objects from the above list into memeory
+        """ Imports and instantiates objects from the above list
         """
         if 'SeisflowsParameters' not in sys.modules.keys():
             raise Exception
@@ -53,12 +51,12 @@ class SeisflowsObjects(object):
             print WarningOverwrite
             sys.exit()
 
-        for obj in self.objects:
-            # instantiate objects
-            key = sys.modules['SeisflowsParameters'][obj.upper()]
+        for name in self.names:
+            # import and instantiate object
+            obj = custom_import(name)()
 
-            # make them accessible via the stanard Python import system
-            sys.modules[obj] = custom_import(obj, key)()
+            # make accessible via standard Python import system
+            sys.modules[name] = obj
 
         self.check()
 
@@ -68,24 +66,23 @@ class SeisflowsObjects(object):
         """
         fullpath = self.fullpath(path)
         unix.mkdir(fullpath)
-        for key in self.objects:
-            saveobj(fullpath +'/'+ key+'.p', sys.modules[key])
+        for name in self.names:
+            saveobj(fullpath +'/'+ name+'.p', sys.modules[name])
 
 
     def reload(self, path):
         """ Load saved objects from disk
         """
         fullpath = self.fullpath(path)
-        for obj in self.objects:
-            fullfile = join(fullpath, obj+'.p')
-            sys.modules[obj] = loadobj(fullfile)
+        for name in self.names:
+            fullfile = join(fullpath, name+'.p')
+            sys.modules[name] = loadobj(fullfile)
         self.check()
 
 
     def check(self):
-        for obj in ['system', 'optimize', 'workflow', 'solver', 'preprocess', 'postprocess']:
-        #for obj in self.objects:
-            sys.modules[obj].check()
+        for name in self.names:
+            sys.modules[name].check()
 
 
     def fullpath(self, path=None):
@@ -220,7 +217,7 @@ class ParameterError(ValueError):
 
 
 def custom_import(*names):
-    """ Imports module and extracts class with the same name, e.g.
+    """ Imports module and extracts class of the same name. For example,
 
             custom_import('workflow', 'inversion') 
 
@@ -229,11 +226,10 @@ def custom_import(*names):
     """
     # parse input arguments
     if len(names) == 1:
-        names.append(
-            SeisflowsParameters()[name.upper()])
+        names += (SeisflowsParameters()[names[0].upper()],)
     if len(names) != 2:
         raise Exception()
-    if names[0] not in SeisflowsObjects.objects:
+    if names[0] not in SeisflowsObjects.names:
         raise Exception()
     if not names[1]:
         return Null
@@ -262,18 +258,19 @@ def loadvars(*args, **kwargs):
 
 ### utility functions
 
-def _import(string, path=None):
+def _import(name, path=None):
     """Imports from string"""
     if path:
-        # temporarily adjust python path
+        # temporarily adjust path
         sys.path.append(path)
 
-    moduleobj = __import__(string, fromlist='dummy')
+    module = import_module(name)
 
     if path:
+        # restore original path
         sys.path.pop()
 
-    return moduleobj
+    return module
 
 
 def _vars(obj):
@@ -283,38 +280,6 @@ def _vars(obj):
         if key[0] != '_':
             mydict[key] = val
     return Struct(mydict)
-
-
-def _parse(args, package=None):
-    """Determines path of module relative to package directory"""
-    arglist = []
-    for arg in args:
-        arglist.extend(arg.split('.'))
-    if package:
-        parglist = package.split('.')
-        nn = min(len(arglist), len(parglist))
-        for ii in range(nn + 1):
-            if parglist[ii:nn] == arglist[0:nn - ii]:
-                break
-        arglist = parglist[0:ii] + arglist
-    return arglist
-
-
-def _exists(parts):
-    """Checks if a module exists without importing it
-
-    Takes an array of strings.
-    """
-    try:
-        path = None
-        for part in parts[:-1]:
-            args = imp.find_module(part, path)
-            obj = imp.load_module(part, *args)
-            path = obj.__path__
-        args = imp.find_module(parts[-1], path)
-        return True
-    except ImportError:
-        return False
 
 
 def _pickle_method(method):

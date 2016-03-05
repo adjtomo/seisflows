@@ -18,8 +18,6 @@ from seisflows.optimize.lib.io import Writer, StepWriter
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
-import solver
-
 
 class base(object):
     """ Nonlinear optimization base class.
@@ -141,6 +139,7 @@ class base(object):
 
         # write initial model
         if exists(PATH.MODEL_INIT):
+            import solver
             src = PATH.MODEL_INIT
             dst = join(PATH.OPTIMIZE, 'm_new')
             savenpy(dst, solver.merge(solver.load(src)))
