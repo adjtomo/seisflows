@@ -9,7 +9,7 @@ from importlib import import_module
 from os.path import abspath, join
 
 from seisflows.tools import unix
-from seisflows.tools.code import Struct, loadjson, loadobj, savejson, saveobj
+from seisflows.tools.code import Struct, loadjson, loadobj, savejson, saveobj, loadpy
 from seisflows.tools.msg import WarningOverwrite
 
 
@@ -138,7 +138,7 @@ class SeisflowsParameters(ParameterObj):
             sys.modules['SeisflowsParameters'] = self
 
     def load(self):
-        mydict = loadvars('parameters', '.')
+        mydict = loadpy(abspath('parameters.py'))
         self.update(mydict)
         return self
 
@@ -164,7 +164,7 @@ class SeisflowsPaths(ParameterObj):
             sys.modules['SeisflowsPaths'] = self
 
     def load(self):
-        mydict = loadvars('paths', '.')
+        mydict = loadpy(abspath('paths.py'))
         super(ParameterObj, self).__setattr__('__dict__', mydict)
         return self
 
@@ -252,35 +252,9 @@ def custom_import(*names):
         raise Exception()
 
 
-def loadvars(*args, **kwargs):
-    return _vars(_import(*args, **kwargs))
+# the following changes how instance methods are handled by pickle.  placing it here, in this module, ensures that pickle changes will be in effect for all SeisFlows workflows
 
-
-### utility functions
-
-def _import(name, path=None):
-    """Imports from string"""
-    if path:
-        # temporarily adjust path
-        sys.path.append(path)
-
-    module = import_module(name)
-
-    if path:
-        # restore original path
-        sys.path.pop()
-
-    return module
-
-
-def _vars(obj):
-    """Returns an object's __dict__ with private variables removed"""
-    mydict = {}
-    for key, val in vars(obj).items():
-        if key[0] != '_':
-            mydict[key] = val
-    return Struct(mydict)
-
+# for relevant discussion, see stackoverflow thread "Can't pickle <type 'instancemethod'> when using python's multiprocessing Pool.map():
 
 def _pickle_method(method):
     func_name = method.im_func.__name__
@@ -299,8 +273,6 @@ def _unpickle_method(func_name, obj, cls):
             break
     return func.__get__(obj, cls)
 
-
-# the following changes how instance methods are handled by pickle.  placing it here, in this module, ensures that pickle changes will be in effect for all SeisFlows workflows
 
 copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 

@@ -3,7 +3,9 @@ import os
 import pickle
 import re
 
+from imp import load_source
 from importlib import import_module
+from os.path import basename
 
 import numpy as np
 
@@ -78,6 +80,19 @@ def savejson(filename, obj):
     """Save object using json"""
     with open(filename, 'wb') as file:
         json.dump(obj, file, sort_keys=True, indent=4)
+
+
+def loadpy(abspath):
+    # load module
+    name = re.sub('.py$', '', basename(abspath))
+    module = load_source(name, abspath)
+
+    # strip private attributes
+    output = Struct()
+    for key, val in vars(module).items():
+        if key[0] != '_':
+            output[key] = val
+    return output
 
 
 def setdiff(list1, list2):
