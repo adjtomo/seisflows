@@ -6,7 +6,7 @@ import sys
 import types
 
 from importlib import import_module
-from os.path import abspath, join
+from os.path import abspath, join, exists
 
 from seisflows.tools import unix
 from seisflows.tools.code import Struct, loadjson, loadobj, savejson, saveobj, loadpy
@@ -47,7 +47,7 @@ class SeisflowsObjects(object):
             raise Exception
 
         # check if objects from previous run exist on disk
-        if os.path.isdir(self.fullpath()):
+        if exists(full(path())):
             print WarningOverwrite
             sys.exit()
 
@@ -64,19 +64,19 @@ class SeisflowsObjects(object):
     def save(self, path):
         """ Save objects to disk for later reference
         """
-        fullpath = self.fullpath(path)
-        unix.mkdir(fullpath)
+        unix.mkdir(full(path))
         for name in self.names:
-            saveobj(fullpath +'/'+ name+'.p', sys.modules[name])
+            fullfile = join(full(path), name+'.p')
+            saveobj(fullfile, sys.modules[name])
 
 
     def reload(self, path):
         """ Load saved objects from disk
         """
-        fullpath = self.fullpath(path)
         for name in self.names:
-            fullfile = join(fullpath, name+'.p')
+            fullfile = join(full(path), name+'.p')
             sys.modules[name] = loadobj(fullfile)
+
         self.check()
 
 
@@ -85,19 +85,19 @@ class SeisflowsObjects(object):
             sys.modules[name].check()
 
 
-    def fullpath(self, path=None):
-        if not path:
-            try:
-                path = SeisflowsParameters()['OUTPUT']
-            except:
-                path = './output'
+def path():
+    try:
+        return SeisflowsPaths()['OUTPUT']
+    except:
+        cwd = abspath('.')
+        return join(cwd, 'output')
 
-        try:
-            fullpath = join(abspath(path), 'SeisflowsObjects')
-        except:
-            raise IOError(path)
 
-        return fullpath
+def full(path):
+    try:
+        return join(abspath(path), 'SeisflowsObjects')
+    except:
+        raise IOError
 
 
 class ParameterObj(object):

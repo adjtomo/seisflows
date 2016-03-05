@@ -3,12 +3,6 @@
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     SeisflowsObjects
 
-# SeisFlows consists of interacting 'system', 'preprocess', 'solver', 
-# 'postprocess', 'optimize', and 'workflow' objects. The SeisflowObjects utility
-# initializes these objects and makes them accessible through the standard 
-# Python import system. The SeisflowsParameters and SeisflowsPaths utilities 
-# read parameter files and store each file's contents in globally accessible
-# dictionaries.
 for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
    obj.load()
 
