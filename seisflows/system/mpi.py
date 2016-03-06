@@ -8,6 +8,7 @@ from seisflows.tools import unix
 from seisflows.tools.code import findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
+from seisflows.tools.msg import mpi4pyImportError
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -56,6 +57,8 @@ class mpi(custom_import('system', 'base')):
 
         if 'OUTPUT' not in PATH:
             setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
+
+        self.check_mpi()
 
 
     def submit(self, workflow):
@@ -114,3 +117,11 @@ class mpi(custom_import('system', 'base')):
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
 
+
+    def check_mpi(self):
+        """ Checks MPI dependencies
+        """
+        try:
+            import mpi4py
+        except:
+            raise Exception(mpi4pyImportError)
