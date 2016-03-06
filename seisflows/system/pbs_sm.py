@@ -32,44 +32,21 @@ class pbs_sm(custom_import('system', 'mpi')):
     def check(self):
         """ Checks parameters and paths
         """
+        super(pbs_sm, self).check()
 
         # check parameters
-        if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', basename(abspath('.')))
-
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
         if 'MEMORY' not in PAR:
-            raise ParameterError(PAR, 'MEMORY')
-
-        if 'VERBOSE' not in PAR:
-            setattr(PAR, 'VERBOSE', 1)
-
-        if 'NTASK' not in PAR:
-            raise ParameterError(PAR, 'NTASK')
-
-        if 'NPROC' not in PAR:
-            raise ParameterError(PAR, 'NPROC')
+            setattr(PAR, 'MEMORY', 0)
 
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
-        # check paths
-        if 'SCRATCH' not in PATH:
-            setattr(PATH, 'SCRATCH', join(abspath('.'), 'scratch'))
+        if 'PBSARGS' not in PAR:
+            setattr(PAR, 'PBSARGS', '')
 
-        if 'LOCAL' not in PATH:
-            setattr(PATH, 'LOCAL', None)
-
-        if 'SYSTEM' not in PATH:
-            setattr(PATH, 'SYSTEM', join(PATH.SCRATCH, 'system'))
-
-        if 'SUBMIT' not in PATH:
-            setattr(PATH, 'SUBMIT', abspath('.'))
-
-        if 'OUTPUT' not in PATH:
-            setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
 
     def submit(self, workflow):
         """Submits job
@@ -81,23 +58,29 @@ class pbs_sm(custom_import('system', 'mpi')):
         self.checkpoint()
 
         # construct resource list
+        resources = []
         nodes = int(PAR.NTASK / PAR.NODESIZE)
         cores = PAR.NTASK % PAR.NODESIZE
         hours = int(PAR.WALLTIME / 60)
         minutes = PAR.WALLTIME % 60
-        resources = 'walltime=%02d:%02d:00'%(hours, minutes)
+        
+        if PAR.WALLTIME:
+            resources += ['walltime=%02d:%02d:00'%(hours, minutes)]
+        if PAR.MEMORY:
+            resources += ['mem=%dgb' % PAR.MEMORY]
         if nodes == 0:
-            resources += ',mem=%dgb,nodes=1:ppn=%d'%(PAR.MEMORY, cores)
+            resources += ['nodes=1:ppn=%d'%(cores)]
         elif cores == 0:
-            resources += ',mem=%dgb,nodes=%d:ppn=%d'%(PAR.MEMORY, nodes, PAR.NODESIZE)
+            resources += ['nodes=%d:ppn=%d'%(nodes, PAR.NODESIZE)]
         else:
-            resources += ',mem=%dgb,nodes=%d:ppn=%d+1:ppn=%d'%(PAR.MEMORY, nodes, PAR.NODESIZE, cores)
+            resources += ['nodes=%d:ppn=%d+1:ppn=%d'%(nodes, PAR.NODESIZE, cores)]
 
         # construct arguments list
         unix.run('qsub '
+                + '%s ' % PAR.PBSARGS 
                 + '-N %s '%PAR.TITLE
                 + '-o %s '%(PATH.SUBMIT +'/'+ 'output.log')
-                + '-l %s '%resources
+                + '-l %s '%resources.join(',')
                 + '-j %s '%'oe'
                 + findpath('seisflows.system') +'/'+ 'wrappers/submit '
                 + '-F %s '%PATH.OUTPUT)
