@@ -47,7 +47,7 @@ class SeisflowsObjects(object):
             raise Exception
 
         # check if objects from previous run exist on disk
-        if exists(full(path())):
+        if exists(_full(_path())):
             print WarningOverwrite
             sys.exit()
 
@@ -64,9 +64,9 @@ class SeisflowsObjects(object):
     def save(self, path):
         """ Save objects to disk for later reference
         """
-        unix.mkdir(full(path))
+        unix.mkdir(_full(path))
         for name in self.names:
-            fullfile = join(full(path), name+'.p')
+            fullfile = join(_full(path), name+'.p')
             saveobj(fullfile, sys.modules[name])
 
 
@@ -74,7 +74,7 @@ class SeisflowsObjects(object):
         """ Load saved objects from disk
         """
         for name in self.names:
-            fullfile = join(full(path), name+'.p')
+            fullfile = join(_full(path), name+'.p')
             sys.modules[name] = loadobj(fullfile)
 
         self.check()
@@ -83,21 +83,6 @@ class SeisflowsObjects(object):
     def check(self):
         for name in self.names:
             sys.modules[name].check()
-
-
-def path():
-    try:
-        return SeisflowsPaths()['OUTPUT']
-    except:
-        cwd = abspath('.')
-        return join(cwd, 'output')
-
-
-def full(path):
-    try:
-        return join(abspath(path), 'SeisflowsObjects')
-    except:
-        raise IOError
 
 
 class ParameterObj(object):
@@ -248,6 +233,23 @@ def custom_import(*names):
         return getattr(module, names[1])
     else:
         raise Exception()
+
+
+# utility functions
+
+def _path():
+    try:
+        return SeisflowsPaths()['OUTPUT']
+    except:
+        cwd = abspath('.')
+        return join(cwd, 'output')
+
+
+def _full(path):
+    try:
+        return join(abspath(path), 'SeisflowsObjects')
+    except:
+        raise IOError
 
 
 def _val(key):
