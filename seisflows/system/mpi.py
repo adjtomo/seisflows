@@ -41,6 +41,9 @@ class mpi(custom_import('system', 'base')):
         if 'VERBOSE' not in PAR:
             setattr(PAR, 'VERBOSE', 1)
 
+        if 'MPIARGS' not in PAR:
+            setattr(PAR, 'MPIARGS', '--mca mpi_warn_on_fork 0')
+
         # check paths
         if 'SCRATCH' not in PATH:
             setattr(PATH, 'SCRATCH', join(abspath('.'), 'scratch'))
@@ -53,9 +56,6 @@ class mpi(custom_import('system', 'base')):
 
         if 'OUTPUT' not in PATH:
             setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
-
-        if 'SYSTEM' not in PATH:
-            setattr(PATH, 'SYSTEM', join(PATH.SCRATCH, 'system'))
 
 
     def submit(self, workflow):
@@ -78,7 +78,7 @@ class mpi(custom_import('system', 'base')):
         if hosts == 'all':
             unix.cd(join(findpath('seisflows.system'), 'wrappers'))
             unix.run('mpiexec -n {} '.format(PAR.NTASK)
-                    + '--mca mpi_warn_on_fork 0' + ' '
+                    + PAR.MPIARGS + ' '
                     + 'run_mpi' + ' '
                     + PATH.OUTPUT + ' '
                     + classname + ' '
@@ -87,7 +87,7 @@ class mpi(custom_import('system', 'base')):
         elif hosts == 'head':
             unix.cd(join(findpath('seisflows.system'), 'wrappers'))
             unix.run('mpiexec -n 1 '
-                    + '--mca mpi_warn_on_fork 0' + ' '
+                    + PAR.MPIARGS + ' '
                     + 'run_mpi_head' + ' '
                     + PATH.OUTPUT + ' '
                     + classname + ' '
@@ -99,7 +99,9 @@ class mpi(custom_import('system', 'base')):
 
     def getnode(self):
         """Gets number of running task"""
-        return int(os.environ['OMPI_COMM_WORLD_RANK'])
+        from mpi4py import MPI
+        return MPI.COMM_WORLD.Get_rank()
+
 
     def mpiargs(self):
         """ Wrapper for mpiexec

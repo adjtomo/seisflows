@@ -9,9 +9,6 @@ if __name__ == '__main__':
     myobj = sys.argv[2]
     myfunc = sys.argv[3]
 
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-
     from os.path import join
     from seisflows.tools.code import loadjson, loadobj
     from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
