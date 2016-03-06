@@ -35,38 +35,13 @@ class slurm_sm(custom_import('system', 'mpi')):
     def check(self):
         """ Checks parameters and paths
         """
-
-        # check parameters
-        if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', basename(abspath('.')))
+        super(slurm_sm, self).check()
 
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
-        if 'VERBOSE' not in PAR:
-            setattr(PAR, 'VERBOSE', 1)
-
-        if 'NPROC' not in PAR:
-            raise ParameterError(PAR, 'NPROC')
-
-        if 'NTASK' not in PAR:
-            raise ParameterError(PAR, 'NTASK')
-
-        if 'SLURM_ARGS' not in PAR:
-            setattr(PAR, 'SLURM_ARGS', '')
-
-        # check paths
-        if 'SCRATCH' not in PATH:
-            setattr(PATH, 'SCRATCH', join(abspath('.'), 'scratch'))
-
-        if 'LOCAL' not in PATH:
-            setattr(PATH, 'LOCAL', None)
-
-        if 'SUBMIT' not in PATH:
-            setattr(PATH, 'SUBMIT', abspath('.'))
-
-        if 'OUTPUT' not in PATH:
-            setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
+        if 'SLURMARGS' not in PAR:
+            setattr(PAR, 'SLURMARGS', '')
 
 
     def submit(self, workflow):
@@ -79,7 +54,7 @@ class slurm_sm(custom_import('system', 'mpi')):
 
         # submit workflow
         unix.run('sbatch '
-                + PAR.SLURM_ARGS + ' '
+                + '%s ' % PAR.SLURMARGS
                 + '--job-name=%s '%PAR.TITLE
                 + '--output=%s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '--cpus-per-task=%d '%PAR.NPROC

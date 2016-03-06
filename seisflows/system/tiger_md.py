@@ -1,6 +1,6 @@
 
 from getpass import getuser
-from os.path import abspath, join, exsits
+from os.path import abspath, join, exists
 from uuid import uuid4
 
 from seisflows.tools import unix

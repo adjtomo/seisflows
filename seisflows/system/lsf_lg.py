@@ -63,8 +63,8 @@ class lsf_lg(custom_import('system', 'base')):
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
-        if 'LSF_ARGS' not in PAR:
-            setattr(PAR, 'LSF_ARGS', '')
+        if 'LSFARGS' not in PAR:
+            setattr(PAR, 'LSFARGS', '')
 
         # check paths
         if 'SCRATCH' not in PATH:
@@ -94,7 +94,7 @@ class lsf_lg(custom_import('system', 'base')):
 
         # prepare bsub arguments
         unix.run('bsub '
-                + PAR.LSF_ARGS + ' '
+                + '%s ' % PAR.LSFARGS
                 + '-J %s ' % PAR.TITLE
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
                 + '-n %d ' % PAR.NODESIZE
@@ -127,7 +127,7 @@ class lsf_lg(custom_import('system', 'base')):
         # submit job
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
             subprocess.call('bsub '
-                + PAR.LSF_ARGS + ' '
+                + '%s ' % PAR.LSFARGS
                 + '-n %d ' % PAR.NPROC 
                 + '-R "span[ptile=%d]" ' % PAR.NODESIZE
                 + '-W %d:00 ' % PAR.STEPTIME
@@ -187,7 +187,7 @@ class lsf_lg(custom_import('system', 'base')):
 
 
 
-    def mpiargs(self):
+    def mpiexec(self):
         return 'mpirun '
 
 

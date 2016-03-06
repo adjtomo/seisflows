@@ -37,50 +37,13 @@ class lsf_sm(custom_import('system', 'mpi')):
     def check(self):
         """ Checks parameters and paths
         """
-
-        # check parameters
-        if 'TITLE' not in PAR:
-            setattr(PAR, 'TITLE', basename(abspath('.')))
+        super(lsf_sm, self).check()
 
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
-        if 'STEPTIME' not in PAR:
-            setattr(PAR, 'STEPTIME', 30.)
-
-        if 'SLEEPTIME' not in PAR:
-            setattr(PAR, 'SLEEPTIME', 1.)
-
-        if 'VERBOSE' not in PAR:
-            setattr(PAR, 'VERBOSE', 1)
-
-        if 'NTASK' not in PAR:
-            raise ParameterError(PAR, 'NTASK')
-
-        if 'NPROC' not in PAR:
-            raise ParameterError(PAR, 'NPROC')
-
-        if 'NODESIZE' not in PAR:
-            raise ParameterError(PAR, 'NODESIZE')
-
-        if 'LSF_ARGS' not in PAR:
-            setattr(PAR, 'LSF_ARGS', '')
-
-        # check paths
-        if 'SCRATCH' not in PATH:
-            setattr(PATH, 'SCRATCH', join(abspath('.'), 'scratch'))
-
-        if 'LOCAL' not in PATH:
-            setattr(PATH, 'LOCAL', None)
-
-        if 'SUBMIT' not in PATH:
-            setattr(PATH, 'SUBMIT', abspath('.'))
-
-        if 'OUTPUT' not in PATH:
-            setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
-
-        if 'SYSTEM' not in PATH:
-            setattr(PATH, 'SYSTEM', join(PATH.SCRATCH, 'system'))
+        if 'LSFARGS' not in PAR:
+            setattr(PAR, 'LSFARGS', '')
 
 
     def submit(self, workflow):
@@ -94,7 +57,7 @@ class lsf_sm(custom_import('system', 'mpi')):
 
         # prepare bsub arguments
         unix.run('bsub '
-                + PAR.LSF_ARGS + ' '
+                + '%s ' % PAR.LSFARGS
                 + '-J %s ' % PAR.TITLE
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
                 + '-n %d ' % PAR.NTASK

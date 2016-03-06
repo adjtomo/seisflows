@@ -63,8 +63,8 @@ class slurm_lg(custom_import('system', 'base')):
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
-        if 'SLURM_ARGS' not in PAR:
-            setattr(PAR, 'SLURM_ARGS', '')
+        if 'SLURMARGS' not in PAR:
+            setattr(PAR, 'SLURMARGS', '')
 
         # check paths
         if 'SCRATCH' not in PATH:
@@ -94,7 +94,7 @@ class slurm_lg(custom_import('system', 'base')):
 
         # prepare sbatch arguments
         unix.run('sbatch '
-                + PAR.SLURM_ARGS + ' '
+                + '%s ' % PAR.SLURMARGS
                 + '--job-name=%s ' % PAR.TITLE
                 + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
                 + '--ntasks-per-node=%d ' % PAR.NODESIZE
@@ -121,7 +121,7 @@ class slurm_lg(custom_import('system', 'base')):
                 return
 
 
-    def mpiargs(self):
+    def mpiexec(self):
         return 'srun '
 
 
@@ -141,7 +141,7 @@ class slurm_lg(custom_import('system', 'base')):
 
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
             subprocess.call('sbatch '
-                + PAR.SLURM_ARGS + ' '
+                + '%s ' % PAR.SLURMARGS
                 + '--job-name=%s ' % PAR.TITLE
                 + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
                 + '--ntasks-per-node=%d ' % PAR.NODESIZE

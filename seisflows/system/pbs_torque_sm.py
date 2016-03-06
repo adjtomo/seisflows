@@ -55,6 +55,9 @@ class pbs_torque_sm(custom_import('system', 'base')):
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
+        if 'PBSARGS' not in PAR:
+            setattr(PAR, 'PBSARGS', '')
+
         # check paths
         if 'SCRATCH' not in PATH:
             setattr(PATH, 'SCRATCH', join(abspath('.'), 'scratch'))
@@ -70,6 +73,7 @@ class pbs_torque_sm(custom_import('system', 'base')):
 
         if 'OUTPUT' not in PATH:
             setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
+
 
     def submit(self, workflow):
         """Submits job
@@ -95,12 +99,13 @@ class pbs_torque_sm(custom_import('system', 'base')):
 
         # construct arguments list
         unix.run('qsub '
-                + '-N %s '%PAR.TITLE
-                + '-o %s '%(PATH.SUBMIT +'/'+ 'output.log')
-                + '-l %s '%resources
-                + '-j %s '%'oe'
+                + '%s ' % PAR.PBSARGS
+                + '-N %s ' % PAR.TITLE
+                + '-o %s ' %( PATH.SUBMIT +'/'+ 'output.log')
+                + '-l %s ' % resources
+                + '-j %s ' % 'oe'
                 + findpath('seisflows.system') +'/'+ 'wrappers/submit '
-                + '-F %s '%PATH.OUTPUT)
+                + '-F %s ' % PATH.OUTPUT)
 
     def run(self, classname, funcname, hosts='all', **kwargs):
         """  Runs tasks in serial or parallel on specified hosts
@@ -137,7 +142,7 @@ class pbs_torque_sm(custom_import('system', 'base')):
         """
         return int(os.getenv('PBS_VNODENUM'))
 
-    def mpiargs(self):
+    def mpiexec(self):
         """ Call code in serial when using pbsdsh (MPI Singleton)
         """
         return ''
