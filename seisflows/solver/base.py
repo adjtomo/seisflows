@@ -565,7 +565,7 @@ class base(object):
         """
         with open(output,'w') as f:
             subprocess.call(
-                system.mpiargs() + script,
+                system.mpiexec() + script,
                 shell=True,
                 stdout=f)
 

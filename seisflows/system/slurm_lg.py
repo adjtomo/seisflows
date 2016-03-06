@@ -121,7 +121,7 @@ class slurm_lg(custom_import('system', 'base')):
                 return
 
 
-    def mpiargs(self):
+    def mpiexec(self):
         return 'srun '
 
 

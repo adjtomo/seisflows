@@ -103,7 +103,7 @@ class mpi(custom_import('system', 'base')):
         return MPI.COMM_WORLD.Get_rank()
 
 
-    def mpiargs(self):
+    def mpiexec(self):
         """ Wrapper for mpiexec
         """
         return ''

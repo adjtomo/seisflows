@@ -142,7 +142,7 @@ class pbs_torque_sm(custom_import('system', 'base')):
         """
         return int(os.getenv('PBS_VNODENUM'))
 
-    def mpiargs(self):
+    def mpiexec(self):
         """ Call code in serial when using pbsdsh (MPI Singleton)
         """
         return ''

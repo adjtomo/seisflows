@@ -126,7 +126,7 @@ class slurm_md(custom_import('system', 'base')):
         return int(gid[lid])
 
 
-    def mpiargs(self):
+    def mpiexec(self):
         return 'mpirun -np %d '%PAR.NPROC
 
 

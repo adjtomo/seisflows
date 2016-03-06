@@ -187,7 +187,7 @@ class lsf_lg(custom_import('system', 'base')):
 
 
 
-    def mpiargs(self):
+    def mpiexec(self):
         return 'mpirun '
 
 
