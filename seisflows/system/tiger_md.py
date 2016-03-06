@@ -21,7 +21,7 @@ class tiger_md(custom_import('system', 'slurm_md')):
         """
 
         if 'UUID' not in PAR:
-            setattr(PAR, 'UUID', str(uuid.uuid4()))
+            setattr(PAR, 'UUID', str(uuid4()))
  
         if 'SCRATCH' not in PATH:
             setattr(PATH, 'SCRATCH', join('/scratch/gpfs', getuser(), 'seisflows', PAR.UUID))
