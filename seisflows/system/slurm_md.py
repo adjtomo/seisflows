@@ -13,7 +13,7 @@ PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
 
-class slurm_sm(custom_import('system', 'base')):
+class slurm_md(custom_import('system', 'base')):
     """ An interface through which to submit workflows, run tasks in serial or 
       parallel, and perform other system functions.
 
@@ -52,8 +52,8 @@ class slurm_sm(custom_import('system', 'base')):
         if 'NTASK' not in PAR:
             raise ParameterError(PAR, 'NTASK')
 
-        if 'SLURM_ARGS' not in PAR:
-            setattr(PAR, 'SLURM_ARGS', '')
+        if 'SLURMARGS' not in PAR:
+            setattr(PAR, 'SLURMARGS', '')
 
         # check paths
         if 'SCRATCH' not in PATH:
@@ -79,7 +79,7 @@ class slurm_sm(custom_import('system', 'base')):
 
         # submit workflow
         unix.run('sbatch '
-                + PAR.SLURM_ARGS + ' '
+                + '%s ' %  PAR.SLURMARGS
                 + '--job-name=%s '%PAR.TITLE
                 + '--output=%s '%(PATH.SUBMIT +'/'+ 'output.log')
                 + '--cpus-per-task=%d '%PAR.NPROC
