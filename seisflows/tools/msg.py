@@ -176,7 +176,7 @@ SEISFLOWS IMPORT ERROR
 
         custom_import(name1, name2)
 
-    The resulting full dotted name "seisflows.name1.name2" must currespond to a
+    The resulting full dotted name "seisflows.name1.name2" must correspond to a
     module in the SeisFlows package.
 
 """
