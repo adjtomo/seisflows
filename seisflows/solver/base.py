@@ -7,8 +7,8 @@ from os.path import basename, join
 import numpy as np
 
 import seisflows.seistools.specfem3d as solvertools
-from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin, splitvec, Model, Minmax
+from seisflows.seistools.shared import getpar, setpar, Model, Minmax
+from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin, splitvec
 
 from seisflows.tools import msg
 from seisflows.tools import unix

@@ -1,7 +1,9 @@
 
-from string import find
-
 from collections import Mapping
+from string import find
+from os.path import abspath, join
+
+import numpy as np
 
 from seisflows.tools.code import Struct
 
@@ -19,11 +21,6 @@ class SeisStruct(Struct):
              ['sx', sx], ['sy', sy], ['sz', sz],
              ['rx', rx], ['ry', ry], ['rz', rz],
              ['nrec', nrec], ['nsrc', nsrc]])
-
-
-class ModelStruct(Mapping):
-    def __init__(self):
-        raise NotImplementedError
 
 
 def getpar(key, file='DATA/Par_file', sep='=', cast=str):
@@ -78,6 +75,39 @@ def setpar(key, val, file='DATA/Par_file', path='.', sep='='):
 
     # write file
     _writelines(path + '/' + file, lines)
+
+
+def Model(keys):
+    return dict((key, []) for key in keys)
+
+
+class Minmax(object):
+    def __init__(self, keys):
+        self.keys = keys
+        self.minvals = dict((key, +np.Inf) for key in keys)
+        self.maxvals = dict((key, -np.Inf) for key in keys)
+
+    def items(self):
+        return ((key, self.minvals[key], self.maxvals[key]) for key in self.keys)
+
+    def update(self, keys, vals):
+        for key,val in zip(keys, vals):
+            minval = val.min()
+            maxval = val.max()
+            minval_all = self.minvals[key]
+            maxval_all = self.maxvals[key]
+            if minval < minval_all: self.minvals.update({key: minval})
+            if maxval > maxval_all: self.maxvals.update({key: maxval})
+
+    def write(self, path, logpath):
+        if not logpath:
+            return
+        filename = join(logpath, 'output.minmax')
+        with open(filename, 'a') as f:
+            f.write(abspath(path)+'\n')
+            for key,minval,maxval in self.items():
+                f.write('%-15s %10.3e %10.3e\n' % (key, minval, maxval))
+            f.write('\n')
 
 
 ### utility functions

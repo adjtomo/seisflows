@@ -51,15 +51,6 @@ def copybin(src, dst, proc, par):
 def splitvec(v,  nproc, ngll, idim):
     parts = []
     for iproc in range(nproc):
-        imin = nproc*ngll*idim + ngll*iproc 
-        imax = nproc*ngll*idim + ngll*(iproc+1)
-        parts += [v[imin:imax]]
-    return parts
-
-
-def splitvec(v,  nproc, ngll, idim):
-    parts = []
-    for iproc in range(nproc):
         imin = sum(ngll)*idim + sum(ngll[:iproc])
         imax = sum(ngll)*idim + sum(ngll[:iproc+1])
         parts += [v[imin:imax]]
@@ -92,38 +83,4 @@ def write_fortran(v, filename):
         n.tofile(file)
         v.tofile(file)
         n.tofile(file)
-
-
-def Model(keys):
-    return dict((key, []) for key in keys)
-
-
-class Minmax(object):
-    def __init__(self, keys):
-        self.keys = keys
-        self.minvals = dict((key, +np.Inf) for key in keys)
-        self.maxvals = dict((key, -np.Inf) for key in keys)
-
-    def items(self):
-        return ((key, self.minvals[key], self.maxvals[key]) for key in self.keys)
-
-    def update(self, keys, vals):
-        for key,val in zip(keys, vals):
-            minval = val.min()
-            maxval = val.max()
-            minval_all = self.minvals[key]
-            maxval_all = self.maxvals[key]
-            if minval < minval_all: self.minvals.update({key: minval})
-            if maxval > maxval_all: self.maxvals.update({key: maxval})
-
-    def write(self, path, logpath):
-        if not logpath:
-            return
-        filename = join(logpath, 'output.minmax')
-        with open(filename, 'a') as f:
-            f.write(abspath(path)+'\n')
-            for key,minval,maxval in self.items():
-                f.write('%-15s %10.3e %10.3e\n' % (key, minval, maxval))
-            f.write('\n')
-
 

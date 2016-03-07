@@ -6,8 +6,8 @@ from os.path import join
 import numpy as np
 
 import seisflows.seistools.specfem3d_globe as solvertools
-from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin, Model, Minmax
+from seisflows.seistools.shared import getpar, setpar, Model, Minmax
+from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
