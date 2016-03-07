@@ -68,7 +68,12 @@ Users without accounts on tiger.princeton.edu can download and run the following
 
 - checkerboard
 
-See these :doc:`instructions <instructions_remote>` for downloading and running inversions on any laptop, desktop, or cluster.
+See these :doc:`instructions <instructions_remote>` for downloading and running inversions.  
+
+The examples above can be run on most any laptop, desktop, or cluster. For more information about running on these systems, see `here <http://seisflows.readthedocs.org/en/latest/instructions_remote.html#run-checkerboard-test-in-parallel>` and  `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-interfaces>`.
+
+We are working, on making more examples available for download.  Once you are familiar with the operation of the package, it is usually fairly straightforward to create inversion examples of your own.
+
 
 
 Documentation
