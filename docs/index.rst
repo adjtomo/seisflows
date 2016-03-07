@@ -6,7 +6,7 @@
 What is SeisFlows?
 ==================
 
-SeisFlows is an open source seismic inversion package that:
+SeisFlows is an open source seismic inversion package that
 
 - delivers a complete, customizable waveform inversion workflow
 
@@ -22,7 +22,7 @@ Perhaps the easiest way to get started is to run a one of the following examples
 Available Locally
 -----------------
 
-Users with accounts on ``tiger.princeton.edu`` can run the following ready-to-go  examples:
+Users with accounts on ``tiger.princeton.edu`` can run the following ready-to-go  inversions.
 
 *2D Regional and Global*
 
@@ -56,17 +56,19 @@ Users with accounts on ``tiger.princeton.edu`` can run the following ready-to-go
 
 - mideast
 
-See these :doc:`instructions <instructions_local>` for running local examples.
+See these :doc:`instructions <instructions_local>` for running inversions on our local cluster.
 
 
-Available Remotely
-------------------
+Available For Download
+----------------------
 
-Users without accounts on tiger can download and run the example following examples.
+Users without accounts on tiger can download and run the following read-to-go inversions.
 
-- 2D checkerboard
+*2D*
 
-See these :doc:`instructions <instructions_remote>` for running examples remotely.
+- checkerboard
+
+See these :doc:`instructions <instructions_remote>` for downloading and running inversions on any laptop, desktop, or cluster.
 
 
 Documentation
