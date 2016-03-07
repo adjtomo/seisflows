@@ -66,7 +66,7 @@ Users without accounts on tiger can download and run the example following examp
 
 - 2D checkerboard
 
-See these :doc:`instructions <instructions_examples>` for running examples remotely.
+See these :doc:`instructions <instructions_remote>` for running examples remotely.
 
 
 Documentation
@@ -76,5 +76,4 @@ Documentation
    :maxdepth: 1
 
    manual/contents.rst
-   ref/modules.rst
 
