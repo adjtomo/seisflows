@@ -24,24 +24,36 @@ Available Locally
 
 Users with accounts on ``tiger.princeton.edu`` can run the following ready-to-go  examples:
 
-2D Regional and Global
+*2D Regional and Global*
+
 - North America
+
 - Southern California
+
 - Global
+
 - Deep Earth
 
-2D Near Surface
+*2D Near Surface*
+
 - Marmousi offshore
+
 - Marmousi onshore
+
 - overthrust offshore
+
 - overthrust onshore
+
 - BP anticline
+
 - BP salt diapir
 
-3D Cartesian
+*3D Cartesian*
+
 - checkerboard
 
-3D Global
+*3D Global*
+
 - mideast
 
 See these :doc:`instructions <instructions_local>` for running local examples.
