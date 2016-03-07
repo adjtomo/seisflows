@@ -124,4 +124,4 @@ class mpi(custom_import('system', 'base')):
         try:
             import mpi4py
         except:
-            raise Exception(mpi4pyImportError)
+            raise Exception(mpi4pyImportError % PAR.SYSTEM)

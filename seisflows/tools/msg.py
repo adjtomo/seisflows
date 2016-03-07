@@ -1,6 +1,4 @@
 
-from seisflows.tools.code import Struct
-
 
 ###
 
