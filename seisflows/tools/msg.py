@@ -127,7 +127,7 @@ TASK ERROR
 
 obspyImportError = """
 
-OBSPY IMPORT ERROR
+DENPENDENCY ERROR
 
     The current data processing workflow requires OBSPY.  Please install it and
     try again, or consider using legacy data processing class 
@@ -135,9 +135,9 @@ OBSPY IMPORT ERROR
 
 """
 
-mpi4pyImportError = """
+mpiError1 = """
 
-MPI4PY IMPORT ERROR
+DEPENDENCY ERROR
 
     The following system configuration requires MPI4PY:
 
@@ -145,6 +145,23 @@ MPI4PY IMPORT ERROR
 
     Please install MPI4PY and try again, or consider choosing a different system
     configuration.
+
+"""
+
+
+mpiError2 = """
+
+SYSTEM CONFIGURATION ERROR
+
+    The following system configuration can be used only with single-core
+    solvers:
+
+        system.%s
+
+    If your solver does in fact run on a single core, then set NPROC <- 1.
+
+    If your solver requires multiple cores, then consider using lsf_lg, pbs_lg,
+    or slurm_lg system interfaces instead.
 
 """
 

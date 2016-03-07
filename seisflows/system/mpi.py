@@ -8,7 +8,7 @@ from seisflows.tools import unix
 from seisflows.tools.code import findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
-from seisflows.tools.msg import mpi4pyImportError
+from seisflows.tools.msg import mpiError1, mpiError2
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -124,5 +124,9 @@ class mpi(custom_import('system', 'base')):
         """
         try:
             import mpi4py
-        except:
-            raise Exception(mpi4pyImportError % PAR.SYSTEM)
+        except ImportError:
+            raise Exception(mpiError1 % PAR.SYSTEM)
+
+        if PAR.NPROC > 1:
+            raise Exception(mpiError2 % PAR.SYSTEM)
+

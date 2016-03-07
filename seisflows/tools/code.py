@@ -46,7 +46,7 @@ def exists(name):
 
 
 def findpath(name):
-    """Resolves absolute path of package"""
+    """Resolves absolute path of module"""
     path = import_module(name).__file__
 
     # adjust file extension
