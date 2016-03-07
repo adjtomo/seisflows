@@ -122,6 +122,8 @@ class slurm_lg(custom_import('system', 'base')):
 
 
     def mpiexec(self):
+        """ Specifies MPI exectuable; used to invoke solver
+        """
         return 'srun '
 
 

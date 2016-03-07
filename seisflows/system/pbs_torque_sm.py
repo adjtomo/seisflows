@@ -137,15 +137,19 @@ class pbs_torque_sm(custom_import('system', 'base')):
                     + funcname + ' '
                     + dirname(findpath('seisflows')))
 
+
     def getnode(self):
         """ Gets number of running task
         """
         return int(os.getenv('PBS_VNODENUM'))
 
+
     def mpiexec(self):
-        """ Call code in serial when using pbsdsh (MPI Singleton)
+        """ Specifies MPI exectuable; used to invoke solver
         """
+        # call solver in serial when using pbsdsh (MPI Singleton)
         return ''
+
 
     def save_kwargs(self, classname, funcname, kwargs):
         kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')

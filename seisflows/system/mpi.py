@@ -107,7 +107,7 @@ class mpi(custom_import('system', 'base')):
 
 
     def mpiexec(self):
-        """ Wrapper for mpiexec
+        """ Specifies MPI exectuable; used to invoke solver
         """
         return ''
 
