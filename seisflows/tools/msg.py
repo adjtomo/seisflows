@@ -191,10 +191,11 @@ SEISFLOWS IMPORT ERROR
     Please check that "name1" is one of the following
 
         workflow
-        system
+        solver
         optimize
         preprocess
         postprocess
+        system
 
 """
 
