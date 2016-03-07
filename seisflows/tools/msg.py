@@ -127,7 +127,7 @@ TASK ERROR
 
 obspyImportError = """
 
-DENPENDENCY ERROR
+DEPENDENCY ERROR
 
     The current data processing workflow requires OBSPY.  Please install it and
     try again, or consider using legacy data processing class 
