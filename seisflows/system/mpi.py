@@ -109,6 +109,7 @@ class mpi(custom_import('system', 'base')):
     def mpiexec(self):
         """ Specifies MPI exectuable; used to invoke solver
         """
+        # call solver as MPI singleton
         return ''
 
     def save_kwargs(self, classname, funcname, kwargs):

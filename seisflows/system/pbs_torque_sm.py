@@ -147,7 +147,7 @@ class pbs_torque_sm(custom_import('system', 'base')):
     def mpiexec(self):
         """ Specifies MPI exectuable; used to invoke solver
         """
-        # call solver in serial when using pbsdsh (MPI Singleton)
+        # call solver as MPI singleton when using pbsdsh
         return ''
 
 
