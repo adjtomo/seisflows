@@ -16,11 +16,45 @@ SeisFlows is an open source seismic inversion package that:
 Getting Started
 ===============
 
-Perhaps the easiest way to get started is to run a few examples.  
+Perhaps the easiest way to get started is to run a one of the following examples.  
 
-Users with accounts on ``tiger.princeton.edu`` can run a number of ready-to-go test cases following these :doc:`instructions <instructions_local>`.  
 
-Other users can download and run an example following these :doc:`alternate instructions <instructions_remote>`.
+Available Locally
+-----------------
+
+Users with accounts on ``tiger.princeton.edu`` can run the following ready-to-go  examples:
+
+2D Regional and Global
+- North America
+- Southern California
+- Global
+- Deep Earth
+
+2D Near Surface
+- Marmousi offshore
+- Marmousi onshore
+- overthrust offshore
+- overthrust onshore
+- BP anticline
+- BP salt diapir
+
+3D Cartesian
+- checkerboard
+
+3D Global
+- mideast
+
+See these :doc:`instructions <instructions_local>` for running local examples.
+
+
+Available Remotely
+------------------
+
+Users without accounts on tiger can download and run the example following examples.
+
+- 2D checkerboard
+
+See these :doc:`instructions <instructions_examples>` for running examples remotely.
 
 
 Documentation
