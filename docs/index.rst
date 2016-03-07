@@ -22,7 +22,7 @@ Perhaps the easiest way to get started is to run a one of the following examples
 Available Locally
 -----------------
 
-Users with accounts on ``tiger.princeton.edu`` can run the following ready-to-go  inversions.
+Users with accounts on tiger.princeton.edu can run the following ready-to-go inversions.
 
 *2D Regional and Global*
 
@@ -62,7 +62,7 @@ See these :doc:`instructions <instructions_local>` for running inversions on our
 Available For Download
 ----------------------
 
-Users without accounts on tiger can download and run the following read-to-go inversions.
+Users without accounts on tiger.princeton.edu can download and run the following inversions.
 
 *2D*
 
