@@ -1,14 +1,16 @@
 
 import os
+import subprocess
+
 from os.path import abspath, basename, join
 
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.code import call, findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
-from seisflows.tools.msg import mpiError1, mpiError2
+from seisflows.tools.msg import mpiError1, mpiError2, mpiError3
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -74,27 +76,31 @@ class mpi(custom_import('system', 'base')):
     def run(self, classname, funcname, hosts='all', **kwargs):
         """ Runs tasks in serial or parallel on specified hosts
         """
-
+        # to avoid cryptic MPI messages, use "--mca_warn_on_fork 0" as the
+        # default value for MPIARGS, and use subprocess.call rather than 
+        # call_catch to invoke mpiexec
         self.checkpoint()
         self.save_kwargs(classname, funcname, kwargs)
 
         if hosts == 'all':
             unix.cd(join(findpath('seisflows.system'), 'wrappers'))
-            unix.run('mpiexec -n {} '.format(PAR.NTASK)
+            subprocess.call('mpiexec -n {} '.format(PAR.NTASK)
                     + PAR.MPIARGS + ' '
                     + 'run_mpi' + ' '
                     + PATH.OUTPUT + ' '
                     + classname + ' '
-                    + funcname)
+                    + funcname,
+                    shell=True)
 
         elif hosts == 'head':
             unix.cd(join(findpath('seisflows.system'), 'wrappers'))
-            unix.run('mpiexec -n 1 '
+            subprocess.call('mpiexec -n 1 '
                     + PAR.MPIARGS + ' '
                     + 'run_mpi_head' + ' '
                     + PATH.OUTPUT + ' '
                     + classname + ' '
-                    + funcname)
+                    + funcname,
+                    shell=True)
 
         else:
             raise(KeyError('Hosts parameter not set/recognized.'))
@@ -107,9 +113,10 @@ class mpi(custom_import('system', 'base')):
 
 
     def mpiexec(self):
-        """ Specifies MPI exectuable; used to invoke solver
+        """ MPI executable used to invoke solver
         """
-        # call solver as MPI singleton
+        # an empty string invokes solver without mpi executable; presupposes 
+        # that solver runs on a single core
         return ''
 
     def save_kwargs(self, classname, funcname, kwargs):
@@ -130,3 +137,13 @@ class mpi(custom_import('system', 'base')):
         if PAR.NPROC > 1:
             raise Exception(mpiError2 % PAR.SYSTEM)
 
+        #try:
+        #    f = open('/dev/null', 'w')
+        #    subprocess.check_call('which mpiexec', 
+        #        shell=True,
+        #        stdout='/dev/null')
+        #except:
+        #    raise Exception(mpiError3 % PAR.SYSTEM)
+        #finally:
+        #    f.close()
+            

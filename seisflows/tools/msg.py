@@ -14,6 +14,23 @@ To resume existing workflow type:
 """
 
 
+SolverError = """
+
+SOLVER FAILED
+
+    Nonzero exit status returned by:  %s
+
+    Subsequent tasks may fail because expected solver output is not in place.
+    Users running on clusters without fault tolerance should consider stopping 
+    any remaining workflow tasks to avoid further loss of resources. 
+
+    To troubleshoot solver errors, navigate to ./scratch/solver to browse solver
+    output or try running solver manually in the directories set up in
+    ./scratch/solver. 
+
+"""
+
+
 ReceiverError_SPECFEM = """
 
 ERROR READING RECEIVERS
@@ -158,10 +175,27 @@ SYSTEM CONFIGURATION ERROR
 
         system.%s
 
-    If your solver does in fact run on a single core, then set NPROC <- 1.
+    If your solver requires only a single core, then set NPROC equal to 1.
 
     If your solver requires multiple cores, then consider using lsf_lg, pbs_lg,
-    or slurm_lg system interfaces instead.
+    or slurm_lg system configurations instead.
+
+"""
+
+
+mpiError3 = """
+
+SYSTEM CONFIGURATION WARNING
+
+    The following system configuration requires 'mpiexec':
+
+        system.%s
+
+    Please make sure than 'mpiexec' is accessible through your shell's PATH
+    environment variable. If your executable goes by a different name such as
+    'mpirun', consider creating an alias in your shell's configuration file, and
+    remember to source the modified configuration file. If MPI is not available
+    on your system, consider using the 'multithreaded' system interface instead.
 
 """
 
@@ -226,4 +260,5 @@ SEISFLOWS IMPORT ERROR
         %s
 
 """
+
 
