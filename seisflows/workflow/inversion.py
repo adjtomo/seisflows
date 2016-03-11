@@ -21,11 +21,10 @@ import postprocess
 
 
 class inversion(object):
-    """ Seismic inversion base class.
+    """ Waveform inversion base class.
 
-      Computes iterative model updates in accordance with parameter file 
-      settings and provides a base class on top of which custom inversion 
-      strategies can be implemented.
+      Peforms iterative nonlinear inversion and provides a base class on top
+      of which specialized strategies can be implemented.
 
       To allow customization, the inversion workflow is divided into generic 
       methods such as 'initialize', 'finalize', 'evaluate_function', 
@@ -113,6 +112,7 @@ class inversion(object):
         """
         optimize.iter = PAR.BEGIN
         self.setup()
+        print ''
 
         while optimize.iter <= PAR.END:
             print "Starting iteration", optimize.iter
@@ -147,9 +147,9 @@ class inversion(object):
             optimize.setup()
 
         if PATH.DATA:
-            print 'Copying data...' 
+            print 'Copying data' 
         else:
-            print 'Generating data...' 
+            print 'Generating data' 
 
         system.run('solver', 'setup', 
                    hosts='all')
@@ -191,12 +191,12 @@ class inversion(object):
             else:
                 retry = optimize.retry_status()
                 if retry:
-                    print ' Line search failed...\n\n Retrying...'
+                    print ' Line search failed\n\n Retrying...'
                     optimize.restart()
                     self.line_search()
                     break
                 else:
-                    print ' Line search failed...\n\n Aborting...'
+                    print ' Line search failed\n\n Aborting...'
                     sys.exit(-1)
 
 

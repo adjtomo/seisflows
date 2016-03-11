@@ -81,9 +81,9 @@ class thrifty_inversion(custom_import('workflow', 'inversion')):
         isready = self.solver_status()
         if not isready:
             if PATH.DATA:
-                print 'Copying data...'
+                print 'Copying data'
             else:
-                print 'Generating data...'
+                print 'Generating data'
 
             system.run('solver', 'setup',
                        hosts='all')
