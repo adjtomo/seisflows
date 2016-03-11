@@ -1,5 +1,5 @@
 
-import subprocess
+import sys
 from os.path import join
 from glob import glob
 
@@ -86,8 +86,8 @@ class specfem2d(custom_import('solver', 'base')):
         unix.cd(self.getpath)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        self.mpirun('bin/xmeshfem2D')
-        self.mpirun('bin/xspecfem2D',output='log.solver')
+        self.call('bin/xmeshfem2D')
+        self.call('bin/xspecfem2D',output='log.solver')
 
         unix.mv(self.data_wildcard, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
@@ -119,8 +119,8 @@ class specfem2d(custom_import('solver', 'base')):
         """
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        self.mpirun('bin/xmeshfem2D')
-        self.mpirun('bin/xspecfem2D')
+        self.call('bin/xmeshfem2D')
+        self.call('bin/xspecfem2D')
 
 
     def adjoint(self):
@@ -131,8 +131,8 @@ class specfem2d(custom_import('solver', 'base')):
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
 
-        self.mpirun('bin/xmeshfem2D')
-        self.mpirun('bin/xspecfem2D')
+        self.call('bin/xmeshfem2D')
+        self.call('bin/xspecfem2D')
 
 
     ### postprocessing utilities
@@ -198,17 +198,6 @@ class specfem2d(custom_import('solver', 'base')):
         _, h = preprocess.load(dir='traces/obs')
         solvertools.write_sources(vars(PAR), h)
 
-
-    ### utility functions
-
-    def mpirun(self, script, output='/dev/null'):
-        """ Wrapper for mpirun
-        """
-        with open(output,'w') as f:
-            subprocess.call(
-                script,
-                shell=True,
-                stdout=f)
 
     ### miscellaneous
 

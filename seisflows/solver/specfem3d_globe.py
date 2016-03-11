@@ -52,7 +52,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         unix.cd(self.getpath)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        self.mpirun('bin/xspecfem3D')
+        self.call('bin/xspecfem3D')
 
         unix.mv(self.data_wildcard, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
@@ -73,7 +73,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
 
             unix.cp(glob(model_path +'/'+ '*'), self.model_databases)
 
-            self.mpirun('bin/xmeshfem3D')
+            self.call('bin/xmeshfem3D')
             self.export_model(PATH.OUTPUT +'/'+ model_name)
 
         else:
@@ -139,7 +139,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         """
         solvertools.setpar('SIMULATION_TYPE', '1')
         solvertools.setpar('SAVE_FORWARD', '.true.')
-        self.mpirun('bin/xspecfem3D')
+        self.call('bin/xspecfem3D')
         unix.mv(self.data_wildcard, 'traces/syn')
 
 
@@ -150,7 +150,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         solvertools.setpar('SAVE_FORWARD', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
-        self.mpirun('bin/xspecfem3D')
+        self.call('bin/xspecfem3D')
 
 
     def check_mesh_properties(self, path=None, parameters=None):
