@@ -8,7 +8,7 @@ from time import sleep
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.code import call, findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 

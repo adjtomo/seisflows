@@ -1,14 +1,14 @@
 
+from os.path import abspath, basename, join
+
 import os
 import math
 import sys
-import subprocess
 import time
-from os.path import abspath, basename, join
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.code import call, findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -100,7 +100,7 @@ class pbs_lg(custom_import('system', 'base')):
         mpiprocs = PAR.NODESIZE
 
         # prepare qsub arguments
-        unix.run( 'qsub '
+        call( 'qsub '
                 + '%s ' % PAR.PBSARGS
                 + '-l select=1:ncpus=%d:mpiprocs=%d ' % (ncpus, mpiprocs)
                 + '-l %s ' % walltime
@@ -157,7 +157,7 @@ class pbs_lg(custom_import('system', 'base')):
 
         # submit job
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
-            subprocess.call('qsub '
+            call('qsub '
                 + '%s ' % PAR.PBSARGS
                 + '-l select=%d:ncpus=%d:mpiprocs=%d ' (nodes, ncpus, mpiprocs)
                 + '-l %s ' % walltime
@@ -172,8 +172,7 @@ class pbs_lg(custom_import('system', 'base')):
                 + classname + ' '
                 + funcname + ' '
                 + findpath('seisflows'),
-                stdout=f,
-                shell=True)
+                stdout=f)
            
         # retrieve job ids
         with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
@@ -224,10 +223,9 @@ class pbs_lg(custom_import('system', 'base')):
         """
         # TODO: replace shell utilities with native Python
         with open(PATH.SYSTEM+'/'+'job_status', 'w') as f:
-            subprocess.call('qstat -x -tJ ' + jobid + ' | '
+            call('qstat -x -tJ ' + jobid + ' | '
                 + 'tail -n 1 ' + ' | '
                 + 'awk \'{print $5}\'',
-                shell=True,
                 stdout=f)
 
         with open(PATH.SYSTEM+'/'+'job_status', 'r') as f:

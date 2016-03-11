@@ -2,13 +2,12 @@
 import os
 import math
 import sys
-import subprocess
 import time
 from os.path import abspath, basename, join
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.code import call, findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -56,7 +55,7 @@ class lsf_sm(custom_import('system', 'mpi')):
         self.checkpoint()
 
         # prepare bsub arguments
-        unix.run('bsub '
+        call('bsub '
                 + '%s ' % PAR.LSFARGS
                 + '-J %s ' % PAR.TITLE
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')

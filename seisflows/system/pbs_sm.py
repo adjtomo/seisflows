@@ -1,9 +1,8 @@
-import os
-import subprocess
+
 from os.path import abspath, basename, join, dirname
 
 from seisflows.tools import unix
-from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.code import call, findpath, saveobj
 from seisflows.tools.config import ParameterError, custom_import, \
     SeisflowsParameters, SeisflowsPaths
 
@@ -76,7 +75,7 @@ class pbs_sm(custom_import('system', 'mpi')):
             resources += ['nodes=%d:ppn=%d+1:ppn=%d'%(nodes, PAR.NODESIZE, cores)]
 
         # construct arguments list
-        unix.run('qsub '
+        call('qsub '
                 + '%s ' % PAR.PBSARGS 
                 + '-N %s '%PAR.TITLE
                 + '-o %s '%(PATH.SUBMIT +'/'+ 'output.log')

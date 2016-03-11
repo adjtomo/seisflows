@@ -1,7 +1,10 @@
+
 import json
 import os
 import pickle
 import re
+import subprocess
+import traceback
 
 from imp import load_source
 from importlib import import_module
@@ -14,6 +17,12 @@ class Struct(dict):
     def __init__(self, *args, **kwargs):
         super(Struct, self).__init__(*args, **kwargs)
         self.__dict__ = self
+
+
+def call(*args, **kwargs):
+    if 'shell' not in kwargs:
+        kwargs['shell'] = True
+    subprocess.check_call(*args, **kwargs)
 
 
 def cast(var):

@@ -2,13 +2,12 @@
 import os
 import math
 import sys
-import subprocess
 import time
 from os.path import abspath, basename, join
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.code import call, findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -93,7 +92,7 @@ class lsf_lg(custom_import('system', 'base')):
         self.checkpoint()
 
         # prepare bsub arguments
-        unix.run('bsub '
+        call('bsub '
                 + '%s ' % PAR.LSFARGS
                 + '-J %s ' % PAR.TITLE
                 + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
@@ -126,7 +125,7 @@ class lsf_lg(custom_import('system', 'base')):
 
         # submit job
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
-            subprocess.call('bsub '
+            call('bsub '
                 + '%s ' % PAR.LSFARGS
                 + '-n %d ' % PAR.NPROC 
                 + '-R "span[ptile=%d]" ' % PAR.NODESIZE
@@ -137,7 +136,6 @@ class lsf_lg(custom_import('system', 'base')):
                 + PATH.OUTPUT + ' '
                 + classname + ' '
                 + funcname + ' ',
-                shell=True,
                 stdout=f)
 
         # retrieve job ids
@@ -176,12 +174,12 @@ class lsf_lg(custom_import('system', 'base')):
         if hosts == 'all':
             args = ''
             args += '[%d-%d] %% %d' % (1, PAR.NSRC, PAR.NTASK)
-            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J_%I'))
+            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J_%I')
 
         elif hosts == 'head':
             args = ''
             args += '[%d-%d]' % (1, 1)
-            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J'))
+            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J')
 
         return args
 
@@ -197,7 +195,7 @@ class lsf_lg(custom_import('system', 'base')):
         """ Retrives job state from LSF database
         """
         with open(PATH.SYSTEM+'/'+'job_status', 'w') as f:
-            subprocess.call('bjobs -a -d "' + jobid + '"', shell=True, stdout=f)
+            call('bjobs -a -d "' + jobid + '"', stdout=f)
         with open(PATH.SYSTEM+'/'+'job_status', 'r') as f:
             lines = f.readlines()
             state = lines[1].split()[2].strip()

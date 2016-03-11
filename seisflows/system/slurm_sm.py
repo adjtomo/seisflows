@@ -1,11 +1,9 @@
 
-import os
-import subprocess
-import sys
 from os.path import abspath, basename, join
+import os
 
 from seisflows.tools import unix
-from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.code import call, findpath, saveobj
 from seisflows.tools.config import ParameterError, custom_import, \
     SeisflowsParameters, SeisflowsPaths
 
@@ -53,7 +51,7 @@ class slurm_sm(custom_import('system', 'mpi')):
         self.checkpoint()
 
         # submit workflow
-        unix.run('sbatch '
+        call('sbatch '
                 + '%s ' % PAR.SLURMARGS
                 + '--job-name=%s '%PAR.TITLE
                 + '--output=%s '%(PATH.SUBMIT +'/'+ 'output.log')

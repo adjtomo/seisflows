@@ -1,11 +1,9 @@
 
-import os
-import subprocess
-import sys
 from os.path import abspath, basename, join
+import os
 
 from seisflows.tools import unix
-from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.code import call, findpath, saveobj
 from seisflows.tools.config import ParameterError, custom_import, \
     SeisflowsParameters, SeisflowsPaths
 
@@ -78,7 +76,7 @@ class slurm_md(custom_import('system', 'base')):
         self.checkpoint()
 
         # submit workflow
-        unix.run('sbatch '
+        call('sbatch '
                 + '%s ' %  PAR.SLURMARGS
                 + '--job-name=%s '%PAR.TITLE
                 + '--output=%s '%(PATH.SUBMIT +'/'+ 'output.log')
@@ -97,7 +95,7 @@ class slurm_md(custom_import('system', 'base')):
 
         if hosts == 'all':
             # run on all available nodes
-            unix.run('srun '
+            call('srun '
                     + '--wait=0 '
                     + join(findpath('seisflows.system'), 'wrappers/run ')
                     + PATH.OUTPUT + ' '
@@ -106,7 +104,7 @@ class slurm_md(custom_import('system', 'base')):
 
         elif hosts == 'head':
             # run on head node
-            unix.run('srun '
+            call('srun '
                     + '--wait=0 '
                     + join(findpath('seisflows.system'), 'wrappers/run_head ')
                     + PATH.OUTPUT + ' '

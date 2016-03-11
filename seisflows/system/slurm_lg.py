@@ -1,14 +1,14 @@
 
+from os.path import abspath, basename, join
+
 import os
 import math
 import sys
-import subprocess
 import time
-from os.path import abspath, basename, join
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.code import call, findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -93,7 +93,7 @@ class slurm_lg(custom_import('system', 'base')):
         self.checkpoint()
 
         # prepare sbatch arguments
-        unix.run('sbatch '
+        call('sbatch '
                 + '%s ' % PAR.SLURMARGS
                 + '--job-name=%s ' % PAR.TITLE
                 + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
@@ -142,7 +142,7 @@ class slurm_lg(custom_import('system', 'base')):
         unix.mkdir(PATH.SYSTEM)
 
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
-            subprocess.call('sbatch '
+            call('sbatch '
                 + '%s ' % PAR.SLURMARGS
                 + '--job-name=%s ' % PAR.TITLE
                 + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
@@ -154,7 +154,6 @@ class slurm_lg(custom_import('system', 'base')):
                 + PATH.OUTPUT + ' '
                 + classname + ' '
                 + funcname + ' ',
-                shell=1,
                 stdout=f)
 
         # retrieve job ids
@@ -201,7 +200,7 @@ class slurm_lg(custom_import('system', 'base')):
         """ Queries job state from SLURM database
         """
         with open(PATH.SYSTEM+'/'+'job_status', 'w') as f:
-            subprocess.call('sacct -n -o state -j '+jobid, shell=True, stdout=f)
+            call('sacct -n -o state -j '+jobid, stdout=f)
 
         with open(PATH.SYSTEM+'/'+'job_status', 'r') as f:
             line = f.readline()

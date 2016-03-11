@@ -1,11 +1,11 @@
-import os
-import subprocess
+
 from os.path import abspath, basename, join, dirname
+import os
 
 from seisflows.tools import unix
-from seisflows.tools.code import findpath, saveobj
+from seisflows.tools.code import call, findpath, saveobj
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError
+    ParameterError, custom_import
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -98,7 +98,7 @@ class pbs_torque_sm(custom_import('system', 'base')):
             resources += ',mem=%dgb,nodes=%d:ppn=%d+1:ppn=%d'%(PAR.MEMORY, nodes, PAR.NODESIZE, cores)
 
         # construct arguments list
-        unix.run('qsub '
+        call('qsub '
                 + '%s ' % PAR.PBSARGS
                 + '-N %s ' % PAR.TITLE
                 + '-o %s ' %( PATH.SUBMIT +'/'+ 'output.log')
@@ -115,7 +115,7 @@ class pbs_torque_sm(custom_import('system', 'base')):
 
         if hosts == 'all':
             # run on all available nodes
-            unix.run('pbsdsh '
+            call('pbsdsh '
                     + join(findpath('seisflows.system'), 'wrappers/export_paths.sh ')
                     + os.getenv('PATH') + ' '
                     + os.getenv('LD_LIBRARY_PATH') + ' '
@@ -127,7 +127,7 @@ class pbs_torque_sm(custom_import('system', 'base')):
 
         elif hosts == 'head':
             # run on head node
-            unix.run('pbsdsh '
+            call('pbsdsh '
                     + join(findpath('seisflows.system'), 'wrappers/export_paths.sh ')
                     + os.getenv('PATH') + ' '
                     + os.getenv('LD_LIBRARY_PATH') + ' '
