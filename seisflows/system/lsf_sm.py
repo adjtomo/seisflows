@@ -29,8 +29,8 @@ class lsf_sm(custom_import('system', 'mpi')):
       Optionally, users can provide a local scratch path PATH.LOCAL if each
       compute node has its own local filesystem.
 
-      For more informations, see 
-      http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-interfaces
+      For important additional information, please see 
+      http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
     """
 
     def check(self):

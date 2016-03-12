@@ -2,22 +2,24 @@
 Overview
 ========
 
-SeisFlows is a Python waveform inversion package designed to be flexible enough for use in both research and production.
+SeisFlows is a Python waveform inversion package flexible enough for both research and production. Currently, the package is being used for or production runs with a billion or so model parameters and for research on oil and gas exploration, earthquake seismology, and general nonlinear optimization problems.
 
-To provide this flexibility, SeisFlows is very modular.  Users are offered choices for each of the following basic modules: 
+To provide flexibility, SeisFlows is very modular.  Users are offered choices in each of the following categories: 
 
 - workflow
 - system
 - solver
-- optimization
-- preprocessing
-- postprocessing
+- nonlinear optimization
+- pre-processing
+- post-processing
 
-The thing that ties everything together is the workflow module.  Execution of a workflow is equivalent to stepping through the code contained in ``workflow.main``.  Users are free to customize the available 'inversion' and 'migration' default workflow modules.
+The thing that ties everything together is the workflow class.  Execution of a workflow is equivalent to stepping through the code contained in ``workflow.main``.  Users are free to customize the available 'inversion' and 'migration' default workflows.
 
-Consider an example from earthquake tomography.  Under SeisFlows, if the study area expands, users can replace a 3D regional solver with a 3D global solver by changing the 'solver' module.  If a new computer system becomes available, users can migrate from, say, an old PBS cluster to a new SLURM cluster by changing the 'system' module.  
+A number of options exists for system and solver.  Consider an example from earthquake tomography.  Under SeisFlows, if the study area expands, users can replace a 3D regional solver with a 3D global solver by changing the 'solver' class.  When a new computer cluster comes online, users can migrate from, say, the old PBS cluster to the new SLURM cluster by changing the 'system' class.
 
-If desired functionality is missing from the main package, users can overload existing modules or contribute their own custom modules.
+Users can also choose from various pre-processing and post-processing options. In our terminology, pre-processing consists of signal processing operations on seismic traces prior to the gradient computation.  Post-processing consists of regularization or image processing operations after the gradient computation.
+
+If desired functionality is missing from the main package, users can overload existing classes or contribute their own custom classes.
 
 
 Installation
@@ -37,7 +39,9 @@ Then set environment variables. Add the following lines to ``.bash_profile`` if 
 Software Prerequisites
 ----------------------
 
-SeisFlows requires Python 2.7, NumPy >1.6, and SciPy >0.12. Forward modeling software is also a prerequisite; see :ref:`solver` for more information.
+SeisFlows requires Python 2.7, NumPy, SciPy, and Obspy.  Forward modeling software is also a prerequisite; see :ref:`solver` for more information.
+
+If Python dependencies are already installed, it is not necessary to run the provided ``setup.py`` script. In fact, the ``setup.py`` is sometimes unreliable as described in the github issues page; if you can contribute a fix, please let us know.
 
 
 Hardware Prerequisites
@@ -51,9 +55,13 @@ Access to a computer cluster is required for most applications.  Base classes ar
 Job Submission
 ==============
 
-Each job must be submitted from a `working directory`.  Within a working directory, users must supply two input files, ``paths.py`` and ``parameters.py``. Output files, by default, are written to the working directory, along with scratch files created by the solver and optimization routines. Different output and scratch directories can be specified by adding or modifying entries in ``paths.py``.
+Each job must have it own `working directory` within which users must supply two input files, ``paths.py`` and ``parameters.py``.
 
-Once a working directory and input files have been created, users can type ``sfrun`` from within the working directory to submit a job. If the ``serial`` system configuration is specified in ``parameters.py``, the job will begin executing immediately. If ``pbs`` or ``slurm`` configurations are specified, the job will run when resources become available. Once the job starts running, status information will be displayed either to the terminal or to the file ``output.log``.
+To begin executing a workflow, simply type ``sfrun`` within a working directory. If for example an ``inversion`` workflow and ``serial`` system configuration are specified in the parameters file, the inversion will begin executing immediately in serial. If a PBS, SLURM, or LSF system configuration is specified instead, execution may wait until required resources become available.
+
+Once the workflow starts running, status information is displayed to the terminal or to the file ``output.log``.  By default, updated models and other inversion results are output to the working directory.
+
+To get a sense for how it all works, try following the step by step instructions included here [http://seisflows.readthedocs.org/en/latest/instructions_remote.html]
 
 
 .. _solver:
@@ -63,7 +71,7 @@ Solver Configuration
 
 SeisFlows includes Python interfaces for SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE.  While the Python interfaces are part of the SeisFlows package, the solver source code must be downloaded separately through the CIG website [https://geodynamics.org/cig/software/].  
 
-After downloading the solver source code, users must configure and compile it, following the instructions in the solver user manual. Summarized briefly, the configuration and compilation procedure is as follows:
+After downloading the solver source code, users must configure and compile it, following the instructions in the solver user manual. Summarized briefly, the configuration and compilation procedure is:
 
 Prior to compilation, users need to run the ``configure`` script and prepare input files such as
 
@@ -94,8 +102,14 @@ After compilation, solver input files must be gathered together in one directory
     SPECFEM_BIN = '/path/to/specfem/exectuable/files'
 
 
-Solver Integration
-------------------
+Writing Custom Solver Interfaces
+--------------------------------
+
+Besides SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE, SeisFlows can interface with other solvers capable of running forward and adjoint simulations. Recently, users unaffiliated with the main SeisFlows developers have successfully interfaced with their own finite difference solvers, for example.  For information about writing custom solver interfaces, see :ref:`developer`.
+
+
+Design Philosophy
+-----------------
 
 Integration of the solver with the other workflow components can be challenging. Here we try to give an idea of the issues involved from both a developer and a user standpoint.
 
@@ -103,15 +117,9 @@ Integration of the solver with the other workflow components can be challenging.
 
 - There is currently no mechanism for automatically compiling executables for SPECFEM2D, SPECFEM3D, or SPECFEM3D_GLOBE. Users must prepare their own SPECFEM input files and then follow the compilation procedure in the SPECFEM documentation.
 
-- As described :ref:`above <job_submission>`, SeisFlows uses two input files, paths and parameter.  Problems could arise if parameters from SeisFlows input files conflict with parameters from solver input file. Users must make sure that there are no conflicts between SeisFlows parameters and solver parameters.
+- As described :ref:`above <job_submission>`, SeisFlows uses two input files, ``paths.py`` and ``parameters.py``.  Problems could arise if parameters from SeisFlows input files conflict with parameters from solver input file. Users must make sure that there are no conflicts between SeisFlows parameters and solver parameters.
 
 - In the solver routines, it is natural to represent velocity models as dictionaries, with different keys corresponding to different material parameters.  In the optimization routines, it natural to represent velocity models as vectors. To convert back and forth between these two representations, a pair of utility functions--``split`` and ``merge``--are included in solver.base.
-
-
-Writing Custom Solver Interfaces
---------------------------------
-
-Besides SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE, SeisFlows can interface with other solvers capable of running forward and adjoint simulations. For information about writing custom solver interfaces, see :ref:`developer`.
 
 
 .. _system:
@@ -119,7 +127,50 @@ Besides SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE, SeisFlows can interface with 
 System Configuration
 ====================
 
-SeisFlows can run on SLURM, PBS, and LSF clusters.
+SeisFlows can run on SLURM, PBS, and LSF clusters, as well as, for very small problems, laptops or desktops.  A list of available system interface classes follows. By hiding environment details behind a python interface layer, these classes provide a consistent command set across different computing environments.
+
+
+*PBS_SM* - For small inversions on PBS clusters. All resources are allocated at the beginning and all simulations are run within a single job.  Requires that individual wavefield simulations run each on a single core, making this option suitable for small 2D inversions only.
+
+*PBS_LG* - For large inversions on PBS clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.  Suitable for small to medium 3D inversions in which individual wavefield simulation span several or more nodes.
+
+*SLURM_SM* - For small inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run within a single job.  Requires that each individual wavefield simulation runs only a single core, making this option suitable for small 2D inversions only.
+
+*SLURM_MD* - For small to moderate-sized inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run within a single job.  Individual wavefield simulations can span more than one core, but not more than one node. Suitable mainly for 2D inversions, although some very small 3D inversion might be possible.
+
+*SLURM_LG* - For large inversions on SLURM clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis. Suitable for 3D inversions in which individual wavefield simulation span several or more nodes.
+
+*SLURM_XL* - For large inversions on SLURM clusters. In addition to the features of SLURM_LG, provides fault tolerence. Tasks that end in failure or timeout are automatically resumbitted. For this reason, can be dangerous to use on code that is not well tested.
+
+*SERIAL* - Tasks that are normally carried out in parallel are instead carried out one at a time. Useful for debugging, among other things.
+
+*MULTITHREADED* - On desktops or laptops with multiple cores, allows embarrassingly parallel tasks to be carried out several at a time, rather than one at a time.
+
+*MPI* - Similar in functionality to  MULTITHREADED, except uses MPI processes rather than multithreading for parallelism.  Requires Python module ``mpi4py``.
+
+*LSF_SM* - Same as SLURM_SM and PBS_SM, except for LSF clusters.
+
+*LSF_LG* - Same as SLURM_LG and PBS_LG, except for LSF clusters.
+
+*PBS_TORQUE_SM* - Same as PBS_SM, except uses pbsdsh rather than mpi4py under the hood.
+
+*TIGER_SM* - Slightly specialized version of of SLURM_SM made available for Princeton users.
+
+*TIGER_MD* - Slightly specialized version of of SLURM_MD made available for Princeton users.
+
+*TIGER_LG* - Slightly specialized version of of SLURM_LG made available for Princeton users.
+
+*TIGER_MD_GPU* - Highly specialized version of SLURM_MD made available for Princeton GPU users.  Provided by Etienne Bachmann. Not recently tested and not likely to work right out of the box.
+
+
+Writing Custom System Interfaces
+--------------------------------
+
+If your needs are more specialized than any of the above options, please view ``seisflows.system`` source code to get a sense for how to write your own custom system interfaces. In our experience, system interfaces require no more than a few hundred lines of code, so writing your own is generally possible once your are familiar with your cluster environment and the SeisFlows framework.
+
+
+Design Philosophy
+-----------------
 
 To make SeisFlows work across different environments, our approach is to wrap system commands with a thin Python layer.  To handle job submission, for example, we wrap the PBS command ``qsub`` and the SLURM command ``sbatch`` with a  python utility called `system.submit`.  The result is a consistent python interface across different clusters.
 
@@ -133,15 +184,6 @@ In SeisFlows, the overall approach to solving system interface problems is to us
 
 
 .. _developer:
-
-
-Parameter Files
-===============
-
-``parameters.py`` contains a list of parameter names and values. Prior to a job being submitted, parameters are checked so that errors can be detected without loss of queue time or wall time. Parameters are stored in a dictionary that is accessible from anywhere in the Python code. By convention, all parameter names must be upper case. Parameter values can be floats, integers, strings or any other Python data type. Parameters can be listed in any order.
-
-``paths.py`` contains a list of path names and values. Prior to a job being submitted, paths are checked so that errors can be detected without loss of queue time or wall time. Paths are stored in a dictionary that is accessible from anywhere in the Python code. By convention, all names must be upper case, and all values must be absolute paths. Paths can be listed in any order.
-
 
 
 Developer Reference
@@ -238,24 +280,10 @@ In the above list, ``setup`` methods are generic methods, called from the ``main
 Besides required methods, classes may include any number of private methods or utility functions.
 
 
-System Interfaces
------------------
+Parameter Files
+---------------
 
-A list of available system interface classes follows. By hiding environment details behind a python interface layer, these classes provide a consistent command set across different computing environments.
+``parameters.py`` contains a list of parameter names and values. Prior to a job being submitted, parameters are checked so that errors can be detected without loss of queue time or wall time. Parameters are stored in a dictionary that is accessible from anywhere in the Python code. By convention, all parameter names must be upper case. Parameter values can be floats, integers, strings or any other Python data type. Parameters can be listed in any order.
 
-PBS_SM - For small inversions on PBS clusters. All resources are allocated at the beginning and all simulations are run at the same time, within a single job. Because of limitations of pbsdsh, individual wavefield simulations cannot span more than one core.
-
-PBS_LG - For large inversions on PBS clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
-
-SLURM_SM - For small inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run at the same time, within a single job. Individual wavefield simulations can span more than one core, but not more than one node.
-
-SLURM_LG - For large inversions on SLURM clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis.
-
-SLURM_XL [under development] - For very large inversions on SLURM clusters. In addition to the features of SLURM_LG, provides fault tolerence: Tasks that end in failure or timeout are automatically resumbitted. (Can be dangerous to use on code that is not well tested.)
-
-SERIAL - Tasks that are normally carried out all at once are instead carried out one at a time. Useful for debugging, among other things.
-
-MULTITHREADED - On desktops or laptops with multiple cores, allows embarrassingly parallel tasks to be carried out several at a time, rather than one at a time.
-
-MPI - Functionally the same as multithreaded, except uses MPI processes rather than multithreading under the hood.  Requires Python module ``mpi4py``.
+``paths.py`` contains a list of path names and values. Prior to a job being submitted, paths are checked so that errors can be detected without loss of queue time or wall time. Paths are stored in a dictionary that is accessible from anywhere in the Python code. By convention, all names must be upper case, and all values must be absolute paths. Paths can be listed in any order.
 

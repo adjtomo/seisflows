@@ -21,7 +21,7 @@ class tiger_md_gpu(custom_import('system', 'tiger_md')):
       environments.
 
       For important additional information, please see 
-      http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-interfaces
+      http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
     """
 
     def check(self):

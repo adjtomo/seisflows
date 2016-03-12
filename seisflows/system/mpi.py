@@ -24,8 +24,8 @@ class mpi(custom_import('system', 'base')):
       classes provide a consistent command set across different computing
       environments.
 
-      For more informations, see 
-      http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-interfaces
+      For important additional information, please see 
+      http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
     """
 
     def check(self):
