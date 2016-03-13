@@ -219,14 +219,23 @@ def custom_import(*names):
     if not names[1]:
         return Null
 
+    # generate package list
+    packages = ['seisflows']
+    if os.getenv('SEISFLOWS_PACKAGES'):
+        for package in os.getenv('SEISFLOWS_PACKAGES').split(','):
+            if package in packages:
+                continue
+            if find_loader(package):
+                packages += [package]
+
     # does module exist?
-    status = False
-    for package in ['seisflows', 'seisflows_research']:
+    _exists = False
+    for package in packages:
         full_dotted_name = package+'.'+names[0]+'.'+names[1]
         if find_loader(full_dotted_name):
-            status = True
+            _exists = True
             break
-    if not status:
+    if not _exists:
         raise Exception(ImportError3 % 
             (names[0], names[1], names[0].upper()))
 
