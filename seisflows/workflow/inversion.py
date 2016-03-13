@@ -74,12 +74,8 @@ class inversion(object):
         if 'OPTIMIZE' not in PATH:
             setattr(PATH, 'OPTIMIZE', join(PATH.SCRATCH, 'optimize'))
 
-        # input settings
         if 'DATA' not in PATH:
             setattr(PATH, 'DATA', None)
-
-        if not exists(PATH.DATA):
-            assert 'MODEL_TRUE' in PATH
 
         if 'MODEL_INIT' not in PATH:
             raise ParameterError(PATH, 'MODEL_INIT')
@@ -105,6 +101,14 @@ class inversion(object):
 
         # assertions
         assert 1 <= PAR.BEGIN <= PAR.END
+
+        # path assertions
+        if not exists(PATH.DATA):
+            assert 'MODEL_TRUE' in PATH
+            assert exists(PATH.MODEL_TRUE)
+
+        if not exists(PATH.MODEL_INIT):
+            raise Exception()
 
 
     def main(self):
