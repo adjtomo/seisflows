@@ -2,7 +2,7 @@
 Overview
 ========
 
-SeisFlows is a Python waveform inversion package flexible enough for both research and production. Currently, the package is being used for or production runs with a billion or so model parameters and for research on oil and gas exploration, earthquake seismology, and general nonlinear optimization problems.
+SeisFlows is a Python waveform inversion package flexible enough for both research and production. So far, the package has been used for production runs with a billion or so model parameters and for research on oil and gas exploration, earthquake seismology, and general nonlinear optimization problems.
 
 To provide flexibility, SeisFlows is very modular.  Users are offered choices in each of the following categories: 
 
@@ -15,11 +15,11 @@ To provide flexibility, SeisFlows is very modular.  Users are offered choices in
 
 The thing that ties everything together is the workflow class.  Execution of a workflow is equivalent to stepping through the code contained in ``workflow.main``.  Users are free to customize the available 'inversion' and 'migration' default workflows.
 
-A number of options exists for system and solver.  Consider an example from earthquake tomography.  Under SeisFlows, if the study area expands, users can replace a 3D regional solver with a 3D global solver by changing the 'solver' class.  When a new computer cluster comes online, users can migrate from, say, the old PBS cluster to the new SLURM cluster by changing the 'system' class.
+A number of options exist for system and solver.  By isolating the system and solver machinery, users can change from application one to another with relative ease. For example, if the study area in an earthquake tomography project expands, users can trade a regional Cartesian solver for a global solver.  If a PBS cluster goes offline and a SLURM cluster comes online to replace it, users can trade the PBS system interface for a SLURM system interface.  A selection of ready-to-go system and solver interfaces are provided within the main package.
 
-Users can also choose from various pre-processing and post-processing options. In our terminology, pre-processing consists of signal processing operations on seismic traces prior to the gradient computation.  Post-processing consists of regularization or image processing operations after the gradient computation.
+Users can also choose from various pre-processing and post-processing options. In our terminology, pre-processing consists of signal processing operations on seismic traces prior to the gradient computation.  Post-processing consists of regularization or image processing operations carried out after the gradient computation.
 
-If desired functionality is missing from the main package, users can overload existing classes or contribute their own custom classes.
+If desired functionality is missing from the main package, users can contribute their own custom classes or overload existing ones.
 
 
 Installation
@@ -41,7 +41,7 @@ Software Prerequisites
 
 SeisFlows requires Python 2.7, NumPy, SciPy, and Obspy.  Forward modeling software is also a prerequisite; see :ref:`solver` for more information.
 
-If Python dependencies are already installed, it is not necessary to run the provided ``setup.py`` script. In fact, the ``setup.py`` is sometimes unreliable as described in the github issues page; if you can contribute a fix, please let us know.
+If Python dependencies are already installed, it is not necessary to run the provided ``setup.py`` script. In fact, the ``setup.py`` is sometimes unreliable as described in the GitHub issues page; if you can contribute a fix, please let us know.
 
 
 Hardware Prerequisites
@@ -57,7 +57,7 @@ Job Submission
 
 Each job must have it own `working directory` within which users must supply two input files, ``paths.py`` and ``parameters.py``.
 
-To begin executing a workflow, simply type ``sfrun`` within a working directory. If for example an ``inversion`` workflow and ``serial`` system configuration are specified in the parameters file, the inversion will begin executing immediately in serial. If a PBS, SLURM, or LSF system configuration is specified instead, execution may wait until required resources become available.
+To begin executing a workflow, simply type ``sfrun`` within a working directory. If an ``inversion`` workflow and ``serial`` system configuration, for example, are specified in the parameters file, the inversion will begin executing immediately in serial. If a PBS, SLURM, or LSF system configuration is specified instead, execution may wait until required resources become available.
 
 Once the workflow starts running, status information is displayed to the terminal or to the file ``output.log``.  By default, updated models and other inversion results are output to the working directory.
 
@@ -69,7 +69,7 @@ To get a sense for how it all works, try following the step by step instructions
 Solver Configuration
 ====================
 
-SeisFlows includes Python interfaces for SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE.  While the Python interfaces are part of the SeisFlows package, the solver source code must be downloaded separately through the CIG website [https://geodynamics.org/cig/software/].  
+SeisFlows includes Python interfaces for SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE.  While the Python interfaces are part of the SeisFlows package, the solver source code must be downloaded separately through GitHub.  
 
 After downloading the solver source code, users must configure and compile it, following the instructions in the solver user manual. Summarized briefly, the configuration and compilation procedure is:
 
@@ -105,7 +105,7 @@ After compilation, solver input files must be gathered together in one directory
 Writing Custom Solver Interfaces
 --------------------------------
 
-Besides SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE, SeisFlows can interface with other solvers capable of running forward and adjoint simulations. Recently, users unaffiliated with the main SeisFlows developers have successfully interfaced with their own finite difference solvers, for example.  For information about writing custom solver interfaces, see :ref:`developer`.
+Besides SPECFEM2D, SPECFEM3D, and SPECFEM3D_GLOBE, SeisFlows can interface with other solvers capable of running forward and adjoint simulations. Users unaffiliated with the main SeisFlows developers have succeeded in interfacing with, for example, their own finite difference solvers.  For information about writing custom solver interfaces, see :ref:`developer`.
 
 
 Design Philosophy
@@ -119,7 +119,7 @@ Integration of the solver with the other workflow components can be challenging.
 
 - As described :ref:`above <job_submission>`, SeisFlows uses two input files, ``paths.py`` and ``parameters.py``.  Problems could arise if parameters from SeisFlows input files conflict with parameters from solver input file. Users must make sure that there are no conflicts between SeisFlows parameters and solver parameters.
 
-- In the solver routines, it is natural to represent velocity models as dictionaries, with different keys corresponding to different material parameters.  In the optimization routines, it natural to represent velocity models as vectors. To convert back and forth between these two representations, a pair of utility functions--``split`` and ``merge``--are included in solver.base.
+- In the solver routines, it's natural to represent velocity models as dictionaries, with different keys corresponding to different material parameters.  In the optimization routines, it's natural to represent velocity models as vectors. To convert back and forth between these two representations, a pair of utility functions--``split`` and ``merge``--are included in solver.base.
 
 
 .. _system:
@@ -142,9 +142,10 @@ SeisFlows can run on SLURM, PBS, and LSF clusters, as well as, for very small pr
 
 *SLURM_XL* - For large inversions on SLURM clusters. In addition to the features of SLURM_LG, provides fault tolerence. Tasks that end in failure or timeout are automatically resumbitted. For this reason, can be dangerous to use on code that is not well tested.
 
-*SERIAL* - Tasks that are normally carried out in parallel are instead carried out one at a time. Useful for debugging, among other things.
+*SERIAL* - Tasks that are normally carried out in parallel are instead carried out one at a time. Useful for debugging, but not much else.
 
-*MULTITHREADED* - On desktops or laptops with multiple cores, allows embarrassingly parallel tasks to be carried out several at a time, rather than one at a time.
+*MULTITHREADED* - On desktops or laptops with multiple cores, allows embarrassingly parallel tasks to be carried out several at a time, rather than one at a time.  Can be used to run small 2D inversion on a laptop or desktop.
+
 
 *MPI* - Similar in functionality to  MULTITHREADED, except uses MPI processes rather than multithreading for parallelism.  Requires Python module ``mpi4py``.
 
@@ -166,7 +167,7 @@ SeisFlows can run on SLURM, PBS, and LSF clusters, as well as, for very small pr
 Writing Custom System Interfaces
 --------------------------------
 
-If your needs are more specialized than any of the above options, please view ``seisflows.system`` source code to get a sense for how to write your own custom system interfaces. In our experience, system interfaces require no more than a few hundred lines of code, so writing your own is generally possible once your are familiar with your cluster environment and the SeisFlows framework.
+If your needs are more specialized than any of the above options, please view ``seisflows.system`` source code to get a sense for how to write your own custom system interfaces. In our experience, system interfaces require no more than a few hundred lines of code, so writing your own is generally possible once you are familiar with the SeisFlows framework and your own cluster environment.
 
 
 Design Philosophy
