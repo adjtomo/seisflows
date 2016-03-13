@@ -13,13 +13,15 @@ To provide flexibility, SeisFlows is very modular.  Users are offered choices in
 - pre-processing
 - post-processing
 
-The thing that ties everything together is the workflow class.  Execution of a workflow is equivalent to stepping through the code contained in ``workflow.main``.  Users are free to customize the available 'inversion' and 'migration' default workflows.
+The thing that ties everything together is the workflow.  Execution of a workflow is equivalent to stepping through the code contained in ``workflow.main``.  Users are free to customize the default 'inversion' and 'migration' workflows from the main package.
 
-A number of options exist for system and solver.  By isolating the system and solver machinery, users can change from application one to another with relative ease. For example, if the study area in an earthquake tomography project expands, users can trade a regional Cartesian solver for a global solver.  If a PBS cluster goes offline and a SLURM cluster comes online to replace it, users can trade the PBS system interface for a SLURM system interface.  A selection of ready-to-go system and solver interfaces are provided within the main package.
+A number of options exist for system and solver.  By isolating system and solver machinery, users can switch from one application to another with relative ease. For example, if the study area in an earthquake tomography project expands, users can trade a regional Cartesian solver for a global solver.  If a PBS cluster goes offline and a SLURM cluster comes online to replace it, users can trade the PBS system interface for a SLURM system interface.  
 
-Users can also choose from various pre-processing and post-processing options. In our terminology, pre-processing consists of signal processing operations on seismic traces prior to the gradient computation.  Post-processing consists of regularization or image processing operations carried out after the gradient computation.
+A selection of ready-to-go system and solver interfaces is provided in the main package.  Through these interfaces, SeisFlows (or prototypes of it) has run on clusters managed by the Department of Defense, Chevron Corp., Total S.A., Princeton University and other universities and institutions.
 
-If desired functionality is missing from the main package, users can contribute their own custom classes or overload existing ones.
+Users can also choose from various pre-processing and post-processing options. In our terminology, pre-processing consists of signal processing operations performed on seismic traces prior to the gradient computation.  Post-processing consists of regularization or image processing operations carried out after the gradient computation.
+
+If desired functionality is missing from the main package, users can contribute their own classes or overload default ones.
 
 
 Installation
@@ -30,7 +32,7 @@ To install Seisflows, first clone the repository::
     git clone github.com/PrincetonUniversity/seisflows
 
 
-Then set environment variables. Add the following lines to ``.bash_profile`` if using bash (or modify accordingly if using a different shell)::
+Then set environment variables. Add the following lines to ``.bash_profile`` (or modify accordingly if using a shell other than bash)::
 
     export PATH=$PATH:/path/to/seisflows/scripts
     export PYTHONPATH=$PYTHONPATH:/path/to/seisflows
@@ -167,7 +169,7 @@ SeisFlows can run on SLURM, PBS, and LSF clusters, as well as, for very small pr
 Writing Custom System Interfaces
 --------------------------------
 
-If your needs are more specialized than any of the above options, please view ``seisflows.system`` source code to get a sense for how to write your own custom system interfaces. In our experience, system interfaces require no more than a few hundred lines of code, so writing your own is generally possible once you are familiar with the SeisFlows framework and your own cluster environment.
+If your needs are more specialized, please view ``seisflows.system`` source code to get a sense for how to write your own custom system interfaces. In our experience, system interfaces require no more than a few hundred lines of code, so writing your own is generally possible once you are familiar with the SeisFlows framework and your own cluster environment.
 
 
 Design Philosophy
@@ -190,93 +192,11 @@ In SeisFlows, the overall approach to solving system interface problems is to us
 Developer Reference
 ===================
 
-To allow classes to work with one another, each class must conform to an established interface.  In practice, this means each class must implement specified methods, listed below, with specified input and output.
+To allow classes to work with one another, each must conform to an established interface.  This means certain classes must implement certain methods, with specified input and output.  Required methods include
 
-``solver`` classes must implement
+- ``setup`` methods are generic methods, called from the ``main`` workflow script and meant to provide users the flexibility to perform any required setup tasks. 
 
-- check
-
-- setup
-
-- eval_func
-
-- eval_grad
-
-- forward
-
-- adjoint
-
-- load
-
-- save
-
-- split
-
-- merge
-
-
-``system`` classes must  implement
-
-- check
-
-- submit
-
-- run
-
-
-``preprocess`` classes must implement
-
-- check
-
-- setup
-
-- prepare_eval_grad
-
-- process_traces
-
-- write_residuals
-
-
-``postprocess`` classes must implement
-
-- check
-
-- setup
-
-- write_graident
-
-- combine_kernels
-
-- process_kernels
-
-
-``optimize`` classes must implement
-
-- check
-
-- setup
-
-- compute_direction
-
-- compute_step
-
-- initialize_search
-
-- finalize_search
-
-- search_status
-
-
-``workflow`` classes must implement
-
-- check
-
-- main
-
-
-In the above list, ``setup`` methods are generic methods, called from the ``main`` workflow script and meant to provide users the flexibility to perform any required setup tasks. 
-
-``check`` methods are the default mechanism for parameter declaration and checking and are called just once, prior to a job being submitted through the scheduler.
+- ``check`` methods are the default mechanism for parameter declaration and checking and are called just once, prior to a job being submitted through the scheduler.
 
 Besides required methods, classes may include any number of private methods or utility functions.
 

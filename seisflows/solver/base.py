@@ -560,22 +560,22 @@ class base(object):
 
     ### miscellaneous
 
-    def call(self, cmd, output='/dev/null'):
+    def call(self, executable, output='/dev/null'):
         """ Calls solver through subprocess
         """
         # a less complicated version, without error catching, would simply be
-        # subprocess.call(system.mpiexec() + cmd, shell=True)
+        # subprocess.call(system.mpiexec() + executable, shell=True)
         try:
             f = open(output,'w')
             subprocess.check_call(
-                system.mpiexec() + cmd,
+                system.mpiexec() + executable,
                 shell=True,
                 stdout=f)
         except subprocess.CalledProcessError, err:
-            print msg.SolverError % (system.mpiexec() + cmd)
+            print msg.SolverError % (system.mpiexec() + executable)
             sys.exit(-1)
         except OSError:
-            print msg.SolverError % (system.mpiexec() + cmd)
+            print msg.SolverError % (system.mpiexec() + executable)
             sys.exit(-1)
         finally:
             f.close()
