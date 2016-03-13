@@ -70,7 +70,7 @@ Users without accounts on tiger.princeton.edu can download and run the following
 
 See these :doc:`instructions <instructions_remote>` for downloading and running inversions.  
 
-The examples above can be run on most any laptop, desktop, or cluster. For more information about running on various systems, see [here] <http://seisflows.readthedocs.org/en/latest/instructions_remote.html#run-checkerboard-test-in-parallel> and [here] <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>.
+The examples above can be run on most any laptop, desktop, or cluster. For more information about running on various systems, see `here <http://seisflows.readthedocs.org/en/latest/instructions_remote.html#run-checkerboard-test-in-parallel>`_ and `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_.
 
 We are working on making more examples available for download.  Once you are familiar, however, with the working of both the package and the solver (for the above examples, SPECFEM2D), it can be straightforward to set up inversions of your own.
 

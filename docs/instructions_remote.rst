@@ -62,12 +62,14 @@ If the optimization problem is solved in 50 iterations or fewer, the test was su
 5. Configure and compile SPECFEM2D
 ----------------------------------
 
-First, download SPECFEM2D from github (to avoid possible version differences, let's use version ``d745c542``)::
+First, download SPECFEM2D from github::
 
         cd /home/packages
         git clone --recursive --branch devel https://github.com/geodynamics/specfem2d.git specfem2d-d745c542
         cd specfem2d-d745c542
         git checkout d745c542
+
+To avoid conflicts, it is import to work with the exact version specified above (``d745c542``). This is necessary becuase, unlike SPECFEM3D and 3D_GLOBE, SPECFEM2D development is a bit haphazard, without proper versioning conventions.
 
 
 Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
@@ -113,8 +115,8 @@ For now, the inversion will run only a single event on only a single processor. 
 On a laptop or desktop with multiple cores, the work of an inversion can be carried out in parallel.  To run the checkerboard example in parallel over events (that is, with multiple event simulations running at the same time on different cores), make the following changes to ``parameters.py``:
 
 - to invert all available events instead of just one event, change ``NTASK`` from ``1`` to ``25``
-- change ``SYSTEM`` from ``serial`` to ``multithreaded`` (or, if ``mpi4py`` is installed, users can instead change ``serial`` to ``mpi``)
-- add a parameter ``NPROCMAX`` and set it equal to the number of cores available on your machine.
+- change ``SYSTEM`` from ``serial`` to ``multithreaded``
+- add a parameter ``NPROCMAX`` and set it to the number of cores available on your machine.
 
 Besides running in parallel over events, the work of an individual event simulation can be parallelized over model regions. See the SPECFEM3D user manual for more information. Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates parallelization over events.
 
@@ -122,5 +124,18 @@ Besides ``serial`` and ``parallel`` settings for running SeisFlows on laptops an
 
 
 9. Visualize inversion results
------------------------------------------
-Sample visualization scripts (coming soon).
+------------------------------
+
+Visualizing inversion results requires software such as pylab, Matlab, or Paraview.
+
+One method for plotting SPECFEM2D models or kernels is to interpolate from the unstructured numerical mesh on which the model parameters are defined to a uniform rectangular grid. A pylab script ``plot2d`` illustrating this approach is available `here <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d>`_.
+
+Another method is to compute a Delauney triangulation and plot the model or kernel over the unstructed mesh itself.  A pylab script ``plot2d_delauney`` illustrating this approach is available `here <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d_delauney>`_.
+
+To plot results from the checkerboard example using ``plot2d``, type the following from the working directory::
+
+          plot2d output/model_init/proc000000_x.bin \
+                 output/model_init/proc000000_z.bin  \
+                 output/model_0001/proc000000_vs.bin
+
+The command line syntax for ``plot2d_delauney`` is exactly the same.  For either script to work, pylab must be installed and the pylab backend properly configured.  Feel free to use these pylab scripts as examples for writing your own plotting scripts in a language of your choosing.
