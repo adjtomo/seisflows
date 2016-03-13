@@ -122,7 +122,7 @@ class test_optimize(object):
                 continue
 
             else:
-                retry = optimize.retry_status
+                retry = optimize.retry_status()
                 if retry:
                     print ' Line search failed... retry'
                     optimize.restart()
