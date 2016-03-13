@@ -129,21 +129,21 @@ class mpi(custom_import('system', 'base')):
     def check_mpi(self):
         """ Checks MPI dependencies
         """
+        if PAR.NPROC > 1:
+            raise Exception(mpiError1 % PAR.SYSTEM)
+
         try:
             import mpi4py
         except ImportError:
-            raise Exception(mpiError1 % PAR.SYSTEM)
-
-        if PAR.NPROC > 1:
             raise Exception(mpiError2 % PAR.SYSTEM)
 
-        #try:
-        #    f = open('/dev/null', 'w')
-        #    subprocess.check_call('which mpiexec', 
-        #        shell=True,
-        #        stdout='/dev/null')
-        #except:
-        #    raise Exception(mpiError3 % PAR.SYSTEM)
-        #finally:
-        #    f.close()
-            
+        try:
+            f = open(os.devnull, 'w')
+            subprocess.check_call('which mpiexec', 
+               shell=True,
+               stdout=f)
+        except:
+            raise Exception(mpiError3 % PAR.SYSTEM)
+        finally:
+            f.close()
+

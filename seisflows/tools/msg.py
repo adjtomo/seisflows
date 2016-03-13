@@ -154,20 +154,6 @@ DEPENDENCY ERROR
 
 mpiError1 = """
 
-DEPENDENCY ERROR
-
-    The following system configuration requires MPI4PY:
-
-        system.%s
-
-    Please install MPI4PY and try again, or consider choosing a different system
-    configuration.
-
-"""
-
-
-mpiError2 = """
-
 SYSTEM CONFIGURATION ERROR
 
     The following system configuration can be used only with single-core
@@ -179,6 +165,20 @@ SYSTEM CONFIGURATION ERROR
 
     If your solver requires multiple cores, then consider using lsf_lg, pbs_lg,
     or slurm_lg system configurations instead.
+
+"""
+
+
+mpiError2 = """
+
+DEPENDENCY ERROR
+
+    The following system configuration requires MPI4PY:
+
+        system.%s
+
+    Please install MPI4PY and try again, or consider choosing a different system
+    configuration.
 
 """
 
