@@ -25,7 +25,7 @@ Users without accounts on tiger.princeton.edu can run the following inversion:
 
 - checkerboard
 
-See these :doc:`instructions <instructions_remote>`_ for downloading and running this example on any laptop, desktop, or cluster. 
+See these :doc: `instructions <instructions_remote>` for downloading and running this example on any laptop, desktop, or cluster. 
 
 Some additional examples based on the Marmousi model are avaiable `here <http://tigress-web.princeton.edu/~rmodrak/2dElastic>`_, although without accompanying step-by-step instructions.
 
