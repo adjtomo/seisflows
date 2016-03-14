@@ -120,7 +120,7 @@ On a laptop or desktop with multiple cores, the work of an inversion can be carr
 
 Besides running in parallel over events, the work of an individual event simulation can be parallelized over model regions. See the SPECFEM3D user manual for more information. Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates parallelization over events.
 
-Besides ``serial`` and ``parallel`` settings for running SeisFlows on laptops and desktops, there are also ``pbs``, ``slurm``, and ``lsf`` options for running on computer clusters. See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information.
+Besides ``serial`` and ``multithreaded`` settings for running SeisFlows on laptops and desktops, there are also PBS, SLRUM, and LSF options for running on computer clusters. See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information.
 
 
 9. Visualize inversion results
@@ -128,7 +128,7 @@ Besides ``serial`` and ``parallel`` settings for running SeisFlows on laptops an
 
 Visualization requires software such as pylab, Matlab, or Paraview.
 
-With any visualization software, one basic approach for plotting SPECFEM2D models or kernels is to interpolate from the unstructured numerical mesh on which the model parameters are defined to a uniform rectangular grid.  A pylab script `plot2d <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d>`_ is available to illustrate this approach.
+With any visualization software, one basic approach for plotting SPECFEM2D models or kernels is to interpolate from the unstructured numerical mesh on which the model parameters are defined to a uniform rectangular grid.  The pylab script `plot2d <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d>`_ illustrates this approach.
 
 
 Another method is to compute a Delauney triangulation and plot the model or kernel over the unstructed mesh itself.  A pylab script `plot2d_delauney <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d_delauney>`_ is available for illustration.
