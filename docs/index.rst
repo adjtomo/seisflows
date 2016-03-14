@@ -21,21 +21,20 @@ Perhaps the easiest way to get started is to run a one of the following examples
 
 Available For Download
 ----------------------
-Users without accounts on tiger.princeton.edu can download and run the following inversions.
+Users without accounts on tiger.princeton.edu can run the following inversion:
 
 - checkerboard
 
-See these :doc:`instructions <instructions_remote>` for downloading and running 
-inversions.
-The examples above can be run on most any laptop, desktop, or cluster. For more information about running on various systems, see `here <http://seisflows.readthedocs.org/en/latest/instructions_remote.html#run-checkerboard-test-in-parallel>`_ and `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_.  We are working on making more examples available for download.
-t.
+See these :doc:`instructions <instructions_remote>`_ for downloading and running this example on any laptop, desktop, or cluster. 
+
+Some additional examples based on the Marmousi model are avaiable `here <http://tigress-web.princeton.edu/~rmodrak/2dElastic>`_, although without accompanying step-by-step instructions.
 
 
 
 Available Locally
 -----------------
 
-Users with accounts on tiger.princeton.edu can run the following ready-to-go inversions.
+Users with accounts on tiger.princeton.edu can run the following inversions:
 
 *2D Regional and Global*
 
