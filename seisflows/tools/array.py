@@ -76,13 +76,6 @@ def savenpy(filename, v):
 # coordinates
 
 
-def gridplot(Z):
-    """ Plots values on 2D rectangular grid
-    """
-    import pylab
-    pylab.pcolor(Z)
-
-
 def gridsmooth(Z, span):
     """ Smooths values on 2D rectangular grid
     """
@@ -101,21 +94,6 @@ def gridsmooth(Z, span):
     W = _signal.convolve2d(W, F, 'same')
     Z = Z/W
     return Z
-
-
-def meshplot(x, y, z):
-    """ Plots values on 2D unstructured mesh
-    """
-    import pylab
-
-    r = (max(x) - min(x))/(max(y) - min(y))
-    rx = r/np.sqrt(1 + r**2)
-    ry = 1/np.sqrt(1 + r**2)
-
-    f = pylab.figure(figsize=(10*rx, 10*ry))
-    p = pylab.tricontourf(x, y, z, 125)
-    pylab.axis('image')
-    return f, p
 
 
 def meshsmooth(v, mesh, span):
