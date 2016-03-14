@@ -43,8 +43,8 @@ If a ''hello'' message is displayed, the test was successful.
 
  
 
-4. Run "optimization" test
---------------------------
+4. Run nonlinear optimization test
+----------------------------------
 
 
 Run the following test to make sure everything is working::
@@ -83,7 +83,7 @@ For troubleshooting any compilation issues, please view the SPECFEM2D manual and
 
 
 6. Set up checkerboard test
--------------------------------
+---------------------------
 
 Download the starting model and other input files required for the waveform inversion checkerboard test.  For simplicity, let's assume the checkerboard working directory will be placed in ``/home/tests`` (if you prefer a different location, then modify the following commands accordingly)::
  
@@ -126,16 +126,17 @@ Besides ``serial`` and ``parallel`` settings for running SeisFlows on laptops an
 9. Visualize inversion results
 ------------------------------
 
-Visualizing inversion results requires software such as pylab, Matlab, or Paraview.
+Visualization requires software such as pylab, Matlab, or Paraview.
 
-One method for plotting SPECFEM2D models or kernels is to interpolate from the unstructured numerical mesh on which the model parameters are defined to a uniform rectangular grid. A pylab script ``plot2d`` illustrating this approach is available `here <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d>`_.
+With any visualization software, one basic approach for plotting SPECFEM2D models or kernels is to interpolate from the unstructured numerical mesh on which the model parameters are defined to a uniform rectangular grid.  A pylab script `plot2d <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d>`_ is available to illustrate this approach.
 
-Another method is to compute a Delauney triangulation and plot the model or kernel over the unstructed mesh itself.  A pylab script ``plot2d_delauney`` illustrating this approach is available `here <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d_delauney>`_.
 
-To plot results from the checkerboard example using ``plot2d``, type the following from the working directory::
+Another method is to compute a Delauney triangulation and plot the model or kernel over the unstructed mesh itself.  A pylab script `plot2d_delauney <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d_delauney>`_ is available for illustration.
+
+To plot results from the checkerboard example using ``plot2d``, run the following command from the working directory::
 
           plot2d output/model_init/proc000000_x.bin \
-                 output/model_init/proc000000_z.bin  \
+                 output/model_init/proc000000_z.bin \
                  output/model_0001/proc000000_vs.bin
 
-The command line syntax for ``plot2d_delauney`` is exactly the same.  For either script to work, pylab must be installed and the pylab backend properly configured.  Feel free to use these pylab scripts as examples for writing your own plotting scripts in a language of your choosing.
+The command line arguments are exactly the same for the other script, ``plot2d_delauney``.  For either script to work, pylab must be installed and the pylab backend properly configured. If you prefer software other than pylab, feel free to use the above scripts for reference in writing your plotting tools. 
