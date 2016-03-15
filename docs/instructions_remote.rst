@@ -118,7 +118,7 @@ On a laptop or desktop with multiple cores, the work of an inversion can be carr
 - change ``SYSTEM`` from ``serial`` to ``multithreaded``
 - add a parameter ``NPROCMAX`` and set it to the number of cores available on your machine.
 
-Besides running in parallel over events, the work of an individual event simulation can be parallelized over model regions. See the SPECFEM3D user manual for more information. Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates parallelization over events.
+Besides running in parallel over events, the work of an individual event simulation can be parallelized over model regions. See the SPECFEM3D user manual for more information. Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, illustrates only event parallelism.
 
 Besides ``serial`` and ``multithreaded`` settings for running SeisFlows on laptops and desktops, there are also PBS, SLURM, and LSF options for running on clusters. See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information.
 
@@ -139,4 +139,4 @@ To plot results from the checkerboard example using ``plot2d``, run the followin
                  output/model_init/proc000000_z.bin \
                  output/model_0001/proc000000_vs.bin
 
-(The command line syntax is the same for the other script, ``plot2d_delaunay``.)  For either script to work, Pylab must be installed and the Pylab backend properly configured. If you prefer visualization software other than Pylab, feel free to use the above scripts for reference in writing your plotting tools. 
+(The command line syntax is the same for the other script.)  For either script to work, Pylab must be installed and the Pylab backend properly configured. If you prefer visualization software other than Pylab, feel free to use the above scripts for reference in writing your plotting own tools. 
