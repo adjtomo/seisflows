@@ -103,7 +103,10 @@ class serial(custom_import('system', 'base')):
     def mpiexec(self):
         """ Specifies MPI exectuable; used to invoke solver
         """
-        return 'mpiexec -np %d ' % PAR.NPROC
+        if PAR.NPROC > 1:
+            return 'mpiexec -np %d ' % PAR.NPROC
+        else:
+            return ''
 
     def progress(self, itask=None):
         """ Provides status updates
