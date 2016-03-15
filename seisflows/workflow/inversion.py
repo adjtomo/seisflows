@@ -36,9 +36,6 @@ class inversion(object):
 
       Commands for running in serial or parallel on a workstation or cluster
       are abstracted through the 'system' interface.
-
-      For assistance using this package, please view online documentation, 
-      browse comments, or email rmodrak -at- princeton -dot- edu
     """
 
     def check(self):
