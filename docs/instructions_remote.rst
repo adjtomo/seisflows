@@ -62,7 +62,7 @@ If the optimization problem is solved in 50 iterations or fewer, the test was su
 5. Configure and compile SPECFEM2D
 ----------------------------------
 
-First, download SPECFEM2D from github::
+First, download SPECFEM2D from GitHub::
 
         cd /home/packages
         git clone --recursive --branch devel https://github.com/geodynamics/specfem2d.git specfem2d-d745c542
@@ -78,7 +78,7 @@ Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
         ./configure FC=ifort
         make all
 
-For troubleshooting any compilation issues, please view the SPECFEM2D manual and github issues page.
+For troubleshooting any compilation issues, please view the SPECFEM2D manual and GitHub issues page.
  
 
 
