@@ -27,7 +27,7 @@ Users without accounts on tiger.princeton.edu can run the following inversion:
 
 See these :doc:`instructions <instructions_remote>` for downloading and running this example on any laptop, desktop, or cluster. 
 
-Some additional examples based on the Marmousi model are avaiable `here <http://tigress-web.princeton.edu/~rmodrak/2dElastic>`_, although without accompanying step-by-step instructions.
+Some additional examples based on the Marmousi model are available `here <http://tigress-web.princeton.edu/~rmodrak/2dElastic>`_, although without accompanying step-by-step instructions.
 
 
 

@@ -87,7 +87,7 @@ Prior to compilation, users need to run the ``configure`` script and prepare inp
 
 To successfully run the ``configure``, you may need to install compilers, libraries, and other software in your environment.
 
-The result of compilation is a set of binary excutables, such as
+The result of compilation is a set of binary executables, such as
 
 - mesher
 
@@ -103,7 +103,7 @@ Note that if solver input files change, solver executables may need to be recomp
 After compilation, solver input files must be gathered together in one directory and solver executables in another.  The absolute paths to the directories containing input files and executables must be given in ``paths.py`` as follows::
 
     SPECFEM_DATA = '/path/to/spcefem/input/files'
-    SPECFEM_BIN = '/path/to/specfem/exectuable/files'
+    SPECFEM_BIN = '/path/to/specfem/executable/files'
 
 
 Writing Custom Solver Interfaces
@@ -144,7 +144,7 @@ SeisFlows can run on SLURM, PBS, and LSF clusters, as well as, for very small pr
 
 *SLURM_LG* - For large inversions on SLURM clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis. Suitable for 3D inversions in which individual wavefield simulation span several or more nodes.
 
-*SLURM_XL* - For large inversions on SLURM clusters. In addition to the features of SLURM_LG, provides fault tolerence. Tasks that end in failure or timeout are automatically resumbitted. For this reason, can be dangerous to use on code that is not well tested.
+*SLURM_XL* - For large inversions on SLURM clusters. In addition to the features of SLURM_LG, provides fault tolerance. Tasks that end in failure or timeout are automatically resubmitted. For this reason, can be dangerous to use on code that is not well tested.
 
 *SERIAL* - Tasks that are normally carried out in parallel are instead carried out one at a time. Useful for debugging, but not much else.
 
@@ -159,11 +159,11 @@ SeisFlows can run on SLURM, PBS, and LSF clusters, as well as, for very small pr
 
 *PBS_TORQUE_SM* - Same as PBS_SM, except uses pbsdsh rather than mpi4py under the hood.
 
-*TIGER_SM* - Slightly specialized version of of SLURM_SM made available for Princeton users.
+*TIGER_SM* - Slightly specialized version of SLURM_SM made available for Princeton users.
 
-*TIGER_MD* - Slightly specialized version of of SLURM_MD made available for Princeton users.
+*TIGER_MD* - Slightly specialized version of SLURM_MD made available for Princeton users.
 
-*TIGER_LG* - Slightly specialized version of of SLURM_LG made available for Princeton users.
+*TIGER_LG* - Slightly specialized version of SLURM_LG made available for Princeton users.
 
 *TIGER_MD_GPU* - Highly specialized version of SLURM_MD made available for Princeton GPU users.  Provided by Etienne Bachmann. Not recently tested and not likely to work right out of the box.
 

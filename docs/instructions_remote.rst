@@ -2,7 +2,7 @@
 1. Download SeisFlows
 ---------------------
 
-To run seisflows you'll need a Unix system with Python 2.7, numpy, scipy, and standard Unix utilities.  From the command line type::
+To run SeisFlows you'll need a Unix system with Python 2.7, Numpy, Scipy, and standard Unix utilities.  After these prerequisites are in place, from the command line type::
  
         mkdir /home/packages
         cd /home/packages
@@ -69,7 +69,7 @@ First, download SPECFEM2D from github::
         cd specfem2d-d745c542
         git checkout d745c542
 
-To avoid conflicts, it is important to work with the exact version specified above (``d745c542``). This is necessary becuase, unlike SPECFEM3D and 3D_GLOBE, SPECFEM2D development is a bit haphazard, without proper versioning conventions.
+To avoid conflicts, it is important to work with the exact version specified above (``d745c542``). This is necessary because, unlike SPECFEM3D and 3D_GLOBE, SPECFEM2D development is sometimes a bit haphazard, without proper versioning conventions.
 
 
 Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
@@ -100,7 +100,7 @@ After the download completes, make sure that all paths specified in ``paths.py``
 7. Run checkerboard test in serial
 ----------------------------------
 
-To run the checkboard test type::
+To run the checkerboard test type::
 
         sfclean ; sfrun
 
@@ -120,18 +120,18 @@ On a laptop or desktop with multiple cores, the work of an inversion can be carr
 
 Besides running in parallel over events, the work of an individual event simulation can be parallelized over model regions. See the SPECFEM3D user manual for more information. Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates parallelization over events.
 
-Besides ``serial`` and ``multithreaded`` settings for running SeisFlows on laptops and desktops, there are also PBS, SLRUM, and LSF options for running on computer clusters. See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information.
+Besides ``serial`` and ``multithreaded`` settings for running SeisFlows on laptops and desktops, there are also PBS, SLURM, and LSF options for running on computer clusters. See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information.
 
 
 9. Visualize inversion results
 ------------------------------
 
-Visualization requires software such as pylab, Matlab, or Paraview.
+Visualization requires software such as Pylab, Matlab, or Paraview.
 
-With any visualization software, one basic approach for plotting SPECFEM2D models or kernels is to interpolate from the unstructured numerical mesh on which the model parameters are defined to a uniform rectangular grid.  The pylab script `plot2d <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d>`_ illustrates this approach.
+With any visualization software, one basic approach for plotting SPECFEM2D models or kernels is to interpolate from the unstructured numerical mesh on which the model parameters are defined to a uniform rectangular grid.  The Pylab script `plot2d <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d>`_ illustrates this approach.
 
 
-Another method is to compute a Delauney triangulation and plot the model or kernel over the unstructed mesh itself.  A pylab script `plot2d_delauney <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d_delauney>`_ is available for illustration.
+Another method is to compute a Delauney triangulation and plot the model or kernel over the unstructured mesh itself.  A Pylab script `plot2d_delauney <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d_delauney>`_ is available for illustration.
 
 To plot results from the checkerboard example using ``plot2d``, run the following command from the working directory::
 
@@ -139,4 +139,4 @@ To plot results from the checkerboard example using ``plot2d``, run the followin
                  output/model_init/proc000000_z.bin \
                  output/model_0001/proc000000_vs.bin
 
-The command line arguments are exactly the same for the other script, ``plot2d_delauney``.  For either script to work, pylab must be installed and the pylab backend properly configured. If you prefer software other than pylab, feel free to use the above scripts for reference in writing your plotting tools. 
+The command line arguments are exactly the same for the other script, ``plot2d_delauney``.  For either script to work, Pylab must be installed and the Pylab backend properly configured. If you prefer software other than Pylab, feel free to use the above scripts for reference in writing your plotting tools. 
