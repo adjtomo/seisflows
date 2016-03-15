@@ -69,7 +69,7 @@ First, download SPECFEM2D from github::
         cd specfem2d-d745c542
         git checkout d745c542
 
-To avoid conflicts, it is important to work with the exact version specified above (``d745c542``). This is necessary because, unlike SPECFEM3D and 3D_GLOBE, SPECFEM2D development is sometimes a bit haphazard, without proper versioning conventions.
+For now, it is important to work with the exact version specified above (``d745c542``). This is necessary because, unlike SPECFEM3D and 3D_GLOBE, SPECFEM2D development is sometimes a bit haphazard, with frequent interface changes.
 
 
 Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
