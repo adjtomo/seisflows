@@ -41,9 +41,11 @@ Then set environment variables. Add the following lines to ``.bash_profile`` (or
 Software Prerequisites
 ----------------------
 
-SeisFlows requires Python 2.7, NumPy, SciPy, and Obspy.  Forward modeling software is also a prerequisite; see :ref:`solver` for more information.
+SeisFlows requires Python 2.7, NumPy and SciPy.  Users will need to install these packages before being able to use SeisFlows.  Obspy is required for some workflows, but not for any of the examples available for download.  (If you can contribute a reliable setup.py script without conda dependencies, please let us know.)
 
-If Python dependencies are already installed, it is not necessary to run the provided ``setup.py`` script. In fact, the ``setup.py`` is sometimes unreliable as described in the GitHub issues page; if you can contribute a fix, please let us know.
+
+Forward modeling software is also a prerequisite; see :ref:`solver` for more information.  (There is currently no ``setup.py``.  If you can contribute a reliable setup.py script without )
+
 
 
 Hardware Prerequisites

@@ -34,7 +34,7 @@ Don't forget to update any open shells::
 Run the following test to make sure everything is working::
 
         cd /home/packages/seisflows/tests/integration/system
-        ./clean; ./run
+        ./clean.py; ./run.py
 
 
 If a ''hello'' message is displayed, the test was successful.
@@ -92,13 +92,13 @@ Download the starting model and other input files required for the waveform inve
         wget --recursive --no-parent --no-host-directories --cut-dirs=2 --reject "index.html*" http://tigress-web.princeton.edu/~rmodrak/2dAcoustic/
 
 
-A directory ``home/tests/checkers`` is now being created.  Among other files, ``parameters.py`` and ``paths.py`` are being downloaded.
+A directory ``/home/tests/checkers`` is now being created.  Among other files, ``parameters.py`` and ``paths.py`` are being downloaded.
 
 After the download completes, make sure that all paths specified in ``paths.py``  are correct.  For example, if you compiled SPECFEM2D somewhere other than ``/home/packages/specfem2d-d745c542``, you will need to modify the ``SPECFEM2D_BIN`` entry accordingly.
 
  
 7. Run checkerboard test in serial
---------------------------------------
+----------------------------------
 
 To run the checkboard test type::
 
