@@ -140,7 +140,7 @@ SeisFlows can run on SLURM, PBS, and LSF clusters, as well as, for very small pr
 
 *SLURM_SM* - For small inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run within a single job.  Requires that each individual wavefield simulation runs only a single core, making this option suitable for small 2D inversions only.
 
-*SLURM_MD* - For small to moderate-sized inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run within a single job.  Individual wavefield simulations can span more than one core, but not more than one node. Suitable mainly for 2D inversions, although some very small 3D inversion might be possible.
+*SLURM_MD* - For small to moderate-sized inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run within a single job.  Individual wavefield simulations can span more than one core, but not more than one node. Suitable mainly for 2D inversions, although some small 3D inversion might be possible.
 
 *SLURM_LG* - For large inversions on SLURM clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis. Suitable for 3D inversions in which individual wavefield simulation span several or more nodes.
 
@@ -148,10 +148,10 @@ SeisFlows can run on SLURM, PBS, and LSF clusters, as well as, for very small pr
 
 *SERIAL* - Tasks that are normally carried out in parallel are instead carried out one at a time. Useful for debugging, but not much else.
 
-*MULTITHREADED* - On desktops or laptops with multiple cores, allows embarrassingly parallel tasks to be carried out several at a time, rather than one at a time.  Can be used to run small 2D inversion on a laptop or desktop.
+*MULTITHREADED* - On desktops or laptops with multiple cores, allows embarrassingly parallel tasks to be carried out several at a time, rather than one at a time.  Can be used to run small 2D inversions on a laptop or desktop.
 
 
-*MPI* - Similar in functionality to  MULTITHREADED, except uses MPI processes rather than multithreading for parallelism.  Requires Python module ``mpi4py``.
+*MPI* - Similar in functionality to  MULTITHREADED, except uses MPI processes rather than multithreading for parallelism.  Requires Python module mpi4py.
 
 *LSF_SM* - Same as SLURM_SM and PBS_SM, except for LSF clusters.
 

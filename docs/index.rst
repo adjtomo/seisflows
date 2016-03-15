@@ -21,7 +21,7 @@ Perhaps the easiest way to get started is to run a one of the following examples
 
 Available For Download
 ----------------------
-Users without accounts on tiger.princeton.edu can run the following inversion:
+All users can run the following inversion:
 
 - checkerboard
 

@@ -120,7 +120,7 @@ On a laptop or desktop with multiple cores, the work of an inversion can be carr
 
 Besides running in parallel over events, the work of an individual event simulation can be parallelized over model regions. See the SPECFEM3D user manual for more information. Both parallelization over events and over model regions can be used at the same time under SeisFlows.  The current example, however, only illustrates parallelization over events.
 
-Besides ``serial`` and ``multithreaded`` settings for running SeisFlows on laptops and desktops, there are also PBS, SLURM, and LSF options for running on computer clusters. See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information.
+Besides ``serial`` and ``multithreaded`` settings for running SeisFlows on laptops and desktops, there are also PBS, SLURM, and LSF options for running on clusters. See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information.
 
 
 9. Visualize inversion results
@@ -128,10 +128,10 @@ Besides ``serial`` and ``multithreaded`` settings for running SeisFlows on lapto
 
 Visualization requires software such as Pylab, Matlab, or Paraview.
 
-With any visualization software, one basic approach for plotting SPECFEM2D models or kernels is to interpolate from the unstructured numerical mesh on which the model parameters are defined to a uniform rectangular grid.  The Pylab script `plot2d <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d>`_ illustrates this approach.
+With any such software, one approach for plotting SPECFEM2D models or kernels is to interpolate from the unstructured numerical mesh on which the model parameters are defined to a uniform rectangular grid.  The Pylab script `plot2d <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d>`_ illustrates this approach.
 
 
-Another method is to compute a Delauney triangulation and plot the model or kernel over the unstructured mesh itself.  A Pylab script `plot2d_delauney <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d_delauney>`_ is available for illustration.
+Another method is to compute a Delaunay triangulation and plot the model or kernel over the unstructured mesh itself.  A Pylab script `plot2d_delaunay <http://tigress-web.princeton.edu/~rmodrak/visualize/plot2d_delaunay>`_ is available for illustration.
 
 To plot results from the checkerboard example using ``plot2d``, run the following command from the working directory::
 
@@ -139,4 +139,4 @@ To plot results from the checkerboard example using ``plot2d``, run the followin
                  output/model_init/proc000000_z.bin \
                  output/model_0001/proc000000_vs.bin
 
-The command line arguments are exactly the same for the other script, ``plot2d_delauney``.  For either script to work, Pylab must be installed and the Pylab backend properly configured. If you prefer software other than Pylab, feel free to use the above scripts for reference in writing your plotting tools. 
+(The command line syntax is the same for the other script, ``plot2d_delaunay``.)  For either script to work, Pylab must be installed and the Pylab backend properly configured. If you prefer visualization software other than Pylab, feel free to use the above scripts for reference in writing your plotting tools. 
