@@ -21,13 +21,18 @@ Perhaps the easiest way to get started is to run a one of the following examples
 
 Available For Download
 ----------------------
-All users can run the following inversion:
 
-- checkerboard
+We have prepared a 2D waveform inversion example inexpensive enough to run comfortably on most any laptop, desktop, or cluster. To download and run this simple checkboard inversion, see these :doc:`instructions <instructions_remote>`. 
 
-See these :doc:`instructions <instructions_remote>` for downloading and running this example on any laptop, desktop, or cluster. 
+Some additional examples are available for download.  While they are significantly more expensive, the procedure for running them is largely the same as for the 2D checkerboard example.
 
-Some additional examples based on the Marmousi model are available `here <http://tigress-web.princeton.edu/~rmodrak/2dElastic>`_, although without accompanying step-by-step instructions.
+Some 2D examples based on the Marmousi model are available `here <http://tigress-web.princeton.edu/~rmodrak/2dElastic>`_.
+
+A 3D Cartesian checkerboard example is available `here <http://tigress-web.princeton.edu/~rmodrak/3dAcoustic>`_.
+
+A 3D global 1-chunk examples is available `here <http://tigress-web.princeton.edu/~rmodrak/Examples3dGlobe>`_.
+
+At a minimimum, one processer is required for the 2D Marmousi examples, 16 processors are required for the 3D Cartesian example, and 64 processors are required for the global 1-chunk example.  See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information about running inversions in parallel.
 
 
 
