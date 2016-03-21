@@ -12,11 +12,7 @@ SeisFlows is an open source seismic inversion package that
 
 - provides a framework for research in regional, global, and exploration seismology
 
-
-Getting Started
-===============
-
-Perhaps the easiest way to get started is to run a one of the following examples.  
+Perhaps the easiest way to learn more is to run a one of the following examples.  
 
 
 Available For Download
@@ -30,7 +26,7 @@ Some 2D examples based on the Marmousi model are available `here <http://tigress
 
 A 3D Cartesian checkerboard example is available `here <http://tigress-web.princeton.edu/~rmodrak/3dAcoustic>`_.
 
-A 3D global 1-chunk examples is available `here <http://tigress-web.princeton.edu/~rmodrak/Examples3dGlobe>`_.
+A 3D global 1-chunk example is available `here <http://tigress-web.princeton.edu/~rmodrak/Examples3dGlobe>`_.
 
 At a minimimum, one processer is required for the 2D Marmousi examples, 16 processors are required for the 3D Cartesian example, and 64 processors are required for the global 1-chunk example.  See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information about running inversions in parallel.
 
