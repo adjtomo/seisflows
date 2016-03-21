@@ -33,7 +33,7 @@ Don't forget to update any open shells::
  
 Run the following test to make sure everything is working::
 
-        cd /home/packages/seisflows/tests/integration/system
+        cd /home/packages/seisflows/tests/test_system
         ./clean.py; ./run.py
 
 
@@ -49,7 +49,7 @@ If a ''hello'' message is displayed, the test was successful.
 
 Run the following test to make sure everything is working::
 
-        cd /home/packages/seisflows/tests/integration/optimize
+        cd /home/packages/seisflows/tests/test_optimize
         ./clean.py; ./run.py
 
 
