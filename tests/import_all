@@ -6,16 +6,20 @@ from importlib import import_module
 from pkgutil import iter_modules
 
 
+# exclude modules from this list
 excluded = []
 excluded += ['seisflows.solver']
 excluded += ['seisflows.system.tiger']
 excluded += ['seisflows.workflow.test_optimize']
 excluded += ['seisflows.workflow.test_preprocess']
 
+# which modules failed to import?
 failed = []
 
-succeed = True
+# aliases
 fail = False
+ignore = True
+succeed = True
 
 
 def check_package(pkgname):
@@ -40,7 +44,7 @@ def check_module(name):
     try:
         import_module(name)
     except NotImplementedError:
-        return succeed
+        return ignore
     except:
         return fail
     else:
@@ -69,6 +73,7 @@ if __name__ == '__main__':
         print ''
         sys.exit(1)
     else:
+        print 'All modules imported successfully.'
         sys.exit(0)
 
 
