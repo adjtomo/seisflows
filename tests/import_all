@@ -64,6 +64,9 @@ if __name__ == '__main__':
     check_package('seisflows')
 
     if failed:
+        print 'The following modules failed to import:'
+        for name in failed: print '  %s' % name
+        print ''
         sys.exit(1)
     else:
         sys.exit(0)
