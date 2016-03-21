@@ -48,13 +48,13 @@ class tiger_md_gpu(custom_import('system', 'tiger_md')):
             unix.ln(PATH.SCRATCH, PATH.SUBMIT + '/' + 'scratch')
 
         call('sbatch '
-                + '--job-name=%s '%PAR.SUBTITLE
-                + '--output=%s '%(PATH.SUBMIT +'/'+ 'output.log')
+                + '--job-name=%s ' % PAR.SUBTITLE
+                + '--output=%s ' % (PATH.SUBMIT +'/'+ 'output.log')
                 + '--nodes 1 '
                 + '--ntasks=% ' % PAR.NGPU
                 + '--ntasks-per-socket=%d ' % PAR.NGPU
-                + '--gres=gpu:%d ' PAR.NGPU
-                + '--time=%d '%PAR.WALLTIME
+                + '--gres=gpu:%d ' % PAR.NGPU
+                + '--time=%d ' % PAR.WALLTIME
                 + findpath('seisflows.system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
 

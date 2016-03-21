@@ -1,6 +1,6 @@
 import numpy as np
 
-from seisflows.seistools import adjoint, misfit, sbandpass, smute
+from seisflows.seistools import adjoint, misfit
 
 from seisflows.tools import unix
 from seisflows.tools.code import Struct
