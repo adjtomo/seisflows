@@ -44,6 +44,9 @@ class mpi(custom_import('system', 'base')):
         if 'VERBOSE' not in PAR:
             setattr(PAR, 'VERBOSE', 1)
 
+        if 'MPIEXEC' not in PAR:
+            setattr(PAR, 'MPIEXEC', 'mpiexec')
+
         if 'MPIARGS' not in PAR:
             setattr(PAR, 'MPIARGS', '--mca mpi_warn_on_fork 0')
 
@@ -84,7 +87,8 @@ class mpi(custom_import('system', 'base')):
 
         if hosts == 'all':
             unix.cd(join(findpath('seisflows.system'), 'wrappers'))
-            subprocess.call('mpiexec -n {} '.format(PAR.NTASK)
+            subprocess.call(PAR.MPIEXEC + ' '
+                    + '-n %d ' % PAR.NTASK
                     + PAR.MPIARGS + ' '
                     + 'run_mpi' + ' '
                     + PATH.OUTPUT + ' '
@@ -94,7 +98,8 @@ class mpi(custom_import('system', 'base')):
 
         elif hosts == 'head':
             unix.cd(join(findpath('seisflows.system'), 'wrappers'))
-            subprocess.call('mpiexec -n 1 '
+            subprocess.call(PAR.MPIEXEC + ' '
+                    + '-n 1 '
                     + PAR.MPIARGS + ' '
                     + 'run_mpi_head' + ' '
                     + PATH.OUTPUT + ' '
@@ -139,7 +144,7 @@ class mpi(custom_import('system', 'base')):
 
         try:
             f = open(os.devnull, 'w')
-            subprocess.check_call('which mpiexec', 
+            subprocess.check_call('which '+PAR.MPIEXEC, 
                shell=True,
                stdout=f)
         except:
