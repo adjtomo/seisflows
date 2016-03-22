@@ -18,15 +18,15 @@ Perhaps the easiest way to learn more is to run a one of the following examples.
 Examples: Available For Download
 --------------------------------
 
-We have prepared a 2D waveform inversion example inexpensive enough to run comfortably on most any laptop, desktop, or cluster. To download and run this simple checkboard inversion, see these :doc:`instructions <instructions_remote>`. 
+We have prepared a 2D waveform inversion example inexpensive enough to run comfortably on almost any laptop, desktop, or cluster. To run this simple checkboard inversion, see these step-by-step :doc:`instructions <instructions_remote>`. 
 
-Some additional examples are available for download.  Despite being significantly more expensive, the procedure for running them is largely the same as for the 2D checkerboard example.
+Some additional examples are available for download.  Please review the instructions for the 2D checkerboard test case to get a sense for how to run any of the other test cases. Despite differences in computational cost, the procedure for these other examples is largely the same as for the 2D checkerboard test case.
 
 Some 2D examples based on the Marmousi model are available `here <http://tigress-web.princeton.edu/~rmodrak/2dElastic>`_.
 
-A 3D Cartesian checkerboard example is available `here <http://tigress-web.princeton.edu/~rmodrak/3dAcoustic>`_.
+A 3D Cartesian checkerboard example is available `here <http://tigress-web.princeton.edu/~rmodrak/3dElastic>`_.
 
-A 3D global 1-chunk example is available `here <http://tigress-web.princeton.edu/~rmodrak/Examples3dGlobe>`_.
+A 3D global 1-chunk example is available `here <http://tigress-web.princeton.edu/~rmodrak/Examples3dGlobe>`_. Please note, the compressed archive for the 3D global example (1 GB) is much larger than for all the other examples.
 
 At a minimimum, one processer is required for the 2D Marmousi examples, 16 processors are required for the 3D Cartesian example, and 64 processors are required for the global 1-chunk example.  See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information about running inversions in parallel.
 
@@ -35,7 +35,7 @@ At a minimimum, one processer is required for the 2D Marmousi examples, 16 proce
 Examples: Available Locally
 ---------------------------
 
-Users with accounts on tiger.princeton.edu can run the following inversions:
+Users with accounts on "tiger.princeton.edu" can run the following inversions without having to download files are recompile executables.
 
 *2D Regional and Global*
 

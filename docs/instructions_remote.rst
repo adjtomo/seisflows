@@ -94,7 +94,9 @@ Download the starting model and other input files required for the waveform inve
 
 A directory ``/home/tests/checkers`` is now being created.  Among other files, ``parameters.py`` and ``paths.py`` are being downloaded.
 
-After the download completes, make sure that all paths specified in ``paths.py``  are correct.  For example, if you compiled SPECFEM2D somewhere other than ``/home/packages/specfem2d-d745c542``, you will need to modify the ``SPECFEM2D_BIN`` entry accordingly.
+After the download completes, make sure that all paths specified in ``paths.py``  are correct.  For example, if you compiled SPECFEM2D somewhere other than ``/home/packages/specfem2d-d745c542``, you will need to modify the ``SPECFEM2D_BIN`` entry accordingly. 
+
+Next, take a minute to view the ``parameters.py`` file and note the close similarity between the first set of parameters and the `directory structure <https://github.com/PrincetonUniversity/seisflows/tree/master/seisflows>`_ of the SeisFlows repository.
 
  
 7. Run checkerboard test in serial
