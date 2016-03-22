@@ -4,25 +4,25 @@
 
 To run SeisFlows you'll need a Unix system with Python 2.7, Numpy, Scipy, and standard Unix utilities.  After these prerequisites are in place, from the command line type::
  
-        mkdir /home/packages
-        cd /home/packages
+        mkdir ~/packages
+        cd ~/packages
         git clone https://github.com/PrincetonUniversity/seisflows.git
 
-If you prefer a location other than ``/home/packages`` , modify the commands above and below accordingly.
+If you prefer a location other than ``~/packages`` , modify the commands above and below accordingly.
 
 
 2. Set environment variables
 ----------------------------
 
-Add the following lines to ``/home/.bash_profile`` (modify accordingly, if you are using a shell other than bash)::
+Add the following lines to ``~/.bash_profile`` (modify accordingly, if you are using a shell other than bash)::
 
-        export PATH=$PATH:/home/packages/seisflows/scripts
-        export PYTHONPATH=$PYTHONPATH:/home/packages/seisflows
+        export PATH=$PATH:~/packages/seisflows/scripts
+        export PYTHONPATH=~/packages/seisflows
  
 
 Don't forget to update any open shells::
 
-        source /home/.bash_profile
+        source ~/.bash_profile
  
 
  
@@ -33,7 +33,7 @@ Don't forget to update any open shells::
  
 Run the following test to make sure everything is working::
 
-        cd /home/packages/seisflows/tests/test_system
+        cd ~/packages/seisflows/tests/test_system
         ./clean.py; ./run.py
 
 
@@ -49,7 +49,7 @@ If a ''hello'' message is displayed, the test was successful.
 
 Run the following test to make sure everything is working::
 
-        cd /home/packages/seisflows/tests/test_optimize
+        cd ~/packages/seisflows/tests/test_optimize
         ./clean.py; ./run.py
 
 
@@ -64,7 +64,7 @@ If the optimization problem is solved in 50 iterations or fewer, the test was su
 
 First, download SPECFEM2D from GitHub::
 
-        cd /home/packages
+        cd ~/packages
         git clone --recursive --branch devel https://github.com/geodynamics/specfem2d.git specfem2d-d745c542
         cd specfem2d-d745c542
         git checkout d745c542
@@ -74,7 +74,7 @@ For now, it is important to work with the exact version specified above (``d745c
 
 Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
 
-        cd /home/packages/specfem2d-d745c542
+        cd ~/packages/specfem2d-d745c542
         ./configure FC=ifort
         make all
 
@@ -85,16 +85,16 @@ Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
 6. Set up checkerboard test
 ---------------------------
 
-Download the starting model and other input files required for the waveform inversion checkerboard test.  For simplicity, let's assume the checkerboard working directory will be placed in ``/home/tests`` (if you prefer a different location, then modify the following commands accordingly)::
+Download the starting model and other input files required for the waveform inversion checkerboard test.  For simplicity, let's assume the checkerboard working directory will be placed in ``~/tests`` (if you prefer a different location, then modify the following commands accordingly)::
  
-        mkdir /home/tests/
-        cd /home/tests/
+        mkdir ~/tests/
+        cd ~/tests/
         wget --recursive --no-parent --no-host-directories --cut-dirs=2 --reject "index.html*" http://tigress-web.princeton.edu/~rmodrak/2dAcoustic/
 
 
-A directory ``/home/tests/checkers`` is now being created.  Among other files, ``parameters.py`` and ``paths.py`` are being downloaded.
+A directory ``~/tests/checkers`` is now being created.  Among other files, ``parameters.py`` and ``paths.py`` are being downloaded.
 
-After the download completes, make sure that all paths specified in ``paths.py``  are correct.  For example, if you compiled SPECFEM2D somewhere other than ``/home/packages/specfem2d-d745c542``, you will need to modify the ``SPECFEM2D_BIN`` entry accordingly. 
+After the download completes, make sure that all paths specified in ``paths.py``  are correct.  For example, if you compiled SPECFEM2D somewhere other than ``~/packages/specfem2d-d745c542``, you will need to modify the ``SPECFEM2D_BIN`` entry accordingly. 
 
 Next, take a minute to view the ``parameters.py`` file and note the close similarity between the first set of parameters and the `directory structure <https://github.com/PrincetonUniversity/seisflows/tree/master/seisflows>`_ of the SeisFlows repository.
 
@@ -106,7 +106,7 @@ To run the checkerboard test type::
 
         sfclean ; sfrun
 
-within ``/home/tests/checkers``.
+within ``~/tests/checkers``.
 
 For now, the inversion will run only a single event on only a single processor.  Once we verify that everything is working correctly in this case, we can move on to multiple events and multiple processors by modifying ``parameters.py``.
 
