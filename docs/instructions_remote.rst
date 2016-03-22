@@ -78,7 +78,7 @@ Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
         ./configure FC=ifort
         make all
 
-For troubleshooting any compilation issues, please view the SPECFEM2D manual and GitHub issues page.
+(Since `make` by itself does not compile all the required utilities, be sure to remember to type `make all`.)  For troubleshooting any compilation issues, please view the SPECFEM2D manual and GitHub issues page.
  
 
 

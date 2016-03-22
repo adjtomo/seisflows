@@ -15,12 +15,12 @@ SeisFlows is an open source seismic inversion package that
 Perhaps the easiest way to learn more is to run a one of the following examples.  
 
 
-Available For Download
-----------------------
+Examples: Available For Download
+--------------------------------
 
 We have prepared a 2D waveform inversion example inexpensive enough to run comfortably on most any laptop, desktop, or cluster. To download and run this simple checkboard inversion, see these :doc:`instructions <instructions_remote>`. 
 
-Some additional examples are available for download.  While they are significantly more expensive, the procedure for running them is largely the same as for the 2D checkerboard example.
+Some additional examples are available for download.  Despite being significantly more expensive, the procedure for running them is largely the same as for the 2D checkerboard example.
 
 Some 2D examples based on the Marmousi model are available `here <http://tigress-web.princeton.edu/~rmodrak/2dElastic>`_.
 
@@ -32,8 +32,8 @@ At a minimimum, one processer is required for the 2D Marmousi examples, 16 proce
 
 
 
-Available Locally
------------------
+Examples: Available Locally
+---------------------------
 
 Users with accounts on tiger.princeton.edu can run the following inversions:
 
