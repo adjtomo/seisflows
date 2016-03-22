@@ -150,9 +150,7 @@ class SeisflowsPaths(ParameterObj):
             sys.modules['SeisflowsPaths'] = self
 
     def __setattr__(self, key, val):
-        if not isinstance(val, basestring):
-            raise ValueError('Must be string or unicode: PATH.%s' % val)
-        super(SeisflowsPaths, self).__setattr__(key, _sub(val))
+        super(SeisflowsPaths, self).__setattr__(*_sub(key, val))
 
     def load(self):
         mydict = loadpy(abspath('paths.py'))
@@ -280,12 +278,16 @@ def _val(key):
         return ''
 
 
-def _sub(path):
+def _sub(key, val):
+    if val is None:
+        val = ''
+    if type(val) not in [str, unicode]:
+        raise ValueError('Must be string or unicode: PATH.%s' % key)
     try:
-        path = re.sub('~', os.getenv('HOME'), path)
+        val = re.sub('~', os.getenv('HOME'), val)
     except:
         raise Exception('Tilde "~" expansion failed.')
-    return path
+    return key, val
 
 
 
