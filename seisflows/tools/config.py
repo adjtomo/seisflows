@@ -2,6 +2,7 @@
 import copy_reg
 import imp
 import os
+import re
 import sys
 import types
 
@@ -148,6 +149,12 @@ class SeisflowsPaths(ParameterObj):
         if 'SeisflowsPaths' not in sys.modules:
             sys.modules['SeisflowsPaths'] = self
 
+    def __setattr__(self, key, val):
+        if not isinstance(val, basestring):
+            raise ValueError('Must be string or unicode: PATH.%s' % val)
+
+        super(SeisflowsPaths, self).__setattr__(key, _sub(val))
+
     def load(self):
         mydict = loadpy(abspath('paths.py'))
         super(ParameterObj, self).__setattr__('__dict__', mydict)
@@ -272,6 +279,15 @@ def _val(key):
         return SeisflowsParameters()[key.upper()]
     else:
         return ''
+
+
+def _sub(path):
+    try:
+        path = re.sub('~', os.getenv('HOME'), path)
+    except:
+        raise Exception('Tilde "~" expansion failed.')
+    return path
+
 
 
 # the following code changes how instance methods are handled by pickle.  placing it here, in this module, ensures that pickle changes will be in effect for all SeisFlows workflows
