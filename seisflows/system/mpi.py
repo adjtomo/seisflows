@@ -124,7 +124,7 @@ class mpi(custom_import('system', 'base')):
         # executable such as mpiexec or mpirun. Using an empty string here
         # presupposes that a simulation runs on a single core, which is
         # consistent with the PAR.NPROC == 1 assertion below. If you want to
-        # carry out an inversion in which each simulation runs on multiple 
+        # carry out a workflow in which each simulation runs on multiple 
         # cores, use a different system interface such as pbs_lg or slurm_lg.
         return ''
 

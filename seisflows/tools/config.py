@@ -152,7 +152,6 @@ class SeisflowsPaths(ParameterObj):
     def __setattr__(self, key, val):
         if not isinstance(val, basestring):
             raise ValueError('Must be string or unicode: PATH.%s' % val)
-
         super(SeisflowsPaths, self).__setattr__(key, _sub(val))
 
     def load(self):
