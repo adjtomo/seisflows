@@ -18,9 +18,9 @@ Perhaps the easiest way to learn more is to run a one of the following examples.
 Examples: Available For Download
 --------------------------------
 
-We have prepared a 2D waveform inversion example that is inexpensive enough to run comfortably on almost any laptop, desktop, or cluster. To run this simple checkboard inversion, see these step-by-step :doc:`instructions <instructions_remote>`. 
+We have prepared a 2D waveform inversion example that is inexpensive enough to run on almost any laptop, desktop, or cluster. To run this simple checkboard inversion, see these step-by-step :doc:`instructions <instructions_remote>`. 
 
-Some additional examples are available for download.  Please review the instructions for the 2D checkerboard test case to get a sense for how to run these other inversions. Aside from differences in computational cost and under-the-hood `solver <http://seisflows.readthedocs.org/en/latest/manual/manual.html#solver-configuration>`_ and `system <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ details, each of these inversion examples runs in basically the same way.
+Some additional examples are available for download.  Please review the instructions for the 2D checkerboard test case to get a sense for how to run these other inversions.
 
 Some 2D examples based on the Marmousi model are available `here <http://tigress-web.princeton.edu/~rmodrak/2dElastic>`_.
 
@@ -35,7 +35,7 @@ At a minimimum, one processer is required for the 2D Marmousi examples, 16 proce
 Examples: Available Locally
 ---------------------------
 
-Users with accounts on "tiger.princeton.edu" can run the following inversions without having to download files are recompile executables.
+Users with accounts on "tiger.princeton.edu" can run the following inversions without having to download files or recompile executables.
 
 *2D Regional and Global*
 
