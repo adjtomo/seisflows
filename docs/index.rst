@@ -18,9 +18,9 @@ Perhaps the easiest way to learn more is to run a one of the following examples.
 Examples: Available For Download
 --------------------------------
 
-We have prepared a 2D waveform inversion example inexpensive enough to run comfortably on almost any laptop, desktop, or cluster. To run this simple checkboard inversion, see these step-by-step :doc:`instructions <instructions_remote>`. 
+We have prepared a 2D waveform inversion example that is inexpensive enough to run comfortably on almost any laptop, desktop, or cluster. To run this simple checkboard inversion, see these step-by-step :doc:`instructions <instructions_remote>`. 
 
-Some additional examples are available for download.  Please review the instructions for the 2D checkerboard test case to get a sense for how to run any of the other test cases. Despite differences in computational cost, the procedure for these other examples is largely the same as for the 2D checkerboard test case.
+Some additional examples are available for download.  Please review the instructions for the 2D checkerboard test case to get a sense for how to run these other inversions. Aside from differences in computational cost and under-the-hood `solver <http://seisflows.readthedocs.org/en/latest/manual/manual.html#solver-configuration>` and `system <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>` details, each of these inversion examples runs in basically the same way.
 
 Some 2D examples based on the Marmousi model are available `here <http://tigress-web.princeton.edu/~rmodrak/2dElastic>`_.
 
