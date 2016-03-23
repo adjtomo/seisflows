@@ -3,6 +3,9 @@ import numpy as np
 
 import scipy.signal as signal
 
+from seisflows.tools.config import SeisflowsParameters
+PAR = SeisflowsParameters()
+
 
 def sbandpass(s, h, freqlo, freqhi):
     nr = h.nr
@@ -44,7 +47,7 @@ def smute(s, h, vel, toff, xoff=0, constant_spacing=False):
 
     # construct tapered window
     length = 400
-    win = np.sin(np.linspace(0, 1, 2*length))
+    win = np.sin(np.linspace(0, np.pi, 2*length))
     win = win[0:length]
 
     for ir in range(0, nr):
@@ -61,7 +64,10 @@ def smute(s, h, vel, toff, xoff=0, constant_spacing=False):
             ixoff = (ir-xoff)/dt
         else:
             itoff = toff/dt
-            ixoff = (h.rx[ir]-h.sx[0]-xoff)/dt
+            if PAR.SOLVER == 'specfem2d':
+                ixoff = (h.rx[ir]-h.sx[0]-xoff)/dt  
+            elif PAR.SOLVER == 'specfem3d':
+                ixoff = np.sqrt((h.rx[ir]-h.sx[0])**2 + (h.ry[ir]-h.sy[0])**2)/dt
 
         itmin = int(np.ceil(slope*abs(ixoff)+itoff)) - length/2
         itmax = itmin + length
@@ -71,11 +77,15 @@ def smute(s, h, vel, toff, xoff=0, constant_spacing=False):
             s[0:itmin,ir] = 0.
             s[itmin:itmax,ir] = win*s[itmin:itmax,ir]
         elif itmin < 1 <= itmax:
-            s[1:itmax,ir] = win[length-itmax+1:length]*s[1:itmax,ir]
+            s[0:itmax,ir] = win[length-itmax:length]*s[0:itmax,ir] 
         elif itmin < nt < itmax:
             s[0:itmin,ir] = 0.
-            s[itmin:nt,ir] = win[1:nt-itmin+1]*s[itmin:nt,ir]
+            s[itmin:nt,ir] = win[0:nt-itmin]*s[itmin:nt,ir] 
         elif itmin > nt:
+            s[:,ir] = 0.
+
+        # inner mute 
+        if ixoff*dt < xoff:
             s[:,ir] = 0.
 
     return s
