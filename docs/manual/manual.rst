@@ -64,7 +64,7 @@ To begin executing a workflow, simply type ``sfrun`` within a working directory.
 
 Once the workflow starts running, status information is displayed to the terminal or to the file ``output.log``.  By default, updated models and other inversion results are output to the working directory.
 
-To get a sense for how it all works, try following the step by step instructions included here [http://seisflows.readthedocs.org/en/latest/instructions_remote.html]
+To get a sense for how it all works, try following the step by step instructions included `here <http://seisflows.readthedocs.org/en/latest/instructions_remote.html>`_.
 
 
 .. _solver:
