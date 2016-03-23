@@ -46,7 +46,7 @@ def smute(s, h, vel, toff, xoff=0, constant_spacing=False):
     nr = h.nr
 
     # construct tapered window
-    length = 400
+    length = 300
     win = np.sin(np.linspace(0, np.pi, 2*length))
     win = win[0:length]
 
