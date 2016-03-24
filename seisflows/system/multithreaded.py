@@ -49,24 +49,23 @@ class multithreaded(custom_import('system', 'serial')):
             running_tasks = dict()
             queued_tasks = range(PAR.NTASK)
 
-            while True:
-                # check running tasks
-                for i, p in running_tasks.items():
-                    if p.poll() != None:
-                        running_tasks.pop(i)
+            # implements "work queue" pattern
+            while queued_tasks or running_tasks:
 
-                # launch new tasks
-                while len(running_tasks) < PAR.NPROCMAX and queued_tasks:
+                # launch queued tasks
+                while len(queued_tasks) > 0 and \
+                      len(running_tasks) < PAR.NPROCMAX:
                     i = queued_tasks.pop(0)
                     p = self._launch(classname, funcname, itask=i)
                     running_tasks[i] = p
 
+                # checks status of running tasks
+                for i, p in running_tasks.items():
+                    if p.poll() != None:
+                        running_tasks.pop(i)
+
                 if running_tasks:
                     sleep(1)
-                    continue
-
-                if not queued_tasks:
-                    break
 
             print ''
 
