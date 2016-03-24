@@ -18,7 +18,7 @@ class test_preprocess(object):
     def check(self):
         """ Checks parameters and paths
         """
-        raise NotImplementedError
+        #raise NotImplementedError
 
         # mute settings
         if 'MUTE' not in PAR:
@@ -52,8 +52,8 @@ class test_preprocess(object):
 
 
     def main(self):
-    """ Tests data processing methods
-    """
+        """ Tests data processing methods
+        """
 
     try:
         preprocess.setup()
@@ -63,21 +63,26 @@ class test_preprocess(object):
         print 'SETUP succeeded'
 
     try:
-        d = preprocess.load(prefix=PAR.OBSERVATIONS)
-        s = preprocess.load(prefix=PAR.SYNTHETICS)
+        d, h = preprocess.load(prefix=PAR.OBSERVATIONS)
+        s, h = preprocess.load(prefix=PAR.SYNTHETICS)
     except:
         print 'LOAD failed'
     else:
         print 'LOAD succeeded'
 
     try:
-        d = preprocess.process_traces(d)
-        s = preprocess.process_traces(s)
+        d = preprocess.apply(preprocess.convolve_stf, [d], [h]) 
+        s = preprocess.apply(preprocess.convolve_stf, [s], [h]) 
     except:
         print 'PROCESS_TRACES failed'
     else:
         print 'PROCESS_TRACES succeeded'
 
 
-
-
+    try:
+        preprocess.save(d, h, prefix=PATH.OBSERVATIONS_PRE)
+        preprocess.save(s, h, prefix=PATH.SYNTHETICS_PRE)
+    except:
+        print 'OUTPUT_TRACES failed'
+    else:
+        print 'OUTPUT_TRACES succeeded'
