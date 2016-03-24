@@ -26,7 +26,7 @@ Some 2D examples based on the Marmousi model are available `here <http://tigress
 
 A 3D Cartesian checkerboard example is available `here <http://tigress-web.princeton.edu/~rmodrak/3dElastic>`_.
 
-A 3D global 1-chunk example is available `here <http://tigress-web.princeton.edu/~rmodrak/Examples3dGlobe>`_. Please note, the compressed archive for this example is very large (> 0.5 GB).
+A 3D global 1-chunk example is available `here <http://tigress-web.princeton.edu/~rmodrak/ExamplesGlobal>`_. Please note, the compressed archive for this example is very large (> 0.5 GB).
 
 At a minimimum, one processer is required for the 2D Marmousi examples, 16 processors are required for the 3D Cartesian example, and 64 processors are required for the global 1-chunk example.  See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information about running inversions in parallel.
 
