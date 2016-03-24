@@ -11,7 +11,6 @@ def sbandpass(s, h, freqlo, freqhi):
     nr = h.nr
     dt = h.dt
     fs = 1/dt
-
     for ir in range(0, nr):
         s[:,ir] = bandpass(s[:,ir],freqlo,freqhi,fs)
     return s

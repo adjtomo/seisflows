@@ -63,16 +63,16 @@ class test_preprocess(object):
         print 'SETUP succeeded'
 
     try:
-        d, h = preprocess.load(prefix=PAR.OBSERVATIONS)
-        s, h = preprocess.load(prefix=PAR.SYNTHETICS)
+        d, h = preprocess.load(prefix=PATH.OBSERVATIONS)
+        s, h = preprocess.load(prefix=PATH.SYNTHETICS)
     except:
         print 'LOAD failed'
     else:
         print 'LOAD succeeded'
 
     try:
-        d = preprocess.apply(preprocess.convolve_stf, [d], [h]) 
-        s = preprocess.apply(preprocess.convolve_stf, [s], [h]) 
+        d = preprocess.process_traces([d], [h]) 
+        s = preprocess.process_traces([s], [h]) 
     except:
         print 'PROCESS_TRACES failed'
     else:
