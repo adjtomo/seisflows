@@ -13,7 +13,7 @@ def sbandpass(s, h, freqlo, freqhi):
     dt = h.dt
     fs = 1/dt
     for ir in range(0, nr):
-        s[:,ir] = bandpass(s[:,ir],freqlo,freqhi,fs) 
+        s[:,ir] = bandpass2(s[:,ir],freqlo,freqhi,fs) 
 
     return s
 
@@ -127,6 +127,14 @@ def bandpass(w, freqlo, freqhi, fs, npass=2):
     wn = [2*freqlo/fs, 2*freqhi/fs]
     (b,a) = signal.butter(npass, wn, btype='band')
     w = signal.lfilter(b, a, w)
+    return w
+
+
+# A forward-backward linear filter (filtfilt) 
+def bandpass2(w, freqlo, freqhi, fs, npass=3):
+    wn = [2*freqlo/fs, 2*freqhi/fs]
+    (b,a) = signal.butter(npass, wn, 'bandpass')
+    w = signal.filtfilt(b, a, w)
     return w
 
 
