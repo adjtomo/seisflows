@@ -185,7 +185,7 @@ def su_specfem3d(d, h, prefix='SEM', channel=None, suffix='.adj', verbose=False)
 
     for iproc in range(nproc):
 
-        file = wildcard % (prefix, iproc, suffix)
+        file = wildcard % (prefix, h.ip[iproc], suffix)
         imin = imax
         imax = imax + h.nn[iproc]
 

@@ -4,6 +4,7 @@ import numpy as np
 import scipy.signal as signal
 
 from seisflows.tools.config import SeisflowsParameters
+
 PAR = SeisflowsParameters()
 
 
@@ -12,7 +13,8 @@ def sbandpass(s, h, freqlo, freqhi):
     dt = h.dt
     fs = 1/dt
     for ir in range(0, nr):
-        s[:,ir] = bandpass(s[:,ir],freqlo,freqhi,fs)
+        s[:,ir] = bandpass(s[:,ir],freqlo,freqhi,fs) 
+
     return s
 
 
@@ -123,7 +125,7 @@ def correlate(u, v):
 
 def bandpass(w, freqlo, freqhi, fs, npass=2):
     wn = [2*freqlo/fs, 2*freqhi/fs]
-    b, a = signal.butter(npass, wn, btype='band')
+    (b,a) = signal.butter(npass, wn, btype='band')
     w = signal.lfilter(b, a, w)
     return w
 
