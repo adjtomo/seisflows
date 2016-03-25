@@ -71,8 +71,8 @@ class test_preprocess(object):
         print 'LOAD succeeded'
 
     try:
-        d = preprocess.process_traces(d, h) 
-        s = preprocess.process_traces(s, h) 
+        d = preprocess.multichannel(preprocess.process_traces, [d], [h]) 
+        s = preprocess.multichannel(preprocess.process_traces, [s], [h]) 
     except:
         print 'PROCESS_TRACES failed'
     else:
