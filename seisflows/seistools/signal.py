@@ -3,10 +3,6 @@ import numpy as np
 
 import scipy.signal as signal
 
-from seisflows.tools.config import SeisflowsParameters
-
-PAR = SeisflowsParameters()
-
 
 def sbandpass(s, h, freqlo, freqhi):
     nr = h.nr
@@ -41,7 +37,8 @@ def shighpass(s, h, freq):
     raise NotImplementedError
 
 
-def smute(s, h, vel, toff, xoff=0, constant_spacing=False):
+# mute early arrivals
+def smute(s, h, vel, toff, xoff, constant_spacing=False):
     nt = h.nt
     dt = h.dt
     nr = h.nr
@@ -65,10 +62,8 @@ def smute(s, h, vel, toff, xoff=0, constant_spacing=False):
             ixoff = (ir-xoff)/dt
         else:
             itoff = toff/dt
-            if PAR.SOLVER == 'specfem2d':
-                ixoff = (h.rx[ir]-h.sx[0]-xoff)/dt  
-            elif PAR.SOLVER == 'specfem3d':
-                ixoff = np.sqrt((h.rx[ir]-h.sx[0])**2 + (h.ry[ir]-h.sy[0])**2)/dt
+            #ixoff = (h.rx[ir]-h.sx[0]-xoff)/dt
+            ixoff = np.sqrt((h.rx[ir]-h.sx[0])**2 + (h.ry[ir]-h.sy[0])**2)/dt
 
         itmin = int(np.ceil(slope*abs(ixoff)+itoff)) - length/2
         itmax = itmin + length
@@ -86,6 +81,50 @@ def smute(s, h, vel, toff, xoff=0, constant_spacing=False):
             s[:,ir] = 0.
 
         # inner mute 
+        if ixoff*dt < xoff:
+            s[:,ir] = 0.
+
+    return s
+
+
+# mute late arrivals
+def smutelow(s, h, vel, toff, xoff, constant_spacing=False):
+    nt = h.nt
+    dt = h.dt
+    nr = h.nr
+
+    # construct tapered window
+    length = 400
+    win = np.cos(np.linspace(0, np.pi, 2*length))
+    win = win[0:length]
+
+    for ir in range(0,h.nr):
+        # calculate slope
+        if vel!=0:
+            slope = 1./vel
+        else:
+            slope = 0
+
+        # calculate offsets
+        if constant_spacing:
+            itoff = toff/dt
+        else:
+            itoff = toff/dt
+            ixoff = np.sqrt((h.rx[ir]-h.sx[0])**2 + (h.ry[ir]-h.sy[0])**2)/dt
+
+        itmin = int(np.ceil(slope*abs(ixoff)+itoff)) - length/2
+        itmax = itmin + length
+
+        # apply window
+        if 1 < itmin and itmax < nt:
+            s[itmax:nt,ir] = 0.
+            s[itmin:itmax,ir] = win*s[itmin:itmax,ir]
+        elif itmin < 1 <= itmax:
+            s[0:itmax,ir] = win[length-itmax:length]*s[0:itmax,ir]
+        elif itmin < nt < itmax:
+            s[itmin:nt,ir] = win[0:nt-itmin]*s[itmin:nt,ir]
+
+        # inner mute
         if ixoff*dt < xoff:
             s[:,ir] = 0.
 

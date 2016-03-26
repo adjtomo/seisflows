@@ -1,5 +1,6 @@
 
 import numpy as np
+import scipy.signal as _signal
 
 from seisflows.tools import unix
 from seisflows.tools.code import Struct
@@ -7,7 +8,7 @@ from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
 from seisflows.seistools import adjoint, misfit, readers, writers
-from seisflows.seistools.signal import sbandpass, smute
+from seisflows.seistools.signal import sbandpass, smute, smutelow
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -106,6 +107,20 @@ class legacy(object):
     def process_traces(self, s, h):
         """ Performs data processing operations on traces
         """
+        # remove linear trend
+        s = _signal.detrend(s)
+
+        # mute 
+        if PAR.MUTE:
+            vel = PAR.MUTESLOPE
+            off = PAR.MUTECONST
+            inn = PAR.MUTEINNER
+            # mute early arrivals
+            s = smute(s, h, vel, off, inn, constant_spacing=False)
+            # mute late arrivals
+            vel = PAR.MUTESLOPE_BTM
+            s = smutelow(s, h, vel, off, inn, constant_spacing=False)
+
         # filter data
         if PAR.FREQLO and PAR.FREQHI:
             s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
