@@ -110,6 +110,13 @@ class legacy(object):
         if PAR.FREQLO and PAR.FREQHI:
             s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
 
+
+        # scale all traces by a single value (norm)
+        if PAR.NORMALIZE_ALL:
+	    sum_norm = np.linalg.norm(s, ord=2)
+            if sum_norm > 0:
+                s /= sum_norm
+
         return s
 
 
