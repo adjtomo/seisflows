@@ -164,11 +164,23 @@ class legacy(object):
                 if w > 0: 
                     s[:,ir] /= w
 
-        # mute direct arrival
+#        # mute direct arrival
+#        if PAR.MUTE:
+#            vel = PAR.MUTESLOPE
+#            off = PAR.MUTECONST
+#            s = smute(s, h, vel, off, constant_spacing=False)
+
+        # mute 
         if PAR.MUTE:
             vel = PAR.MUTESLOPE
             off = PAR.MUTECONST
-            s = smute(s, h, vel, off, constant_spacing=False)
+            inn = PAR.MUTEINNER
+            # mute early arrivals
+            s = smute(s, h, vel, off, inn, constant_spacing=False)
+            # mute late arrivals
+            vel = PAR.MUTESLOPE_BTM
+            s = smutelow(s, h, vel, off, inn, constant_spacing=False)
+
 
         return s
 
