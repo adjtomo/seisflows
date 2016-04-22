@@ -173,7 +173,7 @@ class base(object):
         self.import_model(path)
 
         self.forward()
-        unix.mv(self.data_wildcard, 'traces/syn')
+        unix.mv(self.channels, 'traces/syn')
         preprocess.prepare_eval_grad(self.getpath)
 
         self.export_residuals(path)
@@ -203,7 +203,7 @@ class base(object):
 
         self.import_model(path)
         self.forward()
-        unix.mv(self.data_wildcard, 'traces/lcg')
+        unix.mv(self.channels, 'traces/lcg')
         preprocess.prepare_apply_hess(self.getpath)
 
         self.adjoint()
@@ -563,7 +563,7 @@ class base(object):
     def call(self, executable, output='/dev/null'):
         """ Calls solver through subprocess
         """
-        # a less complicated version, without error catching, would simply be
+        # a less complicated version, without error catching, would be
         # subprocess.call(system.mpiexec() + executable, shell=True)
         try:
             f = open(output,'w')
@@ -582,22 +582,34 @@ class base(object):
 
     @property
     def getnode(self):
+        # it is sometimes useful to overload system.getnode via this method
         return system.getnode()
 
     @property
+    def getname(self):
+        # returns name of source currently under consideration
+        return self.check_source_names()[self.getnode]
+
+    @property
     def getpath(self):
-        name = self.check_source_names()[self.getnode]
-        return join(PATH.SOLVER, name)
+        # returns solver working directory currently in use
+        return join(PATH.SOLVER, self.getname)
+
+
+    ### solver information
+
+    @property
+    def mesh(self):
+        return self.check_mesh_properties()
+
+    @property
+    def channels(self):
+        return glob(self.data_wildcard)
 
     @property
     def data_wildcard(self):
         # must be implemented by subclass
         return NotImplementedError
-
-    @property
-    def mesh(self):
-        mesh = self.check_mesh_properties()
-        return mesh
 
     @property
     def model_databases(self):

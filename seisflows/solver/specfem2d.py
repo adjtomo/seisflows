@@ -89,7 +89,7 @@ class specfem2d(custom_import('solver', 'base')):
         self.call('bin/xmeshfem2D')
         self.call('bin/xspecfem2D',output='log.solver')
 
-        unix.mv(self.data_wildcard, 'traces/obs')
+        unix.mv(self.channels, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
 
 
@@ -130,6 +130,10 @@ class specfem2d(custom_import('solver', 'base')):
         setpar('SAVE_FORWARD', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
+
+        # work around SPECFEM2D trace name conventions
+        #unix.rename()
+        #unix.rename()
 
         self.call('bin/xmeshfem2D')
         self.call('bin/xspecfem2D')
@@ -203,8 +207,8 @@ class specfem2d(custom_import('solver', 'base')):
 
     @property
     def data_wildcard(self):
-        return glob('OUTPUT_FILES/U?_file_single.su')
-        #return glob('OUTPUT_FILES/*semd')
+        return 'OUTPUT_FILES/U?_file_single.su'
+        #return 'OUTPUT_FILES/*semd'
 
     @property
     def model_databases(self):

@@ -54,7 +54,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         setpar('SAVE_FORWARD', '.true.')
         self.call('bin/xspecfem3D')
 
-        unix.mv(self.data_wildcard, 'traces/obs')
+        unix.mv(self.channels, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
 
 
@@ -140,7 +140,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         solvertools.setpar('SIMULATION_TYPE', '1')
         solvertools.setpar('SAVE_FORWARD', '.true.')
         self.call('bin/xspecfem3D')
-        unix.mv(self.data_wildcard, 'traces/syn')
+        unix.mv(self.channels, 'traces/syn')
 
 
     def adjoint(self):
@@ -182,7 +182,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
 
     @property
     def data_wildcard(self):
-        return glob('OUTPUT_FILES/*.sem.ascii')
+        return 'OUTPUT_FILES/*.sem.ascii'
 
     @property
     def kernel_databases(self):
