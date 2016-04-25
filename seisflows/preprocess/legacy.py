@@ -98,12 +98,9 @@ class legacy(object):
     def process_traces(self, s, h):
         """ Performs data processing operations on traces
         """
-        # remove linear trend
-        s = _signal.detrend(s)
-
-        # filter data
-        if PAR.FREQLO and PAR.FREQHI:
-            s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
+        s = self.apply_filter(s, h)
+        s = self.apply_normalize(s, h)
+        s = self.apply_mute(s, h)
 
         return s
 
@@ -127,10 +124,6 @@ class legacy(object):
         # generate adjoint traces
         for i in range(h.nr):
             s[:,i] = self.adjoint(s[:,i], d[:,i], h.nt, h.dt)
-
-        s = self.apply_filter(s, h)
-        s = self.apply_normalize(s, d, h)
-        s = self.apply_mute(s, h)
 
         return s
 
@@ -173,7 +166,7 @@ class legacy(object):
             raise ParameterError()
 
 
-    def apply_normalize(self, s, d, h):
+    def apply_normalize(self, s, h):
         if not PAR.NORMALIZE:
             return s
 
@@ -186,8 +179,8 @@ class legacy(object):
             return s
 
         elif PAR.NORMALIZE == 'L2_all':
-            # normalize all traces by their combined power
-            w = np.linalg.norm(d, ord=2)
+            # normalize traces by their combined power
+            w = np.linalg.norm(s, ord=2)
             if w > 0:
                 s /= w
             return s
