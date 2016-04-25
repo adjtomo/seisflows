@@ -6,6 +6,7 @@ from seisflows.tools import unix
 from seisflows.tools.code import Struct
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
+from seisflows.tools.math import infinity
 
 from seisflows.seistools import adjoint, misfit, readers, writers
 from seisflows.seistools.signal import sbandpass, smute, smutelow
@@ -38,27 +39,13 @@ class legacy(object):
             setattr(PAR, 'WRITER', PAR.READER)
 
         if 'NORMALIZE' not in PAR:
-            setattr(PAR, 'NORMALIZE', True)
+            setattr(PAR, 'NORMALIZE', 'L2')
 
-        # mute settings
         if 'MUTE' not in PAR:
-            setattr(PAR, 'MUTE', False)
+            setattr(PAR, 'MUTE', None)
 
-        if 'MUTESLOPE' not in PAR:
-            setattr(PAR, 'MUTESLOPE', 0.)
-
-        if 'MUTECONST' not in PAR:
-            setattr(PAR, 'MUTECONST', 0.)
-
-        # filter settings
-        if 'BANDPASS' not in PAR:
-            setattr(PAR, 'BANDPASS', False)
-
-        if 'FREQLO' not in PAR:
-            setattr(PAR, 'FREQLO', 0.)
-
-        if 'FREQHI' not in PAR:
-            setattr(PAR, 'FREQHI', 0.)
+        if 'FILTER' not in PAR:
+            setattr(PAR, 'FILTER', None)
 
         # assertions
         if PAR.READER not in dir(readers):
@@ -68,6 +55,10 @@ class legacy(object):
         if PAR.WRITER not in dir(writers):
             print msg.WriterError
             raise ParameterError()
+
+        self.check_filter()
+        self.check_mute()
+        self.check_normalize()
 
 
     def setup(self):
@@ -110,27 +101,9 @@ class legacy(object):
         # remove linear trend
         s = _signal.detrend(s)
 
-        # mute 
-        if PAR.MUTE:
-            vel = PAR.MUTESLOPE
-            off = PAR.MUTECONST
-            inn = PAR.MUTEINNER
-            # mute early arrivals
-            s = smute(s, h, vel, off, inn, constant_spacing=False)
-            # mute late arrivals
-            vel = PAR.MUTESLOPE_BTM
-            s = smutelow(s, h, vel, off, inn, constant_spacing=False)
-
         # filter data
         if PAR.FREQLO and PAR.FREQHI:
             s = sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
-
-
-        # scale all traces by a single value (norm)
-        if PAR.NORMALIZE_ALL:
-	    sum_norm = np.linalg.norm(s, ord=2)
-            if sum_norm > 0:
-                s /= sum_norm
 
         return s
 
@@ -151,38 +124,76 @@ class legacy(object):
     def generate_adjoint_traces(self, s, d, h):
         """ Generates adjoint traces from observed and synthetic traces
         """
-
+        # generate adjoint traces
         for i in range(h.nr):
             s[:,i] = self.adjoint(s[:,i], d[:,i], h.nt, h.dt)
 
-        # apply adjoint filters
-
-        # normalize traces
-        if PAR.NORMALIZE:
-            for ir in range(h.nr):
-                w = np.linalg.norm(d[:,ir], ord=2)
-                if w > 0: 
-                    s[:,ir] /= w
-
-#        # mute direct arrival
-#        if PAR.MUTE:
-#            vel = PAR.MUTESLOPE
-#            off = PAR.MUTECONST
-#            s = smute(s, h, vel, off, constant_spacing=False)
-
-        # mute 
-        if PAR.MUTE:
-            vel = PAR.MUTESLOPE
-            off = PAR.MUTECONST
-            inn = PAR.MUTEINNER
-            # mute early arrivals
-            s = smute(s, h, vel, off, inn, constant_spacing=False)
-            # mute late arrivals
-            vel = PAR.MUTESLOPE_BTM
-            s = smutelow(s, h, vel, off, inn, constant_spacing=False)
-
+        s = self.apply_filter(s, h)
+        s = self.apply_normalize(s, d, h)
+        s = self.apply_mute(s, h)
 
         return s
+
+
+    ### signal processing
+
+    def apply_filter(self, s, h):
+        if not PAR.FILTER:
+            return s
+
+        elif PAR.FILTER == 'Bandpass':
+            s = _signal.detrend(s)
+            return sbandpass(s, h, PAR.FREQLO, PAR.FREQHI)
+
+        elif PAR.FILTER == 'Lowpass':
+            raise NotImplementedError
+
+        elif PAR.FILTER == 'Highpass':
+            raise NotImplementedError
+
+        elif PAR.FILTER == 'Butterworth':
+            raise NotImplementedError
+
+        else:
+            raise ParameterError()
+
+
+    def apply_mute(self, s, h):
+        if not PAR.MUTE:
+            return s
+
+        elif PAR.MUTE == 'Simple':
+            vel = PAR.MUTESLOPE
+            off = PAR.MUTECONST
+
+            # mute early arrivals
+            return smute(s, h, vel, off, 0., constant_spacing=False)
+
+        else:
+            raise ParameterError()
+
+
+    def apply_normalize(self, s, d, h):
+        if not PAR.NORMALIZE:
+            return s
+
+        elif PAR.NORMALIZE == 'L2':
+            # normalize each trace by its own power
+            for ir in range(h.nr):
+                w = np.linalg.norm(d[:,ir], ord=2)
+                if w > 0:
+                    s[:,ir] /= w
+            return s
+
+        elif PAR.NORMALIZE == 'L2_all':
+            # normalize all traces by their combined power
+            w = np.linalg.norm(d, ord=2)
+            if w > 0:
+                s /= w
+            return s
+
+        else:
+            raise ParameterError()
 
 
     ### input/output
@@ -205,6 +216,7 @@ class legacy(object):
         h = self.check_headers(h)
 
         return f, h
+
 
     def save(self, s, h, prefix='traces/adj/', suffix=None):
         """ Writes seismic data to disk
@@ -266,3 +278,72 @@ class legacy(object):
         # write to disk
         self.writer(zeros, h, path, channel)
 
+
+    ### additional parameter checking
+
+    def check_filter(self):
+        """ Checks filter settings
+        """
+        if not PAR.FILTER:
+            pass
+
+        elif PAR.FILTER == 'Bandpass':
+            if 'FREQLO' not in PAR: raise ParameterError('FREQLO')
+            if 'FREQHI' not in PAR: raise ParameterError('FREQHI')
+            assert 0 < PAR.FREQLO
+            assert PAR.FREQLO < PAR.FREQHI
+            assert PAR.FREQHI < infinity
+
+        elif PAR.FILTER == 'Lowpass':
+            raise NotImplementedError
+            if 'FREQLO' not in PAR: raise ParameterError('FREQLO')
+            if 'FREQHI' not in PAR: raise ParameterError('FREQHI')
+            assert 0 == PAR.FREQLO
+            assert PAR.FREQHI <= infinity
+
+        elif PAR.FILTER == 'Highpass':
+            raise NotImplementedError
+            if 'FREQLO' not in PAR: raise ParameterError('FREQLO')
+            if 'FREQHI' not in PAR: raise ParameterError('FREQHI')
+            assert 0 <= PAR.FREQLO
+            assert PAR.FREQHI == infinity
+
+        elif PAR.FILTER == 'Butterworth':
+            raise NotImplementedError
+            if 'CORNERS' not in PAR: raise ParameterError
+            if 'NPASS' not in PAR: PAR.NPASS = 2
+            assert len(PAR.CORNERS) == 4
+            assert 0. <= PAR.CORNERS[1]
+            assert PAR.CORNERS[0] < PAR.CORNERS[1]
+            assert PAR.CORNERS[1] < PAR.CORNERS[2]
+            assert PAR.CORNERS[2] < PAR.CORNERS[3]
+            assert PAR.CORNERS[3] <= infinity
+
+        else:
+            raise ParameterError()
+
+
+    def check_mute(self):
+        """ Checks mute settings
+        """
+        if not PAR.MUTE:
+            pass
+
+        elif PAR.MUTE == 'Simple':
+            if 'MUTESLOPE' not in PAR: PAR.MUTESLOPE = infinity
+            if 'MUTECONST' not in PAR: PAR.MUTECONST = 0.
+            assert PAR.MUTESLOPE > 0.
+            assert PAR.MUTECONST >= 0.
+
+        else:
+            raise ParameterError()
+
+
+    def check_normalize(self):
+        pass
+
+
+    def get_size(self, channels):
+        for channel in channels:
+            _, h = self.reader(channel=channel, **kwargs)    
+            print channel, h.nr, h.nt
