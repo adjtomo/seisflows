@@ -12,7 +12,7 @@ from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin, splitve
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import Struct, exists
+from seisflows.tools.code import Struct, exists, mpicall
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -195,9 +195,9 @@ class base(object):
 
 
     def apply_hess(self, path=''):
-        """ Computes action of Hessian on a given model vector.
+        """ Computes action of Hessian on a given model vector. A gradient 
+          evaluation must have already been carried out beforehand.
         """
-        # a gradient evaluation must have already been carried out
         unix.cd(self.getpath)
         unix.mkdir('traces/lcg')
 
@@ -327,7 +327,8 @@ class base(object):
 
         unix.mkdir(path +'/'+ 'sum')
         for name in parameters:
-            self.call(
+            mpicall(
+                system.mpiexec(),
                 PATH.SPECFEM_BIN +'/'+ 'xcombine_sem '
                 + name + '_kernel' + ' '
                 + 'kernel_paths' + ' '
@@ -345,7 +346,8 @@ class base(object):
         unix.cd(self.getpath)
         for name in parameters:
             print ' smoothing', name
-            self.call(
+            mpicall(
+                system.mpiexec(),
                 PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
                 + str(span) + ' '
                 + str(span) + ' '
@@ -376,7 +378,8 @@ class base(object):
 
         unix.cd(self.getpath)
         for name in self.parameters:
-            self.call(
+            mpicall(
+                system.mpiexec,
                 PATH.SPECFEM_BIN +'/'+ 'xclip_sem '
                 + str(minval) + ' '
                 + str(maxval) + ' '
@@ -558,27 +561,7 @@ class base(object):
         pass
 
 
-    ### miscellaneous
-
-    def call(self, executable, output='/dev/null'):
-        """ Calls solver through subprocess
-        """
-        # a less complicated version, without error catching, would be
-        # subprocess.call(system.mpiexec() + executable, shell=True)
-        try:
-            f = open(output,'w')
-            subprocess.check_call(
-                system.mpiexec() + executable,
-                shell=True,
-                stdout=f)
-        except subprocess.CalledProcessError, err:
-            print msg.SolverError % (system.mpiexec() + executable)
-            sys.exit(-1)
-        except OSError:
-            print msg.SolverError % (system.mpiexec() + executable)
-            sys.exit(-1)
-        finally:
-            f.close()
+    ### solver utility functions
 
     @property
     def getnode(self):

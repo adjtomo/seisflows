@@ -9,7 +9,7 @@ import seisflows.seistools.specfem3d as solvertools
 from seisflows.seistools.shared import getpar, setpar
 
 from seisflows.tools import unix
-from seisflows.tools.code import exists
+from seisflows.tools.code import exists, mpicall
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -78,8 +78,8 @@ class specfem3d(custom_import('solver', 'base')):
             dst = self.model_databases
             unix.cp(src, dst)
 
-            self.call('bin/xmeshfem3D')
-            self.call('bin/xgenerate_databases')
+            mpicall(system.mpiexec(), 'bin/xmeshfem3D')
+            mpicall(system.mpiexec(), 'bin/xgenerate_databases')
             self.export_model(PATH.OUTPUT +'/'+ model_name)
 
         else:
@@ -93,8 +93,8 @@ class specfem3d(custom_import('solver', 'base')):
         """
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        self.call('bin/xgenerate_databases')
-        self.call('bin/xspecfem3D')
+        mpicall(system.mpiexec(), 'bin/xgenerate_databases')
+        mpicall(system.mpiexec(), 'bin/xspecfem3D')
 
 
     def adjoint(self):
@@ -104,7 +104,7 @@ class specfem3d(custom_import('solver', 'base')):
         setpar('SAVE_FORWARD', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
-        self.call('bin/xspecfem3D')
+        mpicall(system.mpiexec(), 'bin/xspecfem3D')
 
 
     ### input file writers

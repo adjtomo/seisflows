@@ -1,6 +1,6 @@
 
 import sys
-from os.path import join
+from os.path import basename, join
 from glob import glob
 
 import numpy as np
@@ -11,7 +11,7 @@ from seisflows.seistools.io import splitvec, loadbypar
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists
+from seisflows.tools.code import exists, mpicall
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -86,10 +86,10 @@ class specfem2d(custom_import('solver', 'base')):
         unix.cd(self.getpath)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        self.call('bin/xmeshfem2D')
-        self.call('bin/xspecfem2D',output='log.solver')
+        mpicall(system.mpiexec(), 'bin/xmeshfem2D')
+        mpicall(system.mpiexec(), 'bin/xspecfem2D',output='log.solver')
 
-        unix.mv(self.channels, 'traces/obs')
+        unix.mv(self.getdata, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
 
 
@@ -119,8 +119,8 @@ class specfem2d(custom_import('solver', 'base')):
         """
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        self.call('bin/xmeshfem2D')
-        self.call('bin/xspecfem2D')
+        mpicall(system.mpiexec(), 'bin/xmeshfem2D')
+        mpicall(system.mpiexec(), 'bin/xspecfem2D')
 
 
     def adjoint(self):
@@ -135,8 +135,8 @@ class specfem2d(custom_import('solver', 'base')):
         #unix.rename()
         #unix.rename()
 
-        self.call('bin/xmeshfem2D')
-        self.call('bin/xspecfem2D')
+        mpicall(system.mpiexec(), 'bin/xmeshfem2D')
+        mpicall(system.mpiexec(), 'bin/xspecfem2D')
 
 
     ### postprocessing utilities

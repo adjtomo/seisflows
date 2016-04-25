@@ -11,7 +11,7 @@ from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import Struct, exists
+from seisflows.tools.code import Struct, exists, mpicall
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -73,7 +73,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
 
             unix.cp(glob(model_path +'/'+ '*'), self.model_databases)
 
-            self.call('bin/xmeshfem3D')
+            mpicall(system.mpiexec(), 'bin/xmeshfem3D')
             self.export_model(PATH.OUTPUT +'/'+ model_name)
 
         else:
@@ -150,7 +150,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         solvertools.setpar('SAVE_FORWARD', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
-        self.call('bin/xspecfem3D')
+        mpicall(system.mpiexec(), 'bin/xspecfem3D')
 
 
     def check_mesh_properties(self, path=None, parameters=None):
