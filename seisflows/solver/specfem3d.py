@@ -49,9 +49,9 @@ class specfem3d(custom_import('solver', 'base')):
         unix.cd(self.getpath)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        self.call('bin/xspecfem3D')
+        mpicall(system.mpiexec(), 'bin/xspecfem3D')
 
-        unix.mv(self.channels, 'traces/obs')
+        unix.mv(self.getdata, 'traces/obs')
         self.export_traces(PATH.OUTPUT, 'traces/obs')
 
 
@@ -178,7 +178,7 @@ class specfem3d(custom_import('solver', 'base')):
 
     @property
     def data_wildcard(self):
-        return 'OUTPUT_FILES/*SU'
+        return '*_SU'
 
     @property
     def kernel_databases(self):

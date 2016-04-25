@@ -207,8 +207,8 @@ class specfem2d(custom_import('solver', 'base')):
 
     @property
     def data_wildcard(self):
-        return 'OUTPUT_FILES/U?_file_single.su'
-        #return 'OUTPUT_FILES/*semd'
+        return 'U?_file_single.su'
+        #return '*semd'
 
     @property
     def model_databases(self):

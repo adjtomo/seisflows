@@ -173,7 +173,7 @@ class base(object):
         self.import_model(path)
 
         self.forward()
-        unix.mv(self.channels, 'traces/syn')
+        unix.mv(self.getdata, 'traces/syn')
         preprocess.prepare_eval_grad(self.getpath)
 
         self.export_residuals(path)
@@ -595,6 +595,12 @@ class base(object):
         # returns solver working directory currently in use
         return join(PATH.SOLVER, self.getname)
 
+    @property
+    def getdata(self):
+        # returns data filenames for current source
+        wildcard = join(self.getpath, 'OUTPUT_FILES', self.data_wildcard)
+        return glob(wildcard)
+
 
     ### solver information
 
@@ -604,7 +610,11 @@ class base(object):
 
     @property
     def channels(self):
-        return glob(self.data_wildcard)
+        wildcard = join(self.getpath, 'traces/obs', self.data_wildcard)
+        return [basename(filename) for filename in glob(wildcard)]
+
+
+    # solver paths and filenames
 
     @property
     def data_wildcard(self):
