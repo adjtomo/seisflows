@@ -4,6 +4,7 @@ import os
 import pickle
 import re
 import subprocess
+import sys
 import traceback
 
 from imp import load_source
