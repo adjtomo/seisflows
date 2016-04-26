@@ -93,6 +93,33 @@ class specfem2d(custom_import('solver', 'base')):
         self.export_traces(PATH.OUTPUT, 'traces/obs')
 
 
+    def initialize_adjoint_traces(self):
+        super(specfem2d, self).initialize_adjoint_traces()
+        self.rename_data()
+
+        # hack to deal with SPECFEM2D's requirement that all components exist,
+        # even ones not in use
+        try:
+            unix.cd(self.getpath)
+            p_sv = getpar('p_sv').lower()
+            unix.cd('traces/adj')
+            if p_sv:
+                unix.cp('Uy_file_single.su.adj', 'Ux_file_single.su.adj')
+                unix.cp('Uy_file_single.su.adj', 'Uz_file_single.su.adj')
+                unix.cp('Uy_file_single.su.adj', 'Up_file_single.su.adj')
+            else:
+                unix.cp('Uz_file_single.su.adj', 'Uy_file_single.su.adj')
+                unix.cp('Uz_file_single.su.adj', 'Up_file_single.su.adj')
+        except:
+            raise Exception()
+
+
+    def rename_data(self):
+        unix.cd(self.getpath)
+        files = glob('traces/adj/*.su')
+        unix.rename('.su', '.su.adj', files)
+
+
     def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
         """ Performs meshing and database generation
         """
@@ -131,9 +158,8 @@ class specfem2d(custom_import('solver', 'base')):
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
 
-        # work around SPECFEM2D trace name conventions
-        #unix.rename()
-        #unix.rename()
+        # work around SPECFEM2D conflicting name conventions
+        self.rename_data()
 
         mpicall(system.mpiexec(), 'bin/xmeshfem2D')
         mpicall(system.mpiexec(), 'bin/xspecfem2D')

@@ -106,6 +106,9 @@ class specfem3d(custom_import('solver', 'base')):
         unix.ln('traces/adj', 'SEM')
         mpicall(system.mpiexec(), 'bin/xspecfem3D')
 
+        # work around SPECFEM3D conflicting name conventions
+        self.rename_data()
+
 
     ### input file writers
 
@@ -134,26 +137,26 @@ class specfem3d(custom_import('solver', 'base')):
     def initialize_adjoint_traces(self):
         """ Works around SPECFEM3D file format issue by overriding base method
         """
-        try:
-           super(specfem3d, self).initialize_adjoint_traces()
-        except:
-           try:
-                import preprocess
 
-                path_obs = self.getpath+'/'+'traces/obs'
-                path_adj = self.getpath+'/'+'traces/adj'
+    def initialize_adjoint_traces(self):
+        super(specfem3d, self).initialize_adjoint_traces()
+        self.rename_data()        
 
-                # read observed data
-                _, h = preprocess.reader(path_obs, preprocess.channels[0])
+        # hack to deal with SPECFEM3D's requirement that all components exist,
+        # even ones not in use
+        unix.cd(self.getpath +'/'+ 'traces/adj')
+        for iproc in range(PAR.NPROC):
+            for channel in ['x', 'y', 'z']:
+                src = '%d_d%s_SU.adj' % (iproc, PAR.CHANNELS[0])
+                dst = '%d_d%s_SU.adj' % (iproc, channel)
+                if not exists(dst):
+                    unix.cp(src, dst)
 
-                zeros = np.zeros((h.nt, h.nr))
-
-                # write adjoint traces
-                for channel in ['x', 'y', 'z']:
-                        preprocess.writer(zeros, h, path_adj, channel)
-
-           except:
-                raise Exception('Seismic Unix format not supported for SPECFEM3D inversions because SPECFEM3D lacks an adequate parallel reader and writer')
+    def rename_data(self):
+        """ Works around conflicting data filename conventions
+        """
+        files = glob(self.getpath +'/'+ 'traces/adj/*SU')
+        unix.rename('_SU', '_SU.adj', files)
 
 
     def write_parameters(self):
@@ -178,7 +181,8 @@ class specfem3d(custom_import('solver', 'base')):
 
     @property
     def data_wildcard(self):
-        return '*_SU'
+        channels = PAR.CHANNELS
+        return '*_d[%s]_SU' % channels.lower()
 
     @property
     def kernel_databases(self):

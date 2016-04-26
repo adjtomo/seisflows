@@ -464,6 +464,28 @@ class base(object):
         unix.cp(src, dst)
 
 
+    def rename_kernels(self, path):
+        """ Works around conflicting kernel filename conventions
+        """
+        files = []
+        files += glob('*proc??????_alpha_kernel.bin')
+        files += glob('*proc??????_alpha[hv]_kernel.bin')
+        files += glob('*proc??????_reg1_alpha_kernel.bin')
+        files += glob('*proc??????_reg1_alpha[hv]_kernel.bin')
+        unix.rename('alpha', 'vp', files)
+
+        files = []
+        files += glob('*proc??????_beta_kernel.bin')
+        files += glob('*proc??????_beta[hv]_kernel.bin')
+        files += glob('*proc??????_reg1_beta_kernel.bin')
+        files += glob('*proc??????_reg1_beta[hv]_kernel.bin')
+        unix.rename('beta', 'vs', files)
+
+
+    def rename_data(self, path):
+        pass
+
+
     ### setup utilities
 
     def initialize_solver_directories(self):
@@ -509,9 +531,11 @@ class base(object):
             Components actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
         """
-        path = self.getpath+'/'+'traces/adj/'
-        for channel in ['x', 'y', 'z']:
-            preprocess.write_zero_traces(path, channel)
+        for channel in self.channels:
+            d = preprocess.reader(self.getpath +'/'+ 'traces/obs', channel)
+            for t in d:
+                t.data[:] = 0.
+            preprocess.writer(d, self.getpath +'/'+ 'traces/adj', channel)
 
 
     def check_mesh_properties(self, path=None, parameters=None):
