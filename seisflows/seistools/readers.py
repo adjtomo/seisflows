@@ -66,6 +66,13 @@ def ascii_specfem2d(**kwargs):
     return s, h
 
 
+def su(path, filename):
+    from obspy import read
+
+    streamobj = read(path +'/'+ filename, format='SU', byteorder='<')
+    return streamobj
+
+
 def su_specfem2d_obspy(prefix='SEM', channel=None, suffix='.su'):
     from obspy import read
 

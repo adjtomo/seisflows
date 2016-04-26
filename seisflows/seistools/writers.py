@@ -91,6 +91,17 @@ def su_specfem2d_obspy(d, prefix='SEM', channel=None, suffix='.su.adj'):
     d.write(file, format='SU')
 
 
+def su(d, path, filename):
+    max_delta = 0.065535
+    dummy_delta = max_delta
+
+    if d[0].stats.delta > max_delta:
+        for t in d:
+            t.stats.delta = dummy_delta
+
+    # write data to file
+    d.write(path+'/'+filename, format='SU')
+
 
 def su_specfem2d(d, h, prefix='SEM', channel=None, suffix='.su.adj'):
     """ Writes Seismic Unix file
