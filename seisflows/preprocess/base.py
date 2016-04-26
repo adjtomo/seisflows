@@ -36,25 +36,11 @@ class base(object):
         if 'NORMALIZE' not in PAR:
             setattr(PAR, 'NORMALIZE', True)
 
-        # mute settings
         if 'MUTE' not in PAR:
-            setattr(PAR, 'MUTE', False)
+            setattr(PAR, 'MUTE', None)
 
-        if 'MUTESLOPE' not in PAR:
-            setattr(PAR, 'MUTESLOPE', 0.)
-
-        if 'MUTECONST' not in PAR:
-            setattr(PAR, 'MUTECONST', 0.)
-
-        # filter settings
-        if 'BANDPASS' not in PAR:
-            setattr(PAR, 'BANDPASS', False)
-
-        if 'FREQLO' not in PAR:
-            setattr(PAR, 'FREQLO', 0.)
-
-        if 'FREQHI' not in PAR:
-            setattr(PAR, 'FREQHI', 0.)
+        if 'FILTER' not in PAR:
+            setattr(PAR, 'FILTER', None)
 
         # assertions
         if PAR.READER not in dir(readers):
@@ -65,8 +51,9 @@ class base(object):
             print msg.WriterError
             raise ParameterError()
 
-        if PAR.READER != PAR.WRITER:
-           print msg.DataFormatWarning % (PAR.READER, PAR.WRITER)
+        self.check_filter()
+        self.check_mute()
+        self.check_normalize()
 
 
     def setup(self):
@@ -90,46 +77,23 @@ class base(object):
         """ Prepares solver for gradient evaluation by writing residuals and
           adjoint traces
         """
-        for channel in self.channels:
+        import solver
+        for channel in solver.channels:
             obs = self.reader(path+'/'+'traces/obs', channel)
             syn = self.reader(path+'/'+'traces/syn', channel)
 
-            for obs_, syn_ in zip(obs, syn):
-                self.process_trace(obs_)
-                self.process_trace(syn_)
+            # process observations
+            obs = self.apply_filter(obs)
+            obs = self.apply_mute(obs)
+            obs = self.apply_normalize(obs)
+
+            # process synthetics
+            syn = self.apply_filter(syn)
+            syn = self.apply_mute(syn)
+            syn = self.apply_normalize(syn)
 
             self.write_residuals(path, syn, obs)
             self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, channel)
-
-
-    def process_trace(self, trace):
-        """ Performs data processing operations on traces
-        """
-        trace.detrend()
-        if PAR.FREQLO and PAR.FREQHI:
-            trace.filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
-
-        # workaround obspy dtype conversion
-        trace.data = trace.data.astype(np.float32)
-
-        if PAR.MUTE:
-            trace *= smask(trace, PAR.MUTESLOPE, PAR.MUTECONST)
-
-
-    def process_trace_adjoint(self, trace):
-        """ Implements adjoint of process_traces method
-        """
-        if PAR.MUTE:
-            trace *= smask(trace, PAR.MUTESLOPE, PAR.MUTECONST)
-
-        trace.data = trace.data[::-1]
-        trace.detrend()
-
-        if PAR.FREQLO and PAR.FREQHI:
-            trace.filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
-
-        # workaround obspy dtype conversion
-        trace.data = trace.data[::-1].astype(np.float32)
 
 
     def write_residuals(self, path, s, d):
@@ -140,7 +104,7 @@ class base(object):
 
         filename = path +'/'+ 'residuals'
         if exists(filename):
-            r = np.loadtxt(filename)
+            r = list(np.loadtxt(filename))
         else:
             r = []
 
@@ -160,18 +124,141 @@ class base(object):
         for i in range(n):
             s[i].data = self.adjoint(s[i].data, d[i].data, nt, dt)
 
-        # apply adjoint filter
-        for trace in s:
-            self.process_trace_adjoint(trace)
-
-        # normalize traces
-        if PAR.NORMALIZE:
-            for i in range(n):
-                w = np.linalg.norm(d[i].data, ord=2)
-                if w > 0: 
-                    s[i].data /= w
-
         self.writer(s, path, channel)
+
+
+    ### signal processing
+
+    def apply_filter(self, s):
+        if not PAR.FILTER:
+            return s
+
+        elif PAR.FILTER == 'Simple':
+            s = _signal.detrend(s)
+            for trace in s:
+                trace.filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
+
+        elif PAR.FILTER == 'Butterworth':
+            raise NotImplementedError
+
+        else:
+            raise ParameterError()
+
+        # workaround obspy dtype conversion
+        trace.data = trace.data.astype(np.float32)
+
+
+    def apply_mute(self, s):
+        if not PAR.MUTE:
+            return s
+
+        elif PAR.MUTE == 'Simple':
+            vel = PAR.MUTESLOPE
+            off = PAR.MUTECONST
+
+            # mute early arrivals
+            return smute(s, h, vel, off, 0., constant_spacing=False)
+
+        else:
+            raise ParameterError()
+
+
+    def apply_normalize(self, s):
+        if not PAR.NORMALIZE:
+            return s
+
+        elif PAR.NORMALIZE == 'L2':
+            # normalize each trace by its own power
+            for ir in range(h.nr):
+                w = np.linalg.norm(s[:,ir], ord=2)
+                if w > 0:
+                    s[:,ir] /= w
+            return s
+
+        elif PAR.NORMALIZE == 'L2_all':
+            # normalize all traces by their combined power
+            w = np.linalg.norm(d, ord=2)
+            if w > 0:
+                s /= w
+            return s
+
+
+    def apply_filter_backwards(self, s):
+        for trace in s:
+            trace.data = np.flip(trace.data)
+
+        s = self.apply_filter()
+
+        for trace in s:
+            trace.data = np.flip(trace.data)
+
+        return s
+
+
+
+    ### additional parameter checking
+
+    def check_filter(self):
+        """ Checks filter settings
+        """
+        if not PAR.FILTER:
+            pass
+
+        elif PAR.FILTER == 'Bandpass':
+            if 'FREQLO' not in PAR: raise ParameterError('FREQLO')
+            if 'FREQHI' not in PAR: raise ParameterError('FREQHI')
+            assert 0 < PAR.FREQLO
+            assert PAR.FREQLO < PAR.FREQHI
+            assert PAR.FREQHI < infinity
+
+        elif PAR.FILTER == 'Lowpass':
+            raise NotImplementedError
+            if 'FREQLO' not in PAR: raise ParameterError('FREQLO')
+            if 'FREQHI' not in PAR: raise ParameterError('FREQHI')
+            assert 0 == PAR.FREQLO
+            assert PAR.FREQHI <= infinity
+
+        elif PAR.FILTER == 'Highpass':
+            raise NotImplementedError
+            if 'FREQLO' not in PAR: raise ParameterError('FREQLO')
+            if 'FREQHI' not in PAR: raise ParameterError('FREQHI')
+            assert 0 <= PAR.FREQLO
+            assert PAR.FREQHI == infinity
+
+        elif PAR.FILTER == 'Butterworth':
+            raise NotImplementedError
+            if 'CORNERS' not in PAR: raise ParameterError
+            if 'NPASS' not in PAR: PAR.NPASS = 2
+            assert len(PAR.CORNERS) == 4
+            assert 0. <= PAR.CORNERS[1]
+            assert PAR.CORNERS[0] < PAR.CORNERS[1]
+            assert PAR.CORNERS[1] < PAR.CORNERS[2]
+            assert PAR.CORNERS[2] < PAR.CORNERS[3]
+            assert PAR.CORNERS[3] <= infinity
+
+        else:
+            raise ParameterError()
+
+
+    def check_mute(self):
+        """ Checks mute settings
+        """
+        if not PAR.MUTE:
+            pass
+
+        elif PAR.MUTE == 'Simple':
+            if 'MUTESLOPE' not in PAR: PAR.MUTESLOPE = infinity
+            if 'MUTECONST' not in PAR: PAR.MUTECONST = 0.
+            assert PAR.MUTESLOPE > 0.
+            assert PAR.MUTECONST >= 0.
+
+        else:
+            raise ParameterError()
+
+
+    def check_normalize(self):
+        pass
+
 
 
     ### utility functions
