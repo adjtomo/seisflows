@@ -27,7 +27,10 @@ class legacy(object):
         """ Checks parameters and paths
         """
         if 'MISFIT' not in PAR:
-            setattr(PAR, 'MISFIT', 'Waveform')
+            setattr(PAR, 'MISFIT', None)
+
+        if 'BACKPROJECT' not in PAR:
+            setattr(PAR, 'BACKPROJECT', None)
 
         if 'CHANNELS' not in PAR:
             raise ParameterError(PAR, 'CHANNELS')
@@ -65,8 +68,11 @@ class legacy(object):
         """ Sets up data preprocessing machinery
         """
         # define misfit function and adjoint source generator
-        self.misfit = getattr(misfit, PAR.MISFIT)
-        self.adjoint = getattr(adjoint, PAR.MISFIT)
+        if PAR.MISFIT:
+            self.misfit = getattr(misfit, PAR.MISFIT)
+            self.adjoint = getattr(adjoint, PAR.MISFIT)
+        elif PAR.BACKPROJECT:
+            self.adjoint = getattr(adjoint, PAR.BACKPROJECT)
 
         # define seismic data reader and writer
         self.reader = getattr(readers, PAR.READER)
@@ -90,9 +96,11 @@ class legacy(object):
         d = self.multichannel(self.process_traces, [d], [h])
         s = self.multichannel(self.process_traces, [s], [h])
 
-        r = self.multichannel(self.write_residuals, [s, d], [h], inplace=False)
         s = self.multichannel(self.generate_adjoint_traces, [s, d], [h])
         self.save(s, h, prefix='traces/adj/')
+
+        if PAR.MISFIT:
+            self.multichannel(self.write_residuals, [s, d], [h], inplace=False)
 
 
     def process_traces(self, s, h):
@@ -173,7 +181,7 @@ class legacy(object):
         elif PAR.NORMALIZE == 'L2':
             # normalize each trace by its own power
             for ir in range(h.nr):
-                w = np.linalg.norm(d[:,ir], ord=2)
+                w = np.linalg.norm(s[:,ir], ord=2)
                 if w > 0:
                     s[:,ir] /= w
             return s
@@ -259,17 +267,6 @@ class legacy(object):
                 print 'Warning: h.nr != PAR.NREC'
 
         return h
-
-
-    def write_zero_traces(self, path, channel):
-        from seisflows.seistools.shared import SeisStruct
-
-        # construct seismic data and header
-        zeros = np.zeros((PAR.NT, PAR.NREC))
-        h = SeisStruct(nt=PAR.NT, dt=PAR.DT, nr=PAR.NREC)
-
-        # write to disk
-        self.writer(zeros, h, path, channel)
 
 
     ### additional parameter checking
