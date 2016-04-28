@@ -176,7 +176,11 @@ class base(object):
         unix.mv(self.getdata, 'traces/syn')
         preprocess.prepare_eval_grad(self.getpath)
 
-        self.export_residuals(path)
+        try:
+            self.export_residuals(path)
+        except:
+            pass
+
         if export_traces:
             self.export_traces(path, prefix='traces/syn')
 
@@ -190,6 +194,7 @@ class base(object):
         self.adjoint()
 
         self.export_kernels(path)
+
         if export_traces:
             self.export_traces(path, prefix='traces/adj')
 

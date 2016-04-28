@@ -22,7 +22,10 @@ class base(object):
         """ Checks parameters and paths
         """
         if 'MISFIT' not in PAR:
-            setattr(PAR, 'MISFIT', 'Waveform')
+            setattr(PAR, 'MISFIT', None)
+
+        if 'BACKPROJECT' not in PAR:
+            setattr(PAR, 'BACKPROJECT', None)
 
         if 'CHANNELS' not in PAR:
             raise ParameterError(PAR, 'CHANNELS')
@@ -60,8 +63,11 @@ class base(object):
         """ Sets up data preprocessing machinery
         """
         # define misfit function and adjoint trace generator
-        self.misfit = getattr(misfit, PAR.MISFIT)
-        self.adjoint = getattr(adjoint, PAR.MISFIT)
+        if PAR.MISFIT:
+            self.misfit = getattr(misfit, PAR.MISFIT)
+            self.adjoint = getattr(adjoint, PAR.MISFIT)
+        elif PAR.BACKPROJECT:
+            self.adjoint = getattr(adjoint, PAR.BACKPROJECT)
 
         # define seismic data reader and writer
         self.reader = getattr(readers, PAR.READER)
@@ -92,8 +98,10 @@ class base(object):
             syn = self.apply_mute(syn)
             syn = self.apply_normalize(syn)
 
-            self.write_residuals(path, syn, obs)
             self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, channel)
+
+            if PAR.MISFIT:
+                self.write_residuals(path, syn, obs)
 
 
     def write_residuals(self, path, s, d):
