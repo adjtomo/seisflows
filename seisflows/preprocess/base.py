@@ -8,7 +8,7 @@ from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
 from seisflows.seistools import adjoint, misfit, readers, writers
-from seisflows.seistools.signal import smute
+from seisflows.seistools.signal import smute, smute2
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -37,7 +37,7 @@ class base(object):
             setattr(PAR, 'WRITER', PAR.READER)
 
         if 'NORMALIZE' not in PAR:
-            setattr(PAR, 'NORMALIZE', True)
+            setattr(PAR, 'NORMALIZE', 'L2')
 
         if 'MUTE' not in PAR:
             setattr(PAR, 'MUTE', None)
@@ -137,14 +137,17 @@ class base(object):
 
     ### signal processing
 
-    def apply_filter(self, s):
+    def apply_filter(self, traces):
         if not PAR.FILTER:
-            return s
+            return traces
 
         elif PAR.FILTER == 'Simple':
-            s = _signal.detrend(s)
-            for trace in s:
-                trace.filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
+            traces = _signal.detrend(traces)
+            for tr in traces:
+                tr.filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
+
+                # workaround obspy dtype conversion
+                tr.data = tr.data.astype(np.float32)
 
         elif PAR.FILTER == 'Butterworth':
             raise NotImplementedError
@@ -152,55 +155,70 @@ class base(object):
         else:
             raise ParameterError()
 
-        # workaround obspy dtype conversion
-        trace.data = trace.data.astype(np.float32)
+        return traces
 
 
-    def apply_mute(self, s):
+    def apply_mute(self, traces):
         if not PAR.MUTE:
-            return s
+            return traces
 
         elif PAR.MUTE == 'Simple':
-            vel = PAR.MUTESLOPE
-            off = PAR.MUTECONST
 
             # mute early arrivals
-            return smute(s, h, vel, off, 0., constant_spacing=False)
+            return smute2(traces, 
+                PAR.MUTESLOPE, # (units: velocity)
+                PAR.MUTECONST, # (units: time)
+                self.get_time_scheme(traces),
+                self.get_source_coords(traces),
+                self.get_receiver_coords(traces))
 
         else:
             raise ParameterError()
 
 
-    def apply_normalize(self, s):
+    def apply_normalize(self, traces):
         if not PAR.NORMALIZE:
-            return s
+            return traces
+
+        elif PAR.NORMALIZE == 'L1':
+            # normalize each trace by its own power
+            for tr in traces:
+                w = np.linalg.norm(tr.data, ord=1)
+                if w > 0:
+                    tr.data /= w
+            return traces
 
         elif PAR.NORMALIZE == 'L2':
             # normalize each trace by its own power
-            for ir in range(h.nr):
-                w = np.linalg.norm(s[:,ir], ord=2)
+            for tr in traces:
+                w = np.linalg.norm(tr.data, ord=2)
                 if w > 0:
-                    s[:,ir] /= w
-            return s
+                    tr.data /= w
+            return traces
 
-        elif PAR.NORMALIZE == 'L2_all':
-            # normalize all traces by their combined power
-            w = np.linalg.norm(d, ord=2)
-            if w > 0:
-                s /= w
-            return s
+        elif PAR.NORMALIZE == 'L2_squared':
+            # normalize each trace by its own power
+            for tr in traces:
+                w = np.linalg.norm(tr.data, ord=2)
+                if w > 0:
+                    tr.data /= w**2.
+            return traces
 
 
-    def apply_filter_backwards(self, s):
-        for trace in s:
-            trace.data = np.flip(trace.data)
+        elif PAR.NORMALIZE == 'L2_summed':
+            raise NotImplementedError
 
-        s = self.apply_filter()
 
-        for trace in s:
-            trace.data = np.flip(trace.data)
+    def apply_filter_backwards(self, traces):
+        for tr in traces:
+            tr.data = np.flip(tr.data)
 
-        return s
+        traces = self.apply_filter()
+
+        for tr in traces:
+            tr.data = np.flip(tr.data)
+
+        return traces
 
 
 
@@ -271,43 +289,40 @@ class base(object):
 
     ### utility functions
 
-    def write_zero_traces(self, path, channel):
-        from obspy.core.stream import Stream
-        from obspy.core.trace import Trace
-
-        # construct seismic data and headers
-        t = Trace(data=np.zeros(PAR.NT, dtype='float32'))
-        t.stats.delta = PAR.DT
-        s = Stream(t)*PAR.NREC
-
-        # write to disk
-        self.writer(s, path, channel)
-
-
-    def get_time_scheme(self, stream):
-        dt = PAR.DT
+    def get_time_scheme(self, traces):
         nt = PAR.NT
+        dt = PAR.DT
         t0 = 0.
         return nt, dt, t0
 
 
-    def get_network_size(self, stream):
-        nrec = len(stream)
+    def get_network_size(self, traces):
+        nrec = len(traces)
         nsrc = 1
         return nrec, nsrc
 
 
-    def get_receiver_coords(self, stream):
-        xr = []
-        yr = []
-        zr = []
-        return xr, yr, zr
+    def get_receiver_coords(self, traces):
+        # TODO: generalize for different file formats
+        rx = []
+        ry = []
+        rz = []
+        for trace in traces:
+            rx += [trace.stats.su.trace_header.group_coordinate_x]
+            ry += [trace.stats.su.trace_header.group_coordinate_y]
+            rz += [0.]
+        return rx, ry, rz
 
 
-    def get_source_coords(self, stream):
-        xr = []
-        yr = []
-        zr = []
-        return xs, ys, zs
+    def get_source_coords(self, traces):
+        # TODO: generalize for different file formats
+        sx = []
+        sy = []
+        sz = []
+        for trace in traces:
+            sx += [trace.stats.su.trace_header.source_coordinate_x]
+            sy += [trace.stats.su.trace_header.source_coordinate_y]
+            sz += [0.]
+        return sx, sy, sz
 
 

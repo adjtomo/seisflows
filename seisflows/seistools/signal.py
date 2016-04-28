@@ -87,6 +87,59 @@ def smute(s, h, vel, toff, xoff, constant_spacing=False):
     return s
 
 
+
+def smute2(traces, vel, toff, time_scheme, s_coords, r_coords, constant_spacing=False):
+
+    nr = len(traces)
+    nt, dt, _ = time_scheme
+
+    # construct tapered window
+    length = 400
+    win = np.sin(np.linspace(0, np.pi, 2*length))
+    win = win[0:length]
+
+    for ir in range(nr):
+        tr = traces[ir].data
+
+        # extract coordinates
+        sx = s_coords[0][ir]
+        sy = s_coords[1][ir]
+        rx = r_coords[0][ir]
+        ry = r_coords[1][ir]
+
+        # calculate slope
+        if vel!=0:
+            slope = 1./vel
+        else:
+            slope = 0
+
+        # calculate offsets
+        if constant_spacing:
+            itoff = toff/dt
+            ixoff = (ir-xoff)/dt
+        else:
+            itoff = toff/dt
+            ixoff = np.sqrt((rx-sx)**2 + (ry-sy)**2)
+
+        itmin = int(np.ceil(slope*abs(ixoff)/dt+itoff)) - length/2
+        itmax = itmin + length
+
+        # apply window
+        if 1 < itmin < itmax < nt:
+            tr[0:itmin] = 0.
+            tr[itmin:itmax] = win*tr[itmin:itmax]
+        elif itmin < 1 <= itmax:
+            tr[0:itmax] = win[length-itmax:length]*tr[0:itmax]
+        elif itmin < nt < itmax:
+            tr[0:itmin] = 0.
+            tr[itmin:nt] = win[0:nt-itmin]*tr[itmin:nt]
+        elif itmin > nt:
+            tr[:] = 0.
+
+    return traces
+
+
+
 # mute late arrivals
 def smutelow(s, h, vel, toff, xoff, constant_spacing=False):
     nt = h.nt
