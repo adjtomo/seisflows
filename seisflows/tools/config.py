@@ -149,11 +149,10 @@ class SeisflowsPaths(ParameterObj):
         if 'SeisflowsPaths' not in sys.modules:
             sys.modules['SeisflowsPaths'] = self
 
-    def __setattr__(self, key, val):
-        super(SeisflowsPaths, self).__setattr__(*_sub(key, val))
-
     def load(self):
         mydict = loadpy(abspath('paths.py'))
+        for key, val in mydict.items():
+            _, mydict[key] = _sub(key, val)
         super(ParameterObj, self).__setattr__('__dict__', mydict)
         return self
 
@@ -283,10 +282,8 @@ def _sub(key, val):
         val = ''
     if type(val) not in [str, unicode]:
         raise ValueError('Must be string or unicode: PATH.%s' % key)
-    try:
-        val = re.sub('~', os.getenv('HOME'), val)
-    except:
-        raise Exception('Tilde "~" expansion failed.')
+    if val[0:2] == '~/':
+        val = os.getenv('HOME') +'/'+ val[2:]
     return key, val
 
 
