@@ -14,3 +14,12 @@ def su(d, path, filename):
     d.write(path+'/'+filename, format='SU')
 
 
+def ascii(stream, path, filenames):
+    import numpy as np
+
+    for tr in stream:
+        t1 = tr.starttime
+        t2 = tr.starttime + tr.npts*tr.sampling_rate
+        times = np.arange(t1, t2, tr.npts)
+        np.savetxt(path +'/'+ tr.filename,
+                   np.column_stack(times, tr.data))
