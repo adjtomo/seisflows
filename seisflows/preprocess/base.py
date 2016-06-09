@@ -30,11 +30,8 @@ class base(object):
         if 'CHANNELS' not in PAR:
             raise ParameterError(PAR, 'CHANNELS')
 
-        if 'READER' not in PAR:
-            raise ParameterError(PAR, 'READER')
-
-        if 'WRITER' not in PAR:
-            setattr(PAR, 'WRITER', PAR.READER)
+        if 'FORMAT' not in PAR:
+            raise ParameterError(PAR, 'FORMAT')
 
         if 'NORMALIZE' not in PAR:
             setattr(PAR, 'NORMALIZE', 'L2')
@@ -46,11 +43,11 @@ class base(object):
             setattr(PAR, 'FILTER', None)
 
         # assertions
-        if PAR.READER not in dir(readers):
+        if PAR.FORMAT not in dir(readers):
             print msg.ReaderError
             raise ParameterError()
 
-        if PAR.WRITER not in dir(writers):
+        if PAR.FORMAT not in dir(writers):
             print msg.WriterError
             raise ParameterError()
 
@@ -70,8 +67,8 @@ class base(object):
             self.adjoint = getattr(adjoint, PAR.BACKPROJECT)
 
         # define seismic data reader and writer
-        self.reader = getattr(readers, PAR.READER)
-        self.writer = getattr(writers, PAR.WRITER)
+        self.reader = getattr(readers, PAR.FORMAT)
+        self.writer = getattr(writers, PAR.FORMAT)
 
         # prepare channels list
         self.channels = []
@@ -84,9 +81,9 @@ class base(object):
           adjoint traces
         """
         import solver
-        for channel in solver.channels:
-            obs = self.reader(path+'/'+'traces/obs', channel)
-            syn = self.reader(path+'/'+'traces/syn', channel)
+        for filename in solver.data_filenames:
+            obs = self.reader(path+'/'+'traces/obs', filename)
+            syn = self.reader(path+'/'+'traces/syn', filename)
 
             # process observations
             obs = self.apply_filter(obs)
@@ -98,7 +95,7 @@ class base(object):
             syn = self.apply_mute(syn)
             syn = self.apply_normalize(syn)
 
-            self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, channel)
+            self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, filename)
 
             if PAR.MISFIT:
                 self.write_residuals(path, syn, obs)
