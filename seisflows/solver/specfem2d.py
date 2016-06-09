@@ -47,6 +47,13 @@ class specfem2d(custom_import('solver', 'base')):
         if 'F0' not in PAR:
             raise Exception
 
+        # check data format
+        if 'FORMAT' not in PAR:
+            raise Exception()
+
+        if PAR.FORMAT != 'su':
+            raise Exception()
+
 
     def check_solver_parameter_files(self):
         """ Checks solver parameters
@@ -67,9 +74,9 @@ class specfem2d(custom_import('solver', 'base')):
             if self.getnode == 0: print "WARNING: f0 != PAR.F0"
             setpar('f0', PAR.F0, file='DATA/SOURCE')
 
-        if self.mesh.nproc != PAR.NPROC:
+        if self.mesh_properties.nproc != PAR.NPROC:
             if self.getnode == 0:
-                print 'Warning: mesh.nproc != PAR.NPROC'
+                print 'Warning: mesh_properties.nproc != PAR.NPROC'
 
         if 'MULTIPLES' in PAR:
             if PAR.MULTIPLES:
@@ -85,39 +92,34 @@ class specfem2d(custom_import('solver', 'base')):
 
         unix.cd(self.getpath)
         setpar('SIMULATION_TYPE', '1')
-        setpar('SAVE_FORWARD', '.true.')
+        setpar('SAVE_FORWARD', '.false.')
         mpicall(system.mpiexec(), 'bin/xmeshfem2D')
-        mpicall(system.mpiexec(), 'bin/xspecfem2D',output='log.solver')
+        mpicall(system.mpiexec(), 'bin/xspecfem2D')
 
-        unix.mv(self.getdata, 'traces/obs')
-        self.export_traces(PATH.OUTPUT, 'traces/obs')
+        if PAR.FORMAT in ['SU', 'su']:
+            src = glob('OUTPUT_FILES/*.su')
+            dst = 'traces/obs'
+            unix.mv(src, dst)
 
 
     def initialize_adjoint_traces(self):
         super(specfem2d, self).initialize_adjoint_traces()
-        self.rename_data()
+
+        # hack to deal with SPECFEM2D's use of different name conventions for
+        # regular traces and 'adjoint' traces
+        if PAR.FORMAT in ['SU', 'su']:
+            files = glob('traces/adj/*.su')
+            unix.rename('.su', '.su.adj', files)
 
         # hack to deal with SPECFEM2D's requirement that all components exist,
         # even ones not in use
-        try:
-            unix.cd(self.getpath)
-            p_sv = getpar('p_sv').lower()
-            unix.cd('traces/adj')
-            if p_sv:
-                unix.cp('Uy_file_single.su.adj', 'Ux_file_single.su.adj')
-                unix.cp('Uy_file_single.su.adj', 'Uz_file_single.su.adj')
-                unix.cp('Uy_file_single.su.adj', 'Up_file_single.su.adj')
-            else:
-                unix.cp('Uz_file_single.su.adj', 'Uy_file_single.su.adj')
-                unix.cp('Uz_file_single.su.adj', 'Up_file_single.su.adj')
-        except:
-            raise Exception()
-
-
-    def rename_data(self):
-        unix.cd(self.getpath)
-        files = glob('traces/adj/*.su')
-        unix.rename('.su', '.su.adj', files)
+        if PAR.FORMAT in ['SU', 'su']:
+            unix.cd(self.getpath +'/'+ 'traces/adj')
+            for channel in ['x', 'y', 'z', 'p']:
+                src = 'U%s_file_single.su.adj' % PAR.CHANNELS[0]
+                dst = 'U%s_file_single.su.adj' % channel
+                if not exists(dst):
+                    unix.cp(src, dst)
 
 
     def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
@@ -141,13 +143,17 @@ class specfem2d(custom_import('solver', 'base')):
 
     ### low-level solver interface
 
-    def forward(self):
+    def forward(self, path='traces/syn'):
         """ Calls SPECFEM2D forward solver
         """
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
         mpicall(system.mpiexec(), 'bin/xmeshfem2D')
         mpicall(system.mpiexec(), 'bin/xspecfem2D')
+
+        if PAR.FORMAT in ['SU', 'su']:
+            filenames = glob('OUTPUT_FILES/*.su')
+            unix.mv(filenames, path)
 
 
     def adjoint(self):
@@ -158,8 +164,11 @@ class specfem2d(custom_import('solver', 'base')):
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
 
-        # work around SPECFEM2D conflicting name conventions
-        self.rename_data()
+        # hack to deal with SPECFEM2D's use of different name conventions for
+        # regular traces and 'adjoint' traces
+        if PAR.FORMAT in ['SU', 'su']:
+            files = glob('traces/adj/*.su')
+            unix.rename('.su', '.su.adj', files)
 
         mpicall(system.mpiexec(), 'bin/xmeshfem2D')
         mpicall(system.mpiexec(), 'bin/xspecfem2D')
@@ -232,9 +241,20 @@ class specfem2d(custom_import('solver', 'base')):
     ### miscellaneous
 
     @property
-    def data_wildcard(self):
-        return 'U?_file_single.su'
-        #return '*semd'
+    def data_filenames(self):
+        if PAR.CHANNELS:
+            if PAR.FORMAT in ['SU', 'su']:
+               filenames = []
+               for channel in PAR.CHANNELS:
+                   filenames += ['U%s_file_single.su' % channel]
+               return filenames
+
+        else:
+            unix.cd(self.getpath)
+            unix.cd('traces/obs')
+
+            if PAR.FORMAT in ['SU', 'su']:
+                return glob('U?_file_single.su')
 
     @property
     def model_databases(self):

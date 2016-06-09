@@ -173,7 +173,6 @@ class base(object):
         self.import_model(path)
 
         self.forward()
-        unix.mv(self.getdata, 'traces/syn')
         preprocess.prepare_eval_grad(self.getpath)
 
         try:
@@ -207,8 +206,7 @@ class base(object):
         unix.mkdir('traces/lcg')
 
         self.import_model(path)
-        self.forward()
-        unix.mv(self.channels, 'traces/lcg')
+        self.forward('traces/lcg')
         preprocess.prepare_apply_hess(self.getpath)
 
         self.adjoint()
@@ -244,7 +242,7 @@ class base(object):
         minmax = Minmax(self.parameters)
         model = Model(self.parameters)
 
-        for iproc in range(self.mesh.nproc):
+        for iproc in range(self.mesh_properties.nproc):
             # read database files
             keys, vals = loadbypar(path, self.parameters, iproc, prefix, suffix)
             for key, val in zip(keys, vals):
@@ -272,7 +270,7 @@ class base(object):
         unix.mkdir(path)
 
         if 'kernel' in suffix:
-            for iproc in range(self.mesh.nproc):
+            for iproc in range(self.mesh_properties.nproc):
                 for key in solver_parameters:
                     if key in self.parameters:
                         savebin(model[key][iproc], path, iproc, prefix+key+suffix)
@@ -280,7 +278,7 @@ class base(object):
                     savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
 
         else:
-            for iproc in range(self.mesh.nproc):
+            for iproc in range(self.mesh_properties.nproc):
                 for key in solver_parameters:
                     if key in self.parameters:
                         savebin(model[key][iproc], path, iproc, prefix+key+suffix)
@@ -303,7 +301,7 @@ class base(object):
         """
         v = np.array([])
         for key in self.parameters:
-            for iproc in range(self.mesh.nproc):
+            for iproc in range(self.mesh_properties.nproc):
                 v = np.append(v, model[key][iproc])
         return v
 
@@ -313,7 +311,7 @@ class base(object):
         """
         model = {}
         for idim, key in enumerate(self.parameters):
-            model[key] = splitvec(v, self.mesh.nproc, self.mesh.ngll, idim)
+            model[key] = splitvec(v, self.mesh_properties.nproc, self.mesh_properties.ngll, idim)
         return model
 
 
@@ -536,11 +534,16 @@ class base(object):
             Components actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
         """
-        for channel in self.channels:
-            d = preprocess.reader(self.getpath +'/'+ 'traces/obs', channel)
+        for filename in self.data_filenames:
+            # read traces
+            d = preprocess.reader(self.getpath +'/'+ 'traces/obs', filename)
+
+            # replace data with zeros
             for t in d:
                 t.data[:] = 0.
-            preprocess.writer(d, self.getpath +'/'+ 'traces/adj', channel)
+
+            # write traces
+            preprocess.writer(d, self.getpath +'/'+ 'traces/adj', filename)
 
 
     def check_mesh_properties(self, path=None, parameters=None):
@@ -594,7 +597,8 @@ class base(object):
 
     @property
     def getnode(self):
-        # it is sometimes useful to overload system.getnode via this method
+        # because it is sometimes useful to overload system.getnode we include
+        # the following method
         return system.getnode()
 
     @property
@@ -608,33 +612,21 @@ class base(object):
         return join(PATH.SOLVER, self.getname)
 
     @property
-    def getdata(self):
-        # returns data filenames for current source
-        wildcard = join(self.getpath, 'OUTPUT_FILES', self.data_wildcard)
-        return glob(wildcard)
-
-
-    ### solver information
-
-    @property
-    def mesh(self):
+    def mesh_properties(self):
         return self.check_mesh_properties()
 
     @property
-    def channels(self):
-        wildcard = join(self.getpath, 'traces/obs', self.data_wildcard)
-        return [basename(filename) for filename in glob(wildcard)]
-
-
-    # solver paths and filenames
-
-    @property
-    def data_wildcard(self):
+    def data_filenames(self):
         # must be implemented by subclass
         return NotImplementedError
 
     @property
     def model_databases(self):
+        # must be implemented by subclass
+        return NotImplementedError
+
+    @property
+    def kernel_databases(self):
         # must be implemented by subclass
         return NotImplementedError
 

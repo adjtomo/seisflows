@@ -18,6 +18,8 @@ from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
 
+import system
+
 
 class specfem3d_globe(custom_import('solver', 'base')):
     """ Python interface for SPECFEM3D_GLOBE
@@ -43,6 +45,13 @@ class specfem3d_globe(custom_import('solver', 'base')):
         """
         super(specfem3d_globe, self).check()
 
+        if 'CHANNELS' not in PAR:
+            setattr(PAR, 'CHANNELS', 'Z')
+
+        # check data format
+        if 'FORMAT' not in PAR:
+            raise Exception()
+
 
     def generate_data(self, **model_kwargs):
         """ Generates data
@@ -54,8 +63,10 @@ class specfem3d_globe(custom_import('solver', 'base')):
         setpar('SAVE_FORWARD', '.true.')
         mpicall(system.mpiexec(), 'bin/xspecfem3D')
 
-        unix.mv(self.getdata, 'traces/obs')
-        self.export_traces(PATH.OUTPUT, 'traces/obs')
+        if PAR.FORMAT in ['ASCII', 'ascii']:
+            src = glob('OUTPUT_FILES/*.sem.ascii')
+            dst = 'traces/obs'
+            unix.mv(src, dst)
 
 
     def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
@@ -91,7 +102,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         model = Model(self.parameters)
         minmax = Minmax(self.parameters)
 
-        for iproc in range(self.mesh.nproc):
+        for iproc in range(self.mesh_properties.nproc):
             # read database files
             keys, vals = loadbypar(path, self.parameters, iproc, prefix, suffix)
             for key, val in zip(keys, vals):
@@ -110,7 +121,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         """
         unix.mkdir(path)
 
-        for iproc in range(self.mesh.nproc):
+        for iproc in range(self.mesh_properties.nproc):
             for key in ['vpv', 'vph', 'vsv', 'vsh', 'eta']:
                 if key in self.parameters:
                     savebin(model[key][iproc], path, iproc, prefix+key+suffix)
@@ -134,13 +145,17 @@ class specfem3d_globe(custom_import('solver', 'base')):
 
     ### low-level solver interface
 
-    def forward(self):
+    def forward(self, path='traces/syn'):
         """ Calls SPECFEM3D_GLOBE forward solver
         """
         solvertools.setpar('SIMULATION_TYPE', '1')
         solvertools.setpar('SAVE_FORWARD', '.true.')
         mpicall(system.mpiexec(), 'bin/xspecfem3D')
-        unix.mv(self.getdata, 'traces/syn')
+
+        if PAR.FORMAT in ['ASCII', 'ascii']:
+            src = glob('OUTPUT_FILES/*.sem.ascii')
+            dst = path
+            unix.mv(src, dst)
 
 
     def adjoint(self):
@@ -177,12 +192,44 @@ class specfem3d_globe(custom_import('solver', 'base')):
         return self._mesh_properties
 
 
+    def rename_data(self):
+        """ Works around conflicting data filename conventions
+        """
+        files = glob(self.getpath +'/'+ 'traces/adj/*sem.ascii')
+        unix.rename('sem.ascii', 'sem.ascii.adj', files)
 
-    ### utility functions
+
+    def initialize_adjoint_traces(self):
+        super(specfem3d_globe, self).initialize_adjoint_traces()
+
+        # hack to deal with SPECFEM2D's use of different name conventions for
+        # regular traces and 'adjoint' traces
+        if PAR.FORMAT in ['SU', 'su']:
+            files = glob(self.getpath +'/'+ 'traces/adj/*SU')
+            unix.rename('_SU', '_SU.adj', files)
+
+        # hack to deal with SPECFEM3D's requirement that all components exist,
+        # even ones not in use
+        unix.cd(self.getpath +'/'+ 'traces/adj')
+        for iproc in range(PAR.NPROC):
+            for channel in ['x', 'y', 'z']:
+                src = '%d_d%s_SU.adj' % (iproc, PAR.CHANNELS[0])
+                dst = '%d_d%s_SU.adj' % (iproc, channel)
+                if not exists(dst):
+                    unix.cp(src, dst)
+
 
     @property
-    def data_wildcard(self):
-        return '*.sem.ascii'
+    def data_filenames(self):
+        unix.cd(self.getpath)
+        unix.cd('traces/obs')
+
+        print 'made it here'
+        if PAR.FORMAT in ['ASCII', 'ascii']:
+            filenames = []
+            for channel in PAR.CHANNELS:
+                filenames += glob('*.??%s.sem.ascii' % channel)
+            return [filenames]
 
     @property
     def kernel_databases(self):
