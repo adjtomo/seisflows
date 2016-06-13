@@ -1,4 +1,6 @@
 
+import numpy as np
+
 from seisflows.seistools.legacy.writers import *
 
 
@@ -15,11 +17,14 @@ def su(d, path, filename):
 
 
 def ascii(stream, path, filenames):
-    import numpy as np
+    for ir, tr in enumerate(stream):
+        nt = tr.stats.npts
+        t1 = float(tr.stats.starttime)
+        t2 = t1 + tr.stats.npts*tr.stats.sampling_rate
+        print nt, t1, t2
+        times = np.linspace(t1, t2, nt)
+        print path +'/'+ tr.stats.filename
+        print times.shape, tr.data.shape
+        np.savetxt(path +'/'+ tr.stats.filename,
+                   np.column_stack((times, tr.data)))
 
-    for tr in stream:
-        t1 = tr.starttime
-        t2 = tr.starttime + tr.npts*tr.sampling_rate
-        times = np.arange(t1, t2, tr.npts)
-        np.savetxt(path +'/'+ tr.filename,
-                   np.column_stack(times, tr.data))

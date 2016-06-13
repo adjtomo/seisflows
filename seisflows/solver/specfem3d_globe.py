@@ -46,7 +46,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         super(specfem3d_globe, self).check()
 
         if 'CHANNELS' not in PAR:
-            setattr(PAR, 'CHANNELS', 'Z')
+            setattr(PAR, 'CHANNELS', 'ENZ')
 
         # check data format
         if 'FORMAT' not in PAR:
@@ -204,20 +204,9 @@ class specfem3d_globe(custom_import('solver', 'base')):
 
         # hack to deal with SPECFEM2D's use of different name conventions for
         # regular traces and 'adjoint' traces
-        if PAR.FORMAT in ['SU', 'su']:
-            files = glob(self.getpath +'/'+ 'traces/adj/*SU')
-            unix.rename('_SU', '_SU.adj', files)
-
-        # hack to deal with SPECFEM3D's requirement that all components exist,
-        # even ones not in use
-        unix.cd(self.getpath +'/'+ 'traces/adj')
-        for iproc in range(PAR.NPROC):
-            for channel in ['x', 'y', 'z']:
-                src = '%d_d%s_SU.adj' % (iproc, PAR.CHANNELS[0])
-                dst = '%d_d%s_SU.adj' % (iproc, channel)
-                if not exists(dst):
-                    unix.cp(src, dst)
-
+        if PAR.FORMAT in ['ASCII', 'ascii']:
+            files = glob(self.getpath +'/'+ 'traces/adj/*sem.ascii')
+            unix.rename('sem.ascii', 'adj', files)
 
     @property
     def data_filenames(self):

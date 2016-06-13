@@ -29,8 +29,8 @@ def ascii(path, filenames):
 
         stats.filename = filename
         stats.starttime = data[0,0]
-        stats.sampling_rate = data[0,0] - data[0,1]
-        stats.npts = len(data[0,:])
+        stats.sampling_rate = data[0,1] - data[0,0]
+        stats.npts = len(data[:,0])
 
         #stats.network = temp[0]
         #stats.station = temp[1]
