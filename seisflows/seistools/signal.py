@@ -1,18 +1,8 @@
 
 import numpy as np
 
-import scipy.signal as signal
 
-
-def sbandpass(s, h, freqlo, freqhi):
-    nr = h.nr
-    dt = h.dt
-    fs = 1/dt
-    for ir in range(0, nr):
-        s[:,ir] = bandpass2(s[:,ir],freqlo,freqhi,fs) 
-
-    return s
-
+# functions acting on whole record sections
 
 def sconvolve(s, h, w, inplace=True):
     nt = h.nt
@@ -29,220 +19,99 @@ def sconvolve(s, h, w, inplace=True):
         return s2
 
 
-def slowpass(s, h, freq):
-    raise NotImplementedError
+def smute(traces, slope, t0, time_scheme, s_coords, r_coords):
+    """ Applies tapered mask to record section, muting early arrivals.
 
+        Phases arriving before
 
-def shighpass(s, h, freq):
-    raise NotImplementedError
+            SLOPE * || s - r || + T0
 
-
-# mute early arrivals
-def smute(s, h, vel, toff, xoff, constant_spacing=False):
-    nt = h.nt
-    dt = h.dt
-    nr = h.nr
-
-    # construct tapered window
-    length = 400
-    win = np.sin(np.linspace(0, np.pi, 2*length))
-    win = win[0:length]
-
-    for ir in range(0, nr):
-
-        # calculate slope
-        if vel!=0:
-            slope = 1./vel
-        else:
-            slope = 0
-
-        # calculate offsets
-        if constant_spacing:
-            itoff = toff/dt
-            ixoff = (ir-xoff)/dt
-        else:
-            itoff = toff/dt
-            #ixoff = (h.rx[ir]-h.sx[0]-xoff)/dt
-            ixoff = np.sqrt((h.rx[ir]-h.sx[0])**2 + (h.ry[ir]-h.sy[0])**2)/dt
-
-        itmin = int(np.ceil(slope*abs(ixoff)+itoff)) - length/2
-        itmax = itmin + length
-
-        # apply window
-        if 1 < itmin and itmax < nt:
-            s[0:itmin,ir] = 0.
-            s[itmin:itmax,ir] = win*s[itmin:itmax,ir]
-        elif itmin < 1 <= itmax:
-            s[0:itmax,ir] = win[length-itmax:length]*s[0:itmax,ir] 
-        elif itmin < nt < itmax:
-            s[0:itmin,ir] = 0.
-            s[itmin:nt,ir] = win[0:nt-itmin]*s[itmin:nt,ir] 
-        elif itmin > nt:
-            s[:,ir] = 0.
-
-        # inner mute 
-        if ixoff*dt < xoff:
-            s[:,ir] = 0.
-
-    return s
-
-
-
-def smute2(traces, vel, toff, time_scheme, s_coords, r_coords, constant_spacing=False):
+        are muted, where slope is has units of velocity**-1, 
+        T0 has units of time, and
+        || s - r || is distance between source and receiver.
+    """
 
     nr = len(traces)
     nt, dt, _ = time_scheme
 
-    # construct tapered window
-    length = 400
-    win = np.sin(np.linspace(0, np.pi, 2*length))
-    win = win[0:length]
-
     for ir in range(nr):
-        tr = traces[ir].data
+        # calculate source-reciever distance
+        (sx, sy) = (s_coords[0][ir], s_coords[1][ir])
+        (rx, ry) = (r_coords[0][ir], r_coords[1][ir])
+        dist = np.sqrt((rx-sx)**2 + (ry-sy)**2)
 
-        # extract coordinates
-        sx = s_coords[0][ir]
-        sy = s_coords[1][ir]
-        rx = r_coords[0][ir]
-        ry = r_coords[1][ir]
-
-        # calculate slope
-        if vel!=0:
-            slope = 1./vel
-        else:
-            slope = 0
-
-        # calculate offsets
-        if constant_spacing:
-            itoff = toff/dt
-            ixoff = (ir-xoff)/dt
-        else:
-            itoff = toff/dt
-            ixoff = np.sqrt((rx-sx)**2 + (ry-sy)**2)
-
-        itmin = int(np.ceil(slope*abs(ixoff)/dt+itoff)) - length/2
-        itmax = itmin + length
-
-        # apply window
-        if 1 < itmin < itmax < nt:
-            tr[0:itmin] = 0.
-            tr[itmin:itmax] = win*tr[itmin:itmax]
-        elif itmin < 1 <= itmax:
-            tr[0:itmax] = win[length-itmax:length]*tr[0:itmax]
-        elif itmin < nt < itmax:
-            tr[0:itmin] = 0.
-            tr[itmin:nt] = win[0:nt-itmin]*tr[itmin:nt]
-        elif itmin > nt:
-            tr[:] = 0.
+        # apply tapered mask
+        traces[ir].data *= mask(vel, t0, dist, nt, dt)
 
     return traces
 
 
+def smute2(traces, slope, t0, time_scheme, s_coords, r_coords):
+    """ Applies tapered mask to record section, muting late arrivals.
 
-# mute late arrivals
-def smutelow(s, h, vel, toff, xoff, constant_spacing=False):
-    nt = h.nt
-    dt = h.dt
-    nr = h.nr
+        Phases arriving after
 
-    # construct tapered window
+            SLOPE * || s - r || + T0
+
+        are muted, where slope is has units of velocity**-1, 
+        T0 has units of time, and
+        || s - r || is distance between source and receiver.
+    """
+
+    nr = len(traces)
+    nt, dt, _ = time_scheme
+
+    for ir in range(nr):
+        # calculate source-reciever distance
+        (sx, sy) = (s_coords[0][ir], s_coords[1][ir])
+        (rx, ry) = (r_coords[0][ir], r_coords[1][ir])
+        dist = np.sqrt((rx-sx)**2 + (ry-sy)**2)
+
+        # apply tapered mask
+        traces[ir].data *= (1.-mask(vel, t0, dist, nt, dt))
+
+    return traces
+
+
+# functions acting on individual traces
+
+def mask(slope, t0, dist, nt, dt):
+    """ Constructs tapered mask that can be applied to trace to
+      mute early or late arrivals.
+    """
+
+    nr = len(r_coords)
+    nt, dt, _ = time_scheme
+
+    mask = np.ones((nt, nr))
+
+    # construct taper
     length = 400
-    win = np.cos(np.linspace(0, np.pi, 2*length))
+    win = np.sin(np.linspace(0, np.pi, 2*length))
     win = win[0:length]
 
-    for ir in range(0,h.nr):
-        # calculate slope
-        if vel!=0:
-            slope = 1./vel
-        else:
-            slope = 0
+    # caculate offsets
+    itmin = int(np.ceil(slope*abs(dist)+t0)/dt) - length/2
+    itmax = itmin + length
 
-        # calculate offsets
-        if constant_spacing:
-            itoff = toff/dt
-        else:
-            itoff = toff/dt
-            ixoff = np.sqrt((h.rx[ir]-h.sx[0])**2 + (h.ry[ir]-h.sy[0])**2)/dt
+    if 1 < itmin < itmax < nt:
+        mask[0:itmin] = 0.
+        mask[itmin:itmax] = win*mask[itmin:itmax]
+    elif itmin < 1 <= itmax:
+        mask[0:itmax] = win[length-itmax:length]*mask[0:itmax]
+    elif itmin < nt < itmax:
+        mask[0:itmin] = 0.
+        mask[itmin:nt] = win[0:nt-itmin]*mask[itmin:nt]
+    elif itmin > nt:
+        mask[:] = 0.
 
-        itmin = int(np.ceil(slope*abs(ixoff)+itoff)) - length/2
-        itmax = itmin + length
-
-        # apply window
-        if 1 < itmin and itmax < nt:
-            s[itmax:nt,ir] = 0.
-            s[itmin:itmax,ir] = win*s[itmin:itmax,ir]
-        elif itmin < 1 <= itmax:
-            s[0:itmax,ir] = win[length-itmax:length]*s[0:itmax,ir]
-        elif itmin < nt < itmax:
-            s[itmin:nt,ir] = win[0:nt-itmin]*s[itmin:nt,ir]
-
-        # inner mute
-        if ixoff*dt < xoff:
-            s[:,ir] = 0.
-
-    return s
+    return mask
 
 
-def swindow(s, h, tmin, tmax, alpha=0.05, units='samples'):
-    nt = h.nt
-    dt = h.dt
-    nr = h.nr
-    t0 = h.t0
-
-    if units == 'time':
-        itmin = int((tmin-t0)/dt)
-        itmax = int((tmax-t0)/dt)
-
-    elif units == 'samples':
-        itmin = int(tmin)
-        itmax = int(tmax)
-
-    else:
-        raise ValueError
-
-    win = tukeywin(nt, itmin, itmax, alpha)
-    for ir in range(0,nr):
-        s[:,ir] = win*s[:,ir]
-
-    return s
-
-
-# --
 
 def correlate(u, v):
     w = np.convolve(u, np.flipud(v))
     return
-
-
-def bandpass(w, freqlo, freqhi, fs, npass=2):
-    wn = [2*freqlo/fs, 2*freqhi/fs]
-    (b,a) = signal.butter(npass, wn, btype='band')
-    w = signal.lfilter(b, a, w)
-    return w
-
-
-# A forward-backward linear filter (filtfilt) 
-def bandpass2(w, freqlo, freqhi, fs, npass=3):
-    wn = [2*freqlo/fs, 2*freqhi/fs]
-    (b,a) = signal.butter(npass, wn, 'bandpass')
-    w = signal.filtfilt(b, a, w)
-    return w
-
-
-def highpass(w, freq, df, npass=2):
-    raise Exception('Not yet implemented.')
-
-
-def lowpass(w, freq, df, npass=2):
-    raise Exception('Not yet implemented.')
-
-
-def window(nt, type='sine', **kwargs):
-    if type == 'sine':
-        return np.sin(np.linspace(0, 1, 2*length))
-    elif type == 'tukey':
-        return tukeywin
 
 
 def tukeywin(nt, imin, imax, alpha=0.05):
