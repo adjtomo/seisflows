@@ -157,5 +157,9 @@ class test_optimize(object):
         d = np.linalg.norm(m_new-m_old)/np.linalg.norm(m_new)
         if d < 1.e-5:
             print 'Stopping criteria met.\n'
-            sys.exit()
+            savetxt('../../niter', cls.iter)
+            sys.exit(0)
 
+        elif cls.iter >= PAR.END:
+            print 'Exceeded maximum number of iterations.\n'
+            sys.exit(-1)
