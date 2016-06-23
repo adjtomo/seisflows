@@ -27,9 +27,6 @@ class base(object):
         if 'BACKPROJECT' not in PAR:
             setattr(PAR, 'BACKPROJECT', None)
 
-        if 'CHANNELS' not in PAR:
-            raise ParameterError(PAR, 'CHANNELS')
-
         if 'FORMAT' not in PAR:
             raise ParameterError(PAR, 'FORMAT')
 
@@ -70,11 +67,6 @@ class base(object):
         self.reader = getattr(readers, PAR.FORMAT)
         self.writer = getattr(writers, PAR.FORMAT)
 
-        # prepare channels list
-        self.channels = []
-        for char in PAR.CHANNELS:
-            self.channels += [char]
-
 
     def prepare_eval_grad(self, path='.'):
         """ Prepares solver for gradient evaluation by writing residuals and
@@ -95,10 +87,10 @@ class base(object):
             syn = self.apply_mute(syn)
             syn = self.apply_normalize(syn)
 
-            self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, filename)
-
             if PAR.MISFIT:
                 self.write_residuals(path, syn, obs)
+
+            self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, filename)
 
 
     def write_residuals(self, path, s, d):
@@ -125,7 +117,6 @@ class base(object):
         nt, dt, _ = self.get_time_scheme(s)
         n, _ = self.get_network_size(s)
 
-        # generate adjoint traces
         for i in range(n):
             s[i].data = self.adjoint(s[i].data, d[i].data, nt, dt)
 
@@ -138,16 +129,29 @@ class base(object):
         if not PAR.FILTER:
             return traces
 
-        elif PAR.FILTER == 'Simple':
+        elif PAR.FILTER == 'Bandpass':
             traces = _signal.detrend(traces)
             for tr in traces:
-                tr.filter('bandpass', freqmin=PAR.FREQLO, freqmax=PAR.FREQHI)
+                tr.filter('bandpass', freqmin=PAR.FREQMIN, freqmax=PAR.FREQMAX)
 
                 # workaround obspy dtype conversion
                 tr.data = tr.data.astype(np.float32)
 
-        elif PAR.FILTER == 'Butterworth':
-            raise NotImplementedError
+        elif PAR.FILTER == 'Lowpass':
+            traces = _signal.detrend(traces)
+            for tr in traces:
+                tr.filter('lowpass', freq=PAR.FREQ)
+
+                # workaround obspy dtype conversion
+                tr.data = tr.data.astype(np.float32)
+
+        elif PAR.FILTER == 'Highpass':
+            traces = _signal.detrend(traces)
+            for tr in traces:
+                tr.filter('highpass', freq=PAR.FREQ)
+
+                # workaround obspy dtype conversion
+                tr.data = tr.data.astype(np.float32)
 
         else:
             raise ParameterError()
@@ -159,11 +163,19 @@ class base(object):
         if not PAR.MUTE:
             return traces
 
-        elif PAR.MUTE == 'Simple':
+        elif PAR.MUTE in ['Linear', 'Early']:
+            # mutes early arrivals
+            return smute(traces, 
+                PAR.MUTESLOPE, # (units: time/distance)
+                PAR.MUTECONST, # (units: time)
+                self.get_time_scheme(traces),
+                self.get_source_coords(traces),
+                self.get_receiver_coords(traces))
 
-            # mute early arrivals
-            return smute2(traces, 
-                PAR.MUTESLOPE, # (units: velocity)
+        elif PAR.MUTE in ['Late']:
+            # mutes late arrivals
+            return smute2(traces,
+                PAR.MUTESLOPE, # (units: time/distance)
                 PAR.MUTECONST, # (units: time)
                 self.get_time_scheme(traces),
                 self.get_source_coords(traces),
@@ -236,28 +248,13 @@ class base(object):
 
         elif PAR.FILTER == 'Lowpass':
             raise NotImplementedError
-            if 'FREQLO' not in PAR: raise ParameterError('FREQLO')
-            if 'FREQHI' not in PAR: raise ParameterError('FREQHI')
-            assert 0 == PAR.FREQLO
-            assert PAR.FREQHI <= infinity
+            if 'FREQ' not in PAR: raise ParameterError('FREQ')
+            assert 0 < PAR.FREQHI <= infinity
 
         elif PAR.FILTER == 'Highpass':
             raise NotImplementedError
-            if 'FREQLO' not in PAR: raise ParameterError('FREQLO')
-            if 'FREQHI' not in PAR: raise ParameterError('FREQHI')
-            assert 0 <= PAR.FREQLO
-            assert PAR.FREQHI == infinity
-
-        elif PAR.FILTER == 'Butterworth':
-            raise NotImplementedError
-            if 'CORNERS' not in PAR: raise ParameterError
-            if 'NPASS' not in PAR: PAR.NPASS = 2
-            assert len(PAR.CORNERS) == 4
-            assert 0. <= PAR.CORNERS[1]
-            assert PAR.CORNERS[0] < PAR.CORNERS[1]
-            assert PAR.CORNERS[1] < PAR.CORNERS[2]
-            assert PAR.CORNERS[2] < PAR.CORNERS[3]
-            assert PAR.CORNERS[3] <= infinity
+            if 'FREQ' not in PAR: raise ParameterError('FREQ')
+            assert 0 <= PAR.FREQLO < infinity
 
         else:
             raise ParameterError()
@@ -269,24 +266,29 @@ class base(object):
         if not PAR.MUTE:
             pass
 
-        elif PAR.MUTE == 'Simple':
-            if 'MUTESLOPE' not in PAR: PAR.MUTESLOPE = infinity
-            if 'MUTECONST' not in PAR: PAR.MUTECONST = 0.
-            assert PAR.MUTESLOPE > 0.
-            assert PAR.MUTECONST >= 0.
+        elif PAR.MUTE in ['Early', 'Late', 'Linear']:
+            assert 'MUTESLOPE' in PAR
+            assert 'MUTECONST' in PAR
+            assert PAR.MUTESLOPE >= 0.
 
         else:
             raise ParameterError()
 
 
     def check_normalize(self):
-        pass
+        if not PAR.FILTER:
+            pass
+        elif PAR.FILTER in ['L1', 'L2', 'L2_squared']:
+            pass
+        else:
+            raise ParameterError()
 
 
 
     ### utility functions
 
     def get_time_scheme(self, traces):
+        # FIXME: extract time scheme from trace headers rather than parameters file
         nt = PAR.NT
         dt = PAR.DT
         t0 = 0.
@@ -300,26 +302,33 @@ class base(object):
 
 
     def get_receiver_coords(self, traces):
-        # TODO: generalize for different file formats
-        rx = []
-        ry = []
-        rz = []
-        for trace in traces:
-            rx += [trace.stats.su.trace_header.group_coordinate_x]
-            ry += [trace.stats.su.trace_header.group_coordinate_y]
-            rz += [0.]
-        return rx, ry, rz
+        if PAR.FORMAT in ['SU', 'su']:
+            rx = []
+            ry = []
+            rz = []
+            for trace in traces:
+                rx += [trace.stats.su.trace_header.group_coordinate_x]
+                ry += [trace.stats.su.trace_header.group_coordinate_y]
+                rz += [0.]
+            return rx, ry, rz
+
+        else:
+             raise NotImplementedError
 
 
     def get_source_coords(self, traces):
-        # TODO: generalize for different file formats
-        sx = []
-        sy = []
-        sz = []
-        for trace in traces:
-            sx += [trace.stats.su.trace_header.source_coordinate_x]
-            sy += [trace.stats.su.trace_header.source_coordinate_y]
-            sz += [0.]
-        return sx, sy, sz
+        if PAR.FORMAT in ['SU', 'su']:
+            sx = []
+            sy = []
+            sz = []
+            for trace in traces:
+                sx += [trace.stats.su.trace_header.source_coordinate_x]
+                sy += [trace.stats.su.trace_header.source_coordinate_y]
+                sz += [0.]
+            return sx, sy, sz
+
+        else:
+             raise NotImplementedError
+
 
 
