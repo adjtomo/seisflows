@@ -155,13 +155,13 @@ class specfem3d(custom_import('solver', 'base')):
     def initialize_adjoint_traces(self):
         super(specfem3d, self).initialize_adjoint_traces()
 
-        # hack to deal with SPECFEM2D's use of different name conventions for
+        # workaround for  SPECFEM2D's use of different name conventions for
         # regular traces and 'adjoint' traces
         if PAR.FORMAT in ['SU', 'su']:
             files = glob(self.getpath +'/'+ 'traces/adj/*SU')
             unix.rename('_SU', '_SU.adj', files)
 
-        # hack to deal with SPECFEM3D's requirement that all components exist,
+        # workaround for  SPECFEM3D's requirement that all components exist,
         # even ones not in use
         unix.cd(self.getpath +'/'+ 'traces/adj')
         for iproc in range(PAR.NPROC):

@@ -202,7 +202,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
     def initialize_adjoint_traces(self):
         super(specfem3d_globe, self).initialize_adjoint_traces()
 
-        # hack to deal with SPECFEM2D's use of different name conventions for
+        # workaround for  SPECFEM2D's use of different name conventions for
         # regular traces and 'adjoint' traces
         if PAR.FORMAT in ['ASCII', 'ascii']:
             files = glob(self.getpath +'/'+ 'traces/adj/*sem.ascii')
