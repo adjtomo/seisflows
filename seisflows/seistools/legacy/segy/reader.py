@@ -5,7 +5,7 @@ from seisflows.tools.code import Struct
 from seisflows.tools.io import BinaryReader, mychar, mysize
 
 from seisflows.seistools.shared import SeisStruct
-from seisflows.seistools.segy.headers import \
+from seisflows.seistools.legacy.segy.headers import \
     SEGY_TAPE_LABEL, SEGY_BINARY_HEADER, SEGY_TRACE_HEADER
 
 
