@@ -19,15 +19,15 @@ def sconvolve(s, h, w, inplace=True):
         return s2
 
 
-def smute(traces, slope, t0, time_scheme, s_coords, r_coords):
+def mute_early(traces, slope, const, time_scheme, s_coords, r_coords):
     """ Applies tapered mask to record section, muting early arrivals.
 
-        Phases arriving before
+        Signals arriving before
 
-            SLOPE * || s - r || + T0
+            SLOPE * || s - r || + CONST
 
         are muted, where slope is has units of velocity**-1, 
-        T0 has units of time, and
+        CONST has units of time, and
         || s - r || is distance between source and receiver.
     """
 
@@ -38,23 +38,23 @@ def smute(traces, slope, t0, time_scheme, s_coords, r_coords):
         # calculate source-reciever distance
         (sx, sy) = (s_coords[0][ir], s_coords[1][ir])
         (rx, ry) = (r_coords[0][ir], r_coords[1][ir])
-        dist = np.sqrt((rx-sx)**2 + (ry-sy)**2)
+        offset = np.sqrt((rx-sx)**2 + (ry-sy)**2)
 
         # apply tapered mask
-        traces[ir].data *= mask(vel, t0, dist, nt, dt)
+        traces[ir].data *= mask(slope, const, offset, (nt, dt, 0.))
 
     return traces
 
 
-def smute2(traces, slope, t0, time_scheme, s_coords, r_coords):
+def mute_late(traces, slope, const, time_scheme, s_coords, r_coords):
     """ Applies tapered mask to record section, muting late arrivals.
 
-        Phases arriving after
+        Signals arriving after
 
-            SLOPE * || s - r || + T0
+            SLOPE * || s - r || + CONST
 
-        are muted, where slope is has units of velocity**-1, 
-        T0 has units of time, and
+        are muted, where SLOPE is has units of velocity**-1, 
+        CONST has units of time, and
         || s - r || is distance between source and receiver.
     """
 
@@ -68,30 +68,28 @@ def smute2(traces, slope, t0, time_scheme, s_coords, r_coords):
         dist = np.sqrt((rx-sx)**2 + (ry-sy)**2)
 
         # apply tapered mask
-        traces[ir].data *= (1.-mask(vel, t0, dist, nt, dt))
+        traces[ir].data *= (1.-mask(slope, const, offset, (nt, dt, 0.)))
 
     return traces
 
 
 # functions acting on individual traces
 
-def mask(slope, t0, dist, nt, dt):
+def mask(slope, const, offset, time_scheme, length=400):
     """ Constructs tapered mask that can be applied to trace to
       mute early or late arrivals.
     """
 
-    nr = len(r_coords)
     nt, dt, _ = time_scheme
 
-    mask = np.ones((nt, nr))
+    mask = np.ones(nt)
 
     # construct taper
-    length = 400
     win = np.sin(np.linspace(0, np.pi, 2*length))
     win = win[0:length]
 
     # caculate offsets
-    itmin = int(np.ceil(slope*abs(dist)+t0)/dt) - length/2
+    itmin = int(np.ceil((slope*abs(offset)+const)/dt)) - length/2
     itmax = itmin + length
 
     if 1 < itmin < itmax < nt:
