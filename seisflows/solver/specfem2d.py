@@ -218,28 +218,6 @@ class specfem2d(custom_import('solver', 'base')):
             unix.cp(src, dst)
 
 
-    ### input file writers
-
-    def write_parameters(self):
-        unix.cd(self.getpath)
-        solvertools.write_parameters(vars(PAR))
-
-    def write_receivers(self):
-        unix.cd(self.getpath)
-        key = 'use_existing_STATIONS'
-        val = '.true.'
-        setpar(key, val)
-        _, h = preprocess.load('traces/obs')
-        solvertools.write_receivers(h.nr, h.rx, h.rz)
-
-    def write_sources(self):
-        unix.cd(self.getpath)
-        _, h = preprocess.load(dir='traces/obs')
-        solvertools.write_sources(vars(PAR), h)
-
-
-    ### miscellaneous
-
     @property
     def data_filenames(self):
         if PAR.CHANNELS:
