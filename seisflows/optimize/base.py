@@ -63,6 +63,7 @@ class base(object):
         if 'SCHEME' not in PAR:
             setattr(PAR, 'SCHEME', 'LBFGS')
 
+        # preconditioner
         if 'PRECOND' not in PAR:
             setattr(PAR, 'PRECOND', None)
 
@@ -73,38 +74,47 @@ class base(object):
             else:
                 setattr(PAR, 'LINESEARCH', 'Bracket')
 
-        # search direction tuning parameters
+        # NLCG periodic restart interval
         if 'NLCGMAX' not in PAR:
             setattr(PAR, 'NLCGMAX', np.inf)
 
+        # NLCG Powell restart threshold
         if 'NLCGTHRESH' not in PAR:
             setattr(PAR, 'NLCGTHRESH', np.inf)
 
+        # LBFGS memory
         if 'LBFGSMEM' not in PAR:
             setattr(PAR, 'LBFGSMEM', 3)
 
+        # LBFGS periodic restart interval
         if 'LBFGSMAX' not in PAR:
             setattr(PAR, 'LBFGSMAX', np.inf)
 
+        # LBFGS angle restart threshold
         if 'LBFGSTHRESH' not in PAR:
             setattr(PAR, 'LBFGSTHRESH', 0.)
 
-        # line search tuning paraemters
+        # maximum number of trial step lengths
         if 'STEPMAX' not in PAR:
             setattr(PAR, 'STEPMAX', 10)
 
-        if 'STEPTHRESH' not in PAR:
-            setattr(PAR, 'STEPTHRESH', None)
-
+        # initial step length as percent of current model
         if 'STEPINIT' not in PAR:
             setattr(PAR, 'STEPINIT', 0.05)
 
+        # optional initial step length safegaurd
+        if 'STEPTHRESH' not in PAR:
+            setattr(PAR, 'STEPTHRESH', None)
+
+        # step length factor in bracketing line search
         if 'STEPFACTOR' not in PAR:
             setattr(PAR, 'STEPFACTOR', 0.5)
 
+        # optional parameter, can be useful for NLCG line search
         if 'STEPOVERSHOOT' not in PAR:
             setattr(PAR, 'STEPOVERSHOOT', 0.)
 
+        # ad hoc factor by which to scale gradient
         if 'ADHOCFACTOR' not in PAR:
             setattr(PAR, 'ADHOCFACTOR', 1.)
 
@@ -248,7 +258,7 @@ class base(object):
         savetxt('alpha', alpha)
         self.save('m_try', m + alpha*p)
 
-        # upate log
+        # append latest statistics
         self.stepwriter(steplen=0., funcval=f)
 
 
@@ -296,7 +306,7 @@ class base(object):
             if fmin < f[0]:
                 self.isdone = 1
 
-        # update log
+        # append latest statistics
         self.stepwriter(steplen=x_, funcval=f_)
 
         return self.isdone
