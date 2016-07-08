@@ -1,19 +1,8 @@
 
-from seisflows.seistools.legacy.readers import *
-
-
 def su(path, filename):
     import obspy
     stream = obspy.read(path +'/'+ filename, 
                    format='SU',
-                   byteorder='<')
-    return stream
-
-
-def segy(path, filename):
-    import obspy
-    stream = obspy.read(path +'/'+ filename,   
-                   format='SEGY',
                    byteorder='<')
     return stream
 
@@ -32,10 +21,13 @@ def ascii(path, filenames):
         stats.sampling_rate = data[0,1] - data[0,0]
         stats.npts = len(data[:,0])
 
-        #stats.network = temp[0]
-        #stats.station = temp[1]
-        #stats.location = temp[2]
-        #stats.channel = temp[3]
+        try:
+            parts = filename.split('.')
+            stats.network = parts[0]
+            stats.station = parts[1]
+            stats.channel = temp[2]
+        except:
+            pass
 
         stream.append(Trace(data=data[:,1], header=stats))
 

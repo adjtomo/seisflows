@@ -1,9 +1,6 @@
 
 import numpy as np
 
-from seisflows.seistools.legacy.writers import *
-
-
 def su(d, path, filename):
     max_delta = 0.065535
     dummy_delta = max_delta
@@ -22,9 +19,12 @@ def ascii(stream, path, filenames):
         t1 = float(tr.stats.starttime)
         t2 = t1 + tr.stats.npts*tr.stats.sampling_rate
         print nt, t1, t2
-        times = np.linspace(t1, t2, nt)
+
+        t = np.linspace(t1, t2, nt)
+        w = tr.data
+
         print path +'/'+ tr.stats.filename
         print times.shape, tr.data.shape
         np.savetxt(path +'/'+ tr.stats.filename,
-                   np.column_stack((times, tr.data)))
+                   np.column_stack((t, w)))
 
