@@ -2,9 +2,9 @@ import numpy as np
 
 from seisflows.tools.array import uniquerows
 from seisflows.tools.code import Struct
-from seisflows.tools.io import BinaryReader, mychar, mysize
 
 from seisflows.seistools.shared import SeisStruct
+from seisflows.seistools.legacy.io import BinaryReader, mychar, mysize
 from seisflows.seistools.legacy.segy.headers import \
     SEGY_TAPE_LABEL, SEGY_BINARY_HEADER, SEGY_TRACE_HEADER
 
