@@ -6,7 +6,7 @@ from os.path import basename, join
 
 import numpy as np
 
-from seisflows.seistools.model_io import sem
+from seisflows.seistools.io import sem
 from seisflows.seistools.shared import getpar, setpar, Model, Minmax
 
 from seisflows.tools import msg
@@ -261,8 +261,7 @@ class base(object):
             for key in self.parameters:
                 sem.write(model[key][iproc], path, prefix+key+suffix, iproc)
 
-            # sensitivity kernels not required for model updates need not be
-            # written
+            # kernels not required for model updates need not be written
             if suffix == '_kernel':
                 continue
 
