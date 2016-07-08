@@ -6,9 +6,8 @@ from os.path import basename, join
 
 import numpy as np
 
-import seisflows.seistools.specfem3d as solvertools
+from seisflows.seistools.model_io import sem
 from seisflows.seistools.shared import getpar, setpar, Model, Minmax
-from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin, splitvec
 
 from seisflows.tools import msg
 from seisflows.tools import unix
@@ -175,10 +174,7 @@ class base(object):
         self.forward()
         preprocess.prepare_eval_grad(self.getpath)
 
-        try:
-            self.export_residuals(path)
-        except:
-            pass
+        self.export_residuals(path)
 
         if export_traces:
             self.export_traces(path, prefix='traces/syn')
@@ -234,7 +230,7 @@ class base(object):
     ### model input/output
 
     def load(self, path, prefix='', suffix='', verbose=False):
-        """ reads SPECFEM model or kernel
+        """ reads SPECFEM model or kernels
 
           Models are stored in Fortran binary format and separated into multiple
           files according to material parameter and processor rank.
@@ -243,57 +239,45 @@ class base(object):
         model = Model(self.parameters)
 
         for iproc in range(self.mesh_properties.nproc):
-            # read database files
-            keys, vals = loadbypar(path, self.parameters, iproc, prefix, suffix)
-            for key, val in zip(keys, vals):
-                model[key] += [val]
+            for key in self.parameters:
+                model[key] += [sem.read(path, prefix+key+suffix, iproc)]
 
-            minmax.update(keys, vals)
+                # keep track of min, max
+                #minmax.update(key, model[key][iproc])
 
-        if verbose:
-            minmax.write(path, logpath=PATH.SUBMIT)
+        #if verbose:
+        #    minmax.write(path, logpath=PATH.SUBMIT)
 
         return model
 
 
     def save(self, path, model, prefix='', suffix='', solver_parameters=['vp', 'vs']):
-        """ writes SPECFEM model
-
-            The following method writes acoustic and elastic models. For an
-            example of how to write transversely isotropic models, see 
-            solver.specfem3d_globe.
-
-            There is a tradeoff here between being simple and being 
-            flexible.  In this case we opt for a simple hardwired approach. For
-            a more flexible, more complex approach see SEISFLOWS-RESEARCH.
+        """ writes SPECFEM model or kernels
         """
         unix.mkdir(path)
 
-        if 'kernel' in suffix:
-            for iproc in range(self.mesh_properties.nproc):
-                for key in solver_parameters:
-                    if key in self.parameters:
-                        savebin(model[key][iproc], path, iproc, prefix+key+suffix)
-                if 'rho' in self.parameters:
-                    savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
+        for iproc in range(self.mesh_properties.nproc):
+            # write parameters required to update model 
+            for key in self.parameters:
+                sem.write(model[key][iproc], path, prefix+key+suffix, iproc)
 
-        else:
-            for iproc in range(self.mesh_properties.nproc):
-                for key in solver_parameters:
-                    if key in self.parameters:
-                        savebin(model[key][iproc], path, iproc, prefix+key+suffix)
-                    else:
-                        src = PATH.OUTPUT +'/'+ 'model_init'
-                        dst = path
-                        copybin(src, dst, iproc, prefix+key+suffix)
+            # sensitivity kernels not required for model updates need not be
+            # written
+            if suffix == '_kernel':
+                continue
 
-                if 'rho' in self.parameters:
-                    savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
-                else:
+            # write any parameters not required for model updates but still
+            # expected by solver
+            for key in solver_parameters:
+                if key not in self.parameters:
                     src = PATH.OUTPUT +'/'+ 'model_init'
                     dst = path
-                    copybin(src, dst, iproc, 'rho')
+                    sem.copy(src, dst, iproc, prefix+key+suffix)
 
+            # density is treated as a special case
+            if self.density_scaling:
+                rho = self.density_scaling(*model[iproc].items())
+                sem.write(rho, path, prefix+'rho'+suffix, iproc)
 
 
     def merge(self, model):
@@ -309,9 +293,15 @@ class base(object):
     def split(self, v):
         """ Converts model from vector to dictionary representation
         """
+        nproc = self.mesh_properties.nproc
+        ngll = self.mesh_properties.ngll
         model = {}
         for idim, key in enumerate(self.parameters):
-            model[key] = splitvec(v, self.mesh_properties.nproc, self.mesh_properties.ngll, idim)
+            model[key] = []
+            for iproc in range(nproc):
+                imin = sum(ngll)*idim + sum(ngll[:iproc])
+                imax = sum(ngll)*idim + sum(ngll[:iproc+1])
+                model[key] += [v[imin:imax]]
         return model
 
 
@@ -428,30 +418,17 @@ class base(object):
         unix.cd(self.kernel_databases)
 
         # work around conflicting name conventions
-        files = []
-        files += glob('*proc??????_alpha_kernel.bin')
-        files += glob('*proc??????_alpha[hv]_kernel.bin')
-        files += glob('*proc??????_reg1_alpha_kernel.bin')
-        files += glob('*proc??????_reg1_alpha[hv]_kernel.bin')
-        unix.rename('alpha', 'vp', files)
+        self.rename_kernels()
 
-        files = []
-        files += glob('*proc??????_beta_kernel.bin') 
-        files += glob('*proc??????_beta[hv]_kernel.bin')
-        files += glob('*proc??????_reg1_beta_kernel.bin')
-        files += glob('*proc??????_reg1_beta[hv]_kernel.bin')
-        unix.rename('beta', 'vs', files)
-
-        # hack to deal with problems on parallel filesystem
+        # two-step command used to work around parallel filesystem issue
         unix.mkdir(join(path, 'kernels'), noexit=True)
-
         unix.mkdir(join(path, 'kernels', basename(self.getpath)))
-        src = join(glob('*_kernel.bin'))
+
+        src = glob('*_kernel.bin')
         dst = join(path, 'kernels', basename(self.getpath))
         unix.mv(src, dst)
 
     def export_residuals(self, path):
-        # hack deals with problems on parallel filesystem
         unix.mkdir(join(path, 'residuals'), noexit=True)
 
         src = join(self.getpath, 'residuals')
@@ -459,7 +436,6 @@ class base(object):
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
-        # hack deals with problems on parallel filesystem
         unix.mkdir(join(path, 'traces'), noexit=True)
 
         src = join(self.getpath, prefix)
@@ -467,7 +443,7 @@ class base(object):
         unix.cp(src, dst)
 
 
-    def rename_kernels(self, path):
+    def rename_kernels(self):
         """ Works around conflicting kernel filename conventions
         """
         files = []
@@ -486,6 +462,8 @@ class base(object):
 
 
     def rename_data(self, path):
+        """ Works around conflicting data filename conventions
+        """
         pass
 
 
@@ -557,7 +535,7 @@ class base(object):
             nproc = 0
             ngll = []
             while True:
-                dummy = loadbin(path, nproc, parameters[0])
+                dummy = sem.read(path, parameters[0], nproc)
                 ngll += [len(dummy)]
                 nproc += 1
                 if not exists('%s/proc%06d_%s.bin' % (path, nproc, parameters[0])):
@@ -593,12 +571,11 @@ class base(object):
         pass
 
 
-    ### solver utility functions
+    ### additional solver attributes
 
     @property
     def getnode(self):
-        # because it is sometimes useful to overload system.getnode we include
-        # the following method
+        # because it is sometimes useful to overload system.getnode
         return system.getnode()
 
     @property
@@ -608,7 +585,7 @@ class base(object):
 
     @property
     def getpath(self):
-        # returns solver working directory currently in use
+        # returns working directory currently in use
         return join(PATH.SOLVER, self.getname)
 
     @property
