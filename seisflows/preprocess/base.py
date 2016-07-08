@@ -8,7 +8,7 @@ from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
 from seisflows.seistools import adjoint, misfit, readers, writers
-from seisflows.seistools.signal import smute, smute2
+from seisflows.seistools.signal import mute_early, mute_late
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
@@ -93,34 +93,35 @@ class base(object):
             self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, filename)
 
 
-    def write_residuals(self, path, s, d):
+    def write_residuals(self, path, syn, dat):
         """ Computes residuals from observations and synthetics
         """
-        nt, dt, _ = self.get_time_scheme(s)
-        n, _ = self.get_network_size(s)
+        nt, dt, _ = self.get_time_scheme(syn)
+        nn, _ = self.get_network_size(syn)
 
         filename = path +'/'+ 'residuals'
         if exists(filename):
-            r = list(np.loadtxt(filename))
+            rsd = list(np.loadtxt(filename))
         else:
-            r = []
+            rsd = []
 
-        for i in range(n):
-            r.append(self.misfit(s[i].data, d[i].data, nt, dt))
+        for ii in range(nn):
+            rsd.append(self.misfit(syn[ii].data, dat[ii].data, nt, dt))
 
-        np.savetxt(filename, r)
+        np.savetxt(filename, rsd)
 
 
-    def write_adjoint_traces(self, path, s, d, channel):
+    def write_adjoint_traces(self, path, syn, dat, channel):
         """ Generates adjoint traces from observed and synthetic traces
         """
-        nt, dt, _ = self.get_time_scheme(s)
-        n, _ = self.get_network_size(s)
+        nt, dt, _ = self.get_time_scheme(syn)
+        nn, _ = self.get_network_size(syn)
 
-        for i in range(n):
-            s[i].data = self.adjoint(s[i].data, d[i].data, nt, dt)
+        for ii in range(nn):
+            # NOTE: overwrites syn[:].data
+            syn[ii].data = self.adjoint(syn[ii].data, dat[ii].data, nt, dt)
 
-        self.writer(s, path, channel)
+        self.writer(syn, path, channel)
 
 
     ### signal processing
@@ -163,18 +164,17 @@ class base(object):
         if not PAR.MUTE:
             return traces
 
-        elif PAR.MUTE in ['Linear', 'Early']:
+        elif PAR.MUTE == 'MuteEarlyArrivals':
             # mutes early arrivals
-            return smute(traces, 
+            return mute_early(traces, 
                 PAR.MUTESLOPE, # (units: time/distance)
                 PAR.MUTECONST, # (units: time)
                 self.get_time_scheme(traces),
                 self.get_source_coords(traces),
                 self.get_receiver_coords(traces))
 
-        elif PAR.MUTE in ['Late']:
-            # mutes late arrivals
-            return smute2(traces,
+        elif PAR.MUTE == 'MuteLateArrivals':
+            return mute_late(traces,
                 PAR.MUTESLOPE, # (units: time/distance)
                 PAR.MUTECONST, # (units: time)
                 self.get_time_scheme(traces),
@@ -190,7 +190,7 @@ class base(object):
             return traces
 
         elif PAR.NORMALIZE == 'L1':
-            # normalize each trace by its own power
+            # normalize each trace by its own L1 norm
             for tr in traces:
                 w = np.linalg.norm(tr.data, ord=1)
                 if w > 0:
@@ -198,7 +198,7 @@ class base(object):
             return traces
 
         elif PAR.NORMALIZE == 'L2':
-            # normalize each trace by its own power
+            # normalize each trace by its own L2 norm
             for tr in traces:
                 w = np.linalg.norm(tr.data, ord=2)
                 if w > 0:
@@ -206,16 +206,24 @@ class base(object):
             return traces
 
         elif PAR.NORMALIZE == 'L2_squared':
-            # normalize each trace by its own power
+            # normalize each trace by its own L2 norm squared
             for tr in traces:
                 w = np.linalg.norm(tr.data, ord=2)
                 if w > 0:
                     tr.data /= w**2.
             return traces
 
-
         elif PAR.NORMALIZE == 'L2_summed':
-            raise NotImplementedError
+            # normalize all traces by their combined L2 norm
+            w = 0.
+            for tr in traces:
+                w += np.linalg.norm(tr.data, ord=2)**2.
+            for tr in traces:
+                tr.data /= w**0.5
+            return traces
+
+        else:
+            raise ParameterError()
 
 
     def apply_filter_backwards(self, traces):
@@ -240,21 +248,21 @@ class base(object):
             pass
 
         elif PAR.FILTER == 'Bandpass':
-            if 'FREQLO' not in PAR: raise ParameterError('FREQLO')
-            if 'FREQHI' not in PAR: raise ParameterError('FREQHI')
-            assert 0 < PAR.FREQLO
-            assert PAR.FREQLO < PAR.FREQHI
-            assert PAR.FREQHI < infinity
+            if 'FREQMIN' not in PAR: raise ParameterError('FREQMIN')
+            if 'FREQMAX' not in PAR: raise ParameterError('FREQMAX')
+            assert 0 < PAR.FREQMIN
+            assert PAR.FREQMIN < PAR.FREQMIN
+            assert PAR.FREQMAX < infinity
 
         elif PAR.FILTER == 'Lowpass':
             raise NotImplementedError
             if 'FREQ' not in PAR: raise ParameterError('FREQ')
-            assert 0 < PAR.FREQHI <= infinity
+            assert 0 < PAR.FREQ <= infinity
 
         elif PAR.FILTER == 'Highpass':
             raise NotImplementedError
             if 'FREQ' not in PAR: raise ParameterError('FREQ')
-            assert 0 <= PAR.FREQLO < infinity
+            assert 0 <= PAR.FREQ < infinity
 
         else:
             raise ParameterError()
@@ -266,7 +274,7 @@ class base(object):
         if not PAR.MUTE:
             pass
 
-        elif PAR.MUTE in ['Early', 'Late', 'Linear']:
+        elif PAR.MUTE in ['MuteEarlyArrivals', 'MuteLateArrivals']:
             assert 'MUTESLOPE' in PAR
             assert 'MUTECONST' in PAR
             assert PAR.MUTESLOPE >= 0.
@@ -329,6 +337,5 @@ class base(object):
 
         else:
              raise NotImplementedError
-
 
 
