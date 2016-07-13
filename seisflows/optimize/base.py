@@ -94,7 +94,7 @@ class base(object):
         if 'LBFGSTHRESH' not in PAR:
             setattr(PAR, 'LBFGSTHRESH', 0.)
 
-        # maximum number of trial step lengths
+        # maximum number of trial steps
         if 'STEPMAX' not in PAR:
             setattr(PAR, 'STEPMAX', 10)
 

@@ -117,11 +117,15 @@ class base(object):
         nt, dt, _ = self.get_time_scheme(syn)
         nn, _ = self.get_network_size(syn)
 
-        for ii in range(nn):
-            # NOTE: overwrites syn[:].data
-            syn[ii].data = self.adjoint(syn[ii].data, dat[ii].data, nt, dt)
+        # NOTE: overwrites syn[:].data
+        adj = syn
 
-        self.writer(syn, path, channel)
+        for ii in range(nn):
+            adj[ii].data = self.adjoint(syn[ii].data, dat[ii].data, nt, dt)
+
+        #self.apply_filter_backwards(adj)
+
+        self.writer(adj, path, channel)
 
 
     ### signal processing
@@ -190,7 +194,7 @@ class base(object):
             return traces
 
         elif PAR.NORMALIZE == 'L1':
-            # normalize each trace by its own L1 norm
+            # normalize each trace by its L1 norm
             for tr in traces:
                 w = np.linalg.norm(tr.data, ord=1)
                 if w > 0:
@@ -198,7 +202,7 @@ class base(object):
             return traces
 
         elif PAR.NORMALIZE == 'L2':
-            # normalize each trace by its own L2 norm
+            # normalize each trace by its L2 norm
             for tr in traces:
                 w = np.linalg.norm(tr.data, ord=2)
                 if w > 0:
@@ -206,7 +210,7 @@ class base(object):
             return traces
 
         elif PAR.NORMALIZE == 'L2_squared':
-            # normalize each trace by its own L2 norm squared
+            # normalize each trace by its L2 norm squared
             for tr in traces:
                 w = np.linalg.norm(tr.data, ord=2)
                 if w > 0:
@@ -284,9 +288,9 @@ class base(object):
 
 
     def check_normalize(self):
-        if not PAR.FILTER:
+        if not PAR.NORMALIZE:
             pass
-        elif PAR.FILTER in ['L1', 'L2', 'L2_squared']:
+        elif PAR.NORMALIZE in ['L1', 'L2', 'L2_squared']:
             pass
         else:
             raise ParameterError()
