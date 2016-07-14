@@ -10,44 +10,45 @@ def write_sources(coords, path='.', ws=1., suffix=''):
     """
     sx, sy, sz = coords
 
-    file = findpath('seisflows.seistools') + '/' + 'specfem2d/SOURCE'
-    with open(file, 'r') as f:
+    filename = findpath('seisflows.seistools') + '/' + 'specfem2d/SOURCE'
+    with open(filename, 'r') as f:
         lines = f.readlines()
 
-    file = 'DATA/SOURCE' + suffix
-    _writelines(file, lines)
+    filename = 'DATA/SOURCE' + suffix
+    with open(filename, 'w') as f:
+        f.writelines(lines)
 
     # adjust source coordinates
-    setpar('xs', sx, file)
-    setpar('zs', sy, file)
-    #setpar('ts', ts[0], file)
+    setpar('xs', sx, filename)
+    setpar('zs', sy, filename)
+    #setpar('ts', ts[0], filename)
 
     # adjust source amplitude
     try:
-        fs = float(getpar('factor', file))
+        fs = float(getpar('factor', filename))
         fs *= ws
-        setpar('factor', str(fs), file)
+        setpar('factor', str(fs), filename)
     except:
         pass
 
     # adjust source wavelet
     if 1:
         # Ricker wavelet
-        setpar('time_function_type', 1, file)
+        setpar('time_function_type', 1, filename)
     elif 0:
         # first derivative of Gaussian
-        setpar('time_function_type', 2, file)
+        setpar('time_function_type', 2, filename)
     elif 0:
         # Gaussian
-        setpar('time_function_type', 3, file)
+        setpar('time_function_type', 3, filename)
     elif 0:
         # Dirac
-        setpar('time_function_type', 4, file)
+        setpar('time_function_type', 4, filename)
     elif 0:
         # Heaviside
-        setpar('time_function_type', 5, file)
+        setpar('time_function_type', 5, filename)
 
-    #setpar('f0', par['F0'], file)
+    #setpar('f0', par['F0'], filename)
 
 
 def write_receivers(coords, path='.'):
@@ -69,14 +70,7 @@ def write_receivers(coords, path='.'):
         line += '%3.1f' % 0. + '\n'
         lines.extend(line)
 
-    _writelines(filename, lines)
-
-
-### utility functions
-
-def _writelines(file, lines):
-    """ Writes text file
-    """
-    with open(file, 'w') as f:
+    with open(filename, 'w') as f:
         f.writelines(lines)
+
 

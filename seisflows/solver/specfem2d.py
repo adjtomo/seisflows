@@ -5,9 +5,8 @@ from glob import glob
 
 import numpy as np
 
-import seisflows.seistools.specfem2d as solvertools
+from seisflows.seistools.io import sem
 from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import splitvec, loadbypar
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
@@ -191,8 +190,8 @@ class specfem2d(custom_import('solver', 'base')):
             return kernels
 
         # set up grid
-        _,x = loadbypar(PATH.MODEL_INIT, ['x'], 0)
-        _,z = loadbypar(PATH.MODEL_INIT, ['z'], 0)
+        x = sem.read(PATH.MODEL_INIT, 'x', 0)
+        z = sem.read(PATH.MODEL_INIT, 'z', 0)
         mesh = stack(x[0], z[0])
 
         for key in self.parameters:
