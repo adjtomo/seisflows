@@ -11,12 +11,14 @@ from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import Struct, exists
+from seisflows.tools.code import Struct, exists, mpicall
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()
+
+import system
 
 
 class specfem3d_globe(custom_import('solver', 'base')):
@@ -43,6 +45,13 @@ class specfem3d_globe(custom_import('solver', 'base')):
         """
         super(specfem3d_globe, self).check()
 
+        if 'CHANNELS' not in PAR:
+            setattr(PAR, 'CHANNELS', 'ENZ')
+
+        # check data format
+        if 'FORMAT' not in PAR:
+            raise Exception()
+
 
     def generate_data(self, **model_kwargs):
         """ Generates data
@@ -52,10 +61,12 @@ class specfem3d_globe(custom_import('solver', 'base')):
         unix.cd(self.getpath)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        self.call('bin/xspecfem3D')
+        mpicall(system.mpiexec(), 'bin/xspecfem3D')
 
-        unix.mv(self.data_wildcard, 'traces/obs')
-        self.export_traces(PATH.OUTPUT, 'traces/obs')
+        if PAR.FORMAT in ['ASCII', 'ascii']:
+            src = glob('OUTPUT_FILES/*.sem.ascii')
+            dst = 'traces/obs'
+            unix.mv(src, dst)
 
 
     def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
@@ -73,7 +84,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
 
             unix.cp(glob(model_path +'/'+ '*'), self.model_databases)
 
-            self.call('bin/xmeshfem3D')
+            mpicall(system.mpiexec(), 'bin/xmeshfem3D')
             self.export_model(PATH.OUTPUT +'/'+ model_name)
 
         else:
@@ -91,7 +102,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         model = Model(self.parameters)
         minmax = Minmax(self.parameters)
 
-        for iproc in range(self.mesh.nproc):
+        for iproc in range(self.mesh_properties.nproc):
             # read database files
             keys, vals = loadbypar(path, self.parameters, iproc, prefix, suffix)
             for key, val in zip(keys, vals):
@@ -110,7 +121,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         """
         unix.mkdir(path)
 
-        for iproc in range(self.mesh.nproc):
+        for iproc in range(self.mesh_properties.nproc):
             for key in ['vpv', 'vph', 'vsv', 'vsh', 'eta']:
                 if key in self.parameters:
                     savebin(model[key][iproc], path, iproc, prefix+key+suffix)
@@ -134,13 +145,17 @@ class specfem3d_globe(custom_import('solver', 'base')):
 
     ### low-level solver interface
 
-    def forward(self):
+    def forward(self, path='traces/syn'):
         """ Calls SPECFEM3D_GLOBE forward solver
         """
         solvertools.setpar('SIMULATION_TYPE', '1')
         solvertools.setpar('SAVE_FORWARD', '.true.')
-        self.call('bin/xspecfem3D')
-        unix.mv(self.data_wildcard, 'traces/syn')
+        mpicall(system.mpiexec(), 'bin/xspecfem3D')
+
+        if PAR.FORMAT in ['ASCII', 'ascii']:
+            src = glob('OUTPUT_FILES/*.sem.ascii')
+            dst = path
+            unix.mv(src, dst)
 
 
     def adjoint(self):
@@ -150,7 +165,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         solvertools.setpar('SAVE_FORWARD', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
-        self.call('bin/xspecfem3D')
+        mpicall(system.mpiexec(), 'bin/xspecfem3D')
 
 
     def check_mesh_properties(self, path=None, parameters=None):
@@ -177,12 +192,33 @@ class specfem3d_globe(custom_import('solver', 'base')):
         return self._mesh_properties
 
 
+    def rename_data(self):
+        """ Works around conflicting data filename conventions
+        """
+        files = glob(self.getpath +'/'+ 'traces/adj/*sem.ascii')
+        unix.rename('sem.ascii', 'sem.ascii.adj', files)
 
-    ### utility functions
+
+    def initialize_adjoint_traces(self):
+        super(specfem3d_globe, self).initialize_adjoint_traces()
+
+        # workaround for  SPECFEM2D's use of different name conventions for
+        # regular traces and 'adjoint' traces
+        if PAR.FORMAT in ['ASCII', 'ascii']:
+            files = glob(self.getpath +'/'+ 'traces/adj/*sem.ascii')
+            unix.rename('sem.ascii', 'adj', files)
 
     @property
-    def data_wildcard(self):
-        return glob('OUTPUT_FILES/*.sem.ascii')
+    def data_filenames(self):
+        unix.cd(self.getpath)
+        unix.cd('traces/obs')
+
+        print 'made it here'
+        if PAR.FORMAT in ['ASCII', 'ascii']:
+            filenames = []
+            for channel in PAR.CHANNELS:
+                filenames += glob('*.??%s.sem.ascii' % channel)
+            return [filenames]
 
     @property
     def kernel_databases(self):

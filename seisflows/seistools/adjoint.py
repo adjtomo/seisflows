@@ -103,3 +103,17 @@ def AnalyticSignal(syn, obs, nt, dt, eps=0.):
     return wadj
 
 
+
+### migration
+
+def Displacement(syn, obs, nt, dt):
+    return obs
+
+def Velocity(syn, obs, nt, dt):
+    adj[1:-1] = (obs[2:] - obs[0:-2])/(2.*dt)
+    return adj
+
+def Acceleration(syn, obs, nt, dt):
+    adj[1:-1] = (-obs[2:] + 2.*obs[1:-1] - obs[0:-2])/(2.*dt)
+    return adj
+

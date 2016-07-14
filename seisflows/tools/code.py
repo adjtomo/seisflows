@@ -4,6 +4,7 @@ import os
 import pickle
 import re
 import subprocess
+import sys
 import traceback
 
 from imp import load_source
@@ -23,6 +24,31 @@ def call(*args, **kwargs):
     if 'shell' not in kwargs:
         kwargs['shell'] = True
     subprocess.check_call(*args, **kwargs)
+
+
+def mpicall(mpiexec, executable, output='/dev/null'):
+    """ Calls MPI executable
+
+      A less complicated version, without error catching, would be
+      subprocess.call(mpiexec +' '+ executable, shell=True)
+    """
+    from seisflows.tools import msg
+
+    try:
+        f = open(output,'w')
+        subprocess.check_call(
+            mpiexec +' '+ executable,
+            shell=True,
+            stdout=f)
+    except subprocess.CalledProcessError, err:
+        print msg.SolverError % (mpiexec +' '+ executable)
+        sys.exit(-1)
+    except OSError:
+        print msg.SolverError % (mpiexec +' '+ executable)
+        sys.exit(-1)
+    finally:
+        f.close()
+
 
 
 def cast(var):
@@ -102,17 +128,6 @@ def loadpy(abspath):
         if key[0] != '_':
             output[key] = val
     return output
-
-
-def setdiff(list1, list2):
-    """Returns the difference of two list in a set.
-    :param list1:
-    :param list2:
-    :return:
-    """
-    set1 = set(list1)
-    set2 = set(list2)
-    return set1.difference(set2)
 
 
 def unique(mylist):

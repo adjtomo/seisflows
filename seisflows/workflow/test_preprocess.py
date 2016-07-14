@@ -1,4 +1,7 @@
 
+from glob import glob
+from os import basename, exists
+
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
@@ -18,71 +21,61 @@ class test_preprocess(object):
     def check(self):
         """ Checks parameters and paths
         """
-        #raise NotImplementedError
-
-        # mute settings
-        if 'MUTE' not in PAR:
-            setattr(PAR, 'MUTE', False)
-
-        if 'MUTESLOPE' not in PAR:
-            setattr(PAR, 'MUTESLOPE', 0.)
-
-        if 'MUTECONST' not in PAR:
-            setattr(PAR, 'MUTECONST', 0.)
-
-        # filter settings
-        if 'BANDPASS' not in PAR:
-            setattr(PAR, 'BANDPASS', False)
-
-        if 'FREQLO' not in PAR:
-            setattr(PAR, 'FREQLO', 0.)
-
-        if 'FREQHI' not in PAR:
-            setattr(PAR, 'FREQHI', 0.)
-
-        # check paths
-        if 'OBSERVATIONS' not in PATH:
+        if 'DATA' not in PATH:
             raise Exception
 
-        if 'SYNTHETICS' not in PATH:
+        if not exists(PATH.DATA):
             raise Exception
 
-        if 'OUTPUT' not in PATH:
-            raise Exception
+        if 'OUTPUT' in PATH:
+            assert exists(PATH.OUTPUT)
 
 
     def main(self):
         """ Tests data processing methods
         """
+        data = {}
 
-    try:
-        preprocess.setup()
-    except:
-        print 'SETUP failed'
-    else:
-        print 'SETUP succeeded'
+        try:
+            preprocess.setup()
+        except:
+            print 'setup failed'
+        else:
+            print 'setup succeeded'
 
-    try:
-        d, h = preprocess.load(prefix=PATH.OBSERVATIONS)
-        s, h = preprocess.load(prefix=PATH.SYNTHETICS)
-    except:
-        print 'LOAD failed'
-    else:
-        print 'LOAD succeeded'
+        # test reader
+        try:
+            for channel in self.channels():
+                data[channel] = preprocess.reader(PATH.DATA, channel)
+        except:
+            print 'reader failed'
+        else:
+            print 'reader succeeded'
 
-    try:
-        d = preprocess.multichannel(preprocess.process_traces, [d], [h]) 
-        s = preprocess.multichannel(preprocess.process_traces, [s], [h]) 
-    except:
-        print 'PROCESS_TRACES failed'
-    else:
-        print 'PROCESS_TRACES succeeded'
+        # test processing
+        try:
+            for channel in self.channels():
+                data[channel] = preprocess.apply_filter(data[channel])
+        except:
+            print 'processing failed'
+        else:
+            print 'processing succeeded'
+
+        try:
+            for channel in self.channels():
+                preprocess.writer(data[channel], PATH.OUTPUT, channel)
+        except:
+            print 'writer failed'
+        else:
+            print 'writer succeeded'
 
 
-    try:
-        preprocess.save(d, h, prefix=PATH.OBSERVATIONS_PRE)
-        preprocess.save(s, h, prefix=PATH.SYNTHETICS_PRE)
-    except:
-        print 'OUTPUT_TRACES failed'
-    else:
-        print 'OUTPUT_TRACES succeeded'
+    @property
+    def channels(self):
+        channels = []
+        for fullname in glob(PATH.DATA):
+            channels += [basename(fullname)]
+
+        return channels
+
+

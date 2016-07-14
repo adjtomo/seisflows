@@ -6,10 +6,15 @@ from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
 for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
    obj.load()
 
+assert 'SYSTEM' in SeisflowsParameters()
+assert 'WORKFLOW' in SeisflowsParameters()
+
 # Now SeisFlows is fully loaded. All that remains is to execute the workflow.
 # Depending on the system specified in the parameter file, the workflow may be 
 # executed immediately or passed to a scheduler.
+
 import system
 import workflow
+
 system.submit(workflow)
 

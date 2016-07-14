@@ -80,7 +80,7 @@ class migration(object):
                    hosts='all',
                    path=PATH.SCRATCH)
 
-        print 'Backprojecting data...'
+        print 'Backprojecting...'
         system.run('solver', 'eval_grad',
                    hosts='all',
                    path=PATH.SCRATCH,

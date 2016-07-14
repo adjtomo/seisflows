@@ -6,13 +6,12 @@ from os.path import basename, join
 
 import numpy as np
 
-import seisflows.seistools.specfem3d as solvertools
+from seisflows.seistools.io import sem
 from seisflows.seistools.shared import getpar, setpar, Model, Minmax
-from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin, splitvec
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import Struct, exists
+from seisflows.tools.code import Struct, exists, mpicall
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -173,10 +172,10 @@ class base(object):
         self.import_model(path)
 
         self.forward()
-        unix.mv(self.data_wildcard, 'traces/syn')
         preprocess.prepare_eval_grad(self.getpath)
 
         self.export_residuals(path)
+
         if export_traces:
             self.export_traces(path, prefix='traces/syn')
 
@@ -190,20 +189,20 @@ class base(object):
         self.adjoint()
 
         self.export_kernels(path)
+
         if export_traces:
             self.export_traces(path, prefix='traces/adj')
 
 
     def apply_hess(self, path=''):
-        """ Computes action of Hessian on a given model vector.
+        """ Computes action of Hessian on a given model vector. A gradient 
+          evaluation must have already been carried out beforehand.
         """
-        # a gradient evaluation must have already been carried out
         unix.cd(self.getpath)
         unix.mkdir('traces/lcg')
 
         self.import_model(path)
-        self.forward()
-        unix.mv(self.data_wildcard, 'traces/lcg')
+        self.forward('traces/lcg')
         preprocess.prepare_apply_hess(self.getpath)
 
         self.adjoint()
@@ -231,7 +230,7 @@ class base(object):
     ### model input/output
 
     def load(self, path, prefix='', suffix='', verbose=False):
-        """ reads SPECFEM model or kernel
+        """ reads SPECFEM model or kernels
 
           Models are stored in Fortran binary format and separated into multiple
           files according to material parameter and processor rank.
@@ -239,58 +238,45 @@ class base(object):
         minmax = Minmax(self.parameters)
         model = Model(self.parameters)
 
-        for iproc in range(self.mesh.nproc):
-            # read database files
-            keys, vals = loadbypar(path, self.parameters, iproc, prefix, suffix)
-            for key, val in zip(keys, vals):
-                model[key] += [val]
+        for iproc in range(self.mesh_properties.nproc):
+            for key in self.parameters:
+                model[key] += [sem.read(path, prefix+key+suffix, iproc)]
 
-            minmax.update(keys, vals)
+                # keep track of min, max
+                #minmax.update(key, model[key][iproc])
 
-        if verbose:
-            minmax.write(path, logpath=PATH.SUBMIT)
+        #if verbose:
+        #    minmax.write(path, logpath=PATH.SUBMIT)
 
         return model
 
 
     def save(self, path, model, prefix='', suffix='', solver_parameters=['vp', 'vs']):
-        """ writes SPECFEM model
-
-            The following method writes acoustic and elastic models. For an
-            example of how to write transversely isotropic models, see 
-            solver.specfem3d_globe.
-
-            There is a tradeoff here between being simple and being 
-            flexible.  In this case we opt for a simple hardwired approach. For
-            a more flexible, more complex approach see SEISFLOWS-RESEARCH.
+        """ writes SPECFEM model or kernels
         """
         unix.mkdir(path)
 
-        if 'kernel' in suffix:
-            for iproc in range(self.mesh.nproc):
-                for key in solver_parameters:
-                    if key in self.parameters:
-                        savebin(model[key][iproc], path, iproc, prefix+key+suffix)
-                if 'rho' in self.parameters:
-                    savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
+        for iproc in range(self.mesh_properties.nproc):
+            # write parameters required to update model 
+            for key in self.parameters:
+                sem.write(model[key][iproc], path, prefix+key+suffix, iproc)
 
-        else:
-            for iproc in range(self.mesh.nproc):
-                for key in solver_parameters:
-                    if key in self.parameters:
-                        savebin(model[key][iproc], path, iproc, prefix+key+suffix)
-                    else:
-                        src = PATH.OUTPUT +'/'+ 'model_init'
-                        dst = path
-                        copybin(src, dst, iproc, prefix+key+suffix)
+            # kernels not required for model updates need not be written
+            if suffix == '_kernel':
+                continue
 
-                if 'rho' in self.parameters:
-                    savebin(model['rho'][iproc], path, iproc, prefix+'rho'+suffix)
-                else:
+            # write any parameters not required for model updates but still
+            # expected by solver
+            for key in solver_parameters:
+                if key not in self.parameters:
                     src = PATH.OUTPUT +'/'+ 'model_init'
                     dst = path
-                    copybin(src, dst, iproc, 'rho')
+                    sem.copy(src, dst, iproc, prefix+key+suffix)
 
+            # density is treated as a special case
+            if self.density_scaling:
+                rho = self.density_scaling(*model[iproc].items())
+                sem.write(rho, path, prefix+'rho'+suffix, iproc)
 
 
     def merge(self, model):
@@ -298,7 +284,7 @@ class base(object):
         """
         v = np.array([])
         for key in self.parameters:
-            for iproc in range(self.mesh.nproc):
+            for iproc in range(self.mesh_properties.nproc):
                 v = np.append(v, model[key][iproc])
         return v
 
@@ -306,9 +292,15 @@ class base(object):
     def split(self, v):
         """ Converts model from vector to dictionary representation
         """
+        nproc = self.mesh_properties.nproc
+        ngll = self.mesh_properties.ngll
         model = {}
         for idim, key in enumerate(self.parameters):
-            model[key] = splitvec(v, self.mesh.nproc, self.mesh.ngll, idim)
+            model[key] = []
+            for iproc in range(nproc):
+                imin = sum(ngll)*idim + sum(ngll[:iproc])
+                imax = sum(ngll)*idim + sum(ngll[:iproc+1])
+                model[key] += [v[imin:imax]]
         return model
 
 
@@ -327,7 +319,8 @@ class base(object):
 
         unix.mkdir(path +'/'+ 'sum')
         for name in parameters:
-            self.call(
+            mpicall(
+                system.mpiexec(),
                 PATH.SPECFEM_BIN +'/'+ 'xcombine_sem '
                 + name + '_kernel' + ' '
                 + 'kernel_paths' + ' '
@@ -345,7 +338,8 @@ class base(object):
         unix.cd(self.getpath)
         for name in parameters:
             print ' smoothing', name
-            self.call(
+            mpicall(
+                system.mpiexec(),
                 PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
                 + str(span) + ' '
                 + str(span) + ' '
@@ -376,7 +370,8 @@ class base(object):
 
         unix.cd(self.getpath)
         for name in self.parameters:
-            self.call(
+            mpicall(
+                system.mpiexec,
                 PATH.SPECFEM_BIN +'/'+ 'xclip_sem '
                 + str(minval) + ' '
                 + str(maxval) + ' '
@@ -422,6 +417,34 @@ class base(object):
         unix.cd(self.kernel_databases)
 
         # work around conflicting name conventions
+        self.rename_kernels()
+
+        # two-step command used to work around parallel filesystem issue
+        unix.mkdir(join(path, 'kernels'), noexit=True)
+        unix.mkdir(join(path, 'kernels', basename(self.getpath)))
+
+        src = glob('*_kernel.bin')
+        dst = join(path, 'kernels', basename(self.getpath))
+        unix.mv(src, dst)
+
+    def export_residuals(self, path):
+        unix.mkdir(join(path, 'residuals'), noexit=True)
+
+        src = join(self.getpath, 'residuals')
+        dst = join(path, 'residuals', basename(self.getpath))
+        unix.mv(src, dst)
+
+    def export_traces(self, path, prefix='traces/obs'):
+        unix.mkdir(join(path, 'traces'), noexit=True)
+
+        src = join(self.getpath, prefix)
+        dst = join(path, 'traces', basename(self.getpath))
+        unix.cp(src, dst)
+
+
+    def rename_kernels(self):
+        """ Works around conflicting kernel filename conventions
+        """
         files = []
         files += glob('*proc??????_alpha_kernel.bin')
         files += glob('*proc??????_alpha[hv]_kernel.bin')
@@ -430,35 +453,17 @@ class base(object):
         unix.rename('alpha', 'vp', files)
 
         files = []
-        files += glob('*proc??????_beta_kernel.bin') 
+        files += glob('*proc??????_beta_kernel.bin')
         files += glob('*proc??????_beta[hv]_kernel.bin')
         files += glob('*proc??????_reg1_beta_kernel.bin')
         files += glob('*proc??????_reg1_beta[hv]_kernel.bin')
         unix.rename('beta', 'vs', files)
 
-        # hack to deal with problems on parallel filesystem
-        unix.mkdir(join(path, 'kernels'), noexit=True)
 
-        unix.mkdir(join(path, 'kernels', basename(self.getpath)))
-        src = join(glob('*_kernel.bin'))
-        dst = join(path, 'kernels', basename(self.getpath))
-        unix.mv(src, dst)
-
-    def export_residuals(self, path):
-        # hack deals with problems on parallel filesystem
-        unix.mkdir(join(path, 'residuals'), noexit=True)
-
-        src = join(self.getpath, 'residuals')
-        dst = join(path, 'residuals', basename(self.getpath))
-        unix.mv(src, dst)
-
-    def export_traces(self, path, prefix='traces/obs'):
-        # hack deals with problems on parallel filesystem
-        unix.mkdir(join(path, 'traces'), noexit=True)
-
-        src = join(self.getpath, prefix)
-        dst = join(path, 'traces', basename(self.getpath))
-        unix.cp(src, dst)
+    def rename_data(self, path):
+        """ Works around conflicting data filename conventions
+        """
+        pass
 
 
     ### setup utilities
@@ -506,9 +511,16 @@ class base(object):
             Components actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
         """
-        path = self.getpath+'/'+'traces/adj/'
-        for channel in ['x', 'y', 'z']:
-            preprocess.write_zero_traces(path, channel)
+        for filename in self.data_filenames:
+            # read traces
+            d = preprocess.reader(self.getpath +'/'+ 'traces/obs', filename)
+
+            # replace data with zeros
+            for t in d:
+                t.data[:] = 0.
+
+            # write traces
+            preprocess.writer(d, self.getpath +'/'+ 'traces/adj', filename)
 
 
     def check_mesh_properties(self, path=None, parameters=None):
@@ -522,7 +534,7 @@ class base(object):
             nproc = 0
             ngll = []
             while True:
-                dummy = loadbin(path, nproc, parameters[0])
+                dummy = sem.read(path, parameters[0], nproc)
                 ngll += [len(dummy)]
                 nproc += 1
                 if not exists('%s/proc%06d_%s.bin' % (path, nproc, parameters[0])):
@@ -558,49 +570,39 @@ class base(object):
         pass
 
 
-    ### miscellaneous
-
-    def call(self, executable, output='/dev/null'):
-        """ Calls solver through subprocess
-        """
-        # a less complicated version, without error catching, would simply be
-        # subprocess.call(system.mpiexec() + executable, shell=True)
-        try:
-            f = open(output,'w')
-            subprocess.check_call(
-                system.mpiexec() + executable,
-                shell=True,
-                stdout=f)
-        except subprocess.CalledProcessError, err:
-            print msg.SolverError % (system.mpiexec() + executable)
-            sys.exit(-1)
-        except OSError:
-            print msg.SolverError % (system.mpiexec() + executable)
-            sys.exit(-1)
-        finally:
-            f.close()
+    ### additional solver attributes
 
     @property
     def getnode(self):
+        # because it is sometimes useful to overload system.getnode
         return system.getnode()
 
     @property
-    def getpath(self):
-        name = self.check_source_names()[self.getnode]
-        return join(PATH.SOLVER, name)
+    def getname(self):
+        # returns name of source currently under consideration
+        return self.check_source_names()[self.getnode]
 
     @property
-    def data_wildcard(self):
+    def getpath(self):
+        # returns working directory currently in use
+        return join(PATH.SOLVER, self.getname)
+
+    @property
+    def mesh_properties(self):
+        return self.check_mesh_properties()
+
+    @property
+    def data_filenames(self):
         # must be implemented by subclass
         return NotImplementedError
 
     @property
-    def mesh(self):
-        mesh = self.check_mesh_properties()
-        return mesh
+    def model_databases(self):
+        # must be implemented by subclass
+        return NotImplementedError
 
     @property
-    def model_databases(self):
+    def kernel_databases(self):
         # must be implemented by subclass
         return NotImplementedError
 

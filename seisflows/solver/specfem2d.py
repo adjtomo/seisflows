@@ -1,17 +1,16 @@
 
 import sys
-from os.path import join
+from os.path import basename, join
 from glob import glob
 
 import numpy as np
 
-import seisflows.seistools.specfem2d as solvertools
+from seisflows.seistools.io import sem
 from seisflows.seistools.shared import getpar, setpar
-from seisflows.seistools.io import splitvec, loadbypar
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists
+from seisflows.tools.code import exists, mpicall
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -47,6 +46,13 @@ class specfem2d(custom_import('solver', 'base')):
         if 'F0' not in PAR:
             raise Exception
 
+        # check data format
+        if 'FORMAT' not in PAR:
+            raise Exception()
+
+        if PAR.FORMAT != 'su':
+            raise Exception()
+
 
     def check_solver_parameter_files(self):
         """ Checks solver parameters
@@ -67,9 +73,9 @@ class specfem2d(custom_import('solver', 'base')):
             if self.getnode == 0: print "WARNING: f0 != PAR.F0"
             setpar('f0', PAR.F0, file='DATA/SOURCE')
 
-        if self.mesh.nproc != PAR.NPROC:
+        if self.mesh_properties.nproc != PAR.NPROC:
             if self.getnode == 0:
-                print 'Warning: mesh.nproc != PAR.NPROC'
+                print 'Warning: mesh_properties.nproc != PAR.NPROC'
 
         if 'MULTIPLES' in PAR:
             if PAR.MULTIPLES:
@@ -85,12 +91,34 @@ class specfem2d(custom_import('solver', 'base')):
 
         unix.cd(self.getpath)
         setpar('SIMULATION_TYPE', '1')
-        setpar('SAVE_FORWARD', '.true.')
-        self.call('bin/xmeshfem2D')
-        self.call('bin/xspecfem2D',output='log.solver')
+        setpar('SAVE_FORWARD', '.false.')
+        mpicall(system.mpiexec(), 'bin/xmeshfem2D')
+        mpicall(system.mpiexec(), 'bin/xspecfem2D')
 
-        unix.mv(self.data_wildcard, 'traces/obs')
-        self.export_traces(PATH.OUTPUT, 'traces/obs')
+        if PAR.FORMAT in ['SU', 'su']:
+            src = glob('OUTPUT_FILES/*.su')
+            dst = 'traces/obs'
+            unix.mv(src, dst)
+
+
+    def initialize_adjoint_traces(self):
+        super(specfem2d, self).initialize_adjoint_traces()
+
+        # work around SPECFEM2D's use of different name conventions for
+        # regular traces and 'adjoint' traces
+        if PAR.FORMAT in ['SU', 'su']:
+            files = glob('traces/adj/*.su')
+            unix.rename('.su', '.su.adj', files)
+
+        # work around SPECFEM2D's requirement that all components exist,
+        # even ones not in use
+        if PAR.FORMAT in ['SU', 'su']:
+            unix.cd(self.getpath +'/'+ 'traces/adj')
+            for channel in ['x', 'y', 'z', 'p']:
+                src = 'U%s_file_single.su.adj' % PAR.CHANNELS[0]
+                dst = 'U%s_file_single.su.adj' % channel
+                if not exists(dst):
+                    unix.cp(src, dst)
 
 
     def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
@@ -114,13 +142,17 @@ class specfem2d(custom_import('solver', 'base')):
 
     ### low-level solver interface
 
-    def forward(self):
+    def forward(self, path='traces/syn'):
         """ Calls SPECFEM2D forward solver
         """
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        self.call('bin/xmeshfem2D')
-        self.call('bin/xspecfem2D')
+        mpicall(system.mpiexec(), 'bin/xmeshfem2D')
+        mpicall(system.mpiexec(), 'bin/xspecfem2D')
+
+        if PAR.FORMAT in ['SU', 'su']:
+            filenames = glob('OUTPUT_FILES/*.su')
+            unix.mv(filenames, path)
 
 
     def adjoint(self):
@@ -131,8 +163,14 @@ class specfem2d(custom_import('solver', 'base')):
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
 
-        self.call('bin/xmeshfem2D')
-        self.call('bin/xspecfem2D')
+        # hack to deal with SPECFEM2D's use of different name conventions for
+        # regular traces and 'adjoint' traces
+        if PAR.FORMAT in ['SU', 'su']:
+            files = glob('traces/adj/*.su')
+            unix.rename('.su', '.su.adj', files)
+
+        mpicall(system.mpiexec(), 'bin/xmeshfem2D')
+        mpicall(system.mpiexec(), 'bin/xspecfem2D')
 
 
     ### postprocessing utilities
@@ -152,8 +190,8 @@ class specfem2d(custom_import('solver', 'base')):
             return kernels
 
         # set up grid
-        _,x = loadbypar(PATH.MODEL_INIT, ['x'], 0)
-        _,z = loadbypar(PATH.MODEL_INIT, ['z'], 0)
+        x = sem.read(PATH.MODEL_INIT, 'x', 0)
+        z = sem.read(PATH.MODEL_INIT, 'z', 0)
         mesh = stack(x[0], z[0])
 
         for key in self.parameters:
@@ -179,32 +217,21 @@ class specfem2d(custom_import('solver', 'base')):
             unix.cp(src, dst)
 
 
-    ### input file writers
-
-    def write_parameters(self):
-        unix.cd(self.getpath)
-        solvertools.write_parameters(vars(PAR))
-
-    def write_receivers(self):
-        unix.cd(self.getpath)
-        key = 'use_existing_STATIONS'
-        val = '.true.'
-        setpar(key, val)
-        _, h = preprocess.load('traces/obs')
-        solvertools.write_receivers(h.nr, h.rx, h.rz)
-
-    def write_sources(self):
-        unix.cd(self.getpath)
-        _, h = preprocess.load(dir='traces/obs')
-        solvertools.write_sources(vars(PAR), h)
-
-
-    ### miscellaneous
-
     @property
-    def data_wildcard(self):
-        return glob('OUTPUT_FILES/U?_file_single.su')
-        #return glob('OUTPUT_FILES/*semd')
+    def data_filenames(self):
+        if PAR.CHANNELS:
+            if PAR.FORMAT in ['SU', 'su']:
+               filenames = []
+               for channel in PAR.CHANNELS:
+                   filenames += ['U%s_file_single.su' % channel]
+               return filenames
+
+        else:
+            unix.cd(self.getpath)
+            unix.cd('traces/obs')
+
+            if PAR.FORMAT in ['SU', 'su']:
+                return glob('U?_file_single.su')
 
     @property
     def model_databases(self):
