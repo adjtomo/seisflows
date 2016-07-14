@@ -3,32 +3,30 @@ from seisflows.tools.code import findpath
 from seisflows.seistools.shared import setpar
 
 
-
-### input file writers
-
 def write_sources(PAR, h, path='.'):
     """ Writes source information to text file
     """
-    file = findpath('sesiflows.seistools') + '/' + 'specfem3d/SOURCE'
-    with open(file, 'r') as f:
+    filename = findpath('sesiflows.seistools') + '/' + 'specfem3d/SOURCE'
+    with open(filename, 'r') as f:
         lines = f.readlines()
 
-    file = 'DATA/SOURCE'
-    _writelines(file, lines)
+    filename = 'DATA/SOURCE'
+    with open(filename, 'w') as f:
+        f.writelines(lines)
 
     # adjust coordinates
-    setpar('xs', h.sx[0], file)
-    setpar('zs', h.sz[0], file)
-    setpar('ts', h.ts, file)
+    setpar('xs', h.sx[0], filename)
+    setpar('zs', h.sz[0], filename)
+    setpar('ts', h.ts, filename)
 
     # adjust wavelet
-    setpar('f0', PAR['F0'], file)
+    setpar('f0', PAR['F0'], filename)
 
 
 def write_receivers(h):
     """ Writes receiver information to text file
     """
-    file = 'DATA/STATIONS'
+    filename = 'DATA/STATIONS'
     lines = []
 
     # loop over receivers
@@ -42,8 +40,8 @@ def write_receivers(h):
         line += '%3.1f' % 0. + '\n'
         lines.extend(line)
 
-    # write file
-    _writelines(file, lines)
+    with open(filename, 'w') as f:
+        f.writelines(lines)
 
 
 def write_parameters(par, version):
@@ -51,12 +49,4 @@ def write_parameters(par, version):
     """
     raise NotImplementedError
 
-
-### utility functions
-
-def _writelines(file, lines):
-    """ Writes text file
-    """
-    with open(file, 'w') as f:
-        f.writelines(lines)
 

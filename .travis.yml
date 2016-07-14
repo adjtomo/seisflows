@@ -8,7 +8,8 @@ install:
   - pip install coveralls
 # command to run tests, e.g. python setup.py test
 script:
-  - coverage run --source seisflows -m unittest discover tests/unit/
+  - coverage run --source seisflows -m unittest discover tests/test_tools test/test_seistools
+
 after_success:
   coveralls
 

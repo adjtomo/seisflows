@@ -9,8 +9,12 @@ for obj in [SeisflowsParameters(), SeisflowsPaths()]:
 for obj in [SeisflowsObjects()]:
    obj.reload('./output')
 
+assert 'SYSTEM' in SeisflowsParameters()    
+assert 'WORKFLOW' in SeisflowsParameters()
+
 import system
 import workflow
+
 system.submit(workflow)
 
 

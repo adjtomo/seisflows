@@ -93,3 +93,13 @@ def AnalyticSignal(syn, obs, nt, dt, eps=0.):
 
     return _np.sqrt(_np.sum(diff*diff*dt))
 
+
+def Displacement(syn, obs, nt, dt):
+    return Exception('This function can only used for migration.')
+
+def Velocity(syn, obs, nt, dt):
+    return Exception('This function can only used for migration.')
+
+def Acceleration(syn, obs, nt, dt):
+    return Exception('This function can only used for migration.')
+

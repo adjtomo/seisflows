@@ -18,7 +18,6 @@ import optimize
 import problems.rosenbrock as problem
 
 
-
 class test_optimize(object):
     """ Optimization unit test.
 
@@ -30,13 +29,19 @@ class test_optimize(object):
 
         # check parameters
         if 'OPTIMIZE' not in PAR: 
-            setattr(PAR,'OPTIMIZE','default')
+            setattr(PAR, 'OPTIMIZE', 'base')
+
+        if 'VERBOSE' not in PAR:
+            setattr(PAR, 'VERBOSE', 1)
 
         if 'BEGIN' not in PAR:
             raise Exception
 
         if 'END' not in PAR:
             raise Exception
+
+        if 'THRESH' not in PAR:
+            setattr(PAR, 'THRESH', 1.e-5)
 
         # check paths
         if 'SCRATCH' not in PATH:
@@ -133,7 +138,6 @@ class test_optimize(object):
                     sys.exit(-1)
 
 
-
     def evaluate_function(cls):
         m = loadnpy('m_try')
         f = problem.func(m)
@@ -149,13 +153,26 @@ class test_optimize(object):
 
 
     def finalize(cls):
-        print '%14.7e %14.7e'%tuple(loadnpy('m_new'))
-
         m_new = loadnpy('m_new')
         m_old = loadnpy('m_old')
 
-        d = np.linalg.norm(m_new-m_old)/np.linalg.norm(m_new)
-        if d < 1.e-5:
+        if PAR.VERBOSE > 0:
+            print '%14.7e %14.7e'%tuple(m_new)
+
+        if cls.status(m_new, m_old):
             print 'Stopping criteria met.\n'
-            sys.exit()
+            np.savetxt('niter', [cls.iter], '%d')
+            sys.exit(0)
+
+        elif cls.iter >= PAR.END:
+            print 'Maximum number of iterations exceeded.\n'
+            sys.exit(-1)
+
+
+    def status(cls, m_new, m_old):
+        _finished = True
+        if np.linalg.norm(m_new-m_old)/np.linalg.norm(m_new) < PAR.THRESH:
+            return _finished
+        else:
+            return not _finished
 

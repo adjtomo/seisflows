@@ -9,7 +9,7 @@ import seisflows.seistools.specfem3d as solvertools
 from seisflows.seistools.shared import getpar, setpar
 
 from seisflows.tools import unix
-from seisflows.tools.code import exists
+from seisflows.tools.code import exists, mpicall
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -40,6 +40,13 @@ class specfem3d(custom_import('solver', 'base')):
         if 'F0' not in PAR:
             raise Exception
 
+        # check data format
+        if 'FORMAT' not in PAR:
+            raise Exception()
+
+        if PAR.FORMAT != 'su':
+            raise Exception()
+
 
     def generate_data(self, **model_kwargs):
         """ Generates data
@@ -49,10 +56,12 @@ class specfem3d(custom_import('solver', 'base')):
         unix.cd(self.getpath)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        self.call('bin/xspecfem3D')
+        mpicall(system.mpiexec(), 'bin/xspecfem3D')
 
-        unix.mv(self.data_wildcard, 'traces/obs')
-        self.export_traces(PATH.OUTPUT, 'traces/obs')
+        if PAR.FORMAT in ['SU', 'su']:
+            src = glob('OUTPUT_FILES/*_d?_SU')
+            dst = 'traces/obs'
+            unix.mv(src, dst)
 
 
     def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
@@ -78,8 +87,8 @@ class specfem3d(custom_import('solver', 'base')):
             dst = self.model_databases
             unix.cp(src, dst)
 
-            self.call('bin/xmeshfem3D')
-            self.call('bin/xgenerate_databases')
+            mpicall(system.mpiexec(), 'bin/xmeshfem3D')
+            mpicall(system.mpiexec(), 'bin/xgenerate_databases')
             self.export_model(PATH.OUTPUT +'/'+ model_name)
 
         else:
@@ -88,13 +97,18 @@ class specfem3d(custom_import('solver', 'base')):
 
     ### low-level solver interface
 
-    def forward(self):
+    def forward(self, path='traces/syn'):
         """ Calls SPECFEM3D forward solver
         """
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        self.call('bin/xgenerate_databases')
-        self.call('bin/xspecfem3D')
+        mpicall(system.mpiexec(), 'bin/xgenerate_databases')
+        mpicall(system.mpiexec(), 'bin/xspecfem3D')
+
+        if PAR.FORMAT in ['SU', 'su']:
+            src = glob('OUTPUT_FILES/*_d?_SU')
+            dst = path
+            unix.mv(src, dst)
 
 
     def adjoint(self):
@@ -104,7 +118,10 @@ class specfem3d(custom_import('solver', 'base')):
         setpar('SAVE_FORWARD', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
-        self.call('bin/xspecfem3D')
+        mpicall(system.mpiexec(), 'bin/xspecfem3D')
+
+        # work around SPECFEM3D conflicting name conventions
+        self.rename_data()
 
 
     ### input file writers
@@ -123,9 +140,9 @@ class specfem3d(custom_import('solver', 'base')):
             if self.getnode == 0: print "WARNING: dt != PAR.DT"
             setpar('DT', PAR.DT)
 
-        if self.mesh.nproc != PAR.NPROC:
+        if self.mesh_properties.nproc != PAR.NPROC:
             if self.getnode == 0:
-                print 'Warning: mesh.nproc != PAR.NPROC'
+                print 'Warning: mesh_properties.nproc != PAR.NPROC'
 
         if 'MULTIPLES' in PAR:
             raise NotImplementedError
@@ -134,26 +151,32 @@ class specfem3d(custom_import('solver', 'base')):
     def initialize_adjoint_traces(self):
         """ Works around SPECFEM3D file format issue by overriding base method
         """
-        try:
-           super(specfem3d, self).initialize_adjoint_traces()
-        except:
-           try:
-                import preprocess
 
-                path_obs = self.getpath+'/'+'traces/obs'
-                path_adj = self.getpath+'/'+'traces/adj'
+    def initialize_adjoint_traces(self):
+        super(specfem3d, self).initialize_adjoint_traces()
 
-                # read observed data
-                _, h = preprocess.reader(path_obs, preprocess.channels[0])
+        # workaround for SPECFEM2D's use of different name conventions for
+        # regular traces and 'adjoint' traces
+        if PAR.FORMAT in ['SU', 'su']:
+            files = glob(self.getpath +'/'+ 'traces/adj/*SU')
+            unix.rename('_SU', '_SU.adj', files)
 
-                zeros = np.zeros((h.nt, h.nr))
+        # workaround for SPECFEM3D's requirement that all components exist,
+        # even ones not in use
+        unix.cd(self.getpath +'/'+ 'traces/adj')
+        for iproc in range(PAR.NPROC):
+            for channel in ['x', 'y', 'z']:
+                src = '%d_d%s_SU.adj' % (iproc, PAR.CHANNELS[0])
+                dst = '%d_d%s_SU.adj' % (iproc, channel)
+                if not exists(dst):
+                    unix.cp(src, dst)
 
-                # write adjoint traces
-                for channel in ['x', 'y', 'z']:
-                        preprocess.writer(zeros, h, path_adj, channel)
-
-           except:
-                raise Exception('Seismic Unix format not supported for SPECFEM3D inversions because SPECFEM3D lacks an adequate parallel reader and writer')
+    def rename_data(self):
+        """ Works around conflicting data filename conventions
+        """
+        if PAR.FORMAT in ['SU', 'su']:
+            files = glob(self.getpath +'/'+ 'traces/adj/*SU')
+            unix.rename('_SU', '_SU.adj', files)
 
 
     def write_parameters(self):
@@ -178,7 +201,25 @@ class specfem3d(custom_import('solver', 'base')):
 
     @property
     def data_wildcard(self):
-        return glob('OUTPUT_FILES/*SU')
+        channels = PAR.CHANNELS
+        return '*_d[%s]_SU' % channels.lower()
+
+    @property
+    def data_filenames(self):
+        if PAR.CHANNELS:
+            if PAR.FORMAT in ['SU', 'su']:
+               filenames = []
+               for channel in PAR.CHANNELS:
+                   for iproc in range(PAR.NPROC):
+                       filenames += ['%d_d%s_SU' % (iproc, channel)]
+               return filenames
+
+        else:
+            unix.cd(self.getpath)
+            unix.cd('traces/obs')
+
+            if PAR.FORMAT in ['SU', 'su']:
+                return glob('*_d[%s]_SU')
 
     @property
     def kernel_databases(self):

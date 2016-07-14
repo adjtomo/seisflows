@@ -12,8 +12,6 @@ excluded += ['seisflows.solver']
 excluded += ['seisflows.system.tiger']
 excluded += ['seisflows.workflow.test_optimize']
 excluded += ['seisflows.workflow.test_preprocess']
-excluded += ['seisflows.workflow.test_preprocess_adjoint']
-
 
 # which modules failed to import?
 failed = []

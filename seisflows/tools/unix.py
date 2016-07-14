@@ -93,7 +93,7 @@ def mv(src='', dst=''):
 
 
 def rename(old, new, names):
-    for name in names:
+    for name in _strlist(names):
         if name.find(old) >= 0:
             os.rename(name, name.replace(old, new))
 

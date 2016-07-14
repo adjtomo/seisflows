@@ -148,4 +148,5 @@ def hilbert(w):
     return np.imag(analytic(w))
 
 
+infinity = np.inf
 
