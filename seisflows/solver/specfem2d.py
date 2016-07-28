@@ -10,7 +10,7 @@ from seisflows.seistools.shared import getpar, setpar
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists, mpicall
+from seisflows.tools.code import exists, call_solver, call_solver_nompi
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -35,6 +35,9 @@ class specfem2d(custom_import('solver', 'base')):
         """ Checks parameters and paths
         """
         super(specfem2d, self).check()
+
+        if 'WITH_MPI' not in PAR:
+            setattr(PAR, 'WITH_MPI', False)
 
         # check time stepping parameters
         if 'NT' not in PAR:
@@ -92,8 +95,13 @@ class specfem2d(custom_import('solver', 'base')):
         unix.cd(self.getpath)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.false.')
-        mpicall(system.mpiexec(), 'bin/xmeshfem2D')
-        mpicall(system.mpiexec(), 'bin/xspecfem2D')
+
+        if PAR.WITH_MPI:
+            call_solver(system.mpiexec(), 'bin/xmeshfem2D')
+            call_solver(system.mpiexec(), 'bin/xspecfem2D')
+        else:
+            call_solver_nompi('bin/xmeshfem2D')
+            call_solver_nompi('bin/xspecfem2D')
 
         if PAR.FORMAT in ['SU', 'su']:
             src = glob('OUTPUT_FILES/*.su')
@@ -147,8 +155,13 @@ class specfem2d(custom_import('solver', 'base')):
         """
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        mpicall(system.mpiexec(), 'bin/xmeshfem2D')
-        mpicall(system.mpiexec(), 'bin/xspecfem2D')
+
+        if PAR.WITH_MPI:
+            call_solver(system.mpiexec(), 'bin/xmeshfem2D')
+            call_solver(system.mpiexec(), 'bin/xspecfem2D')
+        else:
+            call_solver_nompi('bin/xmeshfem2D')
+            call_solver_nompi('bin/xspecfem2D')
 
         if PAR.FORMAT in ['SU', 'su']:
             filenames = glob('OUTPUT_FILES/*.su')
@@ -169,8 +182,12 @@ class specfem2d(custom_import('solver', 'base')):
             files = glob('traces/adj/*.su')
             unix.rename('.su', '.su.adj', files)
 
-        mpicall(system.mpiexec(), 'bin/xmeshfem2D')
-        mpicall(system.mpiexec(), 'bin/xspecfem2D')
+        if PAR.WITH_MPI:
+            call_solver(system.mpiexec(), 'bin/xmeshfem2D')
+            call_solver(system.mpiexec(), 'bin/xspecfem2D')
+        else:
+            call_solver_nompi('bin/xmeshfem2D')
+            call_solver_nompi('bin/xspecfem2D')
 
 
     ### postprocessing utilities
@@ -192,7 +209,7 @@ class specfem2d(custom_import('solver', 'base')):
         # set up grid
         x = sem.read(PATH.MODEL_INIT, 'x', 0)
         z = sem.read(PATH.MODEL_INIT, 'z', 0)
-        mesh = stack(x[0], z[0])
+        mesh = stack(x, z)
 
         for key in self.parameters:
             kernels[key] = [meshsmooth(kernels[key][0], mesh, span)]

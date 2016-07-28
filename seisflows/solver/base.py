@@ -11,7 +11,7 @@ from seisflows.seistools.shared import getpar, setpar, Model, Minmax
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import Struct, exists, mpicall
+from seisflows.tools.code import Struct, exists, call_solver
 from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
@@ -173,7 +173,6 @@ class base(object):
 
         self.forward()
         preprocess.prepare_eval_grad(self.getpath)
-
         self.export_residuals(path)
 
         if export_traces:
@@ -319,7 +318,7 @@ class base(object):
 
         unix.mkdir(path +'/'+ 'sum')
         for name in parameters:
-            mpicall(
+            call_solver(
                 system.mpiexec(),
                 PATH.SPECFEM_BIN +'/'+ 'xcombine_sem '
                 + name + '_kernel' + ' '
@@ -338,7 +337,7 @@ class base(object):
         unix.cd(self.getpath)
         for name in parameters:
             print ' smoothing', name
-            mpicall(
+            call_solver(
                 system.mpiexec(),
                 PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
                 + str(span) + ' '
@@ -370,7 +369,7 @@ class base(object):
 
         unix.cd(self.getpath)
         for name in self.parameters:
-            mpicall(
+            call_solver(
                 system.mpiexec,
                 PATH.SPECFEM_BIN +'/'+ 'xclip_sem '
                 + str(minval) + ' '
