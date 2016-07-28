@@ -26,8 +26,8 @@ def call(*args, **kwargs):
     subprocess.check_call(*args, **kwargs)
 
 
-def mpicall(mpiexec, executable, output='/dev/null'):
-    """ Calls MPI executable
+def call_solver(mpiexec, executable, output='/dev/null'):
+    """ Calls MPI solver executable
 
       A less complicated version, without error catching, would be
       subprocess.call(mpiexec +' '+ executable, shell=True)
@@ -49,6 +49,29 @@ def mpicall(mpiexec, executable, output='/dev/null'):
     finally:
         f.close()
 
+
+def call_solver_nompi(executable, output='/dev/null'):
+    """ Calls non-MPI solver executable
+
+      A less complicated version, without error catching, would be
+      subprocess.call(executable, shell=True)
+    """
+    from seisflows.tools import msg
+
+    try:
+        f = open(output,'w')
+        subprocess.check_call(
+            executable,
+            shell=True,
+            stdout=f)
+    except subprocess.CalledProcessError, err:
+        print msg.SolverError % executable
+        sys.exit(-1)
+    except OSError:
+        print msg.SolverError % executable
+        sys.exit(-1)
+    finally:
+        f.close()
 
 
 def cast(var):
