@@ -192,7 +192,7 @@ class specfem2d(custom_import('solver', 'base')):
 
     ### postprocessing utilities
 
-    def smooth(self, path='', parameters='dummy', span=0. ):
+    def smooth(self, path='', parameters=None, span=0. ):
         """ Smooths SPECFEM2D kernels by convolving them with a Gaussian
         """
         from seisflows.tools.array import meshsmooth, stack
@@ -211,7 +211,7 @@ class specfem2d(custom_import('solver', 'base')):
         z = sem.read(PATH.MODEL_INIT, 'z', 0)
         mesh = stack(x, z)
 
-        for key in self.parameters:
+        for key in parameters or self.parameters:
             kernels[key] = [meshsmooth(kernels[key][0], mesh, span)]
 
         unix.rm(path + '_nosmooth')

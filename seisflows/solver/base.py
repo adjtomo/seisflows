@@ -317,7 +317,7 @@ class base(object):
             f.writelines([join(path, dir)+'\n' for dir in names])
 
         unix.mkdir(path +'/'+ 'sum')
-        for name in parameters:
+        for name in parameters or self.parameters:
             call_solver(
                 system.mpiexec(),
                 PATH.SPECFEM_BIN +'/'+ 'xcombine_sem '
@@ -335,7 +335,7 @@ class base(object):
 
         # apply smoothing operator
         unix.cd(self.getpath)
-        for name in parameters:
+        for name in parameters or self.parameters:
             print ' smoothing', name
             call_solver(
                 system.mpiexec(),
@@ -368,7 +368,7 @@ class base(object):
         assert len(parameters) > 0
 
         unix.cd(self.getpath)
-        for name in self.parameters:
+        for name in parameters or self.parameters:
             call_solver(
                 system.mpiexec,
                 PATH.SPECFEM_BIN +'/'+ 'xclip_sem '
