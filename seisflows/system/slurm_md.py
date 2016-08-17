@@ -127,7 +127,8 @@ class slurm_md(custom_import('system', 'base')):
     def mpiexec(self):
         """ Specifies MPI exectuable; used to invoke solver
         """
-        return 'mpirun -np %d '%PAR.NPROC
+        return ''
+        #return 'mpirun -np %d '%PAR.NPROC
 
 
     def save_kwargs(self, classname, funcname, kwargs):

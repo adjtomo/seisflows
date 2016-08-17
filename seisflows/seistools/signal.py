@@ -65,7 +65,7 @@ def mute_late(traces, slope, const, time_scheme, s_coords, r_coords):
         # calculate source-reciever distance
         (sx, sy) = (s_coords[0][ir], s_coords[1][ir])
         (rx, ry) = (r_coords[0][ir], r_coords[1][ir])
-        dist = np.sqrt((rx-sx)**2 + (ry-sy)**2)
+        offset = np.sqrt((rx-sx)**2 + (ry-sy)**2)
 
         # apply tapered mask
         traces[ir].data *= (1.-mask(slope, const, offset, (nt, dt, 0.)))

@@ -1,3 +1,6 @@
+
+from copy import copy
+
 import os
 
 import numpy as np
@@ -5,71 +8,6 @@ import scipy.signal as _signal
 import scipy.interpolate as _interp
 
 from scipy.signal import hilbert as analytic
-
-
-
-def nabla(Z, order=1, dx=1., dy=1.):
-    """ Returns sum of n-th order spatial derivatives of a function defined on
-        a 2D rectangular grid; generalizes Laplacian
-    """
-    if order == 1:
-        Zx = (Z[:,1:] - Z[:,:-1])/dx
-        Zy = (Z[1:,:] - Z[:-1,:])/dy
-
-        Z[:,:] = 0.
-        Z[:,1:] += Zx
-        Z[1:,:] += Zy
-
-        Z[ :,-1] += Zx[:,-1]
-        Z[-1, :] += Zy[-1,:]
-
-        Z[-1,-1] = (Zx[-1,-1] + Zy[-1,-1])
-
-    elif order == 2:
-        Zx = (Z[:,2:] - 2.*Z[:,1:-1] + Z[:,:-2])/dx**2
-        Zy = (Z[2:,:] - 2.*Z[1:-1,:] + Z[:-2,:])/dy**2
-
-        Z[:,:] = 0.
-        Z[:,1:-1] += Zx
-        Z[1:-1,:] += Zy
-
-        Z[ :, 0] += Zx[ :, 0]
-        Z[ 0, :] += Zy[ 0, :]
-        Z[ :,-1] += Zx[ :,-1]
-        Z[-1, :] += Zy[-1, :]
-
-        Z[ 0, 0] = (Zx[ 0, 0] + Zy[ 0, 0])
-        Z[ 0,-1] = (Zx[ 0,-1] + Zy[ 0,-1])
-        Z[-1, 0] = (Zx[-1, 0] + Zy[-1, 0])
-        Z[-1,-1] = (Zx[-1,-1] + Zy[-1,-1])
-
-    return Z
-
-
-def tv(Z, dx=1., dy=1., epsilon=0.):
-    nrow = Z.shape[0]
-    ncol = Z.shape[1]
-
-    Zx = (Z[:,1:] - Z[:,:-1])/dx
-    Zy = (Z[1:,:] - Z[:-1,:])/dy
-
-    top = np.zeros((nrow, ncol))
-    bot = np.zeros((nrow, ncol))
-
-    top[:,1:] += Zx
-    top[1:,:] += Zy
-    top[ :,-1] += Zx[:,-1]
-    top[-1, :] += Zy[-1,:]
-
-    bot[:,1:] += Zx**2
-    bot[1:,:] += Zy**2
-    bot[ :,-1] += Zx[:,-1]**2
-    bot[-1, :] += Zy[-1,:]**2
-
-    if not epsilon:
-        epsilon = 1.e-6
-
-    return top/(bot + epsilon*bot.max())**0.5
 
 
 def gauss2(X, Y, mu, sigma, normalize=True):
@@ -149,4 +87,118 @@ def hilbert(w):
 
 
 infinity = np.inf
+
+
+
+### finite difference
+
+def nabla(V, h=[]):
+    """ Returns sum of first-order spatial derivatives of a function defined on
+        a 2D rectangular grid; generalizes Laplacian
+    """
+    W = np.zeros(V.shape)
+
+    if h==[]:
+       h = np.ones((V.ndim, 1))
+
+    # interior
+    W[1:-1,1:-1] += (V[1:-1,2:] - V[1:-1,:-2])/(2.*h[0])
+    W[1:-1,1:-1] += (V[2:,1:-1] - V[:-2,1:-1])/(2.*h[1])
+
+    # top/bottom edges
+    W[0,1:-1] = (V[1,1:-1] - V[0,1:-1])/h[1] + (V[0,2:] - V[0,:-2])/(2.*h[0])
+    W[-1,1:-1] = (V[-1,1:-1] - V[-2,1:-1])/h[1] + (V[-1,2:] - V[-1,:-2])/(2.*h[0])
+
+    # left/right edges
+    W[1:-1,0] = (V[2:,0] - V[:-2,0])/(2.*h[1]) + (V[1:-1,1] - V[1:-1,0])/h[0]
+    W[1:-1,-1] = (V[2:,-1] - V[:-2,-1])/(2.*h[1]) + (V[1:-1,-1] - V[1:-1,-2])/h[0]
+
+    # corners
+    W[0,0] = (V[1,0] - V[0,0])/h[1] + (V[0,1] - V[0,0])/h[0]
+    W[0,-1] = (V[1,-1] - V[0,-1])/h[1] + (V[0,-2] - V[0,-1])/h[0]
+    W[-1,0] = (V[-2,0] - V[-1,0])/h[1] + (V[-1,1] - V[-1,0])/h[0]
+    W[-1,-1] = (V[-1,-1] - V[-2,-1])/h[1] + (V[-1,-1] - V[-1,-2])/h[0]
+
+    return W
+
+
+
+def nabla2(V, h=[]):
+    """ Returns sum of second-order spatial derivatives of a function defined on
+        a 2D rectangular grid; generalizes Laplacian
+    """
+    W = np.zeros(V.shape)
+
+    if h==[]:
+       h = np.ones((V.ndim, 1))
+
+    # interior
+    W[1:-1,1:-1] = (V[1:-1,2:] -2.*V[1:-1,1:-1] + V[1:-1,:-2])/h[0]**2
+    W[1:-1,1:-1] = (V[2:,1:-1] -2.*V[1:-1,1:-1] + V[:-2,1:-1])/h[1]**2
+
+    # left/right edges
+    W[0,1:-1] = W[1,1:-1]
+    W[-1,1:-1] = W[-2,1:-1]
+
+    # top/bottom edges
+    W[0,1:-1] = W[1,1:-1]
+    W[-1,1:-1] = W[-2,1:-1]
+
+    # corners
+    W[0,0] = (W[0,1] + W[1,0])/2
+    W[0,-1] = (W[0,-2] + W[1,-1])/2
+    W[-1,0] = (W[-1,1] + W[-2,0])/2
+    W[-1,-1] = (W[-1,-2] + W[-2,-1])/2
+
+    return W
+
+
+def grad(V, h=[]):
+    """ Evaluates derivatives on a 2D rectangular grid
+    """
+    ny, nx = V.shape
+
+    X = np.zeros((ny, nx))
+    Y = np.zeros((ny, nx))
+
+    if h==[]:
+       h = np.ones((V.ndim, 1))
+
+    # interior
+    X[:,1:-1] = (V[:,2:] - V[:,:-2])/(2.*h[0])
+    Y[1:-1,:] = (V[2:,:] - V[:-2,:])/(2.*h[1])
+
+    # left/right edges
+    X[:,0] = (V[:,1] - V[:,0])/h[1]
+    X[:,-1] = (V[:,-1] - V[:,-2])/h[1]
+
+    # top/bottom edges
+    Y[0,:] = (V[1,:] - V[0,:])/h[0]
+    Y[-1,:] = (V[-1,:] - V[-2,:])/h[0]
+
+    return X,Y
+
+
+def tv(Z, h=[], epsilon=1.e-6):
+    nrow = Z.shape[0]
+    ncol = Z.shape[1]
+
+    Zx = (Z[:,1:] - Z[:,:-1])/h[0]
+    Zy = (Z[1:,:] - Z[:-1,:])/h[1]
+
+    top = np.zeros((nrow, ncol))
+    bot = np.zeros((nrow, ncol))
+
+    top[:,1:] += Zx
+    top[1:,:] += Zy
+    top[ :,-1] += Zx[:,-1]
+    top[-1, :] += Zy[-1,:]
+
+    bot[:,1:] += Zx**2
+    bot[1:,:] += Zy**2
+    bot[ :,-1] += Zx[:,-1]**2
+    bot[-1, :] += Zy[-1,:]**2
+
+    return top/(bot + epsilon*bot.max())**0.5
+
 

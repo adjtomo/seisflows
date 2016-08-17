@@ -1,5 +1,5 @@
 
-from os.path import abspath, join
+from os.path import abspath, getsize, join
 from shutil import copyfile
 
 import numpy as np
@@ -41,16 +41,20 @@ def copy(src, dst, iproc, parameter):
 def _read_bin(filename):
     """ Reads Fortran style binary data into numpy array
     """
+    nbytes = getsize(filename)
     with open(filename, 'rb') as file:
         # read size of record
         file.seek(0)
         n = np.fromfile(file, dtype='int32', count=1)[0]
 
-        # read contents of record
-        file.seek(4)
-        v = np.fromfile(file, dtype='float32')
-
-    return v[:-1]
+        if n==nbytes-8:
+            file.seek(4)
+            v = np.fromfile(file, dtype='float32')
+            return v[:-1]
+        else:
+            file.seek(0)
+            v = np.fromfile(file, dtype='float32')
+            return v
 
 
 def _write_bin(v, filename):

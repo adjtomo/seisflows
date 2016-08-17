@@ -15,6 +15,7 @@ PATH = SeisflowsPaths()
 
 import system
 import solver
+import preprocess
 
 
 class regularize(custom_import('postprocess', 'base')):
@@ -43,8 +44,19 @@ class regularize(custom_import('postprocess', 'base')):
     def write_gradient(self, path):
         super(regularize, self).write_gradient(path)
 
-        g = self.regularize(path)
-        self.save(path, g, backup='noregularize')
+        g = solver.load(path +'/'+ 'gradient', suffix='_kernel')
+        if not PAR.LAMBDA:
+            return solver.merge(g)
+
+        m = solver.load(path +'/'+ 'model')
+        mesh = self.getmesh()
+
+        for key in solver.parameters:
+            for iproc in range(PAR.NPROC):
+                g[key][iproc] += PAR.LAMBDA *\
+                    self.nabla(mesh, m[key][iproc], g[key][iproc])
+
+        self.save(path, solver.merge(g), backup='noregularize')
 
 
     def process_kernels(self, path, parameters):
@@ -91,43 +103,31 @@ class regularize(custom_import('postprocess', 'base')):
         dz = lz/nz
 
         sigma = 0.5*PAR.FIXRADIUS*(dx+dz)
-        _, h = preprocess.load(solver.getpath +'/'+ 'traces/obs')
+
+        sx, sy, sz = preprocess.get_source_coords(
+            preprocess.reader(
+                solver.getpath+'/'+'traces/obs', solver.data_filenames[0]))
+
+        rx, ry, rz = preprocess.get_receiver_coords(
+            preprocess.reader(
+                solver.getpath+'/'+'traces/obs', solver.data_filenames[0]))
 
         # mask sources
-        mask = np.exp(-0.5*((x-h.sx[0])**2.+(z-h.sy[0])**2.)/sigma**2.)
+        mask = np.exp(-0.5*((x-sx[0])**2.+(z-sy[0])**2.)/sigma**2.)
         for key in solver.parameters:
             weight = np.sum(mask*g[key][0])/np.sum(mask)
             g[key][0] *= 1.-mask
             g[key][0] += mask*weight
 
         # mask receivers
-        for ir in range(h.nr):
-            mask = np.exp(-0.5*((x-h.rx[ir])**2.+(z-h.ry[ir])**2.)/sigma**2.)
+        for ir in range(PAR.NREC):
+            mask = np.exp(-0.5*((x-rx[ir])**2.+(z-ry[ir])**2.)/sigma**2.)
             for key in solver.parameters:
                 weight = np.sum(mask*g[key][0])/np.sum(mask)
                 g[key][0] *= 1.-mask
                 g[key][0] += mask*weight
 
         solver.save(fullpath, g, suffix='_kernel')
-
-
-    def regularize(self, path):
-        assert (exists(path))
-
-        g = solver.load(path +'/'+ 'gradient', suffix='_kernel')
-        if not PAR.LAMBDA:
-            return solver.merge(g)
-
-        m = solver.load(path +'/'+ 'model')
-        mesh = self.getmesh()
-
-        for key in solver.parameters:            
-            for iproc in range(PAR.NPROC):
-                g[key][iproc] += PAR.LAMBDA *\
-                    self.nabla(mesh, m[key][iproc], g[key][iproc])
-                    #self.nabla(m[key][iproc], g[key][iproc] , mesh, h)
-
-        return solver.merge(g)
 
 
     def nabla(self, mesh, m, g):
@@ -142,9 +142,9 @@ class regularize(custom_import('postprocess', 'base')):
             z = m['z'][0]
             mesh = stack(x, z)
         except:
-            from seisflows.seistools.io import loadbin
-            x = loadbin(model_path, 0, 'x')
-            z = loadbin(model_path, 0, 'z')
+            from seisflows.seistools.io.sem import read
+            x = read(model_path, 'x', 0)
+            z = read(model_path, 'z', 0)
             mesh = stack(x, z)
         return mesh
 
@@ -156,22 +156,9 @@ class regularize(custom_import('postprocess', 'base')):
             x = m['x'][0]
             z = m['z'][0]
         except:
-            from seisflows.seistools.io import loadbin
-            x = loadbin(model_path, 0, 'x')
-            z = loadbin(model_path, 0, 'z')
+            from seisflows.seistools.io.sem import read
+            x = read(model_path, 'x', 0)
+            z = read(model_path, 'z', 0)
         return x,z
 
 
-      #if PAR.SOLVER in ['specfem2d', 'elastic2d']:
-      #    from seisflows.seistools.io import loadbin
-      #    x = loadbin(model_path, 0, 'x')
-      #    z = loadbin(model_path, 0, 'z')
-      #    mesh = stack(x, z)
-      #elif PAR.SOLVER in ['specfem2d_legacy']:
-      #    m = solver.load(model_path)
-      #    x = g['x'][0]
-      #    z = g['z'][0]
-      #    mesh = stack(x, z)
-      #else:
-      #    msg = "postprocess.regularize can only be used with solver.specfem2d"
-      #    raise Exception(msg)
