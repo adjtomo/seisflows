@@ -44,12 +44,6 @@ class base(object):
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
-        if 'BEGIN' not in PAR:
-            raise ParameterError
-
-        if 'END' not in PAR:
-            raise ParameterError
-
         if 'SUBMIT' not in PATH:
             raise ParameterError
 
