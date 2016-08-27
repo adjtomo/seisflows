@@ -54,7 +54,7 @@ class multithreaded(custom_import('system', 'serial')):
 
                 # launch queued tasks
                 while len(queued_tasks) > 0 and \
-                      len(running_tasks) < PAR.NPROCMAX:
+                      len(running_tasks) < int(PAR.NPROCMAX/PAR.NPROC):
                     i = queued_tasks.pop(0)
                     p = self._launch(classname, funcname, itask=i)
                     running_tasks[i] = p
