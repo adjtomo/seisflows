@@ -11,7 +11,7 @@ def mread(path, parameters, iproc, prefix='', suffix=''):
     keys = []
     vals = []
     for key in sorted(parameters):
-        val = read(path, iproc, prefix+key+suffix)
+        val = read(path, prefix+key+suffix, iproc)
         keys += [key]
         vals += [val]
     return keys, vals
