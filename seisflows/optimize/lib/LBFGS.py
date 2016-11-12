@@ -41,6 +41,8 @@ class LBFGS(object):
 
         g = self.load('g_new')
         if self.iter == 1:
+            # return -g rather than -precond(g) on the first iteration because
+            # this approach is perhaps a bit safter and L-BFGS allows it
             return -g, 0
 
         elif self.iter > self.maxiter:
