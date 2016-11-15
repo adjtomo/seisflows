@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
     from os.path import join
     from seisflows.tools.code import loadjson, loadobj
-    from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+    from seisflows.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
     # reload from last checkpoint
     for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:

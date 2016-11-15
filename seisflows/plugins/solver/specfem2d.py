@@ -1,6 +1,6 @@
 
 from seisflows.tools.code import findpath
-from seisflows.seistools.shared import getpar, setpar
+from seisflows.tools.shared import getpar, setpar
 
 
 ### input file writers
@@ -10,7 +10,7 @@ def write_sources(coords, path='.', ws=1., suffix=''):
     """
     sx, sy, sz = coords
 
-    filename = findpath('seisflows.seistools') + '/' + 'specfem2d/SOURCE'
+    filename = findpath('seisflows.plugins') + '/' + 'specfem2d/SOURCE'
     with open(filename, 'r') as f:
         lines = f.readlines()
 

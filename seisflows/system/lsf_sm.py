@@ -8,7 +8,7 @@ from os.path import abspath, basename, join
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.code import call, findpath, saveobj
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
 PAR = SeisflowsParameters()

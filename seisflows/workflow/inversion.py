@@ -7,7 +7,7 @@ from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import divides, exists
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
 PAR = SeisflowsParameters()

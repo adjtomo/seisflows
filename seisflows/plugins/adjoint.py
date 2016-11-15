@@ -2,7 +2,7 @@
 import numpy as _np
 from scipy.signal import hilbert as _analytic
 
-from seisflows.seistools import misfit
+from seisflows.plugins import misfit
 from seisflows.tools.math import hilbert as _hilbert
 
 

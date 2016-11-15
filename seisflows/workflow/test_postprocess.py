@@ -4,7 +4,7 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
     custom_import, ParameterError
 
 PAR = SeisflowsParameters()

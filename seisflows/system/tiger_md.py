@@ -4,7 +4,7 @@ from os.path import abspath, join, exists
 from uuid import uuid4
 
 from seisflows.tools import unix
-from seisflows.tools.config import ParameterError, SeisflowsParameters, SeisflowsPaths, custom_import
+from seisflows.config import ParameterError, SeisflowsParameters, SeisflowsPaths, custom_import
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()

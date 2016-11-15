@@ -1,6 +1,6 @@
 import numpy as np
 
-from seisflows.seistools.legacy.io import BinaryWriter, mychar, mysize
+from seisflows.plugins.legacy.io import BinaryWriter, mychar, mysize
 
 from headers import SEGY_TRACE_HEADER
 

@@ -3,7 +3,7 @@ from glob import glob
 
 from seisflows.tools import unix
 from seisflows.tools.code import exists
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
 PAR = SeisflowsParameters()

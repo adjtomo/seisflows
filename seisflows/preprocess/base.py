@@ -4,11 +4,11 @@ import obspy
 
 from seisflows.tools import msg, unix
 from seisflows.tools.code import exists, Struct
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
-from seisflows.seistools import adjoint, misfit, readers, writers
-from seisflows.seistools.signal import mute_early, mute_late
+from seisflows.plugins import adjoint, misfit, readers, writers
+from seisflows.tools.signal import mute_early, mute_late
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()

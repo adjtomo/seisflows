@@ -5,12 +5,12 @@ from os.path import join
 
 import numpy as np
 
-import seisflows.seistools.specfem3d as solvertools
-from seisflows.seistools.shared import getpar, setpar
+import seisflows.plugins.solver.specfem3d as solvertools
+from seisflows.tools.shared import getpar, setpar
 
 from seisflows.tools import unix
 from seisflows.tools.code import exists, call_solver
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
 PAR = SeisflowsParameters()

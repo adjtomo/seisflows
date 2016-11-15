@@ -3,7 +3,7 @@ from os.path import abspath, basename, join, dirname
 
 from seisflows.tools import unix
 from seisflows.tools.code import call, findpath, saveobj
-from seisflows.tools.config import ParameterError, custom_import, \
+from seisflows.config import ParameterError, custom_import, \
     SeisflowsParameters, SeisflowsPaths
 
 PAR = SeisflowsParameters()

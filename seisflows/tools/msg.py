@@ -82,7 +82,7 @@ READER ERROR
 
    Seismic data reader not found.
 
-   PAR.READER must correspond to an entry in seisflows.seistools.readers
+   PAR.READER must correspond to an entry in seisflows.plugins.readers
 
 """
 
@@ -93,7 +93,7 @@ WRITER ERROR
 
    Seismic data writer not found.
 
-   PAR.WRITER must correspond to an entry in seisflows.seistools.writers
+   PAR.WRITER must correspond to an entry in seisflows.plugins.writers
 
 """
 

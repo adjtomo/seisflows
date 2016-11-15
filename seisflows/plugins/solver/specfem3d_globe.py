@@ -1,12 +1,12 @@
 
 from seisflows.tools.code import findpath
-from seisflows.seistools.shared import setpar
+from seisflows.tools.shared import setpar
 
 
 def write_sources(PAR, h, path='.'):
     """ Writes source information to text file
     """
-    filename = findpath('sesiflows.seistools') + '/' + 'specfem3d/SOURCE'
+    filename = findpath('sesiflows.plugins') + '/' + 'specfem3d/SOURCE'
     with open(filename, 'r') as f:
         lines = f.readlines()
 

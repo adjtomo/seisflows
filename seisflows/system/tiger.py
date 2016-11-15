@@ -1,6 +1,6 @@
 
-from seisflows.tools.config import custom_import
-from seisflows.tools.config import ParameterError, SeisflowsParameters, SeisflowsPaths
+from seisflows.config import custom_import
+from seisflows.config import ParameterError, SeisflowsParameters, SeisflowsPaths
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()

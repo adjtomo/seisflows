@@ -5,7 +5,7 @@ from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.array import grid2mesh, mesh2grid, stack
 from seisflows.tools.code import exists
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 from seisflows.tools.math import nabla
 
@@ -142,7 +142,7 @@ class regularize(custom_import('postprocess', 'base')):
             z = m['z'][0]
             mesh = stack(x, z)
         except:
-            from seisflows.seistools.io.sem import read
+            from seisflows.plugins.io.sem import read
             x = read(model_path, 'x', 0)
             z = read(model_path, 'z', 0)
             mesh = stack(x, z)
@@ -156,7 +156,7 @@ class regularize(custom_import('postprocess', 'base')):
             x = m['x'][0]
             z = m['z'][0]
         except:
-            from seisflows.seistools.io.sem import read
+            from seisflows.plugins.io.sem import read
             x = read(model_path, 'x', 0)
             z = read(model_path, 'z', 0)
         return x,z

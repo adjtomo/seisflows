@@ -1,7 +1,7 @@
 
 from os.path import abspath, join
 
-from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+from seisflows.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
 
 PAR = SeisflowsParameters()
 PATH = SeisflowsPaths()

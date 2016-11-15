@@ -5,7 +5,7 @@
 # also, please leave dummy arguments in place for the time being
 
 
-from seisflows.seistools.shared import Struct
+from seisflows.tools.shared import Struct
 
 
 

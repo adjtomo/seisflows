@@ -5,7 +5,7 @@ from os.path import abspath, basename, join
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
 PAR = SeisflowsParameters()

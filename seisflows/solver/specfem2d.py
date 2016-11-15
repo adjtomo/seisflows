@@ -5,13 +5,13 @@ from glob import glob
 
 import numpy as np
 
-from seisflows.seistools.io import sem
-from seisflows.seistools.shared import getpar, setpar
+from seisflows.plugins.io import sem
+from seisflows.tools.shared import getpar, setpar
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists, call_solver, call_solver_nompi
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError, custom_import
 
 PAR = SeisflowsParameters()

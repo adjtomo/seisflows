@@ -1,5 +1,5 @@
 
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
 PAR = SeisflowsParameters()

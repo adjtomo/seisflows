@@ -6,7 +6,7 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists, loadtxt, savetxt
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
     ParameterError
 
 from seisflows.tools.math import angle, polyfit2, backtrack2
@@ -152,7 +152,7 @@ class base(object):
     def precond(self):
         """ Loads preconditioner machinery
         """
-        from seisflows.seistools import preconds
+        from seisflows.plugins import preconds
 
         if PAR.PRECOND in dir(preconds):
             return getattr(preconds, PAR.PRECOND)()
