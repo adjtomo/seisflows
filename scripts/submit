@@ -15,8 +15,10 @@ def parse_args():
 if __name__ == "__main__":
     ### workflow submission script
 
-    parameters = Dict(loadpy('parameters.py'))
-    paths = Dict(tilde_expand(loadpy('paths.py')))
+    args = parse_args()
+
+    parameters = Dict(loadpy(args.parameters_file))
+    paths = Dict(tilde_expand(loadpy(args.paths_file)))
 
     # register parameters and paths
     sys.modules['seisflows_parameters'] = parameters
@@ -29,7 +31,7 @@ if __name__ == "__main__":
     workflow = sys.modules['seisflows_workflow']
     system = sys.modules['seisflows_system']
 
-    #cd(args.workdir)
+    cd(args.workdir)
 
     # submit workflow
     system.submit(workflow)
