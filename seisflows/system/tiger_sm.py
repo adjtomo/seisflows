@@ -4,10 +4,10 @@ from os.path import abspath, exists, join
 from uuid import uuid4
 
 from seisflows.tools import unix
-from seisflows.config import ParameterError, SeisflowsParameters, SeisflowsPaths, custom_import
+from seisflows.config import ParameterError,   custom_import
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 
 class tiger_sm(custom_import('system', 'slurm_sm')):

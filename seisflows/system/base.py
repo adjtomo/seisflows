@@ -1,10 +1,10 @@
 
-from os.path import abspath, join
+import sys
 
-from seisflows.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+from seisflows.config import save
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 
 class base(object):
@@ -24,6 +24,5 @@ class base(object):
         raise NotImplementedError('Must be implemented by subclass.')
 
     def checkpoint(self):
-        for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
-           obj.save(PATH.OUTPUT)
+        save()
 

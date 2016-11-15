@@ -4,8 +4,8 @@ from seisflows.tools.array import uniquerows
 from seisflows.tools.code import Struct
 
 from seisflows.tools.shared import SeisStruct
-from seisflows.plugins.legacy.io import BinaryReader, mychar, mysize
-from seisflows.plugins.legacy.segy.headers import \
+from seisflows.tools.legacy.io import BinaryReader, mychar, mysize
+from seisflows.tools.legacy.segy.headers import \
     SEGY_TAPE_LABEL, SEGY_BINARY_HEADER, SEGY_TRACE_HEADER
 
 

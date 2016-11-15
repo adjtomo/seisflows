@@ -14,80 +14,71 @@ from seisflows.tools import unix
 from seisflows.tools.code import Struct, loadjson, loadobj, savejson, saveobj, loadpy
 from seisflows.tools.msg import WarningOverwrite, ImportError1, ImportError2, ImportError3, ImportError4
 
+# SeisFlows consists of interacting 'system', 'preprocess', 'solver', 'postprocess', 'optimize', and 'workflow' objects. Each corresponds simultaneously to a module in the SeisFlows source code, a class that is instantiated and made accessible via sys.modules, and parameter in the global parameter dictionary. Once in memory, these objects can be thought of as comprising the complete 'state' of a SeisFlows session. 
 
-class SeisflowsObjects(object):
-    """ SeisFlows consists of interacting 'system', 'preprocess', 'solver',
-      'postprocess', 'optimize', and 'workflow' objects. The role of the
-      SeisflowsObjects utility is to instantiate these objects and make them
-      accessible via the standard Python import system. Once in memory, these
-      objects should be thought of as comprising the complete 'state' of a
-      SeisFlows session.
+# The following list is one of the few hardwired aspects of the whole SeisFlows package. Any changes may result in circular imports or other problems
 
-      The following list is one of the few hardwired aspects of the whole 
-      SeisFlows package. Any changes may result in circular imports or other
-      problems. Each entry corresponds simultaneously to a parameter in
-      SeisflowsParameters; a module in the SeisFlows package; and a class that
-      is instantiated and made accessible via the Python import system.
+names = []
+names += ['system']
+names += ['optimize']
+names += ['preprocess']
+names += ['solver']
+names += ['postprocess']
+names += ['workflow']
+
+
+def config():
+    """ Instantiates SeisFlows objects and makes them globally accessible by
+      registering them in sys.modules
+   """
+    # check if objects exist on disk
+    if exists(_full(_path())):
+        print WarningOverwrite
+        sys.exit()
+
+    if 'seisflows_parameters' not in sys.modules:
+        raise Exception
+
+    if 'seisflows_paths' not in sys.modules:
+        raise Exception
+
+    # instantiate and register objects
+    for name in names:
+        sys.modules['seisflows_'+name] = custom_import(name)()
+
+    # parameter checking
+    for name in names:
+        sys.modules['seisflows_'+name].check()
+
+
+def save():
+    """ Exports state to disk
     """
-    names = []
-    names += ['system']
-    names += ['optimize']
-    names += ['preprocess']
-    names += ['solver']
-    names += ['postprocess']
-    names += ['workflow']
+    unix.mkdir(_full(_path()))
+
+    for name in ['parameters', 'paths']:
+        fullfile = join(_full(_path()), 'seisflows_'+name+'.json')
+        savejson(fullfile, sys.modules['seisflows_'+name].__dict__)
+
+    for name in names:
+        fullfile = join(_full(_path()), 'seisflows_'+name+'.p')
+        saveobj(fullfile, sys.modules['seisflows_'+name])
 
 
-    def load(self):
-        """ Imports and instantiates objects from the above list
-        """
-        if 'SeisflowsParameters' not in sys.modules.keys():
-            raise Exception
+def load(path):
+    """ Imports state from disk
+    """
+    for name in ['parameters', 'paths']:
+        fullfile = join(_full(path), 'seisflows_'+name+'.json')
+        sys.modules['seisflows_'+name] = Dict(loadjson(fullfile))
 
-        if 'SeisflowsPaths' not in sys.modules.keys():
-            raise Exception
-
-        # check if objects from previous run exist on disk
-        if exists(_full(_path())):
-            print WarningOverwrite
-            sys.exit()
-
-        for name in self.names:
-            # import and instantiate object
-            obj = custom_import(name)()
-
-            # make accessible via standard Python import system
-            sys.modules[name] = obj
-
-        self.check()
+    for name in names:
+        fullfile = join(_full(path), 'seisflows_'+name+'.p')
+        sys.modules['seisflows_'+name] = loadobj(fullfile)
 
 
-    def save(self, path):
-        """ Save objects to disk for later reference
-        """
-        unix.mkdir(_full(path))
-        for name in self.names:
-            fullfile = join(_full(path), name+'.p')
-            saveobj(fullfile, sys.modules[name])
-
-
-    def reload(self, path):
-        """ Load saved objects from disk
-        """
-        for name in self.names:
-            fullfile = join(_full(path), name+'.p')
-            sys.modules[name] = loadobj(fullfile)
-
-        self.check()
-
-
-    def check(self):
-        for name in self.names:
-            sys.modules[name].check()
-
-
-class ParameterObj(object):
-    """ Dictionary like object for holding parameters
+class Dict(object):
+    """ Dictionary-like object for holding parameters or paths
     """
     def __iter__(self):
         return iter(sorted(self.__dict__.keys()))
@@ -109,61 +100,10 @@ class ParameterObj(object):
         raise KeyError
 
     def update(self, newdict):
-        super(ParameterObj, self).__setattr__('__dict__', newdict)
+        super(Dict, self).__setattr__('__dict__', newdict)
 
-
-class SeisflowsParameters(ParameterObj):
-    def __new__(self):
-        if 'SeisflowsParameters' in sys.modules:
-            return sys.modules['SeisflowsParameters']
-        else:
-            return object.__new__(self)
-
-    def __init__(self):
-        if 'SeisflowsParameters' not in sys.modules:
-            sys.modules['SeisflowsParameters'] = self
-
-    def load(self):
-        mydict = loadpy(abspath('parameters.py'))
-        self.update(mydict)
-        return self
-
-    def save(self, path):
-        fullfile = join(path, 'SeisflowsParameters.json')
-        savejson(fullfile, self.__dict__)
-
-    def reload(self, path):
-        fullfile = join(path, 'SeisflowsParameters.json')
-        mydict = loadjson(fullfile)
-        self.update(mydict)
-
-
-class SeisflowsPaths(ParameterObj):
-    def __new__(self):
-        if 'SeisflowsPaths' in sys.modules:
-            return sys.modules['SeisflowsPaths']
-        else:
-            return object.__new__(self)
-
-    def __init__(self):
-        if 'SeisflowsPaths' not in sys.modules:
-            sys.modules['SeisflowsPaths'] = self
-
-    def load(self):
-        mydict = loadpy(abspath('paths.py'))
-        for key, val in mydict.items():
-            _, mydict[key] = _sub(key, val)
-        super(ParameterObj, self).__setattr__('__dict__', mydict)
-        return self
-
-    def save(self, path):
-        fullfile = join(path, 'SeisflowsPaths.json')
-        savejson(fullfile, self.__dict__)
-
-    def reload(self, path):
-        fullfile = join(path, 'SeisflowsPaths.json')
-        mydict = loadjson(fullfile)
-        self.update(mydict)
+    def __init__(self, newdict):
+        self.update(newdict)
 
 
 class Null(object):
@@ -204,7 +144,7 @@ class ParameterError(ValueError):
             super(ParameterError, self).__init__(msg)
 
 
-def custom_import(*names):
+def custom_import(*args):
     """ Imports SeisFlows module and extracts class of same name. For example,
 
             custom_import('workflow', 'inversion') 
@@ -213,13 +153,13 @@ def custom_import(*names):
         class 'inversion'.
     """
     # parse input arguments
-    if len(names) == 0:
+    if len(args) == 0:
         raise Exception(ImportError1)
-    if names[0] not in SeisflowsObjects.names:
+    if args[0] not in names:
         raise Exception(ImportError2)
-    if len(names) == 1:
-        names += (_val(names[0]),)
-    if not names[1]:
+    if len(args) == 1:
+        args += (_val(args[0]),)
+    if not args[1]:
         return Null
 
     # generate package list
@@ -234,30 +174,42 @@ def custom_import(*names):
     # does module exist?
     _exists = False
     for package in packages:
-        full_dotted_name = package+'.'+names[0]+'.'+names[1]
+        full_dotted_name = package+'.'+args[0]+'.'+args[1]
         if find_loader(full_dotted_name):
             _exists = True
             break
     if not _exists:
         raise Exception(ImportError3 % 
-            (names[0], names[1], names[0].upper()))
+            (args[0], args[1], args[0].upper()))
 
     # import module
     module = import_module(full_dotted_name)
 
     # extract class
-    if hasattr(module, names[1]):
-        return getattr(module, names[1])
+    if hasattr(module, args[1]):
+        return getattr(module, args[1])
     else:
         raise Exception(ImportError4 % 
-            (names[0], names[1], names[1]))
+            (args[0], args[1], args[1]))
+
+
+def tilde_expand(mydict):
+    """ Expands tilde character in path strings
+    """
+    for key,val in mydict.items():
+        if type(val) not in [str, unicode]:
+            raise Exception
+        if val[0:2] == '~/':
+            mydict[key] = os.getenv('HOME') +'/'+ val[2:]
+    return mydict
+
 
 
 # utility functions
 
 def _path():
     try:
-        return SeisflowsPaths()['OUTPUT']
+        return sys.modules['seisflows_paths']['OUTPUT']
     except:
         cwd = abspath('.')
         return join(cwd, 'output')
@@ -265,27 +217,13 @@ def _path():
 
 def _full(path):
     try:
-        return join(abspath(path), 'SeisflowsObjects')
+        return join(abspath(path), '')
     except:
         raise IOError
 
 
 def _val(key):
-    if key.upper() in SeisflowsParameters():
-        return SeisflowsParameters()[key.upper()]
-    else:
-        return ''
-
-
-def _sub(key, val):
-    if val is None:
-        val = ''
-    if type(val) not in [str, unicode]:
-        raise ValueError('Must be string or unicode: PATH.%s' % key)
-    if val[0:2] == '~/':
-        val = os.getenv('HOME') +'/'+ val[2:]
-    return key, val
-
+    return sys.modules['seisflows_parameters'][key.upper()]
 
 
 # the following code changes how instance methods are handled by pickle.  placing it here, in this module, ensures that pickle changes will be in effect for all SeisFlows workflows

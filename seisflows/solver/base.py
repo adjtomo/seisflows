@@ -12,14 +12,15 @@ from seisflows.tools.shared import getpar, setpar, Model, Minmax
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.code import Struct, exists, call_solver
-from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import   \
     ParameterError, custom_import
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
-import system
-import preprocess
+system = sys.modules['seisflows_system']
+preprocess = sys.modules['seisflows_preprocess']
+
 
 
 class base(object):

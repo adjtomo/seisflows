@@ -9,11 +9,11 @@ import time
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.code import call, findpath, saveobj
-from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import   \
     ParameterError, custom_import
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 
 class pbs_lg(custom_import('system', 'base')):
@@ -243,8 +243,8 @@ class pbs_lg(custom_import('system', 'base')):
             f.write(line)
 
     def save_kwargs(self, classname, funcname, kwargs):
-        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
-        kwargsfile = join(kwargspath, funcname+'.p')
+        kwargspath = join(PATH.OUTPUT, 'kwargs')
+        kwargsfile = join(kwargspath, classname+'_'+funcname+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
 

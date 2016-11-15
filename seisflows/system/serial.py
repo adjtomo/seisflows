@@ -1,15 +1,15 @@
 
 import os
+import sys
 from os.path import abspath, basename, join
 
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, custom_import
+from seisflows.config import ParameterError, custom_import
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 
 class serial(custom_import('system', 'base')):
@@ -77,13 +77,13 @@ class serial(custom_import('system', 'base')):
             for itask in range(PAR.NTASK):
                 self.setnode(itask)
                 self.progress(itask)
-                func = getattr(__import__(classname), funcname)
+                func = getattr(__import__('seisflows_'+classname), funcname)
                 func(**kwargs)
             print ''
 
         elif hosts == 'head':
             self.setnode(0)
-            func = getattr(__import__(classname), funcname)
+            func = getattr(__import__('seisflows_'+classname), funcname)
             func(**kwargs)
 
         else:

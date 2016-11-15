@@ -1,9 +1,9 @@
 
 from seisflows.config import custom_import
-from seisflows.config import ParameterError, SeisflowsParameters, SeisflowsPaths
+from seisflows.config import ParameterError
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 """ For users of tiger.princeton.edu, determines whether
   slurm_sm, slurm_md, or slurm_lg should be used.

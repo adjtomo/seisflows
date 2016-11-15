@@ -34,6 +34,7 @@ def mute_early(traces, slope, const, time_scheme, s_coords, r_coords):
     nr = len(traces)
     nt, dt, _ = time_scheme
 
+
     for ir in range(nr):
         # calculate source-reciever distance
         (sx, sy) = (s_coords[0][ir], s_coords[1][ir])

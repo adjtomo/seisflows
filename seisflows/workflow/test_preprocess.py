@@ -2,11 +2,11 @@
 from glob import glob
 from os import basename, exists
 
-from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import   \
     ParameterError
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 import preprocess
 

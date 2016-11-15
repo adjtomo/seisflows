@@ -12,11 +12,10 @@ class diagonal(object):
     def __init__(self):
         """ Loads any required dependencies
         """
-        from seisflows.config import SeisflowsParameters, SeisflowsPaths
         import solver
 
-        PAR = SeisflowsParameters()
-        PATH = SeisflowsPaths()
+        PAR = sys.modules['seisflows_parameters']
+        PATH = sys.modules['seisflows_paths']
 
         self.path = PATH.PRECOND
         self.load = solver.load

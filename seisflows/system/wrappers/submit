@@ -2,22 +2,21 @@
 
 import sys
 
-from os.path import join
-from seisflows.tools.code import loadjson
-from seisflows.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+from seisflows.tools import unix
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
-OBJ = SeisflowsObjects()
+from seisflows.config import load
 
 
 if __name__ == '__main__':
-    mypath = sys.argv[1]
+    unix.cd(sys.argv[1])
 
-    for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
-       obj.reload(mypath)
+    # reload saved state
+    load(sys.argv[1])
 
-    import workflow
+    # create handles
+    workflow = sys.modules['seisflows_workflow']
+    system = sys.modules['seisflows_system']
 
+    # execute workflow
     workflow.main()
 

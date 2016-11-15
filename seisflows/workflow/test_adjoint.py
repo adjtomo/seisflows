@@ -6,12 +6,12 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.code import exists
-from seisflows.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.config import   \
     ParameterError
 
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 import system
 import solver

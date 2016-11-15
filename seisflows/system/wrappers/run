@@ -5,22 +5,21 @@ if __name__ == '__main__':
 
     # parse command line arguments
     mypath = sys.argv[1]
-    myobj = sys.argv[2]
+    myclass = sys.argv[2]
     myfunc = sys.argv[3]
 
     from os.path import join
     from seisflows.tools.code import loadjson, loadobj
-    from seisflows.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+    from seisflows.config import load
 
     # reload from last checkpoint
-    for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
-       obj.reload(mypath)
+    load(mypath)
 
     # load function arguments
-    kwargspath = join(mypath, 'SeisflowsObjects', myobj + '_kwargs')
-    kwargs = loadobj(join(kwargspath, myfunc + '.p'))
+    kwargspath = join(mypath, 'kwargs')
+    kwargs = loadobj(join(kwargspath, myclass+'_'+myfunc + '.p'))
 
     # call function
-    func = getattr(sys.modules[myobj], myfunc)
+    func = getattr(sys.modules['seisflows_'+myclass], myfunc)
     func(**kwargs)
 
