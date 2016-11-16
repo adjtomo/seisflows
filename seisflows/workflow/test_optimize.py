@@ -7,13 +7,12 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import savetxt
-from seisflows.config import   \
-    ParameterError
+from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
-import optimize
+optimize = sys.modules['seisflows_optimize']
 
 import problems.rosenbrock as problem
 

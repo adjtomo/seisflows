@@ -13,7 +13,7 @@ from seisflows.tools import unix
 from seisflows.tools.code import Struct, loadjson, loadobj, savejson, saveobj, loadpy
 from seisflows.tools.msg import WarningOverwrite, ImportError1, ImportError2, ImportError3, ImportError4
 
-# SeisFlows consists of interacting 'system', 'preprocess', 'solver', 'postprocess', 'optimize', and 'workflow' objects. Each corresponds simultaneously to a module in the SeisFlows source code, a class that is instantiated and made accessible via sys.modules, and parameter in the global parameter dictionary. Once in memory, these objects can be thought of as comprising the complete 'state' of a SeisFlows session. 
+# SeisFlows consists of interacting 'system', 'preprocess', 'solver', 'postprocess', 'optimize', and 'workflow' objects. Each corresponds simultaneously to a module in the SeisFlows source code, a class that is instantiated and made accessible via sys.modules, and parameter in a global dictionary. Once in memory, these objects can be thought of as comprising the complete 'state' of a SeisFlows session
 
 # The following list is one of the few hardwired aspects of the whole SeisFlows package. Any changes may result in circular imports or other problems
 

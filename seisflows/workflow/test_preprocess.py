@@ -2,13 +2,12 @@
 from glob import glob
 from os import basename, exists
 
-from seisflows.config import   \
-    ParameterError
+from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
-import preprocess
+preprocess = sys.modules['seisflows_preprocess']
 
 
 class test_preprocess(object):

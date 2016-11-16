@@ -13,9 +13,9 @@ from seisflows.config import   \
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
-import system
-import solver
-import preprocess
+system = sys.modules['seisflows_system']
+solver = sys.modules['seisflows_solver']
+preprocess = sys.modules['seisflows_preprocess']
 
 
 def DotProductLHS(keys, x, y):

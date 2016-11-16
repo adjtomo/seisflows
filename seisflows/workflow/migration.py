@@ -3,16 +3,15 @@ from glob import glob
 
 from seisflows.tools import unix
 from seisflows.tools.code import exists
-from seisflows.config import   \
-    ParameterError
+from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
-import system
-import solver
-import preprocess
-import postprocess
+system = sys.modules['seisflows_system']
+solver = sys.modules['seisflows_solver']
+preprocess = sys.modules['seisflows_preprocess']
+postprocess = sys.modules['seisflows_postprocess']
 
 
 class migration(object):

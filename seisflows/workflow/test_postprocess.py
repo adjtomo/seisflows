@@ -10,8 +10,8 @@ from seisflows.config import   \
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
-import solver
-import postprocess
+solver = sys.modules['seisflows_solver']
+postprocess = sys.modules['seisflows_postprocess']
 
 migration = custom_import('workflow','migration')()
 
