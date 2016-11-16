@@ -1,7 +1,7 @@
 
-from os.path import abspath, basename, join, dirname
-import os
+import sys
 
+from os.path import abspath, basename, join, dirname
 from seisflows.tools import unix
 from seisflows.tools.code import call, findpath, saveobj
 from seisflows.config import   \
@@ -11,7 +11,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class pbs_torque_sm(custom_import('system', 'base')):
+class pbs_sm_pbsdsh(custom_import('system', 'base')):
     """ An interface through which to submit workflows, run tasks in serial or
       parallel, and perform other system functions.
 

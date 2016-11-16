@@ -10,7 +10,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class pbs_sm(custom_import('system', 'mpi')):
+class pbs_sm_mpi(custom_import('system', 'mpi')):
     """ An interface through which to submit workflows, run tasks in serial or
       parallel, and perform other system functions.
 

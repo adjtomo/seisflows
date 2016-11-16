@@ -9,7 +9,6 @@ import types
 from importlib import import_module
 from pkgutil import find_loader
 from os.path import abspath, join, exists
-
 from seisflows.tools import unix
 from seisflows.tools.code import Struct, loadjson, loadobj, savejson, saveobj, loadpy
 from seisflows.tools.msg import WarningOverwrite, ImportError1, ImportError2, ImportError3, ImportError4

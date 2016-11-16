@@ -1,6 +1,7 @@
 
-from os.path import abspath, basename, join, dirname
+import sys
 
+from os.path import abspath, basename, join, dirname
 from seisflows.tools import unix
 from seisflows.tools.code import call, findpath, saveobj
 from seisflows.config import ParameterError, custom_import, \

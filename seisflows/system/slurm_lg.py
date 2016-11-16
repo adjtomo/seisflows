@@ -1,11 +1,10 @@
 
-from os.path import abspath, basename, join
-
 import os
 import math
 import sys
 import time
 
+from os.path import abspath, basename, join
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.code import call, findpath, saveobj

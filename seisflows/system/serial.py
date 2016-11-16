@@ -1,10 +1,9 @@
 
 import os
 import sys
-from os.path import abspath, basename, join
-
 import numpy as np
 
+from os.path import abspath, basename, join
 from seisflows.tools import unix
 from seisflows.config import ParameterError, custom_import
 

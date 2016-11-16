@@ -1,38 +1,28 @@
 #!/bin/env python
 
-from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+import sys
 
-SeisflowsParameters().load()
-SeisflowsPaths().load()
-
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
-
+from seisflows.config import config, loadpy, tilde_expand, Dict
 
 # run test
 if __name__ == '__main__':
 
-    if 'SYSTEM' not in PAR:
-        PAR.SYSTEM = 'serial'
+    parameters = Dict(loadpy('parameters.py'))
+    paths = Dict(tilde_expand(loadpy('paths.py')))
 
-    if 'PREPROCESS' not in PAR:
-        PAR.PREPROCESS = None
+    # register parameters and paths
+    sys.modules['seisflows_parameters'] = parameters
+    sys.modules['seisflows_paths'] = paths
 
-    if 'SOLVER' not in PAR:
-        PAR.SOLVER = None
+    # instantiate and register objects
+    config()
 
-    if 'POSTPROCESS' not in PAR:
-        PAR.POSTPROCESS = None
+    # create handles
+    workflow = sys.modules['seisflows_workflow']
+    system = sys.modules['seisflows_system']
 
-    if 'OPTIMIZE' not in PAR:
-        PAR.OPTIMIZE = None
+    #cd(args.workdir)
 
-    if 'WORKFLOW' not in PAR:
-        PAR.WORKFLOW = 'test_system'
-
-    SeisflowsObjects().load()
-    import system
-    import workflow
-
+    # submit workflow
     system.submit(workflow)
 

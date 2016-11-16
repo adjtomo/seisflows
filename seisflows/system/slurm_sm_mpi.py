@@ -1,7 +1,8 @@
 
-from os.path import abspath, basename, join
 import os
+import sys
 
+from os.path import abspath, basename, join
 from seisflows.tools import unix
 from seisflows.tools.code import call, findpath, saveobj
 from seisflows.config import ParameterError, custom_import, \
@@ -11,7 +12,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class slurm_sm(custom_import('system', 'mpi')):
+class slurm_sm_mpi(custom_import('system', 'mpi')):
     """ An interface through which to submit workflows, run tasks in serial or 
       parallel, and perform other system functions.
 

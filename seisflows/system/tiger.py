@@ -1,6 +1,7 @@
 
-from seisflows.config import custom_import
-from seisflows.config import ParameterError
+import sys
+
+from seisflows.config import custom_import, ParameterError
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -22,8 +23,6 @@ else:
 # which system interface is appropriate?
 if PAR.NPROC >= PAR.NODESIZE:
     tiger = custom_import('system','tiger_lg')
-elif PAR.NPROC > 1:
-    tiger = custom_import('system','tiger_md')
 else:
     tiger = custom_import('system','tiger_sm')
 
