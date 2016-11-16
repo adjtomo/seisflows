@@ -1,8 +1,9 @@
 
-from os.path import abspath, basename, join
 import os
+import re
 import sys
 
+from os.path import abspath, basename, join
 from seisflows.tools import unix
 from seisflows.tools.code import call, findpath, saveobj
 from seisflows.config import ParameterError, custom_import
@@ -11,7 +12,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class slurm_md(custom_import('system', 'base')):
+class slurm_sm_dsh(custom_import('system', 'base')):
     """ An interface through which to submit workflows, run tasks in serial or 
       parallel, and perform other system functions.
 
@@ -95,33 +96,54 @@ class slurm_md(custom_import('system', 'base')):
 
         if hosts == 'all':
             # run on all available nodes
-            call('srun '
-                    + '--wait=0 '
-                    + join(findpath('seisflows.system'), 'wrappers/run ')
+            call(findpath('seisflows.system')  +'/'+'wrappers/dsh '
                     + PATH.OUTPUT + ' '
                     + classname + ' '
-                    + funcname)
+                    + funcname + ' '
+                    + findpath('seisflows.system')  +'/'+'wrappers/run '
+                    + ','.join(self.generate_nodelist()))
 
         elif hosts == 'head':
             # run on head node
-            call('srun '
-                    + '--wait=0 '
-                    + join(findpath('seisflows.system'), 'wrappers/run_head ')
+            call('ssh ' + self.generate_nodelist()[0] + ' '
+                    + '"'
+                    + 'export SEISFLOWS_TASK_ID=0; '
+                    + join(findpath('seisflows.system'), 'wrappers/run ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
-                    + funcname)
+                    + funcname 
+                    +'"')
 
         else:
             raise(KeyError('Hosts parameter not set/recognized.'))
 
 
+    def generate_nodelist(self):
+        tasks_per_node = []
+        for pattern in os.getenv('SLURM_TASKS_PER_NODE').split(','):
+            match = re.search('([0-9]+)\(x([0-9]+)\)', pattern)
+            if match:
+                i,j = match.groups()
+                tasks_per_node += [int(i)]*int(j)
+            else:
+                tasks_per_node += [int(pattern)]
+
+        with open('job_nodelist', 'w') as f:
+            call('scontrol show hostname $SLURM_JOB_NODEFILE', stdout=f)
+
+        with open('job_nodelist', 'r') as f:
+            nodes = f.read().splitlines() 
+
+        nodelist = []
+        for i,j in zip(nodes, tasks_per_node):
+            nodelist += [i]*j
+        return nodelist
+        
 
     def getnode(self):
         """ Gets number of running task
         """
-        gid = os.getenv('SLURM_GTIDS').split(',')
-        lid = int(os.getenv('SLURM_LOCALID'))
-        return int(gid[lid])
+        return int(os.getenv('SEISFLOWS_TASK_ID'))
 
 
     def mpiexec(self):

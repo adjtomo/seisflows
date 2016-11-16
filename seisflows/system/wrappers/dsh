@@ -1,0 +1,17 @@
+#!/bin/bash
+
+path=$1
+class=$2
+func=$3
+exe=$4
+hosts=$( echo $5 | tr ',' ' ' )
+
+k=0;
+for host in $hosts;
+do
+    cmd="$exe $path $class $func"
+    ssh $host "export SEISFLOWS_TASK_ID=$k; $cmd" &
+    k=$((k+1));
+done
+wait
+

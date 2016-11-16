@@ -1,11 +1,5 @@
 
-import sys
-
 from seisflows.config import save
-
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
-
 
 class base(object):
     """ Abstract base class
