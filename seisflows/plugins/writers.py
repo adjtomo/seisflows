@@ -2,6 +2,11 @@
 import numpy as np
 
 def su(d, path, filename):
+    for t in d:
+        # work around obspy data type conversion
+        t.data = t.data.astype(np.float32)
+
+
     max_delta = 0.065535
     dummy_delta = max_delta
 

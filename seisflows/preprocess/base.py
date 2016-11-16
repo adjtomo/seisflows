@@ -142,7 +142,7 @@ class base(object):
                 tr.filter('bandpass', freqmin=PAR.FREQMIN, freqmax=PAR.FREQMAX)
 
                 # workaround obspy dtype conversion
-                tr.data = tr.data.astype(np.float32)
+                #tr.data = tr.data.astype(np.float32)
 
         elif PAR.FILTER == 'Lowpass':
             traces = _signal.detrend(traces)
@@ -150,7 +150,7 @@ class base(object):
                 tr.filter('lowpass', freq=PAR.FREQ)
 
                 # workaround obspy dtype conversion
-                tr.data = tr.data.astype(np.float32)
+                #tr.data = tr.data.astype(np.float32)
 
         elif PAR.FILTER == 'Highpass':
             traces = _signal.detrend(traces)
@@ -158,7 +158,7 @@ class base(object):
                 tr.filter('highpass', freq=PAR.FREQ)
 
                 # workaround obspy dtype conversion
-                tr.data = tr.data.astype(np.float32)
+                #tr.data = tr.data.astype(np.float32)
 
         else:
             raise ParameterError()
