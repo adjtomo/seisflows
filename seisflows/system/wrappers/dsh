@@ -9,8 +9,7 @@ hosts=$( echo $5 | tr ',' ' ' )
 k=0;
 for host in $hosts;
 do
-    cmd="$exe $path $class $func"
-    ssh $host "export SEISFLOWS_TASK_ID=$k; $cmd" &
+    ssh $host "export SEISFLOWS_TASK_ID=$k; $exe $path $class $func" &
     k=$((k+1));
 done
 wait
