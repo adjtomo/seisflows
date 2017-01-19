@@ -1,4 +1,5 @@
 
+import sys
 from glob import glob
 
 from seisflows.tools import unix
