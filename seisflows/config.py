@@ -51,7 +51,7 @@ def config():
 
 
 def save():
-    """ Exports state to disk
+    """ Exports session to disk
     """
     unix.mkdir(_full(_path()))
 
@@ -65,7 +65,7 @@ def save():
 
 
 def load(path):
-    """ Imports state from disk
+    """ Imports session from disk
     """
     for name in ['parameters', 'paths']:
         fullfile = join(_full(path), 'seisflows_'+name+'.json')

@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 import traceback
+import yaml
 
 from imp import load_source
 from importlib import import_module
@@ -151,6 +152,18 @@ def loadpy(abspath):
         if key[0] != '_':
             output[key] = val
     return output
+
+
+def loadyaml(filename):
+    with open(filename, 'rb') as file:
+        dict = yaml.load(file)
+
+    # replace None
+    if 'None' in dict.values():
+        for key,val in dict.items():
+            if val=='None': dict[key]=None
+
+    return dict
 
 
 def unique(mylist):

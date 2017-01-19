@@ -2,36 +2,36 @@
 
 import sys
 
-from seisflows.config import config, loadpy, tilde_expand, Dict
+from seisflows.config import config, loadyaml, tilde_expand, Dict
 
 def parse_args():
     parser = argparse.ArgumentParser()
+
     parser.add_argument('workdir', nargs='?', default=os.getcwd())
-    parser.add_argument('parameter_file', nargs='?', default='parameters.yaml')
+    parser.add_argument('parameters_file', nargs='?', default='parameters.yaml')
     parser.add_argument('paths_file', nargs='?', default='paths.yaml')
+
     args = vars(parser.parse_args())
 
 
 if __name__ == "__main__":
     ### workflow submission script
 
-    parameters = Dict(loadpy('parameters.py'))
-    paths = Dict(tilde_expand(loadpy('paths.py')))
+    # register parameters
+    parameters = loadyaml('parameters.yaml')
+    sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # register parameters and paths
-    sys.modules['seisflows_parameters'] = parameters
-    sys.modules['seisflows_paths'] = paths
+    # register paths
+    paths = tilde_expand(loadyaml('paths.yaml'))
+    sys.modules['seisflows_paths'] = Dict(paths)
 
-    # instantiate and register objects
+    # register objects
     config()
 
-    # create handles
     workflow = sys.modules['seisflows_workflow']
     system = sys.modules['seisflows_system']
 
     #cd(args.workdir)
 
-    # submit workflow
     system.submit(workflow)
-
 
