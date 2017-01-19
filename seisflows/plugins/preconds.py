@@ -1,4 +1,8 @@
 
+from os.path import exist
+
+import sys
+
 import numpy as np
 
 
@@ -12,12 +16,17 @@ class diagonal(object):
     def __init__(self):
         """ Loads any required dependencies
         """
-        import solver
-
         PAR = sys.modules['seisflows_parameters']
         PATH = sys.modules['seisflows_paths']
 
-        self.path = PATH.PRECOND
+        solver = sys.modules['seisflows_solver']
+
+        if 'PRECOND' not in PATH:
+            raise Exception
+
+        if not exist(PATH.PRECOND):
+            raise Exception
+
         self.load = solver.load
         self.merge = solver.merge
 
@@ -25,7 +34,7 @@ class diagonal(object):
     def __call__(self, q):
         """ Applies preconditioner to given vector
         """
-        p = self.merge(self.load(self.path))
+        p = self.merge(self.load(PATH.PRECOND))
         return p*q
 
 
@@ -49,7 +58,7 @@ class pca(object):
     def __init__(self):
         """ Loads any required dependencies
         """
-        import solver
+        solver = sys.modules['seisflows_solver']
 
         # solver methods
         self.merge = solver.merge
