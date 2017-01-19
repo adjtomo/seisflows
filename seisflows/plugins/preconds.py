@@ -1,5 +1,5 @@
 
-from os.path import exist
+from os.path import exists
 
 import sys
 
