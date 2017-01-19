@@ -2,7 +2,7 @@
 
 import sys
 
-from seisflows.config import config, loadyaml, tilde_expand, Dict
+from seisflows.config import config, loadpy, tilde_expand, Dict
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -18,11 +18,11 @@ if __name__ == "__main__":
     ### workflow submission script
 
     # register parameters
-    parameters = loadyaml('parameters.yaml')
+    parameters = loadpy('parameters.py')
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
     # register paths
-    paths = tilde_expand(loadyaml('paths.yaml'))
+    paths = tilde_expand(loadpy('paths.py'))
     sys.modules['seisflows_paths'] = Dict(paths)
 
     # register objects
