@@ -3,6 +3,7 @@ import subprocess
 from glob import glob
 from os.path import join
 
+import sys
 import numpy as np
 
 import seisflows.plugins.solver.specfem3d as solvertools
@@ -10,13 +11,13 @@ from seisflows.tools.shared import getpar, setpar
 
 from seisflows.tools import unix
 from seisflows.tools.code import exists, call_solver
-from seisflows.config import   \
-    ParameterError, custom_import
+from seisflows.config import ParameterError, custom_import
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
-import system
+system = sys.modules['seisflows_system']
+preprocess = sys.modules['seisflows_preprocess']
 
 
 class specfem3d(custom_import('solver', 'base')):
