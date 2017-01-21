@@ -109,34 +109,23 @@ class lsf_lg(custom_import('system', 'base')):
         """
         self.save_objects()
         self.save_kwargs(classname, funcname, kwargs)
-        jobs = self.launch(classname, funcname, hosts)
+        jobs = self.submit_job_array(classname, funcname, hosts)
         while True:
             # wait a few seconds before checking status
             time.sleep(60*PAR.SLEEPTIME)
 
             self.timestamp()
-            isdone, jobs = self.task_status(classname, funcname, jobs)
+            isdone, jobs = self.job_status(classname, funcname, jobs)
             if isdone:
                 return
 
 
-    def launch(self, classname, funcname, hosts='all'):
+    def submit_job_array(self, classname, funcname, hosts='all'):
         unix.mkdir(PATH.SYSTEM)
 
         # submit job
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
-            call('bsub '
-                + '%s ' % PAR.LSFARGS
-                + '-n %d ' % PAR.NPROC 
-                + '-R "span[ptile=%d]" ' % PAR.NODESIZE
-                + '-W %d:00 ' % PAR.STEPTIME
-                + '-J "%s' %PAR.TITLE
-                + self.launch_args(hosts)
-                + findpath('seisflows.system') +'/'+ 'wrapper/run '
-                + PATH.OUTPUT + ' '
-                + classname + ' '
-                + funcname + ' ',
-                stdout=f)
+            call(self.job_array_cmd(classname, funcname, hosts), stdout=f)
 
         # retrieve job ids
         with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
@@ -152,10 +141,38 @@ class lsf_lg(custom_import('system', 'base')):
             return [job]
 
 
-    def task_status(self, classname, funcname, jobs):
+    def job_array_cmd(self, classname, funcname, hosts):
+        return ('bsub '
+            + '%s ' % PAR.LSFARGS
+            + '-n %d ' % PAR.NPROC
+            + '-R "span[ptile=%d]" ' % PAR.NODESIZE
+            + '-W %d:00 ' % PAR.STEPTIME
+            + '-J "%s' %PAR.TITLE
+            + self.launch_args(hosts)
+            + findpath('seisflows.system') +'/'+ 'wrapper/run '
+            + PATH.OUTPUT + ' '
+            + classname + ' '
+            + funcname + ' ')
+
+
+    def job_array_args(self, hosts):
+        if hosts == 'all':
+            args = ''
+            args += '[%d-%d] %% %d' % (1, PAR.NSRC, PAR.NTASK)
+            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J_%I')
+
+        elif hosts == 'head':
+            args = ''
+            args += '[%d-%d]' % (1, 1)
+            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J')
+
+        return args
+
+
+    def job_status(self, classname, funcname, jobs):
         # query lsf database
         for job in jobs:
-            state = self.getstate(job)
+            state = self._query(job)
             states = []
             if state in ['DONE']:
                 states += [1]
@@ -170,28 +187,13 @@ class lsf_lg(custom_import('system', 'base')):
         return isdone, jobs
 
 
-    def launch_args(self, hosts):
-        if hosts == 'all':
-            args = ''
-            args += '[%d-%d] %% %d' % (1, PAR.NSRC, PAR.NTASK)
-            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J_%I')
-
-        elif hosts == 'head':
-            args = ''
-            args += '[%d-%d]' % (1, 1)
-            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J')
-
-        return args
-
-
-
     def mpiexec(self):
         """ Specifies MPI exectuable; used to invoke solver
         """
         return 'mpiexec '
 
 
-    def getstate(self, jobid):
+    def _query(self, jobid):
         """ Retrives job state from LSF database
         """
         with open(PATH.SYSTEM+'/'+'job_status', 'w') as f:

@@ -109,13 +109,13 @@ class slurm_lg(custom_import('system', 'base')):
         self.checkpoint()
 
         self.save_kwargs(classname, funcname, kwargs)
-        jobs = self._launch(classname, funcname, hosts)
+        jobs = self.submit_job_array(classname, funcname, hosts)
         while True:
             # wait a few seconds before checking status
             time.sleep(60.*PAR.SLEEPTIME)
 
             self._timestamp()
-            isdone, jobs = self._status(classname, funcname, jobs)
+            isdone, jobs = self.job_status(classname, funcname, jobs)
             if isdone:
                 return
 
@@ -137,22 +137,10 @@ class slurm_lg(custom_import('system', 'base')):
 
     ### private methods
 
-    def _launch(self, classname, funcname, hosts='all'):
+    def submit_job_array(self, classname, funcname, hosts='all'):
         unix.mkdir(PATH.SYSTEM)
-
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
-            call('sbatch '
-                + '%s ' % PAR.SLURMARGS
-                + '--job-name=%s ' % PAR.TITLE
-                + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
-                + '--ntasks-per-node=%d ' % PAR.NODESIZE
-                + '--ntasks=%d ' % PAR.NPROC
-                + '--time=%d ' % PAR.STEPTIME
-                + self._launch_args(hosts)
-                + findpath('seisflows.system') +'/'+ 'wrappers/run '
-                + PATH.OUTPUT + ' '
-                + classname + ' '
-                + funcname + ' ',
+            call(self.job_array_cmd(classname, funcname, hosts),
                 stdout=f)
 
         # retrieve job ids
@@ -165,7 +153,22 @@ class slurm_lg(custom_import('system', 'base')):
             return [job]
 
 
-    def _launch_args(self, hosts):
+    def job_array_cmd(self, classname, funcname, hosts):
+        return ('sbatch '
+                + '%s ' % PAR.SLURMARGS
+                + '--job-name=%s ' % PAR.TITLE
+                + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
+                + '--ntasks-per-node=%d ' % PAR.NODESIZE
+                + '--ntasks=%d ' % PAR.NPROC
+                + '--time=%d ' % PAR.STEPTIME
+                + self.job_array_args(hosts)
+                + findpath('seisflows.system') +'/'+ 'wrappers/run '
+                + PATH.OUTPUT + ' '
+                + classname + ' '
+                + funcname + ' ')
+
+
+    def job_array_args(self, hosts):
         if hosts == 'all':
             args = ('--array=%d-%d ' % (0,PAR.NTASK-1)
                    +'--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A_%a'))
@@ -177,7 +180,7 @@ class slurm_lg(custom_import('system', 'base')):
         return args
 
 
-    def _status(self, classname, funcname, jobs):
+    def job_status(self, classname, funcname, jobs):
         """ Determines completion status of one or more jobs
         """
         for job in jobs:
