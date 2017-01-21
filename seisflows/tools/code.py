@@ -6,7 +6,6 @@ import re
 import subprocess
 import sys
 import traceback
-import yaml
 
 from imp import load_source
 from importlib import import_module
@@ -155,6 +154,8 @@ def loadpy(abspath):
 
 
 def loadyaml(filename):
+    import yaml
+
     with open(filename, 'rb') as file:
         dict = yaml.load(file)
 
