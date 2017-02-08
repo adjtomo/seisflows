@@ -187,6 +187,14 @@ class base(object):
                 self.get_source_coords(traces),
                 self.get_receiver_coords(traces))
 
+        elif PAR.MUTE == 'MuteEarlyAndLateArrivals':
+            return mute_early_and_late(traces,
+                PAR.MUTESLOPE,
+                PAR.MUTECONST,
+                self.get_time_scheme(traces),
+                self.get_source_coords(traces),
+                self.get_receiver_coords(traces))
+
         else:
             raise ParameterError()
 
@@ -284,6 +292,14 @@ class base(object):
             assert 'MUTESLOPE' in PAR
             assert 'MUTECONST' in PAR
             assert PAR.MUTESLOPE >= 0.
+
+
+        elif PAR.MUTE in ['MuteEarlyAndLateArrivals']:
+            assert 'MUTESLOPE' in PAR
+            assert 'MUTECONST' in PAR
+            assert len(PAR.MUTESLOPE) == 2
+            assert len(PAR.MUTECONSTANT) == 2
+            assert 0. <= PAR.MUTESLOPE[0] < PAR.MUTESLOPE[1]
 
         else:
             raise ParameterError()

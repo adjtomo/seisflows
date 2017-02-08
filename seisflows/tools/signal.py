@@ -74,6 +74,13 @@ def mute_late(traces, slope, const, time_scheme, s_coords, r_coords):
     return traces
 
 
+def mute_early_and_late(traces, slope, const, time_scheme, s_coords, r_coords):
+    return mute_late(mute_early(traces,
+               slope[0], const[0], time_scheme, s_coords, r_coords),
+               slope[1], const[1], time_scheme, s_coords, r_coords)
+
+
+
 # functions acting on individual traces
 
 def mask(slope, const, offset, time_scheme, length=400):
