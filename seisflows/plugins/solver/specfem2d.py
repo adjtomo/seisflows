@@ -10,7 +10,7 @@ def write_sources(coords, path='.', ws=1., suffix=''):
     """
     sx, sy, sz = coords
 
-    filename = findpath('seisflows.plugins') + '/' + 'specfem2d/SOURCE'
+    filename = findpath('seisflows.plugins') + '/' + 'solver/specfem2d/SOURCE'
     with open(filename, 'r') as f:
         lines = f.readlines()
 
