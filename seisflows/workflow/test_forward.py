@@ -1,4 +1,6 @@
 
+import sys
+
 from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']

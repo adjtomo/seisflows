@@ -1,11 +1,11 @@
 
+import sys
 import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists
-from seisflows.config import   \
-    custom_import, ParameterError
+from seisflows.config import custom_import, ParameterError
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']

@@ -1,7 +1,8 @@
 
+import sys
+
 from glob import glob
 from os import basename, exists
-
 from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']

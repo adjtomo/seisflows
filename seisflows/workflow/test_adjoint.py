@@ -1,13 +1,12 @@
 
-from glob import glob
-from os.path import basename, join
-
+import sys
 import numpy as np
 
+from glob import glob
+from os.path import basename, join
 from seisflows.tools import unix
 from seisflows.tools.code import exists
-from seisflows.config import   \
-    ParameterError
+from seisflows.config import ParameterError
 
 
 PAR = sys.modules['seisflows_parameters']

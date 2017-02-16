@@ -1,13 +1,12 @@
 
-from os.path import join
 import sys
 import numpy as np
 
+from os.path import join
 from seisflows.tools import unix
 from seisflows.tools.array import savenpy
 from seisflows.tools.code import exists
-from seisflows.config import   \
-    ParameterError
+from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']

@@ -1,9 +1,9 @@
 
+import sys
+
 from glob import glob
 from os.path import basename
-
-from seisflows.config import   \
-    ParameterError
+from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
