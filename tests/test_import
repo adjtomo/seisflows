@@ -4,6 +4,7 @@ import sys
 
 from importlib import import_module
 from pkgutil import iter_modules
+from seisflows.config import Null
 
 
 # exclude modules from this list
@@ -53,6 +54,9 @@ def check_module(name):
 
 
 if __name__ == '__main__':
+
+    sys.modules['seisflows_parameters'] = Null()
+    sys.modules['seisflows_paths'] = Null()
 
     # load dummy state
     names = []
