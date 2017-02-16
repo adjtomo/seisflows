@@ -1,20 +1,20 @@
 
+import sys
 import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.array import grid2mesh, mesh2grid, stack
 from seisflows.tools.code import exists
-from seisflows.config import   \
-    ParameterError, custom_import
+from seisflows.config import ParameterError, custom_import
 from seisflows.tools.math import nabla, tv
 
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
-import system
-import solver
+system = sys.modules['seisflows_system']
+solver = sys.modules['seisflows_solver']
 
 
 class total_variation(custom_import('postprocess', 'regularize')):
