@@ -67,7 +67,7 @@ if __name__ == '__main__':
     names += ['postprocess']
     names += ['workflow']
     for name in names:
-        sys.modules[name] = []
+        sys.modules['seisflows_'+name] = Null()
 
     # recursively check package
     check_package('seisflows')
