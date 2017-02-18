@@ -1,0 +1,56 @@
+
+import sys
+import numpy as np
+
+from seisflows.config import custom_import, ParameterError
+from seisflows.optimize.lib.LBFGS import LBFGS as lib
+
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
+
+
+class LBFGS(custom_import('optimize', 'steepest_descent')):
+    """ Limited memory BFGS algorithm
+    """
+
+    def check(self):
+        """ Checks parameters, paths, and dependencies
+        """
+        # LBFGS memory
+        if 'LBFGSMEM' not in PAR:
+            setattr(PAR, 'LBFGSMEM', 3)
+
+        # LBFGS periodic restart interval
+        if 'LBFGSMAX' not in PAR:
+            setattr(PAR, 'LBFGSMAX', np.inf)
+
+        # LBFGS angle restart threshold
+        if 'LBFGSTHRESH' not in PAR:
+            setattr(PAR, 'LBFGSTHRESH', 0.)
+
+        super(LBFGS, self).check()
+
+
+    def setup(self):
+        super(LBFGS, self).setup()
+
+        self.LBFGS = lib(
+            path=PATH.OPTIMIZE,
+            memory=PAR.LBFGSMEM,
+            maxiter=PAR.LBFGSMAX,
+            thresh=PAR.LBFGSTHRESH,
+            precond=self.precond())
+
+
+    def compute_direction(self):
+        g_new = self.load('g_new')
+        p_new, self.restarted = self.LBFGS()
+        self.save('p_new', p_new)
+        self.savetxt('s_new', self.dot(g_new, p_new))
+        return p_new
+
+
+    def restart(self):
+        super(LBFGS, self).restart()
+        self.LBFGS.restart()
+
