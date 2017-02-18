@@ -36,14 +36,7 @@ if __name__ == "__main__":
     unix.mkdir(args.workdir)
     unix.cd(args.workdir)
 
-    # reload objects
-    for name in names:
-        fullfile = join(args.workdir, 'output', 'seisflows_'+name+'.p')
-        sys.modules['seisflows_'+name] = loadobj(fullfile)
-
-    # parameter checking
-    for name in names:
-        sys.modules['seisflows_'+name].check()
+    config()
 
     # submit workflow
     workflow = sys.modules['seisflows_workflow']
