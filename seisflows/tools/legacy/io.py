@@ -5,7 +5,7 @@ from struct import calcsize, pack, unpack
 
 import numpy as _np
 
-from seisflows.tools.code import Struct
+from seisflows.tools.tools import Struct
 
 
 class BinaryReader(object):

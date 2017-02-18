@@ -7,9 +7,8 @@ import time
 from os.path import abspath, basename, join
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import call, findpath, saveobj
-from seisflows.config import   \
-    ParameterError, custom_import
+from seisflows.tools.tools import call, findpath, saveobj
+from seisflows.config import ParameterError, custom_import
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']

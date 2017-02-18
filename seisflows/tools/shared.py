@@ -5,7 +5,7 @@ import numpy as np
 from collections import Mapping
 from os.path import abspath, join, exists
 from string import find
-from seisflows.tools.code import Struct
+from seisflows.tools.tools import Struct
 
 
 class SeisStruct(Struct):

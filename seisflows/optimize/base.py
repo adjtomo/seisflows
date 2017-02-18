@@ -5,7 +5,7 @@ import numpy as np
 from os.path import join
 from seisflows.tools import err, msg, unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import exists, loadtxt, savetxt
+from seisflows.tools.tools import exists, loadtxt, savetxt
 from seisflows.tools.math import angle, polyfit2, backtrack2
 from seisflows.plugins import preconds
 from seisflows.tools.shared import  Writer, StepWriter
@@ -31,7 +31,7 @@ class base(object):
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
-        if 'SUBMIT' not in PATH:
+        if 'WORKDIR' not in PATH:
             raise err.ParameterError
 
         if 'OPTIMIZE' not in PATH:
@@ -91,7 +91,7 @@ class base(object):
                 path=PATH.OUTPUT)
 
         self.stepwriter = StepWriter(
-                path=PATH.SUBMIT)
+                path=PATH.WORKDIR)
 
         unix.mkdir(PATH.OPTIMIZE)
 

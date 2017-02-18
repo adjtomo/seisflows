@@ -11,7 +11,7 @@ from seisflows.plugins.io import loadbypar, copybin, loadbin, savebin
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import Struct, exists, call_solver
+from seisflows.tools.tools import Struct, exists, call_solver
 from seisflows.config import   \
     ParameterError, custom_import
 

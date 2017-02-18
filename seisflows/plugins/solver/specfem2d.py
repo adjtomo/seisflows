@@ -1,5 +1,5 @@
 
-from seisflows.tools.code import findpath
+from seisflows.tools.tools import findpath
 from seisflows.tools.shared import getpar, setpar
 
 

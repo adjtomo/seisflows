@@ -1,7 +1,7 @@
 import numpy as np
 
 from seisflows.tools.array import uniquerows
-from seisflows.tools.code import Struct
+from seisflows.tools.tools import Struct
 
 from seisflows.tools.shared import SeisStruct
 from seisflows.tools.legacy.io import BinaryReader, mychar, mysize
