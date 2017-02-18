@@ -35,58 +35,74 @@ class slurm_lg(custom_import('system', 'base')):
     def check(self):
         """ Checks parameters and paths
         """
-
-        # check parameters
+        # name of job
         if 'TITLE' not in PAR:
             setattr(PAR, 'TITLE', basename(abspath('.')))
 
+        # time allocated for entire workflow
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
+        # time allocated for each individual task
         if 'STEPTIME' not in PAR:
-            setattr(PAR, 'STEPTIME', 30.)
+            setattr(PAR, 'STEPTIME', 15.)
 
-        if 'SLEEPTIME' not in PAR:
-            setattr(PAR, 'SLEEPTIME', 1.)
-
-        if 'VERBOSE' not in PAR:
-            setattr(PAR, 'VERBOSE', 1)
-
+        # number of tasks
         if 'NTASK' not in PAR:
             raise ParameterError(PAR, 'NTASK')
 
+        # number of cores per task
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
+        # number of cores per node
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
+        # optional additional SLURM arguments
         if 'SLURMARGS' not in PAR:
             setattr(PAR, 'SLURMARGS', '')
 
-        # check paths
-        if 'SCRATCH' not in PATH:
-            setattr(PATH, 'SCRATCH', join(abspath('.'), 'scratch'))
+        # optional list of environment variables
+        if 'ENVIRON' not in PAR:
+            setattr(PAR, 'ENVIRON', '')
 
+        # level of detail in output messages
+        if 'VERBOSE' not in PAR:
+            setattr(PAR, 'VERBOSE', 1)
+
+        # where job was submitted
+        if 'WORKDIR' not in PATH:
+            setattr(PATH, 'WORKDIR', abspath('.'))
+
+        # where output files are written
+        if 'OUTPUT' not in PATH:
+            setattr(PATH, 'OUTPUT', PATH.WORKDIR+'/'+'output')
+
+        # where temporary files are written
+        if 'SCRATCH' not in PATH:
+            setattr(PATH, 'SCRATCH', PATH.WORKDIR+'/'+'scratch')
+
+        # where system files are written
+        if 'SYSTEM' not in PATH:
+            setattr(PATH, 'SYSTEM', PATH.SCRATCH+'/'+'system')
+
+        # optional local scratch path
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
-
-        if 'SUBMIT' not in PATH:
-            setattr(PATH, 'SUBMIT', abspath('.'))
-
-        if 'OUTPUT' not in PATH:
-            setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
-
-        if 'SYSTEM' not in PATH:
-            setattr(PATH, 'SYSTEM', join(PATH.SCRATCH, 'system'))
 
 
     def submit(self, workflow):
         """ Submits workflow
         """
+        # create scratch directories
+        unix.rm(PATH.SCRATCH)
+        unix.mkdir(PATH.SCRATCH)
+        unix.mkdir(PATH.SYSTEM)
+
+        # create output directories
         unix.mkdir(PATH.OUTPUT)
-        unix.cd(PATH.OUTPUT)
-        unix.mkdir(PATH.SUBMIT+'/'+'output.slurm')
+        unix.mkdir(PATH.WORKDIR+'/'+'output.slurm')
 
         self.checkpoint()
 
@@ -94,7 +110,7 @@ class slurm_lg(custom_import('system', 'base')):
         call('sbatch '
                 + '%s ' % PAR.SLURMARGS
                 + '--job-name=%s ' % PAR.TITLE
-                + '--output %s ' % (PATH.SUBMIT+'/'+'output.log')
+                + '--output %s ' % (PATH.WORKDIR+'/'+'output.log')
                 + '--ntasks-per-node=%d ' % PAR.NODESIZE
                 + '--nodes=%d ' % 1
                 + '--time=%d ' % PAR.WALLTIME
@@ -103,18 +119,17 @@ class slurm_lg(custom_import('system', 'base')):
 
 
     def run(self, classname, funcname, hosts='all', **kwargs):
-        """  Runs tasks in serial or parallel on specified hosts.
+        """  Runs tasks in serial or parallel on specified hosts
         """
         self.checkpoint()
 
         self.save_kwargs(classname, funcname, kwargs)
         jobs = self.submit_job_array(classname, funcname, hosts)
         while True:
-            # wait a few seconds before checking status
-            time.sleep(60.*PAR.SLEEPTIME)
-
+            # wait a few seconds before checking again
+            time.sleep(5)
             self._timestamp()
-            isdone, jobs = self.job_status(classname, funcname, jobs)
+            isdone, jobs = self.job_array_status(classname, funcname, jobs)
             if isdone:
                 return
 
@@ -134,10 +149,9 @@ class slurm_lg(custom_import('system', 'base')):
             raise Exception("TASK_ID environment variable not defined.")
 
 
-    ### private methods
+    ### job array methods
 
     def submit_job_array(self, classname, funcname, hosts='all'):
-        unix.mkdir(PATH.SYSTEM)
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
             call(self.job_array_cmd(classname, funcname, hosts),
                 stdout=f)
@@ -164,22 +178,26 @@ class slurm_lg(custom_import('system', 'base')):
                 + findpath('seisflows.system') +'/'+ 'wrappers/run '
                 + PATH.OUTPUT + ' '
                 + classname + ' '
-                + funcname + ' ')
+                + funcname + ' ' 
+                + PAR.ENVIRON)
 
 
     def job_array_args(self, hosts):
         if hosts == 'all':
             args = ('--array=%d-%d ' % (0,PAR.NTASK-1)
-                   +'--output %s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%A_%a'))
+                   +'--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a'))
 
         elif hosts == 'head':
             args = ('--array=%d-%d ' % (0,0)
-                   +'--output=%s ' % (PATH.SUBMIT+'/'+'output.slurm/'+'%j'))
+                   +'--output=%s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%j'))
+
+        else:
+            raise KeyError('Bad keyword argument: system.run: hosts')
 
         return args
 
 
-    def job_status(self, classname, funcname, jobs):
+    def job_array_status(self, classname, funcname, jobs):
         """ Determines completion status of one or more jobs
         """
         for job in jobs:

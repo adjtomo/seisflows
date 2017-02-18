@@ -1,16 +1,18 @@
 #!/bin/bash
 
-path=$1
-class=$2
-func=$3
-exe=$4
-hosts=$( echo $5 | tr ',' ' ' )
+hosts=$( echo $1 | tr ',' ' ' )
+path=$2
+class=$3
+func=$4
+exe=$5
+env=$6
 
 k=0;
 for host in $hosts;
 do
-    ssh $host "export SEISFLOWS_TASK_ID=$k; $exe $path $class $func" &
+    ssh $host "export SEISFLOWS_TASK_ID=$k; $exe $path $class $func $env" &
     k=$((k+1));
+    sleep 0.5
 done
 wait
 

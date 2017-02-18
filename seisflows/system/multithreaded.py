@@ -32,6 +32,7 @@ class multithreaded(custom_import('system', 'serial')):
         """
         super(multithreaded, self).check()
 
+        # number of available cores
         if 'NPROCMAX' not in PAR:
             raise Exception
 
@@ -39,8 +40,6 @@ class multithreaded(custom_import('system', 'serial')):
     def run(self, classname, funcname, hosts='all', **kwargs):
         """ Runs tasks in serial or parallel on specified hosts
         """
-        unix.mkdir(PATH.SYSTEM)
-
         self.checkpoint()
         self.save_kwargs(classname, funcname, kwargs)
 

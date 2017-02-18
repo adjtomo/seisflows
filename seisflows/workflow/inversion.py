@@ -140,9 +140,6 @@ class inversion(object):
         """
         # clean scratch directories
         if PAR.BEGIN == 1:
-            unix.rm(PATH.SCRATCH)
-            unix.mkdir(PATH.SCRATCH)
-
             preprocess.setup()
             postprocess.setup()
             optimize.setup()

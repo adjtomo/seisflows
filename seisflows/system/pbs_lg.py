@@ -35,58 +35,75 @@ class pbs_lg(custom_import('system', 'base')):
     def check(self):
         """ Checks parameters and paths
         """
-
-        # check parameters
+        # name of job
         if 'TITLE' not in PAR:
             setattr(PAR, 'TITLE', basename(abspath('.')))
 
+        # time allocated for entire workflow
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
+        # time allocated for each individual task
         if 'STEPTIME' not in PAR:
-            setattr(PAR, 'STEPTIME', 30.)
+            setattr(PAR, 'STEPTIME', 15.)
 
-        if 'SLEEPTIME' not in PAR:
-            setattr(PAR, 'SLEEPTIME', 1.)
-
-        if 'VERBOSE' not in PAR:
-            setattr(PAR, 'VERBOSE', 1)
-
+        # number of tasks
         if 'NTASK' not in PAR:
             raise ParameterError(PAR, 'NTASK')
 
+        # number of cores per task
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
+        # number of cores per node
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
+        # optional additional PBS arguments
         if 'PBSARGS' not in PAR:
             setattr(PAR, 'PBSARGS', '')
 
-        # check paths
-        if 'SCRATCH' not in PATH:
-            setattr(PATH, 'SCRATCH', join(abspath('.'), 'scratch'))
+        # optional list of environment variables
+        if 'ENVIRON' not in PAR:
+            setattr(PAR, 'ENVIRON', '')
 
+        # level of detail in output messages
+        if 'VERBOSE' not in PAR:
+            setattr(PAR, 'VERBOSE', 1)
+
+        # where job was submitted
+        if 'WORKDIR' not in PATH:
+            setattr(PATH, 'WORKDIR', abspath('.'))
+
+        # where output files are written
+        if 'OUTPUT' not in PATH:
+            setattr(PATH, 'OUTPUT', PATH.WORKDIR+'/'+'output')
+
+        # where temporary files are written
+        if 'SCRATCH' not in PATH:
+            setattr(PATH, 'SCRATCH', PATH.WORKDIR+'/'+'scratch')
+
+        # where system files are written
+        if 'SYSTEM' not in PATH:
+            setattr(PATH, 'SYSTEM', PATH.SCRATCH+'/'+'system')
+
+        # optional local scratch path
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
-
-        if 'SUBMIT' not in PATH:
-            setattr(PATH, 'SUBMIT', abspath('.'))
-
-        if 'OUTPUT' not in PATH:
-            setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
-
-        if 'SYSTEM' not in PATH:
-            setattr(PATH, 'SYSTEM', join(PATH.SCRATCH, 'system'))
 
 
     def submit(self, workflow):
         """ Submits workflow
         """
+
+        # create scratch directories
+        unix.rm(PATH.SCRATCH)
+        unix.mkdir(PATH.SCRATCH)
+        unix.mkdir(PATH.SYSTEM)
+
+        # create output directories
         unix.mkdir(PATH.OUTPUT)
-        unix.cd(PATH.OUTPUT)
-        unix.mkdir(PATH.SUBMIT+'/'+'output.pbs')
+        unix.mkdir(PATH.WORKDIR+'/'+'output.pbs')
 
         self.checkpoint()
 
@@ -104,7 +121,7 @@ class pbs_lg(custom_import('system', 'base')):
                 + '-l %s ' % walltime
                 + '-N %s ' % PAR.TITLE
                 + '-j %s '%'oe'
-                + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
+                + '-o %s ' % (PATH.WORKDIR+'/'+'output.log')
                 + '-V '
                 + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/submit '
                 + PATH.OUTPUT)
@@ -116,11 +133,12 @@ class pbs_lg(custom_import('system', 'base')):
         self.checkpoint()
 
         self.save_kwargs(classname, funcname, kwargs)
-        jobs = self._launch(classname, funcname, hosts)
+        jobs = self.submit_job_array(classname, funcname, hosts)
         while True:
-            time.sleep(60.*PAR.SLEEPTIME)
+            # wait a few seconds before checking again
+            time.sleep(5)
             self._timestamp()
-            isdone, jobs = self._status(classname, funcname, jobs)
+            isdone, jobs = self.job_array_status(classname, funcname, jobs)
             if isdone:
                 return
 
@@ -142,36 +160,11 @@ class pbs_lg(custom_import('system', 'base')):
 
     ### private methods
 
-    def _launch(self, classname, funcname, hosts='all'):
-        unix.mkdir(PATH.SYSTEM)
-
-        nodes = math.ceil(PAR.NTASK/float(PAR.NODESIZE))
-        ncpus = PAR.NPROC
-        mpiprocs = PAR.NPROC
-
-        hours = PAR.STEPTIME/60
-        minutes = PAR.STEPTIME%60
-        walltime = 'walltime=%02d:%02d:00 '%(hours, minutes)
-
-        # submit job
+    def submit_job_array(self, classname, funcname, hosts='all'):
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
-            call('qsub '
-                + '%s ' % PAR.PBSARGS
-                + '-l select=%d:ncpus=%d:mpiprocs=%d ' (nodes, ncpus, mpiprocs)
-                + '-l %s ' % walltime
-                + '-J 0-%s ' % (PAR.NTASK-1)
-                + '-N %s ' % PAR.TITLE
-                + '-o %s ' % (PATH.SUBMIT+'/'+'output.pbs/' + '$PBS_ARRAYID')
-                + '-r y '
-                + '-j oe '
-                + '-V '
-                + self.launch_args(hosts)
-                + PATH.OUTPUT + ' '
-                + classname + ' '
-                + funcname + ' '
-                + findpath('seisflows.system'),
+            call(self.job_array_cmd(classname, funcname, hosts),
                 stdout=f)
-           
+
         # retrieve job ids
         with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
             line = f.readline()
@@ -184,21 +177,49 @@ class pbs_lg(custom_import('system', 'base')):
             return [job]
 
 
-    def launch_args(self, hosts):
+    def job_array_cmd(self, classname, funcname, hosts):
+        nodes = math.ceil(PAR.NTASK/float(PAR.NODESIZE))
+        ncpus = PAR.NPROC
+        mpiprocs = PAR.NPROC
+
+        hours = PAR.STEPTIME/60
+        minutes = PAR.STEPTIME%60
+        walltime = 'walltime=%02d:%02d:00 '%(hours, minutes)
+
+         return ('qsub '
+                + '%s ' % PAR.PBSARGS
+                + '-l select=%d:ncpus=%d:mpiprocs=%d ' (nodes, ncpus, mpiprocs)
+                + '-l %s ' % walltime
+                + '-J 0-%s ' % (PAR.NTASK-1)
+                + '-N %s ' % PAR.TITLE
+                + '-o %s ' % (PATH.WORKDIR+'/'+'output.pbs/' + '$PBS_ARRAYID')
+                + '-r y '
+                + '-j oe '
+                + '-V '
+                + self.job_array_args(hosts)
+                + PATH.OUTPUT + ' '
+                + classname + ' '
+                + funcname + ' '
+                + 'PYTHONPATH='+findpath('seisflows.system'),
+                + PAR.ENVIRON,
+                stdout=f)
+
+
+    def job_array_args(self, hosts):
         if hosts == 'all':
-          arg = ('-J 0-%s ' % (PAR.NTASK-1)
-                +'-o %s ' % (PATH.SUBMIT+'/'+'output.pbs/' + '$PBS_ARRAYID')
-                + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/run_pbsdsh ')
+          args = ('-J 0-%s ' % (PAR.NTASK-1)
+                +'-o %s ' % (PATH.WORKDIR+'/'+'output.pbs/' + '$PBS_ARRAYID')
+                + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/run ')
 
         elif hosts == 'head':
-          arg = ('-J 0-0 '
-                 +'-o %s ' % (PATH.SUBMIT+'/'+'output.pbs/' + '$PBS_JOBID')
-                 + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/run_pbsdsh_head ')
+          args = ('-J 0-0 '
+                 +'-o %s ' % (PATH.WORKDIR+'/'+'output.pbs/' + '$PBS_JOBID')
+                 + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/run ')
 
-        return arg
+        return args
 
 
-    def _status(self, classname, funcname, jobs):
+    def job_array_status(self, classname, funcname, jobs):
         """ Determines completion status of one or more jobs
         """
         for job in jobs:
