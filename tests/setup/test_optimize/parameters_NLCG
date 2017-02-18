@@ -1,0 +1,9 @@
+
+WORKFLOW='test_optimize'
+SYSTEM='serial'
+OPTIMIZE='NLCG'
+LINESEARCH='Bracket'
+STEPMAX=40
+BEGIN=1              
+END=200
+

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+WD=$PWD/setup/test_system
+
+# run serial
+sfrun --workdir=$WD --parameter_file=$WD/parameters_serial --path_file=$WD/paths
+rm -rf $WD/output* $WD/scratch
+
+# test multithreaded
+sfrun --workdir=$WD --parameter_file=$WD/parameters_multithreaded --path_file=$WD/paths
+rm -rf $WD/output* $WD/scratch
+

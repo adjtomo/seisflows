@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from seisflows.seistools import signal
+from seisflows.tools import signal
 
 
 class TestSeistoolsSignal(unittest.TestCase):

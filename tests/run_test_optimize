@@ -1,0 +1,14 @@
+#!/bin/bash
+
+WD=$PWD/setup/test_optimize
+export PYTHONPATH=$PYTHONPATH:$WD/problems
+
+# test LBFGS
+sfrun --workdir=$WD --parameter_file=$WD/parameters_LBFGS --path_file=$WD/paths
+rm -rf $WD/output* $WD/scratch 
+
+
+# test NLCG
+sfrun --workdir=$WD --parameter_file=$WD/parameters_NLCG --path_file=$WD/paths
+rm -rf $WD/output* $WD/scratch 
+
