@@ -9,7 +9,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class LBFGS(custom_import('optimize', 'steepest_descent')):
+class LBFGS(custom_import('optimize', 'base')):
     """ Limited memory BFGS algorithm
     """
 

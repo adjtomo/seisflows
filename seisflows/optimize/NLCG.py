@@ -9,7 +9,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class NLCG(custom_import('optimize', 'steepest_descent')):
+class NLCG(custom_import('optimize', 'base')):
     """ Nonlinear conjugate gradient method
     """
 
@@ -24,7 +24,7 @@ class NLCG(custom_import('optimize', 'steepest_descent')):
         if 'NLCGMAX' not in PAR:
             setattr(PAR, 'NLCGMAX', np.inf)
 
-        # NLCG angle restart threshold
+        # NLCG conjugacy restart threshold
         if 'NLCGTHRESH' not in PAR:
             setattr(PAR, 'NLCGTHRESH', np.inf)
 

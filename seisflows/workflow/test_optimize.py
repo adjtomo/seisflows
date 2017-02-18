@@ -13,7 +13,7 @@ PATH = sys.modules['seisflows_paths']
 
 optimize = sys.modules['seisflows_optimize']
 
-import problems.rosenbrock as problem
+import rosenbrock as problem
 
 
 class test_optimize(object):
@@ -30,7 +30,7 @@ class test_optimize(object):
             setattr(PAR, 'OPTIMIZE', 'base')
 
         if 'VERBOSE' not in PAR:
-            setattr(PAR, 'VERBOSE', 1)
+            setattr(PAR, 'VERBOSE', 0)
 
         if 'BEGIN' not in PAR:
             raise Exception
@@ -158,7 +158,7 @@ class test_optimize(object):
             print '%14.7e %14.7e'%tuple(m_new)
 
         if cls.status(m_new, m_old):
-            print 'Stopping criteria met.\n'
+            print 'Test successful: stopping criteria met.\n'
             np.savetxt('niter', [cls.iter], '%d')
             sys.exit(0)
 
