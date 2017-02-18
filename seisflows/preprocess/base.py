@@ -4,7 +4,7 @@ import numpy as np
 import obspy
 
 from seisflows.tools import msg, unix
-from seisflows.tools.code import exists, Struct
+from seisflows.tools.tools import exists, Struct
 from seisflows.config import   \
     ParameterError
 

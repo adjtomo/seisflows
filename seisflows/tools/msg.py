@@ -262,3 +262,18 @@ SEISFLOWS IMPORT ERROR
 """
 
 
+###
+
+CompatibilityError1 = """
+
+Parameter settings have changed.
+
+In your parameter file, please remove
+    OPTIMIZE='base'
+
+and add one of the following instead
+    OPTIMIZE='LBFGS'
+    OPTIMIZE'=NLCG'
+    OPTIMIZE='steepest_descent'
+
+"""

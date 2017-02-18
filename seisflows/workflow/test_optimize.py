@@ -5,7 +5,7 @@ import numpy as np
 from os.path import abspath
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import savetxt
+from seisflows.tools.tools import savetxt
 from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']

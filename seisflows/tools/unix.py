@@ -49,6 +49,7 @@ def cp(src='', dst=''):
 
 
 def ln(src, dst):
+    dst = abspath(dst)
     if os.path.isdir(dst):
         for name in _strlist(src):
             s = abspath(name)

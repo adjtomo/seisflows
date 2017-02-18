@@ -4,30 +4,13 @@ from scipy.signal import hilbert as _analytic
 
 
 def Traveltime(syn, obs, nt, dt):
-    # cross correlation time
     cc = abs(_np.convolve(obs, _np.flipud(syn)))
-    cmax = 0
-    misfit = 0.
-    ioff = None
-    for it in range(2*nt-1):
-        if cc[it] > cmax:
-            cmax = cc[it]
-            ioff = it
-            misfit = (ioff-nt+1)*dt
-    if ioff is not None:
-        misfit = (ioff-nt+1)*dt
-    return misfit
+    return (_np.argmax(cc)-nt+1)*dt
 
 
 def Amplitude(syn, obs, nt, dt):
     # cross correlation amplitude
-    cc = _np.convolve(obs, _np.flipud(syn))
-    cmax = 0
-    ioff = 0
-    for it in range(2*nt-1):
-        if cc[it] > cmax:
-            cmax = cc[it]
-            ioff = it
+    ioff = (_np.argmax(cc)-nt+1)*dt
     if ioff <= 0:
         wrsd = syn[ioff:] - obs[:-ioff]
     else:

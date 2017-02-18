@@ -11,7 +11,7 @@ from seisflows.tools.shared import getpar, setpar, Model, Minmax
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import Struct, exists, call_solver
+from seisflows.tools.tools import Struct, exists, call_solver
 from seisflows.config import   \
     ParameterError, custom_import
 

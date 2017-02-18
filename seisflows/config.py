@@ -11,8 +11,9 @@ from pkgutil import find_loader
 from os.path import abspath, join, exists
 
 from seisflows.tools import msg
+from seisflows.tools.err import ParameterError
 from seisflows.tools import unix
-from seisflows.tools.code import Struct, loadjson, loadobj, loadpy, savejson, saveobj
+from seisflows.tools.tools import Struct, loadjson, loadobj, loadpy, savejson, saveobj
 
 # SeisFlows consists of interacting 'system', 'preprocess', 'solver', 'postprocess', 'optimize', and 'workflow' objects. Each corresponds simultaneously to a module in the SeisFlows source code, a class that is instantiated and made accessible via sys.modules, and a parameter in a global dictionary. Once in memory, these objects can be thought of as comprising the complete 'state' of a SeisFlows session
 
@@ -128,22 +129,6 @@ class Null(object):
         return self
 
 
-class ParameterError(ValueError):
-    def __init__(self, *args):
-        if len(args) == 0:
-            msg = 'Bad parameter.'
-            super(ParameterError, self).__init__(msg)
-        elif len(args) == 1:
-            msg = 'Bad parameter: %s' % args[0]
-            super(ParameterError, self).__init__(msg)
-        elif args[1] not in args[0]:
-            msg = '%s is not defined.' % args[1]
-            super(ParameterError, self).__init__(msg)
-        elif key in obj:
-            msg = '%s has bad value: ' % args[0], args[1].__getattr__(args[0])
-            super(ParameterError, self).__init__(msg)
-
-
 def custom_import(*args):
     """ Imports SeisFlows module and extracts class of same name. For example,
 
@@ -223,7 +208,10 @@ def _full(path):
 
 
 def _val(key):
-    return sys.modules['seisflows_parameters'][key.upper()]
+    try:
+        return sys.modules['seisflows_parameters'][key.upper()]
+    except KeyError:
+        return None
 
 
 # the following code changes how instance methods are handled by pickle.  placing it here, in this module, ensures that pickle changes will be in effect for all SeisFlows workflows

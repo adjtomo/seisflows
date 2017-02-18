@@ -10,7 +10,7 @@ import seisflows.plugins.solver.specfem3d as solvertools
 from seisflows.tools.shared import getpar, setpar
 
 from seisflows.tools import unix
-from seisflows.tools.code import exists, call_solver
+from seisflows.tools.tools import exists, call_solver
 from seisflows.config import ParameterError, custom_import
 
 PAR = sys.modules['seisflows_parameters']
@@ -207,20 +207,18 @@ class specfem3d(custom_import('solver', 'base')):
 
     @property
     def data_filenames(self):
-        if PAR.CHANNELS:
-            if PAR.FORMAT in ['SU', 'su']:
-               filenames = []
-               for channel in PAR.CHANNELS:
-                   for iproc in range(PAR.NPROC):
-                       filenames += ['%d_d%s_SU' % (iproc, channel)]
-               return filenames
+        unix.cd(self.getpath+'/'+'traces/obs')
+
+        if PAR.FORMAT in ['SU', 'su']:
+            if not PAR.CHANNELS:
+                return sorted(glob('*_d?_SU'))
+            filenames = []
+            for channel in PAR.CHANNELS:
+                filenames += sorted(glob('*_d'+channel+'_SU'))
+            return filenames
 
         else:
-            unix.cd(self.getpath)
-            unix.cd('traces/obs')
-
-            if PAR.FORMAT in ['SU', 'su']:
-                return glob('*_d[%s]_SU')
+            raise NotImplementedError
 
     @property
     def kernel_databases(self):
