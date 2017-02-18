@@ -50,15 +50,6 @@ class TestToolsCode(unittest.TestCase):
         self.assertEqual(obj_read, obj_init)
         os.remove(filename)
 
-    def test_setdiff(self):
-        list_ints = range(1, 10)
-        list_odds = range(1, 10, 2)
-        list_evens = range(2, 10, 2)
-
-        self.assertEqual(set(list_odds), tools.setdiff(list_ints, list_evens))
-        self.assertEqual(set(list_evens), tools.setdiff(list_ints, list_odds))
-        self.assertEqual(set(list_ints), tools.setdiff(list_ints, []))
-
     def test_unique(self):
         self.assertEqual([], tools.unique([]))
         self.assertEqual([1,2,3,4], tools.unique([1,2,3,4]))

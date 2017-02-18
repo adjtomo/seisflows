@@ -1,0 +1,6 @@
+#!/bin/bash
+
+for script in $(ls setup/test_tools/*)
+do
+    python $script
+done

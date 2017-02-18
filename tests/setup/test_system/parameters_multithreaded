@@ -1,0 +1,5 @@
+
+WORKFLOW='test_system'
+SYSTEM='serial'
+NTASK=16
+NPROC=2
