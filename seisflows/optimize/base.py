@@ -1,17 +1,14 @@
 
-from os.path import join
 import sys
 import numpy as np
 
-from seisflows.tools import unix
+from os.path import join
+from seisflows.tools import err, msg, unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.code import exists, loadtxt, savetxt
-from seisflows.config import ParameterError 
-
 from seisflows.tools.math import angle, polyfit2, backtrack2
-from seisflows.optimize.lib.LBFGS import LBFGS
-from seisflows.optimize.lib.NLCG import NLCG
-from seisflows.optimize.lib.io import Writer, StepWriter
+from seisflows.plugins import preconds
+from seisflows.tools.shared import  Writer, StepWriter
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -19,19 +16,10 @@ PATH = sys.modules['seisflows_paths']
 
 
 class base(object):
-    """ Nonlinear optimization base class.
+    """ Abstract base class
 
-     Available nonlinear optimization algorithms include steepest descent,
-     nonlinear conjugate gradient (NLCG), and limited-memory BFGS (LBFGS). 
-     Available step control algorithms include a backtracking line search and a
-     bracketing line search.
-
-     Though NLCG (a Krylov method) and LBFGS (a quasi-Newton metod) are both 
-     widely used for geophysical inversion, LBFGS is more efficient and more
-     robust. NLCG requires occasional restarts to avoid numerical stagnation, 
-     while LBFGS generally requires few restarts. Restarts are controlled by 
-     numerical parameters. Default values provided below should work well 
-     for a wide range inversions without the need for manual tuning.
+     Default numerical parameters provided below should work well for a wide range
+     inversions without the need for manual tuning.
 
      To reduce memory overhead, vectors are read from disk rather than passed
      from a calling routine. At the start of each search direction computation
@@ -44,7 +32,7 @@ class base(object):
         """ Checks parameters, paths, and dependencies
         """
         if 'SUBMIT' not in PATH:
-            raise ParameterError
+            raise err.ParameterError
 
         if 'OPTIMIZE' not in PATH:
             setattr(PATH, 'OPTIMIZE', join(PATH.SCRATCH, 'optimize'))
@@ -52,40 +40,16 @@ class base(object):
         if 'MODEL_INIT' not in PATH:
             setattr(PATH, 'MODEL_INIT', None)
 
-        # search direction algorithm
-        if 'SCHEME' not in PAR:
-            setattr(PAR, 'SCHEME', 'LBFGS')
-
-        # preconditioner
-        if 'PRECOND' not in PAR:
-            setattr(PAR, 'PRECOND', None)
-
         # line search algorithm
         if 'LINESEARCH' not in PAR:
-            if  PAR.SCHEME in ['LBFGS']:
+            if  PAR.OPTIMIZE in ['LBFGS']:
                 setattr(PAR, 'LINESEARCH', 'Backtrack')
             else:
                 setattr(PAR, 'LINESEARCH', 'Bracket')
 
-        # NLCG periodic restart interval
-        if 'NLCGMAX' not in PAR:
-            setattr(PAR, 'NLCGMAX', np.inf)
-
-        # NLCG Powell restart threshold
-        if 'NLCGTHRESH' not in PAR:
-            setattr(PAR, 'NLCGTHRESH', np.inf)
-
-        # LBFGS memory
-        if 'LBFGSMEM' not in PAR:
-            setattr(PAR, 'LBFGSMEM', 3)
-
-        # LBFGS periodic restart interval
-        if 'LBFGSMAX' not in PAR:
-            setattr(PAR, 'LBFGSMAX', np.inf)
-
-        # LBFGS angle restart threshold
-        if 'LBFGSTHRESH' not in PAR:
-            setattr(PAR, 'LBFGSTHRESH', 0.)
+        # preconditioner
+        if 'PRECOND' not in PAR:
+            setattr(PAR, 'PRECOND', None)
 
         # maximum number of trial steps
         if 'STEPMAX' not in PAR:
@@ -111,12 +75,17 @@ class base(object):
         if 'ADHOCFACTOR' not in PAR:
             setattr(PAR, 'ADHOCFACTOR', 1.)
 
+        # assertions
+        if PAR.OPTIMIZE in ['base']:
+            print msg.CompatibilityError1
+
+        if PAR.PRECOND:
+            assert PAR.PRECOND in dir(preconds)
+
 
     def setup(self):
         """ Sets up nonlinear optimization machinery
         """
-        unix.mkdir(PATH.OPTIMIZE)
-
         # prepare output writers
         self.writer = Writer(
                 path=PATH.OUTPUT)
@@ -124,39 +93,19 @@ class base(object):
         self.stepwriter = StepWriter(
                 path=PATH.SUBMIT)
 
-        # prepare algorithm machinery
-        if PAR.SCHEME in ['NLCG']:
-            self.NLCG = NLCG(
-                path=PATH.OPTIMIZE,
-                maxiter=PAR.NLCGMAX,
-                thresh=PAR.NLCGTHRESH,
-                precond=self.precond())
-
-        elif PAR.SCHEME in ['LBFGS']:
-            self.LBFGS = LBFGS(
-                path=PATH.OPTIMIZE, 
-                memory=PAR.LBFGSMEM, 
-                maxiter=PAR.LBFGSMAX,   
-                thresh=PAR.LBFGSTHRESH,
-                precond=self.precond())
+        unix.mkdir(PATH.OPTIMIZE)
 
         # write initial model
         if exists(PATH.MODEL_INIT):
             solver = sys.modules['seisflows_solver']
-            src = PATH.MODEL_INIT
-            dst = join(PATH.OPTIMIZE, 'm_new')
-            savenpy(dst, solver.merge(solver.load(src)))
+            self.save('m_new', solver.merge(solver.load(PATH.MODEL_INIT)))
 
 
     def precond(self):
         """ Loads preconditioner machinery
         """
-        from seisflows.plugins import preconds
-
         if PAR.PRECOND in dir(preconds):
             return getattr(preconds, PAR.PRECOND)()
-        elif PAR.PRECOND:
-            return getattr(preconds, 'diagonal')()
         else:
             return None
 
@@ -180,23 +129,8 @@ class base(object):
     def compute_direction(self):
         """ Computes model update direction from stored gradient
         """
-        unix.cd(PATH.OPTIMIZE)
-
-        g_new = self.load('g_new')
-
-        if PAR.SCHEME in ['GradientDescent', 'SteepestDescent']:
-            p_new, self.restarted = -g_new, False
-
-        elif PAR.SCHEME in ['NLCG']:
-            p_new, self.restarted = self.NLCG()
-
-        elif PAR.SCHEME in ['LBFGS']:
-            p_new, self.restarted = self.LBFGS()
-
-        self.save('p_new', p_new)
-        savetxt('s_new', self.dot(g_new, p_new))
-
-        return p_new
+        # must be implemented by subclass
+        raise NotImplementedError
 
 
     # The following names are used exclusively for the line search:
@@ -211,11 +145,9 @@ class base(object):
     def initialize_search(self):
         """ Determines initial step length for line search
         """
-        unix.cd(PATH.OPTIMIZE)
-
         m = self.load('m_new')
         p = self.load('p_new')
-        f = loadtxt('f_new')
+        f = self.loadtxt('f_new')
         norm_m = max(abs(m))
         norm_p = max(abs(p))
         p_ratio = float(norm_m/norm_p)
@@ -232,7 +164,7 @@ class base(object):
             alpha = p_ratio*PAR.STEPINIT
         elif self.restarted:
             alpha = p_ratio*PAR.STEPINIT
-        elif PAR.SCHEME in ['LBFGS']:
+        elif PAR.OPTIMIZE in ['LBFGS']:
             alpha = 1.
         else:
             alpha = self.initial_step()
@@ -262,10 +194,8 @@ class base(object):
             function value from each trial model evaluation. From line search
             history, determines whether stopping criteria have been satisfied.
         """
-        unix.cd(PATH.OPTIMIZE)
-
-        x_ = loadtxt('alpha')
-        f_ = loadtxt('f_try')
+        x_ = self.loadtxt('alpha')
+        f_ = self.loadtxt('f_try')
         if np.isnan(f_):
             raise ValueError
 
@@ -308,12 +238,10 @@ class base(object):
     def compute_step(self):
         """ Computes next trial step length
         """
-        unix.cd(PATH.OPTIMIZE)
-
         m = self.load('m_new')
         g = self.load('g_new')
         p = self.load('p_new')
-        s = loadtxt('s_new')
+        s = self.loadtxt('s_new')
 
         norm_m = max(abs(m))
         norm_p = max(abs(p))
@@ -332,9 +260,9 @@ class base(object):
                 alpha = polyfit2(x, f)
 
             elif any(f[1:] <= f[0]):
-                alpha = loadtxt('alpha')*PAR.STEPFACTOR**-1
+                alpha = self.loadtxt('alpha')*PAR.STEPFACTOR**-1
             else:
-                alpha = loadtxt('alpha')*PAR.STEPFACTOR
+                alpha = self.loadtxt('alpha')*PAR.STEPFACTOR
 
         elif PAR.LINESEARCH == 'Backtrack':
             # calculate slope along 1D profile
@@ -345,19 +273,17 @@ class base(object):
             alpha = backtrack2(f[0], slope, x[1], f[1], b1=0.1, b2=0.5)
 
         # write trial model corresponding to chosen step length
-        savetxt('alpha', alpha)
+        self.savetxt('alpha', alpha)
         self.save('m_try', m + alpha*p)
 
 
     def finalize_search(self):
         """ Cleans working directory and writes updated model
         """
-        unix.cd(PATH.OPTIMIZE)
-
         m = self.load('m_new')
         g = self.load('g_new')
         p = self.load('p_new')
-        s = loadtxt('s_new')
+        s = self.loadtxt('s_new')
 
         x = self.step_lens()
         f = self.func_vals()
@@ -404,8 +330,6 @@ class base(object):
         """ Returns false if search direction was the same as gradient
           direction; returns true otherwise
         """
-        unix.cd(PATH.OPTIMIZE)
-
         g = self.load('g_new')
         p = self.load('p_new')
 
@@ -425,21 +349,11 @@ class base(object):
         """ Discards history of algorithm; prepares to start again from 
           gradient direction
         """
-        unix.cd(PATH.OPTIMIZE)
-
         g = self.load('g_new')
-
         self.save('p_new', -g)
         savetxt('s_new', self.dot(g,g))
-
-        if PAR.SCHEME in ['NLCG']:
-            self.NLCG.restart()
-        elif PAR.SCHEME in ['LBFGS']:
-            self.LBFGS.restart()
-
         self.restarted = 1
         self.stepwriter.iter -= 1
-
         self.stepwriter.newline()
 
 
@@ -450,9 +364,9 @@ class base(object):
         """ Determines first trial step in line search; see eg Nocedal and 
           Wright 2e section 3.5
         """
-        alpha = loadtxt('alpha')
-        s_new = loadtxt('s_new')
-        s_old = loadtxt('s_old')
+        alpha = self.loadtxt('alpha')
+        s_new = self.loadtxt('s_new')
+        s_old = self.loadtxt('s_old')
         s_ratio = s_new/s_old
         return 2.*s_ratio*alpha
 
@@ -494,7 +408,17 @@ class base(object):
             np.squeeze(x),
             np.squeeze(y))
 
-    load = staticmethod(loadnpy)
-    save = staticmethod(savenpy)
+    def load(self, filename):
+        return loadnpy(PATH.OPTIMIZE+'/'+filename)
+
+    def save(self, filename, v):
+        savenpy(PATH.OPTIMIZE+'/'+filename, v)
+
+
+    def loadtxt(self, filename):
+        return loadtxt(PATH.OPTIMIZE+'/'+filename)
+
+    def savetxt(self, filename, c):
+        savetxt(PATH.OPTIMIZE+'/'+filename, c)
 
 
