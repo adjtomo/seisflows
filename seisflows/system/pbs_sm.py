@@ -35,7 +35,7 @@ class pbs_lg(custom_import('system', 'base')):
     def check(self):
         """ Checks parameters and paths
         """
-        raise NotImplementedError
+        print msg.Warning_pbs_sm
 
         # name of job
         if 'TITLE' not in PAR:
@@ -65,9 +65,9 @@ class pbs_lg(custom_import('system', 'base')):
         if 'PBSARGS' not in PAR:
             setattr(PAR, 'PBSARGS', '')
 
-        # optional list of environment variables
-        if 'ENVIRON' not in PAR:
-            setattr(PAR, 'ENVIRON', '')
+        # optional environment variable list VAR1=val1,VAR2=val2,...
+        if 'ENVIRONS' not in PAR:
+            setattr(PAR, 'ENVIRONS', '')
 
         # level of detail in output messages
         if 'VERBOSE' not in PAR:
@@ -135,24 +135,30 @@ class pbs_lg(custom_import('system', 'base')):
         if hosts == 'all':
             # run all tasks
             call(findpath('seisflows.system')  +'/'+'wrappers/dsh '
-                    + ','.join(self.nodelist()) + ' '
+                    + ','.join(self.hostlist()) + ' '
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname + ' '
                     + findpath('seisflows.system')  +'/'+'wrappers/run '
-                    + PAR.ENVIRON)
+                    + 'PYTHONPATH='+findpath('seisflows.system'),+','
+                    + PAR.ENVIRONS)
 
         elif hosts == 'head':
             # run a single task
-            call('ssh ' + self.generate_nodelist()[0] + ' '
+            call('ssh ' + self.hostlist()[0] + ' '
                     + '"'
                     + 'export SEISFLOWS_TASK_ID=0; '
                     + join(findpath('seisflows.system'), 'wrappers/run ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname + ' '
-                    + PAR.ENVIRON
+                    + 'PYTHONPATH='+findpath('seisflows.system'),+','
+                    + PAR.ENVIRONS
                     +'"')
+
+        else:
+            raise KeyError('Bad keyword argument: system.run: hosts')
+
 
 
     def mpiexec(self):
@@ -170,8 +176,9 @@ class pbs_lg(custom_import('system', 'base')):
             raise Exception("PBS_NODENUM environment variable not defined.")
 
 
-    def nodelist(self):
-        raise NotImplementedError
+    def hostlist(self):
+        with open(os.environ['PBS_NODEFILE'], 'r') as f:
+            return [line.strip() for line in f.readlines()]
 
 
     def save_kwargs(self, classname, funcname, kwargs):

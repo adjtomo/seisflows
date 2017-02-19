@@ -63,9 +63,9 @@ class lsf_lg(custom_import('system', 'base')):
         if 'LSFARGS' not in PAR:
             setattr(PAR, 'LSFARGS', '')
 
-        # optional list of environment variables
-        if 'ENVIRON' not in PAR:
-            setattr(PAR, 'ENVIRON', '')
+        # optional environment variable list VAR1=val1,VAR2=val2,...
+        if 'ENVIRONS' not in PAR:
+            setattr(PAR, 'ENVIRONS', '')
 
         # level of detail in output messages
         if 'VERBOSE' not in PAR:
@@ -166,7 +166,7 @@ class lsf_lg(custom_import('system', 'base')):
             + PATH.OUTPUT + ' '
             + classname + ' '
             + funcname + ' '
-            + PAR.ENVIRON)
+            + PAR.ENVIRONS)
 
 
     def job_array_args(self, hosts):

@@ -277,3 +277,22 @@ and add one of the following instead
     OPTIMIZE='steepest_descent'
 
 """
+
+Warning_pbs_sm = """
+
+WARNING:  PBS_SM hasn't been tested for a long while because we laack access to a 
+PBS cluster.
+
+If you have access to a PBS cluster and are willing to help, please let us know.
+
+"""
+
+
+Warning_pbs_lg = """
+
+WARNING:  PBS_LG hasn't been tested for a long while because we lack access to a
+PBS cluster.
+
+If you have access to a PBS cluster and are willing to help, please let us know.
+
+"""

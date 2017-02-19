@@ -53,9 +53,9 @@ class slurm_sm(custom_import('system', 'base')):
         if 'SLURMARGS' not in PAR:
             setattr(PAR, 'SLURMARGS', '')
 
-        # optional list of environment variables
-        if 'ENVIRON' not in PAR:
-            setattr(PAR, 'ENVIRON', '')
+        # optional environment variable list VAR1=val1,VAR2=val2,...
+        if 'ENVIRONS' not in PAR:
+            setattr(PAR, 'ENVIRONS', '')
 
         # level of detail in output messages
         if 'VERBOSE' not in PAR:
@@ -121,7 +121,7 @@ class slurm_sm(custom_import('system', 'base')):
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname + ' '
-                    + PAR.ENVIRON)
+                    + PAR.ENVIRONS)
 
         elif hosts == 'head':
             # run on head node
@@ -133,17 +133,17 @@ class slurm_sm(custom_import('system', 'base')):
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname + ' '
-                    + PAR.ENVIRON)
+                    + PAR.ENVIRONS)
 
         else:
             raise KeyError('Bad keyword argument: system.run: hosts')
 
 
-    def nodelist(self):
-        with open('job_nodelist', 'w') as f:
+    def hostlist(self):
+        with open(PATH.SYSTEM+'/'+'hostlist', 'w') as f:
             call('scontrol show hostname $SLURM_JOB_NODEFILE', stdout=f)
 
-        with open('job_nodelist', 'r') as f:
+        with open(PATH.SYSTEM+'/'+'hostlist', 'r') as f:
             return [line.strip() for line in f.readlines()]
 
 
