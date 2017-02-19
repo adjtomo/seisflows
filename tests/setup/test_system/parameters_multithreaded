@@ -1,5 +1,5 @@
 
 WORKFLOW='test_system'
-SYSTEM='serial'
-NTASK=16
-NPROC=2
+SYSTEM='multithreaded'
+NTASK=4
+NPROCMAX=4

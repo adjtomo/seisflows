@@ -4,7 +4,7 @@ import os
 import uuid
 from tempfile import NamedTemporaryFile
 
-import seisflows.tools.code as tools
+from seisflows.tools import tools
 
 
 class TestToolsCode(unittest.TestCase):

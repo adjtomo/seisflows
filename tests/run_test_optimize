@@ -1,7 +1,15 @@
 #!/bin/bash
 
-WD=$PWD/setup/test_optimize
+# navigate to seisflows/tests
+cd $(dirname ${BASH_SOURCE[0]})
+
+
+WD="$PWD/setup/test_optimize"
+
+
+# add rosenbrock problem to pythonpath
 export PYTHONPATH=$PYTHONPATH:$WD/problems
+
 
 # test LBFGS
 sfrun --workdir=$WD --parameter_file=$WD/parameters_LBFGS --path_file=$WD/paths

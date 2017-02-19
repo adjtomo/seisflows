@@ -1,6 +1,13 @@
 #!/bin/bash
 
-for script in $(ls setup/test_tools/*)
+# navigate to seisflows/tests
+cd $(dirname ${BASH_SOURCE[0]})
+
+
+for script in $(ls $PWD/setup/test_tools)
 do
-    python $script
+    python $WD/$script
 done
+
+
+
