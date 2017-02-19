@@ -35,6 +35,8 @@ class pbs_lg(custom_import('system', 'base')):
     def check(self):
         """ Checks parameters and paths
         """
+        print msg.Warning_pbs_lg
+
         # name of job
         if 'TITLE' not in PAR:
             setattr(PAR, 'TITLE', basename(abspath('.')))
@@ -63,9 +65,9 @@ class pbs_lg(custom_import('system', 'base')):
         if 'PBSARGS' not in PAR:
             setattr(PAR, 'PBSARGS', '')
 
-        # optional list of environment variables
-        if 'ENVIRON' not in PAR:
-            setattr(PAR, 'ENVIRON', '')
+        # optional environment variable list VAR1=val1,VAR2=val2,...
+        if 'ENVIRONS' not in PAR:
+            setattr(PAR, 'ENVIRONS', '')
 
         # level of detail in output messages
         if 'VERBOSE' not in PAR:
@@ -186,7 +188,7 @@ class pbs_lg(custom_import('system', 'base')):
         minutes = PAR.STEPTIME%60
         walltime = 'walltime=%02d:%02d:00 '%(hours, minutes)
 
-         return ('qsub '
+        return ('qsub '
                 + '%s ' % PAR.PBSARGS
                 + '-l select=%d:ncpus=%d:mpiprocs=%d ' (nodes, ncpus, mpiprocs)
                 + '-l %s ' % walltime
@@ -200,9 +202,8 @@ class pbs_lg(custom_import('system', 'base')):
                 + PATH.OUTPUT + ' '
                 + classname + ' '
                 + funcname + ' '
-                + 'PYTHONPATH='+findpath('seisflows.system'),
-                + PAR.ENVIRON,
-                stdout=f)
+                + 'PYTHONPATH='+findpath('seisflows.system'),+','
+                + PAR.ENVIRONS)
 
 
     def job_array_args(self, hosts):
