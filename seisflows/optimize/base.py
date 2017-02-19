@@ -3,11 +3,12 @@ import sys
 import numpy as np
 
 from os.path import join
-from seisflows.tools import err, msg, unix
+from seisflows.config import ParameterError
+from seisflows.plugins import preconds
+from seisflows.tools import msg, unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.tools import exists, loadtxt, savetxt
 from seisflows.tools.math import angle, polyfit2, backtrack2
-from seisflows.plugins import preconds
 from seisflows.tools.shared import  Writer, StepWriter
 
 
@@ -31,21 +32,9 @@ class base(object):
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
-        if 'WORKDIR' not in PATH:
-            raise err.ParameterError
-
-        if 'OPTIMIZE' not in PATH:
-            setattr(PATH, 'OPTIMIZE', join(PATH.SCRATCH, 'optimize'))
-
-        if 'MODEL_INIT' not in PATH:
-            setattr(PATH, 'MODEL_INIT', None)
-
         # line search algorithm
         if 'LINESEARCH' not in PAR:
-            if  PAR.OPTIMIZE in ['LBFGS']:
-                setattr(PAR, 'LINESEARCH', 'Backtrack')
-            else:
-                setattr(PAR, 'LINESEARCH', 'Bracket')
+            setattr(PAR, 'LINESEARCH', 'Bracket')
 
         # preconditioner
         if 'PRECOND' not in PAR:
@@ -67,7 +56,7 @@ class base(object):
         if 'STEPFACTOR' not in PAR:
             setattr(PAR, 'STEPFACTOR', 0.5)
 
-        # optional parameter, can be useful for NLCG line search
+        # optional parameter, useful for NLCG line search
         if 'STEPOVERSHOOT' not in PAR:
             setattr(PAR, 'STEPOVERSHOOT', 0.)
 
@@ -75,7 +64,15 @@ class base(object):
         if 'ADHOCFACTOR' not in PAR:
             setattr(PAR, 'ADHOCFACTOR', 1.)
 
+        # where temporary files are written
+        if 'OPTIMIZE' not in PATH:
+            setattr(PATH, 'OPTIMIZE', PATH.SCRATCH+'/'+'optimize')
+
+
         # assertions
+        if 'WORKDIR' not in PATH:
+            raise ParameterError
+
         if PAR.OPTIMIZE in ['base']:
             print msg.CompatibilityError1
 
@@ -88,15 +85,15 @@ class base(object):
         """
         # prepare output writers
         self.writer = Writer(
-                path=PATH.OUTPUT)
+                path=PATH.WORKDIR+'/'+'output.stat')
 
         self.stepwriter = StepWriter(
-                path=PATH.WORKDIR)
+                path=PATH.WORKDIR+'/'+'output.optim')
 
         unix.mkdir(PATH.OPTIMIZE)
 
         # write initial model
-        if exists(PATH.MODEL_INIT):
+        if 'MODEL_INIT' in PATH:
             solver = sys.modules['seisflows_solver']
             self.save('m_new', solver.merge(solver.load(PATH.MODEL_INIT)))
 
