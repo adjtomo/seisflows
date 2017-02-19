@@ -2,11 +2,11 @@
 1. Download SeisFlows
 ---------------------
 
-To run SeisFlows you'll need a Unix system with Python 2.7, Numpy, Scipy, and standard Unix utilities.  After these prerequisites are in place, from the command line type::
+To run SeisFlows you'll need a Unix system with Python 2.7, Numpy, Scipy, Obspy and standard Unix utilities.  After these prerequisites are in place, from the command line type::
  
         mkdir ~/packages
         cd ~/packages
-        git clone https://github.com/PrincetonUniversity/seisflows.git
+        git clone https://github.com/rmodrak/seisflows.git
 
 If you prefer a location other than ``~/packages`` , modify the commands above and below accordingly.
 
@@ -14,7 +14,7 @@ If you prefer a location other than ``~/packages`` , modify the commands above a
 2. Set environment variables
 ----------------------------
 
-Add the following lines to ``~/.bash_profile`` (modify accordingly, if you are using a shell other than bash)::
+Add the following lines to ``~/.bashrc`` (modify accordingly, if you are using a shell other than bash)::
 
         export PATH=$PATH:~/packages/seisflows/scripts
         export PYTHONPATH=~/packages/seisflows
@@ -22,7 +22,7 @@ Add the following lines to ``~/.bash_profile`` (modify accordingly, if you are u
 
 Don't forget to update any open shells::
 
-        source ~/.bash_profile
+        source ~/.bashrc
  
 
  
@@ -33,8 +33,7 @@ Don't forget to update any open shells::
  
 Run the following test to make sure everything is working::
 
-        cd ~/packages/seisflows/tests/test_system
-        ./clean.py; ./run.py
+        ~/packages/seisflows/tests/run_test_system
 
 
 If a ''hello'' message is displayed, the test was successful.
@@ -49,11 +48,10 @@ If a ''hello'' message is displayed, the test was successful.
 
 Run the following test to make sure everything is working::
 
-        cd ~/packages/seisflows/tests/test_optimize
-        ./clean.py; ./run.py
+        ~/packages/seisflows/tests/run_test_optimize
 
 
-If the optimization problem is solved in 50 iterations or fewer, the test was successful.
+If the optimization problems are solved in 50 iterations or fewer, the test was successful.
 
  
 
