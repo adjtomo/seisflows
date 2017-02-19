@@ -286,6 +286,7 @@ class base(object):
         f = self.func_vals()
 
         # clean working directory
+        unix.cd(PATH.OPTIMIZE)
         unix.rm('alpha')
         unix.rm('m_try')
         unix.rm('f_try')

@@ -39,6 +39,7 @@ class LBFGS(object):
         """
         self.iter += 1
 
+        unix.cd(self.path)
         g = self.load('g_new')
         if self.iter == 1:
             return -g, 0
