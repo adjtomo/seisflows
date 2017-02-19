@@ -5,6 +5,7 @@ import numpy as np
 from collections import Mapping
 from os.path import abspath, join, exists
 from string import find
+from seisflows.tools import unix
 from seisflows.tools.tools import Struct
 
 
@@ -113,9 +114,9 @@ class Minmax(object):
 class StepWriter(object):
     """ Utility for writing one or more columns to text file
     """
-    def __init__(self, path='.', filename='output.optim'):
+    def __init__(self, path='./output.optim'):
         self.iter = 0
-        self.filename = self.fullfile(path, filename)
+        self.filename = abspath(path)
 
         self.write_header()
 
@@ -154,23 +155,15 @@ class StepWriter(object):
                 fileobj.write('\n')
 
 
-    def fullfile(self, path, filename):
-        try:
-            fullpath = abspath(path)
-        except:
-            raise IOError
-        return join(fullpath, filename)
-
-
 class Writer(object):
     """Utility for appending values to text files"""
 
-    def __init__(self, path='.'):
-        if not exists(path):
-            raise Exception
-        self.path = join(path, 'NonlinearOptimization')
-
-        os.mkdir(self.path)
+    def __init__(self, path='./output.stat'):
+        self.path = abspath(path)
+        try:
+            os.mkdir(path)
+        except:
+            raise IOError
 
         self.__call__('step_count', 0)
 

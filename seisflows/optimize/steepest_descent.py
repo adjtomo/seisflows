@@ -16,6 +16,10 @@ class steepest_descent(custom_import('optimize', 'base')):
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
+        # line search algorithm
+        if 'LINESEARCH' not in PAR:
+            setattr(PAR, 'LINESEARCH', 'Bracket')
+
         super(steepest_descent, self).check()
 
 
