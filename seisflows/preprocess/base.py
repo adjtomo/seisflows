@@ -22,21 +22,27 @@ class base(object):
     def check(self):
         """ Checks parameters and paths
         """
+        # usedf for inversion
         if 'MISFIT' not in PAR:
             setattr(PAR, 'MISFIT', None)
 
+        # used for migration
         if 'BACKPROJECT' not in PAR:
             setattr(PAR, 'BACKPROJECT', None)
 
+        # data file format
         if 'FORMAT' not in PAR:
             raise ParameterError(PAR, 'FORMAT')
 
+        # data normalization
         if 'NORMALIZE' not in PAR:
             setattr(PAR, 'NORMALIZE', 'L2')
 
+        # data muting
         if 'MUTE' not in PAR:
             setattr(PAR, 'MUTE', None)
 
+        # data filtering
         if 'FILTER' not in PAR:
             setattr(PAR, 'FILTER', None)
 
@@ -93,6 +99,36 @@ class base(object):
                 self.write_residuals(path, syn, obs)
 
             self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, filename)
+
+
+    def prepare_apply_hess(self, path='.'):
+        """ Prepares solver to compute action of Hessian by writing adjoint traces
+        """
+        solver = sys.modules['seisflows_solver']
+
+        if 'OPTIMIZE' not in PAR:
+           tag1, tag2 = 'lcg', 'obs'
+        elif PAR.OPTIMIZE in ['newton']:
+           tag1, tag2 = 'lcg', 'obs'
+        elif PAR.OPTIMIZE in ['gauss_newton']:
+           tag1, tag2 = 'lcg', 'syn'
+        else:
+           tag1, tag2 = 'lcg', 'obs'
+
+        for filename in solver.data_filenames:
+            dat1 = self.reader(path+'/'+'traces/'+tag1, filename)
+            dat2 = self.reader(path+'/'+'traces/'+tag2, filename)
+
+            dat1 = self.apply_filter(dat1)
+            dat1 = self.apply_mute(dat1)
+            dat1 = self.apply_normalize(dat1)
+
+            dat2 = self.apply_filter(dat2)
+            dat2 = self.apply_mute(dat2)
+            dat2 = self.apply_normalize(dat2)
+
+            self.write_adjoint_traces(path+'/'+'traces/adj', dat1, dat2, filename)
+
 
 
     def write_residuals(self, path, syn, dat):
