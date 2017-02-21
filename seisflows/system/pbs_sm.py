@@ -98,7 +98,6 @@ class pbs_lg(custom_import('system', 'base')):
         """ Submits workflow
         """
         # create scratch directories
-        unix.rm(PATH.SCRATCH)
         unix.mkdir(PATH.SCRATCH)
         unix.mkdir(PATH.SYSTEM)
 

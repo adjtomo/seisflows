@@ -68,7 +68,6 @@ class serial(custom_import('system', 'base')):
         """ Submits job
         """
         # create scratch directories
-        unix.rm(PATH.SCRATCH)
         unix.mkdir(PATH.SCRATCH)
         unix.mkdir(PATH.SYSTEM)
 

@@ -22,7 +22,7 @@ if __name__ == '__main__':
     myfunc = sys.argv[3]
 
     if nargs == 4: 
-        myenv = sys.argv[4]
+        myenv = sys.argv[4].strip(',')
         export(myenv)
 
     from os.path import join

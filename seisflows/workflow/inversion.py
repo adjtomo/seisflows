@@ -138,19 +138,20 @@ class inversion(object):
     def setup(self):
         """ Lays groundwork for inversion
         """
-        # clean scratch directories
-        if PAR.BEGIN == 1:
+        if optimize.iter == 1:
             preprocess.setup()
             postprocess.setup()
             optimize.setup()
 
-        if PATH.DATA:
-            print 'Copying data' 
-        else:
-            print 'Generating data' 
+        if optimize.iter == 1 or \
+           PATH.LOCAL:
+            if PATH.DATA:
+                print 'Copying data' 
+            else:
+                print 'Generating data' 
 
-        system.run('solver', 'setup', 
-                   hosts='all')
+            system.run('solver', 'setup',
+                hosts='all')
 
 
     def initialize(self):
