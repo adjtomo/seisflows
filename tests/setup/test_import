@@ -10,25 +10,7 @@ verbose = True
 
 succeeded = []
 excluded = []
-<<<<<<< HEAD:tests/test_import
-excluded += ['seisflows.solver']
-excluded += ['seisflows.system.tiger']
-excluded += ['seisflows.workflow.test_optimize']
-excluded += ['seisflows.workflow.test_preprocess']
-
-# which modules failed to import?
 failed = []
-
-
-# aliases
-fail = False
-ignore = True
-succeed = True
-
-=======
-failed = []
-
->>>>>>> 1f36d6a3b55e1736e8b7757df06b9a512f0247a4:tests/setup/test_import
 
 def check_package(pkgname):
     if pkgname in excluded:
