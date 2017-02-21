@@ -1,0 +1,5 @@
+
+WORKFLOW='test_system'
+SYSTEM='multithreaded'
+NTASK=4
+NPROCMAX=4

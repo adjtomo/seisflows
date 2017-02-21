@@ -1,21 +1,19 @@
 
-from os.path import abspath
 import sys
-
 import numpy as np
 
+from os.path import abspath
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import savetxt
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError
+from seisflows.tools.tools import savetxt
+from seisflows.config import ParameterError
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
-import optimize
+optimize = sys.modules['seisflows_optimize']
 
-import problems.rosenbrock as problem
+import rosenbrock as problem
 
 
 class test_optimize(object):
@@ -32,7 +30,7 @@ class test_optimize(object):
             setattr(PAR, 'OPTIMIZE', 'base')
 
         if 'VERBOSE' not in PAR:
-            setattr(PAR, 'VERBOSE', 1)
+            setattr(PAR, 'VERBOSE', 0)
 
         if 'BEGIN' not in PAR:
             raise Exception
@@ -160,7 +158,7 @@ class test_optimize(object):
             print '%14.7e %14.7e'%tuple(m_new)
 
         if cls.status(m_new, m_old):
-            print 'Stopping criteria met.\n'
+            print 'Test successful: stopping criteria met.\n'
             np.savetxt('niter', [cls.iter], '%d')
             sys.exit(0)
 

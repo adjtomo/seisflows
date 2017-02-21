@@ -7,12 +7,11 @@ from os.path import abspath, basename, join
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import call, findpath, saveobj
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, custom_import
+from seisflows.tools.tools import call, findpath, saveobj
+from seisflows.config import ParameterError, custom_import
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 
 class lsf_lg(custom_import('system', 'base')):
@@ -36,58 +35,73 @@ class lsf_lg(custom_import('system', 'base')):
     def check(self):
         """ Checks parameters and paths
         """
-
-        # check parameters
+        # name of job
         if 'TITLE' not in PAR:
             setattr(PAR, 'TITLE', basename(abspath('.')))
 
+        # time allocated for entire workflow
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
+        # time allocated for each individual task
         if 'STEPTIME' not in PAR:
-            setattr(PAR, 'STEPTIME', 30.)
+            setattr(PAR, 'STEPTIME', 15.)
 
-        if 'SLEEPTIME' not in PAR:
-            setattr(PAR, 'SLEEPTIME', 1.)
-
-        if 'VERBOSE' not in PAR:
-            setattr(PAR, 'VERBOSE', 1)
-
+        # number of tasks
         if 'NTASK' not in PAR:
             raise ParameterError(PAR, 'NTASK')
 
+        # number of cores per task
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
+         # number of cores per node
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
+        # optional additional LSF arguments
         if 'LSFARGS' not in PAR:
             setattr(PAR, 'LSFARGS', '')
 
-        # check paths
-        if 'SCRATCH' not in PATH:
-            setattr(PATH, 'SCRATCH', join(abspath('.'), 'scratch'))
+        # optional environment variable list VAR1=val1,VAR2=val2,...
+        if 'ENVIRONS' not in PAR:
+            setattr(PAR, 'ENVIRONS', '')
 
+        # level of detail in output messages
+        if 'VERBOSE' not in PAR:
+            setattr(PAR, 'VERBOSE', 1)
+
+        # where job was submitted
+        if 'WORKDIR' not in PATH:
+            setattr(PATH, 'WORKDIR', abspath('.'))
+
+        # where output files are written
+        if 'OUTPUT' not in PATH:
+            setattr(PATH, 'OUTPUT', PATH.WORKDIR+'/'+'output')
+
+        # where temporary files are written
+        if 'SCRATCH' not in PATH:
+            setattr(PATH, 'SCRATCH', PATH.WORKDIR+'/'+'scratch')
+
+        # where system files are written
+        if 'SYSTEM' not in PATH:
+            setattr(PATH, 'SYSTEM', PATH.SCRATCH+'/'+'system')
+
+        # optional local scratch path
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
-
-        if 'SUBMIT' not in PATH:
-            setattr(PATH, 'SUBMIT', abspath('.'))
-
-        if 'OUTPUT' not in PATH:
-            setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
-
-        if 'SYSTEM' not in PATH:
-            setattr(PATH, 'SYSTEM', join(PATH.SCRATCH, 'system'))
 
 
     def submit(self, workflow):
         """ Submits workflow
         """
+        # create scratch directories
+        unix.mkdir(PATH.SCRATCH)
+        unix.mkdir(PATH.SYSTEM)
+
+        # create output directories
         unix.mkdir(PATH.OUTPUT)
-        unix.cd(PATH.OUTPUT)
-        unix.mkdir(PATH.SUBMIT+'/'+'output.lsf')
+        unix.mkdir(PATH.WORKDIR+'/'+'output.lsf')
 
         self.checkpoint()
 
@@ -95,9 +109,9 @@ class lsf_lg(custom_import('system', 'base')):
         call('bsub '
                 + '%s ' % PAR.LSFARGS
                 + '-J %s ' % PAR.TITLE
-                + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
+                + '-o %s ' % (PATH.WORKDIR+'/'+'output.log')
                 + '-n %d ' % PAR.NODESIZE
-                + '-e %s ' % (PATH.SUBMIT+'/'+'error.log')
+                + '-e %s ' % (PATH.WORKDIR+'/'+'error.log')
                 + '-R "span[ptile=%d]" ' % PAR.NODESIZE
                 + '-W %d:00 ' % PAR.WALLTIME
                 +  findpath('seisflows.system') +'/'+ 'wrappers/submit '
@@ -109,34 +123,21 @@ class lsf_lg(custom_import('system', 'base')):
         """
         self.save_objects()
         self.save_kwargs(classname, funcname, kwargs)
-        jobs = self.launch(classname, funcname, hosts)
+        jobs = self.submit_job_array(classname, funcname, hosts)
         while True:
-            # wait a few seconds before checking status
-            time.sleep(60*PAR.SLEEPTIME)
+            # wait 30 seconds before checking status again
+            time.sleep(30)
 
             self.timestamp()
-            isdone, jobs = self.task_status(classname, funcname, jobs)
+            isdone, jobs = self.job_status(classname, funcname, jobs)
             if isdone:
                 return
 
 
-    def launch(self, classname, funcname, hosts='all'):
-        unix.mkdir(PATH.SYSTEM)
-
+    def submit_job_array(self, classname, funcname, hosts='all'):
         # submit job
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
-            call('bsub '
-                + '%s ' % PAR.LSFARGS
-                + '-n %d ' % PAR.NPROC 
-                + '-R "span[ptile=%d]" ' % PAR.NODESIZE
-                + '-W %d:00 ' % PAR.STEPTIME
-                + '-J "%s' %PAR.TITLE
-                + self.launch_args(hosts)
-                + findpath('seisflows.system') +'/'+ 'wrapper/run '
-                + PATH.OUTPUT + ' '
-                + classname + ' '
-                + funcname + ' ',
-                stdout=f)
+            call(self.job_array_cmd(classname, funcname, hosts), stdout=f)
 
         # retrieve job ids
         with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
@@ -152,10 +153,39 @@ class lsf_lg(custom_import('system', 'base')):
             return [job]
 
 
-    def task_status(self, classname, funcname, jobs):
+    def job_array_cmd(self, classname, funcname, hosts):
+        return ('bsub '
+            + '%s ' % PAR.LSFARGS
+            + '-n %d ' % PAR.NPROC
+            + '-R "span[ptile=%d]" ' % PAR.NODESIZE
+            + '-W %d:00 ' % PAR.STEPTIME
+            + '-J "%s' %PAR.TITLE
+            + self.launch_args(hosts)
+            + findpath('seisflows.system') +'/'+ 'wrapper/run '
+            + PATH.OUTPUT + ' '
+            + classname + ' '
+            + funcname + ' '
+            + PAR.ENVIRONS)
+
+
+    def job_array_args(self, hosts):
+        if hosts == 'all':
+            args = ''
+            args += '[%d-%d] %% %d' % (1, PAR.NSRC, PAR.NTASK)
+            args += '-o %s ' % (PATH.WORKDIR+'/'+'output.lsf/'+'%J_%I')
+
+        elif hosts == 'head':
+            args = ''
+            args += '[%d-%d]' % (1, 1)
+            args += '-o %s ' % (PATH.WORKDIR+'/'+'output.lsf/'+'%J')
+
+        return args
+
+
+    def job_status(self, classname, funcname, jobs):
         # query lsf database
         for job in jobs:
-            state = self.getstate(job)
+            state = self._query(job)
             states = []
             if state in ['DONE']:
                 states += [1]
@@ -170,28 +200,13 @@ class lsf_lg(custom_import('system', 'base')):
         return isdone, jobs
 
 
-    def launch_args(self, hosts):
-        if hosts == 'all':
-            args = ''
-            args += '[%d-%d] %% %d' % (1, PAR.NSRC, PAR.NTASK)
-            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J_%I')
-
-        elif hosts == 'head':
-            args = ''
-            args += '[%d-%d]' % (1, 1)
-            args += '-o %s ' % (PATH.SUBMIT+'/'+'output.lsf/'+'%J')
-
-        return args
-
-
-
     def mpiexec(self):
         """ Specifies MPI exectuable; used to invoke solver
         """
         return 'mpiexec '
 
 
-    def getstate(self, jobid):
+    def _query(self, jobid):
         """ Retrives job state from LSF database
         """
         with open(PATH.SYSTEM+'/'+'job_status', 'w') as f:
@@ -215,8 +230,8 @@ class lsf_lg(custom_import('system', 'base')):
 
 
     def save_kwargs(self, classname, funcname, kwargs):
-        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
-        kwargsfile = join(kwargspath, funcname+'.p')
+        kwargspath = join(PATH.OUTPUT, 'kwargs')
+        kwargsfile = join(kwargspath, classname+'_'+funcname+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
 

@@ -1,17 +1,18 @@
 
+import sys
 import numpy as np
 import obspy
 
 from seisflows.tools import msg, unix
-from seisflows.tools.code import exists, Struct
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.tools.tools import exists, Struct
+from seisflows.config import   \
     ParameterError
 
-from seisflows.seistools import adjoint, misfit, readers, writers
-from seisflows.seistools.signal import mute_early, mute_late
+from seisflows.plugins import adjoint, misfit, readers, writers
+from seisflows.tools.signal import mute_early, mute_late
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 
 class base(object):
@@ -21,21 +22,27 @@ class base(object):
     def check(self):
         """ Checks parameters and paths
         """
+        # usedf for inversion
         if 'MISFIT' not in PAR:
             setattr(PAR, 'MISFIT', None)
 
+        # used for migration
         if 'BACKPROJECT' not in PAR:
             setattr(PAR, 'BACKPROJECT', None)
 
+        # data file format
         if 'FORMAT' not in PAR:
             raise ParameterError(PAR, 'FORMAT')
 
+        # data normalization
         if 'NORMALIZE' not in PAR:
             setattr(PAR, 'NORMALIZE', 'L2')
 
+        # data muting
         if 'MUTE' not in PAR:
             setattr(PAR, 'MUTE', None)
 
+        # data filtering
         if 'FILTER' not in PAR:
             setattr(PAR, 'FILTER', None)
 
@@ -72,7 +79,8 @@ class base(object):
         """ Prepares solver for gradient evaluation by writing residuals and
           adjoint traces
         """
-        import solver
+        solver = sys.modules['seisflows_solver']
+
         for filename in solver.data_filenames:
             obs = self.reader(path+'/'+'traces/obs', filename)
             syn = self.reader(path+'/'+'traces/syn', filename)
@@ -91,6 +99,36 @@ class base(object):
                 self.write_residuals(path, syn, obs)
 
             self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, filename)
+
+
+    def prepare_apply_hess(self, path='.'):
+        """ Prepares solver to compute action of Hessian by writing adjoint traces
+        """
+        solver = sys.modules['seisflows_solver']
+
+        if 'OPTIMIZE' not in PAR:
+           tag1, tag2 = 'lcg', 'obs'
+        elif PAR.OPTIMIZE in ['newton']:
+           tag1, tag2 = 'lcg', 'obs'
+        elif PAR.OPTIMIZE in ['gauss_newton']:
+           tag1, tag2 = 'lcg', 'syn'
+        else:
+           tag1, tag2 = 'lcg', 'obs'
+
+        for filename in solver.data_filenames:
+            dat1 = self.reader(path+'/'+'traces/'+tag1, filename)
+            dat2 = self.reader(path+'/'+'traces/'+tag2, filename)
+
+            dat1 = self.apply_filter(dat1)
+            dat1 = self.apply_mute(dat1)
+            dat1 = self.apply_normalize(dat1)
+
+            dat2 = self.apply_filter(dat2)
+            dat2 = self.apply_mute(dat2)
+            dat2 = self.apply_normalize(dat2)
+
+            self.write_adjoint_traces(path+'/'+'traces/adj', dat1, dat2, filename)
+
 
 
     def write_residuals(self, path, syn, dat):
@@ -140,7 +178,7 @@ class base(object):
                 tr.filter('bandpass', freqmin=PAR.FREQMIN, freqmax=PAR.FREQMAX)
 
                 # workaround obspy dtype conversion
-                tr.data = tr.data.astype(np.float32)
+                #tr.data = tr.data.astype(np.float32)
 
         elif PAR.FILTER == 'Lowpass':
             traces = _signal.detrend(traces)
@@ -148,7 +186,7 @@ class base(object):
                 tr.filter('lowpass', freq=PAR.FREQ)
 
                 # workaround obspy dtype conversion
-                tr.data = tr.data.astype(np.float32)
+                #tr.data = tr.data.astype(np.float32)
 
         elif PAR.FILTER == 'Highpass':
             traces = _signal.detrend(traces)
@@ -156,7 +194,7 @@ class base(object):
                 tr.filter('highpass', freq=PAR.FREQ)
 
                 # workaround obspy dtype conversion
-                tr.data = tr.data.astype(np.float32)
+                #tr.data = tr.data.astype(np.float32)
 
         else:
             raise ParameterError()
@@ -181,6 +219,14 @@ class base(object):
             return mute_late(traces,
                 PAR.MUTESLOPE, # (units: time/distance)
                 PAR.MUTECONST, # (units: time)
+                self.get_time_scheme(traces),
+                self.get_source_coords(traces),
+                self.get_receiver_coords(traces))
+
+        elif PAR.MUTE == 'MuteEarlyAndLateArrivals':
+            return mute_early_and_late(traces,
+                PAR.MUTESLOPE,
+                PAR.MUTECONST,
                 self.get_time_scheme(traces),
                 self.get_source_coords(traces),
                 self.get_receiver_coords(traces))
@@ -282,6 +328,14 @@ class base(object):
             assert 'MUTESLOPE' in PAR
             assert 'MUTECONST' in PAR
             assert PAR.MUTESLOPE >= 0.
+
+
+        elif PAR.MUTE in ['MuteEarlyAndLateArrivals']:
+            assert 'MUTESLOPE' in PAR
+            assert 'MUTECONST' in PAR
+            assert len(PAR.MUTESLOPE) == 2
+            assert len(PAR.MUTECONSTANT) == 2
+            assert 0. <= PAR.MUTESLOPE[0] < PAR.MUTESLOPE[1]
 
         else:
             raise ParameterError()

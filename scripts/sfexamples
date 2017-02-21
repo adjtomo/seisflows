@@ -2,11 +2,9 @@
 
 import os
 
-from os.path import join
+from os.path import exists, join
 from socket import gethostname
-
 from seisflows.tools import unix
-from seisflows.tools.code import exists
 
 
 def listdir(dir):

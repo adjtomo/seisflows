@@ -6,18 +6,17 @@ import numpy as np
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import divides, exists
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError
+from seisflows.tools.tools import divides, exists
+from seisflows.config import ParameterError
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
-import system
-import solver
-import optimize
-import preprocess
-import postprocess
+system = sys.modules['seisflows_system']
+solver = sys.modules['seisflows_solver']
+optimize = sys.modules['seisflows_optimize']
+preprocess = sys.modules['seisflows_preprocess']
+postprocess = sys.modules['seisflows_postprocess']
 
 
 class inversion(object):
@@ -139,22 +138,20 @@ class inversion(object):
     def setup(self):
         """ Lays groundwork for inversion
         """
-        # clean scratch directories
-        if PAR.BEGIN == 1:
-            unix.rm(PATH.SCRATCH)
-            unix.mkdir(PATH.SCRATCH)
-
+        if optimize.iter == 1:
             preprocess.setup()
             postprocess.setup()
             optimize.setup()
 
-        if PATH.DATA:
-            print 'Copying data' 
-        else:
-            print 'Generating data' 
+        if optimize.iter == 1 or \
+           PATH.LOCAL:
+            if PATH.DATA:
+                print 'Copying data' 
+            else:
+                print 'Generating data' 
 
-        system.run('solver', 'setup', 
-                   hosts='all')
+            system.run('solver', 'setup',
+                hosts='all')
 
 
     def initialize(self):

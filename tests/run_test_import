@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# navigate to seisflows/tests
+cd $(dirname ${BASH_SOURCE[0]})
+
+
+python $PWD/setup/test_import
+exit $?
+

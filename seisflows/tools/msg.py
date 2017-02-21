@@ -82,7 +82,7 @@ READER ERROR
 
    Seismic data reader not found.
 
-   PAR.READER must correspond to an entry in seisflows.seistools.readers
+   PAR.READER must correspond to an entry in seisflows.plugins.readers
 
 """
 
@@ -93,7 +93,7 @@ WRITER ERROR
 
    Seismic data writer not found.
 
-   PAR.WRITER must correspond to an entry in seisflows.seistools.writers
+   PAR.WRITER must correspond to an entry in seisflows.plugins.writers
 
 """
 
@@ -262,3 +262,37 @@ SEISFLOWS IMPORT ERROR
 """
 
 
+###
+
+CompatibilityError1 = """
+
+Parameter settings have changed.
+
+In your parameter file, please remove
+    OPTIMIZE='base'
+
+and add one of the following instead
+    OPTIMIZE='LBFGS'
+    OPTIMIZE'=NLCG'
+    OPTIMIZE='steepest_descent'
+
+"""
+
+Warning_pbs_sm = """
+
+WARNING:  PBS_SM hasn't been tested for a long while because we laack access to a 
+PBS cluster.
+
+If you have access to a PBS cluster and are willing to help, please let us know.
+
+"""
+
+
+Warning_pbs_lg = """
+
+WARNING:  PBS_LG hasn't been tested for a long while because we lack access to a
+PBS cluster.
+
+If you have access to a PBS cluster and are willing to help, please let us know.
+
+"""

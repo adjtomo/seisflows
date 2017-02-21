@@ -1,20 +1,52 @@
 #!/usr/bin/env python
 
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    SeisflowsObjects
+import argparse, os, sys
 
-for obj in [SeisflowsParameters(), SeisflowsPaths()]:
-   obj.load()
+from seisflows.config import config, loadpy, tilde_expand, Dict, Struct
+from seisflows.tools import unix
 
-for obj in [SeisflowsObjects()]:
-   obj.reload('./output')
 
-assert 'SYSTEM' in SeisflowsParameters()    
-assert 'WORKFLOW' in SeisflowsParameters()
+def getargs():
+    parser = argparse.ArgumentParser()
 
-import system
-import workflow
+    parser.add_argument('--workdir', nargs='?', 
+        default=os.getcwd())
 
-system.submit(workflow)
+    parser.add_argument('--parameter_file', nargs='?', 
+        default='parameters.py')
 
+    parser.add_argument('--path_file', nargs='?', 
+        default='paths.py')
+
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    ### workflow submission script
+    args = getargs()
+
+    # register parameters
+    parameters = loadpy(args.parameter_file)
+    sys.modules['seisflows_parameters'] = Dict(parameters)
+
+    # register paths
+    paths = tilde_expand(loadpy(args.path_file))
+    sys.modules['seisflows_paths'] = Dict(paths)
+
+    unix.mkdir(args.workdir)
+    unix.cd(args.workdir)
+
+    # reload objects
+    for name in names:
+        fullfile = join(args.workdir, 'output', 'seisflows_'+name+'.p')
+        sys.modules['seisflows_'+name] = loadobj(fullfile)
+
+    # parameter checking
+    for name in names:
+        sys.modules['seisflows_'+name].check()
+
+    # submit workflow
+    workflow = sys.modules['seisflows_workflow']
+    system = sys.modules['seisflows_system']
+    system.submit(workflow)
 

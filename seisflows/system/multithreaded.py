@@ -1,19 +1,18 @@
 
 import os
+import sys
+import numpy as np
 
 from os.path import abspath, basename, join
 from subprocess import Popen
 from time import sleep
 
-import numpy as np
-
 from seisflows.tools import unix
-from seisflows.tools.code import call, findpath, saveobj
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, custom_import
+from seisflows.tools.tools import call, findpath, saveobj
+from seisflows.config import ParameterError, custom_import
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 
 class multithreaded(custom_import('system', 'serial')):
@@ -33,6 +32,7 @@ class multithreaded(custom_import('system', 'serial')):
         """
         super(multithreaded, self).check()
 
+        # number of available cores
         if 'NPROCMAX' not in PAR:
             raise Exception
 
@@ -40,8 +40,6 @@ class multithreaded(custom_import('system', 'serial')):
     def run(self, classname, funcname, hosts='all', **kwargs):
         """ Runs tasks in serial or parallel on specified hosts
         """
-        unix.mkdir(PATH.SYSTEM)
-
         self.checkpoint()
         self.save_kwargs(classname, funcname, kwargs)
 
@@ -98,8 +96,8 @@ class multithreaded(custom_import('system', 'serial')):
 
 
     def save_kwargs(self, classname, funcname, kwargs):
-        kwargspath = join(PATH.OUTPUT, 'SeisflowsObjects', classname+'_kwargs')
-        kwargsfile = join(kwargspath, funcname+'.p')
+        kwargspath = join(PATH.OUTPUT, 'kwargs')
+        kwargsfile = join(kwargspath, classname+'_'+funcname+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
 

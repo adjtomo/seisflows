@@ -5,18 +5,18 @@ from os.path import join
 
 import numpy as np
 
-import seisflows.seistools.specfem3d_globe as solvertools
-from seisflows.seistools.shared import getpar, setpar, Model, Minmax
-from seisflows.seistools.io import loadbypar, copybin, loadbin, savebin
+import seisflows.plugins.solver.specfem3d_globe as solvertools
+from seisflows.tools.shared import getpar, setpar, Model, Minmax
+from seisflows.plugins.io import loadbypar, copybin, loadbin, savebin
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import Struct, exists, call_solver
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.tools.tools import Struct, exists, call_solver
+from seisflows.config import   \
     ParameterError, custom_import
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 import system
 

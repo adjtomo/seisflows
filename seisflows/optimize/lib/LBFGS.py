@@ -3,7 +3,7 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.code import savetxt, exists
+from seisflows.tools.tools import savetxt, exists
 from seisflows.tools.math import angle
 
 
@@ -39,6 +39,7 @@ class LBFGS(object):
         """
         self.iter += 1
 
+        unix.cd(self.path)
         g = self.load('g_new')
         if self.iter == 1:
             return -g, 0

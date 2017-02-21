@@ -29,10 +29,10 @@ Installation
 
 To install Seisflows, first clone the repository::
 
-    git clone github.com/PrincetonUniversity/seisflows
+    git clone github.com/rmodrak/seisflows
 
 
-Then set environment variables. Add the following lines to ``.bash_profile`` (or modify accordingly if using a shell other than bash)::
+Then set environment variables. Add the following lines to ``.bashrc`` (or modify accordingly if using a shell other than bash)::
 
     export PATH=$PATH:/path/to/seisflows/scripts
     export PYTHONPATH=$PYTHONPATH:/path/to/seisflows
@@ -41,7 +41,7 @@ Then set environment variables. Add the following lines to ``.bash_profile`` (or
 Software Prerequisites
 ----------------------
 
-SeisFlows requires Python 2.7, NumPy and SciPy.  Users will need to install these packages before being able to use SeisFlows.  Obspy is required for some workflows, but not for any of the examples available for download.  (Please let us know through the GitHub issues page if you could contribute a reliable setup.py script without conda dependencies.)
+SeisFlows requires Python 2.7, Numpy, Scipy and Obspy.  Users will need to install these packages before being able to use SeisFlows.
 
 Forward modeling software is also a prerequisite; see :ref:`solver` for more information.
 
@@ -139,32 +139,18 @@ SeisFlows can run on SLURM, PBS, and LSF clusters, as well as, for very small pr
 
 *SLURM_SM* - For small inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run within a single job.  Requires that each individual wavefield simulation runs only a single core, making this option suitable for small 2D inversions only.
 
-*SLURM_MD* - For small to moderate-sized inversions on SLURM clusters. All resources are allocated at the beginning and all simulations are run within a single job.  Individual wavefield simulations can span more than one core, but not more than one node. Suitable mainly for 2D inversions, although some small 3D inversion might be possible.
 
 *SLURM_LG* - For large inversions on SLURM clusters. The work of the inversion is divided between multiple jobs that are coordinated by a single long-running master job. Resources are allocated on a per simulation basis. Suitable for 3D inversions in which individual wavefield simulation span several or more nodes.
 
-*SLURM_XL* - For large inversions on SLURM clusters. In addition to the features of SLURM_LG, provides fault tolerance. Tasks that end in failure or timeout are automatically resubmitted. For this reason, can be dangerous to use on code that is not well tested.
 
 *SERIAL* - Tasks that are normally carried out in parallel are instead carried out one at a time. Useful for debugging, but not much else.
 
 *MULTITHREADED* - On desktops or laptops with multiple cores, allows embarrassingly parallel tasks to be carried out several at a time, rather than one at a time.  Can be used to run small 2D inversions on a laptop or desktop.
 
 
-*MPI* - Similar in functionality to  MULTITHREADED, except uses MPI processes rather than multithreading for parallelism.  Requires Python module mpi4py.
-
 *LSF_SM* - Same as SLURM_SM and PBS_SM, except for LSF clusters.
 
 *LSF_LG* - Same as SLURM_LG and PBS_LG, except for LSF clusters.
-
-*PBS_TORQUE_SM* - Same as PBS_SM, except uses pbsdsh rather than mpi4py under the hood.
-
-*TIGER_SM* - Slightly specialized version of SLURM_SM made available for Princeton users.
-
-*TIGER_MD* - Slightly specialized version of SLURM_MD made available for Princeton users.
-
-*TIGER_LG* - Slightly specialized version of SLURM_LG made available for Princeton users.
-
-*TIGER_MD_GPU* - Highly specialized version of SLURM_MD made available for Princeton GPU users.  Provided by Etienne Bachmann. Not recently tested and not likely to work right out of the box.
 
 
 Writing Custom System Interfaces

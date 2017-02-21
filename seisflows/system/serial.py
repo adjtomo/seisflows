@@ -1,15 +1,14 @@
 
 import os
-from os.path import abspath, basename, join
-
+import sys
 import numpy as np
 
+from os.path import abspath, basename, join
 from seisflows.tools import unix
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError, custom_import
+from seisflows.config import ParameterError, custom_import
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
 
 class serial(custom_import('system', 'base')):
@@ -28,43 +27,56 @@ class serial(custom_import('system', 'base')):
         """ Checks parameters and paths
         """
 
-        # check parameters
+        # name of job
         if 'TITLE' not in PAR:
             setattr(PAR, 'TITLE', basename(abspath('.')))
 
+        # number of tasks
         if 'NTASK' not in PAR:
             setattr(PAR, 'NTASK', 1)
 
+        # number of processers per task
         if 'NPROC' not in PAR:
             setattr(PAR, 'NPROC', 1)
 
+        # level of detail in output messages
         if 'VERBOSE' not in PAR:
             setattr(PAR, 'VERBOSE', 1)
 
-        # check paths
-        if 'SCRATCH' not in PATH:
-            setattr(PATH, 'SCRATCH', join(abspath('.'), 'scratch'))
+        # where job was submitted
+        if 'WORKDIR' not in PATH:
+            setattr(PATH, 'WORKDIR', abspath('.'))
 
-        if 'LOCAL' not in PATH:
-            setattr(PATH, 'LOCAL', '')
-
-        if 'SUBMIT' not in PATH:
-            setattr(PATH, 'SUBMIT', abspath('.'))
-
+        # where output files are written
         if 'OUTPUT' not in PATH:
-            setattr(PATH, 'OUTPUT', join(PATH.SUBMIT, 'output'))
+            setattr(PATH, 'OUTPUT', PATH.WORKDIR+'/'+'output')
 
+        # where temporary files are written
+        if 'SCRATCH' not in PATH:
+            setattr(PATH, 'SCRATCH', PATH.WORKDIR+'/'+'scratch')
+
+        # where system files are written
         if 'SYSTEM' not in PATH:
-            setattr(PATH, 'SYSTEM', join(PATH.SCRATCH, 'system'))
+            setattr(PATH, 'SYSTEM', PATH.SCRATCH+'/'+'system')
+
+        # optional local filesystem scratch path
+        if 'LOCAL' not in PATH:
+            setattr(PATH, 'LOCAL', None)
 
 
     def submit(self, workflow):
         """ Submits job
         """
+        # create scratch directories
+        unix.mkdir(PATH.SCRATCH)
+        unix.mkdir(PATH.SYSTEM)
+
+        # create output directories
         unix.mkdir(PATH.OUTPUT)
-        unix.cd(PATH.OUTPUT)
 
         self.checkpoint()
+
+        # execute workflow
         workflow.main()
 
 
@@ -77,13 +89,13 @@ class serial(custom_import('system', 'base')):
             for itask in range(PAR.NTASK):
                 self.setnode(itask)
                 self.progress(itask)
-                func = getattr(__import__(classname), funcname)
+                func = getattr(__import__('seisflows_'+classname), funcname)
                 func(**kwargs)
             print ''
 
         elif hosts == 'head':
             self.setnode(0)
-            func = getattr(__import__(classname), funcname)
+            func = getattr(__import__('seisflows_'+classname), funcname)
             func(**kwargs)
 
         else:

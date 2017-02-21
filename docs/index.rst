@@ -12,7 +12,7 @@ SeisFlows is an open source seismic inversion package that
 
 - provides a framework for research in regional, global, and exploration seismology
 
-Perhaps the easiest way to learn more is to run a one of the following examples.  
+Perhaps the easiest way to learn more is to run one of the following examples.  
 
 
 Examples: Available For Download

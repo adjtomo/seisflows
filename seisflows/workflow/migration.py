@@ -1,18 +1,18 @@
 
+import sys
 from glob import glob
 
 from seisflows.tools import unix
-from seisflows.tools.code import exists
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError
+from seisflows.tools.tools import exists
+from seisflows.config import ParameterError
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
-import system
-import solver
-import preprocess
-import postprocess
+system = sys.modules['seisflows_system']
+solver = sys.modules['seisflows_solver']
+preprocess = sys.modules['seisflows_preprocess']
+postprocess = sys.modules['seisflows_postprocess']
 
 
 class migration(object):

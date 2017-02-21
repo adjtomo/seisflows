@@ -1,12 +1,13 @@
 
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError
+import sys
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+from seisflows.config import ParameterError
 
-import system
-import solver
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
+
+system = sys.modules['seisflows_system']
+solver = sys.modules['seisflows_solver']
 
 
 class test_forward(object):

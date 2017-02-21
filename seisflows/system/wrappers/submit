@@ -2,22 +2,24 @@
 
 import sys
 
-from os.path import join
-from seisflows.tools.code import loadjson
-from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
-
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
-OBJ = SeisflowsObjects()
+from seisflows.tools import unix
+from seisflows.config import load
 
 
 if __name__ == '__main__':
-    mypath = sys.argv[1]
+    """ Executes workflow previously submitted through job scheduler such as
+        PBS, LSF, or SLURM
+    """
 
-    for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
-       obj.reload(mypath)
+    unix.cd(sys.argv[1])
 
-    import workflow
+    # reload saved state
+    load(sys.argv[1])
 
+    # create handles
+    workflow = sys.modules['seisflows_workflow']
+    system = sys.modules['seisflows_system']
+
+    # execute workflow
     workflow.main()
 

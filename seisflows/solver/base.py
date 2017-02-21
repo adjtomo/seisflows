@@ -6,20 +6,21 @@ from os.path import basename, join
 
 import numpy as np
 
-from seisflows.seistools.io import sem
-from seisflows.seistools.shared import getpar, setpar, Model, Minmax
+from seisflows.plugins.io import sem
+from seisflows.tools.shared import getpar, setpar, Model, Minmax
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.code import Struct, exists, call_solver
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
+from seisflows.tools.tools import Struct, exists, call_solver
+from seisflows.config import   \
     ParameterError, custom_import
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
 
-import system
-import preprocess
+system = sys.modules['seisflows_system']
+preprocess = sys.modules['seisflows_preprocess']
+
 
 
 class base(object):

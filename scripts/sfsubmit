@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+
+import argparse, os, sys
+
+from seisflows.config import config, loadpy, tilde_expand, Dict, Struct
+from seisflows.tools import unix
+
+
+def getargs():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--workdir', nargs='?', 
+        default=os.getcwd())
+
+    parser.add_argument('--parameter_file', nargs='?', 
+        default='parameters.py')
+
+    parser.add_argument('--path_file', nargs='?', 
+        default='paths.py')
+
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    ### workflow submission script
+    args = getargs()
+
+    # register parameters
+    parameters = loadpy(args.parameter_file)
+    sys.modules['seisflows_parameters'] = Dict(parameters)
+
+    # register paths
+    paths = tilde_expand(loadpy(args.path_file))
+    sys.modules['seisflows_paths'] = Dict(paths)
+
+    unix.mkdir(args.workdir)
+    unix.cd(args.workdir)
+
+    config()
+
+    # submit workflow
+    workflow = sys.modules['seisflows_workflow']
+    system = sys.modules['seisflows_system']
+    system.submit(workflow)
+

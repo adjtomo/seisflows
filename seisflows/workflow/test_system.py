@@ -1,11 +1,12 @@
 
-from seisflows.tools.config import SeisflowsParameters, SeisflowsPaths, \
-    ParameterError
+import sys
 
-PAR = SeisflowsParameters()
-PATH = SeisflowsPaths()
+from seisflows.config import ParameterError
 
-import system
+PAR = sys.modules['seisflows_parameters']
+PATH = sys.modules['seisflows_paths']
+
+system = sys.modules['seisflows_system']
 
 
 class test_system:

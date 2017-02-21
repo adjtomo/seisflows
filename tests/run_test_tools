@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# navigate to seisflows/tests
+cd $(dirname ${BASH_SOURCE[0]})
+
+
+for script in $(ls $PWD/setup/test_tools/*)
+do
+    python $script
+done
+
+
+

@@ -1,26 +1,42 @@
 #!/usr/bin/env python
 
+import os
+import sys
+
+
+def export(myenv):
+    # exports comma delimited list of environment variables
+    # e.g. VARNAME1=value1,VARNAME2=value2
+    for item in myenv.split(','):
+        os.environ.update([item.split('=')])
+
+
 if __name__ == '__main__':
-    import sys
+    """ Runs task within currently executing workflow
+    """
+    nargs = len(sys.argv[1:])
 
     # parse command line arguments
     mypath = sys.argv[1]
-    myobj = sys.argv[2]
+    myclass = sys.argv[2]
     myfunc = sys.argv[3]
 
+    if nargs == 4: 
+        myenv = sys.argv[4].strip(',')
+        export(myenv)
+
     from os.path import join
-    from seisflows.tools.code import loadjson, loadobj
-    from seisflows.tools.config import SeisflowsObjects, SeisflowsParameters, SeisflowsPaths
+    from seisflows.tools.tools import loadjson, loadobj
+    from seisflows.config import load
 
     # reload from last checkpoint
-    for obj in [SeisflowsParameters(), SeisflowsPaths(), SeisflowsObjects()]:
-       obj.reload(mypath)
+    load(mypath)
 
     # load function arguments
-    kwargspath = join(mypath, 'SeisflowsObjects', myobj + '_kwargs')
-    kwargs = loadobj(join(kwargspath, myfunc + '.p'))
+    kwargspath = join(mypath, 'kwargs')
+    kwargs = loadobj(join(kwargspath, myclass+'_'+myfunc + '.p'))
 
     # call function
-    func = getattr(sys.modules[myobj], myfunc)
+    func = getattr(sys.modules['seisflows_'+myclass], myfunc)
     func(**kwargs)
 
