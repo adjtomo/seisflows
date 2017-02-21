@@ -20,7 +20,9 @@ class base(object):
     """ Abstract base class
 
      Default numerical parameters provided below should work well for a wide range
-     inversions without the need for manual tuning.
+     inversions without the need for manual tuning. If the nonlinear optimization
+     procedure stagnates, it may be due to the objective function rather than the 
+     numerical parameters.
 
      To reduce memory overhead, vectors are read from disk rather than passed
      from a calling routine. At the start of each search direction computation
@@ -85,7 +87,7 @@ class base(object):
         """
         # prepare output writers
         self.writer = Writer(
-                path=PATH.WORKDIR+'/'+'output.stat')
+                path=PATH.WORKDIR+'/'+'output.stats')
 
         self.stepwriter = StepWriter(
                 path=PATH.WORKDIR+'/'+'output.optim')
