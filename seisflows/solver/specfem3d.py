@@ -96,6 +96,13 @@ class specfem3d(custom_import('solver', 'base')):
             raise NotImplementedError
 
 
+    def eval_func(self, *args, **kwargs):
+        super(specfem3d, self).eval_func(*args, **kwargs)
+
+        # work around SPECFEM3D conflicting name conventions
+        self.rename_data()
+
+
     ### low-level solver interface
 
     def forward(self, path='traces/syn'):
@@ -121,9 +128,6 @@ class specfem3d(custom_import('solver', 'base')):
         unix.ln('traces/adj', 'SEM')
         call_solver(system.mpiexec(), 'bin/xspecfem3D')
 
-        # work around SPECFEM3D conflicting name conventions
-        self.rename_data()
-
 
     ### input file writers
 
@@ -148,10 +152,6 @@ class specfem3d(custom_import('solver', 'base')):
         if 'MULTIPLES' in PAR:
             raise NotImplementedError
 
-
-    def initialize_adjoint_traces(self):
-        """ Works around SPECFEM3D file format issue by overriding base method
-        """
 
     def initialize_adjoint_traces(self):
         super(specfem3d, self).initialize_adjoint_traces()
