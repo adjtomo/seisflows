@@ -33,6 +33,6 @@ class test_system:
         """
         import time
         time.sleep(1)
-        print 'Hello from', system.getnode()
+        print ' Hello from', system.getnode()+1
         print ''
 

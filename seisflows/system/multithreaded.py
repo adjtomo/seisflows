@@ -56,6 +56,7 @@ class multithreaded(custom_import('system', 'serial')):
                     i = queued_tasks.pop(0)
                     p = self._launch(classname, funcname, itask=i)
                     running_tasks[i] = p
+                    sleep(0.1)
 
                 # checks status of running tasks
                 for i, p in running_tasks.items():
@@ -63,7 +64,7 @@ class multithreaded(custom_import('system', 'serial')):
                         running_tasks.pop(i)
 
                 if running_tasks:
-                    sleep(1)
+                    sleep(1.)
 
             print ''
 

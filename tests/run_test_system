@@ -7,12 +7,12 @@ cd $(dirname ${BASH_SOURCE[0]})
 WD="$PWD/setup/test_system"
 
 
-# test serial
+echo "TESTING SERIAL..."
 sfrun --workdir=$WD --parameter_file=$WD/parameters_serial --path_file=$WD/paths
 rm -rf $WD/output* $WD/scratch
 
 
-# test multithreaded
+echo "TESTING MULTITHREADED..."
 sfrun --workdir=$WD --parameter_file=$WD/parameters_multithreaded --path_file=$WD/paths
 rm -rf $WD/output* $WD/scratch
 
