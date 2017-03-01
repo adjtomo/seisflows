@@ -85,7 +85,7 @@ def Envelope3(syn, obs, nt, dt, eps=0.):
     return wadj
 
 
-def AnalyticSignal(syn, obs, nt, dt, eps=0.):
+def InstantaneousPhase2(syn, obs, nt, dt, eps=0.):
     esyn = abs(_analytic(syn))
     eobs = abs(_analytic(obs))
 

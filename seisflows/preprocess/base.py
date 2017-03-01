@@ -9,7 +9,7 @@ from seisflows.config import   \
     ParameterError
 
 from seisflows.plugins import adjoint, misfit, readers, writers
-from seisflows.tools.signal import mute_early, mute_late
+from seisflows.tools.signal import mute_early, mute_late, mute_early_and_late
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
