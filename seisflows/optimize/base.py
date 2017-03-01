@@ -77,6 +77,7 @@ class base(object):
 
         if PAR.OPTIMIZE in ['base']:
             print msg.CompatibilityError1
+            sys.exit(-1)
 
         if PAR.PRECOND:
             assert PAR.PRECOND in dir(preconds)
