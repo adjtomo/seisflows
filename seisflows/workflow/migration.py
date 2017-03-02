@@ -59,10 +59,6 @@ class migration(object):
     def main(self):
         """ Migrates seismic data
         """
-        # prepare directory structure
-        unix.rm(PATH.SCRATCH)
-        unix.mkdir(PATH.SCRATCH)
-
         # set up workflow machinery
         preprocess.setup()
         postprocess.setup()
