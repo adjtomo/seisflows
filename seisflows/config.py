@@ -137,6 +137,9 @@ def custom_import(*args):
         imports 'seisflows.workflow.inversion' and, from this module, extracts
         class 'inversion'.
     """
+    module_exists = find_loader
+    package_exists = find_loader
+
     # parse input arguments
     if len(args) == 0:
         raise Exception(msg.ImportError1)
@@ -150,17 +153,17 @@ def custom_import(*args):
     # generate package list
     packages = ['seisflows']
     if os.getenv('SEISFLOWS_PACKAGES'):
-        for package in os.getenv('SEISFLOWS_PACKAGES').split(','):
-            if package in packages:
+        for name in os.getenv('SEISFLOWS_PACKAGES').split(','):
+            if name in packages:
                 continue
-            if find_loader(package):
-                packages += [package]
+            if package_exists(name):
+                packages += [name]
 
     # does module exist?
     _exists = False
     for package in packages:
         full_dotted_name = package+'.'+args[0]+'.'+args[1]
-        if find_loader(full_dotted_name):
+        if module_exists(full_dotted_name):
             _exists = True
             break
     if not _exists:
