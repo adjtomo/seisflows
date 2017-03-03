@@ -2,7 +2,7 @@
 import numpy as np
 
 
-# functions acting on whole record sections
+### functions acting on whole record sections
 
 def sconvolve(s, h, w, inplace=True):
     nt = h.nt
@@ -19,8 +19,8 @@ def sconvolve(s, h, w, inplace=True):
         return s2
 
 
-def mute_early(traces, slope, const, time_scheme, s_coords, r_coords):
-    """ Applies tapered mask to record section, muting early arrivals.
+def mute_early_arrivals(traces, slope, const, time_scheme, s_coords, r_coords):
+    """ Applies tapered mask to record section, muting early arrivals
 
         Signals arriving before
 
@@ -47,8 +47,8 @@ def mute_early(traces, slope, const, time_scheme, s_coords, r_coords):
     return traces
 
 
-def mute_late(traces, slope, const, time_scheme, s_coords, r_coords):
-    """ Applies tapered mask to record section, muting late arrivals.
+def mute_late_arrivals(traces, slope, const, time_scheme, s_coords, r_coords):
+    """ Applies tapered mask to record section, muting late arrivals
 
         Signals arriving after
 
@@ -74,14 +74,52 @@ def mute_late(traces, slope, const, time_scheme, s_coords, r_coords):
     return traces
 
 
-def mute_early_and_late(traces, slope, const, time_scheme, s_coords, r_coords):
-    return mute_late(mute_early(traces,
-               slope[0], const[0], time_scheme, s_coords, r_coords),
-               slope[1], const[1], time_scheme, s_coords, r_coords)
+def mute_short_offsets(traces, dist, s_coords, r_coords):
+    """ Mutes traces having
+
+            || s - r || < DIST
+
+        where || s - r || is the offset between source and receiver and 
+        DIST is a user-supplied cutoff
+    """
+    nr = len(traces)
+
+    for ir in range(nr):
+        # calculate source-reciever distance
+        (sx, sy) = (s_coords[0][ir], s_coords[1][ir])
+        (rx, ry) = (r_coords[0][ir], r_coords[1][ir])
+        offset = np.sqrt((rx-sx)**2 + (ry-sy)**2)
+
+        if offset < dist:
+            traces[ir].data[:] = 0.
+        
+    return traces
+
+
+def mute_long_offsets(traces, dist, s_coords, r_coords):
+    """ Mutes traces having
+
+            || s - r || > DIST
+
+        where || s - r || is the offset between source and receiver and 
+        DIST is a user-supplied cutoff
+    """
+    nr = len(traces)
+
+    for ir in range(nr):
+        # calculate source-reciever distance
+        (sx, sy) = (s_coords[0][ir], s_coords[1][ir])
+        (rx, ry) = (r_coords[0][ir], r_coords[1][ir])
+        offset = np.sqrt((rx-sx)**2 + (ry-sy)**2)
+
+        if offset > dist:
+            traces[ir].data[:] = 0.
+        
+    return traces
 
 
 
-# functions acting on individual traces
+### functions acting on individual traces
 
 def mask(slope, const, offset, time_scheme, length=400):
     """ Constructs tapered mask that can be applied to trace to

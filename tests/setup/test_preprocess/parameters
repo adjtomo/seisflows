@@ -1,23 +1,24 @@
 
 WORKFLOW='test_preprocess'
-SYSTEM='serial'
 PREPROCESS='base'
 
 FORMAT='su'
+NT=7500
+DT=9.0e-4
 
-NT=7500     # number of time steps
-DT=9.0e-4     # time increment
+MUTE=[]
+NORMALIZE=[]
 
-MUTE='MuteEarlyArrivals'
-MUTECONST=1.00     # units: time
-MUTESLOPE=1500.**-1     # units: velocity**-1
+MUTE+=['MuteEarlyArrivals']
+MUTE_EARLY_ARRIVALS_CONST=1.00
+MUTE_EARLY_ARRIVALS_SLOPE=1500.**-1
 
-FILTER=None#'Bandpass'
+FILTER=None
 FREQMIN=1.
 FREQMAX=5.
 
 MISFIT='Waveform'
 
+SYSTEM='serial'
 NTASK=1
-#NPROC=1
 

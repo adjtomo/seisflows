@@ -17,6 +17,6 @@ sfrun --workdir=$WD --parameter_file=$WD/parameters --path_file=$WD/paths
 
 
 # to preserve output for inspection, comment out next line
-#rm -rf $WD/output* $WD/scratch
+rm -rf $WD/output* $WD/scratch
 
 

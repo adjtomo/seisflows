@@ -4,7 +4,7 @@ import numpy as np
 import obspy
 
 from seisflows.tools import msg, unix
-from seisflows.tools.tools import exists, Struct
+from seisflows.tools.tools import exists, getset, Struct
 from seisflows.config import ParameterError
 
 from seisflows.plugins import adjoint, misfit, readers, writers
@@ -35,7 +35,7 @@ class base(object):
 
         # data normalization option
         if 'NORMALIZE' not in PAR:
-            setattr(PAR, 'NORMALIZE', 'L2')
+            setattr(PAR, 'NORMALIZE', None)
 
         # data muting option
         if 'MUTE' not in PAR:
@@ -187,77 +187,69 @@ class base(object):
 
 
     def apply_mute(self, traces):
-        if not PAR.MUTE:
-            return traces
-
-        elif PAR.MUTE == 'MuteEarlyArrivals':
-            # mutes early arrivals
-            return signal.mute_early(traces, 
-                PAR.MUTESLOPE, # (units: time/distance)
-                PAR.MUTECONST, # (units: time)
+        if 'MuteEarlyArrivals' in PAR.MUTE:
+            traces = signal.mute_early_arrivals(traces, 
+                PAR.MUTE_EARLY_ARRIVALS_SLOPE, # (units: time/distance)
+                PAR.MUTE_EARLY_ARRIVALS_CONST, # (units: time)
                 self.get_time_scheme(traces),
                 self.get_source_coords(traces),
                 self.get_receiver_coords(traces))
 
-        elif PAR.MUTE == 'MuteLateArrivals':
-            return signal.mute_late(traces,
-                PAR.MUTESLOPE, # (units: time/distance)
-                PAR.MUTECONST, # (units: time)
+        if 'MuteLateArrivals' in PAR.MUTE:
+            traces = signal.mute_late_arrivals(traces,
+                PAR.MUTE_LATE_ARRIVALS_SLOPE, # (units: time/distance)
+                PAR.MUTE_LATE_ARRIVALS_CONST, # (units: time)
                 self.get_time_scheme(traces),
                 self.get_source_coords(traces),
                 self.get_receiver_coords(traces))
 
-        elif PAR.MUTE == 'MuteEarlyAndLateArrivals':
-            return signal.mute_early_and_late(traces,
-                PAR.MUTESLOPE,
-                PAR.MUTECONST,
-                self.get_time_scheme(traces),
+        if 'MuteShortOffsets' in PAR.MUTE:
+            traces = signal.mute_short_offsets(traces,
+                PAR.MUTE_SHORT_OFFSETS_DIST,
                 self.get_source_coords(traces),
                 self.get_receiver_coords(traces))
 
-        else:
-            raise ParameterError()
+        if 'MuteLongOffsets' in PAR.MUTE:
+            traces = signal.mute_long_offsets(traces,
+                PAR.MUTE_LONG_OFFSETS_DIST,
+                self.get_source_coords(traces),
+                self.get_receiver_coords(traces))
+
+        return traces
 
 
     def apply_normalize(self, traces):
-        if not PAR.NORMALIZE:
-            return traces
-
-        elif PAR.NORMALIZE == 'L1':
+        if 'NormalizeTracesL1' in PAR.NORMALIZE:
             # normalize each trace by its L1 norm
             for tr in traces:
                 w = np.linalg.norm(tr.data, ord=1)
                 if w > 0:
                     tr.data /= w
-            return traces
 
-        elif PAR.NORMALIZE == 'L2':
+        elif 'NormalizeTracesL2' in PAR.NORMALIZE:
             # normalize each trace by its L2 norm
             for tr in traces:
                 w = np.linalg.norm(tr.data, ord=2)
                 if w > 0:
                     tr.data /= w
-            return traces
 
-        elif PAR.NORMALIZE == 'L2_squared':
-            # normalize each trace by its L2 norm squared
-            for tr in traces:
-                w = np.linalg.norm(tr.data, ord=2)
-                if w > 0:
-                    tr.data /= w**2.
-            return traces
-
-        elif PAR.NORMALIZE == 'L2_summed':
-            # normalize all traces by their combined L2 norm
+        if 'NormalizeEventsL1' in PAR.NORMALIZE:
+            # normalize event by L1 norm of all traces
             w = 0.
             for tr in traces:
-                w += np.linalg.norm(tr.data, ord=2)**2.
+                w += np.linalg.norm(tr.data, ord=1)
             for tr in traces:
-                tr.data /= w**0.5
-            return traces
+                tr.data /= w
 
-        else:
-            raise ParameterError()
+        elif 'NormalizeEventsL2' in PAR.NORMALIZE:
+            # normalize event by L2 norm of all traces
+            w = 0.
+            for tr in traces:
+                w += np.linalg.norm(tr.data, ord=2)
+            for tr in traces:
+                tr.data /= w
+
+        return traces
 
 
     def apply_filter_backwards(self, traces):
@@ -278,10 +270,12 @@ class base(object):
     def check_filter(self):
         """ Checks filter settings
         """
-        if not PAR.FILTER:
-            pass
+        assert getset(PAR.FILTER) < set([
+            'Bandpass',
+            'Lowpass',
+            'Highpass'])
 
-        elif PAR.FILTER == 'Bandpass':
+        if PAR.FILTER == 'Bandpass':
             if 'FREQMIN' not in PAR: raise ParameterError('FREQMIN')
             if 'FREQMAX' not in PAR: raise ParameterError('FREQMAX')
             assert 0 < PAR.FREQMIN
@@ -298,41 +292,48 @@ class base(object):
             if 'FREQ' not in PAR: raise ParameterError('FREQ')
             assert 0 <= PAR.FREQ < np.inf
 
-        else:
-            raise ParameterError()
 
 
     def check_mute(self):
         """ Checks mute settings
         """
-        if not PAR.MUTE:
-            pass
+        assert getset(PAR.MUTE) < set([
+            'MuteEarlyArrivals', 
+            'MuteLateArrivals',
+            'MuteShortOffsets',
+            'MuteLongOffsets'])
 
-        elif PAR.MUTE in ['MuteEarlyArrivals', 'MuteLateArrivals']:
-            assert 'MUTESLOPE' in PAR
-            assert 'MUTECONST' in PAR
-            assert PAR.MUTESLOPE >= 0.
+        if 'MuteEarlyArrivals' in PAR.MUTE:
+            assert 'MUTE_EARLY_ARRIVALS_SLOPE' in PAR
+            assert 'MUTE_EARLY_ARRIVALS_CONST' in PAR
+            assert PAR.MUTE_EARLY_ARRIVALS_SLOPE >= 0.
 
+        if 'MuteLateArrivals' in PAR.MUTE:
+            assert 'MUTE_LATE_ARRIVALS_SLOPE' in PAR
+            assert 'MUTE_LATE_ARRIVALS_CONST' in PAR
+            assert PAR.MUTE_LATE_ARRIVALS_SLOPE >= 0.
 
-        elif PAR.MUTE in ['MuteEarlyAndLateArrivals']:
-            assert 'MUTESLOPE' in PAR
-            assert 'MUTECONST' in PAR
-            assert len(PAR.MUTESLOPE) == 2
-            assert len(PAR.MUTECONSTANT) == 2
-            assert 0. <= PAR.MUTESLOPE[0] < PAR.MUTESLOPE[1]
+        if 'MuteShortOffsets' in PAR.MUTE:
+            assert 'MUTE_SHORT_OFFSETS_DIST' in PAR
+            assert 0 < PAR.MUTE_SHORT_OFFSETS_DIST
 
-        else:
-            raise ParameterError()
+        if 'MuteLongOffsets' in PAR.MUTE:
+            assert 'MUTE_LONG_OFFSETS_DIST' in PAR
+            assert 0 < PAR.MUTE_SHORT_OFFSETS_DIST
+
+        if 'MuteShortOffsets' not in PAR.MUTE:
+            setattr(PAR, 'MUTE_SHORT_OFFSETS_DIST', 0.)
+
+        if 'MuteLongOffsets' not in PAR.MUTE:
+            setattr(PAR, 'MUTE_LONG_OFFSETS_DIST', 0.)
 
 
     def check_normalize(self):
-        if not PAR.NORMALIZE:
-            pass
-        elif PAR.NORMALIZE in ['L1', 'L2', 'L2_squared']:
-            pass
-        else:
-            raise ParameterError()
-
+        assert getset(PAR.NORMALIZE) < set([
+            'NormalizeTracesL1', 
+            'NormalizeTracesL2',
+            'NormalizeEventsL1',
+            'NormalizeEventsL2'])
 
 
     ### utility functions

@@ -172,6 +172,15 @@ def unique(mylist):
     return list(set(mylist))
 
 
+def getset(arg):
+    if not arg:
+        return set()
+    elif type(arg) in [str, unicode]:
+        return set([arg])
+    else:
+        return set(arg)
+
+
 def loadtxt(filename):
     """Load scalar from text file"""
     return float(np.loadtxt(filename))
