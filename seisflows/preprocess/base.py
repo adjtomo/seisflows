@@ -381,7 +381,7 @@ class base(object):
              raise NotImplementedError
 
 
-    def apply_hess_tages(self):
+    def apply_hess_tags(self):
         if 'OPTIMIZE' not in PAR:
            tag1, tag2 = 'lcg', 'obs'
         elif PAR.OPTIMIZE in ['newton']:
