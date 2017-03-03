@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# navigate to seisflows/tests directory
+cd $(dirname ${BASH_SOURCE[0]})
+
+
+WD="$PWD/setup/test_preprocess"
+
+
+# adjust paths
+sed -i "s:^DATA.*=.*:DATA = '$WD/data.su':" $WD/paths
+sed -i "s:^SYNTHETICS.*=.*:SYNTHETICS = '$WD/synthetics.su':" $WD/paths
+
+
+# run tests
+sfrun --workdir=$WD --parameter_file=$WD/parameters --path_file=$WD/paths
+
+
+# to preserve output for inspection, comment out next line
+#rm -rf $WD/output* $WD/scratch
+
+
