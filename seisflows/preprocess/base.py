@@ -188,7 +188,7 @@ class base(object):
 
     def apply_mute(self, traces):
         if 'MuteEarlyArrivals' in PAR.MUTE:
-            traces = signal.mute_early_arrivals(traces, 
+            traces = signal.mute_early_arrivals(traces,
                 PAR.MUTE_EARLY_ARRIVALS_SLOPE, # (units: time/distance)
                 PAR.MUTE_EARLY_ARRIVALS_CONST, # (units: time)
                 self.get_time_scheme(traces),
@@ -297,8 +297,8 @@ class base(object):
     def check_mute(self):
         """ Checks mute settings
         """
-        assert getset(PAR.MUTE) < set([
-            'MuteEarlyArrivals', 
+        assert getset(PAR.MUTE) <= set([
+            'MuteEarlyArrivals',
             'MuteLateArrivals',
             'MuteShortOffsets',
             'MuteLongOffsets'])
@@ -330,7 +330,7 @@ class base(object):
 
     def check_normalize(self):
         assert getset(PAR.NORMALIZE) < set([
-            'NormalizeTracesL1', 
+            'NormalizeTracesL1',
             'NormalizeTracesL2',
             'NormalizeEventsL1',
             'NormalizeEventsL2'])
