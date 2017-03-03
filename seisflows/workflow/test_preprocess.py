@@ -1,8 +1,10 @@
 
 import sys
+import traceback
+import numpy as np
 
 from glob import glob
-from os import basename, exists
+from os.path import basename, dirname, exists
 from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']
@@ -12,70 +14,191 @@ preprocess = sys.modules['seisflows_preprocess']
 
 
 class test_preprocess(object):
-    """ Preprocess integration test
-
-        Not yet implemented. The following is just a sketch. None of the 
-        methods work yet.
+    """ Signal processing integration test
     """
 
     def check(self):
         """ Checks parameters and paths
         """
+        # data file format
+        if 'FORMAT' not in PAR:
+            raise ParameterError(PAR, 'FORMAT')
+
+        # data normalization option
+        if 'NORMALIZE' not in PAR:
+            setattr(PAR, 'NORMALIZE', None)
+
+        # data muting option
+        if 'MUTE' not in PAR:
+            setattr(PAR, 'MUTE', None)
+
+        # data filtering option
+        if 'FILTER' not in PAR:
+            setattr(PAR, 'FILTER', None)
+
+
         if 'DATA' not in PATH:
             raise Exception
 
         if not exists(PATH.DATA):
             raise Exception
 
-        if 'OUTPUT' in PATH:
-            assert exists(PATH.OUTPUT)
+        if 'SYNTHETICS' not in PATH:
+            setattr(PATH, 'SYNTHETICS', '')
+
+        if PATH.SYNTHETICS:
+            assert exists(PATH.SYNTHETICS)
+
+        if 'WORKDIR' not in PATH:
+            setattr(PATH, 'WORKDIR', abspath('.'))
 
 
     def main(self):
         """ Tests data processing methods
         """
-        data = {}
 
+        print 'testing reader...'
+        data = self.test_reader()
+
+
+        print 'testing writer...'
+        self.test_writer(data)
+
+
+        if PAR.FILTER:
+            print 'testing filtering...'
+            self.test_filter(data)
+
+
+        if PAR.MUTE:
+            print 'testing muting...'
+            self.test_mute(data)
+
+
+        if PAR.MISFIT and \
+           PATH.DATA and \
+           PATH.SYNTHETICS:
+
+            dat = preprocess.reader(dirname(PATH.DATA), 
+                basename(PATH.DATA))
+
+            syn = preprocess.reader(dirname(PATH.SYNTHETICS), 
+                basename(PATH.SYNTHETICS))
+
+            print 'testing misfit...'
+            self.test_misfit(dat, syn)
+
+            print 'testing adjoint...'
+            self.test_adjoint(dat, syn)
+
+        print 'SUCCESS\n'
+
+
+
+    def test_reader(self):
         try:
             preprocess.setup()
-        except:
-            print 'setup failed'
-        else:
-            print 'setup succeeded'
 
-        # test reader
-        try:
-            for channel in self.channels():
-                data[channel] = preprocess.reader(PATH.DATA, channel)
-        except:
-            print 'reader failed'
-        else:
-            print 'reader succeeded'
-
-        # test processing
-        try:
-            for channel in self.channels():
-                data[channel] = preprocess.apply_filter(data[channel])
-        except:
-            print 'processing failed'
-        else:
-            print 'processing succeeded'
+        except Exception,e:
+            print 'setup FAILED\n'
 
         try:
-            for channel in self.channels():
-                preprocess.writer(data[channel], PATH.OUTPUT, channel)
-        except:
-            print 'writer failed'
+            data = preprocess.reader(dirname(PATH.DATA),
+                basename(PATH.DATA))
+
+        except Exception,e:
+            print 'reader FAILED'
+
         else:
-            print 'writer succeeded'
+            print ''
+            return data
 
 
-    @property
-    def channels(self):
-        channels = []
-        for fullname in glob(PATH.DATA):
-            channels += [basename(fullname)]
 
-        return channels
+    def test_writer(self, data):
+        try:
+            if PAR.FORMAT in ['SU', 'su']:
+                extension = '.su'
+            else:
+                extension = ''
 
+            preprocess.writer(data, PATH.WORKDIR, 'output_data'+extension)
+
+
+        except Exception,e:
+            print 'writer FAILED\n'
+            print e.message
+            print e.__class__.__name__
+            traceback.print_exc(e)
+
+        else:
+            print ''
+
+
+
+    def test_filter(self, dat):
+        try:
+            out = preprocess.apply_filter(dat)
+
+        except Exception,e:
+            print 'filtering FAILED\n'
+            print e.message
+            print e.__class__.__name__
+            traceback.print_exc(e)
+
+        else:
+            self.save(out, 'output_data_filtered')
+            print ''
+
+
+    def test_mute(self, dat):
+        try:
+            out = preprocess.apply_mute(dat)
+
+        except Exception,e:
+            print 'muting FAILED\n'
+            print e.message
+            print e.__class__.__name__
+            traceback.print_exc(e)
+
+        else:
+            self.save(out, 'output_data_muted')
+            print ''
+
+
+    def test_misfit(self, dat, syn):
+        nt, dt, _ = preprocess.get_time_scheme(syn)
+        nn, _ = preprocess.get_network_size(syn)
+
+        rsd = []
+        for ii in range(nn):
+            rsd.append(preprocess.misfit(syn[ii].data, dat[ii].data, nt, dt))
+
+
+        filename = PATH.OUTPUT+'/'+'output_misfit'
+        np.savetxt(filename, rsd)
+
+        print ''
+
+
+    def test_adjoint(self, dat, syn):
+        nt, dt, _ = preprocess.get_time_scheme(syn)
+        nn, _ = preprocess.get_network_size(syn)
+
+        adj = syn
+        for ii in range(nn):
+            adj[ii].data = preprocess.adjoint(syn[ii].data, dat[ii].data, nt, dt)
+
+        self.save(adj, 'output_adjoint')
+
+        print ''
+
+
+    def save(self, data, filename):
+        if PAR.FORMAT in ['SU', 'su']:
+            extension = '.su'
+        else:
+            extension = ''
+
+        preprocess.writer(data, PATH.WORKDIR, filename+extension)
 

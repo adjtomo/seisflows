@@ -1,0 +1,23 @@
+
+WORKFLOW='test_preprocess'
+SYSTEM='serial'
+PREPROCESS='base'
+
+FORMAT='su'
+
+NT=7500     # number of time steps
+DT=9.0e-4     # time increment
+
+MUTE='MuteEarlyArrivals'
+MUTECONST=1.00     # units: time
+MUTESLOPE=1500.**-1     # units: velocity**-1
+
+FILTER=None#'Bandpass'
+FREQMIN=1.
+FREQMAX=5.
+
+MISFIT='Waveform'
+
+NTASK=1
+#NPROC=1
+
