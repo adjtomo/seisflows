@@ -5,11 +5,10 @@ import obspy
 
 from seisflows.tools import msg, unix
 from seisflows.tools.tools import exists, Struct
-from seisflows.config import   \
-    ParameterError
+from seisflows.config import ParameterError
 
 from seisflows.plugins import adjoint, misfit, readers, writers
-from seisflows.tools.signal import mute_early, mute_late, mute_early_and_late
+from seisflows.tools import signal
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -34,17 +33,18 @@ class base(object):
         if 'FORMAT' not in PAR:
             raise ParameterError(PAR, 'FORMAT')
 
-        # data normalization
+        # data normalization option
         if 'NORMALIZE' not in PAR:
             setattr(PAR, 'NORMALIZE', 'L2')
 
-        # data muting
+        # data muting option
         if 'MUTE' not in PAR:
             setattr(PAR, 'MUTE', None)
 
-        # data filtering
+        # data filtering option
         if 'FILTER' not in PAR:
             setattr(PAR, 'FILTER', None)
+
 
         # assertions
         if PAR.FORMAT not in dir(readers):
@@ -106,14 +106,7 @@ class base(object):
         """
         solver = sys.modules['seisflows_solver']
 
-        if 'OPTIMIZE' not in PAR:
-           tag1, tag2 = 'lcg', 'obs'
-        elif PAR.OPTIMIZE in ['newton']:
-           tag1, tag2 = 'lcg', 'obs'
-        elif PAR.OPTIMIZE in ['gauss_newton']:
-           tag1, tag2 = 'lcg', 'syn'
-        else:
-           tag1, tag2 = 'lcg', 'obs'
+        tag1, tag2 = self.apply_hess_tags()
 
         for filename in solver.data_filenames:
             dat1 = self.reader(path+'/'+'traces/'+tag1, filename)
@@ -173,28 +166,19 @@ class base(object):
             return traces
 
         elif PAR.FILTER == 'Bandpass':
-            traces = _signal.detrend(traces)
+            #traces = signal.detrend(traces)
             for tr in traces:
                 tr.filter('bandpass', freqmin=PAR.FREQMIN, freqmax=PAR.FREQMAX)
 
-                # workaround obspy dtype conversion
-                #tr.data = tr.data.astype(np.float32)
-
         elif PAR.FILTER == 'Lowpass':
-            traces = _signal.detrend(traces)
+            #traces = signal.detrend(traces)
             for tr in traces:
                 tr.filter('lowpass', freq=PAR.FREQ)
 
-                # workaround obspy dtype conversion
-                #tr.data = tr.data.astype(np.float32)
-
         elif PAR.FILTER == 'Highpass':
-            traces = _signal.detrend(traces)
+            #traces = signal.detrend(traces)
             for tr in traces:
                 tr.filter('highpass', freq=PAR.FREQ)
-
-                # workaround obspy dtype conversion
-                #tr.data = tr.data.astype(np.float32)
 
         else:
             raise ParameterError()
@@ -208,7 +192,7 @@ class base(object):
 
         elif PAR.MUTE == 'MuteEarlyArrivals':
             # mutes early arrivals
-            return mute_early(traces, 
+            return signal.mute_early(traces, 
                 PAR.MUTESLOPE, # (units: time/distance)
                 PAR.MUTECONST, # (units: time)
                 self.get_time_scheme(traces),
@@ -216,7 +200,7 @@ class base(object):
                 self.get_receiver_coords(traces))
 
         elif PAR.MUTE == 'MuteLateArrivals':
-            return mute_late(traces,
+            return signal.mute_late(traces,
                 PAR.MUTESLOPE, # (units: time/distance)
                 PAR.MUTECONST, # (units: time)
                 self.get_time_scheme(traces),
@@ -224,7 +208,7 @@ class base(object):
                 self.get_receiver_coords(traces))
 
         elif PAR.MUTE == 'MuteEarlyAndLateArrivals':
-            return mute_early_and_late(traces,
+            return signal.mute_early_and_late(traces,
                 PAR.MUTESLOPE,
                 PAR.MUTECONST,
                 self.get_time_scheme(traces),
@@ -301,18 +285,18 @@ class base(object):
             if 'FREQMIN' not in PAR: raise ParameterError('FREQMIN')
             if 'FREQMAX' not in PAR: raise ParameterError('FREQMAX')
             assert 0 < PAR.FREQMIN
-            assert PAR.FREQMIN < PAR.FREQMIN
-            assert PAR.FREQMAX < infinity
+            assert PAR.FREQMIN < PAR.FREQMAX
+            assert PAR.FREQMAX < np.inf
 
         elif PAR.FILTER == 'Lowpass':
             raise NotImplementedError
             if 'FREQ' not in PAR: raise ParameterError('FREQ')
-            assert 0 < PAR.FREQ <= infinity
+            assert 0 < PAR.FREQ <= np.inf
 
         elif PAR.FILTER == 'Highpass':
             raise NotImplementedError
             if 'FREQ' not in PAR: raise ParameterError('FREQ')
-            assert 0 <= PAR.FREQ < infinity
+            assert 0 <= PAR.FREQ < np.inf
 
         else:
             raise ParameterError()
@@ -396,4 +380,15 @@ class base(object):
         else:
              raise NotImplementedError
 
+
+    def apply_hess_tages(self):
+        if 'OPTIMIZE' not in PAR:
+           tag1, tag2 = 'lcg', 'obs'
+        elif PAR.OPTIMIZE in ['newton']:
+           tag1, tag2 = 'lcg', 'obs'
+        elif PAR.OPTIMIZE in ['gauss_newton']:
+           tag1, tag2 = 'lcg', 'syn'
+        else:
+           tag1, tag2 = 'lcg', 'obs'
+        return tag1, tag2
 
