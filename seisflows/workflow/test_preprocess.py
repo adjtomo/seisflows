@@ -130,6 +130,7 @@ class test_preprocess(object):
             print e.message
             print e.__class__.__name__
             traceback.print_exc(e)
+            sys.exit(-1)
 
         else:
             print ''
@@ -145,6 +146,7 @@ class test_preprocess(object):
             print e.message
             print e.__class__.__name__
             traceback.print_exc(e)
+            sys.exit(-1)
 
         else:
             self.save(out, 'output_data_filtered')
@@ -160,6 +162,7 @@ class test_preprocess(object):
             print e.message
             print e.__class__.__name__
             traceback.print_exc(e)
+            sys.exit(-1)
 
         else:
             self.save(out, 'output_data_muted')
