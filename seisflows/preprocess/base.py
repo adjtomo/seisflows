@@ -4,7 +4,7 @@ import numpy as np
 import obspy
 
 from seisflows.tools import msg, unix
-from seisflows.tools.tools import exists, Struct
+from seisflows.tools.tools import exists, getset, Struct
 from seisflows.config import ParameterError
 
 from seisflows.plugins import adjoint, misfit, readers, writers
@@ -270,10 +270,12 @@ class base(object):
     def check_filter(self):
         """ Checks filter settings
         """
-        if not PAR.FILTER:
-            pass
+        assert getset(PAR.FILTER) < set([
+            'Bandpass',
+            'Lowpass',
+            'Highpass'])
 
-        elif PAR.FILTER == 'Bandpass':
+        if PAR.FILTER == 'Bandpass':
             if 'FREQMIN' not in PAR: raise ParameterError('FREQMIN')
             if 'FREQMAX' not in PAR: raise ParameterError('FREQMAX')
             assert 0 < PAR.FREQMIN
@@ -290,13 +292,17 @@ class base(object):
             if 'FREQ' not in PAR: raise ParameterError('FREQ')
             assert 0 <= PAR.FREQ < np.inf
 
-        else:
-            raise ParameterError()
 
 
     def check_mute(self):
         """ Checks mute settings
         """
+        assert getset(PAR.MUTE) < set([
+            'MuteEarlyArrivals', 
+            'MuteLateArrivals',
+            'MuteShortOffsets',
+            'MuteLongOffsets'])
+
         if 'MuteEarlyArrivals' in PAR.MUTE:
             assert 'MUTE_EARLY_ARRIVALS_SLOPE' in PAR
             assert 'MUTE_EARLY_ARRIVALS_CONST' in PAR
@@ -323,8 +329,11 @@ class base(object):
 
 
     def check_normalize(self):
-        pass 
-
+        assert getset(PAR.NORMALIZE) < set([
+            'NormalizeTracesL1', 
+            'NormalizeTracesL2',
+            'NormalizeEventsL1',
+            'NormalizeEventsL2'])
 
 
     ### utility functions
