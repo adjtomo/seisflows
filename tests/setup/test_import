@@ -6,7 +6,7 @@ from importlib import import_module
 from pkgutil import iter_modules
 from seisflows.config import Null
 
-verbose = True
+verbose = 1
 
 succeeded = []
 excluded = []
@@ -36,7 +36,7 @@ def check_module(name):
     except NotImplementedError:
         excluded += [name]
     except Exception as e:
-        if verbose:
+        if verbose > 0:
             print name.upper()
             print e
             print '\n'
@@ -75,20 +75,32 @@ if __name__ == '__main__':
 
     # disply results
     print '\n'
-    if succeeded:
-        print 'The following modules succeeded:'
-        for name in succeeded: print '  %s' % name
-        print '\n'
+    print '%d modules were excluded' % len(excluded)
+    print '\n'
+    print '%d modules imported successfully' % len(succeeded)
+    print '\n'
+    print '%d modules failed to import' % len(failed)
+    print '\n'
 
-    if failed:
-        print 'The following modules failed:'
-        for name in failed: print '  %s' % name
-        print '\n'
+    if verbose > 1:
+        if excluded:
+            print 'The following modules were excluded:'
+            for name in excluded: print '  %s' % name
+            print '\n'
 
+        if succeeded:
+            print 'The following modules imported successfully:'
+            for name in succeeded: print '  %s' % name
+            print '\n'
+
+        if failed:
+            print 'The following modules failed to import:'
+            for name in failed: print '  %s' % name
+            print '\n'
+        
     if failed:
-        sys.exit(1)
+        sys.exit(-1)
     else:
-        print 'All modules imported successfully'
-        sys.exit(0)
+        print 'SUCCESS\n'
 
 
