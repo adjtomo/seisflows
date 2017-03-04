@@ -39,11 +39,11 @@ class slurm_lg(custom_import('system', 'base')):
         if 'TITLE' not in PAR:
             setattr(PAR, 'TITLE', basename(abspath('.')))
 
-        # time allocated for entire workflow
+        # time allocated for entire workflow in minutes
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
-        # time allocated for each individual task
+        # time allocated for each individual task in minutes
         if 'STEPTIME' not in PAR:
             setattr(PAR, 'STEPTIME', 15.)
 
