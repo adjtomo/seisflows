@@ -101,6 +101,7 @@ class test_preprocess(object):
 
         except Exception,e:
             print 'setup FAILED\n'
+            sys.exit(-1)
 
         try:
             data = preprocess.reader(dirname(PATH.DATA),
@@ -108,6 +109,7 @@ class test_preprocess(object):
 
         except Exception,e:
             print 'reader FAILED'
+            sys.exit(-1)
 
         else:
             print ''

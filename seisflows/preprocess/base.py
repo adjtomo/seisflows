@@ -303,6 +303,9 @@ class base(object):
     def check_mute(self):
         """ Checks mute settings
         """
+        if not PAR.MUTE:
+            return
+
         assert getset(PAR.MUTE) <= set([
             'MuteEarlyArrivals',
             'MuteLateArrivals',

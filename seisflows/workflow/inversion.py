@@ -41,7 +41,7 @@ class inversion(object):
         """ Checks parameters and paths
         """
 
-        # check parameters
+        # specify parameters
         if 'BEGIN' not in PAR:
             raise ParameterError(PAR, 'BEGIN')
 
@@ -51,7 +51,7 @@ class inversion(object):
         if 'VERBOSE' not in PAR:
             setattr(PAR, 'VERBOSE', 1)
 
-        # scratch paths
+        # specify scratch paths
         if 'SCRATCH' not in PATH:
             raise ParameterError(PATH, 'SCRATCH')
 
@@ -70,14 +70,14 @@ class inversion(object):
         if 'OPTIMIZE' not in PATH:
             setattr(PATH, 'OPTIMIZE', join(PATH.SCRATCH, 'optimize'))
 
-        # input paths
+        # specify input paths
         if 'DATA' not in PATH:
             setattr(PATH, 'DATA', None)
 
         if 'MODEL_INIT' not in PATH:
             raise ParameterError(PATH, 'MODEL_INIT')
 
-        # output paths
+        # specify output paths
         if 'OUTPUT' not in PATH:
             raise ParameterError(PATH, 'OUTPUT')
 
