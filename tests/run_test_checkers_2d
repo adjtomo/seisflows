@@ -30,15 +30,13 @@ MODEL0="/home/rmodrak/data/Examples2d/checkers/ref/model_0001"
 
 
 # wait until first iteration completes
-until [ -e $MODEL ];
-do
+until [ -e $MODEL ]; do
     sleep 1
 done
 
 
 # compare output with reference model
 $COMPARE $MODEL $MODEL0
-STATUS=$?
 
 
 # comment out to preserve output for inspection
