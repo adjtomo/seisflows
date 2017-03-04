@@ -178,7 +178,7 @@ class test_preprocess(object):
             rsd.append(preprocess.misfit(syn[ii].data, dat[ii].data, nt, dt))
 
 
-        filename = PATH.OUTPUT+'/'+'output_misfit'
+        filename = PATH.WORKDIR+'/'+'output_misfit'
         np.savetxt(filename, rsd)
 
         print ''
