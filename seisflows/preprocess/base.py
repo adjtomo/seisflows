@@ -187,6 +187,9 @@ class base(object):
 
 
     def apply_mute(self, traces):
+        if not PAR.NORMALIZE:
+            return traces
+
         if 'MuteEarlyArrivals' in PAR.MUTE:
             traces = signal.mute_early_arrivals(traces,
                 PAR.MUTE_EARLY_ARRIVALS_SLOPE, # (units: time/distance)
@@ -219,6 +222,9 @@ class base(object):
 
 
     def apply_normalize(self, traces):
+        if not PAR.NORMALIZE:
+            return traces
+
         if 'NormalizeTracesL1' in PAR.NORMALIZE:
             # normalize each trace by its L1 norm
             for tr in traces:
