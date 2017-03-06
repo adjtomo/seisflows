@@ -65,6 +65,11 @@ class test_preprocess(object):
         self.test_writer(data)
 
 
+        if PAR.NORMALIZE:
+            print 'testing normalizing...'
+            self.test_normalize(data)
+
+
         if PAR.FILTER:
             print 'testing filtering...'
             self.test_filter(data)
@@ -79,10 +84,10 @@ class test_preprocess(object):
            PATH.DATA and \
            PATH.SYNTHETICS:
 
-            dat = preprocess.reader(dirname(PATH.DATA), 
+            dat = preprocess.reader(dirname(PATH.DATA),
                 basename(PATH.DATA))
 
-            syn = preprocess.reader(dirname(PATH.SYNTHETICS), 
+            syn = preprocess.reader(dirname(PATH.SYNTHETICS),
                 basename(PATH.SYNTHETICS))
 
             print 'testing misfit...'
@@ -135,6 +140,23 @@ class test_preprocess(object):
             sys.exit(-1)
 
         else:
+            print ''
+
+
+
+    def test_normalize(self, dat):
+        try:
+            out = preprocess.apply_normalize(dat)
+
+        except Exception,e:
+            print 'normalization FAILED\n'
+            print e.message
+            print e.__class__.__name__
+            traceback.print_exc(e)
+            sys.exit(-1)
+
+        else:
+            self.save(out, 'output_data_normalized')
             print ''
 
 
