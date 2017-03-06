@@ -11,8 +11,7 @@ from seisflows.tools.shared import getpar, setpar
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.tools import exists, call_solver, call_solver_nompi
-from seisflows.config import   \
-    ParameterError, custom_import
+from seisflows.config import ParameterError, custom_import
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']

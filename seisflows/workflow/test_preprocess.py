@@ -4,7 +4,7 @@ import traceback
 import numpy as np
 
 from glob import glob
-from os.path import basename, dirname, exists
+from os.path import abspath, basename, dirname, exists
 from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']

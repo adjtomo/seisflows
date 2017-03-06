@@ -74,7 +74,7 @@ class multithreaded(custom_import('system', 'serial')):
             func(**kwargs)
 
         else:
-            raise(KeyError('Hosts parameter not set/recognized.'))
+            raise KeyError('Bad keyword argument: system.run: hosts')
 
 
     ### private methods

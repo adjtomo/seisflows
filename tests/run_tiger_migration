@@ -1,0 +1,42 @@
+#!/bin/bash -e
+
+
+WARNING="
+This test works only on tiger.princeton.edu
+"
+if [ $(hostname) != tiger1 ] && [ $(hostname) != tiger2 ]; then
+   echo $WARNING
+   exit
+fi
+
+
+cd $(dirname ${BASH_SOURCE[0]})
+WD="$PWD/setup/test_2d_layers"
+mkdir $WD
+
+
+# copy parameters and paths
+cp /home/rmodrak/data/Examples2d/layers/parameters.py $WD/parameters
+cp /home/rmodrak/data/Examples2d/layers/paths.py $WD/paths
+
+
+# run tests
+sfrun --workdir=$WD --parameter_file=$WD/parameters --path_file=$WD/paths
+
+
+COMPARE="/home/rmodrak/tools/seistools/compare_models --parameters=vs"
+MODEL="$WD/output/kernels/sum"
+MODEL0="/home/rmodrak/data/Examples2d/layers/ref/kernels/sum"
+
+
+# wait until migration completes
+until [ -e $MODEL ]; do
+    sleep 1
+done
+
+
+# comment out to preserve output for inspection
+rm -rf $WD
+
+
+
