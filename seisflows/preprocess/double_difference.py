@@ -124,7 +124,7 @@ class double_difference(custom_import('preprocess', 'base')):
 
 
     def misfit_dd(self, si, sj, nt, dt):
-        if DEBUG_INEXACT_CC:
+        if PAR.DEBUG_INEXACT_CC:
             # much faster but possibly inaccurate
             itmax = np.argmax(si)
             jtmax = np.argmax(sj)
