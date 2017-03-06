@@ -13,6 +13,8 @@ from os.path import basename
 
 import numpy as np
 
+from seisflows.tools import msg
+
 
 class Struct(dict):
     def __init__(self, *args, **kwargs):
@@ -32,8 +34,6 @@ def call_solver(mpiexec, executable, output='/dev/null'):
       A less complicated version, without error catching, would be
       subprocess.call(mpiexec +' '+ executable, shell=True)
     """
-    from seisflows.tools import msg
-
     try:
         f = open(output,'w')
         subprocess.check_call(
@@ -56,8 +56,6 @@ def call_solver_nompi(executable, output='/dev/null'):
       A less complicated version, without error catching, would be
       subprocess.call(executable, shell=True)
     """
-    from seisflows.tools import msg
-
     try:
         f = open(output,'w')
         subprocess.check_call(
@@ -140,10 +138,14 @@ def savejson(filename, obj):
         json.dump(obj, file, sort_keys=True, indent=4)
 
 
-def loadpy(abspath):
+def loadpy(filename):
+    if not exists(filename):
+        print msg.FileError % filename
+        raise IOError
+
     # load module
-    name = re.sub('.py$', '', basename(abspath))
-    module = load_source(name, abspath)
+    name = re.sub('.py$', '', basename(filename))
+    module = load_source(name, filename)
 
     # strip private attributes
     output = Struct()

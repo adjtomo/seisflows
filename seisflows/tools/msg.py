@@ -14,6 +14,15 @@ To resume existing workflow type:
 """
 
 
+FileError = """
+
+FILE NOT FOUND
+
+    %s
+
+"""
+
+
 SolverError = """
 
 SOLVER FAILED
@@ -147,8 +156,7 @@ obspyImportError = """
 DEPENDENCY ERROR
 
     The current data processing workflow requires OBSPY.  Please install it and
-    try again, or consider using legacy data processing class 
-    'preprocess.legacy', which lacks this dependency.
+    try again.
 
 """
 
@@ -201,6 +209,28 @@ SYSTEM CONFIGURATION WARNING
 
 
 ###
+
+
+MissingParameter_Workflow = """
+
+Please specify a workflow by adding a line to the parameter file, e.g.
+
+    WORKFLOW='inversion';
+
+for a list of available workflows, see seisflows/workflow in the source code
+
+"""
+
+
+MissingParameter_System = """
+
+Please specify a system interface by adding a line to the parameter file, e.g.
+
+    SYSTEM='serial';
+
+for a list of available interfaces, see seisflows/system in the source code
+
+"""
 
 ImportError1 = """
 

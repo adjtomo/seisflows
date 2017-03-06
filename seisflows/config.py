@@ -51,6 +51,13 @@ def config():
     for name in names:
         sys.modules['seisflows_'+name].check()
 
+    if not hasattr(sys.modules['seisflows_parameters'], 'workflow'.upper()):
+        print msg.MissingParameter_Worfklow
+        sys.exit(-1)
+
+    if not hasattr(sys.modules['seisflows_parameters'], 'system'.upper()):
+        print msg.MissingParameter_System
+        sys.exit(-1)
 
 
 def save():
