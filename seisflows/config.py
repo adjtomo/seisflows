@@ -33,7 +33,7 @@ def config():
       registering them in sys.modules
    """
     # check if objects exist on disk
-    if exists(_full(_path())):
+    if exists(_output()):
         print msg.WarningOverwrite
         sys.exit()
 
@@ -47,22 +47,23 @@ def config():
     for name in names:
         sys.modules['seisflows_'+name] = custom_import(name)()
 
-    # parameter checking
+    # error checking
     for name in names:
         sys.modules['seisflows_'+name].check()
+
 
 
 def save():
     """ Exports session to disk
     """
-    unix.mkdir(_full(_path()))
+    unix.mkdir(_output())
 
     for name in ['parameters', 'paths']:
-        fullfile = join(_full(_path()), 'seisflows_'+name+'.json')
+        fullfile = join(_output(), 'seisflows_'+name+'.json')
         savejson(fullfile, sys.modules['seisflows_'+name].__dict__)
 
     for name in names:
-        fullfile = join(_full(_path()), 'seisflows_'+name+'.p')
+        fullfile = join(_output(), 'seisflows_'+name+'.p')
         saveobj(fullfile, sys.modules['seisflows_'+name])
 
 
@@ -146,7 +147,7 @@ def custom_import(*args):
     if args[0] not in names:
         raise Exception(msg.ImportError2)
     if len(args) == 1:
-        args += (_val(args[0]),)
+        args += (_try(args[0]),)
     if not args[1]:
         return Null
 
@@ -195,26 +196,29 @@ def tilde_expand(mydict):
 
 # utility functions
 
-def _path():
-    try:
-        return sys.modules['seisflows_paths']['OUTPUT']
-    except:
-        cwd = abspath('.')
-        return join(cwd, 'output')
+def _par(key):
+    return sys.modules['seisflows_parameters'][key.upper()]
 
+def _path(key):
+    return sys.modules['seisflows_paths'][key.upper()]
+
+def _try(key):
+    try:
+        return _par(key)
+    except KeyError:
+        return None
+
+def _output():
+    try:
+        return _full(_path('output'))
+    except:
+        return _full(join('.', 'output'))
 
 def _full(path):
     try:
         return join(abspath(path), '')
     except:
         raise IOError
-
-
-def _val(key):
-    try:
-        return sys.modules['seisflows_parameters'][key.upper()]
-    except KeyError:
-        return None
 
 
 # the following code changes how instance methods are handled by pickle.  placing it here, in this module, ensures that pickle changes will be in effect for all SeisFlows workflows
