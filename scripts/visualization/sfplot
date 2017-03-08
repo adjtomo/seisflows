@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+# Specialized script used to plot vectors/time series from ascii text files.
+
+import argparse
+import numpy as np
+
+from seisflows.tools.graphics import plot_vector
+
+
+def parse_args():
+    # Parse input arguments
+    parser = argparse.ArgumentParser(description='Plot vector/time series.')
+
+    # file and format flags
+    parser.add_argument('file')
+    parser.add_argument('-xl', '--xlabel',
+                        default='',
+                        help='x axis label')
+    parser.add_argument('-yl', '--ylabel',
+                        default='',
+                        help='y axis label')
+    parser.add_argument('-t', '--title',
+                        default='',
+                        help='title')
+
+    return parser.parse_args()
+
+if __name__ == "__main__":
+
+    args = parse_args()
+
+    # load into numpy array
+    v = np.loadtxt(args.file)
+    plot_vector(v, xlabel=args.xlabel, ylabel=args.ylabel, title=args.title)
