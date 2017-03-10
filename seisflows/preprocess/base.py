@@ -166,18 +166,21 @@ class base(object):
             return traces
 
         elif PAR.FILTER == 'Bandpass':
-            #traces = signal.detrend(traces)
             for tr in traces:
+                tr.detrend('demean')
+                tr.detrend('linear')
                 tr.filter('bandpass', freqmin=PAR.FREQMIN, freqmax=PAR.FREQMAX)
 
         elif PAR.FILTER == 'Lowpass':
-            #traces = signal.detrend(traces)
             for tr in traces:
+                tr.detrend('demean')
+                tr.detrend('linear')
                 tr.filter('lowpass', freq=PAR.FREQ)
 
         elif PAR.FILTER == 'Highpass':
-            #traces = signal.detrend(traces)
             for tr in traces:
+                tr.detrend('demean')
+                tr.detrend('linear')
                 tr.filter('highpass', freq=PAR.FREQ)
 
         else:
