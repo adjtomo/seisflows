@@ -190,7 +190,7 @@ class base(object):
 
 
     def apply_mute(self, traces):
-        if not PAR.NORMALIZE:
+        if not PAR.MUTE:
             return traces
 
         if 'MuteEarlyArrivals' in PAR.MUTE:
