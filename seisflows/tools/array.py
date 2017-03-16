@@ -131,8 +131,8 @@ def mesh2grid(v, mesh):
     lz = z.max() - z.min()
     nn = v.size
 
-    nx = np.around(np.sqrt(nn*lx/lz))
-    nz = np.around(np.sqrt(nn*lz/lx))
+    nx = int(np.around(np.sqrt(nn*lx/lz)))
+    nz = int(np.around(np.sqrt(nn*lz/lx)))
     dx = lx/nx
     dz = lz/nz
 
