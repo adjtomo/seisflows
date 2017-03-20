@@ -180,7 +180,7 @@ class base(object):
                 alpha = p_ratio * PAR.STEPTHRESH
 
         # write trial model corresponding to chosen step length
-        savetxt('alpha', alpha)
+        self.savetxt('alpha', alpha)
         self.save('m_try', m + alpha*p)
 
         # append latest statistics
