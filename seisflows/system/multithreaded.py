@@ -70,7 +70,7 @@ class multithreaded(custom_import('system', 'serial')):
 
         elif hosts == 'head':
             self.setnode(0)
-            func = getattr(__import__(classname), funcname)
+            func = getattr(__import__('seisflows_'+classname), funcname)
             func(**kwargs)
 
         else:
