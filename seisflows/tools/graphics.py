@@ -133,19 +133,17 @@ def _convert_to_array(stream):
     TypeError
         If stream is not an obspy stream
     """
-    try:
-        isinstance(stream, Stream)
-    except:
+    if not isinstance(stream, Stream):
         raise TypeError('Input object should be an obspy stream.')
-    else:
-        nt = len(stream.traces[0].data)
-        nr = len(stream)
-        output = np.zeros((nt, nr))
 
-        for i, trace in enumerate(stream):
-            output[:, i] = trace.data[:]
+    nt = len(stream.traces[0].data)
+    nr = len(stream)
+    output = np.zeros((nt, nr))
 
-        return output
+    for i, trace in enumerate(stream):
+        output[:, i] = trace.data[:]
+
+    return output
 
 
 def _cscale(v, clip=100):
