@@ -25,11 +25,13 @@ class double_difference(custom_import('preprocess', 'base')):
         """
         super(double_difference, self).check()
 
+        # specify defaults 
+        if not hasattr(PAR, 'INEXACT_CC'):
+            setattr(PAR, 'INEXACT_CC', False)
+
+        # error checking
         if PAR.MISFIT not in ['Traveltime']:
             raise Exception
-
-        if not hasattr(PAR, 'DEBUG_INEXACT_CC'):
-            setattr(PAR, 'DEBUG_INEXACT_CC', False)
 
 
     def write_residuals(self, path, syn, dat):
@@ -37,47 +39,56 @@ class double_difference(custom_import('preprocess', 'base')):
         """
         nt, dt, _ = self.get_time_scheme(syn)
         nr, _ = self.get_network_size(syn)
+        rx, ry, rz = self.get_receiver_coords(syn)
 
-        # compute traveltime differences between stations
-        d = np.zeros((nr, nr))
-        dd = np.zeros((nr, nr))
+        # calculate distances between stations
+        dist = np.zeros((nr,nr))
+        for i in range(nr):
+            for j in range(i):
+                dist[i,j] = ((rx[i]-rx[j])**2 +
+                             (ry[i]-ry[j])**2 +
+                             (rz[i]-rz[j])**2)**0.5
+
+        # calculate traveltime differences between stations
+        delta_syn = np.zeros((nr,nr))
+        delta_obs = np.zeros((nr,nr))
 
         for i in range(nr):
             for j in range(i):
-
                 if PAR.VERBOSE >= 2:
                     if system.getnode() == 0:
                         print i,j
 
-                d[i,j] = self.misfit_dd(syn[i].data, syn[j].data, nt, dt)
-                dd[i,j] = d[i,j] - self.misfit_dd(dat[i].data, dat[j].data, nt, dt)
+                delta_syn[i,j] = self.misfit_dd(syn[i].data,syn[j].data,nt,dt)
+                delta_obs[i,j] = self.misfit_dd(dat[i].data,dat[j].data,nt,dt)
 
-        np.savetxt(path +'/'+ 'dij', d)
-        np.savetxt(path +'/'+ 'ddij', dd)
+        # save pair-wise arrays
+        np.savetxt(path +'/'+ 'dist_ij', dist)
+        np.savetxt(path +'/'+ 'delta_syn_ij', delta_syn)
+        np.savetxt(path +'/'+ 'delta_obs_ij', delta_obs)
+        np.savetxt(path +'/'+ 'rsd_ij', delta_syn-delta_obs)
 
+        # to get residual, sum over all station pairs
         filename = path +'/'+ 'residuals'
         if exists(filename):
             rsd = list(np.loadtxt(filename))
         else:
             rsd = []
-
-        # to get residual, sum over all station pairs
         for i in range(nr):
-            rsd += [np.sum(abs(dd), 0)]
+            rsd += [np.sum(abs(delta_syn-delta_obs), 0)]
         np.savetxt(filename, rsd)
 
 
     def write_adjoint_traces(self, path, syn, dat, channel):
         """ Computes adjoint traces from observed and synthetic traces
         """
-
         nt, dt, _ = self.get_time_scheme(syn)
         nr, _ = self.get_network_size(syn)
 
-        d = np.loadtxt(path +'/'+ '../../dij')
-        dd = np.loadtxt(path +'/'+ '../../ddij')
+        Del = np.loadtxt(path +'/'+ '../../delta_syn_ij')
+        rsd = np.loadtxt(path +'/'+ '../../rsd_ij')
 
-        # initialize adjoint traces
+        # initialize trace arrays
         adj = Stream()
         for i in range(nr):
             adj.append(Trace(
@@ -96,17 +107,20 @@ class double_difference(custom_import('preprocess', 'base')):
                 si = syn[i].data
                 sj = syn[j].data
 
-                ai_tmp = self.adjoint_dd(si, sj, +d[i,j], nt, dt)
-                aj_tmp = self.adjoint_dd(sj, si, -d[i,j], nt, dt)
+                ai_tmp = self.adjoint_dd(si, sj, +Del[i,j], nt, dt)
+                aj_tmp = self.adjoint_dd(sj, si, -Del[i,j], nt, dt)
 
-                ai -= dd[i,j] * ai_tmp
-                aj += dd[i,j] * aj_tmp
+                ai -= rsd[i,j] * ai_tmp
+                aj += rsd[i,j] * aj_tmp
 
         # write adjoint traces
         self.writer(adj, path, channel)
 
 
     def adjoint_dd(self, si, sj, t0, nt, dt):
+        """ Returns contribution to adjoint source from a single double-
+         difference measurement
+        """
         vi = np.zeros(nt)
         vj = np.zeros(nt)
 
@@ -124,7 +138,9 @@ class double_difference(custom_import('preprocess', 'base')):
 
 
     def misfit_dd(self, si, sj, nt, dt):
-        if PAR.DEBUG_INEXACT_CC:
+        """ Calculates misfit from a single double-difference measurement
+        """
+        if PAR.INEXACT_CC:
             # much faster but possibly inaccurate
             itmax = np.argmax(si)
             jtmax = np.argmax(sj)
@@ -136,6 +152,8 @@ class double_difference(custom_import('preprocess', 'base')):
 
 
     def shift(self, v, it):
+        """ Shift time series by a given number of time steps
+        """
         if it == 0:
             return v
 
@@ -149,4 +167,3 @@ class double_difference(custom_import('preprocess', 'base')):
             vo[:it] = v[-it:]
         return vo
 
-            
