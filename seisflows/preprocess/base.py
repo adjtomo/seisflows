@@ -101,60 +101,33 @@ class base(object):
             self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, filename)
 
 
-    def prepare_apply_hess(self, path='.'):
-        """ Prepares solver to compute action of Hessian by writing adjoint traces
-        """
-        solver = sys.modules['seisflows_solver']
-
-        tag1, tag2 = self.apply_hess_tags()
-
-        for filename in solver.data_filenames:
-            dat1 = self.reader(path+'/'+'traces/'+tag1, filename)
-            dat2 = self.reader(path+'/'+'traces/'+tag2, filename)
-
-            dat1 = self.apply_filter(dat1)
-            dat1 = self.apply_mute(dat1)
-            dat1 = self.apply_normalize(dat1)
-
-            dat2 = self.apply_filter(dat2)
-            dat2 = self.apply_mute(dat2)
-            dat2 = self.apply_normalize(dat2)
-
-            self.write_adjoint_traces(path+'/'+'traces/adj', dat1, dat2, filename)
-
-
-
-    def write_residuals(self, path, syn, dat):
+    def write_residuals(self, path, syn, obs):
         """ Computes residuals from observations and synthetics
         """
         nt, dt, _ = self.get_time_scheme(syn)
         nn, _ = self.get_network_size(syn)
 
-        filename = path +'/'+ 'residuals'
-        if exists(filename):
-            rsd = list(np.loadtxt(filename))
-        else:
-            rsd = []
-
+        rsd = []
         for ii in range(nn):
-            rsd.append(self.misfit(syn[ii].data, dat[ii].data, nt, dt))
+            rsd.append(self.misfit(syn[ii].data, obs[ii].data, nt, dt))
+
+        filename = path+'/'+'residuals'
+        if exists(filename):
+            rsd.extend(list(np.loadtxt(filename)))
 
         np.savetxt(filename, rsd)
 
 
-    def write_adjoint_traces(self, path, syn, dat, channel):
-        """ Generates adjoint traces from observed and synthetic traces
+    def write_adjoint_traces(self, path, syn, obs, channel):
+        """ Writes "adjoint traces" required for gradient computation
+         (overwrites synthetic data in the process)
         """
         nt, dt, _ = self.get_time_scheme(syn)
         nn, _ = self.get_network_size(syn)
 
-        # NOTE: overwrites syn[:].data
         adj = syn
-
         for ii in range(nn):
-            adj[ii].data = self.adjoint(syn[ii].data, dat[ii].data, nt, dt)
-
-        #self.apply_filter_backwards(adj)
+            adj[ii].data = self.adjoint(syn[ii].data, obs[ii].data, nt, dt)
 
         self.writer(adj, path, channel)
 
@@ -396,15 +369,4 @@ class base(object):
         else:
              raise NotImplementedError
 
-
-    def apply_hess_tags(self):
-        if 'OPTIMIZE' not in PAR:
-           tag1, tag2 = 'lcg', 'obs'
-        elif PAR.OPTIMIZE in ['newton']:
-           tag1, tag2 = 'lcg', 'obs'
-        elif PAR.OPTIMIZE in ['gauss_newton']:
-           tag1, tag2 = 'lcg', 'syn'
-        else:
-           tag1, tag2 = 'lcg', 'obs'
-        return tag1, tag2
 
