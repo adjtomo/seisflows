@@ -29,6 +29,9 @@ class double_difference(custom_import('preprocess', 'base')):
         if not hasattr(PAR, 'INEXACT_CC'):
             setattr(PAR, 'INEXACT_CC', False)
 
+        if not hasattr(PAR, 'DISTMAX'):
+            setattr(PAR, 'DISTMAX', np.inf)
+
         # error checking
         if PAR.MISFIT not in ['Traveltime']:
             raise Exception
@@ -55,6 +58,10 @@ class double_difference(custom_import('preprocess', 'base')):
 
         for i in range(nr):
             for j in range(i):
+
+                if dist[i,j] > PAR.DISTMAX: 
+                    continue
+
                 if PAR.VERBOSE >= 2:
                     if system.getnode() == 0:
                         print i,j
