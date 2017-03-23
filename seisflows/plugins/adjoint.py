@@ -9,23 +9,6 @@ from seisflows.tools.math import hilbert as _hilbert
 ### adjoint traces generators
 
 
-def Traveltime(syn, obs, nt, dt):
-    # cross correlation traveltime
-    # (Tromp et al 2005, eq 45)
-    wadj = _np.zeros(nt)
-    wadj[1:-1] = (syn[2:] - syn[0:-2])/(2.*dt)
-    wadj *= 1./(sum(wadj*wadj)*dt)
-    wadj *= misfit.Traveltime(syn,obs,nt,dt)
-    return wadj
-
-
-def Amplitude(syn, obs, nt, dt):
-    # cross correlation amplitude
-    wadj = 1./(sum(syn*syn)*dt) * syn
-    wadj *= misfit.Amplitude(syn,obs,nt,dt)
-    return wadj
-
-
 def Waveform(syn, obs, nt, dt):
     # waveform difference
     # (Tromp et al 2005, eq 9)
@@ -62,6 +45,34 @@ def InstantaneousPhase(syn, obs, nt, dt, eps=0.05):
            _np.imag(_analytic(phi_rsd * syn/(esyn**2. + eps*emax)))
 
     return wadj
+
+
+def Traveltime(syn, obs, nt, dt):
+    # cross correlation traveltime
+    # (Tromp et al 2005, eq 45)
+    wadj = _np.zeros(nt)
+    wadj[1:-1] = (syn[2:] - syn[0:-2])/(2.*dt)
+    wadj *= 1./(sum(wadj*wadj)*dt)
+    wadj *= misfit.Traveltime(syn,obs,nt,dt)
+    return wadj
+
+
+def TraveltimeInexact(syn, obs, nt, dt):
+    # must faster but possibly inaccurate
+    wadj = _np.zeros(nt)
+    wadj[1:-1] = (syn[2:] - syn[0:-2])/(2.*dt)
+    wadj *= 1./(sum(wadj*wadj)*dt)
+    wadj *= misfit.TraveltimeInexact(syn,obs,nt,dt)
+    return wadj
+
+
+def Amplitude(syn, obs, nt, dt):
+    # cross correlation amplitude
+    wadj = 1./(sum(syn*syn)*dt) * syn
+    wadj *= misfit.Amplitude(syn,obs,nt,dt)
+    return wadj
+
+
 
 
 def Envelope2(syn, obs, nt, dt, eps=0.):
