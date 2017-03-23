@@ -26,14 +26,14 @@ class double_difference(custom_import('preprocess', 'base')):
         super(double_difference, self).check()
 
         # specify defaults 
-        if not hasattr(PAR, 'INEXACT_CC'):
-            setattr(PAR, 'INEXACT_CC', False)
-
         if not hasattr(PAR, 'DISTMAX'):
             setattr(PAR, 'DISTMAX', np.inf)
 
+        if not hasattr(PAR, 'WEIGHTS'):
+            setattr(PAR, 'WEIGHTS', None)
+
         # error checking
-        if PAR.MISFIT not in ['Traveltime']:
+        if PAR.MISFIT not in ['Traveltime', 'TraveltimeInexact']:
             raise Exception
 
 
@@ -46,6 +46,7 @@ class double_difference(custom_import('preprocess', 'base')):
 
         # calculate distances between stations
         dist = np.zeros((nr,nr))
+        count = np.zers(nr)
         for i in range(nr):
             for j in range(i):
                 dist[i,j] = ((rx[i]-rx[j])**2 +
@@ -58,19 +59,15 @@ class double_difference(custom_import('preprocess', 'base')):
 
         for i in range(nr):
             for j in range(i):
-
                 if dist[i,j] > PAR.DISTMAX: 
                     continue
 
-                if PAR.VERBOSE >= 2:
-                    if system.getnode() == 0:
-                        print i,j
+                delta_syn[i,j] = self.get_misfit(syn[i].data,syn[j].data,nt,dt)
+                delta_obs[i,j] = self.get_misfit(dat[i].data,dat[j].data,nt,dt)
+                count[i] += 1
 
-                delta_syn[i,j] = self.misfit_dd(syn[i].data,syn[j].data,nt,dt)
-                delta_obs[i,j] = self.misfit_dd(dat[i].data,dat[j].data,nt,dt)
-
-        # save pair-wise arrays
         np.savetxt(path +'/'+ 'dist_ij', dist)
+        np.savetxt(path +'/'+ 'count', count)
         np.savetxt(path +'/'+ 'delta_syn_ij', delta_syn)
         np.savetxt(path +'/'+ 'delta_obs_ij', delta_obs)
         np.savetxt(path +'/'+ 'rsd_ij', delta_syn-delta_obs)
@@ -81,8 +78,7 @@ class double_difference(custom_import('preprocess', 'base')):
             rsd = list(np.loadtxt(filename))
         else:
             rsd = []
-        for i in range(nr):
-            rsd += [np.sum(abs(delta_syn-delta_obs), 0)]
+        rsd += [np.sum(abs(delta_syn-delta_obs), 0)]
         np.savetxt(filename, rsd)
 
 
@@ -105,27 +101,23 @@ class double_difference(custom_import('preprocess', 'base')):
         # generate adjoint traces
         for i in range(nr):
             for j in range(i):
-
-                if PAR.VERBOSE > 2:
-                    print i,j
-
-                ai = adj[i].data
-                aj = adj[j].data
                 si = syn[i].data
                 sj = syn[j].data
 
-                ai_tmp = self.adjoint_dd(si, sj, +Del[i,j], nt, dt)
-                aj_tmp = self.adjoint_dd(sj, si, -Del[i,j], nt, dt)
+                adj[i].data -= rsd[i,j] * \
+                               self.get_adjoint(si, sj, +Del[i,j], nt, dt)
+                adj[j].data += rsd[i,j] * \
+                               self.get_adjoint(sj, si, -Del[i,j], nt, dt)
 
-                ai -= rsd[i,j] * ai_tmp
-                aj += rsd[i,j] * aj_tmp
+        # apply weights
+        adj = self.apply_weights(adj)
 
         # write adjoint traces
         self.writer(adj, path, channel)
 
 
-    def adjoint_dd(self, si, sj, t0, nt, dt):
-        """ Returns contribution to adjoint source from a single double-
+    def get_adjoint(self, si, sj, t0, nt, dt):
+        """ Returns contribution to adjoint source from a single double 
          difference measurement
         """
         vi = np.zeros(nt)
@@ -144,22 +136,44 @@ class double_difference(custom_import('preprocess', 'base')):
         return vjo
 
 
-    def misfit_dd(self, si, sj, nt, dt):
-        """ Calculates misfit from a single double-difference measurement
+    def get_misfit(self, si, sj, nt, dt):
+        """ Calculates misfit for a single double difference measurement
         """
-        if PAR.INEXACT_CC:
+        if PAR.MISFIT == 'TraveltimeInexact':
             # much faster but possibly inaccurate
             itmax = np.argmax(si)
             jtmax = np.argmax(sj)
             return (itmax-jtmax)*dt
-        else:
+
+       elif PAR.MISFIT == 'Traveltime'
             cc = np.convolve(si, np.flipud(sj))
             it = np.argmax(cc)
             return (it-nt+1)*dt
 
+       else:
+           raise ParameterError
+
+
+    def apply_weights(self, traces):
+        if not PAR.WEIGHTS:
+            return traces
+
+        elif PAR.WEIGHTS in ['Simple']:
+            w = np.loadtxt('count')
+            for i,trace in enumerate(traces):
+                trace.data /= w[i]
+
+        elif PAR.WEIGHTS in ['UserSupplied']:
+            w = np.loadtxt(PATH.WEIGHTS)
+            for i,trace in enumerate(traces):
+                trace.data /= w[i]
+
+        elif PAR.WEIGHTS in ['Geographic']:
+            raise NotImplementedError
+
 
     def shift(self, v, it):
-        """ Shift time series by a given number of time steps
+        """ Shifts time series a given number of steps
         """
         if it == 0:
             return v
@@ -173,4 +187,5 @@ class double_difference(custom_import('preprocess', 'base')):
             # shift left
             vo[:it] = v[-it:]
         return vo
+
 
