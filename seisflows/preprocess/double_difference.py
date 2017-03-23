@@ -25,16 +25,16 @@ class double_difference(custom_import('preprocess', 'base')):
         """
         super(double_difference, self).check()
 
-        # specify defaults 
         if not hasattr(PAR, 'DISTMAX'):
-            setattr(PAR, 'DISTMAX', np.inf)
+            setattr(PAR, 'DISTMAX', float("inf"))
 
         if not hasattr(PAR, 'WEIGHTS'):
             setattr(PAR, 'WEIGHTS', None)
 
-        # error checking
-        if PAR.MISFIT not in ['Traveltime', 'TraveltimeInexact']:
-            raise Exception
+        # assertions
+        assert PAR.MISFIT in [
+            'Traveltime',
+            'TraveltimeInexact']
 
 
     def write_residuals(self, path, syn, dat):
@@ -46,7 +46,7 @@ class double_difference(custom_import('preprocess', 'base')):
 
         # calculate distances between stations
         dist = np.zeros((nr,nr))
-        count = np.zers(nr)
+        count = np.zeros(nr)
         for i in range(nr):
             for j in range(i):
                 dist[i,j] = ((rx[i]-rx[j])**2 +
@@ -62,8 +62,8 @@ class double_difference(custom_import('preprocess', 'base')):
                 if dist[i,j] > PAR.DISTMAX: 
                     continue
 
-                delta_syn[i,j] = self.get_misfit(syn[i].data,syn[j].data,nt,dt)
-                delta_obs[i,j] = self.get_misfit(dat[i].data,dat[j].data,nt,dt)
+                delta_syn[i,j] = self.misfit(syn[i].data, syn[j].data, nt, dt)
+                delta_obs[i,j] = self.misfit(dat[i].data, dat[j].data, nt, dt)
                 count[i] += 1
 
         np.savetxt(path +'/'+ 'dist_ij', dist)
@@ -104,19 +104,20 @@ class double_difference(custom_import('preprocess', 'base')):
                 si = syn[i].data
                 sj = syn[j].data
 
-                adj[i].data -= rsd[i,j] * \
-                               self.get_adjoint(si, sj, +Del[i,j], nt, dt)
-                adj[j].data += rsd[i,j] * \
-                               self.get_adjoint(sj, si, -Del[i,j], nt, dt)
+                adj[i].data += rsd[i,j] * \
+                               self.adjoint_dd(si, sj, +Del[i,j], nt, dt)
+                adj[j].data -= rsd[i,j] * \
+                               self.adjoint_dd(sj, si, -Del[i,j], nt, dt)
 
-        # apply weights
+
+        # optional weighting
         adj = self.apply_weights(adj)
 
         # write adjoint traces
         self.writer(adj, path, channel)
 
 
-    def get_adjoint(self, si, sj, t0, nt, dt):
+    def adjoint_dd(self, si, sj, t0, nt, dt):
         """ Returns contribution to adjoint source from a single double 
          difference measurement
         """
@@ -126,7 +127,7 @@ class double_difference(custom_import('preprocess', 'base')):
         vi[1:-1] = (si[2:] - si[0:-2])/(2.*dt)
         vj[1:-1] = (sj[2:] - sj[0:-2])/(2.*dt)
 
-        vjo = self.shift(vj, t0/dt)
+        vjo = self.shift(vj, -t0/dt)
 
         w  = sum(vi*vjo*dt)
         w = max(vjo)
@@ -134,24 +135,6 @@ class double_difference(custom_import('preprocess', 'base')):
             vjo /= w
 
         return vjo
-
-
-    def get_misfit(self, si, sj, nt, dt):
-        """ Calculates misfit for a single double difference measurement
-        """
-        if PAR.MISFIT == 'TraveltimeInexact':
-            # much faster but possibly inaccurate
-            itmax = np.argmax(si)
-            jtmax = np.argmax(sj)
-            return (itmax-jtmax)*dt
-
-       elif PAR.MISFIT == 'Traveltime'
-            cc = np.convolve(si, np.flipud(sj))
-            it = np.argmax(cc)
-            return (it-nt+1)*dt
-
-       else:
-           raise ParameterError
 
 
     def apply_weights(self, traces):
