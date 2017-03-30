@@ -1,5 +1,6 @@
 
 import sys
+import time
 
 from seisflows.config import ParameterError
 
@@ -10,8 +11,9 @@ system = sys.modules['seisflows_system']
 
 
 class test_system:
-    """ Tests system interface.
+    """ Tests system interface
     """
+
     def check(self):
         if 'NTASK' not in PAR:
             raise Exception
@@ -24,15 +26,23 @@ class test_system:
 
 
     def main(self):
-        system.run('workflow', 'hello', hosts='all')
+        system.run('workflow', 'hello', 
+            hosts='all')
+
+        system.run('workflow', 'hello',  
+            hosts='head', 
+            msg=None)
+
         print ''
 
 
-    def hello(self):
+    def hello(self, msg='Hello'):
         """ Sends hello message from compute node
         """
-        import time
+        if not msg:
+            return
+
         time.sleep(1)
-        print ' Hello from', system.getnode()+1
+        print '%s from %d' % (msg, system.getnode()+1)
         print ''
 
