@@ -412,14 +412,14 @@ class base(object):
     def load(self, filename):
         return loadnpy(PATH.OPTIMIZE+'/'+filename)
 
-    def save(self, filename, v):
-        savenpy(PATH.OPTIMIZE+'/'+filename, v)
+    def save(self, filename, array):
+        savenpy(PATH.OPTIMIZE+'/'+filename, array)
 
 
     def loadtxt(self, filename):
         return loadtxt(PATH.OPTIMIZE+'/'+filename)
 
-    def savetxt(self, filename, c):
-        savetxt(PATH.OPTIMIZE+'/'+filename, c)
+    def savetxt(self, filename, scalar):
+        savetxt(PATH.OPTIMIZE+'/'+filename, scalar)
 
 

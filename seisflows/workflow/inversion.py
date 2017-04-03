@@ -5,7 +5,6 @@ import numpy as np
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.tools import divides, exists
 from seisflows.config import ParameterError
 
@@ -236,8 +235,8 @@ class inversion(object):
             path=PATH.GRAD)
 
         src = join(PATH.GRAD, 'gradient')
-        dst = join(PATH.OPTIMIZE, 'g_new')
-        savenpy(dst, solver.merge(solver.load(src, suffix='_kernel')))
+        dst = 'g_new'
+        optimize.save(dst, solver.merge(solver.load(src, suffix='_kernel')))
 
 
     def finalize(self):
@@ -275,9 +274,9 @@ class inversion(object):
         """ Writes model in format used by solver
         """
         unix.mkdir(path)
-        src = PATH.OPTIMIZE +'/'+ 'm_' + suffix
+        src = 'm_'+suffix
         dst = path +'/'+ 'model'
-        parts = solver.split(loadnpy(src))
+        parts = solver.split(optimize.load(src))
         solver.save(dst, parts)
 
 
@@ -300,9 +299,9 @@ class inversion(object):
 
 
     def save_model(self):
-        src = PATH.OPTIMIZE +'/'+ 'm_new'
+        src = 'm_new'
         dst = join(PATH.OUTPUT, 'model_%04d' % optimize.iter)
-        solver.save(dst, solver.split(loadnpy(src)))
+        solver.save(dst, solver.split(optimize.load(src)))
 
 
     def save_kernels(self):

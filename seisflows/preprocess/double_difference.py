@@ -28,10 +28,15 @@ class double_difference(custom_import('preprocess', 'base')):
         if not hasattr(PAR, 'DISTMAX'):
             setattr(PAR, 'DISTMAX', float("inf"))
 
-        if not hasattr(PAR, 'WEIGHTS'):
-            setattr(PAR, 'WEIGHTS', None)
+        if not hasattr(PAR, 'UNITS'):
+            setattr(PAR, 'UNITS', 'lonlat')
 
-        # assertions
+        if not hasattr(PATH, 'WEIGHTS'):
+            setattr(PATH, 'WEIGHTS', None)
+
+        if PATH.WEIGHTS:
+            assert exists(PATH.WEIGHTS)
+
         assert PAR.MISFIT in [
             'Traveltime',
             'TraveltimeInexact']
@@ -49,9 +54,7 @@ class double_difference(custom_import('preprocess', 'base')):
         count = np.zeros(nr)
         for i in range(nr):
             for j in range(i):
-                dist[i,j] = ((rx[i]-rx[j])**2 +
-                             (ry[i]-ry[j])**2 +
-                             (rz[i]-rz[j])**2)**0.5
+                dist[i,j] = self.distance(rx[i], rx[j], ry[i], ry[j])
 
         # calculate traveltime differences between stations
         delta_syn = np.zeros((nr,nr))
@@ -138,21 +141,14 @@ class double_difference(custom_import('preprocess', 'base')):
 
 
     def apply_weights(self, traces):
-        if not PAR.WEIGHTS:
+        if not PATH.WEIGHTS:
             return traces
 
-        elif PAR.WEIGHTS in ['Simple']:
-            w = np.loadtxt('count')
+        else:
+            w = np.loadtxt(PATH.WEIGHTS)[:,-1]
             for i,trace in enumerate(traces):
                 trace.data /= w[i]
-
-        elif PAR.WEIGHTS in ['UserSupplied']:
-            w = np.loadtxt(PATH.WEIGHTS)
-            for i,trace in enumerate(traces):
-                trace.data /= w[i]
-
-        elif PAR.WEIGHTS in ['Geographic']:
-            raise NotImplementedError
+            return weights
 
 
     def shift(self, v, it):
@@ -171,4 +167,17 @@ class double_difference(custom_import('preprocess', 'base')):
             vo[:it] = v[-it:]
         return vo
 
+
+    def distance(self, x1, y1, x2, y2):
+        if PAR.UNITS in ['lonlat']:
+            dlat = np.radians(y2-y1)
+            dlon = np.radians(x2-x1)
+            a = np.sin(dlat/2) * np.sin(dlat/2) + np.cos(np.radians(y1)) \
+                * np.cos(np.radians(y2)) * np.sin(dlon/2) * np.sin(dlon/2)
+            D = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
+            D *= 180/np.pi
+            return D
+
+        else:
+            return ((x1-x2)**2 + (y1-y2)**2)**0.5
 
