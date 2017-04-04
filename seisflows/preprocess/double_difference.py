@@ -67,7 +67,10 @@ class double_difference(custom_import('preprocess', 'base')):
 
                 delta_syn[i,j] = self.misfit(syn[i].data, syn[j].data, nt, dt)
                 delta_obs[i,j] = self.misfit(dat[i].data, dat[j].data, nt, dt)
+                delta_syn[j,i] = -delta_syn[i,j]
+                delta_obs[j,i] = -delta_obs[i,j]
                 count[i] += 1
+
 
         np.savetxt(path +'/'+ 'dist_ij', dist)
         np.savetxt(path +'/'+ 'count', count)
@@ -75,14 +78,21 @@ class double_difference(custom_import('preprocess', 'base')):
         np.savetxt(path +'/'+ 'delta_obs_ij', delta_obs)
         np.savetxt(path +'/'+ 'rsd_ij', delta_syn-delta_obs)
 
-        # to get residual, sum over all station pairs
+        # to get residuals, sum over all station pairs
+        rsd = abs(delta_syn-delta_obs).sum(axis=0)
+
+        # apply optional weights
+        if PATH.WEIGHTS:
+            rsd *= self.load_weights()
+
+        # write residuals to text file
         filename = path +'/'+ 'residuals'
         if exists(filename):
-            rsd = list(np.loadtxt(filename))
+            rsdlist = list(np.loadtxt(filename))
         else:
-            rsd = []
-        rsd += [np.sum(abs(delta_syn-delta_obs), 0)]
-        np.savetxt(filename, rsd)
+            rsdlist = []
+        rsdlist += [rsd]
+        np.savetxt(filename, rsdlist)
 
 
     def write_adjoint_traces(self, path, syn, dat, channel):
@@ -145,10 +155,14 @@ class double_difference(custom_import('preprocess', 'base')):
             return traces
 
         else:
-            w = np.loadtxt(PATH.WEIGHTS)[:,-1]
+            w = self.load_weights()
             for i,trace in enumerate(traces):
-                trace.data /= w[i]
-            return weights
+                trace.data *= w[i]
+            return traces
+
+
+    def load_weights(self):
+            return np.loadtxt(PATH.WEIGHTS)[:,-1]
 
 
     def shift(self, v, it):
