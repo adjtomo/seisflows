@@ -353,8 +353,8 @@ class base(object):
         src = path
         dst = path + '_nosmooth'
         unix.mkdir(dst)
-        for name in self.parameters:
-            unix.mv(glob(src+'/*'+name+'.bin'), dst)
+        for name in parameters or self.parameters:
+            unix.mv(glob(src+'/*'+name+'_kernel.bin'), dst)
 
         # rename output files
         unix.rename('_smooth', '', glob(src+'/*'))
@@ -382,7 +382,7 @@ class base(object):
         src = path
         dst = path + '_noclip'
         unix.mkdir(dst)
-        for name in self.parameters:
+        for name in parameters or self.parameters:
             unix.mv(glob(src+'/*'+name+'.bin'), dst)
 
         # rename output files

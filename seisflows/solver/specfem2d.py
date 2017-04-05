@@ -8,6 +8,7 @@ import numpy as np
 from seisflows.plugins.io import sem
 from seisflows.tools.shared import getpar, setpar
 
+from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.tools import exists, call_solver, call_solver_nompi
@@ -192,14 +193,13 @@ class specfem2d(custom_import('solver', 'base')):
     ### postprocessing utilities
 
     def smooth(self, path='', parameters=None, span=0. ):
-        """ Smooths SPECFEM2D kernels by convolving them with a Gaussian
+        """ For a long time SPECFEM2D lacked its own smoothing utility; this 
+          method was intended only as a crude workaround
         """
-        from seisflows.tools.array import meshsmooth, stack
+        from seisflows.tools import array
 
-        #assert parameters == self.parameters
-
-        # implementing nproc > 1 would be straightforward, but a bit tedious
-        #assert self.mesh.nproc == 1
+        assert self.mesh_properties.nproc == 1,\
+            msg.SmoothingError_SPECFEM2D
 
         kernels = self.load(path, suffix='_kernel')
         if not span:
@@ -208,10 +208,10 @@ class specfem2d(custom_import('solver', 'base')):
         # set up grid
         x = sem.read(PATH.MODEL_INIT, 'x', 0)
         z = sem.read(PATH.MODEL_INIT, 'z', 0)
-        mesh = stack(x, z)
+        mesh = array.stack(x, z)
 
         for key in parameters or self.parameters:
-            kernels[key] = [meshsmooth(kernels[key][0], mesh, span)]
+            kernels[key] = [array.meshsmooth(kernels[key][0], mesh, span)]
 
         unix.rm(path + '_nosmooth')
         unix.mv(path, path + '_nosmooth')

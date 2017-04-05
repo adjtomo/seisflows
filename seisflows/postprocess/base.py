@@ -58,8 +58,10 @@ class base(object):
         if not exists(path):
             raise Exception()
 
-        self.combine_kernels(path, solver.parameters)
-        self.process_kernels(path, solver.parameters)
+        system.run('postprocess', 'process_kernels',
+                 hosts='head',
+                 path=path,
+                 parameters=solver.parameters)
 
         g = solver.merge(solver.load(
                  path +'/'+ 'kernels/sum',
@@ -77,20 +79,16 @@ class base(object):
             self.save(path, g, backup='nomask')
 
 
-    def combine_kernels(self, path, parameters):
-        system.run('solver', 'combine',
-                   hosts='head',
-                   path=path +'/'+ 'kernels',
-                   parameters=parameters)
-
-
     def process_kernels(self, path, parameters):
+        solver.combine(
+               path=path +'/'+ 'kernels',
+               parameters=parameters)
+
         if PAR.SMOOTH > 0.:
-            system.run('solver', 'smooth',
-                       hosts='head',
-                       path=path + '/' + 'kernels/sum',
-                       span=PAR.SMOOTH,
-                       parameters=parameters)
+            solver.smooth( 
+                   path=path +'/'+ 'kernels/sum',
+                   parameters=parameters,
+                   span=PAR.SMOOTH)
 
 
     def save(self, path, v, backup=None):
