@@ -1,8 +1,9 @@
 
-from os.path import join
 import sys
 import numpy as np
 
+from glob import glob
+from os.path import join
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.tools import divides, exists
@@ -163,7 +164,7 @@ class inversion(object):
                    hosts='all',
                    path=PATH.GRAD)
 
-        self.sum_residuals(path=PATH.GRAD, suffix='new')
+        self.write_misfit(path=PATH.GRAD, suffix='new')
 
 
     def compute_direction(self):
@@ -220,7 +221,7 @@ class inversion(object):
                    hosts='all',
                    path=PATH.FUNC)
 
-        self.sum_residuals(path=PATH.FUNC, suffix='try')
+        self.write_misfit(path=PATH.FUNC, suffix='try')
 
 
     def evaluate_gradient(self):
@@ -271,7 +272,7 @@ class inversion(object):
 
 
     def write_model(self, path='', suffix=''):
-        """ Writes model in format used by solver
+        """ Write model in format expected by solver
         """
         unix.mkdir(path)
         src = 'm_'+suffix
@@ -280,16 +281,14 @@ class inversion(object):
         solver.save(dst, parts)
 
 
-    def sum_residuals(self, path='', suffix=''):
-        """ Returns sum of squares of residuals
+    def write_misfit(self, path='', suffix=''):
+        """ Sums data residuals and writes total misfit in form expected by 
+          nonlinear optimization library
         """
-        src = path +'/'+ 'residuals'
-        dst = PATH.OPTIMIZE +'/'+ 'f_' + suffix
-        residuals = []
-        for file in unix.ls(src):
-            fromfile = np.loadtxt(src +'/'+ file)
-            residuals.append(fromfile**2.)
-        np.savetxt(dst, [np.sum(residuals)])
+        src = glob(path +'/'+ 'residuals/*')
+        dst = 'f_'+suffix
+        total_misfit = preprocess.sum_residuals(src)
+        optimize.savetxt(dst, [total_misfit])
 
 
     def save_gradient(self):
