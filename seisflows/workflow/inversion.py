@@ -232,12 +232,7 @@ class inversion(object):
                    path=PATH.GRAD,
                    export_traces=divides(optimize.iter, PAR.SAVETRACES))
 
-        postprocess.write_gradient(
-            path=PATH.GRAD)
-
-        src = join(PATH.GRAD, 'gradient')
-        dst = 'g_new'
-        optimize.save(dst, solver.merge(solver.load(src, suffix='_kernel')))
+        self.write_gradient(path=PATH.GRAD, suffix='new')
 
 
     def finalize(self):
@@ -272,18 +267,26 @@ class inversion(object):
 
 
     def write_model(self, path='', suffix=''):
-        """ Write model in format expected by solver
+        """ Writes model in format expected by solver
         """
-        unix.mkdir(path)
         src = 'm_'+suffix
         dst = path +'/'+ 'model'
         parts = solver.split(optimize.load(src))
         solver.save(dst, parts)
 
 
+    def write_gradient(self, path='', suffix=''):
+        """ Writes gradient in form expected by nonlinear optimization library
+        """
+        src = join(path, 'gradient')
+        dst = 'g_'+suffix
+        postprocess.write_gradient(path)
+        parts = solver.load(src, suffix='_kernel')
+        optimize.save(dst, solver.merge(parts))
+
+
     def write_misfit(self, path='', suffix=''):
-        """ Sums data residuals and writes total misfit in form expected by 
-          nonlinear optimization library
+        """ Writes misfit in form expected by nonlinear optimization library
         """
         src = glob(path +'/'+ 'residuals/*')
         dst = 'f_'+suffix
@@ -319,6 +322,4 @@ class inversion(object):
         src = join(PATH.GRAD, 'residuals')
         dst = join(PATH.OUTPUT, 'residuals_%04d' % optimize.iter)
         unix.mv(src, dst)
-
-
 
