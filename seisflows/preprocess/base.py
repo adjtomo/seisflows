@@ -107,16 +107,25 @@ class base(object):
         nt, dt, _ = self.get_time_scheme(syn)
         nn, _ = self.get_network_size(syn)
 
-        rsd = []
+        residuals = []
         for ii in range(nn):
-            rsd.append(self.misfit(syn[ii].data, obs[ii].data, nt, dt))
+            residuals.append(self.misfit(syn[ii].data, obs[ii].data, nt, dt))
 
         filename = path+'/'+'residuals'
         if exists(filename):
-            rsd.extend(list(np.loadtxt(filename)))
+            residuals.extend(list(np.loadtxt(filename)))
 
-        np.savetxt(filename, rsd)
+        np.savetxt(filename, residuals)
 
+
+    def sum_residuals(self, paths):
+        """ Sums squares of residuals
+        """
+        total_misfit = 0.
+        for path in paths:
+            total_misfit += np.sum(np.loadtxt(path)**2.)
+        return total_misfit
+        
 
     def write_adjoint_traces(self, path, syn, obs, channel):
         """ Writes "adjoint traces" required for gradient computation
