@@ -44,8 +44,8 @@ class slurm_lg(custom_import('system', 'base')):
             setattr(PAR, 'WALLTIME', 30.)
 
         # time allocated for each individual task in minutes
-        if 'STEPTIME' not in PAR:
-            setattr(PAR, 'STEPTIME', 15.)
+        if 'TASKTIME' not in PAR:
+            setattr(PAR, 'TASKTIME', 15.)
 
         # number of tasks
         if 'NTASK' not in PAR:
@@ -172,7 +172,7 @@ class slurm_lg(custom_import('system', 'base')):
                 + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
                 + '--ntasks-per-node=%d ' % PAR.NODESIZE
                 + '--ntasks=%d ' % PAR.NPROC
-                + '--time=%d ' % PAR.STEPTIME
+                + '--time=%d ' % PAR.TASKTIME
                 + self.job_array_args(hosts)
                 + findpath('seisflows.system') +'/'+ 'wrappers/run '
                 + PATH.OUTPUT + ' '
@@ -199,16 +199,19 @@ class slurm_lg(custom_import('system', 'base')):
     def job_array_status(self, classname, funcname, jobs):
         """ Determines completion status of one or more jobs
         """
+        states = []
         for job in jobs:
             state = self._query(job)
-            states = []
-            if state in ['COMPLETED']:
+            if state in ['FAILED', 'NODE_FAIL']:
+                print msg.TaskError_SLURM % (classname, funcname, job)
+                sys.exit(-1)
+            elif state in ['TIMEOUT']:
+                print msg.TimoutError % (classname, funcname, job, PAR.TASKTIME)
+                sys.exit(-1)
+            elif state in ['COMPLETED']:
                 states += [1]
             else:
                 states += [0]
-            if state in ['FAILED', 'NODE_FAIL', 'TIMEOUT']:
-                print msg.TaskError_SLURM % (classname, funcname, job)
-                sys.exit(-1)
         isdone = all(states)
 
         return isdone, jobs
@@ -218,13 +221,13 @@ class slurm_lg(custom_import('system', 'base')):
         """ Queries job state from SLURM database
         """
         with open(PATH.SYSTEM+'/'+'job_status', 'w') as f:
-            call('sacct -n -o state -j '+jobid, stdout=f)
+            call('sacct -n -o jobid,state -j %s ' % jobid.split('_')[0], stdout=f)
 
         with open(PATH.SYSTEM+'/'+'job_status', 'r') as f:
-            line = f.readline()
-            state = line.strip()
-
-        return state
+            for line in f.readlines():
+                id, state = line.split()
+                if id==jobid:
+                    return state
 
 
     ### utility function
