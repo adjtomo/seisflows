@@ -41,7 +41,7 @@ class pbs_lg(custom_import('system', 'base')):
         if 'TITLE' not in PAR:
             setattr(PAR, 'TITLE', basename(abspath('.')))
 
-        # time allocated for entire workflow in minutes
+        # time allocated for workflow in minutes
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
@@ -131,11 +131,11 @@ class pbs_lg(custom_import('system', 'base')):
             # run all tasks
             call(findpath('seisflows.system')  +'/'+'wrappers/dsh '
                     + ','.join(self.hostlist()) + ' '
+                    + findpath('seisflows.system')  +'/'+'wrappers/run '
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname + ' '
-                    + findpath('seisflows.system')  +'/'+'wrappers/run '
-                    + 'PYTHONPATH='+findpath('seisflows.system'),+','
+                    + 'PYTHONPATH='+findpath('seisflows'),+','
                     + PAR.ENVIRONS)
 
         elif hosts == 'head':
@@ -147,7 +147,7 @@ class pbs_lg(custom_import('system', 'base')):
                     + PATH.OUTPUT + ' '
                     + classname + ' '
                     + funcname + ' '
-                    + 'PYTHONPATH='+findpath('seisflows.system'),+','
+                    + 'PYTHONPATH='+findpath('seisflows'),+','
                     + PAR.ENVIRONS
                     +'"')
 
