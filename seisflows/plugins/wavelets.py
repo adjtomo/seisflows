@@ -1,22 +1,49 @@
 
+# please do not remove this module  -- it may be used in a future version of
+# seisflows
+
+
 import numpy as np
 
 
-def ricker(f0, dt, nt=0, width=100.):
+def _gauss(nt, dt, sigma):
+    t = np.arange(-nt, nt+1)*dt
+    y = np.exp(-(t/*2.*sigma)**2.)
 
-    tb = 0.88521*dt
-
-    if not nt:
-        nt = np.ceil(2*width*tb/dt)
-
-    t = np.linspace(-width*tb, width*tb, nt)
-    a = (np.pi*f0)**2
-    y = (1. - 2.*a*t**2) * np.exp(-a*t**2)
+    if nt*dt < 3.*sigma:
+        print warning
 
     return y
 
 
-def gabor(nt, dt, f0):
-    x = np.arange(-nt, nt)*dt
+def ricker(nt, dt, fp):
+    a = 2.*np.pi*fp 
+    t = np.arange(-nt, nt+1)*dt
+    y = (1-0.5*(a*t)**2.)*np.exp(-0.25*(a*t)**2.)
 
+    ts = 1.5**0.5/(np.pi*fp)
+    if nt*dt < 2*ts:
+        print warning
+
+    return y
+
+
+def _gabor(nt, dt, a, b):
+    t = np.arange(-nt, nt+1)*dt
+    y = np.exp(-(a*t)**2.) * np.cos(b*t)
+
+    return y
+
+
+def gabor(nt, df, fp):
+    a = np.pi*fp
+    b = 2*np.pi*fp
+    t = np.arange(-nt, nt+1)*dt
+    y = _gabor(nt, dt, a, b)
+
+    ts = 1.5**0.5/(np.pi*fp)
+    if nt*dt < 2*ts:
+        print warning
+
+    return y
 
