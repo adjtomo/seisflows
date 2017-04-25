@@ -44,8 +44,8 @@ class lsf_lg(custom_import('system', 'base')):
             setattr(PAR, 'WALLTIME', 30.)
 
         # time allocated for each individual task in minutes
-        if 'STEPTIME' not in PAR:
-            setattr(PAR, 'STEPTIME', 15.)
+        if 'TASKTIME' not in PAR:
+            setattr(PAR, 'TASKTIME', 15.)
 
         # number of tasks
         if 'NTASK' not in PAR:
@@ -158,7 +158,7 @@ class lsf_lg(custom_import('system', 'base')):
             + '%s ' % PAR.LSFARGS
             + '-n %d ' % PAR.NPROC
             + '-R "span[ptile=%d]" ' % PAR.NODESIZE
-            + '-W %d:00 ' % PAR.STEPTIME
+            + '-W %d:00 ' % PAR.TASKTIME
             + '-J "%s' %PAR.TITLE
             + self.launch_args(hosts)
             + findpath('seisflows.system') +'/'+ 'wrapper/run '

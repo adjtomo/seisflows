@@ -45,10 +45,6 @@ class pbs_lg(custom_import('system', 'base')):
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
-        # time allocated for each individual task in minutes
-        if 'STEPTIME' not in PAR:
-            setattr(PAR, 'STEPTIME', 15.)
-
         # number of tasks
         if 'NTASK' not in PAR:
             raise ParameterError(PAR, 'NTASK')
@@ -182,8 +178,8 @@ class pbs_lg(custom_import('system', 'base')):
         ncpus = PAR.NPROC
         mpiprocs = PAR.NPROC
 
-        hours = PAR.STEPTIME/60
-        minutes = PAR.STEPTIME%60
+        hours = PAR.TASKTIME/60
+        minutes = PAR.TASKTIME%60
         walltime = 'walltime=%02d:%02d:00 '%(hours, minutes)
 
         return ('qsub '

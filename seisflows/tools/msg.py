@@ -135,6 +135,20 @@ TASK ERROR
 """
 
 
+TaskTimeout = """
+
+TASK TIMED OUT
+
+    Stopping workflow because task time limit exceeded. (To adjust limit,
+    add or modify TASKTIME in parameter file.)
+
+        Task name:  %s.%s
+        Task id:    %s
+        Time limit (minutes): %s
+
+"""
+
+
 TaskError_PBS = """
 
 TASK ERROR

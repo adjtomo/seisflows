@@ -45,10 +45,6 @@ class pbs_lg(custom_import('system', 'base')):
         if 'WALLTIME' not in PAR:
             setattr(PAR, 'WALLTIME', 30.)
 
-        # time allocated for each individual task in minutes
-        if 'STEPTIME' not in PAR:
-            setattr(PAR, 'STEPTIME', 15.)
-
         # number of tasks
         if 'NTASK' not in PAR:
             raise ParameterError(PAR, 'NTASK')
