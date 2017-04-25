@@ -95,6 +95,15 @@ class double_difference(custom_import('preprocess', 'base')):
         np.savetxt(filename, rsdlist)
 
 
+    def sum_residuals(self):
+        """ Sums squares of residuals
+        """
+        total_misfit = 0.
+        for path in paths:
+            total_misfit += np.sum(np.loadtxt(path)**2.)
+        return total_misfit
+
+
     def write_adjoint_traces(self, path, syn, dat, channel):
         """ Computes adjoint traces from observed and synthetic traces
         """
