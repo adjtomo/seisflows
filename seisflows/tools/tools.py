@@ -5,6 +5,7 @@ import pickle
 import re
 import subprocess
 import sys
+import time
 import traceback
 
 from imp import load_source
@@ -112,6 +113,10 @@ def findpath(name):
     path = re.sub('__init__.py$', '', path)
 
     return path
+
+
+def timestamp():
+    return time.strftime('%H:%M:%S')
 
 
 def loadobj(filename):
