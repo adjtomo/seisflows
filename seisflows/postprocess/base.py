@@ -81,11 +81,11 @@ class base(object):
 
     def process_kernels(self, path, parameters):
         solver.combine(
-               path=path +'/'+ 'kernels',
-               parameters=parameters)
+               path +'/'+ 'kernels',
+               parameters)
 
         if PAR.SMOOTH > 0.:
-            solver.smooth( 
+            solver.smooth(
                    path=path +'/'+ 'kernels/sum',
                    parameters=parameters,
                    span=PAR.SMOOTH)

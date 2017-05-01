@@ -1,11 +1,12 @@
 #!/bin/bash
 
 hosts=$( echo $1 | tr ',' ' ' )
-path=$2
-class=$3
-func=$4
-exe=$5
+exe=$2
+path=$3
+class=$4
+func=$5
 env=$6
+
 
 k=0;
 for host in $hosts;

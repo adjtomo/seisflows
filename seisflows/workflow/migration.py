@@ -82,14 +82,16 @@ class migration(object):
                    path=PATH.SCRATCH,
                    export_traces=PAR.SAVETRACES)
 
-        postprocess.combine_kernels(
-            path=PATH.SCRATCH,
-            parameters=solver.parameters)
+        system.run('postprocess', 'process_kernels',
+                 hosts='head',
+                 path=path,
+                 parameters=solver.parameters)
 
         try:
-            postprocess.combine_kernels(
-                path=PATH.SCRATCH,
-                parameters=['rhop'])
+            system.run('postprocess', 'process_kernels',
+                     hosts='head',
+                     path=path,
+                     parameters=['rhop'])
         except:
             pass
 

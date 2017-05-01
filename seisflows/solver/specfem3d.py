@@ -64,6 +64,9 @@ class specfem3d(custom_import('solver', 'base')):
             dst = 'traces/obs'
             unix.mv(src, dst)
 
+        if PAR.SAVETRACES:
+            self.export_traces(PATH.OUTPUT+'/'+'traces/obs')
+
 
     def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
         """ Performs meshing and database generation

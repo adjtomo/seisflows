@@ -108,6 +108,9 @@ class specfem2d(custom_import('solver', 'base')):
             dst = 'traces/obs'
             unix.mv(src, dst)
 
+        if PAR.SAVETRACES:
+            self.export_traces(PATH.OUTPUT+'/'+'traces/obs')
+
 
     def initialize_adjoint_traces(self):
         super(specfem2d, self).initialize_adjoint_traces()

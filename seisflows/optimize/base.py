@@ -7,7 +7,6 @@ from seisflows.config import ParameterError
 from seisflows.plugins import preconds
 from seisflows.tools import msg, unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.tools import exists, loadtxt, savetxt
 from seisflows.tools.math import angle, polyfit2, backtrack2
 from seisflows.tools.shared import  Writer, StepWriter
 
@@ -202,9 +201,9 @@ class base(object):
         # update search history
         self.search_history += [[x_, f_]]
         self.step_count += 1
+
         x = self.step_lens()
         f = self.func_vals()
-
         fmin = f.min()
         imin = f.argmin()
 
@@ -309,9 +308,9 @@ class base(object):
 
         # write updated model
         alpha = x[f.argmin()]
-        savetxt('alpha', alpha)
+        self.savetxt('alpha', alpha)
         self.save('m_new', m + alpha*p)
-        savetxt('f_new', f.min())
+        self.savetxt('f_new', f.min())
 
         # append latest statistics
         self.writer('factor', -self.dot(g,g)**-0.5 * (f[1]-f[0])/(x[1]-x[0]))
@@ -352,7 +351,7 @@ class base(object):
         """
         g = self.load('g_new')
         self.save('p_new', -g)
-        savetxt('s_new', self.dot(g,g))
+        self.savetxt('s_new', self.dot(g,g))
         self.restarted = 1
         self.stepwriter.iter -= 1
         self.stepwriter.newline()
@@ -417,9 +416,9 @@ class base(object):
 
 
     def loadtxt(self, filename):
-        return loadtxt(PATH.OPTIMIZE+'/'+filename)
+        return float(np.loadtxt(filename))
 
     def savetxt(self, filename, scalar):
-        savetxt(PATH.OPTIMIZE+'/'+filename, scalar)
+        np.savetxt(PATH.OPTIMIZE+'/'+filename, [scalar], '%11.6e')
 
 

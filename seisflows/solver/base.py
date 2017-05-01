@@ -175,9 +175,6 @@ class base(object):
         preprocess.prepare_eval_grad(self.getpath)
         self.export_residuals(path)
 
-        if export_traces:
-            self.export_traces(path, prefix='traces/syn')
-
 
     def eval_grad(self, path='', export_traces=False):
         """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
@@ -190,7 +187,8 @@ class base(object):
         self.export_kernels(path)
 
         if export_traces:
-            self.export_traces(path, prefix='traces/adj')
+            self.export_traces(path+'/'+'traces/syn', prefix='traces/syn')
+            self.export_traces(path+'/'+'traces/adj', prefix='traces/adj')
 
 
     def apply_hess(self, path=''):
@@ -434,10 +432,10 @@ class base(object):
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
-        unix.mkdir(join(path, 'traces'), noexit=True)
+        unix.mkdir(join(path), noexit=True)
 
         src = join(self.getpath, prefix)
-        dst = join(path, 'traces', basename(self.getpath))
+        dst = join(path, basename(self.getpath))
         unix.cp(src, dst)
 
 
