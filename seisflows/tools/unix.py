@@ -1,9 +1,11 @@
 
 import os
+import random
 import shutil
 import socket
 import subprocess
 import sys
+import time
 
 from os.path import abspath, basename, isdir, isfile, join
 from seisflows.tools.tools import iterable
@@ -68,17 +70,11 @@ def ls(path):
     return dirs
 
 
-def mkdir(dirs, noexit=False):
-    try:
-        for dir in iterable(dirs):
-            if not os.path.isdir(dir):
-                os.makedirs(dir)
-    except EnvironmentError as e:
-        # hack to deal with race conditions on parallel file system
-        if noexit:
-            pass
-        else:
-            raise e
+def mkdir(dirs):
+    time.sleep(2 * random.random())
+    for dir in iterable(dirs):
+        if not os.path.isdir(dir):
+            os.makedirs(dir)
 
 def mv(src='', dst=''):
     if isinstance(src, (list, tuple)):

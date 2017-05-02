@@ -193,7 +193,7 @@ class base(object):
 
     def apply_hess(self, path=''):
         """ Computes action of Hessian on a given model vector. A gradient 
-          evaluation must have already been carried out beforehand.
+          evaluation must have already been carried out.
         """
         unix.cd(self.getpath)
         unix.mkdir('traces/lcg')
@@ -417,7 +417,7 @@ class base(object):
         self.rename_kernels()
 
         # two-step command used to work around parallel filesystem issue
-        unix.mkdir(join(path, 'kernels'), noexit=True)
+        unix.mkdir(join(path, 'kernels'))
         unix.mkdir(join(path, 'kernels', basename(self.getpath)))
 
         src = glob('*_kernel.bin')
@@ -425,14 +425,14 @@ class base(object):
         unix.mv(src, dst)
 
     def export_residuals(self, path):
-        unix.mkdir(join(path, 'residuals'), noexit=True)
+        unix.mkdir(join(path, 'residuals'))
 
         src = join(self.getpath, 'residuals')
         dst = join(path, 'residuals', basename(self.getpath))
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
-        unix.mkdir(join(path), noexit=True)
+        unix.mkdir(join(path))
 
         src = join(self.getpath, prefix)
         dst = join(path, basename(self.getpath))
