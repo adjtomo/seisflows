@@ -276,23 +276,23 @@ class base(object):
                 sem.write(rho, path, prefix+'rho'+suffix, iproc)
 
 
-    def merge(self, model):
+    def merge(self, model, parameters=[]):
         """ Converts model from dictionary to vector representation
         """
         v = np.array([])
-        for key in self.parameters:
+        for key in parameters or self.parameters:
             for iproc in range(self.mesh_properties.nproc):
                 v = np.append(v, model[key][iproc])
         return v
 
 
-    def split(self, v):
+    def split(self, v, parameters=[]):
         """ Converts model from vector to dictionary representation
         """
         nproc = self.mesh_properties.nproc
         ngll = self.mesh_properties.ngll
         model = {}
-        for idim, key in enumerate(self.parameters):
+        for idim, key in enumerate(parameters or self.parameters):
             model[key] = []
             for iproc in range(nproc):
                 imin = sum(ngll)*idim + sum(ngll[:iproc])
@@ -310,9 +310,8 @@ class base(object):
         """
         unix.cd(self.getpath)
 
-        names = self.check_source_names()
         with open('kernel_paths', 'w') as f:
-            f.writelines([join(path, dir)+'\n' for dir in names])
+            f.writelines([join(path, dir)+'\n' for dir in self.source_names])
 
         unix.mkdir(path +'/'+ 'sum')
         for name in parameters or self.parameters:
@@ -577,7 +576,7 @@ class base(object):
     @property
     def getname(self):
         # returns name of source currently under consideration
-        return self.check_source_names()[self.getnode]
+        return self.source_names[self.getnode]
 
     @property
     def getpath(self):
@@ -587,6 +586,10 @@ class base(object):
     @property
     def mesh_properties(self):
         return self.check_mesh_properties()
+
+    @property
+    def source_names(self):
+        return self.check_source_names()
 
     @property
     def data_filenames(self):
