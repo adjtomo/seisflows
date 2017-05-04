@@ -1,4 +1,9 @@
 
+import sys
+
+from seisflows.plugins.io import sem
+from seisflows.tools import array
+from seisflows.tools import unix
 from seisflows.tools.tools import findpath
 from seisflows.tools.shared import getpar, setpar
 
@@ -73,4 +78,44 @@ def write_receivers(coords, path='.'):
     with open(filename, 'w') as f:
         f.writelines(lines)
 
+
+def smooth_legacy(path='', parameters=[], span=0.):
+        solver = sys.modules['seisflows_solver']
+        PATH = sys.modules['seisflows_paths']
+
+        # intialize arrays
+        kernels = {}
+        for key in parameters or solver.parameters:
+            kernels[key] = []
+
+        coords = {}
+        for key in ['x', 'z']:
+            coords[key] = []
+
+        # read kernels
+        for key in parameters or solver.parameters:
+            kernels[key] += sem.read(path, key+'_kernel', 0)
+
+        if not span:
+            return kernels
+
+        # read coordinates
+        for key in ['x', 'z']:
+            coords[key] += sem.read(PATH.MODEL_INIT, key, 0)
+
+        mesh = array.stack(coords['x'][0],
+                           coords['z'][0])
+
+        #mesh = array.stack(solver.mesh_properties.coords['x'][0],
+        #                   solver.mesh_properties.coords['z'][0])
+
+        for key in parameters or solver.parameters:
+            kernels[key] = [array.meshsmooth(kernels[key][0], mesh, span)]
+
+        unix.rm(path + '_nosmooth')
+        unix.mv(path, path + '_nosmooth')
+
+        unix.mkdir(path)
+        for key in parameters or solver.parameters:
+            sem.write(kernels[key][0], path, key+'_kernel', 0)
 
