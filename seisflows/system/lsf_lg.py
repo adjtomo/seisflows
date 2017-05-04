@@ -59,6 +59,10 @@ class lsf_lg(custom_import('system', 'base')):
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
+        # how to invoke executables
+        if 'MPIEXEC' not in PAR:
+            setattr(PAR, 'MPIEXEC', 'mpiexec')
+
         # optional additional LSF arguments
         if 'LSFARGS' not in PAR:
             setattr(PAR, 'LSFARGS', '')
@@ -203,7 +207,7 @@ class lsf_lg(custom_import('system', 'base')):
     def mpiexec(self):
         """ Specifies MPI exectuable; used to invoke solver
         """
-        return 'mpiexec '
+        return PAR.MPIEXEC
 
 
     def _query(self, jobid):

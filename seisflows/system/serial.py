@@ -39,6 +39,10 @@ class serial(custom_import('system', 'base')):
         if 'NPROC' not in PAR:
             setattr(PAR, 'NPROC', 1)
 
+        # how to invoke executables
+        if 'MPIEXEC' not in PAR:
+            setattr(PAR, 'MPIEXEC', '')
+
         # level of detail in output messages
         if 'VERBOSE' not in PAR:
             setattr(PAR, 'VERBOSE', 1)
@@ -115,10 +119,7 @@ class serial(custom_import('system', 'base')):
     def mpiexec(self):
         """ Specifies MPI exectuable; used to invoke solver
         """
-        if PAR.NPROC > 1:
-            return 'mpiexec -np %d ' % PAR.NPROC
-        else:
-            return ''
+        return PAR.MPIEXEC
 
     def progress(self, itask=None):
         """ Provides status updates

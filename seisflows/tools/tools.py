@@ -51,28 +51,6 @@ def call_solver(mpiexec, executable, output='/dev/null'):
         f.close()
 
 
-def call_solver_nompi(executable, output='/dev/null'):
-    """ Calls non-MPI solver executable
-
-      A less complicated version, without error catching, would be
-      subprocess.call(executable, shell=True)
-    """
-    try:
-        f = open(output,'w')
-        subprocess.check_call(
-            executable,
-            shell=True,
-            stdout=f)
-    except subprocess.CalledProcessError, err:
-        print msg.SolverError % executable
-        sys.exit(-1)
-    except OSError:
-        print msg.SolverError % executable
-        sys.exit(-1)
-    finally:
-        f.close()
-
-
 def divides(i, j):
     """Returns true if j divides i"""
     if j is 0:
