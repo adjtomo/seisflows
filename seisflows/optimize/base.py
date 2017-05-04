@@ -416,7 +416,7 @@ class base(object):
 
 
     def loadtxt(self, filename):
-        return float(np.loadtxt(filename))
+        return float(np.loadtxt(PATH.OPTIMIZE+'/'+filename))
 
     def savetxt(self, filename, scalar):
         np.savetxt(PATH.OPTIMIZE+'/'+filename, [scalar], '%11.6e')
