@@ -2,7 +2,7 @@
 
 import argparse, os, sys
 
-from seisflows.config import config, loadpy, tilde_expand, Dict, Struct
+from seisflows.config import config, loadpy, tilde_expand, Dict
 from seisflows.tools import unix
 
 

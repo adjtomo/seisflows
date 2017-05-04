@@ -2,26 +2,10 @@
 import os
 import numpy as np
 
-from collections import Mapping
 from os.path import abspath, join, exists
 from string import find
 from seisflows.tools import unix
 from seisflows.tools.tools import Struct
-
-
-class SeisStruct(Struct):
-    """ Holds information about data
-    """
-
-    def __init__(self, nr=0, nt=0, dt=0., ts=0.,
-                 sx=[], sy=[], sz=[],
-                 rx=[], ry=[], rz=[],
-                 nrec=[], nsrc=[]):
-        super(SeisStruct, self).__init__(
-            [['nr', nr], ['nt', nt], ['dt', dt], ['ts', ts],
-             ['sx', sx], ['sy', sy], ['sz', sz],
-             ['rx', rx], ['ry', ry], ['rz', rz],
-             ['nrec', nrec], ['nsrc', nsrc]])
 
 
 def getpar(key, file='DATA/Par_file', sep='=', cast=str):
