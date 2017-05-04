@@ -7,7 +7,7 @@ from os.path import basename, join
 import numpy as np
 
 from seisflows.plugins.io import sem
-from seisflows.tools.shared import getpar, setpar, Model, Minmax
+from seisflows.tools.shared import ModelDict
 
 from seisflows.tools import msg
 from seisflows.tools import unix
@@ -122,7 +122,7 @@ class base(object):
             # copy user supplied data
             self.initialize_solver_directories()
 
-            src = glob(PATH.DATA +'/'+ basename(self.getpath) +'/'+ '*')
+            src = glob(PATH.DATA +'/'+ self.getname +'/'+ '*')
             dst = 'traces/obs/'
             unix.cp(src, dst)
 
@@ -226,24 +226,20 @@ class base(object):
 
     ### model input/output
 
-    def load(self, path, prefix='', suffix='', verbose=False):
+    def load(self, path, prefix='', suffix=''):
         """ reads SPECFEM model or kernels
 
           Models are stored in Fortran binary format and separated into multiple
           files according to material parameter and processor rank.
         """
-        minmax = Minmax(self.parameters)
-        model = Model(self.parameters)
+        model = ModelDict(self.parameters)
 
         for iproc in range(self.mesh_properties.nproc):
             for key in self.parameters:
-                model[key] += [sem.read(path, prefix+key+suffix, iproc)]
+                model[key] += sem.read(path, prefix+key+suffix, iproc)
 
                 # keep track of min, max
-                #minmax.update(key, model[key][iproc])
-
-        #if verbose:
-        #    minmax.write(path, logpath=PATH.SUBMIT)
+                model.minmax.update(key, model[key][iproc])
 
         return model
 
@@ -310,8 +306,8 @@ class base(object):
         """
         unix.cd(self.getpath)
 
-        with open('kernel_paths', 'w') as f:
-            f.writelines([join(path, dir)+'\n' for dir in self.source_names])
+        with open('kernel_paths', 'w') as file:
+            file.writelines([join(path, dir)+'\n' for dir in self.source_names])
 
         unix.mkdir(path +'/'+ 'sum')
         for name in parameters or self.parameters:
@@ -342,7 +338,7 @@ class base(object):
                 + name + '_kernel' + ' '
                 + path + '/ '
                 + path + '/ ',
-                output=self.getpath+'/'+'OUTPUT_FILES/output_smooth_sem.txt')
+                output='/dev/null')
 
         print ''
 
@@ -389,16 +385,20 @@ class base(object):
     ### file transfer utilities
 
     def import_model(self, path):
-        src = join(path, 'model')
-        dst = self.model_databases
+        model = self.load(path+'/'+'model')
+        self.save(self.model_databases, model)
 
-        if self.getnode==0:
-            self.save(dst, self.load(src, verbose=True))
-        else:
-            self.save(dst, self.load(src))
+        #if PAR.VERBOSE > 2:
+        #    with open(PATH.OUTPUT+'/'+'minmax', 'a') as file:
+        #        file.write(abspath(path)+'\n')
+        #        for key in self.parameters:
+        #            minmax = model.minmax(key)
+        #            file.write('%-15s %10.3e %10.3e\n' % (key, minmax[0], minmax[1]))
+        #        file.write('\n')
+
 
     def import_traces(self, path):
-        src = glob(join(path, 'traces', basename(self.getpath), '*'))
+        src = glob(join(path, 'traces', self.getname, '*'))
         dst = join(self.getpath, 'traces/obs')
         unix.cp(src, dst)
 
@@ -415,26 +415,23 @@ class base(object):
         # work around conflicting name conventions
         self.rename_kernels()
 
-        # two-step command used to work around parallel filesystem issue
-        unix.mkdir(join(path, 'kernels'))
-        unix.mkdir(join(path, 'kernels', basename(self.getpath)))
-
         src = glob('*_kernel.bin')
-        dst = join(path, 'kernels', basename(self.getpath))
+        dst = join(path, 'kernels', self.getname)
+        unix.mkdir(dst)
         unix.mv(src, dst)
 
     def export_residuals(self, path):
         unix.mkdir(join(path, 'residuals'))
 
         src = join(self.getpath, 'residuals')
-        dst = join(path, 'residuals', basename(self.getpath))
+        dst = join(path, 'residuals', self.getname)
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
         unix.mkdir(join(path))
 
         src = join(self.getpath, prefix)
-        dst = join(path, basename(self.getpath))
+        dst = join(path, self.getname)
         unix.cp(src, dst)
 
 
@@ -495,7 +492,7 @@ class base(object):
         dst = 'DATA/'
         unix.cp(src, dst)
 
-        src = 'DATA/' + self.source_prefix +'_'+ basename(self.getpath)
+        src = 'DATA/' + self.source_prefix +'_'+ self.getname
         dst = 'DATA/' + self.source_prefix
         unix.cp(src, dst)
 
@@ -530,7 +527,7 @@ class base(object):
             nproc = 0
             ngll = []
             while True:
-                dummy = sem.read(path, parameters[0], nproc)
+                dummy = sem.read(path, parameters[0], nproc)[0]
                 ngll += [len(dummy)]
                 nproc += 1
                 if not exists('%s/proc%06d_%s.bin' % (path, nproc, parameters[0])):
@@ -544,7 +541,8 @@ class base(object):
 
 
     def check_source_names(self):
-        """ Checks names of sources
+        """ Determines names of sources by applying rule to user-supplied 
+          input files
         """
         if not hasattr(self, '_source_names'):
             path = PATH.SPECFEM_DATA
@@ -562,7 +560,7 @@ class base(object):
 
 
     def check_solver_parameter_files(self):
-        # must be implemented by subclass
+        # optional method, can be implemented by subclass
         pass
 
 
@@ -593,21 +591,21 @@ class base(object):
 
     @property
     def data_filenames(self):
-        # must be implemented by subclass
+        # required method, must be implemented by subclass
         return NotImplementedError
 
     @property
     def model_databases(self):
-        # must be implemented by subclass
+        # required method, must be implemented by subclass
         return NotImplementedError
 
     @property
     def kernel_databases(self):
-        # must be implemented by subclass
+        # required method, must be implemented by subclass
         return NotImplementedError
 
     @property
     def source_prefix(self):
-        # must be implemented by subclass
+        # required method, must be implemented by subclass
         return NotImplementedError
 

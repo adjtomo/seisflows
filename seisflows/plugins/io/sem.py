@@ -21,7 +21,7 @@ def read(path, parameter, iproc):
     """ Reads a single SPECFEM database file
     """
     filename = 'proc%06d_%s.bin' % (iproc, parameter)
-    return _read_bin(join(path, filename))
+    return [_read_bin(join(path, filename))]
 
 
 def write(v, path, parameter, iproc):
