@@ -8,7 +8,7 @@ import numpy as np
 
 def _gauss(nt, dt, sigma):
     t = np.arange(-nt, nt+1)*dt
-    y = np.exp(-(t/*2.*sigma)**2.)
+    y = np.exp(-(0.5*t/sigma)**2.)
 
     if nt*dt < 3.*sigma:
         print warning
