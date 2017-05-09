@@ -2,10 +2,11 @@
 import os
 import numpy as np
 
+from collections import defaultdict
 from os.path import abspath, join, exists
 from string import find
 from seisflows.tools import unix
-from seisflows.tools.tools import Struct
+from seisflows.tools.tools import iterable
 
 
 def getpar(key, file='DATA/Par_file', sep='=', cast=str):
@@ -35,16 +36,16 @@ def getpar(key, file='DATA/Par_file', sep='=', cast=str):
         raise Exception
 
 
-def setpar(key, val, file='DATA/Par_file', path='.', sep='='):
+def setpar(key, val, filename='DATA/Par_file', path='.', sep='='):
     """ Writes parameter to SPECFEM parfile
     """
 
     val = str(val)
 
     # read line by line
-    with open(path + '/' + file, 'r') as f:
+    with open(path +'/'+ filename, 'r') as file:
         lines = []
-        for line in f:
+        for line in file:
             if find(line, key) == 0:
                 # read key
                 key, _ = _split(line, sep)
@@ -59,35 +60,33 @@ def setpar(key, val, file='DATA/Par_file', path='.', sep='='):
             lines.append(line)
 
     # write file
-    _writelines(path + '/' + file, lines)
+    with open(path +'/'+ filename, 'w') as file:
+        file.writelines(lines)
 
 
-#def ModelDict(keys):
-#    return dict((key, []) for key in keys)
+class Minmax(defaultdict):
+    """ Keeps track of min,max values of model or kernel
+    """
+    def __init__(self):
+        super(Minmax, self).__init__(lambda: [+np.inf, -np.inf])
 
-
-class Minmax(object):
-    def __init__(self, keys):
-       self.dict = dict()
-       for key in keys:
-           self.dict[key] = [+np.inf, -np.inf]
-
-    def update(self, key, val):
-       if min(val) < self.dict[key][0]:
-           self.dict[key][0] = min(val)
-       if max(val) > self.dict[key][1]:
-           self.dict[key][1] = max(val)
+    def update(self, keys, vals):
+        for key, val in _zip(keys, vals):
+            if min(val) < self.dict[key][0]:
+                self.dict[key][0] = min(val)
+            if max(val) > self.dict[key][1]:
+                self.dict[key][1] = max(val)
 
     def __call__(self, key):
         return self.dict[key]
 
 
-class ModelDict(dict):
-    """ Dictionary-like object for holding parameters or paths
+class ModelDict(defaultdict):
+    """ Dictionary-like object for holding models or kernels
     """
-    def __init__(self, keys):
-        self.update(dict((key, []) for key in keys))
-        self.minmax = Minmax(keys)
+    def __init__(self):
+        super(ModelDict, self).__init__(lambda: [])
+        self.minmax = Minmax()
 
 
 class StepWriter(object):
@@ -167,9 +166,5 @@ def _merge(*parts):
     return ''.join(parts)
 
 
-def _writelines(file, lines):
-    """ Writes text file
-    """
-    with open(file, 'w') as f:
-        f.writelines(lines)
-
+def _zip(keys, vals):
+    return zip(iterable(keys), iterable(vals))
