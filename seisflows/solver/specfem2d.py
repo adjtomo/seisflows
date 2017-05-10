@@ -5,7 +5,6 @@ from glob import glob
 
 import numpy as np
 
-from seisflows.plugins.io import sem
 from seisflows.plugins.solver.specfem2d import smooth_legacy
 from seisflows.tools.shared import getpar, setpar
 

@@ -6,31 +6,32 @@ from seisflows.tools.tools import iterable
 import numpy as np
 
 
-def read(path, parameters, iproc):
-    """ Reads SPECFEM database file(s)
+def read_slice(path, parameters, iproc):
+    """ Reads SPECFEM model slice(s)
     """
     vals = []
     for key in iterable(parameters):
         filename = '%s/proc%06d_%s.bin' % (path, iproc, key)
-        vals += [_read_bin(filename)]
+        vals += [_read(filename)]
     return vals
 
 
-def write(data, path, parameter, iproc):
-    """ Writes a single SPECFEM database file
+def write_slice(data, path, parameters, iproc):
+    """ Writes SPECFEM model slice
     """
-    filename = 'proc%06d_%s.bin' % (iproc, parameter)
-    _write_bin(data, join(path, filename))
+    for key in iterable(parameters):
+        filename = '%s/proc%06d_%s.bin' % (path, iproc, key)
+        _write(data, filename)
 
 
-def copy(src, dst, iproc, parameter):
-    """ Copies SPECFEM database file
+def copy_slice(src, dst, iproc, parameter):
+    """ Copies SPECFEM model slice
     """
     filename = 'proc%06d_%s.bin' % (iproc, parameter)
     copyfile(join(src, filename), join(dst, filename))
 
 
-def _read_bin(filename):
+def _read(filename):
     """ Reads Fortran style binary data into numpy array
     """
     nbytes = getsize(filename)
@@ -49,7 +50,7 @@ def _read_bin(filename):
             return data
 
 
-def _write_bin(v, filename):
+def _write(v, filename):
     """ Writes Fortran style binary files--data are written as single precision
         floating point numbers
     """

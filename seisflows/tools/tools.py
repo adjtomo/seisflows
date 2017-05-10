@@ -51,8 +51,16 @@ def call_solver(mpiexec, executable, output='/dev/null'):
         f.close()
 
 
+def diff(list1, list2):
+    """ Difference between two lists
+    """
+    c = set(list1).union(set(list2))
+    d = set(list1).intersection(set(list2))
+    return list(c - d)
+
+
 def divides(i, j):
-    """Returns true if j divides i"""
+    """True if j divides i"""
     if j is 0:
         return False
     elif i % j:

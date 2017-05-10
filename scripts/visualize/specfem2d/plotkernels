@@ -1,0 +1,104 @@
+#!/bin/sh
+''''exec python -W ignore -- "$0" "$@" # '''
+
+import os
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+
+from glob import glob
+from os.path import abspath, join
+from seisflows.plugins.io.fortran_binary import _read
+from seisflows.tools.tools import exists
+
+
+
+def getcoords(dir):
+    for names in getnames(dir):
+        if exists(names):
+            x,z = _read(names[0]), _read(names[1])
+            return x,z
+    else:
+        print('Coordinate files not found.')
+        sys.exit()
+
+
+def meshplot(x, y, z):
+    """ Plots values on 2D unstructured mesh
+    """
+    r = (max(x) - min(x))/(max(y) - min(y))
+    rx = r/np.sqrt(1 + r**2)
+    ry = 1/np.sqrt(1 + r**2)
+
+    f = plt.figure(figsize=(10*rx, 10*ry))
+    p = plt.tricontourf(x, y, z, 125)
+    plt.axis('image')
+    return f, p
+
+
+def getnames(dir):
+    return [
+        (abspath(join(dir, subdir, 'proc000000_x.bin')),
+         abspath(join(dir, subdir, 'proc000000_z.bin'))) 
+         for subdir in [
+         '.',
+         '../model', 
+         '../output/model_init',
+         '../../output/model_init',
+         '../../../output/model_init',
+         '../../../../output/model_init',
+         ]]
+
+
+msg = '''
+%s\nmin, max: %e, %e
+'''
+
+
+if __name__ == '__main__':
+    """ Plots data on 2-D unstructured mesh
+
+    Reads mesh coordinates from first two columns of text file and data from
+    subsequent columns, computes Delaunay triangulation, and plots data
+    using matplotlib.
+
+    In particular, can be used to plot kernels and models output from SPECFEM2D
+    on unstructured GLL bases.
+    """
+    dirname = sys.argv[1]
+    filenames = glob(dirname+'/'+'proc000000*.bin*')
+    filenames.sort()
+
+    x,z = getcoords(dirname)
+
+    for i, filename in enumerate(filenames):
+        if '_x.bin' in filename: filenames.remove(filename); continue
+        if '_z.bin' in filename: filenames.remove(filename); continue
+
+        v = _read(filename)
+
+        minval = min(v)
+        maxval = max(v)
+        maxabs = max(abs(v))
+
+        print msg % (filename, minval, maxval)
+
+        f,p = meshplot(x, z, v)
+
+        #p.set_clim([-1.0e-1*maxabs, +1.0e-1*maxabs])
+        p.set_clim([-1.0e+0*maxabs, +1.0e+0*maxabs])
+        #p.set_clim([-1.0e+1*maxabs, +1.0e+1*maxabs])
+
+        #p.set_clim([-1.0e-3, 1.0e-3])
+        #p.set_clim([-1.0e-2, 1.0e-2])
+        #p.set_clim([-1.0e-1, 1.0e-1])
+        #p.set_clim([-1.0e+0, 1.0e+0])
+        #p.set_clim([-1.0e+1, 1.0e+1])
+        #p.set_clim([-1.0e+2, 1.0e+2])
+        #p.set_clim([-1.0e+3, 1.0e+3])
+        #p.set_clim([-1.0e+4, 1.0e+4])
+
+        p.set_cmap(plt.cm.seismic)
+
+        plt.show()
+
