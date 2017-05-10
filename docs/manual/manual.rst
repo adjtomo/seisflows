@@ -29,7 +29,7 @@ Installation
 
 To install Seisflows, first clone the repository::
 
-    git clone github.com/rmodrak/seisflows
+    git clone https://github.com/rmodrak/seisflows.git
 
 
 Then set environment variables. Add the following lines to ``.bashrc`` (or modify accordingly if using a shell other than bash)::
