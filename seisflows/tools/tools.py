@@ -139,6 +139,18 @@ def loadpy(filename):
     return output
 
 
+def loadnpy(filename):
+    """Loads numpy binary file."""
+    return np.load(filename)
+
+
+def savenpy(filename, v):
+    """Saves numpy binary file."""
+    np.save(filename, v)
+    os.rename(filename + '.npy', filename)
+
+
+
 def loadyaml(filename):
     import yaml
 

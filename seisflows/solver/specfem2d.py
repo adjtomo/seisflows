@@ -11,7 +11,6 @@ from seisflows.tools.shared import getpar, setpar
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.tools import exists, call_solver
 from seisflows.config import ParameterError, custom_import
 

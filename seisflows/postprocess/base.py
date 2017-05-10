@@ -4,7 +4,6 @@ import numpy as np
 
 from os.path import join
 from seisflows.tools import unix
-from seisflows.tools.array import savenpy
 from seisflows.tools.tools import exists
 from seisflows.config import ParameterError
 

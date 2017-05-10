@@ -5,7 +5,6 @@ import numpy as np
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.tools import divides, exists
 from seisflows.config import ParameterError, custom_import
 

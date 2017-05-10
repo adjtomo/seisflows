@@ -6,9 +6,9 @@ from os.path import join
 from seisflows.config import ParameterError
 from seisflows.plugins import preconds
 from seisflows.tools import msg, unix
-from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.math import angle, polyfit2, backtrack2
 from seisflows.tools.shared import  Writer, StepWriter
+from seisflows.tools.tools import loadnpy, savenpy
 
 
 PAR = sys.modules['seisflows_parameters']

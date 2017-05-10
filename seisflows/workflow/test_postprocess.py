@@ -3,7 +3,6 @@ import sys
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.tools import exists
 from seisflows.config import custom_import, ParameterError
 
