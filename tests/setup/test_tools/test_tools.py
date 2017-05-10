@@ -26,12 +26,9 @@ class TestToolsCode(unittest.TestCase):
         existent = os.listdir(os.curdir)
         non_existent = [str(uuid.uuid4().get_hex().upper()[0:6])
                         for i in range(10)]
-        not_names = [None, 0, 1, False, True]
         for name in existent:
             self.assertTrue(tools.exists(name))
         for name in non_existent:
-            self.assertFalse(tools.exists(name))
-        for name in not_names:
             self.assertFalse(tools.exists(name))
 
     def test_saveload(self):
@@ -49,11 +46,6 @@ class TestToolsCode(unittest.TestCase):
         obj_read = tools.loadjson(filename)
         self.assertEqual(obj_read, obj_init)
         os.remove(filename)
-
-    def test_unique(self):
-        self.assertEqual([], tools.unique([]))
-        self.assertEqual([1,2,3,4], tools.unique([1,2,3,4]))
-        self.assertEqual([1], tools.unique([1,1,1,1]))
 
     def test_savetxt(self):
         filename = "tmp_savetxt"
