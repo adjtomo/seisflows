@@ -216,8 +216,8 @@ class multiparameter(custom_import('solver', 'base')):
                 keys = [prefix+key+suffix for key in self.model_parameters]
                 vals = self.read_slice(path, keys, iproc)
                 mapped = self.forward(keys, vals)
-                if PAR.DENSITY in ['Variable', 'Gardner']:
-                    mapped.remove('rho')
+                for key, val in mapped.items():
+                    dict[key] = val
         return dict
 
 
