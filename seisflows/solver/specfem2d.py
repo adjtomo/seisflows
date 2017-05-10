@@ -88,7 +88,7 @@ class specfem2d(custom_import('solver', 'base')):
         """
         self.generate_mesh(**model_kwargs)
 
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.false.')
 
@@ -116,7 +116,7 @@ class specfem2d(custom_import('solver', 'base')):
         # work around SPECFEM2D's requirement that all components exist,
         # even ones not in use
         if PAR.FORMAT in ['SU', 'su']:
-            unix.cd(self.getpath +'/'+ 'traces/adj')
+            unix.cd(self.cwd +'/'+ 'traces/adj')
             for channel in ['x', 'y', 'z', 'p']:
                 src = 'U%s_file_single.su.adj' % PAR.CHANNELS[0]
                 dst = 'U%s_file_single.su.adj' % channel
@@ -131,13 +131,13 @@ class specfem2d(custom_import('solver', 'base')):
         assert(model_type)
 
         self.initialize_solver_directories()
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
 
         assert(exists(model_path))
         self.check_mesh_properties(model_path)
 
         src = glob(join(model_path, '*'))
-        dst = join(self.getpath, 'DATA')
+        dst = join(self.cwd, 'DATA')
         unix.cp(src, dst)
 
         self.export_model(PATH.OUTPUT +'/'+ model_name)
@@ -181,13 +181,13 @@ class specfem2d(custom_import('solver', 'base')):
 
     def import_model(self, path):
         src = glob(path +'/'+ 'model/*')
-        dst = join(self.getpath, 'DATA/')
+        dst = join(self.cwd, 'DATA/')
         unix.cp(src, dst)
 
     def export_model(self, path):
         if self.taskid == 0:
             unix.mkdir(path)
-            src = glob(join(self.getpath, 'DATA/*.bin'))
+            src = glob(join(self.cwd, 'DATA/*.bin'))
             dst = path
             unix.cp(src, dst)
 
@@ -202,7 +202,7 @@ class specfem2d(custom_import('solver', 'base')):
                return filenames
 
         else:
-            unix.cd(self.getpath)
+            unix.cd(self.cwd)
             unix.cd('traces/obs')
 
             if PAR.FORMAT in ['SU', 'su']:
@@ -210,11 +210,11 @@ class specfem2d(custom_import('solver', 'base')):
 
     @property
     def model_databases(self):
-        return join(self.getpath, 'DATA')
+        return join(self.cwd, 'DATA')
 
     @property
     def kernel_databases(self):
-        return join(self.getpath, 'OUTPUT_FILES')
+        return join(self.cwd, 'OUTPUT_FILES')
 
     @property
     def source_prefix(self):

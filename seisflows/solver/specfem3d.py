@@ -54,7 +54,7 @@ class specfem3d(custom_import('solver', 'base')):
         """
         self.generate_mesh(**model_kwargs)
 
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
         call_solver(system.mpiexec(), 'bin/xspecfem3D')
@@ -75,7 +75,7 @@ class specfem3d(custom_import('solver', 'base')):
         assert(model_type)
 
         self.initialize_solver_directories()
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
 
         if model_type in ['gll']:
             par = getpar('MODEL').strip()
@@ -162,12 +162,12 @@ class specfem3d(custom_import('solver', 'base')):
         # workaround for SPECFEM2D's use of different name conventions for
         # regular traces and 'adjoint' traces
         if PAR.FORMAT in ['SU', 'su']:
-            files = glob(self.getpath +'/'+ 'traces/adj/*SU')
+            files = glob(self.cwd +'/'+ 'traces/adj/*SU')
             unix.rename('_SU', '_SU.adj', files)
 
         # workaround for SPECFEM3D's requirement that all components exist,
         # even ones not in use
-        unix.cd(self.getpath +'/'+ 'traces/adj')
+        unix.cd(self.cwd +'/'+ 'traces/adj')
         for iproc in range(PAR.NPROC):
             for channel in ['x', 'y', 'z']:
                 src = '%d_d%s_SU.adj' % (iproc, PAR.CHANNELS[0])
@@ -179,16 +179,16 @@ class specfem3d(custom_import('solver', 'base')):
         """ Works around conflicting data filename conventions
         """
         if PAR.FORMAT in ['SU', 'su']:
-            files = glob(self.getpath +'/'+ 'traces/adj/*SU')
+            files = glob(self.cwd +'/'+ 'traces/adj/*SU')
             unix.rename('_SU', '_SU.adj', files)
 
 
     def write_parameters(self):
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         solvertools.write_parameters(vars(PAR))
 
     def write_receivers(self):
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         key = 'use_existing_STATIONS'
         val = '.true.'
         setpar(key, val)
@@ -196,7 +196,7 @@ class specfem3d(custom_import('solver', 'base')):
         solvertools.write_receivers(h.nr, h.rx, h.rz)
 
     def write_sources(self):
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         _, h = preprocess.load(dir='traces/obs')
         solvertools.write_sources(vars(PAR), h)
 
@@ -210,7 +210,7 @@ class specfem3d(custom_import('solver', 'base')):
 
     @property
     def data_filenames(self):
-        unix.cd(self.getpath+'/'+'traces/obs')
+        unix.cd(self.cwd+'/'+'traces/obs')
 
         if PAR.FORMAT in ['SU', 'su']:
             if not PAR.CHANNELS:
@@ -225,11 +225,11 @@ class specfem3d(custom_import('solver', 'base')):
 
     @property
     def kernel_databases(self):
-        return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
+        return join(self.cwd, 'OUTPUT_FILES/DATABASES_MPI')
 
     @property
     def model_databases(self):
-        return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
+        return join(self.cwd, 'OUTPUT_FILES/DATABASES_MPI')
 
     @property
     def source_prefix(self):

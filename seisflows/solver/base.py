@@ -110,7 +110,7 @@ class base(object):
         """ Prepares solver for inversion or migration
         """
         # clean up for new inversion
-        unix.rm(self.getpath)
+        unix.rm(self.cwd)
 
         # As input for an inversion or migration, users can choose between
         # providing data, or providing a target model from which data are
@@ -122,7 +122,7 @@ class base(object):
             # copy user supplied data
             self.initialize_solver_directories()
 
-            src = glob(PATH.DATA +'/'+ self.getname +'/'+ '*')
+            src = glob(PATH.DATA +'/'+ self.source_name +'/'+ '*')
             dst = 'traces/obs/'
             unix.cp(src, dst)
 
@@ -143,7 +143,7 @@ class base(object):
 
 
     def clean(self):
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         unix.rm('OUTPUT_FILES')
         unix.mkdir('OUTPUT_FILES')
 
@@ -168,11 +168,11 @@ class base(object):
         """ Evaluates misfit function by carrying out forward simulation and
             comparing observations and synthetics.
         """
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         self.import_model(path)
 
         self.forward()
-        preprocess.prepare_eval_grad(self.getpath)
+        preprocess.prepare_eval_grad(self.cwd)
         self.export_residuals(path)
 
 
@@ -180,7 +180,7 @@ class base(object):
         """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
             must be in place beforehand.
         """
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
 
         self.adjoint()
 
@@ -195,12 +195,12 @@ class base(object):
         """ Computes action of Hessian on a given model vector. A gradient 
           evaluation must have already been carried out.
         """
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         unix.mkdir('traces/lcg')
 
         self.import_model(path)
         self.forward('traces/lcg')
-        preprocess.prepare_apply_hess(self.getpath)
+        preprocess.prepare_apply_hess(self.cwd)
 
         self.adjoint()
         self.export_kernels(path)
@@ -291,7 +291,7 @@ class base(object):
         """ Sums individual source contributions. Wrapper over xcombine_sem
             utility.
         """
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
 
         with open('kernel_paths', 'w') as file:
             file.writelines([join(path, dir)+'\n' for dir in self.source_names])
@@ -314,7 +314,7 @@ class base(object):
         assert len(parameters) > 0
 
         # apply smoothing operator
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         for name in parameters or self.parameters:
             print ' smoothing', name
             call_solver(
@@ -347,7 +347,7 @@ class base(object):
         assert exists(path)
         assert len(parameters) > 0
 
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         for name in parameters or self.parameters:
             call_solver(
                 system.mpiexec,
@@ -376,8 +376,8 @@ class base(object):
         self.save(model, self.model_databases)
 
     def import_traces(self, path):
-        src = glob(join(path, 'traces', self.getname, '*'))
-        dst = join(self.getpath, 'traces/obs')
+        src = glob(join(path, 'traces', self.source_name, '*'))
+        dst = join(self.cwd, 'traces/obs')
         unix.cp(src, dst)
 
     def export_model(self, path, parameters=['rho', 'vp', 'vs']):
@@ -394,22 +394,22 @@ class base(object):
         self.rename_kernels()
 
         src = glob('*_kernel.bin')
-        dst = join(path, 'kernels', self.getname)
+        dst = join(path, 'kernels', self.source_name)
         unix.mkdir(dst)
         unix.mv(src, dst)
 
     def export_residuals(self, path):
         unix.mkdir(join(path, 'residuals'))
 
-        src = join(self.getpath, 'residuals')
-        dst = join(path, 'residuals', self.getname)
+        src = join(self.cwd, 'residuals')
+        dst = join(path, 'residuals', self.source_name)
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
         unix.mkdir(join(path))
 
-        src = join(self.getpath, prefix)
-        dst = join(path, self.getname)
+        src = join(self.cwd, prefix)
+        dst = join(path, self.source_name)
         unix.cp(src, dst)
 
 
@@ -445,8 +445,8 @@ class base(object):
           by user as there is currently no mechanism for automatically
           compiling from source.
         """
-        unix.mkdir(self.getpath)
-        unix.cd(self.getpath)
+        unix.mkdir(self.cwd)
+        unix.cd(self.cwd)
 
         # create directory structure
         unix.mkdir('bin')
@@ -470,7 +470,7 @@ class base(object):
         dst = 'DATA/'
         unix.cp(src, dst)
 
-        src = 'DATA/' + self.source_prefix +'_'+ self.getname
+        src = 'DATA/' + self.source_prefix +'_'+ self.source_name
         dst = 'DATA/' + self.source_prefix
         unix.cp(src, dst)
 
@@ -484,14 +484,14 @@ class base(object):
         """
         for filename in self.data_filenames:
             # read traces
-            d = preprocess.reader(self.getpath +'/'+ 'traces/obs', filename)
+            d = preprocess.reader(self.cwd +'/'+ 'traces/obs', filename)
 
             # replace data with zeros
             for t in d:
                 t.data[:] = 0.
 
             # write traces
-            preprocess.writer(d, self.getpath +'/'+ 'traces/adj', filename)
+            preprocess.writer(d, self.cwd +'/'+ 'traces/adj', filename)
 
 
     def check_mesh_properties(self, path=None):
@@ -558,26 +558,26 @@ class base(object):
         return system.taskid()
 
     @property
-    def getname(self):
+    def source_name(self):
         # returns name of source currently under consideration
         return self.source_names[self.taskid]
 
     @property
-    def getpath(self):
+    def cwd(self):
         # returns working directory currently in use
-        return join(PATH.SOLVER, self.getname)
-
-    @property
-    def mesh_properties(self):
-        if not hasattr(self, '_mesh_properties'):
-            self.check_mesh_properties()
-        return self._mesh_properties
+        return join(PATH.SOLVER, self.source_name)
 
     @property
     def source_names(self):
        if not hasattr(self, '_source_names'):
            self.check_source_names()
        return self._source_names
+
+    @property
+    def mesh_properties(self):
+        if not hasattr(self, '_mesh_properties'):
+            self.check_mesh_properties()
+        return self._mesh_properties
 
     @property
     def data_filenames(self):
