@@ -54,7 +54,7 @@ class multithreaded(custom_import('system', 'serial')):
                 while len(queued_tasks) > 0 and \
                       len(running_tasks) < int(PAR.NPROCMAX/PAR.NPROC):
                     i = queued_tasks.pop(0)
-                    p = self._launch(classname, funcname, itask=i)
+                    p = self._launch(classname, funcname, tid=i)
                     running_tasks[i] = p
                     sleep(0.1)
 
@@ -69,7 +69,7 @@ class multithreaded(custom_import('system', 'serial')):
             print ''
 
         elif hosts == 'head':
-            self.setnode(0)
+            self.setid(0)
             func = getattr(__import__('seisflows_'+classname), funcname)
             func(**kwargs)
 
@@ -79,11 +79,11 @@ class multithreaded(custom_import('system', 'serial')):
 
     ### private methods
 
-    def _launch(self, classname, funcname, itask=0):
-        self.progress(itask)
+    def _launch(self, classname, funcname, tid=0):
+        self.progress(tid)
 
         env = os.environ.copy().items()
-        env += [['SEISFLOWS_TASKID', str(itask)]]
+        env += [['SEISFLOWS_TASKID', str(tid)]]
 
         p = Popen(
             findpath('seisflows.system') +'/'+ 'wrappers/run '
