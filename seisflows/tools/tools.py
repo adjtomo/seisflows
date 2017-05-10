@@ -10,6 +10,7 @@ import traceback
 
 from imp import load_source
 from importlib import import_module
+from pkgutil import find_loader
 from os.path import basename
 
 import numpy as np
@@ -100,6 +101,14 @@ def iterable(arg):
         return [arg]
     else:
         return arg
+
+
+def module_exists(name):
+    return find_loader(name)
+
+
+def package_exists(name):
+    return find_loader(name)
 
 
 def timestamp():

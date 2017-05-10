@@ -10,7 +10,7 @@ from os.path import basename, join
 from seisflows.config import ParameterError, custom_import
 from seisflows.tools import msg, unix
 from seisflows.tools.shared import ModelDict
-from seisflows.tools.tools import Struct, diff, exists, call_solver
+from seisflows.tools.tools import Struct, diff, exists, call_solver, module_exists
 
 
 
@@ -76,9 +76,6 @@ class base(object):
     def check(self):
         """ Checks parameters and paths
         """
-        if 'IOFORMAT' not in PAR:
-            setattr(PAR, 'IOFORMAT', 'fortran_binary')
-
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
@@ -101,6 +98,16 @@ class base(object):
 
         if 'SPECFEM_DATA' not in PATH:
             raise ParameterError(PATH, 'SPECFEM_DATA')
+
+        # check IO machinery
+        if 'IOFORMAT' not in PAR:
+            setattr(PAR, 'IOFORMAT', 'fortran_binary')
+
+        full_dotted_name = 'seisflows.plugins.io'+'.'+PAR.IOFORMAT
+        assert module_exists(full_dotted_name)
+        module = import_module(full_dotted_name)
+        assert hasattr(module, 'read_slice')
+        assert hasattr(module, 'write_slice')
 
         # assertions
         assert self.parameters != []
@@ -223,40 +230,44 @@ class base(object):
         raise NotImplementedError
 
 
+    ### model input/output
+
     @property
     def io(self):
+        """ Solver IO module
+        """
         full_dotted_name = 'seisflows.plugins.io'+'.'+PAR.IOFORMAT
         return import_module(full_dotted_name)
 
 
-    ### model input/output
-
     def load(self, path, parameters=[], prefix='', suffix=''):
-        """ reads SPECFEM model or kernels
+        """ Reads SPECFEM model or kernels
         """
         dict = ModelDict()
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters or self.parameters:
-                dict[key] += self.io.read_slice(path, prefix+key+suffix, iproc)
+                dict[key] += self.io.read_slice(
+                    path, prefix+key+suffix, iproc)
         return dict
 
 
     def save(self, dict, path, parameters=['vp','vs','rho'], prefix='', suffix=''):
-        """ writes SPECFEM model or kernels
+        """ Writes SPECFEM model or kernels
         """
         unix.mkdir(path)
 
-        # fill in missing keys
+        # fill in missing parameters
         missing_keys = diff(parameters, dict.keys())
         for iproc in range(self.mesh_properties.nproc):
             for key in missing_keys:
                 dict[key] += self.io.read_slice(
                     PATH.MODEL_INIT, prefix+key+suffix, iproc)
 
-        # save values
+        # write model or kernel files to disk
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters:
-                self.io.write_slice(dict[key][iproc], path, prefix+key+suffix, iproc)
+                self.io.write_slice(
+                    dict[key][iproc], path, prefix+key+suffix, iproc)
 
 
     def merge(self, model, parameters=[]):

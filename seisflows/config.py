@@ -7,13 +7,13 @@ import sys
 import types
 
 from importlib import import_module
-from pkgutil import find_loader
 from os.path import abspath, join, exists
 
 from seisflows.tools import msg
 from seisflows.tools.err import ParameterError
 from seisflows.tools import unix
 from seisflows.tools.tools import loadjson, loadobj, loadpy, savejson, saveobj
+from seisflows.tools.tools import module_exists, package_exists
 
 # SeisFlows consists of interacting 'system', 'preprocess', 'solver', 'postprocess', 'optimize', and 'workflow' objects. Each corresponds simultaneously to a module in the SeisFlows source code, a class that is instantiated and made accessible via sys.modules, and a parameter in a global dictionary. Once in memory, these objects can be thought of as comprising the complete 'state' of a SeisFlows session
 
@@ -145,9 +145,6 @@ def custom_import(*args):
         imports 'seisflows.workflow.inversion' and, from this module, extracts
         class 'inversion'.
     """
-    module_exists = find_loader
-    package_exists = find_loader
-
     # parse input arguments
     if len(args) == 0:
         raise Exception(msg.ImportError1)
