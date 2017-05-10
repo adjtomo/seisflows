@@ -41,12 +41,12 @@ def _read_bin(filename):
 
         if n==nbytes-8:
             file.seek(4)
-            v = np.fromfile(file, dtype='float32')
-            return v[:-1]
+            data = np.fromfile(file, dtype='float32')
+            return data[:-1]
         else:
             file.seek(0)
-            v = np.fromfile(file, dtype='float32')
-            return v
+            data = np.fromfile(file, dtype='float32')
+            return data
 
 
 def _write_bin(v, filename):

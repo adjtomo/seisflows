@@ -37,9 +37,6 @@ class specfem2d(custom_import('solver', 'base')):
         """
         super(specfem2d, self).check()
 
-        if 'WITH_MPI' not in PAR:
-            setattr(PAR, 'WITH_MPI', False)
-
         # check time stepping parameters
         if 'NT' not in PAR:
             raise Exception
@@ -75,7 +72,7 @@ class specfem2d(custom_import('solver', 'base')):
 
         if f0 != PAR.F0:
             if self.getnode == 0: print "WARNING: f0 != PAR.F0"
-            setpar('f0', PAR.F0, file='DATA/SOURCE')
+            setpar('f0', PAR.F0, filename='DATA/SOURCE')
 
         if self.mesh_properties.nproc != PAR.NPROC:
             if self.getnode == 0:
@@ -227,6 +224,7 @@ class specfem2d(custom_import('solver', 'base')):
 
     # workaround for older versions of SPECFEM2D,
     # which lacked a smoothing utility
-    if not exists(PATH.SPECFEM_BIN+'/'+'xsmooth_sem'):
-        smooth = staticmethod(smooth_legacy)
+    #if not exists(PATH.SPECFEM_BIN+'/'+'xsmooth_sem'):
+    #    smooth = staticmethod(smooth_legacy)
+    smooth = staticmethod(smooth_legacy)
 

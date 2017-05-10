@@ -90,14 +90,15 @@ class base(object):
                    span=PAR.SMOOTH)
 
 
-    def save(self, path, v, backup=None):
+    def save(self, path, g, backup=None):
         if backup:
             src = path +'/'+ 'gradient'
             dst = path +'/'+ 'gradient_'+backup
             unix.mv(src, dst)
 
-        solver.save(path +'/'+ 'gradient',
-                    solver.split(v),
+        solver.save(solver.split(g),
+                    path +'/'+ 'gradient',
+                    parameters=solver.parameters,
                     suffix='_kernel')
 
 

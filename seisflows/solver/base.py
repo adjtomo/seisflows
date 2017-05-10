@@ -1,18 +1,18 @@
 
 import subprocess
 import sys
-from glob import glob
-from os.path import basename, join
-
 import numpy as np
 
-from seisflows.plugins.io import sem
-from seisflows.tools.shared import ModelDict
-
-from seisflows.tools import msg
-from seisflows.tools import unix
-from seisflows.tools.tools import Struct, exists, call_solver
+from functools import partial
+from glob import glob
+from os.path import basename, join
 from seisflows.config import ParameterError, custom_import
+from seisflows.plugins.io import sem
+from seisflows.tools import msg, unix
+from seisflows.tools.shared import ModelDict
+from seisflows.tools.tools import Struct, exists, call_solver
+
+
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -70,10 +70,7 @@ class base(object):
         parameters += ['vp']
 
     if PAR.DENSITY == 'Variable':
-        density_scaling = None
         parameters += ['rho']
-    elif PAR.DENSITY == 'Constant':
-        density_scaling = None
 
 
     def check(self):
@@ -143,9 +140,9 @@ class base(object):
 
 
     def clean(self):
-        pass
-        #unix.rm('OUTPUT_FILES')
-        #unix.mkdir('OUTPUT_FILES')
+        unix.cd(self.getpath)
+        unix.rm('OUTPUT_FILES')
+        unix.mkdir('OUTPUT_FILES')
 
 
     def generate_data(self, *args, **kwargs):
@@ -226,79 +223,60 @@ class base(object):
 
     ### model input/output
 
-    def load(self, path, prefix='', suffix=''):
+    def load(self, path, parameters=[], prefix='', suffix=''):
         """ reads SPECFEM model or kernels
-
-          Models are stored in Fortran binary format and separated into multiple
-          files according to material parameter and processor rank.
         """
-        model = ModelDict(self.parameters)
-
+        dict = ModelDict()
         for iproc in range(self.mesh_properties.nproc):
-            for key in self.parameters:
-                model[key] += sem.read(path, prefix+key+suffix, iproc)
-
-                # keep track of min, max
-                model.minmax.update(key, model[key][iproc])
-
-        return model
+            for key in parameters or self.parameters:
+                dict[key] += sem.read(path, prefix+key+suffix, iproc)
+        return dict
 
 
-    def save(self, path, model, prefix='', suffix='', solver_parameters=['vp', 'vs']):
+    def save(self, dict, path, parameters=['vp','vs','rho'], prefix='', suffix=''):
         """ writes SPECFEM model or kernels
         """
         unix.mkdir(path)
 
+        # fill in missing keys
+        missing_keys = diff(parameters, dict.keys())
         for iproc in range(self.mesh_properties.nproc):
-            # write parameters required to update model 
-            for key in self.parameters:
-                sem.write(model[key][iproc], path, prefix+key+suffix, iproc)
+            for key in missing_keys:
+                dict[key] += sem.read(PATH.MODEL_INIT, prefix+key+suffix, iproc)
 
-            # kernels not required for model updates need not be written
-            if suffix == '_kernel':
-                continue
-
-            # write any parameters not required for model updates but still
-            # expected by solver
-            for key in solver_parameters:
-                if key not in self.parameters:
-                    src = PATH.OUTPUT +'/'+ 'model_init'
-                    dst = path
-                    sem.copy(src, dst, iproc, prefix+key+suffix)
-
-            # density is treated as a special case
-            if self.density_scaling:
-                rho = self.density_scaling(*model[iproc].items())
-                sem.write(rho, path, prefix+'rho'+suffix, iproc)
+        # save values
+        for iproc in range(self.mesh_properties.nproc):
+            for key in parameters:
+                sem.write(dict[key][iproc], path, prefix+key+suffix, iproc)
 
 
     def merge(self, model, parameters=[]):
         """ Converts model from dictionary to vector representation
         """
-        v = np.array([])
+        m = np.array([])
         for key in parameters or self.parameters:
             for iproc in range(self.mesh_properties.nproc):
-                v = np.append(v, model[key][iproc])
-        return v
+                m = np.append(m, model[key][iproc])
+        return m
 
 
-    def split(self, v, parameters=[]):
+    def split(self, m, parameters=[]):
         """ Converts model from vector to dictionary representation
         """
         nproc = self.mesh_properties.nproc
         ngll = self.mesh_properties.ngll
-        model = {}
+        model = ModelDict()
         for idim, key in enumerate(parameters or self.parameters):
             model[key] = []
             for iproc in range(nproc):
                 imin = sum(ngll)*idim + sum(ngll[:iproc])
                 imax = sum(ngll)*idim + sum(ngll[:iproc+1])
-                model[key] += [v[imin:imax]]
+                model[key] += [m[imin:imax]]
         return model
 
 
 
-    ### postprocessing utilities
+    ### postprocessing wrappers
 
     def combine(self, path='', parameters=[]):
         """ Sums individual source contributions. Wrapper over xcombine_sem
@@ -386,16 +364,7 @@ class base(object):
 
     def import_model(self, path):
         model = self.load(path+'/'+'model')
-        self.save(self.model_databases, model)
-
-        #if PAR.VERBOSE > 2:
-        #    with open(PATH.OUTPUT+'/'+'minmax', 'a') as file:
-        #        file.write(abspath(path)+'\n')
-        #        for key in self.parameters:
-        #            minmax = model.minmax(key)
-        #            file.write('%-15s %10.3e %10.3e\n' % (key, minmax[0], minmax[1]))
-        #        file.write('\n')
-
+        self.save(model, self.model_databases)
 
     def import_traces(self, path):
         src = glob(join(path, 'traces', self.getname, '*'))
@@ -516,47 +485,55 @@ class base(object):
             preprocess.writer(d, self.getpath +'/'+ 'traces/adj', filename)
 
 
-    def check_mesh_properties(self, path=None, parameters=None):
-        if not hasattr(self, '_mesh_properties'):
-            if not path:
-                path = PATH.MODEL_INIT
+    def check_mesh_properties(self, path=None):
+        if not path:
+            path = PATH.MODEL_INIT
+        if not exists(path):
+            raise Exception
 
-            if not parameters:
-                parameters = self.parameters
+        # count slices and grid points
+        key = self.parameters[0]
+        iproc = 0
+        ngll = []
+        while True:
+            dummy = sem.read(path, key, iproc)[0]
+            ngll += [len(dummy)]
+            iproc += 1
+            if not exists('%s/proc%06d_%s.bin' % (path, iproc, key)):
+                break
+        nproc = iproc
 
-            nproc = 0
-            ngll = []
-            while True:
-                dummy = sem.read(path, parameters[0], nproc)[0]
-                ngll += [len(dummy)]
-                nproc += 1
-                if not exists('%s/proc%06d_%s.bin' % (path, nproc, parameters[0])):
-                    break
+        # create coordinate pointers
+        coords = Struct()
+        for key in ['x', 'y', 'z']:
+           coords[key] = partial(sem.read, path, key)
 
-            self._mesh_properties = Struct([
-                ['nproc', nproc],
-                ['ngll', ngll]])
-
-        return self._mesh_properties
+        self._mesh_properties = Struct([
+            ['nproc', nproc],
+            ['ngll', ngll],
+            ['path', path],
+            ['coords', coords]])
 
 
     def check_source_names(self):
-        """ Determines names of sources by applying rule to user-supplied 
-          input files
+        """ Determines names of sources by applying wildcard rule to user-
+          supplied input files
         """
-        if not hasattr(self, '_source_names'):
-            path = PATH.SPECFEM_DATA
-            wildcard = self.source_prefix+'_*'
-            globstar = sorted(glob(path +'/'+ wildcard))
-            if not globstar:
-                 print msg.SourceError_SPECFEM % (path, wildcard)
-                 sys.exit(-1)
-            names = []
-            for path in globstar:
-                names += [basename(path).split('_')[-1]]
-            self._source_names = names[:PAR.NTASK]
+        path = PATH.SPECFEM_DATA
+        if not exists(path):
+            raise Exception
 
-        return self._source_names
+        # apply wildcard
+        wildcard = self.source_prefix+'_*'
+        globstar = sorted(glob(path +'/'+ wildcard))
+        if not globstar:
+             print msg.SourceError_SPECFEM % (path, wildcard)
+             sys.exit(-1)
+
+        names = []
+        for path in globstar:
+            names += [basename(path).split('_')[-1]]
+        self._source_names = names[:PAR.NTASK]
 
 
     def check_solver_parameter_files(self):
@@ -583,11 +560,15 @@ class base(object):
 
     @property
     def mesh_properties(self):
-        return self.check_mesh_properties()
+        if not hasattr(self, '_mesh_properties'):
+            self.check_mesh_properties()
+        return self._mesh_properties
 
     @property
     def source_names(self):
-        return self.check_source_names()
+       if not hasattr(self, '_source_names'):
+           self.check_source_names()
+       return self._source_names
 
     @property
     def data_filenames(self):
@@ -609,3 +590,7 @@ class base(object):
         # required method, must be implemented by subclass
         return NotImplementedError
 
+def diff(list1, list2):
+    c = set(list1).union(set(list2))
+    d = set(list1).intersection(set(list2))
+    return list(c - d)
