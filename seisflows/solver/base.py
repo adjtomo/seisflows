@@ -10,7 +10,7 @@ from seisflows.config import ParameterError, custom_import
 from seisflows.plugins.io import sem
 from seisflows.tools import msg, unix
 from seisflows.tools.shared import ModelDict
-from seisflows.tools.tools import Struct, exists, call_solver
+from seisflows.tools.tools import Struct, diff, exists, call_solver
 
 
 
@@ -590,7 +590,3 @@ class base(object):
         # required method, must be implemented by subclass
         return NotImplementedError
 
-def diff(list1, list2):
-    c = set(list1).union(set(list2))
-    d = set(list1).intersection(set(list2))
-    return list(c - d)
