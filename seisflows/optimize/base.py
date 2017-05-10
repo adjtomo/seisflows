@@ -189,9 +189,15 @@ class base(object):
     def update_status(self):
         """ Updates line search status
 
-            Maintains line search history by keeping track of step length and
-            function value from each trial model evaluation. From line search
-            history, determines whether stopping criteria have been satisfied.
+          Maintains line search history by keeping track of step length and
+          function value from each trial model evaluation. From line search
+          history, determines whether stopping criteria have been satisfied.
+
+          Here and elsewhere we use the convention
+              status > 0  : success
+              status == 0 : not finished
+              status < 0  : failed
+
         """
         x_ = self.loadtxt('alpha')
         f_ = self.loadtxt('f_try')
@@ -329,6 +335,12 @@ class base(object):
     def retry_status(self):
         """ Returns false if search direction was the same as gradient
           direction; returns true otherwise
+
+          Here and elsewhere we use the convention
+              status > 0  : success
+              status == 0 : not finished
+              status < 0  : failed
+
         """
         g = self.load('g_new')
         p = self.load('p_new')
