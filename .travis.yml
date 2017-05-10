@@ -1,22 +1,18 @@
 language: python
 python:
   - "2.7"
-# command to install dependencies,
-# e.g. pip install -r requirements.txt --use-mirrors
-# install: PLEASE CHANGE ME
+
 install:
   - pip install --upgrade pip setuptools wheel
   - pip install --only-binary=numpy,scipy numpy scipy
   - pip install coveralls
-# command to run tests, e.g. python setup.py test
+
 script:
-  - coverage run --source seisflows -m unittest discover tests/setup/test_tools
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
   - export PATH=$PATH:$(pwd)/scripts
   - tests/run_test_import
   - tests/run_test_optimize
   - tests/run_test_system
+  - tests/run_test_tools
 
-after_success:
-  coveralls
 
