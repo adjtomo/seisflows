@@ -5,9 +5,9 @@ import numpy as np
 
 from functools import partial
 from glob import glob
+from importlib import import_module
 from os.path import basename, join
 from seisflows.config import ParameterError, custom_import
-from seisflows.plugins.io import sem
 from seisflows.tools import msg, unix
 from seisflows.tools.shared import ModelDict
 from seisflows.tools.tools import Struct, diff, exists, call_solver
@@ -76,6 +76,9 @@ class base(object):
     def check(self):
         """ Checks parameters and paths
         """
+        if 'IOFORMAT' not in PAR:
+            setattr(PAR, 'IOFORMAT', 'fortran_binary')
+
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
@@ -220,6 +223,11 @@ class base(object):
         raise NotImplementedError
 
 
+    @property
+    def io(self):
+        full_dotted_name = 'seisflows.plugins.io'+'.'+PAR.IOFORMAT
+        return import_module(full_dotted_name)
+
 
     ### model input/output
 
@@ -229,7 +237,7 @@ class base(object):
         dict = ModelDict()
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters or self.parameters:
-                dict[key] += sem.read(path, prefix+key+suffix, iproc)
+                dict[key] += self.io.read_slice(path, prefix+key+suffix, iproc)
         return dict
 
 
@@ -242,12 +250,13 @@ class base(object):
         missing_keys = diff(parameters, dict.keys())
         for iproc in range(self.mesh_properties.nproc):
             for key in missing_keys:
-                dict[key] += sem.read(PATH.MODEL_INIT, prefix+key+suffix, iproc)
+                dict[key] += self.io.read_slice(
+                    PATH.MODEL_INIT, prefix+key+suffix, iproc)
 
         # save values
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters:
-                sem.write(dict[key][iproc], path, prefix+key+suffix, iproc)
+                self.io.write_slice(dict[key][iproc], path, prefix+key+suffix, iproc)
 
 
     def merge(self, model, parameters=[]):
@@ -371,10 +380,10 @@ class base(object):
         dst = join(self.getpath, 'traces/obs')
         unix.cp(src, dst)
 
-    def export_model(self, path, solver_parameters=['rho', 'vp', 'vs']):
+    def export_model(self, path, parameters=['rho', 'vp', 'vs']):
         if self.getnode == 0:
             unix.mkdir(path)
-            for key in solver_parameters:
+            for key in parameters:
                 files = glob(join(self.model_databases, '*'+key+'.bin'))
                 unix.cp(files, path)
 
@@ -496,7 +505,7 @@ class base(object):
         iproc = 0
         ngll = []
         while True:
-            dummy = sem.read(path, key, iproc)[0]
+            dummy = self.io.read_slice(path, key, iproc)[0]
             ngll += [len(dummy)]
             iproc += 1
             if not exists('%s/proc%06d_%s.bin' % (path, iproc, key)):
@@ -506,7 +515,7 @@ class base(object):
         # create coordinate pointers
         coords = Struct()
         for key in ['x', 'y', 'z']:
-           coords[key] = partial(sem.read, path, key)
+           coords[key] = partial(self.io.read_slice, self, path, key)
 
         self._mesh_properties = Struct([
             ['nproc', nproc],
@@ -523,7 +532,7 @@ class base(object):
         if not exists(path):
             raise Exception
 
-        # apply wildcard
+        # apply wildcard rule
         wildcard = self.source_prefix+'_*'
         globstar = sorted(glob(path +'/'+ wildcard))
         if not globstar:
@@ -589,4 +598,5 @@ class base(object):
     def source_prefix(self):
         # required method, must be implemented by subclass
         return NotImplementedError
+
 
