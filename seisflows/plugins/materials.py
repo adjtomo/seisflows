@@ -5,7 +5,7 @@
 # also, please leave dummy arguments in place for the time being
 
 
-from seisflows.tools.shared import Struct
+from seisflows.tools.tools import Struct
 
 
 
@@ -226,4 +226,121 @@ def rho_gardner(dummy, keys, vals):
 
     return rho
 
+
+def phi_beta_gardner_forward(dummy, keys, vals):
+    input = Struct(zip(keys, vals))
+    output = Struct()
+
+    vp = input.vp
+    vs = input.vs
+    rho = input.rho
+
+    kappa = rho*(vp**2.-(4./3.)*vs**2.)
+
+    output.rho = rho
+    output.bulk_c = (kappa/rho)**0.5
+    output.bulk_beta = vs
+
+    return output
+
+
+def phi_beta_gardner_inverse(dummy, keys, vals):
+    input = Struct(zip(keys, vals))
+    output = Struct()
+
+    phi = input.phi
+    beta = input.beta
+    alpha = (phi**2. + (4./3.)*beta**2.)**0.5
+
+    output.rho = 310.*alpha**0.25
+    output.vp = alpha
+    output.vs = beta
+
+    return output
+
+
+def lambda_mu_forward(dummy, keys, vals):
+    input = Struct(zip(keys, vals))
+    output = Struct()
+
+    vp = input.vp
+    vs = input.vs
+    rho = input.rho
+
+    output.lame1 = rho*(vp**2. - 2.*vs**2.)
+    output.lame2 = rho*vs**2.
+    output.rho = rho
+
+    return output
+
+
+
+
+def kernel_map_alpha_beta(self, model, kernels):
+    output = Struct()
+
+    vp = model.vp
+    vs = model.vs
+
+    rho_alpha = (1./4.)*310.*vp**(-3./4.)
+    rho_beta = 0.
+
+    output.vp = [kernels.vp + rho_alpha*kernels.rho]
+    output.vs = [kernels.vs]
+
+    return output
+
+
+
+def kernel_map_lambda_mu(self, model, kernels):
+    output = Struct()
+
+    vp = model.vp
+    vs = model.vs
+    rho = model.rho
+
+    rho_kappa = (1./9.)*310.**(8./9.)*(rho*vp**2.)**(-8./9.)
+    rho_mu = (4./27.)*310.**(8./9.)*(rho*vp**2.)**(-8./9.)
+
+    output.kappa = [kernels.kappa + rho_kappa*kernels.rho]
+    output.mu = [kernels.mu + rho_mu*kernels.rho]
+    #output.rho = [kernels.rho]
+
+    return output
+
+
+
+def kernel_map_kappa_mu(self, model, kernels):
+    output = Struct()
+
+    vp = model.vp
+    vs = model.vs
+    rho = model.rho
+
+    rho_kappa = (1./9.)*310.**(8./9.)*(rho*vp**2.)**(-8./9.)
+    rho_mu = (4./27.)*310.**(8./9.)*(rho*vp**2.)**(-8./9.)
+
+    output.kappa = [kernels.kappa + rho_kappa*kernels.rho]
+    output.mu = [kernels.mu + rho_mu*kernels.mu]
+    output.rho = [kernels.rho]
+
+    return output
+
+
+
+def kernel_map_phi_beta(self, model, kernels):
+    output = Struct()
+
+    vp = model.vp
+    vs = model.vs
+    rho = model.rho
+
+    rho_bulk_c = (1./4.)*310.*(vp/rho)**0.5*(vp**2.)**(-7./8.)
+    rho_bulk_beta = (1./3.)*310.*(vs/rho)**0.5*(vp**2.)**(-7./8.)
+
+    output.kappa = [kernels.bulk_c + rho_bulk_c*kernels.rho]
+    output.mu = [kernels.bulk_beta + rho_bulk_beta*kernels.rho]
+    output.rho = [kernels.rho]
+
+    return output
 

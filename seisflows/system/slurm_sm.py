@@ -49,6 +49,10 @@ class slurm_sm(custom_import('system', 'base')):
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
+        # how to invoke executables
+        if 'MPIEXEC' not in PAR:
+            setattr(PAR, 'MPIEXEC', '')
+
         # optional additional SLURM arguments
         if 'SLURMARGS' not in PAR:
             setattr(PAR, 'SLURMARGS', '')
@@ -157,8 +161,7 @@ class slurm_sm(custom_import('system', 'base')):
     def mpiexec(self):
         """ Specifies MPI exectuable; used to invoke solver
         """
-        return ''
-        #return 'mpirun -np %d '%PAR.NPROC
+        return PAR.MPIEXEC
 
 
     def save_kwargs(self, classname, funcname, kwargs):

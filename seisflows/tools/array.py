@@ -56,21 +56,6 @@ def stack(*args):
     return np.column_stack(args)
 
 
-### array input/output
-
-def loadnpy(filename):
-    """Loads numpy binary file."""
-    return np.load(filename)
-
-
-def savenpy(filename, v):
-    """Saves numpy binary file."""
-    np.save(filename, v)
-    os.rename(filename + '.npy', filename)
-
-
-
-
 # in the function and variable names, we use 'grid' to describe a set of
 # structured coordinates, and 'mesh' to describe a set of unstructured 
 # coordinates

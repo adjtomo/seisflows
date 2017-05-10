@@ -6,9 +6,9 @@ from os.path import join
 from seisflows.config import ParameterError
 from seisflows.plugins import preconds
 from seisflows.tools import msg, unix
-from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.math import angle, polyfit2, backtrack2
 from seisflows.tools.shared import  Writer, StepWriter
+from seisflows.tools.tools import loadnpy, savenpy
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -189,9 +189,15 @@ class base(object):
     def update_status(self):
         """ Updates line search status
 
-            Maintains line search history by keeping track of step length and
-            function value from each trial model evaluation. From line search
-            history, determines whether stopping criteria have been satisfied.
+          Maintains line search history by keeping track of step length and
+          function value from each trial model evaluation. From line search
+          history, determines whether stopping criteria have been satisfied.
+
+          Here and elsewhere we use the convention
+              status > 0  : success
+              status == 0 : not finished
+              status < 0  : failed
+
         """
         x_ = self.loadtxt('alpha')
         f_ = self.loadtxt('f_try')
@@ -329,6 +335,12 @@ class base(object):
     def retry_status(self):
         """ Returns false if search direction was the same as gradient
           direction; returns true otherwise
+
+          Here and elsewhere we use the convention
+              status > 0  : success
+              status == 0 : not finished
+              status < 0  : failed
+
         """
         g = self.load('g_new')
         p = self.load('p_new')
@@ -416,7 +428,7 @@ class base(object):
 
 
     def loadtxt(self, filename):
-        return float(np.loadtxt(filename))
+        return float(np.loadtxt(PATH.OPTIMIZE+'/'+filename))
 
     def savetxt(self, filename, scalar):
         np.savetxt(PATH.OPTIMIZE+'/'+filename, [scalar], '%11.6e')

@@ -59,6 +59,10 @@ class slurm_lg(custom_import('system', 'base')):
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
+        # how to invoke executables
+        if 'MPIEXEC' not in PAR:
+            setattr(PAR, 'MPIEXEC', 'srun')
+
         # optional additional SLURM arguments
         if 'SLURMARGS' not in PAR:
             setattr(PAR, 'SLURMARGS', '')

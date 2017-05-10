@@ -4,7 +4,7 @@ import numpy as np
 import obspy
 
 from seisflows.tools import msg, unix
-from seisflows.tools.tools import exists, getset, Struct
+from seisflows.tools.tools import exists, getset
 from seisflows.config import ParameterError
 
 from seisflows.plugins import adjoint, misfit, readers, writers

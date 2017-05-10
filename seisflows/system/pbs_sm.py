@@ -57,6 +57,10 @@ class pbs_lg(custom_import('system', 'base')):
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
+        # how to invoke executables
+        if 'MPIEXEC' not in PAR:
+            setattr(PAR, 'MPIEXEC', '')
+
         # optional additional PBS arguments
         if 'PBSARGS' not in PAR:
             setattr(PAR, 'PBSARGS', '')
@@ -159,7 +163,7 @@ class pbs_lg(custom_import('system', 'base')):
     def mpiexec(self):
         """ Specifies MPI exectuable; used to invoke solver
         """
-        return 'mpiexec '
+        return PAR.MPIEXEC
 
 
     def getnode(self):

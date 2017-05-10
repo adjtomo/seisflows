@@ -6,6 +6,16 @@ from importlib import import_module
 from pkgutil import iter_modules
 from seisflows.config import Null
 
+try:
+    import matplotlib
+except:
+    matplotlib = False
+
+try:
+    import obspy
+except:
+    obspy = False
+
 verbose = 1
 
 succeeded = []
@@ -64,6 +74,14 @@ def initialize():
 excluded += ['seisflows.solver']
 excluded += ['seisflows.workflow.test_optimize']
 excluded += ['seisflows.workflow.test_preprocess']
+
+if not matplotlib:
+    excluded += ['seisflows.tools.graphics']
+
+if not obspy:
+    excluded += ['seisflows.preprocess.base']
+    excluded += ['seisflows.preprocess.double_difference']
+
 
 
 if __name__ == '__main__':

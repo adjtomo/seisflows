@@ -4,7 +4,6 @@ import numpy as np
 
 from os.path import join
 from seisflows.tools import unix
-from seisflows.tools.array import savenpy
 from seisflows.tools.tools import exists
 from seisflows.config import ParameterError
 
@@ -65,8 +64,7 @@ class base(object):
 
         g = solver.merge(solver.load(
                  path +'/'+ 'kernels/sum',
-                 suffix='_kernel',
-                 verbose=True))
+                 suffix='_kernel'))
 
         if PAR.LOGARITHMIC:
             # convert from logarithmic to absolute perturbations
@@ -79,7 +77,7 @@ class base(object):
             self.save(path, g, backup='nomask')
 
 
-    def process_kernels(self, path, parameters):
+    def process_kernels(self, path='', parameters=[]):
         solver.combine(
                path +'/'+ 'kernels',
                parameters)
@@ -91,14 +89,15 @@ class base(object):
                    span=PAR.SMOOTH)
 
 
-    def save(self, path, v, backup=None):
+    def save(self, path, g, backup=None):
         if backup:
             src = path +'/'+ 'gradient'
             dst = path +'/'+ 'gradient_'+backup
             unix.mv(src, dst)
 
-        solver.save(path +'/'+ 'gradient',
-                    solver.split(v),
+        solver.save(solver.split(g),
+                    path +'/'+ 'gradient',
+                    parameters=solver.parameters,
                     suffix='_kernel')
 
 

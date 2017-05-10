@@ -1,34 +1,26 @@
 
 from os.path import abspath, getsize, join
 from shutil import copyfile
+from seisflows.tools.tools import iterable
 
 import numpy as np
 
 
-def mread(path, parameters, iproc, prefix='', suffix=''):
-    """ Multiparameter read, callable by a single mpi process
+def read(path, parameters, iproc):
+    """ Reads SPECFEM database file(s)
     """
-    keys = []
     vals = []
-    for key in sorted(parameters):
-        val = read(path, prefix+key+suffix, iproc)
-        keys += [key]
-        vals += [val]
-    return keys, vals
+    for key in iterable(parameters):
+        filename = '%s/proc%06d_%s.bin' % (path, iproc, key)
+        vals += [_read_bin(filename)]
+    return vals
 
 
-def read(path, parameter, iproc):
-    """ Reads a single SPECFEM database file
-    """
-    filename = 'proc%06d_%s.bin' % (iproc, parameter)
-    return _read_bin(join(path, filename))
-
-
-def write(v, path, parameter, iproc):
+def write(data, path, parameter, iproc):
     """ Writes a single SPECFEM database file
     """
     filename = 'proc%06d_%s.bin' % (iproc, parameter)
-    _write_bin(v, join(path, filename))
+    _write_bin(data, join(path, filename))
 
 
 def copy(src, dst, iproc, parameter):
@@ -49,16 +41,16 @@ def _read_bin(filename):
 
         if n==nbytes-8:
             file.seek(4)
-            v = np.fromfile(file, dtype='float32')
-            return v[:-1]
+            data = np.fromfile(file, dtype='float32')
+            return data[:-1]
         else:
             file.seek(0)
-            v = np.fromfile(file, dtype='float32')
-            return v
+            data = np.fromfile(file, dtype='float32')
+            return data
 
 
 def _write_bin(v, filename):
-    """ Writes Fortran style binary data--data are written as single precision
+    """ Writes Fortran style binary files--data are written as single precision
         floating point numbers
     """
     n = np.array([4*len(v)], dtype='int32')

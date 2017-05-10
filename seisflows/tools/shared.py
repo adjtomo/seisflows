@@ -2,26 +2,11 @@
 import os
 import numpy as np
 
-from collections import Mapping
+from collections import defaultdict
 from os.path import abspath, join, exists
 from string import find
 from seisflows.tools import unix
-from seisflows.tools.tools import Struct
-
-
-class SeisStruct(Struct):
-    """ Holds information about data
-    """
-
-    def __init__(self, nr=0, nt=0, dt=0., ts=0.,
-                 sx=[], sy=[], sz=[],
-                 rx=[], ry=[], rz=[],
-                 nrec=[], nsrc=[]):
-        super(SeisStruct, self).__init__(
-            [['nr', nr], ['nt', nt], ['dt', dt], ['ts', ts],
-             ['sx', sx], ['sy', sy], ['sz', sz],
-             ['rx', rx], ['ry', ry], ['rz', rz],
-             ['nrec', nrec], ['nsrc', nsrc]])
+from seisflows.tools.tools import iterable
 
 
 def getpar(key, file='DATA/Par_file', sep='=', cast=str):
@@ -51,16 +36,16 @@ def getpar(key, file='DATA/Par_file', sep='=', cast=str):
         raise Exception
 
 
-def setpar(key, val, file='DATA/Par_file', path='.', sep='='):
+def setpar(key, val, filename='DATA/Par_file', path='.', sep='='):
     """ Writes parameter to SPECFEM parfile
     """
 
     val = str(val)
 
     # read line by line
-    with open(path + '/' + file, 'r') as f:
+    with open(path +'/'+ filename, 'r') as file:
         lines = []
-        for line in f:
+        for line in file:
             if find(line, key) == 0:
                 # read key
                 key, _ = _split(line, sep)
@@ -75,40 +60,33 @@ def setpar(key, val, file='DATA/Par_file', path='.', sep='='):
             lines.append(line)
 
     # write file
-    _writelines(path + '/' + file, lines)
+    with open(path +'/'+ filename, 'w') as file:
+        file.writelines(lines)
 
 
-def Model(keys):
-    return dict((key, []) for key in keys)
-
-
-class Minmax(object):
-    def __init__(self, keys):
-        self.keys = keys
-        self.minvals = dict((key, +np.Inf) for key in keys)
-        self.maxvals = dict((key, -np.Inf) for key in keys)
-
-    def items(self):
-        return ((key, self.minvals[key], self.maxvals[key]) for key in self.keys)
+class Minmax(defaultdict):
+    """ Keeps track of min,max values of model or kernel
+    """
+    def __init__(self):
+        super(Minmax, self).__init__(lambda: [+np.inf, -np.inf])
 
     def update(self, keys, vals):
-        for key,val in zip(keys, vals):
-            minval = val.min()
-            maxval = val.max()
-            minval_all = self.minvals[key]
-            maxval_all = self.maxvals[key]
-            if minval < minval_all: self.minvals.update({key: minval})
-            if maxval > maxval_all: self.maxvals.update({key: maxval})
+        for key, val in _zip(keys, vals):
+            if min(val) < self.dict[key][0]:
+                self.dict[key][0] = min(val)
+            if max(val) > self.dict[key][1]:
+                self.dict[key][1] = max(val)
 
-    def write(self, path, logpath):
-        if not logpath:
-            return
-        filename = join(logpath, 'output.minmax')
-        with open(filename, 'a') as f:
-            f.write(abspath(path)+'\n')
-            for key,minval,maxval in self.items():
-                f.write('%-15s %10.3e %10.3e\n' % (key, minval, maxval))
-            f.write('\n')
+    def __call__(self, key):
+        return self.dict[key]
+
+
+class ModelDict(defaultdict):
+    """ Dictionary-like object for holding models or kernels
+    """
+    def __init__(self):
+        super(ModelDict, self).__init__(lambda: [])
+        self.minmax = Minmax()
 
 
 class StepWriter(object):
@@ -188,9 +166,5 @@ def _merge(*parts):
     return ''.join(parts)
 
 
-def _writelines(file, lines):
-    """ Writes text file
-    """
-    with open(file, 'w') as f:
-        f.writelines(lines)
-
+def _zip(keys, vals):
+    return zip(iterable(keys), iterable(vals))

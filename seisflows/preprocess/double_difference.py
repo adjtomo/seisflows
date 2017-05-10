@@ -7,7 +7,6 @@ from obspy.core import Stream, Trace
 
 from seisflows.plugins import adjoint, misfit
 from seisflows.tools import unix
-from seisflows.tools.tools import Struct
 from seisflows.config import ParameterError, custom_import
 
 PAR = sys.modules['seisflows_parameters']
