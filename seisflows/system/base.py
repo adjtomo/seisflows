@@ -14,7 +14,7 @@ class base(object):
     def run(self):
         raise NotImplementedError('Must be implemented by subclass.')
 
-    def getnode(self):
+    def taskid(self):
         raise NotImplementedError('Must be implemented by subclass.')
 
     def checkpoint(self):

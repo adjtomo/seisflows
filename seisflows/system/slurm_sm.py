@@ -150,7 +150,7 @@ class slurm_sm(custom_import('system', 'base')):
             return [line.strip() for line in f.readlines()]
 
 
-    def getnode(self):
+    def taskid(self):
         """ Gets number of running task
         """
         gid = os.getenv('SLURM_GTIDS').split(',')

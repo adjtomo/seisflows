@@ -106,7 +106,7 @@ class serial(custom_import('system', 'base')):
             task(**kwargs)
 
 
-    def getnode(self):
+    def taskid(self):
         """ Gets number of running task
         """
         return int(os.environ['SEISFLOWS_TASKID'])

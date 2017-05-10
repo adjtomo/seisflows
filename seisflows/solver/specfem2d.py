@@ -61,19 +61,19 @@ class specfem2d(custom_import('solver', 'base')):
         f0 = getpar('f0', file='DATA/SOURCE', cast=float)
 
         if nt != PAR.NT:
-            if self.getnode == 0: print "WARNING: nt != PAR.NT"
+            if self.taskid == 0: print "WARNING: nt != PAR.NT"
             setpar('nt', PAR.NT)
 
         if dt != PAR.DT:
-            if self.getnode == 0: print "WARNING: dt != PAR.DT"
+            if self.taskid == 0: print "WARNING: dt != PAR.DT"
             setpar('deltat', PAR.DT)
 
         if f0 != PAR.F0:
-            if self.getnode == 0: print "WARNING: f0 != PAR.F0"
+            if self.taskid == 0: print "WARNING: f0 != PAR.F0"
             setpar('f0', PAR.F0, filename='DATA/SOURCE')
 
         if self.mesh_properties.nproc != PAR.NPROC:
-            if self.getnode == 0:
+            if self.taskid == 0:
                 print 'Warning: mesh_properties.nproc != PAR.NPROC'
 
         if 'MULTIPLES' in PAR:
@@ -185,7 +185,7 @@ class specfem2d(custom_import('solver', 'base')):
         unix.cp(src, dst)
 
     def export_model(self, path):
-        if self.getnode == 0:
+        if self.taskid == 0:
             unix.mkdir(path)
             src = glob(join(self.getpath, 'DATA/*.bin'))
             dst = path

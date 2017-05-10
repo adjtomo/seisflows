@@ -221,7 +221,7 @@ class lsf_lg(custom_import('system', 'base')):
         return state
 
 
-    def getnode(self):
+    def taskid(self):
         """ Gets number of running task
         """
         return int(os.getenv('LSB_JOBINDEX'))-1

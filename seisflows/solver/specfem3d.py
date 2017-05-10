@@ -80,7 +80,7 @@ class specfem3d(custom_import('solver', 'base')):
         if model_type in ['gll']:
             par = getpar('MODEL').strip()
             if par != 'gll':
-                if self.getnode == 0:
+                if self.taskid == 0:
                     print 'WARNING: Unexpected Par_file setting:'
                     print 'MODEL =', par
             
@@ -141,15 +141,15 @@ class specfem3d(custom_import('solver', 'base')):
         dt = getpar('DT', cast=float)
 
         if nt != PAR.NT:
-            if self.getnode == 0: print "WARNING: nt != PAR.NT"
+            if self.taskid == 0: print "WARNING: nt != PAR.NT"
             setpar('NSTEP', PAR.NT)
 
         if dt != PAR.DT:
-            if self.getnode == 0: print "WARNING: dt != PAR.DT"
+            if self.taskid == 0: print "WARNING: dt != PAR.DT"
             setpar('DT', PAR.DT)
 
         if self.mesh_properties.nproc != PAR.NPROC:
-            if self.getnode == 0:
+            if self.taskid == 0:
                 print 'Warning: mesh_properties.nproc != PAR.NPROC'
 
         if 'MULTIPLES' in PAR:

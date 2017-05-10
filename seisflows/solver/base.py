@@ -381,7 +381,7 @@ class base(object):
         unix.cp(src, dst)
 
     def export_model(self, path, parameters=['rho', 'vp', 'vs']):
-        if self.getnode == 0:
+        if self.taskid == 0:
             unix.mkdir(path)
             for key in parameters:
                 files = glob(join(self.model_databases, '*'+key+'.bin'))
@@ -553,14 +553,14 @@ class base(object):
     ### additional solver attributes
 
     @property
-    def getnode(self):
-        # because it is sometimes useful to overload system.getnode
-        return system.getnode()
+    def taskid(self):
+        # because it is sometimes useful to overload system.taskid
+        return system.taskid()
 
     @property
     def getname(self):
         # returns name of source currently under consideration
-        return self.source_names[self.getnode]
+        return self.source_names[self.taskid]
 
     @property
     def getpath(self):
