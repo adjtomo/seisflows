@@ -43,6 +43,6 @@ class test_system:
             return
 
         time.sleep(1)
-        print '%s from %d' % (msg, system.getnode()+1)
+        print '%s from %d' % (msg, system.taskid()+1)
         print ''
 

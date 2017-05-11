@@ -5,12 +5,12 @@ import numpy as np
 
 from functools import partial
 from glob import glob
+from importlib import import_module
 from os.path import basename, join
 from seisflows.config import ParameterError, custom_import
-from seisflows.plugins.io import sem
 from seisflows.tools import msg, unix
 from seisflows.tools.shared import ModelDict
-from seisflows.tools.tools import Struct, exists, call_solver
+from seisflows.tools.tools import Struct, diff, exists, call_solver, module_exists
 
 
 
@@ -99,6 +99,16 @@ class base(object):
         if 'SPECFEM_DATA' not in PATH:
             raise ParameterError(PATH, 'SPECFEM_DATA')
 
+        # check IO machinery
+        if 'IOFORMAT' not in PAR:
+            setattr(PAR, 'IOFORMAT', 'fortran_binary')
+
+        full_dotted_name = 'seisflows.plugins.io'+'.'+PAR.IOFORMAT
+        assert module_exists(full_dotted_name)
+        module = import_module(full_dotted_name)
+        assert hasattr(module, 'read_slice')
+        assert hasattr(module, 'write_slice')
+
         # assertions
         assert self.parameters != []
 
@@ -107,7 +117,7 @@ class base(object):
         """ Prepares solver for inversion or migration
         """
         # clean up for new inversion
-        unix.rm(self.getpath)
+        unix.rm(self.cwd)
 
         # As input for an inversion or migration, users can choose between
         # providing data, or providing a target model from which data are
@@ -119,7 +129,7 @@ class base(object):
             # copy user supplied data
             self.initialize_solver_directories()
 
-            src = glob(PATH.DATA +'/'+ self.getname +'/'+ '*')
+            src = glob(PATH.DATA +'/'+ self.source_name +'/'+ '*')
             dst = 'traces/obs/'
             unix.cp(src, dst)
 
@@ -140,7 +150,7 @@ class base(object):
 
 
     def clean(self):
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         unix.rm('OUTPUT_FILES')
         unix.mkdir('OUTPUT_FILES')
 
@@ -165,11 +175,11 @@ class base(object):
         """ Evaluates misfit function by carrying out forward simulation and
             comparing observations and synthetics.
         """
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         self.import_model(path)
 
         self.forward()
-        preprocess.prepare_eval_grad(self.getpath)
+        preprocess.prepare_eval_grad(self.cwd)
         self.export_residuals(path)
 
 
@@ -177,7 +187,7 @@ class base(object):
         """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
             must be in place beforehand.
         """
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
 
         self.adjoint()
 
@@ -192,12 +202,12 @@ class base(object):
         """ Computes action of Hessian on a given model vector. A gradient 
           evaluation must have already been carried out.
         """
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         unix.mkdir('traces/lcg')
 
         self.import_model(path)
         self.forward('traces/lcg')
-        preprocess.prepare_apply_hess(self.getpath)
+        preprocess.prepare_apply_hess(self.cwd)
 
         self.adjoint()
         self.export_kernels(path)
@@ -220,34 +230,44 @@ class base(object):
         raise NotImplementedError
 
 
-
     ### model input/output
 
+    @property
+    def io(self):
+        """ Solver IO module
+        """
+        full_dotted_name = 'seisflows.plugins.io'+'.'+PAR.IOFORMAT
+        return import_module(full_dotted_name)
+
+
     def load(self, path, parameters=[], prefix='', suffix=''):
-        """ reads SPECFEM model or kernels
+        """ Reads SPECFEM model or kernels
         """
         dict = ModelDict()
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters or self.parameters:
-                dict[key] += sem.read(path, prefix+key+suffix, iproc)
+                dict[key] += self.io.read_slice(
+                    path, prefix+key+suffix, iproc)
         return dict
 
 
     def save(self, dict, path, parameters=['vp','vs','rho'], prefix='', suffix=''):
-        """ writes SPECFEM model or kernels
+        """ Writes SPECFEM model or kernels
         """
         unix.mkdir(path)
 
-        # fill in missing keys
+        # fill in missing parameters
         missing_keys = diff(parameters, dict.keys())
         for iproc in range(self.mesh_properties.nproc):
             for key in missing_keys:
-                dict[key] += sem.read(PATH.MODEL_INIT, prefix+key+suffix, iproc)
+                dict[key] += self.io.read_slice(
+                    PATH.MODEL_INIT, prefix+key+suffix, iproc)
 
-        # save values
+        # write model or kernel files to disk
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters:
-                sem.write(dict[key][iproc], path, prefix+key+suffix, iproc)
+                self.io.write_slice(
+                    dict[key][iproc], path, prefix+key+suffix, iproc)
 
 
     def merge(self, model, parameters=[]):
@@ -282,7 +302,7 @@ class base(object):
         """ Sums individual source contributions. Wrapper over xcombine_sem
             utility.
         """
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
 
         with open('kernel_paths', 'w') as file:
             file.writelines([join(path, dir)+'\n' for dir in self.source_names])
@@ -305,7 +325,7 @@ class base(object):
         assert len(parameters) > 0
 
         # apply smoothing operator
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         for name in parameters or self.parameters:
             print ' smoothing', name
             call_solver(
@@ -338,7 +358,7 @@ class base(object):
         assert exists(path)
         assert len(parameters) > 0
 
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         for name in parameters or self.parameters:
             call_solver(
                 system.mpiexec,
@@ -367,14 +387,14 @@ class base(object):
         self.save(model, self.model_databases)
 
     def import_traces(self, path):
-        src = glob(join(path, 'traces', self.getname, '*'))
-        dst = join(self.getpath, 'traces/obs')
+        src = glob(join(path, 'traces', self.source_name, '*'))
+        dst = join(self.cwd, 'traces/obs')
         unix.cp(src, dst)
 
-    def export_model(self, path, solver_parameters=['rho', 'vp', 'vs']):
-        if self.getnode == 0:
+    def export_model(self, path, parameters=['rho', 'vp', 'vs']):
+        if self.taskid == 0:
             unix.mkdir(path)
-            for key in solver_parameters:
+            for key in parameters:
                 files = glob(join(self.model_databases, '*'+key+'.bin'))
                 unix.cp(files, path)
 
@@ -385,22 +405,22 @@ class base(object):
         self.rename_kernels()
 
         src = glob('*_kernel.bin')
-        dst = join(path, 'kernels', self.getname)
+        dst = join(path, 'kernels', self.source_name)
         unix.mkdir(dst)
         unix.mv(src, dst)
 
     def export_residuals(self, path):
         unix.mkdir(join(path, 'residuals'))
 
-        src = join(self.getpath, 'residuals')
-        dst = join(path, 'residuals', self.getname)
+        src = join(self.cwd, 'residuals')
+        dst = join(path, 'residuals', self.source_name)
         unix.mv(src, dst)
 
     def export_traces(self, path, prefix='traces/obs'):
         unix.mkdir(join(path))
 
-        src = join(self.getpath, prefix)
-        dst = join(path, self.getname)
+        src = join(self.cwd, prefix)
+        dst = join(path, self.source_name)
         unix.cp(src, dst)
 
 
@@ -436,8 +456,8 @@ class base(object):
           by user as there is currently no mechanism for automatically
           compiling from source.
         """
-        unix.mkdir(self.getpath)
-        unix.cd(self.getpath)
+        unix.mkdir(self.cwd)
+        unix.cd(self.cwd)
 
         # create directory structure
         unix.mkdir('bin')
@@ -461,7 +481,7 @@ class base(object):
         dst = 'DATA/'
         unix.cp(src, dst)
 
-        src = 'DATA/' + self.source_prefix +'_'+ self.getname
+        src = 'DATA/' + self.source_prefix +'_'+ self.source_name
         dst = 'DATA/' + self.source_prefix
         unix.cp(src, dst)
 
@@ -475,14 +495,14 @@ class base(object):
         """
         for filename in self.data_filenames:
             # read traces
-            d = preprocess.reader(self.getpath +'/'+ 'traces/obs', filename)
+            d = preprocess.reader(self.cwd +'/'+ 'traces/obs', filename)
 
             # replace data with zeros
             for t in d:
                 t.data[:] = 0.
 
             # write traces
-            preprocess.writer(d, self.getpath +'/'+ 'traces/adj', filename)
+            preprocess.writer(d, self.cwd +'/'+ 'traces/adj', filename)
 
 
     def check_mesh_properties(self, path=None):
@@ -496,7 +516,7 @@ class base(object):
         iproc = 0
         ngll = []
         while True:
-            dummy = sem.read(path, key, iproc)[0]
+            dummy = self.io.read_slice(path, key, iproc)[0]
             ngll += [len(dummy)]
             iproc += 1
             if not exists('%s/proc%06d_%s.bin' % (path, iproc, key)):
@@ -506,7 +526,7 @@ class base(object):
         # create coordinate pointers
         coords = Struct()
         for key in ['x', 'y', 'z']:
-           coords[key] = partial(sem.read, path, key)
+           coords[key] = partial(self.io.read_slice, self, path, key)
 
         self._mesh_properties = Struct([
             ['nproc', nproc],
@@ -523,7 +543,7 @@ class base(object):
         if not exists(path):
             raise Exception
 
-        # apply wildcard
+        # apply wildcard rule
         wildcard = self.source_prefix+'_*'
         globstar = sorted(glob(path +'/'+ wildcard))
         if not globstar:
@@ -544,31 +564,31 @@ class base(object):
     ### additional solver attributes
 
     @property
-    def getnode(self):
-        # because it is sometimes useful to overload system.getnode
-        return system.getnode()
+    def taskid(self):
+        # because it is sometimes useful to overload system.taskid
+        return system.taskid()
 
     @property
-    def getname(self):
+    def source_name(self):
         # returns name of source currently under consideration
-        return self.source_names[self.getnode]
+        return self.source_names[self.taskid]
 
     @property
-    def getpath(self):
+    def cwd(self):
         # returns working directory currently in use
-        return join(PATH.SOLVER, self.getname)
-
-    @property
-    def mesh_properties(self):
-        if not hasattr(self, '_mesh_properties'):
-            self.check_mesh_properties()
-        return self._mesh_properties
+        return join(PATH.SOLVER, self.source_name)
 
     @property
     def source_names(self):
        if not hasattr(self, '_source_names'):
            self.check_source_names()
        return self._source_names
+
+    @property
+    def mesh_properties(self):
+        if not hasattr(self, '_mesh_properties'):
+            self.check_mesh_properties()
+        return self._mesh_properties
 
     @property
     def data_filenames(self):
@@ -590,7 +610,4 @@ class base(object):
         # required method, must be implemented by subclass
         return NotImplementedError
 
-def diff(list1, list2):
-    c = set(list1).union(set(list2))
-    d = set(list1).intersection(set(list2))
-    return list(c - d)
+

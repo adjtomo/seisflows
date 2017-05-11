@@ -56,7 +56,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         """
         self.generate_mesh(**model_kwargs)
 
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
         call_solver(system.mpiexec(), 'bin/xspecfem3D')
@@ -77,7 +77,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
         assert(model_type)
 
         self.initialize_solver_directories()
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
 
         if model_type == 'gll':
             assert (exists(model_path))
@@ -196,7 +196,7 @@ class specfem3d_globe(custom_import('solver', 'base')):
     def rename_data(self):
         """ Works around conflicting data filename conventions
         """
-        files = glob(self.getpath +'/'+ 'traces/adj/*sem.ascii')
+        files = glob(self.cwd +'/'+ 'traces/adj/*sem.ascii')
         unix.rename('sem.ascii', 'sem.ascii.adj', files)
 
 
@@ -206,12 +206,12 @@ class specfem3d_globe(custom_import('solver', 'base')):
         # workaround for  SPECFEM2D's use of different name conventions for
         # regular traces and 'adjoint' traces
         if PAR.FORMAT in ['ASCII', 'ascii']:
-            files = glob(self.getpath +'/'+ 'traces/adj/*sem.ascii')
+            files = glob(self.cwd +'/'+ 'traces/adj/*sem.ascii')
             unix.rename('sem.ascii', 'adj', files)
 
     @property
     def data_filenames(self):
-        unix.cd(self.getpath)
+        unix.cd(self.cwd)
         unix.cd('traces/obs')
 
         print 'made it here'
@@ -223,11 +223,11 @@ class specfem3d_globe(custom_import('solver', 'base')):
 
     @property
     def kernel_databases(self):
-        return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
+        return join(self.cwd, 'OUTPUT_FILES/DATABASES_MPI')
 
     @property
     def model_databases(self):
-        return join(self.getpath, 'OUTPUT_FILES/DATABASES_MPI')
+        return join(self.cwd, 'OUTPUT_FILES/DATABASES_MPI')
 
     @property
     def source_prefix(self):

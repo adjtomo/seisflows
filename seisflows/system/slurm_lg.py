@@ -143,7 +143,7 @@ class slurm_lg(custom_import('system', 'base')):
         return 'srun '
 
 
-    def getnode(self):
+    def taskid(self):
         """ Gets number of running task
         """
         try:

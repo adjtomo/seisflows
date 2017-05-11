@@ -90,15 +90,15 @@ class serial(custom_import('system', 'base')):
         unix.mkdir(PATH.SYSTEM)
 
         if hosts == 'all':
-            for itask in range(PAR.NTASK):
-                self.setnode(itask)
-                self.progress(itask)
+            for tid in range(PAR.NTASK):
+                self.setid(tid)
+                self.progress(tid)
                 func = getattr(__import__('seisflows_'+classname), funcname)
                 func(**kwargs)
             print ''
 
         elif hosts == 'head':
-            self.setnode(0)
+            self.setid(0)
             func = getattr(__import__('seisflows_'+classname), funcname)
             func(**kwargs)
 
@@ -106,23 +106,23 @@ class serial(custom_import('system', 'base')):
             task(**kwargs)
 
 
-    def getnode(self):
+    def taskid(self):
         """ Gets number of running task
         """
         return int(os.environ['SEISFLOWS_TASKID'])
 
-    def setnode(self, itask):
+    def setid(self, tid):
         """ Sets number of running task
         """
-        os.environ['SEISFLOWS_TASKID'] = str(itask)
+        os.environ['SEISFLOWS_TASKID'] = str(tid)
 
     def mpiexec(self):
         """ Specifies MPI exectuable; used to invoke solver
         """
         return PAR.MPIEXEC
 
-    def progress(self, itask=None):
+    def progress(self, tid=None):
         """ Provides status updates
         """
         if PAR.VERBOSE and PAR.NTASK > 1:
-            print ' task ' + '%02d'%(itask + 1) + ' of ' + '%02d'%PAR.NTASK
+            print ' task ' + '%02d'%(tid + 1) + ' of ' + '%02d'%PAR.NTASK
