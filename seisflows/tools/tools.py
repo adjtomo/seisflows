@@ -30,7 +30,7 @@ def call(*args, **kwargs):
     subprocess.check_call(*args, **kwargs)
 
 
-def call_solver(mpiexec, executable, output='/dev/null'):
+def call_solver(mpiexec, executable, output='solver.log'):
     """ Calls MPI solver executable
 
       A less complicated version, without error catching, would be
