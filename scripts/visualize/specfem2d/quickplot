@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 
-import os
 import re
 import sys
-import numpy as np
 
 from glob import glob
-from os.path import abspath, join
+from os.path import abspath, isdir, join
 from subprocess import call
 from seisflows.tools.tools import exists
 from seisflows.tools.unix import which
@@ -71,22 +69,22 @@ def get_cmd(exe, dir, file):
 
 def parse_args():
     assert len(sys.argv[1:]) >= 1
+    assert isdir(sys.argv[1])
     return sys.argv[1]
 
 
 
 if __name__ == '__main__':
-    """ Plots all model or kernels in a given directory; wrapper over PLOTGLL
-        USAGE:  quickplot DIR [ARGS]
+    """ USAGE:  quickplot DIR [ARGS]
+
+      Plots all model or kernels in given directory. Any additional arguments 
+      after DIR are simply passed to plotgll
     """
-    dir = parse_args()
-    exe = 'python -W ignore '+which('plotgll')
-
-    if not exists(dir):
-        raise Exception
-
     if not which('plotgll'):
-        raise Exception
+        raise EnvironmentError("plotgll not found on path")
+
+    exe = 'python -W ignore '+which('plotgll')
+    dir = parse_args()
 
     files = get_data_files(dir)
     cmd = '&&\n\n'.join([get_cmd(exe, dir, file) for file in files])

@@ -25,9 +25,8 @@ def parse_args():
     parser.add_argument('ycoords',
         help='y coordinates file')
 
-    parser.add_argument('files',
-        help='database file(s)')
-
+    parser.add_argument('file',
+        help='database file')
 
     # optional formatting arguments
     parser.add_argument('--cbar', 
@@ -69,7 +68,7 @@ def parse_args():
 
 
 if __name__ == '__main__':
-    """ Plots GLL model or kernels read from SPECFEM2D Fortran binary files
+    """ Plots GLL model read from SPECFEM2D Fortran binary file
 
         For usage information: plotgll --help
     """
@@ -78,14 +77,14 @@ if __name__ == '__main__':
 
     x = _read(args.xcoords)
     y = _read(args.ycoords)
-    v = _read(args.files)
+    v = _read(args.file)
 
     minval = min(v)
     maxval = max(v)
     maxabs = max(abs(v))
 
     msg = '\n%s\nmin, max: %f, %f\n'
-    print msg % (args.files, minval, maxval)
+    print msg % (args.file, minval, maxval)
 
     f, p = plot_gll(x, y, v)
 

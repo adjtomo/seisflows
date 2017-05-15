@@ -16,26 +16,35 @@ def parse_args():
 
     # file and format flags
     parser.add_argument('file',
-                        help='SU filename')
+                        help='Filename/data source')
 
-    parser.add_argument('-cm', '--cmap', default='seismic',
-                        help='Matplotlib colormap scheme.')
+    parser.add_argument('-f', '--format',
+                        default='SU',
+                        help='Data format')
 
-    parser.add_argument('-c', '--clip', type=float,
+    parser.add_argument('-cm', '--cmap',
+                        default='seismic',
+                        help='Matplotlib colormap scheme')
+
+    parser.add_argument('-c', '--clip',
+                        type=float,
                         default='0',
                         help='Clip amplitudes [0-100]')
 
-    parser.add_argument('-t', '--title', type=str,
+    parser.add_argument('-t', '--title', 
+                        type=str,
                         default='',
-                        help='Plot title.')
+                        help='Figure title')
 
-    parser.add_argument('-xint', '--x_interval', type=float,
+    parser.add_argument('-xint', '--x_interval', 
+                        type=float,
                         default='1.0',
-                        help='Offset axis tick spacing [km].')
+                        help='Offset axis tick spacing [km]')
 
-    parser.add_argument('-yint', '--y_interval', type=float,
+    parser.add_argument('-yint', '--y_interval', 
+                        type=float,
                         default='1.0',
-                        help='Time axis tick spacing [s].')
+                        help='Time axis tick spacing [s]')
 
     return parser.parse_args()
 
@@ -43,13 +52,18 @@ def parse_args():
 if __name__ == "__main__":
 
     args = parse_args()
-
     if args.clip < 0:
         args.clip = 0
     elif args.clip > 100:
         args.clip = 100
 
-    stream = read(args.file, format='SU', byteorder='<')
+
+    if args.format in ['SU', 'su']:
+        stream = read(args.file, format='SU', byteorder='<')
+    else:
+        raise NotImplementedError
+
+
     plot_section(stream,
                  cmap=args.cmap,
                  clip=(100-args.clip),
