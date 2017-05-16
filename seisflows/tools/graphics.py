@@ -19,7 +19,7 @@ def plot_gll(x, y, z):
     return f, p
 
 
-def plot_vector(v, xlabel='', ylabel='', title=''):
+def plot_vector(t, v, xlabel='', ylabel='', title=''):
     """ Plots a vector or time series.
 
     Parameters
@@ -51,7 +51,7 @@ def plot_vector(v, xlabel='', ylabel='', title=''):
         y = v[:, 1]
 
     # plot
-    plt.plot(x, y)
+    plt.plot(t, v)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)

@@ -11,40 +11,41 @@ from seisflows.tools.graphics import plot_section
 
 
 def parse_args():
-    # Parse input arguments
-    parser = argparse.ArgumentParser(description='Plot seismic section from SU data file.')
+    parser = argparse.ArgumentParser(
+        description='Plot seismic section from SU data file.')
 
-    # file and format flags
+    # input file arguments
     parser.add_argument('file',
-                        help='Filename/data source')
+        help='filename/data source')
 
     parser.add_argument('-f', '--format',
-                        default='SU',
-                        help='Data format')
+        default='SU',
+        help='data format')
 
+    # optional formatting arguments
     parser.add_argument('-cm', '--cmap',
-                        default='seismic',
-                        help='Matplotlib colormap scheme')
+        default='seismic',
+        help='colormap scheme')
 
     parser.add_argument('-c', '--clip',
-                        type=float,
-                        default='0',
-                        help='Clip amplitudes [0-100]')
+        type=float,
+        default='0',
+        help='clip amplitudes [0-100]')
 
     parser.add_argument('-t', '--title', 
-                        type=str,
-                        default='',
-                        help='Figure title')
+        type=str,
+        default='',
+        help='figure title')
 
     parser.add_argument('-xint', '--x_interval', 
-                        type=float,
-                        default='1.0',
-                        help='Offset axis tick spacing [km]')
+        type=float,
+        default='1.0',
+        help='offset axis tick spacing [km]')
 
     parser.add_argument('-yint', '--y_interval', 
-                        type=float,
-                        default='1.0',
-                        help='Time axis tick spacing [s]')
+        type=float,
+        default='1.0',
+        help='time axis tick spacing [s]')
 
     return parser.parse_args()
 
@@ -63,13 +64,13 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError
 
-
     plot_section(stream,
-                 cmap=args.cmap,
-                 clip=(100-args.clip),
-                 title=args.title,
-                 x_interval=args.x_interval,
-                 y_interval=args.y_interval)
+        cmap=args.cmap,
+        clip=(100-args.clip),
+        title=args.title,
+        x_interval=args.x_interval,
+        y_interval=args.y_interval)
+
     plt.show()
 
 
