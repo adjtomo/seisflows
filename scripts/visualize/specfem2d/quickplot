@@ -24,6 +24,9 @@ def get_coord_files(dir):
          ]]:
         if exists(files):
             return files
+    else:
+        raise Exception(
+            "coordinate files not found")
 
 
 def get_data_files(dir):
@@ -48,9 +51,9 @@ def get_args(file):
     args += ['--title='+get_title(file)]
     if '_kernel' in file:
         args += ['--saturation=1']
-        args += ['--symmetric=1']
+        args += ['--symmetric']
 
-    # command line arguments, if given, line will override those above
+    # sys.argv arguments, if given, line will override those above
     nargs = len(sys.argv[2:])
     if nargs:
         args += sys.argv[2:]
@@ -68,8 +71,6 @@ def get_cmd(exe, dir, file):
 
 
 def parse_args():
-    assert len(sys.argv[1:]) >= 1
-    assert isdir(sys.argv[1])
     return sys.argv[1]
 
 
@@ -77,17 +78,27 @@ def parse_args():
 if __name__ == '__main__':
     """ USAGE:  quickplot DIR [ARGS]
 
-      Plots all model or kernels in given directory. Any additional arguments 
-      after DIR are simply passed to plotgll
+      Plots all model or kernel parameters in given directory. Any additional
+      arguments after DIR are not used by quickplot and instead passed to 
+      plotgll
     """
-    if not which('plotgll'):
-        raise EnvironmentError("plotgll not found on path")
-
     exe = 'python -W ignore '+which('plotgll')
+
+    if not which('plotgll'):
+        raise EnvironmentError( 
+            "plotgll not found on path")
+
+    if not sys.argv[1:]:
+        raise IOError(
+            "usage: quickplot DIR [ARGS]")
+
     dir = parse_args()
+
+    if not exists(dir):
+        raise IOError(
+            "directory does not exit: %s" % dir)
 
     files = get_data_files(dir)
     cmd = '&&\n\n'.join([get_cmd(exe, dir, file) for file in files])
-
     call(cmd, shell=True)
 

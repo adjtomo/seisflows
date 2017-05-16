@@ -16,7 +16,7 @@ from seisflows.tools.tools import exists
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Plots SPECFEM2D model or kernels')
+        description='plots SPECFEM2D model or kernels')
 
     # required input file arguments
     parser.add_argument('xcoords',
@@ -29,10 +29,11 @@ def parse_args():
         help='database file')
 
     # optional formatting arguments
-    parser.add_argument('--cbar', 
-        type=bool,
-        default=True,
-        help='colorbar')
+    parser.add_argument('--cbar',
+        dest='cbar',
+        action='store_true',
+        help='display colorbar')
+    parser.set_defaults(cbar=False)
 
     parser.add_argument('--cmap',
         default='seismic',
@@ -48,15 +49,16 @@ def parse_args():
         default=None,
         help='colormap max')
 
-    parser.add_argument('--saturation', 
+    parser.add_argument('--saturation',
         type=float,
         default=1.,
         help='colormap saturation factor')
 
     parser.add_argument('--symmetric',
-        type=bool,
-        default=False,
+        dest='symmetric',
+        action='store_true',
         help='colormap symmetry flag')
+    parser.set_defaults(symmetric=False)
 
     parser.add_argument('--title',
         type=str,
@@ -81,7 +83,6 @@ if __name__ == '__main__':
 
     minval = min(v)
     maxval = max(v)
-    maxabs = max(abs(v))
 
     msg = '\n%s\nmin, max: %f, %f\n'
     print msg % (args.file, minval, maxval)
@@ -99,14 +100,17 @@ if __name__ == '__main__':
        args.cmax!=None:
         assert args.cmin < args.cmax
         p.set_clim([args.cmin, args.cmax])
-    elif args.symmetric:
+
+    if args.symmetric:
+        maxabs = max(np.abs(p.get_clim()))
         clim = np.array([-maxabs, +maxabs])
         p.set_clim(clim)
 
     # adjust saturation
     if args.saturation:
         clim = np.array(p.get_clim())
-        p.set_clim(clim/args.saturation)
+        cavg = np.mean(clim)
+        p.set_clim((clim-cavg)/args.saturation+cavg)
 
     # optional colorbar
     if args.cbar:

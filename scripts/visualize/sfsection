@@ -12,7 +12,7 @@ from seisflows.tools.graphics import plot_section
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Plot seismic section from SU data file.')
+        description='plots seismic record section')
 
     # input file arguments
     parser.add_argument('file',

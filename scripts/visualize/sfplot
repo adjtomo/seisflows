@@ -17,6 +17,7 @@ def parse_args():
 
     parser.add_argument('-n',
         default=1,
+        type=int,
         help='trace number')
 
     parser.add_argument('-f', '--format',
@@ -41,11 +42,11 @@ def parse_args():
 def read_ascii(args):
     data = np.loadtxt(args.file)
     if data.ndim == 1:
-        t = range(len(v))
-        v = v
+        t = range(len(data))
+        v = data
     elif data.ndim == 2:
-        t = v[:, 0]
-        v = v[:, 1]
+        t = data[:, 0]
+        v = data[:, 1]
     else:
         raise ValueError(
             'v must be a vector or time series')
@@ -104,10 +105,10 @@ if __name__ == "__main__":
     if args.format in ['ascii']:
         t,v = read_ascii(args)
 
-    elif args.format in ['col', 'columns']:
+    elif args.format in ['cols', 'columns']:
         t,v = read_ascii(args)
 
-    elif args.format in ['row', 'rows']:
+    elif args.format in ['rows']:
         t,v = read_rows(args)
 
     elif args.format in ['SU', 'su']:
