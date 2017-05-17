@@ -227,14 +227,18 @@ class multiparameter(custom_import('solver', 'base')):
         if parameters == self.kernel_parameters:
             for iproc in range(self.mesh_properties.nproc):
                 for key in dict.keys():
-                    self.write_slice(dict[key][iproc], path, prefix+key+suffix, iproc)
+                    self.write_slice(
+                         dict[key][iproc], path, prefix+key+suffix, iproc)
         else:
             for iproc in range(self.mesh_properties.nproc):
                 keys = dict.keys()
                 vals = [dict[key][iproc] for key in keys]
+
                 if PAR.DENSITY in ['Constant']:
                       keys += ['rho']
-                      vals += self.read_slice(PATH.MODEL_INIT, prefix+'rho'+suffix, iproc)
+                      vals += self.read_slice(
+                          PATH.MODEL_INIT, prefix+'rho'+suffix, iproc)
+
                 mapped = self.inverse(keys, vals)
                 for key, val in mapped.items():
                     self.write_slice(val, path, prefix+key+suffix, iproc)

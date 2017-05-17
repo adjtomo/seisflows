@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+
+import re
+import sys
+
+from glob import glob
+from os.path import abspath, isdir, join
+from subprocess import call
+from seisflows.tools.tools import exists
+from seisflows.tools.unix import which
+
+
+def get_coord_files(dir):
+    for files in [
+        [abspath(join(dir, subdir, 'proc000000_x.bin')),
+         abspath(join(dir, subdir, 'proc000000_z.bin'))]
+         for subdir in [
+         '.',
+         '../model',
+         '../output/model_init',
+         '../../output/model_init',
+         '../../../output/model_init',
+         '../../../../output/model_init',
+         ]]:
+        if exists(files):
+            return files
+    else:
+        raise Exception(
+            "coordinate files not found")
+
+
+def get_data_files(dir):
+    files = []
+    for file in glob(dir+'/'+'proc000000*.bin*'):
+        if 'jacobian' in file or \
+           'ibool' in file or \
+           'x.bin' in file or \
+           'z.bin' in file:
+            continue
+        files += [file]
+    return sorted(files)
+
+
+def get_title(file):
+    pattern = '.*proc000000_(.*).bin'
+    return re.match(pattern, file).group(1)
+
+
+def get_args(file):
+    args = []
+    args += ['--title='+get_title(file)]
+    if '_kernel' in file:
+        args += ['--saturation=1']
+        args += ['--symmetric']
+
+    # sys.argv arguments, if given, line will override those above
+    nargs = len(sys.argv[2:])
+    if nargs:
+        args += sys.argv[2:]
+
+    return args
+
+
+def get_cmd(exe, dir, file):
+    return ' '.join(
+        [exe]+
+        get_coord_files(dir)+
+        [file]+
+        get_args(file)
+        )
+
+
+def parse_args():
+    return sys.argv[1]
+
+
+
+if __name__ == '__main__':
+    """ USAGE:  quickplot DIR [ARGS]
+
+      Plots all model or kernel parameters in given directory. Any additional
+      arguments after DIR are not used by quickplot and instead passed to 
+      plotgll
+    """
+    exe = 'python -W ignore '+which('plotgll')
+
+    if not which('plotgll'):
+        raise EnvironmentError( 
+            "plotgll not found on path")
+
+    if not sys.argv[1:]:
+        raise IOError(
+            "usage: quickplot DIR [ARGS]")
+
+    dir = parse_args()
+
+    if not exists(dir):
+        raise IOError(
+            "directory does not exit: %s" % dir)
+
+    files = get_data_files(dir)
+    cmd = '&&\n\n'.join([get_cmd(exe, dir, file) for file in files])
+    call(cmd, shell=True)
+

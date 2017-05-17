@@ -294,8 +294,8 @@ class inversion(object):
         optimize.savetxt(dst, [total_misfit])
 
 
-    def minmax(self, path, dict):
-        """ Updates minmax log with latest model or kernels
+    def write_minmax(self, path, dict):
+        """ Updates minmax log with latest values
         """
         with open(PATH.OUTPUT+'/'+'minmax', 'a') as file:
             file.write(abspath(path)+'\n')

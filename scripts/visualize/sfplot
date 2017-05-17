@@ -9,27 +9,115 @@ from seisflows.tools.graphics import plot_vector
 
 
 def parse_args():
-    # Parse input arguments
-    parser = argparse.ArgumentParser(description='Plot vector/time series.')
+    parser = argparse.ArgumentParser(
+        description='plots vector or time series')
 
-    # file and format flags
-    parser.add_argument('file')
+    parser.add_argument('file',
+        help='filename/data source')
+
+    parser.add_argument('-n',
+        default=1,
+        type=int,
+        help='trace number')
+
+    parser.add_argument('-f', '--format',
+        default='ascii',
+        help='data format')
+
     parser.add_argument('-xl', '--xlabel',
-                        default='',
-                        help='x axis label')
+        default='',
+        help='x axis label')
+
     parser.add_argument('-yl', '--ylabel',
-                        default='',
-                        help='y axis label')
+        default='',
+        help='y axis label')
+
     parser.add_argument('-t', '--title',
-                        default='',
-                        help='title')
+        default='',
+        help='title')
 
     return parser.parse_args()
+
+
+def read_ascii(args):
+    data = np.loadtxt(args.file)
+    if data.ndim == 1:
+        t = range(len(data))
+        v = data
+    elif data.ndim == 2:
+        t = data[:, 0]
+        v = data[:, 1]
+    else:
+        raise ValueError(
+            'v must be a vector or time series')
+    return t,v
+
+
+def read_rows():
+    data = np.loadtxt(args.file)
+    if data.ndim == 2:
+        n = args.n
+        v = v[n, :]
+        t = range(len(v))
+    else:
+        raise ValueError
+
+
+def read_columns():
+    data = np.loadtxt(args.file)
+    if data.ndim == 2:
+        n = args.n
+        v = v[:, n]
+        t = range(len(v))
+    else:
+        raise ValueError
+
+
+def read_su(args):
+    import obspy
+    data = obspy.read(args.file, format='SU', byteorder='<')
+    stats = data[args.n].stats
+    n = args.n
+    t = np.arange(stats.npts)*stats.delta
+    v = data[n].data
+    return t,v
+
+
+def read_generic(args):
+    try:
+        import obspy
+        data = obspy.read(args.file, format=args.format)
+        n = args.n
+        t = range(data[n].shape[0])
+        w = data[n].data
+        return t,v
+    except:
+        raise NotImplementedError
+
+
 
 if __name__ == "__main__":
 
     args = parse_args()
 
-    # load into numpy array
-    v = np.loadtxt(args.file)
-    plot_vector(v, xlabel=args.xlabel, ylabel=args.ylabel, title=args.title)
+
+    # read data
+    if args.format in ['ascii']:
+        t,v = read_ascii(args)
+
+    elif args.format in ['cols', 'columns']:
+        t,v = read_ascii(args)
+
+    elif args.format in ['rows']:
+        t,v = read_rows(args)
+
+    elif args.format in ['SU', 'su']:
+        t,v =  read_su(args)
+
+    else:
+        t,v = read_generic(args)
+
+
+    # plot time series
+    plot_vector(t, v, xlabel=args.xlabel, ylabel=args.ylabel, title=args.title)
+

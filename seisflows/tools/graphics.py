@@ -6,7 +6,20 @@ from scipy.interpolate import interp1d
 from obspy.core.stream import Stream
 
 
-def plot_vector(v, xlabel='', ylabel='', title=''):
+def plot_gll(x, y, z):
+    """ Plots values on 2D unstructured GLL mesh
+    """
+    r = (max(x) - min(x))/(max(y) - min(y))
+    rx = r/np.sqrt(1 + r**2)
+    ry = 1/np.sqrt(1 + r**2)
+
+    f = plt.figure(figsize=(10*rx, 10*ry))
+    p = plt.tricontourf(x, y, z, 125)
+    plt.axis('image')
+    return f, p
+
+
+def plot_vector(t, v, xlabel='', ylabel='', title=''):
     """ Plots a vector or time series.
 
     Parameters
@@ -38,7 +51,7 @@ def plot_vector(v, xlabel='', ylabel='', title=''):
         y = v[:, 1]
 
     # plot
-    plt.plot(x, y)
+    plt.plot(t, v)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)

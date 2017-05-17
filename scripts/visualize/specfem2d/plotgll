@@ -1,0 +1,123 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+
+from glob import glob
+from os.path import abspath, join
+from seisflows.tools.graphics import plot_gll
+from seisflows.plugins.io.fortran_binary import _read
+from seisflows.tools.tools import exists
+
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='plots SPECFEM2D model or kernels')
+
+    # required input file arguments
+    parser.add_argument('xcoords',
+        help='x coordinates file')
+
+    parser.add_argument('ycoords',
+        help='y coordinates file')
+
+    parser.add_argument('file',
+        help='database file')
+
+    # optional formatting arguments
+    parser.add_argument('--cbar',
+        dest='cbar',
+        action='store_true',
+        help='display colorbar')
+    parser.set_defaults(cbar=False)
+
+    parser.add_argument('--cmap',
+        default='seismic',
+        help='colormap scheme')
+
+    parser.add_argument('--cmin', 
+        type=float,
+        default=None,
+        help='colormap min')
+
+    parser.add_argument('--cmax', 
+        type=float,
+        default=None,
+        help='colormap max')
+
+    parser.add_argument('--saturation',
+        type=float,
+        default=1.,
+        help='colormap saturation factor')
+
+    parser.add_argument('--symmetric',
+        dest='symmetric',
+        action='store_true',
+        help='colormap symmetry flag')
+    parser.set_defaults(symmetric=False)
+
+    parser.add_argument('--title',
+        type=str,
+        default='',
+        help='title')
+
+    return parser.parse_args()
+
+
+
+if __name__ == '__main__':
+    """ Plots GLL model read from SPECFEM2D Fortran binary file
+
+        For usage information: plotgll --help
+    """
+
+    args = parse_args()
+
+    x = _read(args.xcoords)
+    y = _read(args.ycoords)
+    v = _read(args.file)
+
+    minval = min(v)
+    maxval = max(v)
+
+    msg = '\n%s\nmin, max: %f, %f\n'
+    print msg % (args.file, minval, maxval)
+
+    f, p = plot_gll(x, y, v)
+
+    plt.axes().set_aspect('equal')
+
+    # set colormap
+    if args.cmap:
+        p.set_cmap(args.cmap)
+
+    # set colormap limits
+    if args.cmin!=None and \
+       args.cmax!=None:
+        assert args.cmin < args.cmax
+        p.set_clim([args.cmin, args.cmax])
+
+    if args.symmetric:
+        maxabs = max(np.abs(p.get_clim()))
+        clim = np.array([-maxabs, +maxabs])
+        p.set_clim(clim)
+
+    # adjust saturation
+    if args.saturation:
+        clim = np.array(p.get_clim())
+        cavg = np.mean(clim)
+        p.set_clim((clim-cavg)/args.saturation+cavg)
+
+    # optional colorbar
+    if args.cbar:
+        cb = plt.colorbar(orientation='horizontal')
+        cb.set_label(args.title)
+    else:
+        plt.title(args.title)
+
+    plt.show()
+

@@ -133,3 +133,21 @@ def touch(filename, times=None):
         os.utime(filename, times)
 
 
+
+def which(name):
+    def isexe(file):
+        return os.path.isfile(file) and os.access(file, os.X_OK)
+
+    dirname, filename = os.path.split(name)
+    if dirname:
+        if isexe(name):
+            return name
+
+    for path in os.environ["PATH"].split(os.pathsep):
+        path = path.strip('"')
+        fullname = os.path.join(path, name)
+        if isexe(fullname):
+            return fullname
+    else:
+        return None
+
