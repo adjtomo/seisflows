@@ -10,6 +10,39 @@ from seisflows.tools.tools import exists
 from seisflows.tools.unix import which
 
 
+def parse_args():
+    return sys.argv[1]
+
+
+def get_cmd(exe, dir, file):
+    return ' '.join(
+        [exe]+
+        get_coord_files(dir)+
+        [file]+
+        get_args(file)
+        )
+
+
+def get_args(file):
+    args = []
+    args += ['--title='+get_title(file)]
+    if '_kernel' in file:
+        args += ['--saturation=1']
+        args += ['--symmetric']
+
+    # sys.argv arguments, if given, will override those above
+    nargs = len(sys.argv[2:])
+    if nargs:
+        args += sys.argv[2:]
+
+    return args
+
+
+def get_title(file):
+    pattern = '.*proc000000_(.*).bin'
+    return re.match(pattern, file).group(1)
+
+
 def get_coord_files(dir):
     for files in [
         [abspath(join(dir, subdir, 'proc000000_x.bin')),
@@ -41,47 +74,16 @@ def get_data_files(dir):
     return sorted(files)
 
 
-def get_title(file):
-    pattern = '.*proc000000_(.*).bin'
-    return re.match(pattern, file).group(1)
-
-
-def get_args(file):
-    args = []
-    args += ['--title='+get_title(file)]
-    if '_kernel' in file:
-        args += ['--saturation=1']
-        args += ['--symmetric']
-
-    # sys.argv arguments, if given, line will override those above
-    nargs = len(sys.argv[2:])
-    if nargs:
-        args += sys.argv[2:]
-
-    return args
-
-
-def get_cmd(exe, dir, file):
-    return ' '.join(
-        [exe]+
-        get_coord_files(dir)+
-        [file]+
-        get_args(file)
-        )
-
-
-def parse_args():
-    return sys.argv[1]
-
-
 
 if __name__ == '__main__':
     """ USAGE:  quickplot DIR [ARGS]
 
-      Plots all model or kernel parameters in given directory. Any additional
-      arguments after DIR are not used by quickplot and instead passed to 
-      plotgll
+      Plots all SPECFEM2D model or kernel files in given directory DIR. 
+
+      Any additional arguments ARGS are simply passed to PLOTGLL and not used 
+      directly by QUICKPLOT
     """
+
     exe = 'python -W ignore '+which('plotgll')
 
     if not which('plotgll'):
