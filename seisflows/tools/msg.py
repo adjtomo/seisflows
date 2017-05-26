@@ -122,19 +122,6 @@ WRITER ERROR
 
 ###
 
-TaskError_LSF = """
-
-TASK ERROR
-
-    Task failed:  %s.%s
-
-    For more information, see output.lsf/%s
-
-    Stopping workflow...
-
-"""
-
-
 TaskTimeout = """
 
 TASK TIMED OUT
@@ -147,6 +134,20 @@ TASK TIMED OUT
         Time limit (minutes): %s
 
 """
+
+
+TaskError_LSF = """
+
+TASK ERROR
+
+    Task failed:  %s.%s
+
+    For more information, see output.lsf/%s
+
+    Stopping workflow...
+
+"""
+
 
 
 TaskError_PBS = """
