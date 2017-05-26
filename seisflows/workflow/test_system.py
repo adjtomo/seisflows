@@ -42,7 +42,7 @@ class test_system:
         """
         time.sleep(1)
         try:
-            print msg % system.taskid()+1 
+            print msg % (system.taskid()+1)
         except:
             print msg
 

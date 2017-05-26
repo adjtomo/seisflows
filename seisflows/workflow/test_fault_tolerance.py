@@ -33,16 +33,8 @@ class test_fault_tolerance:
 
 
     def main(self):
-        system.run('workflow', 'hello', 
-            hosts='all')
-
-        print ''
-
-
-    def main(self):
         system.run('workflow', 'hello',
-            hosts='all',
-            msg='Hello from %d')
+            hosts='all')
 
         print ''
 
@@ -52,14 +44,11 @@ class test_fault_tolerance:
         """
         time.sleep(1)
 
-        if random() < FAILRATE:
+        if random() < PAR.FAILRATE:
             print 'task failed...'
             sys.exit(-1)
 
-        try:
-            print msg % system.taskid()+1 
-        except:
-            print msg
+        print msg % system.taskid()
 
         print ''
 
