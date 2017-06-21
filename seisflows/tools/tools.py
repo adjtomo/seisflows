@@ -30,28 +30,6 @@ def call(*args, **kwargs):
     subprocess.check_call(*args, **kwargs)
 
 
-def call_solver(mpiexec, executable, output='solver.log'):
-    """ Calls MPI solver executable
-
-      A less complicated version, without error catching, would be
-      subprocess.call(mpiexec +' '+ executable, shell=True)
-    """
-    try:
-        f = open(output,'w')
-        subprocess.check_call(
-            mpiexec +' '+ executable,
-            shell=True,
-            stdout=f)
-    except subprocess.CalledProcessError, err:
-        print msg.SolverError % (mpiexec +' '+ executable)
-        sys.exit(-1)
-    except OSError:
-        print msg.SolverError % (mpiexec +' '+ executable)
-        sys.exit(-1)
-    finally:
-        f.close()
-
-
 def diff(list1, list2):
     """ Difference between two lists
     """

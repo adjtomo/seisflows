@@ -4,7 +4,7 @@ import sys
 from seisflows.tools import array
 from seisflows.tools import unix
 from seisflows.tools.tools import findpath
-from seisflows.tools.shared import getpar, setpar
+from seisflows.tools.seismic import getpar, setpar
 
 
 ### input file writers

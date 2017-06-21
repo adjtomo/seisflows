@@ -7,10 +7,11 @@ import sys
 import numpy as np
 
 import seisflows.plugins.solver.specfem3d as solvertools
-from seisflows.tools.shared import getpar, setpar
+from seisflows.tools.seismic import getpar, setpar
 
 from seisflows.tools import unix
-from seisflows.tools.tools import exists, call_solver
+from seisflows.tools.seismic import call_solver
+from seisflows.tools.tools import exists
 from seisflows.config import ParameterError, custom_import
 
 PAR = sys.modules['seisflows_parameters']

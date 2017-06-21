@@ -4,7 +4,7 @@ import sys
 from os.path import join
 
 from seisflows.plugins import io
-from seisflows.tools.shared import ModelDict
+from seisflows.tools.seismic import ModelDict
 
 from seisflows.tools import unix
 from seisflows.tools.tools import exists

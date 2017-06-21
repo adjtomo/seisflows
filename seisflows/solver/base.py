@@ -10,8 +10,8 @@ from os.path import basename, join
 from seisflows.config import ParameterError, custom_import
 from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
-from seisflows.tools.shared import ModelDict
-from seisflows.tools.tools import Struct, diff, exists, call_solver, module_exists
+from seisflows.tools.seismic import ModelDict, call_solver
+from seisflows.tools.tools import Struct, diff, exists
 
 
 
