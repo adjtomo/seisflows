@@ -4,7 +4,8 @@ import numpy as np
 
 from os.path import abspath
 from seisflows.tools import unix
-from seisflows.tools.tools import savetxt, loadnpy, savenpy
+from seisflows.tools.array import loadnpy, savenpy
+from seisflows.tools.tools import savetxt
 from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']
@@ -37,8 +38,11 @@ class test_optimize(object):
         if 'END' not in PAR:
             raise Exception
 
+        if 'STEPLENMAX' not in PAR:
+            setattr(PAR, 'STEPLENMAX', 1.e99)
+
         if 'THRESH' not in PAR:
-            setattr(PAR, 'THRESH', 1.e-5)
+            setattr(PAR, 'THRESH', 1.e-3)
 
         # check paths
         if 'SCRATCH' not in PATH:
@@ -113,26 +117,25 @@ class test_optimize(object):
 
         while True:
             cls.evaluate_function()
-            optimize.update_status()
+            status = optimize.update_search()
 
-            if optimize.isdone:
+            if status > 0:
                 optimize.finalize_search()
                 break
 
-            elif optimize.step_count < PAR.STEPMAX:
-                optimize.compute_step()
+            elif status == 0:
                 continue
 
-            else:
-                retry = optimize.retry_status()
-                if retry:
-                    print ' Line search failed... retry'
+            elif status < 0:
+                if optimize.retry_status():
+                    print ' Line search failed\n\n Retrying...'
                     optimize.restart()
                     cls.line_search()
                     break
                 else:
-                    print ' Line search failed... abort'
+                    print ' Line search failed\n\n Aborting...'
                     sys.exit(-1)
+
 
 
     def evaluate_function(cls):

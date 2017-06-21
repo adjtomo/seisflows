@@ -4,11 +4,11 @@ import numpy as np
 
 from os.path import join
 from seisflows.config import ParameterError
-from seisflows.plugins import preconds
+from seisflows.plugins import line_search, preconds
 from seisflows.tools import msg, unix
+from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.math import angle, polyfit2, backtrack2
 from seisflows.tools.shared import  Writer, StepWriter
-from seisflows.tools.tools import loadnpy, savenpy
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -42,28 +42,16 @@ class base(object):
             setattr(PAR, 'PRECOND', None)
 
         # maximum number of trial steps
-        if 'STEPMAX' not in PAR:
-            setattr(PAR, 'STEPMAX', 10)
+        if 'STEPCOUNTMAX' not in PAR:
+            setattr(PAR, 'STEPCOUNTMAX', 10)
 
-        # initial step length as percent of current model
-        if 'STEPINIT' not in PAR:
-            setattr(PAR, 'STEPINIT', 0.05)
+        # initial step length as fraction of current model
+        if 'STEPLENINIT' not in PAR:
+            setattr(PAR, 'STEPLENINIT', 0.05)
 
-        # optional initial step length safegaurd
-        if 'STEPTHRESH' not in PAR:
-            setattr(PAR, 'STEPTHRESH', None)
-
-        # step length factor in bracketing line search
-        if 'STEPFACTOR' not in PAR:
-            setattr(PAR, 'STEPFACTOR', 0.5)
-
-        # optional parameter, useful for NLCG line search
-        if 'STEPOVERSHOOT' not in PAR:
-            setattr(PAR, 'STEPOVERSHOOT', 0.)
-
-        # ad hoc factor by which to scale gradient
-        if 'ADHOCFACTOR' not in PAR:
-            setattr(PAR, 'ADHOCFACTOR', 1.)
+        # maximum step length as fraction of current model
+        if 'STEPLENMAX' not in PAR:
+            setattr(PAR, 'STEPLENMAX', 0.5)
 
         # where temporary files are written
         if 'OPTIMIZE' not in PATH:
@@ -78,13 +66,34 @@ class base(object):
             print msg.CompatibilityError1
             sys.exit(-1)
 
+        if PAR.LINESEARCH:
+            assert PAR.LINESEARCH in dir(line_search)
+
         if PAR.PRECOND:
             assert PAR.PRECOND in dir(preconds)
+
+        if PAR.STEPLENINIT:
+            assert 0. < PAR.STEPLENINIT
+
+        if PAR.STEPLENMAX:
+            assert 0. < PAR.STEPLENMAX
+
+        if PAR.STEPLENINIT and PAR.STEPLENMAX:
+            assert PAR.STEPLENINIT < PAR.STEPLENMAX
 
 
     def setup(self):
         """ Sets up nonlinear optimization machinery
         """
+        # prepare line search machinery
+        self.line_search = getattr(line_search, PAR.LINESEARCH)(
+            step_count_max=PAR.STEPCOUNTMAX)
+
+        if PAR.PRECOND:
+            self.precond = getattr(precond, PAR.PRECOND)()
+        else:
+            self.precond = None
+
         # prepare output writers
         self.writer = Writer(
                 path=PATH.WORKDIR+'/'+'output.stats')
@@ -92,21 +101,11 @@ class base(object):
         self.stepwriter = StepWriter(
                 path=PATH.WORKDIR+'/'+'output.optim')
 
+        # prepare scratch directory
         unix.mkdir(PATH.OPTIMIZE)
-
-        # write initial model
         if 'MODEL_INIT' in PATH:
             solver = sys.modules['seisflows_solver']
             self.save('m_new', solver.merge(solver.load(PATH.MODEL_INIT)))
-
-
-    def precond(self):
-        """ Loads preconditioner machinery
-        """
-        if PAR.PRECOND in dir(preconds):
-            return getattr(preconds, PAR.PRECOND)()
-        else:
-            return None
 
 
     # The following names are used in the 'compute_direction' method and for
@@ -121,9 +120,6 @@ class base(object):
     #    g_old - previous gradient direction
     #    p_new - current search direction
     #    p_old - previous search direction
-    #    s_new - current slope along search direction
-    #    s_old - previous slope along search direction
-    #    alpha - trial step length
 
     def compute_direction(self):
         """ Computes model update direction from stored gradient
@@ -132,225 +128,117 @@ class base(object):
         raise NotImplementedError
 
 
-    # The following names are used exclusively for the line search:
-    #     m - model vector
-    #     p - search direction vector
-    #     s - slope along search direction
-    #     f - value of objective function, evaluated at m
-    #     x - step length along search direction
-    #     p_ratio - ratio of model norm to search direction norm
-    #     s_ratio - ratio of current slope to previous slope
-
     def initialize_search(self):
         """ Determines initial step length for line search
         """
         m = self.load('m_new')
+        g = self.load('g_new')
         p = self.load('p_new')
         f = self.loadtxt('f_new')
         norm_m = max(abs(m))
         norm_p = max(abs(p))
-        p_ratio = float(norm_m/norm_p)
 
-        # reset search history
-        self.search_history = [[0., f]]
-        self.step_count = 0
-        self.isdone = 0
-        self.isbest = 0
-        self.isbrak = 0
+        self.line_search.step_count = 0
+        if self.restarted: self.line_search.clear_history()
+        self.line_search.step_lens += [0.]
+        self.line_search.func_vals += [f]
+        self.line_search.gtg += [self.dot(g,g)]
+        self.line_search.gtp += [self.dot(g,p)]
+
+        self.stepwriter(
+            steplen=0., 
+            funcval=self.loadtxt('f_new'))
 
         # determine initial step length
-        if self.iter == 1:
-            alpha = p_ratio*PAR.STEPINIT
-        elif self.restarted:
-            alpha = p_ratio*PAR.STEPINIT
-        elif PAR.OPTIMIZE in ['LBFGS']:
-            alpha = 1.
+        if PAR.STEPLENMAX:
+            self.line_search.step_len_max = \
+                PAR.STEPLENMAX*norm_m/norm_p
+
+        if PAR.STEPLENINIT and len(self.line_search.step_lens)<=1:
+            alpha = PAR.STEPLENINIT*norm_m/norm_p
+
         else:
-            alpha = self.initial_step()
+            alpha = self.line_search.initial_step()
 
-        # optional ad hoc scaling
-        if PAR.STEPOVERSHOOT:
-            alpha *= PAR.STEPOVERSHOOT
-
-        # optional maximum step length safegaurd
-        if PAR.STEPTHRESH:
-            if alpha > p_ratio * PAR.STEPTHRESH and \
-                self.iter > 1:
-                alpha = p_ratio * PAR.STEPTHRESH
-
-        # write trial model corresponding to chosen step length
+        # write model corresponding to chosen step length
         self.savetxt('alpha', alpha)
         self.save('m_try', m + alpha*p)
 
-        # append latest statistics
-        self.stepwriter(steplen=0., funcval=f)
 
-
-    def update_status(self):
+    def update_search(self):
         """ Updates line search status
 
-          Maintains line search history by keeping track of step length and
-          function value from each trial model evaluation. From line search
-          history, determines whether stopping criteria have been satisfied.
-
-          Here and elsewhere we use the convention
-              status > 0  : success
-              status == 0 : not finished
-              status < 0  : failed
-
+            Maintains line search history by keeping track of step length and
+            function value from each trial model evaluation. From line search
+            history, determines whether stopping criteria have been satisfied.
         """
-        x_ = self.loadtxt('alpha')
-        f_ = self.loadtxt('f_try')
-        if np.isnan(f_):
-            raise ValueError
+        self.line_search.step_count += 1
+        self.line_search.step_lens += [self.loadtxt('alpha')]
+        self.line_search.func_vals += [self.loadtxt('f_try')]
 
-        # update search history
-        self.search_history += [[x_, f_]]
-        self.step_count += 1
+        self.stepwriter(
+            steplen=self.loadtxt('alpha'),
+            funcval=self.loadtxt('f_try'))
 
-        x = self.step_lens()
-        f = self.func_vals()
-        fmin = f.min()
-        imin = f.argmin()
-
-        # is current step length the best so far?
-        vals = self.func_vals(sort=False)
-        if np.all(vals[-1] < vals[:-1]):
-            self.isbest = 1
-
-        # are stopping criteria satisfied?
-        if PAR.LINESEARCH == 'Fixed':
-            if (fmin < f[0]) and any(fmin < f[imin:]):
-                self.isdone = 1
-
-        elif PAR.LINESEARCH == 'Bracket' or \
-            self.iter == 1 or self.restarted:
-            if self.isbrak:
-                self.isdone = 1
-            elif (fmin < f[0]) and any(fmin < f[imin:]):
-                self.isbrak = 1
-
-        elif PAR.LINESEARCH == 'Backtrack':
-            if fmin < f[0]:
-                self.isdone = 1
-
-        # append latest statistics
-        self.stepwriter(steplen=x_, funcval=f_)
-
-        return self.isdone
-
-
-    def compute_step(self):
-        """ Computes next trial step length
-        """
-        m = self.load('m_new')
-        g = self.load('g_new')
-        p = self.load('p_new')
-        s = self.loadtxt('s_new')
-
-        norm_m = max(abs(m))
-        norm_p = max(abs(p))
-        p_ratio = float(norm_m/norm_p)
-
-        x = self.step_lens()
-        f = self.func_vals()
-
-        # compute trial step length
-        if PAR.LINESEARCH == 'Fixed':
-            alpha = p_ratio*(self.step_count + 1)*PAR.STEPINIT
-
-        elif PAR.LINESEARCH == 'Bracket' or \
-            self.iter==1 or self.restarted:
-            if any(f[1:] < f[0]) and (f[-2] < f[-1]):
-                alpha = polyfit2(x, f)
-
-            elif any(f[1:] <= f[0]):
-                alpha = self.loadtxt('alpha')*PAR.STEPFACTOR**-1
-            else:
-                alpha = self.loadtxt('alpha')*PAR.STEPFACTOR
-
-        elif PAR.LINESEARCH == 'Backtrack':
-            # calculate slope along 1D profile
-            slope = s/self.dot(g,g)**0.5
-            if PAR.ADHOCFACTOR:
-                slope *= PAR.ADHOCFACTOR            
-
-            alpha = backtrack2(f[0], slope, x[1], f[1], b1=0.1, b2=0.5)
-
-        # write trial model corresponding to chosen step length
-        self.savetxt('alpha', alpha)
-        self.save('m_try', m + alpha*p)
+        alpha, status = self.line_search.update()
+        if status >= 0:
+            # write model corresponding to chosen step length
+            m = self.load('m_new')
+            p = self.load('p_new')
+            self.savetxt('alpha', alpha)
+            self.save('m_try', m + alpha*p)
+        return status
 
 
     def finalize_search(self):
-        """ Cleans working directory and writes updated model
+        """ Cleans scratch directory and writes output statistics
         """
         m = self.load('m_new')
         g = self.load('g_new')
         p = self.load('p_new')
-        s = self.loadtxt('s_new')
+        x = self.line_search.current_vals()[0]
+        f = self.line_search.current_vals()[1]
 
-        x = self.step_lens()
-        f = self.func_vals()
-
-        # clean working directory
+        # clean scratch directory
         unix.cd(PATH.OPTIMIZE)
-        unix.rm('alpha')
-        unix.rm('m_try')
-        unix.rm('f_try')
-
         if self.iter > 1:
             unix.rm('m_old')
             unix.rm('f_old')
             unix.rm('g_old')
             unix.rm('p_old')
             unix.rm('s_old')
-
         unix.mv('m_new', 'm_old')
         unix.mv('f_new', 'f_old')
         unix.mv('g_new', 'g_old')
         unix.mv('p_new', 'p_old')
-        unix.mv('s_new', 's_old')
 
-        # write updated model
-        alpha = x[f.argmin()]
-        self.savetxt('alpha', alpha)
-        self.save('m_new', m + alpha*p)
+        unix.mv('m_try', 'm_new')
         self.savetxt('f_new', f.min())
 
-        # append latest statistics
+        # output latest statistics
         self.writer('factor', -self.dot(g,g)**-0.5 * (f[1]-f[0])/(x[1]-x[0]))
         self.writer('gradient_norm_L1', np.linalg.norm(g, 1))
         self.writer('gradient_norm_L2', np.linalg.norm(g, 2))
         self.writer('misfit', f[0])
         self.writer('restarted', self.restarted)
         self.writer('slope', (f[1]-f[0])/(x[1]-x[0]))
-        self.writer('step_count', self.step_count)
+        self.writer('step_count', self.line_search.step_count)
         self.writer('step_length', x[f.argmin()])
         self.writer('theta', 180.*np.pi**-1*angle(p,-g))
-
         self.stepwriter.newline()
 
 
     def retry_status(self):
-        """ Returns false if search direction was the same as gradient
-          direction; returns true otherwise
-
-          Here and elsewhere we use the convention
-              status > 0  : success
-              status == 0 : not finished
-              status < 0  : failed
-
+        """ Checks if search direction was the same as gradient direction
         """
         g = self.load('g_new')
         p = self.load('p_new')
-
-        thresh = 1.e-3
         theta = angle(p,-g)
 
         if PAR.VERBOSE >= 2:
             print ' theta: %6.3f' % theta
 
+        thresh = 1.e-3
         if abs(theta) < thresh:
             return 0
         else:
@@ -363,55 +251,12 @@ class base(object):
         """
         g = self.load('g_new')
         self.save('p_new', -g)
-        self.savetxt('s_new', self.dot(g,g))
+        self.line_search.clear_history()
+        self.line_search.step_count = 0
         self.restarted = 1
         self.stepwriter.iter -= 1
         self.stepwriter.newline()
 
-
-
-    ### line search utilities
-
-    def initial_step(self):
-        """ Determines first trial step in line search; see eg Nocedal and 
-          Wright 2e section 3.5
-        """
-        alpha = self.loadtxt('alpha')
-        s_new = self.loadtxt('s_new')
-        s_old = self.loadtxt('s_old')
-        s_ratio = s_new/s_old
-        return 2.*s_ratio*alpha
-
-
-    def step_lens(self, sort=True):
-        """ Returns previous step lengths from search history
-        """
-        x, f = zip(*self.search_history)
-        x = np.array(x)
-        f = np.array(f)
-        f_sorted = f[abs(x).argsort()]
-        x_sorted = x[abs(x).argsort()]
-        if sort:
-            return x_sorted
-        else:
-            return x
-
-
-    def func_vals(self, sort=True):
-        """ Returns previous function values from search history
-        """
-        x, f = zip(*self.search_history)
-        x = np.array(x)
-        f = np.array(f)
-        f_sorted = f[abs(x).argsort()]
-        x_sorted = x[abs(x).argsort()]
-        if sort:
-            return f_sorted
-        else:
-            return f
-
-
-    ### utilities
 
     def dot(self,x,y):
         """ Computes inner product between vectors
@@ -425,7 +270,6 @@ class base(object):
 
     def save(self, filename, array):
         savenpy(PATH.OPTIMIZE+'/'+filename, array)
-
 
     def loadtxt(self, filename):
         return float(np.loadtxt(PATH.OPTIMIZE+'/'+filename))
