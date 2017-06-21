@@ -100,10 +100,10 @@ class base(object):
             raise ParameterError(PATH, 'SPECFEM_DATA')
 
         # check IO machinery
-        if 'IOFORMAT' not in PAR:
-            setattr(PAR, 'IOFORMAT', 'fortran_binary')
+        if 'SOLVERIO' not in PAR:
+            setattr(PAR, 'SOLVERIO', 'fortran_binary')
 
-        full_dotted_name = 'seisflows.plugins.io'+'.'+PAR.IOFORMAT
+        full_dotted_name = 'seisflows.plugins.io'+'.'+PAR.SOLVERIO
         assert module_exists(full_dotted_name)
         module = import_module(full_dotted_name)
         assert hasattr(module, 'read_slice')
@@ -236,7 +236,7 @@ class base(object):
     def io(self):
         """ Solver IO module
         """
-        full_dotted_name = 'seisflows.plugins.io'+'.'+PAR.IOFORMAT
+        full_dotted_name = 'seisflows.plugins.solver_io'+'.'+PAR.SOLVERIO
         return import_module(full_dotted_name)
 
 
