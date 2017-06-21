@@ -11,11 +11,11 @@ class Bracket(Base):
 
       Variables
           x - list of step lenths from current line search
-          f - correpsonding list of function values from current line search
+          f - correpsonding list of function values
           m - how many step lengths in current line search?
           n - how many model updates in optimization problem?
           gtg - dot product of gradient with itself                    
-          gtg - dot product of gradient and search direction
+          gtp - dot product of gradient and search direction
 
       Status codes
           status > 0  : finished
