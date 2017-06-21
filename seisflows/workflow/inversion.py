@@ -254,8 +254,7 @@ class inversion(object):
         """
         src = 'm_'+suffix
         dst = path +'/'+ 'model'
-        parts = solver.split(optimize.load(src))
-        solver.save(dst, parts)
+        solver.save(solver.split(optimize.load(src)), dst)
 
 
     def write_gradient(self, path='', suffix=''):
@@ -286,7 +285,7 @@ class inversion(object):
     def save_model(self):
         src = 'm_new'
         dst = join(PATH.OUTPUT, 'model_%04d' % optimize.iter)
-        solver.save(dst, solver.split(optimize.load(src)))
+        solver.save(solver.split(optimize.load(src)), dst)
 
 
     def save_kernels(self):

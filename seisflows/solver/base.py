@@ -103,7 +103,7 @@ class base(object):
         if 'SOLVERIO' not in PAR:
             setattr(PAR, 'SOLVERIO', 'fortran_binary')
 
-        full_dotted_name = 'seisflows.plugins.io'+'.'+PAR.SOLVERIO
+        full_dotted_name = 'seisflows.plugins.solver_io'+'.'+PAR.SOLVERIO
         assert module_exists(full_dotted_name)
         module = import_module(full_dotted_name)
         assert hasattr(module, 'read_slice')
