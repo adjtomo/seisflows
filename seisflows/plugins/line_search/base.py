@@ -1,6 +1,5 @@
 
 
-from os.path import abspath
 from seisflows.tools.array import count_zeros
 
 import numpy as np
@@ -8,11 +7,23 @@ import numpy as np
 
 class Base(object):
     """ Abstract base class for line search
+
+      Variables:
+          x - list of step lenths from current line search
+          f - correpsonding list of function values from current line search
+          m - how many step lengths in current line search?
+          n - how many model updates in optimization problem?
+          gtg - dot product of gradient with itself                    
+          gtg - dot product of gradient and search direction
+
+      Status codes:
+          status > 0  : finished
+          status == 0 : not finished
+          status < 0  : failed
     """
-    def __init__(self, path='.',
-             step_count_max=10,
-             step_len_max=np.inf,
-             step_extrap_factor=1.618):
+    def __init__(self,
+                step_count_max=10,
+                step_len_max=np.inf):
 
         # maximum number of trial steps
         self.step_count_max = step_count_max

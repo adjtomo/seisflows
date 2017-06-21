@@ -8,6 +8,19 @@ import numpy as np
 
 class Bracket(Base):
     """ Implements bracketing line search
+
+      Variables:
+          x - list of step lenths from current line search
+          f - correpsonding list of function values from current line search
+          m - how many step lengths in current line search?
+          n - how many model updates in optimization problem?
+          gtg - dot product of gradient with itself                    
+          gtg - dot product of gradient and search direction
+
+      Status codes:
+          status > 0  : finished
+          status == 0 : not finished
+          status < 0  : failed
     """
 
     def initial_step(self):
@@ -32,10 +45,6 @@ class Bracket(Base):
     def update(self):
         """ Checks if termination conditions are satisfied and if necessary
            determines next step length in line search
-
-          status > 0  : finished
-          status == 0 : not finished
-          status < 0  : failed
         """
         x, f, m, n, gtg, gtp = self.current_vals()
 
