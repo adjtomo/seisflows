@@ -3,7 +3,7 @@ import sys
 import numpy as np
 
 from seisflows.config import custom_import, ParameterError
-from seisflows.optimize.lib.NLCG import NLCG as lib
+from seisflows.plugins import optimize
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -38,11 +38,11 @@ class NLCG(custom_import('optimize', 'base')):
     def setup(self):
         super(NLCG, self).setup()
 
-        self.NLCG = lib(
+        self.NLCG = getattr(optimize, 'NLCG')(
             path=PATH.OPTIMIZE,
             maxiter=PAR.NLCGMAX,
             thresh=PAR.NLCGTHRESH,
-            precond=self.precond())
+            precond=self.precond)
 
 
     def compute_direction(self):

@@ -90,7 +90,7 @@ class base(object):
             step_count_max=PAR.STEPCOUNTMAX)
 
         if PAR.PRECOND:
-            self.precond = getattr(precond, PAR.PRECOND)()
+            self.precond = getattr(preconds, PAR.PRECOND)()
         else:
             self.precond = None
 
@@ -229,7 +229,10 @@ class base(object):
 
 
     def retry_status(self):
-        """ Checks if search direction was the same as gradient direction
+        """ Determines if retry is worthwhile after failed line search
+
+          Determines if retry is worthwhile by checking, in effect, if search 
+          direction was the same as gradient direction
         """
         g = self.load('g_new')
         p = self.load('p_new')

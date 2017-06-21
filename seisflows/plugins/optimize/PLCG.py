@@ -7,14 +7,11 @@ from seisflows.tools import unix
 from seisflows.tools.tools import loadtxt, savetxt
 #from seisflows.tools.io import OutputWriter
 
-from seisflows.optimize.lib.LBFGS import LBFGS
-from seisflows.optimize.lib.LCG import LCG
-
-from seisflows.optimize.lib.LBFGS import LBFGS as LBFGS_base
-from seisflows.optimize.lib.LCG import LCG
+from seisflows.plugins.optimize.LBFGS import LBFGS
+from seisflows.plugins.optimize.LCG import LCG
  
  
-class LBFGS(LBFGS_base):
+class LBFGS_(LBFGS):
     """ Adapts L-BFGS from nonlinear optimization to preconditioning
     """
     pass
