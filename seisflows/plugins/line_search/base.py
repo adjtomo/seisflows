@@ -8,7 +8,7 @@ import numpy as np
 class Base(object):
     """ Abstract base class for line search
 
-      Variables:
+      Variables
           x - list of step lenths from current line search
           f - correpsonding list of function values from current line search
           m - how many step lengths in current line search?
@@ -16,7 +16,7 @@ class Base(object):
           gtg - dot product of gradient with itself                    
           gtg - dot product of gradient and search direction
 
-      Status codes:
+      Status codes
           status > 0  : finished
           status == 0 : not finished
           status < 0  : failed
@@ -47,8 +47,7 @@ class Base(object):
 
 
     def current_vals(self, sort=True):
-        """ Returns step lengths, function values and other information about
-          current line search
+        """ Collects information about current line search
         """
         i = self.step_count
         j = count_zeros(self.step_lens)

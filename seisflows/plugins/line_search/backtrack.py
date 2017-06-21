@@ -8,7 +8,7 @@ import numpy as np
 class Backtrack(Bracket):
     """ Implements backtracking linesearch
 
-      Variables:
+      Variables
           x - list of step lenths from current line search
           f - correpsonding list of function values from current line search
           m - how many step lengths in current line search?
@@ -16,7 +16,7 @@ class Backtrack(Bracket):
           gtg - dot product of gradient with itself                    
           gtg - dot product of gradient and search direction
 
-      Status codes:
+      Status codes
           status > 0  : finished
           status == 0 : not finished
           status < 0  : failed

@@ -9,7 +9,7 @@ import numpy as np
 class Bracket(Base):
     """ Implements bracketing line search
 
-      Variables:
+      Variables
           x - list of step lenths from current line search
           f - correpsonding list of function values from current line search
           m - how many step lengths in current line search?
@@ -17,7 +17,7 @@ class Bracket(Base):
           gtg - dot product of gradient with itself                    
           gtg - dot product of gradient and search direction
 
-      Status codes:
+      Status codes
           status > 0  : finished
           status == 0 : not finished
           status < 0  : failed
@@ -34,10 +34,10 @@ class Bracket(Base):
         f = np.array(self.func_vals)
         gtp = self.gtp
 
-        alpha = x[f[:-1].argmin()] * gtp[-2]/gtp[-1]        
+        alpha = x[f[:-1].argmin()] * gtp[-2]/gtp[-1]
 
         if alpha > self.step_len_max:
-            alpha = self.step_len_max
+            alpha = 0.618034*self.step_len_max
 
         return alpha
 
@@ -57,7 +57,7 @@ class Bracket(Base):
             status = 0
 
         elif m <= self.step_count_max and all(f <= f[0]):
-            alpha = 1.618*x[-1]
+            alpha = 1.618034*x[-1]
             status = 0
 
         elif m <= self.step_count_max:
