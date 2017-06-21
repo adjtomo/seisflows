@@ -3,7 +3,7 @@ import sys
 import numpy as np
 
 from seisflows.config import custom_import, ParameterError
-from seisflows.optimize.lib.LBFGS import LBFGS as lib
+from seisflows.plugins import optimize
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -38,19 +38,18 @@ class LBFGS(custom_import('optimize', 'base')):
     def setup(self):
         super(LBFGS, self).setup()
 
-        self.LBFGS = lib(
+        self.LBFGS = getattr(optimize, 'LBFGS')(
             path=PATH.OPTIMIZE,
             memory=PAR.LBFGSMEM,
             maxiter=PAR.LBFGSMAX,
             thresh=PAR.LBFGSTHRESH,
-            precond=self.precond())
+            precond=self.precond)
 
 
     def compute_direction(self):
         g_new = self.load('g_new')
         p_new, self.restarted = self.LBFGS()
         self.save('p_new', p_new)
-        self.savetxt('s_new', self.dot(g_new, p_new))
         return p_new
 
 

@@ -8,9 +8,10 @@ from glob import glob
 from importlib import import_module
 from os.path import basename, join
 from seisflows.config import ParameterError, custom_import
+from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
-from seisflows.tools.shared import ModelDict
-from seisflows.tools.tools import Struct, diff, exists, call_solver, module_exists
+from seisflows.tools.seismic import ModelDict, call_solver
+from seisflows.tools.tools import Struct, diff, exists
 
 
 
@@ -79,6 +80,9 @@ class base(object):
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
+        if 'SOLVERIO' not in PAR:
+            setattr(PAR, 'SOLVERIO', 'fortran_binary')
+
         # check scratch paths
         if 'SCRATCH' not in PATH:
             raise ParameterError(PATH, 'SCRATCH')
@@ -99,18 +103,11 @@ class base(object):
         if 'SPECFEM_DATA' not in PATH:
             raise ParameterError(PATH, 'SPECFEM_DATA')
 
-        # check IO machinery
-        if 'IOFORMAT' not in PAR:
-            setattr(PAR, 'IOFORMAT', 'fortran_binary')
-
-        full_dotted_name = 'seisflows.plugins.io'+'.'+PAR.IOFORMAT
-        assert module_exists(full_dotted_name)
-        module = import_module(full_dotted_name)
-        assert hasattr(module, 'read_slice')
-        assert hasattr(module, 'write_slice')
-
         # assertions
         assert self.parameters != []
+        assert hasattr(solver_io, PAR.SOLVERIO)
+        assert hasattr(self.io, 'read_slice')
+        assert hasattr(self.io, 'write_slice')
 
 
     def setup(self):
@@ -236,8 +233,7 @@ class base(object):
     def io(self):
         """ Solver IO module
         """
-        full_dotted_name = 'seisflows.plugins.io'+'.'+PAR.IOFORMAT
-        return import_module(full_dotted_name)
+        return getattr(solver_io, PAR.SOLVERIO)
 
 
     def load(self, path, parameters=[], prefix='', suffix=''):

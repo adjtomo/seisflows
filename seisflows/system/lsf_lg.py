@@ -188,9 +188,9 @@ class lsf_lg(custom_import('system', 'base')):
 
     def job_status(self, classname, funcname, jobs):
         # query lsf database
+        states = []
         for job in jobs:
             state = self._query(job)
-            states = []
             if state in ['DONE']:
                 states += [1]
             else:

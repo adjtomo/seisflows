@@ -1,12 +1,35 @@
 
 import os
 import numpy as np
+import subprocess
 
 from collections import defaultdict
 from os.path import abspath, join, exists
 from string import find
 from seisflows.tools import unix
 from seisflows.tools.tools import iterable
+
+
+def call_solver(mpiexec, executable, output='solver.log'):
+    """ Calls MPI solver executable
+
+      A less complicated version, without error catching, would be
+      subprocess.call(mpiexec +' '+ executable, shell=True)
+    """
+    try:
+        f = open(output,'w')
+        subprocess.check_call(
+            mpiexec +' '+ executable,
+            shell=True,
+            stdout=f)
+    except subprocess.CalledProcessError, err:
+        print msg.SolverError % (mpiexec +' '+ executable)
+        sys.exit(-1)
+    except OSError:
+        print msg.SolverError % (mpiexec +' '+ executable)
+        sys.exit(-1)
+    finally:
+        f.close()
 
 
 def getpar(key, file='DATA/Par_file', sep='=', cast=str):

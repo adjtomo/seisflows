@@ -6,11 +6,12 @@ from glob import glob
 import numpy as np
 
 from seisflows.plugins.solver.specfem2d import smooth_legacy
-from seisflows.tools.shared import getpar, setpar
+from seisflows.tools.seismic import getpar, setpar
 
 from seisflows.tools import msg
 from seisflows.tools import unix
-from seisflows.tools.tools import exists, call_solver
+from seisflows.tools.seismic import call_solver
+from seisflows.tools.tools import exists
 from seisflows.config import ParameterError, custom_import
 
 PAR = sys.modules['seisflows_parameters']

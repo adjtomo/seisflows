@@ -1,6 +1,6 @@
 
 from seisflows.tools.tools import findpath
-from seisflows.tools.shared import setpar
+from seisflows.tools.seismic import setpar
 
 
 def write_sources(PAR, h, path='.'):

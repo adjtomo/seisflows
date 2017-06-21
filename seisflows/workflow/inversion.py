@@ -48,9 +48,6 @@ class inversion(object):
         if 'END' not in PAR:
             raise ParameterError(PAR, 'END')
 
-        if 'VERBOSE' not in PAR:
-            setattr(PAR, 'VERBOSE', 1)
-
         # specify scratch paths
         if 'SCRATCH' not in PATH:
             raise ParameterError(PATH, 'SCRATCH')
@@ -179,17 +176,16 @@ class inversion(object):
         optimize.initialize_search()
 
         while True:
-            self.iterate_search()
+            print " trial step", optimize.line_search.step_count + 1
+            self.evaluate_function()
+            status = optimize.update_search()
 
-            if optimize.isdone:
+            if status > 0:
                 optimize.finalize_search()
                 break
-            elif optimize.step_count < PAR.STEPMAX:
-                optimize.compute_step()
-                continue
-            else:
-                retry = optimize.retry_status()
-                if retry:
+
+            elif status < 0:
+                if optimize.retry_status():
                     print ' Line search failed\n\n Retrying...'
                     optimize.restart()
                     self.line_search()
@@ -197,19 +193,6 @@ class inversion(object):
                 else:
                     print ' Line search failed\n\n Aborting...'
                     sys.exit(-1)
-
-
-    def iterate_search(self):
-        """ First, calls self.evaluate_function, which carries out a forward 
-          simulation given the current trial model. Then calls
-          optimize.update_status, which maintains search history and checks
-          stopping conditions.
-        """
-        if PAR.VERBOSE > 0:
-            print " trial step", optimize.step_count+1
-
-        self.evaluate_function()
-        optimize.update_status()
 
 
     def evaluate_function(self):
@@ -271,8 +254,7 @@ class inversion(object):
         """
         src = 'm_'+suffix
         dst = path +'/'+ 'model'
-        parts = solver.split(optimize.load(src))
-        solver.save(parts, dst)
+        solver.save(solver.split(optimize.load(src)), dst)
 
 
     def write_gradient(self, path='', suffix=''):
@@ -281,7 +263,7 @@ class inversion(object):
         src = join(path, 'gradient')
         dst = 'g_'+suffix
         postprocess.write_gradient(path)
-        parts = solver.load(src, parameters=solver.parameters, suffix='_kernel')
+        parts = solver.load(src, suffix='_kernel')
         optimize.save(dst, solver.merge(parts))
 
 
@@ -291,18 +273,7 @@ class inversion(object):
         src = glob(path +'/'+ 'residuals/*')
         dst = 'f_'+suffix
         total_misfit = preprocess.sum_residuals(src)
-        optimize.savetxt(dst, [total_misfit])
-
-
-    def write_minmax(self, path, dict):
-        """ Updates minmax log with latest values
-        """
-        with open(PATH.OUTPUT+'/'+'minmax', 'a') as file:
-            file.write(abspath(path)+'\n')
-            for key in dict:
-                minmax = dict.minmax(key)
-                file.write('%-15s %10.3e %10.3e\n' % (key, minmax[0], minmax[1]))
-            file.write('\n')
+        optimize.savetxt(dst, total_misfit)
 
 
     def save_gradient(self):

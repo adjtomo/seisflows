@@ -26,23 +26,25 @@ class test_system:
 
 
     def main(self):
-        system.run('workflow', 'hello', 
-            hosts='all')
-
         system.run('workflow', 'hello',  
             hosts='head', 
-            msg=None)
+            msg='Hello from 0')
+
+        system.run('workflow', 'hello', 
+            hosts='all',
+            msg='Hello from %d')
 
         print ''
 
 
-    def hello(self, msg='Hello'):
-        """ Sends hello message from compute node
+    def hello(self, msg='Hello from %d'):
+        """ Prints hello message
         """
-        if not msg:
-            return
-
         time.sleep(1)
-        print '%s from %d' % (msg, system.taskid()+1)
+        try:
+            print msg % (system.taskid()+1)
+        except:
+            print msg
+
         print ''
 

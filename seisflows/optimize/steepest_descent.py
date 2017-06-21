@@ -30,16 +30,12 @@ class steepest_descent(custom_import('optimize', 'base')):
     def compute_direction(self):
         g_new = self.load('g_new')
 
-        precond=self.precond()
-
-        if precond:
-            p_new = -precond(g_new)
+        if self.precond:
+            p_new = -self.precond(g_new)
         else:
             p_new = -g_new
 
         self.save('p_new', p_new)
-        savetxt('s_new', self.dot(g_new, p_new))
-
         return p_new
 
 

@@ -4,8 +4,6 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.tools import loadtxt, savetxt, loadnpy, savenpy
 
-from seisflows.optimize.lib.LBFGS import LBFGS
-
 
 class LCG(object):
     """ CG solver

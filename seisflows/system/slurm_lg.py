@@ -208,8 +208,6 @@ class slurm_lg(custom_import('system', 'base')):
         states = []
         for job in jobs:
             state = self._query(job)
-            self._print(' '.join((timestamp(), job, state)))
-
             if state in ['TIMEOUT']:
                 print msg.TimoutError % (classname, funcname, job, PAR.TASKTIME)
                 sys.exit(-1)
@@ -237,13 +235,6 @@ class slurm_lg(custom_import('system', 'base')):
                 if line.split()[0]==job:
                     state = line.split()[1]
         return state
-
-
-    ### utility function
-
-    def _print(self, line):
-        with open(PATH.SYSTEM+'/'+'timestamps', 'a') as file:
-            file.write(line+'\n')
 
 
     def save_kwargs(self, classname, funcname, kwargs):

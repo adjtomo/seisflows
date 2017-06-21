@@ -7,6 +7,12 @@ import scipy.interpolate as _interp
 from seisflows.tools.math import gauss2
 
 
+def count_zeros(a):
+    """ Counts number of zeros in a list or array
+    """
+    return sum(np.array(a)==0)
+
+
 def sortrows(a, return_index=False, return_inverse=False):
     """ Sorts rows of numpy array
     """
@@ -54,6 +60,21 @@ def uniquerows(a, sort_array=False, return_index=False):
 
 def stack(*args):
     return np.column_stack(args)
+
+
+### array input/output
+
+def loadnpy(filename):
+    """Loads numpy binary file."""
+    return np.load(filename)
+
+
+def savenpy(filename, v):
+    """Saves numpy binary file."""
+    np.save(filename, v)
+    os.rename(filename + '.npy', filename)
+
+
 
 
 # in the function and variable names, we use 'grid' to describe a set of

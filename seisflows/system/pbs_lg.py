@@ -221,9 +221,9 @@ class pbs_lg(custom_import('system', 'base')):
     def job_array_status(self, classname, funcname, jobs):
         """ Determines completion status of one or more jobs
         """
+        states = []
         for job in jobs:
             state = self._query(job)
-            states = []
             if state in ['C']:
                 states += [1]
             else:
