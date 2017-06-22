@@ -258,7 +258,7 @@ class inversion(object):
 
 
     def write_gradient(self, path='', suffix=''):
-        """ Writes gradient in form expected by nonlinear optimization library
+        """ Writes gradient in format expected by nonlinear optimization library
         """
         src = join(path, 'gradient')
         dst = 'g_'+suffix
@@ -268,7 +268,7 @@ class inversion(object):
 
 
     def write_misfit(self, path='', suffix=''):
-        """ Writes misfit in form expected by nonlinear optimization library
+        """ Writes misfit in format expected by nonlinear optimization library
         """
         src = glob(path +'/'+ 'residuals/*')
         dst = 'f_'+suffix
