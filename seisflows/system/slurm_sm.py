@@ -139,15 +139,13 @@ class slurm_sm(custom_import('system', 'base')):
                     + PAR.ENVIRONS)
 
         else:
-            raise KeyError('Bad keyword argument: system.run: hosts')
+            raise KeyError(
+                'Bad keyword argument: system.run: hosts')
 
 
     def hostlist(self):
-        with open(PATH.SYSTEM+'/'+'hostlist', 'w') as f:
-            call('scontrol show hostname $SLURM_JOB_NODEFILE', stdout=f)
-
-        with open(PATH.SYSTEM+'/'+'hostlist', 'r') as f:
-            return [line.strip() for line in f.readlines()]
+        stdout = check_output('scontrol show hostname $SLURM_JOB_NODEFILE')
+        return [line.strip() for line in stdout]
 
 
     def taskid(self):
