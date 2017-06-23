@@ -55,6 +55,10 @@ class lsf_lg(custom_import('system', 'base')):
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
+        # limit on number of concurrent tasks
+        if 'NTASKMAX' not in PAR:
+            setattr(PAR, 'NTASKMAX', PAR.NTASK)
+
          # number of cores per node
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
@@ -175,7 +179,7 @@ class lsf_lg(custom_import('system', 'base')):
     def job_array_args(self, hosts):
         if hosts == 'all':
             args = ''
-            args += '[%d-%d] %% %d' % (1, PAR.NSRC, PAR.NTASK)
+            args += '[%d-%d] %% %d' % (1, PAR.NTASK, PAR.NTASKMAX)
             args += '-o %s ' % (PATH.WORKDIR+'/'+'output.lsf/'+'%J_%I')
 
         elif hosts == 'head':
@@ -205,7 +209,7 @@ class lsf_lg(custom_import('system', 'base')):
 
 
     def mpiexec(self):
-        """ Specifies MPI exectuable; used to invoke solver
+        """ Specifies MPI executable used to invoke solver
         """
         return PAR.MPIEXEC
 

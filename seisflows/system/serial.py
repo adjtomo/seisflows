@@ -103,7 +103,8 @@ class serial(custom_import('system', 'base')):
             func(**kwargs)
 
         else:
-            task(**kwargs)
+            raise KeyError(
+                'Bad keyword argument: system.run: hosts')
 
 
     def taskid(self):
@@ -111,15 +112,18 @@ class serial(custom_import('system', 'base')):
         """
         return int(os.environ['SEISFLOWS_TASKID'])
 
+
     def setid(self, tid):
         """ Sets number of running task
         """
         os.environ['SEISFLOWS_TASKID'] = str(tid)
 
+
     def mpiexec(self):
-        """ Specifies MPI exectuable; used to invoke solver
+        """ Specifies MPI executable used to invoke solver
         """
         return PAR.MPIEXEC
+
 
     def progress(self, tid=None):
         """ Provides status updates

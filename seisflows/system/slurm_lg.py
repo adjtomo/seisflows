@@ -56,6 +56,10 @@ class slurm_lg(custom_import('system', 'base')):
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
+        # limit on number of concurrent tasks
+        if 'NTASKMAX' not in PAR:
+            setattr(PAR, 'NTASKMAX', PAR.NTASK)
+
         # number of cores per node
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
@@ -139,7 +143,7 @@ class slurm_lg(custom_import('system', 'base')):
 
 
     def mpiexec(self):
-        """ Specifies MPI exectuable; used to invoke solver
+        """ Specifies MPI executable used to invoke solver
         """
         return 'srun '
 
@@ -190,7 +194,7 @@ class slurm_lg(custom_import('system', 'base')):
 
     def job_array_args(self, hosts):
         if hosts == 'all':
-            args = ('--array=%d-%d ' % (0,PAR.NTASK-1)
+            args = ('--array=%d-%d ' % (0,PAR.NTASK-1%PAR.NTASKMAX)
                    +'--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a'))
 
         elif hosts == 'head':
