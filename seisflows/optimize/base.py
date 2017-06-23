@@ -89,6 +89,7 @@ class base(object):
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
             step_count_max=PAR.STEPCOUNTMAX)
 
+        # prepare preconditioner
         if PAR.PRECOND:
             self.precond = getattr(preconds, PAR.PRECOND)()
         else:
@@ -278,7 +279,7 @@ class base(object):
         return float(np.loadtxt(PATH.OPTIMIZE+'/'+filename))
 
     def savetxt(self, filename, scalar):
-        # writes scalars
+        # writes scalars to disk
         np.savetxt(PATH.OPTIMIZE+'/'+filename, [scalar], '%11.6e')
 
 
