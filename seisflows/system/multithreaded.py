@@ -49,6 +49,10 @@ class multithreaded(custom_import('system', 'serial')):
             setattr(PAR, 'NTASKMAX', PAR.NPROCMAX/PAR.NPROC)
 
 
+        # assertions
+        assert PAR.NPROC <= PAR.NPROCMAX
+
+
     def run(self, classname, funcname, hosts='all', **kwargs):
         """ Runs tasks in serial or parallel on specified hosts
         """
