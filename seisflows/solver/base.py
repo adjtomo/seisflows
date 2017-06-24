@@ -252,14 +252,14 @@ class base(object):
         """
         unix.mkdir(path)
 
-        # fill in missing parameters
+        # fill in any missing parameters
         missing_keys = diff(parameters, dict.keys())
         for iproc in range(self.mesh_properties.nproc):
             for key in missing_keys:
                 dict[key] += self.io.read_slice(
                     PATH.MODEL_INIT, prefix+key+suffix, iproc)
 
-        # write model or kernel files to disk
+        # write slices to disk
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters:
                 self.io.write_slice(

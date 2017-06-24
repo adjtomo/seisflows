@@ -5,6 +5,7 @@ import sys
 import time
 
 from os.path import abspath, basename, join
+from subprocess import check_output
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.tools import call, findpath, saveobj, timestamp
@@ -54,6 +55,10 @@ class slurm_lg(custom_import('system', 'base')):
         # number of cores per task
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
+
+        # limit on number of concurrent tasks
+        if 'NTASKMAX' not in PAR:
+            setattr(PAR, 'NTASKMAX', PAR.NTASK)
 
         # number of cores per node
         if 'NODESIZE' not in PAR:
@@ -138,7 +143,7 @@ class slurm_lg(custom_import('system', 'base')):
 
 
     def mpiexec(self):
-        """ Specifies MPI exectuable; used to invoke solver
+        """ Specifies MPI executable used to invoke solver
         """
         return 'srun '
 
@@ -155,14 +160,14 @@ class slurm_lg(custom_import('system', 'base')):
     ### job array methods
 
     def submit_job_array(self, classname, funcname, hosts='all'):
-        with open(PATH.SYSTEM+'/'+'array_id', 'w') as file:
-            call(self.job_array_cmd(classname, funcname, hosts),
-                stdout=file)
+        """ Submits job array and returns associated job ids
+        """
+        # submit job array
+        cmd = self.job_array_cmd(classname, funcname, hosts)
+        stdout = check_output(cmd, shell=True)
 
-        with open(PATH.SYSTEM+'/'+'array_id', 'r') as file:
-            line = file.readline()
-            id = line.split()[-1].strip()
-
+        # construct job id list
+        id = stdout.split()[-1].strip()
         if hosts=='all':
             tasks = range(PAR.NTASK)
             jobs = [id+'_'+str(task) for task in tasks]
@@ -189,7 +194,7 @@ class slurm_lg(custom_import('system', 'base')):
 
     def job_array_args(self, hosts):
         if hosts == 'all':
-            args = ('--array=%d-%d ' % (0,PAR.NTASK-1)
+            args = ('--array=%d-%d ' % (0,PAR.NTASK-1%PAR.NTASKMAX)
                    +'--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a'))
 
         elif hosts == 'head':
@@ -227,13 +232,15 @@ class slurm_lg(custom_import('system', 'base')):
     def _query(self, job):
         """ Queries job state from SLURM database
         """
-        with open(PATH.SYSTEM+'/'+'job_status', 'w') as file:
-            call('sacct -n -o jobid,state -j '+ job.split('_')[0], stdout=file)
+        stdout = check_output(
+            'sacct -n -o jobid,state -j '+ job.split('_')[0],
+            shell=True)
+
         state = ''
-        with open(PATH.SYSTEM+'/'+'job_status', 'r') as file:
-            for line in file.readlines():
-                if line.split()[0]==job:
-                    state = line.split()[1]
+        lines = stdout.strip().split('\n')
+        for line in lines:
+            if line.split()[0]==job:
+                state = line.split()[1]
         return state
 
 

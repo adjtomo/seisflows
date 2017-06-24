@@ -106,13 +106,6 @@ def rm(path=''):
             shutil.rmtree(name)
 
 
-def run(args):
-    child = subprocess.Popen(args, shell=1)
-    streamdata = child.communicate()[0]
-    if child.returncode!=0:
-        sys.exit(-1)
-
-
 def select(items, prompt=''):
     while True:
         if prompt:

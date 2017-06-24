@@ -11,7 +11,8 @@ import traceback
 from imp import load_source
 from importlib import import_module
 from pkgutil import find_loader
-from os.path import basename
+from os.path import basename, exists
+from subprocess import check_output
 
 import numpy as np
 
@@ -178,4 +179,29 @@ def savetxt(filename, v):
     """Save scalar to text file"""
     np.savetxt(filename, [v], '%11.6e')
 
+
+def nproc():
+    try:
+        return _nproc1()
+    except:
+        return _nproc2()
+
+
+def _nproc1():
+    # get number of processors using nproc
+    if not which('nproc'):
+        raise EnvironmentError
+    stdout = check_output('nproc --all', shell=True)
+    nproc = int(stdout.strip())
+    return nproc
+
+
+def _nproc2():
+    # get number of processors using /proc/cpuinfo
+    if not exists('/proc/cpuinfo'):
+        raise EnvironmentError
+    stdout = check_output("cat /proc/cpuinfo | awk '/^processor/{print $3}'", 
+                shell=True)
+    nproc = len(stdout.split('\n'))
+    return nproc
 

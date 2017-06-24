@@ -30,8 +30,8 @@ class Backtrack(Bracket):
 
 
     def update(self):
-        """ Checks if termination conditions are satisfied, and if necessary
-          determines next step length in line search
+        """ Checks termination conditions and if necessary determines next step
+          length in line search
         """
         x, f, m, n, gtg, gtp = self.current_vals()
 

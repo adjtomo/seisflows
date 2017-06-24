@@ -8,7 +8,7 @@ from subprocess import Popen
 from time import sleep
 
 from seisflows.tools import unix
-from seisflows.tools.tools import call, findpath, saveobj
+from seisflows.tools.tools import call, findpath, nproc, saveobj
 from seisflows.config import ParameterError, custom_import
 
 PAR = sys.modules['seisflows_parameters']
@@ -32,9 +32,25 @@ class multithreaded(custom_import('system', 'serial')):
         """
         super(multithreaded, self).check()
 
+        # number of tasks
+        if 'NTASK' not in PAR:
+            raise ParameterError(PAR, 'NTASK')
+
+        # number of cores per task
+        if 'NPROC' not in PAR:
+            raise ParameterError(PAR, 'NPROC')
+
         # number of available cores
         if 'NPROCMAX' not in PAR:
-            raise Exception
+            setattr(PAR, 'NPROCMAX', nproc())
+
+        # maximum number of concurrent tasks
+        if 'NTASKMAX' not in PAR:
+            setattr(PAR, 'NTASKMAX', PAR.NPROCMAX/PAR.NPROC)
+
+
+        # assertions
+        assert PAR.NPROC <= PAR.NPROCMAX
 
 
     def run(self, classname, funcname, hosts='all', **kwargs):
@@ -52,9 +68,9 @@ class multithreaded(custom_import('system', 'serial')):
 
                 # launch queued tasks
                 while len(queued_tasks) > 0 and \
-                      len(running_tasks) < int(PAR.NPROCMAX/PAR.NPROC):
+                      len(running_tasks) < PAR.NTASKMAX:
                     i = queued_tasks.pop(0)
-                    p = self._launch(classname, funcname, tid=i)
+                    p = self._launch(classname, funcname, taskid=i)
                     running_tasks[i] = p
                     sleep(0.1)
 
@@ -69,7 +85,7 @@ class multithreaded(custom_import('system', 'serial')):
             print ''
 
         elif hosts == 'head':
-            self.setid(0)
+            os.environ['SEISFLOWS_TASKID'] = str(0)
             func = getattr(__import__('seisflows_'+classname), funcname)
             func(**kwargs)
 
@@ -79,11 +95,10 @@ class multithreaded(custom_import('system', 'serial')):
 
     ### private methods
 
-    def _launch(self, classname, funcname, tid=0):
-        self.progress(tid)
-
+    def _launch(self, classname, funcname, taskid=0):
         env = os.environ.copy().items()
-        env += [['SEISFLOWS_TASKID', str(tid)]]
+        env += [['SEISFLOWS_TASKID', str(taskid)]]
+        self.progress(taskid)
 
         p = Popen(
             findpath('seisflows.system') +'/'+ 'wrappers/run '

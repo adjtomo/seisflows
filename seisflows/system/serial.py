@@ -90,39 +90,36 @@ class serial(custom_import('system', 'base')):
         unix.mkdir(PATH.SYSTEM)
 
         if hosts == 'all':
-            for tid in range(PAR.NTASK):
-                self.setid(tid)
-                self.progress(tid)
+            for taskid in range(PAR.NTASK):
+                os.environ['SEISFLOWS_TASKID'] = str(taskid)
+                if PAR.VERBOSE > 0:
+                    self.progress(taskid)
                 func = getattr(__import__('seisflows_'+classname), funcname)
                 func(**kwargs)
             print ''
 
         elif hosts == 'head':
-            self.setid(0)
+            os.environ['SEISFLOWS_TASKID'] = str(0)
             func = getattr(__import__('seisflows_'+classname), funcname)
             func(**kwargs)
 
         else:
-            task(**kwargs)
+            raise KeyError(
+                'Bad keyword argument: system.run: hosts')
 
 
     def taskid(self):
-        """ Gets number of running task
-        """
         return int(os.environ['SEISFLOWS_TASKID'])
 
-    def setid(self, tid):
-        """ Sets number of running task
-        """
-        os.environ['SEISFLOWS_TASKID'] = str(tid)
 
     def mpiexec(self):
-        """ Specifies MPI exectuable; used to invoke solver
+        """ Specifies MPI executable used to invoke solver
         """
         return PAR.MPIEXEC
 
-    def progress(self, tid=None):
-        """ Provides status updates
+
+    def progress(self, taskid):
+        """ Provides status update
         """
-        if PAR.VERBOSE and PAR.NTASK > 1:
-            print ' task ' + '%02d'%(tid + 1) + ' of ' + '%02d'%PAR.NTASK
+        if PAR.NTASK > 1:
+            print ' task ' + '%02d of %02d' % (taskid+1, PAR.NTASK)

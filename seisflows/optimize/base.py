@@ -89,6 +89,7 @@ class base(object):
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
             step_count_max=PAR.STEPCOUNTMAX)
 
+        # prepare preconditioner
         if PAR.PRECOND:
             self.precond = getattr(preconds, PAR.PRECOND)()
         else:
@@ -129,7 +130,7 @@ class base(object):
 
 
     def initialize_search(self):
-        """ Determines initial step length for line search
+        """ Determines first step length in line search
         """
         m = self.load('m_new')
         g = self.load('g_new')
@@ -167,10 +168,6 @@ class base(object):
 
     def update_search(self):
         """ Updates line search status
-
-            Maintains line search history by keeping track of step length and
-            function value from each trial model evaluation. From line search
-            history, determines whether stopping criteria have been satisfied.
         """
         self.line_search.step_count += 1
         self.line_search.step_lens += [self.loadtxt('alpha')]
@@ -191,7 +188,8 @@ class base(object):
 
 
     def finalize_search(self):
-        """ Cleans scratch directory and writes output statistics
+        """ Writes output statistics and prepares scratch directory for next
+          model upate
         """
         m = self.load('m_new')
         g = self.load('g_new')
@@ -229,10 +227,11 @@ class base(object):
 
 
     def retry_status(self):
-        """ Determines if retry is worthwhile after failed line search
+        """ Determines if restart is worthwhile
 
-          Determines if retry is worthwhile by checking, in effect, if search 
-          direction was the same as gradient direction
+          After failed line search, determines if restart is worthwhile by 
+          checking, in effect, if search direction was the same as gradient
+          direction
         """
         g = self.load('g_new')
         p = self.load('p_new')
@@ -269,15 +268,19 @@ class base(object):
             np.squeeze(y))
 
     def load(self, filename):
+        # reads vectors from disk
         return loadnpy(PATH.OPTIMIZE+'/'+filename)
 
     def save(self, filename, array):
+        # writes vectors to disk
         savenpy(PATH.OPTIMIZE+'/'+filename, array)
 
     def loadtxt(self, filename):
+        # reads scalars from disk
         return float(np.loadtxt(PATH.OPTIMIZE+'/'+filename))
 
     def savetxt(self, filename, scalar):
+        # writes scalars to disk
         np.savetxt(PATH.OPTIMIZE+'/'+filename, [scalar], '%11.6e')
 
 

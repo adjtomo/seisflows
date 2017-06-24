@@ -47,7 +47,8 @@ class Base(object):
 
 
     def current_vals(self, sort=True):
-        """ Collects information about current line search
+        """ A convenience function used to collect information about
+          current line search
         """
         i = self.step_count
         j = count_zeros(self.step_lens)
