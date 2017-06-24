@@ -227,10 +227,11 @@ class base(object):
 
 
     def retry_status(self):
-        """ Determines if retry is worthwhile after failed line search
+        """ Determines if restart is worthwhile
 
-          Determines if retry is worthwhile by checking, in effect, if search 
-          direction was the same as gradient direction
+          After failed line search, determines if restart is worthwhile by 
+          checking, in effect, if search direction was the same as gradient
+          direction
         """
         g = self.load('g_new')
         p = self.load('p_new')

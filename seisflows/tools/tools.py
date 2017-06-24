@@ -192,7 +192,6 @@ def _nproc1():
     if not which('nproc'):
         raise EnvironmentError
     stdout = check_output('nproc --all', shell=True)
-    print stdout
     nproc = int(stdout.strip())
     return nproc
 
@@ -203,7 +202,6 @@ def _nproc2():
         raise EnvironmentError
     stdout = check_output("cat /proc/cpuinfo | awk '/^processor/{print $3}'", 
                 shell=True)
-    print stdout
     nproc = len(stdout.split('\n'))
     return nproc
 
