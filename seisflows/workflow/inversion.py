@@ -172,6 +172,11 @@ class inversion(object):
 
     def line_search(self):
         """ Conducts line search in given search direction
+
+          Status codes
+              status > 0  : finished
+              status == 0 : not finished
+              status < 0  : failed
         """
         optimize.initialize_search()
 
@@ -183,6 +188,9 @@ class inversion(object):
             if status > 0:
                 optimize.finalize_search()
                 break
+
+            elif status == 0:
+                continue
 
             elif status < 0:
                 if optimize.retry_status():
