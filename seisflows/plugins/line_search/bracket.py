@@ -68,7 +68,7 @@ class Bracket(Base):
             status = 0
 
         elif alpha > self.step_len_max:
-            # stop search because safeguard prevents use from going further
+            # stop because safeguard prevents us from going further
             alpha = self.step_len_max
             status = 1
 

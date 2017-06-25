@@ -53,8 +53,8 @@ class Base(object):
 
 
     def search_history(self, sort=True):
-        """ A convenience function, collects all necessary information to 
-          determine status and calculate step length
+        """ A convenience function, collects information needed to determine
+          search status and calculate step length
         """
         i = self.step_count
         j = count_zeros(self.step_lens)-1
