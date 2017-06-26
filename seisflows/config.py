@@ -157,12 +157,6 @@ def custom_import(*args):
 
     # generate package list
     packages = ['seisflows']
-    if os.getenv('SEISFLOWS_PACKAGES'):
-        for name in os.getenv('SEISFLOWS_PACKAGES').split(','):
-            if name in packages:
-                continue
-            if package_exists(name):
-                packages += [name]
 
     # does module exist?
     _exists = False
