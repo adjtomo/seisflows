@@ -11,8 +11,6 @@ class Backtrack(Bracket):
       Variables
           x - list of step lenths from current line search
           f - correpsonding list of function values
-          m - how many step lengths in current line search?
-          n - how many model updates in optimization problem?
           gtg - dot product of gradient with itself                    
           gtp - dot product of gradient and search direction
 
@@ -22,32 +20,35 @@ class Backtrack(Bracket):
           status < 0  : failed
     """
 
-    def initial_step(self):
-        alpha = 1.
-        if alpha > self.step_len_max:
-            alpha = self.step_len_max
-        return alpha
-
-
-    def update(self):
-        """ Checks termination conditions and if necessary determines next step
-          length in line search
+    def calculate_step(self):
+        """ Determines step length and search status
         """
-        x, f, m, n, gtg, gtp = self.current_vals()
+        x, f, gtg, gtp, step_count, update_count = self.search_history()
 
-        if n == 1:
-            alpha, status = super(Backtrack, self).update()
+
+        if update_count==0:
+            # quasi-Newton direction is not yet scaled properly, so instead
+            # of a bactracking line perform a bracketing line search
+            alpha, status = super(Backtrack, self).calculate_step()
+
+        elif step_count==0:
+            # our choice of a unit step length here assumes a well-scaled
+            # search direction
+            alpha = min(1., self.step_len_max)
+            status = 0
 
         elif _check_decrease(x,f):
             alpha = x[f.argmin()]
             status = 1
 
-        elif m <= self.step_count_max:
+        elif step_count <= self.step_count_max:
+            # we need a smaller step length
             slope = gtp[-1]/gtg[-1]
             alpha = backtrack2(f[0], slope, x[1], f[1], b1=0.1, b2=0.5)
             status = 0
 
         else:
+            # failed because step_count_max exceeded
             alpha = None
             status = -1
 

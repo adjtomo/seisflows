@@ -1,6 +1,8 @@
 
 
+from os.path import abspath
 from seisflows.tools.array import count_zeros
+from seisflows.tools.seismic import StepWriter
 
 import numpy as np
 
@@ -23,13 +25,17 @@ class Base(object):
     """
     def __init__(self,
                 step_count_max=10,
-                step_len_max=np.inf):
+                step_len_max=np.inf,
+                path=abspath('.')):
 
         # maximum number of trial steps
         self.step_count_max = step_count_max
 
         # optional maximum step length safeguard
         self.step_len_max = step_len_max
+
+        # prepare output log
+        self.writer = StepWriter(path)
 
         self.func_vals = []
         self.step_lens = []
@@ -46,29 +52,49 @@ class Base(object):
         self.gtp = []
 
 
-    def current_vals(self, sort=True):
-        """ A convenience function used to collect information about
-          current line search
+    def search_history(self, sort=True):
+        """ A convenience function, collects information needed to determine
+          search status and calculate step length
         """
         i = self.step_count
-        j = count_zeros(self.step_lens)
+        j = count_zeros(self.step_lens)-1
         k = len(self.step_lens)
         x = np.array(self.step_lens[k-i-1:k])
         f = np.array(self.func_vals[k-i-1:k])
         if sort:
             f = f[abs(x).argsort()]
             x = x[abs(x).argsort()]
-        return x, f, i, j, self.gtg, self.gtp
+        return x, f, self.gtg, self.gtp, i, j
 
 
-    def initial_step(self):
-        # must be implemented by subclass
-        raise NotImplementedError
+    def initialize(self, step_len, func_val, gtg, gtp):
+
+        # update search history
+        self.step_count = 0
+        self.step_lens += [step_len]
+        self.func_vals += [func_val]
+        self.gtg += [gtg]
+        self.gtp += [gtp]
+
+        self.writer(step_len, func_val)
+
+        return self.calculate_step()
 
 
-    def update(self):
-        # must be implemented by subclass
-        raise NotImplementedError
+    def update(self, step_len, func_val):
+
+        # update search history
+        self.step_count += 1
+        self.step_lens += [step_len]
+        self.func_vals += [func_val]
+
+        self.writer(step_len, func_val)
+
+        return self.calculate_step()
+
+
+    def calculate_step(self):
+        raise NotImplementedError('Must be implemented by subclass')
 
 
 

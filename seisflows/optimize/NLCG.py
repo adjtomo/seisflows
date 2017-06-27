@@ -49,7 +49,6 @@ class NLCG(custom_import('optimize', 'base')):
         g_new = self.load('g_new')
         p_new, self.restarted = self.NLCG()
         self.save('p_new', p_new)
-        self.savetxt('s_new', self.dot(g_new, p_new))
         return p_new
 
 

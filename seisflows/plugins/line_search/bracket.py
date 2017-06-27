@@ -12,8 +12,6 @@ class Bracket(Base):
       Variables
           x - list of step lenths from current line search
           f - correpsonding list of function values
-          m - how many step lengths in current line search?
-          n - how many model updates in optimization problem?
           gtg - dot product of gradient with itself                    
           gtp - dot product of gradient and search direction
 
@@ -23,32 +21,23 @@ class Bracket(Base):
           status < 0  : failed
     """
 
-    def initial_step(self):
-        """ Calculates first step length in line search
-
-         Initial step length for the current line search is obtained by
-         scaling the final step length from the previous line search
-         based on the first equation in sec 3.5 of Nocedal and Wright 2ed
+    def calculate_step(self):
+        """ Determines step length and search status
         """
-        x = np.array(self.step_lens)
-        f = np.array(self.func_vals)
-        gtp = self.gtp
+        x, f, gtg, gtp, step_count, update_count = self.search_history()
 
-        alpha = x[f[:-1].argmin()] * gtp[-2]/gtp[-1]
+        if step_count==0 and update_count==0:
+            # based on idea from Dennis and Schnabel
+            alpha = gtg[-1]**-1
+            status = 0
 
-        if alpha > self.step_len_max:
-            alpha = 0.618034*self.step_len_max
+        elif step_count==0:
+            # based on the first equation in sec 3.5 of Nocedal and Wright 2ed
+            idx = np.argmin(self.func_vals[:-1])
+            alpha = self.step_lens[idx] * gtp[-2]/gtp[-1]
+            status = 0
 
-        return alpha
-
-
-    def update(self):
-        """ Checks termination conditions and if necessary determines next step
-          length in line search
-        """
-        x, f, m, n, gtg, gtp = self.current_vals()
-
-        if _check_bracket(x,f) and _good_enough(x,f):
+        elif _check_bracket(x,f) and _good_enough(x,f):
             alpha = x[f.argmin()]
             status = 1
 
@@ -56,20 +45,30 @@ class Bracket(Base):
             alpha = polyfit2(x,f)
             status = 0
 
-        elif m <= self.step_count_max and all(f <= f[0]):
+        elif step_count <= self.step_count_max and all(f <= f[0]):
+            # we need a larger step length
             alpha = 1.618034*x[-1]
             status = 0
 
-        elif m <= self.step_count_max:
+        elif step_count <= self.step_count_max:
+            # we need a smaller step length
             slope = gtp[-1]/gtg[-1]
             alpha = backtrack2(f[0], slope, x[1], f[1], b1=0.1, b2=0.5)
             status = 0
 
         else:
+            # failed because step_count_max exceeded
             alpha = None
             status = -1
 
-        if alpha > self.step_len_max:
+        # apply optional step length safeguard
+        if alpha > self.step_len_max and \
+           step_count==0:
+            alpha = 0.618034*self.step_len_max
+            status = 0
+
+        elif alpha > self.step_len_max:
+            # stop because safeguard prevents us from going further
             alpha = self.step_len_max
             status = 1
 

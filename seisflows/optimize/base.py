@@ -87,7 +87,8 @@ class base(object):
         """
         # prepare line search machinery
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
-            step_count_max=PAR.STEPCOUNTMAX)
+            step_count_max=PAR.STEPCOUNTMAX,
+            path=PATH.WORKDIR+'/'+'output.optim')
 
         # prepare preconditioner
         if PAR.PRECOND:
@@ -95,12 +96,9 @@ class base(object):
         else:
             self.precond = None
 
-        # prepare output writers
+        # prepare output logs
         self.writer = Writer(
                 path=PATH.WORKDIR+'/'+'output.stats')
-
-        self.stepwriter = StepWriter(
-                path=PATH.WORKDIR+'/'+'output.optim')
 
         # prepare scratch directory
         unix.mkdir(PATH.OPTIMIZE)
@@ -138,28 +136,23 @@ class base(object):
         f = self.loadtxt('f_new')
         norm_m = max(abs(m))
         norm_p = max(abs(p))
+        gtg = self.dot(g,g)
+        gtp = self.dot(g,p)
 
-        self.line_search.step_count = 0
-        if self.restarted: self.line_search.clear_history()
-        self.line_search.step_lens += [0.]
-        self.line_search.func_vals += [f]
-        self.line_search.gtg += [self.dot(g,g)]
-        self.line_search.gtp += [self.dot(g,p)]
+        if self.restarted:
+            self.line_search.clear_history()
 
-        self.stepwriter(
-            steplen=0., 
-            funcval=self.loadtxt('f_new'))
-
-        # determine initial step length
+        # optional step length safeguard
         if PAR.STEPLENMAX:
             self.line_search.step_len_max = \
                 PAR.STEPLENMAX*norm_m/norm_p
 
+        # determine initial step length
+        alpha, _ = self.line_search.initialize(0.,f,gtg,gtp)
+
+        # optional initial step length override
         if PAR.STEPLENINIT and len(self.line_search.step_lens)<=1:
             alpha = PAR.STEPLENINIT*norm_m/norm_p
-
-        else:
-            alpha = self.line_search.initial_step()
 
         # write model corresponding to chosen step length
         self.savetxt('alpha', alpha)
@@ -167,17 +160,12 @@ class base(object):
 
 
     def update_search(self):
-        """ Updates line search status
+        """ Updates line search status and step length
         """
-        self.line_search.step_count += 1
-        self.line_search.step_lens += [self.loadtxt('alpha')]
-        self.line_search.func_vals += [self.loadtxt('f_try')]
-
-        self.stepwriter(
-            steplen=self.loadtxt('alpha'),
-            funcval=self.loadtxt('f_try'))
-
-        alpha, status = self.line_search.update()
+        alpha, status = self.line_search.update(
+            self.loadtxt('alpha'),
+            self.loadtxt('f_try'))
+ 
         if status >= 0:
             # write model corresponding to chosen step length
             m = self.load('m_new')
@@ -188,14 +176,14 @@ class base(object):
 
 
     def finalize_search(self):
-        """ Writes output statistics and prepares scratch directory for next
+        """ Prepares algorithm machinery and scratch directory for next
           model upate
         """
         m = self.load('m_new')
         g = self.load('g_new')
         p = self.load('p_new')
-        x = self.line_search.current_vals()[0]
-        f = self.line_search.current_vals()[1]
+        x = self.line_search.search_history()[0]
+        f = self.line_search.search_history()[1]
 
         # clean scratch directory
         unix.cd(PATH.OPTIMIZE)
@@ -223,7 +211,8 @@ class base(object):
         self.writer('step_count', self.line_search.step_count)
         self.writer('step_length', x[f.argmin()])
         self.writer('theta', 180.*np.pi**-1*angle(p,-g))
-        self.stepwriter.newline()
+
+        self.line_search.writer.newline()
 
 
     def retry_status(self):
@@ -248,16 +237,18 @@ class base(object):
 
 
     def restart(self):
-        """ Discards history of algorithm; prepares to start again from 
-          gradient direction
+        """ Restarts nonlinear optimization algorithm
+
+          Keeps current position in model space, but discards history of
+          nonlinear optimization algorithm in an attempt to recover from
+          numerical stagnation 
         """
         g = self.load('g_new')
         self.save('p_new', -g)
         self.line_search.clear_history()
-        self.line_search.step_count = 0
         self.restarted = 1
-        self.stepwriter.iter -= 1
-        self.stepwriter.newline()
+        self.line_search.writer.iter -= 1
+        self.line_search.writer.newline()
 
 
     def dot(self,x,y):
