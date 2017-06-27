@@ -52,11 +52,11 @@ class thrifty_inversion(custom_import('workflow', 'inversion')):
             self.status=0
 
         elif optimize.iter==PAR.END:
-            # doesn't work after resuming saved workflow
+            # may not work after resuming saved workflow
             self.status=0
 
         elif PATH.LOCAL:
-            # doesn't work if using local filesystems
+            # may not work if using local filesystems
             self.status=0
 
         else:
