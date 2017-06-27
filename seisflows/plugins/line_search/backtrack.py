@@ -27,13 +27,13 @@ class Backtrack(Bracket):
 
 
         if update_count==0:
-            # we don't have enough information yet to do a bactracking line
-            # search, so instead revert to a bracketing line search
+            # quasi-Newton direction is not scaled properly yet, so instead
+            # of a bactracking line perform a bracketing line search
             alpha, status = super(Backtrack, self).calculate_step()
 
         elif step_count==0:
-            # our choice of a unit step length here assumes well-scaled search
-            # direction
+            # our choice of a unit step length here assumes a well-scaled
+            # search direction
             alpha = min(1., self.step_len_max)
             status = 0
 
