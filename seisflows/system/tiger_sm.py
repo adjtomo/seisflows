@@ -20,6 +20,9 @@ class tiger_sm(custom_import('system', 'slurm_sm')):
     def check(self):
         """ Checks parameters and paths
         """
+        if 'tiger' not in unix.hostname():
+            print msg.SystemError
+
         # where job was submitted
         if 'WORKDIR' not in PATH:
             setattr(PATH, 'WORKDIR', abspath('.'))

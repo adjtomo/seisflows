@@ -174,7 +174,6 @@ class base(object):
         """
         unix.cd(self.cwd)
         self.import_model(path)
-
         self.forward()
         preprocess.prepare_eval_grad(self.cwd)
         self.export_residuals(path)
@@ -185,11 +184,8 @@ class base(object):
             must be in place beforehand.
         """
         unix.cd(self.cwd)
-
         self.adjoint()
-
         self.export_kernels(path)
-
         if export_traces:
             self.export_traces(path+'/'+'traces/syn', prefix='traces/syn')
             self.export_traces(path+'/'+'traces/adj', prefix='traces/adj')
@@ -200,12 +196,10 @@ class base(object):
           evaluation must have already been carried out.
         """
         unix.cd(self.cwd)
-        unix.mkdir('traces/lcg')
-
         self.import_model(path)
+        unix.mkdir('traces/lcg')
         self.forward('traces/lcg')
         preprocess.prepare_apply_hess(self.cwd)
-
         self.adjoint()
         self.export_kernels(path)
 
@@ -348,8 +342,7 @@ class base(object):
 
 
     def clip(self, path='', parameters=[], minval=-np.inf, maxval=np.inf):
-        """ Clips kernels by convolving them with a Gaussian.  Wrapper over 
-            xclip_sem utility.
+        """ Wrapper over xclip_sem utility
         """
         assert exists(path)
         assert len(parameters) > 0
