@@ -26,38 +26,47 @@ preprocess = sys.modules['seisflows_preprocess']
 class base(object):
     """ Base class for SPECFEM2D, SPECFEM3D and SPECFEM3D_GLOBE
 
+      NOTE: This class supports only simple acoustic and isotropic elastic
+        inversions. For additional material paremeterizations, see the
+        options available in github.com/rmodrak/seisflows-multiparameter
+
+
+      METHODS
+
       eval_func, eval_grad, apply_hess
         These methods deal with evaluation of the misfit function or its
         derivatives.  Together, they provide the primary interface through which
-        SeisFlows interacts with SPECFEM.
+        SeisFlows interacts with SPECFEM
 
       forward, adjoint
         These methods allow direct access to low-level SPECFEM components,
-        providing another interface through which to interact with the solver.
+        providing an alternative interface through which to interact with the 
+        solver
 
-     generate_data, generate_model
-        One time operations performed at beginning of an inversion or 
-        migration.
+     steup, generate_data, generate_model
+        One-time operations performed at beginning of an inversion or 
+        migration
 
      initialize_solver_directories, initialize_adjoint_traces
         SPECFEM requires a particular directory structure in which to run and
         particular file formats for models, data, and parameter files. These
-        methods help put in place all these prerequisites.
+        methods help put in place all these prerequisites
 
       load, save
         For reading and writing SPECFEM models and kernels. On the disk,
         models and kernels are stored as binary files, and in memory, as
         dictionaries with different keys corresponding to different material
-        parameters.
+        parameters
 
       split, merge
         Within the solver routines, it is natural to store models as 
         dictionaries. Within the optimization routines, it is natural to store
         models as vectors. Two methods, 'split' and 'merge', are used to convert 
-        back and forth between these two representations.
+        back and forth between these two representations
 
       combine, smooth
-        Utilities for combining and smoothing kernels.
+        Utilities for combining and smoothing kernels
+
     """
 
     assert 'MATERIALS' in PAR
@@ -77,13 +86,18 @@ class base(object):
     def check(self):
         """ Checks parameters and paths
         """
+        # number of processors per simulation
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
+
+        # format used by SPECFEM for writing models
+        # (currently, SPECFEM offers both 'fortran_binary' and 'adios')
         if 'SOLVERIO' not in PAR:
             setattr(PAR, 'SOLVERIO', 'fortran_binary')
 
-        # check scratch paths
+
+        # solver scratch paths
         if 'SCRATCH' not in PATH:
             raise ParameterError(PATH, 'SCRATCH')
 
@@ -96,7 +110,7 @@ class base(object):
             else:
                 setattr(PATH, 'SOLVER', join(PATH.SCRATCH, 'solver'))
 
-        # check solver input paths
+        # solver input paths
         if 'SPECFEM_BIN' not in PATH:
             raise ParameterError(PATH, 'SPECFEM_BIN')
 
@@ -112,6 +126,9 @@ class base(object):
 
     def setup(self):
         """ Prepares solver for inversion or migration
+
+          Sets up directory structure expected by SPECFEM and copies or 
+          generates seismic data to be inverted or migrated
         """
         # clean up for new inversion
         unix.rm(self.cwd)
@@ -170,7 +187,11 @@ class base(object):
 
     def eval_func(self, path='', export_traces=False):
         """ Evaluates misfit function by carrying out forward simulation and
-            comparing observations and synthetics.
+            comparing observations and synthetics
+
+          ARGUMENTS
+            PATH - the directory from which model is imported
+            EXPORT_TRACES - save or discard traces?
         """
         unix.cd(self.cwd)
         self.import_model(path)
@@ -180,8 +201,14 @@ class base(object):
 
 
     def eval_grad(self, path='', export_traces=False):
-        """ Evaluates gradient by carrying out adjoint simulation. Adjoint traces
-            must be in place beforehand.
+        """ Evaluates gradient by carrying out adjoint simulation
+
+          (A function evaluation must already have been carried out and adjoint
+          traces must already be in place.) 
+
+         ARGUMENTS
+            PATH - the directory to which output files are exported
+            EXPORT_TRACES - save or discard traces?
         """
         unix.cd(self.cwd)
         self.adjoint()
@@ -192,8 +219,12 @@ class base(object):
 
 
     def apply_hess(self, path=''):
-        """ Computes action of Hessian on a given model vector. A gradient 
-          evaluation must have already been carried out.
+        """ Computes action of Hessian on a given model vector.
+
+          (A gradient evaluation must have already been carried out.)
+
+          ARGUMENTS
+            PATH - the directory to which output files are exported
         """
         unix.cd(self.cwd)
         self.import_model(path)
@@ -232,6 +263,12 @@ class base(object):
 
     def load(self, path, parameters=[], prefix='', suffix=''):
         """ Reads SPECFEM model or kernels
+
+          ARGUMENTS
+              PATH - the directory from which model is loaded
+              PARAMETERS - list of material parameters to be loaded
+              PREFIX - optional filename prefix
+              SUFFIX - optional filename suffix, eg '_kernel'
         """
         dict = ModelDict()
         for iproc in range(self.mesh_properties.nproc):
@@ -243,6 +280,13 @@ class base(object):
 
     def save(self, dict, path, parameters=['vp','vs','rho'], prefix='', suffix=''):
         """ Writes SPECFEM model or kernels
+
+          ARGUMENTS
+              DICT - ModelDict object containing model
+              PATH - the directory to which model is saved
+              PARAMETERS - list of material parameters to be loaded
+              PREFIX - optional filename prefix
+              SUFFIX - optional filename suffix, eg '_kernel'
         """
         unix.mkdir(path)
 
@@ -478,15 +522,15 @@ class base(object):
 
 
     def initialize_adjoint_traces(self):
-        """ Adjoint traces are initialized by writing zeros for all components.
-            Components actually in use during an inversion or migration will be
-            overwritten with nonzero values later on.
+        """ Puts in place "adjoint traces" expected by SPECFEM
         """
         for filename in self.data_filenames:
             # read traces
             d = preprocess.reader(self.cwd +'/'+ 'traces/obs', filename)
 
-            # replace data with zeros
+            # Adjoint traces are initialized by writing zeros for all channels.
+            # Channels actually in use during an inversion or migration will be
+            # overwritten with nonzero values later on.
             for t in d:
                 t.data[:] = 0.
 

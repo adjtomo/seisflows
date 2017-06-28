@@ -11,6 +11,7 @@ from seisflows.tools.math import angle
 from seisflows.tools.seismic import  Writer
 
 
+# seisflows.config objects 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
@@ -24,7 +25,7 @@ class base(object):
 
      To reduce memory overhead, vectors are read from disk rather than passed
      from calling routines. For example, at the beginning of compute_direction 
-     the current model and gradient are read from  'g_new' the resulting search
+     the current gradient is  read from  'g_new' and the resulting search
      direction is written to 'p_new'. As the inversion progresses, other 
      information is stored as well.
 
@@ -43,12 +44,12 @@ class base(object):
 
     def check(self):
         """ Checks parameters, paths, and dependencies
-
-         The numerical parameters provided below should work well for a wide 
-         range of applications without manual tuning. If the nonlinear
-         optimization procedure stagnates, it is more likely due to the objective function than the following numerical parameters.
-
         """
+        # The default numerical settings provided here should work well for a 
+        # range of applications without manual tuning. If the nonlinear
+        # optimization procedure stagnates, it is probably due to the 
+        # objective function rather than the nonlinear optimization parameters
+
         # line search algorithm
         if 'LINESEARCH' not in PAR:
             setattr(PAR, 'LINESEARCH', 'Bracket')
@@ -136,7 +137,6 @@ class base(object):
         self.save('p_new', p_new)
 
 
-
     def initialize_search(self):
         """ Determines first step length in line search
         """
@@ -171,6 +171,11 @@ class base(object):
 
     def update_search(self):
         """ Updates line search status and step length
+
+          Status codes
+              status > 0  : finished
+              status == 0 : not finished
+              status < 0  : failed
         """
         alpha, status = self.line_search.update(
             self.loadtxt('alpha'),
