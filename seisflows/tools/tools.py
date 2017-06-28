@@ -90,6 +90,12 @@ def package_exists(name):
     return find_loader(name)
 
 
+def pkgpath(name):
+    for path in import_module('seisflows').__path__:
+        if name+'/seisflows' in path:
+            return path
+
+
 def timestamp():
     return time.strftime('%H:%M:%S')
 
