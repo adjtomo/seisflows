@@ -1,9 +1,8 @@
 
-from os.path import exists
-
 import sys
-
 import numpy as np
+
+from os.path import exists
 
 
 class Diagonal(object):
