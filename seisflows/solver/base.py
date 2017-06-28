@@ -24,14 +24,13 @@ preprocess = sys.modules['seisflows_preprocess']
 
 
 class base(object):
-    """ Base class for SPECFEM2D, SPECFEM3D and SPECFEM3D_GLOBE
+    """ Provides an interface through which solver simulations can be set up and 
+      from Python and a base class for SPECFEM2D, SPECFEM3D and SPECFEM3D_GLOBE
+      solver interfaces
 
-      NOTE: This class supports only simple acoustic and isotropic elastic
-        inversions. For additional material paremeterizations, see the
-        options available in github.com/rmodrak/seisflows-multiparameter
-
-
-      METHODS
+      This class supports only acoustic and isotropic elastic inversions.
+      For additional options involving the material paremeterization, see the
+      github.com/rmodrak/seisflows-multiparameter
 
       eval_func, eval_grad, apply_hess
         These methods deal with evaluation of the misfit function or its
@@ -91,7 +90,7 @@ class base(object):
             raise ParameterError(PAR, 'NPROC')
 
 
-        # format used by SPECFEM for writing models
+        # format used by SPECFEM for reading and writing models
         # (currently, SPECFEM offers both 'fortran_binary' and 'adios')
         if 'SOLVERIO' not in PAR:
             setattr(PAR, 'SOLVERIO', 'fortran_binary')
