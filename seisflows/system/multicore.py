@@ -53,11 +53,12 @@ class multicore(custom_import('system', 'serial')):
         assert PAR.NPROC <= PAR.NPROCMAX
 
 
-    def run(self, classname, funcname, hosts='all', **kwargs):
-        """ Runs tasks in serial or parallel on specified hosts
+    def run(self, classname, method, hosts='all', **kwargs):
+        """ Executes the following task:
+              classname.method(*args, **kwargs)
         """
         self.checkpoint()
-        self.save_kwargs(classname, funcname, kwargs)
+        self.save_kwargs(classname, method, kwargs)
 
         if hosts == 'all':
             running_tasks = dict()
@@ -70,7 +71,7 @@ class multicore(custom_import('system', 'serial')):
                 while len(queued_tasks) > 0 and \
                       len(running_tasks) < PAR.NTASKMAX:
                     i = queued_tasks.pop(0)
-                    p = self._launch(classname, funcname, taskid=i)
+                    p = self._launch(classname, method, taskid=i)
                     running_tasks[i] = p
                     sleep(0.1)
 
@@ -86,7 +87,7 @@ class multicore(custom_import('system', 'serial')):
 
         elif hosts == 'head':
             os.environ['SEISFLOWS_TASKID'] = str(0)
-            func = getattr(__import__('seisflows_'+classname), funcname)
+            func = getattr(__import__('seisflows_'+classname), method)
             func(**kwargs)
 
         else:
@@ -95,7 +96,7 @@ class multicore(custom_import('system', 'serial')):
 
     ### private methods
 
-    def _launch(self, classname, funcname, taskid=0):
+    def _launch(self, classname, method, taskid=0):
         env = os.environ.copy().items()
         env += [['SEISFLOWS_TASKID', str(taskid)]]
         self.progress(taskid)
@@ -104,16 +105,16 @@ class multicore(custom_import('system', 'serial')):
             findpath('seisflows.system') +'/'+ 'wrappers/run '
             + PATH.OUTPUT + ' '
             + classname + ' '
-            + funcname,
+            + method,
             shell=True,
             env=dict(env))
 
         return p
 
 
-    def save_kwargs(self, classname, funcname, kwargs):
+    def save_kwargs(self, classname, method, kwargs):
         kwargspath = join(PATH.OUTPUT, 'kwargs')
-        kwargsfile = join(kwargspath, classname+'_'+funcname+'.p')
+        kwargsfile = join(kwargspath, classname+'_'+method+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
 

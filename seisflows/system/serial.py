@@ -84,8 +84,9 @@ class serial(custom_import('system', 'base')):
         workflow.main()
 
 
-    def run(self, classname, funcname, hosts='all', **kwargs):
-        """ Runs tasks in serial or parallel on specified hosts
+    def run(self, classname, method, hosts='all', **kwargs):
+        """ Executes the following task:
+              classname.method(*args, **kwargs)
         """
         unix.mkdir(PATH.SYSTEM)
 
@@ -94,13 +95,13 @@ class serial(custom_import('system', 'base')):
                 os.environ['SEISFLOWS_TASKID'] = str(taskid)
                 if PAR.VERBOSE > 0:
                     self.progress(taskid)
-                func = getattr(__import__('seisflows_'+classname), funcname)
+                func = getattr(__import__('seisflows_'+classname), method)
                 func(**kwargs)
             print ''
 
         elif hosts == 'head':
             os.environ['SEISFLOWS_TASKID'] = str(0)
-            func = getattr(__import__('seisflows_'+classname), funcname)
+            func = getattr(__import__('seisflows_'+classname), method)
             func(**kwargs)
 
         else:
@@ -109,6 +110,8 @@ class serial(custom_import('system', 'base')):
 
 
     def taskid(self):
+        """ Provides a unique identifier for each running task
+        """
         return int(os.environ['SEISFLOWS_TASKID'])
 
 

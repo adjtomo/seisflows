@@ -33,7 +33,7 @@ class multithreaded(custom_import('system', 'multicore')):
         print """
             DEPRECATION WARNING
 
-                SYSTEM.MULTITHREADED has been renamed to SYSTEM.MULTICORE
+                SYSTEM.MULTITHREADED has been renamed SYSTEM.MULTICORE
 
                 Please update your parameter file.
         """

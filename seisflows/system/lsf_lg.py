@@ -126,26 +126,27 @@ class lsf_lg(custom_import('system', 'base')):
                 + PATH.OUTPUT)
 
 
-    def run(self, classname, funcname, hosts='all', **kwargs):
-        """  Runs tasks in serial or parallel on specified hosts.
+    def run(self, classname, method, hosts='all', **kwargs):
+        """ Executes the following task:
+              classname.method(*args, **kwargs)
         """
         self.save_objects()
-        self.save_kwargs(classname, funcname, kwargs)
-        jobs = self.submit_job_array(classname, funcname, hosts)
+        self.save_kwargs(classname, method, kwargs)
+        jobs = self.submit_job_array(classname, method, hosts)
         while True:
             # wait 30 seconds before checking status again
             time.sleep(30)
 
             self.timestamp()
-            isdone, jobs = self.job_status(classname, funcname, jobs)
+            isdone, jobs = self.job_status(classname, method, jobs)
             if isdone:
                 return
 
 
-    def submit_job_array(self, classname, funcname, hosts='all'):
+    def submit_job_array(self, classname, method, hosts='all'):
         # submit job
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
-            call(self.job_array_cmd(classname, funcname, hosts), stdout=f)
+            call(self.job_array_cmd(classname, method, hosts), stdout=f)
 
         # retrieve job ids
         with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
@@ -161,7 +162,7 @@ class lsf_lg(custom_import('system', 'base')):
             return [job]
 
 
-    def job_array_cmd(self, classname, funcname, hosts):
+    def job_array_cmd(self, classname, method, hosts):
         return ('bsub '
             + '%s ' % PAR.LSFARGS
             + '-n %d ' % PAR.NPROC
@@ -172,7 +173,7 @@ class lsf_lg(custom_import('system', 'base')):
             + findpath('seisflows.system') +'/'+ 'wrapper/run '
             + PATH.OUTPUT + ' '
             + classname + ' '
-            + funcname + ' '
+            + method + ' '
             + PAR.ENVIRONS)
 
 
@@ -190,7 +191,7 @@ class lsf_lg(custom_import('system', 'base')):
         return args
 
 
-    def job_status(self, classname, funcname, jobs):
+    def job_status(self, classname, method, jobs):
         # query lsf database
         states = []
         for job in jobs:
@@ -201,7 +202,7 @@ class lsf_lg(custom_import('system', 'base')):
                 states += [0]
             if state in ['EXIT']:
                 print 'LSF job failed: %s ' %job
-                print msg.TaskError_LSF % (classname, funcname, job)
+                print msg.TaskError_LSF % (classname, method, job)
                 sys.exit(-1)
         isdone = all(states)
 
@@ -226,7 +227,7 @@ class lsf_lg(custom_import('system', 'base')):
 
 
     def taskid(self):
-        """ Gets number of running task
+        """ Provides a unique identifier for each running task
         """
         return int(os.getenv('LSB_JOBINDEX'))-1
 
@@ -237,9 +238,9 @@ class lsf_lg(custom_import('system', 'base')):
             f.write(line)
 
 
-    def save_kwargs(self, classname, funcname, kwargs):
+    def save_kwargs(self, classname, method, kwargs):
         kwargspath = join(PATH.OUTPUT, 'kwargs')
-        kwargsfile = join(kwargspath, classname+'_'+funcname+'.p')
+        kwargsfile = join(kwargspath, classname+'_'+method+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
 
