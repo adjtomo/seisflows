@@ -1,5 +1,5 @@
 
 WORKFLOW='test_system'
-SYSTEM='multithreaded'
+SYSTEM='multicore'
 NTASK=4
 NPROCMAX=4

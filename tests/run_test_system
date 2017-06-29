@@ -13,8 +13,8 @@ sfrun --workdir=$WD --parameter_file=$WD/parameters_serial --path_file=$WD/paths
 rm -rf $WD/output* $WD/scratch
 
 
-echo "TESTING MULTITHREADED..."
-sfrun --workdir=$WD --parameter_file=$WD/parameters_multithreaded --path_file=$WD/paths
+echo "TESTING multicore..."
+sfrun --workdir=$WD --parameter_file=$WD/parameters_multicore --path_file=$WD/paths
 rm -rf $WD/output* $WD/scratch
 
 
