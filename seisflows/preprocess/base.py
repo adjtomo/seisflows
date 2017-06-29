@@ -108,7 +108,7 @@ class base(object):
         """ Computes residuals from observations and synthetics
 
           INPUT
-            PATH - directory in which residuals are written
+            PATH - location residuals will be written
             SYN - obspy Stream object containing synthetic data
             OBS - obspy Stream object containing observed data
         """
@@ -143,7 +143,7 @@ class base(object):
          (overwrites synthetic data in the process)
 
           INPUT
-            PATH - directory in which "adjoint traces" are written
+            PATH - location "adjoint traces" will be written
             SYN - obspy Stream object containing synthetic data
             OBS - obspy Stream object containing observed data
             CHANNEL - channel or component code used by writer
