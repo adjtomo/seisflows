@@ -84,13 +84,13 @@ class migration(object):
 
         system.run('postprocess', 'process_kernels',
                  hosts='head',
-                 path=PATH.SCRATCH,
+                 path=PATH.SCRATCH+'/'+'kernels',
                  parameters=solver.parameters)
 
         try:
             system.run('postprocess', 'process_kernels',
                      hosts='head',
-                     path=PATH.SCRATCH,
+                     path=PATH.SCRATCH+'/'+'kernels',
                      parameters=['rhop'])
         except:
             pass

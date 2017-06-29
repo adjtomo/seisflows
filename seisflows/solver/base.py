@@ -29,8 +29,7 @@ class base(object):
       solver interfaces
 
       This class supports only acoustic and isotropic elastic inversions.
-      For additional options involving the material paremeterization, see the
-      github.com/rmodrak/seisflows-multiparameter
+      For additional options, see github.com/rmodrak/seisflows-multiparameter
 
       eval_func, eval_grad, apply_hess
         These methods deal with evaluation of the misfit function or its
@@ -188,7 +187,7 @@ class base(object):
         """ Evaluates misfit function by carrying out forward simulation and
             comparing observations and synthetics
 
-          ARGUMENTS
+          INPUT
             PATH - the directory from which model is imported
             EXPORT_TRACES - save or discard traces?
         """
@@ -205,7 +204,7 @@ class base(object):
           (A function evaluation must already have been carried out and adjoint
           traces must already be in place.) 
 
-         ARGUMENTS
+         INPUT
             PATH - the directory to which output files are exported
             EXPORT_TRACES - save or discard traces?
         """
@@ -222,7 +221,7 @@ class base(object):
 
           (A gradient evaluation must have already been carried out.)
 
-          ARGUMENTS
+          INPUT
             PATH - the directory to which output files are exported
         """
         unix.cd(self.cwd)
@@ -263,7 +262,7 @@ class base(object):
     def load(self, path, parameters=[], prefix='', suffix=''):
         """ Reads SPECFEM model or kernels
 
-          ARGUMENTS
+          INPUT
               PATH - the directory from which model is loaded
               PARAMETERS - list of material parameters to be loaded
               PREFIX - optional filename prefix
@@ -280,7 +279,7 @@ class base(object):
     def save(self, dict, path, parameters=['vp','vs','rho'], prefix='', suffix=''):
         """ Writes SPECFEM model or kernels
 
-          ARGUMENTS
+          INPUT
               DICT - ModelDict object containing model
               PATH - the directory to which model is saved
               PARAMETERS - list of material parameters to be loaded
@@ -331,31 +330,39 @@ class base(object):
 
     ### postprocessing wrappers
 
-    def combine(self, path='', parameters=[]):
+    def combine(self, input_path='', output_path='', parameters=[]):
         """ Sums individual source contributions. Wrapper over xcombine_sem
             utility.
         """
+        if not exists(input_path):
+            raise Exception
+
+        if not exists(output_path):
+            unix.mkdir(output_path)
+
         unix.cd(self.cwd)
-
         with open('kernel_paths', 'w') as file:
-            file.writelines([join(path, dir)+'\n' for dir in self.source_names])
+            file.writelines([join(input_path, name+'\n')
+                for name in self.source_names])
 
-        unix.mkdir(path +'/'+ 'sum')
         for name in parameters or self.parameters:
             call_solver(
                 system.mpiexec(),
                 PATH.SPECFEM_BIN +'/'+ 'xcombine_sem '
                 + name + '_kernel' + ' '
                 + 'kernel_paths' + ' '
-                + path +'/'+ 'sum')
+                + output_path)
 
 
-    def smooth(self, path='', parameters=[], span=0.):
+    def smooth(self, input_path='', output_path='', parameters=[], span=0.):
         """ Smooths kernels by convolving them with a Gaussian.  Wrapper over 
             xsmooth_sem utility.
         """
-        assert exists(path)
-        assert len(parameters) > 0
+        if not exists(input_path):
+            raise Exception
+
+        if not exists(output_path):
+            unix.mkdir(output_path)
 
         # apply smoothing operator
         unix.cd(self.cwd)
@@ -367,49 +374,15 @@ class base(object):
                 + str(span) + ' '
                 + str(span) + ' '
                 + name + '_kernel' + ' '
-                + path + '/ '
-                + path + '/ ',
+                + input_path + '/ '
+                + output_path + '/ ',
                 output='/dev/null')
 
         print ''
 
-        # move input files
-        src = path
-        dst = path + '_nosmooth'
-        unix.mkdir(dst)
-        for name in parameters or self.parameters:
-            unix.mv(glob(src+'/*'+name+'_kernel.bin'), dst)
-
         # rename output files
-        unix.rename('_smooth', '', glob(src+'/*'))
-
-
-    def clip(self, path='', parameters=[], minval=-np.inf, maxval=np.inf):
-        """ Wrapper over xclip_sem utility
-        """
-        assert exists(path)
-        assert len(parameters) > 0
-
-        unix.cd(self.cwd)
-        for name in parameters or self.parameters:
-            call_solver(
-                system.mpiexec,
-                PATH.SPECFEM_BIN +'/'+ 'xclip_sem '
-                + str(minval) + ' '
-                + str(maxval) + ' '
-                + name + '_kernel' + ' '
-                + path + '/ '
-                + path + '/ ')
-
-        # move input files
-        src = path
-        dst = path + '_noclip'
-        unix.mkdir(dst)
-        for name in parameters or self.parameters:
-            unix.mv(glob(src+'/*'+name+'.bin'), dst)
-
-        # rename output files
-        unix.rename('_clip', '', glob(src+'/*'))
+        files = glob(output_path+'/*')
+        unix.rename('_smooth', '', files)
 
 
     ### file transfer utilities

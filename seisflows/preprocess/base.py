@@ -78,6 +78,9 @@ class base(object):
     def prepare_eval_grad(self, path='.'):
         """ Prepares solver for gradient evaluation by writing residuals and
           adjoint traces
+
+          INPUT
+            PATH - directory containing observed and synthetic seismic data
         """
         solver = sys.modules['seisflows_solver']
 
@@ -103,6 +106,11 @@ class base(object):
 
     def write_residuals(self, path, syn, obs):
         """ Computes residuals from observations and synthetics
+
+          INPUT
+            PATH - directory in which residuals are written
+            SYN - obspy Stream object containing synthetic data
+            OBS - obspy Stream object containing observed data
         """
         nt, dt, _ = self.get_time_scheme(syn)
         nn, _ = self.get_network_size(syn)
@@ -118,18 +126,27 @@ class base(object):
         np.savetxt(filename, residuals)
 
 
-    def sum_residuals(self, paths):
+    def sum_residuals(self, files):
         """ Sums squares of residuals
+
+          INPUT
+            FILES - files containing residuals
         """
         total_misfit = 0.
-        for path in paths:
-            total_misfit += np.sum(np.loadtxt(path)**2.)
+        for file in files:
+            total_misfit += np.sum(np.loadtxt(file)**2.)
         return total_misfit
         
 
     def write_adjoint_traces(self, path, syn, obs, channel):
         """ Writes "adjoint traces" required for gradient computation
          (overwrites synthetic data in the process)
+
+          INPUT
+            PATH - directory in which "adjoint traces" are written
+            SYN - obspy Stream object containing synthetic data
+            OBS - obspy Stream object containing observed data
+            CHANNEL - channel or component code used by writer
         """
         nt, dt, _ = self.get_time_scheme(syn)
         nn, _ = self.get_network_size(syn)
