@@ -40,11 +40,12 @@ SOLVER FAILED
 """
 
 
-SystemError = """
+SystemWarning = """
 
-SYSTEM ERROR
+Please double check SYSTEM parameter
 
-    Please choose a different setting for SYSTEM parameter.
+    Expected hostname: %s
+    Actual hostname: %s
 
 """
 
