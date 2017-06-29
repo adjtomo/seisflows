@@ -30,7 +30,7 @@ class multicore(custom_import('system', 'serial')):
     def check(self):
         """ Checks parameters and paths
         """
-        super(multithreaded, self).check()
+        super(multicore, self).check()
 
         # number of tasks
         if 'NTASK' not in PAR:
