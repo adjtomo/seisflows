@@ -52,7 +52,7 @@ def cp(src='', dst=''):
 
 
 def hostname():
-    return socket.hostname()
+    return socket.gethostname().split('.')[0]
 
 
 def ln(src, dst):
