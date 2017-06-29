@@ -94,7 +94,9 @@ class specfem3d(custom_import('solver', 'base')):
 
             call_solver(system.mpiexec(), 'bin/xmeshfem3D')
             call_solver(system.mpiexec(), 'bin/xgenerate_databases')
-            self.export_model(PATH.OUTPUT +'/'+ model_name)
+
+            if self.taskid == 0:
+                self.export_model(PATH.OUTPUT +'/'+ model_name)
 
         else:
             raise NotImplementedError

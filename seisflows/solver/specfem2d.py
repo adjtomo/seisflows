@@ -141,7 +141,8 @@ class specfem2d(custom_import('solver', 'base')):
         dst = join(self.cwd, 'DATA')
         unix.cp(src, dst)
 
-        self.export_model(PATH.OUTPUT +'/'+ model_name)
+        if self.taskid == 0:
+            self.export_model(PATH.OUTPUT +'/'+ model_name)
 
 
     ### low-level solver interface
@@ -186,11 +187,10 @@ class specfem2d(custom_import('solver', 'base')):
         unix.cp(src, dst)
 
     def export_model(self, path):
-        if self.taskid == 0:
-            unix.mkdir(path)
-            src = glob(join(self.cwd, 'DATA/*.bin'))
-            dst = path
-            unix.cp(src, dst)
+        unix.mkdir(path)
+        src = glob(join(self.cwd, 'DATA/*.bin'))
+        dst = path
+        unix.cp(src, dst)
 
 
     @property
