@@ -1,9 +1,8 @@
 
 import sys
 
-from seisflows.tools import array
-from seisflows.tools import unix
-from seisflows.tools.tools import findpath
+from seisflows.tools import array, unix
+from seisflows.tools.tools import exists, findpath
 from seisflows.tools.seismic import getpar, setpar
 
 
@@ -78,9 +77,18 @@ def write_receivers(coords, path='.'):
         f.writelines(lines)
 
 
-def smooth_legacy(path='', parameters=[], span=0.):
+def smooth_legacy(input_path='', output_path='', parameters=[], span=0.):
         solver = sys.modules['seisflows_solver']
         PATH = sys.modules['seisflows_paths']
+
+        if not exists(input_path):
+            raise Exception
+
+        if not exists(output_path):
+            unix.mkdir(output_path)
+
+        if solver.mesh_properties.nproc!=1:
+            raise NotImplementedError
 
         # intialize arrays
         kernels = {}
@@ -93,7 +101,7 @@ def smooth_legacy(path='', parameters=[], span=0.):
 
         # read kernels
         for key in parameters or solver.parameters:
-            kernels[key] += solver.io.read_slice(path, key+'_kernel', 0)
+            kernels[key] += solver.io.read_slice(input_path, key+'_kernel', 0)
 
         if not span:
             return kernels
@@ -102,19 +110,13 @@ def smooth_legacy(path='', parameters=[], span=0.):
         for key in ['x', 'z']:
             coords[key] += solver.io.read_slice(PATH.MODEL_INIT, key, 0)
 
-        mesh = array.stack(coords['x'][0],
-                           coords['z'][0])
+        mesh = array.stack(coords['x'][0], coords['z'][0])
 
-        #mesh = array.stack(solver.mesh_properties.coords['x'][0],
-        #                   solver.mesh_properties.coords['z'][0])
-
+        # apply smoother
         for key in parameters or solver.parameters:
             kernels[key] = [array.meshsmooth(kernels[key][0], mesh, span)]
 
-        unix.rm(path + '_nosmooth')
-        unix.mv(path, path + '_nosmooth')
-
-        unix.mkdir(path)
+        # write smooth kernels
         for key in parameters or solver.parameters:
-            solver.io.write_slice(kernels[key][0], path, key+'_kernel', 0)
+            solver.io.write_slice(kernels[key][0], output_path, key+'_kernel', 0)
 

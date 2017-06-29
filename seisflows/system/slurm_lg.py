@@ -126,18 +126,19 @@ class slurm_lg(custom_import('system', 'base')):
                 + PATH.OUTPUT)
 
 
-    def run(self, classname, funcname, hosts='all', **kwargs):
-        """  Runs tasks in serial or parallel on specified hosts
+    def run(self, classname, method, hosts='all', **kwargs):
+        """ Executes the following task:
+              classname.method(*args, **kwargs)
         """
         self.checkpoint()
 
-        self.save_kwargs(classname, funcname, kwargs)
-        jobs = self.submit_job_array(classname, funcname, hosts)
+        self.save_kwargs(classname, method, kwargs)
+        jobs = self.submit_job_array(classname, method, hosts)
         while True:
             # wait a few seconds before checking again
             time.sleep(5)
 
-            isdone, jobs = self.job_array_status(classname, funcname, jobs)
+            isdone, jobs = self.job_array_status(classname, method, jobs)
             if isdone:
                 return
 
@@ -149,7 +150,7 @@ class slurm_lg(custom_import('system', 'base')):
 
 
     def taskid(self):
-        """ Gets number of running task
+        """ Provides a unique identifier for each running task
         """
         try:
             return int(os.getenv('SLURM_ARRAY_TASK_ID'))
@@ -159,11 +160,11 @@ class slurm_lg(custom_import('system', 'base')):
 
     ### job array methods
 
-    def submit_job_array(self, classname, funcname, hosts='all'):
+    def submit_job_array(self, classname, method, hosts='all'):
         """ Submits job array and returns associated job ids
         """
         # submit job array
-        cmd = self.job_array_cmd(classname, funcname, hosts)
+        cmd = self.job_array_cmd(classname, method, hosts)
         stdout = check_output(cmd, shell=True)
 
         # construct job id list
@@ -176,7 +177,7 @@ class slurm_lg(custom_import('system', 'base')):
         return jobs
 
 
-    def job_array_cmd(self, classname, funcname, hosts):
+    def job_array_cmd(self, classname, method, hosts):
         return ('sbatch '
                 + '%s ' % PAR.SLURMARGS
                 + '--job-name=%s ' % PAR.TITLE
@@ -188,7 +189,7 @@ class slurm_lg(custom_import('system', 'base')):
                 + findpath('seisflows.system') +'/'+ 'wrappers/run '
                 + PATH.OUTPUT + ' '
                 + classname + ' '
-                + funcname + ' ' 
+                + method + ' ' 
                 + PAR.ENVIRONS)
 
 
@@ -207,17 +208,17 @@ class slurm_lg(custom_import('system', 'base')):
         return args
 
 
-    def job_array_status(self, classname, funcname, jobs):
+    def job_array_status(self, classname, method, jobs):
         """ Determines completion status of one or more jobs
         """
         states = []
         for job in jobs:
             state = self._query(job)
             if state in ['TIMEOUT']:
-                print msg.TimoutError % (classname, funcname, job, PAR.TASKTIME)
+                print msg.TimoutError % (classname, method, job, PAR.TASKTIME)
                 sys.exit(-1)
             elif state in ['FAILED', 'NODE_FAIL']:
-                print msg.TaskError_SLURM % (classname, funcname, job)
+                print msg.TaskError_SLURM % (classname, method, job)
                 sys.exit(-1)
             elif state in ['COMPLETED']:
                 states += [1]
@@ -244,9 +245,9 @@ class slurm_lg(custom_import('system', 'base')):
         return state
 
 
-    def save_kwargs(self, classname, funcname, kwargs):
+    def save_kwargs(self, classname, method, kwargs):
         kwargspath = join(PATH.OUTPUT, 'kwargs')
-        kwargsfile = join(kwargspath, classname+'_'+funcname+'.p')
+        kwargsfile = join(kwargspath, classname+'_'+method+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
 

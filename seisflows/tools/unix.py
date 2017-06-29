@@ -51,6 +51,10 @@ def cp(src='', dst=''):
         shutil.copytree(src, dst)
 
 
+def hostname():
+    return socket.gethostname().split('.')[0]
+
+
 def ln(src, dst):
     dst = abspath(dst)
     if os.path.isdir(dst):

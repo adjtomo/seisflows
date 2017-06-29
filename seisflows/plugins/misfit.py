@@ -1,4 +1,8 @@
 
+# used by the PREPROCESS class and specified by the MISFIT parameter
+
+
+
 import numpy as np
 from scipy.signal import hilbert as _analytic
 

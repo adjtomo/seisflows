@@ -7,32 +7,49 @@ from seisflows.config import ParameterError
 from seisflows.plugins import line_search, preconds
 from seisflows.tools import msg, unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.math import angle, polyfit2, backtrack2
-from seisflows.tools.seismic import  Writer, StepWriter
+from seisflows.tools.math import angle
+from seisflows.tools.seismic import  Writer
 
 
+# seisflows.config objects 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
 class base(object):
-    """ Abstract base class
+    """ Nonlinear optimization abstract base class
 
-     Default numerical parameters provided below should work well for a wide range
-     inversions without the need for manual tuning. If the nonlinear optimization
-     procedure stagnates, it may be due to the objective function rather than the 
-     numerical parameters.
+     Base class on top of which steepest descent, nonlinear conjugate, quasi-
+     Newton and Newton methods can be implemented.  Includes methods for
+     both search direction and line search.
 
      To reduce memory overhead, vectors are read from disk rather than passed
-     from a calling routine. At the start of each search direction computation
-     the current model and gradient are read from files 'm_new' and 'g_new';
-     the resulting search direction is written to 'p_new'. As the inversion
-     progresses, other information is stored to disk as well.
+     from calling routines. For example, at the beginning of compute_direction 
+     the current gradient is  read from  'g_new' and the resulting search
+     direction is written to 'p_new'. As the inversion progresses, other 
+     information is stored as well.
+
+     Variables
+        m_new - current model
+        m_old - previous model
+        m_try - line search model
+        f_new - current objective function value
+        f_old - previous objective function value
+        f_try - line search function value
+        g_new - current gradient direction
+        g_old - previous gradient direction
+        p_new - current search direction
+        p_old - previous search direction
     """
 
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
+        # The default numerical settings provided here should work well for a 
+        # range of applications without manual tuning. If the nonlinear
+        # optimization procedure stagnates, it is probably due to the 
+        # objective function rather than the nonlinear optimization parameters
+
         # line search algorithm
         if 'LINESEARCH' not in PAR:
             setattr(PAR, 'LINESEARCH', 'Bracket')
@@ -107,24 +124,17 @@ class base(object):
             self.save('m_new', solver.merge(solver.load(PATH.MODEL_INIT)))
 
 
-    # The following names are used in the 'compute_direction' method and for
-    # writing information to disk:
-    #    m_new - current model
-    #    m_old - previous model
-    #    m_try - trial model
-    #    f_new - current objective function value
-    #    f_old - previous objective function value
-    #    f_try - trial objective function value
-    #    g_new - current gradient direction
-    #    g_old - previous gradient direction
-    #    p_new - current search direction
-    #    p_old - previous search direction
-
     def compute_direction(self):
-        """ Computes model update direction from stored gradient
+        """ Computes search direction
         """
-        # must be implemented by subclass
-        raise NotImplementedError
+        # the following code implements steepest descent
+        # (for other algorithms, simply overload this method)
+        g_new = self.load('g_new')
+        if self.precond:
+            p_new = -self.precond(g_new)
+        else:
+            p_new = -g_new
+        self.save('p_new', p_new)
 
 
     def initialize_search(self):
@@ -161,6 +171,11 @@ class base(object):
 
     def update_search(self):
         """ Updates line search status and step length
+
+          Status codes
+              status > 0  : finished
+              status == 0 : not finished
+              status < 0  : failed
         """
         alpha, status = self.line_search.update(
             self.loadtxt('alpha'),

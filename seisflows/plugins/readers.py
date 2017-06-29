@@ -1,5 +1,14 @@
 
+# SeisFlows uses obspy stream objects for holding and processing seismic data. In some cases, obspy.read doesn't  provide the desired behavior, so we introduce an additonal level of indirection
+
+# used by the PREPROCESS class and specified by the READER parameter
+
+
 def su(path, filename):
+    """ Reads Seismic Unix files
+
+      Hardwired ''
+    """
     import obspy
     stream = obspy.read(path +'/'+ filename, 
                    format='SU',
@@ -8,6 +17,8 @@ def su(path, filename):
 
 
 def ascii(path, filenames):
+    """ Reads SPECFEM3D-style ascii data
+    """
     from numpy import loadtxt
     from obspy.core import Stream, Stats, Trace
 

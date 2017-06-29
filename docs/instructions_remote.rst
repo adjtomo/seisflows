@@ -51,7 +51,7 @@ Run the following test to make sure everything is working::
         ~/packages/seisflows/tests/run_test_optimize
 
 
-If the optimization problems are solved in 50 iterations or fewer, the test was successful.
+If the optimization problems are solved in 60 iterations or fewer, the test was successful.
 
  
 

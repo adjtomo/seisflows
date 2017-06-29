@@ -1,4 +1,9 @@
 
+# SeisFlows uses obspy stream objects for holding and processing seismic data. In some cases, obspy.read doesn't  provide the desired behavior, so we introduce an additonal level of indirection
+
+# used by the PREPROCESS class and specified by the WRITER parameter
+
+
 import numpy as np
 
 def su(d, path, filename):

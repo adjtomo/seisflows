@@ -3,7 +3,6 @@
 import os
 
 from os.path import exists, join
-from socket import gethostname
 from seisflows.tools import unix
 
 
@@ -28,7 +27,7 @@ if __name__ == '__main__':
     """ Prompts user to select SEISFLOWS example, then sets up working directory
       to run example.
     """
-    if gethostname() in ['tiger1', 'tiger2']:
+    if unix.hostname() in ['tiger1', 'tiger2', 'tiger', 'tigergpu']:
         path = '/home/rmodrak/data'
     else:
         path = getpath()

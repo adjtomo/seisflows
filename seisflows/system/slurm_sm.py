@@ -110,11 +110,12 @@ class slurm_sm(custom_import('system', 'base')):
                 + PATH.OUTPUT)
 
 
-    def run(self, classname, funcname, hosts='all', **kwargs):
-        """  Runs tasks in serial or parallel on specified hosts
+    def run(self, classname, method, hosts='all', **kwargs):
+        """ Executes the following task:
+              classname.method(*args, **kwargs)
         """
         self.checkpoint()
-        self.save_kwargs(classname, funcname, kwargs)
+        self.save_kwargs(classname, method, kwargs)
 
         if hosts == 'all':
             # run on all available nodes
@@ -123,7 +124,7 @@ class slurm_sm(custom_import('system', 'base')):
                     + join(findpath('seisflows.system'), 'wrappers/run ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
-                    + funcname + ' '
+                    + method + ' '
                     + PAR.ENVIRONS)
 
         elif hosts == 'head':
@@ -135,7 +136,7 @@ class slurm_sm(custom_import('system', 'base')):
                     + join(findpath('seisflows.system'), 'wrappers/run ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
-                    + funcname + ' '
+                    + method + ' '
                     + PAR.ENVIRONS)
 
         else:
@@ -144,12 +145,14 @@ class slurm_sm(custom_import('system', 'base')):
 
 
     def hostlist(self):
+        """ Generates list of allocated cores
+        """
         stdout = check_output('scontrol show hostname $SLURM_JOB_NODEFILE')
         return [line.strip() for line in stdout]
 
 
     def taskid(self):
-        """ Gets number of running task
+        """ Provides a unique identifier for each running task
         """
         gid = os.getenv('SLURM_GTIDS').split(',')
         lid = int(os.getenv('SLURM_LOCALID'))
@@ -162,9 +165,9 @@ class slurm_sm(custom_import('system', 'base')):
         return PAR.MPIEXEC
 
 
-    def save_kwargs(self, classname, funcname, kwargs):
+    def save_kwargs(self, classname, method, kwargs):
         kwargspath = join(PATH.OUTPUT, 'kwargs')
-        kwargsfile = join(kwargspath, classname+'_'+funcname+'.p')
+        kwargsfile = join(kwargspath, classname+'_'+method+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
 

@@ -126,8 +126,9 @@ class pbs_lg(custom_import('system', 'base')):
                 + PATH.OUTPUT)
 
 
-    def run(self, classname, funcname, hosts='all', **kwargs):
-        """ Runs task(s) on specified hosts
+    def run(self, classname, method, hosts='all', **kwargs):
+        """ Executes the following task:
+              classname.method(*args, **kwargs)
         """
         self.checkpoint()
 
@@ -138,7 +139,7 @@ class pbs_lg(custom_import('system', 'base')):
                     + findpath('seisflows.system')  +'/'+'wrappers/run '
                     + PATH.OUTPUT + ' '
                     + classname + ' '
-                    + funcname + ' '
+                    + method + ' '
                     + 'PYTHONPATH='+findpath('seisflows'),+','
                     + PAR.ENVIRONS)
 
@@ -150,7 +151,7 @@ class pbs_lg(custom_import('system', 'base')):
                     + join(findpath('seisflows.system'), 'wrappers/run ')
                     + PATH.OUTPUT + ' '
                     + classname + ' '
-                    + funcname + ' '
+                    + method + ' '
                     + 'PYTHONPATH='+findpath('seisflows'),+','
                     + PAR.ENVIRONS
                     +'"')
@@ -167,7 +168,7 @@ class pbs_lg(custom_import('system', 'base')):
 
 
     def taskid(self):
-        """ Gets number of running task
+        """ Provides a unique identifier for each running task
         """
         try:
             return os.getenv('PBS_NODENUM')
@@ -176,13 +177,15 @@ class pbs_lg(custom_import('system', 'base')):
 
 
     def hostlist(self):
+        """ Generates list of allocated cores
+        """
         with open(os.environ['PBS_NODEFILE'], 'r') as f:
             return [line.strip() for line in f.readlines()]
 
 
-    def save_kwargs(self, classname, funcname, kwargs):
+    def save_kwargs(self, classname, method, kwargs):
         kwargspath = join(PATH.OUTPUT, 'kwargs')
-        kwargsfile = join(kwargspath, classname+'_'+funcname+'.p')
+        kwargsfile = join(kwargspath, classname+'_'+method+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
 

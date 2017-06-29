@@ -87,7 +87,9 @@ class specfem3d_globe(custom_import('solver', 'base')):
             unix.cp(glob(model_path +'/'+ '*'), self.model_databases)
 
             call_solver(system.mpiexec(), 'bin/xmeshfem3D')
-            self.export_model(PATH.OUTPUT +'/'+ model_name)
+
+            if self.taskid == 0:
+                self.export_model(PATH.OUTPUT +'/'+ model_name)
 
         else:
             raise NotImplementedError

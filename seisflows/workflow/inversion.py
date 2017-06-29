@@ -20,7 +20,7 @@ postprocess = sys.modules['seisflows_postprocess']
 
 
 class inversion(object):
-    """ Waveform inversion base class.
+    """ Waveform inversion base class
 
       Peforms iterative nonlinear inversion and provides a base class on top
       of which specialized strategies can be implemented.
@@ -41,14 +41,14 @@ class inversion(object):
         """ Checks parameters and paths
         """
 
-        # specify parameters
+        # starting and stopping iterations
         if 'BEGIN' not in PAR:
             raise ParameterError(PAR, 'BEGIN')
 
         if 'END' not in PAR:
             raise ParameterError(PAR, 'END')
 
-        # specify scratch paths
+        # scratch paths
         if 'SCRATCH' not in PATH:
             raise ParameterError(PATH, 'SCRATCH')
 
@@ -67,14 +67,14 @@ class inversion(object):
         if 'OPTIMIZE' not in PATH:
             setattr(PATH, 'OPTIMIZE', join(PATH.SCRATCH, 'optimize'))
 
-        # specify input paths
+        # input paths
         if 'DATA' not in PATH:
             setattr(PATH, 'DATA', None)
 
         if 'MODEL_INIT' not in PATH:
             raise ParameterError(PATH, 'MODEL_INIT')
 
-        # specify output paths
+        # output paths
         if 'OUTPUT' not in PATH:
             raise ParameterError(PATH, 'OUTPUT')
 
