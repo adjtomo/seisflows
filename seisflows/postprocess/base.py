@@ -86,7 +86,7 @@ class base(object):
 
           INPUT
               PATH - directory containing sensitivity kernels
-              PARAMETERS - list of material parameters to be operated on
+              PARAMETERS - list of material parameters e.g. ['vp','vs']
         """
         if not exists(path):
             raise Exception
@@ -94,26 +94,24 @@ class base(object):
         if not parameters:
             parameters = solver.parameters
 
+        if PAR.SMOOTH > 0:
+            suffix = '_nosmooth'
+
         solver.combine(
                input_path=path,
-               output_path=path+'/'+'sum',
+               output_path=path+'/'+'sum'+suffix,
                parameters=parameters)
 
         if PAR.SMOOTH > 0.:
-            src = path+'/'+'sum'
-            dst = path+'/'+'sum_nosmooth' 
-            unix.mv(src, dst)
-
             solver.smooth(
-                   input_path=path+'/'+'sum_nosmooth',
+                   input_path=path+'/'+'sum'+suffix,
                    output_path=path+'/'+'sum',
                    parameters=parameters,
                    span=PAR.SMOOTH)
 
 
     def save(self, g, path='', parameters=[], backup=None):
-        """ Convience function for saving dictionary representation of 
-          gradient
+        """ Utility for saving dictionary representation of gradient
         """
         if not exists(path):
             raise Exception
