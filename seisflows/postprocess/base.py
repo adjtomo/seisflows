@@ -52,13 +52,8 @@ class base(object):
 
 
     def write_gradient(self, path):
-        """ Writes gradient of objective function
-
-          Combines and processes contributions to the gradient from individual
-          sources
-
-          INPUT
-              PATH - directory containing output of adjoint simulation
+        """ Processes and combines contributions to the gradient from
+          individual sources
         """
         if not exists(path):
             raise Exception
