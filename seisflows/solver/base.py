@@ -24,9 +24,9 @@ preprocess = sys.modules['seisflows_preprocess']
 
 
 class base(object):
-    """ Provides an interface through which solver simulations can be set up and 
-      from Python and a base class for SPECFEM2D, SPECFEM3D and SPECFEM3D_GLOBE
-      solver interfaces
+    """ Provides an interface through which solver simulations can be set up
+      and run and a parent class for SPECFEM2D, SPECFEM3D and SPECFEM3D_GLOBE 
+      subclasses
 
       This class supports only acoustic and isotropic elastic inversions.
       For additional options, see github.com/rmodrak/seisflows-multiparameter
