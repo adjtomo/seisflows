@@ -24,9 +24,9 @@ preprocess = sys.modules['seisflows_preprocess']
 
 
 class base(object):
-    """ Provides an interface through which solver simulations can be set up and 
-      from Python and a base class for SPECFEM2D, SPECFEM3D and SPECFEM3D_GLOBE
-      solver interfaces
+    """ Provides an interface through which solver simulations can be set up
+      and run and a parent class for SPECFEM2D, SPECFEM3D and SPECFEM3D_GLOBE 
+      subclasses
 
       This class supports only acoustic and isotropic elastic inversions.
       For additional options, see github.com/rmodrak/seisflows-multiparameter
@@ -183,9 +183,8 @@ class base(object):
 
     ### high-level solver interface
 
-    def eval_func(self, path='', export_traces=False):
-        """ Evaluates misfit function by carrying out forward simulation and
-            comparing observations and synthetics
+    def eval_func(self, path='', export_traces=False, write_residuals=True):
+        """ Performs forward simulations needed for misfit function evaluation
 
           INPUT
             PATH - the directory from which model is imported
@@ -194,12 +193,14 @@ class base(object):
         unix.cd(self.cwd)
         self.import_model(path)
         self.forward()
-        preprocess.prepare_eval_grad(self.cwd)
-        self.export_residuals(path)
+
+        if write_residuals:
+            preprocess.prepare_eval_grad(self.cwd)
+            self.export_residuals(path)
 
 
     def eval_grad(self, path='', export_traces=False):
-        """ Evaluates gradient by carrying out adjoint simulation
+        """ Evaluates gradient by carrying out adjoint simulations
 
           (A function evaluation must already have been carried out and adjoint
           traces must already be in place.) 

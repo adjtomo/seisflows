@@ -20,10 +20,6 @@ class NLCG(custom_import('optimize', 'base')):
         if 'LINESEARCH' not in PAR:
             setattr(PAR, 'LINESEARCH', 'Bracket')
 
-        # NLCG memory
-        if 'NLCGMEM' not in PAR:
-            setattr(PAR, 'NLCGMEM', 3)
-
         # NLCG periodic restart interval
         if 'NLCGMAX' not in PAR:
             setattr(PAR, 'NLCGMAX', np.inf)
