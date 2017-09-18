@@ -79,9 +79,7 @@ if __name__ == '__main__':
     """ USAGE:  quickplot DIR [ARGS]
 
       Plots all SPECFEM2D model or kernel files in given directory DIR. 
-
-      Any additional arguments ARGS are simply passed to PLOTGLL and not used 
-      directly by QUICKPLOT
+      Any additional ARGS are simply passed to PLOTGLL.
     """
 
     exe = 'python -W ignore '+which('plotgll')
@@ -95,7 +93,6 @@ if __name__ == '__main__':
             "usage: quickplot DIR [ARGS]")
 
     dir = parse_args()
-
     if not exists(dir):
         raise IOError(
             "directory does not exit: %s" % dir)
