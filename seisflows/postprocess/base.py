@@ -15,7 +15,10 @@ solver = sys.modules['seisflows_solver']
 
 
 class base(object):
-    """ Gradient postprocessing class
+    """ Postprocessing base class
+
+      Postprocesing refers to image processing and regularization operations on 
+      models or gradients
     """
 
     def check(self):

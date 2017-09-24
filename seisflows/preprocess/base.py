@@ -16,6 +16,9 @@ PATH = sys.modules['seisflows_paths']
 
 class base(object):
     """ Data preprocessing class
+
+      Provides data processing functions for seismic traces, with options for
+      data misfit, filtering, normalization and muting
     """
 
     def check(self):
