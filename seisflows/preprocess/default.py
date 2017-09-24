@@ -1,4 +1,6 @@
 
+import sys
+
 from seisflows.config import custom_import
 
 PAR = sys.modules['seisflows_parameters']
