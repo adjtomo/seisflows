@@ -128,14 +128,22 @@ class slurm_lg(custom_import('system', 'base')):
 
     def run(self, classname, method, hosts='all', **kwargs):
         """ Executes the following task:
-              classname.method(*args, **kwargs)
+              classname.method(**kwargs)
         """
         self.checkpoint()
-
         self.save_kwargs(classname, method, kwargs)
-        jobs = self.submit_job_array(classname, method, hosts)
+
+        # submit job array
+        stdout = check_output(
+            self.job_array_cmd(classname, method, hosts),
+            shell=True)
+
+        # keep track of job ids
+        jobs = self.job_id_list(stdout, hosts)
+
+        # check job array completion status
         while True:
-            # wait a few seconds before checking again
+            # wait a few seconds between queries
             time.sleep(5)
 
             isdone, jobs = self.job_array_status(classname, method, jobs)
@@ -153,67 +161,55 @@ class slurm_lg(custom_import('system', 'base')):
         """ Provides a unique identifier for each running task
         """
         try:
+            return int(os.getenv('SEISFLOWS_TASKID'))
+        except:        
             return int(os.getenv('SLURM_ARRAY_TASK_ID'))
-        except:
-            raise Exception("TASK_ID environment variable not defined.")
 
 
     ### job array methods
 
-    def submit_job_array(self, classname, method, hosts='all'):
-        """ Submits job array and returns associated job ids
-        """
-        # submit job array
-        cmd = self.job_array_cmd(classname, method, hosts)
-        stdout = check_output(cmd, shell=True)
-
-        # construct job id list
-        id = stdout.split()[-1].strip()
-        if hosts=='all':
-            tasks = range(PAR.NTASK)
-            jobs = [id+'_'+str(task) for task in tasks]
-        else:
-            jobs = [id+'_0']
-        return jobs
-
-
     def job_array_cmd(self, classname, method, hosts):
-        return ('sbatch '
-                + '%s ' % PAR.SLURMARGS
-                + '--job-name=%s ' % PAR.TITLE
-                + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
-                + '--ntasks-per-node=%d ' % PAR.NODESIZE
-                + '--ntasks=%d ' % PAR.NPROC
-                + '--time=%d ' % PAR.TASKTIME
-                + self.job_array_args(hosts)
-                + findpath('seisflows.system') +'/'+ 'wrappers/run '
-                + PATH.OUTPUT + ' '
-                + classname + ' '
-                + method + ' ' 
-                + PAR.ENVIRONS)
-
-
-    def job_array_args(self, hosts):
         if hosts == 'all':
-            args = ('--array=%d-%d ' % (0,PAR.NTASK-1%PAR.NTASKMAX)
-                   +'--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a'))
+           return ('sbatch %s ' % PAR.SLURMARGS
+                   + '--job-name=%s ' % PAR.TITLE
+                   + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
+                   + '--ntasks-per-node=%d ' % PAR.NODESIZE
+                   + '--ntasks=%d ' % PAR.NPROC
+                   + '--time=%d ' % PAR.TASKTIME
+                   + '--array=%d-%d ' % (0,PAR.NTASK-1%PAR.NTASKMAX)
+                   + '--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a')
+                   + '%s ' % (findpath('seisflows.system') +'/'+ 'wrappers/run')
+                   + '%s ' % PATH.OUTPUT
+                   + '%s ' % classname
+                   + '%s ' % method
+                   + '%s ' % PAR.ENVIRONS)
 
         elif hosts == 'head':
-            args = ('--array=%d-%d ' % (0,0)
-                   +'--output=%s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%j'))
+          return ('sbatch %s ' % PAR.SLURMARGS
+                   + '--job-name=%s ' % PAR.TITLE
+                   + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
+                   + '--ntasks-per-node=%d ' % PAR.NODESIZE
+                   + '--ntasks=%d ' % PAR.NPROC
+                   + '--time=%d ' % PAR.TASKTIME
+                   + '--array=%d-%d ' % (0,0)
+                   + '--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a')
+                   + '%s ' % (findpath('seisflows.system') +'/'+ 'wrappers/run')
+                   + '%s ' % PATH.OUTPUT 
+                   + '%s ' % classname 
+                   + '%s ' % method 
+                   + '%s ' % PAR.ENVIRONS
+                   + '%s ' % 'SEISFLOWS_TASKID=0')
 
         else:
             raise KeyError('Bad keyword argument: system.run: hosts')
 
-        return args
-
 
     def job_array_status(self, classname, method, jobs):
-        """ Determines completion status of one or more jobs
+        """ Determines completion status of job array
         """
         states = []
         for job in jobs:
-            state = self._query(job)
+            state = self.job_status(job)
             if state in ['TIMEOUT']:
                 print msg.TimoutError % (classname, method, job, PAR.TASKTIME)
                 sys.exit(-1)
@@ -230,8 +226,18 @@ class slurm_lg(custom_import('system', 'base')):
         return isdone, jobs
 
 
-    def _query(self, job):
-        """ Queries job state from SLURM database
+    def job_id_list(self, stdout, hosts):
+        """ Parses job id list from sbatch standard output
+        """
+        job_id = stdout.split()[-1].strip()
+        if hosts == 'all':
+            return [job_id+'_'+str(ii) for ii in range(PAR.NTASK)]
+        else:
+            return [job_id+'_0']
+
+
+    def job_status(self, job):
+        """ Queries completion status of a single job
         """
         stdout = check_output(
             'sacct -n -o jobid,state -j '+ job.split('_')[0],
@@ -250,4 +256,5 @@ class slurm_lg(custom_import('system', 'base')):
         kwargsfile = join(kwargspath, classname+'_'+method+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
+
 
