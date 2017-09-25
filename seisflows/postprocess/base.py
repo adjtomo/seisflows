@@ -15,7 +15,10 @@ solver = sys.modules['seisflows_solver']
 
 
 class base(object):
-    """ Gradient postprocessing class
+    """ Postprocessing base class
+
+      Postprocesing refers to image processing and regularization operations on 
+      models or gradients
     """
 
     def check(self):
@@ -95,19 +98,22 @@ class base(object):
             parameters = solver.parameters
 
         if PAR.SMOOTH > 0:
-            suffix = '_nosmooth'
+            solver.combine(
+                   input_path=path,
+                   output_path=path+'/'+'sum_nosmooth',
+                   parameters=parameters)
 
-        solver.combine(
-               input_path=path,
-               output_path=path+'/'+'sum'+suffix,
-               parameters=parameters)
-
-        if PAR.SMOOTH > 0.:
             solver.smooth(
-                   input_path=path+'/'+'sum'+suffix,
+                   input_path=path+'/'+'sum_nosmooth',
                    output_path=path+'/'+'sum',
                    parameters=parameters,
                    span=PAR.SMOOTH)
+        else:
+            solver.combine(
+                   input_path=path,
+                   output_path=path+'/'+'sum',
+                   parameters=parameters)
+
 
 
     def save(self, g, path='', parameters=[], backup=None):

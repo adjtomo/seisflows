@@ -16,7 +16,9 @@ system = sys.modules['seisflows_system']
 
 
 class double_difference(custom_import('preprocess', 'base')):
-    """ Data preprocessing class
+    """ Double-difference data processing class
+
+      Adds double-difference data misfit functions to base class
     """
 
     def check(self):
@@ -48,22 +50,21 @@ class double_difference(custom_import('preprocess', 'base')):
         nr, _ = self.get_network_size(syn)
         rx, ry, rz = self.get_receiver_coords(syn)
 
-        # calculate distances between stations
         dist = np.zeros((nr,nr))
         count = np.zeros(nr)
+        delta_syn = np.zeros((nr,nr))
+        delta_obs = np.zeros((nr,nr))
+
+        # calculate distances between stations
         for i in range(nr):
             for j in range(i):
                 dist[i,j] = self.distance(rx[i], rx[j], ry[i], ry[j])
 
-        # calculate traveltime differences between stations
-        delta_syn = np.zeros((nr,nr))
-        delta_obs = np.zeros((nr,nr))
-
+        # calculate traveltime lags between stations pairs
         for i in range(nr):
             for j in range(i):
                 if dist[i,j] > PAR.DISTMAX: 
                     continue
-
                 delta_syn[i,j] = self.misfit(syn[i].data, syn[j].data, nt, dt)
                 delta_obs[i,j] = self.misfit(dat[i].data, dat[j].data, nt, dt)
                 delta_syn[j,i] = -delta_syn[i,j]

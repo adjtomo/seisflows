@@ -80,6 +80,7 @@ if not matplotlib:
 
 if not obspy:
     excluded += ['seisflows.preprocess.base']
+    excluded += ['seisflows.preprocess.default']
     excluded += ['seisflows.preprocess.double_difference']
 
 
