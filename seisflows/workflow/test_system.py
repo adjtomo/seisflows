@@ -12,7 +12,7 @@ PATH = sys.modules['seisflows_paths']
 system = sys.modules['seisflows_system']
 
 
-class test_system:
+class test_system(base):
     """ Tests system interface
     """
 
@@ -28,7 +28,7 @@ class test_system:
 
 
     def main(self):
-        system.run('workflow', 'hello',  
+        system.run_single('workflow', 'hello',  
             msg='Hello from 0')
 
         system.run('workflow', 'hello', 

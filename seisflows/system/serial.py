@@ -78,35 +78,32 @@ class serial(custom_import('system', 'base')):
         # create output directories
         unix.mkdir(PATH.OUTPUT)
 
-        self.checkpoint()
+        workflow.checkpoint()
 
         # execute workflow
         workflow.main()
 
 
     def run(self, classname, method, hosts='all', **kwargs):
-        """ Executes the following task:
-              classname.method(*args, **kwargs)
+        """ Executes task multiple times in serial
         """
         unix.mkdir(PATH.SYSTEM)
 
-        if hosts == 'all':
-            for taskid in range(PAR.NTASK):
-                os.environ['SEISFLOWS_TASKID'] = str(taskid)
-                if PAR.VERBOSE > 0:
-                    self.progress(taskid)
-                func = getattr(__import__('seisflows_'+classname), method)
-                func(**kwargs)
-            print ''
-
-        elif hosts == 'head':
-            os.environ['SEISFLOWS_TASKID'] = str(0)
+        for taskid in range(PAR.NTASK):
+            os.environ['SEISFLOWS_TASKID'] = str(taskid)
+            if PAR.VERBOSE > 0:
+                self.progress(taskid)
             func = getattr(__import__('seisflows_'+classname), method)
             func(**kwargs)
+        print ''
 
-        else:
-            raise KeyError(
-                'Bad keyword argument: system.run: hosts')
+
+    def run_single(self, classname, method, *args, **kwargs):
+        """ Runs task a single time
+        """
+        os.environ['SEISFLOWS_TASKID'] = str(0)
+        func = getattr(__import__('seisflows_'+classname), method)
+        func(**kwargs)
 
 
     def taskid(self):
