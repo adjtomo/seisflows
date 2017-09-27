@@ -112,7 +112,7 @@ class slurm_lg(custom_import('system', 'base')):
         unix.mkdir(PATH.OUTPUT)
         unix.mkdir(PATH.WORKDIR+'/'+'output.slurm')
 
-        self.checkpoint()
+        workflow.checkpoint()
 
         # prepare sbatch arguments
         call('sbatch '

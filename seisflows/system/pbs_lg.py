@@ -105,7 +105,7 @@ class pbs_lg(custom_import('system', 'base')):
         unix.mkdir(PATH.OUTPUT)
         unix.mkdir(PATH.WORKDIR+'/'+'output.pbs')
 
-        self.checkpoint()
+        workflow.checkpoint()
 
         hours = PAR.WALLTIME/60
         minutes = PAR.WALLTIME%60

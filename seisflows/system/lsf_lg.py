@@ -111,7 +111,7 @@ class lsf_lg(custom_import('system', 'base')):
         unix.mkdir(PATH.OUTPUT)
         unix.mkdir(PATH.WORKDIR+'/'+'output.lsf')
 
-        self.checkpoint()
+        workflow.checkpoint()
 
         # prepare bsub arguments
         call('bsub '

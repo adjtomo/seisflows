@@ -96,7 +96,7 @@ class slurm_sm(custom_import('system', 'base')):
         # create output directories
         unix.mkdir(PATH.OUTPUT)
 
-        self.checkpoint()
+        workflow.checkpoint()
 
         # submit workflow
         call('sbatch '

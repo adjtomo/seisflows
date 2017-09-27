@@ -1,5 +1,10 @@
 
-from seisflows.config import save
+
+from os.path import join
+
+from seisflows.config import save, saveobj
+from seisflows.tools import unix
+
 
 class base(object):
     """ Abstract base class
@@ -19,9 +24,15 @@ class base(object):
 
 
 
-    def run(self, classname, method, **kwargs):
-        """ Executes the following task:
-              classname.method(*args, **kwargs)
+    def run(self, classname, method, *args, **kwargs):
+        """ Runs task multiple times
+        """
+        raise NotImplementedError('Must be implemented by subclass.')
+
+
+
+    def run_single(self, classname, method, *args, **kwargs):
+        """ Runs task a single time
         """
         raise NotImplementedError('Must be implemented by subclass.')
 
@@ -34,9 +45,12 @@ class base(object):
 
 
 
-    def checkpoint(self):
-        """ Writes information to disk so workflow can be resumed in case of
-          interruption        
+    def checkpoint(self, path, classname, method, args, kwargs):
+        """ Writes information to disk so tasks can be executed remotely
         """
+        argspath = join(path, 'kwargs')
+        argsfile = join(argspath, classname+'_'+method+'.p')
+        unix.mkdir(argspath)
+        saveobj(argsfile, kwargs)
         save()
 
