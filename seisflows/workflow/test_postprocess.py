@@ -5,6 +5,7 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.tools import exists
 from seisflows.config import custom_import, ParameterError
+from seisflows.workflow.base import base
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -15,7 +16,7 @@ postprocess = sys.modules['seisflows_postprocess']
 migration = custom_import('workflow','migration')()
 
 
-class test_postprocess(object):
+class test_postprocess(base):
     """ Postprocessing class
     """
 

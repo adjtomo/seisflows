@@ -4,6 +4,7 @@ import sys
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.config import ParameterError, custom_import
+from seisflows.workflow.base import base
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']

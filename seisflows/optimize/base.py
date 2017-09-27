@@ -47,8 +47,9 @@ class base(object):
         """
         # The default numerical settings provided here should work well for a 
         # range of applications without manual tuning. If the nonlinear
-        # optimization procedure stagnates, it is probably due to the 
-        # objective function rather than the nonlinear optimization parameters
+        # optimization procedure stagnates, a good first assumption, in our
+        # experience, it is that due to the objective function under 
+        # consideration rather than the nonlinear optimization parameters
 
         # line search algorithm
         if 'LINESEARCH' not in PAR:

@@ -61,8 +61,7 @@ class base(object):
         if not exists(path):
             raise Exception
 
-        system.run('postprocess', 'process_kernels',
-                 hosts='head',
+        system.run_single('postprocess', 'process_kernels',
                  path=path+'/kernels',
                  parameters=solver.parameters)
 

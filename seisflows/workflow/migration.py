@@ -5,6 +5,7 @@ from glob import glob
 from seisflows.tools import unix
 from seisflows.tools.tools import exists
 from seisflows.config import ParameterError
+from seisflows.workflow.base import base
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -15,7 +16,7 @@ preprocess = sys.modules['seisflows_preprocess']
 postprocess = sys.modules['seisflows_postprocess']
 
 
-class migration(object):
+class migration(base):
     """ Migration base class.
 
       In the terminology of seismic exploration, implements a
@@ -65,32 +66,27 @@ class migration(object):
 
         # set up solver machinery
         print 'Preparing solver...'
-        system.run('solver', 'setup',
-                   hosts='all')
+        system.run('solver', 'setup')
 
         self.prepare_model()
 
         # perform migration
         print 'Generating synthetics...'
         system.run('solver', 'eval_func',
-                   hosts='all',
                    path=PATH.SCRATCH,
                    write_residuals=False)
 
         print 'Backprojecting...'
         system.run('solver', 'eval_grad',
-                   hosts='all',
                    path=PATH.SCRATCH,
                    export_traces=PAR.SAVETRACES)
 
-        system.run('postprocess', 'process_kernels',
-                 hosts='head',
+        system.run_single('postprocess', 'process_kernels',
                  path=PATH.SCRATCH+'/'+'kernels',
                  parameters=solver.parameters)
 
         try:
-            system.run('postprocess', 'process_kernels',
-                     hosts='head',
+            system.run_single('postprocess', 'process_kernels',
                      path=PATH.SCRATCH+'/'+'kernels',
                      parameters=['rhop'])
         except:

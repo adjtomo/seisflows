@@ -105,7 +105,7 @@ class pbs_lg(custom_import('system', 'base')):
         unix.mkdir(PATH.OUTPUT)
         unix.mkdir(PATH.WORKDIR+'/'+'output.pbs')
 
-        self.checkpoint()
+        workflow.checkpoint()
 
         hours = PAR.WALLTIME/60
         minutes = PAR.WALLTIME%60
@@ -128,12 +128,13 @@ class pbs_lg(custom_import('system', 'base')):
 
 
     def run(self, classname, method, hosts='all', **kwargs):
-        """ Executes the following task:
-              classname.method(*args, **kwargs)
-        """
-        self.checkpoint()
+        """ Runs task multiple times in embarrassingly parallel fasion
 
-        self.save_kwargs(classname, method, kwargs)
+          Executes classname.method(*args, **kwargs) NTASK times, each time on
+          NPROC cpu cores
+        """
+        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
+
         jobs = self.submit_job_array(classname, method, hosts)
         while True:
             # wait a few seconds before checking again

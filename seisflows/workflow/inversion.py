@@ -4,10 +4,12 @@ import numpy as np
 
 from glob import glob
 from os.path import join
+
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.tools import divides, exists
-from seisflows.config import ParameterError
+from seisflows.config import ParameterError, save
+from seisflows.workflow.base import base
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -19,7 +21,7 @@ preprocess = sys.modules['seisflows_preprocess']
 postprocess = sys.modules['seisflows_postprocess']
 
 
-class inversion(object):
+class inversion(base):
     """ Waveform inversion base class
 
       Peforms iterative nonlinear inversion and provides a base class on top
@@ -147,8 +149,7 @@ class inversion(object):
             else:
                 print 'Generating data' 
 
-            system.run('solver', 'setup',
-                hosts='all')
+            system.run('solver', 'setup')
 
 
     def initialize(self):
@@ -158,7 +159,6 @@ class inversion(object):
 
         print 'Generating synthetics'
         system.run('solver', 'eval_func',
-                   hosts='all',
                    path=PATH.GRAD)
 
         self.write_misfit(path=PATH.GRAD, suffix='new')
@@ -209,7 +209,6 @@ class inversion(object):
         self.write_model(path=PATH.FUNC, suffix='try')
 
         system.run('solver', 'eval_func',
-                   hosts='all',
                    path=PATH.FUNC)
 
         self.write_misfit(path=PATH.FUNC, suffix='try')
@@ -219,7 +218,6 @@ class inversion(object):
         """ Performs adjoint simulation to evaluate gradient
         """
         system.run('solver', 'eval_grad',
-                   hosts='all',
                    path=PATH.GRAD,
                    export_traces=divides(optimize.iter, PAR.SAVETRACES))
 
@@ -229,7 +227,7 @@ class inversion(object):
     def finalize(self):
         """ Saves results from current model update iteration
         """
-        system.checkpoint()
+        self.checkpoint()
 
         if divides(optimize.iter, PAR.SAVEMODEL):
             self.save_model()
@@ -255,6 +253,13 @@ class inversion(object):
         unix.rm(PATH.FUNC)
         unix.mkdir(PATH.GRAD)
         unix.mkdir(PATH.FUNC)
+
+
+    def checkpoint(self):
+        """ Writes information to disk so workflow can be resumed following a
+          break
+        """
+        save()
 
 
     def write_model(self, path='', suffix=''):

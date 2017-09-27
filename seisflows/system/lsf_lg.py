@@ -111,7 +111,7 @@ class lsf_lg(custom_import('system', 'base')):
         unix.mkdir(PATH.OUTPUT)
         unix.mkdir(PATH.WORKDIR+'/'+'output.lsf')
 
-        self.checkpoint()
+        workflow.checkpoint()
 
         # prepare bsub arguments
         call('bsub '
@@ -127,12 +127,31 @@ class lsf_lg(custom_import('system', 'base')):
 
 
     def run(self, classname, method, hosts='all', **kwargs):
-        """ Executes the following task:
-              classname.method(*args, **kwargs)
+        """ Runs task multiple times in embarrassingly parallel fasion
+
+          Executes classname.method(*args, **kwargs) NTASK times, each time on
+          NPROC cpu cores
         """
-        self.save_objects()
-        self.save_kwargs(classname, method, kwargs)
-        jobs = self.submit_job_array(classname, method, hosts)
+        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
+
+        stdout = check_output(
+            'bsub %s ' % PAR.LSFARGS
+            + '-n %d ' % PAR.NPROC
+            + '-R "span[ptile=%d]" ' % PAR.NODESIZE
+            + '-W %d:00 ' % PAR.TASKTIME
+            + '-J "%s' %PAR.TITLE
+            + '[%d-%d] %% %d' % (1, PAR.NTASK, PAR.NTASKMAX)
+            + '-o %s ' % (PATH.WORKDIR+'/'+'output.lsf/'+'%J_%I')
+            + '%s ' % findpath('seisflows.system') +'/'+ 'wrapper/run '
+            + '%s ' % PATH.OUTPUT + ' '
+            + '%s ' % classname + ' '
+            + '%s ' % method + ' '
+            + '%s ' % PAR.ENVIRONS,
+            shell=True)
+
+        # keep track of job ids
+        jobs = self.job_id_list(stdout, PAR.NTASK)
+
         while True:
             # wait 30 seconds before checking status again
             time.sleep(30)
@@ -143,52 +162,49 @@ class lsf_lg(custom_import('system', 'base')):
                 return
 
 
-    def submit_job_array(self, classname, method, hosts='all'):
-        # submit job
-        with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
-            call(self.job_array_cmd(classname, method, hosts), stdout=f)
+    def run_single(self, classname, method, hosts='all', **kwargs):
+        """ Runs task multiple times in embarrassingly parallel fasion
 
-        # retrieve job ids
-        with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
-            # reads one entire line from the file
-            line = f.readline()
-            job_buf = line.split()[1].strip()
-            job = job_buf[1:-1]
-        if hosts == 'all' and PAR.NSRC > 1:
-            nn = range(1,PAR.NSRC+1)
-            #return [job+'_'+str(ii) for ii in nn]
-            return [job+'['+str(ii)+']' for ii in nn]
-        else:
-            return [job]
+          Executes classname.method(*args, **kwargs) NTASK times, each time on
+          NPROC cpu cores
+        """
+        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
 
-
-    def job_array_cmd(self, classname, method, hosts):
-        return ('bsub '
-            + '%s ' % PAR.LSFARGS
+        stdout = check_output(
+            'bsub %s ' % PAR.LSFARGS
             + '-n %d ' % PAR.NPROC
             + '-R "span[ptile=%d]" ' % PAR.NODESIZE
             + '-W %d:00 ' % PAR.TASKTIME
             + '-J "%s' %PAR.TITLE
-            + self.launch_args(hosts)
-            + findpath('seisflows.system') +'/'+ 'wrapper/run '
-            + PATH.OUTPUT + ' '
-            + classname + ' '
-            + method + ' '
-            + PAR.ENVIRONS)
+            + '[%d-%d]' % (1, 1)
+            + '-o %s ' % (PATH.WORKDIR+'/'+'output.lsf/'+'%J')
+            + '%s ' % findpath('seisflows.system') +'/'+ 'wrapper/run '
+            + '%s ' % PATH.OUTPUT
+            + '%s ' % classname
+            + '%s ' % method
+            + '%s ' % PAR.ENVIRONS,
+            shell=True)
+
+        # keep track of job ids
+        jobs = self.job_id_list(stdout, ntask=1)
+
+        while True:
+            # wait 30 seconds before checking status again
+            time.sleep(30)
+
+            self.timestamp()
+            isdone, jobs = self.job_status(classname, method, jobs)
+            if isdone:
+                return
 
 
-    def job_array_args(self, hosts):
-        if hosts == 'all':
-            args = ''
-            args += '[%d-%d] %% %d' % (1, PAR.NTASK, PAR.NTASKMAX)
-            args += '-o %s ' % (PATH.WORKDIR+'/'+'output.lsf/'+'%J_%I')
-
-        elif hosts == 'head':
-            args = ''
-            args += '[%d-%d]' % (1, 1)
-            args += '-o %s ' % (PATH.WORKDIR+'/'+'output.lsf/'+'%J')
-
-        return args
+    def job_id_list(self, stdout):
+        job = stdout.split()[1].strip()[1:-1]
+        if ntask==1:
+            return [job]
+        else:
+            nn = range(1,PAR.NSRC+1)
+            return [job+'['+str(ii)+']' for ii in nn]
 
 
     def job_status(self, classname, method, jobs):

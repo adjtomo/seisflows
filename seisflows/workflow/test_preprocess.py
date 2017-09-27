@@ -6,6 +6,7 @@ import numpy as np
 from glob import glob
 from os.path import abspath, basename, dirname, exists
 from seisflows.config import ParameterError
+from seisflows.workflow.base import base
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -13,7 +14,7 @@ PATH = sys.modules['seisflows_paths']
 preprocess = sys.modules['seisflows_preprocess']
 
 
-class test_preprocess(object):
+class test_preprocess(base):
     """ Signal processing integration test
     """
 

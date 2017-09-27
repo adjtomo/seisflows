@@ -2,6 +2,8 @@
 import sys
 
 from seisflows.config import ParameterError
+from seisflows.workflow.base import base
+
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -10,7 +12,7 @@ system = sys.modules['seisflows_system']
 solver = sys.modules['seisflows_solver']
 
 
-class test_forward(object):
+class test_forward(base):
     """ Tests solver by running forward simulation
     """
 
@@ -39,7 +41,6 @@ class test_forward(object):
         print 'Running solver...'
 
         system.run('solver', 'generate_data',
-                   hosts='all',
                    model_path=PATH.MODEL,
                    model_type='gll',
                    model_name='model')
