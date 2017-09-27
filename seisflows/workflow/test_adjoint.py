@@ -41,7 +41,7 @@ def DotProductRHS(keys, x, y):
 
 
 
-class test_adjoint(custom_import('workflow','base')):
+class test_adjoint(base):
 
     def check(self):
         """ Checks parameters and paths
