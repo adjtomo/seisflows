@@ -5,7 +5,7 @@ import numpy as np
 from seisflows.tools import unix
 from seisflows.tools.tools import exists
 from seisflows.config import custom_import, ParameterError
-from seisflows.workflow import base
+from seisflows.workflow.base import base
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
