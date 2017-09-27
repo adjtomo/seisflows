@@ -7,6 +7,7 @@ from os.path import basename, join
 from seisflows.tools import unix
 from seisflows.tools.tools import exists
 from seisflows.config import ParameterError
+from seisflows.workflow.base import base
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -40,7 +41,7 @@ def DotProductRHS(keys, x, y):
 
 
 
-class test_adjoint(object):
+class test_adjoint(custom_import('workflow','base')):
 
     def check(self):
         """ Checks parameters and paths
@@ -82,18 +83,15 @@ class test_adjoint(object):
 
 
         print 'SIMULATION 1 OF 3'
-        system.run('solver', 'setup',
-                   hosts='all')
+        system.run('solver', 'setup')
 
         print 'SIMULATION 2 OF 3'
         self.prepare_model()
         system.run('solver', 'eval_func',
-                   hosts='all',
                    path=PATH.SCRATCH)
 
         print 'SIMULATION 3 OF 3'
         system.run('solver', 'eval_grad',
-                   hosts='all',
                    path=PATH.SCRATCH)
 
         # collect traces

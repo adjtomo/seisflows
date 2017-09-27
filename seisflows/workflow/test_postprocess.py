@@ -15,7 +15,7 @@ postprocess = sys.modules['seisflows_postprocess']
 migration = custom_import('workflow','migration')()
 
 
-class test_postprocess(object):
+class test_postprocess(base):
     """ Postprocessing class
     """
 

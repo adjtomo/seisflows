@@ -3,6 +3,8 @@ import sys
 import time
 
 from seisflows.config import ParameterError
+from seisflows.workflow.base import base
+
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -27,11 +29,9 @@ class test_system:
 
     def main(self):
         system.run('workflow', 'hello',  
-            hosts='head', 
             msg='Hello from 0')
 
         system.run('workflow', 'hello', 
-            hosts='all',
             msg='Hello from %d')
 
         print ''

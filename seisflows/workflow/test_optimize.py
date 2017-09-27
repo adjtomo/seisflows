@@ -7,6 +7,7 @@ from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.tools import savetxt
 from seisflows.config import ParameterError
+from seisflows.workflow.base import base
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -16,7 +17,7 @@ optimize = sys.modules['seisflows_optimize']
 import rosenbrock as problem
 
 
-class test_optimize(object):
+class test_optimize(base):
     """ Optimization unit test.
 
         Tests nonlinear optimization procedure with inexpensive test function.
