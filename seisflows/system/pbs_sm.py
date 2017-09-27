@@ -127,10 +127,14 @@ class pbs_lg(custom_import('system', 'base')):
 
 
     def run(self, classname, method, hosts='all', **kwargs):
-        """ Executes the following task:
+        """ Runs embarrassingly parallel tasks
+
+          Executes the following multiple times:
               classname.method(*args, **kwargs)
+
+          system.taskid serves to provide each running task a unique identifier
         """
-        self.checkpoint()
+        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
 
         if hosts == 'all':
             # run all tasks
