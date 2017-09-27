@@ -106,42 +106,38 @@ class slurm_sm(custom_import('system', 'base')):
                 + '--cpus-per-task=%d '%PAR.NPROC
                 + '--ntasks=%d '%PAR.NTASK
                 + '--time=%d '%PAR.WALLTIME
-                + findpath('seisflows.system') +'/'+ 'wrappers/submit '
-                + PATH.OUTPUT)
+                + '%s ' % findpath('seisflows.system') +'/'+ 'wrappers/submit'
+                + '%s ' % PATH.OUTPUT)
 
 
-    def run(self, classname, method, hosts='all', **kwargs):
-        """ Executes the following task:
-              classname.method(*args, **kwargs)
+    def run(self, classname, method, *args, **kwargs):
+        """ Runs task multiple times in embarrassingly parallel fasion
         """
-        self.checkpoint()
-        self.save_kwargs(classname, method, kwargs)
+        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
 
-        if hosts == 'all':
-            # run on all available nodes
-            call('srun '
-                    + '--wait=0 '
-                    + join(findpath('seisflows.system'), 'wrappers/run ')
-                    + PATH.OUTPUT + ' '
-                    + classname + ' '
-                    + method + ' '
-                    + PAR.ENVIRONS)
+        call('srun '
+                + '--wait=0 '
+                + '%s ' % join(findpath('seisflows.system'), 'wrappers/run ')
+                + '%s ' % PATH.OUTPUT
+                + '%s ' % classname
+                + '%s ' % method
+                + '%s ' % PAR.ENVIRONS)
 
-        elif hosts == 'head':
-            # run on head node
-            call('srun '
-                    + '--wait=0 '
-                    + '--ntasks=1 '
-                    + '--nodes=1 ' 
-                    + join(findpath('seisflows.system'), 'wrappers/run ')
-                    + PATH.OUTPUT + ' '
-                    + classname + ' '
-                    + method + ' '
-                    + PAR.ENVIRONS)
 
-        else:
-            raise KeyError(
-                'Bad keyword argument: system.run: hosts')
+    def run_single(self, classname, method, *args, **kwargs):
+        """ Runs task a single time
+        """
+        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
+
+        call('srun '
+                + '--wait=0 '
+                + '--ntasks=1 '
+                + '--nodes=1 ' 
+                + '%s ' % join(findpath('seisflows.system'), 'wrappers/run ')
+                + '%s ' % PATH.OUTPUT
+                + '%s ' % classname
+                + '%s ' % method
+                + '%s ' % PAR.ENVIRONS)
 
 
     def hostlist(self):

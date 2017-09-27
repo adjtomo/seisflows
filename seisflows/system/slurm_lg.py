@@ -126,22 +126,74 @@ class slurm_lg(custom_import('system', 'base')):
                 + PATH.OUTPUT)
 
 
-    def run(self, classname, method, hosts='all', **kwargs):
-        """ Executes the following task:
-              classname.method(**kwargs)
+    def run(self, classname, method, *args, **kwargs):
+        """ Runs task multiple times in embarrassingly parallel fasion
+
+          Executes classname.method(*args, **kwargs) NTASK times, each time on
+          NPROC cpu cores
         """
-        self.checkpoint()
-        self.save_kwargs(classname, method, kwargs)
+        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
 
         # submit job array
         stdout = check_output(
-            self.job_array_cmd(classname, method, hosts),
-            shell=True)
+                   'sbatch %s ' % PAR.SLURMARGS
+                   + '--job-name=%s ' % PAR.TITLE
+                   + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
+                   + '--ntasks-per-node=%d ' % PAR.NODESIZE
+                   + '--ntasks=%d ' % PAR.NPROC
+                   + '--time=%d ' % PAR.TASKTIME
+                   + '--array=%d-%d ' % (0,PAR.NTASK-1%PAR.NTASKMAX)
+                   + '--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a')
+                   + '%s ' % (findpath('seisflows.system') +'/'+ 'wrappers/run')
+                   + '%s ' % PATH.OUTPUT
+                   + '%s ' % classname
+                   + '%s ' % method
+                   + '%s ' % PAR.ENVIRONS,
+                   shell=True)
 
         # keep track of job ids
-        jobs = self.job_id_list(stdout, hosts)
+        jobs = self.job_id_list(stdout, PAR.NTASK)
 
         # check job array completion status
+        while True:
+            # wait a few seconds between queries
+            time.sleep(5)
+
+            isdone, jobs = self.job_array_status(classname, method, jobs)
+            if isdone:
+                return
+
+
+    def run_single(self, classname, method, *args, **kwargs):
+        """ Runs task a single time
+
+          Executes classname.method(*args, **kwargs) a single time on NPROC 
+          cpu cores
+        """
+        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
+
+        # submit job
+        stdout = check_output(
+                   'sbatch %s ' % PAR.SLURMARGS
+                   + '--job-name=%s ' % PAR.TITLE
+                   + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
+                   + '--ntasks-per-node=%d ' % PAR.NODESIZE
+                   + '--ntasks=%d ' % PAR.NPROC
+                   + '--time=%d ' % PAR.TASKTIME
+                   + '--array=%d-%d ' % (0,0)
+                   + '--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a')
+                   + '%s ' % (findpath('seisflows.system') +'/'+ 'wrappers/run')
+                   + '%s ' % PATH.OUTPUT
+                   + '%s ' % classname
+                   + '%s ' % method
+                   + '%s ' % PAR.ENVIRONS
+                   + '%s ' % 'SEISFLOWS_TASKID=0',
+                   shell=True)
+
+        # keep track of job ids
+        jobs = self.job_id_list(stdout, 1)
+
+        # check job completion status
         while True:
             # wait a few seconds between queries
             time.sleep(5)
@@ -168,44 +220,8 @@ class slurm_lg(custom_import('system', 'base')):
 
     ### job array methods
 
-    def job_array_cmd(self, classname, method, hosts):
-        if hosts == 'all':
-           return ('sbatch %s ' % PAR.SLURMARGS
-                   + '--job-name=%s ' % PAR.TITLE
-                   + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
-                   + '--ntasks-per-node=%d ' % PAR.NODESIZE
-                   + '--ntasks=%d ' % PAR.NPROC
-                   + '--time=%d ' % PAR.TASKTIME
-                   + '--array=%d-%d ' % (0,PAR.NTASK-1%PAR.NTASKMAX)
-                   + '--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a')
-                   + '%s ' % (findpath('seisflows.system') +'/'+ 'wrappers/run')
-                   + '%s ' % PATH.OUTPUT
-                   + '%s ' % classname
-                   + '%s ' % method
-                   + '%s ' % PAR.ENVIRONS)
-
-        elif hosts == 'head':
-          return ('sbatch %s ' % PAR.SLURMARGS
-                   + '--job-name=%s ' % PAR.TITLE
-                   + '--nodes=%d ' % math.ceil(PAR.NPROC/float(PAR.NODESIZE))
-                   + '--ntasks-per-node=%d ' % PAR.NODESIZE
-                   + '--ntasks=%d ' % PAR.NPROC
-                   + '--time=%d ' % PAR.TASKTIME
-                   + '--array=%d-%d ' % (0,0)
-                   + '--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a')
-                   + '%s ' % (findpath('seisflows.system') +'/'+ 'wrappers/run')
-                   + '%s ' % PATH.OUTPUT 
-                   + '%s ' % classname 
-                   + '%s ' % method 
-                   + '%s ' % PAR.ENVIRONS
-                   + '%s ' % 'SEISFLOWS_TASKID=0')
-
-        else:
-            raise KeyError('Bad keyword argument: system.run: hosts')
-
-
     def job_array_status(self, classname, method, jobs):
-        """ Determines completion status of job array
+        """ Determines completion status of job or job array
         """
         states = []
         for job in jobs:
@@ -226,14 +242,11 @@ class slurm_lg(custom_import('system', 'base')):
         return isdone, jobs
 
 
-    def job_id_list(self, stdout, hosts):
+    def job_id_list(self, stdout, ntask):
         """ Parses job id list from sbatch standard output
         """
         job_id = stdout.split()[-1].strip()
-        if hosts == 'all':
-            return [job_id+'_'+str(ii) for ii in range(PAR.NTASK)]
-        else:
-            return [job_id+'_0']
+        return [job_id+'_'+str(ii) for ii in range(ntask)]
 
 
     def job_status(self, job):
@@ -249,12 +262,5 @@ class slurm_lg(custom_import('system', 'base')):
             if line.split()[0]==job:
                 state = line.split()[1]
         return state
-
-
-    def save_kwargs(self, classname, method, kwargs):
-        kwargspath = join(PATH.OUTPUT, 'kwargs')
-        kwargsfile = join(kwargspath, classname+'_'+method+'.p')
-        unix.mkdir(kwargspath)
-        saveobj(kwargsfile, kwargs)
 
 
