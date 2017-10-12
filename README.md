@@ -7,12 +7,9 @@ SeisFlows is an open source seismic inversion package that
 
 - Provides a framework for research in regional, global, and exploration seismology
 
-Examples and usage guidelines are available online at [readthedocs.org](http://seisflows.readthedocs.org/en/latest/).
+SeisFlows has an unique, somewhat idiosyncratic design informed by familiarity with different research problems (including oil and gas exploration, earthqake tomography, medical imaging) and experience working in different computing environments (including various high-performance computing clusters).
 
-SeisFlows has an idiosyncratic workflow-based design informed by familiarity with different research problems (oil and gas exploration, earthqake tomography, medical imaging) and experience working in different computing environments (including various high-performance computing clusters).
-
-With SeisFlows, wave simulations must be performed using an external software package such as SPECFEM2D or SPECFEM3D.  The ability to interface with external solvers ensures flexibility, and the choice of SPECFEM as a default option gives access to cutting-edge meshing and hardware accelaration capabilities.  However, the use of external package also creates additional work for the user, because to carry out an inversion, one must become familiar not only with SeisFlows, but also with a separate solver package.  
-
+Examples and usage information are available at [readthedocs.org](http://seisflows.readthedocs.org/en/latest/).  Probably the easiest way to learn more is to follow these checkerboard example [instructions](http://seisflows.readthedocs.io/en/latest/instructions_remote.html).
 
 References
 ----------
@@ -25,7 +22,7 @@ Another manuscript is currently under review in Computers and Geosciences.
 
 See also
 --------
-Various inversion strategies have been implemented by overloading SeisFlows classes.  The following packages give a sense for the type of research possible within the framework:
+The main packages provides overloadble inversion and migration workflows.  The following extension packages are not currently documented, but still do give a sense perhaps for the type of research possible within this framework:
 
 - https://github.com/rmodrak/seisflows-research
 - https://github.com/rmodrak/seisflows-multiparameter
