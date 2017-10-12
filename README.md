@@ -25,13 +25,13 @@ Another manuscript is currently under review in Computers and Geosciences.
 
 See also
 --------
-Many specialized inversion strategies have been implemented by overloading SeisFlows classes.  The following extension packages give a sense for the type of research possible within the framework:
+Various inversion strategies have been implemented by overloading SeisFlows classes.  The following packages give a sense for the type of research possible within the framework:
 
 - https://github.com/rmodrak/seisflows-research
 - https://github.com/rmodrak/seisflows-multiparameter
 
 
-The following extension package illustrates how SeisFlows can be tailored to specific high-performance computing environments and how  fault tolerance can be implemented:
+The following package illustrates how SeisFlows can be tailored to specific high-performance computing environments:
 
 - https://github.com/rmodrak/seisflows-hpc
 
