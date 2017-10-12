@@ -11,7 +11,7 @@ Examples and usage information are available at [readthedocs.org](http://seisflo
 
 SeisFlows has an unique, somewhat idiosyncratic workflow-based design informed by familiarity with different research problems (including oil and gas exploration, earthqake tomography, medical imaging) and experience working in different computing environments (including various high-performance computing clusters).
 
-Probably the easiest way to learn more is to follow these checkerboard example `instructions <http://seisflows.readthedocs.io/en/latest/instructions_remote.html#>`_ from readthedocs.
+Probably the easiest way to learn more is to follow these checkerboard example [instructions](http://seisflows.readthedocs.io/en/latest/instructions_remote.html) from readthedocs.
 
 References
 ----------
