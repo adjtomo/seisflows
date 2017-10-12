@@ -21,7 +21,7 @@ Another manuscript is currently under review in Computers and Geosciences.
 
 Background
 ----------
-The most sophisticated full-waveform inversion packages are expensive, proprietary software used by major oil and gas companies and geophysical service providers.  Generally, such software is maintained by professional software engineering teams and not available to independent researchers.
+The most sophisticated full-waveform inversion packages are expensive, proprietary software used by major oil and gas companies and geophysical service providers.  Generally, such software is maintained by professional developers and not available to independent researchers.
 
 Outside of industry, several open source packages have been developed, mainly in geophysics but also in nondestructive testing and other fields.  Many early inversion packages use frequency-domain formulations suitable for research, but not scalable beyond inexpensive 2D problems.  More recent packages such as SeisFlows use Python for inexpensive processing tasks in combination with parallel compiled code for wave simulation.  This approach combines the ease of use of modern scientific Python and with the efficiency and scalability of modern acoustic and elastic wave-equation solvers.
 
