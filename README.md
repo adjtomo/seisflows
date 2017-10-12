@@ -31,11 +31,11 @@ More recent packages such as SeisFlows use Python for inexpensive processing tas
 
 SeisFlows has an idiosyncratic workflow-based design informed by familiarity with diverse research problems (oil and gas exploration, earthqake tomography, medical imaging) and experience running in diverse environments (laptops, desktops, and a variety of high-performance computing clusters).
 
-With SeisFlows, wave simulations must be performed using an external software packagesuch as SPECFEM2D or SPECFEM3D.  The ability to interface with external solvers ensures flexibility.  The default interfaces for SPECFEM2D/3D provide the opportunity to take advantage of cutting-edge meshing and hardware accelaration capabilities.
+With SeisFlows, wave simulations must be performed using an external software packagesuch as SPECFEM2D or SPECFEM3D.  The ability to interface with external solvers ensures flexibility.  The choice of SPECFEM2D/3D for the default solver interfaces creates an opportunity to take advantage of cutting-edge meshing and hardware accelaration capabilities.
 
-Ae the same time, the need for an external solver creates additional work for the user: to carry out an inversion, one must become familiar not only with SeisFlows, but also with a separate solver package.
+At the same time, the need for an external solver creates additional work for the user.  To carry out an inversion, one must become familiar not only with SeisFlows, but also with a separate solver package.
 
-If you decide to try SeisFlows, it should be fairly straightforward to run the provided checkerboard and Marmousi examples.  To move beyond these examples, one would need to invest some time to become familiar with how to set up simulations with SPECFEM2D/3D, and in paricular how to create models in SPECFEM2D/3D's idionsyncratic binary format.
+If you decide to try SeisFlows, it should be fairly straightforward to run the provided checkerboard and Marmousi examples available at [readthedocs.org](http://seisflows.readthedocs.org/en/latest/).  To move beyond these examples, one would need to invest some time to become familiar with how to set up simulations with SPECFEM2D/3D, and in paricular how to create models in SPECFEM2D/3D's idionsyncratic binary format.
 
 
 
