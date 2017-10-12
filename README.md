@@ -22,7 +22,7 @@ Another manuscript is currently under review in Computers and Geosciences.
 
 See also
 --------
-The main packages provides highly customizable inversion and migration workflows.  The following extension packages give a sense for the type of research possible within this framework:
+The main packages provides overloadble inversion and migration workflows.  The following extension packages are not currently documented, but still do give a sense perhaps for the type of research possible within this framework:
 
 - https://github.com/rmodrak/seisflows-research
 - https://github.com/rmodrak/seisflows-multiparameter
