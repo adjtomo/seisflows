@@ -27,18 +27,24 @@ Another manuscript is currently under review in Computers and Geosciences.
 
 Relation to other packages
 --------------------------
-SeisFlows is one of many waveform inversion packages.  The most sophisticated waveform inversion packages are expensive, proprietary software developed by major oil and gas companies and geophysical service providers.  Generally, such codes are maintained by professional software engineerings teams and not available to independent researchers.
+SeisFlows is one of perhaps a few dozen waveform inversion packages.  The most sophisticated of these are expensive, proprietary codes developed by leading oil and gas companies and geophysical service providers.  Generally, such packages are maintained by professional software engineering teams and not available to independent researchers.
 
-Outside of industry, several open source packages have been developed, mainly in geophysics but also in nondestructive testing and other fields.  Many early inversion packages use frequency-domain formulations suitable for research, but not scalable beyond inexpensive 2D problems.  More recent packages such as SeisFlows use Python for inexpensive processing tasks in combination with parallel compiled code for wave simulation.  This approach combines the ease of use of modern scientific Python and with the efficiency and scalability of modern acoustic and elastic wave-equation solvers.
+Outside of industry, several open source packages have been developed, mainly in geophysics but also in nondestructive testing and other areas.  The terms _waveform inverison_, _full waveform inversion_, _adjoint tomography_, and _finite frequeny tomography_ are all more or less synonymous, and associated software packages share many similarities.
+
+Many early waveform inversion packages used simple frequency-domain formulations, which were suitable for research but not scalable beyond inexpensive 2D problems.  More recent packages such as SeisFlows use Python for inexpensive processing tasks in combination with parallel compiled code for wave simulation.  This approach combines the ease of use of modern scientific Python and with the efficiency and scalability of modern time-domain acoustic and elastic wave-equation solvers.  Unlike some packages, SeisFlows provides an fully automated nonlinear optimization workflow, which is useful for prototyping inversion methods.
 
 
 See also
 --------
-Not all of these extension packages are production-ready, but they give a sense for the type of research possible within the framework.
+Many specialized inversion strategies have been implemented by overloading SeisFlows classes.  The following extension packages give a sense for the type of research possible within the framework:
+
+- https://github.com/rmodrak/seisflows-research
+- https://github.com/rmodrak/seisflows-multiparameter
+
+
+The following extension package illustrates how SeisFlows can be tailored to specific high-performance computing environments and how  fault tolerance can be implemented:
 
 - https://github.com/rmodrak/seisflows-hpc
-- https://github.com/rmodrak/seisflows-multiparameter
-- https://github.com/rmodrak/seisflows-research
 
 
 
