@@ -70,13 +70,13 @@ First, download SPECFEM2D from GitHub::
 For now, it is important to work with the exact version specified above (``d745c542``). This is necessary because, unlike SPECFEM3D and 3D_GLOBE, SPECFEM2D development is sometimes a bit haphazard, with frequent interface changes.
 
 
-Next, configure and compile SPECFEM2D using ifort (preferred) or gfortran::
+Next, configure and compile SPECFEM2D using ifort (preferred) or some other fortran compiler::
 
         cd ~/packages/specfem2d-d745c542
         ./configure FC=ifort
         make all
 
-(Since `make` by itself does not compile all the required utilities, be sure to remember to type `make all`.)  For troubleshooting any compilation issues, please view the SPECFEM2D manual and GitHub issues page.
+(Since `make` by itself does not compile all the required utilities, be sure to remember to type `make all`.)  For troubleshooting any compilation issues, please view SPECFEM2D's manual and GitHub issues page.
  
 
 
@@ -140,3 +140,10 @@ To plot results from the checkerboard example using ``plot2d``, run the followin
                  output/model_0001/proc000000_vs.bin
 
 (The command line syntax is the same for the other script.)  For either script to work, Pylab must be installed and the Pylab backend properly configured. If you prefer visualization software other than Pylab, feel free to use the above scripts for reference in writing your plotting own tools. 
+
+
+10. Creating your own examples
+------------------------------
+It may be clear by now that with SeisFlows, wave simulations must be performed using an external software package such as SPECFEM2D or SPECFEM3D.  The ability to interface with external solvers ensures flexibility, and the choice of SPECFEM as a default option gives access to cutting-edge meshing and hardware accelaration capabilities.  However, the use of external package also creates additional work for the user because, to carry set up one's own inversion, one must become familiar not only with the SeisFlows package, but also with a separate solver package.  
+
+To move beyond the above checkerboard test case, familiarity with how to set up simulations with SPECFEM--in paricular with how to create models in SPECFEM's idionsyncratic binary format--is essential.  `Issue #83 <https://github.com/rmodrak/seisflows/issues/83>`_ may be helpful in this regard.  Trying the two other `examples available for download <https://github.com/rmodrak/seisflows/blob/master/docs/index.rst#examples-available-for-download>` may also be useful.
