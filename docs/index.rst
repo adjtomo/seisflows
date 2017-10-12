@@ -3,15 +3,28 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-What is SeisFlows?
-==================
-SeisFlows is one of many waveform inversion packages.  Most of these are sophisticated, proprietary codes developed by oil and gas companies and geophysical service providers.  Generally, such packages are maintained by professional software engineering teams and not available to independent researchers.
+SeisFlows is an open source seismic inversion package that
 
-Outside of industry, a number of open source packages have been developed, mainly in geophysics but also in nondestructive testing and other areas. Many early waveform inversion packages used simple frequency-domain formulations, which were well-suited for research but not readily scalable beyond inexpensive 2D problems.  More recent packages such as SeisFlows use Python for data processing tasks in combination with parallel compiled code for wave simulation.  This approach combines the ease of use of modern scientific Python and with the efficiency and scalability of modern acoustic and elastic wave-equation solvers.
+    Delivers a complete, customizable waveform inversion workflow
 
-Unlike some packages that require extensive human intervention, SeisFlows provides an automated nonlinear optimization workflow, with the option to carry out multiple model upates without stopping or to stop between updates for quality control checks.
+    Provides a framework for research in regional, global, and exploration seismology
 
-Perhaps the easiest way to learn more is to run one of the following examples.  
+Examples and usage information are available at readthedocs.org.
+
+SeisFlows has an unique, somewhat idiosyncratic workflow-based design informed by familiarity with different research problems (including oil and gas exploration, earthqake tomography, medical imaging) and experience working in different computing environments (including various high-performance computing clusters).
+
+Probably the easiest way to learn more is to run one of the examples below.  
+
+
+Relation to other packages
+==========================
+The most sophisticated waveform inversion packages are expensive proprietary codes developed by oil and gas companies and geophysical service providers.  Generally, such packages are maintained by professional software engineering teams and not available to independent researchers.
+
+Outside of industry, a number of open source packages have been developed, mainly in geophysics but also in nondestructive testing and other areas. Many early waveform inversion packages used simple frequency-domain formulations, which were well-suited for research but not readily scalable beyond 2D problems.  More recent packages such as SeisFlows use Python for data processing tasks in combination with parallel compiled code for wave simulation.  This approach combines the ease of use of modern scientific Python and with the efficiency and scalability of modern acoustic and elastic wave-equation solvers.
+
+SeisFlows provides an automated nonlinear optimization workflow, with the option to carry out multiple model upates without stopping or to stop between updates for quality control checks.
+
+With SeisFlows, wave simulations must be performed using an external software package such as SPECFEM2D or SPECFEM3D. The ability to interface with external solvers provides flexibility, and the choice of SPECFEM as a default option gives access to cutting-edge solver capabilities. However, the need for an external package imposes some additional demands on the user as described `here <http://seisflows.readthedocs.io/en/latest/instructions_remote.html#creating-your-own-examples>`_.
 
 
 Examples: Available For Download
