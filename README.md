@@ -9,11 +9,11 @@ SeisFlows is an open source seismic inversion package that
 
 Examples and usage guidelines are available online at [readthedocs.org](http://seisflows.readthedocs.org/en/latest/).
 
-SeisFlows has an idiosyncratic workflow-based design informed by familiarity with different research problems (oil and gas exploration, earthqake tomography, medical imaging) and experience in different computing environments, including a variety of high-performance computing clusters.
+SeisFlows has an idiosyncratic workflow-based design informed by familiarity with different research problems (oil and gas exploration, earthqake tomography, medical imaging) and experience working in different computing environments (including on a variety of high-performance computing clusters).
 
 With SeisFlows, wave simulations must be performed using an external software package such as SPECFEM2D or SPECFEM3D.  The ability to interface with external solvers ensures flexibility, and the choice of SPECFEM as a default option gives access to cutting-edge meshing and hardware accelaration capabilities.  At the same time, the need for an external solver creates additional work for the user: to carry out an inversion, one must become familiar not only with SeisFlows, but also with a separate solver package.  
 
-If you wish to try SeisFlows, it should be relatively straightforward to run the checkerboard and Marmousi examples available at [readthedocs.org](http://seisflows.readthedocs.org/en/latest/).  To move beyond these examples, one needs to become familiar with how to set up SPECFEM simulations, in paricular, with how to create models using SPECFEM's idionsyncratic parameter file settings and binary file format.
+If you wish to try SeisFlows, it should be relatively straightforward to run the checkerboard and Marmousi examples available at [readthedocs.org](http://seisflows.readthedocs.org/en/latest/).  To move beyond these examples, one needs to become familiar with how to set up SPECFEM simulations, and in paricular, with how choose SPECFEM's parameter file settings and create models using SPECFEM's idiosyncratic binary file format.
 
 
 References
