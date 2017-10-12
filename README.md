@@ -11,6 +11,8 @@ Examples and usage information are available at [readthedocs.org](http://seisflo
 
 SeisFlows has an unique, somewhat idiosyncratic workflow-based design informed by familiarity with different research problems (including oil and gas exploration, earthqake tomography, medical imaging) and experience working in different computing environments (including various high-performance computing clusters).
 
+Probably the easiest way to learn more is to follow these checkerboard example `instructions <http://seisflows.readthedocs.io/en/latest/instructions_remote.html#>`_ from readthedocs.
+
 References
 ----------
 If you use this package in your research, please cite:
@@ -22,7 +24,7 @@ Another manuscript is currently under review in Computers and Geosciences.
 
 See also
 --------
-The following packages give a sense for the type of research possible within the framework:
+The main packages provides highly customizable inversion and migration workflows.  The following extension packages give a sense for the type of research possible within this framework:
 
 - https://github.com/rmodrak/seisflows-research
 - https://github.com/rmodrak/seisflows-multiparameter
