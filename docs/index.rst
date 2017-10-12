@@ -5,12 +5,11 @@
 
 What is SeisFlows?
 ==================
+SeisFlows is one of many waveform inversion packages.  Most of these are sophisticated, proprietary codes developed by oil and gas companies and geophysical service providers.  Generally, such packages are maintained by professional software engineering teams and not available to independent researchers.
 
-SeisFlows is an open source seismic inversion package that
+Outside of industry, a number of open source packages have been developed, mainly in geophysics but also in nondestructive testing and other areas. Many early waveform inversion packages used simple frequency-domain formulations, which were well-suited for research but not readily scalable beyond inexpensive 2D problems.  More recent packages such as SeisFlows use Python for data processing tasks in combination with parallel compiled code for wave simulation.  This approach combines the ease of use of modern scientific Python and with the efficiency and scalability of modern acoustic and elastic wave-equation solvers.
 
-- delivers a complete, customizable waveform inversion workflow
-
-- provides a framework for research in regional, global, and exploration seismology
+Unlike some packages that require extensive human intervention, SeisFlows provides an automated nonlinear optimization workflow, with the option to carry out multiple model upates without stopping or to stop between updates for quality control checks.
 
 Perhaps the easiest way to learn more is to run one of the following examples.  
 
