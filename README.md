@@ -7,11 +7,9 @@ SeisFlows is an open source seismic inversion package that
 
 - Provides a framework for research in regional, global, and exploration seismology
 
-Examples and usage information are available at [readthedocs.org](http://seisflows.readthedocs.org/en/latest/).
+SeisFlows has an unique, somewhat idiosyncratic design informed by familiarity with different research problems (including oil and gas exploration, earthqake tomography, medical imaging) and experience working in different computing environments (including various high-performance computing clusters).
 
-SeisFlows has an unique, somewhat idiosyncratic workflow-based design informed by familiarity with different research problems (including oil and gas exploration, earthqake tomography, medical imaging) and experience working in different computing environments (including various high-performance computing clusters).
-
-Probably the easiest way to learn more is to follow these checkerboard example [instructions](http://seisflows.readthedocs.io/en/latest/instructions_remote.html) from readthedocs.
+Examples and usage information are available at [readthedocs.org](http://seisflows.readthedocs.org/en/latest/).  Probably the easiest way to learn more is to follow these checkerboard example [instructions](http://seisflows.readthedocs.io/en/latest/instructions_remote.html).
 
 References
 ----------
