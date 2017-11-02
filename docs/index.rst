@@ -3,22 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-SeisFlows is an open source seismic inversion package that
-
-    Delivers a complete, customizable waveform inversion workflow
-
-    Provides a framework for research in regional, global, and exploration seismology
-
-SeisFlows has an unique, somewhat idiosyncratic workflow-based design informed by familiarity with different research problems (including oil and gas exploration, earthqake tomography, medical imaging) and experience working in different computing environments (including various high-performance computing clusters).
-
-Probably the easiest way to learn more is to run one of the examples below.  
-
-
-Relation to other packages
---------------------------
+Background
+----------
 The most sophisticated waveform inversion packages are expensive proprietary codes developed by oil and gas companies and geophysical service providers.  Generally, such packages are maintained by professional software engineering teams and not available to independent researchers.
 
-Outside of industry, a number of open source packages have been developed, mainly in geophysics but also in nondestructive testing and other areas. Many early waveform inversion packages used simple frequency-domain formulations, which were well-suited for research but not readily scalable beyond 2D problems.  More recent packages such as SeisFlows use Python for data processing tasks in combination with parallel compiled code for wave simulation.  This approach combines the ease of use of modern scientific Python and with the efficiency and scalability of modern acoustic and elastic wave-equation solvers.
+Outside of industry, a number of open source packages have been developed, mainly in geophysics but also in nondestructive testing and other areas. Many early waveform inversion packages used simple frequency-domain formulations, which were well-suited for research but not readily scalable beyond 2D problems.  
+
+More recent packages such as SeisFlows use Python for data processing tasks in combination with parallel compiled code for wave simulation.  This approach combines the ease of use of modern scientific Python and with the efficiency and scalability of modern acoustic and elastic wave-equation solvers.
 
 SeisFlows provides an automated nonlinear optimization workflow, with the option to carry out multiple model upates without stopping or to stop between updates for quality control checks.
 
@@ -36,10 +27,11 @@ Some 2D examples based on the Marmousi model are available `here <http://tigress
 
 A 3D Cartesian checkerboard example is available `here <http://tigress-web.princeton.edu/~rmodrak/3dElastic>`_.
 
-A 3D global 1-chunk example is available `here <http://tigress-web.princeton.edu/~rmodrak/ExamplesGlobal>`_. Please note, the compressed archive for this example is very large (> 0.5 GB).
+A 3D global 1-chunk example is available `here <http://tigress-web.princeton.edu/~rmodrak/ExamplesGlobal>`_. Please note, the compressed archive for this example is very large (> 0.5 GB). [No longer available because of file size.]
 
 At a minimimum, one processer is required for the 2D Marmousi examples, 16 processors are required for the 3D Cartesian example, and 64 processors are required for the global 1-chunk example.  See `here <http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration>`_ for more information about running inversions in parallel.
 
+Note: File hosting services are provided by my alma mater.  The download server may become temporarily unavailable due to system maintenance or permanently unavailable due to expiration of my account.
 
 
 Examples: Available Locally
