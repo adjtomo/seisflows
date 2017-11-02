@@ -45,11 +45,13 @@ class base(object):
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
-        # The default numerical settings provided here should work well for a 
+        # The default numerical parameters defined below should work well for a 
         # range of applications without manual tuning. If the nonlinear
-        # optimization procedure stagnates, a good first assumption, in our
-        # experience, it is that due to the objective function under 
-        # consideration rather than the nonlinear optimization parameters
+        # optimization procedure stagnates, it may be due to issues involving
+        # data quality or the choice of data misfit, data processing, or
+        # regularization parameters.  Problems in any of these areas usually 
+        # manifest themselves through stagnation of the nonlinear optimization
+        # algorithm.
 
         # line search algorithm
         if 'LINESEARCH' not in PAR:
