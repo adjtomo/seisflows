@@ -20,7 +20,7 @@ Another manuscript is currently under review in Computers and Geosciences.
 
 Design
 ------
-The inversion task is abstracted into six components: solver, system, nonlinear optimization, data preprocessing, image postprocessing, and workflow.  This design is informed by familiarity with different high-performance computing environments and different research problems (including oil and gas exploration, earthqake tomography, and ultrasound imaging).  
+The inversion task is abstracted into six components: solver, system, nonlinear optimization, data preprocessing, image postprocessing, and workflow.  This design is informed by hands-on experience with many different high-performance computing environments and research applications (including oil and gas exploration, earthquake tomography, and ultrasound imaging).  
 
 To see the choices available for each component, simply browse the source code and note the modules available in each of the six directories.  The inversion itself is executed by `inversion.main` in `seisflows/workflow/inversion.py`, which may be another good place to browse.
 
@@ -28,7 +28,7 @@ To see the choices available for each component, simply browse the source code a
 
 See also
 --------
-The following extension packages are not currently documented, but do give a sense for the type of research possible within this framework:
+The following extension packages are not currently documented, but may still give a sense for the type of research possible within this framework:
 
 - https://github.com/rmodrak/seisflows-research
 - https://github.com/rmodrak/seisflows-multiparameter
