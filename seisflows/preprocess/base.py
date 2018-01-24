@@ -79,11 +79,11 @@ class base(object):
 
 
     def prepare_eval_grad(self, path='.'):
-        """ Prepares solver for gradient evaluation by writing residuals and
-          adjoint traces
+        """
+         Prepares solver for gradient evaluation by writing residuals and
+         adjoint traces
 
-          INPUT
-            PATH - directory containing observed and synthetic seismic data
+         :input path: directory containing observed and synthetic seismic data
         """
         solver = sys.modules['seisflows_solver']
 
@@ -108,12 +108,12 @@ class base(object):
 
 
     def write_residuals(self, path, syn, obs):
-        """ Computes residuals from observations and synthetics
+        """
+        Computes residuals
 
-          INPUT
-            PATH - location residuals will be written
-            SYN - obspy Stream object containing synthetic data
-            OBS - obspy Stream object containing observed data
+        :input path: location "adjoint traces" will be written
+        :input syn: obspy Stream object containing synthetic data
+        :input obs: obspy Stream object containing observed data
         """
         nt, dt, _ = self.get_time_scheme(syn)
         nn, _ = self.get_network_size(syn)
@@ -130,26 +130,26 @@ class base(object):
 
 
     def sum_residuals(self, files):
-        """ Sums squares of residuals
+        """
+        Sums squares of residuals
 
-          INPUT
-            FILES - files containing residuals
+        :input files: list of single-column text files containing residuals
+        :output total_misfit: sum of squares of residuals
         """
         total_misfit = 0.
-        for file in files:
-            total_misfit += np.sum(np.loadtxt(file)**2.)
+        for filename in files:
+            total_misfit += np.sum(np.loadtxt(filename)**2.)
         return total_misfit
         
 
     def write_adjoint_traces(self, path, syn, obs, channel):
-        """ Writes "adjoint traces" required for gradient computation
-         (overwrites synthetic data in the process)
+        """
+        Writes "adjoint traces" required for gradient computation
 
-          INPUT
-            PATH - location "adjoint traces" will be written
-            SYN - obspy Stream object containing synthetic data
-            OBS - obspy Stream object containing observed data
-            CHANNEL - channel or component code used by writer
+        :input path: location "adjoint traces" will be written
+        :input syn: obspy Stream object containing synthetic data
+        :input obs: obspy Stream object containing observed data
+        :input channel: channel or component code used by writer
         """
         nt, dt, _ = self.get_time_scheme(syn)
         nn, _ = self.get_network_size(syn)
