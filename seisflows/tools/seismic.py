@@ -33,8 +33,54 @@ def call_solver(mpiexec, executable, output='solver.log'):
         f.close()
 
 
+class Minmax(defaultdict):
+    """ Keeps track of min,max values of model or kernel
+    """
+    def __init__(self):
+        super(Minmax, self).__init__(lambda: [+np.inf, -np.inf])
+
+    def update(self, keys, vals):
+        for key, val in _zip(keys, vals):
+            if min(val) < self.dict[key][0]:
+                self.dict[key][0] = min(val)
+            if max(val) > self.dict[key][1]:
+                self.dict[key][1] = max(val)
+
+    def __call__(self, key):
+        return self.dict[key]
+
+
+class Container(defaultdict):
+    """ Dictionary-like object for holding models or kernels
+    """
+    def __init__(self):
+        super(Container, self).__init__(lambda: [])
+        self.minmax = Minmax()
+
+
+class Writer(object):
+    """ Utility for appending values to text files
+    """
+    def __init__(self, path='./output.stat'):
+        self.path = abspath(path)
+        try:
+            os.mkdir(path)
+        except:
+            raise IOError
+
+        self.__call__('step_count', 0)
+
+    def __call__(self, filename, val):
+        fullfile = join(self.path, filename)
+        with open(fullfile, 'a') as f:
+            f.write('%e\n' % val)
+
+
+
+
+
 def getpar(key, file='DATA/Par_file', sep='=', cast=str):
-    """ Reads parameter from SPECFEM parfile
+    """ Reads parameter from text file
     """
     val = None
     with open(file, 'r') as f:
