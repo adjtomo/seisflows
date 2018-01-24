@@ -32,7 +32,7 @@ def call(*args, **kwargs):
 
 
 def diff(list1, list2):
-    """ Difference between two lists
+    """ Difference between unique elements of lists
     """
     c = set(list1).union(set(list2))
     d = set(list1).intersection(set(list2))

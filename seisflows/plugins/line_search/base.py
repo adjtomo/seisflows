@@ -2,7 +2,6 @@
 
 from os.path import abspath
 from seisflows.tools.array import count_zeros
-from seisflows.tools.seismic import StepWriter
 
 import numpy as np
 
@@ -35,7 +34,7 @@ class Base(object):
         self.step_len_max = step_len_max
 
         # prepare output log
-        self.writer = StepWriter(path)
+        self.writer = Writer(path)
 
         self.func_vals = []
         self.step_lens = []
@@ -96,6 +95,50 @@ class Base(object):
     def calculate_step(self):
         raise NotImplementedError('Must be implemented by subclass')
 
+
+
+class Writer(object):
+    """ Utility for writing one or more columns to text file
+    """
+    def __init__(self, path='./output.optim'):
+        self.iter = 0
+        self.filename = abspath(path)
+
+        self.write_header()
+
+    def __call__(self, steplen=None, funcval=None):
+        with open(self.filename, 'a') as fileobj:
+            if self.iter == 0:
+                self.iter += 1
+                fmt = '%10d  %10.3e  %10.3e\n'
+                fileobj.write(fmt % (self.iter, steplen, funcval))
+            elif steplen == 0.:
+                self.iter += 1
+                fmt = '%10d  %10.3e  %10.3e\n'
+                fileobj.write(fmt % (self.iter, steplen, funcval))
+            else:
+                fmt = 12*' ' + '%10.3e  %10.3e\n'
+                fileobj.write(fmt % (steplen, funcval))
+
+    def write_header(self):
+        # write header
+        headers = []
+        headers += ['ITER']
+        headers += ['STEPLEN']
+        headers += ['MISFIT']
+
+        with open(self.filename, 'a') as fileobj:
+            for header in headers:
+                fmt = '%%%ds  ' % 10
+                fileobj.write('%10s  ' % header)
+            fileobj.write('\n')
+            for _ in range(len(headers)):
+                fileobj.write('%10s  ' % (10*'='))
+            fileobj.write('\n')
+
+    def newline(self):
+        with open(self.filename, 'a') as fileobj:
+                fileobj.write('\n')
 
 
 
