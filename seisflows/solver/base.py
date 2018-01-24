@@ -10,7 +10,7 @@ from os.path import basename, join
 from seisflows.config import ParameterError, custom_import
 from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
-from seisflows.tools.seismic import ModelDict, call_solver
+from seisflows.tools.seismic import Container, call_solver
 from seisflows.tools.tools import Struct, diff, exists
 
 
@@ -261,15 +261,18 @@ class base(object):
 
 
     def load(self, path, parameters=[], prefix='', suffix=''):
-        """ Reads SPECFEM model or kernels
+        """ 
+          Loads SPECFEM2D/3D models or kernels
 
-          INPUT
-              PATH - the directory from which model is loaded
-              PARAMETERS - list of material parameters to be loaded
-              PREFIX - optional filename prefix
-              SUFFIX - optional filename suffix, eg '_kernel'
+          :input path :: directory from which model is read
+          :input parameters :: list of material parameters to be read
+              (if empty, defaults to self.parameters)
+          :input prefix :: optional filename prefix
+          :input suffix :: optional filename suffix, eg '_kernel'
+          :output dict :: model or kernels indexed by material parameter
+              and processor rank, ie dict[parameter][iproc]
         """
-        dict = ModelDict()
+        dict = Container()
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters or self.parameters:
                 dict[key] += self.io.read_slice(
@@ -318,7 +321,7 @@ class base(object):
         """
         nproc = self.mesh_properties.nproc
         ngll = self.mesh_properties.ngll
-        model = ModelDict()
+        model = Container()
         for idim, key in enumerate(parameters or self.parameters):
             model[key] = []
             for iproc in range(nproc):
