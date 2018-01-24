@@ -107,7 +107,7 @@ def getpar(key, file='DATA/Par_file', sep='=', cast=str):
 
 
 def setpar(key, val, filename='DATA/Par_file', path='.', sep='='):
-    """ Writes parameter to SPECFEM parfile
+    """ Writes parameter to text file
     """
 
     val = str(val)
@@ -132,93 +132,6 @@ def setpar(key, val, filename='DATA/Par_file', path='.', sep='='):
     # write file
     with open(path +'/'+ filename, 'w') as file:
         file.writelines(lines)
-
-
-class Minmax(defaultdict):
-    """ Keeps track of min,max values of model or kernel
-    """
-    def __init__(self):
-        super(Minmax, self).__init__(lambda: [+np.inf, -np.inf])
-
-    def update(self, keys, vals):
-        for key, val in _zip(keys, vals):
-            if min(val) < self.dict[key][0]:
-                self.dict[key][0] = min(val)
-            if max(val) > self.dict[key][1]:
-                self.dict[key][1] = max(val)
-
-    def __call__(self, key):
-        return self.dict[key]
-
-
-class ModelDict(defaultdict):
-    """ Dictionary-like object for holding models or kernels
-    """
-    def __init__(self):
-        super(ModelDict, self).__init__(lambda: [])
-        self.minmax = Minmax()
-
-
-class StepWriter(object):
-    """ Utility for writing one or more columns to text file
-    """
-    def __init__(self, path='./output.optim'):
-        self.iter = 0
-        self.filename = abspath(path)
-
-        self.write_header()
-
-    def __call__(self, steplen=None, funcval=None):
-        with open(self.filename, 'a') as fileobj:
-            if self.iter == 0:
-                self.iter += 1
-                fmt = '%10d  %10.3e  %10.3e\n'
-                fileobj.write(fmt % (self.iter, steplen, funcval))
-            elif steplen == 0.:
-                self.iter += 1
-                fmt = '%10d  %10.3e  %10.3e\n'
-                fileobj.write(fmt % (self.iter, steplen, funcval))
-            else:
-                fmt = 12*' ' + '%10.3e  %10.3e\n'
-                fileobj.write(fmt % (steplen, funcval))
-
-    def write_header(self):
-        # write header
-        headers = []
-        headers += ['ITER']
-        headers += ['STEPLEN']
-        headers += ['MISFIT']
-
-        with open(self.filename, 'a') as fileobj:
-            for header in headers:
-                fmt = '%%%ds  ' % 10
-                fileobj.write('%10s  ' % header)
-            fileobj.write('\n')
-            for _ in range(len(headers)):
-                fileobj.write('%10s  ' % (10*'='))
-            fileobj.write('\n')
-
-    def newline(self):
-        with open(self.filename, 'a') as fileobj:
-                fileobj.write('\n')
-
-
-class Writer(object):
-    """Utility for appending values to text files"""
-
-    def __init__(self, path='./output.stat'):
-        self.path = abspath(path)
-        try:
-            os.mkdir(path)
-        except:
-            raise IOError
-
-        self.__call__('step_count', 0)
-
-    def __call__(self, filename, val):
-        fullfile = join(self.path, filename)
-        with open(fullfile, 'a') as f:
-            f.write('%e\n' % val)
 
 
 
