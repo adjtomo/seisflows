@@ -24,7 +24,7 @@ class base(object):
     def check(self):
         """ Checks parameters and paths
         """
-        # usedf for inversion
+        # used for inversion
         if 'MISFIT' not in PAR:
             setattr(PAR, 'MISFIT', None)
 
