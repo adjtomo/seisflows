@@ -172,21 +172,28 @@ class base(object):
                 tr.detrend('demean')
                 tr.detrend('linear')
                 tr.taper(0.05, type='hann')
-                tr.filter('bandpass', freqmin=PAR.FREQMIN, freqmax=PAR.FREQMAX)
+                tr.filter('bandpass',
+                          zerophase=True,
+                          freqmin=PAR.FREQMIN,
+                          freqmax=PAR.FREQMAX)
 
         elif PAR.FILTER == 'Lowpass':
             for tr in traces:
                 tr.detrend('demean')
                 tr.detrend('linear')
                 tr.taper(0.05, type='hann')
-                tr.filter('lowpass', freq=PAR.FREQ)
+                tr.filter('lowpass', 
+                          zerophase=True,
+                          freq=PAR.FREQ)
 
         elif PAR.FILTER == 'Highpass':
             for tr in traces:
                 tr.detrend('demean')
                 tr.detrend('linear')
                 tr.taper(0.05, type='hann')
-                tr.filter('highpass', freq=PAR.FREQ)
+                tr.filter('highpass',
+                          zerophase=True,
+                          freq=PAR.FREQ)
 
         else:
             raise ParameterError()
