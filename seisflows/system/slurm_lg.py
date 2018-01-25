@@ -58,15 +58,11 @@ class slurm_lg(custom_import('system', 'base')):
 
         # limit on number of concurrent tasks
         if 'NTASKMAX' not in PAR:
-            setattr(PAR, 'NTASKMAX', PAR.NTASK)
+            setattr(PAR, 'NTASKMAX', 100)
 
         # number of cores per node
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
-
-        # how to invoke executables
-        if 'MPIEXEC' not in PAR:
-            setattr(PAR, 'MPIEXEC', 'srun')
 
         # optional additional SLURM arguments
         if 'SLURMARGS' not in PAR:
@@ -142,7 +138,7 @@ class slurm_lg(custom_import('system', 'base')):
                    + '--ntasks-per-node=%d ' % PAR.NODESIZE
                    + '--ntasks=%d ' % PAR.NPROC
                    + '--time=%d ' % PAR.TASKTIME
-                   + '--array=%d-%d ' % (0,PAR.NTASK-1%PAR.NTASKMAX)
+                   + '--array=%d-%d ' % (0,(PAR.NTASK-1)%PAR.NTASKMAX)
                    + '--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a')
                    + '%s ' % (findpath('seisflows.system') +'/'+ 'wrappers/run')
                    + '%s ' % PATH.OUTPUT
