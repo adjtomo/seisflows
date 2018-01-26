@@ -106,7 +106,7 @@ class slurm_sm(custom_import('system', 'base')):
                 + '--cpus-per-task=%d '%PAR.NPROC
                 + '--ntasks=%d '%PAR.NTASK
                 + '--time=%d '%PAR.WALLTIME
-                + '%s ' % findpath('seisflows.system') +'/'+ 'wrappers/submit'
+                + '%s ' % join(findpath('seisflows.system'), 'wrappers/submit')
                 + '%s ' % PATH.OUTPUT)
 
 
