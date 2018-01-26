@@ -283,8 +283,8 @@ class base(object):
           Saves SPECFEM2D/3D models or kernels
 
           :input dict :: model stored as a dictionary or Container
-          :input path :: directory from which model is read
-          :input parameters :: list of material parameters to be read,
+          :input path :: directory to which model is written
+          :input parameters :: list of material parameters to be written
           :input prefix :: optional filename prefix
           :input suffix :: optional filename suffix, eg '_kernel'
         """

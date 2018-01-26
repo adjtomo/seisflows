@@ -14,7 +14,7 @@ Design
 ------
 With SeisFlows, the inversion task is abstracted into six components: `solver`, `system`, `nonlinear optimization`, `data preprocessing`, `postprocessing`, and `workflow`.  This design is informed by hands-on experience with different HPC environments and research applications. The source code is structured in a modular way based on these six categories, and users are offered various choices in each one.  To see the choices available for each category, simply browse the source code.  The inversion itself is executed by `seisflows/workflow/inversion.py`, which may be good place to start looking.
 
-Wave simulations are performed by calling an external solver. The ability to interface with outside packages provides flexibility, and the choice of SPECFEM2D/3D/3D\_GLOBE as default options gives optional GPU acceleration and other useful capabilities. Setting up your own inversions, however, can be time consuming because it requires familiarity with SPECFEM2D/3D/3D\_GLOBES's idiosyncratic meshing procedure and binary file formats. Alternatively, some users have interfaced with other solvers, but this can also be time consuming.
+Wave simulations are performed by calling an external solver. The ability to interface with outside packages provides flexibility, and the choice of SPECFEM2D/3D/3D\_GLOBE as default options gives optional GPU acceleration and other useful capabilities. Setting up your own inversions, however, can be quite time consuming because it requires familiarity with SPECFEM2D/3D/3D\_GLOBES's idiosyncratic meshing procedure and binary file formats. Alternatively, some users have interfaced with yet other solver packages, but this can also be time consuming.
 
 
 References
@@ -28,7 +28,7 @@ Another manuscript is currently under review in Computers and Geosciences.
 
 See also
 --------
-The following extension packages are not currently documented, but may still give a sense for the type of research possible within this framework:
+The following extension packages are not currently documented, but may still give a sense for the type of research possible within the framework:
 
 - https://github.com/rmodrak/seisflows-research
 - https://github.com/rmodrak/seisflows-multiparameter
