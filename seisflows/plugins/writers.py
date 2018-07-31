@@ -28,13 +28,13 @@ def ascii(stream, path, filenames):
         nt = tr.stats.npts
         t1 = float(tr.stats.starttime)
         t2 = t1 + tr.stats.npts*tr.stats.sampling_rate
-        print nt, t1, t2
+        print(nt, t1, t2)
 
         t = np.linspace(t1, t2, nt)
         w = tr.data
 
-        print path +'/'+ tr.stats.filename
-        print times.shape, tr.data.shape
+        print(path +'/'+ tr.stats.filename)
+        print(times.shape, tr.data.shape)
         np.savetxt(path +'/'+ tr.stats.filename,
                    np.column_stack((t, w)))
 

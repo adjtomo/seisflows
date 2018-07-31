@@ -51,7 +51,7 @@ class LCG(object):
 
         pap = np.dot(p, ap)
         if pap < 0:
-            print ' Stopping LCG [negative curvature]'
+            print(' Stopping LCG [negative curvature]')
             isdone = True
             return isdone
                        

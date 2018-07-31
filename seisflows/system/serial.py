@@ -95,7 +95,7 @@ class serial(custom_import('system', 'base')):
                 self.progress(taskid)
             func = getattr(__import__('seisflows_'+classname), method)
             func(**kwargs)
-        print ''
+        print('')
 
 
     def run_single(self, classname, method, *args, **kwargs):
@@ -122,4 +122,4 @@ class serial(custom_import('system', 'base')):
         """ Provides status update
         """
         if PAR.NTASK > 1:
-            print ' task ' + '%02d of %02d' % (taskid+1, PAR.NTASK)
+            print(' task ' + '%02d of %02d' % (taskid+1, PAR.NTASK))

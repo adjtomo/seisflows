@@ -34,7 +34,7 @@ class test_system(base):
         system.run('workflow', 'hello', 
             msg='Hello from %d')
 
-        print ''
+        print('')
 
 
     def hello(self, msg='Hello from %d'):
@@ -42,9 +42,9 @@ class test_system(base):
         """
         time.sleep(1)
         try:
-            print msg % (system.taskid()+1)
+            print(msg % (system.taskid()+1))
         except:
-            print msg
+            print(msg)
 
-        print ''
+        print('')
 

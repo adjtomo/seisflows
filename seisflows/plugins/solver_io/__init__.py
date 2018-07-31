@@ -6,4 +6,6 @@
 #import adios
 
 import fortran_binary
+from .fortran_binary import read_slice
+from .fortran_binary import write_slice
 

@@ -1,5 +1,5 @@
 
-import copy_reg
+import copyreg
 import imp
 import os
 import re
@@ -39,7 +39,7 @@ def config():
 
     # check if objects already exist on disk
     if exists(_output()):
-        print msg.WarningOverwrite
+        print(msg.WarningOverwrite)
         sys.exit()
 
     # instantiate and register objects
@@ -51,11 +51,11 @@ def config():
         sys.modules['seisflows_'+name].check()
 
     if not hasattr(sys.modules['seisflows_parameters'], 'workflow'.upper()):
-        print msg.MissingParameter_Worfklow
+        print(msg.MissingParameter_Worfklow)
         sys.exit(-1)
 
     if not hasattr(sys.modules['seisflows_parameters'], 'system'.upper()):
-        print msg.MissingParameter_System
+        print(msg.MissingParameter_System)
         sys.exit(-1)
 
 
@@ -183,7 +183,7 @@ def tilde_expand(mydict):
     """ Expands tilde character in path strings
     """
     for key,val in mydict.items():
-        if type(val) not in [str, unicode]:
+        if type(val) not in [str]:
             raise Exception
         if val[0:2] == '~/':
             mydict[key] = os.getenv('HOME') +'/'+ val[2:]
@@ -240,5 +240,5 @@ def _unpickle_method(func_name, obj, cls):
     return func.__get__(obj, cls)
 
 
-copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
+copyreg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 

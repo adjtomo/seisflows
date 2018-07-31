@@ -51,11 +51,11 @@ class base(object):
 
         # assertions
         if PAR.FORMAT not in dir(readers):
-            print msg.ReaderError
+            print(msg.ReaderError)
             raise ParameterError()
 
         if PAR.FORMAT not in dir(writers):
-            print msg.WriterError
+            print(msg.WriterError)
             raise ParameterError()
 
         self.check_filter()

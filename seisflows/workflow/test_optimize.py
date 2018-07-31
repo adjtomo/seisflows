@@ -68,17 +68,17 @@ class test_optimize(base):
         cls.setup()
 
         for cls.iter in range(PAR.BEGIN, PAR.END+1):
-            print 'Starting iteration', cls.iter
+            print('Starting iteration', cls.iter)
             optimize.iter = cls.iter
 
-            print "Computing search direction"
+            print("Computing search direction")
             cls.compute_direction()
 
-            print "Computing step length"
+            print("Computing step length")
             cls.line_search()
 
             cls.finalize()
-            print ''
+            print('')
 
 
     def setup(cls):
@@ -129,12 +129,12 @@ class test_optimize(base):
 
             elif status < 0:
                 if optimize.retry_status():
-                    print ' Line search failed\n\n Retrying...'
+                    print(' Line search failed\n\n Retrying...')
                     optimize.restart()
                     cls.line_search()
                     break
                 else:
-                    print ' Line search failed\n\n Aborting...'
+                    print(' Line search failed\n\n Aborting...')
                     sys.exit(-1)
 
 
@@ -158,15 +158,15 @@ class test_optimize(base):
         m_old = loadnpy('m_old')
 
         if PAR.VERBOSE > 0:
-            print '%14.7e %14.7e'%tuple(m_new)
+            print('%14.7e %14.7e'%tuple(m_new))
 
         if cls.status(m_new, m_old):
-            print 'Test successful: stopping criteria met.\n'
+            print('Test successful: stopping criteria met.\n')
             np.savetxt('niter', [cls.iter], '%d')
             sys.exit(0)
 
         elif cls.iter >= PAR.END:
-            print 'Maximum number of iterations exceeded.\n'
+            print('Maximum number of iterations exceeded.\n')
             sys.exit(-1)
 
 

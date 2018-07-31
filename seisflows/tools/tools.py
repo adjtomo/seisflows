@@ -54,7 +54,7 @@ def exists(names):
     for name in iterable(names):
         if not name:
             return False
-        elif not isinstance(name, basestring):
+        elif not isinstance(name, str):
             raise TypeError
         elif not os.path.exists(name):
             return False
@@ -120,13 +120,13 @@ def loadjson(filename):
 
 def savejson(filename, obj):
     """Save object using json"""
-    with open(filename, 'wb') as file:
+    with open(filename, 'w', encoding = 'utf8') as file:
         json.dump(obj, file, sort_keys=True, indent=4)
 
 
 def loadpy(filename):
     if not exists(filename):
-        print msg.FileError % filename
+        print(msg.FileError % filename)
         raise IOError
 
     # load module

@@ -94,8 +94,8 @@ class PLCG(LCG):
             eta1996 = 1.
 
         if verbose:
-            print ' RATIO:', LHS/RHS
-            print ''
+            print(' RATIO:', LHS/RHS)
+            print('')
 
         #self.writer(
         #    self.iter,

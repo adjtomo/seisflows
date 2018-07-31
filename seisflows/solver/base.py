@@ -118,8 +118,11 @@ class base(object):
         # assertions
         assert self.parameters != []
         assert hasattr(solver_io, PAR.SOLVERIO)
-        assert hasattr(self.io, 'read_slice')
-        assert hasattr(self.io, 'write_slice')
+        # assert hasattr(self.io, 'read_slice')
+        # assert hasattr(self.io, 'write_slice')
+        assert hasattr(solver_io, 'read_slice')
+        assert hasattr(solver_io, 'write_slice')
+        
 
 
     def setup(self):
@@ -369,7 +372,7 @@ class base(object):
         # apply smoothing operator
         unix.cd(self.cwd)
         for name in parameters or self.parameters:
-            print ' smoothing', name
+            print (' smoothing', name)
             call_solver(
                 system.mpiexec(),
                 PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
@@ -380,7 +383,7 @@ class base(object):
                 + output_path + '/ ',
                 output='/dev/null')
 
-        print ''
+        print('')
 
         # rename output files
         files = glob(output_path+'/*')
@@ -554,7 +557,7 @@ class base(object):
         wildcard = self.source_prefix+'_*'
         globstar = sorted(glob(path +'/'+ wildcard))
         if not globstar:
-             print msg.SourceError_SPECFEM % (path, wildcard)
+             print(msg.SourceError_SPECFEM % (path, wildcard))
              sys.exit(-1)
 
         names = []

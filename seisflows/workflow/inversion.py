@@ -112,26 +112,26 @@ class inversion(base):
         """
         optimize.iter = PAR.BEGIN
         self.setup()
-        print ''
+        print('')
 
         while optimize.iter <= PAR.END:
-            print "Starting iteration", optimize.iter
+            print("Starting iteration", optimize.iter)
             self.initialize()
 
-            print "Computing gradient"
+            print("Computing gradient")
             self.evaluate_gradient()
 
-            print "Computing search direction"
+            print("Computing search direction")
             self.compute_direction()
 
-            print "Computing step length"
+            print("Computing step length")
             self.line_search()
 
             self.finalize()
             self.clean()
 
             optimize.iter += 1
-            print ''
+            print('')
 
 
     def setup(self):
@@ -145,9 +145,9 @@ class inversion(base):
         if optimize.iter == 1 or \
            PATH.LOCAL:
             if PATH.DATA:
-                print 'Copying data' 
+                print('Copying data' )
             else:
-                print 'Generating data' 
+                print('Generating data' )
 
             system.run('solver', 'setup')
 
@@ -157,7 +157,7 @@ class inversion(base):
         """
         self.write_model(path=PATH.GRAD, suffix='new')
 
-        print 'Generating synthetics'
+        print('Generating synthetics')
         system.run('solver', 'eval_func',
                    path=PATH.GRAD)
 
@@ -181,7 +181,7 @@ class inversion(base):
         optimize.initialize_search()
 
         while True:
-            print " trial step", optimize.line_search.step_count + 1
+            print(" trial step", optimize.line_search.step_count + 1)
             self.evaluate_function()
             status = optimize.update_search()
 
@@ -194,12 +194,12 @@ class inversion(base):
 
             elif status < 0:
                 if optimize.retry_status():
-                    print ' Line search failed\n\n Retrying...'
+                    print(' Line search failed\n\n Retrying...')
                     optimize.restart()
                     self.line_search()
                     break
                 else:
-                    print ' Line search failed\n\n Aborting...'
+                    print(' Line search failed\n\n Aborting...')
                     sys.exit(-1)
 
 

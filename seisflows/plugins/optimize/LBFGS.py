@@ -44,7 +44,7 @@ class LBFGS(object):
             return -g, 0
 
         elif self.iter > self.maxiter:
-            print 'restarting LBFGS... [periodic restart]'
+            print('restarting LBFGS... [periodic restart]')
             self.restart()
             return -g, 1
 
@@ -145,10 +145,10 @@ class LBFGS(object):
     def check_status(self, g, r):
         theta = 180.*np.pi**-1*angle(g,r)
         if not 0. < theta < 90.:
-            print 'restarting LBFGS... [not a descent direction]'
+            print('restarting LBFGS... [not a descent direction]')
             return 1
         elif theta > 90. - self.thresh:
-            print 'restarting LBFGS... [practical safeguard]'
+            print('restarting LBFGS... [practical safeguard]')
             return 1
         else:
             return 0

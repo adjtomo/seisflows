@@ -83,7 +83,7 @@ class base(object):
             raise ParameterError
 
         if PAR.OPTIMIZE in ['base']:
-            print msg.CompatibilityError1
+            print(msg.CompatibilityError1)
             sys.exit(-1)
 
         if PAR.LINESEARCH:
@@ -245,7 +245,7 @@ class base(object):
         theta = angle(p,-g)
 
         if PAR.VERBOSE >= 2:
-            print ' theta: %6.3f' % theta
+            print(' theta: %6.3f' % theta)
 
         thresh = 1.e-3
         if abs(theta) < thresh:
