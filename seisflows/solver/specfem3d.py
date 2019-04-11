@@ -236,5 +236,5 @@ class specfem3d(custom_import('solver', 'base')):
 
     @property
     def source_prefix(self):
-        return 'FORCESOLUTION'
+        return 'CMTSOLUTION'
 
