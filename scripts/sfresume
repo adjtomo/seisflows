@@ -2,8 +2,8 @@
 
 import argparse, os, sys
 
-from seisflows.config import config, loadpy, names, tilde_expand, Dict, Struct
-from seisflows.tools import unix
+from seisflows.config import config, loadpy, names, tilde_expand, Dict
+from seisflows.tools import unix, tools
 
 
 def getargs():
@@ -38,8 +38,8 @@ if __name__ == "__main__":
 
     # reload objects
     for name in names:
-        fullfile = join(args.workdir, 'output', 'seisflows_'+name+'.p')
-        sys.modules['seisflows_'+name] = loadobj(fullfile)
+        fullfile = os.path.join(args.workdir, 'output', 'seisflows_'+name+'.p')
+        sys.modules['seisflows_'+name] = tools.loadobj(fullfile)
 
     # parameter checking
     for name in names:

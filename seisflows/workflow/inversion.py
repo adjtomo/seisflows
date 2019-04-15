@@ -110,10 +110,12 @@ class inversion(base):
     def main(self):
         """ Carries out seismic inversion
         """
+        print "Beginning at iteration %s" % PAR.BEGIN
         optimize.iter = PAR.BEGIN
         self.setup()
         print ''
-
+        
+        print optimize.iter, " <= ", PAR.END
         while optimize.iter <= PAR.END:
             print "Starting iteration", optimize.iter
             self.initialize()
@@ -138,6 +140,7 @@ class inversion(base):
         """ Lays groundwork for inversion
         """
         if optimize.iter == 1:
+            print "Performing setup"
             preprocess.setup()
             postprocess.setup()
             optimize.setup()
@@ -148,7 +151,8 @@ class inversion(base):
                 print 'Copying data' 
             else:
                 print 'Generating data' 
-
+            
+            print "Running solver"
             system.run('solver', 'setup')
 
 

@@ -202,7 +202,7 @@ class slurm_lg(custom_import('system', 'base')):
     def mpiexec(self):
         """ Specifies MPI executable used to invoke solver
         """
-        return 'srun '
+        return 'srun -u '
 
 
     def taskid(self):
