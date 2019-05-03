@@ -9,6 +9,16 @@ SeisFlows is an open source seismic inversion package that provides
 
 SeisFlows differs from previous open-source software in emphasizing both flexibility and HPC portability.  Examples and usage information are available at [readthedocs.org](http://seisflows.readthedocs.org/en/latest/).  Probably the easiest way to learn more is to follow these checkerboard example [instructions](http://seisflows.readthedocs.io/en/latest/instructions_remote.html).
 
+*My HPC account has been partially reactivated and the examples recovered. Two of the smaller examples are now being hosted from GoogleDrive*
+
+
+- [2D acoustic checkerboard](https://drive.google.com/open?id=1ow3LTYEvNn55yGeIV56sqaW-wXC0MtYW)
+
+- [3D elastic checkerboard](https://drive.google.com/open?id=1LC2QfLNcMOWyHnCSgIGx5DDHyDD51YiV)
+
+
+
+
 
 Design
 ------
@@ -21,7 +31,7 @@ References
 ----------
 If you find this package useful, please cite:
 
-`Ryan Modrak, Dmitry Borisov, Matthieu Lefebvre, JeroenTrompa; SeisFlows—Flexible waveform inversion software, Computers & Geosciences, Volume 115, June 2018, Pages 88-95, https://doi.org/10.1016/j.cageo.2018.02.004`
+`Ryan Modrak, Dmitry Borisov, Matthieu Lefebvre, Jeroen Tromp; SeisFlows—Flexible waveform inversion software, Computers & Geosciences, Volume 115, June 2018, Pages 88-95, https://doi.org/10.1016/j.cageo.2018.02.004`
 
 `Ryan Modrak, Jeroen Tromp; Seismic waveform inversion best practices: regional, global and exploration test cases, Geophysical Journal International, Volume 206, Issue 3, 1 September 2016, Pages 1864–1889, https://doi.org/10.1093/gji/ggw202`
 
