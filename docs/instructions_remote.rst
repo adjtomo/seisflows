@@ -82,21 +82,14 @@ Next, configure and compile SPECFEM2D using ifort (preferred) or some other fort
 
 6. Set up checkerboard test
 ---------------------------
-
-Download the starting model and other input files required for the waveform inversion checkerboard test.  For simplicity, let's assume the checkerboard working directory will be placed in ``~/tests`` (if you prefer a different location, then modify the following commands accordingly)::
  
-        mkdir ~/tests/
-        cd ~/tests/
-        wget --recursive --no-parent --no-host-directories --cut-dirs=2 --reject "index.html*" http://tigress-web.princeton.edu/~rmodrak/2dAcoustic/
+*Note: the princeton.edu file hosting account has expired, and so these instructions have changed slightly.*
 
+Download the starting model and other input files from `GoogleDrive <https://drive.google.com/open?id=1ow3LTYEvNn55yGeIV56sqaW-wXC0MtYW>`.  Unpack the archive using ``tar -xzf checkers.tgz``.
 
-A directory ``~/tests/checkers`` is now being created.  Among other files, ``parameters.py`` and ``paths.py`` are being downloaded.
-
-After the download completes, make sure that all paths specified in ``paths.py``  are correct.  For example, if you compiled SPECFEM2D somewhere other than ``~/packages/specfem2d-d745c542``, you will need to modify the ``SPECFEM2D_BIN`` entry accordingly. 
+After unpacking, make sure that all paths specified in ``paths.py``  are correct.  For example, if you compiled SPECFEM2D somewhere other than ``~/packages/specfem2d-d745c542``, you will need to modify the ``SPECFEM2D_BIN`` entry accordingly. 
 
 Next, take a minute to view the ``parameters.py`` file and note the close similarity between the first set of parameters and the `directory structure <https://github.com/PrincetonUniversity/seisflows/tree/master/seisflows>`_ of the SeisFlows repository.
-
-Note: File hosting services are provided by my alma mater.  The download server may become temporarily unavailable due to system maintenance or permanently unavailable due to expiration of my account.
 
  
 7. Run checkerboard test in serial
@@ -146,6 +139,6 @@ To plot results from the checkerboard example using ``plot2d``, run the followin
 
 10. Creating your own examples
 ------------------------------
-It may be clear by now that with SeisFlows, wave simulations must be performed using an external software package such as SPECFEM2D or SPECFEM3D.  The ability to interface with external solvers ensures flexibility, and the choice of SPECFEM as a default option gives access to cutting-edge meshing and hardware accelaration capabilities.  However, the use of external package also creates additional work for the user because, to carry set up one's own inversion, one must become familiar not only with the SeisFlows package, but also with a separate solver package.  
+With SeisFlows, wave simulations must be performed using an external software package such as SPECFEM2D or SPECFEM3D.  The ability to interface with external solvers ensures flexibility, and the choice of SPECFEM as a default option gives access to cutting-edge meshing and hardware accelaration capabilities.  However, the use of external package also creates additional work for the user because, to carry set up one's own inversion, one must become familiar not only with the SeisFlows package, but also with a separate solver package.  
 
 To move beyond the above checkerboard test case, familiarity with how to set up simulations with SPECFEM--in paricular with how to create models in SPECFEM's idionsyncratic binary format--is essential.  `Issue #83 <https://github.com/rmodrak/seisflows/issues/83>`_ may be helpful in this regard.  Trying the two other `examples available for download <https://github.com/rmodrak/seisflows/blob/master/docs/index.rst#examples-available-for-download>`_ may also be useful.
