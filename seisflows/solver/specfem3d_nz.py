@@ -106,7 +106,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
 
 
     def eval_func(self, *args, **kwargs):
-        super(specfem3d, self).eval_func(*args, **kwargs)
+        super(specfem3d_nz, self).eval_func(*args, **kwargs)
 
         # work around SPECFEM3D conflicting name conventions
         self.rename_data()
@@ -163,7 +163,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
 
 
     def initialize_adjoint_traces(self):
-        super(specfem3d, self).initialize_adjoint_traces()
+        super(specfem3d_nz, self).initialize_adjoint_traces()
 
         # workaround for SPECFEM2D's use of different name conventions for
         # regular traces and 'adjoint' traces

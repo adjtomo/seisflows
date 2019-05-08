@@ -147,6 +147,7 @@ class base(object):
 
         else:
             # generate data on the fly
+            print "generating data in solver/base"  # bchow
             self.generate_data(
                 model_path=PATH.MODEL_TRUE,
                 model_name='model_true',
