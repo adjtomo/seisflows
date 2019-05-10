@@ -26,7 +26,6 @@ class specfem3d_nz(custom_import('solver', 'base')):
 
       See base class for method descriptions
     """
-
     def check(self):
         """ Checks parameters and paths
         """
@@ -46,12 +45,13 @@ class specfem3d_nz(custom_import('solver', 'base')):
         if 'FORMAT' not in PAR:
             raise Exception()
 
-        if PAR.FORMAT != 'su':
+        # make sure data format is accetapble
+        if PAR.FORMAT not in ['su', 'sem']:
             raise Exception()
 
-
     def generate_data(self, **model_kwargs):
-        """ Generates data
+        """ Generates data in the synthetic-synthetic comparison case.
+        Not for use in the real-data problem.
         """
         print 'generate data'
         self.generate_mesh(**model_kwargs)
@@ -68,7 +68,6 @@ class specfem3d_nz(custom_import('solver', 'base')):
 
         if PAR.SAVETRACES:
             self.export_traces(PATH.OUTPUT+'/'+'traces/obs')
-
 
     def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
         """ Performs meshing and database generation
@@ -104,29 +103,50 @@ class specfem3d_nz(custom_import('solver', 'base')):
         else:
             raise NotImplementedError
 
+    def eval_func(self, path='', iter='', *args, **kwargs):
+        """
+        evaluate the misfit functional using the external package Pyatoa.
+        Pyatoa is written in Python3 so it needs to be called with subprocess
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        # generate the synthetics
+        unix.cd(self.cwd)
+        self.import_model()
+        self.forward()
 
-    def eval_func(self, *args, **kwargs):
-        super(specfem3d_nz, self).eval_func(*args, **kwargs)
+        # calling bash script to call Pyatoa. Parameters are passed through
+        # the bash script to Pyatoa via positional command line arguments
+        subprocess.call(system.mpiexec(),
+                        join(PATH.WORKDIR, 'run_process_seisflows.sh '),
+                        self.source_name,                    # event_id
+                        str(int(iter) - 1),                  # model_number
+                        join(self.cwd, 'traces', 'syn'),     # synthetic_dir
+                        PATH.WORKDIR,                        # working_dir
+                        join(PATH.WORKDIR, 'pyatoa.output')  # output_dir
+                        )
 
-        # work around SPECFEM3D conflicting name conventions
-        self.rename_data()
 
-
-    ### low-level solver interface
-
+    # low-level solver interface
     def forward(self, path='traces/syn'):
-        """ Calls SPECFEM3D forward solver
+        """ Calls SPECFEM3D forward solver and then moves files into path
         """
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
         call_solver(system.mpiexec(), 'bin/xgenerate_databases')
         call_solver(system.mpiexec(), 'bin/xspecfem3D')
 
+        # seismic unix output format
         if PAR.FORMAT in ['SU', 'su']:
             src = glob('OUTPUT_FILES/*_d?_SU')
             dst = path
             unix.mv(src, dst)
-
+        # sem output format
+        elif PAR.FORMAT == "sem":
+            src = glob('OUTPUT_FILES/*_sem?')
+            dst = path
+            unix.mv(src, dst)
 
     def adjoint(self):
         """ Calls SPECFEM3D adjoint solver
@@ -137,9 +157,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         unix.ln('traces/adj', 'SEM')
         call_solver(system.mpiexec(), 'bin/xspecfem3D')
 
-
-    ### input file writers
-
+    # input file writers
     def check_solver_parameter_files(self):
         """ Checks solver parameters
         """
@@ -161,19 +179,18 @@ class specfem3d_nz(custom_import('solver', 'base')):
         if 'MULTIPLES' in PAR:
             raise NotImplementedError
 
-
     def initialize_adjoint_traces(self):
         super(specfem3d_nz, self).initialize_adjoint_traces()
 
         # workaround for SPECFEM2D's use of different name conventions for
         # regular traces and 'adjoint' traces
         if PAR.FORMAT in ['SU', 'su']:
-            files = glob(self.cwd +'/'+ 'traces/adj/*SU')
+            files = glob(self.cwd + '/' + 'traces/adj/*SU')
             unix.rename('_SU', '_SU.adj', files)
 
         # workaround for SPECFEM3D's requirement that all components exist,
         # even ones not in use
-        unix.cd(self.cwd +'/'+ 'traces/adj')
+        unix.cd(self.cwd + '/' + 'traces/adj')
         for iproc in range(PAR.NPROC):
             for channel in ['x', 'y', 'z']:
                 src = '%d_d%s_SU.adj' % (iproc, PAR.CHANNELS[0])
@@ -185,9 +202,8 @@ class specfem3d_nz(custom_import('solver', 'base')):
         """ Works around conflicting data filename conventions
         """
         if PAR.FORMAT in ['SU', 'su']:
-            files = glob(self.cwd +'/'+ 'traces/adj/*SU')
+            files = glob(self.cwd + '/' + 'traces/adj/*SU')
             unix.rename('_SU', '_SU.adj', files)
-
 
     def write_parameters(self):
         unix.cd(self.cwd)
@@ -206,9 +222,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         _, h = preprocess.load(dir='traces/obs')
         solvertools.write_sources(vars(PAR), h)
 
-
-    ### miscellaneous
-
+    # miscellaneous
     @property
     def data_wildcard(self):
         channels = PAR.CHANNELS
