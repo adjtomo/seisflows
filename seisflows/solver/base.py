@@ -144,7 +144,6 @@ class base(object):
             src = glob(PATH.DATA +'/'+ self.source_name +'/'+ '*')
             dst = 'traces/obs/'
             unix.cp(src, dst)
-
         else:
             # generate data on the fly
             print "generating data in solver/base"  # bchow
@@ -199,6 +198,20 @@ class base(object):
             preprocess.prepare_eval_grad(self.cwd)
             self.export_residuals(path)
 
+    def eval_fwd(self, path='', export_traces=False, write_residuals=True):
+        """
+        Performs forward simulations needed for misfit function evaluation
+        But does not perform misfit quantification as in eval_func.
+        For use with Pyatoa which takes care of the misfit evaluation.
+
+        :param path:
+        :param export_traces:
+        :param write_residuals:
+        :return:
+        """
+        unix.cd(self.cwd)
+        self.import_model(path)
+        self.forward()
 
     def eval_grad(self, path='', export_traces=False):
         """ 
@@ -215,7 +228,6 @@ class base(object):
             self.export_traces(path+'/'+'traces/syn', prefix='traces/syn')
             self.export_traces(path+'/'+'traces/adj', prefix='traces/adj')
 
-
     def apply_hess(self, path=''):
         """
           Computes action of Hessian on a given model vector.
@@ -231,16 +243,12 @@ class base(object):
         self.adjoint()
         self.export_kernels(path)
 
-
-
-    ### low-level solver interface
-
+    # low-level solver interface
     def forward(self):
         """ Calls forward solver
         """
         # must be implemented by subclass
         raise NotImplementedError
-
 
     def adjoint(self):
         """ Calls adjoint solver
@@ -256,7 +264,6 @@ class base(object):
         """ Solver IO module
         """
         return getattr(solver_io, PAR.SOLVERIO)
-
 
     def load(self, path, parameters=[], prefix='', suffix=''):
         """ 
@@ -276,7 +283,6 @@ class base(object):
                 dict[key] += self.io.read_slice(
                     path, prefix+key+suffix, iproc)
         return dict
-
 
     def save(self, dict, path, parameters=['vp','vs','rho'],
              prefix='', suffix=''):
@@ -304,7 +310,6 @@ class base(object):
                 self.io.write_slice(
                     dict[key][iproc], path, prefix+key+suffix, iproc)
 
-
     def merge(self, model, parameters=[]):
         """ Converts model from dictionary to vector representation
         """
@@ -313,7 +318,6 @@ class base(object):
             for iproc in range(self.mesh_properties.nproc):
                 m = np.append(m, model[key][iproc])
         return m
-
 
     def split(self, m, parameters=[]):
         """ Converts model from vector to dictionary representation
@@ -329,10 +333,7 @@ class base(object):
                 model[key] += [m[imin:imax]]
         return model
 
-
-
-    ### postprocessing wrappers
-
+    # postprocessing wrappers
     def combine(self, input_path='', output_path='', parameters=[]):
         """ Sums individual source contributions. Wrapper over xcombine_sem
             utility.
@@ -355,7 +356,6 @@ class base(object):
                 + name + '_kernel' + ' '
                 + 'kernel_paths' + ' '
                 + output_path)
-
 
     def smooth(self, input_path='', output_path='', parameters=[], span=0.):
         """ Smooths kernels by convolving them with a Gaussian.  Wrapper over 
@@ -387,9 +387,7 @@ class base(object):
         files = glob(output_path+'/*')
         unix.rename('_smooth', '', files)
 
-
-    ### file transfer utilities
-
+    # file transfer utilities
     def import_model(self, path):
         model = self.load(path+'/'+'model')
         self.save(model, self.model_databases)
@@ -431,7 +429,6 @@ class base(object):
         dst = join(path, self.source_name)
         unix.cp(src, dst)
 
-
     def rename_kernels(self):
         """ Works around conflicting kernel filename conventions
         """
@@ -449,15 +446,12 @@ class base(object):
         files += glob('*proc??????_reg1_beta[hv]_kernel.bin')
         unix.rename('beta', 'vs', files)
 
-
     def rename_data(self, path):
         """ Works around conflicting data filename conventions
         """
         pass
 
-
-    ### setup utilities
-
+    # setup utilities
     def initialize_solver_directories(self):
         """ Creates directory structure expected by SPECFEM3D, copies 
           executables, and prepares input files. Executables must be supplied 
@@ -495,7 +489,6 @@ class base(object):
 
         self.check_solver_parameter_files()
 
-
     def initialize_adjoint_traces(self):
         """ Puts in place "adjoint traces" expected by SPECFEM
         """
@@ -511,7 +504,6 @@ class base(object):
 
             # write traces
             preprocess.writer(d, self.cwd +'/'+ 'traces/adj', filename)
-
 
     def check_mesh_properties(self, path=None):
         if not path:
@@ -542,7 +534,6 @@ class base(object):
             ['path', path],
             ['coords', coords]])
 
-
     def check_source_names(self):
         """ Determines names of sources by applying wildcard rule to user-
             supplied input files
@@ -563,14 +554,11 @@ class base(object):
             names += [basename(path).split('_')[-1]]
         self._source_names = names[:PAR.NTASK]
 
-
     def check_solver_parameter_files(self):
         # optional method, can be implemented by subclass
         pass
 
-
-    ### additional solver attributes
-
+    # additional solver attributes
     @property
     def taskid(self):
         # because it is sometimes useful to overload system.taskid

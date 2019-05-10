@@ -38,9 +38,6 @@ class specfem3d_nz(custom_import('solver', 'base')):
         if 'DT' not in PAR:
             raise Exception
 
-        if 'F0' not in PAR:
-            raise Exception
-
         # check data format
         if 'FORMAT' not in PAR:
             raise Exception()
@@ -48,6 +45,23 @@ class specfem3d_nz(custom_import('solver', 'base')):
         # make sure data format is accetapble
         if PAR.FORMAT not in ['su', 'sem']:
             raise Exception()
+
+    def setup(self):
+        """
+          Overload of solver.base.setup, removes the need to move data around
+          as Pyatoa takes care of data fetching within eval_func
+          Prepares solver for inversion or migration
+          Sets up directory structure expected by SPECFEM and copies or
+          generates seismic data to be inverted or migrated
+        """
+        # clean up for new inversion
+        unix.rm(self.cwd)
+
+        # prepare initial model
+        self.generate_mesh(
+            model_path=PATH.MODEL_INIT,
+            model_name='model_init',
+            model_type='gll')
 
     def generate_data(self, **model_kwargs):
         """ Generates data in the synthetic-synthetic comparison case.
@@ -93,17 +107,24 @@ class specfem3d_nz(custom_import('solver', 'base')):
             dst = self.model_databases
             unix.cp(src, dst)
 
-            # bchow 
-            # call_solver(system.mpiexec(), 'bin/xmeshfem3D')
             call_solver(system.mpiexec(), 'bin/xgenerate_databases')
 
             if self.taskid == 0:
-                self.export_model(PATH.OUTPUT +'/'+ model_name)
+                self.export_model(PATH.OUTPUT + '/' + model_name)
 
         else:
             raise NotImplementedError
 
-    def eval_func(self, path='', iter='', *args, **kwargs):
+    def eval_fwd(self):
+        """
+        evaluating the forward problem
+        :return:
+        """
+        unix.cd(self.cwd)
+        self.import_model(path)
+        self.forward()
+
+    def eval_func(self, iter='', *args, **kwargs):
         """
         evaluate the misfit functional using the external package Pyatoa.
         Pyatoa is written in Python3 so it needs to be called with subprocess
@@ -111,22 +132,20 @@ class specfem3d_nz(custom_import('solver', 'base')):
         :param kwargs:
         :return:
         """
-        # generate the synthetics
-        unix.cd(self.cwd)
-        self.import_model()
-        self.forward()
-
-        # calling bash script to call Pyatoa. Parameters are passed through
-        # the bash script to Pyatoa via positional command line arguments
-        subprocess.call(system.mpiexec(),
-                        join(PATH.WORKDIR, 'run_process_seisflows.sh '),
-                        self.source_name,                    # event_id
-                        str(int(iter) - 1),                  # model_number
-                        join(self.cwd, 'traces', 'syn'),     # synthetic_dir
-                        PATH.WORKDIR,                        # working_dir
-                        join(PATH.WORKDIR, 'pyatoa.output')  # output_dir
-                        )
-
+        subprocess.call("module load Anaconda3/5.2.0-GCC-7.1.0", shell=True)
+        subprocess.call("module load HDF5/1.10.1-GCC-7.1.0", shell=True)
+        subprocess.call("source activate tomo", shell=True)
+        call_pyatoa = (system.mpiexec() +
+                       join(PATH.WORKDIR, 'process_seisflows.py'),
+                       "-i {i} -m {m} -p {p} -w {w} -o {o}".format(
+                           i=self.source_name,
+                           m="m{:0>2}".format(int(iter)-1),
+                           p=join(self.cwd, 'traces', 'syn'),
+                           w=PATH.WORKDIR,
+                           o=join(PATH.WORKDIR, 'pyatoa.output')
+                       )
+                       )
+        subprocess.call(call_pyatoa, shell=True)
 
     # low-level solver interface
     def forward(self, path='traces/syn'):

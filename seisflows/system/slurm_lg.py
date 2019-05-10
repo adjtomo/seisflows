@@ -198,6 +198,13 @@ class slurm_lg(custom_import('system', 'base')):
             if isdone:
                 return
 
+    def run_preproc(self):
+        """
+        special run call to use python on maui_ancil, overloaded by maui_lg
+        :return:
+        """
+        raise NotImplementedError
+
 
     def mpiexec(self):
         """ Specifies MPI executable used to invoke solver
