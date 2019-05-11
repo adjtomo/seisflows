@@ -1,44 +1,60 @@
 #!/usr/bin/env python
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+#
+################################################################################
 
+# Import system modules
 import argparse, os, sys
 
+# Local imports
 from seisflows.config import config, loadpy, tilde_expand, Dict
 from seisflows.tools import unix
 
 
 def getargs():
+    """ This function run argparse (see https://docs.python.org/2/howto/argparse.html)
+    to process the arguments given by the user along with sfrun. Define default
+    behaviour if they are not given qnd help message when sfrun -h is run
+    """
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--workdir', nargs='?', 
-        default=os.getcwd())
+        default=os.getcwd(), help="workdir : working directory. Default is given by command pwd")
 
     parser.add_argument('--parameter_file', nargs='?', 
-        default='parameters.py')
+        default='parameters.py', help="parameter_file : path to the parameter file. Default is ./parameters.py")
 
     parser.add_argument('--path_file', nargs='?', 
-        default='paths.py')
+        default='paths.py', help="path_file : path to the file containing the path to the model and solver. Default is ./paths.py")
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    ### workflow submission script
-    args = getargs()
+    """ Workflow submission script
+    """
+    args = getargs() # Parse the arguments given along command sfrun
 
-    # register parameters
+    # Load and register parameters
     parameters = loadpy(args.parameter_file)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # register paths
+    # Load and register paths
     paths = tilde_expand(loadpy(args.path_file))
     sys.modules['seisflows_paths'] = Dict(paths)
 
+    # Create working directory and open it
     unix.mkdir(args.workdir)
     unix.cd(args.workdir)
 
+    # Run configuration script
     config()
 
-    # submit workflow
+    # Submit workflow
     workflow = sys.modules['seisflows_workflow']
     system = sys.modules['seisflows_system']
     system.submit(workflow)
