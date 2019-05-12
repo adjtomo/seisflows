@@ -165,8 +165,7 @@ class inversion(base):
         # system.run('solver', 'eval_func',
         #            path=PATH.GRAD)
         # bchow
-        system.run_single('solver', 'eval_func',
-                          path=PATH.GRAD)
+        system.run_preproc('solver', 'eval_func', path=PATH.GRAD)
 
         self.write_misfit(path=PATH.GRAD, suffix='new')
 
@@ -215,7 +214,7 @@ class inversion(base):
         """
         self.write_model(path=PATH.FUNC, suffix='try')
 
-        system.run('solver', 'eval_fwd', path=PATH.FUNC)
+        # system.run('solver', 'eval_fwd', path=PATH.FUNC)
         system.run_preproc('solver', 'eval_func', iter=optimize.iter)
 
         self.write_misfit(path=PATH.FUNC, suffix='try')
