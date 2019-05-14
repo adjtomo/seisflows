@@ -115,15 +115,6 @@ class specfem3d_nz(custom_import('solver', 'base')):
         else:
             raise NotImplementedError
 
-    def eval_fwd(self):
-        """
-        evaluating the forward problem
-        :return:
-        """
-        unix.cd(self.cwd)
-        self.import_model(path)
-        self.forward()
-
     def eval_func(self, iter='', *args, **kwargs):
         """
         evaluate the misfit functional using the external package Pyatoa.
@@ -132,20 +123,22 @@ class specfem3d_nz(custom_import('solver', 'base')):
         :param kwargs:
         :return:
         """
-        subprocess.call("module load Anaconda3/5.2.0-GCC-7.1.0", shell=True)
-        subprocess.call("module load HDF5/1.10.1-GCC-7.1.0", shell=True)
-        subprocess.call("source activate tomo", shell=True)
-        call_pyatoa = (system.mpiexec() +
-                       join(PATH.WORKDIR, 'process_seisflows.py '),
-                       "-i {i} -m {m} -p {p} -w {w} -o {o}".format(
-                           i=self.source_name,
-                           #m="m{:0>2}".format(int(iter)-1),
-                           m="m{:0>2}".format(0),  # CHANGE
-                           p=join(self.cwd, 'traces', 'syn'),
-                           w=PATH.WORKDIR,
-                           o=join(PATH.WORKDIR, 'pyatoa.output')
-                       )
-                       )
+        call_pyatoa = (
+                "module load Anaconda3/5.2.0-GCC-7.1.0; "
+                "module load HDF5/1.10.1-GCC-7.1.0;"
+                "source activate tomo; "
+                "/nesi/project/nesi00263/PyPackages/conda_envs/tomo/bin/python " +
+                 join(PATH.WORKDIR, 'process_seisflows.py ') +
+                 "-i {i} -m {m} -p {p} -w {w} -o {o} -c {c}".format(
+                 i=self.source_name,
+                 #m="m{:0>2}".format(int(iter)-1),
+                 m="m{:0>2}".format(0),  # CHANGE
+                 p=join(self.cwd, 'traces', 'syn'),
+                 w=PATH.WORKDIR,
+                 o=join(PATH.WORKDIR, 'pyatoa.output'),
+                 c=self.cwd
+                 )
+                 )
         subprocess.call(call_pyatoa, shell=True)
 
     # low-level solver interface

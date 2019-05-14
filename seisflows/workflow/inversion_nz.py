@@ -21,7 +21,7 @@ preprocess = sys.modules['seisflows_preprocess']
 postprocess = sys.modules['seisflows_postprocess']
 
 
-class inversion(base):
+class inversion_nz(base):
     """ Waveform inversion base class
 
       Peforms iterative nonlinear inversion and provides a base class on top
@@ -114,7 +114,7 @@ class inversion(base):
         optimize.iter = PAR.BEGIN
         self.setup()
         print ''
-
+        
         print optimize.iter, " <= ", PAR.END
         while optimize.iter <= PAR.END:
             print "Starting iteration", optimize.iter
@@ -151,7 +151,7 @@ class inversion(base):
                 print 'Copying data' 
             else:
                 print 'Generating data' 
-
+            
             print "Running solver"
             system.run('solver', 'setup')
 
@@ -162,8 +162,8 @@ class inversion(base):
         self.write_model(path=PATH.GRAD, suffix='new')
 
         print 'Generating synthetics'
-        system.run('solver', 'eval_func',
-                   path=PATH.GRAD)
+        system.run('solver', 'eval_fwd', path=PATH.GRAD)
+        system.run_preproc('solver', 'eval_func', path=PATH.GRAD)
 
         self.write_misfit(path=PATH.GRAD, suffix='new')
 
@@ -212,8 +212,8 @@ class inversion(base):
         """
         self.write_model(path=PATH.FUNC, suffix='try')
 
-        system.run('solver', 'eval_func',
-                   path=PATH.FUNC)
+        system.run('solver', 'eval_fwd', path=PATH.FUNC)
+        system.run_preproc('solver', 'eval_func', iter=optimize.iter)
 
         self.write_misfit(path=PATH.FUNC, suffix='try')
 

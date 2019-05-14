@@ -198,7 +198,7 @@ class base(object):
             preprocess.prepare_eval_grad(self.cwd)
             self.export_residuals(path)
 
-    def eval_fwd(self, path='', export_traces=False, write_residuals=True):
+    def eval_fwd(self, path=''):
         """
         Performs forward simulations needed for misfit function evaluation
         But does not perform misfit quantification as in eval_func.
