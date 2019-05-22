@@ -198,20 +198,11 @@ class base(object):
             preprocess.prepare_eval_grad(self.cwd)
             self.export_residuals(path)
 
-    def eval_fwd(self, path=''):
+    def eval_fwd(self, *args, **kwargs):
+        """ Performs forward simulations needed for misfit function evaluation
         """
-        Performs forward simulations needed for misfit function evaluation
-        But does not perform misfit quantification as in eval_func.
-        For use with Pyatoa which takes care of the misfit evaluation.
-
-        :param path:
-        :param export_traces:
-        :param write_residuals:
-        :return:
-        """
-        unix.cd(self.cwd)
-        self.import_model(path)
-        self.forward()
+        # must be implemented by subclass
+        raise NotImplementedError
 
     def eval_grad(self, path='', export_traces=False):
         """ 

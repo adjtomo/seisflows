@@ -43,7 +43,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
             raise Exception()
 
         # make sure data format is accetapble
-        if PAR.FORMAT not in ['su', 'sem']:
+        if PAR.FORMAT not in ['su', 'ascii']:
             raise Exception()
 
     def setup(self):
@@ -73,6 +73,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         unix.cd(self.cwd)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
+        setpar('ATTENUATION ', '.true.')
         call_solver(system.mpiexec(), 'bin/xspecfem3D')
 
         if PAR.FORMAT in ['SU', 'su']:
@@ -115,6 +116,16 @@ class specfem3d_nz(custom_import('solver', 'base')):
         else:
             raise NotImplementedError
 
+    def eval_fwd(self, path=''):
+        """
+        Performs forward simulations for misfit function evaluation.
+        Same as solver.base.eval_func without the residual writing.
+        For use in specfem3d_nz where eval_func is taken by Pyatoa.
+        """
+        unix.cd(self.cwd)
+        self.import_model(path)
+        self.forward()
+    
     def eval_func(self, iter='', *args, **kwargs):
         """
         evaluate the misfit functional using the external package Pyatoa.
@@ -124,16 +135,15 @@ class specfem3d_nz(custom_import('solver', 'base')):
         :return:
         """
         call_pyatoa = (
-                "module load Anaconda3/5.2.0-GCC-7.1.0; "
+                "module load Anaconda2/5.2.0-GCC-7.1.0; "
                 "module load HDF5/1.10.1-GCC-7.1.0;"
-                "source activate tomo; "
-                "/nesi/project/nesi00263/PyPackages/conda_envs/tomo/bin/python " +
+                "/nesi/project/nesi00263/PyPackages/"  # cont
+                "conda_envs/tomo/bin/python " +
                  join(PATH.WORKDIR, 'process_seisflows.py ') +
-                 "-i {i} -m {m} -p {p} -w {w} -o {o} -c {c}".format(
+                 "-i {i} -m {m} -w {w} -o {o} -c {c}".format(
                  i=self.source_name,
-                 #m="m{:0>2}".format(int(iter)-1),
-                 m="m{:0>2}".format(0),  # CHANGE
-                 p=join(self.cwd, 'traces', 'syn'),
+                 m="m{:0>2}".format(int(iter)-1),
+                 # m="m{:0>2}".format(0),  # CHANGE
                  w=PATH.WORKDIR,
                  o=join(PATH.WORKDIR, 'pyatoa.output'),
                  c=self.cwd
@@ -147,7 +157,8 @@ class specfem3d_nz(custom_import('solver', 'base')):
         """
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
-        call_solver(system.mpiexec(), 'bin/xgenerate_databases')
+        setpar('ATTENUATION ', '.true.')
+        # call_solver(system.mpiexec(), 'bin/xgenerate_databases')
         call_solver(system.mpiexec(), 'bin/xspecfem3D')
 
         # seismic unix output format
@@ -156,8 +167,8 @@ class specfem3d_nz(custom_import('solver', 'base')):
             dst = path
             unix.mv(src, dst)
         # sem output format
-        elif PAR.FORMAT == "sem":
-            src = glob('OUTPUT_FILES/*_sem?')
+        elif PAR.FORMAT == "ascii":
+            src = glob('OUTPUT_FILES/*sem?')
             dst = path
             unix.mv(src, dst)
 
@@ -166,6 +177,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         """
         setpar('SIMULATION_TYPE', '3')
         setpar('SAVE_FORWARD', '.false.')
+        setpar('ATTENUATION ', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
         call_solver(system.mpiexec(), 'bin/xspecfem3D')
