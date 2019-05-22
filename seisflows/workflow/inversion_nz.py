@@ -163,9 +163,10 @@ class inversion_nz(base):
 
         print 'Generating synthetics'
         system.run('solver', 'eval_fwd', path=PATH.GRAD)
-        system.run_preproc('solver', 'eval_func', path=PATH.GRAD)
+        system.run_preproc('solver', 'eval_func', iter=optimize.iter, 
+                                            misfit_path=PATH.GRAD, suffix='new')
 
-        self.write_misfit(path=PATH.GRAD, suffix='new')
+        # self.write_misfit(path=PATH.GRAD, suffix='new')
 
 
     def compute_direction(self):
@@ -213,9 +214,10 @@ class inversion_nz(base):
         self.write_model(path=PATH.FUNC, suffix='try')
 
         system.run('solver', 'eval_fwd', path=PATH.FUNC)
-        system.run_preproc('solver', 'eval_func', iter=optimize.iter)
+        system.run_preproc('solver', 'eval_func', iter=optimize.iter,
+                                            misfit_path=PATH.FUNC, suffix='try')
 
-        self.write_misfit(path=PATH.FUNC, suffix='try')
+        # self.write_misfit(path=PATH.FUNC, suffix='try')
 
 
     def evaluate_gradient(self):
