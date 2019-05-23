@@ -1,63 +1,70 @@
 #!/usr/bin/env python
-
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+# sfsection:
 # Specialized script used to visualize seismic section.
+#
+###############################################################################
 
+# Import system modules
 import argparse
 
+# Import obspy and matplotlib
 from obspy import read
 import matplotlib.pyplot as plt
 
+# Local imports
 from seisflows.tools.graphics import plot_section
 
 
 def parse_args():
+    """ This function run argparse (see
+    https://docs.python.org/2/howto/argparse.html) to process the arguments
+    given by the user along with sfsection. Define default behaviour if they
+    are not given and help message when sfsection -h is run
+    """
     parser = argparse.ArgumentParser(
         description='plots seismic record section')
 
-    # input file arguments
+    # Input file arguments
     parser.add_argument('file',
-        help='filename/data source')
+                        help='filename/data source')
 
-    parser.add_argument('-f', '--format',
-        default='SU',
-        help='data format')
+    parser.add_argument('-f', '--format', default='SU',
+                        help='data format')
 
-    # optional formatting arguments
-    parser.add_argument('-cm', '--cmap',
-        default='seismic',
-        help='colormap scheme')
+    # Optional formatting arguments
+    parser.add_argument('-cm', '--cmap', default='seismic',
+                        help='colormap scheme')
 
-    parser.add_argument('-c', '--clip',
-        type=float,
-        default='0',
-        help='clip amplitudes [0-100]')
+    parser.add_argument('-c', '--clip', type=float, default='0',
+                        help='clip amplitudes [0-100]')
 
-    parser.add_argument('-t', '--title', 
-        type=str,
-        default='',
-        help='figure title')
+    parser.add_argument('-t', '--title', type=str, default='',
+                        help='figure title')
 
-    parser.add_argument('-xint', '--x_interval', 
-        type=float,
-        default='1.0',
-        help='offset axis tick spacing [km]')
+    parser.add_argument('-xint', '--x_interval', type=float, default='1.0',
+                        help='offset axis tick spacing [km]')
 
-    parser.add_argument('-yint', '--y_interval', 
-        type=float,
-        default='1.0',
-        help='time axis tick spacing [s]')
+    parser.add_argument('-yint', '--y_interval', type=float, default='1.0',
+                        help='time axis tick spacing [s]')
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
+    """ Specialized script used to visualize seismic section
+    """
 
-    args = parse_args()
+    args = parse_args()  # Parse the arguments given along command sfsection
+
     if args.clip < 0:
         args.clip = 0
     elif args.clip > 100:
         args.clip = 100
-
 
     if args.format in ['SU', 'su']:
         stream = read(args.file, format='SU', byteorder='<')
@@ -65,12 +72,10 @@ if __name__ == "__main__":
         raise NotImplementedError
 
     plot_section(stream,
-        cmap=args.cmap,
-        clip=(100-args.clip),
-        title=args.title,
-        x_interval=args.x_interval,
-        y_interval=args.y_interval)
+                 cmap=args.cmap,
+                 clip=(100-args.clip),
+                 title=args.title,
+                 x_interval=args.x_interval,
+                 y_interval=args.y_interval)
 
     plt.show()
-
-

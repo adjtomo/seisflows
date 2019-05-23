@@ -1,72 +1,65 @@
 #!/usr/bin/env python
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+# plotgll:
+# Plots GLL model read from SPECFEM2D Fortran binary file
+#
+###############################################################################
 
+# Import system modules
 import argparse
-import os
-import sys
+
+# Import numpy and matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 
-from glob import glob
-from os.path import abspath, join
+# Local imports
 from seisflows.tools.graphics import plot_gll
 from seisflows.plugins.io.fortran_binary import _read
-from seisflows.tools.tools import exists
-
 
 
 def parse_args():
+    """ This function run argparse (see
+    https://docs.python.org/2/howto/argparse.html) to process the arguments
+    given by the user along with plotgll. Define default behaviour if they are
+    not given and help message when plotgll -h is run
+    """
     parser = argparse.ArgumentParser(
-        description='plots SPECFEM2D model or kernels')
+        description='Plots SPECFEM2D model or kernels')
 
-    # required input file arguments
-    parser.add_argument('xcoords',
-        help='x coordinates file')
+    # Required input file arguments
+    parser.add_argument('xcoords', help='x coordinates file')
 
-    parser.add_argument('ycoords',
-        help='y coordinates file')
+    parser.add_argument('ycoords', help='y coordinates file')
 
-    parser.add_argument('file',
-        help='database file')
+    parser.add_argument('file', help='Database file')
 
-    # optional formatting arguments
-    parser.add_argument('--cbar',
-        dest='cbar',
-        action='store_true',
-        help='display colorbar')
-    parser.set_defaults(cbar=False)
+    # Optional formatting arguments
+    parser.add_argument('--cbar', dest='cbar', action='store_true',
+                        default=False,
+                        help='display colorbar')
 
-    parser.add_argument('--cmap',
-        default='seismic',
-        help='colormap scheme')
+    parser.add_argument('--cmap', default='seismic',
+                        help='colormap scheme')
 
-    parser.add_argument('--cmin', 
-        type=float,
-        default=None,
-        help='colormap min')
+    parser.add_argument('--cmin', type=float, default=None,
+                        help='colormap min')
 
-    parser.add_argument('--cmax', 
-        type=float,
-        default=None,
-        help='colormap max')
+    parser.add_argument('--cmax', type=float, default=None,
+                        help='colormap max')
 
-    parser.add_argument('--saturation',
-        type=float,
-        default=1.,
-        help='colormap saturation factor')
+    parser.add_argument('--saturation', type=float, default=1.,
+                        help='colormap saturation factor')
 
-    parser.add_argument('--symmetric',
-        dest='symmetric',
-        action='store_true',
-        help='colormap symmetry flag')
-    parser.set_defaults(symmetric=False)
+    parser.add_argument('--symmetric', dest='symmetric', action='store_true',
+                        default=False, help='colormap symmetry flag')
 
-    parser.add_argument('--title',
-        type=str,
-        default='',
-        help='title')
+    parser.add_argument('--title', type=str, default='', help='title')
 
     return parser.parse_args()
-
 
 
 if __name__ == '__main__':
@@ -75,11 +68,13 @@ if __name__ == '__main__':
         For usage information: plotgll --help
     """
 
+    # Parse the arguments given along command plotgll
     args = parse_args()
 
-    x = _read(args.xcoords)
-    y = _read(args.ycoords)
-    v = _read(args.file)
+    # Reads Fortran style binary data files into numpy array
+    x = _read(args.xcoords)  # Reads xcoords file
+    y = _read(args.ycoords)  # Reads ycoords file
+    v = _read(args.file)     # Reads database file
 
     minval = min(v)
     maxval = max(v)
@@ -87,32 +82,34 @@ if __name__ == '__main__':
     msg = '\n%s\nmin, max: %f, %f\n'
     print msg % (args.file, minval, maxval)
 
+    # Plot :
     f, p = plot_gll(x, y, v)
 
-    plt.axes().set_aspect('equal')
+    plt.axes().set_aspect('equal')  # Equal aspect ratio
 
-    # set colormap
+    # Set colormap
     if args.cmap:
         p.set_cmap(args.cmap)
 
-    # set colormap limits
-    if args.cmin!=None and \
-       args.cmax!=None:
+    # Set colormap limits
+    if args.cmin is not None and \
+       args.cmax is not None:
         assert args.cmin < args.cmax
         p.set_clim([args.cmin, args.cmax])
 
+    # Symmetric colormap
     if args.symmetric:
         maxabs = max(np.abs(p.get_clim()))
         clim = np.array([-maxabs, +maxabs])
         p.set_clim(clim)
 
-    # adjust saturation
+    # Adjust saturation
     if args.saturation:
         clim = np.array(p.get_clim())
         cavg = np.mean(clim)
         p.set_clim((clim-cavg)/args.saturation+cavg)
 
-    # optional colorbar
+    # Optional colorbar
     if args.cbar:
         cb = plt.colorbar(orientation='horizontal')
         cb.set_label(args.title)
@@ -120,4 +117,3 @@ if __name__ == '__main__':
         plt.title(args.title)
 
     plt.show()
-

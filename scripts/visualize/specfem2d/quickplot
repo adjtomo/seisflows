@@ -1,24 +1,39 @@
 #!/usr/bin/env python
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+# quickplot:
+# Plots all SPECFEM2D model or kernel files in given directory
+# Any additional ARGS are simply passed to PLOTGLL.
+#
+###############################################################################
 
+# Import system modules
 import re
 import sys
-
 from glob import glob
-from os.path import abspath, isdir, join
+from os.path import abspath, join
 from subprocess import call
+
+# Local imports
 from seisflows.tools.tools import exists
 from seisflows.tools.unix import which
 
 
 def parse_args():
+    """ Quick and dirty way to parse the first argument. We should be using
+    argparse instead (see https://docs.python.org/2/howto/argparse.html)
+    """
     return sys.argv[1]
 
 
 def get_cmd(exe, dir, file):
     return ' '.join(
-        [exe]+
-        get_coord_files(dir)+
-        [file]+
+        [exe] +
+        get_coord_files(dir) +
+        [file] +
         get_args(file)
         )
 
@@ -44,17 +59,15 @@ def get_title(file):
 
 
 def get_coord_files(dir):
-    for files in [
-        [abspath(join(dir, subdir, 'proc000000_x.bin')),
-         abspath(join(dir, subdir, 'proc000000_z.bin'))]
-         for subdir in [
-         '.',
-         '../model',
-         '../output/model_init',
-         '../../output/model_init',
-         '../../../output/model_init',
-         '../../../../output/model_init',
-         ]]:
+    for files in [[abspath(join(dir, subdir, 'proc000000_x.bin')),
+                   abspath(join(dir, subdir, 'proc000000_z.bin'))]
+                  for subdir in ['.',
+                                 '../model',
+                                 '../output/model_init',
+                                 '../../output/model_init',
+                                 '../../../output/model_init',
+                                 '../../../../output/model_init',
+                                 ]]:
         if exists(files):
             return files
     else:
@@ -74,18 +87,17 @@ def get_data_files(dir):
     return sorted(files)
 
 
-
 if __name__ == '__main__':
     """ USAGE:  quickplot DIR [ARGS]
 
-      Plots all SPECFEM2D model or kernel files in given directory DIR. 
+      Plots all SPECFEM2D model or kernel files in given directory DIR.
       Any additional ARGS are simply passed to PLOTGLL.
     """
 
     exe = 'python -W ignore '+which('plotgll')
 
     if not which('plotgll'):
-        raise EnvironmentError( 
+        raise EnvironmentError(
             "plotgll not found on path")
 
     if not sys.argv[1:]:
@@ -100,4 +112,3 @@ if __name__ == '__main__':
     files = get_data_files(dir)
     cmd = '&&\n\n'.join([get_cmd(exe, dir, file) for file in files])
     call(cmd, shell=True)
-
