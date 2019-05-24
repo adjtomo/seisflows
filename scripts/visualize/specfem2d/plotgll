@@ -15,10 +15,12 @@ import argparse
 # Import numpy and matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import use as mpluse
 
 # Local imports
 from seisflows.tools.graphics import plot_gll
-from seisflows.plugins.io.fortran_binary import _read
+from seisflows.plugins.solver_io.fortran_binary import _read
+from seisflows.tools import unix
 
 
 def parse_args():
@@ -51,13 +53,24 @@ def parse_args():
     parser.add_argument('--cmax', type=float, default=None,
                         help='colormap max')
 
+    parser.add_argument('--vmin', type=float, default=None,
+                        help='colorbar inferior limit')
+
+    parser.add_argument('--vmax', type=float, default=None,
+                        help='colormap superior limit')
+
     parser.add_argument('--saturation', type=float, default=1.,
                         help='colormap saturation factor')
 
     parser.add_argument('--symmetric', dest='symmetric', action='store_true',
                         default=False, help='colormap symmetry flag')
 
-    parser.add_argument('--title', type=str, default='', help='title')
+    parser.add_argument('--title', type=str, default='',
+                        help='title')
+
+    parser.add_argument('--CBorientation', type=str, default='horizontal',
+                        help='Color bar orientation. Either horizontal or \
+                        vertical')
 
     return parser.parse_args()
 
@@ -81,9 +94,14 @@ if __name__ == '__main__':
 
     msg = '\n%s\nmin, max: %f, %f\n'
     print msg % (args.file, minval, maxval)
+    print ''
+
+    # Switch backend if needed
+    if unix.hostname() in ['naga']:
+        mpluse('Qt5Agg', warn=False, force=True)
 
     # Plot :
-    f, p = plot_gll(x, y, v)
+    f, p = plot_gll(x, y, v, vmin=args.vmin, vmax=args.vmax)
 
     plt.axes().set_aspect('equal')  # Equal aspect ratio
 
@@ -111,7 +129,7 @@ if __name__ == '__main__':
 
     # Optional colorbar
     if args.cbar:
-        cb = plt.colorbar(orientation='horizontal')
+        cb = plt.colorbar(orientation=args.CBorientation)
         cb.set_label(args.title)
     else:
         plt.title(args.title)

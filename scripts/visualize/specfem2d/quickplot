@@ -23,7 +23,7 @@ from seisflows.tools.unix import which
 
 
 def parse_args():
-    """ Quick and dirty way to parse the first argument. We should be using
+    """ Quick-and-dirty way to parse an argument. We should be using
     argparse instead (see https://docs.python.org/2/howto/argparse.html)
     """
     return sys.argv[1]
