@@ -99,9 +99,9 @@ class inversion_nz(base):
         assert 1 <= PAR.BEGIN <= PAR.END
 
         # path assertions
-        if not exists(PATH.DATA):
-            assert 'MODEL_TRUE' in PATH
-            assert exists(PATH.MODEL_TRUE)
+        # if not exists(PATH.DATA):
+        #     assert 'MODEL_TRUE' in PATH
+        #     assert exists(PATH.MODEL_TRUE)
 
         if not exists(PATH.MODEL_INIT):
             raise Exception()
@@ -112,19 +112,20 @@ class inversion_nz(base):
         """
         print "Beginning at iteration %s" % PAR.BEGIN
         optimize.iter = PAR.BEGIN
-        self.setup()
+        optimize.setup()  # bchow - reset optmize mechanics, to remove
+        # self.setup()
         print ''
         
         print optimize.iter, " <= ", PAR.END
         while optimize.iter <= PAR.END:
             print "Starting iteration", optimize.iter
-            self.initialize()
+            # self.initialize()
 
             print "Computing gradient"
-            self.evaluate_gradient()
+            # self.evaluate_gradient()
 
             print "Computing search direction"
-            self.compute_direction()
+            # self.compute_direction()
 
             print "Computing step length"
             self.line_search()
@@ -164,9 +165,9 @@ class inversion_nz(base):
         print 'Generating synthetics'
         system.run('solver', 'eval_fwd', path=PATH.GRAD)
         system.run_preproc('solver', 'eval_func', iter=optimize.iter, 
-                                            misfit_path=PATH.GRAD, suffix='new')
+                                                                  suffix='new')
 
-        # self.write_misfit(path=PATH.GRAD, suffix='new')
+        self.write_misfit(suffix='new')
 
 
     def compute_direction(self):
@@ -215,9 +216,8 @@ class inversion_nz(base):
 
         system.run('solver', 'eval_fwd', path=PATH.FUNC)
         system.run_preproc('solver', 'eval_func', iter=optimize.iter,
-                                            misfit_path=PATH.FUNC, suffix='try')
-
-        # self.write_misfit(path=PATH.FUNC, suffix='try')
+                                                                   suffix='try')
+        self.write_misfit(suffix='try')
 
 
     def evaluate_gradient(self):
@@ -286,13 +286,24 @@ class inversion_nz(base):
         optimize.save(dst, solver.merge(parts))
 
 
-    def write_misfit(self, path='', suffix=''):
+    def write_misfit(self, suffix=''):
         """ Writes misfit in format expected by nonlinear optimization library
+            Overloads old write_misfit function
+            
+            As per Tape (2010) Eq. 7, the total misfit function F^T is given as:
+            F^T(m) = (1/S) * sum[s=1:S] (F^T_s(m))
+            
+            where S is the number of sources
         """
-        src = glob(path +'/'+ 'residuals/*')
+        src = join(PATH.WORKDIR, 'pyatoa.output', 'pyatoa.misfits')
         dst = 'f_'+suffix
-        total_misfit = preprocess.sum_residuals(src)
+        misfit = np.loadtxt(src)
+        total_misfit = misfit.sum()/len(misfit)
         optimize.savetxt(dst, total_misfit)
+        
+        
+        src_new = join(PATH.WORKDIR, 'pyatoa.output', 'pyatoa.misfits_old')
+        unix.mv(src, src_new) 
 
 
     def save_gradient(self):

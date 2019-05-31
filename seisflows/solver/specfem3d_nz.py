@@ -126,7 +126,8 @@ class specfem3d_nz(custom_import('solver', 'base')):
         self.import_model(path)
         self.forward()
     
-    def eval_func(self, iter='', misfit_path="", suffix=None, *args, **kwargs):
+    def eval_func(self, iter='', misfit_path="", suffix=None, step=None, 
+                                                               *args, **kwargs):
         """
         evaluate the misfit functional using the external package Pyatoa.
         Pyatoa is written in Python3 so it needs to be called with subprocess
@@ -140,14 +141,13 @@ class specfem3d_nz(custom_import('solver', 'base')):
                 "/nesi/project/nesi00263/PyPackages/"  # cont
                 "conda_envs/tomo/bin/python " +
                  join(PATH.WORKDIR, 'process_seisflows.py ') +
-                 "-i {i} -m {m} -w {w} -o {o} -c {c} -s {s} -p {p}".format(
+                 "-i {i} -m {m} -w {w} -o {o} -c {c} -s {s}".format(
                  i=self.source_name,
                  m="m{:0>2}".format(int(iter)-1),  # model number
                  w=PATH.WORKDIR,  # working directory
                  o=join(PATH.WORKDIR, 'pyatoa.output'),  # output directory
                  c=self.cwd,  # current directory (event directory)
                  s=suffix,  # suffix for seisflows misfit writing
-                 p=misfit_path  # path to save misfit value
                  )
                  )
         subprocess.call(call_pyatoa, shell=True)
@@ -159,7 +159,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
         setpar('ATTENUATION ', '.true.')
-        # call_solver(system.mpiexec(), 'bin/xgenerate_databases')
+        call_solver(system.mpiexec(), 'bin/xgenerate_databases')
         call_solver(system.mpiexec(), 'bin/xspecfem3D')
 
         # seismic unix output format
