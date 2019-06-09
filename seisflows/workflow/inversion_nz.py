@@ -1,5 +1,6 @@
 
 import sys
+import time
 import numpy as np
 
 from glob import glob
@@ -98,11 +99,6 @@ class inversion_nz(base):
         # parameter assertions
         assert 1 <= PAR.BEGIN <= PAR.END
 
-        # path assertions
-        # if not exists(PATH.DATA):
-        #     assert 'MODEL_TRUE' in PATH
-        #     assert exists(PATH.MODEL_TRUE)
-
         if not exists(PATH.MODEL_INIT):
             raise Exception()
 
@@ -110,22 +106,23 @@ class inversion_nz(base):
     def main(self):
         """ Carries out seismic inversion
         """
+        print time.asctime()
         print "Beginning at iteration %s" % PAR.BEGIN
         optimize.iter = PAR.BEGIN
-        optimize.setup()  # bchow - reset optmize mechanics, to remove
-        # self.setup()
+        # optimize.setup()  # bchow - reset optmize mechanics, to remove
+        self.setup()
         print ''
         
         print optimize.iter, " <= ", PAR.END
         while optimize.iter <= PAR.END:
             print "Starting iteration", optimize.iter
-            # self.initialize()
+            self.initialize()
 
             print "Computing gradient"
-            # self.evaluate_gradient()
+            self.evaluate_gradient()
 
             print "Computing search direction"
-            # self.compute_direction()
+            self.compute_direction()
 
             print "Computing step length"
             self.line_search()
@@ -188,14 +185,19 @@ class inversion_nz(base):
 
         while True:
             print " trial step", optimize.line_search.step_count + 1
+            print time.asctime()
+            print "evaluate_function"
             self.evaluate_function()
+            print time.asctime()
             status = optimize.update_search()
 
             if status > 0:
+                print "trial step successful"
                 optimize.finalize_search()
                 break
 
             elif status == 0:
+                print "retrying with new trial step"
                 continue
 
             elif status < 0:
@@ -215,8 +217,8 @@ class inversion_nz(base):
         self.write_model(path=PATH.FUNC, suffix='try')
 
         system.run('solver', 'eval_fwd', path=PATH.FUNC)
-        system.run_preproc('solver', 'eval_func', iter=optimize.iter,
-                                                                   suffix='try')
+        system.run_preproc('solver', 'eval_func', iter=optimize.iter, 
+                         step=optimize.line_search.step_count + 1, suffix='try')
         self.write_misfit(suffix='try')
 
 
@@ -297,14 +299,30 @@ class inversion_nz(base):
         """
         src = join(PATH.WORKDIR, 'pyatoa.output', 'pyatoa.misfits')
         dst = 'f_'+suffix
-        misfit = np.loadtxt(src)
-        total_misfit = misfit.sum()/len(misfit)
-        optimize.savetxt(dst, total_misfit)
+                
+        # pyatoa takes a few seconds to write the last misfit to the text file
+        # hold pattern until all the misfits are present 
+        while True:
+            misfits = np.loadtxt(src, skiprows=1, usecols=[0,1,3])
+            if misfit.shape[0] == PAR.NSRC:
+                # determine where the misfit file contains information for 
+                # the current model number and step count 
+                where_model = np.where(misfits[:,0] == optimize.iter)[0]
+                where_step = np.where(
+                         misfits[:,1] == optimize.line_search.step_count + 1)[0]
+                indices = np.unique(np.concatenate((where_model, where_step)))
+               
+                # only choose misfits for given model and step  
+                misfit = misfits[indices, 2]
+                 
+                total_misfit = misfit.sum()/len(misfit)
+                optimize.savetxt(dst, total_misfit)
+                return
+            else:
+                print "waiting for pyatoa"
+                time.sleep(60) 
         
         
-        src_new = join(PATH.WORKDIR, 'pyatoa.output', 'pyatoa.misfits_old')
-        unix.mv(src, src_new) 
-
 
     def save_gradient(self):
         src = join(PATH.GRAD, 'gradient')

@@ -1,6 +1,10 @@
 #!/bin/sh
 
-rm -rf output*
-rm -rf error.log
-rm -rf scratch
-
+echo "Are you sure about that? (y/[n])"
+read choice
+if [ "$choice" == "y" ] 
+then 
+    rm -rf output*
+    rm -rf error.log
+    rm -rf scratch
+fi

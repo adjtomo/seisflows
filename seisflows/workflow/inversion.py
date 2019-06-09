@@ -165,7 +165,7 @@ class inversion(base):
         system.run('solver', 'eval_func',
                    path=PATH.GRAD)
 
-        self.write_misfit(path=PATH.GRAD, suffix='new')
+        self.write_misfit(suffix='new')
 
 
     def compute_direction(self):
