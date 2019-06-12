@@ -27,10 +27,6 @@ if __name__ == "__main__":
     ### workflow submission script
     args = getargs()
 
-    # check mail
-    if args.with_mail and '@' not in args.with_mail:
-        sys.exit('--with_mail requires valid email address')
-
     # register parameters
     parameters = loadpy(args.parameter_file)
     sys.modules['seisflows_parameters'] = Dict(parameters)
@@ -47,5 +43,5 @@ if __name__ == "__main__":
     # submit workflow
     workflow = sys.modules['seisflows_workflow']
     system = sys.modules['seisflows_system']
-    system.submit(workflow, with_mail=args.with_mail)
+    system.submit(workflow)
 

@@ -1,10 +1,9 @@
-
+import os
 import sys
 import time
+import glob
 import numpy as np
 
-from glob import glob
-from os.path import join
 
 from seisflows.tools import msg
 from seisflows.tools import unix
@@ -59,16 +58,16 @@ class inversion_nz(base):
             setattr(PATH, 'LOCAL', None)
 
         if 'FUNC' not in PATH:
-            setattr(PATH, 'FUNC', join(PATH.SCRATCH, 'evalfunc'))
+            setattr(PATH, 'FUNC', os.path.join(PATH.SCRATCH, 'evalfunc'))
 
         if 'GRAD' not in PATH:
-            setattr(PATH, 'GRAD', join(PATH.SCRATCH, 'evalgrad'))
+            setattr(PATH, 'GRAD', os.path.join(PATH.SCRATCH, 'evalgrad'))
 
         if 'HESS' not in PATH:
-            setattr(PATH, 'HESS', join(PATH.SCRATCH, 'evalhess'))
+            setattr(PATH, 'HESS', os.path.join(PATH.SCRATCH, 'evalhess'))
 
         if 'OPTIMIZE' not in PATH:
-            setattr(PATH, 'OPTIMIZE', join(PATH.SCRATCH, 'optimize'))
+            setattr(PATH, 'OPTIMIZE', os.path.join(PATH.SCRATCH, 'optimize'))
 
         # input paths
         if 'DATA' not in PATH:
@@ -161,11 +160,10 @@ class inversion_nz(base):
 
         print 'Generating synthetics'
         system.run('solver', 'eval_fwd', path=PATH.GRAD)
-        system.run_preproc('solver', 'eval_func', iter=optimize.iter, 
-                                                                  suffix='new')
+        system.run_ancil('solver', 'eval_func', iter=optimize.iter, 
+                                                                   suffix='new')
 
         self.write_misfit(suffix='new')
-
 
     def compute_direction(self):
         """ Computes search direction
@@ -217,8 +215,11 @@ class inversion_nz(base):
         self.write_model(path=PATH.FUNC, suffix='try')
 
         system.run('solver', 'eval_fwd', path=PATH.FUNC)
-        system.run_preproc('solver', 'eval_func', iter=optimize.iter, 
-                         step=optimize.line_search.step_count + 1, suffix='try')
+        system.run_ancil('solver', 'eval_func', 
+                         iter=optimize.iter, 
+                         step=optimize.line_search.step_count + 1, 
+                         suffix='try'
+                         )
         self.write_misfit(suffix='try')
 
 
@@ -281,7 +282,7 @@ class inversion_nz(base):
     def write_gradient(self, path='', suffix=''):
         """ Writes gradient in format expected by nonlinear optimization library
         """
-        src = join(path, 'gradient')
+        src = os.path.join(path, 'gradient')
         dst = 'g_'+suffix
         postprocess.write_gradient(path)
         parts = solver.load(src, suffix='_kernel')
@@ -291,65 +292,70 @@ class inversion_nz(base):
     def write_misfit(self, suffix=''):
         """ Writes misfit in format expected by nonlinear optimization library
             Overloads old write_misfit function
-            
-            As per Tape (2010) Eq. 7, the total misfit function F^T is given as:
-            F^T(m) = (1/S) * sum[s=1:S] (F^T_s(m))
-            
-            where S is the number of sources
         """
-        src = join(PATH.WORKDIR, 'pyatoa.output', 'pyatoa.misfits')
+        src = os.path.join(PATH.DATA, 'misfits', "*")
         dst = 'f_'+suffix
-                
-        # pyatoa takes a few seconds to write the last misfit to the text file
-        # hold pattern until all the misfits are present 
+        
+        misfit = 0
         while True:
-            misfits = np.loadtxt(src, skiprows=1, usecols=[0,1,3])
-            if misfit.shape[0] == PAR.NSRC:
-                # determine where the misfit file contains information for 
-                # the current model number and step count 
-                where_model = np.where(misfits[:,0] == optimize.iter)[0]
-                where_step = np.where(
-                         misfits[:,1] == optimize.line_search.step_count + 1)[0]
-                indices = np.unique(np.concatenate((where_model, where_step)))
-               
-                # only choose misfits for given model and step  
-                misfit = misfits[indices, 2]
-                 
-                total_misfit = misfit.sum()/len(misfit)
-                optimize.savetxt(dst, total_misfit)
+            misfits = glob.glob(src)
+            if len(misfits) == PAR.NSRC:
+                for _misfit in misfits:
+                    misfit += np.loadtxt(_misfit)
+                    os.remove(_misfit)
+                optimize.savetxt(dst, misfit/PAR.NSRC)
                 return
             else:
-                print "waiting for pyatoa"
-                time.sleep(60) 
-        
-        
+                time.sleep(5)   
+                
+
+        # for JSON files, deprecated 
+        # # set necessary values  
+        # model = "m{:0>2}".format(optimize.iter-1)
+        # if hasattr(optimize.line_search, "step_count"):
+        #     step_count = optimize.line_search.step_count + 1
+        # else:
+        #     step_count = 0
+        # step = "s{:0>2}".format(step_count)
+        # 
+        # # wait to make sure that all instances have written to file
+        # while True:
+        #     if os.path.exists(src + "_lock"):
+        #         time.sleep(5) 
+        #     elif os.path.exists(src) and not os.path.exists(src + "_lock"):
+        #         with open(src, "r") as f:
+        #             misfit_dict = json.load(f)
+        #             misfit = misfit_dict[model][step]["misfit"]
+        #             optimize.savetxt(dst, misfit)
+        #         return
+         
 
     def save_gradient(self):
-        src = join(PATH.GRAD, 'gradient')
-        dst = join(PATH.OUTPUT, 'gradient_%04d' % optimize.iter)
+        src = os.path.join(PATH.GRAD, 'gradient')
+        dst = os.path.join(PATH.OUTPUT, 'gradient_%04d' % optimize.iter)
         unix.mv(src, dst)
 
 
     def save_model(self):
         src = 'm_new'
-        dst = join(PATH.OUTPUT, 'model_%04d' % optimize.iter)
+        dst = os.path.join(PATH.OUTPUT, 'model_%04d' % optimize.iter)
         solver.save(solver.split(optimize.load(src)), dst)
 
 
     def save_kernels(self):
-        src = join(PATH.GRAD, 'kernels')
-        dst = join(PATH.OUTPUT, 'kernels_%04d' % optimize.iter)
+        src = os.path.join(PATH.GRAD, 'kernels')
+        dst = os.path.join(PATH.OUTPUT, 'kernels_%04d' % optimize.iter)
         unix.mv(src, dst)
 
 
     def save_traces(self):
-        src = join(PATH.GRAD, 'traces')
-        dst = join(PATH.OUTPUT, 'traces_%04d' % optimize.iter)
+        src = os.path.join(PATH.GRAD, 'traces')
+        dst = os.path.join(PATH.OUTPUT, 'traces_%04d' % optimize.iter)
         unix.mv(src, dst)
 
 
     def save_residuals(self):
-        src = join(PATH.GRAD, 'residuals')
-        dst = join(PATH.OUTPUT, 'residuals_%04d' % optimize.iter)
+        src = os.path.join(PATH.GRAD, 'residuals')
+        dst = os.path.join(PATH.OUTPUT, 'residuals_%04d' % optimize.iter)
         unix.mv(src, dst)
 

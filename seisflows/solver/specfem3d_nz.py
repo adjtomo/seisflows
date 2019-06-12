@@ -131,7 +131,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         evaluate the misfit functional using the external package Pyatoa.
         Pyatoa is written in Python3 so it needs to be called with subprocess
         
-        the full subprocess call submitted to cli is:
+        the full subprocess call submitted to cli is something like:
         $ module load Anaconda2/5.2.0-GCC-7.1.0  # required for python packages
         $ module load HDF5/1.10.1-GCC-7.1.0  # required for pyasdf
         $ /nesi/project/nesi00263/PyPackages/conda_envs/tomo/bin/python  # py3
@@ -142,11 +142,10 @@ class specfem3d_nz(custom_import('solver', 'base')):
         :param kwargs:
         :return:
         """
-        load_modules = ("module load Anaconda2/5.2.0-GCC-7.1.0;"
-                        "module load HDF5/1.10.1-GCC-7.1.0;"
-                        )
+        load_conda = "module load Anaconda2/5.2.0-GCC-7.1.0;"
+        load_hdf5 = "module load HDF5/1.10.1-GCC-7.1.0;"
         python_bin = ("/nesi/project/nesi00263/PyPackages/"
-                                                  "conda_envs/tomo/bin/python "
+                                                    "conda_envs/tomo/bin/python"
                       )
         pyatoa_script = join(PATH.WORKDIR, 'pyatoa.scripts', 'process.py') 
         arguments = ("-e {e} -i {i} -m {m} -w {w} -o {o} -c {c} -s {s}".format(
@@ -159,7 +158,8 @@ class specfem3d_nz(custom_import('solver', 'base')):
                      s=suffix,  # suffix for seisflows misfit writing 
                      )
                      )
-        call_pyatoa = load_modules + python_bin + pyatoa_script + arguments
+        call_pyatoa = " ".join([load_conda, load_hdf5, python_bin,
+                                pyatoa_script, arguments])
 
         subprocess.call(call_pyatoa, shell=True)
 

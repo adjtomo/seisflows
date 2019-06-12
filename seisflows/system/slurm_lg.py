@@ -198,7 +198,7 @@ class slurm_lg(custom_import('system', 'base')):
             if isdone:
                 return
 
-    def run_preproc(self):
+    def run_ancil(self):
         """
         special run call to use python on maui_ancil, overloaded by maui_lg
         :return:
