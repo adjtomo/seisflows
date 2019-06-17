@@ -108,7 +108,7 @@ class inversion_nz(base):
         print time.asctime()
         print "Beginning at iteration %s" % PAR.BEGIN
         optimize.iter = PAR.BEGIN
-        # optimize.setup()  # bchow - reset optmize mechanics, to remove
+        # optimize.setup()  # sfresume refresh
         self.setup()
         print ''
         
@@ -308,28 +308,7 @@ class inversion_nz(base):
             else:
                 time.sleep(5)   
                 
-
-        # for JSON files, deprecated 
-        # # set necessary values  
-        # model = "m{:0>2}".format(optimize.iter-1)
-        # if hasattr(optimize.line_search, "step_count"):
-        #     step_count = optimize.line_search.step_count + 1
-        # else:
-        #     step_count = 0
-        # step = "s{:0>2}".format(step_count)
-        # 
-        # # wait to make sure that all instances have written to file
-        # while True:
-        #     if os.path.exists(src + "_lock"):
-        #         time.sleep(5) 
-        #     elif os.path.exists(src) and not os.path.exists(src + "_lock"):
-        #         with open(src, "r") as f:
-        #             misfit_dict = json.load(f)
-        #             misfit = misfit_dict[model][step]["misfit"]
-        #             optimize.savetxt(dst, misfit)
-        #         return
-         
-
+    
     def save_gradient(self):
         src = os.path.join(PATH.GRAD, 'gradient')
         dst = os.path.join(PATH.OUTPUT, 'gradient_%04d' % optimize.iter)
