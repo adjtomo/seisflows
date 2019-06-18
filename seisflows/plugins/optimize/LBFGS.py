@@ -38,6 +38,7 @@ class LBFGS(object):
         """
         self.iter += 1
 
+        print 'calling L-BFGS optimization schema'
         unix.cd(self.path)
         g = self.load('g_new')
         if self.iter == 1:
@@ -47,7 +48,7 @@ class LBFGS(object):
             print 'restarting LBFGS... [periodic restart]'
             self.restart()
             return -g, 1
-
+            
         S, Y = self.update()
         q = self.apply(g, S, Y)
 

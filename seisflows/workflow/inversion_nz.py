@@ -108,7 +108,6 @@ class inversion_nz(base):
         print time.asctime()
         print "Beginning at iteration %s" % PAR.BEGIN
         optimize.iter = PAR.BEGIN
-        # optimize.setup()  # sfresume refresh
         self.setup()
         print ''
         

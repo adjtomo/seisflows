@@ -22,8 +22,11 @@ class base(object):
     def check(self):
         """ Checks parameters and paths
         """
-        if 'SMOOTH' not in PAR:
-            setattr(PAR, 'SMOOTH', 0.)
+        if 'SMOOTH_H' not in PAR:
+            setattr(PAR, 'SMOOTH_H', 0.)
+        
+        if 'SMOOTH_V' not in PAR:
+            setattr(PAR, 'SMOOTH_V', 0.)
 
         if 'MASK' not in PATH:
             setattr(PATH, 'MASK', None)
@@ -104,7 +107,7 @@ class base(object):
         if not exists(path):
             raise Exception
 
-        if PAR.SMOOTH > 0:
+        if PAR.SMOOTH_H > 0:
             solver.combine(
                    input_path=path,
                    output_path=path+'/'+'sum_nosmooth',
@@ -114,7 +117,8 @@ class base(object):
                    input_path=path+'/'+'sum_nosmooth',
                    output_path=path+'/'+'sum',
                    parameters=parameters,
-                   span=PAR.SMOOTH)
+                   span_h=PAR.SMOOTH_H,
+                   span_v=PAR.SMOOTH_V)
         else:
             solver.combine(
                    input_path=path,

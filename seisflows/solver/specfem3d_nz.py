@@ -259,6 +259,52 @@ class specfem3d_nz(custom_import('solver', 'base')):
         _, h = preprocess.load(dir='traces/obs')
         solvertools.write_sources(vars(PAR), h)
 
+    # postprocessing wrapper overload
+    def smooth(self, input_path='', output_path='', 
+                                           parameters=[], span_h=0., span_v=0.):
+        """ Smooths kernels by convolving them with a Gaussian.  Wrapper over 
+            xsmooth_sem utility. 
+            smooth() in base.py has the incorrect command line call, specfem 
+            requires that NPROC be specified
+        """
+        if not exists(input_path):
+            raise Exception
+
+        if not exists(output_path):
+            unix.mkdir(output_path)
+
+        # apply smoothing operator
+        unix.cd(self.cwd)
+        for name in parameters or self.parameters:
+            print ' smoothing', name
+            print " ".join([
+                PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem',  # ./bin/xsmooth_sem
+                str(span_h),  # SIGMA_H
+                str(span_v),  # SIGMA_V
+                name + '_kernel', # KERNEL_NAME
+                input_path + '/',  # INPUT_DIR
+                output_path + '/',  # OUTPUT_DIR
+                '.false'  # USE_GPU
+                ])  
+            call_solver(
+                system.mpiexec(),
+                " ".join([
+                PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem',  # ./bin/xsmooth_sem
+                str(span_h),  # SIGMA_H
+                str(span_v),  # SIGMA_V
+                name + '_kernel', # KERNEL_NAME
+                input_path + '/',  # INPUT_DIR
+                output_path + '/',  # OUTPUT_DIR
+                '.false'  # USE_GPU
+                ]),  
+                output='/dev/null')
+
+        print ''
+
+        # rename output files
+        files = glob(output_path+'/*')
+        unix.rename('_smooth', '', files)
+
     # miscellaneous
     @property
     def data_wildcard(self):
