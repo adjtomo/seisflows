@@ -108,7 +108,7 @@ class inversion_nz(base):
         print time.asctime()
         print "Beginning at iteration %s" % PAR.BEGIN
         optimize.iter = PAR.BEGIN
-        self.setup()
+        # self.setup()
         print ''
         
         print optimize.iter, " <= ", PAR.END
@@ -158,7 +158,7 @@ class inversion_nz(base):
         self.write_model(path=PATH.GRAD, suffix='new')
 
         print 'Generating synthetics'
-        system.run('solver', 'eval_fwd', path=PATH.GRAD)
+        # system.run('solver', 'eval_fwd', path=PATH.GRAD)
         system.run_ancil('solver', 'eval_func', iter=optimize.iter, 
                                                                    suffix='new')
 
