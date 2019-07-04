@@ -147,13 +147,13 @@ class specfem3d_nz(custom_import('solver', 'base')):
         python_bin = ("/nesi/project/nesi00263/PyPackages/"
                                                     "conda_envs/tomo/bin/python"
                       )
-        pyatoa_script = join(PATH.WORKDIR, 'pyatoa.scripts', 'process.py') 
+        pyatoa_script = join(PATH.PYATOA, 'sfprocess.py') 
         arguments = ("-e {e} -i {i} -m {m} -w {w} -o {o} -c {c} -s {s}".format(
                      e=self.source_name, 
                      m="m{:0>2}".format(int(iter)-1),  # model number
                      i=step,
                      w=PATH.WORKDIR,  # working directory
-                     o=PATH.DATA,  # output directory
+                     o=PATH.PYATOA,  # output directory
                      c=self.cwd,  # current directory (event directory)
                      s=suffix,  # suffix for seisflows misfit writing 
                      )

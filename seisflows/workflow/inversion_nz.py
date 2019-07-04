@@ -70,8 +70,8 @@ class inversion_nz(base):
             setattr(PATH, 'OPTIMIZE', os.path.join(PATH.SCRATCH, 'optimize'))
 
         # input paths
-        if 'DATA' not in PATH:
-            setattr(PATH, 'DATA', None)
+        if 'PYATOA' not in PATH:
+            raise ParameterError(PATH, 'PYATOA')
 
         if 'MODEL_INIT' not in PATH:
             raise ParameterError(PATH, 'MODEL_INIT')
@@ -141,14 +141,8 @@ class inversion_nz(base):
             postprocess.setup()
             optimize.setup()
 
-        if optimize.iter == 1 or \
-           PATH.LOCAL:
-            if PATH.DATA:
-                print 'Copying data' 
-            else:
-                print 'Generating data' 
-            
-            print "Running solver"
+        if optimize.iter == 1 or PATH.LOCAL:
+            print "Running database generation"
             system.run('solver', 'setup')
 
 
@@ -291,8 +285,9 @@ class inversion_nz(base):
     def write_misfit(self, suffix=''):
         """ Writes misfit in format expected by nonlinear optimization library
             Overloads old write_misfit function
+            Waits for all instances of Pyatoa to finish writing their misfit
         """
-        src = os.path.join(PATH.DATA, 'misfits', "*")
+        src = os.path.join(PATH.PYATOA, 'misfits', "*")
         dst = 'f_'+suffix
         
         misfit = 0
