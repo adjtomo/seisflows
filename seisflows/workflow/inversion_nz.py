@@ -2,8 +2,8 @@ import os
 import sys
 import time
 import glob
+import subprocess
 import numpy as np
-
 
 from seisflows.tools import msg
 from seisflows.tools import unix
@@ -95,80 +95,86 @@ class inversion_nz(base):
         if 'SAVERESIDUALS' not in PAR:
             setattr(PAR, 'SAVERESIDUALS', 0)
 
+        # Make sure a Pyatoa entry directory is present
+        if 'PYATOA' not in PATH:
+            raise ParameterError(PATH, 'PYATOA')
+
+        # make sure a Python3 binary is avilalable
+        if 'PYTHON3' not in PATH:
+            raise ParameterError(PATH, 'PYTHON3')
+
         # parameter assertions
         assert 1 <= PAR.BEGIN <= PAR.END
 
         if not exists(PATH.MODEL_INIT):
             raise Exception()
 
-
     def main(self):
         """ Carries out seismic inversion
         """
-        print time.asctime()
-        print "Beginning at iteration %s" % PAR.BEGIN
+        print "BEGINNING WORKFLOW AT {}".format(time.asctime())
         optimize.iter = PAR.BEGIN
-        # self.setup()
+        self.setup()
         print ''
         
         print optimize.iter, " <= ", PAR.END
         while optimize.iter <= PAR.END:
-            print "Starting iteration", optimize.iter
+            print "ITERATION ", optimize.iter
             self.initialize()
-
-            print "Computing gradient"
             self.evaluate_gradient()
-
-            print "Computing search direction"
             self.compute_direction()
-
-            print "Computing step length"
             self.line_search()
-
             self.finalize()
             self.clean()
 
             optimize.iter += 1
             print ''
 
-
     def setup(self):
         """ Lays groundwork for inversion
         """
+        print 'SETUP'
         if optimize.iter == 1:
-            print "Performing setup"
-            preprocess.setup()
+            print '\tPerforming module setup'
             postprocess.setup()
             optimize.setup()
 
-        if optimize.iter == 1 or \
-           PATH.LOCAL:
-            if PATH.DATA:
-                print 'Copying data' 
-            else:
-                print 'Generating data' 
-            
-            print "Running solver"
-            system.run('solver', 'setup')
+            print '\tInitializing Pyatoa'
+            pyatoa_init = " ".join([
+                PATH.PYTHON3,
+                os.path.join(PATH.PYATOA, "process.py"),
+                "--mode initialize",
+                "--working_dir {}".format(PATH.WORKDIR)
+            ])
+            subprocess.call(pyatoa_init, shell=True)
 
+            print '\tPreparing initial model'
+            system.run('solver', 'setup')
 
     def initialize(self):
         """ Prepares for next model update iteration
         """
+        print 'INITIALIZE'
         self.write_model(path=PATH.GRAD, suffix='new')
 
-        print 'Generating synthetics'
-        # system.run('solver', 'eval_fwd', path=PATH.GRAD)
-        system.run_ancil('solver', 'eval_func', iter=optimize.iter, 
-                                                                   suffix='new')
+        print '\tRunning forward simulation'
+        print '\t', time.asctime()
+        system.run('solver', 'eval_fwd', path=PATH.GRAD)
+        print '\t', time.asctime()
+
+        print '\tQuantifying misfit'
+        print '\t', time.asctime()
+        system.run_ancil('solver', 'eval_func',
+                         iter=optimize.iter, suffix='new')
+        print '\t', time.asctime()
 
         self.write_misfit(suffix='new')
 
     def compute_direction(self):
         """ Computes search direction
         """
+        print 'COMPUTE SEARCH DIRECTION'
         optimize.compute_direction()
-
 
     def line_search(self):
         """ Conducts line search in given search direction
@@ -178,64 +184,85 @@ class inversion_nz(base):
               status == 0 : not finished
               status < 0  : failed
         """
+        print 'LINE SEARCH'
         optimize.initialize_search()
 
         while True:
-            print " trial step", optimize.line_search.step_count + 1
-            print time.asctime()
-            print "evaluate_function"
+            print '\tTrial Step', optimize.line_search.step_count + 1
             self.evaluate_function()
-            print time.asctime()
             status = optimize.update_search()
 
             if status > 0:
-                print "trial step successful"
+                print '\tTrial step successful'
                 optimize.finalize_search()
                 break
 
             elif status == 0:
-                print "retrying with new trial step"
+                print '\tRetrying with new trial step'
                 continue
 
             elif status < 0:
                 if optimize.retry_status():
-                    print ' Line search failed\n\n Retrying...'
+                    print '\tLine search failed\n\n Retrying...'
                     optimize.restart()
                     self.line_search()
                     break
                 else:
-                    print ' Line search failed\n\n Aborting...'
+                    print '\tLine search failed\n\n Aborting...'
                     sys.exit(-1)
-
 
     def evaluate_function(self):
         """ Performs forward simulation to evaluate objective function
         """
+        print 'EVALUATE FUNCTION'
         self.write_model(path=PATH.FUNC, suffix='try')
 
+        print '\tRunning forward simulation'
+        print '\t', time.asctime()
         system.run('solver', 'eval_fwd', path=PATH.FUNC)
-        system.run_ancil('solver', 'eval_func', 
+        print '\t', time.asctime()
+
+        print '\tQuantifying misfit'
+        print '\t', time.asctime()
+        system.run_ancil('solver', 'eval_func',
                          iter=optimize.iter, 
                          step=optimize.line_search.step_count + 1, 
                          suffix='try'
                          )
-        self.write_misfit(suffix='try')
+        print '\t', time.asctime()
 
+        self.write_misfit(suffix='try')
 
     def evaluate_gradient(self):
         """ Performs adjoint simulation to evaluate gradient
         """
+        print '\tRunning adjoint simulation'
+        print '\t', time.asctime()
         system.run('solver', 'eval_grad',
                    path=PATH.GRAD,
                    export_traces=divides(optimize.iter, PAR.SAVETRACES))
+        print '\t', time.asctime()
 
         self.write_gradient(path=PATH.GRAD, suffix='new')
-
 
     def finalize(self):
         """ Saves results from current model update iteration
         """
+        print 'FINALIZE'
         self.checkpoint()
+
+        # Finalize Pyatoa run
+        print '\tFinalizing Pyatoa'
+        finalize_pyatoa = " ".join([
+            PATH.PYTHON3,
+            os.path.join(PATH.PYATOA, "process.py"),
+            "--mode finalize",
+            "--working_dir", PATH.WORKDIR,
+            "--model_number {}".format("m{:0>2}".format(int(iter)-1)),
+            "--step_count {}".format(optimize.line_search.step_count + 1)
+        ])
+
+        subprocess.call(finalize_pyatoa, shell=True)
 
         if divides(optimize.iter, PAR.SAVEMODEL):
             self.save_model()
@@ -252,7 +279,6 @@ class inversion_nz(base):
         if divides(optimize.iter, PAR.SAVERESIDUALS):
             self.save_residuals()
 
-
     def clean(self):
         """ Cleans directories in which function and gradient evaluations were
           carried out
@@ -262,13 +288,11 @@ class inversion_nz(base):
         unix.mkdir(PATH.GRAD)
         unix.mkdir(PATH.FUNC)
 
-
     def checkpoint(self):
         """ Writes information to disk so workflow can be resumed following a
           break
         """
         save()
-
 
     def write_model(self, path='', suffix=''):
         """ Writes model in format expected by solver
@@ -276,7 +300,6 @@ class inversion_nz(base):
         src = 'm_'+suffix
         dst = path +'/'+ 'model'
         solver.save(solver.split(optimize.load(src)), dst)
-
 
     def write_gradient(self, path='', suffix=''):
         """ Writes gradient in format expected by nonlinear optimization library
@@ -286,7 +309,6 @@ class inversion_nz(base):
         postprocess.write_gradient(path)
         parts = solver.load(src, suffix='_kernel')
         optimize.save(dst, solver.merge(parts))
-
 
     def write_misfit(self, suffix=''):
         """ Writes misfit in format expected by nonlinear optimization library
@@ -306,31 +328,26 @@ class inversion_nz(base):
                 return
             else:
                 time.sleep(5)   
-                
-    
+
     def save_gradient(self):
         src = os.path.join(PATH.GRAD, 'gradient')
         dst = os.path.join(PATH.OUTPUT, 'gradient_%04d' % optimize.iter)
         unix.mv(src, dst)
-
 
     def save_model(self):
         src = 'm_new'
         dst = os.path.join(PATH.OUTPUT, 'model_%04d' % optimize.iter)
         solver.save(solver.split(optimize.load(src)), dst)
 
-
     def save_kernels(self):
         src = os.path.join(PATH.GRAD, 'kernels')
         dst = os.path.join(PATH.OUTPUT, 'kernels_%04d' % optimize.iter)
         unix.mv(src, dst)
 
-
     def save_traces(self):
         src = os.path.join(PATH.GRAD, 'traces')
         dst = os.path.join(PATH.OUTPUT, 'traces_%04d' % optimize.iter)
         unix.mv(src, dst)
-
 
     def save_residuals(self):
         src = os.path.join(PATH.GRAD, 'residuals')
