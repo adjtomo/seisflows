@@ -1,13 +1,13 @@
 """
 SEISFLOWS MODULES
 """
-WORKFLOW='inversion_nz'   # inversion, migration, modeling
-SOLVER='specfem3d_nz'     # specfem2d, specfem3d
-SYSTEM='maui_lg'          # serial, pbs, slurm
-OPTIMIZE='LBFGS'          # steepest_descent, LBFGS, NLCG
-LINESEARCH='Backtrack'    # Bracket, Backtrack
-PREPROCESS='base'         # base
-POSTPROCESS='base'        # base
+WORKFLOW='thrifty_inversion_nz'      # inversion, migration, modeling
+SOLVER='specfem3d_nz'               # specfem2d, specfem3d
+SYSTEM='maui_lg'                    # serial, pbs, slurm
+OPTIMIZE='LBFGS'                    # steepest_descent, LBFGS, NLCG
+LINESEARCH='Backtrack'              # Bracket, Backtrack
+PREPROCESS='base'                   # base
+POSTPROCESS='base'                  # base
 
 """
 SIMULATION PARAMETERS
@@ -20,8 +20,8 @@ PRECOND=None
 """
 WORKFLOW
 """
-BEGIN=1                 # first iteration
-END=1                   # last iteration
+BEGIN=2                 # first iteration
+END=2                   # last iteration
 NREC=20                 # number of receivers
 NSRC=2                  # number of sources
 
@@ -31,18 +31,20 @@ SYSTEM
 NTASK=NSRC             # number of tasks
 NPROC=144              # number of processers
 NODESIZE=80            # number of cores per node (set by system)
-WALLTIME=180           # master job walltime
+WALLTIME=240           # master job walltime
 TASKTIME=30            # maximum job time for each slave job 
 
 # 'maui_lg' SYSTEM
-ACCOUNT = 'nesi00263'                # NeSI account name 
-MAIN_CLUSTER = 'maui'                # cluster to run simulations on
-MAIN_PARTITION = 'nesi_research'     # partition of simulation cluster
-ANCIL_CLUSTER = 'maui_ancil'         # cluster to run data processing on
-ANCIL_PARTITION = 'nesi_prepost'     # partition of processing cluster
-ANCIL_TASKTIME = 5                   # for shorter tasktimes (default=TASKTIME)
-CPUS_PER_TASK = 1                    # available for multithreading (default=1)
-# MAIL_ADDRESS='bryant.chow@vuw.ac.nz' # email job updates to (default='')
+ACCOUNT='nesi00263'                # NeSI account name 
+MAIN_CLUSTER='maui'                # cluster to run simulations on
+MAIN_PARTITION='nesi_research'     # partition of simulation cluster
+ANCIL_CLUSTER='maui_ancil'         # cluster to run data processing on
+ANCIL_PARTITION='nesi_prepost'     # partition of processing cluster
+ANCIL_TASKTIME=int(NREC*0.2)       # for shorter tasktimes (default=TASKTIME)
+# NODES=4
+CPUS_PER_TASK=1                    # available for multithreading (default=1)
+# SLURMARGS='--hint=nomultithread'   # request the entire node, requires 4 NODE
+
 
 """
 PREPROCESSING
@@ -60,7 +62,8 @@ MUTESLOPE=0.            # mute slope (for muting early arrivals)
 """
 POSTPROCESSING
 """
-SMOOTH=0.               # smoothing radius
+SMOOTH_H=10000.          # smoothing radius in the horizontal, meters
+SMOOTH_V=4000.          # smoothing radius in the vertical, meters
 SCALE=1.                # scaling factor
 
 """ 
@@ -71,7 +74,7 @@ STEPCOUNTMAX=3         # maximum allowable trial step lengths (default=10,
 STEPINIT=0.25           # <<< This doesn't exist? step length safeguard
 STEPFACTOR=0.75         # <<< This doesn't exist?
 STEPLENINIT=0.05        # initial step, fraction of current model (default=0.05)
-STEPLENMAX=0.5          # max step, fraction of current model (default=0.5)
+STEPLENMAX=0.2          # max step, fraction of current model (default=0.5)
 
 # 'LBFGS' OPTIMIZATION (defaults if not set)
 # LBFGSMAX=''           # periodic restart invterval (default=infinity)

@@ -69,9 +69,6 @@ class inversion_nz(base):
             setattr(PATH, 'OPTIMIZE', os.path.join(PATH.SCRATCH, 'optimize'))
 
         # input paths
-        if 'PYATOA' not in PATH:
-            raise ParameterError(PATH, 'PYATOA')
-
         if 'MODEL_INIT' not in PATH:
             raise ParameterError(PATH, 'MODEL_INIT')
 
@@ -94,7 +91,7 @@ class inversion_nz(base):
         if 'SAVERESIDUALS' not in PAR:
             setattr(PAR, 'SAVERESIDUALS', 0)
 
-        # make sure a Pyatoa entry directory is present.
+        # pyatoa specific paths
         # Config file should be present here.
         if 'PYATOA_IO' not in PATH:
             raise ParameterError(PATH, 'PYATOA_IO')
