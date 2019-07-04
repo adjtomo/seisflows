@@ -5,7 +5,6 @@ import glob
 import subprocess
 import numpy as np
 
-from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.tools import divides, exists
 from seisflows.config import ParameterError, save
@@ -70,8 +69,8 @@ class inversion_nz(base):
             setattr(PATH, 'OPTIMIZE', os.path.join(PATH.SCRATCH, 'optimize'))
 
         # input paths
-        if 'DATA' not in PATH:
-            setattr(PATH, 'DATA', None)
+        if 'PYATOA' not in PATH:
+            raise ParameterError(PATH, 'PYATOA')
 
         if 'MODEL_INIT' not in PATH:
             raise ParameterError(PATH, 'MODEL_INIT')
@@ -95,9 +94,14 @@ class inversion_nz(base):
         if 'SAVERESIDUALS' not in PAR:
             setattr(PAR, 'SAVERESIDUALS', 0)
 
-        # Make sure a Pyatoa entry directory is present
-        if 'PYATOA' not in PATH:
-            raise ParameterError(PATH, 'PYATOA')
+        # make sure a Pyatoa entry directory is present.
+        # Config file should be present here.
+        if 'PYATOA_IO' not in PATH:
+            raise ParameterError(PATH, 'PYATOA_IO')
+
+        # make sure the Pyatoa plugin run script is present
+        if 'PYATOA_RUN' not in PATH:
+            raise ParameterError(PATH, 'PYATOA_RUN')
 
         # make sure a Python3 binary is avilalable
         if 'PYTHON3' not in PATH:
@@ -142,7 +146,7 @@ class inversion_nz(base):
             print '\tInitializing Pyatoa'
             pyatoa_init = " ".join([
                 PATH.PYTHON3,
-                os.path.join(PATH.PYATOA, "process.py"),
+                PATH.PYATOA_RUN,
                 "--mode initialize",
                 "--working_dir {}".format(PATH.WORKDIR)
             ])
@@ -163,11 +167,12 @@ class inversion_nz(base):
         print '\t', time.asctime()
 
         print '\tQuantifying misfit'
-        print '\t', time.asctime()
+        print '\tstarting at', time.asctime(), '...'
         system.run_ancil('solver', 'eval_func',
                          iter=optimize.iter, suffix='new')
-        print '\t', time.asctime()
+        print '\tfinished at', time.asctime()
 
+        print '\tWriting misfit'
         self.write_misfit(suffix='new')
 
     def compute_direction(self):
@@ -185,6 +190,7 @@ class inversion_nz(base):
               status < 0  : failed
         """
         print 'LINE SEARCH'
+        print '\tinitializing line search'
         optimize.initialize_search()
 
         while True:
@@ -218,9 +224,9 @@ class inversion_nz(base):
         self.write_model(path=PATH.FUNC, suffix='try')
 
         print '\tRunning forward simulation'
-        print '\t', time.asctime()
+        print '\tstarting at', time.asctime(), '...'
         system.run('solver', 'eval_fwd', path=PATH.FUNC)
-        print '\t', time.asctime()
+        print '\tfinished at', time.asctime()
 
         print '\tQuantifying misfit'
         print '\t', time.asctime()
@@ -237,11 +243,11 @@ class inversion_nz(base):
         """ Performs adjoint simulation to evaluate gradient
         """
         print '\tRunning adjoint simulation'
-        print '\t', time.asctime()
+        print '\tstarting at', time.asctime(), '...'
         system.run('solver', 'eval_grad',
                    path=PATH.GRAD,
                    export_traces=divides(optimize.iter, PAR.SAVETRACES))
-        print '\t', time.asctime()
+        print '\tfinished at', time.asctime()
 
         self.write_gradient(path=PATH.GRAD, suffix='new')
 
@@ -255,13 +261,11 @@ class inversion_nz(base):
         print '\tFinalizing Pyatoa'
         finalize_pyatoa = " ".join([
             PATH.PYTHON3,
-            os.path.join(PATH.PYATOA, "process.py"),
+            PATH.PYATOA_RUN,
             "--mode finalize",
             "--working_dir", PATH.WORKDIR,
             "--model_number {}".format("m{:0>2}".format(int(iter)-1)),
-            "--step_count {}".format(optimize.line_search.step_count + 1)
         ])
-
         subprocess.call(finalize_pyatoa, shell=True)
 
         if divides(optimize.iter, PAR.SAVEMODEL):
@@ -313,8 +317,9 @@ class inversion_nz(base):
     def write_misfit(self, suffix=''):
         """ Writes misfit in format expected by nonlinear optimization library
             Overloads old write_misfit function
+            Waits for all instances of Pyatoa to finish writing their misfit
         """
-        src = os.path.join(PATH.DATA, 'misfits', "*")
+        src = os.path.join(PATH.PYATOA, 'misfits', "*")
         dst = 'f_'+suffix
         
         misfit = 0
@@ -324,6 +329,7 @@ class inversion_nz(base):
                 for _misfit in misfits:
                     misfit += np.loadtxt(_misfit)
                     os.remove(_misfit)
+                # Following Tape et al 2007, total misfit=misfit/number_srcs
                 optimize.savetxt(dst, misfit/PAR.NSRC)
                 return
             else:

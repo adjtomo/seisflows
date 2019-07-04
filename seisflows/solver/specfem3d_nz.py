@@ -4,7 +4,6 @@ from glob import glob
 from os.path import join
 
 import sys
-import numpy as np
 
 import seisflows.plugins.solver.specfem3d as solvertools
 from seisflows.tools.seismic import getpar, setpar
@@ -67,7 +66,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         """ Generates data in the synthetic-synthetic comparison case.
         Not for use in the real-data problem.
         """
-        print 'generate data'
+        print '\t\tspecfem3d_nz.generate data'
         self.generate_mesh(**model_kwargs)
 
         unix.cd(self.cwd)
@@ -87,7 +86,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
     def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
         """ Performs meshing and database generation
         """
-        print 'generate mesh'
+        print '\t\tspecfem3d_nz.generate mesh'
         assert(model_name)
         assert(model_type)
 
@@ -104,7 +103,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
             assert(exists(model_path))
             self.check_mesh_properties(model_path)
 
-            src = glob(model_path +'/'+ '*')
+            src = glob(model_path + '/' + '*')
             dst = self.model_databases
             unix.cp(src, dst)
 
@@ -122,6 +121,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         Same as solver.base.eval_func without the residual writing.
         For use in specfem3d_nz where eval_func is taken by Pyatoa.
         """
+        print '\t\tspecfem3d_nz.eval_fwd'
         unix.cd(self.cwd)
         self.import_model(path)
         self.forward()
@@ -135,21 +135,21 @@ class specfem3d_nz(custom_import('solver', 'base')):
         :param kwargs:
         :return:
         """
+        print '\t\tspecfem3d_nz.eval_func'
         load_conda = "module load Anaconda2/5.2.0-GCC-7.1.0;"
         load_hdf5 = "module load HDF5/1.10.1-GCC-7.1.0;"
-        pyatoa_script = join(PATH.PYATOA, 'process.py')
         arguments = " ".join([
             "--mode process",
-            "--event_id {}".format(self.source_name),
-            "--model_number {}".format("m{:0>2}".format(int(iter)-1)),
-            "--step_count {}".format(step),
-            "--current_dir {}".format(self.cwd),
             "--working_dir {}".format(PATH.WORKDIR),
+            "--current_dir {}".format(self.cwd),
+            "--model_number {}".format("m{:0>2}".format(int(iter) - 1)),
+            "--event_id {}".format(self.source_name),
+            "--step_count {}".format(step),
             "--suffix {}".format(suffix)
         ])
         call_pyatoa = " ".join([load_conda, load_hdf5, PATH.PYTHON3,
-                                pyatoa_script, arguments])
-
+                                PATH.PYATOA_RUN, arguments
+                                ])
         subprocess.call(call_pyatoa, shell=True)
 
     # low-level solver interface
@@ -167,7 +167,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
             src = glob('OUTPUT_FILES/*_d?_SU')
             dst = path
             unix.mv(src, dst)
-        # sem output format
+        # ascii sem output format
         elif PAR.FORMAT == "ascii":
             src = glob('OUTPUT_FILES/*sem?')
             dst = path
@@ -249,8 +249,8 @@ class specfem3d_nz(custom_import('solver', 'base')):
         solvertools.write_sources(vars(PAR), h)
 
     # postprocessing wrapper overload
-    def smooth(self, input_path='', output_path='', 
-                                           parameters=[], span_h=0., span_v=0.):
+    def smooth(self, input_path='', output_path='',
+               parameters=[], span_h=0., span_v=0.):
         """ Smooths kernels by convolving them with a Gaussian.  Wrapper over 
             xsmooth_sem utility. 
             smooth() in base.py has the incorrect command line call, specfem 
@@ -265,29 +265,19 @@ class specfem3d_nz(custom_import('solver', 'base')):
         # apply smoothing operator
         unix.cd(self.cwd)
         for name in parameters or self.parameters:
-            print ' smoothing', name
-            print " ".join([
-                PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem',  # ./bin/xsmooth_sem
-                str(span_h),  # SIGMA_H
-                str(span_v),  # SIGMA_V
-                name + '_kernel', # KERNEL_NAME
-                input_path + '/',  # INPUT_DIR
-                output_path + '/',  # OUTPUT_DIR
-                '.false'  # USE_GPU
-                ])  
+            print '\t\tsmoothing', name
             call_solver(
                 system.mpiexec(),
                 " ".join([
-                PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem',  # ./bin/xsmooth_sem
-                str(span_h),  # SIGMA_H
-                str(span_v),  # SIGMA_V
-                name + '_kernel', # KERNEL_NAME
-                input_path + '/',  # INPUT_DIR
-                output_path + '/',  # OUTPUT_DIR
-                '.false'  # USE_GPU
-                ]),  
+                    PATH.SPECFEM_BIN + '/' + 'xsmooth_sem',  # ./bin/xsmooth_sem
+                    str(span_h),  # SIGMA_H
+                    str(span_v),  # SIGMA_V
+                    name + '_kernel',  # KERNEL_NAME
+                    input_path + '/',  # INPUT_DIR
+                    output_path + '/',  # OUTPUT_DIR
+                    '.false'  # USE_GPU
+                    ]),
                 output='/dev/null')
-
         print ''
 
         # rename output files
