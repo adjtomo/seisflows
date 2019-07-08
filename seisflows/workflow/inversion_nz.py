@@ -147,7 +147,11 @@ class inversion_nz(base):
                 "--mode initialize",
                 "--working_dir {}".format(PATH.WORKDIR)
             ])
-            subprocess.call(pyatoa_init, shell=True)
+            try:
+                stdout = subprocess.check_output(pyatoa_init, shell=True)
+            except subprocess.CalledProcessError as e:
+                print("Pyatoa failed with {}".format(e))
+                sys.exit(-1)
 
             print '\tPreparing initial model'
             system.run('solver', 'setup')
@@ -159,15 +163,15 @@ class inversion_nz(base):
         self.write_model(path=PATH.GRAD, suffix='new')
 
         print '\tRunning forward simulation'
-        print '\t', time.asctime()
+        print '\t\tstarting at', time.asctime(), '...'
         system.run('solver', 'eval_fwd', path=PATH.GRAD)
-        print '\t', time.asctime()
+        print '\t\tfinished at', time.asctime()
 
         print '\tQuantifying misfit'
-        print '\tstarting at', time.asctime(), '...'
+        print '\t\tstarting at', time.asctime(), '...'
         system.run_ancil('solver', 'eval_func',
                          iter=optimize.iter, suffix='new')
-        print '\tfinished at', time.asctime()
+        print '\t\tfinished at', time.asctime()
 
         print '\tWriting misfit'
         self.write_misfit(suffix='new')
@@ -221,30 +225,31 @@ class inversion_nz(base):
         self.write_model(path=PATH.FUNC, suffix='try')
 
         print '\tRunning forward simulation'
-        print '\tstarting at', time.asctime(), '...'
+        print '\t\tstarting at', time.asctime(), '...'
         system.run('solver', 'eval_fwd', path=PATH.FUNC)
-        print '\tfinished at', time.asctime()
+        print '\t\tfinished at', time.asctime()
 
         print '\tQuantifying misfit'
-        print '\t', time.asctime()
+        print '\t\tstarting at', time.asctime(), '...'
         system.run_ancil('solver', 'eval_func',
                          iter=optimize.iter, 
                          step=optimize.line_search.step_count + 1, 
                          suffix='try'
                          )
-        print '\t', time.asctime()
+        print '\t\tfinished at', time.asctime()
 
         self.write_misfit(suffix='try')
 
     def evaluate_gradient(self):
         """ Performs adjoint simulation to evaluate gradient
         """
+        print 'EVALUATE GRADIENT'
         print '\tRunning adjoint simulation'
-        print '\tstarting at', time.asctime(), '...'
+        print '\t\tstarting at', time.asctime(), '...'
         system.run('solver', 'eval_grad',
                    path=PATH.GRAD,
                    export_traces=divides(optimize.iter, PAR.SAVETRACES))
-        print '\tfinished at', time.asctime()
+        print '\t\tfinished at', time.asctime()
 
         self.write_gradient(path=PATH.GRAD, suffix='new')
 
@@ -260,11 +265,15 @@ class inversion_nz(base):
             PATH.PYTHON3,
             PATH.PYATOA_RUN,
             "--mode finalize",
-            "--working_dir", PATH.WORKDIR,
-            "--model_number {}".format("m{:0>2}".format(int(iter)-1)),
+            "--working_dir {}".format(PATH.WORKDIR),
+            "--model_number {}".format("m{:0>2}".format(int(optimize.iter)-1)),
         ])
-        subprocess.call(finalize_pyatoa, shell=True)
-
+        try:
+            stdout = subprocess.check_output(finalize_pyatoa, shell=True)
+        except subproces.CalledProcessError as e:
+            print("Pyatoa failed with {}".format(e))
+            sys.exit(-1)
+            
         if divides(optimize.iter, PAR.SAVEMODEL):
             self.save_model()
 
@@ -316,7 +325,7 @@ class inversion_nz(base):
             Overloads old write_misfit function
             Waits for all instances of Pyatoa to finish writing their misfit
         """
-        src = os.path.join(PATH.PYATOA, 'misfits', "*")
+        src = os.path.join(PATH.PYATOA_IO, 'data', 'misfits', "*")
         dst = 'f_'+suffix
         
         misfit = 0

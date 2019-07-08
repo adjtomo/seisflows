@@ -18,8 +18,6 @@ def getargs():
     parser.add_argument('--path_file', nargs='?', 
         default='paths.py')
 
-    parser.add_argument('--with_mail', default=None)
-
     return parser.parse_args()
 
 

@@ -66,7 +66,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         """ Generates data in the synthetic-synthetic comparison case.
         Not for use in the real-data problem.
         """
-        print '\t\tspecfem3d_nz.generate data'
+        print 'specfem3d_nz.generate data'
         self.generate_mesh(**model_kwargs)
 
         unix.cd(self.cwd)
@@ -86,7 +86,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
     def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
         """ Performs meshing and database generation
         """
-        print '\t\tspecfem3d_nz.generate mesh'
+        print 'specfem3d_nz.generate mesh'
         assert(model_name)
         assert(model_type)
 
@@ -121,7 +121,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         Same as solver.base.eval_func without the residual writing.
         For use in specfem3d_nz where eval_func is taken by Pyatoa.
         """
-        print '\t\tspecfem3d_nz.eval_fwd'
+        print 'specfem3d_nz.eval_fwd'
         unix.cd(self.cwd)
         self.import_model(path)
         self.forward()
@@ -135,7 +135,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         :param kwargs:
         :return:
         """
-        print '\t\tspecfem3d_nz.eval_func'
+        print 'specfem3d_nz.eval_func'
         load_conda = "module load Anaconda2/5.2.0-GCC-7.1.0;"
         load_hdf5 = "module load HDF5/1.10.1-GCC-7.1.0;"
         arguments = " ".join([
@@ -150,8 +150,12 @@ class specfem3d_nz(custom_import('solver', 'base')):
         call_pyatoa = " ".join([load_conda, load_hdf5, PATH.PYTHON3,
                                 PATH.PYATOA_RUN, arguments
                                 ])
-        subprocess.call(call_pyatoa, shell=True)
-
+        try:
+            stdout = subprocess.check_output(call_pyatoa, shell=True)
+        except subprocess.CalledProcessError as e:
+            print("Pyatoa failed with {}".format(e))
+            sys.exit(-1)
+    
     # low-level solver interface
     def forward(self, path='traces/syn'):
         """ Calls SPECFEM3D forward solver and then moves files into path
@@ -265,7 +269,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         # apply smoothing operator
         unix.cd(self.cwd)
         for name in parameters or self.parameters:
-            print '\t\tsmoothing', name
+            print 'smoothing', name
             call_solver(
                 system.mpiexec(),
                 " ".join([
