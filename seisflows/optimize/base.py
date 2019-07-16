@@ -165,11 +165,11 @@ class base(object):
 
         # optional initial step length override
         if PAR.STEPLENINIT and len(self.line_search.step_lens)<=1:
-            print "step length override from alpha_old={}".format(alpha)
+            print "\t\tstep length override from alpha_old={}".format(alpha)
             alpha = PAR.STEPLENINIT*norm_m/norm_p
             print "to alpha_new={}".format(alpha)
         
-        print "optimize.base.initialize_search says alpha={}".format(alpha)
+        print "\t\toptimize.base.initialize_search - alpha={}".format(alpha)
         # write model corresponding to chosen step length
         self.savetxt('alpha', alpha)
         self.save('m_try', m + alpha*p)

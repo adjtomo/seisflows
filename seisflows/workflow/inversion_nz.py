@@ -115,7 +115,7 @@ class inversion_nz(base):
         """
         print "BEGINNING WORKFLOW AT {}".format(time.asctime())
         optimize.iter = PAR.BEGIN
-        self.setup()
+        # self.setup()
         print ''
         
         print optimize.iter, " <= ", PAR.END
@@ -124,6 +124,7 @@ class inversion_nz(base):
             self.initialize()
             self.evaluate_gradient()
             self.compute_direction()
+            sys.exit()  # HEY
             self.line_search()
             self.finalize()
             self.clean()
@@ -270,7 +271,7 @@ class inversion_nz(base):
         ])
         try:
             stdout = subprocess.check_output(finalize_pyatoa, shell=True)
-        except subproces.CalledProcessError as e:
+        except subprocess.CalledProcessError as e:
             print("Pyatoa failed with {}".format(e))
             sys.exit(-1)
             
@@ -306,17 +307,22 @@ class inversion_nz(base):
 
     def write_model(self, path='', suffix=''):
         """ Writes model in format expected by solver
+        Only write vp and vs, do not update density (rho) as it is not sensitive
+        to the measurements we are making
         """
         src = 'm_'+suffix
         dst = path +'/'+ 'model'
-        solver.save(solver.split(optimize.load(src)), dst)
+        solver.save(dict=solver.split(optimize.load(src)), path=dst)
 
     def write_gradient(self, path='', suffix=''):
         """ Writes gradient in format expected by nonlinear optimization library
         """
         src = os.path.join(path, 'gradient')
         dst = 'g_'+suffix
+        print '\tPostprocessing'
+        print '\t\tstarting at', time.asctime(), '...'
         postprocess.write_gradient(path)
+        print '\t\tfinished at', time.asctime()
         parts = solver.load(src, suffix='_kernel')
         optimize.save(dst, solver.merge(parts))
 
