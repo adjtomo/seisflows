@@ -32,10 +32,10 @@ class specfem3d_nz(custom_import('solver', 'base')):
 
         # check time stepping parameters
         if 'NT' not in PAR:
-            raise Exception
+            raise Exception()
 
         if 'DT' not in PAR:
-            raise Exception
+            raise Exception()
 
         # check data format
         if 'FORMAT' not in PAR:
@@ -55,6 +55,15 @@ class specfem3d_nz(custom_import('solver', 'base')):
         """
         # clean up for new inversion
         unix.rm(self.cwd)
+         
+        self.initialize_solver_directories()
+        
+        # if synthetic case, create synthetic observations 
+        if PAR.CASE == "Synthetic":
+            self.generate_data(
+                model_path=PATH.MODEL_TRUE,
+                model_name='model_true',
+                model_type='gll')
 
         # prepare initial model
         self.generate_mesh(
@@ -63,20 +72,30 @@ class specfem3d_nz(custom_import('solver', 'base')):
             model_type='gll')
 
     def generate_data(self, **model_kwargs):
-        """ Generates data in the synthetic-synthetic comparison case.
-        Not for use in the real-data problem.
+        """ 
+        Generates data in the synthetic-synthetic comparison case.
+        Not for use in the real-data problem. Differs from specfem3d.nz in that
+        it automatically calls generate mesh for the true model, rather than
+        passing them in as kwargs.
         """
-        print 'specfem3d_nz.generate data'
+        # Prepare for the forward simulation
         self.generate_mesh(**model_kwargs)
 
+        print 'specfem3d_nz.generate data'
         unix.cd(self.cwd)
         setpar('SIMULATION_TYPE', '1')
         setpar('SAVE_FORWARD', '.true.')
         setpar('ATTENUATION ', '.true.')
         call_solver(system.mpiexec(), 'bin/xspecfem3D')
 
+        # seismic unix format
         if PAR.FORMAT in ['SU', 'su']:
             src = glob('OUTPUT_FILES/*_d?_SU')
+            dst = 'traces/obs'
+            unix.mv(src, dst)
+        # ascii sem output format
+        elif PAR.FORMAT == "ascii":
+            src = glob('OUTPUT_FILES/*sem?')
             dst = 'traces/obs'
             unix.mv(src, dst)
 
@@ -90,7 +109,6 @@ class specfem3d_nz(custom_import('solver', 'base')):
         assert(model_name)
         assert(model_type)
 
-        self.initialize_solver_directories()
         unix.cd(self.cwd)
 
         if model_type in ['gll']:
@@ -144,7 +162,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
             "--current_dir {}".format(self.cwd),
             "--model_number {}".format("m{:0>2}".format(int(iter) - 1)),
             "--event_id {}".format(self.source_name),
-            "--step_count {}".format(step),
+            "--step_count {}".format("s{:0>2}".format(step)),
             "--suffix {}".format(suffix)
         ])
         call_pyatoa = " ".join([load_conda, load_hdf5, PATH.PYTHON3,
@@ -268,6 +286,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
 
         # apply smoothing operator
         unix.cd(self.cwd)
+        print 'smoothing parameters ', self.parameters
         for name in parameters or self.parameters:
             print 'smoothing', name
             call_solver(
@@ -280,8 +299,8 @@ class specfem3d_nz(custom_import('solver', 'base')):
                     input_path + '/',  # INPUT_DIR
                     output_path + '/',  # OUTPUT_DIR
                     '.false'  # USE_GPU
-                    ]),
-                output='/dev/null')
+                    ])
+                    )
         print ''
 
         # rename output files

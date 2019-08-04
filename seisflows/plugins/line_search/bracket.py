@@ -26,12 +26,9 @@ class Bracket(Base):
         """
         x, f, gtg, gtp, step_count, update_count = self.search_history()
 
-        print "\tplugins.line_search.bracket.calculate_step()"
-       
-        print "\tstep_count={}\n\tupdate_count={}\n\tcheck_bracket={}\n" \
-              "\tgood_enough={}\n\tx={}\n\tf={}\n\tgtg={}\n\tgtp={}".format(
-                    step_count, update_count, _check_bracket(x,f),
-                    _good_enough(x,f), x, f, gtg, gtp) 
+        print '\tBracketing line search'
+        print '\t\tStep lengths = {}'.format(x)
+        print '\t\tMisfits = {}'.format(f)
         
         # For the first inversion and initial step, set alpha
         if step_count==0 and update_count==0:

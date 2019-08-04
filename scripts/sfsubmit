@@ -29,8 +29,14 @@ if __name__ == "__main__":
     parameters = loadpy(args.parameter_file)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # register paths
+    # register paths, check they exist
     paths = tilde_expand(loadpy(args.path_file))
+    for key in paths:
+        if key == 'SCRATCH':
+            continue
+        if not os.path.exists(paths[key]):
+            sys.exit(paths[key])
+
     sys.modules['seisflows_paths'] = Dict(paths)
 
     unix.mkdir(args.workdir)

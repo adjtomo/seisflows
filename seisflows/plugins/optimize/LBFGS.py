@@ -38,7 +38,7 @@ class LBFGS(object):
         """
         self.iter += 1
 
-        print 'calling L-BFGS optimization schema'
+        print '\tComputing search direction using L-BFGS optimization schema'
         unix.cd(self.path)
         g = self.load('g_new')
         if self.iter == 1:

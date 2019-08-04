@@ -25,7 +25,9 @@ class Backtrack(Bracket):
         """
         x, f, gtg, gtp, step_count, update_count = self.search_history()
         
-        print "\t\tplugins.line_search.backtrack.calculate_step()"
+        print '\tBacktracking line search'
+        print '\t\tStep lengths = {}'.format(x)
+        print '\t\tMisfits = {}'.format(f)
         
         # quasi-Newton direction is not yet scaled properly, so instead
         # of a bactracking line perform a bracketing line search

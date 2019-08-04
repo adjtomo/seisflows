@@ -49,6 +49,10 @@ class inversion_nz(base):
         if 'END' not in PAR:
             raise ParameterError(PAR, 'END')
 
+        # signifiy if data-synth. or synth.-synth. case
+        if 'CASE' not in PAR:
+            raise ParameterError(PAR, 'CASE')
+
         # scratch paths
         if 'SCRATCH' not in PATH:
             raise ParameterError(PATH, 'SCRATCH')
@@ -107,36 +111,43 @@ class inversion_nz(base):
         # parameter assertions
         assert 1 <= PAR.BEGIN <= PAR.END
 
+        # check that their is a given starting model
         if not exists(PATH.MODEL_INIT):
+            raise Exception()
+       
+        # synthetic-synthetic examples require a true model to create the 'data' 
+        if PAR.CASE == 'Synthetic' and not exists(PATH.MODEL_TRUE):
             raise Exception()
 
     def main(self):
         """ Carries out seismic inversion
         """
+        main_start = time.time()
         print "BEGINNING WORKFLOW AT {}".format(time.asctime())
         optimize.iter = PAR.BEGIN
-        # self.setup()
-        print ''
-        
+        self.setup()
+               
         print optimize.iter, " <= ", PAR.END
         while optimize.iter <= PAR.END:
             print "ITERATION ", optimize.iter
             self.initialize()
             self.evaluate_gradient()
             self.compute_direction()
-            sys.exit()  # HEY
             self.line_search()
             self.finalize()
             self.clean()
 
+            print "finished iteration {} at {}".format(optimize.iter,
+                                                       time.asctime()
+                                                       )
+            print '{:.2f}m elapsed'.format((time.time() - main_start) / 60.)
             optimize.iter += 1
-            print ''
 
     def setup(self):
         """ Lays groundwork for inversion
         """
-        print 'SETUP'
         if optimize.iter == 1:
+            print 'SETUP'
             print '\tPerforming module setup'
             postprocess.setup()
             optimize.setup()
@@ -153,9 +164,11 @@ class inversion_nz(base):
             except subprocess.CalledProcessError as e:
                 print("Pyatoa failed with {}".format(e))
                 sys.exit(-1)
-
+            
             print '\tPreparing initial model'
+            tstart = time.time()
             system.run('solver', 'setup')
+            print '\t{:.2f}m elapsed'.format((time.time() - tstart) / 60.)
 
     def initialize(self):
         """ Prepares for next model update iteration
@@ -165,14 +178,16 @@ class inversion_nz(base):
 
         print '\tRunning forward simulation'
         print '\t\tstarting at', time.asctime(), '...'
+        tstart = time.time() 
         system.run('solver', 'eval_fwd', path=PATH.GRAD)
-        print '\t\tfinished at', time.asctime()
+        print '\t\t{:.2f}m elapsed'.format((time.time() - tstart) / 60.)
 
         print '\tQuantifying misfit'
         print '\t\tstarting at', time.asctime(), '...'
+        tstart = time.time()
         system.run_ancil('solver', 'eval_func',
                          iter=optimize.iter, suffix='new')
-        print '\t\tfinished at', time.asctime()
+        print '\t\t{:.2f}m elapsed'.format((time.time() - tstart) / 60.)
 
         print '\tWriting misfit'
         self.write_misfit(suffix='new')
@@ -227,17 +242,19 @@ class inversion_nz(base):
 
         print '\tRunning forward simulation'
         print '\t\tstarting at', time.asctime(), '...'
+        tstart = time.time() 
         system.run('solver', 'eval_fwd', path=PATH.FUNC)
-        print '\t\tfinished at', time.asctime()
+        print '\t\t{:.2f}m elapsed'.format((time.time() - tstart) / 60.)
 
         print '\tQuantifying misfit'
         print '\t\tstarting at', time.asctime(), '...'
+        tstart = time.time() 
         system.run_ancil('solver', 'eval_func',
                          iter=optimize.iter, 
                          step=optimize.line_search.step_count + 1, 
                          suffix='try'
                          )
-        print '\t\tfinished at', time.asctime()
+        print '\t\t{:.2f}m elapsed'.format((time.time() - tstart) / 60.)
 
         self.write_misfit(suffix='try')
 
@@ -247,10 +264,11 @@ class inversion_nz(base):
         print 'EVALUATE GRADIENT'
         print '\tRunning adjoint simulation'
         print '\t\tstarting at', time.asctime(), '...'
+        tstart = time.time() 
         system.run('solver', 'eval_grad',
                    path=PATH.GRAD,
                    export_traces=divides(optimize.iter, PAR.SAVETRACES))
-        print '\t\tfinished at', time.asctime()
+        print '\t\t{:.2f}m elapsed'.format((time.time() - tstart) / 60.)
 
         self.write_gradient(path=PATH.GRAD, suffix='new')
 
@@ -268,6 +286,8 @@ class inversion_nz(base):
             "--mode finalize",
             "--working_dir {}".format(PATH.WORKDIR),
             "--model_number {}".format("m{:0>2}".format(int(optimize.iter)-1)),
+            "--step_count {}".format("s{:0>2}".format(
+                                               optimize.line_search.step_count))
         ])
         try:
             stdout = subprocess.check_output(finalize_pyatoa, shell=True)
@@ -322,9 +342,10 @@ class inversion_nz(base):
         print '\tPostprocessing'
         print '\t\tstarting at', time.asctime(), '...'
         postprocess.write_gradient(path)
-        print '\t\tfinished at', time.asctime()
+        print '\t\t{:.2f}m elapsed'.format((time.time() - tstart) / 60.)
         parts = solver.load(src, suffix='_kernel')
         optimize.save(dst, solver.merge(parts))
+        
 
     def write_misfit(self, suffix=''):
         """ Writes misfit in format expected by nonlinear optimization library
