@@ -140,7 +140,7 @@ class inversion_nz(base):
             print "finished iteration {} at {}".format(optimize.iter,
                                                        time.asctime()
                                                        )
-            print '{:.2f}m elapsed'.format((time.time() - main_start) / 60.)
+            print '{:.2f}m elapsed\n\n'.format((time.time() - main_start) / 60.)
             optimize.iter += 1
 
     def setup(self):
@@ -211,7 +211,7 @@ class inversion_nz(base):
         optimize.initialize_search()
 
         while True:
-            print '\tTrial Step', optimize.line_search.step_count + 1
+            print 'TRIAL STEP', optimize.line_search.step_count + 1
             self.evaluate_function()
             status = optimize.update_search()
 
@@ -237,7 +237,6 @@ class inversion_nz(base):
     def evaluate_function(self):
         """ Performs forward simulation to evaluate objective function
         """
-        print 'EVALUATE FUNCTION'
         self.write_model(path=PATH.FUNC, suffix='try')
 
         print '\tRunning forward simulation'
@@ -341,6 +340,7 @@ class inversion_nz(base):
         dst = 'g_'+suffix
         print '\tPostprocessing'
         print '\t\tstarting at', time.asctime(), '...'
+        tstart = time.time()
         postprocess.write_gradient(path)
         print '\t\t{:.2f}m elapsed'.format((time.time() - tstart) / 60.)
         parts = solver.load(src, suffix='_kernel')

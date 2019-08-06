@@ -25,36 +25,38 @@ class Backtrack(Bracket):
         """
         x, f, gtg, gtp, step_count, update_count = self.search_history()
         
-        print '\tBacktracking line search'
-        print '\t\tStep lengths = {}'.format(x)
-        print '\t\tMisfits = {}'.format(f)
-        
         # quasi-Newton direction is not yet scaled properly, so instead
         # of a bactracking line perform a bracketing line search
         if update_count==0:
             alpha, status = super(Backtrack, self).calculate_step()
-            
-        # our choice of a unit step length here assumes a well-scaled
-        # search direction
-        elif step_count==0:
-            alpha = min(1., self.step_len_max)
-            status = 0
-
-        # pass if misfit is reduced
-        elif _check_decrease(x,f):
-            alpha = x[f.argmin()]
-            status = 1
-
-        # if misfit continually increases, decrease step length
-        elif step_count <= self.step_count_max:
-            slope = gtp[-1]/gtg[-1]
-            alpha = backtrack2(f[0], slope, x[1], f[1], b1=0.1, b2=0.5)
-            status = 0
-
-        # failed because step_count_max exceeded
+       
+        # Assumed well scaled search direction, attempt backtracking line search 
+        # with unit step length
         else:
-            alpha = None
-            status = -1
+            print '\tBacktracking line search'
+            print '\t\tStep lengths = {}'.format(x)
+            print '\t\tMisfits = {}'.format(f)
+            # try unit step length
+            if step_count==0:
+                print "\t\tAttempting unit step length"
+                alpha = min(1., self.step_len_max)
+                status = 0
+            # pass if misfit is reduced
+            elif _check_decrease(x,f):
+                print "\t\tMisfit decrease, pass"
+                alpha = x[f.argmin()]
+                status = 1
+            # if misfit continually increases, decrease step length
+            elif step_count <= self.step_count_max:
+                print "\t\tMisfit increase, decreasing step length"
+                slope = gtp[-1]/gtg[-1]
+                alpha = backtrack2(f[0], slope, x[1], f[1], b1=0.1, b2=0.5)
+                status = 0
+            # failed because step_count_max exceeded
+            else:
+                print "\t\tBacktracking failed, step_count_max exceeded"
+                alpha = None
+                status = -1
 
         return alpha, status
 

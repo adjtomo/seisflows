@@ -307,6 +307,28 @@ class specfem3d_nz(custom_import('solver', 'base')):
         files = glob(output_path+'/*')
         unix.rename('_smooth', '', files)
 
+    def combine_vol_data(self, input_path, output_path, quantity):
+        """
+        Call Specfems executable combine_vol_data_vtk on kernels or model files
+        """
+        if not exists(input_path):
+            raise Exception
+
+        if not exists(output_path):
+            unix.mkdir(output_path)
+        
+        unix.cd(self.cwd)
+        call_solver(system.mpiexec(),
+                    " ".join[PATH.SPECFEM_BIN + '/' + 'xcombine_vol_data_vtk',
+                             0,  # proc_start
+                             PAR.NPROC,  # proc_end
+                             quantity,  # kernel
+                             path_in,  # dir_in
+                             path_out,  # dir_out
+                             0  # gpu_accel
+                             ])
+        print ''
+
     # miscellaneous
     @property
     def data_wildcard(self):
