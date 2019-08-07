@@ -1,6 +1,11 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+# Define all messages
+###############################################################################
 
-
-###
 
 WarningOverwrite = """
 
@@ -30,12 +35,12 @@ SOLVER FAILED
     Nonzero exit status returned by:  %s
 
     Subsequent tasks may fail because expected solver output is not in place.
-    Users running on clusters without fault tolerance should consider stopping 
-    any remaining workflow tasks to avoid further loss of resources. 
+    Users running on clusters without fault tolerance should consider stopping
+    any remaining workflow tasks to avoid further loss of resources.
 
-    To troubleshoot solver errors, navigate to ./scratch/solver to browse solver
-    output or try running solver manually in the directories set up in
-    ./scratch/solver. 
+    To troubleshoot solver errors, navigate to ./scratch/solver to browse
+    solver output or try running solver manually in the directories set up in
+    ./scratch/solver.
 
 """
 
@@ -117,9 +122,6 @@ WRITER ERROR
 """
 
 
-
-###
-
 TaskTimeout = """
 
 TASK TIMED OUT
@@ -145,7 +147,6 @@ TASK ERROR
     Stopping workflow...
 
 """
-
 
 
 TaskError_PBS = """
@@ -210,8 +211,8 @@ DEPENDENCY ERROR
 
         system.%s
 
-    Please install MPI4PY and try again, or consider choosing a different system
-    configuration.
+    Please install MPI4PY and try again, or consider choosing a different
+    system configuration.
 
 """
 
@@ -226,9 +227,10 @@ SYSTEM CONFIGURATION WARNING
 
     Please make sure than 'mpiexec' is accessible through your shell's PATH
     environment variable. If your executable goes by a different name such as
-    'mpirun', consider creating an alias in your shell's configuration file, and
-    remember to source the modified configuration file. If MPI is not available
-    on your system, consider using the 'multithreaded' system interface instead.
+    'mpirun', consider creating an alias in your shell's configuration file,
+    and remember to source the modified configuration file. If MPI is not
+    available on your system, consider using the 'multithreaded' system
+    interface instead.
 
 """
 
@@ -306,7 +308,7 @@ ImportError4 = """
 
 SEISFLOWS IMPORT ERROR
 
-    By convention, SeisFlows module 
+    By convention, SeisFlows module
 
         seisflows.%s.%s
 
@@ -336,7 +338,7 @@ and add one of the following instead
 Warning_pbs_sm = """
 
 WARNING:  PBS_SM hasn't been tested for a long while because we don't own a PBS
-cluster.  If you have access to one cluster and are willing to help debug, 
+cluster.  If you have access to one cluster and are willing to help debug,
 please let us know.
 
 """
@@ -345,7 +347,7 @@ please let us know.
 Warning_pbs_lg = """
 
 WARNING:  PBS_LG hasn't been tested for a long while because we don't own a PBS
-cluster.  If you have access to one cluster and are willing to help debug, 
+cluster.  If you have access to one cluster and are willing to help debug,
 please let us know.
 
 """

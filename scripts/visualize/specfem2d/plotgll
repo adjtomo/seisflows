@@ -11,6 +11,8 @@
 
 # Import system modules
 import argparse
+import warnings
+import sys
 
 # Import numpy and matplotlib
 import numpy as np
@@ -18,9 +20,30 @@ import matplotlib.pyplot as plt
 from matplotlib import use as mpluse
 
 # Local imports
-from seisflows.tools.graphics import plot_gll
-from seisflows.plugins.solver_io.fortran_binary import _read
+from seisflows.tools.graphics import plot_gll, plot_many_gll
+from seisflows.plugins.solver_io.fortran_binary import _read, _write
 from seisflows.tools import unix
+
+
+def readStations(path):
+    """ Read specfem2d STATIONS file
+    """
+    with warnings.catch_warnings():  # Suppress warning about single precision
+        warnings.simplefilter("ignore")
+        stats = np.genfromtxt(path, usecols=(0, 2, 3), dtype=None)
+    temp = [list(u) for u in stats]
+    temp = map(list, zip(*temp))
+    return temp[:][0], np.array(temp[:][1]), np.array(temp[:][2])
+
+def readTwoColumnsFile(path):
+    """ Read two columns file containing numbers
+    """
+    with warnings.catch_warnings():  # Suppress warning about single precision
+        warnings.simplefilter("ignore")
+        stats = np.genfromtxt(path, usecols=(0, 1), dtype=None)
+    temp = [list(u) for u in stats]
+    temp = map(list, zip(*temp))
+    return np.array(temp[:][0]), np.array(temp[:][1])
 
 
 def parse_args():
@@ -63,10 +86,26 @@ def parse_args():
                         help='colormap saturation factor')
 
     parser.add_argument('--symmetric', dest='symmetric', action='store_true',
-                        default=False, help='colormap symmetry flag')
+                        default=False, help='Colormap symmetry flag')
+
+    parser.add_argument('--plotPoints', action='store_true',
+                        default=False, help='Plot x, z points used')
+
+    parser.add_argument('--tripcolor', action='store_true',
+                        default=False, help='Sometimes tricontourf \
+                                            does not work. Use tripcolor instead')
+
+    parser.add_argument('--skip', type=int, default=10,
+                        help='Read one sample over "skip" samples. Make plotting much faster')
 
     parser.add_argument('--title', type=str, default='',
                         help='title')
+
+    parser.add_argument('--STATIONS', type=str, default='',
+                        help='Path to STATIONS file to display on top')
+
+    parser.add_argument('--SOURCES', type=str, default='',
+                        help='Path to SOURCES file to display on top')
 
     parser.add_argument('--CBorientation', type=str, default='horizontal',
                         help='Color bar orientation. Either horizontal or \
@@ -101,9 +140,19 @@ if __name__ == '__main__':
         mpluse('Qt5Agg', warn=False, force=True)
 
     # Plot :
-    f, p = plot_gll(x, y, v, vmin=args.vmin, vmax=args.vmax)
+    x = x[::args.skip]
+    y = y[::args.skip]
+    v = v[::args.skip]
 
+    if not args.tripcolor:
+        f, p = plot_gll(x, y, v, vmin=args.vmin, vmax=args.vmax)
+    else:
+        f, p = plot_many_gll(x, y, v, vmin=args.vmin, vmax=args.vmax)
     plt.axes().set_aspect('equal')  # Equal aspect ratio
+
+    if args.plotPoints:
+        print(str(len(x))+" points considered")
+        plt.scatter(x, y, c='k', marker='.')
 
     # Set colormap
     if args.cmap:
@@ -134,4 +183,15 @@ if __name__ == '__main__':
     else:
         plt.title(args.title)
 
+    if args.STATIONS:
+        with open(args.STATIONS) as file:
+            namesStats, xStats, zStats = readStations(args.STATIONS)
+            plt.scatter(xStats, zStats, c='g', marker='^')
+
+    if args.SOURCES:
+        with open(args.SOURCES) as file:
+            xSources, zSources = readTwoColumnsFile(args.SOURCES)
+            plt.scatter(xSources, zSources, c='r', marker='*')
+
     plt.show()
+

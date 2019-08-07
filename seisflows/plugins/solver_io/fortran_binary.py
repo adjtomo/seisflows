@@ -1,13 +1,25 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
-from os.path import abspath, getsize, join
+# Import system modules
+from os.path import getsize, join
 from shutil import copyfile
-from seisflows.tools.tools import iterable
 
+# Import numpy
 import numpy as np
+
+# Local imports
+from seisflows.tools.tools import iterable
 
 
 def read_slice(path, parameters, iproc):
     """ Reads SPECFEM model slice(s)
+        Such as, for example : proc000005_vp.bin
+        In that specific case it would be : read_slice(path, 'vp', 5)
     """
     vals = []
     for key in iterable(parameters):
@@ -39,8 +51,7 @@ def _read(filename):
         # read size of record
         file.seek(0)
         n = np.fromfile(file, dtype='int32', count=1)[0]
-
-        if n==nbytes-8:
+        if n == nbytes-8:
             file.seek(4)
             data = np.fromfile(file, dtype='float32')
             return data[:-1]
@@ -61,4 +72,3 @@ def _write(v, filename):
         n.tofile(file)
         v.tofile(file)
         n.tofile(file)
-

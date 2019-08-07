@@ -1,10 +1,19 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
-import numpy as np
-
 from glob import glob
 from os.path import join
 
+# Import Numpy
+import numpy as np
+
+# Local imports
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.tools import divides, exists
@@ -27,8 +36,8 @@ class inversion(base):
       Peforms iterative nonlinear inversion and provides a base class on top
       of which specialized strategies can be implemented.
 
-      To allow customization, the inversion workflow is divided into generic 
-      methods such as 'initialize', 'finalize', 'evaluate_function', 
+      To allow customization, the inversion workflow is divided into generic
+      methods such as 'initialize', 'finalize', 'evaluate_function',
       'evaluate_gradient', which can be easily overloaded.
 
       Calls to forward and adjoint solvers are abstracted through the 'solver'
@@ -106,12 +115,11 @@ class inversion(base):
         if not exists(PATH.MODEL_INIT):
             raise Exception()
 
-
     def main(self):
         """ Carries out seismic inversion
         """
         optimize.iter = PAR.BEGIN
-        self.setup()
+        self.setup()  # This will generate synthetics if no data is supplied
         print ''
 
         while optimize.iter <= PAR.END:
@@ -133,24 +141,28 @@ class inversion(base):
             optimize.iter += 1
             print ''
 
-
     def setup(self):
-        """ Lays groundwork for inversion
+        """ Lays groundwork for inversion.
+            Runs setup method for preprocess, postprocess, optimize and also
+            for the solver through the system: system.run('solver','setup')
+            This will copy user supplied data or generate it from a
+            'real' model supplied
+            This will setup the mesh for the initial model supplied
+            If path LOCAL is supplied this is done even at iteration > 1
         """
+
         if optimize.iter == 1:
             preprocess.setup()
             postprocess.setup()
             optimize.setup()
 
-        if optimize.iter == 1 or \
-           PATH.LOCAL:
-            if PATH.DATA:
-                print 'Copying data' 
+        if optimize.iter == 1 or PATH.LOCAL:
+            if PATH.DATA:  # If data is supplied (path to data given)
+                print 'Copying user supplied data'
             else:
-                print 'Generating data' 
+                print 'Generating synthetic data'
 
             system.run('solver', 'setup')
-
 
     def initialize(self):
         """ Prepares for next model update iteration
@@ -163,12 +175,10 @@ class inversion(base):
 
         self.write_misfit(path=PATH.GRAD, suffix='new')
 
-
     def compute_direction(self):
         """ Computes search direction
         """
         optimize.compute_direction()
-
 
     def line_search(self):
         """ Conducts line search in given search direction
@@ -202,7 +212,6 @@ class inversion(base):
                     print ' Line search failed\n\n Aborting...'
                     sys.exit(-1)
 
-
     def evaluate_function(self):
         """ Performs forward simulation to evaluate objective function
         """
@@ -213,7 +222,6 @@ class inversion(base):
 
         self.write_misfit(path=PATH.FUNC, suffix='try')
 
-
     def evaluate_gradient(self):
         """ Performs adjoint simulation to evaluate gradient
         """
@@ -222,7 +230,6 @@ class inversion(base):
                    export_traces=divides(optimize.iter, PAR.SAVETRACES))
 
         self.write_gradient(path=PATH.GRAD, suffix='new')
-
 
     def finalize(self):
         """ Saves results from current model update iteration
@@ -244,7 +251,6 @@ class inversion(base):
         if divides(optimize.iter, PAR.SAVERESIDUALS):
             self.save_residuals()
 
-
     def clean(self):
         """ Cleans directories in which function and gradient evaluations were
           carried out
@@ -254,67 +260,62 @@ class inversion(base):
         unix.mkdir(PATH.GRAD)
         unix.mkdir(PATH.FUNC)
 
-
     def checkpoint(self):
         """ Writes information to disk so workflow can be resumed following a
           break
         """
         save()
 
-
     def write_model(self, path='', suffix=''):
         """ Writes model in format expected by solver
         """
         src = 'm_'+suffix
-        dst = path +'/'+ 'model'
+        dst = path + '/' + 'model'
         solver.save(solver.split(optimize.load(src)), dst)
 
-
     def write_gradient(self, path='', suffix=''):
-        """ Writes gradient in format expected by nonlinear optimization library
+        """ Writes gradient in format expected by nonlinear optimization
+        library
         """
         src = join(path, 'gradient')
         dst = 'g_'+suffix
         postprocess.write_gradient(path)
         parts = solver.load(src, suffix='_kernel')
-        optimize.save(dst, solver.merge(parts))
-
+        # At some point in specfem development the gradient became - gradient
+        if PAR.MINUSGRADIENT:
+            optimize.save(dst, -solver.merge(parts))
+        else:
+            optimize.save(dst, solver.merge(parts))
 
     def write_misfit(self, path='', suffix=''):
         """ Writes misfit in format expected by nonlinear optimization library
         """
-        src = glob(path +'/'+ 'residuals/*')
+        src = glob(path + '/' + 'residuals/*')
         dst = 'f_'+suffix
         total_misfit = preprocess.sum_residuals(src)
         optimize.savetxt(dst, total_misfit)
-
 
     def save_gradient(self):
         src = join(PATH.GRAD, 'gradient')
         dst = join(PATH.OUTPUT, 'gradient_%04d' % optimize.iter)
         unix.mv(src, dst)
 
-
     def save_model(self):
         src = 'm_new'
         dst = join(PATH.OUTPUT, 'model_%04d' % optimize.iter)
         solver.save(solver.split(optimize.load(src)), dst)
-
 
     def save_kernels(self):
         src = join(PATH.GRAD, 'kernels')
         dst = join(PATH.OUTPUT, 'kernels_%04d' % optimize.iter)
         unix.mv(src, dst)
 
-
     def save_traces(self):
         src = join(PATH.GRAD, 'traces')
         dst = join(PATH.OUTPUT, 'traces_%04d' % optimize.iter)
         unix.mv(src, dst)
 
-
     def save_residuals(self):
         src = join(PATH.GRAD, 'residuals')
         dst = join(PATH.OUTPUT, 'residuals_%04d' % optimize.iter)
         unix.mv(src, dst)
-

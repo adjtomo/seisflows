@@ -1,19 +1,25 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 from copy import copy
-
 import os
 
+# Import Numpy and some utilities from Scipy
 import numpy as np
 import scipy.signal as _signal
 import scipy.interpolate as _interp
-
 from scipy.signal import hilbert as analytic
 
 
 def gauss2(X, Y, mu, sigma, normalize=True):
     """ Evaluates Gaussian over points of X,Y
     """
-    # evaluates Gaussian over X,Y
+
     D = sigma[0, 0]*sigma[1, 1] - sigma[0, 1]*sigma[1, 0]
     B = np.linalg.inv(sigma)
     X = X - mu[0]
@@ -48,7 +54,8 @@ def backtrack3(f0, g0, x1, f1, x2, f2):
 
 
 def polyfit2(x, f):
-    # parabolic fit
+    """ Parabolic fit
+    """
     i = np.argmin(f)
     p = np.polyfit(x[i-1:i+2], f[i-1:i+2], 2)
 
@@ -60,7 +67,8 @@ def polyfit2(x, f):
 
 
 def lsq2(x, f):
-    # parabolic least squares fit
+    """ Parabolic least squares fit
+    """
     p = np.polyfit(x, f, 2)
     if p[0] > 0:
         return -p[1]/(2*p[0])
@@ -69,14 +77,14 @@ def lsq2(x, f):
         raise Exception()
 
 
-def angle(x,y):
-    xy = dot(x,y)
-    xx = dot(x,x)
-    yy = dot(y,y)
+def angle(x, y):
+    xy = dot(x, y)
+    xx = dot(x, x)
+    yy = dot(y, y)
     return np.arccos(xy/(xx*yy)**0.5)
 
 
-def dot(x,y):
+def dot(x, y):
     return np.dot(
         np.squeeze(x),
         np.squeeze(y))
@@ -89,8 +97,7 @@ def hilbert(w):
 infinity = np.inf
 
 
-
-### finite difference
+# Finite difference
 
 def nabla(V, h=[]):
     """ Returns sum of first-order spatial derivatives of a function defined on
@@ -98,29 +105,32 @@ def nabla(V, h=[]):
     """
     W = np.zeros(V.shape)
 
-    if h==[]:
-       h = np.ones((V.ndim, 1))
+    if h == []:
+        h = np.ones((V.ndim, 1))
 
     # interior
-    W[1:-1,1:-1] += (V[1:-1,2:] - V[1:-1,:-2])/(2.*h[0])
-    W[1:-1,1:-1] += (V[2:,1:-1] - V[:-2,1:-1])/(2.*h[1])
+    W[1:-1, 1:-1] += (V[1:-1, 2:] - V[1:-1, :-2])/(2.*h[0])
+    W[1:-1, 1:-1] += (V[2:, 1:-1] - V[:-2, 1:-1])/(2.*h[1])
 
     # top/bottom edges
-    W[0,1:-1] = (V[1,1:-1] - V[0,1:-1])/h[1] + (V[0,2:] - V[0,:-2])/(2.*h[0])
-    W[-1,1:-1] = (V[-1,1:-1] - V[-2,1:-1])/h[1] + (V[-1,2:] - V[-1,:-2])/(2.*h[0])
+    W[0, 1:-1] = (V[1, 1:-1] - V[0, 1:-1])/h[1] + \
+                 (V[0, 2:] - V[0, :-2])/(2.*h[0])
+    W[-1, 1:-1] = (V[-1, 1:-1] - V[-2, 1:-1])/h[1] + \
+                  (V[-1, 2:] - V[-1, :-2])/(2.*h[0])
 
     # left/right edges
-    W[1:-1,0] = (V[2:,0] - V[:-2,0])/(2.*h[1]) + (V[1:-1,1] - V[1:-1,0])/h[0]
-    W[1:-1,-1] = (V[2:,-1] - V[:-2,-1])/(2.*h[1]) + (V[1:-1,-1] - V[1:-1,-2])/h[0]
+    W[1:-1, 0] = (V[2:, 0] - V[:-2, 0])/(2.*h[1]) + \
+                 (V[1:-1, 1] - V[1:-1, 0])/h[0]
+    W[1:-1, -1] = (V[2:, -1] - V[:-2, -1])/(2.*h[1]) + \
+                  (V[1:-1, -1] - V[1:-1, -2])/h[0]
 
     # corners
-    W[0,0] = (V[1,0] - V[0,0])/h[1] + (V[0,1] - V[0,0])/h[0]
-    W[0,-1] = (V[1,-1] - V[0,-1])/h[1] + (V[0,-2] - V[0,-1])/h[0]
-    W[-1,0] = (V[-2,0] - V[-1,0])/h[1] + (V[-1,1] - V[-1,0])/h[0]
-    W[-1,-1] = (V[-1,-1] - V[-2,-1])/h[1] + (V[-1,-1] - V[-1,-2])/h[0]
+    W[0, 0] = (V[1, 0] - V[0, 0])/h[1] + (V[0, 1] - V[0, 0])/h[0]
+    W[0, -1] = (V[1, -1] - V[0, -1])/h[1] + (V[0, -2] - V[0, -1])/h[0]
+    W[-1, 0] = (V[-2, 0] - V[-1, 0])/h[1] + (V[-1, 1] - V[-1, 0])/h[0]
+    W[-1, -1] = (V[-1, -1] - V[-2, -1])/h[1] + (V[-1, -1] - V[-1, -2])/h[0]
 
     return W
-
 
 
 def nabla2(V, h=[]):
@@ -129,26 +139,26 @@ def nabla2(V, h=[]):
     """
     W = np.zeros(V.shape)
 
-    if h==[]:
-       h = np.ones((V.ndim, 1))
+    if h == []:
+        h = np.ones((V.ndim, 1))
 
     # interior
-    W[1:-1,1:-1] += (V[1:-1,2:] -2.*V[1:-1,1:-1] + V[1:-1,:-2])/h[0]**2
-    W[1:-1,1:-1] += (V[2:,1:-1] -2.*V[1:-1,1:-1] + V[:-2,1:-1])/h[1]**2
+    W[1:-1, 1:-1] += (V[1:-1, 2:] - 2.*V[1:-1, 1:-1] + V[1:-1, :-2])/h[0]**2
+    W[1:-1, 1:-1] += (V[2:, 1:-1] - 2.*V[1:-1, 1:-1] + V[:-2, 1:-1])/h[1]**2
 
     # left/right edges
-    W[0,1:-1] = W[1,1:-1]
-    W[-1,1:-1] = W[-2,1:-1]
+    W[0, 1:-1] = W[1, 1:-1]
+    W[-1, 1:-1] = W[-2, 1:-1]
 
     # top/bottom edges
-    W[0,1:-1] = W[1,1:-1]
-    W[-1,1:-1] = W[-2,1:-1]
+    W[0, 1:-1] = W[1, 1:-1]
+    W[-1, 1:-1] = W[-2, 1:-1]
 
     # corners
-    W[0,0] = (W[0,1] + W[1,0])/2
-    W[0,-1] = (W[0,-2] + W[1,-1])/2
-    W[-1,0] = (W[-1,1] + W[-2,0])/2
-    W[-1,-1] = (W[-1,-2] + W[-2,-1])/2
+    W[0, 0] = (W[0, 1] + W[1, 0])/2
+    W[0, -1] = (W[0, -2] + W[1, -1])/2
+    W[-1, 0] = (W[-1, 1] + W[-2, 0])/2
+    W[-1, -1] = (W[-1, -2] + W[-2, -1])/2
 
     return W
 
@@ -161,44 +171,42 @@ def grad(V, h=[]):
     X = np.zeros((ny, nx))
     Y = np.zeros((ny, nx))
 
-    if h==[]:
-       h = np.ones((V.ndim, 1))
+    if h == []:
+        h = np.ones((V.ndim, 1))
 
     # interior
-    X[:,1:-1] = (V[:,2:] - V[:,:-2])/(2.*h[0])
-    Y[1:-1,:] = (V[2:,:] - V[:-2,:])/(2.*h[1])
+    X[:, 1:-1] = (V[:, 2:] - V[:, :-2])/(2.*h[0])
+    Y[1:-1, :] = (V[2:, :] - V[:-2, :])/(2.*h[1])
 
     # left/right edges
-    X[:,0] = (V[:,1] - V[:,0])/h[1]
-    X[:,-1] = (V[:,-1] - V[:,-2])/h[1]
+    X[:, 0] = (V[:, 1] - V[:, 0])/h[1]
+    X[:, -1] = (V[:, -1] - V[:, -2])/h[1]
 
     # top/bottom edges
-    Y[0,:] = (V[1,:] - V[0,:])/h[0]
-    Y[-1,:] = (V[-1,:] - V[-2,:])/h[0]
+    Y[0, :] = (V[1, :] - V[0, :])/h[0]
+    Y[-1, :] = (V[-1, :] - V[-2, :])/h[0]
 
-    return X,Y
+    return X, Y
 
 
 def tv(Z, h=[], epsilon=1.e-6):
     nrow = Z.shape[0]
     ncol = Z.shape[1]
 
-    Zx = (Z[:,1:] - Z[:,:-1])/h[0]
-    Zy = (Z[1:,:] - Z[:-1,:])/h[1]
+    Zx = (Z[:, 1:] - Z[:, :-1])/h[0]
+    Zy = (Z[1:, :] - Z[:-1, :])/h[1]
 
     top = np.zeros((nrow, ncol))
     bot = np.zeros((nrow, ncol))
 
-    top[:,1:] += Zx
-    top[1:,:] += Zy
-    top[ :,-1] += Zx[:,-1]
-    top[-1, :] += Zy[-1,:]
+    top[:, 1:] += Zx
+    top[1:, :] += Zy
+    top[:, -1] += Zx[:, -1]
+    top[-1, :] += Zy[-1, :]
 
-    bot[:,1:] += Zx**2
-    bot[1:,:] += Zy**2
-    bot[ :,-1] += Zx[:,-1]**2
-    bot[-1, :] += Zy[-1,:]**2
+    bot[:, 1:] += Zx**2
+    bot[1:, :] += Zy**2
+    bot[:, -1] += Zx[:, -1]**2
+    bot[-1, :] += Zy[-1, :]**2
 
     return top/(bot + epsilon*bot.max())**0.5
-
-

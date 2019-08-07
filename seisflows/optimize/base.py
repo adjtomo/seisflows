@@ -1,17 +1,26 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
+from os.path import join
+
+# Import Numpy
 import numpy as np
 
-from os.path import join
+# Local imports
 from seisflows.config import ParameterError
 from seisflows.plugins import line_search, preconds
 from seisflows.tools import msg, unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.math import angle
-from seisflows.tools.seismic import  Writer
+from seisflows.tools.seismic import Writer
 
-
-# seisflows.config objects 
+# seisflows.config objects
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
@@ -24,9 +33,9 @@ class base(object):
      both search direction and line search.
 
      To reduce memory overhead, vectors are read from disk rather than passed
-     from calling routines. For example, at the beginning of compute_direction 
+     from calling routines. For example, at the beginning of compute_direction
      the current gradient is  read from  'g_new' and the resulting search
-     direction is written to 'p_new'. As the inversion progresses, other 
+     direction is written to 'p_new'. As the inversion progresses, other
      information is stored as well.
 
      Variables
@@ -45,11 +54,11 @@ class base(object):
     def check(self):
         """ Checks parameters, paths, and dependencies
         """
-        # The default numerical parameters defined below should work well for a 
+        # The default numerical parameters defined below should work well for a
         # range of applications without manual tuning. If the nonlinear
         # optimization procedure stagnates, it may be due to issues involving
         # data quality or the choice of data misfit, data processing, or
-        # regularization parameters.  Problems in any of these areas usually 
+        # regularization parameters.  Problems in any of these areas usually
         # manifest themselves through stagnation of the nonlinear optimization
         # algorithm.
 
@@ -77,7 +86,6 @@ class base(object):
         if 'OPTIMIZE' not in PATH:
             setattr(PATH, 'OPTIMIZE', PATH.SCRATCH+'/'+'optimize')
 
-
         # assertions
         if 'WORKDIR' not in PATH:
             raise ParameterError
@@ -100,7 +108,6 @@ class base(object):
 
         if PAR.STEPLENINIT and PAR.STEPLENMAX:
             assert PAR.STEPLENINIT < PAR.STEPLENMAX
-
 
     def setup(self):
         """ Sets up nonlinear optimization machinery
@@ -126,7 +133,6 @@ class base(object):
             solver = sys.modules['seisflows_solver']
             self.save('m_new', solver.merge(solver.load(PATH.MODEL_INIT)))
 
-
     def compute_direction(self):
         """ Computes search direction
         """
@@ -139,7 +145,6 @@ class base(object):
             p_new = -g_new
         self.save('p_new', p_new)
 
-
     def initialize_search(self):
         """ Determines first step length in line search
         """
@@ -149,8 +154,8 @@ class base(object):
         f = self.loadtxt('f_new')
         norm_m = max(abs(m))
         norm_p = max(abs(p))
-        gtg = self.dot(g,g)
-        gtp = self.dot(g,p)
+        gtg = self.dot(g, g)
+        gtp = self.dot(g, p)
 
         if self.restarted:
             self.line_search.clear_history()
@@ -161,16 +166,15 @@ class base(object):
                 PAR.STEPLENMAX*norm_m/norm_p
 
         # determine initial step length
-        alpha, _ = self.line_search.initialize(0.,f,gtg,gtp)
+        alpha, _ = self.line_search.initialize(0., f, gtg, gtp)
 
         # optional initial step length override
-        if PAR.STEPLENINIT and len(self.line_search.step_lens)<=1:
+        if PAR.STEPLENINIT and len(self.line_search.step_lens) <= 1:
             alpha = PAR.STEPLENINIT*norm_m/norm_p
 
         # write model corresponding to chosen step length
         self.savetxt('alpha', alpha)
         self.save('m_try', m + alpha*p)
-
 
     def update_search(self):
         """ Updates line search status and step length
@@ -183,7 +187,7 @@ class base(object):
         alpha, status = self.line_search.update(
             self.loadtxt('alpha'),
             self.loadtxt('f_try'))
- 
+
         if status >= 0:
             # write model corresponding to chosen step length
             m = self.load('m_new')
@@ -191,7 +195,6 @@ class base(object):
             self.savetxt('alpha', alpha)
             self.save('m_try', m + alpha*p)
         return status
-
 
     def finalize_search(self):
         """ Prepares algorithm machinery and scratch directory for next
@@ -220,7 +223,7 @@ class base(object):
         self.savetxt('f_new', f.min())
 
         # output latest statistics
-        self.writer('factor', -self.dot(g,g)**-0.5 * (f[1]-f[0])/(x[1]-x[0]))
+        self.writer('factor', -self.dot(g, g)**-0.5 * (f[1]-f[0])/(x[1]-x[0]))
         self.writer('gradient_norm_L1', np.linalg.norm(g, 1))
         self.writer('gradient_norm_L2', np.linalg.norm(g, 2))
         self.writer('misfit', f[0])
@@ -228,21 +231,20 @@ class base(object):
         self.writer('slope', (f[1]-f[0])/(x[1]-x[0]))
         self.writer('step_count', self.line_search.step_count)
         self.writer('step_length', x[f.argmin()])
-        self.writer('theta', 180.*np.pi**-1*angle(p,-g))
+        self.writer('theta', 180.*np.pi**-1*angle(p, -g))
 
         self.line_search.writer.newline()
-
 
     def retry_status(self):
         """ Determines if restart is worthwhile
 
-          After failed line search, determines if restart is worthwhile by 
+          After failed line search, determines if restart is worthwhile by
           checking, in effect, if search direction was the same as gradient
           direction
         """
         g = self.load('g_new')
         p = self.load('p_new')
-        theta = angle(p,-g)
+        theta = angle(p, -g)
 
         if PAR.VERBOSE >= 2:
             print ' theta: %6.3f' % theta
@@ -253,13 +255,12 @@ class base(object):
         else:
             return 1
 
-
     def restart(self):
         """ Restarts nonlinear optimization algorithm
 
           Keeps current position in model space, but discards history of
           nonlinear optimization algorithm in an attempt to recover from
-          numerical stagnation 
+          numerical stagnation
         """
         g = self.load('g_new')
         self.save('p_new', -g)
@@ -268,8 +269,7 @@ class base(object):
         self.line_search.writer.iter -= 1
         self.line_search.writer.newline()
 
-
-    def dot(self,x,y):
+    def dot(self, x, y):
         """ Computes inner product between vectors
         """
         return np.dot(
@@ -291,5 +291,3 @@ class base(object):
     def savetxt(self, filename, scalar):
         # writes scalars to disk
         np.savetxt(PATH.OPTIMIZE+'/'+filename, [scalar], '%11.6e')
-
-

@@ -1,4 +1,12 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+#
+###############################################################################
 
+# Local imports
 from seisflows.tools.tools import findpath
 from seisflows.tools.seismic import setpar
 
@@ -42,5 +50,3 @@ def write_receivers(h):
 
     with open(file, 'w') as f:
         f.writelines(lines)
-
-

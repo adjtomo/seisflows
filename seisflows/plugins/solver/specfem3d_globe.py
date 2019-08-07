@@ -1,4 +1,12 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+#
+###############################################################################
 
+# Local imports
 from seisflows.tools.tools import findpath
 from seisflows.tools.seismic import setpar
 
@@ -48,5 +56,3 @@ def write_parameters(par, version):
     """ Writes parameters to text file
     """
     raise NotImplementedError
-
-

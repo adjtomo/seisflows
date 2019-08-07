@@ -1,9 +1,16 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
 
+# Local imports
 from seisflows.config import ParameterError
 from seisflows.workflow.base import base
-
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']

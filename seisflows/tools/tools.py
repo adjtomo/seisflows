@@ -1,4 +1,11 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import json
 import os
 import pickle
@@ -7,15 +14,16 @@ import subprocess
 import sys
 import time
 import traceback
-
 from imp import load_source
 from importlib import import_module
 from pkgutil import find_loader
 from os.path import basename, exists
 from subprocess import check_output
 
+# Import Numpy
 import numpy as np
 
+# Local imports
 from seisflows.tools import msg
 
 
@@ -152,7 +160,6 @@ def savenpy(filename, v):
     os.rename(filename + '.npy', filename)
 
 
-
 def loadyaml(filename):
     import yaml
 
@@ -161,8 +168,9 @@ def loadyaml(filename):
 
     # replace None
     if 'None' in dict.values():
-        for key,val in dict.items():
-            if val=='None': dict[key]=None
+        for key, val in dict.items():
+            if val == 'None':
+                dict[key] = None
 
     return dict
 
@@ -194,7 +202,8 @@ def nproc():
 
 
 def _nproc1():
-    # get number of processors using nproc
+    """ Get number of processors using nproc
+    """
     if not which('nproc'):
         raise EnvironmentError
     stdout = check_output('nproc --all', shell=True)
@@ -203,11 +212,11 @@ def _nproc1():
 
 
 def _nproc2():
-    # get number of processors using /proc/cpuinfo
+    """ Get number of processors using /proc/cpuinfo
+    """
     if not exists('/proc/cpuinfo'):
         raise EnvironmentError
-    stdout = check_output("cat /proc/cpuinfo | awk '/^processor/{print $3}'", 
-                shell=True)
+    stdout = check_output("cat /proc/cpuinfo | awk '/^processor/{print $3}'",
+                          shell=True)
     nproc = len(stdout.split('\n'))
     return nproc
-

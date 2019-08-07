@@ -1,7 +1,17 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
+
+# Import Numpy
 import numpy as np
 
+# Local imports
 from seisflows.config import custom_import, ParameterError
 from seisflows.plugins import optimize
 
@@ -34,7 +44,6 @@ class LBFGS(custom_import('optimize', 'base')):
 
         super(LBFGS, self).check()
 
-
     def setup(self):
         super(LBFGS, self).setup()
 
@@ -45,14 +54,11 @@ class LBFGS(custom_import('optimize', 'base')):
             thresh=PAR.LBFGSTHRESH,
             precond=self.precond)
 
-
     def compute_direction(self):
         g_new = self.load('g_new')
         p_new, self.restarted = self.LBFGS()
         self.save('p_new', p_new)
 
-
     def restart(self):
         super(LBFGS, self).restart()
         self.LBFGS.restart()
-

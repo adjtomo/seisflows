@@ -1,8 +1,17 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+#
+###############################################################################
 
+# Import numpy
+import numpy as np
+
+# Local imports
 from seisflows.plugins.line_search import Bracket
 from seisflows.tools.math import backtrack2
-
-import numpy as np
 
 
 class Backtrack(Bracket):
@@ -11,7 +20,7 @@ class Backtrack(Bracket):
       Variables
           x - list of step lenths from current line search
           f - correpsonding list of function values
-          gtg - dot product of gradient with itself                    
+          gtg - dot product of gradient with itself
           gtp - dot product of gradient and search direction
 
       Status codes
@@ -25,19 +34,18 @@ class Backtrack(Bracket):
         """
         x, f, gtg, gtp, step_count, update_count = self.search_history()
 
-
-        if update_count==0:
+        if update_count == 0:
             # quasi-Newton direction is not yet scaled properly, so instead
             # of a bactracking line perform a bracketing line search
             alpha, status = super(Backtrack, self).calculate_step()
 
-        elif step_count==0:
+        elif step_count == 0:
             # our choice of a unit step length here assumes a well-scaled
             # search direction
             alpha = min(1., self.step_len_max)
             status = 0
 
-        elif _check_decrease(x,f):
+        elif _check_decrease(x, f):
             alpha = x[f.argmin()]
             status = 1
 
@@ -55,13 +63,11 @@ class Backtrack(Bracket):
         return alpha, status
 
 
-
 def _check_decrease(step_lens, func_vals, c=1.e-4):
     """ Checks for sufficient decrease
     """
-    x,f = step_lens, func_vals
+    x, f = step_lens, func_vals
     if f.min() < f[0]:
         return 1
     else:
         return 0
-

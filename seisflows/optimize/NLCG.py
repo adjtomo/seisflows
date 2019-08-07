@@ -1,7 +1,17 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
+
+# Import Numpy
 import numpy as np
 
+# Local imports
 from seisflows.config import custom_import, ParameterError
 from seisflows.plugins import optimize
 
@@ -30,7 +40,6 @@ class NLCG(custom_import('optimize', 'base')):
 
         super(NLCG, self).check()
 
-
     def setup(self):
         super(NLCG, self).setup()
 
@@ -40,16 +49,11 @@ class NLCG(custom_import('optimize', 'base')):
             thresh=PAR.NLCGTHRESH,
             precond=self.precond)
 
-
     def compute_direction(self):
         g_new = self.load('g_new')
         p_new, self.restarted = self.NLCG()
         self.save('p_new', p_new)
 
-
     def restart(self):
         super(NLCG, self).restart()
         self.NLCG.restart()
-
-
-

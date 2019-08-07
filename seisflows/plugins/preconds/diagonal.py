@@ -1,8 +1,17 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+#
+###############################################################################
 
+# Import system modules
 import sys
-import numpy as np
-
 from os.path import exists
+
+# Import Numpy
+import numpy as np
 
 
 class Diagonal(object):
@@ -15,7 +24,6 @@ class Diagonal(object):
         """
         PAR = sys.modules['seisflows_parameters']
         PATH = sys.modules['seisflows_paths']
-
         solver = sys.modules['seisflows_solver']
 
         if 'PRECOND' not in PATH:
@@ -28,11 +36,8 @@ class Diagonal(object):
         self.load = solver.load
         self.merge = solver.merge
 
-
     def __call__(self, q):
         """ Applies preconditioner to given vector
         """
         p = self.merge(self.load(self.path))
         return p*q
-
-

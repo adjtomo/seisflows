@@ -1,10 +1,20 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
 import traceback
-import numpy as np
-
 from glob import glob
 from os.path import abspath, basename, dirname, exists
+
+# Import Numpy
+import numpy as np
+
+# Local imports
 from seisflows.config import ParameterError
 from seisflows.workflow.base import base
 
@@ -37,7 +47,6 @@ class test_preprocess(base):
         if 'FILTER' not in PAR:
             setattr(PAR, 'FILTER', None)
 
-
         if 'DATA' not in PATH:
             raise Exception
 
@@ -53,7 +62,6 @@ class test_preprocess(base):
         if 'WORKDIR' not in PATH:
             setattr(PATH, 'WORKDIR', abspath('.'))
 
-
     def main(self):
         """ Tests data processing methods
         """
@@ -61,35 +69,30 @@ class test_preprocess(base):
         print 'testing reader...'
         data = self.test_reader()
 
-
         print 'testing writer...'
         self.test_writer(data)
-
 
         if PAR.NORMALIZE:
             print 'testing normalizing...'
             self.test_normalize(data)
 
-
         if PAR.FILTER:
             print 'testing filtering...'
             self.test_filter(data)
 
-
         if PAR.MUTE:
             print 'testing muting...'
             self.test_mute(data)
-
 
         if PAR.MISFIT and \
            PATH.DATA and \
            PATH.SYNTHETICS:
 
             dat = preprocess.reader(dirname(PATH.DATA),
-                basename(PATH.DATA))
+                                    basename(PATH.DATA))
 
             syn = preprocess.reader(dirname(PATH.SYNTHETICS),
-                basename(PATH.SYNTHETICS))
+                                    basename(PATH.SYNTHETICS))
 
             print 'testing misfit...'
             self.test_misfit(dat, syn)
@@ -99,29 +102,25 @@ class test_preprocess(base):
 
         print 'SUCCESS\n'
 
-
-
     def test_reader(self):
         try:
             preprocess.setup()
 
-        except Exception,e:
+        except Exception, e:
             print 'setup FAILED\n'
             sys.exit(-1)
 
         try:
             data = preprocess.reader(dirname(PATH.DATA),
-                basename(PATH.DATA))
+                                     basename(PATH.DATA))
 
-        except Exception,e:
+        except Exception, e:
             print 'reader FAILED'
             sys.exit(-1)
 
         else:
             print ''
             return data
-
-
 
     def test_writer(self, data):
         try:
@@ -132,8 +131,7 @@ class test_preprocess(base):
 
             preprocess.writer(data, PATH.WORKDIR, 'output_data'+extension)
 
-
-        except Exception,e:
+        except Exception, e:
             print 'writer FAILED\n'
             print e.message
             print e.__class__.__name__
@@ -143,13 +141,11 @@ class test_preprocess(base):
         else:
             print ''
 
-
-
     def test_normalize(self, dat):
         try:
             out = preprocess.apply_normalize(dat)
 
-        except Exception,e:
+        except Exception, e:
             print 'normalization FAILED\n'
             print e.message
             print e.__class__.__name__
@@ -160,13 +156,11 @@ class test_preprocess(base):
             self.save(out, 'output_data_normalized')
             print ''
 
-
-
     def test_filter(self, dat):
         try:
             out = preprocess.apply_filter(dat)
 
-        except Exception,e:
+        except Exception, e:
             print 'filtering FAILED\n'
             print e.message
             print e.__class__.__name__
@@ -177,12 +171,11 @@ class test_preprocess(base):
             self.save(out, 'output_data_filtered')
             print ''
 
-
     def test_mute(self, dat):
         try:
             out = preprocess.apply_mute(dat)
 
-        except Exception,e:
+        except Exception, e:
             print 'muting FAILED\n'
             print e.message
             print e.__class__.__name__
@@ -193,7 +186,6 @@ class test_preprocess(base):
             self.save(out, 'output_data_muted')
             print ''
 
-
     def test_misfit(self, dat, syn):
         nt, dt, _ = preprocess.get_time_scheme(syn)
         nn, _ = preprocess.get_network_size(syn)
@@ -202,12 +194,10 @@ class test_preprocess(base):
         for ii in range(nn):
             rsd.append(preprocess.misfit(syn[ii].data, dat[ii].data, nt, dt))
 
-
         filename = PATH.WORKDIR+'/'+'output_misfit'
         np.savetxt(filename, rsd)
 
         print ''
-
 
     def test_adjoint(self, dat, syn):
         nt, dt, _ = preprocess.get_time_scheme(syn)
@@ -215,12 +205,12 @@ class test_preprocess(base):
 
         adj = syn
         for ii in range(nn):
-            adj[ii].data = preprocess.adjoint(syn[ii].data, dat[ii].data, nt, dt)
+            adj[ii].data = preprocess.adjoint(syn[ii].data, dat[ii].data, nt,
+                                              dt)
 
         self.save(adj, 'output_adjoint')
 
         print ''
-
 
     def save(self, data, filename):
         if PAR.FORMAT in ['SU', 'su']:
@@ -229,4 +219,3 @@ class test_preprocess(base):
             extension = ''
 
         preprocess.writer(data, PATH.WORKDIR, filename+extension)
-

@@ -1,3 +1,10 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
+
 
 class ParameterError(ValueError):
     def __init__(self, *args):
@@ -13,4 +20,3 @@ class ParameterError(ValueError):
         elif key in obj:
             msg = '%s has bad value: ' % args[0], args[1].__getattr__(args[0])
             super(ParameterError, self).__init__(msg)
-

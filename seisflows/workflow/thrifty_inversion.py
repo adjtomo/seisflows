@@ -1,6 +1,14 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
 
+# Local imports
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.config import ParameterError, custom_import
@@ -22,46 +30,40 @@ class thrifty_inversion(custom_import('workflow', 'inversion')):
       same
     """
 
-    status=0
+    status = 0
 
     def initialize(self):
-        if self.status==0:
+        if self.status == 0:
             super(thrifty_inversion, self).initialize()
-
 
     def clean(self):
         # can forward simulations from line search be carried over?
         self.update_status()
 
-        if self.status==1:
+        if self.status == 1:
             unix.rm(PATH.GRAD)
             unix.mv(PATH.FUNC, PATH.GRAD)
             unix.mkdir(PATH.FUNC)
         else:
             super(thrifty_inversion, self).clean()
 
-
     def update_status(self):
         if PAR.LINESEARCH != 'Backtrack':
             # only works for backtracking line search
-            self.status=0
+            self.status = 0
 
-        elif optimize.iter==PAR.BEGIN or \
-             optimize.restarted:
+        elif optimize.iter == PAR.BEGIN or optimize.restarted:
             # even if backtracking line search is chosen, may not work on
             # first iteration or following a restart
-            self.status=0
+            self.status = 0
 
-        elif optimize.iter==PAR.END:
+        elif optimize.iter == PAR.END:
             # may not work after resuming saved workflow
-            self.status=0
+            self.status = 0
 
         elif PATH.LOCAL:
             # may not work if using local filesystems
-            self.status=0
+            self.status = 0
 
         else:
-            self.status=1
-
-
-
+            self.status = 1

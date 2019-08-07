@@ -1,9 +1,19 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+#
+###############################################################################
 
-
+# Import system modules
 from os.path import abspath
-from seisflows.tools.array import count_zeros
 
+# Import numpy
 import numpy as np
+
+# Local imports
+from seisflows.tools.array import count_zeros
 
 
 class Base(object):
@@ -14,7 +24,7 @@ class Base(object):
           f - correpsonding list of function values
           m - how many step lengths in current line search?
           n - how many model updates in optimization problem?
-          gtg - dot product of gradient with itself                    
+          gtg - dot product of gradient with itself
           gtp - dot product of gradient and search direction
 
       Status codes
@@ -23,9 +33,9 @@ class Base(object):
           status < 0  : failed
     """
     def __init__(self,
-                step_count_max=10,
-                step_len_max=np.inf,
-                path=abspath('.')):
+                 step_count_max=10,
+                 step_len_max=np.inf,
+                 path=abspath('.')):
 
         # maximum number of trial steps
         self.step_count_max = step_count_max
@@ -41,7 +51,6 @@ class Base(object):
         self.gtg = []
         self.gtp = []
 
-
     def clear_history(self):
         """ Clears line search history
         """
@@ -49,7 +58,6 @@ class Base(object):
         self.step_lens = []
         self.gtg = []
         self.gtp = []
-
 
     def search_history(self, sort=True):
         """ A convenience function, collects information needed to determine
@@ -65,7 +73,6 @@ class Base(object):
             x = x[abs(x).argsort()]
         return x, f, self.gtg, self.gtp, i, j
 
-
     def initialize(self, step_len, func_val, gtg, gtp):
 
         # update search history
@@ -79,7 +86,6 @@ class Base(object):
 
         return self.calculate_step()
 
-
     def update(self, step_len, func_val):
 
         # update search history
@@ -91,10 +97,8 @@ class Base(object):
 
         return self.calculate_step()
 
-
     def calculate_step(self):
         raise NotImplementedError('Must be implemented by subclass')
-
 
 
 class Writer(object):
@@ -139,6 +143,3 @@ class Writer(object):
     def newline(self):
         with open(self.filename, 'a') as fileobj:
                 fileobj.write('\n')
-
-
-

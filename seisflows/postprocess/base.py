@@ -1,7 +1,17 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
+
+# Import Numpy
 import numpy as np
 
+# Local imports
 from os.path import join
 from seisflows.tools import unix
 from seisflows.tools.tools import exists
@@ -31,12 +41,10 @@ class base(object):
         if PATH.MASK:
             assert exists(PATH.MASK)
 
-
     def setup(self):
         """ Placeholder for initialization or setup tasks
         """
         pass
-
 
     def write_gradient(self, path):
         """
@@ -51,11 +59,11 @@ class base(object):
 
         # because processing operations can be quite expensive, they must be
         # run through the HPC system interface; processing does not involve
-        # embarassingly parallel tasks, we use system.run_single instead of 
+        # embarassingly parallel tasks, we use system.run_single instead of
         # system.run
         system.run_single('postprocess', 'process_kernels',
-                 path=path+'/kernels',
-                 parameters=solver.parameters)
+                          path=path+'/kernels',
+                          parameters=solver.parameters)
 
         gradient = solver.load(
             path+'/'+'kernels/sum', suffix='_kernel')
@@ -65,37 +73,35 @@ class base(object):
 
         # convert to absolute perturbations, log dm --> dm
         # see Eq.13 Tromp et al 2005
-        gradient *= solver.merge(solver.load(path +'/'+ 'model'))
-
+        gradient *= solver.merge(solver.load(path + '/' + 'model'))
         if PATH.MASK:
             # to scale the gradient, users can supply "masks" by exactly
-            # mimicking the file format in which models stored
+            # mimicking the file format in which models are stored
             mask = solver.merge(solver.load(PATH.MASK))
 
             # while both masking and preconditioning involve scaling the
             # gradient, they are fundamentally different operations:
             # masking is ad hoc, preconditioning is a change of variables;
-            # see Modrak & Tromp 2016 GJI
+            # see Modrak & Tromp 2016 GJI Seismic waveform inversion best
+            # practices: regional,global and exploration test cases
             solver.save(solver.split(gradient),
-                        path +'/'+ 'gradient_nomask',
+                        path + '/' + 'gradient_nomask',
                         parameters=solver.parameters,
                         suffix='_kernel')
 
             solver.save(solver.split(gradient*mask),
-                        path +'/'+ 'gradient',
+                        path + '/' + 'gradient',
                         parameters=solver.parameters,
                         suffix='_kernel')
 
         else:
             solver.save(solver.split(gradient),
-                        path +'/'+ 'gradient',
+                        path + '/' + 'gradient',
                         parameters=solver.parameters,
                         suffix='_kernel')
 
-
-
     def process_kernels(self, path, parameters):
-        """ 
+        """
         Sums kernels from individual sources, with optional smoothing
 
         :input path: directory containing sensitivity kernels
@@ -120,5 +126,3 @@ class base(object):
                    input_path=path,
                    output_path=path+'/'+'sum',
                    parameters=parameters)
-
-

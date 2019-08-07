@@ -1,9 +1,19 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import os
 import sys
+from os.path import abspath, basename, join
+
+# Import Numpy
 import numpy as np
 
-from os.path import abspath, basename, join
+# Local imports
 from seisflows.tools import unix
 from seisflows.config import ParameterError, custom_import
 
@@ -12,14 +22,14 @@ PATH = sys.modules['seisflows_paths']
 
 
 class serial(custom_import('system', 'base')):
-    """ An interface through which to submit workflows, run tasks in serial or 
+    """ An interface through which to submit workflows, run tasks in serial or
       parallel, and perform other system functions.
 
-      By hiding environment details behind a python interface layer, these 
+      By hiding environment details behind a python interface layer, these
       classes provide a consistent command set across different computing
       environments.
 
-      For important additional information, please see 
+      For important additional information, please see
       http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
     """
 
@@ -67,29 +77,28 @@ class serial(custom_import('system', 'base')):
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
 
-
     def submit(self, workflow):
         """ Submits job
         """
-        # create scratch directories
+        # create scratch, scratch/system and output directories
         unix.mkdir(PATH.SCRATCH)
         unix.mkdir(PATH.SYSTEM)
-
-        # create output directories
         unix.mkdir(PATH.OUTPUT)
 
+        # saves results from current model update iteration
         workflow.checkpoint()
 
         # execute workflow
         workflow.main()
 
-
     def run(self, classname, method, hosts='all', **kwargs):
-        """ Executes task multiple times in serial
+        """ Executes method from classname multiple times in serial
+            taskid is used to identified a given task (one source)
         """
         unix.mkdir(PATH.SYSTEM)
 
         for taskid in range(PAR.NTASK):
+            # set environment variable SEISFLOWS_TASKID to taskid :
             os.environ['SEISFLOWS_TASKID'] = str(taskid)
             if PAR.VERBOSE > 0:
                 self.progress(taskid)
@@ -97,29 +106,29 @@ class serial(custom_import('system', 'base')):
             func(**kwargs)
         print ''
 
-
     def run_single(self, classname, method, *args, **kwargs):
         """ Runs task a single time
         """
+        # set environment variable SEISFLOWS_TASKID to 0 :
         os.environ['SEISFLOWS_TASKID'] = str(0)
         func = getattr(__import__('seisflows_'+classname), method)
         func(**kwargs)
 
-
     def taskid(self):
-        """ Provides a unique identifier for each running task
+        """ Return the value of the environment variable SEISFLOWS_TASKID
+            which provides a unique identifier for each running task
         """
         return int(os.environ['SEISFLOWS_TASKID'])
-
 
     def mpiexec(self):
         """ Specifies MPI executable used to invoke solver
         """
         return PAR.MPIEXEC
 
-
     def progress(self, taskid):
         """ Provides status update
         """
         if PAR.NTASK > 1:
             print ' task ' + '%02d of %02d' % (taskid+1, PAR.NTASK)
+        else:
+            print ' task running'

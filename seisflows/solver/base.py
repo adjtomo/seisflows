@@ -1,19 +1,27 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import subprocess
 import sys
-import numpy as np
-
 from functools import partial
 from glob import glob
 from importlib import import_module
 from os.path import basename, join
+
+# Import Numpy
+import numpy as np
+
+# Local imports
 from seisflows.config import ParameterError, custom_import
 from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
 from seisflows.tools.seismic import Container, call_solver
 from seisflows.tools.tools import Struct, diff, exists
-
-
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -22,10 +30,9 @@ system = sys.modules['seisflows_system']
 preprocess = sys.modules['seisflows_preprocess']
 
 
-
 class base(object):
     """ Provides an interface through which solver simulations can be set up
-      and run and a parent class for SPECFEM2D, SPECFEM3D and SPECFEM3D_GLOBE 
+      and run and a parent class for SPECFEM2D, SPECFEM3D and SPECFEM3D_GLOBE
       subclasses
 
       This class supports only acoustic and isotropic elastic inversions.
@@ -33,22 +40,22 @@ class base(object):
 
       eval_func, eval_grad, apply_hess
         These methods deal with evaluation of the misfit function or its
-        derivatives.  Together, they provide the primary interface through which
-        SeisFlows interacts with SPECFEM2D/3D
+        derivatives.  Together, they provide the primary interface through
+        which SeisFlows interacts with SPECFEM2D/3D
 
       forward, adjoint
         These methods allow direct access to low-level SPECFEM2D/3D components,
-        providing an alternative interface through which to interact with the 
+        providing an alternative interface through which to interact with the
         solver
 
-     steup, generate_data, generate_model
-        One-time operations performed at beginning of an inversion or 
+     setup, generate_data, generate_model
+        One-time operations performed at beginning of an inversion or
         migration
 
      initialize_solver_directories, initialize_adjoint_traces
-        SPECFEM2D/3D requires a particular directory structure in which to run and
-        particular file formats for models, data, and parameter files. These
-        methods help put in place all these prerequisites
+        SPECFEM2D/3D requires a particular directory structure in which to run
+        and particular file formats for models, data, and parameter files.
+        These methods help put in place all these prerequisites
 
       load, save
         For reading and writing SPECFEM2D/3D models and kernels. On the disk,
@@ -57,10 +64,10 @@ class base(object):
         parameters
 
       split, merge
-        Within the solver routines, it is natural to store models as 
+        Within the solver routines, it is natural to store models as
         dictionaries. Within the optimization routines, it is natural to store
-        models as vectors. Two methods, 'split' and 'merge', are used to convert 
-        back and forth between these two representations
+        models as vectors. Two methods, 'split' and 'merge', are used to
+        convert back and forth between these two representations
 
       combine, smooth
         Utilities for combining and smoothing kernels
@@ -80,7 +87,6 @@ class base(object):
     if PAR.DENSITY == 'Variable':
         parameters += ['rho']
 
-
     def check(self):
         """ Checks parameters and paths
         """
@@ -88,12 +94,10 @@ class base(object):
         if 'NPROC' not in PAR:
             raise ParameterError(PAR, 'NPROC')
 
-
         # format used by SPECFEM for reading and writing models
         # (currently, SPECFEM offers both 'fortran_binary' and 'adios')
         if 'SOLVERIO' not in PAR:
             setattr(PAR, 'SOLVERIO', 'fortran_binary')
-
 
         # solver scratch paths
         if 'SCRATCH' not in PATH:
@@ -121,15 +125,21 @@ class base(object):
         assert hasattr(self.io, 'read_slice')
         assert hasattr(self.io, 'write_slice')
 
-
     def setup(self):
-        """ 
-          Prepares solver for inversion or migration
-          Sets up directory structure expected by SPECFEM and copies or 
-          generates seismic data to be inverted or migrated
+        """ Prepares solver for inversion or migration
+            Sets up directory structure expected by SPECFEM and copies or
+            generates seismic data to be inverted or migrated
         """
         # clean up for new inversion
-        unix.rm(self.cwd)
+        # cwd : current working directory. When called this go into
+        # the solver DATA folder and look for the index of the source
+        # corresponding to the taskid considered. Append it to PATH.SOLVER
+        unix.rm(self.cwd)  # Clear the working directory
+
+        # copy data folder to output
+        src = glob(PATH.SPECFEM_DATA)
+        dst = join(PATH.OUTPUT, 'DATA')
+        unix.cp(src, dst)
 
         # As input for an inversion or migration, users can choose between
         # providing data, or providing a target model from which data are
@@ -141,7 +151,7 @@ class base(object):
             # copy user supplied data
             self.initialize_solver_directories()
 
-            src = glob(PATH.DATA +'/'+ self.source_name +'/'+ '*')
+            src = glob(PATH.DATA + '/' + self.source_name + '/' + '*')
             dst = 'traces/obs/'
             unix.cp(src, dst)
 
@@ -152,20 +162,24 @@ class base(object):
                 model_name='model_true',
                 model_type='gll')
 
-        # prepare initial model
+        # prepare initial model mesh
         self.generate_mesh(
             model_path=PATH.MODEL_INIT,
             model_name='model_init',
             model_type='gll')
 
+        # Adjoint traces (in scratch/solver/source_name/traces/adj)are
+        # initialized below by writing zeros for all channels (even the ones
+        # that are not actually in use, as required by specfem)
+        # Ex: Ux, Uy, Uz even if only Uy is used
+        # Channels actually in use during an inversion or migration will be
+        # overwritten with nonzero values later on.
         self.initialize_adjoint_traces()
-
 
     def clean(self):
         unix.cd(self.cwd)
         unix.rm('OUTPUT_FILES')
         unix.mkdir('OUTPUT_FILES')
-
 
     def generate_data(self, *args, **kwargs):
         """ Generates data
@@ -173,15 +187,13 @@ class base(object):
         # must be implemented by subclass
         raise NotImplementedError
 
-
     def generate_mesh(self, *args, **kwargs):
         """ Performs meshing and database generation
         """
         # must be implemented by subclass
         raise NotImplementedError
 
-
-    ### high-level solver interface
+    # High-level solver interface
 
     def eval_func(self, path='', export_traces=False, write_residuals=True):
         """
@@ -198,9 +210,8 @@ class base(object):
             preprocess.prepare_eval_grad(self.cwd)
             self.export_residuals(path)
 
-
     def eval_grad(self, path='', export_traces=False):
-        """ 
+        """
           Evaluates gradient by carrying out adjoint simulations.
           (A function evaluation must already have been carried out.)
 
@@ -214,12 +225,11 @@ class base(object):
             self.export_traces(path+'/'+'traces/syn', prefix='traces/syn')
             self.export_traces(path+'/'+'traces/adj', prefix='traces/adj')
 
-
     def apply_hess(self, path=''):
         """
           Computes action of Hessian on a given model vector.
           (A gradient evaluation must have already been carried out.)
- 
+
           :input path :: directory to which output files are exported
         """
         unix.cd(self.cwd)
@@ -230,9 +240,7 @@ class base(object):
         self.adjoint()
         self.export_kernels(path)
 
-
-
-    ### low-level solver interface
+    # Low-level solver interface
 
     def forward(self):
         """ Calls forward solver
@@ -240,15 +248,13 @@ class base(object):
         # must be implemented by subclass
         raise NotImplementedError
 
-
     def adjoint(self):
         """ Calls adjoint solver
         """
         # must be implemented by subclass
         raise NotImplementedError
 
-
-    ### model input/output
+    # Model input/output
 
     @property
     def io(self):
@@ -256,9 +262,8 @@ class base(object):
         """
         return getattr(solver_io, PAR.SOLVERIO)
 
-
     def load(self, path, parameters=[], prefix='', suffix=''):
-        """ 
+        """
           Loads SPECFEM2D/3D models or kernels
 
           :input path :: directory from which model is read
@@ -276,10 +281,9 @@ class base(object):
                     path, prefix+key+suffix, iproc)
         return dict
 
-
-    def save(self, dict, path, parameters=['vp','vs','rho'],
+    def save(self, dict, path, parameters=['vp', 'vs', 'rho'],
              prefix='', suffix=''):
-        """ 
+        """
           Saves SPECFEM2D/3D models or kernels
 
           :input dict :: model stored as a dictionary or Container
@@ -303,7 +307,6 @@ class base(object):
                 self.io.write_slice(
                     dict[key][iproc], path, prefix+key+suffix, iproc)
 
-
     def merge(self, model, parameters=[]):
         """ Converts model from dictionary to vector representation
         """
@@ -312,7 +315,6 @@ class base(object):
             for iproc in range(self.mesh_properties.nproc):
                 m = np.append(m, model[key][iproc])
         return m
-
 
     def split(self, m, parameters=[]):
         """ Converts model from vector to dictionary representation
@@ -328,9 +330,7 @@ class base(object):
                 model[key] += [m[imin:imax]]
         return model
 
-
-
-    ### postprocessing wrappers
+    # Postprocessing wrappers
 
     def combine(self, input_path='', output_path='', parameters=[]):
         """ Sums individual source contributions. Wrapper over xcombine_sem
@@ -345,19 +345,18 @@ class base(object):
         unix.cd(self.cwd)
         with open('kernel_paths', 'w') as file:
             file.writelines([join(input_path, name+'\n')
-                for name in self.source_names])
+                            for name in self.source_names])
 
         for name in parameters or self.parameters:
             call_solver(
                 system.mpiexec(),
-                PATH.SPECFEM_BIN +'/'+ 'xcombine_sem '
+                PATH.SPECFEM_BIN + '/' + 'xcombine_sem '
                 + name + '_kernel' + ' '
                 + 'kernel_paths' + ' '
                 + output_path)
 
-
     def smooth(self, input_path='', output_path='', parameters=[], span=0.):
-        """ Smooths kernels by convolving them with a Gaussian.  Wrapper over 
+        """ Smooths kernels by convolving them with a Gaussian.  Wrapper over
             xsmooth_sem utility.
         """
         if not exists(input_path):
@@ -366,13 +365,13 @@ class base(object):
         if not exists(output_path):
             unix.mkdir(output_path)
 
-        # apply smoothing operator
+        # Apply smoothing operator
         unix.cd(self.cwd)
         for name in parameters or self.parameters:
             print ' smoothing', name
             call_solver(
                 system.mpiexec(),
-                PATH.SPECFEM_BIN +'/'+ 'xsmooth_sem '
+                PATH.SPECFEM_BIN + '/' + 'xsmooth_sem '
                 + str(span) + ' '
                 + str(span) + ' '
                 + name + '_kernel' + ' '
@@ -386,8 +385,7 @@ class base(object):
         files = glob(output_path+'/*')
         unix.rename('_smooth', '', files)
 
-
-    ### file transfer utilities
+    # File transfer utilities
 
     def import_model(self, path):
         model = self.load(path+'/'+'model')
@@ -407,7 +405,6 @@ class base(object):
 
     def export_kernels(self, path):
         unix.cd(self.kernel_databases)
-
         # work around conflicting name conventions
         self.rename_kernels()
 
@@ -430,39 +427,42 @@ class base(object):
         dst = join(path, self.source_name)
         unix.cp(src, dst)
 
-
     def rename_kernels(self):
         """ Works around conflicting kernel filename conventions
         """
         files = []
+        files += glob('*proc??????_c_acoustic_kernel.bin')
         files += glob('*proc??????_alpha_kernel.bin')
         files += glob('*proc??????_alpha[hv]_kernel.bin')
         files += glob('*proc??????_reg1_alpha_kernel.bin')
         files += glob('*proc??????_reg1_alpha[hv]_kernel.bin')
+        # Replace 'alpha' by 'vp' is all files names :
         unix.rename('alpha', 'vp', files)
+        # Replace 'c_acoustic' by 'vp' is all files names :
+        unix.rename('c_acoustic', 'vp', files)
 
         files = []
         files += glob('*proc??????_beta_kernel.bin')
         files += glob('*proc??????_beta[hv]_kernel.bin')
         files += glob('*proc??????_reg1_beta_kernel.bin')
         files += glob('*proc??????_reg1_beta[hv]_kernel.bin')
+        # Replace 'beta' by 'vs' is all files names :
         unix.rename('beta', 'vs', files)
-
 
     def rename_data(self, path):
         """ Works around conflicting data filename conventions
         """
         pass
 
-
-    ### setup utilities
+    # Setup utilities
 
     def initialize_solver_directories(self):
-        """ Creates directory structure expected by SPECFEM3D, copies 
-          executables, and prepares input files. Executables must be supplied 
-          by user as there is currently no mechanism for automatically
-          compiling from source.
+        """ Creates directory structure expected by SPECFEM3D, copies
+            executables, and prepares input files. Executables must be supplied
+            by user as there is currently no mechanism for automatically
+            compiling from source.
         """
+        # cwd : current working directory
         unix.mkdir(self.cwd)
         unix.cd(self.cwd)
 
@@ -478,29 +478,33 @@ class base(object):
         unix.mkdir(self.model_databases)
         unix.mkdir(self.kernel_databases)
 
-        # copy exectuables
-        src = glob(PATH.SPECFEM_BIN +'/'+ '*')
+        # copy exectuables to local directory
+        src = glob(PATH.SPECFEM_BIN + '/' + '*')
         dst = 'bin/'
         unix.cp(src, dst)
 
-        # copy input files
-        src = glob(PATH.SPECFEM_DATA +'/'+ '*')
+        # copy input files to local directory
+        src = glob(PATH.SPECFEM_DATA + '/' + '*')
         dst = 'DATA/'
         unix.cp(src, dst)
 
-        src = 'DATA/' + self.source_prefix +'_'+ self.source_name
+        src = 'DATA/' + self.source_prefix + '_' + self.source_name
         dst = 'DATA/' + self.source_prefix
         unix.cp(src, dst)
 
         self.check_solver_parameter_files()
 
-
     def initialize_adjoint_traces(self):
         """ Puts in place "adjoint traces" expected by SPECFEM
+            Adjoint traces are initialized by writing zeros for all channels.
+            (even the ones that are not actually in use, as required by
+            specfem) Ex: Ux, Uy, Uz even if only Uy is used
+            Channels actually in use during an inversion or migration will be
+            overwritten with nonzero values later on.
         """
         for filename in self.data_filenames:
             # read traces
-            d = preprocess.reader(self.cwd +'/'+ 'traces/obs', filename)
+            d = preprocess.reader(self.cwd + '/' + 'traces/obs', filename)
 
             # Adjoint traces are initialized by writing zeros for all channels.
             # Channels actually in use during an inversion or migration will be
@@ -509,16 +513,23 @@ class base(object):
                 t.data[:] = 0.
 
             # write traces
-            preprocess.writer(d, self.cwd +'/'+ 'traces/adj', filename)
-
+            preprocess.writer(d, self.cwd + '/' + 'traces/adj', filename)
 
     def check_mesh_properties(self, path=None):
+        """ path contains binary files such as:
+            proc000000_z.bin, proc000000_x.bin, proc000000_vs.bin
+            proc000000_vp.bin, proc000000_rho.bin, proc000001_z.bin,
+            proc000001_x.bin, proc000001_vs.bin ...
+            These will be read to get the number of processors used, the number
+            of gll points and the coordinates of those points
+        """
         if not path:
             path = PATH.MODEL_INIT
         if not exists(path):
             raise Exception
 
-        # count slices and grid points
+        # count slices (number of processors used to create the mesh) and grid
+        # points
         key = self.parameters[0]
         iproc = 0
         ngll = []
@@ -533,7 +544,9 @@ class base(object):
         # create coordinate pointers
         coords = Struct()
         for key in ['x', 'y', 'z']:
-           coords[key] = partial(self.io.read_slice, self, path, key)
+            # The following define coords['x'] as the function io.read_slice
+            # when called with path, 'x'. It is not executed
+            coords[key] = partial(self.io.read_slice, self, path, key)
 
         self._mesh_properties = Struct([
             ['nproc', nproc],
@@ -541,10 +554,13 @@ class base(object):
             ['path', path],
             ['coords', coords]])
 
-
     def check_source_names(self):
         """ Determines names of sources by applying wildcard rule to user-
             supplied input files
+            If source_prefix is 'SOURCE' and that in specfem DATA folder are
+            the files SOURCE_00001, SOURCE_00002, SOURCE_00003, ...
+            Then this will build the list names = ['00001','00002','00003',...]
+            If, for ex, taskid is 1 the function returns ['00001', '00002']
         """
         path = PATH.SPECFEM_DATA
         if not exists(path):
@@ -552,23 +568,25 @@ class base(object):
 
         # apply wildcard rule
         wildcard = self.source_prefix+'_*'
-        globstar = sorted(glob(path +'/'+ wildcard))
+        globstar = sorted(glob(path + '/' + wildcard))
         if not globstar:
-             print msg.SourceError_SPECFEM % (path, wildcard)
-             sys.exit(-1)
+            print msg.SourceError_SPECFEM % (path, wildcard)
+            sys.exit(-1)
 
+        # If source_prefix is 'SOURCE' and that in specfem DATA folder are the
+        # files SOURCE_00001, SOURCE_00002, SOURCE_00003, ...
+        # Then this will build the list names = ['00001', '00002', '00003' ...]
+        # If taskid is 1 the function returns ['00001', '00002']
         names = []
         for path in globstar:
             names += [basename(path).split('_')[-1]]
         self._source_names = names[:PAR.NTASK]
 
-
     def check_solver_parameter_files(self):
         # optional method, can be implemented by subclass
         pass
 
-
-    ### additional solver attributes
+    # Additional solver attributes
 
     @property
     def taskid(self):
@@ -587,9 +605,9 @@ class base(object):
 
     @property
     def source_names(self):
-       if not hasattr(self, '_source_names'):
-           self.check_source_names()
-       return self._source_names
+        if not hasattr(self, '_source_names'):
+            self.check_source_names()
+        return self._source_names
 
     @property
     def mesh_properties(self):
@@ -616,5 +634,3 @@ class base(object):
     def source_prefix(self):
         # required method, must be implemented by subclass
         return NotImplementedError
-
-

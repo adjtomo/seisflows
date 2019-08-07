@@ -47,22 +47,31 @@ if __name__ == "__main__":
     """
     args = getargs()  # Parse the arguments given along command sfrun
 
-    # Load and register parameters
+    # Load file parameters.py and store it in a Dictionnary like structure
     parameters = loadpy(args.parameter_file)
+    # Register the parameters to make them globally accessible.
+    # More precisely we add a new key named 'seisflows_parameters' to the
+    # dictionary sys.modules (mapping modules names to modules which have
+    # already been loaded) we store the parameters inside
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # Load and register paths
+    # Load and register paths.py (same than above for paths)
+    # tilde_expand expands tilde character in path strings
     paths = tilde_expand(loadpy(args.path_file))
     sys.modules['seisflows_paths'] = Dict(paths)
 
-    # Create working directory and open it
+    # Create working directory (if it does not exist) and open it
     unix.mkdir(args.workdir)
     unix.cd(args.workdir)
 
     # Run configuration script
+    # It basically instantiates SeisFlows objects and makes them globally
+    # accessible by registering them in sys.modules
     config()
 
-    # Submit workflow
+    # Submit workflow (we give the newly instantiated class workflow to the
+    # class system through the method submit)
     workflow = sys.modules['seisflows_workflow']
     system = sys.modules['seisflows_system']
+
     system.submit(workflow)

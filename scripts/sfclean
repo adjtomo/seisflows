@@ -1,6 +1,7 @@
 #!/bin/sh
 
-usage="$(basename "$0") [-h] -- delete directories output* and scratch in the current directory
+usage="$(basename "$0") [-h] -- delete directories output, output.stat*, output.optim
+and scratch in the current directory
 
 where:
     -h  show this help text"
@@ -14,6 +15,6 @@ while getopts ':hs:' option; do
 done
 shift $((OPTIND - 1))
 
-rm -rf output*
+rm -rf output output.stat* output.optim
 rm -rf scratch
 

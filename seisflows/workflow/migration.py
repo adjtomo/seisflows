@@ -1,7 +1,15 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
 from glob import glob
 
+# Local imports
 from seisflows.tools import unix
 from seisflows.tools.tools import exists
 from seisflows.config import ParameterError
@@ -56,7 +64,6 @@ class migration(base):
         if 'SAVETRACES' not in PAR:
             setattr(PAR, 'SAVETRACES', 0)
 
-
     def main(self):
         """ Migrates seismic data
         """
@@ -82,13 +89,13 @@ class migration(base):
                    export_traces=PAR.SAVETRACES)
 
         system.run_single('postprocess', 'process_kernels',
-                 path=PATH.SCRATCH+'/'+'kernels',
-                 parameters=solver.parameters)
+                          path=PATH.SCRATCH+'/'+'kernels',
+                          parameters=solver.parameters)
 
         try:
             system.run_single('postprocess', 'process_kernels',
-                     path=PATH.SCRATCH+'/'+'kernels',
-                     parameters=['rhop'])
+                              path=PATH.SCRATCH+'/'+'kernels',
+                              parameters=['rhop'])
         except:
             pass
 
@@ -102,28 +109,26 @@ class migration(base):
 
         print 'Finished\n'
 
-
-    ### utility functions
+    # Utility functions
 
     def prepare_model(self):
-        model = PATH.OUTPUT +'/'+ 'model_init'
+        model = PATH.OUTPUT + '/' + 'model_init'
         assert exists(model)
-        unix.cp(model, PATH.SCRATCH +'/'+ 'model')
+        unix.cp(model, PATH.SCRATCH + '/' + 'model')
 
     def save_kernels_sum(self):
-        src = PATH.SCRATCH +'/'+ 'kernels/sum'
-        dst = PATH.OUTPUT +'/'+ 'kernels'
+        src = PATH.SCRATCH + '/' + 'kernels/sum'
+        dst = PATH.OUTPUT + '/' + 'kernels'
         unix.mkdir(dst)
         unix.cp(src, dst)
 
     def save_kernels(self):
-        src = PATH.SCRATCH +'/'+ 'kernels'
+        src = PATH.SCRATCH + '/' + 'kernels'
         dst = PATH.OUTPUT
         unix.mkdir(dst)
         unix.cp(src, dst)
 
     def save_traces(self):
-        src = PATH.SCRATCH +'/'+ 'traces'
+        src = PATH.SCRATCH + '/' + 'traces'
         dst = PATH.OUTPUT
         unix.cp(src, dst)
-

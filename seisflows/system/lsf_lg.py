@@ -1,10 +1,20 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import os
-import math
 import sys
 import time
 from os.path import abspath, basename, join
 
+# Import utilitaries
+import math
+
+# Local imports
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.tools import call, findpath, saveobj
@@ -15,10 +25,10 @@ PATH = sys.modules['seisflows_paths']
 
 
 class lsf_lg(custom_import('system', 'base')):
-    """ An interface through which to submit workflows, run tasks in serial or 
+    """ An interface through which to submit workflows, run tasks in serial or
       parallel, and perform other system functions.
 
-      By hiding environment details behind a python interface layer, these 
+      By hiding environment details behind a python interface layer, these
       classes provide a consistent command set across different computing
       environments.
 
@@ -28,7 +38,7 @@ class lsf_lg(custom_import('system', 'base')):
       Optionally, users can provide a local scratch path PATH.LOCAL if each
       compute node has its own local filesystem.
 
-      For important additional information, please see 
+      For important additional information, please see
       http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
     """
 
@@ -59,7 +69,7 @@ class lsf_lg(custom_import('system', 'base')):
         if 'NTASKMAX' not in PAR:
             setattr(PAR, 'NTASKMAX', PAR.NTASK)
 
-         # number of cores per node
+        # number of cores per node
         if 'NODESIZE' not in PAR:
             raise ParameterError(PAR, 'NODESIZE')
 
@@ -99,7 +109,6 @@ class lsf_lg(custom_import('system', 'base')):
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
 
-
     def submit(self, workflow):
         """ Submits workflow
         """
@@ -122,9 +131,8 @@ class lsf_lg(custom_import('system', 'base')):
                 + '-e %s ' % (PATH.WORKDIR+'/'+'error.log')
                 + '-R "span[ptile=%d]" ' % PAR.NODESIZE
                 + '-W %d:00 ' % PAR.WALLTIME
-                +  findpath('seisflows.system') +'/'+ 'wrappers/submit '
+                + findpath('seisflows.system') + '/' + 'wrappers/submit '
                 + PATH.OUTPUT)
-
 
     def run(self, classname, method, hosts='all', **kwargs):
         """ Runs task multiple times in embarrassingly parallel fasion
@@ -139,10 +147,10 @@ class lsf_lg(custom_import('system', 'base')):
             + '-n %d ' % PAR.NPROC
             + '-R "span[ptile=%d]" ' % PAR.NODESIZE
             + '-W %d:00 ' % PAR.TASKTIME
-            + '-J "%s' %PAR.TITLE
+            + '-J "%s' % PAR.TITLE
             + '[%d-%d] %% %d' % (1, PAR.NTASK, PAR.NTASKMAX)
             + '-o %s ' % (PATH.WORKDIR+'/'+'output.lsf/'+'%J_%I')
-            + '%s ' % findpath('seisflows.system') +'/'+ 'wrapper/run '
+            + '%s ' % findpath('seisflows.system') + '/' + 'wrapper/run '
             + '%s ' % PATH.OUTPUT + ' '
             + '%s ' % classname + ' '
             + '%s ' % method + ' '
@@ -161,7 +169,6 @@ class lsf_lg(custom_import('system', 'base')):
             if isdone:
                 return
 
-
     def run_single(self, classname, method, hosts='all', **kwargs):
         """ Runs task multiple times in embarrassingly parallel fasion
 
@@ -175,10 +182,10 @@ class lsf_lg(custom_import('system', 'base')):
             + '-n %d ' % PAR.NPROC
             + '-R "span[ptile=%d]" ' % PAR.NODESIZE
             + '-W %d:00 ' % PAR.TASKTIME
-            + '-J "%s' %PAR.TITLE
+            + '-J "%s' % PAR.TITLE
             + '[%d-%d]' % (1, 1)
-            + '-o %s ' % (PATH.WORKDIR+'/'+'output.lsf/'+'%J')
-            + '%s ' % findpath('seisflows.system') +'/'+ 'wrapper/run '
+            + '-o %s ' % (PATH.WORKDIR + '/' + 'output.lsf/' + '%J')
+            + '%s ' % findpath('seisflows.system') + '/' + 'wrapper/run '
             + '%s ' % PATH.OUTPUT
             + '%s ' % classname
             + '%s ' % method
@@ -197,15 +204,13 @@ class lsf_lg(custom_import('system', 'base')):
             if isdone:
                 return
 
-
     def job_id_list(self, stdout):
         job = stdout.split()[1].strip()[1:-1]
-        if ntask==1:
+        if ntask == 1:
             return [job]
         else:
-            nn = range(1,PAR.NSRC+1)
+            nn = range(1, PAR.NSRC+1)
             return [job+'['+str(ii)+']' for ii in nn]
-
 
     def job_status(self, classname, method, jobs):
         # query lsf database
@@ -217,19 +222,17 @@ class lsf_lg(custom_import('system', 'base')):
             else:
                 states += [0]
             if state in ['EXIT']:
-                print 'LSF job failed: %s ' %job
+                print 'LSF job failed: %s ' % job
                 print msg.TaskError_LSF % (classname, method, job)
                 sys.exit(-1)
         isdone = all(states)
 
         return isdone, jobs
 
-
     def mpiexec(self):
         """ Specifies MPI executable used to invoke solver
         """
         return PAR.MPIEXEC
-
 
     def _query(self, jobid):
         """ Retrives job state from LSF database
@@ -241,22 +244,18 @@ class lsf_lg(custom_import('system', 'base')):
             state = lines[1].split()[2].strip()
         return state
 
-
     def taskid(self):
         """ Provides a unique identifier for each running task
         """
         return int(os.getenv('LSB_JOBINDEX'))-1
-
 
     def timestamp(self):
         with open(PATH.SYSTEM+'/'+'timestamps', 'a') as f:
             line = time.strftime('%H:%M:%S')+'\n'
             f.write(line)
 
-
     def save_kwargs(self, classname, method, kwargs):
         kwargspath = join(PATH.OUTPUT, 'kwargs')
         kwargsfile = join(kwargspath, classname+'_'+method+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
-

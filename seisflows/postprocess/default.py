@@ -1,6 +1,14 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
 
+# Local imports
 from seisflows.config import custom_import
 
 PAR = sys.modules['seisflows_parameters']

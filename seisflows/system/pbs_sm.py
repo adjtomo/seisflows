@@ -1,10 +1,20 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import os
-import math
 import sys
 import time
-
 from os.path import abspath, basename, join
+
+# Import utilitaries
+import math
+
+# Local imports
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.tools import call, findpath, saveobj
@@ -93,7 +103,6 @@ class pbs_lg(custom_import('system', 'base')):
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
 
-
     def submit(self, workflow):
         """ Submits workflow
         """
@@ -106,25 +115,25 @@ class pbs_lg(custom_import('system', 'base')):
 
         workflow.checkpoint()
 
-        hours = PAR.WALLTIME/60
-        minutes = PAR.WALLTIME%60
+        hours = PAR.WALLTIME / 60
+        minutes = PAR.WALLTIME % 60
         walltime = 'walltime=%02d:%02d:00 ' % (hours, minutes)
 
         ncpus = PAR.NODESIZE
         mpiprocs = PAR.NODESIZE
 
         # prepare qsub arguments
-        call( 'qsub '
-                + '%s ' % PAR.PBSARGS
-                + '-l select=1:ncpus=%d:mpiprocs=%d ' % (ncpus, mpiprocs)
-                + '-l %s ' % walltime
-                + '-N %s ' % PAR.TITLE
-                + '-j %s '%'oe'
-                + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
-                + '-V '
-                + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/submit '
-                + PATH.OUTPUT)
-
+        call('qsub '
+             + '%s ' % PAR.PBSARGS
+             + '-l select=1:ncpus=%d:mpiprocs=%d ' % (ncpus, mpiprocs)
+             + '-l %s ' % walltime
+             + '-N %s ' % PAR.TITLE
+             + '-j %s ' % 'oe'
+             + '-o %s ' % (PATH.SUBMIT+'/'+'output.log')
+             + '-V '
+             + ' -- '
+             + findpath('seisflows.system') + '/' + 'wrappers/submit '
+             + PATH.OUTPUT)
 
     def run(self, classname, method, hosts='all', **kwargs):
         """ Runs embarrassingly parallel tasks
@@ -138,38 +147,35 @@ class pbs_lg(custom_import('system', 'base')):
 
         if hosts == 'all':
             # run all tasks
-            call(findpath('seisflows.system')  +'/'+'wrappers/dsh '
-                    + ','.join(self.hostlist()) + ' '
-                    + findpath('seisflows.system')  +'/'+'wrappers/run '
-                    + PATH.OUTPUT + ' '
-                    + classname + ' '
-                    + method + ' '
-                    + 'PYTHONPATH='+findpath('seisflows'),+','
-                    + PAR.ENVIRONS)
+            call(findpath('seisflows.system') + '/' + 'wrappers/dsh '
+                 + ','.join(self.hostlist()) + ' '
+                 + findpath('seisflows.system') + '/' + 'wrappers/run '
+                 + PATH.OUTPUT + ' '
+                 + classname + ' '
+                 + method + ' '
+                 + 'PYTHONPATH=' + findpath('seisflows'), + ','
+                 + PAR.ENVIRONS)
 
         elif hosts == 'head':
             # run a single task
             call('ssh ' + self.hostlist()[0] + ' '
-                    + '"'
-                    + 'export SEISFLOWS_TASK_ID=0; '
-                    + join(findpath('seisflows.system'), 'wrappers/run ')
-                    + PATH.OUTPUT + ' '
-                    + classname + ' '
-                    + method + ' '
-                    + 'PYTHONPATH='+findpath('seisflows'),+','
-                    + PAR.ENVIRONS
-                    +'"')
+                 + '"'
+                 + 'export SEISFLOWS_TASK_ID=0; '
+                 + join(findpath('seisflows.system'), 'wrappers/run ')
+                 + PATH.OUTPUT + ' '
+                 + classname + ' '
+                 + method + ' '
+                 + 'PYTHONPATH=' + findpath('seisflows'), + ','
+                 + PAR.ENVIRONS
+                 + '"')
 
         else:
             raise KeyError('Bad keyword argument: system.run: hosts')
-
-
 
     def mpiexec(self):
         """ Specifies MPI executable used to invoke solver
         """
         return PAR.MPIEXEC
-
 
     def taskid(self):
         """ Provides a unique identifier for each running task
@@ -179,18 +185,14 @@ class pbs_lg(custom_import('system', 'base')):
         except:
             raise Exception("PBS_NODENUM environment variable not defined.")
 
-
     def hostlist(self):
         """ Generates list of allocated cores
         """
         with open(os.environ['PBS_NODEFILE'], 'r') as f:
             return [line.strip() for line in f.readlines()]
 
-
     def save_kwargs(self, classname, method, kwargs):
         kwargspath = join(PATH.OUTPUT, 'kwargs')
         kwargsfile = join(kwargspath, classname+'_'+method+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
-
-
