@@ -1,52 +1,73 @@
 #!/usr/bin/env python
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+# sfresume:
+# Workflow submission script
+#
+###############################################################################
 
-import argparse, os, sys
+# Import system modules
+import argparse
+import os
+import sys
+from os.path import join
 
-from seisflows.config import config, loadpy, names, tilde_expand, Dict, Struct
+# Local imports
+from seisflows.config import loadpy, names, tilde_expand, Dict
 from seisflows.tools import unix
+from seisflows.tools.tools import loadobj
 
 
 def getargs():
+    """ This function run argparse (see
+    https://docs.python.org/2/howto/argparse.html) to process the arguments
+    given by the user along with sfresume. Define default behaviour if they are
+    not given and help message when sfresume -h is run
+    """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--workdir', nargs='?', 
-        default=os.getcwd())
+    parser.add_argument('--workdir', nargs='?', default=os.getcwd(),
+                        help="working directory")
 
-    parser.add_argument('--parameter_file', nargs='?', 
-        default='parameters.py')
+    parser.add_argument('--parameter_file', nargs='?', default='parameters.py',
+                        help="parameter file")
 
-    parser.add_argument('--path_file', nargs='?', 
-        default='paths.py')
+    parser.add_argument('--path_file', nargs='?', default='paths.py',
+                        help="paths file")
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    ### workflow submission script
+    """ Workflow submission script
+    """
+
     args = getargs()
 
-    # register parameters
+    # Register parameters
     parameters = loadpy(args.parameter_file)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # register paths
+    # Register paths
     paths = tilde_expand(loadpy(args.path_file))
     sys.modules['seisflows_paths'] = Dict(paths)
 
     unix.mkdir(args.workdir)
     unix.cd(args.workdir)
 
-    # reload objects
+    # Reload objects
     for name in names:
         fullfile = join(args.workdir, 'output', 'seisflows_'+name+'.p')
         sys.modules['seisflows_'+name] = loadobj(fullfile)
 
-    # parameter checking
+    # Parameter checking
     for name in names:
         sys.modules['seisflows_'+name].check()
 
-    # submit workflow
+    # Submit workflow
     workflow = sys.modules['seisflows_workflow']
     system = sys.modules['seisflows_system']
     system.submit(workflow)
-

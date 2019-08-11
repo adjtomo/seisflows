@@ -1,9 +1,17 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+#
+###############################################################################
 
-from seisflows.plugins.line_search import Base
-from seisflows.tools.math import backtrack2, polyfit2
-
+# Import numpy
 import numpy as np
 
+# Local imports
+from seisflows.plugins.line_search import Base
+from seisflows.tools.math import backtrack2, polyfit2
 
 
 class Bracket(Base):
@@ -12,7 +20,7 @@ class Bracket(Base):
       Variables
           x - list of step lenths from current line search
           f - correpsonding list of function values
-          gtg - dot product of gradient with itself                    
+          gtg - dot product of gradient with itself
           gtp - dot product of gradient and search direction
 
       Status codes
@@ -26,23 +34,23 @@ class Bracket(Base):
         """
         x, f, gtg, gtp, step_count, update_count = self.search_history()
 
-        if step_count==0 and update_count==0:
+        if step_count == 0 and update_count == 0:
             # based on idea from Dennis and Schnabel
             alpha = gtg[-1]**-1
             status = 0
 
-        elif step_count==0:
+        elif step_count == 0:
             # based on the first equation in sec 3.5 of Nocedal and Wright 2ed
             idx = np.argmin(self.func_vals[:-1])
             alpha = self.step_lens[idx] * gtp[-2]/gtp[-1]
             status = 0
 
-        elif _check_bracket(x,f) and _good_enough(x,f):
+        elif _check_bracket(x, f) and _good_enough(x, f):
             alpha = x[f.argmin()]
             status = 1
 
-        elif _check_bracket(x,f):
-            alpha = polyfit2(x,f)
+        elif _check_bracket(x, f):
+            alpha = polyfit2(x, f)
             status = 0
 
         elif step_count <= self.step_count_max and all(f <= f[0]):
@@ -63,7 +71,7 @@ class Bracket(Base):
 
         # apply optional step length safeguard
         if alpha > self.step_len_max and \
-           step_count==0:
+           step_count == 0:
             alpha = 0.618034*self.step_len_max
             status = 0
 
@@ -90,14 +98,10 @@ def _good_enough(step_lens, func_vals, thresh=np.log10(1.2)):
     """ Checks if step length is reasonably close to quadratic estimate
     """
     x, f = step_lens, func_vals
-    if not _check_bracket(x,f):
+    if not _check_bracket(x, f):
         return 0
-    x0 = polyfit2(x,f)
+    x0 = polyfit2(x, f)
     if any(np.abs(np.log10(x[1:]/x0)) < thresh):
         return 1
     else:
         return 0
-
-
-
-

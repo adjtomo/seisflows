@@ -1,7 +1,16 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+#
+###############################################################################
 
+# Import system modules
 from os.path import abspath, join
 from shutil import copyfile
 
+# Import numpy
 import numpy as np
 
 
@@ -27,4 +36,3 @@ def write(v, path, parameter, iproc):
     """ Writes to ADIOS container
     """
     raise NotImplementedError
-

@@ -1,72 +1,117 @@
 #!/usr/bin/env python
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+# plotgll:
+# Plots GLL model read from SPECFEM2D Fortran binary file
+#
+###############################################################################
 
+# Import system modules
 import argparse
-import os
+import warnings
 import sys
+
+# Import numpy and matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import use as mpluse
 
-from glob import glob
-from os.path import abspath, join
-from seisflows.tools.graphics import plot_gll
-from seisflows.plugins.io.fortran_binary import _read
-from seisflows.tools.tools import exists
+# Local imports
+from seisflows.tools.graphics import plot_gll, plot_many_gll
+from seisflows.plugins.solver_io.fortran_binary import _read, _write
+from seisflows.tools import unix
 
+
+def readStations(path):
+    """ Read specfem2d STATIONS file
+    """
+    with warnings.catch_warnings():  # Suppress warning about single precision
+        warnings.simplefilter("ignore")
+        stats = np.genfromtxt(path, usecols=(0, 2, 3), dtype=None)
+    temp = [list(u) for u in stats]
+    temp = map(list, zip(*temp))
+    return temp[:][0], np.array(temp[:][1]), np.array(temp[:][2])
+
+def readTwoColumnsFile(path):
+    """ Read two columns file containing numbers
+    """
+    with warnings.catch_warnings():  # Suppress warning about single precision
+        warnings.simplefilter("ignore")
+        stats = np.genfromtxt(path, usecols=(0, 1), dtype=None)
+    temp = [list(u) for u in stats]
+    temp = map(list, zip(*temp))
+    return np.array(temp[:][0]), np.array(temp[:][1])
 
 
 def parse_args():
+    """ This function run argparse (see
+    https://docs.python.org/2/howto/argparse.html) to process the arguments
+    given by the user along with plotgll. Define default behaviour if they are
+    not given and help message when plotgll -h is run
+    """
     parser = argparse.ArgumentParser(
-        description='plots SPECFEM2D model or kernels')
+        description='Plots SPECFEM2D model or kernels')
 
-    # required input file arguments
-    parser.add_argument('xcoords',
-        help='x coordinates file')
+    # Required input file arguments
+    parser.add_argument('xcoords', help='x coordinates file')
 
-    parser.add_argument('ycoords',
-        help='y coordinates file')
+    parser.add_argument('ycoords', help='y coordinates file')
 
-    parser.add_argument('file',
-        help='database file')
+    parser.add_argument('file', help='Database file')
 
-    # optional formatting arguments
-    parser.add_argument('--cbar',
-        dest='cbar',
-        action='store_true',
-        help='display colorbar')
-    parser.set_defaults(cbar=False)
+    # Optional formatting arguments
+    parser.add_argument('--cbar', dest='cbar', action='store_true',
+                        default=False,
+                        help='display colorbar')
 
-    parser.add_argument('--cmap',
-        default='seismic',
-        help='colormap scheme')
+    parser.add_argument('--cmap', default='seismic',
+                        help='colormap scheme')
 
-    parser.add_argument('--cmin', 
-        type=float,
-        default=None,
-        help='colormap min')
+    parser.add_argument('--cmin', type=float, default=None,
+                        help='colormap min')
 
-    parser.add_argument('--cmax', 
-        type=float,
-        default=None,
-        help='colormap max')
+    parser.add_argument('--cmax', type=float, default=None,
+                        help='colormap max')
 
-    parser.add_argument('--saturation',
-        type=float,
-        default=1.,
-        help='colormap saturation factor')
+    parser.add_argument('--vmin', type=float, default=None,
+                        help='colorbar inferior limit')
 
-    parser.add_argument('--symmetric',
-        dest='symmetric',
-        action='store_true',
-        help='colormap symmetry flag')
-    parser.set_defaults(symmetric=False)
+    parser.add_argument('--vmax', type=float, default=None,
+                        help='colormap superior limit')
 
-    parser.add_argument('--title',
-        type=str,
-        default='',
-        help='title')
+    parser.add_argument('--saturation', type=float, default=1.,
+                        help='colormap saturation factor')
+
+    parser.add_argument('--symmetric', dest='symmetric', action='store_true',
+                        default=False, help='Colormap symmetry flag')
+
+    parser.add_argument('--plotPoints', action='store_true',
+                        default=False, help='Plot x, z points used')
+
+    parser.add_argument('--tripcolor', action='store_true',
+                        default=False, help='Sometimes tricontourf \
+                                            does not work. Use tripcolor instead')
+
+    parser.add_argument('--skip', type=int, default=10,
+                        help='Read one sample over "skip" samples. Make plotting much faster')
+
+    parser.add_argument('--title', type=str, default='',
+                        help='title')
+
+    parser.add_argument('--STATIONS', type=str, default='',
+                        help='Path to STATIONS file to display on top')
+
+    parser.add_argument('--SOURCES', type=str, default='',
+                        help='Path to SOURCES file to display on top')
+
+    parser.add_argument('--CBorientation', type=str, default='horizontal',
+                        help='Color bar orientation. Either horizontal or \
+                        vertical')
 
     return parser.parse_args()
-
 
 
 if __name__ == '__main__':
@@ -75,49 +120,78 @@ if __name__ == '__main__':
         For usage information: plotgll --help
     """
 
+    # Parse the arguments given along command plotgll
     args = parse_args()
 
-    x = _read(args.xcoords)
-    y = _read(args.ycoords)
-    v = _read(args.file)
+    # Reads Fortran style binary data files into numpy array
+    x = _read(args.xcoords)  # Reads xcoords file
+    y = _read(args.ycoords)  # Reads ycoords file
+    v = _read(args.file)     # Reads database file
 
     minval = min(v)
     maxval = max(v)
 
     msg = '\n%s\nmin, max: %f, %f\n'
     print msg % (args.file, minval, maxval)
+    print ''
 
-    f, p = plot_gll(x, y, v)
+    # Switch backend if needed
+    if unix.hostname() in ['naga']:
+        mpluse('Qt5Agg', warn=False, force=True)
 
-    plt.axes().set_aspect('equal')
+    # Plot :
+    x = x[::args.skip]
+    y = y[::args.skip]
+    v = v[::args.skip]
 
-    # set colormap
+    if not args.tripcolor:
+        f, p = plot_gll(x, y, v, vmin=args.vmin, vmax=args.vmax)
+    else:
+        f, p = plot_many_gll(x, y, v, vmin=args.vmin, vmax=args.vmax)
+    plt.axes().set_aspect('equal')  # Equal aspect ratio
+
+    if args.plotPoints:
+        print(str(len(x))+" points considered")
+        plt.scatter(x, y, c='k', marker='.')
+
+    # Set colormap
     if args.cmap:
         p.set_cmap(args.cmap)
 
-    # set colormap limits
-    if args.cmin!=None and \
-       args.cmax!=None:
+    # Set colormap limits
+    if args.cmin is not None and \
+       args.cmax is not None:
         assert args.cmin < args.cmax
         p.set_clim([args.cmin, args.cmax])
 
+    # Symmetric colormap
     if args.symmetric:
         maxabs = max(np.abs(p.get_clim()))
         clim = np.array([-maxabs, +maxabs])
         p.set_clim(clim)
 
-    # adjust saturation
+    # Adjust saturation
     if args.saturation:
         clim = np.array(p.get_clim())
         cavg = np.mean(clim)
         p.set_clim((clim-cavg)/args.saturation+cavg)
 
-    # optional colorbar
+    # Optional colorbar
     if args.cbar:
-        cb = plt.colorbar(orientation='horizontal')
+        cb = plt.colorbar(orientation=args.CBorientation)
         cb.set_label(args.title)
     else:
         plt.title(args.title)
+
+    if args.STATIONS:
+        with open(args.STATIONS) as file:
+            namesStats, xStats, zStats = readStations(args.STATIONS)
+            plt.scatter(xStats, zStats, c='g', marker='^')
+
+    if args.SOURCES:
+        with open(args.SOURCES) as file:
+            xSources, zSources = readTwoColumnsFile(args.SOURCES)
+            plt.scatter(xSources, zSources, c='r', marker='*')
 
     plt.show()
 

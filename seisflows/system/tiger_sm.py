@@ -1,9 +1,17 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
-
 from getpass import getuser
 from os.path import abspath, exists
 from uuid import uuid4
+
+# Local imports
 from seisflows.tools import unix
 from seisflows.config import ParameterError, custom_import
 
@@ -30,14 +38,13 @@ class tiger_sm(custom_import('system', 'slurm_sm')):
 
         super(tiger_sm, self).check()
 
-
     def submit(self, *args, **kwargs):
         """ Submits job
         """
         if not exists(PATH.SCRATCH):
-            path = '/scratch/gpfs'+'/'+getuser()+'/'+'seisflows'+'/'+str(uuid4())
+            path = '/scratch/gpfs' + '/' + getuser() + '/' + 'seisflows' + '/'\
+                   + str(uuid4())
             unix.mkdir(path)
             unix.ln(path, PATH.SCRATCH)
 
         super(tiger_sm, self).submit(*args, **kwargs)
-

@@ -1,6 +1,15 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+#
+###############################################################################
 
+# Import Numpy
 import numpy as np
 
+# Local imports
 from seisflows.tools import unix
 from seisflows.tools.tools import loadtxt, savetxt, loadnpy, savenpy
 
@@ -8,7 +17,8 @@ from seisflows.tools.tools import loadtxt, savetxt, loadnpy, savenpy
 class LCG(object):
     """ CG solver
     """
-    def __init__(self, path, load=loadnpy, save=savenpy, thresh=np.inf, maxiter=np.inf, precond=None):
+    def __init__(self, path, load=loadnpy, save=savenpy, thresh=np.inf,
+                 maxiter=np.inf, precond=None):
         self.path = path
         self.load = loadnpy
         self.save = savenpy
@@ -17,7 +27,6 @@ class LCG(object):
 
         self.ilcg = 0
         self.iter = 0
-
 
     def initialize(self):
         unix.mkdir(self.path+'/'+'LCG')
@@ -37,7 +46,6 @@ class LCG(object):
         self.save('LCG/p', p)
         savetxt('LCG/ry', np.dot(r, y))
 
-
     def update(self, ap):
         unix.cd(self.path)
 
@@ -54,7 +62,7 @@ class LCG(object):
             print ' Stopping LCG [negative curvature]'
             isdone = True
             return isdone
-                       
+
         alpha = ry/pap
         x += alpha*p
         r += alpha*ap
@@ -82,13 +90,10 @@ class LCG(object):
 
         return isdone
 
-
-    ### dummy methods, can be overloaded
+    # Dummy methods, can be overloaded
 
     def check_status(self, *args, **kwargs):
         return -1
 
     def apply_precond(self, r):
         return r
-
-

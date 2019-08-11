@@ -1,12 +1,21 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import os
 import sys
-import numpy as np
-
 from os.path import abspath, basename, join
 from subprocess import Popen
 from time import sleep
 
+# Numpy
+import numpy as np
+
+# Local imports
 from seisflows.tools import unix
 from seisflows.tools.tools import call, findpath, nproc, saveobj
 from seisflows.config import ParameterError, custom_import
@@ -16,14 +25,14 @@ PATH = sys.modules['seisflows_paths']
 
 
 class multicore(custom_import('system', 'serial')):
-    """ An interface through which to submit workflows, run tasks in serial or 
+    """ An interface through which to submit workflows, run tasks in serial or
       parallel, and perform other system functions.
 
-      By hiding environment details behind a python interface layer, these 
+      By hiding environment details behind a python interface layer, these
       classes provide a consistent command set across different computing
       environments.
 
-      For important additional information, please see 
+      For important additional information, please see
       http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
     """
 
@@ -48,10 +57,22 @@ class multicore(custom_import('system', 'serial')):
         if 'NTASKMAX' not in PAR:
             setattr(PAR, 'NTASKMAX', PAR.NPROCMAX/PAR.NPROC)
 
-
-        # assertions
+        # Assertions
         assert PAR.NPROC <= PAR.NPROCMAX
 
+    def submit(self, workflow):
+        """ Submits job
+        """
+        # create scratch, scratch/system and output directories
+        unix.mkdir(PATH.SCRATCH)
+        unix.mkdir(PATH.SYSTEM)
+        unix.mkdir(PATH.OUTPUT)
+
+        # saves results from current model update iteration
+        workflow.checkpoint()
+
+        # execute workflow
+        workflow.main()
 
     def run(self, classname, method, *args, **kwargs):
         """ Runs task multiple times in embarrassingly parallel fasion
@@ -73,11 +94,11 @@ class multicore(custom_import('system', 'serial')):
                 i = queued_tasks.pop(0)
                 p = self._run_task(classname, method, taskid=i)
                 running_tasks[i] = p
-                sleep(0.1)
+                sleep(0.5)
 
             # checks status of running tasks
             for i, p in running_tasks.items():
-                if p.poll() != None:
+                if p.poll() is not None:
                     running_tasks.pop(i)
 
             if running_tasks:
@@ -85,16 +106,15 @@ class multicore(custom_import('system', 'serial')):
 
         print ''
 
-
     def run_single(self, classname, method, *args, **kwargs):
         """ Runs task a single time
         """
+        # set environment variable SEISFLOWS_TASKID to 0 :
         os.environ['SEISFLOWS_TASKID'] = str(0)
         func = getattr(__import__('seisflows_'+classname), method)
         func(**kwargs)
 
-
-    ### private methods
+    # Private methods
 
     def _run_task(self, classname, method, taskid=0):
         env = os.environ.copy().items()
@@ -102,7 +122,7 @@ class multicore(custom_import('system', 'serial')):
         self.progress(taskid)
 
         p = Popen(
-            findpath('seisflows.system') +'/'+ 'wrappers/run '
+            findpath('seisflows.system') + '/' + 'wrappers/run '
             + PATH.OUTPUT + ' '
             + classname + ' '
             + method,
@@ -111,10 +131,8 @@ class multicore(custom_import('system', 'serial')):
 
         return p
 
-
     def save_kwargs(self, classname, method, kwargs):
         kwargspath = join(PATH.OUTPUT, 'kwargs')
         kwargsfile = join(kwargspath, classname+'_'+method+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
-

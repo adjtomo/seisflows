@@ -1,10 +1,19 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
-import numpy as np
-
 from os.path import exists
+
+# Import Numpy and Obspy
+import numpy as np
 from obspy.core import Stream, Trace
 
+# Local imports
 from seisflows.plugins import adjoint, misfit
 from seisflows.tools import unix
 from seisflows.config import ParameterError, custom_import
@@ -42,7 +51,6 @@ class double_difference(custom_import('preprocess', 'base')):
             'Traveltime',
             'TraveltimeInexact']
 
-
     def write_residuals(self, path, syn, dat):
         """ Computes residuals from observations and synthetics
         """
@@ -50,33 +58,32 @@ class double_difference(custom_import('preprocess', 'base')):
         nr, _ = self.get_network_size(syn)
         rx, ry, rz = self.get_receiver_coords(syn)
 
-        dist = np.zeros((nr,nr))
+        dist = np.zeros((nr, nr))
         count = np.zeros(nr)
-        delta_syn = np.zeros((nr,nr))
-        delta_obs = np.zeros((nr,nr))
+        delta_syn = np.zeros((nr, nr))
+        delta_obs = np.zeros((nr, nr))
 
         # calculate distances between stations
         for i in range(nr):
             for j in range(i):
-                dist[i,j] = self.distance(rx[i], rx[j], ry[i], ry[j])
+                dist[i, j] = self.distance(rx[i], rx[j], ry[i], ry[j])
 
         # calculate traveltime lags between stations pairs
         for i in range(nr):
             for j in range(i):
-                if dist[i,j] > PAR.DISTMAX: 
+                if dist[i, j] > PAR.DISTMAX:
                     continue
-                delta_syn[i,j] = self.misfit(syn[i].data, syn[j].data, nt, dt)
-                delta_obs[i,j] = self.misfit(dat[i].data, dat[j].data, nt, dt)
-                delta_syn[j,i] = -delta_syn[i,j]
-                delta_obs[j,i] = -delta_obs[i,j]
+                delta_syn[i, j] = self.misfit(syn[i].data, syn[j].data, nt, dt)
+                delta_obs[i, j] = self.misfit(dat[i].data, dat[j].data, nt, dt)
+                delta_syn[j, i] = -delta_syn[i, j]
+                delta_obs[j, i] = -delta_obs[i, j]
                 count[i] += 1
 
-
-        np.savetxt(path +'/'+ 'dist_ij', dist)
-        np.savetxt(path +'/'+ 'count', count)
-        np.savetxt(path +'/'+ 'delta_syn_ij', delta_syn)
-        np.savetxt(path +'/'+ 'delta_obs_ij', delta_obs)
-        np.savetxt(path +'/'+ 'rsd_ij', delta_syn-delta_obs)
+        np.savetxt(path + '/' + 'dist_ij', dist)
+        np.savetxt(path + '/' + 'count', count)
+        np.savetxt(path + '/' + 'delta_syn_ij', delta_syn)
+        np.savetxt(path + '/' + 'delta_obs_ij', delta_obs)
+        np.savetxt(path + '/' + 'rsd_ij', delta_syn-delta_obs)
 
         # to get residuals, sum over all station pairs
         rsd = abs(delta_syn-delta_obs).sum(axis=0)
@@ -86,14 +93,13 @@ class double_difference(custom_import('preprocess', 'base')):
             rsd *= self.load_weights()
 
         # write residuals to text file
-        filename = path +'/'+ 'residuals'
+        filename = path + '/' + 'residuals'
         if exists(filename):
             rsdlist = list(np.loadtxt(filename))
         else:
             rsdlist = []
         rsdlist += [rsd]
         np.savetxt(filename, rsdlist)
-
 
     def sum_residuals(self):
         """ Sums squares of residuals
@@ -103,15 +109,14 @@ class double_difference(custom_import('preprocess', 'base')):
             total_misfit += np.sum(np.loadtxt(path)**2.)
         return total_misfit
 
-
     def write_adjoint_traces(self, path, syn, dat, channel):
         """ Computes adjoint traces from observed and synthetic traces
         """
         nt, dt, _ = self.get_time_scheme(syn)
         nr, _ = self.get_network_size(syn)
 
-        Del = np.loadtxt(path +'/'+ '../../delta_syn_ij')
-        rsd = np.loadtxt(path +'/'+ '../../rsd_ij')
+        Del = np.loadtxt(path + '/' + '../../delta_syn_ij')
+        rsd = np.loadtxt(path + '/' + '../../rsd_ij')
 
         # initialize trace arrays
         adj = Stream()
@@ -126,11 +131,10 @@ class double_difference(custom_import('preprocess', 'base')):
                 si = syn[i].data
                 sj = syn[j].data
 
-                adj[i].data += rsd[i,j] * \
-                               self.adjoint_dd(si, sj, +Del[i,j], nt, dt)
-                adj[j].data -= rsd[i,j] * \
-                               self.adjoint_dd(sj, si, -Del[i,j], nt, dt)
-
+                adj[i].data += rsd[i, j] * \
+                               self.adjoint_dd(si, sj, +Del[i, j], nt, dt)
+                adj[j].data -= rsd[i, j] * \
+                               self.adjoint_dd(sj, si, -Del[i, j], nt, dt)
 
         # optional weighting
         adj = self.apply_weights(adj)
@@ -138,10 +142,9 @@ class double_difference(custom_import('preprocess', 'base')):
         # write adjoint traces
         self.writer(adj, path, channel)
 
-
     def adjoint_dd(self, si, sj, t0, nt, dt):
-        """ Returns contribution to adjoint source from a single double 
-         difference measurement
+        """ Returns contribution to adjoint source from a single double
+            difference measurement
         """
         vi = np.zeros(nt)
         vj = np.zeros(nt)
@@ -151,13 +154,12 @@ class double_difference(custom_import('preprocess', 'base')):
 
         vjo = self.shift(vj, -t0/dt)
 
-        w  = sum(vi*vjo*dt)
+        w = sum(vi*vjo*dt)
         w = max(vjo)
         if w:
             vjo /= w
 
         return vjo
-
 
     def apply_weights(self, traces):
         if not PATH.WEIGHTS:
@@ -165,14 +167,12 @@ class double_difference(custom_import('preprocess', 'base')):
 
         else:
             w = self.load_weights()
-            for i,trace in enumerate(traces):
+            for i, trace in enumerate(traces):
                 trace.data *= w[i]
             return traces
 
-
     def load_weights(self):
-            return np.loadtxt(PATH.WEIGHTS)[:,-1]
-
+            return np.loadtxt(PATH.WEIGHTS)[:, -1]
 
     def shift(self, v, it):
         """ Shifts time series a given number of steps
@@ -190,7 +190,6 @@ class double_difference(custom_import('preprocess', 'base')):
             vo[:it] = v[-it:]
         return vo
 
-
     def distance(self, x1, y1, x2, y2):
         if PAR.UNITS in ['lonlat']:
             dlat = np.radians(y2-y1)
@@ -203,4 +202,3 @@ class double_difference(custom_import('preprocess', 'base')):
 
         else:
             return ((x1-x2)**2 + (y1-y2)**2)**0.5
-

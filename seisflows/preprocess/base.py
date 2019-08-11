@@ -1,12 +1,21 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
+
+# Import Numpy and Obspy
 import numpy as np
 import obspy
 
+# Local imports
 from seisflows.tools import msg, unix
 from seisflows.tools.tools import exists, getset
 from seisflows.config import ParameterError
-
 from seisflows.plugins import adjoint, misfit, readers, writers
 from seisflows.tools import signal
 
@@ -48,7 +57,6 @@ class base(object):
         if 'FILTER' not in PAR:
             setattr(PAR, 'FILTER', None)
 
-
         # assertions
         if PAR.FORMAT not in dir(readers):
             print msg.ReaderError
@@ -61,7 +69,6 @@ class base(object):
         self.check_filter()
         self.check_mute()
         self.check_normalize()
-
 
     def setup(self):
         """ Sets up data preprocessing machinery
@@ -76,7 +83,6 @@ class base(object):
         # define seismic data reader and writer
         self.reader = getattr(readers, PAR.FORMAT)
         self.writer = getattr(writers, PAR.FORMAT)
-
 
     def prepare_eval_grad(self, path='.'):
         """
@@ -104,8 +110,8 @@ class base(object):
             if PAR.MISFIT:
                 self.write_residuals(path, syn, obs)
 
-            self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs, filename)
-
+            self.write_adjoint_traces(path+'/'+'traces/adj', syn, obs,
+                                      filename)
 
     def write_residuals(self, path, syn, obs):
         """
@@ -128,7 +134,6 @@ class base(object):
 
         np.savetxt(filename, residuals)
 
-
     def sum_residuals(self, files):
         """
         Sums squares of residuals
@@ -140,7 +145,6 @@ class base(object):
         for filename in files:
             total_misfit += np.sum(np.loadtxt(filename)**2.)
         return total_misfit
-        
 
     def write_adjoint_traces(self, path, syn, obs, channel):
         """
@@ -160,9 +164,7 @@ class base(object):
 
         self.writer(adj, path, channel)
 
-
-    ### signal processing
-
+    # Signal processing
     def apply_filter(self, traces):
         if not PAR.FILTER:
             return traces
@@ -182,7 +184,7 @@ class base(object):
                 tr.detrend('demean')
                 tr.detrend('linear')
                 tr.taper(0.05, type='hann')
-                tr.filter('lowpass', 
+                tr.filter('lowpass',
                           zerophase=True,
                           freq=PAR.FREQ)
 
@@ -200,23 +202,22 @@ class base(object):
 
         return traces
 
-
     def apply_mute(self, traces):
         if not PAR.MUTE:
             return traces
 
         if 'MuteEarlyArrivals' in PAR.MUTE:
             traces = signal.mute_early_arrivals(traces,
-                PAR.MUTE_EARLY_ARRIVALS_SLOPE, # (units: time/distance)
-                PAR.MUTE_EARLY_ARRIVALS_CONST, # (units: time)
+                PAR.MUTE_EARLY_ARRIVALS_SLOPE,  # (units: time/distance)
+                PAR.MUTE_EARLY_ARRIVALS_CONST,  # (units: time)
                 self.get_time_scheme(traces),
                 self.get_source_coords(traces),
                 self.get_receiver_coords(traces))
 
         if 'MuteLateArrivals' in PAR.MUTE:
             traces = signal.mute_late_arrivals(traces,
-                PAR.MUTE_LATE_ARRIVALS_SLOPE, # (units: time/distance)
-                PAR.MUTE_LATE_ARRIVALS_CONST, # (units: time)
+                PAR.MUTE_LATE_ARRIVALS_SLOPE,  # (units: time/distance)
+                PAR.MUTE_LATE_ARRIVALS_CONST,  # (units: time)
                 self.get_time_scheme(traces),
                 self.get_source_coords(traces),
                 self.get_receiver_coords(traces))
@@ -234,7 +235,6 @@ class base(object):
                 self.get_receiver_coords(traces))
 
         return traces
-
 
     def apply_normalize(self, traces):
         if not PAR.NORMALIZE:
@@ -272,7 +272,6 @@ class base(object):
 
         return traces
 
-
     def apply_filter_backwards(self, traces):
         for tr in traces:
             tr.data = np.flip(tr.data)
@@ -284,10 +283,7 @@ class base(object):
 
         return traces
 
-
-
-    ### additional parameter checking
-
+    # Additional parameter checking
     def check_filter(self):
         """ Checks filter settings
         """
@@ -297,23 +293,25 @@ class base(object):
             'Highpass'])
 
         if PAR.FILTER == 'Bandpass':
-            if 'FREQMIN' not in PAR: raise ParameterError('FREQMIN')
-            if 'FREQMAX' not in PAR: raise ParameterError('FREQMAX')
+            if 'FREQMIN' not in PAR:
+                raise ParameterError('FREQMIN')
+            if 'FREQMAX' not in PAR:
+                raise ParameterError('FREQMAX')
             assert 0 < PAR.FREQMIN
             assert PAR.FREQMIN < PAR.FREQMAX
             assert PAR.FREQMAX < np.inf
 
         elif PAR.FILTER == 'Lowpass':
             raise NotImplementedError
-            if 'FREQ' not in PAR: raise ParameterError('FREQ')
+            if 'FREQ' not in PAR:
+                raise ParameterError('FREQ')
             assert 0 < PAR.FREQ <= np.inf
 
         elif PAR.FILTER == 'Highpass':
             raise NotImplementedError
-            if 'FREQ' not in PAR: raise ParameterError('FREQ')
+            if 'FREQ' not in PAR:
+                raise ParameterError('FREQ')
             assert 0 <= PAR.FREQ < np.inf
-
-
 
     def check_mute(self):
         """ Checks mute settings
@@ -351,7 +349,6 @@ class base(object):
         if 'MuteLongOffsets' not in PAR.MUTE:
             setattr(PAR, 'MUTE_LONG_OFFSETS_DIST', 0.)
 
-
     def check_normalize(self):
         assert getset(PAR.NORMALIZE) < set([
             'NormalizeTracesL1',
@@ -359,22 +356,26 @@ class base(object):
             'NormalizeEventsL1',
             'NormalizeEventsL2'])
 
-
-    ### utility functions
-
+    # Utility functions
     def get_time_scheme(self, traces):
-        # FIXME: extract time scheme from trace headers rather than parameters file
+        """ FIXME: extract time scheme from trace headers rather than
+            parameters file.
+            Note from Alexis Bottero : it is actually better like this in
+            my opinion because this allows for longer traces to be processed.
+            Indeed, in su format only 2 bytes are dedicated to the number of
+            samples which is supposed to be stored as an unsigned int. The
+            maximum NT which can be stored in the header is then 32762 whereas
+            there is no limit in principle.
+        """
         nt = PAR.NT
         dt = PAR.DT
         t0 = 0.
         return nt, dt, t0
 
-
     def get_network_size(self, traces):
         nrec = len(traces)
         nsrc = 1
         return nrec, nsrc
-
 
     def get_receiver_coords(self, traces):
         if PAR.FORMAT in ['SU', 'su']:
@@ -388,8 +389,7 @@ class base(object):
             return rx, ry, rz
 
         else:
-             raise NotImplementedError
-
+            raise NotImplementedError
 
     def get_source_coords(self, traces):
         if PAR.FORMAT in ['SU', 'su']:
@@ -403,6 +403,4 @@ class base(object):
             return sx, sy, sz
 
         else:
-             raise NotImplementedError
-
-
+            raise NotImplementedError

@@ -1,10 +1,20 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import os
-import math
 import sys
 import time
-
 from os.path import abspath, basename, join
+
+# Import utilitaries
+import math
+
+# Local imports
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.tools import call, findpath, saveobj
@@ -93,7 +103,6 @@ class pbs_lg(custom_import('system', 'base')):
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
 
-
     def submit(self, workflow):
         """ Submits workflow
         """
@@ -107,25 +116,25 @@ class pbs_lg(custom_import('system', 'base')):
 
         workflow.checkpoint()
 
-        hours = PAR.WALLTIME/60
-        minutes = PAR.WALLTIME%60
+        hours = PAR.WALLTIME / 60
+        minutes = PAR.WALLTIME % 60
         walltime = 'walltime=%02d:%02d:00 ' % (hours, minutes)
 
         ncpus = PAR.NODESIZE
         mpiprocs = PAR.NODESIZE
 
         # prepare qsub arguments
-        call( 'qsub '
-                + '%s ' % PAR.PBSARGS
-                + '-l select=1:ncpus=%d:mpiprocs=%d ' % (ncpus, mpiprocs)
-                + '-l %s ' % walltime
-                + '-N %s ' % PAR.TITLE
-                + '-j %s '%'oe'
-                + '-o %s ' % (PATH.WORKDIR+'/'+'output.log')
-                + '-V '
-                + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/submit '
-                + PATH.OUTPUT)
-
+        call('qsub '
+             + '%s ' % PAR.PBSARGS
+             + '-l select=1:ncpus=%d:mpiprocs=%d ' % (ncpus, mpiprocs)
+             + '-l %s ' % walltime
+             + '-N %s ' % PAR.TITLE
+             + '-j %s ' % 'oe'
+             + '-o %s ' % (PATH.WORKDIR+'/'+'output.log')
+             + '-V '
+             + ' -- '
+             + findpath('seisflows.system') + '/' + 'wrappers/submit '
+             + PATH.OUTPUT)
 
     def run(self, classname, method, hosts='all', **kwargs):
         """ Runs task multiple times in embarrassingly parallel fasion
@@ -144,12 +153,10 @@ class pbs_lg(custom_import('system', 'base')):
             if isdone:
                 return
 
-
     def mpiexec(self):
         """ Specifies MPI executable used to invoke solver
         """
         return PAR.MPIEXEC
-
 
     def taskid(self):
         """ Provides a unique identifier for each running task
@@ -157,15 +164,15 @@ class pbs_lg(custom_import('system', 'base')):
         try:
             return os.getenv('PBS_ARRAY_INDEX')
         except:
-            raise Exception("PBS_ARRAY_INDEX environment variable not defined.")
+            raise Exception("PBS_ARRAY_INDEX environment variable \
+                            not defined.")
 
-
-    ### private methods
+    # Private methods
 
     def submit_job_array(self, classname, method, hosts='all'):
         with open(PATH.SYSTEM+'/'+'job_id', 'w') as f:
             call(self.job_array_cmd(classname, method, hosts),
-                stdout=f)
+                 stdout=f)
 
         # retrieve job ids
         with open(PATH.SYSTEM+'/'+'job_id', 'r') as f:
@@ -178,15 +185,14 @@ class pbs_lg(custom_import('system', 'base')):
         else:
             return [job]
 
-
     def job_array_cmd(self, classname, method, hosts):
         nodes = math.ceil(PAR.NTASK/float(PAR.NODESIZE))
         ncpus = PAR.NPROC
         mpiprocs = PAR.NPROC
 
-        hours = PAR.TASKTIME/60
-        minutes = PAR.TASKTIME%60
-        walltime = 'walltime=%02d:%02d:00 '%(hours, minutes)
+        hours = PAR.TASKTIME / 60
+        minutes = PAR.TASKTIME % 60
+        walltime = 'walltime=%02d:%02d:00 ' % (hours, minutes)
 
         return ('qsub '
                 + '%s ' % PAR.PBSARGS
@@ -202,23 +208,25 @@ class pbs_lg(custom_import('system', 'base')):
                 + PATH.OUTPUT + ' '
                 + classname + ' '
                 + method + ' '
-                + 'PYTHONPATH='+findpath('seisflows.system'),+','
+                + 'PYTHONPATH=' + findpath('seisflows.system'), +','
                 + PAR.ENVIRONS)
-
 
     def job_array_args(self, hosts):
         if hosts == 'all':
-          args = ('-J 0-%s ' % (PAR.NTASK-1)
-                +'-o %s ' % (PATH.WORKDIR+'/'+'output.pbs/' + '$PBS_ARRAYID')
-                + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/run ')
+            args = ('-J 0-%s ' % (PAR.NTASK-1)
+                    + '-o %s ' % (PATH.WORKDIR + '/' + 'output.pbs/' +
+                                  '$PBS_ARRAYID')
+                    + ' -- '
+                    + findpath('seisflows.system') + '/' + 'wrappers/run ')
 
         elif hosts == 'head':
-          args = ('-J 0-0 '
-                 +'-o %s ' % (PATH.WORKDIR+'/'+'output.pbs/' + '$PBS_JOBID')
-                 + ' -- ' + findpath('seisflows.system') +'/'+ 'wrappers/run ')
+            args = ('-J 0-0 '
+                    + '-o %s ' % (PATH.WORKDIR + '/' + 'output.pbs/' +
+                                  '$PBS_JOBID')
+                    + ' -- '
+                    + findpath('seisflows.system') + '/' + 'wrappers/run ')
 
         return args
-
 
     def job_array_status(self, classname, method, jobs):
         """ Determines completion status of one or more jobs
@@ -237,16 +245,15 @@ class pbs_lg(custom_import('system', 'base')):
 
         return isdone, jobs
 
-
     def _query(self, jobid):
         """ Queries job state from PBS database
         """
         # TODO: replace shell utilities with native Python
         with open(PATH.SYSTEM+'/'+'job_status', 'w') as f:
             call('qstat -x -tJ ' + jobid + ' | '
-                + 'tail -n 1 ' + ' | '
-                + 'awk \'{print $5}\'',
-                stdout=f)
+                 + 'tail -n 1 ' + ' | '
+                 + 'awk \'{print $5}\'',
+                 stdout=f)
 
         with open(PATH.SYSTEM+'/'+'job_status', 'r') as f:
             line = f.readline()
@@ -254,8 +261,7 @@ class pbs_lg(custom_import('system', 'base')):
 
         return state
 
-
-    ### utility function
+    # Utility functions
 
     def _timestamp(self):
         with open(PATH.SYSTEM+'/'+'timestamps', 'a') as f:
@@ -267,5 +273,3 @@ class pbs_lg(custom_import('system', 'base')):
         kwargsfile = join(kwargspath, classname+'_'+method+'.p')
         unix.mkdir(kwargspath)
         saveobj(kwargsfile, kwargs)
-
-

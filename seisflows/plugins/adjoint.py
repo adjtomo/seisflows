@@ -1,28 +1,32 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+# Functions used by the PREPROCESS class and specified by the MISFIT parameter
+###############################################################################
 
-# used by the PREPROCESS class and specified by the MISFIT parameter
-
-
-
+# Import Numpy and utilities from Scipy
 import numpy as _np
 from scipy.signal import hilbert as _analytic
 
+# Local imports
 from seisflows.plugins import misfit
 from seisflows.tools.math import hilbert as _hilbert
 
 
-### adjoint traces generators
-
+# Adjoint traces generators
 
 def Waveform(syn, obs, nt, dt):
-    # waveform difference
-    # (Tromp et al 2005, eq 9)
+    """ Waveform difference (Tromp et al 2005, eq 9)
+    """
     wadj = syn - obs
     return wadj
 
 
 def Envelope(syn, obs, nt, dt, eps=0.05):
-    # envelope difference
-    # (Yuan et al 2015, eq 16)
+    """ Envelope difference (Yuan et al 2015, eq 16)
+    """
     esyn = abs(_analytic(syn))
     eobs = abs(_analytic(obs))
     etmp = (esyn - eobs)/(esyn + eps*esyn.max())
@@ -31,63 +35,63 @@ def Envelope(syn, obs, nt, dt, eps=0.05):
 
 
 def InstantaneousPhase(syn, obs, nt, dt, eps=0.05):
-    # instantaneous phase 
-    # (Bozdag et al 2011, eq 27)
+    """ Instantaneous phase (from Bozdag et al. 2011, eq 27)
+    """
     r = _np.real(_analytic(syn))
     i = _np.imag(_analytic(syn))
-    phi_syn = _np.arctan2(i,r)
+    phi_syn = _np.arctan2(i, r)
 
     r = _np.real(_analytic(obs))
     i = _np.imag(_analytic(obs))
-    phi_obs = _np.arctan2(i,r)
+    phi_obs = _np.arctan2(i, r)
 
     phi_rsd = phi_syn - phi_obs
     esyn = abs(_analytic(syn))
     emax = max(esyn**2.)
 
     wadj = phi_rsd*_np.imag(_analytic(syn))/(esyn**2. + eps*emax) + \
-           _np.imag(_analytic(phi_rsd * syn/(esyn**2. + eps*emax)))
+        _np.imag(_analytic(phi_rsd * syn/(esyn**2. + eps*emax)))
 
     return wadj
 
 
 def Traveltime(syn, obs, nt, dt):
-    # cross correlation traveltime
-    # (Tromp et al 2005, eq 45)
+    """ Cross correlation traveltime (Tromp et al 2005, eq 45)
+    """
     wadj = _np.zeros(nt)
     wadj[1:-1] = (syn[2:] - syn[0:-2])/(2.*dt)
     wadj *= 1./(sum(wadj*wadj)*dt)
-    wadj *= misfit.Traveltime(syn,obs,nt,dt)
+    wadj *= misfit.Traveltime(syn, obs, nt, dt)
     return wadj
 
 
 def TraveltimeInexact(syn, obs, nt, dt):
-    # must faster but possibly inaccurate
+    """ Much faster (but possibly inaccurate) version of Traveltime function
+    """
     wadj = _np.zeros(nt)
     wadj[1:-1] = (syn[2:] - syn[0:-2])/(2.*dt)
     wadj *= 1./(sum(wadj*wadj)*dt)
-    wadj *= misfit.TraveltimeInexact(syn,obs,nt,dt)
+    wadj *= misfit.TraveltimeInexact(syn, obs, nt, dt)
     return wadj
 
 
 def Amplitude(syn, obs, nt, dt):
-    # cross correlation amplitude
+    """ Cross correlation amplitude
+    """
     wadj = 1./(sum(syn*syn)*dt) * syn
-    wadj *= misfit.Amplitude(syn,obs,nt,dt)
+    wadj *= misfit.Amplitude(syn, obs, nt, dt)
     return wadj
 
 
-
-
 def Envelope2(syn, obs, nt, dt, eps=0.):
-    # envelope amplitude ratio
-    # (Yuan et al 2015, eqs B-2, B-3)
+    """ Envelope amplitude ratio (Yuan et al 2015, eq B-2, B-3)
+    """
     raise NotImplementedError
 
 
 def Envelope3(syn, obs, nt, dt, eps=0.):
-    # envelope lag
-    # (Yuan et al 2015, eqs B-2, B-5)
+    """ Envelope cross-correlation lag (Yuan et al 2015, eqs B-2, B-5)
+    """
     esyn = abs(_analytic(syn))
     eobs = abs(_analytic(obs))
 
@@ -118,17 +122,17 @@ def InstantaneousPhase2(syn, obs, nt, dt, eps=0.):
     return wadj
 
 
-
-### migration
+# Migration
 
 def Displacement(syn, obs, nt, dt):
     return obs
+
 
 def Velocity(syn, obs, nt, dt):
     adj[1:-1] = (obs[2:] - obs[0:-2])/(2.*dt)
     return adj
 
+
 def Acceleration(syn, obs, nt, dt):
     adj[1:-1] = (-obs[2:] + 2.*obs[1:-1] - obs[0:-2])/(2.*dt)
     return adj
-

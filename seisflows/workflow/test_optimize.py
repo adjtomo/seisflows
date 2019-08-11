@@ -1,20 +1,31 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
+from os.path import abspath
+
+# Import Numpy
 import numpy as np
 
-from os.path import abspath
+# Local imports
 from seisflows.tools import unix
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.tools import savetxt
 from seisflows.config import ParameterError
 from seisflows.workflow.base import base
 
+# Import rosenbrock
+import rosenbrock as problem
+
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 optimize = sys.modules['seisflows_optimize']
-
-import rosenbrock as problem
 
 
 class test_optimize(base):
@@ -27,7 +38,7 @@ class test_optimize(base):
         cls.path = PATH.OPTIMIZE
 
         # check parameters
-        if 'OPTIMIZE' not in PAR: 
+        if 'OPTIMIZE' not in PAR:
             setattr(PAR, 'OPTIMIZE', 'base')
 
         if 'VERBOSE' not in PAR:
@@ -47,13 +58,13 @@ class test_optimize(base):
 
         # check paths
         if 'SCRATCH' not in PATH:
-            setattr(PATH,'SCRATCH',abspath('./scratch'))
+            setattr(PATH, 'SCRATCH', abspath('./scratch'))
 
         if 'SUBMIT' not in PATH:
-            setattr(PATH,'SUBMIT',abspath('.'))
+            setattr(PATH, 'SUBMIT', abspath('.'))
 
         if 'OPTIMIZE' not in PATH:
-            setattr(PATH,'OPTIMIZE',PATH.SCRATCH)
+            setattr(PATH, 'OPTIMIZE', PATH.SCRATCH)
 
         # assertions
         assert PAR.BEGIN == 1
@@ -62,7 +73,6 @@ class test_optimize(base):
         assert 'func' in dir(problem)
         assert 'grad' in dir(problem)
         assert 'model_init' in dir(problem)
-
 
     def main(cls):
         cls.setup()
@@ -80,7 +90,6 @@ class test_optimize(base):
             cls.finalize()
             print ''
 
-
     def setup(cls):
         unix.mkdir(cls.path)
         unix.cd(cls.path)
@@ -90,8 +99,7 @@ class test_optimize(base):
 
         unix.cd(cls.path)
         m = problem.model_init()
-        savenpy('m_new',m)
-
+        savenpy('m_new', m)
 
     def compute_direction(cls):
         cls.evaluate_gradient()
@@ -99,7 +107,6 @@ class test_optimize(base):
             cls.compute_direction_newton()
         else:
             optimize.compute_direction()
-
 
     def compute_direction_newton(cls):
         optimize.initialize_newton()
@@ -111,7 +118,6 @@ class test_optimize(base):
             isdone = optimize.iterate_newton()
             if isdone:
                 break
-
 
     def line_search(cls):
         optimize.initialize_search()
@@ -137,28 +143,24 @@ class test_optimize(base):
                     print ' Line search failed\n\n Aborting...'
                     sys.exit(-1)
 
-
-
     def evaluate_function(cls):
         m = loadnpy('m_try')
         f = problem.func(m)
-        savetxt('f_try',f)
-
+        savetxt('f_try', f)
 
     def evaluate_gradient(cls):
         m = loadnpy('m_new')
         f = problem.func(m)
         g = problem.grad(m)
-        savetxt('f_new',f)
-        savenpy('g_new',g)
-
+        savetxt('f_new', f)
+        savenpy('g_new', g)
 
     def finalize(cls):
         m_new = loadnpy('m_new')
         m_old = loadnpy('m_old')
 
         if PAR.VERBOSE > 0:
-            print '%14.7e %14.7e'%tuple(m_new)
+            print '%14.7e %14.7e' % tuple(m_new)
 
         if cls.status(m_new, m_old):
             print 'Test successful: stopping criteria met.\n'
@@ -169,11 +171,9 @@ class test_optimize(base):
             print 'Maximum number of iterations exceeded.\n'
             sys.exit(-1)
 
-
     def status(cls, m_new, m_old):
         _finished = True
         if np.linalg.norm(m_new-m_old)/np.linalg.norm(m_new) < PAR.THRESH:
             return _finished
         else:
             return not _finished
-

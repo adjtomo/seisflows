@@ -1,8 +1,13 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+# Please do not remove this draft module  -- it may be used in a future version
+# of Seisflows
+###############################################################################
 
-# please do not remove this module  -- it may be used in a future version of
-# seisflows
-
-
+# Import Numpy
 import numpy as np
 
 
@@ -17,7 +22,7 @@ def _gauss(nt, dt, sigma):
 
 
 def ricker(nt, dt, fp):
-    a = 2.*np.pi*fp 
+    a = 2.*np.pi*fp
     t = np.arange(-nt, nt+1)*dt
     y = (1-0.5*(a*t)**2.)*np.exp(-0.25*(a*t)**2.)
 
@@ -46,4 +51,3 @@ def gabor(nt, df, fp):
         print warning
 
     return y
-

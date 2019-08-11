@@ -1,5 +1,20 @@
 #!/bin/sh
 
-rm -rf output*
+usage="$(basename "$0") [-h] -- delete directories output, output.stat*, output.optim
+and scratch in the current directory
+
+where:
+    -h  show this help text"
+
+while getopts ':hs:' option; do
+  case "$option" in
+    h) echo "$usage"
+       exit
+       ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+rm -rf output output.stat* output.optim
 rm -rf scratch
 

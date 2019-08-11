@@ -1,7 +1,17 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
+
+# Import Numpy
 import numpy as np
 
+# Local imports
 from seisflows.config import custom_import, ParameterError
 
 PAR = sys.modules['seisflows_parameters']
@@ -22,16 +32,12 @@ class steepest_descent(custom_import('optimize', 'base')):
 
         super(steepest_descent, self).check()
 
-
     def setup(self):
         super(steepest_descent, self).setup()
-
 
     def compute_direction(self):
         super(steepest_descent, self).compute_direction()
 
-
     def restart(self):
         # steepest descent never requires restarts
         pass
-

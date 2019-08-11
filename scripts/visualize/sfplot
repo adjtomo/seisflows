@@ -1,40 +1,50 @@
 #!/usr/bin/env python
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+# sfplot:
+# Specialized script used to plot vectors/time series from ascii text files
+#
+###############################################################################
 
-# Specialized script used to plot vectors/time series from ascii text files.
-
+# Import system modules
 import argparse
+
+# Import numpy
 import numpy as np
 
+# Local imports
 from seisflows.tools.graphics import plot_vector
 
 
 def parse_args():
+    """ This function run argparse
+    (see https://docs.python.org/2/howto/argparse.html) to process the
+    arguments given by the user along with sfplot. Define default behaviour if
+    they are not given and help message when sfplot -h is run
+    """
     parser = argparse.ArgumentParser(
         description='plots vector or time series')
 
     parser.add_argument('file',
-        help='filename/data source')
+                        help='filename/data source')
 
-    parser.add_argument('-n',
-        default=1,
-        type=int,
-        help='trace number')
+    parser.add_argument('-n', default=1, type=int,
+                        help='trace number')
 
-    parser.add_argument('-f', '--format',
-        default='ascii',
-        help='data format')
+    parser.add_argument('-f', '--format', default='ascii',
+                        help='data format')
 
-    parser.add_argument('-xl', '--xlabel',
-        default='',
-        help='x axis label')
+    parser.add_argument('-xl', '--xlabel', default='',
+                        help='x axis label')
 
-    parser.add_argument('-yl', '--ylabel',
-        default='',
-        help='y axis label')
+    parser.add_argument('-yl', '--ylabel', default='',
+                        help='y axis label')
 
-    parser.add_argument('-t', '--title',
-        default='',
-        help='title')
+    parser.add_argument('-t', '--title', default='',
+                        help='title')
 
     return parser.parse_args()
 
@@ -50,7 +60,7 @@ def read_ascii(args):
     else:
         raise ValueError(
             'v must be a vector or time series')
-    return t,v
+    return t, v
 
 
 def read_rows():
@@ -80,7 +90,7 @@ def read_su(args):
     n = args.n
     t = np.arange(stats.npts)*stats.delta
     v = data[n].data
-    return t,v
+    return t, v
 
 
 def read_generic(args):
@@ -90,34 +100,32 @@ def read_generic(args):
         n = args.n
         t = range(data[n].shape[0])
         w = data[n].data
-        return t,v
+        return t, v
     except:
         raise NotImplementedError
 
 
-
 if __name__ == "__main__":
+    """ Specialized script used to plot vectors/time series from ascii text
+    files
+    """
+    args = parse_args()  # Parse the arguments given along command sfplot
 
-    args = parse_args()
-
-
-    # read data
+    # Read data
     if args.format in ['ascii']:
-        t,v = read_ascii(args)
+        t, v = read_ascii(args)
 
     elif args.format in ['cols', 'columns']:
-        t,v = read_ascii(args)
+        t, v = read_ascii(args)
 
     elif args.format in ['rows']:
-        t,v = read_rows(args)
+        t, v = read_rows(args)
 
     elif args.format in ['SU', 'su']:
-        t,v =  read_su(args)
+        t, v = read_su(args)
 
     else:
-        t,v = read_generic(args)
+        t, v = read_generic(args)
 
-
-    # plot time series
+    # Plot time series
     plot_vector(t, v, xlabel=args.xlabel, ylabel=args.ylabel, title=args.title)
-

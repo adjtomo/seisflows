@@ -1,12 +1,26 @@
 #!/usr/bin/env python
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+# sfexamples:
+# Prompts user to select SEISFLOWS example, then sets up working directory
+# to run example
+#
+###############################################################################
 
+# Import system modules
 import os
+from os.path import exists
 
-from os.path import exists, join
+# Local imports
 from seisflows.tools import unix
 
 
 def listdir(dir):
+    """ List directories in current directory in a sorted fashion
+    """
     subdirs = []
     for subdir in unix.ls(dir):
         if os.path.isdir(dir+'/'+subdir):
@@ -17,9 +31,12 @@ def listdir(dir):
 
 
 def getpath():
+    """ Return the environment variable 'SEISFLOWS_EXAMPLES' raise en error
+    if it does not exist
+    """
     path = os.getenv('SEISFLOWS_EXAMPLES')
-    if not exists(path):  
-       raise EnvironmentError()
+    if not exists(path):
+        raise EnvironmentError()
     return path
 
 
@@ -33,18 +50,17 @@ if __name__ == '__main__':
         path = getpath()
     print ''
 
-    # select directory
+    # Select directory
     dirs = ['Examples2d', 'Examples3d', 'Examples3dGlobe']
     dir = unix.select(dirs)
     print ''
 
-    # select subdirectory
+    # Select subdirectory
     subdirs = listdir(path+'/'+dir)
     subdir = unix.select(subdirs)
     print ''
 
-    # set up working directory
+    # Set up working directory
     fullpath = path+'/'+dir+'/'+subdir
     unix.cp(fullpath+'/'+'parameters.py', '.')
     unix.cp(fullpath+'/'+'paths.py', '.')
-

@@ -1,12 +1,22 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import os
 import subprocess
 import sys
-import numpy as np
-
 from collections import defaultdict
 from os.path import abspath, join, exists
 from string import find
+
+# Import Numpy
+import numpy as np
+
+# Local imports
 from seisflows.tools import msg, unix
 from seisflows.tools.tools import iterable
 
@@ -18,16 +28,16 @@ def call_solver(mpiexec, executable, output='solver.log'):
       subprocess.call(mpiexec +' '+ executable, shell=True)
     """
     try:
-        f = open(output,'w')
+        f = open(output, 'w')
         subprocess.check_call(
-            mpiexec +' '+ executable,
+            mpiexec + ' ' + executable,
             shell=True,
             stdout=f)
     except subprocess.CalledProcessError, err:
-        print msg.SolverError % (mpiexec +' '+ executable)
+        print msg.SolverError % (mpiexec + ' ' + executable)
         sys.exit(-1)
     except OSError:
-        print msg.SolverError % (mpiexec +' '+ executable)
+        print msg.SolverError % (mpiexec + ' ' + executable)
         sys.exit(-1)
     finally:
         f.close()
@@ -76,10 +86,7 @@ class Writer(object):
             f.write('%e\n' % val)
 
 
-
-
-
-def getpar(key, file='DATA/Par_file', sep='=', cast=str):
+def getpar(key, file='DATA/Par_file', sep='=', cast=str, noOutput=False):
     """ Reads parameter from text file
     """
     val = None
@@ -88,21 +95,20 @@ def getpar(key, file='DATA/Par_file', sep='=', cast=str):
         for line in f:
             if find(line, key) == 0:
                 # read key
-                key, val = _split(line, sep)
-                if not key:
+                key_read, val_read = _split(line, sep)
+                if not key_read or (key_read.strip() != key):
                     continue
                 # read val
-                val, _ = _split(val, '#')
+                val, _ = _split(val_read, '#')
                 val.strip()
                 break
-
     if val:
         if cast == float:
             val = val.replace('d', 'e')
         return cast(val)
-
     else:
-        print 'Not found in parameter file: %s\n' % key
+        if not noOutput:
+            print 'Not found in parameter file: %s\n' % key
         raise Exception
 
 
@@ -113,7 +119,7 @@ def setpar(key, val, filename='DATA/Par_file', path='.', sep='='):
     val = str(val)
 
     # read line by line
-    with open(path +'/'+ filename, 'r') as file:
+    with open(path + '/' + filename, 'r') as file:
         lines = []
         for line in file:
             if find(line, key) == 0:
@@ -130,12 +136,11 @@ def setpar(key, val, filename='DATA/Par_file', path='.', sep='='):
             lines.append(line)
 
     # write file
-    with open(path +'/'+ filename, 'w') as file:
+    with open(path + '/' + filename, 'w') as file:
         file.writelines(lines)
 
 
-
-### utility functions
+# Utility functions
 
 def _split(str, sep):
     n = find(str, sep)

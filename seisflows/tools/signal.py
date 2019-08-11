@@ -1,8 +1,15 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import Numpy
 import numpy as np
 
 
-### functions acting on whole record sections
+# Functions acting on whole record sections
 
 def sconvolve(s, h, w, inplace=True):
     nt = h.nt
@@ -10,12 +17,12 @@ def sconvolve(s, h, w, inplace=True):
 
     if inplace:
         for ir in range(nr):
-            s[:,ir] = np.convolve(s[:,ir], w, 'same')
+            s[:, ir] = np.convolve(s[:, ir], w, 'same')
         return s
     else:
-        s2 = np.zeros((nt,nr))
+        s2 = np.zeros((nt, nr))
         for ir in range(nr):
-            s2[:,ir] = np.convolve(s[:,ir], w, 'same')
+            s2[:, ir] = np.convolve(s[:, ir], w, 'same')
         return s2
 
 
@@ -26,14 +33,13 @@ def mute_early_arrivals(traces, slope, const, time_scheme, s_coords, r_coords):
 
             SLOPE * || s - r || + CONST
 
-        are muted, where slope is has units of velocity**-1, 
+        are muted, where slope is has units of velocity**-1,
         CONST has units of time, and
         || s - r || is distance between source and receiver.
     """
 
     nr = len(traces)
     nt, dt, _ = time_scheme
-
 
     for ir in range(nr):
         # calculate source-reciever distance
@@ -54,7 +60,7 @@ def mute_late_arrivals(traces, slope, const, time_scheme, s_coords, r_coords):
 
             SLOPE * || s - r || + CONST
 
-        are muted, where SLOPE is has units of velocity**-1, 
+        are muted, where SLOPE is has units of velocity**-1,
         CONST has units of time, and
         || s - r || is distance between source and receiver.
     """
@@ -79,7 +85,7 @@ def mute_short_offsets(traces, dist, s_coords, r_coords):
 
             || s - r || < DIST
 
-        where || s - r || is the offset between source and receiver and 
+        where || s - r || is the offset between source and receiver and
         DIST is a user-supplied cutoff
     """
     nr = len(traces)
@@ -92,7 +98,7 @@ def mute_short_offsets(traces, dist, s_coords, r_coords):
 
         if offset < dist:
             traces[ir].data[:] = 0.
-        
+
     return traces
 
 
@@ -101,7 +107,7 @@ def mute_long_offsets(traces, dist, s_coords, r_coords):
 
             || s - r || > DIST
 
-        where || s - r || is the offset between source and receiver and 
+        where || s - r || is the offset between source and receiver and
         DIST is a user-supplied cutoff
     """
     nr = len(traces)
@@ -114,12 +120,11 @@ def mute_long_offsets(traces, dist, s_coords, r_coords):
 
         if offset > dist:
             traces[ir].data[:] = 0.
-        
+
     return traces
 
 
-
-### functions acting on individual traces
+# Functions acting on individual traces
 
 def mask(slope, const, offset, time_scheme, length=400):
     """ Constructs tapered mask that can be applied to trace to
@@ -152,14 +157,13 @@ def mask(slope, const, offset, time_scheme, length=400):
     return mask
 
 
-
 def correlate(u, v):
     w = np.convolve(u, np.flipud(v))
-    return
+    return w
 
 
 def tukeywin(nt, imin, imax, alpha=0.05):
-    t = np.linspace(0,1,imax-imin)
+    t = np.linspace(0, 1, imax-imin)
     w = np.zeros(imax-imin)
     p = alpha/2.
     lo = np.floor(p*(imax-imin-1))+1
@@ -170,4 +174,3 @@ def tukeywin(nt, imin, imax, alpha=0.05):
     win = np.zeros(nt)
     win[imin:imax] = w
     return win
-

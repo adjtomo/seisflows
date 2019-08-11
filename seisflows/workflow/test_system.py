@@ -1,10 +1,17 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
 import time
 
+# Local imports
 from seisflows.config import ParameterError
 from seisflows.workflow.base import base
-
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -21,21 +28,19 @@ class test_system(base):
             raise Exception
 
         if 'NPROC' not in PAR:
-            setattr(PAR,'NPROC',1)
+            setattr(PAR, 'NPROC', 1)
 
         if 'VERBOSE' not in PAR:
-            setattr(PAR,'VERBOSE',0)
-
+            setattr(PAR, 'VERBOSE', 0)
 
     def main(self):
-        system.run_single('workflow', 'hello',  
-            msg='Hello from 0')
+        system.run_single('workflow', 'hello',
+                          msg='Hello from 0')
 
-        system.run('workflow', 'hello', 
-            msg='Hello from %d')
+        system.run('workflow', 'hello',
+                   msg='Hello from %d')
 
         print ''
-
 
     def hello(self, msg='Hello from %d'):
         """ Prints hello message
@@ -47,4 +52,3 @@ class test_system(base):
             print msg
 
         print ''
-

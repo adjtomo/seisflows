@@ -1,4 +1,14 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# This file contains a bunch of useful functions to manipulate files and
+# directories and more generally to mimic unix bash commands
+
+# Import system modules
 import os
 import random
 import shutil
@@ -7,11 +17,15 @@ import subprocess
 import sys
 import time
 
+# Local imports
 from os.path import abspath, basename, isdir, isfile, join
 from seisflows.tools.tools import iterable
 
 
 def cat(src, *dst):
+    """ Open a file and print it. If file dst is given the file is printed into
+        dst
+    """
     f = open(src, 'r')
     contents = f.read()
     f.close()
@@ -25,10 +39,15 @@ def cat(src, *dst):
 
 
 def cd(path):
+    """ Change current directory to the one given
+    """
     os.chdir(path)
 
 
 def cp(src='', dst=''):
+    """ Copy all (files or directories, as list or tupples) given in src to
+        directory (or file) dst 
+    """
     if isinstance(src, (list, tuple)):
         if len(src) > 1:
             assert isdir(dst)
@@ -75,10 +94,11 @@ def ls(path):
 
 
 def mkdir(dirs):
-    time.sleep(2 * random.random())
+    time.sleep(1.0 * random.random())
     for dir in iterable(dirs):
         if not os.path.isdir(dir):
             os.makedirs(dir)
+
 
 def mv(src='', dst=''):
     if isinstance(src, (list, tuple)):
@@ -130,7 +150,6 @@ def touch(filename, times=None):
         os.utime(filename, times)
 
 
-
 def which(name):
     def isexe(file):
         return os.path.isfile(file) and os.access(file, os.X_OK)
@@ -147,4 +166,3 @@ def which(name):
             return fullname
     else:
         return None
-

@@ -1,7 +1,17 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import sys
+
+# Import Numpy
 import numpy as np
 
+# Local imports
 from seisflows.tools import unix
 from seisflows.tools.tools import exists
 from seisflows.config import custom_import, ParameterError
@@ -13,7 +23,7 @@ PATH = sys.modules['seisflows_paths']
 solver = sys.modules['seisflows_solver']
 postprocess = sys.modules['seisflows_postprocess']
 
-migration = custom_import('workflow','migration')()
+migration = custom_import('workflow', 'migration')()
 
 
 class test_postprocess(base):
@@ -28,7 +38,6 @@ class test_postprocess(base):
         if 'INPUT' not in PATH:
             setattr(PATH, 'INPUT', None)
 
-
     def main(self):
         """ Writes gradient of objective function
         """
@@ -36,4 +45,3 @@ class test_postprocess(base):
             migration.main()
 
         postprocess.process_kernels()
-

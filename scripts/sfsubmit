@@ -4,11 +4,15 @@
 #
 # See LICENCE file
 #
+# sfrun:
+# Workflow submission script
 #
-################################################################################
+###############################################################################
 
 # Import system modules
-import argparse, os, sys
+import argparse
+import os
+import sys
 
 # Local imports
 from seisflows.config import config, loadpy, tilde_expand, Dict
@@ -16,20 +20,24 @@ from seisflows.tools import unix
 
 
 def getargs():
-    """ This function run argparse (see https://docs.python.org/2/howto/argparse.html)
-    to process the arguments given by the user along with sfrun. Define default
-    behaviour if they are not given qnd help message when sfrun -h is run
+    """ This function run argparse
+    (see https://docs.python.org/2/howto/argparse.html) to process the
+    arguments given by the user along with sfrun. Define default behaviour if
+    they are not given and help message when sfrun -h is run
     """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--workdir', nargs='?', 
-        default=os.getcwd(), help="workdir : working directory. Default is given by command pwd")
+    parser.add_argument('--workdir', nargs='?', default=os.getcwd(),
+                        help="workdir : working directory. Default is given \
+                              by command pwd")
 
-    parser.add_argument('--parameter_file', nargs='?', 
-        default='parameters.py', help="parameter_file : path to the parameter file. Default is ./parameters.py")
+    parser.add_argument('--parameter_file', nargs='?', default='parameters.py',
+                        help="parameter_file : path to the parameter file. \
+                        Default is ./parameters.py")
 
-    parser.add_argument('--path_file', nargs='?', 
-        default='paths.py', help="path_file : path to the file containing the path to the model and solver. Default is ./paths.py")
+    parser.add_argument('--path_file', nargs='?', default='paths.py',
+                        help="path_file : path to the file containing the \
+                        path to the model and solver. Default is ./paths.py")
 
     return parser.parse_args()
 
@@ -37,25 +45,33 @@ def getargs():
 if __name__ == "__main__":
     """ Workflow submission script
     """
-    args = getargs() # Parse the arguments given along command sfrun
+    args = getargs()  # Parse the arguments given along command sfrun
 
-    # Load and register parameters
+    # Load file parameters.py and store it in a Dictionnary like structure
     parameters = loadpy(args.parameter_file)
+    # Register the parameters to make them globally accessible.
+    # More precisely we add a new key named 'seisflows_parameters' to the
+    # dictionary sys.modules (mapping modules names to modules which have
+    # already been loaded) we store the parameters inside
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # Load and register paths
+    # Load and register paths.py (same than above for paths)
+    # tilde_expand expands tilde character in path strings
     paths = tilde_expand(loadpy(args.path_file))
     sys.modules['seisflows_paths'] = Dict(paths)
 
-    # Create working directory and open it
+    # Create working directory (if it does not exist) and open it
     unix.mkdir(args.workdir)
     unix.cd(args.workdir)
 
     # Run configuration script
+    # It basically instantiates SeisFlows objects and makes them globally
+    # accessible by registering them in sys.modules
     config()
 
-    # Submit workflow
+    # Submit workflow (we give the newly instantiated class workflow to the
+    # class system through the method submit)
     workflow = sys.modules['seisflows_workflow']
     system = sys.modules['seisflows_system']
-    system.submit(workflow)
 
+    system.submit(workflow)

@@ -1,16 +1,31 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+# In the function and variable names, we use 'grid' to describe a set of
+# structured coordinates, and 'mesh' to describe a set of unstructured
+# coordinates
+###############################################################################
+
+# Import system modules
 import os
 
+# Import numpy
 import numpy as np
+
+# Import utilities from Scipy
 import scipy.signal as _signal
 import scipy.interpolate as _interp
 
+# Local imports
 from seisflows.tools.math import gauss2
 
 
 def count_zeros(a):
     """ Counts number of zeros in a list or array
     """
-    return sum(np.array(a)==0)
+    return sum(np.array(a) == 0)
 
 
 def sortrows(a, return_index=False, return_inverse=False):
@@ -62,7 +77,7 @@ def stack(*args):
     return np.column_stack(args)
 
 
-### array input/output
+# Array input/output
 
 def loadnpy(filename):
     """Loads numpy binary file."""
@@ -75,12 +90,9 @@ def savenpy(filename, v):
     os.rename(filename + '.npy', filename)
 
 
-
-
-# in the function and variable names, we use 'grid' to describe a set of
-# structured coordinates, and 'mesh' to describe a set of unstructured 
+# In the function and variable names, we use 'grid' to describe a set of
+# structured coordinates, and 'mesh' to describe a set of unstructured
 # coordinates
-
 
 def gridsmooth(Z, span):
     """ Smooths values on 2D rectangular grid
@@ -128,11 +140,11 @@ def meshsmooth(v, mesh, span):
 
 
 def mesh2grid(v, mesh):
-    """ Interpolates from an unstructured coordinates (mesh) to a structured 
+    """ Interpolates from an unstructured coordinates (mesh) to a structured
         coordinates (grid)
     """
-    x = mesh[:,0]
-    z = mesh[:,1]
+    x = mesh[:, 0]
+    z = mesh[:, 1]
     lx = x.max() - x.min()
     lz = z.max() - z.min()
     nn = v.size
@@ -162,8 +174,7 @@ def mesh2grid(v, mesh):
 
 
 def grid2mesh(V, grid, mesh):
-    """ Interpolates from structured coordinates (grid) to unstructured 
+    """ Interpolates from structured coordinates (grid) to unstructured
         coordinates (mesh)
     """
     return _interp.griddata(grid, V.flatten(), mesh, 'linear')
-

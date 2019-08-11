@@ -1,12 +1,20 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import Numpy and some utilities from Scipy and Matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
+# Import from Obspy
 from obspy.core.stream import Stream
 
 
-def plot_gll(x, y, z):
+def plot_gll(x, y, z, vmin=None, vmax=None):
     """ Plots values on 2D unstructured GLL mesh
     """
     r = (max(x) - min(x))/(max(y) - min(y))
@@ -14,8 +22,27 @@ def plot_gll(x, y, z):
     ry = 1/np.sqrt(1 + r**2)
 
     f = plt.figure(figsize=(10*rx, 10*ry))
-    p = plt.tricontourf(x, y, z, 125)
+    if vmin is not None and vmax is not None:
+        p = plt.tricontourf(x, y, z, 125, levels=np.linspace(vmin, vmax, 125))
+    else:
+        p = plt.tricontourf(x, y, z, 125)
     plt.axis('image')
+
+    return f, p
+
+
+def plot_many_gll(x, y, z, vmin=None, vmax=None):
+    """ Plots values on big 2D unstructured GLL mesh
+        (in that case tricontourf does not work)
+    """
+    r = (max(x) - min(x))/(max(y) - min(y))
+    rx = r/np.sqrt(1 + r**2)
+    ry = 1/np.sqrt(1 + r**2)
+
+    f = plt.figure(figsize=(10*rx, 10*ry))
+    p = plt.tripcolor(x, y, z, vmin=vmin, vmax=vmax)
+    plt.axis('image')
+
     return f, p
 
 
@@ -58,7 +85,8 @@ def plot_vector(t, v, xlabel='', ylabel='', title=''):
     plt.show()
 
 
-def plot_section(stream, ax=None, cmap='seismic', clip=100, title='', x_interval=1.0, y_interval=1.0):
+def plot_section(stream, ax=None, cmap='seismic', clip=100, title='',
+                 x_interval=1.0, y_interval=1.0):
     """  Plots a seismic section from an obspy stream.
 
     Parameters
@@ -86,7 +114,8 @@ def plot_section(stream, ax=None, cmap='seismic', clip=100, title='', x_interval
 
     # check format of stream
     if stream[0].stats._format != 'SU':
-        raise NotImplemented('plot_section currently only supports streams for SU data files.')
+        raise NotImplemented('plot_section currently only supports streams for\
+                             SU data files.')
 
     # get dimensions
     nr = len(stream)
@@ -112,13 +141,13 @@ def plot_section(stream, ax=None, cmap='seismic', clip=100, title='', x_interval
     ax.set_xlabel('Offset [km]')
     ax.set_ylabel('Time [s]')
 
-    #set ticks
+    # set ticks
     t = _get_time(stream)
     yticks, ytick_labels = get_regular_ticks(t, y_interval)
     ax.set_yticks(yticks)
     ax.set_yticklabels(ytick_labels)
 
-    offsets =_get_offsets(stream)
+    offsets = _get_offsets(stream)
     xticks, xtick_labels = get_regular_ticks(offsets, x_interval)
     ax.set_xticks(xticks)
     ax.set_xticklabels(xtick_labels)
@@ -183,7 +212,7 @@ def _get_offsets(stream):
 
     # set scale to km
     if scalco == 0:
-        scalco = 1e-3 # assume coords are in m
+        scalco = 1e-3  # assume coords are in m
     else:
         scalco = 1.0e-3 / scalco
 

@@ -1,15 +1,26 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+#
+###############################################################################
 
+# Import system modules
 import sys
 
+# Local imports
 from seisflows.tools import array, unix
 from seisflows.tools.tools import exists, findpath
 from seisflows.tools.seismic import getpar, setpar
 
 
-### input file writers
+# Input file writers
 
 def write_sources(coords, path='.', ws=1., suffix=''):
     """ Writes source information to text file
+        TODO this has to be adapted for new versions of specfem because the
+        source file format has changed
     """
     sx, sy, sz = coords
 
@@ -24,7 +35,7 @@ def write_sources(coords, path='.', ws=1., suffix=''):
     # adjust source coordinates
     setpar('xs', sx, filename)
     setpar('zs', sy, filename)
-    #setpar('ts', ts[0], filename)
+    # setpar('ts', ts[0], filename)
 
     # adjust source amplitude
     try:
@@ -51,7 +62,7 @@ def write_sources(coords, path='.', ws=1., suffix=''):
         # Heaviside
         setpar('time_function_type', 5, filename)
 
-    #setpar('f0', par['F0'], filename)
+    # setpar('f0', par['F0'], filename)
 
 
 def write_receivers(coords, path='.'):
@@ -60,7 +71,7 @@ def write_receivers(coords, path='.'):
     rx, ry, rz = coords
     nr = len(coords[0])
 
-    filename = path +'/'+ 'DATA/STATIONS'
+    filename = path + '/' + 'DATA/STATIONS'
 
     lines = []
     for ir in range(nr):
@@ -87,7 +98,7 @@ def smooth_legacy(input_path='', output_path='', parameters=[], span=0.):
         if not exists(output_path):
             unix.mkdir(output_path)
 
-        if solver.mesh_properties.nproc!=1:
+        if solver.mesh_properties.nproc != 1:
             raise NotImplementedError
 
         # intialize arrays
@@ -118,5 +129,5 @@ def smooth_legacy(input_path='', output_path='', parameters=[], span=0.):
 
         # write smooth kernels
         for key in parameters or solver.parameters:
-            solver.io.write_slice(kernels[key][0], output_path, key+'_kernel', 0)
-
+            solver.io.write_slice(kernels[key][0], output_path, key+'_kernel',
+                                  0)

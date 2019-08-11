@@ -1,21 +1,29 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+#
+###############################################################################
 
+# Import system modules
 from os.path import join
 
+# Import Numpy
 import numpy as np
 
+# Local imports
 from seisflows.tools import unix
 from seisflows.tools.tools import loadtxt, savetxt
 #from seisflows.tools.io import OutputWriter
-
 from seisflows.plugins.optimize.LBFGS import LBFGS
 from seisflows.plugins.optimize.LCG import LCG
- 
- 
+
+
 class LBFGS_(LBFGS):
     """ Adapts L-BFGS from nonlinear optimization to preconditioning
     """
     pass
-
 
 
 class PLCG(LCG):
@@ -30,8 +38,7 @@ class PLCG(LCG):
 
         # prepare output writer
         self.logpath = join(path, 'output.plcg')
-        #self.writer = OutputWriter(self.logpath, width=14)
-
+        # self.writer = OutputWriter(self.logpath, width=14)
 
     def apply_precond(self, r):
         if not self.precond:
@@ -73,8 +80,6 @@ class PLCG(LCG):
         else:
             raise ValueError
 
-
-
     def check_status(self, ap, verbose=True):
         """ Checks Eisenstat-Walker termination status
         """
@@ -84,7 +89,7 @@ class PLCG(LCG):
         LHS = _norm(g1)
         RHS = _norm(g0)
 
-        # for comparison, calculates forcing term proposed by 
+        # for comparison, calculates forcing term proposed by
         # Eisenstat & Walker 1996
         try:
             g_new = _norm(g)
@@ -97,7 +102,7 @@ class PLCG(LCG):
             print ' RATIO:', LHS/RHS
             print ''
 
-        #self.writer(
+        # self.writer(
         #    self.iter,
         #    self.ilcg,
         #    LHS,
@@ -112,10 +117,10 @@ class PLCG(LCG):
             return not _done
 
 
-
-### utility functions
+# Utility functions
 
 _done = 0
+
 
 def _norm(v):
     return float(np.linalg.norm(v))

@@ -1,11 +1,21 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import os
-import math
 import sys
 import time
-
 from os.path import abspath, basename, join
 from subprocess import check_output
+
+# Import utilitaries
+import math
+
+# Local imports
 from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.tools import call, findpath, saveobj, timestamp
@@ -16,10 +26,10 @@ PATH = sys.modules['seisflows_paths']
 
 
 class slurm_lg(custom_import('system', 'base')):
-    """ An interface through which to submit workflows, run tasks in serial or 
+    """ An interface through which to submit workflows, run tasks in serial or
       parallel, and perform other system functions.
 
-      By hiding environment details behind a python interface layer, these 
+      By hiding environment details behind a python interface layer, these
       classes provide a consistent command set across different computing
       environments.
 
@@ -29,7 +39,7 @@ class slurm_lg(custom_import('system', 'base')):
       Optionally, users can provide a local scratch path PATH.LOCAL if each
       compute node has its own local filesystem.
 
-      For important additional information, please see 
+      For important additional information, please see
       http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
     """
 
@@ -96,7 +106,6 @@ class slurm_lg(custom_import('system', 'base')):
         if 'LOCAL' not in PATH:
             setattr(PATH, 'LOCAL', None)
 
-
     def submit(self, workflow):
         """ Submits workflow
         """
@@ -112,15 +121,14 @@ class slurm_lg(custom_import('system', 'base')):
 
         # prepare sbatch arguments
         call('sbatch '
-                + '%s ' % PAR.SLURMARGS
-                + '--job-name=%s ' % PAR.TITLE
-                + '--output %s ' % (PATH.WORKDIR+'/'+'output.log')
-                + '--ntasks-per-node=%d ' % PAR.NODESIZE
-                + '--nodes=%d ' % 1
-                + '--time=%d ' % PAR.WALLTIME
-                + findpath('seisflows.system') +'/'+ 'wrappers/submit '
-                + PATH.OUTPUT)
-
+             + '%s ' % PAR.SLURMARGS
+             + '--job-name=%s ' % PAR.TITLE
+             + '--output %s ' % (PATH.WORKDIR+'/'+'output.log')
+             + '--ntasks-per-node=%d ' % PAR.NODESIZE
+             + '--nodes=%d ' % 1
+             + '--time=%d ' % PAR.WALLTIME
+             + findpath('seisflows.system') + '/' + 'wrappers/submit '
+             + PATH.OUTPUT)
 
     def run(self, classname, method, *args, **kwargs):
         """ Runs task multiple times in embarrassingly parallel fasion
@@ -138,9 +146,11 @@ class slurm_lg(custom_import('system', 'base')):
                    + '--ntasks-per-node=%d ' % PAR.NODESIZE
                    + '--ntasks=%d ' % PAR.NPROC
                    + '--time=%d ' % PAR.TASKTIME
-                   + '--array=%d-%d ' % (0,(PAR.NTASK-1)%PAR.NTASKMAX)
-                   + '--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a')
-                   + '%s ' % (findpath('seisflows.system') +'/'+ 'wrappers/run')
+                   + '--array=%d-%d ' % (0, (PAR.NTASK-1) % PAR.NTASKMAX)
+                   + '--output %s ' % (PATH.WORKDIR + '/' + 'output.slurm/' +
+                                       '%A_%a')
+                   + '%s ' % (findpath('seisflows.system') + '/' +
+                              'wrappers/run')
                    + '%s ' % PATH.OUTPUT
                    + '%s ' % classname
                    + '%s ' % method
@@ -159,11 +169,10 @@ class slurm_lg(custom_import('system', 'base')):
             if isdone:
                 return
 
-
     def run_single(self, classname, method, *args, **kwargs):
         """ Runs task a single time
 
-          Executes classname.method(*args, **kwargs) a single time on NPROC 
+          Executes classname.method(*args, **kwargs) a single time on NPROC
           cpu cores
         """
         self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
@@ -176,9 +185,11 @@ class slurm_lg(custom_import('system', 'base')):
                    + '--ntasks-per-node=%d ' % PAR.NODESIZE
                    + '--ntasks=%d ' % PAR.NPROC
                    + '--time=%d ' % PAR.TASKTIME
-                   + '--array=%d-%d ' % (0,0)
-                   + '--output %s ' % (PATH.WORKDIR+'/'+'output.slurm/'+'%A_%a')
-                   + '%s ' % (findpath('seisflows.system') +'/'+ 'wrappers/run')
+                   + '--array=%d-%d ' % (0, 0)
+                   + '--output %s ' % (PATH.WORKDIR + '/' + 'output.slurm/' +
+                                       '%A_%a')
+                   + '%s ' % (findpath('seisflows.system') + '/' +
+                              'wrappers/run')
                    + '%s ' % PATH.OUTPUT
                    + '%s ' % classname
                    + '%s ' % method
@@ -198,23 +209,20 @@ class slurm_lg(custom_import('system', 'base')):
             if isdone:
                 return
 
-
     def mpiexec(self):
         """ Specifies MPI executable used to invoke solver
         """
         return 'srun '
-
 
     def taskid(self):
         """ Provides a unique identifier for each running task
         """
         try:
             return int(os.getenv('SEISFLOWS_TASKID'))
-        except:        
+        except:
             return int(os.getenv('SLURM_ARRAY_TASK_ID'))
 
-
-    ### job array methods
+    # Job array methods
 
     def job_array_status(self, classname, method, jobs):
         """ Determines completion status of job or job array
@@ -237,26 +245,22 @@ class slurm_lg(custom_import('system', 'base')):
 
         return isdone, jobs
 
-
     def job_id_list(self, stdout, ntask):
         """ Parses job id list from sbatch standard output
         """
         job_id = stdout.split()[-1].strip()
         return [job_id+'_'+str(ii) for ii in range(ntask)]
 
-
     def job_status(self, job):
         """ Queries completion status of a single job
         """
         stdout = check_output(
-            'sacct -n -o jobid,state -j '+ job.split('_')[0],
+            'sacct -n -o jobid,state -j ' + job.split('_')[0],
             shell=True)
 
         state = ''
         lines = stdout.strip().split('\n')
         for line in lines:
-            if line.split()[0]==job:
+            if line.split()[0] == job:
                 state = line.split()[1]
         return state
-
-

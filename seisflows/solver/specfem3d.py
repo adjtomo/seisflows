@@ -1,14 +1,22 @@
+#
+# This is Seisflows
+#
+# See LICENCE file
+#
+###############################################################################
 
+# Import system modules
 import subprocess
 from glob import glob
 from os.path import join
-
 import sys
+
+# Import Numpy
 import numpy as np
 
+# Local imports
 import seisflows.plugins.solver.specfem3d as solvertools
 from seisflows.tools.seismic import getpar, setpar
-
 from seisflows.tools import unix
 from seisflows.tools.seismic import call_solver
 from seisflows.tools.tools import exists
@@ -49,7 +57,6 @@ class specfem3d(custom_import('solver', 'base')):
         if PAR.FORMAT != 'su':
             raise Exception()
 
-
     def generate_data(self, **model_kwargs):
         """ Generates data
         """
@@ -68,7 +75,6 @@ class specfem3d(custom_import('solver', 'base')):
         if PAR.SAVETRACES:
             self.export_traces(PATH.OUTPUT+'/'+'traces/obs')
 
-
     def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
         """ Performs meshing and database generation
         """
@@ -84,11 +90,11 @@ class specfem3d(custom_import('solver', 'base')):
                 if self.taskid == 0:
                     print 'WARNING: Unexpected Par_file setting:'
                     print 'MODEL =', par
-            
+
             assert(exists(model_path))
             self.check_mesh_properties(model_path)
 
-            src = glob(model_path +'/'+ '*')
+            src = glob(model_path + '/' + '*')
             dst = self.model_databases
             unix.cp(src, dst)
 
@@ -96,11 +102,10 @@ class specfem3d(custom_import('solver', 'base')):
             call_solver(system.mpiexec(), 'bin/xgenerate_databases')
 
             if self.taskid == 0:
-                self.export_model(PATH.OUTPUT +'/'+ model_name)
+                self.export_model(PATH.OUTPUT + '/' + model_name)
 
         else:
             raise NotImplementedError
-
 
     def eval_func(self, *args, **kwargs):
         super(specfem3d, self).eval_func(*args, **kwargs)
@@ -108,8 +113,7 @@ class specfem3d(custom_import('solver', 'base')):
         # work around SPECFEM3D conflicting name conventions
         self.rename_data()
 
-
-    ### low-level solver interface
+    # Low-level solver interface
 
     def forward(self, path='traces/syn'):
         """ Calls SPECFEM3D forward solver
@@ -124,7 +128,6 @@ class specfem3d(custom_import('solver', 'base')):
             dst = path
             unix.mv(src, dst)
 
-
     def adjoint(self):
         """ Calls SPECFEM3D adjoint solver
         """
@@ -134,8 +137,7 @@ class specfem3d(custom_import('solver', 'base')):
         unix.ln('traces/adj', 'SEM')
         call_solver(system.mpiexec(), 'bin/xspecfem3D')
 
-
-    ### input file writers
+    # Input file writers
 
     def check_solver_parameter_files(self):
         """ Checks solver parameters
@@ -144,11 +146,13 @@ class specfem3d(custom_import('solver', 'base')):
         dt = getpar('DT', cast=float)
 
         if nt != PAR.NT:
-            if self.taskid == 0: print "WARNING: nt != PAR.NT"
+            if self.taskid == 0:
+                print "WARNING: nt != PAR.NT"
             setpar('NSTEP', PAR.NT)
 
         if dt != PAR.DT:
-            if self.taskid == 0: print "WARNING: dt != PAR.DT"
+            if self.taskid == 0:
+                print "WARNING: dt != PAR.DT"
             setpar('DT', PAR.DT)
 
         if self.mesh_properties.nproc != PAR.NPROC:
@@ -158,19 +162,18 @@ class specfem3d(custom_import('solver', 'base')):
         if 'MULTIPLES' in PAR:
             raise NotImplementedError
 
-
     def initialize_adjoint_traces(self):
         super(specfem3d, self).initialize_adjoint_traces()
 
         # workaround for SPECFEM2D's use of different name conventions for
         # regular traces and 'adjoint' traces
         if PAR.FORMAT in ['SU', 'su']:
-            files = glob(self.cwd +'/'+ 'traces/adj/*SU')
+            files = glob(self.cwd + '/' + 'traces/adj/*SU')
             unix.rename('_SU', '_SU.adj', files)
 
         # workaround for SPECFEM3D's requirement that all components exist,
         # even ones not in use
-        unix.cd(self.cwd +'/'+ 'traces/adj')
+        unix.cd(self.cwd + '/' + 'traces/adj')
         for iproc in range(PAR.NPROC):
             for channel in ['x', 'y', 'z']:
                 src = '%d_d%s_SU.adj' % (iproc, PAR.CHANNELS[0])
@@ -182,9 +185,8 @@ class specfem3d(custom_import('solver', 'base')):
         """ Works around conflicting data filename conventions
         """
         if PAR.FORMAT in ['SU', 'su']:
-            files = glob(self.cwd +'/'+ 'traces/adj/*SU')
+            files = glob(self.cwd + '/' + 'traces/adj/*SU')
             unix.rename('_SU', '_SU.adj', files)
-
 
     def write_parameters(self):
         unix.cd(self.cwd)
@@ -203,8 +205,7 @@ class specfem3d(custom_import('solver', 'base')):
         _, h = preprocess.load(dir='traces/obs')
         solvertools.write_sources(vars(PAR), h)
 
-
-    ### miscellaneous
+    # Miscellaneous
 
     @property
     def data_wildcard(self):
@@ -237,4 +238,3 @@ class specfem3d(custom_import('solver', 'base')):
     @property
     def source_prefix(self):
         return 'FORCESOLUTION'
-
