@@ -94,6 +94,12 @@ def ls(path):
 
 
 def mkdir(dirs):
+    """ Make directories or list of directories
+        In parallel environments, random delays are useful prior to prevent
+        filesystem overload from multiple simultaneous commands.
+        This method is used in large-scale environments like amazon or
+        google web services
+    """
     time.sleep(1.0 * random.random())
     for dir in iterable(dirs):
         if not os.path.isdir(dir):
