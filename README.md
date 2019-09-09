@@ -14,7 +14,7 @@ SeisFlows differs from previous open-source software in emphasizing both flexibi
 
 - [2D acoustic checkerboard](https://drive.google.com/open?id=1ow3LTYEvNn55yGeIV56sqaW-wXC0MtYW)
 
-- [3D elastic checkerboard](https://drive.google.com/open?id=1LC2QfLNcMOWyHnCSgIGx5DDHyDD51YiV)
+- [3D elastic checkerboard](https://drive.google.com/open?id=1fm1pg0QzGW721BHN2tD6lb9FWRLMl6_z)
 
 
 
