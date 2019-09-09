@@ -31,12 +31,18 @@ if __name__ == "__main__":
 
     # register paths, check they exist
     paths = tilde_expand(loadpy(args.path_file))
+    paths_dont_exist = []
     for key in paths:
         if key == 'SCRATCH':
             continue
         if not os.path.exists(paths[key]):
-            sys.exit(paths[key])
-
+            paths_dont_exist.append(paths[key]) 
+        if paths_dont_exist:
+            print 'The following paths do not exist:'
+            for path_ in paths_dont_exist:
+                print '\t{}'.format(path_)
+            sys.exit()
+        
     sys.modules['seisflows_paths'] = Dict(paths)
 
     unix.mkdir(args.workdir)
