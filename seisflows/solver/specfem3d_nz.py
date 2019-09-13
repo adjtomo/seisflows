@@ -1,4 +1,4 @@
-
+import time
 import subprocess
 from glob import glob
 from os.path import join
@@ -168,8 +168,11 @@ class specfem3d_nz(custom_import('solver', 'base')):
         call_pyatoa = " ".join([load_conda, load_hdf5, PATH.PYTHON3,
                                 PATH.PYATOA_RUN, arguments
                                 ])
+        print(call_pyatoa)
         try:
+            tstart = time.time()
             stdout = subprocess.check_output(call_pyatoa, shell=True)
+            print '{:.2f}m elapsed'.format((time.time() - tstart) / 60 )
         except subprocess.CalledProcessError as e:
             print("Pyatoa failed with {}".format(e))
             sys.exit(-1)

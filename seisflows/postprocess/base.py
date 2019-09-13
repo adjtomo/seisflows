@@ -28,6 +28,9 @@ class base(object):
         if 'SMOOTH_V' not in PAR:
             setattr(PAR, 'SMOOTH_V', 0.)
 
+        if 'TASKTIME_SMOOTH' not in PAR:
+            setattr(PAR, 'TASKTIME_SMOOTH', 1)
+
         if 'MASK' not in PATH:
             setattr(PATH, 'MASK', None)
 
@@ -57,7 +60,7 @@ class base(object):
         # embarassingly parallel tasks, we use system.run_single instead of 
         # system.run
         system.run_single('postprocess', 'process_kernels',
-                 path=path+'/kernels',
+                 path=path+'/kernels', scale_tasktime=PAR.TASKTIME_SMOOTH,
                  parameters=solver.parameters)
 
         gradient = solver.load(

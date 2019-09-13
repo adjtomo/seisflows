@@ -356,6 +356,11 @@ class inversion_nz(base):
         dst = 'f_'+suffix
         
         misfit = 0
+        
+        # Used to wait for processes to finish
+        waited_s = 0
+        wait_interval_s = 5
+
         while True:
             misfits = glob.glob(src)
             if len(misfits) == PAR.NSRC:
@@ -366,7 +371,13 @@ class inversion_nz(base):
                 optimize.savetxt(dst, misfit/PAR.NSRC)
                 return
             else:
-                time.sleep(5)   
+                waited_s += wait_interval_s
+                # If this function has waited more than x minutes, exit because
+                # something has gone wrong with misfit quantification
+                if waited_s >= (60 * 5):
+                    print 'Error, misfit writer stuck waiting for files'
+                    sys.exit(-1)
+                time.sleep(wait_interval_s)   
 
     def save_gradient(self):
         src = os.path.join(PATH.GRAD, 'gradient')
