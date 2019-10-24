@@ -89,6 +89,18 @@ def hilbert(w):
 infinity = np.inf
 
 
+def poissons_ratio(vp, vs):
+    """
+    Calculate Poisson's Ratio based on the definition given in the Specfem3D
+    source code
+    :type vp: float or np.array
+    :param vp: P-wave velocity
+    :type vs: float or np.array
+    :param vs: S-wave velocity
+    :rtype: float or np.array
+    :return: Poissons ratio
+    """
+    return (0.5 * (vp * vp - 2 * vs * vs) / (vp * vp - vs * vs))
 
 ### finite difference
 

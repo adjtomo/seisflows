@@ -7,7 +7,7 @@ from seisflows.config import ParameterError
 from seisflows.plugins import line_search, preconds
 from seisflows.tools import msg, unix
 from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.math import angle
+from seisflows.tools.math import angle, poissons_ratio
 from seisflows.tools.seismic import  Writer
 
 
@@ -139,6 +139,59 @@ class base(object):
             p_new = -g_new
         self.save('p_new', p_new)
 
+    
+    def threshold_model(self, m):
+        """
+        Make sure that their are no outlier model values that will cause 
+        errors during the execution of the Specfem binaries 
+        -this function probably doesn't belong here, should be moved to solver?
+        -allow reassignment of Vp rather than Vs, what is most realistic?
+        -generalize function to allow for Lame parameter definitions
+        
+        :type m: np.array
+        :param m: model to be thresholded
+        :rtype: np.array
+        :return: thresholded model
+        """
+        if PAR.MATERIALS == "Elastic":
+        # determine the number of splits in the model vector based on the chosen
+        # simulation parameters, 'Variable' density means rho included in 'm'
+            if PAR.DENSITY == "Constant":
+                split = int(len(m) / 2)
+            else:
+                split = int(len(m) / 3)
+            
+            # The model vector is just a linear vector of model parameters
+            vp = m[0:split]
+            vs = m[split:2*split]
+            assert(len(vp) == len(vs))
+
+            poissons = poissons_ratio(vp=vp, vs=vs)
+        
+            # These boundary values are set by the Specfem source code
+            negative_outliers = np.where(poissons < -1.)[0]
+            positive_outliers = np.where(poissons > 0.5)[0] 
+            outliers = np.concatenate([negative_outliers, positive_outliers]) 
+            print '\t\t{} outlier(s) found for Poissons ratio bounds'.format(
+                                                                  len(outliers))
+            
+            # !!! Should we allow reassignment of Vp? 
+            # For each outlier, reassign values of Vs to acceptable bounds
+            if outliers.any():   
+                vs_max_values = np.sort(vs)[::-1] 
+                for idx in outliers:
+                    vp_ = m[idx]
+
+                    # Loop through the largest values of Vs until Poisson's 
+                    # ratio criteria is met, set in place in m
+                    for vs_try in vs_max_values:
+                        if -1 < poissons_ratio(vp_, vs_try) < 0.5:
+                            print '\t\t\treassigning vs={} to {}'.format(
+                                                     m[idx + split], vs_try)
+                            m[idx + split] = vs_try
+                            break
+        return m
+
 
     def initialize_search(self):
         """ Determines first step length in line search
@@ -167,10 +220,15 @@ class base(object):
         if PAR.STEPLENINIT and len(self.line_search.step_lens)<=1:
             alpha = PAR.STEPLENINIT*norm_m/norm_p
             print '\t\tstep length override due to PAR.STEPLENINIT' 
-        
+
+        # The new model is the old model, scaled by the step direction and grad
+        # threshold to remove any outlier values
+        m_try = self.threshold_model(m + alpha * p) 
+
+ 
         # write model corresponding to chosen step length
         self.savetxt('alpha', alpha)
-        self.save('m_try', m + alpha*p)
+        self.save('m_try', m_try)
 
 
     def update_search(self):
@@ -190,7 +248,8 @@ class base(object):
             m = self.load('m_new')
             p = self.load('p_new')
             self.savetxt('alpha', alpha)
-            self.save('m_try', m + alpha*p)
+            m_try = self.threshold_model(m + alpha * p)
+            self.save('m_try', m_try)
         return status
 
 

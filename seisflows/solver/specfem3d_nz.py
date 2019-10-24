@@ -292,9 +292,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
         print 'smoothing parameters ', self.parameters
         for name in parameters or self.parameters:
             print 'smoothing', name
-            call_solver(
-                system.mpiexec(),
-                " ".join([
+            solver_call = " ".join([
                     PATH.SPECFEM_BIN + '/' + 'xsmooth_sem',  # ./bin/xsmooth_sem
                     str(span_h),  # SIGMA_H
                     str(span_v),  # SIGMA_V
@@ -303,33 +301,41 @@ class specfem3d_nz(custom_import('solver', 'base')):
                     output_path + '/',  # OUTPUT_DIR
                     '.false'  # USE_GPU
                     ])
-                    )
+            call_solver(system.mpiexec(), solver_call)
         print ''
 
         # rename output files
         files = glob(output_path+'/*')
         unix.rename('_smooth', '', files)
 
-    def combine_vol_data(self, input_path, output_path, quantity):
+    def combine_vol_data(self, output_path='', quantity=''):
         """
+        This does not work
         Call Specfems executable combine_vol_data_vtk on kernels or model files
         """
-        if not exists(input_path):
-            raise Exception
-
         if not exists(output_path):
             unix.mkdir(output_path)
-        
+       
+        # This should probably be moved to its own function 
+        # def import_kernels()
         unix.cd(self.cwd)
-        call_solver(system.mpiexec(),
-                    " ".join[PATH.SPECFEM_BIN + '/' + 'xcombine_vol_data_vtk',
-                             0,  # proc_start
-                             PAR.NPROC,  # proc_end
-                             quantity,  # kernel
-                             path_in,  # dir_in
-                             path_out,  # dir_out
-                             0  # gpu_accel
-                             ])
+        src = glob(join(PATH.GRAD, self.source_name, "*{}*".format(quantity)))
+        dst = join(self.cwd, "kernels")
+        unix.mkdir(dst)
+        unix.ln(src=src, dst=dst)
+        
+        solver_call = " ".join([
+                PATH.SPECFEM_BIN + '/' + 'xcombine_vol_data_vtk',
+                0, # NPROC_START
+                PAR.NPROC,  # NPROC_END
+                quantity,  # QUANTITY
+                dst,  # DIR_IN
+                dst,  # DIR_OUT, we will rename the files first
+                0  # GPU ACCEL
+                ])
+        call_solver(system_mpiexec(), solver_call)
+        
+        unix.rm(dst)
         print ''
 
     # miscellaneous

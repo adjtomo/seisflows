@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+"""
+Script to initiate a run folder with paths and necessary pyatoa folders
+Does not instantiate parameters.py because that needs to be modified by
+researcher
+"""
+import os
+
+
+if __name__ == "__main__":
+    # Hard-coded directory names
+    pyatoa_fid = "pyatoa.io"
+
+    # Hard-coded path names
+    python3 =  "/nesi/project/nesi00263/PyPackages/conda_envs/tomo/bin/python"
+    pkg_path = "/scale_wlg_persistent/filesets/project/nesi00263/PyPackages/"
+    seisflows = os.path.join(pkg_path, "seisflows", "seisflows") 
+    pyatoa = os.path.join(pkg_path, "pyatoa", "pyatoa")
+
+    # Write the paths.py file
+    paths_fid = os.path.join(os.getcwd(), )
+    scratch = os.path.join(os.getcwd(), 'scratch')
+    pyatoa_io = os.path.join(os.getcwd(), pyatoa_fid)
+    pyatoa_run = os.path.join(pyatoa, 
+    if not os.path.exists(pyatoa_io):
+        os.mkdirs(pyatoa_io)
+    
+    with open(paths_fid, "w") as f:
+        f.write("SCRATCH = '{}'\n\n".format(scratch)
+        f.write("PYATOA_IO = '{}'\n\n".format(pyatoa_io)
+        f.write("PYATOA_RUN = \n\n")
+        
+        f.write("PYTHON3 = \n\n")
+        f.write("MODEL_INIT = \n\n")
+        f.write("MODEL_TRUE = \n\n")
+        f.write("SPECFEM_DATA = \n\n")
+        f.write("SPECFEM_BIN = \n\n")
+    pyatoa_pkg_path = 
+    write_paths()

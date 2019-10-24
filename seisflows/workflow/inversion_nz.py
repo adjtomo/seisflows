@@ -41,7 +41,6 @@ class inversion_nz(base):
     def check(self):
         """ Checks parameters and paths
         """
-
         # starting and stopping iterations
         if 'BEGIN' not in PAR:
             raise ParameterError(PAR, 'BEGIN')
@@ -79,6 +78,7 @@ class inversion_nz(base):
         # output paths
         if 'OUTPUT' not in PATH:
             raise ParameterError(PATH, 'OUTPUT')
+
 
         if 'SAVEMODEL' not in PAR:
             setattr(PAR, 'SAVEMODEL', 1)
@@ -293,20 +293,17 @@ class inversion_nz(base):
         except subprocess.CalledProcessError as e:
             print("Pyatoa failed with {}".format(e))
             sys.exit(-1)
-            
-        if divides(optimize.iter, PAR.SAVEMODEL):
+
+        # Save files from scratch before discarding  
+        if PAR.SAVEMODEL:
             self.save_model()
-
-        if divides(optimize.iter, PAR.SAVEGRADIENT):
+        if PAR.SAVEGRADIENT:
             self.save_gradient()
-
-        if divides(optimize.iter, PAR.SAVEKERNELS):
+        if PAR.SAVEKERNELS:
             self.save_kernels()
-
-        if divides(optimize.iter, PAR.SAVETRACES):
+        if PAR.SAVETRACES:
             self.save_traces()
-
-        if divides(optimize.iter, PAR.SAVERESIDUALS):
+        if PAR.SAVERESIDUALS:
             self.save_residuals()
 
     def clean(self):
@@ -326,8 +323,6 @@ class inversion_nz(base):
 
     def write_model(self, path='', suffix=''):
         """ Writes model in format expected by solver
-        Only write vp and vs, do not update density (rho) as it is not sensitive
-        to the measurements we are making
         """
         src = 'm_'+suffix
         dst = path +'/'+ 'model'
@@ -345,7 +340,6 @@ class inversion_nz(base):
         print '\t\t{:.2f}m elapsed'.format((time.time() - tstart) / 60.)
         parts = solver.load(src, suffix='_kernel')
         optimize.save(dst, solver.merge(parts))
-        
 
     def write_misfit(self, suffix=''):
         """ Writes misfit in format expected by nonlinear optimization library
@@ -378,6 +372,9 @@ class inversion_nz(base):
                     print 'Error, misfit writer stuck waiting for files'
                     sys.exit(-1)
                 time.sleep(wait_interval_s)   
+    
+    def create_vtk_file(self, src, dst):
+        src = os.path.join(PATH.GRAD)
 
     def save_gradient(self):
         src = os.path.join(PATH.GRAD, 'gradient')
