@@ -94,6 +94,7 @@ SAVE OUTPUTS
 SAVEGRADIENT=False
 SAVEKERNELS=False
 SAVEMODEL=True
+SAVE_AS="vector"      # save as "vector" (.npy) or "binary" (.bin) or "both"
 SAVERESIDUALS=False
 SAVETRACES=False
 

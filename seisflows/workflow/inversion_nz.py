@@ -6,7 +6,7 @@ import subprocess
 import numpy as np
 
 from seisflows.tools import unix
-from seisflows.tools.tools import divides, exists
+from seisflows.tools.tools import exists
 from seisflows.config import ParameterError, save
 from seisflows.workflow.base import base
 
@@ -88,6 +88,9 @@ class inversion_nz(base):
 
         if 'SAVEKERNELS' not in PAR:
             setattr(PAR, 'SAVEKERNELS', 0)
+        
+        if 'SAVEAS' not in PAR:
+            setattr(PAR, 'SAVEAS', 'binary')
 
         if 'SAVETRACES' not in PAR:
             setattr(PAR, 'SAVETRACES', 0)
@@ -111,7 +114,7 @@ class inversion_nz(base):
         # parameter assertions
         assert 1 <= PAR.BEGIN <= PAR.END
 
-        # check that their is a given starting model
+        # check that there is a given starting model
         if not exists(PATH.MODEL_INIT):
             raise Exception()
        
@@ -266,7 +269,7 @@ class inversion_nz(base):
         tstart = time.time() 
         system.run('solver', 'eval_grad',
                    path=PATH.GRAD,
-                   export_traces=divides(optimize.iter, PAR.SAVETRACES))
+                   export_traces=PAR.SAVETRACES)
         print '\t\t{:.2f}m elapsed'.format((time.time() - tstart) / 60.)
 
         self.write_gradient(path=PATH.GRAD, suffix='new')
@@ -310,6 +313,7 @@ class inversion_nz(base):
         """ Cleans directories in which function and gradient evaluations were
           carried out
         """
+        print 'CLEAN'
         unix.rm(PATH.GRAD)
         unix.rm(PATH.FUNC)
         unix.mkdir(PATH.GRAD)
@@ -376,15 +380,25 @@ class inversion_nz(base):
     def create_vtk_file(self, src, dst):
         src = os.path.join(PATH.GRAD)
 
-    def save_gradient(self):
-        src = os.path.join(PATH.GRAD, 'gradient')
+    def save_gradient(self, saveas='binary'):
+        """allows saving numpy array or standard .bin files
+        vector saves on file count, but requires numpy and seisflows to read 
+        """
         dst = os.path.join(PATH.OUTPUT, 'gradient_%04d' % optimize.iter)
-        unix.mv(src, dst)
+        if saveas in ['binary', 'both']:
+            src = os.path.join(PATH.GRAD, 'gradient')
+            unix.mv(src, dst)
+        if saveas in ['vector', 'both']: 
+            src = os.path.join(PATH.OPTIM, 'g_new')            
+            np.save(src, dst)
 
-    def save_model(self):
+    def save_model(self, saveas='binary'):
         src = 'm_new'
-        dst = os.path.join(PATH.OUTPUT, 'model_%04d' % optimize.iter)
-        solver.save(solver.split(optimize.load(src)), dst)
+        dst = os.path.join(PATH.OUTPUT, 'model_%04d' % optimize.iter)   
+        if saveas in ['binary', 'both']:
+            solver.save(solver.split(optimize.load(src)), dst)
+        if saveas in ['vector', 'both']:
+            np.save(dst, optimize.load(src))
 
     def save_kernels(self):
         src = os.path.join(PATH.GRAD, 'kernels')

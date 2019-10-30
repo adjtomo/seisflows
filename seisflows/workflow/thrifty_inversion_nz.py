@@ -21,19 +21,26 @@ class thrifty_inversion_nz(custom_import('workflow', 'inversion_nz')):
       The results of 'inversion' and 'thrifty_inversion' should be exactly the
       same
     """
-
-    status=0
+    # Instanstiate the status attribute
+    status = 0
 
     def initialize(self):
-        if self.status==0:
+        """
+        If line search can be carried over, skip initialization step
+        """
+        if self.status == 0:
             super(thrifty_inversion_nz, self).initialize()
+        else:
+            print 'THRIFTY INITIALIZE'
 
 
     def clean(self):
-        # can forward simulations from line search be carried over?
+        """
+        Determine if forward simulation from line search can be carried over
+        """
         self.update_status()
-
-        if self.status==1:
+        if self.status == 1:
+            print 'THRIFTY CLEAN'
             unix.rm(PATH.GRAD)
             unix.mv(PATH.FUNC, PATH.GRAD)
             unix.mkdir(PATH.FUNC)
@@ -42,26 +49,34 @@ class thrifty_inversion_nz(custom_import('workflow', 'inversion_nz')):
 
 
     def update_status(self):
+        """
+        Determine if line search forward simulation can be carried over
+        """
+        print 'THRIFTY STATUS'
+        # only works for backtracking line search
         if PAR.LINESEARCH != 'Backtrack':
-            # only works for backtracking line search
+            print '\t Line search not "Backtrack", cannot run thrifty'
+            self.status = 0
+        # may not work on first iteration
+        elif optimize.iter == PAR.BEGIN:
+            print '\t First iteration of workflow, defaulting to inversion'
             self.status=0
-
-        elif optimize.iter==PAR.BEGIN or \
-             optimize.restarted:
-            # even if backtracking line search is chosen, may not work on
-            # first iteration or following a restart
-            self.status=0
-
-        elif optimize.iter==PAR.END:
-            # may not work after resuming saved workflow
-            self.status=0
-
+        # may not work following restart
+        elif optimize.restarted:
+            print '\t Optimization has been restarted, defaulting to inversion'
+            self.status = 0
+        # may not work after resuming saved workflow
+        elif optimize.iter == PAR.END:
+            print '\t End of workflow, defaulting to inversion'
+            self.status = 0
+        # may not work if using local filesystems
         elif PATH.LOCAL:
-            # may not work if using local filesystems
-            self.status=0
-
+            print '\t Local filesystem, cannot run thrifty'
+            self.status = 0
+        # otherwise, continue with thrifty inversion
         else:
-            self.status=1
+            print '\t Continuing with thrifty inversion'
+            self.status = 1
 
 
 
