@@ -81,22 +81,22 @@ class inversion_nz(base):
 
 
         if 'SAVEMODEL' not in PAR:
-            setattr(PAR, 'SAVEMODEL', 1)
+            setattr(PAR, 'SAVEMODEL', True)
 
         if 'SAVEGRADIENT' not in PAR:
-            setattr(PAR, 'SAVEGRADIENT', 0)
+            setattr(PAR, 'SAVEGRADIENT', False)
 
         if 'SAVEKERNELS' not in PAR:
-            setattr(PAR, 'SAVEKERNELS', 0)
+            setattr(PAR, 'SAVEKERNELS', False)
         
         if 'SAVEAS' not in PAR:
             setattr(PAR, 'SAVEAS', 'binary')
 
         if 'SAVETRACES' not in PAR:
-            setattr(PAR, 'SAVETRACES', 0)
+            setattr(PAR, 'SAVETRACES', False)
 
         if 'SAVERESIDUALS' not in PAR:
-            setattr(PAR, 'SAVERESIDUALS', 0)
+            setattr(PAR, 'SAVERESIDUALS', False)
 
         # pyatoa specific paths
         # Config file should be present here.
@@ -299,9 +299,9 @@ class inversion_nz(base):
 
         # Save files from scratch before discarding  
         if PAR.SAVEMODEL:
-            self.save_model()
+            self.save_model(saveas=PAR.SAVEAS)
         if PAR.SAVEGRADIENT:
-            self.save_gradient()
+            self.save_gradient(saveas=PAR.SAVEAS)
         if PAR.SAVEKERNELS:
             self.save_kernels()
         if PAR.SAVETRACES:
@@ -389,8 +389,8 @@ class inversion_nz(base):
             src = os.path.join(PATH.GRAD, 'gradient')
             unix.mv(src, dst)
         if saveas in ['vector', 'both']: 
-            src = os.path.join(PATH.OPTIM, 'g_new')            
-            np.save(src, dst)
+            src = os.path.join(PATH.OPTIMIZE, 'g_new')            
+            unix.cp(src, dst + '.npy')
 
     def save_model(self, saveas='binary'):
         src = 'm_new'
@@ -398,7 +398,7 @@ class inversion_nz(base):
         if saveas in ['binary', 'both']:
             solver.save(solver.split(optimize.load(src)), dst)
         if saveas in ['vector', 'both']:
-            np.save(dst, optimize.load(src))
+            np.save(file=dst, arr=optimize.load(src))
 
     def save_kernels(self):
         src = os.path.join(PATH.GRAD, 'kernels')

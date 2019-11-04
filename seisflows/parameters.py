@@ -59,6 +59,35 @@ MUTECONST=0.            # mute constant (for muting early arrivals)
 MUTESLOPE=0.            # mute slope (for muting early arrivals)
 
 """
+PYATOA - REQUIRES EXTERNAL PACKAGE, NOT USED BY SEISFLOWS
+"""
+# PREPROCESSING
+SYNTHETIC_UNIT = "disp"  # what units are Specfem3D synthetics; [disp, vel, acc]
+MIN_PERIOD = 10.         # minimum period to filter all data in seconds
+MAX_PERIOD = 30.         # maximum period
+FILTER_CORNERS = 4       # corners for bandpass filter, default=4
+ROTATE_TO_RTZ = False    # rotate waveforms to radial, transverse, vertical
+FIX_WINDOWS = False      # fix misfit windows between iterations
+
+# PYFLEX, PYADJOINT
+PYFLEX_MAP = "hikurangi"        # config map for Pyflex; see pyatoa.plugins
+ADJ_SRC_TYPE = "cc_hikurangi"   # misfit function to use in Pyadjoint
+WINDOW_AMP_RATIO = 0.2          # extra amplitude threshold criteria; [0:1]
+
+# OUTPUT FILES
+SNAPSHOT = True             # periodically copy .h5 files incase corruption
+WRITE_MISFIT_JSON = True    # save misfit information into a .json file 
+CREATE_SRCRCV_VTK = True    # generate .vtk files for srcrcv locations
+
+# PLOTTING
+PLOT_WAVEFORMS = True       # plot waveform figures during workflow
+PLOT_SRCRCV_MAPS = True     # plot source receiver maps during workflow
+PLOT_MISFIT_MAPS = False    # plot misfit maps during workflow
+COMBINE_IMGS = True         # combine waveforms and srcrcv maps into a .pdf
+PURGE_WAVEFORMS = True      # if COMBINE_IMGS; delete waveforms after combine
+PURGE_TILES = True          # if COMBINE_IMGS; delete intermediate wave/map imgs
+
+"""
 POSTPROCESSING
 """
 TASKTIME_SMOOTH=3      # scales SYSTEM.TASKTIME for longer smoothing, default=1
