@@ -299,9 +299,9 @@ class inversion_nz(base):
 
         # Save files from scratch before discarding  
         if PAR.SAVEMODEL:
-            self.save_model(saveas=PAR.SAVEAS)
+            self.save_model()
         if PAR.SAVEGRADIENT:
-            self.save_gradient(saveas=PAR.SAVEAS)
+            self.save_gradient()
         if PAR.SAVEKERNELS:
             self.save_kernels()
         if PAR.SAVETRACES:
@@ -380,24 +380,24 @@ class inversion_nz(base):
     def create_vtk_file(self, src, dst):
         src = os.path.join(PATH.GRAD)
 
-    def save_gradient(self, saveas='binary'):
+    def save_gradient(self):
         """allows saving numpy array or standard .bin files
         vector saves on file count, but requires numpy and seisflows to read 
         """
         dst = os.path.join(PATH.OUTPUT, 'gradient_%04d' % optimize.iter)
-        if saveas in ['binary', 'both']:
+        if PAR.SAVEAS in ['binary', 'both']:
             src = os.path.join(PATH.GRAD, 'gradient')
             unix.mv(src, dst)
-        if saveas in ['vector', 'both']: 
-            src = os.path.join(PATH.OPTIMIZE, 'g_new')            
+        if PAR.SAVEAS in ['vector', 'both']: 
+            src = os.path.join(PATH.OPTIMIZE, 'g_old')            
             unix.cp(src, dst + '.npy')
 
-    def save_model(self, saveas='binary'):
+    def save_model(self):
         src = 'm_new'
         dst = os.path.join(PATH.OUTPUT, 'model_%04d' % optimize.iter)   
-        if saveas in ['binary', 'both']:
+        if PAR.SAVEAS in ['binary', 'both']:
             solver.save(solver.split(optimize.load(src)), dst)
-        if saveas in ['vector', 'both']:
+        if PAR.SAVEAS in ['vector', 'both']:
             np.save(file=dst, arr=optimize.load(src))
 
     def save_kernels(self):
