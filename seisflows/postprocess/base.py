@@ -97,9 +97,7 @@ class base(object):
                         path +'/'+ 'gradient',
                         parameters=solver.parameters,
                         suffix='_kernel')
-
-
-
+    
     def process_kernels(self, path, parameters):
         """ 
         Sums kernels from individual sources, with optional smoothing

@@ -66,8 +66,7 @@ class Writer(object):
         try:
             os.mkdir(path)
         except:
-            print "Warning, {} exists".format(path)  # bchow
-            # raise IOError
+            raise IOError
 
         self.__call__('step_count', 0)
 

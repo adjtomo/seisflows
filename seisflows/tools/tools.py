@@ -156,15 +156,30 @@ def savenpy(filename, v):
 def loadyaml(filename):
     import yaml
 
+    # work around PyYAML bugs
+    yaml.SafeLoader.add_implicit_resolver(
+        u'tag:yaml.org,2002:float',
+        re.compile(u'''^(?:
+         [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+        |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+        |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+        |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+        |[-+]?\\.(?:inf|Inf|INF)
+        |\\.(?:nan|NaN|NAN))$''', re.X),
+        list(u'-+0123456789.'))
+
     with open(filename, 'rb') as file:
-        dict = yaml.load(file)
+        mydict = yaml.load(file)
+
+    if mydict == None:
+        mydict = dict()
 
     # replace None
-    if 'None' in dict.values():
-        for key,val in dict.items():
-            if val=='None': dict[key]=None
+    if 'None' in mydict.values():
+        for key,val in mydict.items():
+            if val=='None': mydict[key]=None
 
-    return dict
+    return mydict
 
 
 def getset(arg):
