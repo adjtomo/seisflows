@@ -27,8 +27,9 @@ class thrifty_inversion_nz(custom_import('workflow', 'inversion_nz')):
     def initialize(self):
         """
         If line search can be carried over, skip initialization step
+        Or if manually starting a new run, start with normal inversion init
         """
-        if self.status == 0:
+        if (self.status == 0) or (optimize.iter == PAR.BEGIN):
             super(thrifty_inversion_nz, self).initialize()
         else:
             print 'THRIFTY INITIALIZE'

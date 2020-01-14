@@ -181,18 +181,19 @@ CREATE_GRADIENT_KERNEL_VTK:
 # Paths
 #
 # ==============================================================================
-SCRATCH: ''
-MODEL_INIT: ''
-MODEL_TRUE: ''  # only necessary if CASE == 'Synthetic'
-SPECFEM_DATA: ''
-SPECFEM_BIN: ''
+PATHS:
+    SCRATCH: ''
+    MODEL_INIT: ''
+    MODEL_TRUE: ''  # only necessary if CASE == 'Synthetic'
+    SPECFEM_DATA: ''
+    SPECFEM_BIN: ''
 
-#----------------------------------------------
-# Pathing required if preprocessing == 'pyatoa'
-#----------------------------------------------
-PYTHON3: ''
-PYATOA_IO: ''
-PYATOA_RUN: ''
+    #----------------------------------------------
+    # Pathing required if preprocessing == 'pyatoa'
+    #----------------------------------------------
+    PYTHON3: ''
+    PYATOA_IO: ''
+    PYATOA_RUN: ''
 
 # ==============================================================================
 #

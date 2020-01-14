@@ -184,7 +184,7 @@ def tilde_expand(mydict):
     """
     for key,val in mydict.items():
         if type(val) not in [str, unicode]:
-            raise Exception
+            raise Exception('Expanded objects must be str or unicode')
         if val[0:2] == '~/':
             mydict[key] = os.getenv('HOME') +'/'+ val[2:]
     return mydict

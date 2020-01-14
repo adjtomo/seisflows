@@ -1,10 +1,29 @@
 #!/usr/bin/env python
 
+import numpy as np
 import argparse, os, sys
 
-from seisflows.config import config, loadpy, names, tilde_expand, Dict
+from seisflows.config import config, names, tilde_expand, Dict
 from seisflows.tools import unix, tools
+from seisflows.tools.tools import loadpy, loadyaml
 
+
+def convert_model(path_output, model_fid):
+    """
+    convert model .npy to .bin files
+    """
+    src = os.path.join(PATH.OUTPUT, "{}.npy".format(model_fid))
+    dst = os.path.join(PATH.OUTPUT, model_fid)
+    
+    if not os.path.exists(src):
+        print("{} does not exist".format(src))
+        return
+    elif os.path.exists(dst):
+        print("{} already exists".format(dst))
+        return
+    
+    solver.save(solver.split(np.load(src)), dst) 
+    
 
 def getargs():
     parser = argparse.ArgumentParser()
@@ -13,10 +32,10 @@ def getargs():
         default=os.getcwd())
 
     parser.add_argument('--parameter_file', nargs='?', 
-        default='parameters.py')
+        default='parameters.yaml')
 
     parser.add_argument('--path_file', nargs='?', 
-        default='paths.py')
+        default='paths.yaml')
 
     return parser.parse_args()
 
@@ -24,13 +43,33 @@ def getargs():
 if __name__ == "__main__":
     ### workflow submission script
     args = getargs()
+   
+    if not os.path.exists(args.parameter_file) or\
+       not os.path.exists(args.path_file):
+        if os.path.exists('parameters.py') and os.path.exists('paths.py'):
+            args.parameter_file = 'parameters.py'
+            args.paths_file = 'paths.py'
+        elif os.path.exists('parameters.yaml'):
+            args.parameter_file = 'parameters.yaml'
+            args.path_file = 'paths.py'
+        else:
+            raise Exception('Input files not found.')
 
+    # Dynamically assign load functions
+    if '.py' in args.parameter_file:
+        load = loadpy
+    else:
+        load = loadyaml
+ 
     # register parameters
-    parameters = loadpy(args.parameter_file)
+    parameters = load(args.parameter_file)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # register paths
-    paths = tilde_expand(loadpy(args.path_file))
+    # register paths, they should have been checked by sfsubmit
+    if os.path.exists('paths.py'):
+        paths = tilde_expand(load(args.path_file))
+    elif 'PATHS' in parameters:
+        paths = tilde_expand(parameters['PATHS'])
     sys.modules['seisflows_paths'] = Dict(paths)
 
     unix.mkdir(args.workdir)

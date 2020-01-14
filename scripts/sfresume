@@ -1,12 +1,11 @@
-!/usr/bin/env python
+#!/usr/bin/env python
 
 import argparse
 import sys
 
-from os import getcwd
-from os.path import exists
-from seisflows.tools import unix
-from seisflows.config import config, tilde_expand, Dict
+import os
+from seisflows.tools import unix, tools
+from seisflows.config import config, names, tilde_expand, Dict
 from seisflows.tools.tools import loadpy, loadyaml
 
 
@@ -26,23 +25,22 @@ def getargs():
 
 
 if __name__ == "__main__":
-    ### workflow submission script
+    # Same as sfsubmit
     args = getargs()
 
     # check input files
-    if not exists(args.parameter_file) or\
-       not exists(args.path_file):
-
+    if not os.path.exists(args.parameter_file) or\
+       not os.path.exists(args.path_file):
        # fall back to legacy filenames
-        if exists('parameters.py') and\
-           exists('paths.py'):
+        if os.path.exists('parameters.py') and os.path.exists('paths.py'):
             args.parameter_file = 'parameters.py'
             args.path_file = 'paths.py'
-
+        elif os.path.exists('parameters.yaml'):
+            args.parameter_file = 'parameters.yaml'
         else:
             raise Exception('Input files not found.')
 
-
+    # Dynamically assign load functions
     if '.py' in args.parameter_file:
         load = loadpy
     else:
@@ -52,8 +50,12 @@ if __name__ == "__main__":
     parameters = load(args.parameter_file)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # register paths
-    paths = tilde_expand(load(args.path_file))
+    # register paths, they should have been checked by sfsubmit
+    if os.path.exists('paths.py'):
+        paths = tilde_expand(load(args.path_file))
+    elif 'PATHS' in parameters:
+        paths = tilde_expand(parameters['PATHS'])
+
     sys.modules['seisflows_paths'] = Dict(paths)
 
     unix.mkdir(args.workdir)

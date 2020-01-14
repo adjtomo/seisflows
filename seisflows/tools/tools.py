@@ -152,7 +152,6 @@ def savenpy(filename, v):
     os.rename(filename + '.npy', filename)
 
 
-
 def loadyaml(filename):
     import yaml
 
@@ -169,7 +168,7 @@ def loadyaml(filename):
         list(u'-+0123456789.'))
 
     with open(filename, 'rb') as file:
-        mydict = yaml.load(file)
+        mydict = yaml.safe_load(file)
 
     if mydict == None:
         mydict = dict()

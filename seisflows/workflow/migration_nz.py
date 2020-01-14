@@ -19,7 +19,7 @@ optimize = sys.modules['seisflows_optimize']
 postprocess = sys.modules['seisflows_postprocess']
 
 
-class until_adjoint(custom_import('workflow', 'inversion_nz')):
+class migration_nz(custom_import('workflow', 'inversion_nz')):
     """ 
     Run workflow for forward and adjoint simulations. Useful for creating
     waveform and kernel information, without invoking an entire inversion

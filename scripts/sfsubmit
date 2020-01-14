@@ -29,19 +29,18 @@ if __name__ == "__main__":
     args = getargs()
     
     # check input files
-    if not exists(args.parameter_file) or\
-       not exists(args.path_file):
-    
+    if not exists(args.parameter_file) or not exists(args.path_file):
        # fall back to legacy filenames
-        if exists('parameters.py') and\
-           exists('paths.py'):
+        if exists('parameters.py') and exists('paths.py'):
             args.parameter_file = 'parameters.py'
             args.path_file = 'paths.py'
-
+        elif exists('parameters.yaml'):
+            args.parameter_file = 'parameters.yaml'
+            args.path_file = 'paths.py'
         else:
             raise Exception('Input files not found.')
-        
 
+    # Dynamically assign load functions
     if '.py' in args.parameter_file:
         load = loadpy
     else:
@@ -51,19 +50,24 @@ if __name__ == "__main__":
     parameters = load(args.parameter_file)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # register paths, check they exist
-    paths = tilde_expand(loadpy(args.path_file))
+    # register paths
+    if exists('paths.py'):
+        paths = tilde_expand(loadpy(args.path_file))
+    elif 'PATHS' in parameters:
+        paths = tilde_expand(parameters['PATHS'])
+
+    # check that paths exist
     paths_dont_exist = []
-    for key in paths:
-        if key == 'SCRATCH':
+    for key, path in paths.items():
+        if (key in ['SCRATCH', 'PYATOA_IO']) or (path == ''):
             continue
-        if not os.path.exists(paths[key]):
-            paths_dont_exist.append(paths[key]) 
-        if paths_dont_exist:
-            print 'The following paths do not exist:'
-            for path_ in paths_dont_exist:
-                print '\t{}'.format(path_)
-            sys.exit()
+        if not exists(path):
+            paths_dont_exist.append(path) 
+    if paths_dont_exist:
+        print 'The following paths do not exist:'
+        for path_ in paths_dont_exist:
+            print '\t{}'.format(path_)
+        sys.exit()
         
     sys.modules['seisflows_paths'] = Dict(paths)
 
