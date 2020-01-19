@@ -1,26 +1,33 @@
 #!/usr/bin/env python
+"""
+This script submits a new Seisflows workflow.
 
+This script needs to be run in a directory containing `parameters.yaml` which
+should contain user defined paths and parameters to be used in the workflow
+"""
+import os
+import sys
 import argparse
-import sys 
 
-from os import getcwd
 from os.path import exists
 from seisflows.tools import unix
 from seisflows.config import config, tilde_expand, Dict
-from seisflows.tools.tools import loadpy, loadyaml
+from seisflows.tools.tools import loadyaml
         
            
 def getargs():
+    """
+    Get User defined arguments, or assign defaults
+
+    :rtype: argparse.ArgumentParser()
+    :return: User defined or default arguments
+    """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--workdir', nargs='?',
-        default=getcwd())
+    parser.add_argument('--workdir', nargs='?', default=os.getcwd())
 
     parser.add_argument('--parameter_file', nargs='?',
-        default='parameters.yaml')
-        
-    parser.add_argument('--path_file', nargs='?',
-        default='paths.yaml')
+                        default='parameters.yaml')
 
     return parser.parse_args()
     
@@ -28,56 +35,40 @@ def getargs():
 if __name__ == "__main__":
     args = getargs()
     
-    # check input files
-    if not exists(args.parameter_file) or not exists(args.path_file):
-       # fall back to legacy filenames
-        if exists('parameters.py') and exists('paths.py'):
-            args.parameter_file = 'parameters.py'
-            args.path_file = 'paths.py'
-        elif exists('parameters.yaml'):
-            args.parameter_file = 'parameters.yaml'
-            args.path_file = 'paths.py'
-        else:
-            raise Exception('Input files not found.')
+    # Check if the filepaths exist
+    if not os.path.exists(args.parameter_file):
+        raise Exception(f"Parameter file not found: {args.parameter_file}")
 
-    # Dynamically assign load functions
-    if '.py' in args.parameter_file:
-        load = loadpy
-    else:
-        load = loadyaml
-
-    # register parameters
-    parameters = load(args.parameter_file)
+    # Register parameters
+    parameters = loadyaml(args.parameter_file)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # register paths
-    if exists('paths.py'):
-        paths = tilde_expand(loadpy(args.path_file))
-    elif 'PATHS' in parameters:
-        paths = tilde_expand(parameters['PATHS'])
+    # Register paths, they should have been checked by sfsubmit
+    paths = tilde_expand(parameters['PATHS'])
+    sys.modules['seisflows_paths'] = Dict(paths)
 
-    # check that paths exist
+    # Check that paths exist
     paths_dont_exist = []
     for key, path in paths.items():
         if (key in ['SCRATCH', 'PYATOA_IO']) or (path == ''):
             continue
-        if not exists(path):
+        if not os.path.exists(path):
             paths_dont_exist.append(path) 
     if paths_dont_exist:
-        print 'The following paths do not exist:'
+        print("The following paths do not exist:")
         for path_ in paths_dont_exist:
-            print '\t{}'.format(path_)
+            print(f"\t{path_}")
         sys.exit()
-        
-    sys.modules['seisflows_paths'] = Dict(paths)
 
+    # If paths exist, pass to modules
+    sys.modules['seisflows_paths'] = Dict(paths)
     unix.mkdir(args.workdir)
     unix.cd(args.workdir)
 
+    # Submit workflow
     config()
-
-    # submit workflow
     workflow = sys.modules['seisflows_workflow']
     system = sys.modules['seisflows_system']
+
     system.submit(workflow)
 

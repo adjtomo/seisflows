@@ -1,95 +1,96 @@
 #!/usr/bin/env python
+"""
+This script opens the current Seisflows workflow in an
+iPython debugger environment. This allows the User to look at workflow
+parameters, execute individual functions, etc.
 
+Paths and parameters should be specified in the file `parameters.yaml`
+"""
+import os
+import sys
+import argparse
 import numpy as np
-import argparse, os, sys
 
 from seisflows.config import config, names, tilde_expand, Dict
 from seisflows.tools import unix, tools
-from seisflows.tools.tools import loadpy, loadyaml
+from seisflows.tools.tools import loadyaml
 
 
 def convert_model(path_output, model_fid):
     """
     convert model .npy to .bin files
+
+    :type path_output: str
+    :param path_output: path to the 'output' directory where models are saved
+    :type model_fid: str
+    :param model_fid: the model that should be converted
     """
-    src = os.path.join(PATH.OUTPUT, "{}.npy".format(model_fid))
-    dst = os.path.join(PATH.OUTPUT, model_fid)
+    src = os.path.join(path_output, f"{model_fid}.npy")
+    dst = os.path.join(path_output, model_fid)
     
     if not os.path.exists(src):
-        print("{} does not exist".format(src))
+        print(f"{src} does not exist")
         return
     elif os.path.exists(dst):
-        print("{} already exists".format(dst))
+        print(f"{src} already exists")
         return
     
     solver.save(solver.split(np.load(src)), dst) 
     
 
 def getargs():
+    """
+    Get User defined arguments, or assign defaults
+
+    :rtype: argparse.ArgumentParser()
+    :return: User defined or default arguments
+    """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--workdir', nargs='?', 
-        default=os.getcwd())
+    parser.add_argument('--workdir', nargs='?', default=os.getcwd())
 
-    parser.add_argument('--parameter_file', nargs='?', 
-        default='parameters.yaml')
-
-    parser.add_argument('--path_file', nargs='?', 
-        default='paths.yaml')
+    parser.add_argument('--parameter_file', nargs='?',
+                        default='parameters.yaml')
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    ### workflow submission script
     args = getargs()
-   
-    if not os.path.exists(args.parameter_file) or\
-       not os.path.exists(args.path_file):
-        if os.path.exists('parameters.py') and os.path.exists('paths.py'):
-            args.parameter_file = 'parameters.py'
-            args.paths_file = 'paths.py'
-        elif os.path.exists('parameters.yaml'):
-            args.parameter_file = 'parameters.yaml'
-            args.path_file = 'paths.py'
-        else:
-            raise Exception('Input files not found.')
 
-    # Dynamically assign load functions
-    if '.py' in args.parameter_file:
-        load = loadpy
-    else:
-        load = loadyaml
+    # Check if the filepaths exist
+    if not os.path.exists(args.parameter_file):
+        raise Exception(f"Parameter file not found: {args.parameter_file}")
  
-    # register parameters
-    parameters = load(args.parameter_file)
+    # Register parameters
+    parameters = loadyaml(args.parameter_file)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # register paths, they should have been checked by sfsubmit
-    if os.path.exists('paths.py'):
-        paths = tilde_expand(load(args.path_file))
-    elif 'PATHS' in parameters:
-        paths = tilde_expand(parameters['PATHS'])
+    # Register paths, they should have been checked by sfsubmit
+    paths = tilde_expand(parameters['PATHS'])
     sys.modules['seisflows_paths'] = Dict(paths)
 
+    # Create the necessary paths
     unix.mkdir(args.workdir)
     unix.cd(args.workdir)
 
-    # reload objects
+    # Reload objects from Pickle files
     for name in names:
-        fullfile = os.path.join(args.workdir, 'output', 'seisflows_'+name+'.p')
-        sys.modules['seisflows_'+name] = tools.loadobj(fullfile)
+        fullfile = os.path.join(
+            args.workdir, "output", "seisflows_" + name + ".p")
+        sys.modules['seisflows_' + name] = tools.loadobj(fullfile)
 
-    # parameter checking
+    # Check parameters
     for name in names:
-        sys.modules['seisflows_'+name].check()
+        sys.modules['seisflows_' + name].check()
 
-    # distribute modules for easier debugging
+    # Prematurely distribute modules for easier debugging
     PATH = sys.modules['seisflows_paths']
     PAR = sys.modules['seisflows_parameters']
+
     workflow = sys.modules['seisflows_workflow']
     system = sys.modules['seisflows_system']
     solver = sys.modules['seisflows_solver']
     optimize = sys.modules['seisflows_optimize']
     
-    import ipdb;ipdb.set_trace()
+    import ipdb; ipdb.set_trace()

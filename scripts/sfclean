@@ -1,4 +1,6 @@
 #!/bin/sh
+# This script deletes all the generated outputs of Seisflows, to reset back to
+# the initial state. All intermediate data will be lost.
 
 echo "Are you sure about that? (y/[n])"
 read choice
