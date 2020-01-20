@@ -3,6 +3,7 @@
 This is the base class for seisflows.optimize
 This class provides the core utilities for the Seisflows optimization schema.
 """
+import os
 import sys
 import numpy as np
 
@@ -111,7 +112,7 @@ class Base(object):
         # Prepare line search machinery
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
             step_count_max=PAR.STEPCOUNTMAX,
-            path=f"{PATH.WORKDIR}/output.optim")
+            path=os.path.join(PATH.WORKDIR, "output.optim"))
 
         # Prepare preconditioner
         if PAR.PRECOND:
@@ -120,7 +121,7 @@ class Base(object):
             self.precond = None
 
         # Prepare output logs
-        self.writer = Writer(path=f"{PATH.WORKDIR}/output.stats")
+        self.writer = Writer(path=os.path.join(PATH.WORKDIR, "output.stats"))
 
         # Prepare scratch directory
         unix.mkdir(PATH.OPTIMIZE)
@@ -353,7 +354,7 @@ class Base(object):
         :param filename: filename to read from
         :return:
         """
-        return loadnpy(f"{PATH.OPTIMIZE}/{filename}")
+        return loadnpy(os.path.join(PATH.OPTIMIZE, filename))
 
     def save(self, filename, array):
         """
@@ -365,7 +366,7 @@ class Base(object):
         :param array: array to be saved
         :return:
         """
-        savenpy(f"{PATH.OPTIMIZE}/{filename}", array)
+        savenpy(os.path.join(PATH.OPTIMIZE, filename), array)
 
     def loadtxt(self, filename):
         """
@@ -377,7 +378,7 @@ class Base(object):
         :param array: array to be saved
         :return:
         """
-        return float(np.loadtxt(f"{PATH.OPTIMIZE}/{filename}"))
+        return float(np.loadtxt(os.path.join(PATH.OPTIMIZE, filename)))
 
     def savetxt(self, filename, scalar):
         """
@@ -389,6 +390,6 @@ class Base(object):
         :param scalar: value to write to disk
         :return:
         """
-        np.savetxt(f"{PATH.OPTIMIZE}/{filename}", [scalar], "%11.6e")
+        np.savetxt(os.path.join(PATH.OPTIMIZE, filename), [scalar], "%11.6e")
 
 
