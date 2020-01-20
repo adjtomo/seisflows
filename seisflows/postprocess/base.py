@@ -1,11 +1,10 @@
-
+#!/usr/bin/env python
+"""
+This is the base class for the postprocess functionalities
+"""
 import sys
-import numpy as np
 
-from os.path import join
-from seisflows.tools import unix
 from seisflows.tools.tools import exists
-from seisflows.config import ParameterError
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -14,116 +13,118 @@ system = sys.modules['seisflows_system']
 solver = sys.modules['seisflows_solver']
 
 
-class base(object):
-    """ Regularization, smoothing, sharpening, masking and related operations
-      on models or gradients
+class Base(object):
     """
-
+    Postprocessing in a Seisflows workflow includes tasks such as
+    regularization, smoothing, sharpening, masking and related operations
+    on models or gradients
+    """
     def check(self):
-        """ Checks parameters and paths
         """
-        if 'SMOOTH_H' not in PAR:
-            setattr(PAR, 'SMOOTH_H', 0.)
+        Checks parameters and paths
+        """
+        if "SMOOTH_H" not in PAR:
+            setattr(PAR, "SMOOTH_H", 0.)
         
-        if 'SMOOTH_V' not in PAR:
-            setattr(PAR, 'SMOOTH_V', 0.)
+        if "SMOOTH_V" not in PAR:
+            setattr(PAR, "SMOOTH_V", 0.)
 
-        if 'TASKTIME_SMOOTH' not in PAR:
-            setattr(PAR, 'TASKTIME_SMOOTH', 1)
+        if "TASKTIME_SMOOTH" not in PAR:
+            setattr(PAR, "TASKTIME_SMOOTH", 1)
 
-        if 'MASK' not in PATH:
-            setattr(PATH, 'MASK', None)
+        if "MASK" not in PATH:
+            setattr(PATH, "MASK", None)
 
         if PATH.MASK:
             assert exists(PATH.MASK)
 
-
     def setup(self):
-        """ Placeholder for initialization or setup tasks
+        """
+        Placeholder for initialization or setup tasks
         """
         pass
 
+    def process_kernels(self, path, parameters):
+        """
+        Sums kernels from individual sources, with optional smoothing
+
+        :type path: str
+        :param path: directory containing sensitivity kernels
+        :type parameters: list
+        :param parameters: material parameters e.g. ['vp','vs']
+        """
+        # Check if the path exists
+        if not exists(path):
+            raise FileNotFoundError
+
+        # If specified, smooth the kernels in the vertical and horizontal
+        if PAR.SMOOTH_H > 0:
+            solver.combine(input_path=path, output_path=f"{path}/sum_nosmooth",
+                           parameters=parameters)
+
+            solver.smooth(input_path=f"{path}/sum_nosmooth",
+                          output_path=f"{path}/sum", parameters=parameters,
+                          span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
+        else:
+            solver.combine(input_path=path, output_path=f"{path}/sum",
+                           parameters=parameters)
 
     def write_gradient(self, path):
         """
         Combines contributions from individual sources and material parameters
         to get the gradient, and optionally applies user-supplied scaling
 
-        :input path: directory from which kernels are read and to which
-                     gradient is written
+        Note:
+        Because processing operations can be quite expensive, they must be
+        run through the HPC system interface; processing does not involve
+        embarassingly parallel tasks, we use system.run_single instead of
+        system.run
+
+        :type path: str
+        :param path: directory from which kernels are read and to which
+        gradient is written
         """
+        # Check that the given path exists
         if not exists(path):
-            raise Exception
+            raise FileNotFoundError
 
-        # because processing operations can be quite expensive, they must be
-        # run through the HPC system interface; processing does not involve
-        # embarassingly parallel tasks, we use system.run_single instead of 
-        # system.run
-        system.run_single('postprocess', 'process_kernels',
-                 path=path+'/kernels', scale_tasktime=PAR.TASKTIME_SMOOTH,
-                 parameters=solver.parameters)
+        # Run postprocessing
+        system.run_single("postprocess", "process_kernels",
+                          path=f"{path}/kernels",
+                          scale_tasktime=PAR.TASKTIME_SMOOTH,
+                          parameters=solver.parameters)
 
-        gradient = solver.load(
-            path+'/'+'kernels/sum', suffix='_kernel')
+        # Access the gradient information stored in the kernel summation
+        gradient = solver.load(f"{path}/kernels/sum", suffix="_kernel")
 
-        # merge into a single vector
+        # Merge the gradients into a single vector
         gradient = solver.merge(gradient)
 
-        # convert to absolute perturbations, log dm --> dm
-        # see Eq.13 Tromp et al 2005
-        gradient *= solver.merge(solver.load(path +'/'+ 'model'))
+        # Convert to absolute perturbations:
+        # log dm --> dm (see Eq.13 Tromp et al 2005)
+        gradient *= solver.merge(solver.load(f"{path}/model"))
 
         if PATH.MASK:
             # to scale the gradient, users can supply "masks" by exactly
             # mimicking the file format in which models stored
             mask = solver.merge(solver.load(PATH.MASK))
 
-            # while both masking and preconditioning involve scaling the
+            # While both masking and preconditioning involve scaling the
             # gradient, they are fundamentally different operations:
             # masking is ad hoc, preconditioning is a change of variables;
             # see Modrak & Tromp 2016 GJI
-            solver.save(solver.split(gradient),
-                        path +'/'+ 'gradient_nomask',
+            solver.save(solver.split(gradient), f"{path}/gradient_nomask",
                         parameters=solver.parameters,
-                        suffix='_kernel')
+                        suffix="_kernel")
 
-            solver.save(solver.split(gradient*mask),
-                        path +'/'+ 'gradient',
+            solver.save(solver.split(gradient*mask), f"{path}/gradient",
                         parameters=solver.parameters,
-                        suffix='_kernel')
-
+                        suffix="_kernel")
         else:
-            solver.save(solver.split(gradient),
-                        path +'/'+ 'gradient',
+            solver.save(solver.split(gradient), f"{path}/gradient",
                         parameters=solver.parameters,
-                        suffix='_kernel')
+                        suffix="_kernel")
     
-    def process_kernels(self, path, parameters):
-        """ 
-        Sums kernels from individual sources, with optional smoothing
 
-        :input path: directory containing sensitivity kernels
-        :input parameters: list of material parameters e.g. ['vp','vs']
-        """
-        if not exists(path):
-            raise Exception
-
-        if PAR.SMOOTH_H > 0:
-            solver.combine(
-                   input_path=path,
-                   output_path=path+'/'+'sum_nosmooth',
-                   parameters=parameters)
-
-            solver.smooth(
-                   input_path=path+'/'+'sum_nosmooth',
-                   output_path=path+'/'+'sum',
-                   parameters=parameters,
-                   span_h=PAR.SMOOTH_H,
-                   span_v=PAR.SMOOTH_V)
-        else:
-            solver.combine(
-                   input_path=path,
-                   output_path=path+'/'+'sum',
-                   parameters=parameters)
 
 
