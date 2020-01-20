@@ -1,35 +1,38 @@
-
+#!/usr/bin/env python
+"""
+This is the base class for seisflows.optimize
+This class provides the core utilities for the Seisflows optimization schema.
+"""
 import sys
 import numpy as np
 
-from os.path import join
-from seisflows.config import ParameterError
 from seisflows.plugins import line_search, preconds
 from seisflows.tools import msg, unix
+from seisflows.tools.err import ParameterError
 from seisflows.tools.array import loadnpy, savenpy
 from seisflows.tools.math import angle, poissons_ratio
 from seisflows.tools.seismic import  Writer
-
 
 # seisflows.config objects 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class base(object):
-    """ Nonlinear optimization abstract base class
+class Base(object):
+    """
+    Nonlinear optimization abstract base class
 
-     Base class on top of which steepest descent, nonlinear conjugate, quasi-
-     Newton and Newton methods can be implemented.  Includes methods for
-     both search direction and line search.
+    Base class on top of which steepest descent, nonlinear conjugate, quasi-
+    Newton and Newton methods can be implemented.  Includes methods for
+    both search direction and line search.
 
-     To reduce memory overhead, vectors are read from disk rather than passed
-     from calling routines. For example, at the beginning of compute_direction 
-     the current gradient is  read from  'g_new' and the resulting search
-     direction is written to 'p_new'. As the inversion progresses, other 
-     information is stored as well.
+    To reduce memory overhead, vectors are read from disk rather than passed
+    from calling routines. For example, at the beginning of compute_direction
+    the current gradient is  read from  'g_new' and the resulting search
+    direction is written to 'p_new'. As the inversion progresses, other
+    information is stored as well.
 
-     Variables
+    Variables:
         m_new - current model
         m_old - previous model
         m_try - line search model
@@ -41,49 +44,49 @@ class base(object):
         p_new - current search direction
         p_old - previous search direction
     """
-
     def check(self):
-        """ Checks parameters, paths, and dependencies
         """
-        # The default numerical parameters defined below should work well for a 
-        # range of applications without manual tuning. If the nonlinear
-        # optimization procedure stagnates, it may be due to issues involving
-        # data quality or the choice of data misfit, data processing, or
-        # regularization parameters.  Problems in any of these areas usually 
-        # manifest themselves through stagnation of the nonlinear optimization
-        # algorithm.
+        Checks parameters, paths, and dependencies
 
+        Note:
+        The default numerical parameters defined below should work well for a
+        range of applications without manual tuning. If the nonlinear
+        optimization procedure stagnates, it may be due to issues involving
+        data quality or the choice of data misfit, data processing, or
+        regularization parameters.  Problems in any of these areas usually
+        manifest themselves through stagnation of the nonlinear optimization
+        algorithm.
+        """
         # line search algorithm
-        if 'LINESEARCH' not in PAR:
-            setattr(PAR, 'LINESEARCH', 'Bracket')
+        if "LINESEARCH" not in PAR:
+            setattr(PAR, "LINESEARCH", "Bracket")
 
-        # preconditioner
-        if 'PRECOND' not in PAR:
-            setattr(PAR, 'PRECOND', None)
+        # Preconditioner
+        if "PRECOND" not in PAR:
+            setattr(PAR, "PRECOND", None)
 
-        # maximum number of trial steps
-        if 'STEPCOUNTMAX' not in PAR:
-            setattr(PAR, 'STEPCOUNTMAX', 10)
+        # Maximum number of trial steps
+        if "STEPCOUNTMAX" not in PAR:
+            setattr(PAR, "STEPCOUNTMAX", 10)
 
-        # initial step length as fraction of current model
-        if 'STEPLENINIT' not in PAR:
-            setattr(PAR, 'STEPLENINIT', 0.05)
+        # Initial step length as fraction of current model
+        if "STEPLENINIT" not in PAR:
+            setattr(PAR, "STEPLENINIT", 0.05)
 
-        # maximum step length as fraction of current model
-        if 'STEPLENMAX' not in PAR:
-            setattr(PAR, 'STEPLENMAX', 0.5)
+        # Maximum step length as fraction of current model
+        if "STEPLENMAX" not in PAR:
+            setattr(PAR, "STEPLENMAX", 0.5)
 
-        # where temporary files are written
-        if 'OPTIMIZE' not in PATH:
-            setattr(PATH, 'OPTIMIZE', PATH.SCRATCH+'/'+'optimize')
+        # Location of temporary files
+        if "OPTIMIZE" not in PATH:
+            setattr(PATH, "OPTIMIZE", f"{PATH.SCRATCH}/optimize")
 
-
-        # assertions
-        if 'WORKDIR' not in PATH:
+        # Assertions
+        if "WORKDIR" not in PATH:
             raise ParameterError
 
         if PAR.OPTIMIZE in ['base']:
-            print msg.CompatibilityError1
+            print(msg.CompatibilityError1)
             sys.exit(-1)
 
         if PAR.LINESEARCH:
@@ -101,49 +104,51 @@ class base(object):
         if PAR.STEPLENINIT and PAR.STEPLENMAX:
             assert PAR.STEPLENINIT < PAR.STEPLENMAX
 
-
     def setup(self):
-        """ Sets up nonlinear optimization machinery
         """
-        # prepare line search machinery
+        Sets up nonlinear optimization machinery, initiate
+        """
+        # Prepare line search machinery
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
             step_count_max=PAR.STEPCOUNTMAX,
-            path=PATH.WORKDIR+'/'+'output.optim')
+            path=f"{PATH.WORKDIR}/output.optim")
 
-        # prepare preconditioner
+        # Prepare preconditioner
         if PAR.PRECOND:
             self.precond = getattr(preconds, PAR.PRECOND)()
         else:
             self.precond = None
 
-        # prepare output logs
-        self.writer = Writer(
-                path=PATH.WORKDIR+'/'+'output.stats')
+        # Prepare output logs
+        self.writer = Writer(path=f"{PATH.WORKDIR}/output.stats")
 
-        # prepare scratch directory
+        # Prepare scratch directory
         unix.mkdir(PATH.OPTIMIZE)
         if 'MODEL_INIT' in PATH:
             solver = sys.modules['seisflows_solver']
             self.save('m_new', solver.merge(solver.load(PATH.MODEL_INIT)))
 
-
     def compute_direction(self):
-        """ Computes search direction
         """
-        # the following code implements steepest descent
-        # (for other algorithms, simply overload this method)
+        Computes search direction
+
+        Note:
+        This function implements steepest descent, for other algorithms,
+        simply overload this method
+        """
+
         g_new = self.load('g_new')
         if self.precond:
             p_new = -self.precond(g_new)
         else:
             p_new = -g_new
         self.save('p_new', p_new)
-
     
     def threshold_model(self, m):
         """
         Make sure that their are no outlier model values that will cause 
-        errors during the execution of the Specfem binaries 
+        errors during the execution of the Specfem binaries
+
         -this function probably doesn't belong here, should be moved to solver?
         -allow reassignment of Vp rather than Vs, what is most realistic?
         -generalize function to allow for Lame parameter definitions
@@ -153,9 +158,9 @@ class base(object):
         :rtype: np.array
         :return: thresholded model
         """
-        if PAR.MATERIALS == "Elastic":
         # determine the number of splits in the model vector based on the chosen
         # simulation parameters, 'Variable' density means rho included in 'm'
+        if PAR.MATERIALS == "Elastic":
             if PAR.DENSITY == "Constant":
                 split = int(len(m) / 2)
             else:
@@ -172,8 +177,8 @@ class base(object):
             negative_outliers = np.where(poissons < -1.)[0]
             positive_outliers = np.where(poissons > 0.5)[0] 
             outliers = np.concatenate([negative_outliers, positive_outliers]) 
-            print '\t\t{} outlier(s) found for Poissons ratio bounds'.format(
-                                                                  len(outliers))
+            print(f"\t\t{len(outliers)} outlier(s) found "
+                  f"for Poissons ratio bounds")
             
             # !!! Should we allow reassignment of Vp? 
             # For each outlier, reassign values of Vs to acceptable bounds
@@ -186,126 +191,128 @@ class base(object):
                     # ratio criteria is met, set in place in m
                     for vs_try in vs_max_values:
                         if -1 < poissons_ratio(vp_, vs_try) < 0.5:
-                            print '\t\t\treassigning vs={} to {}'.format(
-                                                     m[idx + split], vs_try)
+                            print(f"\t\t\treassigning vs={m[idx + split]} "
+                                  f"to {vs_try}")
                             m[idx + split] = vs_try
                             break
         return m
 
-
     def initialize_search(self):
-        """ Determines first step length in line search
         """
+        Determines first step length in line search
+        """
+        # Load in and calucate the necessary variables
         m = self.load('m_new')
         g = self.load('g_new')
         p = self.load('p_new')
         f = self.loadtxt('f_new')
         norm_m = max(abs(m))
         norm_p = max(abs(p))
-        gtg = self.dot(g,g)
-        gtp = self.dot(g,p)
+        gtg = self.dot(g, g)
+        gtp = self.dot(g, p)
 
+        # Restart line search if necessary
         if self.restarted:
             self.line_search.clear_history()
 
-        # optional step length safeguard
+        # Optional step length safeguard
         if PAR.STEPLENMAX:
-            self.line_search.step_len_max = \
-                PAR.STEPLENMAX*norm_m/norm_p
+            self.line_search.step_len_max = PAR.STEPLENMAX * norm_m / norm_p
 
-        # determine initial step length
-        alpha, _ = self.line_search.initialize(0.,f,gtg,gtp)
+        # Determine initial step length
+        alpha, _ = self.line_search.initialize(0., f, gtg, gtp)
 
-        # optional initial step length override
-        if PAR.STEPLENINIT and len(self.line_search.step_lens)<=1:
-            alpha = PAR.STEPLENINIT*norm_m/norm_p
-            print '\t\tstep length override due to PAR.STEPLENINIT' 
+        # Optional initial step length override
+        if PAR.STEPLENINIT and len(self.line_search.step_lens) <= 1:
+            alpha = PAR.STEPLENINIT * norm_m / norm_p
+            print("\t\tstep length override due to PAR.STEPLENINIT")
 
-        # The new model is the old model, scaled by the step direction and grad
-        # threshold to remove any outlier values
-        m_try = self.threshold_model(m + alpha * p) 
-
+        # The new model is the old model, scaled by the step direction and
+        # gradient threshold to remove any outlier values
+        m_try = self.threshold_model(m + alpha * p)
  
-        # write model corresponding to chosen step length
-        self.savetxt('alpha', alpha)
-        self.save('m_try', m_try)
-
+        # Write model corresponding to chosen step length
+        self.savetxt("alpha", alpha)
+        self.save("m_try", m_try)
 
     def update_search(self):
-        """ Updates line search status and step length
-
-          Status codes
-              status > 0  : finished
-              status == 0 : not finished
-              status < 0  : failed
         """
-        alpha, status = self.line_search.update(
-            self.loadtxt('alpha'),
-            self.loadtxt('f_try'))
-        
+        Updates line search status and step length
+
+        Status codes:
+            status > 0  : finished
+            status == 0 : not finished
+            status < 0  : failed
+        """
+        alpha, status = self.line_search.update(self.loadtxt("alpha"),
+                                                self.loadtxt("f_try"))
+
+        # write model corresponding to chosen step length
         if status >= 0:
-            # write model corresponding to chosen step length
-            m = self.load('m_new')
-            p = self.load('p_new')
-            self.savetxt('alpha', alpha)
+            m = self.load("m_new")
+            p = self.load("p_new")
+            self.savetxt("alpha", alpha)
             m_try = self.threshold_model(m + alpha * p)
-            self.save('m_try', m_try)
+            self.save("m_try", m_try)
+
         return status
 
-
     def finalize_search(self):
-        """ Prepares algorithm machinery and scratch directory for next
-          model upate
         """
-        m = self.load('m_new')
+        Prepares algorithm machinery and scratch directory for next model update
+
+        Removes old model/search parameters, moves current parameters to old,
+        sets up new current parameters and writes statistic outputs
+        """
+        # m = self.load('m_new')  # unusued variable
         g = self.load('g_new')
         p = self.load('p_new')
         x = self.line_search.search_history()[0]
         f = self.line_search.search_history()[1]
 
-        # clean scratch directory
+        # Clean scratch directory
         unix.cd(PATH.OPTIMIZE)
+        # Remove the old model parameters
         if self.iter > 1:
-            unix.rm('m_old')
-            unix.rm('f_old')
-            unix.rm('g_old')
-            unix.rm('p_old')
-            unix.rm('s_old')
+            for fid in ["m_old", "f_old", "g_old", "p_old", "s_old"]:
+                unix.rm(fid)
+
+        # Rename current model parameters to '_old' for new search
         unix.mv('m_new', 'm_old')
         unix.mv('f_new', 'f_old')
         unix.mv('g_new', 'g_old')
         unix.mv('p_new', 'p_old')
 
+        # Setup the current model parameters
         unix.mv('m_try', 'm_new')
         self.savetxt('f_new', f.min())
 
-        # output latest statistics
-        self.writer('factor', -self.dot(g,g)**-0.5 * (f[1]-f[0])/(x[1]-x[0]))
+        # Output latest statistics
+        self.writer('factor',
+                    -self.dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0]))
         self.writer('gradient_norm_L1', np.linalg.norm(g, 1))
         self.writer('gradient_norm_L2', np.linalg.norm(g, 2))
         self.writer('misfit', f[0])
         self.writer('restarted', self.restarted)
-        self.writer('slope', (f[1]-f[0])/(x[1]-x[0]))
+        self.writer('slope', (f[1] - f[0]) / (x[1] - x[0]))
         self.writer('step_count', self.line_search.step_count)
         self.writer('step_length', x[f.argmin()])
-        self.writer('theta', 180.*np.pi**-1*angle(p,-g))
+        self.writer('theta', 180. * np.pi ** -1 * angle(p, -g))
 
         self.line_search.writer.newline()
 
-
     def retry_status(self):
-        """ Determines if restart is worthwhile
-
-          After failed line search, determines if restart is worthwhile by 
-          checking, in effect, if search direction was the same as gradient
-          direction
+        """
+        After a failed line search, this determines if restart is worthwhile
+        by checking, in effect, if the search direction was the same as gradient
+        direction
         """
         g = self.load('g_new')
         p = self.load('p_new')
         theta = angle(p,-g)
 
-        if PAR.VERBOSE >= 2:
-            print ' theta: %6.3f' % theta
+        if PAR.VERBOSE:
+            print(f" theta: {theta:6.3f}")
 
         thresh = 1.e-3
         if abs(theta) < thresh:
@@ -313,43 +320,75 @@ class base(object):
         else:
             return 1
 
-
     def restart(self):
-        """ Restarts nonlinear optimization algorithm
-
-          Keeps current position in model space, but discards history of
-          nonlinear optimization algorithm in an attempt to recover from
-          numerical stagnation 
         """
-        g = self.load('g_new')
-        self.save('p_new', -g)
+        Restarts nonlinear optimization algorithm.
+        Keeps current position in model space, but discards history of
+        nonlinear optimization algorithm in an attempt to recover from
+        numerical stagnation.
+        """
+        g = self.load("g_new")
+        self.save("p_new", -g)
         self.line_search.clear_history()
         self.restarted = 1
         self.line_search.writer.iter -= 1
         self.line_search.writer.newline()
 
-
-    def dot(self,x,y):
-        """ Computes inner product between vectors
+    def dot(self, x, y):
         """
-        return np.dot(
-            np.squeeze(x),
-            np.squeeze(y))
+        Utility function to computes inner product between vectors
+
+        :type x: np.array
+        :param x: vector 1
+        :type y: np.array
+        :param y: vector 2
+        """
+        return np.dot(np.squeeze(x), np.squeeze(y))
 
     def load(self, filename):
-        # reads vectors from disk
-        return loadnpy(PATH.OPTIMIZE+'/'+filename)
+        """
+        Reads vectors from disk
+
+        :type filename: str
+        :param filename: filename to read from
+        :return:
+        """
+        return loadnpy(f"{PATH.OPTIMIZE}/{filename}")
 
     def save(self, filename, array):
-        # writes vectors to disk
-        savenpy(PATH.OPTIMIZE+'/'+filename, array)
+        """
+        Writes vectors to disk
+
+        :type filename: str
+        :param filename: filename to read from
+        :type array: np.array
+        :param array: array to be saved
+        :return:
+        """
+        savenpy(f"{PATH.OPTIMIZE}/{filename}", array)
 
     def loadtxt(self, filename):
-        # reads scalars from disk
-        return float(np.loadtxt(PATH.OPTIMIZE+'/'+filename))
+        """
+        Reads scalars from disk
+
+        :type filename: str
+        :param filename: filename to read from
+        :type array: np.array
+        :param array: array to be saved
+        :return:
+        """
+        return float(np.loadtxt(f"{PATH.OPTIMIZE}/{filename}"))
 
     def savetxt(self, filename, scalar):
-        # writes scalars to disk
-        np.savetxt(PATH.OPTIMIZE+'/'+filename, [scalar], '%11.6e')
+        """
+        Writes scalars to disk
+
+        :type filename: str
+        :param filename: filename to read from
+        :type scalar: float
+        :param scalar: value to write to disk
+        :return:
+        """
+        np.savetxt(f"{PATH.OPTIMIZE}/{filename}", [scalar], "%11.6e")
 
 

@@ -1,15 +1,19 @@
-
+#!/usr/bin/env python
+"""
+This is the custom class for an steepest descent optimization schema.
+It supercedes the `seisflows.optimize.base` class
+"""
 import sys
-import numpy as np
 
-from seisflows.config import custom_import, ParameterError
+from seisflows.config import custom_import
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class steepest_descent(custom_import('optimize', 'base')):
-    """ Steepest descent method
+class SteepestDescent(custom_import("optimize", "Base")):
+    """
+    Steepest descent method
     """
     restarted = False
 
@@ -20,18 +24,23 @@ class steepest_descent(custom_import('optimize', 'base')):
         if 'LINESEARCH' not in PAR:
             setattr(PAR, 'LINESEARCH', 'Bracket')
 
-        super(steepest_descent, self).check()
-
+        super(SteepestDescent, self).check()
 
     def setup(self):
-        super(steepest_descent, self).setup()
-
+        """
+        Set up the steepest descent optimization schema
+        """
+        super(SteepestDescent, self).setup()
 
     def compute_direction(self):
-        super(steepest_descent, self).compute_direction()
-
+        """
+        Overwrite the Base compute direction class
+        """
+        super(SteepestDescent, self).compute_direction()
 
     def restart(self):
-        # steepest descent never requires restarts
+        """
+        Steepest descent never requires restarts
+        """
         pass
 
