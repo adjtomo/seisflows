@@ -45,6 +45,6 @@ if __name__ == '__main__':
 
     # set up working directory
     fullpath = path+'/'+dir+'/'+subdir
-    unix.cp(fullpath+'/'+'parameters.py', '.')
-    unix.cp(fullpath+'/'+'paths.py', '.')
+    unix.cp(fullpath+'/'+'parameters.yaml', '.')
+
 
