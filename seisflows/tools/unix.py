@@ -1,10 +1,10 @@
-
+"""
+Unix functions wrapped in Python
+"""
 import os
 import random
 import shutil
 import socket
-import subprocess
-import sys
 import time
 
 from os.path import abspath, basename, isdir, isfile, join
@@ -12,23 +12,30 @@ from seisflows.tools.tools import iterable
 
 
 def cat(src, *dst):
-    f = open(src, 'r')
-    contents = f.read()
-    f.close()
+    """
+    Concatenate files and print on standard output
+    """
+    with open(src, 'r') as f:
+        contents = f.read()
 
     if not dst:
-        print contents
+        print(contents)
     else:
-        f = open(dst, 'w')
-        f.write(contents)
-        f.close()
+        with open(dst, 'w') as f:
+            f.write(contents)
 
 
 def cd(path):
+    """
+    Change directory
+    """
     os.chdir(path)
 
 
 def cp(src='', dst=''):
+    """
+    Copy files
+    """
     if isinstance(src, (list, tuple)):
         if len(src) > 1:
             assert isdir(dst)

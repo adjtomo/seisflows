@@ -1,6 +1,7 @@
+"""
+Pre-defined Warning and Error messages so that Seisflows has a uniform look
+"""
 
-
-###
 
 WarningOverwrite = """
 
@@ -18,7 +19,7 @@ FileError = """
 
 FILE NOT FOUND
 
-    %s
+    {file}
 
 """
 
@@ -27,7 +28,7 @@ SolverError = """
 
 SOLVER FAILED
 
-    Nonzero exit status returned by:  %s
+    Nonzero exit status returned by:  {exc}
 
     Subsequent tasks may fail because expected solver output is not in place.
     Users running on clusters without fault tolerance should consider stopping 
@@ -44,8 +45,8 @@ SystemWarning = """
 
 Please double check SYSTEM parameter
 
-    Expected hostname: %s
-    Actual hostname: %s
+    Expected hostname: {}
+    Actual hostname: {}
 
 """
 
@@ -65,8 +66,8 @@ ERROR READING SOURCES
 
     In DIRECTORY, there must be one or more files matching WILDCARD.
 
-    DIRECTORY:  "%s"
-    WILDCARD:  "%s"
+    DIRECTORY:  "{}"
+    WILDCARD:  "{}"
 
 """
 
@@ -77,9 +78,9 @@ PARAMETER WARNING
 
     There is a conflict between parameters.
 
-    SPECFEM Parameter:  "%s"
-    Old Value:  %s
-    Overwriting with:  %s
+    SPECFEM Parameter:  "{}"
+    Old Value:  {}
+    Overwriting with:  {}
 
 """
 
@@ -88,8 +89,8 @@ DataFormatWarning = """
 
 DATA FORMAT WARNING
 
-    reader format: %s
-    writer format: %s
+    reader format: {}
+    writer format: {}
 
     Incompatible file formats may result in job failure or other problems.
 
@@ -127,9 +128,9 @@ TASK TIMED OUT
     Stopping workflow because task time limit exceeded. (To adjust limit,
     add or modify TASKTIME in parameter file.)
 
-        Task name:  %s.%s
-        Task id:    %s
-        Time limit (minutes): %s
+        Task name:  {}.{}
+        Task id:    {}
+        Time limit (minutes): {}
 
 """
 
@@ -138,23 +139,22 @@ TaskError_LSF = """
 
 TASK ERROR
 
-    Task failed:  %s.%s
+    Task failed:  {}.{}
 
-    For more information, see output.lsf/%s
+    For more information, see output.lsf/{}
 
     Stopping workflow...
 
 """
 
 
-
 TaskError_PBS = """
 
 TASK ERROR
 
-    Task failed:  %s.%s
+    Task failed:  {}.{}
 
-    For more information, see output.pbs/%s
+    For more information, see output.pbs/{}
 
     Stopping workflow...
 
@@ -165,16 +165,14 @@ TaskError_SLURM = """
 
 TASK ERROR
 
-    Task failed:  %s.%s
+    Task failed:  {}.{}
 
-    For more information, see output.slurm/%s
+    For more information, see output.slurm/{}
 
     Stopping workflow...
 
 """
 
-
-###
 
 obspyImportError = """
 
@@ -192,7 +190,7 @@ SYSTEM CONFIGURATION ERROR
     The following system configuration can be used only with single-core
     solvers:
 
-        system.%s
+        system.{}
 
     If your solver requires only a single core, then set NPROC equal to 1.
 
@@ -208,7 +206,7 @@ DEPENDENCY ERROR
 
     The following system configuration requires MPI4PY:
 
-        system.%s
+        system.{}
 
     Please install MPI4PY and try again, or consider choosing a different system
     configuration.
@@ -222,7 +220,7 @@ SYSTEM CONFIGURATION WARNING
 
     The following system configuration requires 'mpiexec':
 
-        system.%s
+        system.{}
 
     Please make sure than 'mpiexec' is accessible through your shell's PATH
     environment variable. If your executable goes by a different name such as
@@ -295,9 +293,9 @@ SEISFLOWS IMPORT ERROR
 
     The following module was not found in the SeisFlows package:
 
-        seisflows.%s.%s
+        seisflows.{}.{}
 
-    Please check user-supplied %s parameter.
+    Please check user-supplied {} parameter.
 
 """
 
@@ -308,16 +306,14 @@ SEISFLOWS IMPORT ERROR
 
     By convention, SeisFlows module 
 
-        seisflows.%s.%s
+        seisflows.{}.{}
 
     must contain a class named
 
-        %s
+        {}
 
 """
 
-
-###
 
 CompatibilityError1 = """
 
@@ -329,7 +325,7 @@ In your parameter file, please remove
 and add one of the following instead
     OPTIMIZE='LBFGS'
     OPTIMIZE'=NLCG'
-    OPTIMIZE='steepest_descent'
+    OPTIMIZE='SteepestDescent'
 
 """
 

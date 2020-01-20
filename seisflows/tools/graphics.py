@@ -1,4 +1,7 @@
-
+#!/usr/bin/env python
+"""
+Visualization tools for Seisflows
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
@@ -7,7 +10,14 @@ from obspy.core.stream import Stream
 
 
 def plot_gll(x, y, z):
-    """ Plots values on 2D unstructured GLL mesh
+    """
+    Plots values on 2D unstructured GLL mesh
+    :type x: np.array
+    :param x: x values of GLL mesh
+    :type y: np.array
+    :param y: y values of GLL mesh
+    :type z: np.array
+    :param z: z values of GLL mesh
     """
     r = (max(x) - min(x))/(max(y) - min(y))
     rx = r/np.sqrt(1 + r**2)
@@ -16,32 +26,29 @@ def plot_gll(x, y, z):
     f = plt.figure(figsize=(10*rx, 10*ry))
     p = plt.tricontourf(x, y, z, 125)
     plt.axis('image')
+
     return f, p
 
 
 def plot_vector(t, v, xlabel='', ylabel='', title=''):
-    """ Plots a vector or time series.
-
-    Parameters
-    ----------
-    v: ndarray, ndims = 1/2
-        Vector or time series to plot
-    xlabel: str
-        x axis label
-    ylabel: str
-        y axis label
-    title: str
-        plot title
-
-    Raises
-    ------
-    ValueError
-        If dimensions of v are greater than 2
     """
+    Plots a vector or time series.
+    If dimensions of v are greater than 2, raises ValueError
 
-    # check input dimension
+    :type t: np.ndarray
+    :param t: Time axis for potting
+    :type v: np.ndarray
+    :param v: Vector or time series to plot, ndims = 1/2
+    :type xlabel: str
+    :param xlabel: x axis label
+    :type ylabel: str
+    :param ylabel: y axis label
+    :type title: str
+    :param title: plot title
+    """
+    # Check input dimension
     if v.ndim > 2:
-        raise ValueError('v must be a vector or a time series')
+        raise ValueError("v must be a vector or a time series")
 
     if v.ndim == 1:
         x = range(len(v))
@@ -50,7 +57,7 @@ def plot_vector(t, v, xlabel='', ylabel='', title=''):
         x = v[:, 0]
         y = v[:, 1]
 
-    # plot
+    # Plot
     plt.plot(t, v)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -58,8 +65,10 @@ def plot_vector(t, v, xlabel='', ylabel='', title=''):
     plt.show()
 
 
-def plot_section(stream, ax=None, cmap='seismic', clip=100, title='', x_interval=1.0, y_interval=1.0):
-    """  Plots a seismic section from an obspy stream.
+def plot_section(stream, ax=None, cmap='seismic', clip=100, title='',
+                 x_interval=1.0, y_interval=1.0):
+    """
+    Plots a seismic section from an Obspy stream.
 
     Parameters
     ----------
@@ -86,7 +95,8 @@ def plot_section(stream, ax=None, cmap='seismic', clip=100, title='', x_interval
 
     # check format of stream
     if stream[0].stats._format != 'SU':
-        raise NotImplemented('plot_section currently only supports streams for SU data files.')
+        raise NotImplemented(
+            'plot_section currently only supports streams for SU data files.')
 
     # get dimensions
     nr = len(stream)
@@ -104,7 +114,8 @@ def plot_section(stream, ax=None, cmap='seismic', clip=100, title='', x_interval
     if ax is None:
         fig, ax = plt.subplots(figsize=(fsize, scale_factor*fsize))
 
-    im = ax.imshow(data, aspect=scale_factor*d_aspect, clim=_cscale(data, clip=clip))
+    im = ax.imshow(data, aspect=scale_factor*d_aspect,
+                   clim=_cscale(data, clip=clip))
     im.set_cmap(cmap)
 
     # labels
@@ -112,7 +123,7 @@ def plot_section(stream, ax=None, cmap='seismic', clip=100, title='', x_interval
     ax.set_xlabel('Offset [km]')
     ax.set_ylabel('Time [s]')
 
-    #set ticks
+    # Set ticks
     t = _get_time(stream)
     yticks, ytick_labels = get_regular_ticks(t, y_interval)
     ax.set_yticks(yticks)
@@ -127,7 +138,8 @@ def plot_section(stream, ax=None, cmap='seismic', clip=100, title='', x_interval
 
 
 def _convert_to_array(stream):
-    """ Extracts trace data from an obspy stream and returns a 2D array.
+    """
+    Extracts trace data from an obspy stream and returns a 2D array.
 
     Parameters
     ----------

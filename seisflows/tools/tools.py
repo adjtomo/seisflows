@@ -1,46 +1,64 @@
-
-import json
+"""
+Functional tools employed by Seisflows
+"""
 import os
-import pickle
 import re
-import subprocess
-import sys
 import time
-import traceback
+import yaml
+import json
+import pickle
+import subprocess
+import numpy as np
 
 from imp import load_source
 from importlib import import_module
 from pkgutil import find_loader
-from os.path import basename, exists
-from subprocess import check_output
-
-import numpy as np
 
 from seisflows.tools import msg
 
 
 class Struct(dict):
+    """
+    Revised dictionary structure
+    """
     def __init__(self, *args, **kwargs):
         super(Struct, self).__init__(*args, **kwargs)
         self.__dict__ = self
 
 
 def call(*args, **kwargs):
+    """
+    Subprocess check call
+    """
     if 'shell' not in kwargs:
         kwargs['shell'] = True
     subprocess.check_call(*args, **kwargs)
 
 
 def diff(list1, list2):
-    """ Difference between unique elements of lists
+    """
+    Difference between unique elements of lists
+
+    :type list1: list
+    :param list1: first list
+    :type list2: list
+    :param list2: second list
     """
     c = set(list1).union(set(list2))
     d = set(list1).intersection(set(list2))
+
     return list(c - d)
 
 
 def divides(i, j):
-    """True if j divides i"""
+    """
+    Return True if `j` divides `i`.
+
+    Bryant: I don't think this works in python3?
+
+    :type i: int
+    :type j :int
+    """
     if j is 0:
         return False
     elif i % j:
@@ -50,11 +68,16 @@ def divides(i, j):
 
 
 def exists(names):
-    """Wrapper for os.path.exists"""
+    """
+    Wrapper for os.path.exists for a list
+
+    :type names: list
+    :param names: list of names to check existnce
+    """
     for name in iterable(names):
         if not name:
             return False
-        elif not isinstance(name, basestring):
+        elif not isinstance(name, str):
             raise TypeError
         elif not os.path.exists(name):
             return False
@@ -63,19 +86,31 @@ def exists(names):
 
 
 def findpath(name):
-    """Resolves absolute path of module"""
+    """
+    Resolves absolute path of module
+
+    :type name: str
+    :param name: absolute path of str
+    """
     path = import_module(name).__file__
 
-    # adjust file extension
+    # Adjust file extension
     path = re.sub('.pyc$', '.py', path)
 
-    # strip trailing "__init__.py"
+    # Strip trailing "__init__.py"
     path = re.sub('__init__.py$', '', path)
 
     return path
 
 
 def iterable(arg):
+    """
+    Make an argument iterable
+
+    :param arg: an argument to make iterable
+    :type: list
+    :return: iterable argument
+    """
     if not isinstance(arg, (list, tuple)):
         return [arg]
     else:
@@ -83,77 +118,127 @@ def iterable(arg):
 
 
 def module_exists(name):
+    """
+    Determine if a module loader exists
+
+    :type name: str
+    :param name: name of module
+    """
     return find_loader(name)
 
 
 def package_exists(name):
+    """
+    Determine if a package exists
+
+    :type name: str
+    :param name: name of package
+    """
     return find_loader(name)
 
 
 def pkgpath(name):
+    """
+    Path to Seisflows package
+
+    :type name: str
+    :param name: name of package
+    """
     for path in import_module('seisflows').__path__:
-        if name+'/seisflows' in path:
+        if os.path.join(name, 'seisflows') in path:
             return path
 
 
 def timestamp():
+    """
+    Return a timestamp for current time
+    """
     return time.strftime('%H:%M:%S')
 
 
 def loadobj(filename):
-    """Load object using pickle"""
+    """
+    Load object using pickle
+
+    :type filename: str
+    :param filename: object to load
+    """
     with open(filename, 'rb') as file:
         return pickle.load(file)
 
 
 def saveobj(filename, obj):
-    """Save object using pickle"""
+    """
+    Save object using pickle
+    """
     with open(filename, 'wb') as file:
         pickle.dump(obj, file)
 
 
 def loadjson(filename):
-    """Load object using json"""
+    """
+    Load object using json
+    """
     with open(filename, 'rb') as file:
         return json.load(file)
 
 
 def savejson(filename, obj):
-    """Save object using json"""
+    """
+    Save object using json
+    """
     with open(filename, 'wb') as file:
         json.dump(obj, file, sort_keys=True, indent=4)
 
 
 def loadpy(filename):
+    """
+    Load a .py file. Used to load old parameter.py and paths.py files.
+    Deprecated in favor of using .yaml files
+
+    :type filename: str
+    :param filename: filename of .py file
+    """
     if not exists(filename):
-        print msg.FileError % filename
+        print(msg.FileError.format(file=filename))
         raise IOError
 
-    # load module
+    # Load module
     name = re.sub('.py$', '', basename(filename))
     module = load_source(name, filename)
 
-    # strip private attributes
+    # Strip private attributes
     output = Struct()
     for key, val in vars(module).items():
         if key[0] != '_':
             output[key] = val
+
     return output
 
 
 def loadnpy(filename):
-    """Loads numpy binary file."""
+    """
+    Wrapper function for loading numpy binary file
+    :type filename: str
+    :param filename: file to load with numpy
+    """
     return np.load(filename)
 
 
 def savenpy(filename, v):
-    """Saves numpy binary file."""
+    """
+    Saves numpy binary file without the '.npy' file ending
+
+    :type filename: str
+    :param filename: file to save using numpy
+    :type v: np.array
+    :param v: array to save
+    """
     np.save(filename, v)
-    os.rename(filename + '.npy', filename)
+    os.rename(f"{filename}.npy", filename)
 
 
 def loadyaml(filename):
-    import yaml
 
     # work around PyYAML bugs
     yaml.SafeLoader.add_implicit_resolver(
@@ -170,58 +255,92 @@ def loadyaml(filename):
     with open(filename, 'rb') as file:
         mydict = yaml.safe_load(file)
 
-    if mydict == None:
+    if mydict is None:
         mydict = dict()
 
-    # replace None
+    # Replace None
     if 'None' in mydict.values():
-        for key,val in mydict.items():
-            if val=='None': mydict[key]=None
+        for key, val in mydict.items():
+            if val == 'None':
+                mydict[key] = None
 
     return mydict
 
 
 def getset(arg):
+    """
+    Return a set object
+
+    :type arg: None, str or list
+    :param arg: argument to turn into a set
+    :return:
+    """
     if not arg:
         return set()
-    elif isinstance(arg, basestring):
+    elif isinstance(arg, str):
         return set([arg])
     else:
         return set(arg)
 
 
 def loadtxt(filename):
-    """Load scalar from text file"""
+    """
+    Load scalar from text file
+    """
     return float(np.loadtxt(filename))
 
 
 def savetxt(filename, v):
-    """Save scalar to text file"""
+    """
+    Save scalar to text file
+    """
     np.savetxt(filename, [v], '%11.6e')
 
 
 def nproc():
+    """
+    Get the number of processors available
+
+    :rtype: int
+    :return: number of processors
+    """
     try:
-        return _nproc1()
-    except:
-        return _nproc2()
+        return _nproc_method1()
+    except EnvironmentError:
+        return _nproc_method2()
 
 
-def _nproc1():
-    # get number of processors using nproc
-    if not which('nproc'):
+def _nproc_method1():
+    """
+    Used subprocess to determine the number of processeors available
+
+    :rtype: int
+    :return: number of processors
+    """
+    # Check if the command `nproc` works
+    if not subprocess.getstatusoutput('nproc')[0] == 0:
         raise EnvironmentError
-    stdout = check_output('nproc --all', shell=True)
-    nproc = int(stdout.strip())
-    return nproc
+
+    num_proc = int(subprocess.getstatusoutput('nproc')[1])
+
+    return num_proc
 
 
-def _nproc2():
-    # get number of processors using /proc/cpuinfo
-    if not exists('/proc/cpuinfo'):
+def _nproc_method2():
+    """
+    Get number of processors using /proc/cpuinfo
+
+    Bryant: This doesnt work?
+
+    :rtype: int
+    :return: number of processors
+    """
+    if not os.path.exists('/proc/cpuinfo'):
         raise EnvironmentError
-    stdout = check_output("cat /proc/cpuinfo | awk '/^processor/{print $3}'", 
-                shell=True)
-    nproc = len(stdout.split('\n'))
-    return nproc
+
+    stdout = subprocess.check_output(
+        "cat /proc/cpuinfo | awk '/^processor/{print $3}'", shell=True)
+    num_proc = len(stdout.split('\n'))
+
+    return num_proc
 
