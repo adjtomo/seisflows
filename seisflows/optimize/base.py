@@ -10,9 +10,9 @@ import numpy as np
 from seisflows.plugins import line_search, preconds
 from seisflows.tools import msg, unix
 from seisflows.tools.err import ParameterError
-from seisflows.tools.array import loadnpy, savenpy
+from seisflows.tools.tools import loadnpy, savenpy
 from seisflows.tools.math import angle, poissons_ratio
-from seisflows.tools.seismic import  Writer
+from seisflows.tools.seismic import Writer
 
 # seisflows.config objects 
 PAR = sys.modules['seisflows_parameters']

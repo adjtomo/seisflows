@@ -4,8 +4,7 @@ import numpy as np
 
 from os.path import abspath
 from seisflows.tools import unix
-from seisflows.tools.array import loadnpy, savenpy
-from seisflows.tools.tools import savetxt
+from seisflows.tools.tools import savetxt, loadnpy, savenpy
 from seisflows.config import ParameterError
 from seisflows.workflow.base import base
 

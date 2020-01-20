@@ -24,6 +24,15 @@ POSTPROCESS: base                  # base
 #
 # Workflow
 #
+# :type BEGIN: int
+# :param BEGIN: the number of the first iteration, starting from 1
+# :type END: int
+# :param END: the last iteration, workflow will complete iteration {end}
+# :type NSRC: int
+# :param NSRC: number of sources, and therefore parallel workflows. Sources will
+#   be discovered in the PATHS/SPECFEM_DATA. If the number of sources provided
+#   is greater than NSRC, then sources will be chosen from a sorted list
+#
 # ==============================================================================
 BEGIN: 1                # first iteration
 END: 1                  # last iteration
@@ -66,7 +75,7 @@ PRECOND: None               # Optimization preconditioners
 NT: 10000                   # number of time steps
 DT: 0.03                    # time step
 F0: .1                      # dominant frequency (SPECFEM2D only)
-SOLVERIO: fortran_binary    # the file type used in the solver
+SOLVERIO: fortran_binary    # the file type used in the solver, "fortran_binary" or "adios"
 
 # ==============================================================================
 #
@@ -187,6 +196,11 @@ PATHS:
     MODEL_TRUE: ''  # only necessary if CASE == 'Synthetic'
     SPECFEM_DATA: ''
     SPECFEM_BIN: ''
+
+    #-----------------------------------------------------------
+    # Pathing if overwriting default directory structure desired
+    #-----------------------------------------------------------
+    LOCAL: ''
 
     #----------------------------------------------
     # Pathing required if preprocessing == 'pyatoa'

@@ -3,14 +3,11 @@
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/sfexamples" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/sfexamples" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/optimize/LBFGS.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/LBFGS.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/optimize/NLCG.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/NLCG.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/optimize/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/optimize/steepest_descent.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/steepest_descent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/parameters.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/parameters.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/parameters.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/paths.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/solver/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/solver/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/tools/unix.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/tools/unix.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/workflow/test_optimize.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/test_optimize.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -23,7 +20,7 @@
       <usages-collector id="statistics.file.extensions.open">
         <counts>
           <entry key="plotgll" value="1" />
-          <entry key="py" value="15" />
+          <entry key="py" value="58" />
           <entry key="sfclean" value="1" />
           <entry key="sfexamples" value="4" />
           <entry key="sfinit" value="1" />
@@ -31,32 +28,40 @@
           <entry key="sfresume" value="3" />
           <entry key="sfrun" value="1" />
           <entry key="sfsubmit" value="1" />
-          <entry key="yaml" value="1" />
+          <entry key="yaml" value="2" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.open">
         <counts>
           <entry key="PLAIN_TEXT" value="1" />
-          <entry key="Python" value="27" />
-          <entry key="YAML" value="1" />
+          <entry key="Python" value="70" />
+          <entry key="YAML" value="2" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="py" value="3731" />
+          <entry key="py" value="18825" />
           <entry key="sfclean" value="206" />
           <entry key="sfdebug" value="1003" />
           <entry key="sfexamples" value="5" />
           <entry key="sfresume" value="154" />
           <entry key="sfsubmit" value="364" />
-          <entry key="yaml" value="10" />
+          <entry key="yaml" value="718" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="206" />
-          <entry key="Python" value="5257" />
-          <entry key="YAML" value="10" />
+          <entry key="Python" value="20351" />
+          <entry key="YAML" value="718" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.lifecycle.project">
+        <counts>
+          <entry key="project.closed" value="2" />
+          <entry key="project.open.time.7" value="1" />
+          <entry key="project.open.time.8" value="1" />
+          <entry key="project.opened" value="2" />
         </counts>
       </usages-collector>
     </session>
@@ -64,80 +69,84 @@
   <component name="FileEditorManager">
     <splitter split-orientation="horizontal" split-proportion="0.4988067">
       <split-first>
-        <leaf>
+        <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
           <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/seisflows/config.py">
+            <entry file="file://$PROJECT_DIR$/seisflows/workflow/test_optimize.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="105">
-                  <caret line="7" column="9" selection-start-line="7" selection-end-line="7" selection-end-column="9" />
-                  <folding>
-                    <element signature="e#423#432#0" expanded="true" />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/seisflows/tools/err.py">
-              <provider selected="true" editor-type-id="text-editor" />
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/scripts/sfexamples">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="720">
-                  <caret line="48" lean-forward="true" selection-start-line="48" selection-end-line="48" />
-                  <folding>
-                    <element signature="e#23#32#0" expanded="true" />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/seisflows/parameters.yaml">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="786">
-                  <caret line="202" column="8" selection-start-line="202" selection-start-column="8" selection-end-line="202" selection-end-column="8" />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/seisflows/optimize/NLCG.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="120">
-                  <caret line="8" column="42" selection-start-line="8" selection-start-column="42" selection-end-line="8" selection-end-column="42" />
+                <state relative-caret-position="75">
+                  <caret line="5" column="32" selection-start-line="5" selection-start-column="32" selection-end-line="5" selection-end-column="32" />
                 </state>
               </provider>
             </entry>
           </file>
           <file pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/seisflows/optimize/steepest_descent.py">
+            <entry file="file://$PROJECT_DIR$/seisflows/solver/base.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="630">
-                  <caret line="42" column="9" selection-start-line="42" selection-start-column="9" selection-end-line="42" selection-end-column="9" />
+                <state relative-caret-position="661">
+                  <caret line="83" column="72" selection-start-line="83" selection-start-column="72" selection-end-line="83" selection-end-column="72" />
                   <folding>
-                    <element signature="e#1#11#0" expanded="true" />
+                    <element signature="e#151#160#0" expanded="true" />
                   </folding>
                 </state>
               </provider>
             </entry>
           </file>
           <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/seisflows/tools/tools.py">
+            <entry file="file://$PROJECT_DIR$/seisflows/system/base.py">
+              <provider selected="true" editor-type-id="text-editor" />
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/seisflows/system/slurm_lg.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="297">
-                  <caret line="154" column="12" selection-start-line="154" selection-start-column="4" selection-end-line="154" selection-end-column="12" />
+                <state relative-caret-position="-2817" />
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/seisflows/plugins/writers.py">
+              <provider selected="true" editor-type-id="text-editor" />
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/seisflows/plugins/readers.py">
+              <provider selected="true" editor-type-id="text-editor" />
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/seisflows/tools/unix.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="1309">
+                  <caret line="106" lean-forward="true" selection-start-line="106" selection-end-line="106" />
+                  <folding>
+                    <element signature="e#41#50#0" expanded="true" />
+                  </folding>
                 </state>
               </provider>
             </entry>
           </file>
           <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/scripts/sfclean">
+            <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem3d_nz.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="30">
-                  <caret line="2" column="38" selection-start-line="2" selection-start-column="38" selection-end-line="2" selection-end-column="38" />
+                <state relative-caret-position="411">
+                  <caret line="347" column="22" selection-start-line="347" selection-start-column="8" selection-end-line="347" selection-end-column="22" />
+                  <folding>
+                    <element signature="e#0#11#0" expanded="true" />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver_io/fortran_binary.py">
+              <provider selected="true" editor-type-id="text-editor" />
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/seisflows/parameters.yaml">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="1356">
+                  <caret line="193" column="15" selection-start-line="193" selection-start-column="15" selection-end-line="193" selection-end-column="15" />
                 </state>
               </provider>
             </entry>
@@ -145,15 +154,30 @@
         </leaf>
       </split-first>
       <split-second>
-        <leaf>
+        <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
           <file pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/seisflows/optimize/LBFGS.py">
+            <entry file="file://$PROJECT_DIR$/seisflows/tools/msg.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="604">
-                  <caret line="54" selection-start-line="54" selection-end-line="56" selection-end-column="11" />
-                  <folding>
-                    <element signature="e#139#149#0" expanded="true" />
-                  </folding>
+                <state relative-caret-position="387">
+                  <caret line="68" column="18" lean-forward="true" selection-start-line="68" selection-start-column="18" selection-end-line="68" selection-end-column="18" />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/seisflows/tools/seismic.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="2280">
+                  <caret line="159" column="14" lean-forward="true" selection-start-line="159" selection-start-column="14" selection-end-line="159" selection-end-column="14" />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/seisflows/plugins/line_search/base.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="255">
+                  <caret line="20" column="31" selection-start-line="20" selection-start-column="31" selection-end-line="20" selection-end-column="31" />
                 </state>
               </provider>
             </entry>
@@ -161,32 +185,11 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/seisflows/optimize/base.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="-1513">
-                  <caret line="130" column="21" selection-start-line="130" selection-start-column="8" selection-end-line="130" selection-end-column="21" />
+                <state relative-caret-position="690">
+                  <caret line="46" column="7" lean-forward="true" selection-start-line="46" selection-start-column="7" selection-end-line="46" selection-end-column="7" />
                   <folding>
-                    <element signature="e#154#164#0" expanded="true" />
+                    <element signature="e#154#163#0" expanded="true" />
                   </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/scripts/sfsubmit">
-              <provider selected="true" editor-type-id="text-editor">
-                <state>
-                  <caret column="17" selection-end-line="1" />
-                  <folding>
-                    <element signature="e#231#240#0" expanded="true" />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/seisflows/tools/msg.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="4455">
-                  <caret line="297" column="20" lean-forward="true" selection-start-line="297" selection-start-column="20" selection-end-line="297" selection-end-column="20" />
                 </state>
               </provider>
             </entry>
@@ -197,30 +200,43 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>config</find>
-      <find>getcwd</find>
-      <find>imp</find>
-      <find>loadpy</find>
-      <find>names</find>
-      <find>path</find>
-      <find>&quot;</find>
-      <find>tilde_expand</find>
-      <find>Import Error3</find>
-      <find>join</find>
-      <find>self.line_search</find>
-      <find>loadyaml</find>
-      <find>import('optimize', 'base')):</find>
-      <find>S(custom_import('optimize', 'base')):</find>
-      <find>VERBOSE</find>
-      <find>exists</find>
+      <find>backtrack2</find>
       <find>parameter</find>
-      <find>compute_Direc</find>
-      <find>ParameterError</find>
+      <find>analytic</find>
+      <find>os.path</find>
+      <find>%s</find>
+      <find>err</find>
+      <find>/</find>
+      <find>find</find>
+      <find>loadnpy</find>
+      <find>load_source</find>
+      <find>find_loader</find>
+      <find>text</find>
+      <find>check_output</find>
+      <find>Solver</find>
       <find>'</find>
+      <find>LOCAL</find>
+      <find>local</find>
+      <find>self.io</find>
+      <find>input</find>
+      <find>exists</find>
+      <find>def misfit</find>
+      <find>call_solver</find>
+      <find>export_traces</find>
+      <find>smooth</find>
+      <find>initialize</find>
+      <find>unix.rename</find>
+      <find>read_slice</find>
+      <find>_mesh_properties</find>
+      <find>data_filenames</find>
+      <find>!!!</find>
     </findStrings>
     <replaceStrings>
       <replace>'</replace>
+      <replace>/</replace>
+      <replace>{}</replace>
       <replace>&quot;</replace>
+      <replace>param</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -229,7 +245,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/seisflows/tools/msg.py" />
         <option value="$PROJECT_DIR$/seisflows/workflow/inversion_nz.py" />
         <option value="$PROJECT_DIR$/scripts/sfclean" />
         <option value="$PROJECT_DIR$/scripts/sfdebug" />
@@ -237,11 +252,22 @@
         <option value="$PROJECT_DIR$/scripts/sfresume" />
         <option value="$PROJECT_DIR$/seisflows/config.py" />
         <option value="$PROJECT_DIR$/scripts/sfexamples" />
-        <option value="$PROJECT_DIR$/seisflows/parameters.yaml" />
-        <option value="$PROJECT_DIR$/seisflows/optimize/base.py" />
         <option value="$PROJECT_DIR$/seisflows/optimize/LBFGS.py" />
         <option value="$PROJECT_DIR$/seisflows/optimize/NLCG.py" />
         <option value="$PROJECT_DIR$/seisflows/optimize/steepest_descent.py" />
+        <option value="$PROJECT_DIR$/seisflows/postprocess/base.py" />
+        <option value="$PROJECT_DIR$/seisflows/tools/err.py" />
+        <option value="$PROJECT_DIR$/seisflows/tools/graphics.py" />
+        <option value="$PROJECT_DIR$/seisflows/tools/math.py" />
+        <option value="$PROJECT_DIR$/seisflows/tools/seismic.py" />
+        <option value="$PROJECT_DIR$/seisflows/tools/array.py" />
+        <option value="$PROJECT_DIR$/seisflows/workflow/test_optimize.py" />
+        <option value="$PROJECT_DIR$/seisflows/tools/tools.py" />
+        <option value="$PROJECT_DIR$/seisflows/optimize/base.py" />
+        <option value="$PROJECT_DIR$/seisflows/parameters.yaml" />
+        <option value="$PROJECT_DIR$/seisflows/tools/unix.py" />
+        <option value="$PROJECT_DIR$/seisflows/tools/msg.py" />
+        <option value="$PROJECT_DIR$/seisflows/solver/base.py" />
       </list>
     </option>
   </component>
@@ -251,17 +277,18 @@
     <detection-done>true</detection-done>
     <sorting>DEFINITION_ORDER</sorting>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-316" />
-    <option name="y" value="-1029" />
-    <option name="width" value="1799" />
-    <option name="height" value="1005" />
+  <component name="ProjectFrameBounds">
+    <option name="x" value="-373" />
+    <option name="y" value="-1058" />
+    <option name="width" value="1920" />
+    <option name="height" value="1058" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -294,7 +321,38 @@
               <item name="seisflows" type="b2602c69:ProjectViewProjectNode" />
               <item name="seisflows" type="462c0819:PsiDirectoryNode" />
               <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="plugins" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="seisflows" type="b2602c69:ProjectViewProjectNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="solver_io" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="seisflows" type="b2602c69:ProjectViewProjectNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
               <item name="postprocess" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="seisflows" type="b2602c69:ProjectViewProjectNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="preprocess" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="seisflows" type="b2602c69:ProjectViewProjectNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="solver" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="seisflows" type="b2602c69:ProjectViewProjectNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="system" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="seisflows" type="b2602c69:ProjectViewProjectNode" />
@@ -302,11 +360,16 @@
               <item name="seisflows" type="462c0819:PsiDirectoryNode" />
               <item name="tools" type="462c0819:PsiDirectoryNode" />
             </path>
+            <path>
+              <item name="seisflows" type="b2602c69:ProjectViewProjectNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="workflow" type="462c0819:PsiDirectoryNode" />
+            </path>
           </expand>
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -366,10 +429,10 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-373" y="-1058" width="1920" height="1058" extended-state="6" />
+    <frame x="-373" y="-1058" width="1920" height="1058" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.10756124" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.10969116" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -385,13 +448,16 @@
       <window_info anchor="bottom" id="Terminal" order="10" />
       <window_info anchor="bottom" id="Python Console" order="11" weight="0.32944608" />
       <window_info anchor="bottom" id="Event Log" order="12" side_tool="true" />
-      <window_info anchor="right" x="0" y="0" width="270" height="578" id="Documentation" side_tool="true" weight="0.32956383" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
       <window_info anchor="right" id="SciView" order="3" />
       <window_info anchor="right" id="Database" order="4" />
+      <window_info anchor="right" x="0" y="0" width="270" height="578" id="Documentation" order="5" side_tool="true" weight="0.3290735" />
     </layout>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
   </component>
   <component name="VcsContentAnnotationSettings">
     <option name="myLimit" value="2678400000" />
@@ -403,9 +469,7 @@
     <entry file="file://$PROJECT_DIR$/scripts/visualize/specfem2d/plotgll">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/scripts/sfinit">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
+    <entry file="file://$PROJECT_DIR$/scripts/sfinit" />
     <entry file="file://$PROJECT_DIR$/scripts/sfrun">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -413,9 +477,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="364">
           <caret line="65" column="46" lean-forward="true" selection-start-line="65" selection-start-column="46" selection-end-line="65" selection-end-column="46" />
-          <folding>
-            <element signature="e#203#212#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -426,23 +487,11 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/tools/msg.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="4455">
-          <caret line="297" column="20" lean-forward="true" selection-start-line="297" selection-start-column="20" selection-end-line="297" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/parameters.py">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/parameters.py" />
     <entry file="file://$PROJECT_DIR$/scripts/sfexamples">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="720">
           <caret line="48" lean-forward="true" selection-start-line="48" selection-end-line="48" />
-          <folding>
-            <element signature="e#23#32#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -450,27 +499,65 @@
       <provider selected="true" editor-type-id="text-editor">
         <state>
           <caret column="17" selection-end-line="1" />
-          <folding>
-            <element signature="e#231#240#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/config.py">
+    <entry file="file://$PROJECT_DIR$/seisflows/optimize/steepest_descent.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="105">
-          <caret line="7" column="9" selection-start-line="7" selection-end-line="7" selection-end-column="9" />
-          <folding>
-            <element signature="e#423#432#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="480">
+          <caret line="32" column="44" lean-forward="true" selection-start-line="32" selection-start-column="44" selection-end-line="32" selection-end-column="44" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/tools/err.py">
-      <provider selected="true" editor-type-id="text-editor" />
+    <entry file="file://$PROJECT_DIR$/seisflows/postprocess/default.py" />
+    <entry file="file://$PROJECT_DIR$/seisflows/postprocess/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="60">
+          <caret line="4" lean-forward="true" selection-start-line="4" selection-end-line="4" />
+        </state>
+      </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/postprocess/base.py">
-      <provider selected="true" editor-type-id="text-editor" />
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret selection-end-line="3" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/tools/graphics.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret selection-end-line="3" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/line_search/backtrack.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="45">
+          <caret line="6" lean-forward="true" selection-start-line="6" selection-end-line="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/optimize/NLCG.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-26">
+          <caret line="8" column="42" selection-start-line="8" selection-start-column="42" selection-end-line="8" selection-end-column="42" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/optimize/LBFGS.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-191">
+          <caret selection-end-line="4" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/tools/math.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="150">
+          <caret line="10" selection-start-line="10" selection-end-line="10" />
+        </state>
+      </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/scripts/sfclean">
       <provider selected="true" editor-type-id="text-editor">
@@ -479,53 +566,151 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/tools/tools.py">
+    <entry file="file://$PROJECT_DIR$/seisflows/tools/signal.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="297">
-          <caret line="154" column="12" selection-start-line="154" selection-start-column="4" selection-end-line="154" selection-end-column="12" />
+        <state relative-caret-position="-1766" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/config.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1391">
+          <caret line="7" column="9" selection-start-line="7" selection-end-line="7" selection-end-column="9" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/parameters.yaml">
+    <entry file="file://$PROJECT_DIR$/seisflows/tools/array.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="786">
-          <caret line="202" column="8" selection-start-line="202" selection-start-column="8" selection-end-line="202" selection-end-column="8" />
+        <state relative-caret-position="1410">
+          <caret line="100" column="44" selection-start-line="100" selection-start-column="44" selection-end-line="100" selection-end-column="44" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/line_search/base.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="255">
+          <caret line="20" column="31" selection-start-line="20" selection-start-column="31" selection-end-line="20" selection-end-column="31" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/optimize/base.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1513">
-          <caret line="130" column="21" selection-start-line="130" selection-start-column="8" selection-end-line="130" selection-end-column="21" />
+        <state relative-caret-position="690">
+          <caret line="46" column="7" lean-forward="true" selection-start-line="46" selection-start-column="7" selection-end-line="46" selection-end-column="7" />
           <folding>
-            <element signature="e#154#164#0" expanded="true" />
+            <element signature="e#154#163#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/optimize/NLCG.py">
+    <entry file="file://$PROJECT_DIR$/seisflows/preprocess/double_difference.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="120">
-          <caret line="8" column="42" selection-start-line="8" selection-start-column="42" selection-end-line="8" selection-end-column="42" />
-        </state>
+        <state relative-caret-position="-690" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/optimize/LBFGS.py">
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver_io/adios.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/tools/tools.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="604">
-          <caret line="54" selection-start-line="54" selection-end-line="56" selection-end-column="11" />
+        <state relative-caret-position="342">
+          <caret line="74" column="49" lean-forward="true" selection-start-line="74" selection-start-column="49" selection-end-line="74" selection-end-column="49" />
           <folding>
-            <element signature="e#139#149#0" expanded="true" />
+            <element signature="e#47#56#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/optimize/steepest_descent.py">
+    <entry file="file://$PROJECT_DIR$/seisflows/preprocess/default.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/preprocess/base.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="630">
-          <caret line="42" column="9" selection-start-line="42" selection-start-column="9" selection-end-line="42" selection-end-column="9" />
+        <state relative-caret-position="150">
+          <caret line="19" column="50" selection-start-line="19" selection-start-column="50" selection-end-line="19" selection-end-column="50" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver_io/fortran_binary.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem2d.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/parameters.yaml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1356">
+          <caret line="193" column="15" selection-start-line="193" selection-start-column="15" selection-end-line="193" selection-end-column="15" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/tools/seismic.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2280">
+          <caret line="159" column="14" lean-forward="true" selection-start-line="159" selection-start-column="14" selection-end-line="159" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/tools/unix.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1309">
+          <caret line="106" lean-forward="true" selection-start-line="106" selection-end-line="106" />
           <folding>
-            <element signature="e#1#11#0" expanded="true" />
+            <element signature="e#41#50#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/readers.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/writers.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/tools/err.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret selection-end-line="3" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/tools/msg.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="387">
+          <caret line="68" column="18" lean-forward="true" selection-start-line="68" selection-start-column="18" selection-end-line="68" selection-end-column="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/system/slurm_lg.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-2817" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/workflow/test_optimize.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="75">
+          <caret line="5" column="32" selection-start-line="5" selection-start-column="32" selection-end-line="5" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem3d_nz.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="411">
+          <caret line="347" column="22" selection-start-line="347" selection-start-column="8" selection-end-line="347" selection-end-column="22" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/system/base.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/solver/base.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="661">
+          <caret line="83" column="72" selection-start-line="83" selection-start-column="72" selection-end-line="83" selection-end-column="72" />
+          <folding>
+            <element signature="e#151#160#0" expanded="true" />
           </folding>
         </state>
       </provider>
