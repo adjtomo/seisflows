@@ -4,7 +4,8 @@ from seisflows.tools.seismic import setpar
 
 
 def write_sources(PAR, h, path='.'):
-    """ Writes source information to text file
+    """
+    Writes source information to text file
     """
     file = findpath('sesiflows.plugins') + '/' + 'specfem3d/FORCESOLUTION'
     with open(file, 'r') as f:

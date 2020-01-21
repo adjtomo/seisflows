@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This is the base class for seisflows.solver
+This is the base class seisflows.solver.Base
 This class provides the core utilities for the Seisflows solver interactions
 """
 import os
@@ -15,7 +15,7 @@ from seisflows.tools.seismic import Container, call_solver
 from seisflows.tools.tools import Struct, diff, exists
 
 
-# seisflows.config objects
+# Seisflows configuration
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
@@ -187,7 +187,6 @@ class Base(object):
         unix.rm('OUTPUT_FILES')
         unix.mkdir('OUTPUT_FILES')
 
-
     def generate_data(self, *args, **kwargs):
         """
         Generates data based on a given model
@@ -195,7 +194,6 @@ class Base(object):
         !!! Must be implemented by subclass !!!
         """
         raise NotImplementedError
-
 
     def generate_mesh(self, *args, **kwargs):
         """
@@ -579,9 +577,9 @@ class Base(object):
         """
         # Rename alpha to vp
         for globfids in ['*proc??????_alpha_kernel.bin',
-                          '*proc??????_alpha[hv]_kernel.bin',
-                          '*proc??????_reg1_alpha_kernel.bin',
-                          '*proc??????_reg1_alpha[hv]_kernel.bin']:
+                         '*proc??????_alpha[hv]_kernel.bin',
+                         '*proc??????_reg1_alpha_kernel.bin',
+                         '*proc??????_reg1_alpha[hv]_kernel.bin']:
             unix.rename(old='alpha', new='vp', names=glob(globfids))
 
         # Rename beta to vs
@@ -590,7 +588,6 @@ class Base(object):
                          '*proc??????_reg1_beta_kernel.bin',
                          '*proc??????_reg1_beta[hv]_kernel.bin']:
             unix.rename(old='beta', new='vs', names=glob(globfids))
-
 
     def rename_data(self, path):
         """
