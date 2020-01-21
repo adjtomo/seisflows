@@ -36,7 +36,8 @@ class InversionPyatoa(custom_import('workflow', 'Inversion')):
     Waveform inversion subclass, additional support for Pyatoa integration
     """
     def check(self):
-        """ Checks parameters and paths
+        """
+        Checks parameters and paths
         """
         # Run Base class checks
         super(InversionPyatoa, self).check()

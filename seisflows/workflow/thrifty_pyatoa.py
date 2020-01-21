@@ -14,7 +14,7 @@ InversionPyatoa rather than Inversion
 import sys
 
 from seisflows.tools import unix
-from seisflows.config import  custom_import
+from seisflows.config import custom_import
 
 # Seisflows Configuration
 PAR = sys.modules['seisflows_parameters']
@@ -23,7 +23,7 @@ PATH = sys.modules['seisflows_paths']
 optimize = sys.modules['seisflows_optimize']
 
 
-class ThriftyInversion(custom_import('workflow', 'inversion')):
+class ThriftyPyatoa(custom_import('workflow', 'inversion_pyatoa')):
     """
     Thrifty inversion subclass for InversionPyatoa
     """
@@ -36,7 +36,7 @@ class ThriftyInversion(custom_import('workflow', 'inversion')):
         Or if manually starting a new run, start with normal inversion init
         """
         if (self.status == 0) or (optimize.iter == PAR.BEGIN):
-            super(ThriftyInversion, self).initialize()
+            super(ThriftyPyatoa, self).initialize()
         else:
             print("THRIFTY INITIALIZE")
 
@@ -51,7 +51,7 @@ class ThriftyInversion(custom_import('workflow', 'inversion')):
             unix.mv(PATH.FUNC, PATH.GRAD)
             unix.mkdir(PATH.FUNC)
         else:
-            super(ThriftyInversion, self).clean()
+            super(ThriftyPyatoa, self).clean()
 
     def update_status(self):
         """
@@ -65,7 +65,7 @@ class ThriftyInversion(custom_import('workflow', 'inversion')):
         # May not work on first iteration
         elif optimize.iter == PAR.BEGIN:
             print("\t First iteration of workflow, defaulting to inversion")
-            self.status=0
+            self.status = 0
         # May not work following restart
         elif optimize.restarted:
             print("\t Optimization has been restarted, defaulting to inversion")
@@ -82,8 +82,6 @@ class ThriftyInversion(custom_import('workflow', 'inversion')):
         else:
             print("\t Continuing with thrifty inversion")
             self.status = 1
-
-
 
 
 

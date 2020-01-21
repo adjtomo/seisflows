@@ -2,11 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/seisflows/solver/specfem3d.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/solver/specfem3d.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/solver/specfem3d_nz.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/inversion.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/inversion.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/inversion_nz.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/workflow/inversion_pyatoa.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/inversion_pyatoa.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/workflow/thrifty_inversion_nz.py" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -19,7 +17,7 @@
       <usages-collector id="statistics.file.extensions.open">
         <counts>
           <entry key="plotgll" value="1" />
-          <entry key="py" value="83" />
+          <entry key="py" value="84" />
           <entry key="sfclean" value="1" />
           <entry key="sfexamples" value="4" />
           <entry key="sfinit" value="1" />
@@ -33,13 +31,13 @@
       <usages-collector id="statistics.file.types.open">
         <counts>
           <entry key="PLAIN_TEXT" value="1" />
-          <entry key="Python" value="95" />
+          <entry key="Python" value="96" />
           <entry key="YAML" value="2" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="py" value="28826" />
+          <entry key="py" value="29404" />
           <entry key="sfclean" value="206" />
           <entry key="sfdebug" value="1003" />
           <entry key="sfexamples" value="5" />
@@ -51,7 +49,7 @@
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="206" />
-          <entry key="Python" value="30352" />
+          <entry key="Python" value="30930" />
           <entry key="YAML" value="718" />
         </counts>
       </usages-collector>
@@ -81,20 +79,11 @@
               </provider>
             </entry>
           </file>
-          <file pinned="false" current-in-tab="true">
+          <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/seisflows/workflow/inversion_pyatoa.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="480">
-                  <caret line="42" lean-forward="true" selection-start-line="42" selection-end-line="42" />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/seisflows/solver/base.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="124">
-                  <caret line="160" column="34" lean-forward="true" selection-start-line="160" selection-start-column="34" selection-end-line="160" selection-end-column="34" />
+                <state>
+                  <caret selection-end-line="9" selection-end-column="3" />
                 </state>
               </provider>
             </entry>
@@ -117,10 +106,15 @@
               </provider>
             </entry>
           </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/seisflows/workflow/thrifty_inversion_nz.py">
+          <file pinned="false" current-in-tab="true">
+            <entry file="file://$PROJECT_DIR$/seisflows/workflow/thrifty_pyatoa.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="-52" />
+                <state relative-caret-position="621">
+                  <caret line="77" column="24" lean-forward="true" selection-start-line="77" selection-start-column="24" selection-end-line="77" selection-end-column="24" />
+                  <folding>
+                    <element signature="e#486#496#0" expanded="true" />
+                  </folding>
+                </state>
               </provider>
             </entry>
           </file>
@@ -148,7 +142,14 @@
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py">
-              <provider selected="true" editor-type-id="text-editor" />
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="315">
+                  <caret line="21" lean-forward="true" selection-start-line="21" selection-end-line="21" />
+                  <folding>
+                    <element signature="e#487#497#0" expanded="true" />
+                  </folding>
+                </state>
+              </provider>
             </entry>
           </file>
           <file pinned="false" current-in-tab="false">
@@ -276,6 +277,9 @@
         <option value="$PROJECT_DIR$/seisflows/workflow/base.py" />
         <option value="$PROJECT_DIR$/seisflows/workflow/inversion.py" />
         <option value="$PROJECT_DIR$/seisflows/workflow/inversion_nz.py" />
+        <option value="$PROJECT_DIR$/seisflows/workflow/inversion_pyatoa.py" />
+        <option value="$PROJECT_DIR$/seisflows/workflow/thrifty_pyatoa.py" />
+        <option value="$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py" />
       </list>
     </option>
   </component>
@@ -478,7 +482,6 @@
     <option name="myLimit" value="2678400000" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/scripts/sfinit" />
     <entry file="file://$PROJECT_DIR$/scripts/sfrun">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -692,24 +695,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/solver/base.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="124">
-          <caret line="160" column="34" lean-forward="true" selection-start-line="160" selection-start-column="34" selection-end-line="160" selection-end-column="34" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/workflow/base.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="75">
           <caret line="5" column="7" selection-start-line="5" selection-start-column="7" selection-end-line="5" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver/specfem3d.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="90">
-          <caret line="7" column="4" selection-start-line="7" selection-start-column="4" selection-end-line="7" selection-end-column="4" />
         </state>
       </provider>
     </entry>
@@ -775,14 +764,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/workflow/thrifty_inversion_nz.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-52" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem3d.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="627">
@@ -793,10 +774,51 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/solver/base.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2265">
+          <caret line="160" column="34" lean-forward="true" selection-start-line="160" selection-start-column="34" selection-end-line="160" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/workflow/thrifty_inversion_nz.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="435">
+          <caret line="34" column="38" lean-forward="true" selection-start-line="34" selection-start-column="38" selection-end-line="34" selection-end-column="38" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver/specfem3d.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="90">
+          <caret line="7" column="4" selection-start-line="7" selection-start-column="4" selection-end-line="7" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/workflow/inversion_pyatoa.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="480">
-          <caret line="42" lean-forward="true" selection-start-line="42" selection-end-line="42" />
+        <state>
+          <caret selection-end-line="9" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/workflow/thrifty_pyatoa.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="621">
+          <caret line="77" column="24" lean-forward="true" selection-start-line="77" selection-start-column="24" selection-end-line="77" selection-end-column="24" />
+          <folding>
+            <element signature="e#486#496#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="315">
+          <caret line="21" lean-forward="true" selection-start-line="21" selection-end-line="21" />
+          <folding>
+            <element signature="e#487#497#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
