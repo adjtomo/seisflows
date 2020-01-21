@@ -1,18 +1,28 @@
+#!/usr/bin/env python
+"""
+This is the subclass seisflows.solver.Specfem3D_pyatoa
+This class provides utilities for the Seisflows solver interactions with
+Specfem3D Cartesian. It inherits all attributes from seisflows.solver.Base,
+and overwrites these functions to provide specified interaction with Specfem3D
+
+This subclass also interacts with the Python package Pyatoa, to perform data
+collection, preprocessing, and misfit quantification steps
+"""
+import os
+import sys
 import time
 import subprocess
-from glob import glob
-from os.path import join
-
-import sys
-
 import seisflows.plugins.solver.specfem3d as solvertools
-from seisflows.tools.seismic import getpar, setpar
 
+from glob import glob
 from seisflows.tools import unix
-from seisflows.tools.seismic import call_solver
 from seisflows.tools.tools import exists
-from seisflows.config import ParameterError, custom_import
+from seisflows.config import custom_import
+from seisflows.tools.seismic import call_solver, getpar, setpar
 
+from pyatoa.plugins.seisflows.pyaflowa import Pyaflowa
+
+# Seisflows configuration
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
@@ -20,142 +30,155 @@ system = sys.modules['seisflows_system']
 preprocess = sys.modules['seisflows_preprocess']
 
 
-class specfem3d_nz(custom_import('solver', 'base')):
-    """ Python interface for SPECFEM3D
+class Specfem3dPyatoa(custom_import('solver', 'Base')):
+    """
+    Python interface to Specfem3D Cartesian. This subclass inherits functions
+    from seisflows.solver.Base
 
-      See base class for method descriptions
+    !!! See base class for method descriptions !!!
     """
     def check(self):
-        """ Checks parameters and paths
         """
-        super(specfem3d_nz, self).check()
+        Checks parameters and paths. Most prechecks will happen in the workflow.
+        """
+        # Run Base class checks
+        super(Specfem3dPyatoa, self).check()
 
-        # check time stepping parameters
-        if 'NT' not in PAR:
-            raise Exception()
+        # Check time stepping parameters
+        if "NT" not in PAR:
+            raise Exception("'NT' not specified in parameters file")
 
-        if 'DT' not in PAR:
-            raise Exception()
+        if "DT" not in PAR:
+            raise Exception("'DT' not specified in parameters file")
 
-        # check data format
-        if 'FORMAT' not in PAR:
-            raise Exception()
+        # Check data format for Specfem3D
+        if "FORMAT" not in PAR:
+            raise Exception("'FORMAT' not specified in parameters file")
 
-        # make sure data format is accetapble
-        if PAR.FORMAT not in ['su', 'ascii']:
+        # Currently Pyatoa only works with ASCII
+        if PAR.FORMAT not in ["ascii"]:
             raise Exception()
 
     def setup(self):
         """
-          Overload of solver.base.setup, removes the need to move data around
-          as Pyatoa takes care of data fetching within eval_func
-          Prepares solver for inversion or migration
-          Sets up directory structure expected by SPECFEM and copies or
-          generates seismic data to be inverted or migrated
+        Overload of solver.base.setup
+
+        Removes the need to move data around as Pyatoa takes care of data
+        fetching within eval_func.
+
+        Allows for synthetic-synthetic cases
         """
-        # clean up for new inversion
+        # Clean up for new inversion
         unix.rm(self.cwd)
-         
         self.initialize_solver_directories()
         
-        # if synthetic case, create synthetic observations 
+        # If synthetic case, create synthetic observations
         if PAR.CASE == "Synthetic":
-            self.generate_data(
-                model_path=PATH.MODEL_TRUE,
-                model_name='model_true',
-                model_type='gll')
+            self.generate_data(model_path=PATH.MODEL_TRUE,
+                               model_name="model_true", model_type="gll")
 
-        # prepare initial model
-        self.generate_mesh(
-            model_path=PATH.MODEL_INIT,
-            model_name='model_init',
-            model_type='gll')
+        # Prepare initial model
+        self.generate_mesh(model_path=PATH.MODEL_INIT, model_name="model_init",
+                           model_type="gll")
 
     def generate_data(self, **model_kwargs):
-        """ 
+        """
+        Overload seisflows.solver.base.generate_data
+        
+        Not used if PAR.CASE == "Data"
+
         Generates data in the synthetic-synthetic comparison case.
-        Not for use in the real-data problem. Differs from specfem3d.nz in that
-        it automatically calls generate mesh for the true model, rather than
+        Automatically calls generate mesh for the true model, rather than
         passing them in as kwargs.
+
+        Also turns on attenuation for the forward model
+        !!! attenuation could be moved into parameters.yaml? !!!
         """
         # Prepare for the forward simulation
         self.generate_mesh(**model_kwargs)
-
-        print 'specfem3d_nz.generate data'
-        unix.cd(self.cwd)
-        setpar('SIMULATION_TYPE', '1')
-        setpar('SAVE_FORWARD', '.true.')
-        setpar('ATTENUATION ', '.true.')
-        call_solver(system.mpiexec(), 'bin/xspecfem3D')
-
-        # seismic unix format
-        if PAR.FORMAT in ['SU', 'su']:
-            src = glob('OUTPUT_FILES/*_d?_SU')
-            dst = 'traces/obs'
-            unix.mv(src, dst)
-        # ascii sem output format
-        elif PAR.FORMAT == "ascii":
-            src = glob('OUTPUT_FILES/*sem?')
-            dst = 'traces/obs'
-            unix.mv(src, dst)
-
-        if PAR.SAVETRACES:
-            self.export_traces(PATH.OUTPUT+'/'+'traces/obs')
-
-    def generate_mesh(self, model_path=None, model_name=None, model_type='gll'):
-        """ Performs meshing and database generation
-        """
-        print 'specfem3d_nz.generate mesh'
-        assert(model_name)
-        assert(model_type)
+        if PAR.VERBOSE:
+            print("Specfem3dPyatoa.generate data")
 
         unix.cd(self.cwd)
+        setpar("SIMULATION_TYPE", "1")
+        setpar("SAVE_FORWARD", ".true.")
+        setpar("ATTENUATION ", ".true.")
+        call_solver(mpiexec=system.mpiexec(), exectuable="bin/xspecfem3D")
 
-        if model_type in ['gll']:
-            par = getpar('MODEL').strip()
-            if par != 'gll':
-                if self.taskid == 0:
-                    print 'WARNING: Unexpected Par_file setting:'
-                    print 'MODEL =', par
-            
-            assert(exists(model_path))
-            self.check_mesh_properties(model_path)
-
-            src = glob(model_path + '/' + '*')
-            dst = self.model_databases
-            unix.cp(src, dst)
-
-            call_solver(system.mpiexec(), 'bin/xgenerate_databases')
-
-            if self.taskid == 0:
-                self.export_model(PATH.OUTPUT + '/' + model_name)
-
+        # ASCII .sem? output format
+        if PAR.FORMAT == "ascii":
+            unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*sem?")),
+                    dst="traces/obs")
         else:
-            raise NotImplementedError
+            raise NotImplementedError("Pyatoa only works with ascii")
+
+        # Export traces to permanent storage on disk
+        if PAR.SAVETRACES:
+            self.export_traces(os.path.join(PATH.OUTPUT, "traces", "obs"))
+
+    def generate_mesh(self, model_path, model_name, model_type='gll'):
+        """
+        Performs meshing and database generation
+
+        :type model_path: str
+        :param model_path: path to the model to be used for mesh generation
+        :type model_name: str
+        :param model_name: name of the model to be used as identification
+        :type model_type: str
+        :param model_type: available model types to be passed to the Specfem3D
+            Par_file. See Specfem3D Par_file for available options.
+        """
+        if PAR.VERBOSE:
+            print("Specfem3dPyatoa.generate mesh")
+
+        unix.cd(self.cwd)
+
+        # Run mesh generation
+        assert(exists(model_path))
+        if model_type in available_model_types:
+            par = getpar("MODEL").strip()
+            if par == "gll":
+                self.check_mesh_properties(model_path)
+
+                src = glob(os.path.join(model_path, "*"))
+                dst = self.model_databases
+                unix.cp(src, dst)
+
+                call_solver(mpiexec=system.mpiexec(),
+                            executable="bin/xgenerate_databases")
+
+            # Export the model for future use in the workflow
+            if self.taskid == 0:
+                self.export_model(os.path.join(PATH.OUTPUT, model_name))
+        else:
+            raise NotImplementedError(f"MODEL={par} not implemented")
 
     def eval_fwd(self, path=''):
         """
         Performs forward simulations for misfit function evaluation.
         Same as solver.base.eval_func without the residual writing.
-        For use in specfem3d_nz where eval_func is taken by Pyatoa.
+
+        Function evaluation is taken care of by Pyatoa.
         """
-        print 'specfem3d_nz.eval_fwd'
+        if PAR.VERBOSE:
+            print("Specfem3dPyatoa.eval_fwd")
         unix.cd(self.cwd)
         self.import_model(path)
         self.forward()
     
     def eval_func(self, iter='', step=0, suffix=None, *args, **kwargs):
         """
-        evaluate the misfit functional using the external package Pyatoa.
-        Pyatoa is written in Python3 so it needs to be called with subprocess
+        Call Pyatoa workflow to evaluate the misfit functional.
 
+        :type iter:
         :param args:
         :param kwargs:
         :return:
         """
-        print 'specfem3d_nz.eval_func'
-        load_conda = "module load Anaconda2/5.2.0-GCC-7.1.0;"
-        load_hdf5 = "module load HDF5/1.10.1-GCC-7.1.0;"
+        if PAR.VERBOSE:
+            print("Specfem3dPyatoa.eval_func calling Pyatoa")
+
+
         arguments = " ".join([
             "--mode process",
             "--working_dir {}".format(PATH.WORKDIR),
@@ -231,7 +254,7 @@ class specfem3d_nz(custom_import('solver', 'base')):
             raise NotImplementedError
 
     def initialize_adjoint_traces(self):
-        super(specfem3d_nz, self).initialize_adjoint_traces()
+        super(Specfem3dPyatoa, self).initialize_adjoint_traces()
 
         # workaround for SPECFEM2D's use of different name conventions for
         # regular traces and 'adjoint' traces

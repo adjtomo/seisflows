@@ -36,7 +36,8 @@ class Specfem3d(custom_import('solver', 'Base')):
     !!! See base class for method descriptions !!!
     """
     def check(self):
-        """ Checks parameters and paths
+        """
+        Checks parameters and paths
         """
         # Run Base class checks
         super(Specfem3d, self).check()
@@ -107,14 +108,14 @@ class Specfem3d(custom_import('solver', 'Base')):
             if par == "gll":
                 self.check_mesh_properties(model_path)
 
-                src = glob(model_path +'/'+ '*')
+                src = glob(os.path.join(model_path, "*"))
                 dst = self.model_databases
                 unix.cp(src, dst)
 
                 call_solver(mpiexec=system.mpiexec(),
-                            executable='bin/xmeshfem3D')
+                            executable="bin/xmeshfem3D")
                 call_solver(mpiexec=system.mpiexec(),
-                            executable='bin/xgenerate_databases')
+                            executable="bin/xgenerate_databases")
 
             # Export the model for future use in the workflow
             if self.taskid == 0:

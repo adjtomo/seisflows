@@ -5,7 +5,6 @@ class base(object):
     """ Workflow abstract base class
     """
 
-
     def check(self):
         """ Checks parameters and paths
         """
