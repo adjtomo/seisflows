@@ -116,9 +116,9 @@ TASK TIMED OUT
     Stopping workflow because task time limit exceeded. (To adjust limit,
     add or modify TASKTIME in parameter file.)
 
-        Task name:  {}.{}
-        Task id:    {}
-        Time limit (minutes): {}
+        Task name:  {classname}.{method}
+        Task id:    {job_id}
+        Time limit (minutes): {tasktime}
 
 """
 
@@ -151,9 +151,9 @@ TaskError_SLURM = """
 
 TASK ERROR
 
-    Task failed:  {}.{}
+    Task failed:  {classname}.{method}
 
-    For more information, see output.slurm/{}
+    For more information, see output.slurm/{job_id}
 
     Stopping workflow...
 
