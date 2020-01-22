@@ -120,7 +120,7 @@ class Inversion(Base):
         if not exists(PATH.MODEL_INIT):
             raise Exception("MODEL_INIT does not exist")
 
-    def _watch(self, method):
+    def stopwatch(self, method):
         """
         Timestamps for print statements. `time` package wrapper
 
@@ -145,8 +145,8 @@ class Inversion(Base):
 
         Carries out seismic inversion
         """
-        self._watch("set")
-        print(f"BEGINNING WORKFLOW AT {self._watch()}")
+        self.stopwatch("set")
+        print(f"BEGINNING WORKFLOW AT {self.stopwatch()}")
 
         # One-time intialization of the workflow
         optimize.iter = PAR.BEGIN
@@ -162,8 +162,8 @@ class Inversion(Base):
             self.line_search()
             self.finalize()
             self.clean()
-            print(f"finished iteration {optimize.iter} at {self._watch()}\n")
-            self._watch("time")
+            print(f"finished iteration {optimize.iter} at {self.stopwatch()}\n")
+            self.stopwatch("time")
             optimize.iter += 1
 
     def setup(self):
@@ -184,9 +184,9 @@ class Inversion(Base):
                 print("Generating data")
 
             print("Running solver")
-            self._watch("set")
+            self.stopwatch("set")
             system.run("solver", "setup")
-            self._watch("time")
+            self.stopwatch("time")
 
     def initialize(self):
         """
@@ -256,10 +256,10 @@ class Inversion(Base):
         """
         print("EVALUATE GRADIENT\n\tRunning adjoint simulation")
 
-        self._watch("set")
+        self.stopwatch("set")
         system.run("solver", "eval_grad", path=PATH.GRAD,
                    export_traces=PAR.SAVETRACES)
-        self._watch("time")
+        self.stopwatch("time")
         self.write_gradient(path=PATH.GRAD, suffix="new")
 
     def finalize(self):
@@ -329,11 +329,11 @@ class Inversion(Base):
         src = os.path.join(path, "gradient")
         dst = f"g_{suffix}"
 
-        self._watch("set")
+        self.stopwatch("set")
         postprocess.write_gradient(path)
         parts = solver.load(src, suffix="_kernel")
         optimize.save(dst, solver.merge(parts))
-        self._watch("time")
+        self.stopwatch("time")
 
     def write_misfit(self, path="", suffix=""):
         """

@@ -131,7 +131,6 @@ class SlurmLg(custom_import('system', 'base')):
 
         call(submit_call)
 
-
     def run(self, classname, method, *args, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on the
@@ -178,7 +177,6 @@ class SlurmLg(custom_import('system', 'base')):
             isdone, jobs = self.job_array_status(classname, method, jobs)
             if isdone:
                 return
-
 
     def run_single(self, classname, method, *args, **kwargs):
         """

@@ -10,8 +10,6 @@ collection, preprocessing, and misfit quantification steps
 """
 import os
 import sys
-import time
-import subprocess
 import seisflows.plugins.solver.specfem3d as solvertools
 
 from glob import glob
@@ -30,7 +28,7 @@ system = sys.modules['seisflows_system']
 preprocess = sys.modules['seisflows_preprocess']
 
 
-class Specfem3dPyatoa(custom_import('solver', 'Base')):
+class Specfem3DPyatoa(custom_import('solver', 'Base')):
     """
     Python interface to Specfem3D Cartesian. This subclass inherits functions
     from seisflows.solver.Base
@@ -128,6 +126,8 @@ class Specfem3dPyatoa(custom_import('solver', 'Base')):
         :param model_type: available model types to be passed to the Specfem3D
             Par_file. See Specfem3D Par_file for available options.
         """
+        available_model_types = ["gll"]
+
         if PAR.VERBOSE:
             print("Specfem3dPyatoa.generate mesh")
 
@@ -162,43 +162,25 @@ class Specfem3dPyatoa(custom_import('solver', 'Base')):
         """
         if PAR.VERBOSE:
             print("Specfem3dPyatoa.eval_fwd")
+
         unix.cd(self.cwd)
         self.import_model(path)
         self.forward()
     
-    def eval_func(self, iter='', step=0, suffix=None, *args, **kwargs):
+    def eval_func(self, pyaflowa):
         """
         Call Pyatoa workflow to evaluate the misfit functional.
 
-        :type iter:
-        :param args:
-        :param kwargs:
-        :return:
+        :type pyaflowa: Pyaflowa object
+        :param pyaflowa: Pyaflowa object that controls the misfit function eval
         """
         if PAR.VERBOSE:
             print("Specfem3dPyatoa.eval_func calling Pyatoa")
 
+        pyaflowa.process(cwd=self.cwd, event_id=self.source_name)
 
-        arguments = " ".join([
-            "--mode process",
-            "--working_dir {}".format(PATH.WORKDIR),
-            "--current_dir {}".format(self.cwd),
             "--model_number {}".format("m{:0>2}".format(int(iter) - 1)),
-            "--event_id {}".format(self.source_name),
-            "--step_count {}".format("s{:0>2}".format(step)),
-            "--suffix {}".format(suffix)
-        ])
-        call_pyatoa = " ".join([load_conda, load_hdf5, PATH.PYTHON3,
-                                PATH.PYATOA_RUN, arguments
-                                ])
-        print(call_pyatoa)
-        try:
-            tstart = time.time()
-            stdout = subprocess.check_output(call_pyatoa, shell=True)
-            print '{:.2f}m elapsed'.format((time.time() - tstart) / 60 )
-        except subprocess.CalledProcessError as e:
-            print("Pyatoa failed with {}".format(e))
-            sys.exit(-1)
+
     
     # low-level solver interface
     def forward(self, path='traces/syn'):

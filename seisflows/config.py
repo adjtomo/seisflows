@@ -21,7 +21,7 @@ from seisflows.tools import msg
 # from seisflows.tools.err import ParameterError
 from seisflows.tools import unix
 from seisflows.tools.tools import loadjson, loadobj, savejson, saveobj
-from seisflows.tools.tools import module_exists, package_exists
+from seisflows.tools.tools import module_exists
 
 
 # The following list is one of the few hardwired aspects of the whole
@@ -54,7 +54,7 @@ def config():
 
     # Ensure that certain parameters are instantiated
     if not hasattr(sys.modules['seisflows_parameters'], "WORKFLOW"):
-        print(msg.MissingParameter_Worfklow)
+        print(msg.MissingParameter_Workflow)
         sys.exit(-1)
     if not hasattr(sys.modules['seisflows_parameters'], "SYSTEM"):
         print(msg.MissingParameter_System)

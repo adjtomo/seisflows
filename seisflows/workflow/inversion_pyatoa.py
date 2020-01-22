@@ -66,15 +66,13 @@ class InversionPyatoa(custom_import('workflow', 'Inversion')):
             postprocess.setup()
             optimize.setup()
 
-            print("\tInitializing Pyatoa")
-            pyaflowa = Pyaflowa(seisflows_paths=PATH,
-                                seisflows_parameters=PAR)
-            pyaflowa.setup()
-            
+            print("\tInitializing Pyaflowa")
+            self.pyaflowa = Pyaflowa(par=vars(PAR), paths=vars(PATH))
+
             print("\tPreparing initial model")
-            self._watch("set")
+            self.stopwatch("set")
             system.run("solver", "setup")
-            self._watch("time")
+            self.stopwatch("time")
 
     def initialize(self):
         """
@@ -93,15 +91,15 @@ class InversionPyatoa(custom_import('workflow', 'Inversion')):
         self.write_model(path=path_, suffix=suffix_)
 
         print("\tRunning forward simulation")
-        self._watch("set")
+        self.stopwatch("set")
         system.run("solver", "eval_fwd", path=path_)
-        self._watch("time")
+        self.stopwatch("time")
 
         print("\tQuantifying misfit")
-        self._watch("set")
-        self.pyaflowa.set(iter=optimize.iter, suffix=suffix_)
+        self.stopwatch("set")
+        self.pyaflowa.set(iteration=optimize.iter, step=0)
         system.run_ancil("solver", "eval_func", pyaflowa=self.pyaflowa)
-        self._watch("time")
+        self.stopwatch("time")
 
         print("\tWriting misfit")
         self.write_misfit(suffix=suffix_)
@@ -120,17 +118,16 @@ class InversionPyatoa(custom_import('workflow', 'Inversion')):
         self.write_model(path=path_, suffix=suffix_)
 
         print("\tRunning forward simulation")
-        self._watch("set")
+        self.stopwatch("set")
         system.run("solver", "eval_fwd", path=path_)
-        self._watch("time")
+        self.stopwatch("time")
 
         print("\tQuantifying misfit")
-        self._watch("set")
-        self.pyaflowa.set(iter=optimize.iter,
-                          step=optimize.line_search.step_count + 1,
-                          suffix=suffix_)
+        self.stopwatch("set")
+        self.pyaflowa.set(iteration=optimize.iter,
+                          step=optimize.line_search.step_count + 1)
         system.run_ancil("solver", "eval_func", pyaflowa=self.pyaflowa)
-        self._watch("time")
+        self.stopwatch("time")
 
         self.write_misfit(suffix=suffix_)
 
@@ -142,13 +139,15 @@ class InversionPyatoa(custom_import('workflow', 'Inversion')):
         """
         super(InversionPyatoa, self).finalize()
 
-        # Finalize Pyatoa run
-        self.pyaflowa.set(iter=optimize.iter,
-                          model=f"m{int(optimize.iter)-1:0>2}",
-                          step=f"s{optimize.line_search.step_count:0>2}")
+        # Finalize Pyatoa for the given iteration and step count
+        print("\tFinalizing Pyatoa")
+        self.stopwatch("set")
+        self.pyaflowa.set(iteration=optimize.iter,
+                          step=optimize.line_search.step_count)
         self.pyaflowa.finalize()
+        self.stopwatch("time")
 
-    def write_misfit(self, suffix=''):
+    def write_misfit(self):
         """
         Overwrites seisflows.workflow.inversion.write_misfit()
 
@@ -156,9 +155,6 @@ class InversionPyatoa(custom_import('workflow', 'Inversion')):
         Waits for all instances of Pyatoa to finish writing their misfit
 
         !!! This should be rewritten, it's a bit clunky !!!
-
-        :type suffix: str
-        :param suffix: suffix to add to the misfit
         """
         src = os.path.join(PATH.PYATOA_IO, "data", "misfits", "*")
         dst = "f_{suffix}"
