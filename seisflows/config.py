@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 """
+This is the Seisflows Config script, it contains utilities that are called upon
+throughout the Seisflows workflow. It also (re)defines some important functions
+that are used extensively by the machinery of Seisflows.
+
 SeisFlows consists of interacting objects:
 'system', 'preprocess', 'solver', 'postprocess', 'optimize', 'workflow'
 
@@ -36,8 +40,8 @@ def config():
     registering them in sys.modules
     """
     # Parameters and paths must already be loaded (normally done by sfsubmit)
-    assert 'seisflows_parameters' in sys.modules
-    assert 'seisflows_paths' in sys.modules
+    assert('seisflows_parameters' in sys.modules)
+    assert('seisflows_paths' in sys.modules)
 
     # Check if objects already exist on disk
     if os.path.exists(_output()):
@@ -223,8 +227,8 @@ def tilde_expand(mydict):
     for key, val in mydict.items():
         if not isinstance(val, str):
             raise Exception("Expanded objects must type: str")
-        elif val[:2] == '~/':
-            mydict[key] = f"{os.getenv('HOME')}/{val[2:]}"
+        else:
+            mydict[key] = os.path.expanduser(val)
 
     return mydict
 
