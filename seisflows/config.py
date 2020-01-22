@@ -26,13 +26,8 @@ from seisflows.tools.tools import module_exists, package_exists
 
 # The following list is one of the few hardwired aspects of the whole
 # SeisFlows package. Any changes may result in circular imports, other problems
-names = []
-names += ['system']
-names += ['preprocess']
-names += ['solver']
-names += ['postprocess']
-names += ['optimize']
-names += ['workflow']
+names = ["system", "preprocess", "solver", "postprocess",
+         "optimize", "workflow"]
 
 
 def config():
@@ -151,47 +146,71 @@ class Null(object):
         return self
 
 
-def custom_import(*args):
+def custom_import(name=None, module=None, classname=None):
     """
-    Imports SeisFlows module and extracts class of same name.
+    Imports SeisFlows module and extracts class that is the camelcase version
+    of the module name
 
     For example:
         custom_import('workflow', 'inversion')
 
         imports 'seisflows.workflow.inversion' and, from this module, extracts
         class 'inversion'.
+
+    :type name: str
+    :param name: component of the workflow to import, defined by `names`,
+        available: "system", "preprocess", "solver",
+                   "postprocess", "optimize", "workflow"
+    :type module: module within the workflow component to call upon, e.g.
+        seisflows.workflow.inversion, where `inversion` is the module
+    :type classname: str
+    :param classname: the class to be called from the module. Usually this is
+        just the CamelCase version of the module, which will be defaulted to if
+        this parameter is set `None`, however allows for custom class naming.
+        Note: CamelCase class names following PEP-8 convention.
     """
-    # Parse input arguments
-    if len(args) == 0:
+    # Parse input arguments for custom import
+    # Allow empty system to be called so that import error message can be thrown
+    if name is None:
         raise Exception(msg.ImportError1)
-    if args[0] not in names:
+    # Invalid `system` call
+    elif name not in names:
         raise Exception(msg.ImportError2)
-    if len(args) == 1:
-        args += (_try(args[0]),)
-    if not args[1]:
-        return Null
+    # Attempt to retrieve currently assigned classname from parameters
+    if module is None:
+        module = _try(name)
+        if classname is None:
+            return Null
+    # If no method specified, convert classname to CamelCase
+    if classname is None:
+        classname = module.title().replace("_", "")
 
     # Generate package list
-    packages = ['seisflows']
+    packages = ["seisflows"]
 
-    # Check if modules exist
+    # Check if modules exist, otherwise raise custom exception
     _exists = False
     for package in packages:
-        full_dotted_name = f"{package}.{args[0]}.{args[1]}"
+        full_dotted_name = ".".join([package, name, module])
         if module_exists(full_dotted_name):
             _exists = True
             break
     if not _exists:
-        raise Exception(msg.ImportError3 % (args[0], args[1], args[0].upper()))
-
+        raise Exception(
+            msg.ImportError3.format(name=name, module=module,
+                                    module_upper=module.upper())
+        )
     # Import module
     module = import_module(full_dotted_name)
 
-    # Extract class
-    if hasattr(module, args[1]):
-        return getattr(module, args[1])
-    else:
-        raise Exception(msg.ImportError4 % (args[0], args[1], args[1]))
+    # Extract classname from module if possible
+    try:
+        return getattr(module, classname)
+    except AttributeError:
+        raise Exception(
+            msg.ImportError4.format(name=name, module=module,
+                                    classname=classname)
+        )
 
 
 def tilde_expand(mydict):

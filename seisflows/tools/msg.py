@@ -14,7 +14,6 @@ To resume existing workflow type:
   sfresume
 """
 
-
 FileError = """
 
 FILE NOT FOUND
@@ -22,7 +21,6 @@ FILE NOT FOUND
     {file}
 
 """
-
 
 SolverError = """
 
@@ -40,7 +38,6 @@ SOLVER FAILED
 
 """
 
-
 SystemWarning = """
 
 Please double check SYSTEM parameter
@@ -50,7 +47,6 @@ Please double check SYSTEM parameter
 
 """
 
-
 ReceiverError_SPECFEM = """
 
 ERROR READING RECEIVERS
@@ -58,7 +54,6 @@ ERROR READING RECEIVERS
     Error reading receivers.
 
 """
-
 
 SourceError_SPECFEM = """
 
@@ -71,7 +66,6 @@ ERROR READING SOURCES
 
 """
 
-
 ParameterWarning_SPECFEM = """
 
 PARAMETER WARNING
@@ -83,7 +77,6 @@ PARAMETER WARNING
     Overwriting with:  {}
 
 """
-
 
 DataFormatWarning = """
 
@@ -106,7 +99,6 @@ READER ERROR
 
 """
 
-
 WriterError = """
 
 WRITER ERROR
@@ -116,10 +108,6 @@ WRITER ERROR
    PAR.WRITER must correspond to an entry in seisflows.plugins.writers
 
 """
-
-
-
-###
 
 TaskTimeout = """
 
@@ -133,7 +121,6 @@ TASK TIMED OUT
         Time limit (minutes): {}
 
 """
-
 
 TaskError_LSF = """
 
@@ -160,7 +147,6 @@ TASK ERROR
 
 """
 
-
 TaskError_SLURM = """
 
 TASK ERROR
@@ -172,7 +158,6 @@ TASK ERROR
     Stopping workflow...
 
 """
-
 
 obspyImportError = """
 
@@ -199,7 +184,6 @@ SYSTEM CONFIGURATION ERROR
 
 """
 
-
 mpiError2 = """
 
 DEPENDENCY ERROR
@@ -212,7 +196,6 @@ DEPENDENCY ERROR
     configuration.
 
 """
-
 
 mpiError3 = """
 
@@ -230,10 +213,6 @@ SYSTEM CONFIGURATION WARNING
 
 """
 
-
-###
-
-
 MissingParameter_Workflow = """
 
 Please specify a workflow by adding a line to the parameter file, e.g.
@@ -243,7 +222,6 @@ Please specify a workflow by adding a line to the parameter file, e.g.
 for a list of available workflows, see seisflows/workflow in the source code
 
 """
-
 
 MissingParameter_System = """
 
@@ -268,12 +246,11 @@ SEISFLOWS IMPORT ERROR
 
 """
 
-
 ImportError2 = """
 
 SEISFLOWS IMPORT ERROR
 
-    custom_import(name1, name2)
+    custom_import(system, classname, method)
 
     Please check that "name1" is one of the following
 
@@ -286,19 +263,17 @@ SEISFLOWS IMPORT ERROR
 
 """
 
-
 ImportError3 = """
 
 SEISFLOWS IMPORT ERROR
 
     The following module was not found in the SeisFlows package:
 
-        seisflows.{}.{}
+        seisflows.{name}.{module}
 
-    Please check user-supplied {} parameter.
+    Please check user-supplied {module_upper} parameter.
 
 """
-
 
 ImportError4 = """
 
@@ -306,14 +281,13 @@ SEISFLOWS IMPORT ERROR
 
     By convention, SeisFlows module 
 
-        seisflows.{}.{}
+        seisflows.{name}.{module}
 
     must contain a class named
 
-        {}
+        {classname}
 
 """
-
 
 CompatibilityError1 = """
 
@@ -336,7 +310,6 @@ cluster.  If you have access to one cluster and are willing to help debug,
 please let us know.
 
 """
-
 
 Warning_pbs_lg = """
 
