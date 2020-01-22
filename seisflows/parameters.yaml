@@ -175,13 +175,13 @@ SAVEMODEL: True
 SAVE_AS: vector      # save as "vector" (.npy) or "binary" (.bin) or "both"
 SAVERESIDUALS: False
 SAVETRACES: False
-CREATE_EVENT_KERNEL_VTK: 
+VTK_EVENT_KERNELS:
     - vp_kernel
     - vs_kernel
-CREATE_SUM_NOSMOOTH_KERNEL_VTK: 
+VTK_SUM_NOSMOOTH_KERNEL:
     - vp_kernel
     - vs_kernel
-CREATE_GRADIENT_KERNEL_VTK: 
+VTK_GRADIENT_KERNEL:
     - vp_kernel
     - vs_kernel
 

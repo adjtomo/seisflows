@@ -65,6 +65,8 @@ class Base(object):
             solver.smooth(input_path=f"{path}/sum_nosmooth",
                           output_path=f"{path}/sum", parameters=parameters,
                           span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
+
+            solver.combine_vol_data_vtk()
         else:
             solver.combine(input_path=path, output_path=f"{path}/sum",
                            parameters=parameters)
@@ -75,10 +77,10 @@ class Base(object):
         to get the gradient, and optionally applies user-supplied scaling
 
         Note:
-        Because processing operations can be quite expensive, they must be
-        run through the HPC system interface; processing does not involve
-        embarassingly parallel tasks, we use system.run_single instead of
-        system.run
+            Because processing operations can be quite expensive, they must be
+            run through the HPC system interface; processing does not involve
+            embarassingly parallel tasks, we use system.run_single instead of
+            system.run
 
         :type path: str
         :param path: directory from which kernels are read and to which
@@ -88,7 +90,7 @@ class Base(object):
         if not exists(path):
             raise FileNotFoundError
 
-        # Run postprocessing
+        # Run postprocessing on the cluster
         system.run_single("postprocess", "process_kernels",
                           path=f"{path}/kernels",
                           scale_tasktime=PAR.TASKTIME_SMOOTH,
