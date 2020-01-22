@@ -428,7 +428,7 @@ class Base(object):
         # Write the source names into the kernel paths file for SEM
         with open('kernel_paths', 'w') as file:
             file.writelines(
-                [os.path.join(input_path, name + '\n')
+                [os.path.join(input_path, f"{name}\n")
                  for name in self.source_names]
             )
 
@@ -484,6 +484,14 @@ class Base(object):
         # Rename output files
         files = glob(os.path.join(output_path, '*'))
         unix.rename(old='_smooth', new='', names=files)
+
+    def combine_vol_data_vtk(self):
+        """
+        Postprocessing wrapper for xcombine_vol_data_vtk
+
+        !!! must be implemented by subclass !!!
+        """
+        pass
 
     def import_model(self, path):
         """

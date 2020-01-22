@@ -28,7 +28,7 @@ system = sys.modules['seisflows_system']
 preprocess = sys.modules['seisflows_preprocess']
 
 
-class Specfem3d(custom_import('solver', 'Base')):
+class Specfem3D(custom_import('solver', 'base')):
     """
     Python interface to Specfem3D Cartesian. This subclass inherits functions
     from seisflows.solver.Base
@@ -40,7 +40,7 @@ class Specfem3d(custom_import('solver', 'Base')):
         Checks parameters and paths
         """
         # Run Base class checks
-        super(Specfem3d, self).check()
+        super(Specfem3D, self).check()
 
         # Check time stepping parameters
         if "NT" not in PAR:
@@ -157,6 +157,7 @@ class Specfem3d(custom_import('solver', 'Base')):
         """
         setpar('SIMULATION_TYPE', '3')
         setpar('SAVE_FORWARD', '.false.')
+        setpar('ATTENUATION ', '.false.')
         unix.rm('SEM')
         unix.ln('traces/adj', 'SEM')
         call_solver(mpiexec=system.mpiexec(), exectuable='bin/xspecfem3D')
@@ -200,7 +201,7 @@ class Specfem3d(custom_import('solver', 'Base')):
         """
         # Initialize adjoint traces as zeroes for all data_filenames
         # write to `traces/adj`
-        super(Specfem3d, self).initialize_adjoint_traces()
+        super(Specfem3D, self).initialize_adjoint_traces()
 
         # Rename data to work around Specfem naming convetions
         self.rename_data()
