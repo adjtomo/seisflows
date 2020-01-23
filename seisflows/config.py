@@ -74,12 +74,12 @@ def save():
     # Save the paths and parameters into a JSON file
     for name in ['parameters', 'paths']:
         fullfile = os.path.join(_output(), f"seisflows_{name}.json")
-        savejson(fullfile, sys.modules['seisflows_' + name].__dict__)
+        savejson(fullfile, sys.modules[f"seisflows_{name}"].__dict__)
 
     # Save the current workflow as pickle objects
     for name in names:
         fullfile = os.path.join(_output(), f"seisflows_{name}.p")
-        saveobj(fullfile, sys.modules['seisflows_' + name])
+        saveobj(fullfile, sys.modules[f"seisflows_{name}"])
 
 
 def load():
@@ -89,17 +89,20 @@ def load():
     # Load parameters and paths from a JSON file
     for name in ['parameters', 'paths']:
         fullfile = os.path.join(_output(), f"seisflows_{name}.json")
-        sys.modules['seisflows_' + name] = Dict(loadjson(fullfile))
+        sys.modules[f"seisflows_{name}"] = Dict(loadjson(fullfile))
 
     # Load the saved workflow from pickle objects
     for name in names:
         fullfile = os.path.join(_output(), f"seisflows_{name}.p")
-        sys.modules['seisflows_' + name] = loadobj(fullfile)
+        sys.modules[f"seisflows_{name}"] = loadobj(fullfile)
 
 
 class Dict(object):
     """
     Re defined dictionary-like object for holding parameters or paths
+
+    Allows for easier access of dictionary items, does not allow resets of
+    attributes once defined, only allows updates through new dictionaries.
     """
     def __iter__(self):
         return iter(sorted(self.__dict__.keys()))
