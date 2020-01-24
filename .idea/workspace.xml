@@ -3,10 +3,14 @@
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/optimize/NLCG.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/NLCG.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/plugins/optimize/LBFGS.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/optimize/LBFGS.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/plugins/optimize/NLCG.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/optimize/NLCG.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/inversion_pyatoa.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/inversion_pyatoa.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/plugins/adjoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/adjoint.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/plugins/preconds/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/preconds/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/plugins/preconds/diagonal.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/preconds/diagonal.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/plugins/solver/specfem2d.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/plugins/solver/specfem2d/SOURCE" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/plugins/solver/specfem3d.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/solver/specfem3d.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/plugins/solver/specfem3d_globe.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/preprocess/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/preprocess/base.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -77,22 +81,24 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
         <counts>
-          <entry key="py" value="31" />
+          <entry key="SOURCE" value="1" />
+          <entry key="py" value="41" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.open">
         <counts>
-          <entry key="Python" value="31" />
+          <entry key="PLAIN_TEXT" value="1" />
+          <entry key="Python" value="41" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="py" value="9477" />
+          <entry key="py" value="11047" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="Python" value="9477" />
+          <entry key="Python" value="11047" />
         </counts>
       </usages-collector>
     </session>
@@ -107,8 +113,8 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/seisflows/workflow/inversion_pyatoa.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="327">
-                  <caret line="26" column="37" lean-forward="true" selection-start-line="26" selection-start-column="37" selection-end-line="26" selection-end-column="37" />
+                <state>
+                  <caret selection-end-line="9" selection-end-column="3" />
                   <folding>
                     <element signature="e#359#368#0" expanded="true" />
                   </folding>
@@ -116,14 +122,47 @@
               </provider>
             </entry>
           </file>
-          <file pinned="false" current-in-tab="true">
+          <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/seisflows/plugins/optimize/NLCG.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="519">
-                  <caret line="128" column="11" lean-forward="true" selection-start-line="128" selection-start-column="11" selection-end-line="128" selection-end-column="11" />
+                <state>
+                  <caret selection-end-line="6" selection-end-column="3" />
                   <folding>
                     <element signature="e#1#10#0" expanded="true" />
                   </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/seisflows/plugins/adjoint.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="-954">
+                  <caret line="21" column="30" lean-forward="true" selection-start-line="21" selection-start-column="30" selection-end-line="21" selection-end-column="30" />
+                  <folding>
+                    <element signature="e#73#92#0" expanded="true" />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="true">
+            <entry file="file://$PROJECT_DIR$/seisflows/preprocess/base.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="574">
+                  <caret line="413" lean-forward="true" selection-start-line="413" selection-end-line="413" />
+                  <folding>
+                    <element signature="e#137#146#0" expanded="true" />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/seisflows/preprocess/default.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="240">
+                  <caret line="18" lean-forward="true" selection-start-line="18" selection-end-line="18" />
                 </state>
               </provider>
             </entry>
@@ -135,7 +174,7 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/seisflows/plugins/optimize/LBFGS.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="674">
+                <state relative-caret-position="200">
                   <caret line="106" column="25" selection-start-line="106" selection-end-line="107" />
                 </state>
               </provider>
@@ -207,10 +246,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>eval_grad</find>
-      <find>export_kernels</find>
-      <find>super</find>
-      <find>TaskError_SL</find>
       <find>combine_volt</find>
       <find>combine_volt_dat</find>
       <find>combine_</find>
@@ -226,7 +261,6 @@
       <find>newline</find>
       <find>count_zer</find>
       <find>VERBOSE</find>
-      <find>'</find>
       <find>self.memory</find>
       <find>thresh</find>
       <find>checkst</find>
@@ -236,7 +270,12 @@
       <find>apply</find>
       <find>q</find>
       <find>angle</find>
+      <find>np</find>
+      <find>np.</find>
+      <find>check_descent</find>
       <find>line_Search</find>
+      <find>'</find>
+      <find>traces</find>
     </findStrings>
     <replaceStrings>
       <replace>'</replace>
@@ -266,7 +305,6 @@
         <option value="$PROJECT_DIR$/seisflows/tools/array.py" />
         <option value="$PROJECT_DIR$/seisflows/workflow/test_optimize.py" />
         <option value="$PROJECT_DIR$/seisflows/tools/unix.py" />
-        <option value="$PROJECT_DIR$/seisflows/plugins/solver/specfem3d.py" />
         <option value="$PROJECT_DIR$/seisflows/workflow/inversion_nz.py" />
         <option value="$PROJECT_DIR$/seisflows/workflow/thrifty_pyatoa.py" />
         <option value="$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py" />
@@ -293,6 +331,11 @@
         <option value="$PROJECT_DIR$/seisflows/optimize/NLCG.py" />
         <option value="$PROJECT_DIR$/seisflows/plugins/optimize/LBFGS.py" />
         <option value="$PROJECT_DIR$/seisflows/plugins/optimize/NLCG.py" />
+        <option value="$PROJECT_DIR$/seisflows/plugins/preconds/diagonal.py" />
+        <option value="$PROJECT_DIR$/seisflows/plugins/preconds/__init__.py" />
+        <option value="$PROJECT_DIR$/seisflows/plugins/solver/specfem3d.py" />
+        <option value="$PROJECT_DIR$/seisflows/plugins/adjoint.py" />
+        <option value="$PROJECT_DIR$/seisflows/preprocess/base.py" />
       </list>
     </option>
   </component>
@@ -350,6 +393,26 @@
               <item name="seisflows" type="462c0819:PsiDirectoryNode" />
               <item name="plugins" type="462c0819:PsiDirectoryNode" />
               <item name="optimize" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="seisflows3" type="b2602c69:ProjectViewProjectNode" />
+              <item name="seisflows3" type="462c0819:PsiDirectoryNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="preconds" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="seisflows3" type="b2602c69:ProjectViewProjectNode" />
+              <item name="seisflows3" type="462c0819:PsiDirectoryNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="solver" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="seisflows3" type="b2602c69:ProjectViewProjectNode" />
+              <item name="seisflows3" type="462c0819:PsiDirectoryNode" />
+              <item name="seisflows" type="462c0819:PsiDirectoryNode" />
+              <item name="preprocess" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="seisflows3" type="b2602c69:ProjectViewProjectNode" />
@@ -461,30 +524,6 @@
     <option name="myLimit" value="2678400000" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver_io/adios.py">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/preprocess/default.py">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem2d.py" />
-    <entry file="file://$PROJECT_DIR$/seisflows/tools/err.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <caret selection-end-line="3" selection-end-column="3" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/plugins/writers.py">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/plugins/readers.py">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver_io/fortran_binary.py">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem3d_nz.py" />
     <entry file="file://$PROJECT_DIR$/seisflows/workflow/inversion_nz.py" />
     <entry file="file://$PROJECT_DIR$/seisflows/workflow/thrifty_inversion_nz.py" />
     <entry file="file://$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py">
@@ -498,20 +537,6 @@
     <entry file="file://$PROJECT_DIR$/tests/run_test_tools" />
     <entry file="file://$PROJECT_DIR$/tests/run_test_preprocess" />
     <entry file="file://$PROJECT_DIR$/tests/run_test_import" />
-    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver/specfem3d.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="90">
-          <caret line="7" column="4" selection-start-line="7" selection-start-column="4" selection-end-line="7" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver/specfem2d.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-651">
-          <caret line="12" column="7" selection-start-line="12" selection-start-column="7" selection-end-line="12" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem3d_globe.py" />
     <entry file="file://$PROJECT_DIR$/seisflows/workflow/thrifty_pyatoa.py">
       <provider selected="true" editor-type-id="text-editor">
@@ -541,13 +566,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="630">
           <caret line="42" column="8" selection-start-line="42" selection-start-column="8" selection-end-line="42" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/preprocess/base.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="150">
-          <caret line="19" column="50" selection-start-line="19" selection-start-column="50" selection-end-line="19" selection-end-column="50" />
         </state>
       </provider>
     </entry>
@@ -741,16 +759,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/workflow/inversion_pyatoa.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="327">
-          <caret line="26" column="37" lean-forward="true" selection-start-line="26" selection-start-column="37" selection-end-line="26" selection-end-column="37" />
-          <folding>
-            <element signature="e#359#368#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/optimize/NLCG.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="690">
@@ -763,17 +771,104 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/plugins/optimize/LBFGS.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="674">
+        <state relative-caret-position="200">
           <caret line="106" column="25" selection-start-line="106" selection-end-line="107" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/preconds/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="60">
+          <caret line="4" lean-forward="true" selection-start-line="4" selection-end-line="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/preconds/diagonal.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="600">
+          <caret line="40" column="48" selection-start-line="40" selection-start-column="48" selection-end-line="40" selection-end-column="48" />
+          <folding>
+            <element signature="e#232#241#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver/specfem2d/SOURCE">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="195">
+          <caret line="13" lean-forward="true" selection-start-line="13" selection-end-line="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver/__init__.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver/specfem2d.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="15">
+          <caret line="12" column="7" selection-start-line="12" selection-start-column="7" selection-end-line="12" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/solver/specfem3d.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-86">
+          <caret line="4" column="27" selection-start-line="4" selection-start-column="27" selection-end-line="4" selection-end-column="27" />
+          <folding>
+            <element signature="e#85#94#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/readers.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/misfit.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/plugins/adjoint.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-954">
+          <caret line="21" column="30" lean-forward="true" selection-start-line="21" selection-start-column="30" selection-end-line="21" selection-end-column="30" />
+          <folding>
+            <element signature="e#73#92#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/plugins/optimize/NLCG.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="519">
-          <caret line="128" column="11" lean-forward="true" selection-start-line="128" selection-start-column="11" selection-end-line="128" selection-end-column="11" />
+        <state>
+          <caret selection-end-line="6" selection-end-column="3" />
           <folding>
             <element signature="e#1#10#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/workflow/inversion_pyatoa.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret selection-end-line="9" selection-end-column="3" />
+          <folding>
+            <element signature="e#359#368#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/preprocess/default.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="240">
+          <caret line="18" lean-forward="true" selection-start-line="18" selection-end-line="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/preprocess/base.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="574">
+          <caret line="413" lean-forward="true" selection-start-line="413" selection-end-line="413" />
+          <folding>
+            <element signature="e#137#146#0" expanded="true" />
           </folding>
         </state>
       </provider>

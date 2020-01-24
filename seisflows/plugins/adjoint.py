@@ -1,8 +1,6 @@
-
-# used by the PREPROCESS class and specified by the MISFIT parameter
-
-
-
+"""
+Functions used by the PREPROCESS class and specified by the MISFIT parameter
+"""
 import numpy as _np
 from scipy.signal import hilbert as _analytic
 
@@ -10,10 +8,16 @@ from seisflows.plugins import misfit
 from seisflows.tools.math import hilbert as _hilbert
 
 
-### adjoint traces generators
-
-
 def Waveform(syn, obs, nt, dt):
+    """
+    Waveform difference from Tromp et al 2005 Eq 9
+
+    :param syn:
+    :param obs:
+    :param nt:
+    :param dt:
+    :return:
+    """
     # waveform difference
     # (Tromp et al 2005, eq 9)
     wadj = syn - obs
