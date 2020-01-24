@@ -16,6 +16,7 @@ PATH = sys.modules['seisflows_paths']
 class LBFGS(custom_import("optimize", "Base")):
     """
     The Limited memory BFGS algorithm
+    Calls upon seisflows.plugin.optimize.LBFGS to accomplish LBFGS algorithm
     """
     def check(self):
         """
@@ -49,7 +50,8 @@ class LBFGS(custom_import("optimize", "Base")):
                                                 memory=PAR.LBFGSMEM,
                                                 maxiter=PAR.LBFGSMAX,
                                                 thresh=PAR.LBFGSTHRESH,
-                                                precond=self.precond)
+                                                precond=self.precond,
+                                                verbose=PAR.VERBOSE)
 
     def compute_direction(self):
         """
