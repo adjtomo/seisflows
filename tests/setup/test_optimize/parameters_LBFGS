@@ -1,8 +1,0 @@
-
-WORKFLOW='test_optimize'
-SYSTEM='serial'
-OPTIMIZE='LBFGS'
-STEPMAX=10
-BEGIN=1              
-END=200
-

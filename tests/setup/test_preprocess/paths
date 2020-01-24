@@ -1,5 +1,0 @@
-
-DATA = '~/seisflows/tests/setup/test_preprocess/data.su'
-
-SYNTHETICS = '~/seisflows/tests/setup/test_preprocess/synthetics.su'
-

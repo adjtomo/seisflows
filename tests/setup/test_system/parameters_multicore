@@ -1,5 +1,0 @@
-
-WORKFLOW='test_system'
-SYSTEM='multicore'
-NTASK=4
-NPROCMAX=4

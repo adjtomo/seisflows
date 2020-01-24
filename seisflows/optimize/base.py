@@ -107,12 +107,14 @@ class Base(object):
 
     def setup(self):
         """
-        Sets up nonlinear optimization machinery, initiate
+        Sets up nonlinear optimization machinery
         """
         # Prepare line search machinery
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
             step_count_max=PAR.STEPCOUNTMAX,
-            path=os.path.join(PATH.WORKDIR, "output.optim"))
+            path=os.path.join(PATH.WORKDIR, "output.optim"),
+            verbose=PAR.VERBOSE
+        )
 
         # Prepare preconditioner
         if PAR.PRECOND:
