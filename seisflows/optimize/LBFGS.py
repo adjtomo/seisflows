@@ -13,7 +13,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class LBFGS(custom_import("optimize", "Base")):
+class LBFGS(custom_import("optimize", "base")):
     """
     The Limited memory BFGS algorithm
     Calls upon seisflows.plugin.optimize.LBFGS to accomplish LBFGS algorithm

@@ -11,7 +11,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class SteepestDescent(custom_import("optimize", "Base")):
+class SteepestDescent(custom_import("optimize", "base")):
     """
     Steepest descent method
     """

@@ -64,6 +64,8 @@ def config():
         print(msg.MissingParameter_System)
         sys.exit(-1)
 
+    import ipdb;ipdb.set_trace()
+
 
 def save():
     """
@@ -186,11 +188,17 @@ def custom_import(name=None, module=None, classname=None):
     # Attempt to retrieve currently assigned classname from parameters
     if module is None:
         module = _try(name)
-        if classname is None:
+        # If no module by that name, return Null
+        if module is None:
             return Null
-    # If no method specified, convert classname to CamelCase
+    # If no method specified, convert classname to PEP-8
     if classname is None:
-        classname = module.title().replace("_", "")
+        # Make a distinction for fully uppercase classnames, e.g. LBFGS
+        if module.isupper():
+            classname = module.upper()
+        # If normal classname, convert to CamelCase
+        else:
+            classname = module.title().replace("_", "")
 
     # Generate package list
     packages = ["seisflows"]

@@ -50,7 +50,7 @@ if __name__ == "__main__":
     # Check that paths exist
     paths_dont_exist = []
     for key, path in paths.items():
-        if (key in ['SCRATCH', 'PYATOA_IO']) or (path == ''):
+        if (key in ['OUTPUT', 'SCRATCH', 'PYATOA_IO']) or (path == ''):
             continue
         if not os.path.exists(path):
             paths_dont_exist.append(path) 
