@@ -310,7 +310,7 @@ class Base(object):
         """
         Checks filter settings
         """
-        assert getset(PAR.FILTER) < set(['Bandpass', 'Lowpass', 'Highpass'])
+        assert getset(PAR.FILTER) < {'Bandpass', 'Lowpass', 'Highpass'}
 
         if PAR.FILTER == 'Bandpass':
             if 'FREQMIN' not in PAR: raise ParameterError('FREQMIN')
@@ -337,10 +337,10 @@ class Base(object):
         if not PAR.MUTE:
             return
 
-        assert getset(PAR.MUTE) <= set(['MuteEarlyArrivals',
-                                        'MuteLateArrivals',
-                                        'MuteShortOffsets',
-                                        'MuteLongOffsets'])
+        assert getset(PAR.MUTE) <= {'MuteEarlyArrivals',
+                                    'MuteLateArrivals',
+                                    'MuteShortOffsets',
+                                    'MuteLongOffsets'}
 
         if 'MuteEarlyArrivals' in PAR.MUTE:
             assert 'MUTE_EARLY_ARRIVALS_SLOPE' in PAR
@@ -371,10 +371,10 @@ class Base(object):
 
         :return:
         """
-        assert getset(PAR.NORMALIZE) < set(['NormalizeTracesL1',
-                                            'NormalizeTracesL2',
-                                            'NormalizeEventsL1',
-                                            'NormalizeEventsL2'])
+        assert getset(PAR.NORMALIZE) < {'NormalizeTracesL1',
+                                        'NormalizeTracesL2',
+                                        'NormalizeEventsL1',
+                                        'NormalizeEventsL2'}
 
     def get_time_scheme(self, traces):
         """
@@ -408,9 +408,8 @@ class Base(object):
                 ry += [trace.stats.su.trace_header.group_coordinate_y]
                 rz += [0.]
             return rx, ry, rz
-
         else:
-             raise NotImplementedError
+            raise NotImplementedError
 
     def get_source_coords(self, traces):
         """
@@ -427,8 +426,7 @@ class Base(object):
                 sy += [trace.stats.su.trace_header.source_coordinate_y]
                 sz += [0.]
             return sx, sy, sz
-
         else:
-             raise NotImplementedError
+            raise NotImplementedError
 
 
