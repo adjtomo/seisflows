@@ -20,35 +20,35 @@ class LBFGS(object):
 
     To conserve memory, most vectors are read from disk rather than passed
     from a calling routine.
+
+    L-BFGS Variables:
+        s: memory of model differences
+        y: memory of gradient differences
+
+    Optimization Variables:
+        m: model
+        f: objective function value
+        g: gradient direction
+        p: search direction
+
+    Line Search Variables:
+        x: list of step lenths from current line search
+        f: correpsonding list of function values
+        m: number of step lengths in current line search
+        n: number of model updates in optimization problem
+        gtg: dot product of gradient with itself
+        gtp: dot product of gradient and search direction
+
+    Status codes
+        status > 0  : finished
+        status == 0 : not finished
+        status < 0  : failed
     """
 
     def __init__(self, path=".", load=loadnpy, save=savenpy, memory=5,
                  thresh=0., maxiter=np.inf, precond=None, verbose=True):
         """
         Initialize the LBFGS algorithm
-
-        L-BFGS Variables:
-            s: memory of model differences
-            y: memory of gradient differences
-
-        Optimization Variables:
-            m: model
-            f: objective function value
-            g: gradient direction
-            p: search direction
-
-        Line Search Variables:
-            x: list of step lenths from current line search
-            f: correpsonding list of function values
-            m: number of step lengths in current line search
-            n: number of model updates in optimization problem
-            gtg: dot product of gradient with itself
-            gtp: dot product of gradient and search direction
-
-        Status codes
-            status > 0  : finished
-            status == 0 : not finished
-            status < 0  : failed
 
         :type path: str
         :param path: path to the optization directory
@@ -93,12 +93,10 @@ class LBFGS(object):
         :rtype: tuple (np.array, int)
         :return: search direction, status of search
         """
-        # Whenever this function is called, the iteration is moved ahead
-        self.iter += 1
-
         if self.verbose:
-            print("\tComputing search direction using L-BFGS "
-                  "optimization schema")
+            print("\tComputing search direction w/ L-BFGS")
+
+        self.iter += 1
         unix.cd(self.path)
 
         # Load the current gradient direction, which is the L-BFGS search

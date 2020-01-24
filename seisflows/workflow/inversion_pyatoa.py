@@ -31,7 +31,7 @@ preprocess = sys.modules['seisflows_preprocess']
 postprocess = sys.modules['seisflows_postprocess']
 
 
-class InversionPyatoa(custom_import('workflow', 'Inversion')):
+class InversionPyatoa(custom_import('workflow', 'inversion')):
     """
     Waveform inversion subclass, additional support for Pyatoa integration
     """

@@ -13,11 +13,10 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class NLCG(custom_import("optimize", "Base")):
+class NLCG(custom_import("optimize", "base")):
     """
     Nonlinear conjugate gradient method
     """
-
     def check(self):
         """
         Checks parameters, paths, and dependencies
@@ -44,7 +43,8 @@ class NLCG(custom_import("optimize", "Base")):
         self.NLCG = getattr(optimize, 'NLCG')(path=PATH.OPTIMIZE,
                                               maxiter=PAR.NLCGMAX,
                                               thresh=PAR.NLCGTHRESH,
-                                              precond=self.precond)
+                                              precond=self.precond,
+                                              verbose=PAR.VERBOSE)
 
     def compute_direction(self):
         """
