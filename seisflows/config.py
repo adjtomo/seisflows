@@ -64,8 +64,6 @@ def config():
         print(msg.MissingParameter_System)
         sys.exit(-1)
 
-    import ipdb;ipdb.set_trace()
-
 
 def save():
     """
@@ -84,18 +82,21 @@ def save():
         saveobj(fullfile, sys.modules[f"seisflows_{name}"])
 
 
-def load():
+def load(path):
     """
     Imports a previously saved session from disk
+
+    :type path: str
+    :param path: path to the previously saved session
     """
     # Load parameters and paths from a JSON file
     for name in ['parameters', 'paths']:
-        fullfile = os.path.join(_output(), f"seisflows_{name}.json")
+        fullfile = os.path.join(_full(path), f"seisflows_{name}.json")
         sys.modules[f"seisflows_{name}"] = Dict(loadjson(fullfile))
 
     # Load the saved workflow from pickle objects
     for name in names:
-        fullfile = os.path.join(_output(), f"seisflows_{name}.p")
+        fullfile = os.path.join(_full(path), f"seisflows_{name}.p")
         sys.modules[f"seisflows_{name}"] = loadobj(fullfile)
 
 
@@ -130,7 +131,28 @@ class Dict(object):
 
     def __init__(self, newdict):
         self.update(newdict)
-
+    
+    def __str__(self):
+        """
+        Pretty print dictionaries and first level nested dictionaries
+        """
+        str_ = "{"
+        for key, item in vars(self).items():
+            if isinstance(item, str):
+                str_ += (f"{key}: '{item}'\n")
+            elif isinstance(item, dict):
+                str_ += (key + ": {\n")
+                for key2, item2 in vars(self)[key].items():
+                    if isinstance(item2, str):
+                        str_ += (f"\t{key2}: '{item2}'\n")
+                    else:
+                        str_ += (f"\t{key2}: {item2}\n")
+                str_ += "}\n"
+            else:
+                str_ += (f"{key}: {item}\n")
+        str_ += "}"
+        return str_
+        
 
 class Null(object):
     """
