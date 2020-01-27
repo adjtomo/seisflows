@@ -16,7 +16,7 @@ def call_solver(mpiexec, executable, output='solver.log'):
     Calls MPI solver executable
 
     A less complicated version, without error catching, would be
-    subprocess.call(mpiexec +' '+ executable, shell=True)
+    subprocess.call(f"{mpiexec} {executable}", shell=True)
 
     :type mpiexec: str
     :param mpiexec: call to mpi

@@ -183,7 +183,7 @@ class Inversion(Base):
             else:
                 print("Generating data")
 
-            print("Running solver")
+            print("Running solver", end="... ")
             self.stopwatch("set")
             system.run("solver", "setup")
             self.stopwatch("time")
@@ -254,7 +254,7 @@ class Inversion(Base):
         """
         Performs adjoint simulation to evaluate gradient of the misfit function
         """
-        print("EVALUATE GRADIENT\n\tRunning adjoint simulation")
+        print("EVALUATE GRADIENT\n\tRunning adjoint simulation", end="... ")
 
         self.stopwatch("set")
         system.run("solver", "eval_grad", path=PATH.GRAD,

@@ -9,4 +9,5 @@ then
     rm -rf output*
     rm -rf error.log
     rm -rf scratch
+    rm -rf pyatoa.io
 fi

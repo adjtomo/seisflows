@@ -18,7 +18,7 @@ from seisflows.tools.err import ParameterError
 from seisflows.tools.tools import exists
 from seisflows.config import custom_import
 
-from pyatoa.plugins.seisflows.pyaflowa import Pyaflowa
+from pyatoa import Pyaflowa
 
 # Seisflows configuration
 PAR = sys.modules['seisflows_parameters']
@@ -34,6 +34,10 @@ postprocess = sys.modules['seisflows_postprocess']
 class InversionPyatoa(custom_import('workflow', 'inversion')):
     """
     Waveform inversion subclass, additional support for Pyatoa integration
+    
+    Overwrites following functions from seisflows.workflow.inversion.Inversion
+        
+        check, setup, initialize, evaluate_function, finalize, write_misfit
     """
     def check(self):
         """
@@ -69,7 +73,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
             print("\tInitializing Pyaflowa")
             self.pyaflowa = Pyaflowa(par=vars(PAR), paths=vars(PATH))
 
-            print("\tPreparing initial model")
+            print("\tPreparing initial model", end="... ")
             self.stopwatch("set")
             system.run("solver", "setup")
             self.stopwatch("time")
@@ -90,12 +94,12 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
 
         self.write_model(path=path_, suffix=suffix_)
 
-        print("\tRunning forward simulation")
+        print("\tRunning forward simulation", end="... ")
         self.stopwatch("set")
         system.run("solver", "eval_fwd", path=path_)
         self.stopwatch("time")
 
-        print("\tQuantifying misfit")
+        print("\tQuantifying misfit", end="... ")
         self.stopwatch("set")
         self.pyaflowa.set(iteration=optimize.iter, step=0)
         system.run_ancil("solver", "eval_func", pyaflowa=self.pyaflowa)
@@ -117,12 +121,12 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
 
         self.write_model(path=path_, suffix=suffix_)
 
-        print("\tRunning forward simulation")
+        print("\tRunning forward simulation", end="... ")
         self.stopwatch("set")
         system.run("solver", "eval_fwd", path=path_)
         self.stopwatch("time")
 
-        print("\tQuantifying misfit")
+        print("\tQuantifying misfit", end="... ")
         self.stopwatch("set")
         self.pyaflowa.set(iteration=optimize.iter,
                           step=optimize.line_search.step_count + 1)
@@ -140,7 +144,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         super(InversionPyatoa, self).finalize()
 
         # Finalize Pyatoa for the given iteration and step count
-        print("\tFinalizing Pyatoa")
+        print("\tFinalizing Pyatoa", end="... ")
         self.stopwatch("set")
         self.pyaflowa.set(iteration=optimize.iter,
                           step=optimize.line_search.step_count)

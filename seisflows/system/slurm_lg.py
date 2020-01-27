@@ -158,7 +158,7 @@ class SlurmLg(custom_import('system', 'base')):
             f"--ntasks={PAR.NPROC:d}",
             f"--time={PAR.TASKTIME:d}",
             f"--output={os.path.join(PATH.WORKDIR, 'output.slurm', '%A_%a')}",
-            f"--array=0-{PAR.NTASK-1 & PAR.NTASKMAX}",
+            f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
             f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",
             f"{classname}",

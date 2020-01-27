@@ -73,8 +73,8 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
                                model_name="model_true", model_type="gll")
 
         # Prepare initial model
-        self.generate_mesh(model_path=PATH.MODEL_INIT, model_name="model_init",
-                           model_type="gll")
+        self.generate_mesh(model_path=PATH.MODEL_INIT, 
+                           model_name="model_init", model_type="gll")
 
     def generate_data(self, **model_kwargs):
         """
@@ -111,10 +111,15 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         if PAR.SAVETRACES:
             self.export_traces(os.path.join(PATH.OUTPUT, "traces", "obs"))
 
-    def generate_mesh(self, model_path, model_name, model_type='gll', 
-                      symlink=True):
+    def generate_mesh(self, model_path, model_name, model_type='gll'):
         """
         Performs meshing and database generation
+
+        Note:
+            Specfem model files must be copied to individual solver directory
+            If not, Fortran I/O errors will occur when multiple processes try to
+            read from the same .bin file. This means that during the workflow 
+            there will be large disk requirements due to redundant files.
 
         :type model_path: str
         :param model_path: path to the model to be used for mesh generation
@@ -127,12 +132,6 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         :param symlink: symlink critical components rather than copying.
             This saves on storage requirements
         """
-        # Determine which function to use when copying from Specfem directory
-        if symlink:
-            copy_func = unix.ln
-        else:
-            copy_func = unix.cp
-
         available_model_types = ["gll"]
 
         if PAR.VERBOSE:
@@ -146,10 +145,11 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
             par = getpar("MODEL").strip()
             if par == "gll":
                 self.check_mesh_properties(model_path)
-
+                
+                # Copy model files 
                 src = glob(os.path.join(model_path, "*"))
                 dst = self.model_databases
-                copy_func(src, dst)
+                unix.cp(src, dst)
 
                 call_solver(mpiexec=system.mpiexec(),
                             executable="bin/xgenerate_databases")
