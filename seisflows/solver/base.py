@@ -647,7 +647,7 @@ class Base(object):
 
         # Copy event source file and rename, work around symlink relative pathin
         src = f"{self.source_prefix}_{self.source_name}"
-        if not symlink
+        if not symlink:
             src = os.path.join("DATA", src)
         
         dst = os.path.join("DATA", self.source_prefix)

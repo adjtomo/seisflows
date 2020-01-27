@@ -92,7 +92,7 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         # Prepare for the forward simulation
         self.generate_mesh(**model_kwargs)
         if PAR.VERBOSE:
-            print("Specfem3dPyatoa.generate data")
+            print(f"{self.__class__.__name__}.generate_data()")
 
         unix.cd(self.cwd)
         setpar("SIMULATION_TYPE", "1")
@@ -111,7 +111,8 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         if PAR.SAVETRACES:
             self.export_traces(os.path.join(PATH.OUTPUT, "traces", "obs"))
 
-    def generate_mesh(self, model_path, model_name, model_type='gll'):
+    def generate_mesh(self, model_path, model_name, model_type='gll', 
+                      symlink=True):
         """
         Performs meshing and database generation
 
@@ -122,11 +123,20 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         :type model_type: str
         :param model_type: available model types to be passed to the Specfem3D
             Par_file. See Specfem3D Par_file for available options.
+        :type symlink: bool
+        :param symlink: symlink critical components rather than copying.
+            This saves on storage requirements
         """
+        # Determine which function to use when copying from Specfem directory
+        if symlink:
+            copy_func = unix.ln
+        else:
+            copy_func = unix.cp
+
         available_model_types = ["gll"]
 
         if PAR.VERBOSE:
-            print("Specfem3dPyatoa.generate mesh")
+            print(f"{self.__class__.__name__}.generate_mesh()")
 
         unix.cd(self.cwd)
 
@@ -139,10 +149,14 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
 
                 src = glob(os.path.join(model_path, "*"))
                 dst = self.model_databases
-                unix.cp(src, dst)
+                copy_func(src, dst)
 
                 call_solver(mpiexec=system.mpiexec(),
                             executable="bin/xgenerate_databases")
+                
+                # Remove VT? files, they aren't necessary and take up space
+                for fid in glob(os.path.join(self.model_databases, "*.vt?")):
+                    os.remove(fid)
 
             # Export the model for future use in the workflow
             if self.taskid == 0:
@@ -158,7 +172,7 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         Function evaluation is taken care of by Pyatoa.
         """
         if PAR.VERBOSE:
-            print("Specfem3dPyatoa.eval_fwd")
+            print(f"{self.__class__.__name__}.eval_fwd()")
 
         unix.cd(self.cwd)
         self.import_model(path)
@@ -172,7 +186,7 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         :param pyaflowa: Pyaflowa object that controls the misfit function eval
         """
         if PAR.VERBOSE:
-            print("Specfem3dPyatoa.eval_func calling Pyatoa")
+            print(f"{self.__class__.__name__}.eval_func() => calling Pyatoa...")
         pyaflowa.process(cwd=self.cwd, event_id=self.source_name)
     
     def forward(self, path='traces/syn'):
@@ -200,6 +214,34 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         # ascii sem output format
         elif PAR.FORMAT == "ascii":
             unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*sem?")), dst=path)
+
+    def check_solver_parameter_files(self):
+        """
+        Checks solver parameters
+        """
+        nt = getpar(key="NSTEP", cast=int)
+        dt = getpar(key="DT", cast=float)
+
+        if nt != PAR.NT:
+            if self.taskid == 0:
+                warnings.warn("Specfem3D NSTEP != PAR.NT\n"
+                              "overwriting Specfem3D with Seisflows parameter"
+                              )
+            setpar(key="NSTEP", val=PAR.NT)
+
+        if dt != PAR.DT:
+            if self.taskid == 0:
+                warnings.warn("Specfem3D DT != PAR.DT\n"
+                              "overwriting Specfem3D with Seisflows parameter"
+                              )
+            setpar(key="DT", val=PAR.DT)
+
+        if self.mesh_properties.nproc != PAR.NPROC:
+            if self.taskid == 0:
+                warnings.warn("Specfem3D mesh nproc != PAR.NPROC")
+
+        if 'MULTIPLES' in PAR:
+            raise NotImplementedError
 
     def combine_vol_data_vtk(self):
         """
