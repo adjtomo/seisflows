@@ -101,7 +101,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
 
         print("\tQuantifying misfit", end="... ")
         self.stopwatch("set")
-        self.pyaflowa.set(iteration=optimize.iter, step=0)
+        self.pyaflowa.set(iteration=optimize.iter, step=0, misfits={})
         system.run_ancil("solver", "eval_func", pyaflowa=self.pyaflowa)
         self.stopwatch("time")
 
@@ -129,7 +129,9 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         print("\tQuantifying misfit", end="... ")
         self.stopwatch("set")
         self.pyaflowa.set(iteration=optimize.iter,
-                          step=optimize.line_search.step_count + 1)
+                          step=optimize.line_search.step_count + 1,
+                          misfits={}
+                          )
         system.run_ancil("solver", "eval_func", pyaflowa=self.pyaflowa)
         self.stopwatch("time")
 
@@ -151,42 +153,33 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         self.pyaflowa.finalize()
         self.stopwatch("time")
 
-    def write_misfit(self):
+    def write_misfit(self, suffix):
         """
         Overwrites seisflows.workflow.inversion.write_misfit()
+
+        Total misfit defined by Tape et al 2007: total_misfit=misfit/number_srcs
 
         Writes misfit in format expected by nonlinear optimization library
         Waits for all instances of Pyatoa to finish writing their misfit
 
-        !!! This should be rewritten, it's a bit clunky !!!
+        :type suffix: str
+        :param suffix: suffix to write the misfit with, e.g. `f_new`
         """
-        src = os.path.join(PATH.PYATOA_IO, "data", "misfits", "*")
-        dst = "f_{suffix}"
+        dst = f"f_{suffix}"
 
-        # Used to wait for processes to finish
-        misfit = 0
-        waited_s = 0
-        wait_interval_s = 5
+        # Make sure pyaflowa has written all misfits before proceeding
+        waited = 0
+        while len(self.pyaflowa.misfits) < PAR["NSRC"]:
+            time.sleep(10)
+            waited += 1
+            if waited >= 10:
+                print("seisflows.workflow.inversion_pyatoa waited too long for "
+                      "misfits to be written, exiting.")
+                sys.exit(-1)
 
-        while True:
-            misfits = glob.glob(src)
-            if len(misfits) == PAR.NSRC:
-                for _misfit in misfits:
-                    misfit += np.loadtxt(_misfit)
-                    os.remove(_misfit)
-                # Following Tape et al 2007, total misfit=misfit/number_srcs
-                optimize.savetxt(dst, misfit/PAR.NSRC)
-                return
-            else:
-                waited_s += wait_interval_s
-                # If this function has waited more than x minutes, exit because
-                # something has gone wrong with misfit quantification
-                if waited_s >= (60 * 5):
-                    print("Error, misfit writer stuck waiting for files")
-                    sys.exit(-1)
-
-                time.sleep(wait_interval_s)   
-
+        # Save the total misfit
+        total_misfit = sum(self.pyaflowa.misfits.values()) / PAR["NSRC"]
+        optimize.savetxt(dst, total_misfit)
 
 
 

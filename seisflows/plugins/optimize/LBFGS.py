@@ -104,7 +104,6 @@ class LBFGS(object):
         g = self.load("g_new")
         if self.iter == 1:
             return -g, 0
-        # Force restart if the iterations have surpassed the maximum number iter
         elif self.iter > self.maxiter:
             if self.verbose:
                 print("\trestarting LBFGS... [periodic restart]")
