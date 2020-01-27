@@ -645,9 +645,12 @@ class Base(object):
         dst = os.path.join('DATA', '')
         copy_func(src, dst)
 
-        # Copy event source file and rename
-        src = os.path.join('DATA', f"{self.source_prefix}_{self.source_name}")
-        dst = os.path.join('DATA', self.source_prefix)
+        # Copy event source file and rename, work around symlink relative pathin
+        src = f"{self.source_prefix}_{self.source_name}"
+        if not symlink
+            src = os.path.join("DATA", src)
+        
+        dst = os.path.join("DATA", self.source_prefix)
         copy_func(src, dst)
 
         self.check_solver_parameter_files()
@@ -731,7 +734,7 @@ class Base(object):
         wildcard = f"{self.source_prefix}_*"
         globstar = sorted(glob(os.path.join(path, wildcard)))
         if not globstar:
-            print(msg.SourceError_SPECFEM.format((path, wildcard)))
+            print(msg.SourceError_SPECFEM.format(path, wildcard))
             sys.exit(-1)
 
         # Create internal definition of available source names
