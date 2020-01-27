@@ -7,10 +7,10 @@ from seisflows.config import load
 
 
 if __name__ == '__main__':
-    """ Executes workflow previously submitted through job scheduler such as
-        PBS, LSF, or SLURM
+    """ 
+    Executes workflow previously submitted through job scheduler such as
+    PBS, LSF, or SLURM
     """
-
     unix.cd(sys.argv[1])
 
     # reload saved state

@@ -112,7 +112,7 @@ class Inversion(Base):
         assert 1 <= PAR.BEGIN <= PAR.END
 
         # Path assertions
-        if not exists(PATH.DATA):
+        if PATH.DATA in PAR and not exists(PATH.DATA):
             assert "MODEL_TRUE" in PATH
             assert exists(PATH.MODEL_TRUE)
 
@@ -120,7 +120,7 @@ class Inversion(Base):
         if not exists(PATH.MODEL_INIT):
             raise Exception("MODEL_INIT does not exist")
 
-    def stopwatch(self, method):
+    def stopwatch(self, method=None):
         """
         Timestamps for print statements. `time` package wrapper
 

@@ -1,22 +1,33 @@
 #!/usr/bin/env python
-
+"""
+A wrapper for running tasks within the currently executing workflow
+"""
 import os
 import sys
 
+from seisflows.tools.tools import loadjson, loadobj
+from seisflows.config import load
 
 def export(myenv):
-    # exports comma delimited list of environment variables
-    # e.g. VARNAME1=value1,VARNAME2=value2
+    """
+    Exports comma delimited list of environment variables
+
+    e.g. VARNAME1=value1,VARNAME2=value2
+
+    :type myenv: str
+    :param myevn: the system environment to take variables from
+    """
     for item in myenv.split(','):
         os.environ.update([item.split('=')])
 
 
 if __name__ == '__main__':
-    """ Runs task within currently executing workflow
+    """ 
+    Runs task within currently executing workflow
     """
     nargs = len(sys.argv[1:])
 
-    # parse command line arguments
+    # Parse command line arguments
     mypath = sys.argv[1]
     myclass = sys.argv[2]
     myfunc = sys.argv[3]
@@ -25,18 +36,14 @@ if __name__ == '__main__':
         myenv = sys.argv[4].strip(',')
         export(myenv)
 
-    from os.path import join
-    from seisflows.tools.tools import loadjson, loadobj
-    from seisflows.config import load
-
-    # reload from last checkpoint
+    # Reload from last checkpoint
     load(mypath)
 
-    # load function arguments
-    kwargspath = join(mypath, 'kwargs')
-    kwargs = loadobj(join(kwargspath, myclass+'_'+myfunc + '.p'))
+    # Load function arguments
+    kwargspath = os.path.join(mypath, 'kwargs')
+    kwargs = loadobj(os.path.join(kwargspath, f"{myclass}_{myfunc}.p"))
 
-    # call function
-    func = getattr(sys.modules['seisflows_'+myclass], myfunc)
+    # Call function
+    func = getattr(sys.modules[f"seisflows_{myclass}"], myfunc)
     func(**kwargs)
 

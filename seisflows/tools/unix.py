@@ -96,8 +96,10 @@ def ls(path):
 def mkdir(dirs):
     """
     Make directory
-
     Note: Random wait times to prevent overloading disk
+        
+    :type dirs: str or list
+    :param dirs: pathnames to make
     """
     time.sleep(2 * random.random())
     for dir_ in iterable(dirs):

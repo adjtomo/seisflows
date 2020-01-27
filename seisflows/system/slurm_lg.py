@@ -119,8 +119,9 @@ class SlurmLg(custom_import('system', 'base')):
 
         # Submit using sbatch
         submit_call = " ".join([
-            f"sbatch {PAR.SLURMARGS}",
-            f"--job_name={PAR.TITLE}",
+            f"sbatch", 
+            f"{PAR.SLURMARGS}",
+            f"--job-name={PAR.TITLE}",
             f"--output={output_log}",
             f"--ntasks-per-node={PAR.NODESIZE}",
             f"--nodes=1",
@@ -150,7 +151,7 @@ class SlurmLg(custom_import('system', 'base')):
         # Submit job array
         run_call = " ".join([
             "sbatch",
-            "{PAR.SLURMARGS}"
+            f"{PAR.SLURMARGS}",
             f"--job-name={PAR.TITLE}",
             f"--nodes={math.ceil(PAR.NPROC/float(PAR.NODESIZE)):d}",
             f"--ntasks-per-node={PAR.NODESIZE:d}",
@@ -192,7 +193,7 @@ class SlurmLg(custom_import('system', 'base')):
         # Submit job array
         run_call = " ".join([
             "sbatch",
-            "{PAR.SLURMARGS}"
+            f"{PAR.SLURMARGS}",
             f"--job-name={PAR.TITLE}",
             f"--nodes={math.ceil(PAR.NPROC/float(PAR.NODESIZE)):d}",
             f"--ntasks-per-node={PAR.NODESIZE:d}",
@@ -286,12 +287,16 @@ class SlurmLg(custom_import('system', 'base')):
     def job_id_list(self, stdout, ntask):
         """
         Parses job id list from sbatch standard output
+        Decode class bytes to str using UTF-8
 
         :type stdout: str
         :param stdout: the output of subprocess.check_output()
         :type ntask: int
         :param ntask: number of tasks currently running
         """
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode("UTF-8")
+
         job_id = stdout.split()[-1].strip()
         return [f"{job_id}_{str(ii)}" for ii in range(ntask)]
 
@@ -302,9 +307,11 @@ class SlurmLg(custom_import('system', 'base')):
         :type job: str
         :param job: job id to query
         """
-        stdout = check_output(
-            "sacct -n -o jobid,state -j "+ job.split("_")[0],
-            shell=True)
+        stdout = check_output("sacct -n -o jobid,state -j {job.split('_')[0]}",
+                              shell=True)
+
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode("UTF-8")
 
         state = ""
         lines = stdout.strip().split("\n")

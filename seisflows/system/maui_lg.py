@@ -39,7 +39,7 @@ class MauiLg(custom_import('system', 'slurm_lg')):
         super(MauiLg, self).check()
 
         # NeSI Nodesize is hard set to 40
-        if PAR.NTASK != 40:
+        if PAR.NODESIZE != 40:
             print("Maui must have a nodesize of 40, overwriting user set")
             setattr(PAR, "NODESIZE", 40)
 
@@ -112,33 +112,44 @@ class MauiLg(custom_import('system', 'slurm_lg')):
         # If a scratch directory is made outside the working directory
         if not os.path.exists('./scratch'):
             unix.ln(PATH.SCRATCH, os.path.join(PATH.WORKDIR, "scratch"))
-
-        # If resuming, rename the old log files so they don't get overwritten
+        
+        # If resuming, print a delineation between old and new logs
         output_log = os.path.join(PATH.WORKDIR, "output.log")
         error_log = os.path.join(PATH.WORKDIR, "error.log")
         for log in [output_log, error_log]:
-            log_prior = f"{log}_prior"
-            log_temp = f"{log}_temp"
-            if os.path.exists(log):
-                # If a prior log exists, move to temp file and then rewrite new
-                if os.path.exists(log_prior):
-                    os.rename(log_prior, log_temp)
-                    with open(log_prior, 'w') as f_out:
-                        for fid in [log_temp, log]:
-                            with open(fid) as f_in:
-                                f_out.write(f_in.read())
-                    unix.rm(log_temp)
-                else:
-                    os.rename(log, log_prior)
+            if os.path.exists(os.path.join(PATH.WORKDIR, log)):
+                with open(os.path.join(PATH.WORKDIR, log), "r+") as f:
+                    lines = f.readlines()
+                    f.seek(0, 0)
+                    f.write("{space} RESUME {space}\n\n".format("=" * 36))
+                    f.write(lines)
+                    
+        # # If resuming, rename the old log files so they don't get overwritten
+        # output_log = os.path.join(PATH.WORKDIR, "output.log")
+        # error_log = os.path.join(PATH.WORKDIR, "error.log")
+        # for log in [output_log, error_log]:
+        #     log_prior = f"{log}_prior"
+        #     log_temp = f"{log}_temp"
+        #     if os.path.exists(log):
+        #         # If a prior log exists, move to temp file and then rewrite new
+        #         if os.path.exists(log_prior):
+        #             os.rename(log_prior, log_temp)
+        #             with open(log_prior, 'w') as f_out:
+        #                 for fid in [log_temp, log]:
+        #                     with open(fid) as f_in:
+        #                         f_out.write(f_in.read())
+        #             unix.rm(log_temp)
+        #         else:
+        #             os.rename(log, log_prior)
                     
         workflow.checkpoint()
                
         # Submit to maui_ancil
         submit_call = " ".join([
             f"sbatch {PAR.SLURMARGS}",
-            f"--acount={PAR.ACCOUNT}",
+            f"--account={PAR.ACCOUNT}",
             f"--partition={PAR.ANCIL_PARTITION}",
-            f"--job_name=main_{PAR.TITLE}",  # main_ prefix means master
+            f"--job-name=main_{PAR.TITLE}",  # main_ prefix means master
             f"--output={output_log}",
             f"--error={error_log}",
             f"--ntasks=1",
@@ -192,8 +203,8 @@ class MauiLg(custom_import('system', 'slurm_lg')):
 
         run_call = " ".join([
             "sbatch",
-            "{PAR.SLURMARGS}"
-            f"--acount={PAR.ACCOUNT}",
+            f"{PAR.SLURMARGS}",
+            f"--account={PAR.ACCOUNT}",
             f"--job-name={PAR.TITLE}",
             f"--clusters={PAR.MAIN_CLUSTER}",
             f"--partition={PAR.MAIN_PARTITION}",
@@ -260,8 +271,8 @@ class MauiLg(custom_import('system', 'slurm_lg')):
         # Submit job
         run_call = " ".join([
             "sbatch",
-            "{PAR.SLURMARGS}"
-            f"--acount={PAR.ACCOUNT}",
+            f"{PAR.SLURMARGS}",
+            f"--account={PAR.ACCOUNT}",
             f"--job-name={PAR.TITLE}",
             f"--clusters={PAR.MAIN_CLUSTER}",
             f"--partition={PAR.MAIN_PARTITION}",
@@ -322,8 +333,8 @@ class MauiLg(custom_import('system', 'slurm_lg')):
 
         run_call = " ".join([
             "sbatch",
-            "{PAR.SLURMARGS}"
-            f"--acount={PAR.ACCOUNT}",
+            f"{PAR.SLURMARGS}",
+            f"--account={PAR.ACCOUNT}",
             f"--job-name={PAR.TITLE}",
             f"--clusters={PAR.ANCIL_CLUSTER}",
             f"--partition={PAR.ANCIL_PARTITION}",
@@ -367,7 +378,8 @@ class MauiLg(custom_import('system', 'slurm_lg')):
         """
         Overwrite seisflows.system.workflow.slurm_log.job_id_list()
 
-        Parses job id list from sbatch standard output
+        Parses job id list from sbatch standard output. 
+        Decode class bytes to str using UTF-8 from subprocess.check_output()
 
         Note:
             Submitting jobs across clusters on Maui means the phrase
@@ -375,11 +387,14 @@ class MauiLg(custom_import('system', 'slurm_lg')):
             longer stdout().split()[-1]. Instead, scan through stdout and try
             to find the number using float() to break on words.
 
-        :type stdout: str
+        :type stdout: str or bytes
         :param stdout: the output of subprocess.check_output()
         :type ntask: int
         :param ntask: number of tasks currently running
         """    
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode("UTF-8")
+
         for parts in stdout.split():
             try:
                 job_id = parts.strip()
@@ -396,12 +411,14 @@ class MauiLg(custom_import('system', 'slurm_lg')):
 
         The added -L flag to `sacct` to query all clusters
 
-        :type job: str
         :param job: job id to query
         """
         stdout = check_output(
             "sacct -nL -o jobid,state -j " + job.split("_")[0],
             shell=True)
+
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode("UTF-8")
 
         state = ""
         lines = stdout.strip().split("\n")

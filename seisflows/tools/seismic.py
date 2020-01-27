@@ -25,7 +25,7 @@ def call_solver(mpiexec, executable, output='solver.log'):
     :type output: str
     :param output: where to redirect stdout
     """
-    exc_cmd = " ".join(mpiexec, executable)
+    exc_cmd = f"{mpiexec} {executable}"
     try:
         f = open(output, 'w')
         subprocess.check_call(exc_cmd, shell=True, stdout=f)
@@ -73,7 +73,9 @@ class Writer(object):
         try:
             os.mkdir(path)
         except FileExistsError:
-            print(f"Warning, {path} exists")
+            print(f"Warning, {os.path.basename(path)} exists\n"
+                  "Appending to these files without deleting them will cause"
+                  "problems in the workflow")
 
         self.__call__('step_count', 0)
 

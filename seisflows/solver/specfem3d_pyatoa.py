@@ -252,4 +252,28 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
                         # Can I wrap this into a function?
                         unix.rm(glob(os.path.join(event, f"*{kernel}*")))
 
+    @property
+    def kernel_databases(self):
+        """
+        The location of databases for mernel outputs
+        """
+        return os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
 
+    @property
+    def model_databases(self):
+        """
+        The location of databases for model outputs
+        """
+        return os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
+
+    @property  
+    def source_prefix(self):
+        """
+        Specfem3D's preferred source prefix
+        
+        :rtype: str
+        :return: source prefix
+        """
+        return "CMTSOLUTION"
+       
+          

@@ -163,32 +163,32 @@ def loadobj(filename):
     :type filename: str
     :param filename: object to load
     """
-    with open(filename, 'rb') as file:
-        return pickle.load(file)
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
 
 
 def saveobj(filename, obj):
     """
     Save object using pickle
     """
-    with open(filename, 'wb') as file:
-        pickle.dump(obj, file)
+    with open(filename, 'wb') as f:
+        pickle.dump(obj, f)
 
 
 def loadjson(filename):
     """
     Load object using json
     """
-    with open(filename, 'rb') as file:
-        return json.load(file)
+    with open(filename, 'r') as f:
+        return json.load(f)
 
 
 def savejson(filename, obj):
     """
     Save object using json
     """
-    with open(filename, 'wb') as file:
-        json.dump(obj, file, sort_keys=True, indent=4)
+    with open(filename, 'w') as f:
+        json.dump(obj, f, sort_keys=True, indent=4)
 
 
 def loadpy(filename):
@@ -252,8 +252,8 @@ def loadyaml(filename):
         |\\.(?:nan|NaN|NAN))$''', re.X),
         list(u'-+0123456789.'))
 
-    with open(filename, 'rb') as file:
-        mydict = yaml.safe_load(file)
+    with open(filename, 'r') as f:
+        mydict = yaml.safe_load(f)
 
     if mydict is None:
         mydict = dict()
