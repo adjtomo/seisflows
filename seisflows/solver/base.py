@@ -649,9 +649,12 @@ class Base(object):
         src = f"{self.source_prefix}_{self.source_name}"
         if not symlink:
             src = os.path.join("DATA", src)
-        
         dst = os.path.join("DATA", self.source_prefix)
         copy_func(src, dst)
+
+        # Symlink taskid_0 as mainsolver in solver directory for convenience
+        if self.taskid == 0: 
+             unix.ln(src, os.path.join("..", "mainsolver"))
 
         self.check_solver_parameter_files()
 

@@ -180,7 +180,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
 
         # Sum up individual event misfits, remove them afterwards
         total_misfit = 0
-        for event in src:
+        for event in glob(src):
             total_misfit += np.loadtxt(event)
             os.remove(event)
 
