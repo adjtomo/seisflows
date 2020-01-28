@@ -47,16 +47,71 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         super(InversionPyatoa, self).check()
 
         # Signifiy if data-synth. or synth.-synth. case
-        if 'CASE' not in PAR:
-            raise ParameterError(PAR, 'CASE')
+        if "CASE" not in PAR:
+            raise ParameterError(PAR, "CASE")
 
-        # Synthetic-synthetic examples require a true model to create the 'data'
-        if PAR.CASE == 'Synthetic' and not exists(PATH.MODEL_TRUE):
+        if "RESUME_FROM" not in PAR:
+            setattr(PAR, "RESUME_FROM", None)
+
+        # Synthetic-synthetic examples require a true model to create the "data"
+        if PAR.CASE == "Synthetic" and not exists(PATH.MODEL_TRUE):
             raise Exception()
 
         # Pyatoa specific paths
-        if 'PYATOA_IO' not in PATH:
-            raise ParameterError(PATH, 'PYATOA_IO')
+        if "PYATOA_IO" not in PATH:
+            raise ParameterError(PATH, "PYATOA_IO")
+
+    def main(self):
+        """
+        !!! This function controls the main workflow !!!
+
+        Overwrites seisflows.workflow.inversion.main.
+        Carries out seismic inversion
+        """
+        # Make the workflow a list of functions that can be called dynamically
+        flow = [self.initialize,
+                self.evaluate_gradient,
+                self.write_gradient,
+                self.compute_direction,
+                self.line_search,
+                self.finalize,
+                self.clean
+                ]
+
+        self.stopwatch("set")
+        print(f"BEGINNING WORKFLOW AT {self.stopwatch()}")
+        optimize.iter = PAR.BEGIN
+        print(f"{optimize.iter} <= {PAR.END}")
+
+        # Allow workflow resume from a given mid-workflow location
+        if PAR.RESUME_FROM:
+            # Determine the index that corresponds to the resume function named
+            for i, func in enumerate(flow):
+                if func.__name__ == "write_gradient":
+                    resume_idx = i
+                    break
+            else:
+                print("PAR.RESUME_FROM does not correspond to any workflow "
+                      "functions. Exiting...")
+                sys.exit(-1)
+            print(f"RESUME ITERATION {optimize.iter} (from function "
+                  f"{flow[resume_idx].__name__})")
+            for func in flow[resume_idx:]:
+                func()
+            print(f"finished iteration {optimize.iter} at {self.stopwatch()}\n")
+            optimize.iter += 1
+        else:
+            # First-time intialization of the workflow
+            self.setup()
+
+        # Run the workflow until PAR.END
+        while optimize.iter <= PAR.END:
+            print(f"ITERATION {optimize.iter}")
+            for func in flow:
+                func()
+            print(f"finished iteration {optimize.iter} at {self.stopwatch()}\n")
+            self.stopwatch("time")
+            optimize.iter += 1
 
     def setup(self):
         """

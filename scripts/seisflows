@@ -67,6 +67,10 @@ def parse(parameters):
             del parsed_parameters[key]
         elif key == "LINESEARCH":
             parsed_parameters[key] = item.capitalize()
+        elif key == "RESUME_FROM":
+            check = input(f"{key} is set to {item}, proceed? (y/[n]): ")
+            if check == "y":
+                continue
                 
     return parsed_parameters
 
