@@ -9,6 +9,7 @@ import os
 import sys
 import argparse
 import numpy as np
+from glob import glob
 
 from seisflows.tools import unix, tools
 from seisflows.config import config, tilde_expand, Dict, names
@@ -24,18 +25,50 @@ def get_args():
     """
     parser = argparse.ArgumentParser()
 
-    # Required parameters
-    parser.add_argument("-r", "--run", required=True, type=str,
+    # Positional arguments
+    parser.add_argument("run", type=str, nargs="?",
                         choices=["submit", "clean", "resume", "debug",
                                  "restart"],
                         help="task for Seisflows to perform")
 
-    # Default parameters
+    # Optional parameters
     parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd())
     parser.add_argument("-p", "--parameter_file", nargs="?",
                         default="parameters.yaml")
+    parser.add_argument("-c", "--continuous", nargs="?", default=True)
 
     return parser.parse_args()
+
+
+def parse(parameters):
+    """
+    Seisflows was written in such a way that excluding parameters from the 
+    parameter file would enforce default values. This becomes confusing however 
+    because then the User needs to look at the definitions in the check()
+    functions of each module to determine which parameters they want to exclude.
+
+    Rather than rewrite this system, we allow the User to set parameters to 
+    None, null, '', etc. This function sanitizes those inputs before handing 
+    them over to Seisflows. This allows for full parameter files that include 
+    all options that also works with the machinery of Seisflows
+
+    This function also enforces a few string formats 
+
+    :type parameters: dict
+    :param parameters: dict of parameters to parse
+    :rtype: dict
+    :return: parameters that have been sanitized of all null values
+    """
+    # Copy the dictionary to get around deleting keys while iterating
+    parsed_parameters = dict(parameters)
+    for key, item in parameters.items():
+        # Search for all None and "" items, ignore bools, 0's etc.
+        if not item and isinstance(item, (type(None), str)):
+            del parsed_parameters[key]
+        elif key == "LINESEARCH":
+            parsed_parameters[key] = item.capitalize()
+                
+    return parsed_parameters
 
 
 def setup():
@@ -50,6 +83,7 @@ def setup():
 
     # Register parameters
     parameters = loadyaml(args.parameter_file)
+    parameters = parse(parameters)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
     # Register paths, they should have been checked by submit
@@ -73,10 +107,15 @@ def submit():
         if not os.path.exists(path):
             paths_dont_exist.append(path)
     if paths_dont_exist:
-        print("The following paths do not exist:")
+        print("\nThe following paths do not exist:\n")
         for path_ in paths_dont_exist:
             print(f"\t{path_}")
+        print("\n")
         sys.exit()
+
+    # Expand relative pathnames
+    for key, path in paths.items():
+        paths[key] = os.path.abspath(path)
 
     # If paths exist, pass to modules
     sys.modules["seisflows_paths"] = Dict(paths)
@@ -146,10 +185,11 @@ def clean(workdir):
     :type workdir: str
     :param workdir: working directory to clean
     """
-    check = input("Are you sure you want to clean, this will remove all current"
-                  "\nworkflow objects, leaving only the parameter file (y/[n])")
+    check = input("\nThis will remove all workflow objects, leaving only the "
+                  "parameter file.\nAre you sure you want to clean? (y/[n]): ")
     if check == "y":
-        unix.rm(os.path.join(workdir, "output*"))
+        for fid in glob(os.path.join(workdir, "output*")):
+            unix.rm(fid)
         unix.rm(os.path.join(workdir, "error.log"))
         unix.rm(os.path.join(workdir, "scratch"))
         unix.rm(os.path.join(workdir, "pyatoa.io"))
@@ -182,6 +222,16 @@ def convert_model(solver, path_output, model_fid):
     solver.save(solver.split(np.load(src)), dst)
 
 
+def status(continuous):
+    """
+    Monitor the status of the workflow
+
+    :type continuous: bool
+    :param continous: keep an up to date status, rather than a one time print
+    """
+    raise NotImplementedError 
+
+
 if __name__ == "__main__":
     args_ = get_args()
     if args_.run == "submit":
@@ -195,3 +245,5 @@ if __name__ == "__main__":
     elif args_.run == "restart":
         clean(args_.workdir)
         submit()
+    elif args_.run == "status":
+        status(continuous=args_.continous)
