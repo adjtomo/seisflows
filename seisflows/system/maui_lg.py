@@ -5,9 +5,10 @@ This class provides the core utilities interaction with HPC systems which must
 be overloaded by subclasses
 """
 import os
-import math
 import sys
+import math
 import time
+from glob import glob
 from subprocess import check_output, call, CalledProcessError
 
 from seisflows.tools import unix
@@ -108,39 +109,20 @@ class MauiLg(custom_import('system', 'slurm_lg')):
         # Create output directories
         unix.mkdir(PATH.OUTPUT)
         unix.mkdir(os.path.join(PATH.WORKDIR, "output.slurm"))
+        unix.mkdir(os.path.join(PATH.WORKDIR, "logs"))
 
         # If a scratch directory is made outside the working directory
         if not os.path.exists('./scratch'):
             unix.ln(PATH.SCRATCH, os.path.join(PATH.WORKDIR, "scratch"))
         
-        # If resuming, print a delineation between old and new logs
-        output_log = os.path.join(PATH.WORKDIR, "output.log")
-        error_log = os.path.join(PATH.WORKDIR, "error.log")
+        output_log = os.path.join(PATH.WORKDIR, "output")
+        error_log = os.path.join(PATH.WORKDIR, "error")
+    
+        # If resuming, move old log files to keep them out of the way
         for log in [output_log, error_log]:
-            if os.path.exists(os.path.join(PATH.WORKDIR, log)):
-                with open(os.path.join(PATH.WORKDIR, log), "r+") as f:
-                    lines = f.readlines()
-                    f.seek(0, 0)
-                    f.write("{space} RESUME {space}\n\n".format("=" * 36))
-                    f.write(lines)
-                    
-        # # If resuming, rename the old log files so they don't get overwritten
-        # output_log = os.path.join(PATH.WORKDIR, "output.log")
-        # error_log = os.path.join(PATH.WORKDIR, "error.log")
-        # for log in [output_log, error_log]:
-        #     log_prior = f"{log}_prior"
-        #     log_temp = f"{log}_temp"
-        #     if os.path.exists(log):
-        #         # If a prior log exists, move to temp file and then rewrite new
-        #         if os.path.exists(log_prior):
-        #             os.rename(log_prior, log_temp)
-        #             with open(log_prior, 'w') as f_out:
-        #                 for fid in [log_temp, log]:
-        #                     with open(fid) as f_in:
-        #                         f_out.write(f_in.read())
-        #             unix.rm(log_temp)
-        #         else:
-        #             os.rename(log, log_prior)
+            unix.mv(src=glob(os.path.join(f"{log}*.log")), 
+                    dst=os.path.join(PATH.WORKDIR, "logs")
+                    )
                     
         workflow.checkpoint()
                
@@ -150,8 +132,8 @@ class MauiLg(custom_import('system', 'slurm_lg')):
             f"--account={PAR.ACCOUNT}",
             f"--partition={PAR.ANCIL_PARTITION}",
             f"--job-name=main_{PAR.TITLE}",  # main_ prefix means master
-            f"--output={output_log}",
-            f"--error={error_log}",
+            f"--output={output_log}-%A.log",
+            f"--error={error_log}-%A.log",
             f"--ntasks=1",
             f"--cpus-per-task=1",
             f"--time={PAR.WALLTIME:d}",
