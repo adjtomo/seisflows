@@ -87,7 +87,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         if PAR.RESUME_FROM:
             # Determine the index that corresponds to the resume function named
             for i, func in enumerate(flow):
-                if func.__name__ == "write_gradient":
+                if func.__name__ == PAR.RESUME_FROM:
                     resume_idx = i
                     break
             else:

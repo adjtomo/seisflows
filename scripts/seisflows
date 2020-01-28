@@ -144,16 +144,7 @@ def resume(debug=False):
     """
     args, paths, parameters = setup()
 
-    # Register parameters
-    parameters = loadyaml(args.parameter_file)
-    sys.modules["seisflows_parameters"] = Dict(parameters)
-
-    # Register paths, they should have been checked by submit
-    paths = tilde_expand(parameters["PATHS"])
-    sys.modules["seisflows_paths"] = Dict(paths)
-
-    # Create the necessary paths
-    unix.mkdir(args.workdir)
+    # Work directory should already be created
     unix.cd(args.workdir)
 
     # Reload objects from Pickle files
