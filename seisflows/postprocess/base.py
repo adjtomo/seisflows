@@ -46,6 +46,7 @@ class Base(object):
 
     def process_kernels(self, path, parameters):
         """
+        This should be run
         Sums kernels from individual sources, with optional smoothing
 
         :type path: str
@@ -65,11 +66,14 @@ class Base(object):
             solver.smooth(input_path=f"{path}/sum_nosmooth",
                           output_path=f"{path}/sum", parameters=parameters,
                           span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
-
-            solver.combine_vol_data_vtk()
         else:
             solver.combine(input_path=path, output_path=f"{path}/sum",
                            parameters=parameters)
+
+        # Create VTK files for gradients and kernels
+        if (PAR.VTK_EVENT_KERNEL and PAR.VTK_SUM_NOSMOOTH_KERNEL and
+            PAR.VTK_GRADIENT_KERNEL):
+            solver.combine_vol_data_vtk(input_path=path)
 
     def write_gradient(self, path):
         """

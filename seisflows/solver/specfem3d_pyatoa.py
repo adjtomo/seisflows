@@ -54,6 +54,16 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         # Currently Pyatoa only works with ASCII
         if PAR.FORMAT not in ["ascii"]:
             raise Exception()
+        
+        # VTK outputs
+        if "VTK_EVENT_KERNEL" not in PAR:
+            setattr(PAR, "VTK_EVENT_KERNEL", [])
+
+        if "VTK_SUM_NOSMOOTH_KERNEL" not in PAR:
+            setattr(PAR, "VTK_EVENT_KERNEL", [])
+
+        if "VTK_GRADIENT_KERNEL" not in PAR:
+            setattr(PAR, "VTK_EVENT_KERNEL", [])
 
     def setup(self):
         """
@@ -253,7 +263,7 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         if 'MULTIPLES' in PAR:
             raise NotImplementedError
 
-    def combine_vol_data_vtk(self):
+    def combine_vol_data_vtk(self, path):
         """
         Overwrites seisflows.solver.base.combine_vol_data_vtk
 
