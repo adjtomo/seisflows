@@ -2,15 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/sfclean" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/sfdebug" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/sfresume" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/sfrun" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/sfstatus" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/sfsubmit" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/tools/msg.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/tools/msg.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/solver/specfem3d_pyatoa.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/solver/specfem3d_pyatoa.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -85,7 +77,7 @@
       <usages-collector id="statistics.file.extensions.open">
         <counts>
           <entry key="SOURCE" value="1" />
-          <entry key="py" value="68" />
+          <entry key="py" value="69" />
           <entry key="seisflows" value="1" />
           <entry key="sfclean" value="1" />
           <entry key="sfdebug" value="1" />
@@ -97,19 +89,19 @@
       <usages-collector id="statistics.file.types.open">
         <counts>
           <entry key="PLAIN_TEXT" value="2" />
-          <entry key="Python" value="74" />
+          <entry key="Python" value="75" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="py" value="13006" />
+          <entry key="py" value="13023" />
           <entry key="seisflows" value="1814" />
           <entry key="sfdebug" value="1" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="Python" value="14821" />
+          <entry key="Python" value="14838" />
         </counts>
       </usages-collector>
     </session>
@@ -118,7 +110,7 @@
     <favorites_list name="seisflows" />
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.71960783">
+    <splitter split-orientation="horizontal" split-proportion="0.47254902">
       <split-first>
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
           <file pinned="false" current-in-tab="false">
@@ -138,8 +130,8 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/seisflows/config.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="264">
-                  <caret line="50" column="38" lean-forward="true" selection-start-line="50" selection-start-column="38" selection-end-line="50" selection-end-column="38" />
+                <state relative-caret-position="339">
+                  <caret line="55" column="22" lean-forward="true" selection-start-line="55" selection-start-column="22" selection-end-line="55" selection-end-column="22" />
                 </state>
               </provider>
             </entry>
@@ -175,7 +167,7 @@
       </split-first>
       <split-second>
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-          <file pinned="false" current-in-tab="true">
+          <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/seisflows/tools/unix.py">
               <provider selected="true" editor-type-id="text-editor">
                 <state relative-caret-position="183">
@@ -199,11 +191,23 @@
               </provider>
             </entry>
           </file>
-          <file pinned="false" current-in-tab="false">
+          <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem3d_pyatoa.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="2715">
-                  <caret line="188" column="51" selection-start-line="188" selection-start-column="51" selection-end-line="188" selection-end-column="51" />
+                <state relative-caret-position="345">
+                  <caret line="130" column="67" selection-start-line="130" selection-start-column="67" selection-end-line="130" selection-end-column="67" />
+                  <folding>
+                    <element signature="e#450#459#0" expanded="true" />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem3d.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="566">
+                  <caret line="163" lean-forward="true" selection-start-line="151" selection-end-line="163" />
                 </state>
               </provider>
             </entry>
@@ -211,7 +215,7 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/seisflows/solver/base.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="3630">
+                <state relative-caret-position="595">
                   <caret line="251" column="20" selection-start-line="251" selection-start-column="8" selection-end-line="251" selection-end-column="20" />
                 </state>
               </provider>
@@ -232,7 +236,6 @@
       <find>angle</find>
       <find>np</find>
       <find>traces</find>
-      <find>adjoint</find>
       <find>misfit</find>
       <find>np.</find>
       <find>line_Search</find>
@@ -253,6 +256,7 @@
       <find>names</find>
       <find>'</find>
       <find>sfsubmit</find>
+      <find>adjoint</find>
     </findStrings>
     <replaceStrings>
       <replace>'</replace>
@@ -294,7 +298,6 @@
         <option value="$PROJECT_DIR$/seisflows/solver/specfem3d.py" />
         <option value="$PROJECT_DIR$/seisflows/solver/base.py" />
         <option value="$PROJECT_DIR$/seisflows/parameters.yaml" />
-        <option value="$PROJECT_DIR$/seisflows/solver/specfem3d_pyatoa.py" />
         <option value="$PROJECT_DIR$/seisflows/plugins/line_search/base.py" />
         <option value="$PROJECT_DIR$/seisflows/optimize/base.py" />
         <option value="$PROJECT_DIR$/seisflows/plugins/line_search/bracket.py" />
@@ -317,6 +320,7 @@
         <option value="$PROJECT_DIR$/seisflows/plugins/readers.py" />
         <option value="$PROJECT_DIR$/scripts/seisflows" />
         <option value="$PROJECT_DIR$/seisflows/config.py" />
+        <option value="$PROJECT_DIR$/seisflows/solver/specfem3d_pyatoa.py" />
       </list>
     </option>
   </component>
@@ -667,27 +671,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem3d_pyatoa.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2715">
-          <caret line="188" column="51" selection-start-line="188" selection-start-column="51" selection-end-line="188" selection-end-column="51" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem3d.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="617">
-          <caret line="282" column="41" selection-start-line="282" selection-start-column="41" selection-end-line="282" selection-end-column="41" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/solver/base.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3630">
-          <caret line="251" column="20" selection-start-line="251" selection-start-column="8" selection-end-line="251" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/plugins/optimize/NLCG.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="227">
@@ -722,16 +705,6 @@
     <entry file="file://$USER_HOME$/miniconda3/envs/tomo/lib/python3.7/os.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-4628" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/seisflows/tools/unix.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="183">
-          <caret line="143" column="7" selection-start-line="143" selection-start-column="7" selection-end-line="143" selection-end-column="7" />
-          <folding>
-            <element signature="e#41#50#0" expanded="true" />
-          </folding>
-        </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/workflow/inversion_pyatoa.py">
@@ -833,8 +806,42 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/seisflows/config.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="264">
-          <caret line="50" column="38" lean-forward="true" selection-start-line="50" selection-start-column="38" selection-end-line="50" selection-end-column="38" />
+        <state relative-caret-position="339">
+          <caret line="55" column="22" lean-forward="true" selection-start-line="55" selection-start-column="22" selection-end-line="55" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/tools/unix.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="183">
+          <caret line="143" column="7" selection-start-line="143" selection-start-column="7" selection-end-line="143" selection-end-column="7" />
+          <folding>
+            <element signature="e#41#50#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/solver/base.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="595">
+          <caret line="251" column="20" selection-start-line="251" selection-start-column="8" selection-end-line="251" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem3d.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="566">
+          <caret line="163" lean-forward="true" selection-start-line="151" selection-end-line="163" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/seisflows/solver/specfem3d_pyatoa.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="345">
+          <caret line="130" column="67" selection-start-line="130" selection-start-column="67" selection-end-line="130" selection-end-column="67" />
+          <folding>
+            <element signature="e#450#459#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

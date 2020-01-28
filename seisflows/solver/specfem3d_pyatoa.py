@@ -10,6 +10,7 @@ collection, preprocessing, and misfit quantification steps
 """
 import os
 import sys
+import warnings
 
 from glob import glob
 from seisflows.tools import unix
@@ -128,9 +129,6 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         :type model_type: str
         :param model_type: available model types to be passed to the Specfem3D
             Par_file. See Specfem3D Par_file for available options.
-        :type symlink: bool
-        :param symlink: symlink critical components rather than copying.
-            This saves on storage requirements
         """
         available_model_types = ["gll"]
 
@@ -214,6 +212,18 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         # ascii sem output format
         elif PAR.FORMAT == "ascii":
             unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*sem?")), dst=path)
+
+    def adjoint(self):
+        """
+        Calls SPECFEM3D adjoint solver, creates the `SEM` folder with adjoint
+        traces which is required by the adjoint solver
+        """
+        setpar("SIMULATION_TYPE", "3")
+        setpar("SAVE_FORWARD", ".false.")
+        setpar("ATTENUATION ", ".false.")
+        unix.rm("SEM")
+        unix.ln("traces/adj", "SEM")
+        call_solver(mpiexec=system.mpiexec(), exectuable="bin/xspecfem3D")
 
     def check_solver_parameter_files(self):
         """
