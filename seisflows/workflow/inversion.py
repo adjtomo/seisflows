@@ -147,7 +147,7 @@ class Inversion(Base):
         """
         self.stopwatch("set")
         print(f"BEGINNING WORKFLOW AT {self.stopwatch()}")
-
+        
         # One-time intialization of the workflow
         optimize.iter = PAR.BEGIN
         self.setup()
@@ -158,6 +158,7 @@ class Inversion(Base):
             print(f"ITERATION {optimize.iter}")
             self.initialize()
             self.evaluate_gradient()
+            self.write_gradient()
             self.compute_direction()
             self.line_search()
             self.finalize()
@@ -260,7 +261,6 @@ class Inversion(Base):
         system.run("solver", "eval_grad", path=PATH.GRAD,
                    export_traces=PAR.SAVETRACES)
         self.stopwatch("time")
-        self.write_gradient(path=PATH.GRAD, suffix="new")
 
     def finalize(self):
         """
