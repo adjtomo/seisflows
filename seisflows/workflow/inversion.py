@@ -141,7 +141,7 @@ class Inversion(Base):
 
     def main(self):
         """
-        !!! This function controls the main workflow!!!
+        !!! This function controls the main workflow !!!
 
         Carries out seismic inversion
         """
@@ -158,7 +158,6 @@ class Inversion(Base):
             print(f"ITERATION {optimize.iter}")
             self.initialize()
             self.evaluate_gradient()
-            self.write_gradient()
             self.compute_direction()
             self.line_search()
             self.finalize()
@@ -261,6 +260,9 @@ class Inversion(Base):
         system.run("solver", "eval_grad", path=PATH.GRAD,
                    export_traces=PAR.SAVETRACES)
         self.stopwatch("time")
+        
+        # Run postprocessing functions and write gradient to optimization 
+        self.write_gradient(path=PATH.GRAD, suffix="new")
 
     def finalize(self):
         """

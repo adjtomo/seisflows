@@ -190,6 +190,19 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
 
         self.write_misfit(suffix=suffix_)
 
+    def evaluate_gradient(self):
+        """
+        Overwrites seisflows.workflow.inversion.evaluate_gradient()        
+
+        Performs adjoint simulation to evaluate gradient of the misfit function
+        """
+        print("EVALUATE GRADIENT\n\tRunning adjoint simulation", end="... ")
+
+        self.stopwatch("set")
+        system.run("solver", "eval_grad", path=PATH.GRAD,
+                   export_traces=PAR.SAVETRACES)
+        self.stopwatch("time")
+
     def finalize(self):
         """
         Overwrites seisflows.workflow.inversion.finalize()
@@ -204,6 +217,23 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         self.pyaflowa.set(iteration=optimize.iter,
                           step=optimize.line_search.step_count)
         self.pyaflowa.finalize()
+        self.stopwatch("time")
+
+    def write_gradient(self):
+        """
+        Overwrites seisflows.workflow.inversion.write_gradient()
+
+        Removes the need to set path and suffix, hardcodes them into function
+
+        Writes gradient in format expected by nonlinear optimization library
+        """
+        print("POSTPROCESSING")
+        src = os.path.join(PATH.GRAD, "gradient")
+
+        self.stopwatch("set")
+        postprocess.write_gradient(PATH.GRAD)
+        parts = solver.load(src, suffix="_kernel")
+        optimize.save("g_new", solver.merge(parts))
         self.stopwatch("time")
 
     def write_misfit(self, suffix):
