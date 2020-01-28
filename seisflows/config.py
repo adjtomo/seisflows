@@ -14,15 +14,12 @@ of as comprising the complete 'state' of a SeisFlows session
 """
 
 import os
-# import re
 import sys
-# import imp
 import types
 import copyreg
 from importlib import import_module
 
 from seisflows.tools import msg
-# from seisflows.tools.err import ParameterError
 from seisflows.tools import unix
 from seisflows.tools.tools import loadjson, loadobj, savejson, saveobj
 from seisflows.tools.tools import module_exists

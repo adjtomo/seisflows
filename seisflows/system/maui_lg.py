@@ -125,7 +125,7 @@ class MauiLg(custom_import('system', 'slurm_lg')):
                     )
                     
         workflow.checkpoint()
-               
+
         # Submit to maui_ancil
         submit_call = " ".join([
             f"sbatch {PAR.SLURMARGS}",

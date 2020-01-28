@@ -68,9 +68,10 @@ def parse(parameters):
         elif key == "LINESEARCH":
             parsed_parameters[key] = item.capitalize()
         elif key == "RESUME_FROM":
-            check = input(f"{key} is set to {item}, proceed? (y/[n]): ")
-            if check == "y":
-                continue
+            check = input(f"\nPAR.{key} is set to {item}, proceed? (y/[n]): ")
+            if check != "y":
+                sys.exit(-1)
+            
                 
     return parsed_parameters
 
@@ -90,8 +91,10 @@ def setup():
     parameters = parse(parameters)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
-    # Register paths, they should have been checked by submit
+    # Register paths, expand to relative paths to absolute
     paths = tilde_expand(parameters['PATHS'])
+    for key, path in paths.items():
+        paths[key] = os.path.abspath(path)
     sys.modules['seisflows_paths'] = Dict(paths)
 
     return args, paths, parameters
@@ -116,10 +119,6 @@ def submit():
             print(f"\t{path_}")
         print("\n")
         sys.exit()
-
-    # Expand relative pathnames
-    for key, path in paths.items():
-        paths[key] = os.path.abspath(path)
 
     # If paths exist, pass to modules
     sys.modules["seisflows_paths"] = Dict(paths)
@@ -167,7 +166,8 @@ def resume(debug=False):
         solver = sys.modules["seisflows_solver"]
         optimize = sys.modules["seisflows_optimize"]
         postprocess = sys.modules["seisflows_postprocess"]
-
+        
+        # Open the debugger
         import ipdb; ipdb.set_trace()
     else:
         system.submit(workflow)
