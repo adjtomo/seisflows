@@ -287,7 +287,7 @@ class MauiLg(custom_import('system', 'slurm_lg')):
             f"{classname}",
             f"{method}",
             f"{PAR.ENVIRONS}",
-            f"{SEISFLOWS_TASKID}=0"
+            f"SEISFLOWS_TASKID=0"
         ])
 
         if PAR.WITH_OPENMP:

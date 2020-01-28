@@ -61,7 +61,7 @@ class Base(object):
         # line search algorithm
         if "LINESEARCH" not in PAR:
             setattr(PAR, "LINESEARCH", "Bracket")
-
+        
         # Preconditioner
         if "PRECOND" not in PAR:
             setattr(PAR, "PRECOND", None)
@@ -194,7 +194,7 @@ class Base(object):
                     # ratio criteria is met, set in place in m
                     for vs_try in vs_max_values:
                         if -1 < poissons_ratio(vp_, vs_try) < 0.5:
-                            print(f"\t\t\treassigning vs={m[idx + split]} "
+                            print(f"\t\t\tReassigning vs={m[idx + split]} "
                                   f"to {vs_try}")
                             m[idx + split] = vs_try
                             break
@@ -228,7 +228,7 @@ class Base(object):
         # Optional initial step length override
         if PAR.STEPLENINIT and len(self.line_search.step_lens) <= 1:
             alpha = PAR.STEPLENINIT * norm_m / norm_p
-            print("\t\tstep length override due to PAR.STEPLENINIT")
+            print("\t\tStep length override due to PAR.STEPLENINIT")
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values

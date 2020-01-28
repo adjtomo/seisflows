@@ -41,14 +41,14 @@ class Bracket(Base):
         # For the first inversion and initial step, set alpha manually
         if step_count == 0 and update_count == 0:
             if self.verbose:
-                print("\t\tFirst inversion, initial trial step, continuing...")
+                print("\t\tFirst iteration, guessing trial step...")
             # Based on idea from Dennis and Schnabel
             alpha = gtg[-1] ** -1
             status = 0
         # For every i'th inversions initial step, set alpha manually
         elif step_count==0:
             if self.verbose:
-                print("\t\tInitial trial step, setting scaled step length")
+                print("\t\tFirst step, setting scaled step length")
             # Based on the first equation in sec 3.5 of Nocedal and Wright 2ed
             idx = np.argmin(self.func_vals[:-1])
             alpha = self.step_lens[idx] * gtp[-2] / gtp[-1]

@@ -478,7 +478,8 @@ class Base(object):
                                              str(span_h), str(span_v),
                                              f"{name}_kernel",
                                              os.path.join(input_path, ""),
-                                             os.path.join(output_path, "")]),
+                                             os.path.join(output_path, ""),
+                                             ".false"]),
                         output=output)
 
         # Rename output files
@@ -654,7 +655,7 @@ class Base(object):
 
         # Symlink taskid_0 as mainsolver in solver directory for convenience
         if self.taskid == 0: 
-             unix.ln(src, os.path.join("..", "mainsolver"))
+             unix.ln(self.source_name, os.path.join("..", "mainsolver"))
 
         self.check_solver_parameter_files()
 

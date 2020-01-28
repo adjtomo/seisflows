@@ -316,7 +316,7 @@ class Inversion(Base):
 
         solver.save(solver.split(optimize.load(src)), dst)
 
-    def write_gradient(self, path="", suffix=""):
+    def write_gradient(self, path, suffix=""):
         """
         Writes gradient in format expected by nonlinear optimization library
 

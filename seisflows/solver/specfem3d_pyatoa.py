@@ -223,7 +223,7 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         setpar("ATTENUATION ", ".false.")
         unix.rm("SEM")
         unix.ln("traces/adj", "SEM")
-        call_solver(mpiexec=system.mpiexec(), exectuable="bin/xspecfem3D")
+        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
 
     def check_solver_parameter_files(self):
         """

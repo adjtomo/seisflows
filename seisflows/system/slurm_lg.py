@@ -206,7 +206,7 @@ class SlurmLg(custom_import('system', 'base')):
             f"{classname}",
             f"{method}",
             f"{PAR.ENVIRONS}"
-            f"{SEISFLOWS_TASKID}=0"
+            f"SEISFLOWS_TASKID=0"
         ])
 
         stdout = check_output(run_call, shell=True)
