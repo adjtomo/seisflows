@@ -8,10 +8,10 @@ WarningOverwrite = """
 WARNING: Data from previous workflow found in working directory.
 
 To delete data and start a new workflow type:
-  sfclean; sfrun
+  seisflows restart
 
 To resume existing workflow type:
-  sfresume
+  sesiflows resume
 """
 
 FileError = """

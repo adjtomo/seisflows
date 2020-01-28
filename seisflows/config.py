@@ -39,7 +39,7 @@ def config():
     Instantiates SeisFlows objects and makes them globally accessible by
     registering them in sys.modules
     """
-    # Parameters and paths must already be loaded (normally done by sfsubmit)
+    # Parameters and paths must already be loaded (normally done by submit)
     assert('seisflows_parameters' in sys.modules)
     assert('seisflows_paths' in sys.modules)
 
