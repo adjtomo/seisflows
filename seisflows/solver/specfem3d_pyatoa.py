@@ -56,14 +56,14 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
             raise Exception()
         
         # VTK outputs
-        if "VTK_EVENT_KERNEL" not in PAR:
-            setattr(PAR, "VTK_EVENT_KERNEL", [])
+        if "VTK_EVENT_KERNELS" not in PAR:
+            setattr(PAR, "VTK_EVENT_KERNELS", [])
 
         if "VTK_SUM_NOSMOOTH_KERNEL" not in PAR:
-            setattr(PAR, "VTK_EVENT_KERNEL", [])
+            setattr(PAR, "VTK_SUM_NOSMOOTH_KERNEL", [])
 
-        if "VTK_GRADIENT_KERNEL" not in PAR:
-            setattr(PAR, "VTK_EVENT_KERNEL", [])
+        if "VTK_GRADIENT" not in PAR:
+            setattr(PAR, "VTK_GRADIENT", [])
 
     def setup(self):
         """

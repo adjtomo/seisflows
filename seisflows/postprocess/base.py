@@ -71,8 +71,8 @@ class Base(object):
                            parameters=parameters)
 
         # Create VTK files for gradients and kernels
-        if (PAR.VTK_EVENT_KERNEL and PAR.VTK_SUM_NOSMOOTH_KERNEL and
-            PAR.VTK_GRADIENT_KERNEL):
+        if (PAR.VTK_EVENT_KERNELS and PAR.VTK_SUM_NOSMOOTH_KERNEL and
+            PAR.VTK_GRADIENT):
             solver.combine_vol_data_vtk(input_path=path)
 
     def write_gradient(self, path):
