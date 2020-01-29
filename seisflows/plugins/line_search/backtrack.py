@@ -56,7 +56,7 @@ class Backtrack(Bracket):
                 alpha = min(1., self.step_len_max)
                 status = 0
             # Pass if misfit is reduced
-            elif _check_decrease(x, sf):
+            elif _check_decrease(x, f):
                 if self.vervose:
                     print("\t\tMisfit decrease, pass")
                 alpha = x[f.argmin()]
