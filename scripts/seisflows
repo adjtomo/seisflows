@@ -185,7 +185,8 @@ def clean(workdir):
     if check == "y":
         for fid in glob(os.path.join(workdir, "output*")):
             unix.rm(fid)
-        unix.rm(os.path.join(workdir, "error.log"))
+        for fid in glob(os.path.join(workdir, "*log*")):
+            unix.rm(fid)
         unix.rm(os.path.join(workdir, "scratch"))
         unix.rm(os.path.join(workdir, "pyatoa.io"))
 
@@ -221,10 +222,49 @@ def status(continuous):
     """
     Monitor the status of the workflow
 
+    %i job_id-[start-end]
+    %F job_id
+    %K array_start-array_end
+    %T extended job status e.g. RUNNING
+    %L time left
+    
     :type continuous: bool
     :param continous: keep an up to date status, rather than a one time print
     """
-    raise NotImplementedError 
+    from subprocess import check_output
+    
+    def chkout(arg):
+        """small wrapper for check_output
+        """
+        return check_output(arg, shell=True).decode("utf-8").strip()
+
+    args, paths, par = setup()
+    
+    if par["SYSTEM"] == "maui_lg":
+        output_log = glob.glob(os.path.join(args.workdir, "output*.log"))[0]
+        error_log = glob.glob(os.path.join(args.workdir, "error*.log"))[0]
+
+        base = (f"squeue --noheader --clusters={par['MAIN_CLUSTER']} "
+                f"--account={par['ACCOUNT']}")
+   
+        # Get the currently running job id
+        job_id = chkout(" ".join([base, "--name={par['TITLE'] -o %F"]))
+        job_id = job_id.split("\n")[0]
+        
+        # Determine if multiple jobs or single job running
+        array_check = chkout(" ".join([base, "--name={par['TITLE'] -o %K"]))
+        array_check = array_check.split("\n")[0]
+        # Single job running
+        if array_check == "N/A":
+            status = chkout(" ".join([base, "--job={job_id} -o '%T,%L'"]))
+            status = status.split("\n")[1]
+            status, timeleft = status.split(",")
+        # Multiple jobs running
+        else:
+            status = np.zeros(par['NTASK'])
+    else:
+        raise NotImplementedError(f"System {parameters['SYSTEM']} not "
+                                  f"supported")
 
 
 if __name__ == "__main__":

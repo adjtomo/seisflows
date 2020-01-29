@@ -98,7 +98,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
                   f"{flow[resume_idx].__name__})")
             for func in flow[resume_idx:]:
                 func()
-            print(f"finished iteration {optimize.iter} at {self.stopwatch()}\n")
+            print(f"FINISHED ITERATION {optimize.iter} AT {self.stopwatch()}\n")
             optimize.iter += 1
         else:
             # First-time intialization of the workflow
@@ -109,7 +109,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
             print(f"ITERATION {optimize.iter}")
             for func in flow:
                 func()
-            print(f"finished iteration {optimize.iter} at {self.stopwatch()}\n")
+            print(f"FINISHED ITERATION {optimize.iter} AT {self.stopwatch()}\n")
             self.stopwatch("time")
             optimize.iter += 1
 
@@ -255,7 +255,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         # Wait as long as it would reasonably take for a task to finish
         waited = 0
         wait_time_s = 10
-        while len(glob(src)) < PAR.NSRC:
+        while len(glob(src)) < PAR.NTASK:
             time.sleep(wait_time_s)
             waited += wait_time_s
             if waited >= (PAR.ANCIL_TASKTIME * 60) / 2:
@@ -270,7 +270,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
             os.remove(event)
 
         # Save the total misfit
-        total_misfit = total_misfit / PAR.NSRC
+        total_misfit = total_misfit / PAR.NTASK
         optimize.savetxt(dst, total_misfit)
 
 
