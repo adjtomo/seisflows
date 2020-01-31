@@ -605,7 +605,7 @@ class Base(object):
         pass
 
     # setup utilities
-    def initialize_solver_directories(self, symlink=True):
+    def initialize_solver_directories(self):
         """
         Setup Utility:
         Creates directory structure expected by SPECFEM3D, copies
@@ -613,16 +613,11 @@ class Base(object):
         by user as there is currently no mechanism for automatically
         compiling from source.
 
-        :type symlink: bool
-        :param symlink: symlinks critical components rather than copying.
-            This saves on storage requirements
+        Directories will act as completely indepedent Specfem run directories.
+        This allows for embarassing parallelization while avoiding the need 
+        for intra-directory commnunications, at the cost of redundancy and 
+        extra files
         """
-        # Determine which function to use when copying from Specfem directory
-        if symlink:
-            copy_func = unix.ln
-        else:
-            copy_func = unix.cp
-
         unix.mkdir(self.cwd)
         unix.cd(self.cwd)
 
@@ -639,19 +634,17 @@ class Base(object):
         # Copy exectuables
         src = glob(os.path.join(PATH.SPECFEM_BIN, '*'))
         dst = os.path.join('bin', '')
-        copy_func(src, dst)
+        unix.cp(src, dst)
 
         # Copy input files
         src = glob(os.path.join(PATH.SPECFEM_DATA, '*'))
         dst = os.path.join('DATA', '')
-        copy_func(src, dst)
+        unix.cp(src, dst)
 
         # Copy event source file and rename, work around symlink relative pathin
-        src = f"{self.source_prefix}_{self.source_name}"
-        if not symlink:
-            src = os.path.join("DATA", src)
+        src = os.path.join("DATA", f"{self.source_prefix}_{self.source_name}")
         dst = os.path.join("DATA", self.source_prefix)
-        copy_func(src, dst)
+        unix.cp(src, dst)
 
         # Symlink taskid_0 as mainsolver in solver directory for convenience
         if self.taskid == 0: 
