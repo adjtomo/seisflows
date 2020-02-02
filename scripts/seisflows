@@ -71,8 +71,7 @@ def parse(parameters):
             check = input(f"\nPAR.{key} is set to {item}, proceed? (y/[n]): ")
             if check != "y":
                 sys.exit(-1)
-            
-                
+
     return parsed_parameters
 
 
