@@ -85,21 +85,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
 
         # Allow workflow resume from a given mid-workflow location
         if PAR.RESUME_FROM:
-            # Determine the index that corresponds to the resume function named
-            for i, func in enumerate(flow):
-                if func.__name__ == PAR.RESUME_FROM:
-                    resume_idx = i
-                    break
-            else:
-                print("PAR.RESUME_FROM does not correspond to any workflow "
-                      "functions. Exiting...")
-                sys.exit(-1)
-            print(f"RESUME ITERATION {optimize.iter} (from function "
-                  f"{flow[resume_idx].__name__})")
-            for func in flow[resume_idx:]:
-                func()
-            print(f"FINISHED ITERATION {optimize.iter} AT {self.stopwatch()}\n")
-            optimize.iter += 1
+            self.resume_from(flow)
         else:
             # First-time intialization of the workflow
             self.setup()
@@ -112,6 +98,30 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
             print(f"FINISHED ITERATION {optimize.iter} AT {self.stopwatch()}\n")
             self.stopwatch("time")
             optimize.iter += 1
+
+    def resume_from(self, flow):
+        """
+        Resume the workflow from a given function. Unique function
+    
+        :type flow: list
+        :param flow: list of functions which comprise the full workflow
+        """ 
+        # Determine the index that corresponds to the resume function named
+        for i, func in enumerate(flow):
+            if func.__name__ == PAR.RESUME_FROM:
+                resume_idx = i
+                break
+        else:
+            print("PAR.RESUME_FROM does not correspond to any workflow "
+                  "functions. Exiting...")
+            sys.exit(-1)
+        print(f"RESUME ITERATION {optimize.iter} (from function "
+              f"{flow[resume_idx].__name__})")
+        
+        for func in flow[resume_idx:]:
+            func()
+        print(f"FINISHED ITERATION {optimize.iter} AT {self.stopwatch()}\n")
+        optimize.iter += 1
 
     def setup(self):
         """
