@@ -9,8 +9,6 @@ import sys
 import time
 from glob import glob
 
-import numpy as np
-from seisflows.tools import unix
 from seisflows.tools.tools import exists
 from seisflows.config import save
 from seisflows.workflow.base import Base
@@ -144,6 +142,20 @@ class Forward(Base):
         Writes information to disk so workflow can be resumed following a break
         """
         save()
+
+    def write_model(self, path="", suffix=""):
+        """
+        Writes model in format expected by solver
+
+        :type path: str
+        :param path: path to write the model to
+        :type suffix: str
+        :param suffix: suffix to add to the model
+        """
+        src = f"m_{suffix}"
+        dst = os.path.join(path, "model")
+
+        solver.save(solver.split(optimize.load(src)), dst)
 
     def write_misfit(self, path="", suffix=""):
         """
