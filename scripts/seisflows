@@ -157,7 +157,9 @@ def resume(debug=False):
     workflow = sys.modules["seisflows_workflow"]
     system = sys.modules["seisflows_system"]
 
-    if debug:
+    if not debug:
+        system.submit(workflow)
+    else:
         # Prematurely distribute modules for easier debugging
         PATH = sys.modules["seisflows_paths"]
         PAR = sys.modules["seisflows_parameters"]
@@ -166,10 +168,14 @@ def resume(debug=False):
         optimize = sys.modules["seisflows_optimize"]
         postprocess = sys.modules["seisflows_postprocess"]
         
-        # Open the debugger
-        import ipdb; ipdb.set_trace()
-    else:
-        system.submit(workflow)
+        # Import debugging options
+        import ipdb
+        from IPython import embed
+        # This is Seisflows' debug mode.
+        ipdb.set_trace(context=5)
+        embed(colors="Neutral")
+        # type 'n' to access a more useful IPython debugger.
+        # type 'workflow.checkpoint()' to save any changes made here.
 
 
 def clean(workdir):
