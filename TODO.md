@@ -1,4 +1,4 @@
-## For Version 2.1.0
+## For Version 1.2.0
 #### General
 - [ ] write unit tests
 - [ ] update docs to reflect the major changes made, include changelog
