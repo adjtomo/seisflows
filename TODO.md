@@ -25,6 +25,7 @@
 - [ ] Re-introduce Specfem2D and Specfem3D Globe solver classes
 
 #### Workflow
+- [ ] Incorporate mesh generation into `setup` for one-time mesh generation using Meshfem3D?
 - [ ] Add resume_from capability into Inversion base class
 - [ ] Finish updating migration and migration pyatoa, clean up forward
 - [ ] Thrifty Inversion, allow workflow to start from simulation after a resume call, using a user-defined parameter,
