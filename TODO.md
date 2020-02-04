@@ -1,4 +1,4 @@
-## 0.1.1
+## For next version 0.1.1
 #### General
 - [ ] write unit tests
 - [ ] update docs to reflect the major changes made, include changelog
@@ -27,20 +27,19 @@
 #### Workflow
 - [ ] Add resume_from capability into Inversion base class
 - [ ] Finish updating migration and migration pyatoa, clean up forward
-- [ ] 
 
 #### Scripts
 - [ ] add more descriptive help statements, maybe a step by step way to set up a
       run folder that asks the User to choose the parameters they want and fills
       in the parameter.yaml file and maybe also points them to the directories
       that require custom classes
-- [ ] include print statement for `submit` detailing important parameters such
--     as `ntasks`, `walltime`, `begin`, `end`
-- [ ] include print statement for `resume` detailing parameters such as `ntasks`,
--     `walltime`, `begin`, `end`, `resume_from`
-- [ ] create a `status` function to check on the status of jobs, maybe by 
+- [ ] include print statement for submit detailing important parameters such
+-     as ntasks, walltime, begin, end
+- [ ] include print statement for resume detailing parameters such as ntasks,
+-     walltime, begin, end, resume_from
+- [ ] create a status function to check on the status of jobs, maybe by 
 -     querying the output files. Try not to make it system dependent so that it
 -     can still be generally applicable to Seisflows
-- [ ] Move `convert_model` function into the util section of Seisflows
+- [ ] Move convert_model() function into the util section of Seisflows
 
 
