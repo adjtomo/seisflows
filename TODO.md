@@ -1,4 +1,4 @@
-**0.1.1
+## 0.1.1
 #### General
 - [ ] write unit tests
 - [ ] update docs to reflect the major changes made, include changelog
