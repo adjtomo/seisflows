@@ -1,4 +1,4 @@
-** 0.2.0
+**0.1.1
 #### General
 - [ ] write unit tests
 - [ ] update docs to reflect the major changes made, include changelog
@@ -14,10 +14,7 @@
       completely separate as Pyaflowa
 
 #### Plugins
-##### Note: I always found it really confusing that all of the optmization and 
-      line search machinery is set in plugins, and that the optimization base
-      class just calls a plugin to inherit its machinery. What was the purpose
-      of this and can it be cleaned up a little bit?
+##### Note: I always found it really confusing that all of the optmization and line search machinery is set in plugins, and that the optimization base class just calls a plugin to inherit its machinery. What was the purpose of this and can it be cleaned up a little bit?
 
 - [ ] Clean up the random plugins and maybe organize them better
 
