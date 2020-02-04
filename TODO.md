@@ -27,6 +27,10 @@
 #### Workflow
 - [ ] Add resume_from capability into Inversion base class
 - [ ] Finish updating migration and migration pyatoa, clean up forward
+- [ ] Thrifty Inversion, allow workflow to start from simulation after a resume call, using a user-defined parameter,
+      if the User hasn't changed anything in the parameter files. At the moment hitting the end of one set of tasks, 
+      e.g. iterations 2-5 and resuming from 6, forces forward simulations to be run again, even if nothing has changed
+      after iteration 5, which is a bit wasteful if you could jump straight into an adjoint simulation
 
 #### Scripts
 - [ ] add more descriptive help statements, maybe a step by step way to set up a
