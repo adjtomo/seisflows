@@ -1,4 +1,4 @@
-## 0.1.0
+## 1.1.0
 * Updated all syntax to Python3, changed import statements to reflect some 
   package namespace changes from Python2
 * Docstrings and parameter type and descriptions for all classes and functions
