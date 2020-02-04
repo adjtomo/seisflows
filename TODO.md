@@ -34,12 +34,12 @@
       in the parameter.yaml file and maybe also points them to the directories
       that require custom classes
 - [ ] include print statement for submit detailing important parameters such
--     as ntasks, walltime, begin, end
+      as ntasks, walltime, begin, end
 - [ ] include print statement for resume detailing parameters such as ntasks,
--     walltime, begin, end, resume_from
+      walltime, begin, end, resume_from
 - [ ] create a status function to check on the status of jobs, maybe by 
--     querying the output files. Try not to make it system dependent so that it
--     can still be generally applicable to Seisflows
+      querying the output files. Try not to make it system dependent so that it
+      can still be generally applicable to Seisflows
 - [ ] Move convert_model() function into the util section of Seisflows
 
 
