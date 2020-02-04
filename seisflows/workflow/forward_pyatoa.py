@@ -72,6 +72,8 @@ class ForwardPyatoa(custom_import("workflow", "forward")):
         system.run("solver", "setup")
         self.stopwatch("time")
 
+        self.prepare_model()
+
     def initialize(self):
         """
         Overwrite seisflows.workflow.inversion.intialize()
@@ -84,9 +86,7 @@ class ForwardPyatoa(custom_import("workflow", "forward")):
         """
         print("INITIALIZE")
         suffix_ = "new"
-        path_ = PATH.GRAD
-
-        self.write_model(path=path_, suffix=suffix_)
+        path_ = PATH.SCRATCH
 
         print("\tRunning forward simulation", end="... ")
         self.stopwatch("set")
@@ -95,12 +95,9 @@ class ForwardPyatoa(custom_import("workflow", "forward")):
 
         print("\tQuantifying misfit", end="... ")
         self.stopwatch("set")
-        self.pyaflowa.set(iteration=optimize.iter, step=0)
+        self.pyaflowa.set(iteration=0, step=0)
         system.run_ancil("solver", "eval_func", pyaflowa=self.pyaflowa)
         self.stopwatch("time")
-
-        print("\tWriting misfit")
-        self.write_misfit(suffix=suffix_)
 
     def write_misfit(self, suffix):
         """

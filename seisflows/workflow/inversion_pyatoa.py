@@ -96,7 +96,6 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
             for func in flow:
                 func()
             print(f"FINISHED ITERATION {optimize.iter} AT {self.stopwatch()}\n")
-            self.stopwatch("time")
             optimize.iter += 1
 
     def resume_from(self, flow):

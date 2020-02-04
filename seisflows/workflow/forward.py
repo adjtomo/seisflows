@@ -10,6 +10,7 @@ import time
 from glob import glob
 
 from seisflows.tools.tools import exists
+from seisflows.tools import unix
 from seisflows.config import save
 from seisflows.workflow.base import Base
 from seisflows.tools.err import ParameterError
@@ -122,8 +123,10 @@ class Forward(Base):
         preprocess.setup()
         print("Running solver", end="... ")
         self.stopwatch("set")
-        system.run("solver", "setup")
+        system.run("solver", "setup", path=PATH.SCRATCH)
         self.stopwatch("time")
+        
+        self.prepare_model()
 
     def initialize(self):
         """
@@ -143,19 +146,18 @@ class Forward(Base):
         """
         save()
 
-    def write_model(self, path="", suffix=""):
+    def prepare_model(self, path="", suffix=""):
         """
-        Writes model in format expected by solver
+        Names the initial model to be forwarded to solver
 
         :type path: str
         :param path: path to write the model to
         :type suffix: str
         :param suffix: suffix to add to the model
         """
-        src = f"m_{suffix}"
-        dst = os.path.join(path, "model")
-
-        solver.save(solver.split(optimize.load(src)), dst)
+        model = os.path.join(PATH.OUTPUT, "model_init")
+        assert(os.path.exists(model))
+        unix.cp(model, os.path.join(PATH.SCRATCH, "model"))
 
     def write_misfit(self, path="", suffix=""):
         """

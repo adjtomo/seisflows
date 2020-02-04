@@ -163,7 +163,6 @@ class Inversion(Base):
             self.finalize()
             self.clean()
             print(f"finished iteration {optimize.iter} at {self.stopwatch()}\n")
-            self.stopwatch("time")
             optimize.iter += 1
 
     def setup(self):
