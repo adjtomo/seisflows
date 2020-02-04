@@ -1,4 +1,4 @@
-## For next version 0.1.1
+## For next version 2.1.0
 #### General
 - [ ] write unit tests
 - [ ] update docs to reflect the major changes made, include changelog
