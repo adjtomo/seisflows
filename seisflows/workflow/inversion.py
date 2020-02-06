@@ -346,7 +346,7 @@ class Inversion(Base):
         :param suffix: suffix to add to the misfit
         """
         src = glob(os.path.join(path, "residuals", "*"))
-        dst = "f_{suffix}"
+        dst = f"f_{suffix}"
 
         total_misfit = preprocess.sum_residuals(src)
         optimize.savetxt(dst, total_misfit)
@@ -381,7 +381,7 @@ class Inversion(Base):
         functions to read
         """
         src = "m_new"
-        dst = os.path.join(PATH.OUTPUT, "model_{optimize.iter:04d}")
+        dst = os.path.join(PATH.OUTPUT, f"model_{optimize.iter:04d}")
         if PAR.SAVEAS in ["binary", "both"]:
             solver.save(solver.split(optimize.load(src)), dst)
         if PAR.SAVEAS in ["vector", "both"]:
@@ -392,7 +392,7 @@ class Inversion(Base):
         Save the kernel vector as a Fortran binary file
         """
         src = os.path.join(PATH.GRAD, "kernels")
-        dst = os.path.join(PATH.OUTPUT, "kernels_{optimize.iter:04d}")
+        dst = os.path.join(PATH.OUTPUT, f"kernels_{optimize.iter:04d}")
         unix.mv(src, dst)
 
     def save_traces(self):
@@ -400,7 +400,7 @@ class Inversion(Base):
         Save the traces
         """
         src = os.path.join(PATH.GRAD, "traces")
-        dst = os.path.join(PATH.OUTPUT, "traces_{optimize.iter:04d}")
+        dst = os.path.join(PATH.OUTPUT, f"traces_{optimize.iter:04d}")
         unix.mv(src, dst)
 
     def save_residuals(self):
@@ -408,6 +408,6 @@ class Inversion(Base):
         Save the residuals
         """
         src = os.path.join(PATH.GRAD, "residuals")
-        dst = os.path.join(PATH.OUTPUT, "residuals_{optimize.iter:04d}")
+        dst = os.path.join(PATH.OUTPUT, f"residuals_{optimize.iter:04d}")
         unix.mv(src, dst)
 
