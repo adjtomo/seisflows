@@ -1,5 +1,6 @@
 ## For Version 1.2.0
 #### General
+- [ ] consider using a logger rather than print statement updates
 - [ ] write unit tests
 - [ ] update docs to reflect the major changes made, include changelog
 - [ ] try to reconcile a `base` parameters.yaml file with `custom` attributes
