@@ -39,7 +39,7 @@
       run folder that asks the User to choose the parameters they want and fills
       in the parameter.yaml file and maybe also points them to the directories
       that require custom classes
-- [ ] include print statement for submit detailing important parameters such
+- [x] include print statement for submit detailing important parameters such
       as ntasks, walltime, begin, end
 - [ ] include print statement for resume detailing parameters such as ntasks,
       walltime, begin, end, resume_from
