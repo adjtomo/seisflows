@@ -1,12 +1,17 @@
 ## For Version 1.2.0
+#### Bugs
+- [ ] setattr after parameters have been set doesnt work
+
 #### General
 - [ ] consider using a logger rather than print statement updates
 - [ ] write unit tests
 - [ ] update docs to reflect the major changes made, include changelog
-- [ ] try to reconcile a `base` parameters.yaml file with `custom` attributes
+- [ ] try to reconcile a `base` parameters.yaml file with `custom` attributes, e.g. make a custom_parameters.yaml file to store all the non-standard parameters
 - [ ] create a simple pet 2D example (specfem2D acoustic checkerboard from Ryan)
       that can be run serial and can be used for testing of the base classes
 - [ ] Bring in all classes from Seisflows and update to Py3 w/ docstrings
+- [ ] Sanity checks before submitting workflow, not inside the workflow
+- [ ] incorporate Specfems mass event simulator to avoid N instances of database files, this would really help cut down on the total scratch file sized
 
 #### Preprocess
 - [ ] Finish updating to Py3 and writing full docstrings, better integration 
