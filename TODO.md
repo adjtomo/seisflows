@@ -48,7 +48,7 @@
 - [x] include print statement for submit detailing important parameters such
       as ntasks, walltime, begin, end
 - [ ] include print statement for resume detailing parameters such as ntasks,
-      walltime, begin, end, resume_from
+      walltime, begin, end, resume_from, allow for full print statement of all variables in a digestable way
 - [ ] create a status function to check on the status of jobs, maybe by 
       querying the output files. Try not to make it system dependent so that it
       can still be generally applicable to Seisflows
