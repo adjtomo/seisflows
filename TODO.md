@@ -54,5 +54,6 @@
       can still be generally applicable to Seisflows
 - [ ] Move convert_model() function into the util section of Seisflows
 - [ ] Sanity check that PAR.NTASKS <= number of sources in DATA, also list which events are being used or give the option to choose
-
+- [ ] Copy parameters.yaml into output/ on submit or resume so that if parameters change during an inversion, the user knows what the
+      input parameters were? Or can you save this to a dictionary somewhere?
 
