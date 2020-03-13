@@ -39,6 +39,7 @@
       e.g. iterations 2-5 and resuming from 6, forces forward simulations to be run again, even if nothing has changed
       after iteration 5, which is a bit wasteful if you could jump straight into an adjoint simulation
 - [ ] STOP_AT parameter for inversion, removes the need for a 'forward' workflow?
+- [ ] add workflow for minimum_resolvable_period which takes bin and DATA directories for NGLL5 and NGLL7 specfem and computes synthetics and compares them using pyatoa?
 
 #### Scripts
 - [ ] add more descriptive help statements, maybe a step by step way to set up a
