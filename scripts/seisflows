@@ -67,15 +67,11 @@ def parse(parameters):
             del parsed_parameters[key]
         elif key == "LINESEARCH":
             parsed_parameters[key] = item.capitalize()
-        elif key == "RESUME_FROM":
-            check = input(f"\nPAR.{key} is set to {item}, proceed? (y/[n]): ")
-            if check != "y":
-                sys.exit(-1)
 
     return parsed_parameters
 
 
-def setup():
+def setup(debug=False):
     """
     Common setup for multiple functions
     """
@@ -87,6 +83,8 @@ def setup():
 
     # Register parameters
     parameters = loadyaml(args.parameter_file)
+    if not debug:
+        print_parameters(parameters)
     parameters = parse(parameters)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
@@ -96,7 +94,30 @@ def setup():
         paths[key] = os.path.abspath(path)
     sys.modules['seisflows_paths'] = Dict(paths)
 
+
     return args, paths, parameters
+
+
+def print_parameters(par):
+    """
+    Print important arguments before beginning a workflow. This will ensure that
+    the User is aware of how key arguments are set that will have major affect
+    on the workflow.
+    """
+    msg = f"""
+      Beginning workflow "{par['TITLE']}"...
+          WORKFLOW: {par['WORKFLOW']}
+          BEGIN: {par['BEGIN']}
+          END: {par['END']}
+          RESUME_FROM: {par['RESUME_FROM']}
+          NTASK: {par['NTASK']}
+          WALLTIME: {par['WALLTIME']}
+          CASE: {par['CASE']}
+          """
+    print(msg)
+    check = input("Continue? (y/[n]): ")
+    if check != "y":
+        sys.exit(-1)
 
 
 def submit():
@@ -140,7 +161,7 @@ def resume(debug=False):
     :param debug: Do not submit the workflow, but rather open a debugger so the
         User can search and step through the workflow
     """
-    args, paths, parameters = setup()
+    args, paths, parameters = setup(debug)
 
     # Work directory should already be created
     unix.cd(args.workdir)
@@ -167,7 +188,26 @@ def resume(debug=False):
         solver = sys.modules["seisflows_solver"]
         optimize = sys.modules["seisflows_optimize"]
         postprocess = sys.modules["seisflows_postprocess"]
-        
+
+        def convert_model(model_fid):
+            """
+            convert model .npy to .bin files
+
+            :type model_fid: str
+            :param model_fid: the model that should be converted
+            """
+            src = os.path.join(PATH.OUTPUT, f"{model_fid}.npy")
+            dst = os.path.join(PATH.OUTPUT, model_fid)
+
+            if not os.path.exists(src):
+                print(f"{src} does not exist")
+                return
+            elif os.path.exists(dst):
+                print(f"{src} already exists")
+                return
+
+            solver.save(solver.split(np.load(src)), dst)
+            
         # Import debugging options
         import ipdb
         from IPython import embed
@@ -194,33 +234,6 @@ def clean(workdir):
             unix.rm(fid)
         unix.rm(os.path.join(workdir, "scratch"))
         unix.rm(os.path.join(workdir, "pyatoa.io"))
-
-
-def convert_model(solver, path_output, model_fid):
-    """
-    convert model .npy to .bin files
-
-    TODO:
-        figure out where to put this in seisflows
-
-    :type solver: module
-    :param solver: seisflows.solver
-    :type path_output: str
-    :param path_output: path to the 'output' directory where models are saved
-    :type model_fid: str
-    :param model_fid: the model that should be converted
-    """
-    src = os.path.join(path_output, f"{model_fid}.npy")
-    dst = os.path.join(path_output, model_fid)
-
-    if not os.path.exists(src):
-        print(f"{src} does not exist")
-        return
-    elif os.path.exists(dst):
-        print(f"{src} already exists")
-        return
-
-    solver.save(solver.split(np.load(src)), dst)
 
 
 def status(continuous):
