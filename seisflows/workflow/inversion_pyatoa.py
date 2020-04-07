@@ -53,6 +53,9 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         if "RESUME_FROM" not in PAR:
             setattr(PAR, "RESUME_FROM", None)
 
+        if "STOP_AT" not in PAR:
+            setattr(PAR, "STOP_AT", None)
+
         # Synthetic-synthetic examples require a true model to create the "data"
         if PAR.CASE == "Synthetic" and not exists(PATH.MODEL_TRUE):
             raise Exception()
@@ -95,6 +98,10 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
             print(f"ITERATION {optimize.iter}")
             for func in flow:
                 func()
+                # Stop the workflow at STOP_AT if requested
+                if PAR.STOP_AT and func.__name__ == PAR.STOP_AT:
+                    print(f"STOP ITERATION {optimize.iter} AT {PAR.STOP_AT}")
+                    break
             print(f"FINISHED ITERATION {optimize.iter} AT {self.stopwatch()}\n")
             optimize.iter += 1
 
@@ -165,12 +172,44 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
 
         print("\tQuantifying misfit", end="... ")
         self.stopwatch("set")
-        self.pyaflowa.set(iteration=optimize.iter, step=0)
+        self.pyaflowa.set(iteration=optimize.iter, step=0, fix_windows=False)
         system.run_ancil("solver", "eval_func", pyaflowa=self.pyaflowa)
         self.stopwatch("time")
 
         print("\tWriting misfit")
         self.write_misfit(suffix=suffix_)
+
+    def line_search(self):
+        """
+        Overwrite seisflows.workflow.inversion.line_search()
+
+        Same core function but adds the ability to toggle window fixing,
+        this allows retention of windows for each step.
+        """
+        print("LINE SEARCH\n\tinitializing line search")
+        optimize.initialize_search()
+
+        while True:
+            print(f"TRIAL STEP: {optimize.line_search.step_count + 1}")
+            self.evaluate_function()
+            status = optimize.update_search()
+            # Determine the outcome of the line search
+            if status > 0:
+                print("\tTrial step successful")
+                optimize.finalize_search()
+                break
+            elif status == 0:
+                print("\tRetrying with new trial step")
+                continue
+            elif status < 0:
+                if optimize.retry_status():
+                    print("\tLine search failed\n\n Retrying...")
+                    optimize.restart()
+                    self.line_search()
+                    break
+                else:
+                    print("\tLine search failed\n\n Aborting...")
+                    sys.exit(-1)
 
     def evaluate_function(self):
         """
@@ -178,7 +217,8 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
 
         This is the same function as intialize, however the input and output
         paths are different, to signify that this is executed at a different
-        section of the workflow
+        section of the workflow. Also allows for window fixing based on
+        User defined Pyatoa.fix_windows parameter.
         """
         suffix_ = "try"
         path_ = PATH.FUNC
@@ -193,7 +233,8 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         print("\tQuantifying misfit", end="... ")
         self.stopwatch("set")
         self.pyaflowa.set(iteration=optimize.iter,
-                          step=optimize.line_search.step_count + 1)
+                          step=optimize.line_search.step_count + 1,
+                          fix_windows=PAR.PYATOA["fix_windows"])
         system.run_ancil("solver", "eval_func", pyaflowa=self.pyaflowa)
         self.stopwatch("time")
 

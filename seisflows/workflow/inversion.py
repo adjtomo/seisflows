@@ -207,12 +207,12 @@ class Inversion(Base):
         optimize.compute_direction()
 
     def line_search(self):
-        """ Conducts line search in given search direction
-
-          Status codes
-              status > 0  : finished
-              status == 0 : not finished
-              status < 0  : failed
+        """
+        Conducts line search in given search direction
+        Status codes:
+            status > 0  : finished
+            status == 0 : not finished
+            status < 0  : failed
         """
         print("LINE SEARCH\n\tinitializing line search")
         optimize.initialize_search()
