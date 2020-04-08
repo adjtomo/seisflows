@@ -263,56 +263,32 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         if 'MULTIPLES' in PAR:
             raise NotImplementedError
 
-    def combine_vol_data_vtk(self, path):
+    def combine_vol_data_vtk(self, quantity, tag):
         """
-        Overwrites seisflows.solver.base.combine_vol_data_vtk
-
         Postprocessing wrapper: xcombine_vol_data_vtk
-
-        Note:
-            Default output of xcombine_vol_data_vtk will be named {quantity}.vtk
-            This will create vtk files for all event kernels
-
-        !!! should this be moved into base?
+        Used to create .vtk files of models, kernels etc.
         """
         # Create a directory for combining kernels
         unix.cd(self.cwd)
-        sum_dir = os.path.join(self.cwd, "SUM")
-        if not os.path.exists(sum_dir):
-            os.makedirs(sum_dir)
 
-        # Reused solver call
-        solver_call = " ".join([
-            f"{PATH.SPECFEM_BIN}/xcombine_vol_data_vtk",
-            f"0",  # NPROC_START
-            f"{PAR.NPROC}",  # NPROC_END
-            "{kernel}",  # QUANTITY
-            "{DIR_IN}",  # DIR_IN
-            "{DIR_OUT}",  # DIR_OUT
-            f"0"  # GPU ACCEL
-        ])
+        # Specfem outputs the summmed VTK file as the quantity
+        src = os.path.join(self.model_databases, f"{quantity}.vtk")
+        dst = os.path.join(PATH.OUTPUT, f"{quantity}_{tag}.vtk")
 
         # Parameters file determines which kernels are made into VTK files
-        if PAR.VTK_EVENT_KERNELS:
-            for kernel in PAR.VTK_EVENT_KERNELS:
-                # Symlink kernels into the output path
-                events = glob(os.path.join(PATH.GRAD, "kernels", "*"))
-                for event in events:
-                    # Deal with summed kernels separately
-                    if event not in ["sum", "sum_nosmooth"]:
-                        # symlink files into the SUM directory
-                        unix.ln(src=glob(os.path.join(event, f"*{kernel}*")),
-                                dst=sum_dir)
-                        # Run the xcombine_vol_data_vtk
-                        call_solver(mpiexec=system.mpiexec(),
-                                    executable=solver_call.format(kernel=kernel,
-                                                                  dir_in=event,
-                                                                  dir_out=event)
-                                    )
-                        # Unfinished, how do I remove the symlinks and leave the
-                        # VTK file, I need to rename it also and move it away
-                        # Can I wrap this into a function?
-                        unix.rm(glob(os.path.join(event, f"*{kernel}*")))
+        call_solver(mpiexec=system.mpiexec(),
+                    executable=" ".join([
+                        f"{PATH.SPECFEM_BIN}/xcombine_vol_data_vtk",
+                        f"0",  # NPROC_START
+                        f"{PAR.NPROC}",  # NPROC_END
+                        "{quantity}",  # QUANTITY
+                        "{path}",  # DIR_IN
+                        "{path}",  # DIR_OUT
+                        f"0"  # GPU ACCEL
+                        ])
+                    )
+
+        unix.mv(src, dst)
 
     @property
     def kernel_databases(self):
@@ -337,5 +313,4 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         :return: source prefix
         """
         return "CMTSOLUTION"
-       
-          
+

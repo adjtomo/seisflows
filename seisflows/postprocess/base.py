@@ -70,11 +70,6 @@ class Base(object):
             solver.combine(input_path=path, output_path=f"{path}/sum",
                            parameters=parameters)
 
-        # Create VTK files for gradients and kernels
-        if (PAR.VTK_EVENT_KERNELS and PAR.VTK_SUM_NOSMOOTH_KERNEL and
-            PAR.VTK_GRADIENT):
-            solver.combine_vol_data_vtk(input_path=path)
-
     def write_gradient(self, path):
         """
         Combines contributions from individual sources and material parameters

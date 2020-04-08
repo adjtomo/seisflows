@@ -94,7 +94,6 @@ def setup(debug=False):
         paths[key] = os.path.abspath(path)
     sys.modules['seisflows_paths'] = Dict(paths)
 
-
     return args, paths, parameters
 
 
