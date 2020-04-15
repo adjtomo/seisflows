@@ -172,7 +172,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
 
         print("\tQuantifying misfit", end="... ")
         self.stopwatch("set")
-        self.pyaflowa.set(iteration=optimize.iter, step=0, fix_windows=False)
+        self.pyaflowa.set(iteration=optimize.iter, step=0)
         system.run_ancil("solver", "eval_func", pyaflowa=self.pyaflowa)
         self.stopwatch("time")
 
@@ -233,8 +233,8 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         print("\tQuantifying misfit", end="... ")
         self.stopwatch("set")
         self.pyaflowa.set(iteration=optimize.iter,
-                          step=optimize.line_search.step_count + 1,
-                          fix_windows=PAR.PYATOA["fix_windows"])
+                          step=optimize.line_search.step_count + 1
+                          )
         system.run_ancil("solver", "eval_func", pyaflowa=self.pyaflowa)
         self.stopwatch("time")
 
@@ -265,7 +265,8 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         print("\tFinalizing Pyatoa", end="... ")
         self.stopwatch("set")
         self.pyaflowa.set(iteration=optimize.iter,
-                          step=optimize.line_search.step_count)
+                          step=optimize.line_search.step_count
+                          )
         self.pyaflowa.finalize()
         self.stopwatch("time")
 

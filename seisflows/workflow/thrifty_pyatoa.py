@@ -30,6 +30,17 @@ class ThriftyPyatoa(custom_import('workflow', 'inversion_pyatoa')):
     # Instanstiate the status attribute
     status = 0
 
+    def check(self):
+        """
+        Checks parameters and paths
+        """
+        # Run Base class checks
+        super(ThriftyPyatoa, self).check()
+
+        # Signifiy if data-synth. or synth.-synth. case
+        if "FORCE_THRIFTY" not in PAR:
+            setattr(PAR, "FORCE_THRIFTY", False)
+
     def initialize(self):
         """
         If line search can be carried over, skip initialization step
@@ -40,11 +51,22 @@ class ThriftyPyatoa(custom_import('workflow', 'inversion_pyatoa')):
         else:
             print("THRIFTY INITIALIZE")
 
-    def clean(self):
+    def clean(self, status=None):
         """
         Determine if forward simulation from line search can be carried over
+        Allow manual control over status, so that the User can force a clean    
+        Useful, e.g. if you force a thrifty inversion at PAR.END but end up 
+        changing some parameters.
+    
+        :type status: int
+        :param status: 0 or 1, 0 means default Inversion, clean scratch 
+                               1 means Thrifty Inversion, do not clean 
         """
-        self.update_status()
+        if status is None:
+            self.update_status()
+        else:
+            self.status = status
+        
         if self.status == 1:
             print("THRIFTY CLEAN")
             unix.rm(PATH.GRAD)
@@ -60,27 +82,28 @@ class ThriftyPyatoa(custom_import('workflow', 'inversion_pyatoa')):
         print("THRIFTY STATUS")
         # Only works for backtracking line search
         if PAR.LINESEARCH != "Backtrack":
-            print("\t Line search not 'Backtrack', cannot run thrifty")
+            print("\t Line search not 'Backtrack', cannot run ThriftyInversion")
             self.status = 0
-        # May not work on first iteration
-        elif optimize.iter == PAR.BEGIN:
-            print("\t First iteration of workflow, defaulting to inversion")
+        # May not work on first iteration, allow force if no parameters changed
+        elif optimize.iter == 1:
+            print("\t L-BFGS requires 2 gradient evaluations for scaling, "
+                  "defaulting to Inversion")
             self.status = 0
         # May not work following restart
         elif optimize.restarted:
-            print("\t Optimization has been restarted, defaulting to inversion")
+            print("\t Optimization has been restarted, defaulting to Inversion")
             self.status = 0
         # May not work after resuming saved workflow
-        elif optimize.iter == PAR.END:
-            print("\t End of workflow, defaulting to inversion")
+        elif optimize.iter == PAR.END and not PAR.FORCE_THRIFTY:
+            print("\t End of workflow, defaulting to Inversion")
             self.status = 0
         # May not work if using local filesystems
         elif PATH.LOCAL:
-            print("\t Local filesystem, cannot run thrifty")
+            print("\t Local filesystem, cannot run ThriftyInversion")
             self.status = 0
         # Otherwise, continue with thrifty inversion
         else:
-            print("\t Continuing with thrifty inversion")
+            print("\t Continuing with ThriftyInversion")
             self.status = 1
 
 
