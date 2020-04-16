@@ -221,6 +221,7 @@ class Base(object):
         # Optional step length safeguard
         if PAR.STEPLENMAX:
             self.line_search.step_len_max = PAR.STEPLENMAX * norm_m / norm_p
+            print(f"\t\tStep length max {self.line_search.step_len_max}")
 
         # Determine initial step length
         alpha, _ = self.line_search.initialize(0., f, gtg, gtp)
