@@ -18,6 +18,8 @@ from seisflows.tools.tools import exists
 from seisflows.config import custom_import
 from seisflows.tools.seismic import call_solver, getpar, setpar
 
+from pyatoa.plugins.new_zealand.process import preproc
+
 # Seisflows configuration
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -195,7 +197,8 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         """
         if PAR.VERBOSE:
             print(f"{self.__class__.__name__}.eval_func() => calling Pyatoa...")
-        pyaflowa.process(cwd=self.cwd, event_id=self.source_name)
+        pyaflowa.process(cwd=self.cwd, event_id=self.source_name,
+                         overwrite=preproc)
     
     def forward(self, path='traces/syn'):
         """

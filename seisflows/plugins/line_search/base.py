@@ -90,10 +90,33 @@ class Base(object):
         self.gtg = []
         self.gtp = []
 
+    def reset(self):
+        """
+        If a line search fails mid-search, and the User wants to resume from 
+        the line search function. Initialize will be called again. This function
+        undos the progress made by the previous line search so that a new line
+        search can be called without problem.
+
+        output.optim needs to have its lines cleared manually
+        """
+        # Wind back dot products by one
+        self.gtg = self.gtg[:-1]
+        self.gtp = self.gtp[:-1]
+        
+        # Move step lens and function evaluations by number of step count
+        original_idx = -1 * self.step_count - 1
+        self.step_lens = self.step_lens[:original_idx]
+        self.func_vals = self.func_vals[:original_idx]
+        
+        # Step back the writer as initialize() will step it forward 
+        self.writer.iter -= 1
+
     def search_history(self, sort=True):
         """
-        A convenience function, collects information needed to determine
-        search status and calculate step length
+        A convenience function, collects information based on the current
+        evaluation of the line search, needed to determine search status and 
+        calculate step length. From the full collection of the search history,
+        only returns values relevant to the current line search.
 
         :type sort: bool
         :param sort: sort the search history by step length
@@ -108,7 +131,7 @@ class Base(object):
         :rtype i: int
         :return i: step_count
         :rtype j: int
-        :return j: number of step lengths that are zero
+        :return j: number of iterations corresponding to 0 step length
         """
         i = self.step_count
         j = count_zeros(self.step_lens) - 1
@@ -139,7 +162,8 @@ class Writer(object):
     """
     def __init__(self, path="./output.optim"):
         """
-        Initiate the Writer class
+        Initiate the Writer class. Internally used `iter` variable references
+        the current iteration of the workflow.
 
         :type path: str
         :param path: path to the file that the writer will write to
