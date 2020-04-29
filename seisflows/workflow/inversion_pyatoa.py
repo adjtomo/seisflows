@@ -53,8 +53,8 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
         if "RESUME_FROM" not in PAR:
             setattr(PAR, "RESUME_FROM", None)
 
-        if "STOP_AT" not in PAR:
-            setattr(PAR, "STOP_AT", None)
+        if "STOP_AFTER" not in PAR:
+            setattr(PAR, "STOP_AFTER", None)
 
         # Synthetic-synthetic examples require a true model to create the "data"
         if PAR.CASE == "Synthetic" and not exists(PATH.MODEL_TRUE):
@@ -98,9 +98,9 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
             print(f"ITERATION {optimize.iter}")
             for func in flow:
                 func()
-                # Stop the workflow at STOP_AT if requested
-                if PAR.STOP_AT and func.__name__ == PAR.STOP_AT:
-                    print(f"STOP ITERATION {optimize.iter} AT {PAR.STOP_AT}")
+                # Stop the workflow at STOP_AFTER if requested
+                if PAR.STOP_AFTER and func.__name__ == PAR.STOP_AFTER:
+                    print(f"STOP ITERATION {optimize.iter} AT {PAR.STOP_AFTER}")
                     break
             print(f"FINISHED ITERATION {optimize.iter} AT {self.stopwatch()}\n")
             optimize.iter += 1
