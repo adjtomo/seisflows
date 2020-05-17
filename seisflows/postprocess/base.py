@@ -62,7 +62,7 @@ class Base(object):
         if PAR.SMOOTH_H > 0:
             solver.combine(input_path=path, output_path=f"{path}/sum_nosmooth",
                            parameters=parameters)
-
+            print(f"\tSmoothing gradient: H={PAR.SMOOTH_H}, V={PAR.SMOOTH_V}")
             solver.smooth(input_path=f"{path}/sum_nosmooth",
                           output_path=f"{path}/sum", parameters=parameters,
                           span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)

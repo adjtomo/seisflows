@@ -123,6 +123,12 @@ class MauiLg(custom_import('system', 'slurm_lg')):
             unix.mv(src=glob(os.path.join(f"{log}*.log")), 
                     dst=os.path.join(PATH.WORKDIR, "logs")
                     )
+        
+        # Copy the parameter.yaml file into the log directoroy
+        par_copy = f"parameters_{PAR.BEGIN}-{PAR.END}.yaml"
+        unix.cp(src="parameters.yaml", 
+                dst=os.path.join(PATH.WORKDIR, "logs", par_copy)
+                )
                     
         workflow.checkpoint()
 

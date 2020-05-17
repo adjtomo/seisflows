@@ -109,6 +109,7 @@ def print_parameters(par):
           BEGIN: {par['BEGIN']}
           END: {par['END']}
           RESUME_FROM: {par['RESUME_FROM']}
+          STOP_AFTER: {par['STOP_AFTER']}
           NTASK: {par['NTASK']}
           WALLTIME: {par['WALLTIME']}
           CASE: {par['CASE']}
