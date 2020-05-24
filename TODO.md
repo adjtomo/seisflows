@@ -13,6 +13,7 @@
 - [ ] Sanity checks before submitting workflow, not inside the workflow
 - [ ] incorporate Specfems mass event simulator to avoid N instances of database files, this would really help cut down on the total scratch file sized
 - [ ] Split up output.slurm by iteration
+- [ ] line_search.Writer should not have its own iter, it should take iteration number from optimize
 
 #### Preprocess
 - [ ] Finish updating to Py3 and writing full docstrings, better integration 
