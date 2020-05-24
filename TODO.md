@@ -1,4 +1,12 @@
 ## For Version 1.2.0
+
+#### Structural change considerations:
+- [ ] Can we do away with the custom_import() function and simply include direct import statements? This would reduce clutter and make code easier to read, current system obscures where import statements point. If the argument is that custom_import() includes custom error messages, incorrect import statements would also raise informative ImportErrors that will point the User to the correct location.  
+- [ ] Why is the core functionality of Optimize split into optimize and plugins.optimize, can these two be reconciled? It makes the code harder to follow when you have to jump between these two directories to understand a single module.  
+- [ ] Why is line_search a plugin when it is called directly in the initilaization of optimize.Base, it seems it is no longer a plugin but core functionality of the package and should be relabelled so. Perhaps the line_search directory can be dropped into the optimize directory  
+- [ ] Following up on the above two points, it feels like the entire 'plugins' directory is just a 'miscellaneous' directory. Most of the functionality located I feel could be relocated to more fitting locations that would make more sense than a catch-all plugin directory  
+
+
 #### Bugs
 - [ ] setattr after parameters have been set doesnt work
 
