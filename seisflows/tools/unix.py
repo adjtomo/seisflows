@@ -42,7 +42,7 @@ def cp(src='', dst=''):
     """
     if isinstance(src, (list, tuple)):
         if len(src) > 1:
-            assert os.path.isdir(dst)
+            assert os.path.isdir(dst), "unexpected type for unix.cp 'dst'"
         for sub in src:
             cp(sub, dst)
         return
@@ -113,7 +113,7 @@ def mv(src='', dst=''):
     """
     if isinstance(src, (list, tuple)):
         if len(src) > 1:
-            assert os.path.isdir(dst)
+            assert os.path.isdir(dst), "unexpected type for 'dst' in unix.mv"
         for sub in src:
             mv(sub, dst)
         return
