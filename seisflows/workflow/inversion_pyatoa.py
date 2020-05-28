@@ -140,13 +140,23 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
             print("SETUP\n\tPerforming module setup")
             postprocess.setup()
             optimize.setup()
+            solver.initialize_solver_directories()
 
             print("\tInitializing Pyaflowa")
             self.pyaflowa = Pyaflowa(pars=vars(PAR), paths=vars(PATH))
 
+            if PAR.CASE == "Synthetic":
+                # If synthetic-synthetic case, need to generate synthetic data
+                print("\tGenerating synthetic data", end="... ")
+                self.stopwatch("set")
+                system.run_single("solver", "setup", "true")
+                system.run("solver", "generate_data")
+                self.stopwatch("time")
+
+            # Generate the mesh files to be used for the initial model
             print("\tPreparing initial model", end="... ")
             self.stopwatch("set")
-            system.run("solver", "setup")
+            system.run_single("solver", "setup")
             self.stopwatch("time")
 
     def initialize(self):

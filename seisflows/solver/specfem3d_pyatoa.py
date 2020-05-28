@@ -54,44 +54,34 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
             raise Exception("'FORMAT' not specified in parameters file")
 
         # Currently Pyatoa only works with ASCII
-        if PAR.FORMAT not in ["ascii"]:
-            raise Exception()
-        
-        # VTK outputs
-        if "VTK_EVENT_KERNELS" not in PAR:
-            setattr(PAR, "VTK_EVENT_KERNELS", [])
+        acceptable_formats = ["ascii"]
+        if PAR.FORMAT not in acceptable_formats:
+            raise Exception(f"'FORMAT' must be in {acceptable_formats}")
 
-        if "VTK_SUM_NOSMOOTH_KERNEL" not in PAR:
-            setattr(PAR, "VTK_SUM_NOSMOOTH_KERNEL", [])
-
-        if "VTK_GRADIENT" not in PAR:
-            setattr(PAR, "VTK_GRADIENT", [])
-
-    def setup(self):
+    def setup(self, model="init"):
         """
-        Overload of solver.base.setup
+        Overload of solver.base.setup(), should be run as a single instance
 
         Removes the need to move data around as Pyatoa takes care of data
         fetching within eval_func.
 
         Allows for synthetic-synthetic cases
-        """
-        # Clean up for new inversion
-        unix.rm(self.cwd)
-        self.initialize_solver_directories()
-        
-        # If synthetic case, create synthetic observations
-        if PAR.CASE == "Synthetic":
-            self.generate_data(model_path=PATH.MODEL_TRUE,
-                               model_name="model_true", model_type="gll")
 
-        # Prepare initial model
-        self.generate_mesh(model_path=PATH.MODEL_INIT, 
-                           model_name="model_init", model_type="gll")
+        :type case: str
+        :param case: "syn" or "data"
+        :type model: str
+        :param model: model to setup, either 'true' or 'init'
+        """   
+        if model == "true":
+            self.generate_mesh(model_path=PATH.MODEL_TRUE,
+                               model_name="model_true", model_type="gll")
+        elif model == "init":
+            self.generate_mesh(model_path=PATH.MODEL_INIT, 
+                               model_name="model_init", model_type="gll")
 
     def generate_data(self, **model_kwargs):
         """
-        Overload seisflows.solver.base.generate_data
+        Overload seisflows.solver.base.generate_data. To be run in parallel
         
         Not used if PAR.CASE == "Data"
 
@@ -103,22 +93,18 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         !!! attenuation could be moved into parameters.yaml? !!!
         """
         # Prepare for the forward simulation
-        self.generate_mesh(**model_kwargs)
         if PAR.VERBOSE:
             print(f"{self.__class__.__name__}.generate_data()")
 
         unix.cd(self.cwd)
         setpar("SIMULATION_TYPE", "1")
-        setpar("SAVE_FORWARD", ".true.")
+        setpar("SAVE_FORWARD", ".false.")
         setpar("ATTENUATION ", ".true.")
         call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
 
-        # ASCII .sem? output format
-        if PAR.FORMAT == "ascii":
-            unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*sem?")),
-                    dst="traces/obs")
-        else:
-            raise NotImplementedError("Pyatoa only works with ascii")
+        # move ASCII .sem? files into appropriate directory
+        unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*sem?")),
+                dst="traces/obs")
 
         # Export traces to permanent storage on disk
         if PAR.SAVETRACES:
@@ -126,13 +112,14 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
 
     def generate_mesh(self, model_path, model_name, model_type='gll'):
         """
-        Performs meshing and database generation
+        Performs meshing and database generation as a serial task.
 
         Note:
-            Specfem model files must be copied to individual solver directory
-            If not, Fortran I/O errors will occur when multiple processes try to
-            read from the same .bin file. This means that during the workflow 
-            there will be large disk requirements due to redundant files.
+            Specfem model files must exist in each individual solver directory
+            If symlinked, Fortran I/O errors will occur when multiple processes 
+            try to read from the same .bin file. 
+            This means that during the workflow there will be large disk 
+            requirements due to redundant files in scratch.
 
         :type model_path: str
         :param model_path: path to the model to be used for mesh generation
@@ -142,37 +129,40 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         :param model_type: available model types to be passed to the Specfem3D
             Par_file. See Specfem3D Par_file for available options.
         """
+        assert(exists(model_path)), f"model {model_path} does not exist"
         available_model_types = ["gll"]
+        assert(model_type in available_model_types), \
+            f"{model_type} not in available types {available_model_types}"
+
+        # Ensure this is only run by taskid 0, mainsolver
+        cwd = os.path.join(PATH.SOLVER, self.mainsolver)
 
         if PAR.VERBOSE:
             print(f"{self.__class__.__name__}.generate_mesh()")
 
-        unix.cd(self.cwd)
-
         # Run mesh generation
-        assert(exists(model_path))
-        if model_type in available_model_types:
-            par = getpar("MODEL").strip()
-            if par == "gll":
-                self.check_mesh_properties(model_path)
-                
-                # Copy model files 
-                src = glob(os.path.join(model_path, "*"))
-                dst = self.model_databases
-                unix.cp(src, dst)
+        unix.cd(cwd)
+        par = getpar("MODEL").strip()
+        if par == "gll":
+            self.check_mesh_properties(model_path)
+            
+            # Copy model files and then run xgenerate databases
+            src = glob(os.path.join(model_path, "*"))
+            dst = self.model_databases
+            unix.cp(src, dst)
+            call_solver(mpiexec=system.mpiexec(),
+                        executable="bin/xgenerate_databases")
+            
+            # Remove VT? files, they aren't necessary and take up space
+            unix.rm(glob(os.path.join("OUTPUT_FILES", "DATABASES_MPI" "*.vt?")))
 
-                call_solver(mpiexec=system.mpiexec(),
-                            executable="bin/xgenerate_databases")
-                
-                # Remove VT? files, they aren't necessary and take up space
-                for fid in glob(os.path.join(self.model_databases, "*.vt?")):
-                    os.remove(fid)
-
-            # Export the model for future use in the workflow
-            if self.taskid == 0:
-                self.export_model(os.path.join(PATH.OUTPUT, model_name))
-        else:
-            raise NotImplementedError(f"MODEL={model_type} not implemented")
+        # Copy the database files into all the other solvers
+        src = glob(os.path.join("OUTPUT_FILES", "DATABASES_MPI", "*"))
+        for source_name in self.source_names:
+            if source_name == self.mainsolver:
+                continue
+            dst = os.path.join(source_name, "OUTPUT_FILES", "DATABASES_MPI", "")
+            unix.cp(src, dst)
 
     def eval_fwd(self, path=''):
         """
@@ -211,20 +201,15 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         :param path: path to export traces to after completion of simulation
         """
         # Set parameters and run forward simulation
-        setpar('SIMULATION_TYPE', '1')
-        setpar('SAVE_FORWARD', '.true.')
-        setpar('ATTENUATION ', '.true.')
+        setpar("SIMULATION_TYPE", "1")
+        setpar("SAVE_FORWARD", ".true.")
+        setpar("ATTENUATION ", ".true.")
         call_solver(mpiexec=system.mpiexec(),
-                    executable='bin/xgenerate_databases')
-        call_solver(mpiexec=system.mpiexec(), executable='bin/xspecfem3D')
+                    executable="bin/xgenerate_databases")
+        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
 
-        # Seismic unix output format
-        if PAR.FORMAT in ['SU', 'su']:
-            unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*_d?_SU")), dst=path)
-
-        # ascii sem output format
-        elif PAR.FORMAT == "ascii":
-            unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*sem?")), dst=path)
+        # Only works with ASCII file format
+        unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*sem?")), dst=path)
 
     def adjoint(self):
         """
@@ -240,28 +225,26 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
 
     def check_solver_parameter_files(self):
         """
-        Checks solver parameters
+        Checks solver parameters for inconsistencies, should be called as
+        a serial task
         """
         nt = getpar(key="NSTEP", cast=int)
         dt = getpar(key="DT", cast=float)
 
         if nt != PAR.NT:
-            if self.taskid == 0:
-                warnings.warn("Specfem3D NSTEP != PAR.NT\n"
-                              "overwriting Specfem3D with Seisflows parameter"
-                              )
+            warnings.warn("Specfem3D NSTEP != PAR.NT\n"
+                          "overwriting Specfem3D with Seisflows parameter"
+                          )
             setpar(key="NSTEP", val=PAR.NT)
 
         if dt != PAR.DT:
-            if self.taskid == 0:
-                warnings.warn("Specfem3D DT != PAR.DT\n"
-                              "overwriting Specfem3D with Seisflows parameter"
-                              )
+            warnings.warn("Specfem3D DT != PAR.DT\n"
+                          "overwriting Specfem3D with Seisflows parameter"
+                          )
             setpar(key="DT", val=PAR.DT)
 
         if self.mesh_properties.nproc != PAR.NPROC:
-            if self.taskid == 0:
-                warnings.warn("Specfem3D mesh nproc != PAR.NPROC")
+            warnings.warn("Specfem3D mesh nproc != PAR.NPROC")
 
         if 'MULTIPLES' in PAR:
             raise NotImplementedError
@@ -271,6 +254,7 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         Postprocessing wrapper: xcombine_vol_data_vtk
         Used to create .vtk files of models, kernels etc.
         """
+        raise NotImplementedError
         # Create a directory for combining kernels
         unix.cd(self.cwd)
 
@@ -292,6 +276,49 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
                     )
 
         unix.mv(src, dst)
+
+    def initialize_solver_directories(self):
+        """
+        Overwrite solver.base.initialize_solver_directories()
+
+        Creates solver directories in serial.
+
+        Should be run by master job, copies the necessary data and creates the 
+        necessary file structure for all events.
+        """
+        for source_name in self.source_names:
+            cwd = os.path.join(PATH.SOLVER, self.source_name)
+            # Remove any existing scratch directory 
+            unix.rm(cwd)
+
+            # Create internal directory structure
+            unix.mkdir(cwd)
+            for cwd_dir in ["bin", "DATA", "OUTPUT_FILES/DATABASES_MPI", 
+                            "traces/obs", "traces/syn", "traces/adj"]:
+                unix.mkdir(os.path.join(cwd, cwd_dir))
+
+            # Copy exectuables
+            src = glob(os.path.join(PATH.SPECFEM_BIN, "*"))
+            dst = os.path.join(cwd, "bin", "")
+            unix.cp(src, dst)
+
+            # Copy all input files except source files
+            src = glob(os.path.join(PATH.SPECFEM_DATA, "*"))
+            src = [_ for _ in src if not self.source_prefix in _]
+            dst = os.path.join("DATA", "")
+            unix.cp(src, dst)
+
+            # symlink event source specifically
+            src = os.path.join(PATH.SPECFEM_DATA, 
+                               f"{self.source_prefix}_{source_name}")
+            dst = os.path.join("DATA", self.source_prefix)
+            unix.ln(src, dst)
+
+            if source_name == self.mainsolver: 
+                # Symlink taskid_0 as mainsolver in solver directory
+                unix.ln(source_name, os.path.join(PATH.SOLVER, "mainsolver"))
+                # Only check the solver parameters once
+                self.check_solver_parameter_files()
 
     @property
     def kernel_databases(self):
@@ -316,4 +343,11 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         :return: source prefix
         """
         return "CMTSOLUTION"
+
+    @property
+    def mainsolver(self):
+        """
+        Ensure that the main solver has a consistent reference inside Solver
+        """
+        return self.source_names[0]
 
