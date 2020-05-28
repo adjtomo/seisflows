@@ -142,7 +142,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
             optimize.setup()
 
             print("\tInitializing Pyaflowa")
-            self.pyaflowa = Pyaflowa(par=vars(PAR), paths=vars(PATH))
+            self.pyaflowa = Pyaflowa(pars=vars(PAR), paths=vars(PATH))
 
             print("\tPreparing initial model", end="... ")
             self.stopwatch("set")
