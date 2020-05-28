@@ -125,21 +125,22 @@ class Base(object):
         # Prepare output logs
         self.writer = Writer(path=os.path.join(PATH.WORKDIR, "output.stats"))
 
-        # Prepare scratch directory
+        # Prepare scratch directory and save initial model
         unix.mkdir(PATH.OPTIMIZE)
-        if 'MODEL_INIT' in PATH:
+        if "MODEL_INIT" in PATH:
             solver = sys.modules['seisflows_solver']
-            self.save('m_new', solver.merge(solver.load(PATH.MODEL_INIT)))
+            m_new = solver.merge(solver.load(PATH.MODEL_INIT))
+            self.check_model_parameters(m_new)
+            self.save('m_new', m_new)
 
     def compute_direction(self):
         """
         Computes search direction
 
         Note:
-        This function implements steepest descent, for other algorithms,
-        simply overload this method
+            This function implements steepest descent, for other algorithms,
+            simply overload this method
         """
-
         g_new = self.load('g_new')
         if self.precond:
             p_new = -self.precond(g_new)
@@ -147,58 +148,52 @@ class Base(object):
             p_new = -g_new
         self.save('p_new', p_new)
     
-    def threshold_model(self, m):
+    def check_model_parameters(self, m):
         """
-        Make sure that their are no outlier model values that will cause 
-        errors during the execution of the Specfem binaries
-
-        -this function probably doesn't belong here, should be moved to solver?
-        -allow reassignment of Vp rather than Vs, what is most realistic?
-        -generalize function to allow for Lame parameter definitions
+        Check to ensure that the model parameters fall within the guidelines 
+        of the solver. Print off min/max model parameters for the User.
         
         :type m: np.array
         :param m: model to be thresholded
         :rtype: np.array
         :return: thresholded model
         """
-        # determine the number of splits in the model vector based on the chosen
-        # simulation parameters, 'Variable' density means rho included in 'm'
+        # Distribute the model parameters based on the type of inversion
         if PAR.MATERIALS == "Elastic":
             if PAR.DENSITY == "Constant":
-                split = int(len(m) / 2)
+                vp, vs = np.split(m, 2)
+                rho = None
             else:
-                split = int(len(m) / 3)
-            
-            # The model vector is just a linear vector of model parameters
-            vp = m[0:split]
-            vs = m[split:2*split]
-            assert(len(vp) == len(vs))
+                # include density in the model vector
+                vp, vs, rho = np.split(m, 3)
+        else:
+            vp = m
+            vs = rho = None
 
+        # Check the Poisson's ratio based on Specfem3D upper/lower bounds
+        if vp and vs:
             poissons = poissons_ratio(vp=vp, vs=vs)
-        
-            # These boundary values are set by the Specfem source code
-            negative_outliers = np.where(poissons < -1.)[0]
-            positive_outliers = np.where(poissons > 0.5)[0] 
-            outliers = np.concatenate([negative_outliers, positive_outliers]) 
-            print(f"\t\t{len(outliers)} outlier(s) found "
-                  f"for Poissons ratio bounds")
-            
-            # !!! Should we allow reassignment of Vp? 
-            # For each outlier, reassign values of Vs to acceptable bounds
-            if outliers.any():   
-                vs_max_values = np.sort(vs)[::-1] 
-                for idx in outliers:
-                    vp_ = m[idx]
+            if (poissons.min() < -1) or (poissons.max() > 0.5):
+                msg = f"""
+                
+                ERROR CHECKING MODEL PARAMETERS
 
-                    # Loop through the largest values of Vs until Poisson's 
-                    # ratio criteria is met, set in place in m
-                    for vs_try in vs_max_values:
-                        if -1 < poissons_ratio(vp_, vs_try) < 0.5:
-                            print(f"\t\t\tReassigning vs={m[idx + split]} "
-                                  f"to {vs_try}")
-                            m[idx + split] = vs_try
-                            break
-        return m
+                    The Poisson's ratio is out of bounds with respect to the 
+                    bounds set by Specfem3D (-1, 0.5). This will cause an error 
+                    in the process xgenerate_databases. The model bounds were 
+                    found to be:
+
+                    {poissons.min():.2f} < PR < {poissons.max():.2f}
+
+                """
+                sys.exit(-1)
+
+        # Tell the User min and max values of the updated model
+        print("\t\tModel Parameters")
+        msg = "\t\t\t{minval:.2f} <= {val} <= {maxval:.2f}"
+        for val, tag in zip([vp, vs, rho], ["Vp", "Vs", "rho"]):
+            if val is not None:
+                print(msg.format(minval=val.min(), val=tag, maxval=val.max()))
 
     def initialize_search(self):
         """
@@ -233,11 +228,15 @@ class Base(object):
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
-        m_try = self.threshold_model(m + alpha * p)
+        m_try = m + alpha * p
+
+        # Check the new model and update the User on a few parameters
+        self.check_model_parameters(m_try)
  
-        # Write model corresponding to chosen step length
-        self.savetxt("alpha", alpha)
+         # Write model corresponding to chosen step length
         self.save("m_try", m_try)
+        self.savetxt("alpha", alpha)
+
 
     def update_search(self):
         """
@@ -256,7 +255,8 @@ class Base(object):
             m = self.load("m_new")
             p = self.load("p_new")
             self.savetxt("alpha", alpha)
-            m_try = self.threshold_model(m + alpha * p)
+            m_try = m + alpha * p
+            self.check_model_parameters(m_try)
             self.save("m_try", m_try)
 
         return status
@@ -281,27 +281,27 @@ class Base(object):
             for fid in ["m_old", "f_old", "g_old", "p_old", "s_old"]:
                 unix.rm(fid)
 
-        # Rename current model parameters to '_old' for new search
-        unix.mv('m_new', 'm_old')
-        unix.mv('f_new', 'f_old')
-        unix.mv('g_new', 'g_old')
-        unix.mv('p_new', 'p_old')
+        # Rename current model parameters to "_old" for new search
+        unix.mv("m_new", "m_old")
+        unix.mv("f_new", "f_old")
+        unix.mv("g_new", "g_old")
+        unix.mv("p_new", "p_old")
 
         # Setup the current model parameters
-        unix.mv('m_try', 'm_new')
-        self.savetxt('f_new', f.min())
+        unix.mv("m_try", "m_new")
+        self.savetxt("f_new", f.min())
 
         # Output latest statistics
-        self.writer('factor',
+        self.writer("factor",
                     -self.dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0]))
-        self.writer('gradient_norm_L1', np.linalg.norm(g, 1))
-        self.writer('gradient_norm_L2', np.linalg.norm(g, 2))
-        self.writer('misfit', f[0])
-        self.writer('restarted', self.restarted)
-        self.writer('slope', (f[1] - f[0]) / (x[1] - x[0]))
-        self.writer('step_count', self.line_search.step_count)
-        self.writer('step_length', x[f.argmin()])
-        self.writer('theta', 180. * np.pi ** -1 * angle(p, -g))
+        self.writer("gradient_norm_L1", np.linalg.norm(g, 1))
+        self.writer("gradient_norm_L2", np.linalg.norm(g, 2))
+        self.writer("misfit", f[0])
+        self.writer("restarted", self.restarted)
+        self.writer("slope", (f[1] - f[0]) / (x[1] - x[0]))
+        self.writer("step_count", self.line_search.step_count)
+        self.writer("step_length", x[f.argmin()])
+        self.writer("theta", 180. * np.pi ** -1 * angle(p, -g))
 
         self.line_search.writer.newline()
 
@@ -311,8 +311,8 @@ class Base(object):
         by checking, in effect, if the search direction was the same as gradient
         direction
         """
-        g = self.load('g_new')
-        p = self.load('p_new')
+        g = self.load("g_new")
+        p = self.load("p_new")
         theta = angle(p,-g)
 
         if PAR.VERBOSE:

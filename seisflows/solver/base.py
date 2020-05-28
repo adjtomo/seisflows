@@ -501,7 +501,7 @@ class Base(object):
         :type path: str
         :param path: path to model
         """
-        model = self.load(path+'/'+'model')
+        model = self.load(os.path.join(path, "model"))
         self.save(model, self.model_databases)
 
     def import_traces(self, path):
@@ -622,33 +622,42 @@ class Base(object):
         unix.cd(self.cwd)
 
         # Create directory structure
-        unix.mkdir('bin')
-        unix.mkdir('DATA')
-        unix.mkdir('OUTPUT_FILES')
-        unix.mkdir('traces/obs')
-        unix.mkdir('traces/syn')
-        unix.mkdir('traces/adj')
+        unix.mkdir("bin")
+        unix.mkdir("DATA")
+        unix.mkdir("OUTPUT_FILES")
+        unix.mkdir("traces/obs")
+        unix.mkdir("traces/syn")
+        unix.mkdir("traces/adj")
         unix.mkdir(self.model_databases)
         unix.mkdir(self.kernel_databases)
 
         # Copy exectuables
-        src = glob(os.path.join(PATH.SPECFEM_BIN, '*'))
-        dst = os.path.join('bin', '')
+        src = glob(os.path.join(PATH.SPECFEM_BIN, "*"))
+        dst = os.path.join("bin", "")
         unix.cp(src, dst)
 
-        # Copy input files
-        src = glob(os.path.join(PATH.SPECFEM_DATA, '*'))
-        dst = os.path.join('DATA', '')
+        # Copy all input files except source files
+        src = glob(os.path.join(PATH.SPECFEM_DATA, "*"))
+        src = [_ for _ in src if not _.startswith(self.source_prefix)]
+        dst = os.path.join("DATA", "")
         unix.cp(src, dst)
 
-        # Copy event source file and rename, work around symlink relative pathin
-        src = os.path.join("DATA", f"{self.source_prefix}_{self.source_name}")
+        # symlink event source specifically
+        src = os.path.join(PATH.SPECFEM_DATA, 
+                           f"{self.source_prefix}_{self.source_name}")
         dst = os.path.join("DATA", self.source_prefix)
-        unix.cp(src, dst)
+        unix.ln(src, dst)
 
-        # Symlink taskid_0 as mainsolver in solver directory for convenience
         if self.taskid == 0: 
-             unix.ln(self.source_name, os.path.join("..", "mainsolver"))
+            # Symlink taskid_0 as mainsolver in solver directory for convenience
+            unix.ln(self.source_name, os.path.join(PATH.SOLVER, "mainsolver"))
+        else:
+            # Copy the initial model from mainsolver into current directory
+            # Avoids the need to run multiple instances of xgenerate_databases
+            src = os.path.join(PATH.SOLVER, "mainsolver", "OUTPUT_FILES", 
+                               "DATABASES_MPI")
+            dst = os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
+            unix.cp(src, dst)
 
         self.check_solver_parameter_files()
 
@@ -682,11 +691,10 @@ class Base(object):
         :type path: str
         :param path: path to the mesh file
         """
-        # Check the path
-        if not path:
-            path = PATH.MODEL_INIT
+        # Check the given model path or the initial model
+        path = path or PATH.MODEL_INIT
         if not exists(path):
-            raise Exception
+            raise FileNotFoundError(f"Mesh path {path} does not exist")
 
         # Count slices and grid points
         key = self.parameters[0]

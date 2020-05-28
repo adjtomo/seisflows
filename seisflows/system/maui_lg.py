@@ -148,26 +148,6 @@ class MauiLg(custom_import('system', 'slurm_lg')):
         ])
         call(submit_call)
 
-    def prep_openmp(self, subprocess_call):
-        """
-        OpenMP requires some initial exports before sbatch command can be run
-        This function will append these to the 'check_output' call that 'run'
-        and 'run_single' use
-
-        :type subprocess_call: str
-        :param subprocess_call: the string that is passed to check_output
-        :rtype: str
-        :return: a prepended call with the correct export statements
-        """
-        prepended_call = " ".join([
-                    "export OMP_NUM_THREADS={PAR.CPUS_PER_TASK};",
-                    "export OMP_PROC_BIND=true;",
-                    "export OMP_PLACES=cores;",
-                    subprocess_call
-                    ])
-        
-        return prepended_call
-
     def run(self, classname, method, scale_tasktime=1, *args, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on the
