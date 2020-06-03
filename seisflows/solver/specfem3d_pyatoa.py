@@ -287,19 +287,21 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         necessary file structure for all events.
         """
         for source_name in self.source_names:
-            cwd = os.path.join(PATH.SOLVER, self.source_name)
+            cwd = os.path.join(PATH.SOLVER, source_name)
             # Remove any existing scratch directory 
             unix.rm(cwd)
 
-            # Create internal directory structure
+            # Create internal directory structure, change into directory to make
+            # all actions RELATIVE path actions
             unix.mkdir(cwd)
+            unix.cd(cwd)
             for cwd_dir in ["bin", "DATA", "OUTPUT_FILES/DATABASES_MPI", 
                             "traces/obs", "traces/syn", "traces/adj"]:
-                unix.mkdir(os.path.join(cwd, cwd_dir))
+                unix.mkdir(cwd_dir)
 
             # Copy exectuables
             src = glob(os.path.join(PATH.SPECFEM_BIN, "*"))
-            dst = os.path.join(cwd, "bin", "")
+            dst = os.path.join("bin", "")
             unix.cp(src, dst)
 
             # Copy all input files except source files

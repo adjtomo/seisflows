@@ -136,6 +136,7 @@ class MauiLg(custom_import('system', 'slurm_lg')):
         submit_call = " ".join([
             f"sbatch {PAR.SLURMARGS}",
             f"--account={PAR.ACCOUNT}",
+            f"--cluster={PAR.ANCIL_CLUSTER}",
             f"--partition={PAR.ANCIL_PARTITION}",
             f"--job-name=main_{PAR.TITLE}",  # main_ prefix means master
             f"--output={output_log}-%A.log",
@@ -320,7 +321,7 @@ class MauiLg(custom_import('system', 'slurm_lg')):
         stdout = check_output(run_call, shell=True)
 
         # Keep track of job ids
-        jobs = self.job_id_list(stdout, 1)
+        jobs = self.job_id_list(stdout, PAR.NTASK)
 
         # Check for job completion status
         check_status_error = 0

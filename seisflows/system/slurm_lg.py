@@ -222,14 +222,6 @@ class SlurmLg(custom_import('system', 'base')):
             if isdone:
                 return
 
-    def run_ancil(self):
-        """
-        Special run call to use Python on maui_ancil
-
-        !!! To be implemented by subclass MauiLg !!!
-        """
-        raise NotImplementedError
-
     def mpiexec(self):
         """
         Specifies MPI executable used to invoke solver
