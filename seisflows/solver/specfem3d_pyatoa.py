@@ -67,8 +67,10 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
 
         Allows for synthetic-synthetic cases
 
-        :type case: str
-        :param case: "syn" or "data"
+        :type model: str
+        :param model: "init", "true", generates the mesh to be used for workflow
+            "true" used for synthetic-synthetic cases
+            "init" for initial model, default
         :type model: str
         :param model: model to setup, either 'true' or 'init'
         """   
@@ -134,14 +136,13 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         assert(model_type in available_model_types), \
             f"{model_type} not in available types {available_model_types}"
 
-        # Ensure this is only run by taskid 0, mainsolver
-        cwd = os.path.join(PATH.SOLVER, self.mainsolver)
-
         if PAR.VERBOSE:
             print(f"{self.__class__.__name__}.generate_mesh()")
 
-        # Run mesh generation
+        # Ensure this is only run by taskid 0, mainsolver
+        cwd = os.path.join(PATH.SOLVER, self.mainsolver)
         unix.cd(cwd)
+
         par = getpar("MODEL").strip()
         if par == "gll":
             self.check_mesh_properties(model_path)
@@ -153,16 +154,6 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
             call_solver(mpiexec=system.mpiexec(),
                         executable="bin/xgenerate_databases")
             
-            # Remove VT? files, they aren't necessary and take up space
-            unix.rm(glob(os.path.join("OUTPUT_FILES", "DATABASES_MPI" "*.vt?")))
-
-        # Copy the database files into all the other solvers
-        src = glob(os.path.join("OUTPUT_FILES", "DATABASES_MPI", "*"))
-        for source_name in self.source_names:
-            if source_name == self.mainsolver:
-                continue
-            dst = os.path.join(source_name, "OUTPUT_FILES", "DATABASES_MPI", "")
-            unix.cp(src, dst)
 
     def eval_fwd(self, path=''):
         """
@@ -187,8 +178,7 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         """
         if PAR.VERBOSE:
             print(f"{self.__class__.__name__}.eval_func() => calling Pyatoa...")
-        pyaflowa.eval_func(cwd=self.cwd, event_id=self.source_name,
-                           overwrite=preproc)
+        pyaflowa.eval_func(event_id=self.source_name, overwrite=preproc)
     
     def forward(self, path='traces/syn'):
         """
@@ -248,6 +238,34 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
 
         if 'MULTIPLES' in PAR:
             raise NotImplementedError
+
+    def distribute_databases(self):
+        """
+        A serial task to distrubute the database files outputted by 
+        xgenerate_databases from main solver to all solver directories
+        """
+        # Copy the database files but ignore any vt? files
+        src_db = glob(os.path.join(PATH.SOLVER, self.mainsolver, 
+                                   "OUTPUT_FILES", "DATABASES_MPI", "*"))
+        for extension in [".vtu", ".vtk"]:
+            src_db = [_ for _ in src_db if extension not in _] 
+    
+        # Copy the .h files from the mesher, Specfem needs these as well
+        src_h = glob(os.path.join(PATH.SOLVER, self.mainsolver, 
+                                   "OUTPUT_FILES", "*.h"))
+
+        for source_name in self.source_names:
+            # Ensure main solver is skipped
+            if source_name == self.mainsolver:
+                continue
+            # Copy database files
+            dst_db = os.path.join(PATH.SOLVER, source_name, 
+                                  "OUTPUT_FILES", "DATABASES_MPI", "")
+            unix.cp(src_db, dst_db)
+
+            # Copy mesher h files
+            dst_h = os.path.join(PATH.SOLVER, source_name, "OUTPUT_FILES", "")
+            unix.cp(src_h, dst_h)
 
     def combine_vol_data_vtk(self, quantity, tag):
         """
