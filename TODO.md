@@ -11,6 +11,7 @@
 
 #### Bugs
 - [ ] setattr after parameters have been set doesnt work
+- [ ] unix.rename will rename the entire file path, which can get dicey if e.g. 'smooth' is in the path and postprocess tries to rename the kernels from _smooth to ''
 
 #### General
 - [ ] consider using a logger rather than print statement updates
