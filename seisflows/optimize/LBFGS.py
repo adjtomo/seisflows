@@ -6,14 +6,14 @@ It supercedes the `seisflows.optimize.base` class
 import sys
 import numpy as np
 
-from seisflows.optimize.base_optimize import BaseOptimize
+from seisflows.optimize.base import Base
 from seisflows.plugins import optimize
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class LBFGS(BaseOptimize):
+class LBFGS(Base):
     """
     The Limited memory BFGS algorithm
     Calls upon seisflows.plugin.optimize.LBFGS to accomplish LBFGS algorithm

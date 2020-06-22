@@ -130,8 +130,8 @@ class Base(object):
         if "MODEL_INIT" in PATH:
             solver = sys.modules['seisflows_solver']
             m_new = solver.merge(solver.load(PATH.MODEL_INIT))
-            self.check_model_parameters(m_new)
-            self.save('m_new', m_new)
+            self.save("m_new", m_new)
+            self.check_model_parameters(m_new, "m_new")
 
     def compute_direction(self):
         """
@@ -148,50 +148,51 @@ class Base(object):
             p_new = -g_new
         self.save('p_new', p_new)
     
-    def check_model_parameters(self, m):
+    def check_model_parameters(self, m, tag):
         """
         Check to ensure that the model parameters fall within the guidelines 
         of the solver. Print off min/max model parameters for the User.
         
         :type m: np.array
-        :param m: model to be thresholded
-        :rtype: np.array
-        :return: thresholded model
+        :param m: model to check parameters of 
+        :type tag: str
+        :param tag: tag of the model to be used for more specific error msgs
         """
+        vp, vs, rho, poissons = None, None, None, None
         # Distribute the model parameters based on the type of inversion
         if PAR.MATERIALS == "Elastic":
             if PAR.DENSITY == "Constant":
                 vp, vs = np.split(m, 2)
-                rho = None
             else:
                 # include density in the model vector
                 vp, vs, rho = np.split(m, 3)
         else:
             vp = m
-            vs = rho = None
 
         # Check the Poisson's ratio based on Specfem3D upper/lower bounds
-        if vp and vs:
+        if vp is not None and vs is not None:
             poissons = poissons_ratio(vp=vp, vs=vs)
             if (poissons.min() < -1) or (poissons.max() > 0.5):
                 msg = f"""
                 
                 ERROR CHECKING MODEL PARAMETERS
 
-                    The Poisson's ratio is out of bounds with respect to the 
-                    bounds set by Specfem3D (-1, 0.5). This will cause an error 
-                    in the process xgenerate_databases. The model bounds were 
-                    found to be:
+                    The Poisson's ratio of '{tag}' is out of bounds with respect 
+                    to the range defined by Specfem3D (-1, 0.5). This will cause 
+                    an error in the process xgenerate_databases. The model 
+                    bounds were found to be:
 
                     {poissons.min():.2f} < PR < {poissons.max():.2f}
 
                 """
+                print(msg)
                 sys.exit(-1)
 
         # Tell the User min and max values of the updated model
         print("\t\tModel Parameters")
         msg = "\t\t\t{minval:.2f} <= {val} <= {maxval:.2f}"
-        for val, tag in zip([vp, vs, rho], ["Vp", "Vs", "rho"]):
+        for val, tag in zip([vp, vs, rho, poissons], 
+                            ["Vp", "Vs", "rho", "Poissons"]):
             if val is not None:
                 print(msg.format(minval=val.min(), val=tag, maxval=val.max()))
 
@@ -230,13 +231,12 @@ class Base(object):
         # gradient threshold to remove any outlier values
         m_try = m + alpha * p
 
-        # Check the new model and update the User on a few parameters
-        self.check_model_parameters(m_try)
- 
          # Write model corresponding to chosen step length
         self.save("m_try", m_try)
         self.savetxt("alpha", alpha)
 
+        # Check the new model and update the User on a few parameters
+        self.check_model_parameters(m_try, "m_try")
 
     def update_search(self):
         """
@@ -256,8 +256,8 @@ class Base(object):
             p = self.load("p_new")
             self.savetxt("alpha", alpha)
             m_try = m + alpha * p
-            self.check_model_parameters(m_try)
             self.save("m_try", m_try)
+            self.check_model_parameters(m_try, "m_try")
 
         return status
 

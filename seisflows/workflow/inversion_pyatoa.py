@@ -149,7 +149,8 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
                 # If synthetic-synthetic case, need to generate synthetic data
                 print("\tGenerating synthetic data", end="... ")
                 self.stopwatch("set")
-                system.run_single("solver", "setup", "true")
+                system.run_single("solver", "setup", model="true")
+                solver.distribute_databases()
                 system.run("solver", "generate_data")
                 self.stopwatch("time")
 
@@ -157,6 +158,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
             print("\tPreparing initial model", end="... ")
             self.stopwatch("set")
             system.run_single("solver", "setup")
+            solver.distribute_databases()
             self.stopwatch("time")
 
     def initialize(self):
