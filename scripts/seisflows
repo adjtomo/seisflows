@@ -113,6 +113,7 @@ def print_parameters(par):
           NTASK: {par['NTASK']}
           WALLTIME: {par['WALLTIME']}
           CASE: {par['CASE']}
+          SMOOTH H,V: {par['SMOOTH_H']}, {par['SMOOTH_V']}
           """
     print(msg)
     check = input("Continue? (y/[n]): ")

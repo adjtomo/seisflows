@@ -178,7 +178,9 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         """
         if PAR.VERBOSE:
             print(f"{self.__class__.__name__}.eval_func() => calling Pyatoa...")
-        pyaflowa.eval_func(event_id=self.source_name, overwrite=preproc)
+        pyaflowa.eval_func(event_id=self.source_name, preclean=False)
+        # pyaflowa.eval_func(event_id=self.source_name, overwrite=preproc, 
+        #                    preclean=False)
     
     def forward(self, path='traces/syn'):
         """
