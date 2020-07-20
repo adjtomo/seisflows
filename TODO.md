@@ -7,6 +7,7 @@
 - [ ] Following up on the above two points, it feels like the entire 'plugins' directory is just a 'miscellaneous' directory. Most of the functionality located I feel could be relocated to more fitting locations that would make more sense than a catch-all plugin directory  
 - [ ] Can we have a single run_checks() function within the sfsubmit function that checks all parameter requirements from individual modules. At the moment the master job needs to be submitted and running, and even multiple jobs might need to be submitted before a parameter check happens for a given module, which if set incorrectly can crash a run. 
 - [ ] The disk storage requirements for a large scale run can be excessive with the need for N_events database directories. Thats almost 1Tb of disk storage for 250 events using a 10s mesh. I think its vital that we start using Specfem's simultaneous run ability to drastically reduce the temporary storage costs as well as prepare Seisflows for scalability.
+- [ ] Rename the Base classes to be more specific, e.g. SolverBase, can be confusing if all Base classes are named the same thing.
 
 
 #### Bugs
