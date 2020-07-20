@@ -58,7 +58,7 @@ class InversionPyatoa(custom_import('workflow', 'inversion')):
 
         # Synthetic-synthetic examples require a true model to create the "data"
         if PAR.CASE == "Synthetic" and not exists(PATH.MODEL_TRUE):
-            raise Exception()
+            raise Exception("CASE == Synthetic requires PATH.MODEL_TRUE")
 
         # Pyatoa specific paths
         if "PYATOA_IO" not in PATH:

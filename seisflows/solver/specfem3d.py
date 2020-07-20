@@ -50,15 +50,16 @@ class Specfem3D(custom_import('solver', 'base')):
             raise Exception("'DT' not specified in parameters file")
 
         if "F0" not in PAR:
-            raise Exception("'F0' not specified in praameters file")
+            raise Exception("'F0' not specified in parameters file")
 
         # Check data format for Specfem3D
         if "FORMAT" not in PAR:
             raise Exception("'FORMAT' not specified in parameters file")
 
-        acceptable_formats = ["su", "SU"]
-        if PAR.FORMAT not in acceptable_formats:
+        acceptable_formats = ["SU", "ASCII"]
+        if PAR.FORMAT.upper() not in acceptable_formats:
             raise Exception(f"'FORMAT' must be {acceptable_formats}")
+
 
     def generate_data(self, **model_kwargs):
         """
@@ -66,19 +67,29 @@ class Specfem3D(custom_import('solver', 'base')):
 
         :param model_kwargs: keyword arguments to pass to `generate_mesh`
         """
+        if PAR.VERBOSE:
+            print(f"{self.__class__.__name__}.generate_data()")
+
         # Create the mesh
         self.generate_mesh(**model_kwargs)
 
         # Run the Forward simulation
         unix.cd(self.cwd)
-        setpar('SIMULATION_TYPE', '1')
-        setpar('SAVE_FORWARD', '.true.')
-        call_solver(mpiexec=system.mpiexec(), executable='bin/xspecfem3D')
+
+        setpar("SIMULATION_TYPE", "1")
+        setpar("SAVE_FORWARD", ".true.")
+        setpar("ATTENUATION ", ".true.")
+
+        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
 
         # Move output waveforms into holding directory
-        if PAR.FORMAT in ['SU', 'su']:
-            unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*_d?_SU")),
-                    dst=os.path.join("traces", "obs"))
+        if PAR.FORMAT.upper() == "SU":
+            tag = "*_d?_SU"
+        elif PAR.FORMAT.upper() == "ASCII":
+            tag = "*sem?"
+
+        unix.mv(src=glob(os.path.join("OUTPUT_FILES", tag)), 
+                dst=os.path.join("traces", "obs"))
 
         # Export traces to disk for permanent storage
         if PAR.SAVETRACES:
@@ -96,32 +107,34 @@ class Specfem3D(custom_import('solver', 'base')):
         :param model_type: available model types to be passed to the Specfem3D
             Par_file. See Specfem3D Par_file for available options.
         """
+        assert(exists(model_path)), f"model {model_path} does not exist"
+
         available_model_types = ["gll"]
+        assert(model_type in available_model_types), \
+            f"{model_type} not in available types {available_model_types}"
+
+        if PAR.VERBOSE:
+            print(f"{self.__class__.__name__}.generate_mesh()")
 
         self.initialize_solver_directories()
         unix.cd(self.cwd)
 
         # Run mesh generation
-        assert(exists(model_path))
-        if model_type in available_model_types:
-            par = getpar("MODEL").strip()
-            if par == "gll":
-                self.check_mesh_properties(model_path)
+        par = getpar("MODEL").strip()
+        if par == "gll":
+            self.check_mesh_properties(model_path)
 
-                src = glob(os.path.join(model_path, "*"))
-                dst = self.model_databases
-                unix.cp(src, dst)
+            src = glob(os.path.join(model_path, "*"))
+            dst = self.model_databases
+            unix.cp(src, dst)
 
-                call_solver(mpiexec=system.mpiexec(),
-                            executable="bin/xmeshfem3D")
-                call_solver(mpiexec=system.mpiexec(),
-                            executable="bin/xgenerate_databases")
+            call_solver(mpiexec=system.mpiexec(), executable="bin/xmeshfem3D")
+            call_solver(mpiexec=system.mpiexec(), 
+                        executable="bin/xgenerate_databases")
 
-            # Export the model for future use in the workflow
-            if self.taskid == 0:
-                self.export_model(os.path.join(PATH.OUTPUT, model_name))
-        else:
-            raise NotImplementedError(f"MODEL={par} not implemented")
+        # Export the model for future use in the workflow
+        if self.taskid == 0:
+            self.export_model(os.path.join(PATH.OUTPUT, model_name))
 
     def eval_func(self, *args, **kwargs):
         """
@@ -132,7 +145,7 @@ class Specfem3D(custom_import('solver', 'base')):
         # Work around SPECFEM3D conflicting name conventions
         self.rename_data()
 
-    def forward(self, path='traces/syn'):
+    def forward(self, path="traces/syn"):
         """
         Calls SPECFEM3D forward solver, exports solver outputs to traces dir
 
@@ -140,27 +153,30 @@ class Specfem3D(custom_import('solver', 'base')):
         :param path: path to export traces to after completion of simulation
         """
         # Set parameters and run forward simulation
-        setpar('SIMULATION_TYPE', '1')
-        setpar('SAVE_FORWARD', '.true.')
+        setpar("SIMULATION_TYPE", "1")
+        setpar("SAVE_FORWARD", ".true.")
+        setpar("ATTENUATION ", ".true.")
+
         call_solver(mpiexec=system.mpiexec(),
-                    executable='bin/xgenerate_databases')
-        call_solver(mpiexec=system.mpiexec(), executable='bin/xspecfem3D')
+                    executable="bin/xgenerate_databases")
+        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
 
         # Find and move output traces
-        if PAR.FORMAT in ['SU', 'su']:
-            unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*_d?_SU")), dst=path)
+        if PAR.FORMAT.upper() == "SU":
+            unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*_d?_SU")), 
+                    dst=path)
 
     def adjoint(self):
         """
         Calls SPECFEM3D adjoint solver, creates the `SEM` folder with adjoint
         traces which is required by the adjoint solver
         """
-        setpar('SIMULATION_TYPE', '3')
-        setpar('SAVE_FORWARD', '.false.')
-        setpar('ATTENUATION ', '.false.')
-        unix.rm('SEM')
-        unix.ln('traces/adj', 'SEM')
-        call_solver(mpiexec=system.mpiexec(), executable='bin/xspecfem3D')
+        setpar("SIMULATION_TYPE", "3")
+        setpar("SAVE_FORWARD", ".false.")
+        setpar("ATTENUATION ", ".false.")
+        unix.rm("SEM")
+        unix.ln("traces/adj", "SEM")
+        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
 
     def check_solver_parameter_files(self):
         """
@@ -225,7 +241,7 @@ class Specfem3D(custom_import('solver', 'base')):
         Specfem3D's uses different name conventions for regular traces
         and 'adjoint' traces
         """
-        if PAR.FORMAT in ['SU', 'su']:
+        if PAR.FORMAT.upper == "SU":
             files = glob(os.path.join(self.cwd, "traces", "adj", "*SU"))
             unix.rename(old='_SU', new='_SU.adj', names=files)
 

@@ -190,9 +190,6 @@ class MauiLg(custom_import('system', 'slurm_lg')):
             f"{PAR.ENVIRONS}"
         ])
 
-        if PAR.WITH_OPENMP:
-            run_call = self.prep_openmp(run_call) 
-
         stdout = check_output(run_call, shell=True)
         
         # Keep track of Job IDS
@@ -258,9 +255,6 @@ class MauiLg(custom_import('system', 'slurm_lg')):
             f"{PAR.ENVIRONS}",
             f"SEISFLOWS_TASKID=0"
         ])
-
-        if PAR.WITH_OPENMP:
-            run_call = self.prep_openmp(run_call)
         
         stdout = check_output(run_call, shell=True)
         

@@ -429,4 +429,10 @@ class Base(object):
         else:
             raise NotImplementedError
 
+    def finalize(self):
+        """
+        Any last tasks to clean up data
+        """
+        pass
+
 
