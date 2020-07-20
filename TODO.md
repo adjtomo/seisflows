@@ -15,6 +15,7 @@
 - [ ] unix.rename will rename the entire file path, which can get dicey if e.g. 'smooth' is in the path and postprocess tries to rename the kernels from _smooth to ''
 
 #### General
+- [ ] A giant list of acceptable parameters rather than having to search the source code
 - [ ] replace subprocess.check_ouput(X) with subprocess.run(X, capture_output=True, text=True).stdout
 - [ ] consider using a logger rather than print statement updates
 - [ ] write unit tests
