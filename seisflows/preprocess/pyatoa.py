@@ -8,16 +8,15 @@ misfit measurement.
 """
 import os
 import sys
-import time
 import copy
 import pyasdf
 import pyatoa
-import logger
+import logging
 import numpy as np
 from glob import glob
 
+from seisflows.tools.err import ParameterError
 from pyatoa.utils.asdf.clean import clean_dataset
-from pyatoa.utils.form import format_iter, format_step
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -33,7 +32,25 @@ class Pyatoa(object):
     made external, this class is simply used as a Seisflows abstraction for
     calls to Pyatoa.
     """
-    def check(self):
+    def __init__(self, data=None, figures=None, config=None):
+        """
+        These parameters should not be set by __init__!
+        Attributes are just initialized as NoneTypes for clarity and docstrings
+
+        :type data: str
+        :param data: directory where data from the preprocessing is stored
+        :type figures: str
+        :param figures: directory where figures are stored
+        :type config: pyatoa.core.Config
+        :param config: a general config object that will be parsed into
+            the preprocessing workflow
+        """
+        self.data = data
+        self.figures = figures
+        self.config = config
+
+    @staticmethod
+    def check():
         """ 
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
@@ -43,33 +60,35 @@ class Pyatoa(object):
             setattr(PATH, "PYATOA", os.path.join(PATH.SCRATCH, "pyatoa"))
 
         if "DATA" not in PATH:
-            setattr(PATH, "DATA", [])
+            setattr(PATH, "DATA", None)
 
-        # Check the parameter requirements
+        if "RESPONSE" not in PATH:
+            setattr(PATH, "RESPONSE", None)
+
+        # Check the existence of required parameters
+        required_parameters = ["COMPONENTS", "UNIT_OUTPUT", "MIN_PERIOD",
+                               "MAX_PERIOD", "CORNERS", "CLIENT",
+                               "ADJ_SRC_TYPE", "PYFLEX_PRESET",
+                               "FIX_WINDOWS", "PLOT", "FORMAT"
+                               ]
+        for req in required_parameters:
+            if req not in PAR:
+                raise ParameterError(PAR, req)
+
+        # Check specific parameter requirements
         if PAR.FORMAT != "ascii":
             raise ValueError("Pyatoa preprocess currently only works with "
                              "the 'ascii' format")
 
-        if "UNIT_OUTPUT" not in PAR:
-            raise ValueError("Pyatoa preprocess requires parameter "
-                             "UNIT_OUTPUT to define the desired waveform "
-                             "units")
+        # Set default values parameters for any non-set parameters
+        if "PLOT" not in PAR:
+            setattr(PAR, "PLOT", True)
 
-        if "MIN_PERIOD" not in PAR:
-            raise ValueError("Pyatoa preprocess requires parameter "
-                             "MIN_PERIOD to define the lower filter corner")
+        if "LOGGING" not in PAR:
+            setattr(PAR, "LOGGING", "DEBUG")
 
-        if "MAX_PERIOD" not in PAR:
-            raise ValueError("Pyatoa preprocess requires parameter "
-                             "MAX_PERIOD to define the upper filter corner")
-
-        if "CORNERS" not in PAR:
-            raise ValueError("Pyatoa preprocess requires parameter "
-                             "CORNERS to define the filter corner order")
-
-        if "ROTATE" not in PAR:
-            raise ValueError("Pyatoa preprocess requires parameter "
-                             "ROTATE to define the desired components")
+        if "MAP_CORNERS" not in PAR:
+            setattr(PAR, "MAP_CORNERS", None)
 
         if "CLIENT" not in PAR:
             setattr(PAR, "CLIENT", None)
@@ -86,30 +105,6 @@ class Pyatoa(object):
                 raise ValueError("Pyatoa preprocess parameters START_PAD and "
                                  "END_PAD will not provide long enough obs."
                                  "traces to match the length of synthetics")
-
-        if "ADJ_SRC_TYPE" not in PAR:
-            raise ValueError("Pyatoa preprocess requires parameter "
-                             "ADJ_SRC_TYPE to define the desired adjoint "
-                             "source type")
-
-        if "PYFLEX_PRESET" not in PAR:
-            raise ValueError("Pyatoa preprocess requires parameter "
-                             "PYFLEX_PRESET to define the desired map "
-                             "for Pyflex parameters")
-
-        if "FIX_WINDOWS" not in PAR:
-            raise ValueError("Pyatoa preprocess requires parameter "
-                             "FIX_WINDOWS to define windowing selection "
-                             "behavior")
-
-        if "PLOT" not in PAR:
-            setattr(PAR, "PLOT", True)
-
-        if "LOGGING" not in PAR:
-            setattr(PAR, "LOGGING", "DEBUG")
-
-        if "MAP_CORNERS" not in PAR:
-            setattr(PAR, "MAP_CORNERS", None)
 
     def setup(self):
         """
@@ -130,10 +125,10 @@ class Pyatoa(object):
         self.config = pyatoa.Config(
             event_id=None, iteration=None, step_count=None, 
             synthetics_only=bool(PAR.CASE.lower() == "synthetic"),
+            component_list=list(PAR.COMPONENTS), rotate_to_rtz=PAR.ROTATE,
             min_period=PAR.MIN_PERIOD, max_period=PAR.MAX_PERIOD, 
             filter_corners=PAR.CORNERS, unit_output=PAR.UNIT_OUTPUT,
-            rotate_to_rtz=PAR.ROTATE, client=PAR.CLIENT,
-            start_pad=PAR.START_PAD, end_pad=PAR.END_PAD,
+            client=PAR.CLIENT, start_pad=PAR.START_PAD, end_pad=PAR.END_PAD,
             adj_src_type=PAR.ADJ_SRC_TYPE, pyflex_preset=PAR.PYFLEX_PRESET,
             cfgpaths={"waveforms": [os.path.join(PATH.DATA, "mseeds")],
                       "responses": [os.path.join(PATH.DATA, "seed")]
@@ -151,41 +146,42 @@ class Pyatoa(object):
         elif isinstance(PAR.FIX_WINDOWS, bool):
             return PAR.FIX_WINDOWS
 
-    def prepare_eval_grad(self, path, source_name):
+    def prepare_eval_grad(self, path, cwd, source_name):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms, 
         and measuring misfit between observations and synthetics using Pyatoa.
 
         :type path: str
-        :param path: path to the current Specfem working directory
+        :param path: path to the current function evaluation for saving residual
+        :type cwd: str
+        :param cwd: the path to the current Specfem working directory
         :type source_name: str
         :param source_name: the event id to be used for tagging and data lookup
         """
         # Some internal path naming and parameter setting
         dataset = os.path.join(self.data, source_name)
         figures = os.path.join(self.figures, source_name)
-        misfit = os.path.join(self.data, "misfit")
 
         # Establish event-specific configuration parameters
         config = copy.deepcopy(self.config)
         config.source_name = source_name
         config.iteration = optimize.iter
         config.step_count = optimize.line_search.step_count
-        config.cfgpaths["waveforms"] += [os.path.join(path, "traces", "obs")]
-        config.cfgpaths["synthetics"] += [os.path.join(path, "traces", "syn")]
+        config.cfgpaths["waveforms"] += [os.path.join(cwd, "traces", "obs")]
+        config.cfgpaths["synthetics"] += [os.path.join(cwd, "traces", "syn")]
 
         # Begin processing using Pyatoa
         misfit, nwin = 0, 0
-        inv = pyatoa.read_stations(os.path.join(path, "DATA", "STATIONS"))
+        inv = pyatoa.read_stations(os.path.join(cwd, "DATA", "STATIONS"))
 
-        with pyasdf.ASDFDataSet(dataset):
+        with pyasdf.ASDFDataSet(dataset) as ds:
             clean_dataset(dataset, iteration=optimize.iter, 
                           step_count=optimize.line_search.step_count)
 
             config.write(write_to=dataset)
-            mgmt = pytoa.Manager(ds=ds, config=config)
-            for network in inventory:
-                for station in network:
+            mgmt = pyatoa.Manager(ds=ds, config=config)
+            for net in inv:
+                for sta in net:
                     mgmt.reset()
 
                     # Gather data; if fail, move onto the next station
@@ -197,12 +193,11 @@ class Pyatoa(object):
 
                     # Process data; if fail, move onto waveform plotting
                     try:
-                        mgmt.flow(preprocess_overwrite=overwrite,
-                                  fix_windows=self.fix_windows)
+                        mgmt.flow(fix_windows=self.fix_windows)
 
                         self.write_adjoint_traces(
-                                       path=os.path.join(path, "traces", "adj"),
-                                       traces=mgmt.adjsrcs.values(), 
+                                       path=os.path.join(cwd, "traces", "adj"),
+                                       adjsrcs=mgmt.adjsrcs.values(),
                                        offset=mgmt.stats.time_offset_sec
                                        )
 
@@ -220,21 +215,19 @@ class Pyatoa(object):
 
         # Generate the necessary files to continue the inversion
         if misfit:
-            # Write the event misfit
-            np.savetxt(os.path.join(misfit, source_name), 
-                       0.5 * misfit / num_win)
+            # Write the event misfit a la Tape et al. (2010)
+            np.savetxt(os.path.join(path, "residuals", source_name),
+                       0.5 * misfit / nwin)
 
             # Create blank adjoint sources and STATIONS_ADJOINT
-            self.write_additional_adjoint_files(
-                        path=path, inv=inv, comp_list=mgmt.config.component_list
-                        )
+            self.write_additional_adjoint_files(path=path, inv=inv)
 
-    def sum_residuals(self, files):
+    @staticmethod
+    def sum_residuals(files):
         """
         Averages the event misfits and returns the total misfit.
 
-        Total misfit defined by Tape et al. (2007): 
-            total_misfit = sum(event_misfits) / number_srcs
+        Total misfit defined by Tape et al. (2010)
 
         :type files: str
         :param files: list of single-column text files containing residuals
@@ -253,19 +246,19 @@ class Pyatoa(object):
 
         return total_misfit
 
-    def write_adjoint_traces(self, path, adjsrcs, offset):
+    @staticmethod
+    def write_adjoint_traces(path, adjsrcs, offset):
         """
-        Writes "adjoint traces" required for gradient computation using the 
+        Writes adjoint sources required for gradient computation using the 
         functionality contained in the Pyadjint AdjointSource object
 
         :type path: str
         :param path: location "adjoint traces" will be written
-        :type syn: obspy.core.stream.Stream
-        :param syn: synthetic data
-        :type obs: obspy.core.stream.Stream
-        :param syn: observed data
-        :type channel: str
-        :param channel: channel or component code used by writer
+        :type adjsrcs: dict of pyadjoint.AdjointSource's
+        :param adjsrcs: adjoint source objects that contain a write function
+        :type offset: float
+        :param offset: required time offset that is set by Specfem and defined
+            by Pyatoa
         """
         for adj in adjsrcs:
             fid = f"{adj.network}.{adj.station}.{adj.component}.adj"
@@ -273,7 +266,8 @@ class Pyatoa(object):
                       time_offset=offset
                       )
 
-    def write_additional_adjoint_files(self, path, inv, component_list):
+    @staticmethod
+    def write_additional_adjoint_files(path, inv):
         """
         Generates the STATIONS_ADJOINT file expected by the SPECFEM 
         adjoint simulation, and blank adjoint sources.
@@ -283,9 +277,6 @@ class Pyatoa(object):
         :type inv: obspy.core.inventory.Inventory
         :param inv: Inventory created from the SPECFEM STATIONS file, to be 
             used for checking station names
-        :type component_list: list of str
-        :param component_list: list of components that are being used, for 
-            checking against adjoint sources
         """
         # A line template for the STATIONS_ADJOINT file
         tmplt = "{sta:>6}{net:>6}{lat:12.4f}{lon:12.4f}{elv:11.1f}{bur:11.1f}\n"
@@ -313,7 +304,7 @@ class Pyatoa(object):
                                        )
                     # Check for the existence of any adjoint sources
                     if glob(fid.format("?")):
-                        for comp in component_list:
+                        for comp in PAR.COMPONENTS:
                             if not os.path.exists(fid.format(comp)):
                                 # Write a blank adjoint source for empty comps
                                 np.savetxt(fid.format(comp), example_trace)
@@ -324,11 +315,4 @@ class Pyatoa(object):
                                              lon=sta.longitude, 
                                              elv=sta.elevation,
                                              bur=0)
-                        )
-
-    def finalize(self):
-        """
-        Run some finalization functions that will assist in assessing misfit
-        behavior 
-        """
-
+                                )

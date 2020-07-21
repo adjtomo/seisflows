@@ -17,6 +17,7 @@ from seisflows.plugins import adjoint, misfit, readers, writers
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
+solver = sys.modules["seisflows_solver"]
 
 
 class Base(object):
@@ -45,14 +46,20 @@ class Base(object):
         # Data normalization option
         if "NORMALIZE" not in PAR:
             setattr(PAR, "NORMALIZE", None)
+        else:
+            self.check_normalize_parameters()
 
         # Data muting option
         if "MUTE" not in PAR:
             setattr(PAR, "MUTE", None)
+        else:
+            self.check_mute_parameters()
 
-        # Data filtering option
+        # Data filtering option using Obspy
         if "FILTER" not in PAR:
             setattr(PAR, "FILTER", None)
+        else:
+            self.check_filter_parameters()
 
         # Assert that readers and writers available
         if PAR.FORMAT not in dir(readers):
@@ -62,10 +69,6 @@ class Base(object):
         if PAR.FORMAT not in dir(writers):
             print(msg.WriterError)
             raise ParameterError()
-
-        self.check_filter()
-        self.check_mute()
-        self.check_normalize()
 
     def setup(self):
         """
@@ -82,7 +85,7 @@ class Base(object):
         self.reader = getattr(readers, PAR.FORMAT)
         self.writer = getattr(writers, PAR.FORMAT)
 
-    def prepare_eval_grad(self, path='.'):
+    def prepare_eval_grad(self, path='./', **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
         adjoint traces
@@ -90,8 +93,6 @@ class Base(object):
         :type path: str
         :param path: directory containing observed and synthetic seismic data
         """
-        solver = sys.modules['seisflows_solver']
-
         for filename in solver.data_filenames:
             obs = self.reader(os.path.join(path, "traces", "obs", filename))
             syn = self.reader(os.path.join(path, "traces", "syn", filename))
@@ -148,7 +149,7 @@ class Base(object):
         """
         total_misfit = 0.
         for filename in files:
-            total_misfit += np.sum(np.loadtxt(filename) **2.)
+            total_misfit += np.sum(np.loadtxt(filename) ** 2.)
 
         return total_misfit
 
@@ -184,7 +185,7 @@ class Base(object):
         :return: filtered traces
         """
         # If no filter given, don't do anything
-        if not PAR.FILTER:
+        if PAR.FILTER is None:
             return st
 
         # Pre-processing before filtering
@@ -192,15 +193,13 @@ class Base(object):
         st.detrend("linear")
         st.taper(0.05, type="hann")
 
-        if PAR.FILTER == "Bandpass":
-            st.filter("bandpass", zerophase=True, freqmin=PAR.FREQMIN,
-                      freqmax=PAR.FREQMAX)
-        elif PAR.FILTER == "Lowpass":
+        if PAR.FILTER.upper() == "BANDPASS":
+            st.filter("bandpass", zerophase=True,
+                      freqmin=PAR.FREQMIN, freqmax=PAR.FREQMAX)
+        elif PAR.FILTER.upper() == "LOWPASS":
             st.filter("lowpass", zerophase=True, freq=PAR.FREQ)
-        elif PAR.FILTER == "Highpass":
+        elif PAR.FILTER.upper() == "HIGHPASS":
             st.filter("highpass", zerophase=True, freq=PAR.FREQ)
-        else:
-            raise ParameterError()
 
         return st
 
@@ -306,37 +305,50 @@ class Base(object):
 
         return traces
 
-    def check_filter(self):
+    def check_filter_parameters(self):
         """
-        Checks filter settings
+        Checks filter settings based on user parameters and user provided
+        filter corners
         """
-        assert getset(PAR.FILTER) < {'Bandpass', 'Lowpass', 'Highpass'}
+        assert PAR.FILTER.upper() in ["BANDPASS", "LOWPASS", "HIGHPASS"]
 
-        if PAR.FILTER == 'Bandpass':
-            if 'FREQMIN' not in PAR: raise ParameterError('FREQMIN')
-            if 'FREQMAX' not in PAR: raise ParameterError('FREQMAX')
-            assert 0 < PAR.FREQMIN
-            assert PAR.FREQMIN < PAR.FREQMAX
-            assert PAR.FREQMAX < np.inf
-        elif PAR.FILTER == 'Lowpass':
-            raise NotImplementedError
-            if 'FREQ' not in PAR:
-                raise ParameterError('FREQ')
-            assert 0 < PAR.FREQ <= np.inf
+        if PAR.FILTER.upper() == "BANDPASS":
+            # Check that filter parameters are provided
+            if "MIN_FREQ" not in PAR and "MAX_FREQ" not in PAR:
+                raise ParameterError("MIN_FREQ / MAX_FREQ>")
+            if "MIN_PERIOD" not in PAR and "MAX_PERIOD" not in PAR:
+                raise ParameterError("MIN_PERIOD / MAX_PERIOD")
 
-        elif PAR.FILTER == 'Highpass':
-            raise NotImplementedError
-            if 'FREQ' not in PAR:
-                raise ParameterError('FREQ')
-            assert 0 <= PAR.FREQ < np.inf
+            # Assign the corresponding frequencies or periods
+            if "MIN_FREQ" in PAR:
+                PAR.MIN_PERIOD = 1 / PAR.MAX_FREQ
+                PAR.MAX_PERIOD = 1 / PAR.MIN_FREQ
+            elif "MIN_PERIOD" in PAR:
+                PAR.MIN_FREQ = 1 / PAR.MAX_PERIOD
+                PAR.MAX_FREQ = 1 / PAR.MIN_PERIOD
+
+            # Check that the values provided make sense
+            assert PAR.MIN_FREQ > 0., "Minimum frequency must be > 0"
+            assert PAR.MIN_FREQ < PAR.MAX_FREQ, "Max freq < min freq"
+            assert PAR.FREQMAX < np.inf, "Max freq > infity"
+
+        elif PAR.FILTER.upper() in ["LOWPASS", "HIGHPASS"]:
+            if "FREQ" not in PAR or "PERIOD" not in PAR:
+                raise ParameterError("FREQ / PERIOD")
+
+            if PAR.FREQ:
+                PAR.PERIOD = 1 / PAR.FREQ
+            elif PAR.PERIOD:
+                PAR.FREQ = 1 / PAR.PERIOD
+
+            assert PAR.FREQ > 0., "Freq must be > 0"
+            assert PAR.FREQ < np.inf, "Freq > infinity"
 
     def check_mute(self):
         """
-        Checks mute settings
+        Checks mute settings, which are used to zero out early or late arrivals
+        or offsets
         """
-        if not PAR.MUTE:
-            return
-
         assert getset(PAR.MUTE) <= {'MuteEarlyArrivals',
                                     'MuteLateArrivals',
                                     'MuteShortOffsets',
@@ -368,8 +380,7 @@ class Base(object):
 
     def check_normalize(self):
         """
-
-        :return:
+        Check that the normalization parameters are properly set
         """
         assert getset(PAR.NORMALIZE) < {'NormalizeTracesL1',
                                         'NormalizeTracesL2',
@@ -398,41 +409,42 @@ class Base(object):
         nsrc = 1
         return nrec, nsrc
 
-    def get_receiver_coords(self, traces):
-        if PAR.FORMAT in ['SU', 'su']:
-            rx = []
-            ry = []
-            rz = []
-            for trace in traces:
-                rx += [trace.stats.su.trace_header.group_coordinate_x]
-                ry += [trace.stats.su.trace_header.group_coordinate_y]
+    def get_receiver_coords(self, st):
+        """
+        Retrieve the coordinates from a Stream object
+
+        :type st: obspy.core.stream.Stream
+        :param st: a stream to query for coordinates
+        :return:
+        """
+        if PAR.FORMAT.upper == "SU":
+            rx, ry, rz = [], [], []
+
+            for tr in st:
+                rx += [tr.stats.su.trace_header.group_coordinate_x]
+                ry += [tr.stats.su.trace_header.group_coordinate_y]
                 rz += [0.]
             return rx, ry, rz
         else:
             raise NotImplementedError
 
-    def get_source_coords(self, traces):
+    def get_source_coords(self, st):
         """
+        Get the coordinates of the source object
 
-        :param traces:
+        :type st: obspy.core.stream.Stream
+        :param st: a stream to query for coordinates
         :return:
         """
-        if PAR.FORMAT in ['SU', 'su']:
-            sx = []
-            sy = []
-            sz = []
-            for trace in traces:
-                sx += [trace.stats.su.trace_header.source_coordinate_x]
-                sy += [trace.stats.su.trace_header.source_coordinate_y]
+        if PAR.FORMAT.upper() == "SU":
+            sx, sy, sz = [], [], []
+            for tr in st:
+                sx += [tr.stats.su.trace_header.source_coordinate_x]
+                sy += [tr.stats.su.trace_header.source_coordinate_y]
                 sz += [0.]
             return sx, sy, sz
         else:
             raise NotImplementedError
 
-    def finalize(self):
-        """
-        Any last tasks to clean up data
-        """
-        pass
 
 

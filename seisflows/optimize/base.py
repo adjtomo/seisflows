@@ -231,7 +231,7 @@ class Base(object):
         # gradient threshold to remove any outlier values
         m_try = m + alpha * p
 
-         # Write model corresponding to chosen step length
+        # Write model corresponding to chosen step length
         self.save("m_try", m_try)
         self.savetxt("alpha", alpha)
 

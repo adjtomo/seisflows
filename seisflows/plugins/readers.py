@@ -19,8 +19,8 @@ def su(path, filename):
     """
     from obspy import read
 
-    st = read(os.path.join(path, filename), format='SU',
-              byteorder='<')
+    st = read(os.path.join(path, filename), format='SU', byteorder='<')
+    
     return st
 
 

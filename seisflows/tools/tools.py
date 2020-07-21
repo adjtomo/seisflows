@@ -273,7 +273,8 @@ def getset(arg):
 
     :type arg: None, str or list
     :param arg: argument to turn into a set
-    :return:
+    :rtype: set
+    :return: a set of the given argument
     """
     if not arg:
         return set()

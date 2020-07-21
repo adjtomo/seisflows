@@ -1,0 +1,6 @@
+README.md
+setup.py
+seisflows.egg-info/PKG-INFO
+seisflows.egg-info/SOURCES.txt
+seisflows.egg-info/dependency_links.txt
+seisflows.egg-info/top_level.txt

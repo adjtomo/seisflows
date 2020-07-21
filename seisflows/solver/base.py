@@ -84,30 +84,46 @@ class Base(object):
         !!! Required functions which must be implemented by subclass !!!
 
     """
-    # Determine material properties to be used in workflow
-    assert 'MATERIALS' in PAR
-    assert 'DENSITY' in PAR
+    def __init__(self, parameters=None, mesh_properties=None,
+                 source_names=None):
+        """
+        These parameters should not be set by __init__!
+        Attributes are just initialized as NoneTypes for clarity and docstrings
 
-    parameters = []
-    if PAR.MATERIALS == 'Elastic':
-        parameters += ['vp']
-        parameters += ['vs']
-    elif PAR.MATERIALS == 'Acoustic':
-        parameters += ['vp']
-
-    if PAR.DENSITY == 'Variable':
-        parameters += ['rho']
+        :type parameters: list of str
+        :param parameters: a list detailing the parameters to be used to
+            define the model, available: ['vp', 'vs', 'rho']
+        :type mesh_properties: seisflows.tools.tools.Struct
+        :param mesh_properties: hidden attribute, a dictionary of mesh
+            properties, including the ngll points, nprocs, and mesh coordinates
+        :type source_names: hidden attribute,
+        :param source_names: the names of all the sources that are being used
+            by the solver
+        """
+        self.parameters = parameters
+        self._mesh_properties = mesh_properties
+        self._source_names = source_names
 
     def check(self):
         """
         Checks parameters and paths
         """
+        if "MATERIALS" not in PAR:
+            raise ParameterError(PAR, "MATERIALS")
+        else:
+            assert(PAR.MATERIALS.upper() in ["ELASTIC", "ACOUSTIC"])
+
+        if "DENSITY" not in PAR:
+            raise ParameterError(PAR, "DENSITY")
+        else:
+            assert(PAR.DENSITY.upper() in ["CONSTANT", "VARIABLE"])
+
         # number of processors per simulation
         if "NPROC" not in PAR:
             raise ParameterError(PAR, "NPROC")
 
         # Format used by SPECFEM for reading, writing models
-        # (currently, SPECFEM offers "fortran_binary", "adios")
+        # Currently, SPECFEM offers "fortran_binary", "adios"
         if "SOLVERIO" not in PAR:
             setattr(PAR, "SOLVERIO", "fortran_binary")
 
@@ -137,10 +153,20 @@ class Base(object):
             raise ParameterError(PATH, "SPECFEM_DATA")
 
         # Ensure parameters set properly
-        assert self.parameters != []
         assert hasattr(solver_io, PAR.SOLVERIO)
-        assert hasattr(self.io, "read_slice")
-        assert hasattr(self.io, "write_slice")
+        assert hasattr(self.io, "read_slice"), \
+            "IO method has no attribute 'read_slice'"
+        assert hasattr(self.io, "write_slice"), \
+            "IO method has no attribute 'write_slice'"
+
+        # Set an internal parameter list
+        if PAR.MATERIALS.upper() == "ELASTIC":
+            self.parameters = ["vp", "vs"]
+        elif PAR.MATERIALS.upper() == "ACOUSTIC":
+            self.parameters = ["vp"]
+
+        if PAR.DENSITY.upper() == "VARIABLE":
+            self.parameters.append("rho")
 
     def setup(self):
         """ 
@@ -157,26 +183,25 @@ class Base(object):
         """
         # Clean up for new inversion
         unix.rm(self.cwd)
+        self.initialize_solver_directories()
 
-        # If Data provided by user
         if PATH.DATA:
-            # Copy user supplied data
-            self.initialize_solver_directories()
-            unix.cp(src=glob(os.path.join(PATH.DATA, self.source_name, '*')),
-                    dst="traces/obs/")
-        else:
-            # Generate data on the fly using the true model
-            if PAR.VERBOSE:
-                print("generating data in solver/base")
+            # If Data provided by user, copy directly into the solver directory
+            unix.cp(src=glob(os.path.join(PATH.DATA, self.source_name, "*")),
+                    dst=os.path.join("traces", "obs")
+                    )
+        elif PAR.CASE.upper() == "SYNTHETIC":
+            # Generate synthetic data on the fly using the true model
             self.generate_data(model_path=PATH.MODEL_TRUE,
-                               model_name='model_true',
-                               model_type='gll')
+                               model_name="model_true",
+                               model_type="gll")
 
         # Prepare initial model
         self.generate_mesh(model_path=PATH.MODEL_INIT,
-                           model_name='model_init',
-                           model_type='gll')
+                           model_name="model_init",
+                           model_type="gll")
 
+        # Create blank adjoint traces to be overwritten
         self.initialize_adjoint_traces()
 
     def clean(self):
@@ -184,8 +209,8 @@ class Base(object):
         Clean up the run directory and set up for new run
         """
         unix.cd(self.cwd)
-        unix.rm('OUTPUT_FILES')
-        unix.mkdir('OUTPUT_FILES')
+        unix.rm("OUTPUT_FILES")
+        unix.mkdir("OUTPUT_FILES")
 
     def generate_data(self, *args, **kwargs):
         """
@@ -222,8 +247,9 @@ class Base(object):
         self.forward()
 
         if write_residuals:
-            preprocess.prepare_eval_grad(self.cwd)
-            self.export_residuals(path)
+            preprocess.prepare_eval_grad(path, self.cwd, self.source_name)
+            if export_traces:
+                self.export_residuals(path)
 
     def eval_fwd(self, *args, **kwargs):
         """
@@ -251,11 +277,12 @@ class Base(object):
         unix.cd(self.cwd)
         self.adjoint()
         self.export_kernels(path)
+
         if export_traces:
-            self.export_traces(path=os.path.join(path, 'traces', 'syn'),
-                               prefix='traces/syn')
-            self.export_traces(path=os.path.join(path, 'traces', 'adj'),
-                               prefix='traces/adj')
+            self.export_traces(path=os.path.join(path, "traces", "syn"),
+                               prefix="traces/syn")
+            self.export_traces(path=os.path.join(path, "traces", "adj"),
+                               prefix="traces/adj")
 
     def apply_hess(self, path=''):
         """
@@ -269,8 +296,8 @@ class Base(object):
         """
         unix.cd(self.cwd)
         self.import_model(path)
-        unix.mkdir('traces/lcg')
-        self.forward('traces/lcg')
+        unix.mkdir("traces/lcg")
+        self.forward("traces/lcg")
         preprocess.prepare_apply_hess(self.cwd)
         self.adjoint()
         self.export_kernels(path)
@@ -283,7 +310,6 @@ class Base(object):
 
         !!! Must be implemented by subclass !!!
         """
-        # must be implemented by subclass
         raise NotImplementedError
 
     def adjoint(self):
@@ -294,7 +320,6 @@ class Base(object):
 
         !!! Must be implemented by subclass !!!
         """
-        # must be implemented by subclass
         raise NotImplementedError
 
     @property
@@ -306,7 +331,7 @@ class Base(object):
         """
         return getattr(solver_io, PAR.SOLVERIO)
 
-    def load(self, path, parameters=[], prefix='', suffix=''):
+    def load(self, path, parameters=None, prefix='', suffix=''):
         """ 
         Solver I/O: Loads SPECFEM2D/3D models or kernels
 
@@ -323,16 +348,18 @@ class Base(object):
         :return: model or kernels indexed by material parameter and
             processor rank, ie dict[parameter][iproc]
         """
+        if parameters is None:
+            parameters = self.parameters
+
         load_dict = Container()
         for iproc in range(self.mesh_properties.nproc):
-            for key in parameters or self.parameters:
+            for key in parameters:
                 load_dict[key] += self.io.read_slice(
                     path=path, parameters=f"{prefix}{key}{suffix}", iproc=iproc)
 
         return load_dict
 
-    def save(self, save_dict, path, parameters=['vp','vs','rho'], prefix='',
-             suffix=''):
+    def save(self, save_dict, path, parameters=None, prefix='', suffix=''):
         """ 
         Solver I/O: Saves SPECFEM2D/3D models or kernels
 
@@ -349,6 +376,11 @@ class Base(object):
         """
         unix.mkdir(path)
 
+        # Set default parameters
+        if parameters is None:
+            parameters = self.parameters
+            # paramters = ["vp", "vs", "rho"]
+
         # Fill in any missing parameters
         missing_keys = diff(parameters, save_dict.keys())
         for iproc in range(self.mesh_properties.nproc):
@@ -364,7 +396,7 @@ class Base(object):
                                     parameters=f"{prefix}{key}{suffix}",
                                     iproc=iproc)
 
-    def merge(self, model, parameters=[]):
+    def merge(self, model, parameters=None):
         """
         Convert dictionary representation `model` to vector representation `m`
 
@@ -376,14 +408,17 @@ class Base(object):
         :rtype: np.ndarray
         :return: model as a vector
         """
+        if parameters is None:
+            parameters = self.parameters
+
         m = np.array([])
-        for key in parameters or self.parameters:
+        for key in parameters:
             for iproc in range(self.mesh_properties.nproc):
                 m = np.append(m, model[key][iproc])
 
         return m
 
-    def split(self, m, parameters=[]):
+    def split(self, m, parameters=None):
         """
         Converts vector representation `m` to dictionary representation `model`
 
@@ -395,11 +430,14 @@ class Base(object):
         :rtype: dict
         :return: model as a dictionary
         """
+        if parameters is None:
+            parameters = self.parameters
+
         nproc = self.mesh_properties.nproc
         ngll = self.mesh_properties.ngll
         model = Container()
 
-        for idim, key in enumerate(parameters or self.parameters):
+        for idim, key in enumerate(parameters):
             model[key] = []
             for iproc in range(nproc):
                 imin = sum(ngll) * idim + sum(ngll[:iproc])
@@ -408,7 +446,7 @@ class Base(object):
 
         return model
 
-    def combine(self, input_path, output_path, parameters=[]):
+    def combine(self, input_path, output_path, parameters=None):
         """
         Postprocessing wrapper: xcombine_sem
         Sums individual source contributions.
@@ -421,6 +459,9 @@ class Base(object):
         :param parameters: optional list of parameters,
             defaults to `self.parameters`
         """
+        if parameters is None:
+            parameters = self.parameters
+
         if not exists(output_path):
             unix.mkdir(output_path)
 
@@ -433,7 +474,7 @@ class Base(object):
             )
 
         # Call on bin/xcombine_sem
-        for name in parameters or self.parameters:
+        for name in parameters:
             # Example call:
             # mpiexec ./bin/xcombine_sem alpha_kernel kernel_paths output
             call_solver(mpiexec=system.mpiexec(),
@@ -442,7 +483,7 @@ class Base(object):
                                              output_path])
                         )
 
-    def smooth(self, input_path, output_path, parameters=[], span_h=0.,
+    def smooth(self, input_path, output_path, parameters=None, span_h=0.,
                span_v=0., output='solver.log'):
         """
         Postprocessing wrapper: xsmooth_sem
@@ -465,14 +506,15 @@ class Base(object):
         :type output: str
         :param output: file to output stdout to
         """
+        if parameters is None:
+            parameters = self.parameters
+
         if not exists(output_path):
             unix.mkdir(output_path)
 
         # Apply smoothing operator
         unix.cd(self.cwd)
-        for name in parameters or self.parameters:
-            if PAR.VERBOSE:
-                print(f"Smoothing {name}")
+        for name in parameters:
             call_solver(mpiexec=system.mpiexec(),
                         executable=" ".join([f"{PATH.SPECFEM_BIN}/xsmooth_sem",
                                              str(span_h), str(span_v),
@@ -480,11 +522,12 @@ class Base(object):
                                              os.path.join(input_path, ""),
                                              os.path.join(output_path, ""),
                                              ".false"]),
-                        output=output)
+                        output=output
+                        )
 
         # Rename output files
-        files = glob(os.path.join(output_path, '*'))
-        unix.rename(old='_smooth', new='', names=files)
+        files = glob(os.path.join(output_path, "*"))
+        unix.rename(old="_smooth", new="", names=files)
 
     def combine_vol_data_vtk(self):
         """
@@ -515,7 +558,7 @@ class Base(object):
         dst = os.path.join(self.cwd, 'traces', 'obs')
         unix.cp(src, dst)
 
-    def export_model(self, path, parameters=['rho', 'vp', 'vs']):
+    def export_model(self, path, parameters=None):
         """
         File transfer utility. Export the model to disk.
 
@@ -526,12 +569,13 @@ class Base(object):
         :type parameters: list
         :param parameters: list of parameters that define the model
         """
+        if parameters is None:
+            parameters = self.parameters
+
         if self.taskid == 0:
             unix.mkdir(path)
             for key in parameters:
-                files = glob(os.path.join(self.model_databases,
-                                          f"*{key}.bin")
-                             )
+                files = glob(os.path.join(self.model_databases, f"*{key}.bin"))
                 unix.cp(files, path)
 
     def export_kernels(self, path):
@@ -546,8 +590,8 @@ class Base(object):
         # Work around conflicting name conventions
         self.rename_kernels()
 
-        src = glob('*_kernel.bin')
-        dst = os.path.join(path, 'kernels', self.source_name)
+        src = glob("*_kernel.bin")
+        dst = os.path.join(path, "kernels", self.source_name)
         unix.mkdir(dst)
         unix.mv(src, dst)
 
@@ -558,13 +602,13 @@ class Base(object):
         :type path: str
         :param path: path to save residuals
         """
-        unix.mkdir(os.path.join(path, 'residuals'))
+        unix.mkdir(os.path.join(path, "residuals"))
 
-        src = os.path.join(self.cwd, 'residuals')
-        dst = os.path.join(path, 'residuals', self.source_name)
+        src = os.path.join(self.cwd, "residuals")
+        dst = os.path.join(path, "residuals", self.source_name)
         unix.mv(src, dst)
 
-    def export_traces(self, path, prefix='traces/obs'):
+    def export_traces(self, path, prefix="traces/obs"):
         """
         File transfer utility. Export traces to disk.
 
@@ -579,24 +623,25 @@ class Base(object):
         dst = os.path.join(path, self.source_name)
         unix.cp(src, dst)
 
-    def rename_kernels(self):
+    @staticmethod
+    def rename_kernels():
         """
         Works around conflicting kernel filename conventions by renaming
         `alpha` to `vp` and `beta` to `vs`
         """
         # Rename alpha to vp
-        for globfids in ['*proc??????_alpha_kernel.bin',
-                         '*proc??????_alpha[hv]_kernel.bin',
-                         '*proc??????_reg1_alpha_kernel.bin',
-                         '*proc??????_reg1_alpha[hv]_kernel.bin']:
-            unix.rename(old='alpha', new='vp', names=glob(globfids))
+        for globfids in ["*proc??????_alpha_kernel.bin",
+                         "*proc??????_alpha[hv]_kernel.bin",
+                         "*proc??????_reg1_alpha_kernel.bin",
+                         "*proc??????_reg1_alpha[hv]_kernel.bin"]:
+            unix.rename(old="alpha", new="vp", names=glob(globfids))
 
         # Rename beta to vs
-        for globfids in ['*proc??????_beta_kernel.bin',
-                         '*proc??????_beta[hv]_kernel.bin',
-                         '*proc??????_reg1_beta_kernel.bin',
-                         '*proc??????_reg1_beta[hv]_kernel.bin']:
-            unix.rename(old='beta', new='vs', names=glob(globfids))
+        for globfids in ["*proc??????_beta_kernel.bin",
+                         "*proc??????_beta[hv]_kernel.bin",
+                         "*proc??????_reg1_beta_kernel.bin",
+                         "*proc??????_reg1_beta[hv]_kernel.bin"]:
+            unix.rename(old="beta", new="vs", names=glob(globfids))
 
     def rename_data(self, path):
         """
@@ -604,7 +649,6 @@ class Base(object):
         """
         pass
 
-    # setup utilities
     def initialize_solver_directories(self):
         """
         Setup Utility:
@@ -622,14 +666,10 @@ class Base(object):
         unix.cd(self.cwd)
 
         # Create directory structure
-        unix.mkdir("bin")
-        unix.mkdir("DATA")
-        unix.mkdir("OUTPUT_FILES")
-        unix.mkdir("traces/obs")
-        unix.mkdir("traces/syn")
-        unix.mkdir("traces/adj")
-        unix.mkdir(self.model_databases)
-        unix.mkdir(self.kernel_databases)
+        for cwd_dir in ["bin", "DATA", "OUTPUT_FILES/DATABASES_MPI",
+                        "traces/obs", "traces/syn", "traces/adj",
+                        self.model_databases, self.kernel_database]:
+            unix.mkdir(cwd_dir)
 
         # Copy exectuables
         src = glob(os.path.join(PATH.SPECFEM_BIN, "*"))
@@ -638,11 +678,11 @@ class Base(object):
 
         # Copy all input files except source files
         src = glob(os.path.join(PATH.SPECFEM_DATA, "*"))
-        src = [_ for _ in src if not _.startswith(self.source_prefix)]
+        src = [_ for _ in src if self.source_prefix not in _]
         dst = os.path.join("DATA", "")
         unix.cp(src, dst)
 
-        # symlink event source specifically
+        # Symlink event source specifically
         src = os.path.join(PATH.SPECFEM_DATA, 
                            f"{self.source_prefix}_{self.source_name}")
         dst = os.path.join("DATA", self.source_prefix)
@@ -663,26 +703,30 @@ class Base(object):
 
     def initialize_adjoint_traces(self):
         """
-        Setup utility: Creates the "adjoint traces" expected by SPECFEM
+        Setup utility: Creates the "adjoint traces" expected by SPECFEM.
+        This is only done for the 'base' the Preprocess class.
 
         Note:
             Adjoint traces are initialized by writing zeros for all channels.
             Channels actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
         """
-        for filename in self.data_filenames:
-            # Read traces
-            d = preprocess.reader(path=os.path.join(self.cwd, 'traces', 'obs'),
-                                  filename=filename)
+        if PAR.PREPROCESS == "base":
+            for filename in self.data_filenames:
+                d = preprocess.reader(
+                            path=os.path.join(self.cwd, "traces", "obs"),
+                            filename=filename
+                            )
 
-            # Initialize by writing zeroes
-            for t in d:
-                t.data[:] = 0.
+                # Set the data traces to zero
+                for t in d:
+                    t.data[:] = 0.
 
-            # Write traces
-            preprocess.writer(stream=d,
-                              path=os.path.join(self.cwd, 'traces', 'adj'),
-                              filename=filename)
+                # Write traces
+                preprocess.writer(
+                         stream=d, path=os.path.join(self.cwd, "traces", "adj"),
+                         filename=filename
+                         )
 
     def check_mesh_properties(self, path=None):
         """
@@ -692,7 +736,9 @@ class Base(object):
         :param path: path to the mesh file
         """
         # Check the given model path or the initial model
-        path = path or PATH.MODEL_INIT
+        if path is None:
+            path = PATH.MODEL_INIT
+
         if not exists(path):
             raise FileNotFoundError(f"Mesh path {path} does not exist")
 
@@ -701,24 +747,26 @@ class Base(object):
         iproc = 0
         ngll = []
         while True:
-            dummy = self.io.read_slice(
-                path=path, parameters=key, iproc=iproc)[0]
+            dummy = self.io.read_slice(path=path, parameters=key, 
+                                       iproc=iproc)[0]
             ngll += [len(dummy)]
             iproc += 1
-            if not exists(f"{path}/proc{iproc:06d}_{key}.bin"):
+            if not exists(os.path.join(path, f"proc{int(iproc):06d}_{key}.bin"):
                 break
         nproc = iproc
 
         # Create coordinate pointers
+        # !!! This partial is incorrectly defined and does not execute when 
+        # !!! called. What is the point of that?
         coords = Struct()
         for key in ['x', 'y', 'z']:
             coords[key] = partial(self.io.read_slice, self, path, key)
 
         # Define internal mesh properties
-        self._mesh_properties = Struct([['nproc', nproc],
-                                        ['ngll', ngll],
-                                        ['path', path],
-                                        ['coords', coords]]
+        self._mesh_properties = Struct([["nproc", nproc],
+                                        ["ngll", ngll],
+                                        ["path", path],
+                                        ["coords", coords]]
                                        )
 
     def check_source_names(self):
@@ -738,6 +786,7 @@ class Base(object):
         # Apply wildcard rule and check for available sources
         wildcard = f"{self.source_prefix}_*"
         globstar = sorted(glob(os.path.join(path, wildcard)))
+
         if not globstar:
             print(msg.SourceError_SPECFEM.format(path, wildcard))
             sys.exit(-1)

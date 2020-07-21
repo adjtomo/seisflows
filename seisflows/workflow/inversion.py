@@ -123,6 +123,8 @@ class Inversion(Base):
         # Signifiy if data-synth. or synth.-synth. case
         if "CASE" not in PAR:
             raise ParameterError(PAR, "CASE")
+        elif PAR.CASE.upper() == "SYNTHETIC" and not exists(PATH.MODEL_TRUE):
+            raise Exception("CASE == SYNTHETIC requires PATH.MODEL_TRUE")
 
         if "RESUME_FROM" not in PAR:
             setattr(PAR, "RESUME_FROM", None)
@@ -130,25 +132,21 @@ class Inversion(Base):
         if "STOP_AFTER" not in PAR:
             setattr(PAR, "STOP_AFTER", None)
 
-        # Synthetic-synthetic examples require a true model to create the "data"
-        if PAR.CASE == "Synthetic" and not exists(PATH.MODEL_TRUE):
-            raise Exception("CASE == Synthetic requires PATH.MODEL_TRUE")
-
     def main(self):
         """
         !!! This function controls the main workflow !!!
 
-        Carries out seismic inversion
+        Carries out seismic inversion by running a series of functions in order
         """
-        # Make the workflow a list of functions that can be called dynamically
-        flow = [self.initialize,
-                self.evaluate_gradient,
-                self.write_gradient,
-                self.compute_direction,
-                self.line_search,
-                self.finalize,
-                self.clean
-                ]
+        # The workflow is a list of functions that can be called dynamically
+        self.flow = [self.initialize,
+                     self.evaluate_gradient,
+                     self.write_gradient,
+                     self.compute_direction,
+                     self.line_search,
+                     self.finalize,
+                     self.clean
+                     ]
 
         print(f"BEGINNING WORKFLOW AT {time.asctime()}")
         optimize.iter = PAR.BEGIN
@@ -156,15 +154,15 @@ class Inversion(Base):
 
         # Allow workflow resume from a given mid-workflow location
         if PAR.RESUME_FROM:
-            self.resume_from(flow)
-        else:
+            self.resume_from()
+        elif optimize.iter == 1:
             # First-time intialization of the workflow
             self.setup()
 
-        # Run the workflow until PAR.END
+        # Run the workflow until from the current iteration until PAR.END
         while optimize.iter <= PAR.END:
             print(f"ITERATION {optimize.iter}")
-            for func in flow:
+            for func in self.flow:
                 func()
                 # Stop the workflow at STOP_AFTER if requested
                 if PAR.STOP_AFTER and func.__name__ == PAR.STOP_AFTER:
@@ -173,65 +171,53 @@ class Inversion(Base):
             print(f"FINISHED ITERATION {optimize.iter} AT {time.asctime()}\n")
             optimize.iter += 1
 
-    def resume_from(self, flow):
+    def resume_from(self):
         """
         Resume the workflow from a given function, proceed in the same fashion 
         as main until the end of the current iteration.
-    
-        :type flow: list
-        :param flow: list of functions which comprise the full workflow
         """ 
         # Determine the index that corresponds to the resume function named
-        for i, func in enumerate(flow):
-            if func.__name__ == PAR.RESUME_FROM:
-                resume_idx = i
-                break
-        else:
+        try:
+            resume_idx = [_.__name__ for _ in self.flow].index(PAR.RESUME_FROM)
+        except ValueError:
             print("PAR.RESUME_FROM does not correspond to any workflow "
                   "functions. Exiting...")
             sys.exit(-1)
+
         print(f"RESUME ITERATION {optimize.iter} (from function "
-              f"{flow[resume_idx].__name__})")
+              f"{self.flow[resume_idx].__name__})")
         
-        for func in flow[resume_idx:]:
+        for func in self.flow[resume_idx:]:
             func()
+
         print(f"FINISHED ITERATION {optimize.iter} AT {time.asctime()}\n")
         optimize.iter += 1
 
     def setup(self):
         """
-        Lays groundwork for inversion
+        Lays groundwork for inversion by running setup() functions for the 
+        involved sub-modules, and generating synthetic true data if necessary, 
+        and generating the pre-requisite database files. Should only be run once
+        at the iteration 1
         """
         # Set up all the requisite modules
-        if optimize.iter == 1:
-            print("SETUP\n\tPerforming module setup")
-            preprocess.setup()
-            postprocess.setup()
-            optimize.setup()
+        print("SETUP")
+        preprocess.setup()
+        postprocess.setup()
+        optimize.setup()
 
-            if PAR.CASE == "Synthetic":
-                self._setup_synthetics()
+        # Run the setup in serial to reduce unnecessary job submissions
+        # Needs to be split up into multiple system calls
+        if "SERIAL" in solver.__class__.__name__.upper():
+            solver.initialize_solver_directories()
 
-        self._setup_initial_model()
-
-    @Decorators.stopwatch
-    def _setup_synthetic_data(self):
-        """
-        Generate synthetic data from a 'True' model
-        """
-        print("\tGenerating synthetic data", end="... ")
-        system.run_single("solver", "setup", model="true")
-        solver.distribute_databases()
-        system.run("solver", "generate_data")
-
-    @Decorators.stopwatch
-    def _setup_initial_model(self):
-        """
-        Generate the necessary database files using the initial model
-        """
-        print("\tPreparing initial model", end="... ")
-        system.run_single("solver", "setup")
-        solver.distribute_databases()
+            if PAR.CASE.upper() == "SYNTHETIC":
+                system.run_single("solver", "setup", model="true")
+                system.run("solver", "generate_data")
+    
+            system.run_single("solver", "setup", model="init")
+        else:
+            system.run("solver", "setup")
 
     def initialize(self):
         """
@@ -256,13 +242,14 @@ class Inversion(Base):
             status == 0 : not finished
             status < 0  : failed
         """
-        print("LINE SEARCH\n\tinitializing line search")
+        print("LINE SEARCH")
         optimize.initialize_search()
 
         while True:
             print(f"TRIAL STEP: {optimize.line_search.step_count + 1}")
             self.evaluate_function(path=PATH.FUNC, suffix="try")
             status = optimize.update_search()
+
             # Determine the outcome of the line search
             if status > 0:
                 print("\tTrial step successful")
@@ -281,7 +268,6 @@ class Inversion(Base):
                     print("\tLine search failed\n\n Aborting...")
                     sys.exit(-1)
 
-    @Decorators.stopwatch
     def evaluate_function(self, path, suffix):
         """
         Performs forward simulation, and evaluates the objective function
@@ -311,7 +297,6 @@ class Inversion(Base):
         Saves results from current model update iteration
         """
         self.checkpoint()
-        preprocess.finalize()
 
         # Save files from scratch before discarding
         if PAR.SAVEMODEL:
@@ -361,7 +346,6 @@ class Inversion(Base):
 
         solver.save(solver.split(optimize.load(src)), dst)
 
-    @Decorators.stopwatch
     def write_gradient(self, path, suffix):
         """
         Writes gradient in format expected by non-linear optimization library.
@@ -382,7 +366,9 @@ class Inversion(Base):
 
     def write_misfit(self, path, suffix):
         """
-        Writes misfit in format expected by nonlinear optimization library
+        Writes misfit in format expected by nonlinear optimization library.
+        Collects all misfit values within the given residuals directory and sums
+        them in a manner chosen by the preprocess class.
 
         :type path: str
         :param path: path to write the misfit to

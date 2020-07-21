@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 """
-This is the subclass seisflows.solver.Specfem3D_pyatoa
-This class provides utilities for the Seisflows solver interactions with
-Specfem3D Cartesian. It inherits all attributes from seisflows.solver.Base,
-and overwrites these functions to provide specified interaction with Specfem3D
+This is the subclass seisflows.solver.Specfem3DSerial
 
-This subclass also interacts with the Python package Pyatoa, to perform data
-collection, preprocessing, and misfit quantification steps
+This class is almost the same as Specfem3D, except the setup step is run as
+a serial task. This is useful if HPC job queues are long, as it saves
 """
 import os
 import sys
-import warnings
 
 from glob import glob
 from seisflows.tools import unix
@@ -18,7 +14,6 @@ from seisflows.tools.tools import exists
 from seisflows.config import custom_import
 from seisflows.tools.seismic import call_solver, getpar, setpar
 
-from pyatoa.plugins.new_zealand.process import preproc
 
 # Seisflows configuration
 PAR = sys.modules['seisflows_parameters']
@@ -28,44 +23,16 @@ system = sys.modules['seisflows_system']
 preprocess = sys.modules['seisflows_preprocess']
 
 
-class Specfem3DPyatoa(custom_import('solver', 'base')):
+class Specfem3DSerial(custom_import("solver", "specfem3d")):
     """
     Python interface to Specfem3D Cartesian. This subclass inherits functions
-    from seisflows.solver.Base
+    from seisflows.solver.specfem3d
 
     !!! See base class for method descriptions !!!
     """
-    def check(self):
-        """
-        Checks parameters and paths. Most prechecks will happen in the workflow.
-        """
-        # Run Base class checks
-        super(Specfem3DPyatoa, self).check()
-
-        # Check time stepping parameters
-        if "NT" not in PAR:
-            raise Exception("'NT' not specified in parameters file")
-
-        if "DT" not in PAR:
-            raise Exception("'DT' not specified in parameters file")
-
-        # Check data format for Specfem3D
-        if "FORMAT" not in PAR:
-            raise Exception("'FORMAT' not specified in parameters file")
-
-        # Currently Pyatoa only works with ASCII
-        acceptable_formats = ["ascii"]
-        if PAR.FORMAT not in acceptable_formats:
-            raise Exception(f"'FORMAT' must be in {acceptable_formats}")
-
     def setup(self, model="init"):
         """
         Overload of solver.base.setup(), should be run as a single instance
-
-        Removes the need to move data around as Pyatoa takes care of data
-        fetching within eval_func.
-
-        Allows for synthetic-synthetic cases
 
         :type model: str
         :param model: "init", "true", generates the mesh to be used for workflow
@@ -80,6 +47,8 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         elif model == "init":
             self.generate_mesh(model_path=PATH.MODEL_INIT, 
                                model_name="model_init", model_type="gll")
+            
+        self.distribute_databases()
 
     def generate_data(self, **model_kwargs):
         """
@@ -94,19 +63,17 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
         Also turns on attenuation for the forward model
         !!! attenuation could be moved into parameters.yaml? !!!
         """
-        # Prepare for the forward simulation
-        if PAR.VERBOSE:
-            print(f"{self.__class__.__name__}.generate_data()")
-
         unix.cd(self.cwd)
+
         setpar("SIMULATION_TYPE", "1")
         setpar("SAVE_FORWARD", ".false.")
         setpar("ATTENUATION ", ".true.")
+
         call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
 
         # move ASCII .sem? files into appropriate directory
-        unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*sem?")),
-                dst="traces/obs")
+        unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
+                dst=os.path.join("traces", "obs"))
 
         # Export traces to permanent storage on disk
         if PAR.SAVETRACES:
@@ -114,7 +81,10 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
 
     def generate_mesh(self, model_path, model_name, model_type='gll'):
         """
-        Performs meshing and database generation as a serial task.
+        Performs meshing and database generation as a serial task. Differs
+        slightly from specfem3d class as it only creates database files for
+        the main solver, rather than generating them individually for each
+        running process.
 
         Note:
             Specfem model files must exist in each individual solver directory
@@ -132,12 +102,10 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
             Par_file. See Specfem3D Par_file for available options.
         """
         assert(exists(model_path)), f"model {model_path} does not exist"
+
         available_model_types = ["gll"]
         assert(model_type in available_model_types), \
             f"{model_type} not in available types {available_model_types}"
-
-        if PAR.VERBOSE:
-            print(f"{self.__class__.__name__}.generate_mesh()")
 
         # Ensure this is only run by taskid 0, mainsolver
         cwd = os.path.join(PATH.SOLVER, self.mainsolver)
@@ -153,93 +121,8 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
             unix.cp(src, dst)
             call_solver(mpiexec=system.mpiexec(),
                         executable="bin/xgenerate_databases")
-            
 
-    def eval_fwd(self, path=''):
-        """
-        Performs forward simulations for misfit function evaluation.
-        Same as solver.base.eval_func without the residual writing.
-
-        Function evaluation is taken care of by Pyatoa.
-        """
-        if PAR.VERBOSE:
-            print(f"{self.__class__.__name__}.eval_fwd()")
-
-        unix.cd(self.cwd)
-        self.import_model(path)
-        self.forward()
-    
-    def eval_func(self, pyaflowa):
-        """
-        Call Pyatoa workflow to evaluate the misfit functional.
-
-        :type pyaflowa: Pyaflowa object
-        :param pyaflowa: Pyaflowa object that controls the misfit function eval
-        """
-        if PAR.VERBOSE:
-            print(f"{self.__class__.__name__}.eval_func() => calling Pyatoa...")
-        pyaflowa.eval_func(event_id=self.source_name, preclean=False)
-        # pyaflowa.eval_func(event_id=self.source_name, overwrite=preproc, 
-        #                    preclean=False)
-    
-    def forward(self, path='traces/syn'):
-        """
-        Overwrites seisflows.solver.specfem3d.forward()
-
-        Calls SPECFEM3D forward solver and then moves files into path
-        Adds attenuation, and output format for ASCII
-
-        :type path: str
-        :param path: path to export traces to after completion of simulation
-        """
-        # Set parameters and run forward simulation
-        setpar("SIMULATION_TYPE", "1")
-        setpar("SAVE_FORWARD", ".true.")
-        setpar("ATTENUATION ", ".true.")
-        call_solver(mpiexec=system.mpiexec(),
-                    executable="bin/xgenerate_databases")
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
-
-        # Only works with ASCII file format
-        unix.mv(src=glob(os.path.join("OUTPUT_FILES", "*sem?")), dst=path)
-
-    def adjoint(self):
-        """
-        Calls SPECFEM3D adjoint solver, creates the `SEM` folder with adjoint
-        traces which is required by the adjoint solver
-        """
-        setpar("SIMULATION_TYPE", "3")
-        setpar("SAVE_FORWARD", ".false.")
-        setpar("ATTENUATION ", ".false.")
-        unix.rm("SEM")
-        unix.ln("traces/adj", "SEM")
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
-
-    def check_solver_parameter_files(self):
-        """
-        Checks solver parameters for inconsistencies, should be called as
-        a serial task
-        """
-        nt = getpar(key="NSTEP", cast=int)
-        dt = getpar(key="DT", cast=float)
-
-        if nt != PAR.NT:
-            warnings.warn("Specfem3D NSTEP != PAR.NT\n"
-                          "overwriting Specfem3D with Seisflows parameter"
-                          )
-            setpar(key="NSTEP", val=PAR.NT)
-
-        if dt != PAR.DT:
-            warnings.warn("Specfem3D DT != PAR.DT\n"
-                          "overwriting Specfem3D with Seisflows parameter"
-                          )
-            setpar(key="DT", val=PAR.DT)
-
-        if self.mesh_properties.nproc != PAR.NPROC:
-            warnings.warn("Specfem3D mesh nproc != PAR.NPROC")
-
-        if 'MULTIPLES' in PAR:
-            raise NotImplementedError
+        self.export_model(os.path.join(PATH.OUTPUT, model_name))
 
     def distribute_databases(self):
         """
@@ -254,7 +137,7 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
     
         # Copy the .h files from the mesher, Specfem needs these as well
         src_h = glob(os.path.join(PATH.SOLVER, self.mainsolver, 
-                                   "OUTPUT_FILES", "*.h"))
+                                  "OUTPUT_FILES", "*.h"))
 
         for source_name in self.source_names:
             # Ensure main solver is skipped
@@ -269,42 +152,14 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
             dst_h = os.path.join(PATH.SOLVER, source_name, "OUTPUT_FILES", "")
             unix.cp(src_h, dst_h)
 
-    def combine_vol_data_vtk(self, quantity, tag):
-        """
-        Postprocessing wrapper: xcombine_vol_data_vtk
-        Used to create .vtk files of models, kernels etc.
-        """
-        raise NotImplementedError
-        # Create a directory for combining kernels
-        unix.cd(self.cwd)
-
-        # Specfem outputs the summmed VTK file as the quantity
-        src = os.path.join(self.model_databases, f"{quantity}.vtk")
-        dst = os.path.join(PATH.OUTPUT, f"{quantity}_{tag}.vtk")
-
-        # Parameters file determines which kernels are made into VTK files
-        call_solver(mpiexec=system.mpiexec(),
-                    executable=" ".join([
-                        f"{PATH.SPECFEM_BIN}/xcombine_vol_data_vtk",
-                        f"0",  # NPROC_START
-                        f"{PAR.NPROC}",  # NPROC_END
-                        "{quantity}",  # QUANTITY
-                        "{path}",  # DIR_IN
-                        "{path}",  # DIR_OUT
-                        f"0"  # GPU ACCEL
-                        ])
-                    )
-
-        unix.mv(src, dst)
-
     def initialize_solver_directories(self):
         """
         Overwrite solver.base.initialize_solver_directories()
 
         Creates solver directories in serial.
 
-        Should be run by master job, copies the necessary data and creates the 
-        necessary file structure for all events.
+        Should only be run by master job, copies the necessary data and creates
+        the necessary file structure for all events.
         """
         for source_name in self.source_names:
             cwd = os.path.join(PATH.SOLVER, source_name)
@@ -341,30 +196,6 @@ class Specfem3DPyatoa(custom_import('solver', 'base')):
                 unix.ln(source_name, os.path.join(PATH.SOLVER, "mainsolver"))
                 # Only check the solver parameters once
                 self.check_solver_parameter_files()
-
-    @property
-    def kernel_databases(self):
-        """
-        The location of databases for mernel outputs
-        """
-        return os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
-
-    @property
-    def model_databases(self):
-        """
-        The location of databases for model outputs
-        """
-        return os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
-
-    @property  
-    def source_prefix(self):
-        """
-        Specfem3D's preferred source prefix
-        
-        :rtype: str
-        :return: source prefix
-        """
-        return "CMTSOLUTION"
 
     @property
     def mainsolver(self):
