@@ -1,38 +1,43 @@
-
+"""
+Functions to read and write FORTRAN binary files that are outputted by Specfem
+"""
+import numpy as np
 from os.path import abspath, getsize, join
 from shutil import copyfile
 from seisflows.tools.tools import iterable
 
-import numpy as np
-
 
 def read_slice(path, parameters, iproc):
-    """ Reads SPECFEM model slice(s)
+    """ 
+    Reads SPECFEM model slice(s)
     """
     vals = []
     for key in iterable(parameters):
-        filename = '%s/proc%06d_%s.bin' % (path, iproc, key)
+        filename = f"{path}/proc{iproc:06d}_{key}.bin"
         vals += [_read(filename)]
     return vals
 
 
 def write_slice(data, path, parameters, iproc):
-    """ Writes SPECFEM model slice
+    """ 
+    Writes SPECFEM model slice
     """
     for key in iterable(parameters):
-        filename = '%s/proc%06d_%s.bin' % (path, iproc, key)
+        filename = "{path}/proc{iproc:06d}_{key}.bin"
         _write(data, filename)
 
 
 def copy_slice(src, dst, iproc, parameter):
-    """ Copies SPECFEM model slice
+    """ 
+    Copies SPECFEM model slice
     """
-    filename = 'proc%06d_%s.bin' % (iproc, parameter)
+    filename = f"proc{iproc:06d}_{parameter}.bin"
     copyfile(join(src, filename), join(dst, filename))
 
 
 def _read(filename):
-    """ Reads Fortran style binary data into numpy array
+    """ 
+    Reads Fortran style binary data into numpy array
     """
     nbytes = getsize(filename)
     with open(filename, 'rb') as file:
@@ -51,8 +56,9 @@ def _read(filename):
 
 
 def _write(v, filename):
-    """ Writes Fortran style binary files--data are written as single precision
-        floating point numbers
+    """ 
+    Writes Fortran style binary files
+    Data are written as single precision floating point numbers
     """
     n = np.array([4*len(v)], dtype='int32')
     v = np.array(v, dtype='float32')
