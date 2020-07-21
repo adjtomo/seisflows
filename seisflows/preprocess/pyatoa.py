@@ -20,11 +20,9 @@ from pyatoa.utils.asdf.clean import clean_dataset
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
-solver = sys.modules['seisflows_solver']
-optimize = sys.modules['seisflows_optimize']
 
 
-class Pyatoa(object):
+class Pyatoa:
     """
     Data preprocessing class
 
@@ -32,7 +30,7 @@ class Pyatoa(object):
     made external, this class is simply used as a Seisflows abstraction for
     calls to Pyatoa.
     """
-    def __init__(self, data=None, figures=None, config=None):
+    def __init__(self):
         """
         These parameters should not be set by __init__!
         Attributes are just initialized as NoneTypes for clarity and docstrings
@@ -45,9 +43,9 @@ class Pyatoa(object):
         :param config: a general config object that will be parsed into
             the preprocessing workflow
         """
-        self.data = data
-        self.figures = figures
-        self.config = config
+        self.data = None
+        self.figures = None
+        self.config = None
 
     @staticmethod
     def check():
@@ -67,7 +65,7 @@ class Pyatoa(object):
 
         # Check the existence of required parameters
         required_parameters = ["COMPONENTS", "UNIT_OUTPUT", "MIN_PERIOD",
-                               "MAX_PERIOD", "CORNERS", "CLIENT",
+                               "MAX_PERIOD", "CORNERS", "CLIENT", "ROTATE",
                                "ADJ_SRC_TYPE", "PYFLEX_PRESET",
                                "FIX_WINDOWS", "PLOT", "FORMAT"
                                ]
@@ -119,7 +117,7 @@ class Pyatoa(object):
 
         # Set the logging level, to be outputted to stdout
         for log in ["pyflex", "pyflex", "pyadjoint"]:
-            logging.getLogger(log).setLevel(PAR.LOGGING)
+            logging.getLogger(log).setLevel(PAR.LOGGING.upper())
 
         # Establish the Pyatoa Configuration object using Seisflows parameters
         self.config = pyatoa.Config(
@@ -135,17 +133,6 @@ class Pyatoa(object):
                       }
             )
 
-    @property
-    def fix_windows(self):
-        """
-        A property to check if windows need to be fixed. Dependent on the 
-        iteration/step count, as well as the User set parameter
-        """
-        if optimize.iter == 1 and optimize.line_search.step_count == 0:
-            return False
-        elif isinstance(PAR.FIX_WINDOWS, bool):
-            return PAR.FIX_WINDOWS
-
     def prepare_eval_grad(self, path, cwd, source_name):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms, 
@@ -158,6 +145,9 @@ class Pyatoa(object):
         :type source_name: str
         :param source_name: the event id to be used for tagging and data lookup
         """
+        # Late import because preprocess is loaded before optimize
+        optimize = sys.modules["seisflows_optimize"]
+
         # Some internal path naming and parameter setting
         dataset = os.path.join(self.data, source_name)
         figures = os.path.join(self.figures, source_name)
@@ -193,7 +183,7 @@ class Pyatoa(object):
 
                     # Process data; if fail, move onto waveform plotting
                     try:
-                        mgmt.flow(fix_windows=self.fix_windows)
+                        mgmt.flow(fix_windows=PAR.FIX_WINDOWS)
 
                         self.write_adjoint_traces(
                                        path=os.path.join(cwd, "traces", "adj"),

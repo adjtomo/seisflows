@@ -17,9 +17,9 @@
 # PARAMETERS:
 # -----------
 # WORKFLOW: The method for running Seisflows
-#    inversion, inversion_pyatoa, migration, thrifty_inversion, etc.
+#    inversion, migration, thrifty_inversion, etc.
 # SOLVER: External solver to use
-#    specfem2d, specfem3d, specfem3d_globe, specfem3d_pyatoa
+#    specfem2d, specfem3d, specfem3d_globe
 # SYSTEM: Computer architecture
 #    serial, pbs, slurm, etc.
 # OPTIMIZE: Optimization algorithm for the inverse problem
@@ -32,12 +32,12 @@
 #    base
 #
 # ==============================================================================
-WORKFLOW: inversion
+WORKFLOW: thrifty_inversion
 SOLVER: specfem3d
-SYSTEM: slurm_lg
+SYSTEM: serial
 OPTIMIZE: LBFGS 
-LINESEARCH: backtrack    
-PREPROCESS: base
+LINESEARCH: backtrack
+PREPROCESS: pyatoa
 POSTPROCESS: base
 
 # ==============================================================================
@@ -56,9 +56,9 @@ POSTPROCESS: base
 #              be gathered and sorted from the DATA directory
 #
 # ==============================================================================
-TITLE: null
-BEGIN: 1      
-END: 1 
+TITLE: test
+BEGIN: 1
+END: 1
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 
@@ -69,16 +69,22 @@ END: 1
 # RESUME_FROM (str): Resume a workflow from a given task, incase time out or 
 #                    error encountered mid-iteration. Parameter must match
 #                    method names inside workflow.inversion_pyatoa.main()
-#
-#                    !!! Caution, this is an advanced User parameter, its best 
+# STOP_AT (str):     Stop the workflow after completing the given function
+#                    Useful for interogating the inversion mid-iteration
+#                    !!! Caution, these are an advanced User parameter, its best 
 #                    to just restart the iteration from the beginning to avoid 
 #                    creating duplicates or skipping essential functions !!!
+#                    Available functions:
+#                       initialize, evaluate_gradient, write_gradient
+#                       compute_direction, line_search, finalize, clean
 #
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 RESUME_FROM: null
+STOP_AFTER: null
+
 
 # ==============================================================================
-#
+
 #                                    SYSTEM
 #
 #     Parameters used to interact with the compute system running Seisflows
@@ -87,20 +93,20 @@ RESUME_FROM: null
 # PARAMETERS:
 # -----------
 # NTASK (int):    Number of tasks specified in submission scripts. 
-#                 Corresponds to the number of sources used in the workflow
+
 # NPROC (int):    Number of processors specified in submission scripts
 # NODESIZE (int): Number of cores per node set by the system architecture
-# WALLTIME (int): Job time in minutes for the entire workflow
+
 # TASKTIME (int): Maximum job time for each task within the workflow
 # ENVIRONS (str): Comma delimited environment variables to pass to `run`
-#                 should be the in the format: VARNAME1=value1,VARNAME2=value2
+
 #
 # ==============================================================================
-NTASK: 2
-NPROC: 80
-NODESIZE: 40
-WALLTIME: 1000
-TASKTIME: 25
+NTASK: 1
+NPROC: 1
+NODESIZE: 1
+WALLTIME: 10
+TASKTIME: 10
 ENVIRONS: ''
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -108,7 +114,7 @@ ENVIRONS: ''
 #                           CUSTOM SYSTEM: MauiLg
 #
 #     Parameters specific to the New Zealand HPC cluster Maui (& Maui_ancil)
-#
+
 # PARAMETERS:
 # -----------
 # ACCOUNT (str):         NeSI account name
@@ -131,7 +137,7 @@ MAIN_CLUSTER: maui
 MAIN_PARTITION: nesi_research  
 ANCIL_CLUSTER: maui_ancil 
 ANCIL_PARTITION: nesi_prepost
-ANCIL_TASKTIME: 20 
+ANCIL_TASKTIME: 30
 NODES: 2
 CPUS_PER_TASK: 1 
 SLURMARGS: --hint=nomultithread
@@ -165,13 +171,14 @@ WITH_OPENMP: False
 #                  Seisflows only supports `fortran_binary`
 #
 # ==============================================================================
-CASE: Data
+CASE: Synthetic
 MATERIALS: Elastic
 DENSITY: Constant
-PRECOND: None   
+PRECOND: null
 NT: 10000 
 DT: 0.03
-F0: .1  
+F0: .1
+SOURCE_PREFIX: CMTSOLUTION
 SOLVERIO: fortran_binary
 
 # ==============================================================================
@@ -183,70 +190,80 @@ SOLVERIO: fortran_binary
 # PARAMETERS:
 # -----------
 # FORMAT (str):  Data file formats. Available: `ascii`, `su`
+# COMPONENTS (str): Components to use for generating data, formatted as a single
+#   string. For example, if Z and N components, should be 'ZN'
 #
 # ==============================================================================
 FORMAT: ascii 
+COMPONENTS: ZNE
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 
 #                          CUSTOM PREPROCESSING: base
 #
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-CHANNELS: z              # data channels to be used
-NORMALIZE: 0             # normalize tracesi
-FILTER: ''               # highpass, lowpass, bandpass
-MUTE: 0                  # mute direct arrival
+NORMALIZE: null          # normalize traces
+FILTER: null             # highpass, lowpass, bandpass
+MUTE: null               # mute direct arrival
 MUTECONST: 0.            # mute constant (for muting early arrivals)
 MUTESLOPE: 0.            # mute slope (for muting early arrivals)
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #
 #                        CUSTOM PREPROCESSING: pyatoa
-# 
+#
+#        Parameters related to preprocessing using the package Pyatoa
+#        Will be used in the Pyaflowa workflow, or passed to the Config
+#
+# PARAMETERS:
+# -----------
+# LOGGIN (str):           [null, warning, info, debug] level for log statements
+# UNIT_OUTPUT (str):      [disp, vel, acc] desired units of the observed data
+# MIN_PERIOD (float):     Low corner period in seconds for bandpass filter
+# MAX_PERIOD (float):     High corner period in seconds for bandpass filter
+# CORNERS (int):          Number of corners in bandpass (default=4)
+# ROTATE (bool):          Rotate from North/East/Z to Radial/Transverse/Z 
+# CLIENT (str):           ObsPy FDSN client to get data externally 
+# START_PAD (int):        For observed data, length of data in seconds to get
+#                         before origin time. Should match or exceed 
+#                         synthetic t0. Should be positive 
+# END_PAD (int):          Same as start_pad but for after origin time. Should be
+#                         longer than PAR.NT * PAR.DT    
+# PYFLEX_PRESET (str):    Optional preset map for Pyflex, see pyatoa plugins
+# ADJ_SRC_TYPE (str):     [cc, mt, wav] Adjoint source type for Pyadjoint 
+# FIX_WINDOWS (bool/str): [True, False, iter]
+#                         True: Fix windows for every function evaluation
+#                         False: Evaluate new windows each function evaluation
+#                         iter: Evaluate new windows only at new iterations, 
+#                               but not during line search
+# SNAPSHOT (bool):        Periodically duplicate .h5 output files on disk
+# PLOT (bool):            Plot waveforms and maps
+# MAP_CORNERS (dict):     Optional list of corners to feed into basemap which
+#                         defines the region for generating source-rcv maps
+#
+# What to do with win_amp_ratio?
+# win_amp_ratio (float):  [0:1] Window amplitude threshold criteria  
+#
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-PYATOA:
-    set_logging:  
-        pyatoa: info       # Detailed workflow info: [info, debug, null]
-        pyflex: null        # Windowing logger options
-    cfgpaths:               # User defined paths to auxiliary data
-        waveforms: []
-        synthetics: []
-        responses: []   
-   
-    # OBSPY 
-    unit_output: DISP       # Observed waveform units; [disp, vel, acc]
-    synthetic_unit: DISP    # Specfem3D synthetic units; [disp, vel, acc]
-    min_period: 10.         # minimum period to filter all data in seconds
-    max_period: 30.         # maximum period
-    filter_corners: 4       # corners for bandpass filter, default=4
-    rotate_to_rtz: False    # rotate waveforms to radial, transverse, vertical
-    client: GEONET          # FDSN client for external data fetching
-    start_pad: 20           # time before origintime to retrieve data
-    end_pad: 350            # time after origintime to retrieve data
-
-    # PYFLEX, PYADJOINT
-    pyflex_map: hikurangi          # config map for Pyflex; see pyatoa.plugins
-    adj_src_type: cc_hikurangi     # misfit function to use in Pyadjoint
-    window_amp_ratio: 0.2          # extra amplitude threshold criteria; [0:1]
-    fix_windows: True              # fix misfit windows between iterations
-
-    # OUTPUT FILES
-    snapshot: True             # periodically copy .h5 files incase corruption
-    write_misfit_json: True    # save misfit information into a .json file 
-    create_srcrcv_vtk: True    # generate .vtk files for srcrcv locations
-
-    # PLOTTING
-    plot_waveforms: True       # plot waveform figures during workflow
-    plot_srcrcv_maps: True     # plot source receiver maps during workflow
-    plot_misfit_maps: False    # plot misfit maps during workflow
-    map_corners:               # to set the extent of the map for srcrcv maps
-        lat_min: -42.5         # bottom edge in degrees
-        lat_max: -37.0         # top edge in degrees
-        lon_min: 173.0         # left edge in degrees
-        lon_max: 178.5         # right edge in degrees
-    combine_imgs: True         # combine waveforms and srcrcv maps into a .pdf
-    purge_waveforms: True      # if COMBINE_IMGS; delete waveforms after combine
-    purge_tiles: True          # if COMBINE_IMGS; delete intermediate imgs
+LOGGING: debug
+UNIT_OUTPUT: DISP       
+MIN_PERIOD: 10.         
+MAX_PERIOD: 30.         
+ROTATE: False
+CORNERS: 4       
+CLIENT: GEONET          
+START_PAD: 20           
+END_PAD: 350           
+PYFLEX_PRESET: nznorth_10-30s_plus
+ADJ_SRC_TYPE: cc
+FIX_WINDOWS: False
+SNAPSHOT: True     
+PLOT: True
+MAP_CORNERS:
+    LAT_MIN: -42.5
+    LAT_MAX: -37.0
+    LON_MIN: 173.0
+    LON_MAX: 178.5
 
 # ==============================================================================
 #
@@ -256,17 +273,19 @@ PYATOA:
 # 
 # PARAMETERS:
 # -----------
-# TASKTIME_SMOOTH (int): Scales the smoothing operation, as this may take longer
+# TASKTIME_SMOOTH (int): Scales the smoothing operation, as this may take longer 
 #                        than normal tasktimes. Scaling works as a multiple of
 #                        SYSTEM.TASKTIME. Default is 1
 # SMOOTH_H (float):      Gaussian std. for smoothing in the horizontal, meters
+#                        Smoothing scalelength is ~ sqrt(8) * sigma
 # SMOOTH_V (float):      Gaussian std. for smoothing in the vertical, meters
+#                        Smoothing scalelength is ~ sqrt(8) * sigma
 # SCALE (float):         Scaling factor
 #
 # ==============================================================================
-TASKTIME_SMOOTH: 3 
-SMOOTH_H: 20000.
-SMOOTH_V: 2000.
+TASKTIME_SMOOTH: 1
+SMOOTH_H: 5000.
+SMOOTH_V: 5000.
 SCALE: 1.
 
 # ==============================================================================
@@ -284,7 +303,7 @@ SCALE: 1.
 #                      Default = 0.5
 #
 # ==============================================================================
-STEPCOUNTMAX: 7 
+STEPCOUNTMAX: 5
 STEPLENINIT: 0.05
 STEPLENMAX: 0.5
 
@@ -300,7 +319,7 @@ STEPLENMAX: 0.5
 # LBFGSTHRES (float): Descent direction threshold. Default = 0.0
 #
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-LBFGSMAX: null 
+LBFGSMAX: null
 LBFGSMEM: null
 LBFGSTHRES: null
 
@@ -321,31 +340,14 @@ LBFGSTHRES: null
 #                       `both`:   saves as both .npy and .bin files
 # SAVERESIDUALS (bool): Preprocessing, save waveform residuals
 # SAVETRACES (bool):    Preprocessing, save waveforms
-#
-# VTK_EVENT_KERNEL (list of str):    Create .vtk files for visualization of 
-#                                    event kernels. Kernels availalable:
-#                                    `vs_kernel`, `vp_kernel`, `rho_kernel` 
-# VTK_MISFIT_KERNEL (list of str):   Create .vtk files for visualization of
-#                                    misfit kernels
-# VTK_GRADIENT_KERNEL (list of str): Create .vtk files for visualization of
-#                                    the gradient 
 # 
 # ==============================================================================
-SAVEGRADIENT: False
-SAVEKERNELS: False
+SAVEGRADIENT: True
+SAVEKERNELS: True
 SAVEMODEL: True
-SAVE_AS: vector  
+SAVEAS: binary  
 SAVERESIDUALS: False
 SAVETRACES: False
-# VTK_EVENT_KERNELS: 
-#     - vp_kernel
-#     - vs_kernel
-# VTK_SUM_NOSMOOTH_KERNELS: 
-#     - vp_kernel
-#     - vs_kernel
-# VTK_GRADIENT: 
-#     - vp_kernel
-#     - vs_kernel
 
 # ==============================================================================
 #
@@ -364,15 +366,18 @@ SAVETRACES: False
 #
 # CUSTOM PATHING:
 # ---------------
-# PYATOA_IO:    Location to store Pyatoa workflow files
+# DATA:     Location of any observation data, must be in the form
+#           path/to/DATA/EVENT_ID/NN.SSS.CCC.sem?
+#           or if using Pyatoa preprocess class
+#               path/to/DATA/mseeds/... (seed naming convention)
+#               path/to/DATA/seed/... (seed naming convention)
 #
 # ==============================================================================
 PATHS:
     SCRATCH: "./scratch"
     OUTPUT: "./output"
-    MODEL_INIT: "/path/to/model_init"
-    MODEL_TRUE: "/path/to/model_true"
-    SPECFEM_DATA: "./sfDATA"
-    SPECFEM_BIN: "/path/to/specfem_binaries"
-    PYATOA_IO: "./pyatoa.io"
-
+    MODEL_INIT: "./"
+    MODEL_TRUE: "./"
+    SPECFEM_DATA: "./"
+    SPECFEM_BIN: "./"
+    DATA: "./"

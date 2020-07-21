@@ -14,7 +14,7 @@ InversionPyatoa rather than Inversion
 import sys
 
 from seisflows.tools import unix
-from seisflows.config import  custom_import
+from seisflows.config import custom_import
 
 # Seisflows Configuration
 PAR = sys.modules['seisflows_parameters']
@@ -23,12 +23,20 @@ PATH = sys.modules['seisflows_paths']
 optimize = sys.modules['seisflows_optimize']
 
 
-class ThriftyInversion(custom_import('workflow', 'inversion')):
+class ThriftyInversion(custom_import("workflow", "inversion")):
     """
     Thrifty inversion subclass for InversionPyatoa
     """
-    # Instanstiate the status attribute
-    status = 0
+    def __init__(self):
+        """
+        :type status: int
+        :param status: the current status of the inversion.
+            0: First iteration, restart, or other conditions means inversion
+               must default to normal behavior
+            1: A well-scaled inversion can skip the function evaluation of the
+               next iteration by using the previous iteration.
+        """
+        self.status = 0
 
     def initialize(self):
         """
@@ -45,6 +53,7 @@ class ThriftyInversion(custom_import('workflow', 'inversion')):
         Determine if forward simulation from line search can be carried over
         """
         self.update_status()
+
         if self.status == 1:
             print("THRIFTY CLEAN")
             unix.rm(PATH.GRAD)
@@ -64,15 +73,15 @@ class ThriftyInversion(custom_import('workflow', 'inversion')):
             self.status = 0
         # May not work on first iteration
         elif optimize.iter == PAR.BEGIN:
-            print("\t First iteration of workflow, defaulting to inversion")
-            self.status=0
+            print("\t First iteration of workflow, defaulting to Inversion")
+            self.status = 0
         # May not work following restart
         elif optimize.restarted:
-            print("\t Optimization has been restarted, defaulting to inversion")
+            print("\t Optimization has been restarted, defaulting to Inversion")
             self.status = 0
         # May not work after resuming saved workflow
         elif optimize.iter == PAR.END:
-            print("\t End of workflow, defaulting to inversion")
+            print("\t End of workflow, defaulting to Inversion")
             self.status = 0
         # May not work if using local filesystems
         elif PATH.LOCAL:
@@ -80,7 +89,7 @@ class ThriftyInversion(custom_import('workflow', 'inversion')):
             self.status = 0
         # Otherwise, continue with thrifty inversion
         else:
-            print("\t Continuing with thrifty inversion")
+            print("\t Continuing with Thrifty Inversion")
             self.status = 1
 
 

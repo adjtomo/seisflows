@@ -2,22 +2,22 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/seisflows" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/seisflows" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/optimize/LBFGS.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/LBFGS.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/optimize/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/plugins/readers.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/readers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/parameters.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/parameters.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/preprocess/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/preprocess/base.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/preprocess/pyatoa.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/preprocess/pyatoa.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/solver/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/solver/base.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/solver/specfem3d.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/solver/specfem3d.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/solver/specfem3d_serial.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/solver/specfem3d_serial.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/tools/err.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/tools/err.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/solver/specfem3d_serial.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/tools/msg.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/tools/msg.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/tools/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/tools/tools.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/forward.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/forward_pyatoa.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/workflow/inversion.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/inversion.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/workflow/migration_pyatoa.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/workflow/thrifty_pyatoa.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,6 +39,7 @@
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
@@ -86,6 +87,14 @@
     <option name="version" value="1" />
   </component>
   <component name="WindowStateProjectService">
+    <state x="111" y="-712" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1595371326383">
+      <screen x="-35" y="-746" width="1366" height="746" />
+    </state>
+    <state x="111" y="-712" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.22.1280.778/-35.-746.1366.746@-35.-746.1366.746" timestamp="1595371326383" />
+    <state width="498" height="451" key="SwitcherDM" timestamp="1595371807769">
+      <screen x="-35" y="-746" width="1366" height="746" />
+    </state>
+    <state width="498" height="451" key="SwitcherDM/0.22.1280.778/-35.-746.1366.746@-35.-746.1366.746" timestamp="1595371807769" />
     <state width="600" height="428" key="javadoc.popup" timestamp="1595295278319">
       <screen x="0" y="22" width="1920" height="1058" />
     </state>

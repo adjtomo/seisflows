@@ -23,7 +23,7 @@ system = sys.modules['seisflows_system']
 preprocess = sys.modules['seisflows_preprocess']
 
 
-class Base(object):
+class Base:
     """
     This base class provides an interface through which solver simulations can
     be set up and run and a parent class for the following subclasses:
@@ -84,25 +84,24 @@ class Base(object):
         !!! Required functions which must be implemented by subclass !!!
 
     """
-    def __init__(self, parameters=None, mesh_properties=None,
-                 source_names=None):
+    def __init__(self):
         """
-        These parameters should not be set by __init__!
+        These parameters should not be set by the User_!
         Attributes are just initialized as NoneTypes for clarity and docstrings
 
         :type parameters: list of str
         :param parameters: a list detailing the parameters to be used to
             define the model, available: ['vp', 'vs', 'rho']
-        :type mesh_properties: seisflows.tools.tools.Struct
-        :param mesh_properties: hidden attribute, a dictionary of mesh
+        :type _mesh_properties: seisflows.tools.tools.Struct
+        :param _mesh_properties: hidden attribute, a dictionary of mesh
             properties, including the ngll points, nprocs, and mesh coordinates
-        :type source_names: hidden attribute,
-        :param source_names: the names of all the sources that are being used
+        :type _source_names: hidden attribute,
+        :param _source_names: the names of all the sources that are being used
             by the solver
         """
-        self.parameters = parameters
-        self._mesh_properties = mesh_properties
-        self._source_names = source_names
+        self.parameters = None
+        self._mesh_properties = None
+        self._source_names = None
 
     def check(self):
         """
@@ -250,16 +249,6 @@ class Base(object):
             preprocess.prepare_eval_grad(path, self.cwd, self.source_name)
             if export_traces:
                 self.export_residuals(path)
-
-    def eval_fwd(self, *args, **kwargs):
-        """
-        High level solver interface
-
-        Performs forward simulations needed for misfit function evaluation
-
-        !!! Must be implemented by subclass !!!
-        """
-        raise NotImplementedError
 
     def eval_grad(self, path='', export_traces=False):
         """
@@ -629,23 +618,22 @@ class Base(object):
         Works around conflicting kernel filename conventions by renaming
         `alpha` to `vp` and `beta` to `vs`
         """
-        # Rename alpha to vp
-        for globfids in ["*proc??????_alpha_kernel.bin",
-                         "*proc??????_alpha[hv]_kernel.bin",
-                         "*proc??????_reg1_alpha_kernel.bin",
-                         "*proc??????_reg1_alpha[hv]_kernel.bin"]:
-            unix.rename(old="alpha", new="vp", names=glob(globfids))
+        # Rename 'alpha' to 'vp'
+        for tag in ["alpha", "alpha[hv]", "reg1_alpha", "reg1_alpha[hv]"]:
+            names = glob(f"*proc??????_{tag}_kernel.bin")
+            unix.rename(old="alpha", new="vp", names=names)
 
-        # Rename beta to vs
-        for globfids in ["*proc??????_beta_kernel.bin",
-                         "*proc??????_beta[hv]_kernel.bin",
-                         "*proc??????_reg1_beta_kernel.bin",
-                         "*proc??????_reg1_beta[hv]_kernel.bin"]:
-            unix.rename(old="beta", new="vs", names=glob(globfids))
+        # Rename 'beta' to 'vs'
+        for tag in ["beta", "beta[hv]", "reg1_beta", "reg1_beta[hv]"]:
+            names = glob(f"*proc??????_{tag}_kernel.bin")
+            unix.rename(old="beta", new="vs", names=names)
 
     def rename_data(self, path):
         """
-        Works around conflicting data filename conventions
+        Optional method to rename data to work around conflicting naming schemes
+        for data outputted by the solver
+
+        !!! Can be implemented by subclass !!!
         """
         pass
 
@@ -751,7 +739,8 @@ class Base(object):
                                        iproc=iproc)[0]
             ngll += [len(dummy)]
             iproc += 1
-            if not exists(os.path.join(path, f"proc{int(iproc):06d}_{key}.bin"):
+            if not exists(os.path.join(path,
+                                       f"proc{int(iproc):06d}_{key}.bin")):
                 break
         nproc = iproc
 
@@ -775,8 +764,7 @@ class Base(object):
         user-supplied input files
 
         Note:
-            Available sources are sorted and chosen from the start of the list
-            until PAR.NTASK
+            Source list is sorted and collected from start up to PAR.NTASK
         """
         # Check path
         path = PATH.SPECFEM_DATA

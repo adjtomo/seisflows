@@ -10,10 +10,10 @@ import time
 from glob import glob
 
 import numpy as np
+from seisflows.config import custom_import
 from seisflows.tools import unix
 from seisflows.tools.tools import exists
 from seisflows.config import save
-from seisflows.workflow.base import Base
 from seisflows.tools.err import ParameterError
 
 PAR = sys.modules["seisflows_parameters"]
@@ -26,7 +26,7 @@ preprocess = sys.modules["seisflows_preprocess"]
 postprocess = sys.modules["seisflows_postprocess"]
 
 
-class Inversion(Base):
+class Inversion(custom_import("workflow", "base")):
     """
     Waveform inversion base class
 
@@ -44,7 +44,8 @@ class Inversion(Base):
     Commands for running in serial or parallel on a workstation or cluster
     are abstracted through the "system" interface.
     """
-    def check(self):
+    @staticmethod
+    def check():
         """
         Checks parameters and paths
         """
@@ -139,14 +140,14 @@ class Inversion(Base):
         Carries out seismic inversion by running a series of functions in order
         """
         # The workflow is a list of functions that can be called dynamically
-        self.flow = [self.initialize,
-                     self.evaluate_gradient,
-                     self.write_gradient,
-                     self.compute_direction,
-                     self.line_search,
-                     self.finalize,
-                     self.clean
-                     ]
+        flow = [self.initialize,
+                self.evaluate_gradient,
+                self.write_gradient,
+                self.compute_direction,
+                self.line_search,
+                self.finalize,
+                self.clean
+                ]
 
         print(f"BEGINNING WORKFLOW AT {time.asctime()}")
         optimize.iter = PAR.BEGIN
@@ -154,7 +155,7 @@ class Inversion(Base):
 
         # Allow workflow resume from a given mid-workflow location
         if PAR.RESUME_FROM:
-            self.resume_from()
+            self.resume_from(flow)
         elif optimize.iter == 1:
             # First-time intialization of the workflow
             self.setup()
@@ -162,7 +163,7 @@ class Inversion(Base):
         # Run the workflow until from the current iteration until PAR.END
         while optimize.iter <= PAR.END:
             print(f"ITERATION {optimize.iter}")
-            for func in self.flow:
+            for func in flow:
                 func()
                 # Stop the workflow at STOP_AFTER if requested
                 if PAR.STOP_AFTER and func.__name__ == PAR.STOP_AFTER:
@@ -171,10 +172,14 @@ class Inversion(Base):
             print(f"FINISHED ITERATION {optimize.iter} AT {time.asctime()}\n")
             optimize.iter += 1
 
-    def resume_from(self):
+    def resume_from(self, flow):
         """
         Resume the workflow from a given function, proceed in the same fashion 
         as main until the end of the current iteration.
+
+        :type flow: list of functions
+        :param flow: the order of functions defined in main(), which should be
+            parsed to determine where workflow should be resumed from
         """ 
         # Determine the index that corresponds to the resume function named
         try:
@@ -193,7 +198,8 @@ class Inversion(Base):
         print(f"FINISHED ITERATION {optimize.iter} AT {time.asctime()}\n")
         optimize.iter += 1
 
-    def setup(self):
+    @staticmethod
+    def setup():
         """
         Lays groundwork for inversion by running setup() functions for the 
         involved sub-modules, and generating synthetic true data if necessary, 
@@ -205,19 +211,7 @@ class Inversion(Base):
         preprocess.setup()
         postprocess.setup()
         optimize.setup()
-
-        # Run the setup in serial to reduce unnecessary job submissions
-        # Needs to be split up into multiple system calls
-        if "SERIAL" in solver.__class__.__name__.upper():
-            solver.initialize_solver_directories()
-
-            if PAR.CASE.upper() == "SYNTHETIC":
-                system.run_single("solver", "setup", model="true")
-                system.run("solver", "generate_data")
-    
-            system.run_single("solver", "setup", model="init")
-        else:
-            system.run("solver", "setup")
+        system.run("solver", "setup")
 
     def initialize(self):
         """
@@ -227,7 +221,8 @@ class Inversion(Base):
         print("INITIALIZE")
         self.evaluate_function(path=PATH.GRAD, suffix="new")
 
-    def compute_direction(self):
+    @staticmethod
+    def compute_direction():
         """
         Computes search direction
         """
@@ -314,7 +309,8 @@ class Inversion(Base):
         if PAR.SAVERESIDUALS:
             self.save_residuals()
 
-    def clean(self):
+    @staticmethod
+    def clean():
         """
         Cleans directories in which function and gradient evaluations were
         carried out
@@ -326,13 +322,15 @@ class Inversion(Base):
         unix.mkdir(PATH.GRAD)
         unix.mkdir(PATH.FUNC)
 
-    def checkpoint(self):
+    @staticmethod
+    def checkpoint():
         """
         Writes information to disk so workflow can be resumed following a break
         """
         save()
 
-    def write_model(self, path, suffix):
+    @staticmethod
+    def write_model(path, suffix):
         """
         Writes model in format expected by solver
 
@@ -346,7 +344,8 @@ class Inversion(Base):
 
         solver.save(solver.split(optimize.load(src)), dst)
 
-    def write_gradient(self, path, suffix):
+    @staticmethod
+    def write_gradient(path, suffix):
         """
         Writes gradient in format expected by non-linear optimization library.
         Calls the postprocess module, which will smooth/precondition gradient.
@@ -364,7 +363,8 @@ class Inversion(Base):
         parts = solver.load(src, suffix="_kernel")
         optimize.save(dst, solver.merge(parts))
 
-    def write_misfit(self, path, suffix):
+    @staticmethod
+    def write_misfit(path, suffix):
         """
         Writes misfit in format expected by nonlinear optimization library.
         Collects all misfit values within the given residuals directory and sums
@@ -381,7 +381,8 @@ class Inversion(Base):
         total_misfit = preprocess.sum_residuals(src)
         optimize.savetxt(dst, total_misfit)
 
-    def save_gradient(self):
+    @staticmethod
+    def save_gradient():
         """
         Save the gradient vector. Allows saving numpy array or standard
         Fortran .bin files
@@ -398,7 +399,8 @@ class Inversion(Base):
             src = os.path.join(PATH.OPTIMIZE, "g_old")
             unix.cp(src, dst + ".npy")
 
-    def save_model(self):
+    @staticmethod
+    def save_model():
         """
         Save the model vector. Allows saving numpy array or standard
         Fortran .bin files
@@ -413,7 +415,8 @@ class Inversion(Base):
         if PAR.SAVEAS in ["vector", "both"]:
             np.save(file=dst, arr=optimize.load(src))
 
-    def save_kernels(self):
+    @staticmethod
+    def save_kernels():
         """
         Save the kernel vector as a Fortran binary file on disk
         """
@@ -421,7 +424,8 @@ class Inversion(Base):
         dst = os.path.join(PATH.OUTPUT, f"kernels_{optimize.iter:04d}")
         unix.mv(src, dst)
 
-    def save_traces(self):
+    @staticmethod
+    def save_traces():
         """
         Save the waveform traces to disk
         """
@@ -429,7 +433,8 @@ class Inversion(Base):
         dst = os.path.join(PATH.OUTPUT, f"traces_{optimize.iter:04d}")
         unix.mv(src, dst)
 
-    def save_residuals(self):
+    @staticmethod
+    def save_residuals():
         """
         Save the residuals to disk
         """

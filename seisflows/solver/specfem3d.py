@@ -41,7 +41,8 @@ class Specfem3D(custom_import("solver", "base")):
         # Run Base class checks
         super(Specfem3D, self).check()
 
-        required_parameters = ["NT", "DT", "F0", "FORMAT", "COMPONENTS"]
+        required_parameters = ["NT", "DT", "F0", "FORMAT", "COMPONENTS",
+                               "SOURCE_PREFIX"]
         for req in required_parameters:
             if req not in PAR:
                 raise ParameterError(self, req)
@@ -314,5 +315,5 @@ class Specfem3D(custom_import("solver", "base")):
         :rtype: str
         :return: source prefix
         """
-        return "CMTSOLUTION"
+        return PAR.SOURCE_PREFIX.upper()
 

@@ -15,9 +15,8 @@ from seisflows.tools.err import ParameterError
 from seisflows.tools.tools import exists, getset
 from seisflows.plugins import adjoint, misfit, readers, writers
 
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
-solver = sys.modules["seisflows_solver"]
+PAR = sys.modules["seisflows_parameters"]
+PATH = sys.modules["seisflows_paths"]
 
 
 class Base(object):
@@ -93,6 +92,9 @@ class Base(object):
         :type path: str
         :param path: directory containing observed and synthetic seismic data
         """
+        # Need to load solver mid-workflow as preprocess is loaded first
+        solver = sys.modules["seisflows_solver"]
+
         for filename in solver.data_filenames:
             obs = self.reader(os.path.join(path, "traces", "obs", filename))
             syn = self.reader(os.path.join(path, "traces", "syn", filename))
@@ -344,7 +346,7 @@ class Base(object):
             assert PAR.FREQ > 0., "Freq must be > 0"
             assert PAR.FREQ < np.inf, "Freq > infinity"
 
-    def check_mute(self):
+    def check_mute_parameters(self):
         """
         Checks mute settings, which are used to zero out early or late arrivals
         or offsets
@@ -378,7 +380,7 @@ class Base(object):
         if 'MuteLongOffsets' not in PAR.MUTE:
             setattr(PAR, 'MUTE_LONG_OFFSETS_DIST', 0.)
 
-    def check_normalize(self):
+    def check_normalize_parameters(self):
         """
         Check that the normalization parameters are properly set
         """

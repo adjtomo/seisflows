@@ -17,9 +17,10 @@ from seisflows.tools.seismic import Writer
 # seisflows.config objects 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
+solver = sys.modules['seisflows_solver']
 
 
-class Base(object):
+class Base:
     """
     Nonlinear optimization abstract base class
 
@@ -45,6 +46,32 @@ class Base(object):
         p_new - current search direction
         p_old - previous search direction
     """
+    def __init__(self):
+        """
+        These parameters should not be set by __init__!
+        Attributes are just initialized as NoneTypes for clarity and docstrings
+
+        :type iter: int
+        :param iter: the current iteration of the workflow
+        :type line_search: Class
+        :param line_search: a class controlling the line search functionality
+            for determining step length
+        :type precond: Class
+        :param precond: a class controlling the preconditioner functionality
+            for preconditiong gradient information
+        :type writer: Class
+        :param writer: a class that has simple write-to-text functions for
+            outputting the status of an optimization
+        :type restarted: int
+        :param restarted: a flag signalling if the optimization algorithm has
+            been restarted recently
+        """
+        self.iter = None
+        self.line_search = None
+        self.precond = None
+        self.writer = None
+        self.restarted = None
+
     def check(self):
         """
         Checks parameters, paths, and dependencies
@@ -128,7 +155,6 @@ class Base(object):
         # Prepare scratch directory and save initial model
         unix.mkdir(PATH.OPTIMIZE)
         if "MODEL_INIT" in PATH:
-            solver = sys.modules['seisflows_solver']
             m_new = solver.merge(solver.load(PATH.MODEL_INIT))
             self.save("m_new", m_new)
             self.check_model_parameters(m_new, "m_new")
@@ -147,8 +173,9 @@ class Base(object):
         else:
             p_new = -g_new
         self.save('p_new', p_new)
-    
-    def check_model_parameters(self, m, tag):
+
+    @staticmethod
+    def check_model_parameters(m, tag):
         """
         Check to ensure that the model parameters fall within the guidelines 
         of the solver. Print off min/max model parameters for the User.
@@ -158,43 +185,26 @@ class Base(object):
         :type tag: str
         :param tag: tag of the model to be used for more specific error msgs
         """
-        vp, vs, rho, poissons = None, None, None, None
-        # Distribute the model parameters based on the type of inversion
-        if PAR.MATERIALS == "Elastic":
-            if PAR.DENSITY == "Constant":
-                vp, vs = np.split(m, 2)
-            else:
-                # include density in the model vector
-                vp, vs, rho = np.split(m, 3)
-        else:
-            vp = m
+        # Dynamic way to split up the model based on number of params
+        pars = {}
+        for i, par in enumerate(solver.parameters):
+            pars[par] = np.split(m, len(solver.parameters))[i]
 
         # Check the Poisson's ratio based on Specfem3D upper/lower bounds
-        if vp is not None and vs is not None:
-            poissons = poissons_ratio(vp=vp, vs=vs)
+        if pars["vp"] is not None and pars["vs"] is not None:
+            poissons = poissons_ratio(vp=pars["vp"], vs=pars["vs"])
             if (poissons.min() < -1) or (poissons.max() > 0.5):
-                msg = f"""
-                
-                ERROR CHECKING MODEL PARAMETERS
-
-                    The Poisson's ratio of '{tag}' is out of bounds with respect 
-                    to the range defined by Specfem3D (-1, 0.5). This will cause 
-                    an error in the process xgenerate_databases. The model 
-                    bounds were found to be:
-
-                    {poissons.min():.2f} < PR < {poissons.max():.2f}
-
-                """
-                print(msg)
+                print(msg.PoissonsRatioError.format(tag=tag,
+                                                    pmin=poissons.min(),
+                                                    pmax=poissons.max())
+                      )
                 sys.exit(-1)
 
         # Tell the User min and max values of the updated model
         print("\t\tModel Parameters")
-        msg = "\t\t\t{minval:.2f} <= {val} <= {maxval:.2f}"
-        for val, tag in zip([vp, vs, rho, poissons], 
-                            ["Vp", "Vs", "rho", "Poissons"]):
-            if val is not None:
-                print(msg.format(minval=val.min(), val=tag, maxval=val.max()))
+        msg_ = "\t\t\t{minval:.2f} <= {key} <= {maxval:.2f}"
+        for key, vals in pars.items():
+            print(msg_.format(minval=vals.min(), key=key, maxval=vals.max()))
 
     def initialize_search(self):
         """
@@ -338,7 +348,8 @@ class Base(object):
         self.line_search.writer.iter -= 1
         self.line_search.writer.newline()
 
-    def dot(self, x, y):
+    @staticmethod
+    def dot( x, y):
         """
         Utility function to computes inner product between vectors
 
@@ -349,7 +360,8 @@ class Base(object):
         """
         return np.dot(np.squeeze(x), np.squeeze(y))
 
-    def load(self, filename):
+    @staticmethod
+    def load(filename):
         """
         Reads vectors from disk
 
@@ -359,7 +371,8 @@ class Base(object):
         """
         return loadnpy(os.path.join(PATH.OPTIMIZE, filename))
 
-    def save(self, filename, array):
+    @staticmethod
+    def save(filename, array):
         """
         Writes vectors to disk
 
@@ -371,19 +384,19 @@ class Base(object):
         """
         savenpy(os.path.join(PATH.OPTIMIZE, filename), array)
 
-    def loadtxt(self, filename):
+    @staticmethod
+    def loadtxt(filename):
         """
         Reads scalars from disk
 
         :type filename: str
         :param filename: filename to read from
-        :type array: np.array
-        :param array: array to be saved
         :return:
         """
         return float(np.loadtxt(os.path.join(PATH.OPTIMIZE, filename)))
 
-    def savetxt(self, filename, scalar):
+    @staticmethod
+    def savetxt(filename, scalar):
         """
         Writes scalars to disk
 

@@ -318,3 +318,16 @@ cluster.  If you have access to one cluster and are willing to help debug,
 please let us know.
 
 """
+
+PoissonsRatioError = """
+                
+ERROR CHECKING MODEL PARAMETERS
+
+    The Poisson's ratio of '{tag}' is out of bounds with respect 
+    to the range defined by Specfem3D (-1, 0.5). This will cause 
+    an error in the process xgenerate_databases. The model 
+    bounds were found to be:
+
+    {pmin:.2f} < PR < {pmax:.2f}
+
+"""

@@ -69,9 +69,9 @@ def divides(i, j):
 
 def exists(names):
     """
-    Wrapper for os.path.exists for a list
+    Wrapper for os.path.exists that also works on lists
 
-    :type names: list
+    :type names: list or str
     :param names: list of names to check existnce
     """
     for name in iterable(names):

@@ -18,6 +18,17 @@ class LBFGS(Base):
     The Limited memory BFGS algorithm
     Calls upon seisflows.plugin.optimize.LBFGS to accomplish LBFGS algorithm
     """
+    def __init__(self):
+        """
+        These parameters should not be set by __init__!
+        Attributes are just initialized as NoneTypes for clarity and docstrings
+
+        :type LBFGS: Class
+        :param LBFGS: plugin LBFGS class that controls the machinery of the
+            L-BFGS optimization schema
+        """
+        self.LBFGS = None
+
     def check(self):
         """
         Checks parameters, paths, and dependencies
@@ -46,7 +57,7 @@ class LBFGS(Base):
         Set up the LBFGS optimization schema
         """
         super(LBFGS, self).setup()
-        self.LBFGS = getattr(optimize, 'LBFGS')(path=PATH.OPTIMIZE,
+        self.LBFGS = getattr(optimize, "LBFGS")(path=PATH.OPTIMIZE,
                                                 memory=PAR.LBFGSMEM,
                                                 maxiter=PAR.LBFGSMAX,
                                                 thresh=PAR.LBFGSTHRESH,
@@ -57,7 +68,6 @@ class LBFGS(Base):
         """
         Overwrite the Base compute direction class
         """
-        # g_new = self.load('g_new')
         p_new, self.restarted = self.LBFGS()
 
         self.save("p_new", p_new)

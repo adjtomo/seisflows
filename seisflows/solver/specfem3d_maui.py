@@ -3,7 +3,13 @@
 This is the subclass seisflows.solver.Specfem3DSerial
 
 This class is almost the same as Specfem3D, except the setup step is run as
-a serial task. This is useful if HPC job queues are long, as it saves
+a serial task. This is useful as HPC job queues are long on Maui, so it saves
+on job queue time by replacing it with a long-winded serial task.
+
+Additionally, misfit quantification is split off from the forward simulation,
+because Anaconda is not available on the main cluster, so jobs need to be
+submitted to an auxiliary cluster. This is paired with a new evaluate_function()
+function defined by the InversionMaui workflow class.
 """
 import os
 import sys
@@ -14,7 +20,6 @@ from seisflows.tools.tools import exists
 from seisflows.config import custom_import
 from seisflows.tools.seismic import call_solver, getpar, setpar
 
-
 # Seisflows configuration
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -23,14 +28,14 @@ system = sys.modules['seisflows_system']
 preprocess = sys.modules['seisflows_preprocess']
 
 
-class Specfem3DSerial(custom_import("solver", "specfem3d")):
+class Specfem3DMaui(custom_import("solver", "specfem3d")):
     """
     Python interface to Specfem3D Cartesian. This subclass inherits functions
     from seisflows.solver.specfem3d
 
     !!! See base class for method descriptions !!!
     """
-    def setup(self, model="init"):
+    def setup(self, model):
         """
         Overload of solver.base.setup(), should be run as a single instance
 
@@ -40,17 +45,15 @@ class Specfem3DSerial(custom_import("solver", "specfem3d")):
             "init" for initial model, default
         :type model: str
         :param model: model to setup, either 'true' or 'init'
-        """   
-        if model == "true":
-            self.generate_mesh(model_path=PATH.MODEL_TRUE,
-                               model_name="model_true", model_type="gll")
-        elif model == "init":
-            self.generate_mesh(model_path=PATH.MODEL_INIT, 
-                               model_name="model_init", model_type="gll")
+        """
+        # Choice of model will determine which mesh to generate
+        self.generate_mesh(model_path=getattr(PATH, f"MODEL_{model.upper()}"),
+                           model_name=f"model_{model.lower()}",
+                           model_type="gll")
             
         self.distribute_databases()
 
-    def generate_data(self, **model_kwargs):
+    def generate_data(self):
         """
         Overload seisflows.solver.base.generate_data. To be run in parallel
         
@@ -83,15 +86,9 @@ class Specfem3DSerial(custom_import("solver", "specfem3d")):
         """
         Performs meshing and database generation as a serial task. Differs
         slightly from specfem3d class as it only creates database files for
-        the main solver, rather than generating them individually for each
-        running process.
+        the main solver, which are then copied in serial by the function
+        distribute_databases()
 
-        Note:
-            Specfem model files must exist in each individual solver directory
-            If symlinked, Fortran I/O errors will occur when multiple processes 
-            try to read from the same .bin file. 
-            This means that during the workflow there will be large disk 
-            requirements due to redundant files in scratch.
 
         :type model_path: str
         :param model_path: path to the model to be used for mesh generation
@@ -124,10 +121,39 @@ class Specfem3DSerial(custom_import("solver", "specfem3d")):
 
         self.export_model(os.path.join(PATH.OUTPUT, model_name))
 
+    def eval_misfit(self, path='', export_traces=False):
+        """
+        Performs function evaluation only, that is, the misfit quantification.
+        Forward simulations are performed in a separate function
+
+        :type path: str
+        :param path: path in the scratch directory to use for I/O
+        :type export_traces: bool
+        :param export_traces: option to save the observation traces to disk
+        :return:
+        """
+        preprocess.prepare_eval_grad(path, self.cwd, self.source_name)
+        if export_traces:
+            self.export_residuals(path)
+
+    def eval_fwd(self, path=''):
+        """
+        High level solver interface
+
+        Performans forward simulations only, function evaluation is split off
+        into its own function
+
+        :type path: str
+        :param path: path in the scratch directory to use for I/O
+        """
+        unix.cd(self.cwd)
+        self.import_model(path)
+        self.forward()
+
     def distribute_databases(self):
         """
         A serial task to distrubute the database files outputted by 
-        xgenerate_databases from main solver to all solver directories
+        xgenerate_databases from main solver to all other solver directories
         """
         # Copy the database files but ignore any vt? files
         src_db = glob(os.path.join(PATH.SOLVER, self.mainsolver, 
@@ -143,23 +169,24 @@ class Specfem3DSerial(custom_import("solver", "specfem3d")):
             # Ensure main solver is skipped
             if source_name == self.mainsolver:
                 continue
-            # Copy database files
+            # Copy database files to each of the other source directories
             dst_db = os.path.join(PATH.SOLVER, source_name, 
                                   "OUTPUT_FILES", "DATABASES_MPI", "")
             unix.cp(src_db, dst_db)
 
-            # Copy mesher h files
+            # Copy mesher h files into the overlying directory
             dst_h = os.path.join(PATH.SOLVER, source_name, "OUTPUT_FILES", "")
             unix.cp(src_h, dst_h)
 
     def initialize_solver_directories(self):
         """
-        Overwrite solver.base.initialize_solver_directories()
+        Creates solver directories in serial using a single node.
+        Should only be run by master job.
 
-        Creates solver directories in serial.
-
-        Should only be run by master job, copies the necessary data and creates
-        the necessary file structure for all events.
+        Differs from Base initialize_solver_directories() as this serial task
+        will create directory structures for each source, rather than having
+        each source create its own. However the internal dir structure is the
+        same.
         """
         for source_name in self.source_names:
             cwd = os.path.join(PATH.SOLVER, source_name)
@@ -181,7 +208,7 @@ class Specfem3DSerial(custom_import("solver", "specfem3d")):
 
             # Copy all input files except source files
             src = glob(os.path.join(PATH.SPECFEM_DATA, "*"))
-            src = [_ for _ in src if not self.source_prefix in _]
+            src = [_ for _ in src if self.source_prefix not in _]
             dst = os.path.join("DATA", "")
             unix.cp(src, dst)
 
