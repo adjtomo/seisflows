@@ -2,22 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/optimize/LBFGS.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/LBFGS.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/optimize/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/parameters.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/parameters.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/preprocess/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/preprocess/base.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/preprocess/pyatoa.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/preprocess/pyatoa.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/solver/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/solver/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/solver/specfem3d.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/solver/specfem3d.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/solver/specfem3d_serial.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/tools/msg.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/tools/msg.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/tools/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/tools/tools.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/workflow/inversion.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/inversion.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/migration_pyatoa.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/thrifty_inversion.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/thrifty_pyatoa.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

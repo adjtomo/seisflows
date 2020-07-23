@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This is the base class seisflows.preprocess.pyatoa
+This is the base class seisflows.preprocess.Pyatoa
 
 This is a main Seisflows class, it controls the preprocessing.
 This class uses the Python package Pyatoa to perform preprocessing, and
@@ -154,7 +154,7 @@ class Pyatoa:
 
         # Establish event-specific configuration parameters
         config = copy.deepcopy(self.config)
-        config.source_name = source_name
+        config.event_id = source_name
         config.iteration = optimize.iter
         config.step_count = optimize.line_search.step_count
         config.cfgpaths["waveforms"] += [os.path.join(cwd, "traces", "obs")]

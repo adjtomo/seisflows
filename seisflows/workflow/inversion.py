@@ -208,6 +208,7 @@ class Inversion(custom_import("workflow", "base")):
         """
         # Set up all the requisite modules
         print("SETUP")
+        import ipdb;ipdb.set_trace()
         preprocess.setup()
         postprocess.setup()
         optimize.setup()
