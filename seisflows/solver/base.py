@@ -832,7 +832,7 @@ class Base:
         :rtype: list
         :return: list of source names
         """
-        if not hasattr(self, '_source_names'):
+        if self._source_names is None:
             self.check_source_names()
 
         return self._source_names
@@ -845,7 +845,7 @@ class Base:
         :rtype: Struct
         :return: Structure of mesh properties
         """
-        if not hasattr(self, '_mesh_properties'):
+        if self._mesh_properties is None:
             self.check_mesh_properties()
 
         return self._mesh_properties
