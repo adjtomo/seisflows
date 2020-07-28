@@ -9,14 +9,15 @@ misfit measurement.
 import os
 import sys
 import copy
-import pyasdf
 import pyatoa
 import logging
 import numpy as np
 from glob import glob
-
+from pyasdf import ASDFDataSet
+from seisflows.tools import unix
 from seisflows.tools.err import ParameterError
 from pyatoa.utils.asdf.clean import clean_dataset
+from pyatoa.utils.images import imgs_to_pdf
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -24,11 +25,7 @@ PATH = sys.modules["seisflows_paths"]
 
 class Pyatoa:
     """
-    Data preprocessing class
-
-    Outsources data handling to Pyatoa via the class Pyaflowa. All calls are
-    made external, this class is simply used as a Seisflows abstraction for
-    calls to Pyatoa.
+    Data preprocessing class using the Pyatoa package
     """
     def __init__(self):
         """
@@ -54,8 +51,9 @@ class Pyatoa:
         workflow to ensure that things are set appropriately.
         """
         # Check the path requirements
-        if "PYATOA" not in PATH:
-            setattr(PATH, "PYATOA", os.path.join(PATH.SCRATCH, "pyatoa"))
+        if "PREPROCESS" not in PATH:
+            setattr(PATH, "PREPROCESS", 
+                    os.path.join(PATH.SCRATCH, "preprocess"))
 
         if "DATA" not in PATH:
             setattr(PATH, "DATA", None)
@@ -112,31 +110,28 @@ class Pyatoa:
 
         Akin to an __init__ class, but to be called externally by the workflow.
         """
-        self.data = os.path.join(PATH.PYATOA, "data")
-        self.figures = os.path.join(PATH.PYATOA, "figures")
+        # Late import because preprocess is loaded before optimize
+        solver = sys.modules["seisflows_solver"]
 
-        # Set the logging level, to be outputted to stdout
-        for log in ["pyflex", "pyflex", "pyadjoint"]:
-            logging.getLogger(log).setLevel(PAR.LOGGING.upper())
+        self.data = os.path.join(PATH.PREPROCESS, "data")
+        self.figures = os.path.join(PATH.PREPROCESS, "figures")
 
-        # Establish the Pyatoa Configuration object using Seisflows parameters
-        self.config = pyatoa.Config(
-            event_id=None, iteration=None, step_count=None, 
-            synthetics_only=bool(PAR.CASE.lower() == "synthetic"),
-            component_list=list(PAR.COMPONENTS), rotate_to_rtz=PAR.ROTATE,
-            min_period=PAR.MIN_PERIOD, max_period=PAR.MAX_PERIOD, 
-            filter_corners=PAR.CORNERS, unit_output=PAR.UNIT_OUTPUT,
-            client=PAR.CLIENT, start_pad=PAR.START_PAD, end_pad=PAR.END_PAD,
-            adj_src_type=PAR.ADJ_SRC_TYPE, pyflex_preset=PAR.PYFLEX_PRESET,
-            cfgpaths={"waveforms": [os.path.join(PATH.DATA, "mseeds")],
-                      "responses": [os.path.join(PATH.DATA, "seed")]
-                      }
-            )
+        # Make data and figure directories for each source
+        unix.mkdir(self.data)  
+        for source_name in solver.source_names:
+            unix.mkdir(os.path.join(self.figures, source_name))
+       
+        # Wee bit hacky, but make the 'residuals' directories for saving misfit
+        for path_ in [os.path.join(PATH.GRAD, "residuals"),
+                      os.path.join(PATH.FUNC, "residuals")]:
+            unix.mkdir(path_)
 
     def prepare_eval_grad(self, path, cwd, source_name):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms, 
         and measuring misfit between observations and synthetics using Pyatoa.
+        
+        This is a process specific task and intended to be run in parallel
 
         :type path: str
         :param path: path to the current function evaluation for saving residual
@@ -145,33 +140,60 @@ class Pyatoa:
         :type source_name: str
         :param source_name: the event id to be used for tagging and data lookup
         """
-        # Late import because preprocess is loaded before optimize
+        # Late import because preprocess is loaded before optimize, 
+        # Optimize required to know which iteration/step_count we are at
         optimize = sys.modules["seisflows_optimize"]
 
-        # Some internal path naming and parameter setting
-        dataset = os.path.join(self.data, source_name)
-        figures = os.path.join(self.figures, source_name)
+        # Set the logging level, which will be outputted to stdout
+        for log in ["pyatoa", "pyflex", "pyadjoint"]:
+            logging.getLogger(log).setLevel(PAR.LOGGING.upper())
 
-        # Establish event-specific configuration parameters
-        config = copy.deepcopy(self.config)
-        config.event_id = source_name
-        config.iteration = optimize.iter
-        config.step_count = optimize.line_search.step_count
-        config.cfgpaths["waveforms"] += [os.path.join(cwd, "traces", "obs")]
-        config.cfgpaths["synthetics"] += [os.path.join(cwd, "traces", "syn")]
+        # Only query FDSN for i00s00, else turn off by setting client to None
+        if optimize.iter == 1 and optimize.line_search.step_count == 0:
+            client = PAR.CLIENT
+        else:   
+            client = None
+
+        # Establish the Pyatoa Configuration object using Seisflows parameters
+        config = pyatoa.Config(
+                        event_id=source_name,
+                        iteration=optimize.iter,
+                        step_count=optimize.line_search.step_count,
+                        synthetics_only=bool(PAR.CASE.lower() == "synthetic"),
+                        component_list=list(PAR.COMPONENTS), 
+                        rotate_to_rtz=PAR.ROTATE,
+                        min_period=PAR.MIN_PERIOD, 
+                        max_period=PAR.MAX_PERIOD, 
+                        filter_corners=PAR.CORNERS, 
+                        unit_output=PAR.UNIT_OUTPUT,
+                        client=client,
+                        start_pad=PAR.START_PAD, 
+                        end_pad=PAR.END_PAD,
+                        adj_src_type=PAR.ADJ_SRC_TYPE, 
+                        pyflex_preset=PAR.PYFLEX_PRESET,
+                        cfgpaths={
+                            "waveforms": [os.path.join(PATH.DATA, "mseeds"),
+                                          os.path.join(cwd, "traces", "obs")],
+                            "synthetics": [os.path.join(cwd, "traces", "syn")],
+                            "responses": [os.path.join(PATH.DATA, "seed")],
+                            }
+                        )
 
         # Begin processing using Pyatoa
         misfit, nwin = 0, 0
         inv = pyatoa.read_stations(os.path.join(cwd, "DATA", "STATIONS"))
 
-        with pyasdf.ASDFDataSet(dataset) as ds:
-            clean_dataset(dataset, iteration=optimize.iter, 
-                          step_count=optimize.line_search.step_count)
+        with ASDFDataSet(os.path.join(self.data, f"{source_name}.h5")) as ds:
+            clean_dataset(ds, iteration=optimize.iter, 
+                          step_count=optimize.line_search.step_count
+                          )
 
-            config.write(write_to=dataset)
+            config.write(write_to=ds)
             mgmt = pyatoa.Manager(ds=ds, config=config)
             for net in inv:
                 for sta in net:
+                    pyatoa.logger.info(
+                        f"\n{'='*80}\n\n{net.code}.{sta.code}\n\n{'='*80}")
                     mgmt.reset()
 
                     # Gather data; if fail, move onto the next station
@@ -191,26 +213,61 @@ class Pyatoa:
                                        offset=mgmt.stats.time_offset_sec
                                        )
 
-                        misfit += mgmt.misfit
-                        nwin += mgmt.nwin
+                        misfit += mgmt.stats.misfit
+                        nwin += mgmt.stats.nwin
+                    except pyatoa.ManagerError as e:
+                        pyatoa.logger.warning(e)
+                        pass
                     except Exception as e:
+                        # Uncontrolled exceptions warrant lengthier error msg
                         pyatoa.logger.warning(e, exc_info=True)
                         pass
 
-                    # Plot the data
                     if PAR.PLOT:
-                        mgmt.plot(save=os.path.join(figures, f"{sta.code}.png"),
-                                  map_corners=PAR.MAP_CORNERS, show=False, 
-                                  return_figure=False)
+                        # Save the data with a specific tag
+                        # e.g. path/to/figures/i01s00_NZ_BFZ.png
+                        mgmt.plot(corners=PAR.MAP_CORNERS, show=False, 
+                                  save=os.path.join(self.figures, source_name, 
+                                                    f"{config.iter_tag}"
+                                                    f"{config.step_tag}_"
+                                                    f"{net.code}_{sta.code}.png"
+                                                    )
+                                  )
 
         # Generate the necessary files to continue the inversion
         if misfit:
             # Write the event misfit a la Tape et al. (2010)
             np.savetxt(os.path.join(path, "residuals", source_name),
-                       0.5 * misfit / nwin)
+                       [0.5 * misfit / nwin], fmt="%11.6e")
 
             # Create blank adjoint sources and STATIONS_ADJOINT
-            self.write_additional_adjoint_files(path=path, inv=inv)
+            self.write_additional_adjoint_files(cwd=cwd, inv=inv)
+
+    def finalize(self):
+        """
+        Run some serial finalization tasks specific to Pyatoa, which will help
+        aggregate the collection of output information:
+            Aggregate misfit windows using the Inspector class
+            Generate PDFS of waveform figures for easy access
+        """
+        insp = pyatoa.Inspector(PAR.TITLE)
+        insp.discover(path=os.path.join(self.data))
+        insp.save(path=self.data) 
+
+        # Combine images into a PDF, delete all pngs afterwards
+        unix.cd(self.figures)
+        for source in glob("*"):
+            if os.path.isdir(source):
+                unix.cd(source)
+                all_imgs = glob("*.png")
+                img_tags = set([_.split("_")[0] for _ in all_imgs])
+                for tag in img_tags:
+                    fids = glob(f"{tag}_*.png")
+                    imgs_to_pdf(fids=fids, 
+                                fid_out=os.path.join(self.figures, 
+                                                     f"{tag}_{source}.pdf"))
+                unix.rm(glob("*.png"))
+
 
     @staticmethod
     def sum_residuals(files):
@@ -257,13 +314,13 @@ class Pyatoa:
                       )
 
     @staticmethod
-    def write_additional_adjoint_files(path, inv):
+    def write_additional_adjoint_files(cwd, inv):
         """
         Generates the STATIONS_ADJOINT file expected by the SPECFEM 
         adjoint simulation, and blank adjoint sources.
 
-        :type path: str
-        :param path: path to the current SPECFEM working directory
+        :type cwd: str
+        :param cwd: path to the current SPECFEM working directory
         :type inv: obspy.core.inventory.Inventory
         :param inv: Inventory created from the SPECFEM STATIONS file, to be 
             used for checking station names
@@ -272,11 +329,11 @@ class Pyatoa:
         tmplt = "{sta:>6}{net:>6}{lat:12.4f}{lon:12.4f}{elv:11.1f}{bur:11.1f}\n"
 
         # Check that adjoint sources have been written by prepare_eval_grad()
-        adj_path = os.path.join(path, "traces", "adj")
+        adj_path = os.path.join(cwd, "traces", "adj")
         adjoint_traces = glob(os.path.join(adj_path, "*"))
 
         # Open up the stations adjoint file to be written to
-        with open(os.path.join(path, "DATA", "STATIONS_ADJOINT"), "w") as f:
+        with open(os.path.join(cwd, "DATA", "STATIONS_ADJOINT"), "w") as f:
 
             # If no adjoint traces were written, will create empty file
             if not adjoint_traces:
