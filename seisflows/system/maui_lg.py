@@ -37,7 +37,7 @@ class MauiLg(custom_import('system', 'slurm_lg')):
         Checks parameters and paths
         """
         # Run SlurmLG checks first
-        super(MauiLg, self).check()
+        super().check()
 
         # NeSI Nodesize is hard set to 40
         if PAR.NODESIZE != 40:
@@ -96,7 +96,9 @@ class MauiLg(custom_import('system', 'slurm_lg')):
         """
         Overwrites seisflows.workflow.maui_lg.submit()
 
-        Submits master job workflow to maui_ancil cluster
+        Submits master job workflow to maui_ancil cluster with a more in-depth
+        logging system that saves old output logs and names logs based on
+        the job name
 
         Note:
             The master job must be run on maui_ancil because Maui does
@@ -337,7 +339,8 @@ class MauiLg(custom_import('system', 'slurm_lg')):
             if isdone:
                 return
 
-    def job_id_list(self, stdout, ntask):
+    @staticmethod
+    def job_id_list(stdout, ntask):
         """
         Overwrite seisflows.system.workflow.slurm_log.job_id_list()
 
@@ -366,29 +369,6 @@ class MauiLg(custom_import('system', 'slurm_lg')):
             except ValueError:
                 continue
 
-    def job_status(self, job):
-        """
-        Overwrite seisflows.system.workflow.slurm_log.job_status()
-
-        Queries completion status of a single job
-
-        The added -L flag to `sacct` to query all clusters
-
-        :param job: job id to query
-        """
-        stdout = check_output(
-            "sacct -nL -o jobid,state -j " + job.split("_")[0],
-            shell=True)
-
-        if isinstance(stdout, bytes):
-            stdout = stdout.decode("UTF-8")
-
-        state = ""
-        lines = stdout.strip().split("\n")
-        for line in lines:
-            if line.split()[0] == job:
-                state = line.split()[1]
-        return state
 
     
 

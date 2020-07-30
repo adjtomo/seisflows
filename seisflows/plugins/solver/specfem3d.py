@@ -20,7 +20,7 @@ def write_sources(par, h, path="."):
     :type path: str
     :param path: path to write sources to
     """
-    file = os.path.join(findpath("sesiflows.plugins"), "specfem3d",
+    file = os.path.join(findpath("seisflows.plugins"), "specfem3d",
                         "FORCESOLUTION")
     with open(file, "r") as f:
         lines = f.readlines()

@@ -16,9 +16,7 @@ class Diagonal(object):
         """
         Loads any required dependencies
         """
-        PAR = sys.modules["seisflows_parameters"]
         PATH = sys.modules["seisflows_paths"]
-
         solver = sys.modules["seisflows_solver"]
 
         if "PRECOND" not in PATH:

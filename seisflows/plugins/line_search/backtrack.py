@@ -29,6 +29,12 @@ class Backtrack(Bracket):
         status == 0 : not finished
         status < 0  : failed
     """
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+        """
+        super().__init__()
 
     def calculate_step(self):
         """
@@ -40,7 +46,7 @@ class Backtrack(Bracket):
         # quasi-Newton direction is not yet scaled properly, so instead
         # of a bactracking line perform a bracketing line search
         if update_count == 0:
-            alpha, status = super(Backtrack, self).calculate_step()
+            alpha, status = super().calculate_step()
        
         # Assumed well scaled search direction, attempt backtracking line search 
         # with unit step length
@@ -56,7 +62,7 @@ class Backtrack(Bracket):
                 alpha = min(1., self.step_len_max)
                 status = 0
             # Pass if misfit is reduced
-            elif _check_decrease(x, f):
+            elif self._check_decrease(x, f):
                 if self.verbose:
                     print("\t\tMisfit decrease, pass")
                 alpha = x[f.argmin()]
@@ -78,18 +84,17 @@ class Backtrack(Bracket):
 
         return alpha, status
 
+    @staticmethod
+    def _check_decrease(step_lens, func_vals, c=1.e-4):
+        """
+        Checks for sufficient decrease by comparing the current functional value
+        with the smallest functional value in the list.
 
-def _check_decrease(step_lens, func_vals, c=1.e-4):
-    """
-    Checks for sufficient decrease by comparing the current functional value
-    with the smallest functional value in the list.
-
-    !!! This function is defined outside the class because the Base class
-    !!! doesn't require the function, but this subclass does
-    """
-    x, f = step_lens, func_vals
-    if f.min() < f[0]:
-        return 1
-    else:
-        return 0
+        !!! What's with the unused value of 'c'?, also 'x' isn't used
+        """
+        x, f = step_lens, func_vals
+        if f.min() < f[0]:
+            return 1
+        else:
+            return 0
 

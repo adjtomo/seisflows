@@ -17,6 +17,15 @@ class NLCG(custom_import("optimize", "base")):
     """
     Nonlinear conjugate gradient method
     """
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+        """
+        super().__init__()
+        self.NLCG = None
+        self.restarted = None
+
     def check(self):
         """
         Checks parameters, paths, and dependencies
@@ -33,13 +42,13 @@ class NLCG(custom_import("optimize", "base")):
         if "NLCGTHRESH" not in PAR:
             setattr(PAR, "NLCGTHRESH", np.inf)
 
-        super(NLCG, self).check()
+        super().check()
 
     def setup(self):
         """
         Set up the NLCG optimization schema
         """
-        super(NLCG, self).setup()
+        super().setup()
         self.NLCG = getattr(optimize, 'NLCG')(path=PATH.OPTIMIZE,
                                               maxiter=PAR.NLCGMAX,
                                               thresh=PAR.NLCGTHRESH,
@@ -58,7 +67,7 @@ class NLCG(custom_import("optimize", "base")):
         """
         Overwrite the Base restart class and include a restart of the NLCG
         """
-        super(NLCG, self).restart()
+        super().restart()
         self.NLCG.restart()
 
 

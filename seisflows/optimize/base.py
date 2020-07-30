@@ -72,7 +72,8 @@ class Base:
         self.writer = None
         self.restarted = None
 
-    def check(self):
+    @staticmethod
+    def check():
         """
         Checks parameters, paths, and dependencies
 

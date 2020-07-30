@@ -39,7 +39,7 @@ class Specfem3D(custom_import("solver", "base")):
         Checks parameters and paths
         """
         # Run Base class checks
-        super(Specfem3D, self).check()
+        super().check()
 
         required_parameters = ["NT", "DT", "F0", "FORMAT", "COMPONENTS",
                                "SOURCE_PREFIX"]
@@ -118,7 +118,7 @@ class Specfem3D(custom_import("solver", "base")):
         """
         Call eval_func from Base class
         """
-        super(Specfem3D, self).eval_func(*args, **kwargs)
+        super().eval_func(*args, **kwargs)
 
         # Work around SPECFEM3D conflicting name conventions of SU data
         self.rename_data()
@@ -196,7 +196,7 @@ class Specfem3D(custom_import("solver", "base")):
         """
         # Initialize adjoint traces as zeroes for all data_filenames
         # write to `traces/adj`
-        super(Specfem3D, self).initialize_adjoint_traces()
+        super().initialize_adjoint_traces()
 
         # Rename data to work around Specfem naming convetions
         self.rename_data()

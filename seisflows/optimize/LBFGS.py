@@ -6,30 +6,36 @@ It supercedes the `seisflows.optimize.base` class
 import sys
 import numpy as np
 
-from seisflows.optimize.base import Base
+from seisflows.config import custom_import
 from seisflows.plugins import optimize
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class LBFGS(Base):
+class LBFGS(custom_import("optimize", "base")):
     """
     The Limited memory BFGS algorithm
     Calls upon seisflows.plugin.optimize.LBFGS to accomplish LBFGS algorithm
     """
     def __init__(self):
         """
-        These parameters should not be set by __init__!
-        Attributes are just initialized as NoneTypes for clarity and docstrings
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
 
         :type LBFGS: Class
         :param LBFGS: plugin LBFGS class that controls the machinery of the
             L-BFGS optimization schema
+        :type restarted: int
+        :param restarted: a flag to let Seisflows know if the LBFGS algorithm
+            has been restarted
         """
+        super().__init__()
         self.LBFGS = None
+        self.restarted = None
 
-    def check(self):
+    @staticmethod
+    def check():
         """
         Checks parameters, paths, and dependencies
         """
@@ -50,13 +56,13 @@ class LBFGS(Base):
             setattr(PAR, "LBFGSTHRESH", 0.)
 
         # Include all checks from Base class
-        super(LBFGS, self).check()
+        super().check()
 
     def setup(self):
         """
         Set up the LBFGS optimization schema
         """
-        super(LBFGS, self).setup()
+        super().setup()
         self.LBFGS = getattr(optimize, "LBFGS")(path=PATH.OPTIMIZE,
                                                 memory=PAR.LBFGSMEM,
                                                 maxiter=PAR.LBFGSMAX,
@@ -76,6 +82,6 @@ class LBFGS(Base):
         """
         Overwrite the Base restart class and include a restart of the LBFGS
         """
-        super(LBFGS, self).restart()
+        super().restart()
         self.LBFGS.restart()
 

@@ -4,11 +4,10 @@ This is the Base class for seisflows.plugins.line_search
 
 Line search is called on by the optimization procedure
 """
-from os.path import abspath
-from seisflows.tools.array import count_zeros
-
+import os
 import numpy as np
 
+from seisflows.tools.array import count_zeros
 
 class Base(object):
     """
@@ -26,17 +25,35 @@ class Base(object):
         status > 0  : finished
         status == 0 : not finished
         status < 0  : failed
+
     """
-    def __init__(self, step_count_max=10, step_len_max=np.inf,
-                 path=abspath("."), verbose=True):
+    def __init__(self, step_count_max=10, step_len_max=None, path=None,
+                 verbose=True):
+        """
+
+        :type step_count_max: int
+        :param step_count_max: maximum number of step counts before changing
+            line search behavior.
+        :type step_len_max: int
+        :param step_len_max: maximum length of the step, defaults to infinity,
+            that is unbounded step length
+        :type path: str
+        :param path: path to set the writer to, defaults to current dir
+        :type verbose: bool
+        :param verbose: determines how descriptive the chosen line search
+            algorithm is in the log files
+        """
         # Set maximum number of trial steps
         self.step_count_max = step_count_max
 
         # Optional maximum step length safeguard
-        self.step_len_max = step_len_max
+        if step_len_max is None:
+            self.step_len_max = np.inf
+        else:
+            self.step_len_max = step_len_max
 
-        # Prepare output log
-        self.writer = Writer(path)
+        # Prepare output log, by default set the path to the current dir
+        self.writer = Writer(path or os.path.abspath("."))
 
         # Prepare lists for line search history
         self.func_vals = []
@@ -48,13 +65,21 @@ class Base(object):
 
     def initialize(self, step_len, func_val, gtg, gtp):
         """
-        Initialize a new search from step count 0
+        Initialize a new search from step count 0 and calculate the step
+        direction and length
 
-        :param step_len:
-        :param func_val:
-        :param gtg:
-        :param gtp:
-        :return:
+        :type step_len: float
+        :param step_len: initial step length determined by optimization
+        :type func_val: float
+        :param func_val: current evaluation of the objective function
+        :type gtg: float
+        :param gtg: dot product of the gradient with itself
+        :type gtp: float
+        :param gtp: dot product of gradient `g` with search direction `p`
+        :rtype alpha: float
+        :return alpha: the calculated rial step length
+        :rtype status: int
+        :return status: current status of the line search
         """
         self.step_count = 0
         self.step_lens += [step_len]
@@ -64,14 +89,25 @@ class Base(object):
 
         self.writer(step_len, func_val)
 
-        return self.calculate_step()
+        # Call calculate step, must be implemented by subclass
+        alpha, status = self.calculate_step()
+
+        return alpha, status
 
     def update(self, step_len, func_val):
         """
-        Update search history
-        :param step_len:
-        :param func_val:
-        :return:
+        Update search history by appending internal attributes, writing the
+        current list of step lengths and function evaluations, and calculating a
+        new step length
+
+        :type step_len: float
+        :param step_len: step length determined by optimization
+        :type func_val: float
+        :param func_val: current evaluation of the objective function
+        :rtype alpha: float
+        :return alpha: the calculated rial step length
+        :rtype status: int
+        :return status: current status of the line search
         """
         self.step_count += 1
         self.step_lens += [step_len]
@@ -79,11 +115,14 @@ class Base(object):
 
         self.writer(step_len, func_val)
 
-        return self.calculate_step()
+        # Call calcuate step, must be implemented by subclass
+        alpha, status = self.calculate_step()
+
+        return alpha, status
 
     def clear_history(self):
         """
-        Clears line search history
+        Clears internal line search history
         """
         self.func_vals = []
         self.step_lens = []
@@ -165,11 +204,14 @@ class Writer(object):
         Initiate the Writer class. Internally used `iter` variable references
         the current iteration of the workflow.
 
+        !!! This should be changed, it's confusing to have multiple values for
+        !!! iter floating around. Ideally it would reference optimize.iter
+
         :type path: str
         :param path: path to the file that the writer will write to
         """
         self.iter = 0
-        self.filename = abspath(path)
+        self.filename = os.path.abspath(path)
         self.write_header()
 
     def __call__(self, steplen=None, funcval=None):
@@ -180,7 +222,6 @@ class Writer(object):
         :param steplen: step length
         :type funcval: float
         :param funcval: misfit functional value for given step
-        :return:
         """
         iter_ = "{iteration:10d}  {step_length:10.3e}  {function_value:10.3e}\n"
         step_ = "{space:s}  {step_length:10.3e}  {function_value:10.3e}\n"
@@ -203,8 +244,6 @@ class Writer(object):
     def write_header(self):
         """
         Write the header of the text file
-        Allows for extra headers to be written into file, call function will
-        need to be changed
         """
         headers = ["ITER", "STEPLEN", "MISFIT"]
 
@@ -225,7 +264,7 @@ class Writer(object):
         Write a new line to the text file
         """
         with open(self.filename, "a") as fileobj:
-                fileobj.write("\n")
+            fileobj.write("\n")
 
 
 

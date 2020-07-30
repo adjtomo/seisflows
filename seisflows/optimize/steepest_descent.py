@@ -15,28 +15,29 @@ class SteepestDescent(custom_import("optimize", "base")):
     """
     Steepest descent method
     """
-    restarted = False
+    def __init__(self):
+        self.restarted = False
 
     def check(self):
-        """ Checks parameters, paths, and dependencies
         """
+        Checks parameters, paths, and dependencies
+        """
+        if "LINESEARCH" not in PAR:
+            setattr(PAR, "LINESEARCH", "Bracket")
 
-        if 'LINESEARCH' not in PAR:
-            setattr(PAR, 'LINESEARCH', 'Bracket')
-
-        super(SteepestDescent, self).check()
+        super().check()
 
     def setup(self):
         """
         Set up the steepest descent optimization schema
         """
-        super(SteepestDescent, self).setup()
+        super().setup()
 
     def compute_direction(self):
         """
         Overwrite the Base compute direction class
         """
-        super(SteepestDescent, self).compute_direction()
+        super().compute_direction()
 
     def restart(self):
         """

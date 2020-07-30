@@ -8,7 +8,6 @@ misfit measurement.
 """
 import os
 import sys
-import copy
 import pyatoa
 import logging
 import numpy as np

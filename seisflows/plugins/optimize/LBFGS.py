@@ -12,7 +12,7 @@ from seisflows.tools.tools import exists, loadnpy, savenpy
 from seisflows.tools.math import angle
 
 
-class LBFGS(object):
+class LBFGS:
     """
     Limited-memory BFGS algorithm
 
@@ -44,7 +44,6 @@ class LBFGS(object):
         status == 0 : not finished
         status < 0  : failed
     """
-
     def __init__(self, path=".", load=loadnpy, save=savenpy, memory=5,
                  thresh=0., maxiter=np.inf, precond=None, verbose=True):
         """
@@ -221,8 +220,8 @@ class LBFGS(object):
             r = q
 
         # Use scaling M3 proposed by Liu and Nocedal 1989
-        sty = np.dot(y[:,0], s[:,0])
-        yty = np.dot(y[:,0], y[:,0])
+        sty = np.dot(y[:, 0], s[:, 0])
+        yty = np.dot(y[:, 0], y[:, 0])
         r *= sty/yty
 
         # Second matrix product

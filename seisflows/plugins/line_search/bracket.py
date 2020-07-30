@@ -2,10 +2,10 @@
 """
 This is the subclass class for seisflows.plugins.line_search.bracket
 """
+import numpy as np
+
 from seisflows.plugins.line_search.base import Base
 from seisflows.tools.math import backtrack2, polyfit2
-
-import numpy as np
 
 
 class Bracket(Base):
@@ -26,9 +26,16 @@ class Bracket(Base):
         status == 0 : not finished
         status < 0  : failed
     """
+    def __init__ (self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+        """
+        super().__init__()
+
     def calculate_step(self):
         """
-        Determines step length and search status
+        Determines step length (alpha) and search status (status)
         """
         # Determine the line search history
         x, f, gtg, gtp, step_count, update_count = self.search_history()
@@ -46,7 +53,7 @@ class Bracket(Base):
             alpha = gtg[-1] ** -1
             status = 0
         # For every i'th inversions initial step, set alpha manually
-        elif step_count==0:
+        elif step_count == 0:
             if self.verbose:
                 print("\t\tFirst step, setting scaled step length")
             # Based on the first equation in sec 3.5 of Nocedal and Wright 2ed
@@ -54,13 +61,13 @@ class Bracket(Base):
             alpha = self.step_lens[idx] * gtp[-2] / gtp[-1]
             status = 0
         # If misfit is reduced and then increased, we've bracketed. Pass
-        elif _check_bracket(x,f) and _good_enough(x,f):
+        elif self._check_bracket(x, f) and self._good_enough(x,f):
             if self.verbose:
                 print("\t\tBracket okay, step length reasonable, pass")
             alpha = x[f.argmin()]
             status = 1
         # If misfit is reduced but not close, set to quadratic fit
-        elif _check_bracket(x,f):
+        elif self._check_bracket(x, f):
             if self.verbose:
                 print("\t\tBracket okay, step length unreasonable, "
                       "manual step...")
@@ -70,8 +77,7 @@ class Bracket(Base):
         elif step_count <= self.step_count_max and all(f <= f[0]):
             if self.verbose:
                 print("\t\tMisfit not bracketed, increasing step length...")
-            # 1.618034 is the 'golden ratio'
-            alpha = 1.618034 * x[-1]
+            alpha = 1.618034 * x[-1]  # 1.618034 is the 'golden ratio'
             status = 0
         # If misfit increases, reduce step length by backtracking
         elif step_count <= self.step_count_max:
@@ -104,56 +110,52 @@ class Bracket(Base):
 
         return alpha, status
 
+    @staticmethod
+    def _check_bracket(step_lens, func_vals):
+        """
+        Checks if minimum has been bracketed
 
-def _check_bracket(step_lens, func_vals):
-    """ 
-    Checks if minimum has been bracketed
-    
-    Looks at the minimum of the misfit values calculated through eval func
-    to see if the misfit has been reduced w.r.t the initial misfit
+        Looks at the minimum of the misfit values calculated through eval func
+        to see if the misfit has been reduced w.r.t the initial misfit
 
-    !!! This function is defined outside the class because the Base class
-    !!! doesn't require the function, but this subclass does
+        !!! This function is defined outside the class because the Base class
+        !!! doesn't require the function, but this subclass does
 
-    :type step_lens: numpy.array
-    :param step_lens: an array of the step lengths taken during iteration
-    :type func_vals: numpy.array
-    :param func_vals: array of misfit values from eval func function
-    :rtype: int
-    :return: status of function as a bool
-    """
-    x, f = step_lens, func_vals
-    imin, fmin = f.argmin(), f.min()
-    if (fmin < f[0]) and any(f[imin:] > fmin):
-        return 1
-    else:
-        return 0
+        :type step_lens: numpy.array
+        :param step_lens: an array of the step lengths taken during iteration
+        :type func_vals: numpy.array
+        :param func_vals: array of misfit values from eval func function
+        :rtype: int
+        :return: status of function as a bool
+        """
+        x, f = step_lens, func_vals
+        imin, fmin = f.argmin(), f.min()
+        if (fmin < f[0]) and any(f[imin:] > fmin):
+            return 1
+        else:
+            return 0
 
+    def _good_enough(self, step_lens, func_vals, thresh=np.log10(1.2)):
+        """
+        Checks if step length is reasonably close to quadratic estimate
 
-def _good_enough(step_lens, func_vals, thresh=np.log10(1.2)):
-    """
-    Checks if step length is reasonably close to quadratic estimate
-
-    !!! This function is defined outside the class because the Base class
-    !!! doesn't require the function, but this subclass does
-
-    :type step_lens: np.array
-    :param step_lens: an array of the step lengths taken during iteration
-    :type func_vals: np.array
-    :param func_vals: array of misfit values from eval func function
-    :type thresh: numpy.float64
-    :param thresh: threshold value for comparison against quadratic estimate
-    :rtype: int
-    :return: status of function as a bool
-    """
-    x, f = step_lens, func_vals
-    if not _check_bracket(x, f):
-        return 0
-    x0 = polyfit2(x, f)
-    if any(np.abs(np.log10(x[1:] / x0)) < thresh):
-        return 1
-    else:
-        return 0
+        :type step_lens: np.array
+        :param step_lens: an array of the step lengths taken during iteration
+        :type func_vals: np.array
+        :param func_vals: array of misfit values from eval func function
+        :type thresh: numpy.float64
+        :param thresh: threshold value for comparison against quadratic estimate
+        :rtype: int
+        :return: status of function as a bool
+        """
+        x, f = step_lens, func_vals
+        if not self._check_bracket(x, f):
+            return 0
+        x0 = polyfit2(x, f)
+        if any(np.abs(np.log10(x[1:] / x0)) < thresh):
+            return 1
+        else:
+            return 0
 
 
 

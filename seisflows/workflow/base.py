@@ -3,7 +3,6 @@
 This is the Base class for seisflows.workflow.
 It contains mandatory functions that must be called by subclasses
 """
-import time
 from seisflows.config import save
 
 
@@ -25,7 +24,8 @@ class Base:
         """
         raise NotImplementedError("Must be implemented by subclass.")
 
-    def checkpoint(self):
+    @staticmethod
+    def checkpoint():
         """
         Writes information to disk so workflow can be resumed following a break
         """

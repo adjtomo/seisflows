@@ -13,13 +13,20 @@ system = sys.modules['seisflows_system']
 solver = sys.modules['seisflows_solver']
 
 
-class Base(object):
+class Base:
     """
     Postprocessing in a Seisflows workflow includes tasks such as
     regularization, smoothing, sharpening, masking and related operations
     on models or gradients
     """
-    def check(self):
+    def __init__(self):
+        """
+        These parameters should not be set by __init__!
+        Attributes are just initialized as NoneTypes for clarity and docstrings
+        """
+
+    @staticmethod
+    def check():
         """
         Checks parameters and paths
         """
@@ -44,10 +51,11 @@ class Base(object):
         """
         pass
 
-    def process_kernels(self, path, parameters):
+    @staticmethod
+    def process_kernels(path, parameters):
         """
-        This should be run
         Sums kernels from individual sources, with optional smoothing
+        This should be run in paralell
 
         :type path: str
         :param path: directory containing sensitivity kernels
@@ -70,7 +78,8 @@ class Base(object):
             solver.combine(input_path=path, output_path=f"{path}/sum",
                            parameters=parameters)
 
-    def write_gradient(self, path):
+    @staticmethod
+    def write_gradient(path):
         """
         Combines contributions from individual sources and material parameters
         to get the gradient, and optionally applies user-supplied scaling
@@ -125,7 +134,4 @@ class Base(object):
             solver.save(solver.split(gradient), f"{path}/gradient",
                         parameters=solver.parameters,
                         suffix="_kernel")
-    
-
-
 

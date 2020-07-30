@@ -19,7 +19,7 @@ PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
 
 
-class Base(object):
+class Base:
     """
     Data preprocessing class
 

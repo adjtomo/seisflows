@@ -172,7 +172,8 @@ class Inversion(custom_import("workflow", "base")):
             print(f"FINISHED ITERATION {optimize.iter} AT {time.asctime()}\n")
             optimize.iter += 1
 
-    def resume_from(self, flow):
+    @staticmethod
+    def resume_from(flow):
         """
         Resume the workflow from a given function, proceed in the same fashion 
         as main until the end of the current iteration.

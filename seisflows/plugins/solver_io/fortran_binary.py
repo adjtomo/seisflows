@@ -51,8 +51,8 @@ def copy_slice(src, dst, iproc, parameter):
     :param src: source location to copy slice from
     :type dst: str
     :param dst: destination location to copy slice to
-    :type parameters: str
-    :param parameters: parameters to copy, e.g. 'vs', 'vp'
+    :type parameter: str
+    :param parameter: parameters to copy, e.g. 'vs', 'vp'
     :type iproc: int
     :param iproc: processor/slice number to copy
     """
@@ -71,7 +71,7 @@ def _read(filename):
         file.seek(0)
         n = np.fromfile(file, dtype='int32', count=1)[0]
 
-        if n==nbytes-8:
+        if n == nbytes-8:
             file.seek(4)
             data = np.fromfile(file, dtype='float32')
             return data[:-1]
@@ -86,7 +86,7 @@ def _write(v, filename):
     Writes Fortran style binary files
     Data are written as single precision floating point numbers
     """
-    n = np.array([4*len(v)], dtype='int32')
+    n = np.array([4 * len(v)], dtype='int32')
     v = np.array(v, dtype='float32')
 
     with open(filename, 'wb') as file:

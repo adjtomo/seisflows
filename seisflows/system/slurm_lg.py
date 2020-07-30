@@ -13,7 +13,7 @@ import time
 from subprocess import check_output
 from seisflows.tools import msg, unix
 from seisflows.tools.err import ParameterError
-from seisflows.tools.tools import call, findpath, saveobj, timestamp
+from seisflows.tools.tools import call, findpath
 from seisflows.config import custom_import
 
 # Seisflows configuration
@@ -103,7 +103,8 @@ class SlurmLg(custom_import('system', 'base')):
         if "LOCAL" not in PATH:
             setattr(PATH, "LOCAL", None)
 
-    def submit(self, workflow):
+    @staticmethod
+    def submit(workflow):
         """
         Submits workflow as a master job
         """
@@ -122,7 +123,7 @@ class SlurmLg(custom_import('system', 'base')):
             f"sbatch", 
             f"{PAR.SLURMARGS}",
             f"--job-name={PAR.TITLE}",
-            f"--output={output_log}",
+            f"--output=output.log",
             f"--ntasks-per-node={PAR.NODESIZE}",
             f"--nodes=1",
             f"--time={PAR.WALLTIME:d}",
@@ -222,7 +223,8 @@ class SlurmLg(custom_import('system', 'base')):
             if isdone:
                 return
 
-    def mpiexec(self):
+    @staticmethod
+    def mpiexec():
         """
         Specifies MPI executable used to invoke solver
 
@@ -231,17 +233,18 @@ class SlurmLg(custom_import('system', 'base')):
         """
         return 'srun -u '
 
-    def taskid(self):
+    @staticmethod
+    def taskid():
         """
         Provides a unique identifier for each running task
 
-        !!! TO DO: what type of exception is that? !!!
         :rtype: int
         :return: identifier for a given task
         """
         try:
             return int(os.getenv('SEISFLOWS_TASKID'))
-        except:
+        except TypeError:
+            # TypeError thrown when 'SEISFLOWS_TASKID' is returned as None
             return int(os.getenv('SLURM_ARRAY_TASK_ID'))
 
     def job_array_status(self, classname, method, jobs):
@@ -276,7 +279,8 @@ class SlurmLg(custom_import('system', 'base')):
 
         return isdone, jobs
 
-    def job_id_list(self, stdout, ntask):
+    @staticmethod
+    def job_id_list(stdout, ntask):
         """
         Parses job id list from sbatch standard output
         Decode class bytes to str using UTF-8
@@ -292,15 +296,20 @@ class SlurmLg(custom_import('system', 'base')):
         job_id = stdout.split()[-1].strip()
         return [f"{job_id}_{str(ii)}" for ii in range(ntask)]
 
-    def job_status(self, job):
+    @staticmethod
+    def job_status(job):
         """
         Queries completion status of a single job
+
+            -L flag in sacct queries all available clusters, not just the
+            cluster that ran the `sacct` call
 
         :type job: str
         :param job: job id to query
         """
-        stdout = check_output("sacct -n -o jobid,state -j {job.split('_')[0]}",
-                              shell=True)
+        stdout = check_output(
+            "sacct -nL -o jobid,state -j " + job.split("_")[0],
+            shell=True)
 
         if isinstance(stdout, bytes):
             stdout = stdout.decode("UTF-8")

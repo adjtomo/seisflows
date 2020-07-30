@@ -10,7 +10,7 @@ from seisflows.config import save, saveobj
 from seisflows.tools import unix
 
 
-class Base(object):
+class Base:
     """
     Abstract base class
     """
@@ -44,7 +44,8 @@ class Base(object):
         """
         raise NotImplementedError('Must be implemented by subclass.')
 
-    def checkpoint(self, path, classname, method, args, kwargs):
+    @staticmethod
+    def checkpoint(path, classname, method, args, kwargs):
         """
         Writes information to disk so tasks can be executed remotely
 

@@ -44,7 +44,7 @@ class ThriftyInversion(custom_import("workflow", "inversion")):
         Or if manually starting a new run, start with normal inversion init
         """
         if (self.status == 0) or (optimize.iter == PAR.BEGIN):
-            super(ThriftyInversion, self).initialize()
+            super().initialize()
         else:
             print("THRIFTY INITIALIZE")
 
@@ -60,7 +60,7 @@ class ThriftyInversion(custom_import("workflow", "inversion")):
             unix.mv(PATH.FUNC, PATH.GRAD)
             unix.mkdir(PATH.FUNC)
         else:
-            super(ThriftyInversion, self).clean()
+            super().clean()
 
     def update_status(self):
         """

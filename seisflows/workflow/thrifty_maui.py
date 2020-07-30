@@ -31,7 +31,7 @@ class ThriftyMaui(custom_import("workflow", "thrifty_inversion")):
         Ensure that the correct submodules are specified, otherwise
         this workflow won't function properly.
         """
-        super(ThriftyMaui, self).check()
+        super().check()
 
         if "MAUI" not in PAR.SYSTEM.upper():
             raise ParameterError()
