@@ -612,8 +612,7 @@ class Base:
         dst = os.path.join(path, self.source_name)
         unix.cp(src, dst)
 
-    @staticmethod
-    def rename_kernels():
+    def rename_kernels(self):
         """
         Works around conflicting kernel filename conventions by renaming
         `alpha` to `vp` and `beta` to `vs`

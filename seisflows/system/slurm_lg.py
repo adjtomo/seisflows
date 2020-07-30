@@ -103,8 +103,7 @@ class SlurmLg(custom_import('system', 'base')):
         if "LOCAL" not in PATH:
             setattr(PATH, "LOCAL", None)
 
-    @staticmethod
-    def submit(workflow):
+    def submit(self, workflow):
         """
         Submits workflow as a master job
         """
@@ -223,8 +222,7 @@ class SlurmLg(custom_import('system', 'base')):
             if isdone:
                 return
 
-    @staticmethod
-    def mpiexec():
+    def mpiexec(self):
         """
         Specifies MPI executable used to invoke solver
 
@@ -233,8 +231,7 @@ class SlurmLg(custom_import('system', 'base')):
         """
         return 'srun -u '
 
-    @staticmethod
-    def taskid():
+    def taskid(self):
         """
         Provides a unique identifier for each running task
 
@@ -279,8 +276,7 @@ class SlurmLg(custom_import('system', 'base')):
 
         return isdone, jobs
 
-    @staticmethod
-    def job_id_list(stdout, ntask):
+    def job_id_list(self, stdout, ntask):
         """
         Parses job id list from sbatch standard output
         Decode class bytes to str using UTF-8
@@ -296,8 +292,7 @@ class SlurmLg(custom_import('system', 'base')):
         job_id = stdout.split()[-1].strip()
         return [f"{job_id}_{str(ii)}" for ii in range(ntask)]
 
-    @staticmethod
-    def job_status(job):
+    def job_status(self, job):
         """
         Queries completion status of a single job
 

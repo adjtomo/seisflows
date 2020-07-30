@@ -44,8 +44,7 @@ class Inversion(custom_import("workflow", "base")):
     Commands for running in serial or parallel on a workstation or cluster
     are abstracted through the "system" interface.
     """
-    @staticmethod
-    def check():
+    def check(self):
         """
         Checks parameters and paths
         """
@@ -172,8 +171,7 @@ class Inversion(custom_import("workflow", "base")):
             print(f"FINISHED ITERATION {optimize.iter} AT {time.asctime()}\n")
             optimize.iter += 1
 
-    @staticmethod
-    def resume_from(flow):
+    def resume_from(self, flow):
         """
         Resume the workflow from a given function, proceed in the same fashion 
         as main until the end of the current iteration.
@@ -199,8 +197,7 @@ class Inversion(custom_import("workflow", "base")):
         print(f"FINISHED ITERATION {optimize.iter} AT {time.asctime()}\n")
         optimize.iter += 1
 
-    @staticmethod
-    def setup():
+    def setup(self):
         """
         Lays groundwork for inversion by running setup() functions for the 
         involved sub-modules, and generating synthetic true data if necessary, 
@@ -222,8 +219,7 @@ class Inversion(custom_import("workflow", "base")):
         print("INITIALIZE")
         self.evaluate_function(path=PATH.GRAD, suffix="new")
 
-    @staticmethod
-    def compute_direction():
+    def compute_direction(self):
         """
         Computes search direction
         """
@@ -309,8 +305,7 @@ class Inversion(custom_import("workflow", "base")):
         if PAR.SAVERESIDUALS:
             self.save_residuals()
 
-    @staticmethod
-    def clean():
+    def clean(self):
         """
         Cleans directories in which function and gradient evaluations were
         carried out
@@ -322,15 +317,13 @@ class Inversion(custom_import("workflow", "base")):
         unix.mkdir(PATH.GRAD)
         unix.mkdir(PATH.FUNC)
 
-    @staticmethod
-    def checkpoint():
+    def checkpoint(self):
         """
         Writes information to disk so workflow can be resumed following a break
         """
         save()
 
-    @staticmethod
-    def write_model(path, suffix):
+    def write_model(self, path, suffix):
         """
         Writes model in format expected by solver
 
@@ -344,16 +337,10 @@ class Inversion(custom_import("workflow", "base")):
 
         solver.save(solver.split(optimize.load(src)), dst)
 
-    @staticmethod
-    def write_gradient():
+    def write_gradient(self):
         """
         Writes gradient in format expected by non-linear optimization library.
         Calls the postprocess module, which will smooth/precondition gradient.
-
-        :type path: str
-        :param path: path to write the gradient to
-        :type suffix: str
-        :param suffix: suffix to add to the gradient
         """
         print("POSTPROCESSING")
         src = os.path.join(PATH.GRAD, "gradient")
@@ -363,8 +350,7 @@ class Inversion(custom_import("workflow", "base")):
         parts = solver.load(src, suffix="_kernel")
         optimize.save(dst, solver.merge(parts))
 
-    @staticmethod
-    def write_misfit(path, suffix):
+    def write_misfit(self, path, suffix):
         """
         Writes misfit in format expected by nonlinear optimization library.
         Collects all misfit values within the given residuals directory and sums
@@ -381,8 +367,7 @@ class Inversion(custom_import("workflow", "base")):
         total_misfit = preprocess.sum_residuals(src)
         optimize.savetxt(dst, total_misfit)
 
-    @staticmethod
-    def save_gradient():
+    def save_gradient(self):
         """
         Save the gradient vector. Allows saving numpy array or standard
         Fortran .bin files
@@ -399,8 +384,7 @@ class Inversion(custom_import("workflow", "base")):
             src = os.path.join(PATH.OPTIMIZE, "g_old")
             unix.cp(src, dst + ".npy")
 
-    @staticmethod
-    def save_model():
+    def save_model(self):
         """
         Save the model vector. Allows saving numpy array or standard
         Fortran .bin files
@@ -415,8 +399,7 @@ class Inversion(custom_import("workflow", "base")):
         if PAR.SAVEAS in ["vector", "both"]:
             np.save(file=dst, arr=optimize.load(src))
 
-    @staticmethod
-    def save_kernels():
+    def save_kernels(self):
         """
         Save the kernel vector as a Fortran binary file on disk
         """
@@ -424,8 +407,7 @@ class Inversion(custom_import("workflow", "base")):
         dst = os.path.join(PATH.OUTPUT, f"kernels_{optimize.iter:04d}")
         unix.mv(src, dst)
 
-    @staticmethod
-    def save_traces():
+    def save_traces(self):
         """
         Save the waveform traces to disk
         """
@@ -433,8 +415,7 @@ class Inversion(custom_import("workflow", "base")):
         dst = os.path.join(PATH.OUTPUT, f"traces_{optimize.iter:04d}")
         unix.mv(src, dst)
 
-    @staticmethod
-    def save_residuals():
+    def save_residuals(self):
         """
         Save the residuals to disk
         """

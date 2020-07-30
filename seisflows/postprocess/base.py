@@ -78,8 +78,7 @@ class Base:
             solver.combine(input_path=path, output_path=f"{path}/sum",
                            parameters=parameters)
 
-    @staticmethod
-    def write_gradient(path):
+    def write_gradient(self, path):
         """
         Combines contributions from individual sources and material parameters
         to get the gradient, and optionally applies user-supplied scaling

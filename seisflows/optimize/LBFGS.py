@@ -34,8 +34,7 @@ class LBFGS(custom_import("optimize", "base")):
         self.LBFGS = None
         self.restarted = None
 
-    @staticmethod
-    def check():
+    def check(self):
         """
         Checks parameters, paths, and dependencies
         """

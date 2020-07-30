@@ -39,8 +39,7 @@ class ThriftyMaui(custom_import("workflow", "thrifty_inversion")):
         if "MAUI" not in PAR.SOLVER.upper():
             raise ParameterError()
 
-    @staticmethod
-    def setup():
+    def setup(self):
         """
         Lays groundwork for inversion by running setup() functions for the
         involved sub-modules, and generating synthetic true data if necessary,

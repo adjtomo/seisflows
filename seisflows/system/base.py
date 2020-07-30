@@ -44,8 +44,7 @@ class Base:
         """
         raise NotImplementedError('Must be implemented by subclass.')
 
-    @staticmethod
-    def checkpoint(path, classname, method, args, kwargs):
+    def checkpoint(self, path, classname, method, args, kwargs):
         """
         Writes information to disk so tasks can be executed remotely
 

@@ -43,8 +43,7 @@ class Pyatoa:
         self.figures = None
         self.config = None
 
-    @staticmethod
-    def check():
+    def check(self):
         """ 
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
@@ -276,8 +275,7 @@ class Pyatoa:
                                                      f"{tag}_{source}.pdf"))
                 unix.rm(glob("*.png"))
 
-    @staticmethod
-    def write_residuals(path, scaled_misfit, source_name):
+    def write_residuals(self, path, scaled_misfit, source_name):
         """
         Computes residuals and saves them to a text file in the appropriate path
 
@@ -299,8 +297,7 @@ class Pyatoa:
      
         np.savetxt(event_residual, [scaled_misfit], fmt="%11.6e")
 
-    @staticmethod
-    def sum_residuals(files):
+    def sum_residuals(self, files):
         """
         Averages the event misfits and returns the total misfit.
 
@@ -323,8 +320,7 @@ class Pyatoa:
 
         return total_misfit
 
-    @staticmethod
-    def write_adjoint_traces(path, adjsrcs, offset):
+    def write_adjoint_traces(self, path, adjsrcs, offset):
         """
         Writes adjoint sources required for gradient computation using the 
         functionality contained in the Pyadjint AdjointSource object
@@ -343,8 +339,7 @@ class Pyatoa:
                       time_offset=offset
                       )
 
-    @staticmethod
-    def write_additional_adjoint_files(cwd, inv):
+    def write_additional_adjoint_files(self, cwd, inv):
         """
         Generates the STATIONS_ADJOINT file expected by the SPECFEM 
         adjoint simulation, and blank adjoint sources.

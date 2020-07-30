@@ -32,8 +32,7 @@ class MauiLg(custom_import('system', 'slurm_lg')):
     Both clusters are run with the Slurm system, and
     so MauiLG inherits attributes from `slurm_lg` system
     """
-    @staticmethod
-    def check():
+    def check(self):
         """
         Checks parameters and paths
         """
@@ -340,8 +339,7 @@ class MauiLg(custom_import('system', 'slurm_lg')):
             if isdone:
                 return
 
-    @staticmethod
-    def job_id_list(stdout, ntask):
+    def job_id_list(self, stdout, ntask):
         """
         Overwrite seisflows.system.workflow.slurm_log.job_id_list()
 
