@@ -120,11 +120,6 @@ class Pyatoa:
         unix.mkdir(self.data)  
         for source_name in solver.source_names:
             unix.mkdir(os.path.join(self.figures, source_name))
-       
-        # Wee bit hacky, but make the 'residuals' directories for saving misfit
-        for path_ in [os.path.join(PATH.GRAD, "residuals"),
-                      os.path.join(PATH.FUNC, "residuals")]:
-            unix.mkdir(path_)
 
     def prepare_eval_grad(self, path, cwd, source_name):
         """
@@ -179,8 +174,9 @@ class Pyatoa:
                             }
                         )
 
-        # Begin processing using Pyatoa
+        # Begin processing using Pyatoa, track some stats along the way
         misfit, nwin = 0, 0
+        _stations, _processed, _exceptions = 0, 0, 0
         inv = pyatoa.read_stations(os.path.join(cwd, "DATA", "STATIONS"))
 
         with ASDFDataSet(os.path.join(self.data, f"{source_name}.h5")) as ds:
@@ -192,6 +188,7 @@ class Pyatoa:
             mgmt = pyatoa.Manager(ds=ds, config=config)
             for net in inv:
                 for sta in net:
+                    _stations += 1
                     pyatoa.logger.info(
                         f"\n{'='*80}\n\n{net.code}.{sta.code}\n\n{'='*80}")
                     mgmt.reset()
@@ -215,12 +212,14 @@ class Pyatoa:
 
                         misfit += mgmt.stats.misfit
                         nwin += mgmt.stats.nwin
+                        _processed += 1
                     except pyatoa.ManagerError as e:
                         pyatoa.logger.warning(e)
                         pass
                     except Exception as e:
                         # Uncontrolled exceptions warrant lengthier error msg
                         pyatoa.logger.warning(e, exc_info=True)
+                        _exceptions += 1
                         pass
 
                     if PAR.PLOT:
@@ -236,9 +235,19 @@ class Pyatoa:
 
         # Generate the necessary files to continue the inversion
         if misfit:
-            # Write the event misfit a la Tape et al. (2010)
-            np.savetxt(os.path.join(path, "residuals", source_name),
-                       [0.5 * misfit / nwin], fmt="%11.6e")
+            # Place some useful information at the end of the Pyatoa log file
+            pyatoa.logger.info(f"\n{'='*80}\n\nSUMMARY\n\n{'='*80}\n"
+                               f"SOURCE NAME: {source_name}\n"
+                               f"STATIONS: {_processed} / {_stations}\n"
+                               f"WINDOWS: {nwin}\n"
+                               f"RAW MISFIT: {misfit:.2f}\n"
+                               f"UNEXPECTED ERRORS: {_exceptions}"
+                               )
+                 
+        
+            # Event misfit defined by Tape et al. (2010)
+            self.write_residuals(path=path, scaled_misfit=0.5 * misfit / nwin,
+                                 source_name=source_name)
 
             # Create blank adjoint sources and STATIONS_ADJOINT
             self.write_additional_adjoint_files(cwd=cwd, inv=inv)
@@ -268,6 +277,28 @@ class Pyatoa:
                                                      f"{tag}_{source}.pdf"))
                 unix.rm(glob("*.png"))
 
+    @staticmethod
+    def write_residuals(path, scaled_misfit, source_name):
+        """
+        Computes residuals and saves them to a text file in the appropriate path
+
+        :type path: str        
+        :param path: scratch directory path, e.g. PATH.GRAD or PATH.FUNC
+        :type scaled_misfit: float
+        :param scaled_misfit: the summation of misfit from each 
+            source-receiver pair calculated by prepare_eval_grad()
+        :type source_name: str
+        :param source_name: name of the source related to the misfit, used
+            for file naming
+        """
+        residuals_dir = os.path.join(path, "residuals")        
+
+        if not os.path.exists(residuals_dir):
+            unix.mkdir(residuals_dir)
+        
+        event_residual = os.path.join(residuals_dir, source_name)        
+     
+        np.savetxt(event_residual, [scaled_misfit], fmt="%11.6e")
 
     @staticmethod
     def sum_residuals(files):
@@ -329,8 +360,8 @@ class Pyatoa:
         tmplt = "{sta:>6}{net:>6}{lat:12.4f}{lon:12.4f}{elv:11.1f}{bur:11.1f}\n"
 
         # Check that adjoint sources have been written by prepare_eval_grad()
-        adj_path = os.path.join(cwd, "traces", "adj")
-        adjoint_traces = glob(os.path.join(adj_path, "*"))
+        unix.cd(os.path.join(cwd, "traces", "adj"))
+        adjoint_traces = glob("*")
 
         # Open up the stations adjoint file to be written to
         with open(os.path.join(cwd, "DATA", "STATIONS_ADJOINT"), "w") as f:
@@ -339,22 +370,25 @@ class Pyatoa:
             if not adjoint_traces:
                 return
 
-            # Create an zeroed adjoint source trace for filling blanks
+            # Create a zeroed adjoint source trace for filling blanks
             example_trace = np.loadtxt(adjoint_traces[0])
             example_trace[:, 1] = 0
 
             # Check for the existence of adjoint sources for each station
             for net in inv:
                 for sta in net:
-                    fid = os.path.join(adj_path, 
-                                       f"{net.code}.{sta.code}.??{'{}'}.adj"
-                                       )
+                    fid = f"{net.code}.{sta.code}.{'{}'}.adj"
                     # Check for the existence of any adjoint sources
-                    if glob(fid.format("?")):
+                    check_station = glob(fid.format("???"))
+                    if check_station:
+                        _, _, channel, _ = check_station[0].split(".")
                         for comp in PAR.COMPONENTS:
-                            if not os.path.exists(fid.format(comp)):
+                            # Take channel name from the file name
+                            channel = channel[:-1] + comp
+                            fid_out = fid.format(channel.upper())
+                            if not os.path.exists(fid_out):
                                 # Write a blank adjoint source for empty comps
-                                np.savetxt(fid.format(comp), example_trace)
+                                np.savetxt(fid_out, example_trace)
 
                         # Write the station into the STATIONS_ADJOINT file
                         f.write(tmplt.format(sta=sta.code, net=net.code,

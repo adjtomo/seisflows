@@ -13,6 +13,7 @@ function defined by the InversionMaui workflow class.
 """
 import os
 import sys
+import warnings
 
 from glob import glob
 from seisflows.tools import unix
@@ -108,7 +109,11 @@ class Specfem3DMaui(custom_import("solver", "specfem3d")):
         cwd = os.path.join(PATH.SOLVER, self.mainsolver)
         unix.cd(cwd)
 
+        # Check that the model parameter falls into the acceptable types
         par = getpar("MODEL").strip()
+        assert(par in available_model_types), \
+            f"Par_file {par} not in available types {available_model_types}"
+
         if par == "gll":
             self.check_mesh_properties(model_path)
             
@@ -223,6 +228,34 @@ class Specfem3DMaui(custom_import("solver", "specfem3d")):
                 unix.ln(source_name, os.path.join(PATH.SOLVER, "mainsolver"))
                 # Only check the solver parameters once
                 self.check_solver_parameter_files()
+
+    def check_solver_parameter_files(self):
+        """
+        Checks solver parameters. Only slightly different to Specfem3D as it
+        is run by the main task, not be an array process, so no need to check
+        task_id
+        """
+        nt = getpar(key="NSTEP", cast=int)
+        dt = getpar(key="DT", cast=float)
+
+        if nt != PAR.NT:
+            warnings.warn("Specfem3D NSTEP != PAR.NT\n"
+                          "overwriting Specfem3D with Seisflows parameter"
+                          )
+            setpar(key="NSTEP", val=PAR.NT)
+
+        if dt != PAR.DT:
+            warnings.warn("Specfem3D DT != PAR.DT\n"
+                          "overwriting Specfem3D with Seisflows parameter"
+                          )
+            setpar(key="DT", val=PAR.DT)
+
+        if self.mesh_properties.nproc != PAR.NPROC:
+            warnings.warn("Specfem3D mesh nproc != PAR.NPROC")
+
+        if "MULTIPLES" in PAR:
+            raise NotImplementedError
+
 
     @property
     def mainsolver(self):

@@ -17,7 +17,7 @@ preprocess = sys.modules["seisflows_preprocess"]
 postprocess = sys.modules["seisflows_postprocess"]
 
 
-class ThrifyMaui(custom_import("workflow", "thrifty_inversion")):
+class ThriftyMaui(custom_import("workflow", "thrifty_inversion")):
     """
     Waveform thrify inversion class specifically for running jobs on the
     New Zealand HPC cluster Maui.
@@ -78,5 +78,6 @@ class ThrifyMaui(custom_import("workflow", "thrifty_inversion")):
         """
         self.write_model(path=path, suffix=suffix)
         system.run("solver", "eval_fwd", path=path)
-        system.run_ancil("solver", "eval_misfit")
+        system.run_ancil("solver", "eval_misfit", path=path)
         self.write_misfit(path=path, suffix=suffix)
+
