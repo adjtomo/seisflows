@@ -32,7 +32,8 @@ class MauiLg(custom_import('system', 'slurm_lg')):
     Both clusters are run with the Slurm system, and
     so MauiLG inherits attributes from `slurm_lg` system
     """
-    def check(self):
+    @staticmethod
+    def check():
         """
         Checks parameters and paths
         """
