@@ -121,7 +121,7 @@ class Inversion(custom_import("workflow", "base")):
         if not exists(PATH.MODEL_INIT):
             raise Exception("MODEL_INIT does not exist")
 
-        # Signifiy if data-synth. or synth.-synth. case
+        # Check if this is a synthetic-synthetic or data-synthetic inversion
         if "CASE" not in PAR:
             raise ParameterError(PAR, "CASE")
         elif PAR.CASE.upper() == "SYNTHETIC" and not exists(PATH.MODEL_TRUE):
@@ -183,16 +183,16 @@ class Inversion(custom_import("workflow", "base")):
         """ 
         # Determine the index that corresponds to the resume function named
         try:
-            resume_idx = [_.__name__ for _ in self.flow].index(PAR.RESUME_FROM)
+            resume_idx = [_.__name__ for _ in flow].index(PAR.RESUME_FROM)
         except ValueError:
-            print("PAR.RESUME_FROM does not correspond to any workflow "
+            print(f"{PAR.RESUME_FROM} does not correspond to any workflow "
                   "functions. Exiting...")
             sys.exit(-1)
 
         print(f"RESUME ITERATION {optimize.iter} (from function "
-              f"{self.flow[resume_idx].__name__})")
+              f"{flow[resume_idx].__name__})")
         
-        for func in self.flow[resume_idx:]:
+        for func in flow[resume_idx:]:
             func()
 
         print(f"FINISHED ITERATION {optimize.iter} AT {time.asctime()}\n")
@@ -208,7 +208,6 @@ class Inversion(custom_import("workflow", "base")):
         """
         # Set up all the requisite modules
         print("SETUP")
-        import ipdb;ipdb.set_trace()
         preprocess.setup()
         postprocess.setup()
         optimize.setup()
@@ -273,26 +272,25 @@ class Inversion(custom_import("workflow", "base")):
         :type suffix: str
         :param suffix: suffix to use for I/O
         """
+        print("EVALUATION FUNCTION\n\tRunning forward simulation")
         self.write_model(path=path, suffix=suffix)
         system.run("solver", "eval_func", path=path)
         self.write_misfit(path=path, suffix=suffix)
 
     def evaluate_gradient(self):
         """
-        Performs adjoint simulation to evaluate gradien                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               t of the misfit function
+        Performs adjoint simulation to retrieve the gradient of the objective 
         """
-        print("EVALUATE GRADIENT\n\tRunning adjoint simulation", end="... ")
-
-        self.stopwatch("set")
+        print("EVALUATE GRADIENT\n\tRunning adjoint simulation")
         system.run("solver", "eval_grad", path=PATH.GRAD,
                    export_traces=PAR.SAVETRACES)
-        self.stopwatch("time")
 
     def finalize(self):
         """
         Saves results from current model update iteration
         """
         self.checkpoint()
+        preprocess.finalize()
 
         # Save files from scratch before discarding
         if PAR.SAVEMODEL:
@@ -346,7 +344,7 @@ class Inversion(custom_import("workflow", "base")):
         solver.save(solver.split(optimize.load(src)), dst)
 
     @staticmethod
-    def write_gradient(path, suffix):
+    def write_gradient():
         """
         Writes gradient in format expected by non-linear optimization library.
         Calls the postprocess module, which will smooth/precondition gradient.
@@ -357,10 +355,10 @@ class Inversion(custom_import("workflow", "base")):
         :param suffix: suffix to add to the gradient
         """
         print("POSTPROCESSING")
-        src = os.path.join(path, "gradient")
-        dst = f"g_{suffix}"
+        src = os.path.join(PATH.GRAD, "gradient")
+        dst = f"g_new"
 
-        postprocess.write_gradient(path)
+        postprocess.write_gradient(PATH.GRAD)
         parts = solver.load(src, suffix="_kernel")
         optimize.save(dst, solver.merge(parts))
 

@@ -74,8 +74,8 @@ class Writer(object):
             os.mkdir(path)
         except FileExistsError:
             print(f"Warning, {os.path.basename(path)} exists\n"
-                  "Appending to these files without deleting them will cause"
-                  "problems in the workflow")
+                  "Appending to this files without deleting them may lead to "
+                  "unintended consequences")
 
         self.__call__('step_count', 0)
 

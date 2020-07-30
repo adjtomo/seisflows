@@ -185,11 +185,11 @@ def resume(debug=False):
         # Prematurely distribute modules for easier debugging
         PATH = sys.modules["seisflows_paths"]
         PAR = sys.modules["seisflows_parameters"]
-        preprocess = sys.modules["seisflows_preprocess"]
+        system = sys.modules["seisflows_system"]
         solver = sys.modules["seisflows_solver"]
         optimize = sys.modules["seisflows_optimize"]
+        preprocess = sys.modules["seisflows_preprocess"]
         postprocess = sys.modules["seisflows_postprocess"]
-        system = sys.modules["seisflows_system"]
             
         # Import debugging options
         import ipdb

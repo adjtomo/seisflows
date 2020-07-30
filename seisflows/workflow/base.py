@@ -7,7 +7,7 @@ import time
 from seisflows.config import save
 
 
-class Base(object):
+class Base:
     """
     Workflow abstract base class
     """
