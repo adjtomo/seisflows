@@ -29,12 +29,12 @@ class Backtrack(Bracket):
         status == 0 : not finished
         status < 0  : failed
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         These parameters should not be set by the user.
         Attributes are initialized as NoneTypes for clarity and docstrings.
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
     def calculate_step(self):
         """
