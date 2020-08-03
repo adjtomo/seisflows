@@ -142,9 +142,12 @@ class Pyatoa:
             logging.getLogger(log).setLevel(PAR.LOGGING.upper())
 
         # Only query FDSN for i00s00, else turn off by setting client to None
+        # Dont fix windows for the first function evaluation
         if optimize.iter == 1 and optimize.line_search.step_count == 0:
             client = PAR.CLIENT
+            fix_windows = False
         else:   
+            fix_windows = PAR.FIX_WINDOWS
             client = None
 
         # Establish the Pyatoa Configuration object using Seisflows parameters
@@ -200,7 +203,7 @@ class Pyatoa:
 
                     # Process data; if fail, move onto waveform plotting
                     try:
-                        mgmt.flow(fix_windows=PAR.FIX_WINDOWS)
+                        mgmt.flow(fix_windows=fix_windows)
 
                         self.write_adjoint_traces(
                                        path=os.path.join(cwd, "traces", "adj"),
