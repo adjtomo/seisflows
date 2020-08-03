@@ -24,6 +24,7 @@ class Base:
         These parameters should not be set by __init__!
         Attributes are just initialized as NoneTypes for clarity and docstrings
         """
+        pass
 
     @staticmethod
     def check():
@@ -70,7 +71,7 @@ class Base:
         if PAR.SMOOTH_H > 0:
             solver.combine(input_path=path, output_path=f"{path}/sum_nosmooth",
                            parameters=parameters)
-            print(f"\tSmoothing gradient: H={PAR.SMOOTH_H}, V={PAR.SMOOTH_V}")
+
             solver.smooth(input_path=f"{path}/sum_nosmooth",
                           output_path=f"{path}/sum", parameters=parameters,
                           span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
@@ -98,6 +99,9 @@ class Base:
             raise FileNotFoundError
 
         # Run postprocessing on the cluster
+        if PAR.VERBOSE and PAR.SMOOTH_H > 0:
+            print(f"\tSmoothing gradient: H={PAR.SMOOTH_H}, V={PAR.SMOOTH_V}")
+
         system.run_single("postprocess", "process_kernels",
                           path=f"{path}/kernels",
                           scale_tasktime=PAR.TASKTIME_SMOOTH,
@@ -114,6 +118,8 @@ class Base:
         gradient *= solver.merge(solver.load(f"{path}/model"))
 
         if PATH.MASK:
+            if PAR.VERBOSE:
+                print(f"\tMasking gradient")
             # to scale the gradient, users can supply "masks" by exactly
             # mimicking the file format in which models stored
             mask = solver.merge(solver.load(PATH.MASK))

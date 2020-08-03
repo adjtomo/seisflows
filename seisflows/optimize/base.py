@@ -202,10 +202,11 @@ class Base:
                 sys.exit(-1)
 
         # Tell the User min and max values of the updated model
-        print("\t\tModel Parameters")
-        msg_ = "\t\t\t{minval:.2f} <= {key} <= {maxval:.2f}"
-        for key, vals in pars.items():
-            print(msg_.format(minval=vals.min(), key=key, maxval=vals.max()))
+        if PAR.VERBOSE:
+            print(f"\tModel Parameters ({tag})")
+            msg_ = "\t\t{minval:.2f} <= {key} <= {maxval:.2f}"
+            for key, vals in pars.items():
+                print(msg_.format(minval=vals.min(), key=key, maxval=vals.max()))
 
     def initialize_search(self):
         """
@@ -228,7 +229,6 @@ class Base:
         # Optional step length safeguard
         if PAR.STEPLENMAX:
             self.line_search.step_len_max = PAR.STEPLENMAX * norm_m / norm_p
-            print(f"\t\tStep length max {self.line_search.step_len_max}")
 
         # Determine initial step length
         alpha, _ = self.line_search.initialize(0., f, gtg, gtp)
@@ -236,7 +236,8 @@ class Base:
         # Optional initial step length override
         if PAR.STEPLENINIT and len(self.line_search.step_lens) <= 1:
             alpha = PAR.STEPLENINIT * norm_m / norm_p
-            print("\t\tStep length override due to PAR.STEPLENINIT")
+            if PAR.VERBOSE:
+                print("\t\tStep length override due to PAR.STEPLENINIT")
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
@@ -324,7 +325,7 @@ class Base:
         """
         g = self.load("g_new")
         p = self.load("p_new")
-        theta = angle(p,-g)
+        theta = angle(p, -g)
 
         if PAR.VERBOSE:
             print(f" theta: {theta:6.3f}")

@@ -42,8 +42,8 @@ class Bracket(Base):
 
         if self.verbose:
             print("\tBracketing line search")
-            print(f"\t\tStep lengths = {x}")
-            print(f"\t\tMisfits = {f}")
+            print(f"\t\tStep Length(s) = {x}")
+            print(f"\t\tMisfit(s) = {f}")
         
         # For the first inversion and initial step, set alpha manually
         if step_count == 0 and update_count == 0:

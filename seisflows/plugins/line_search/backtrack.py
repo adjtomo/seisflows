@@ -53,8 +53,8 @@ class Backtrack(Bracket):
         else:
             if self.verbose:
                 print("\tBacktracking line search")
-                print(f"\t\tstep lengths = {x}")
-                print(f"\t\tmisfits = {f}")
+                print(f"\t\tStep Length(s) = {x}")
+                print(f"\t\tMisfit(s) = {f}")
             # Initial unit step length
             if step_count == 0:
                 if self.verbose:

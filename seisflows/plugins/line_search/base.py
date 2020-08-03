@@ -9,6 +9,7 @@ import numpy as np
 
 from seisflows.tools.array import count_zeros
 
+
 class Base:
     """
     Abstract base class for line search
