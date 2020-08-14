@@ -3,11 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/optimize/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/plugins/line_search/backtrack.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/line_search/backtrack.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/plugins/line_search/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/line_search/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/plugins/line_search/bracket.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/line_search/bracket.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/postprocess/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/postprocess/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/preprocess/pyatoa.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/preprocess/pyatoa.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,6 +26,8 @@
   </component>
   <component name="PropertiesComponent">
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
@@ -90,5 +88,9 @@
       <screen x="0" y="22" width="1920" height="1058" />
     </state>
     <state width="600" height="428" key="javadoc.popup/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1595295278319" />
+    <state x="623" y="255" width="672" height="678" key="search.everywhere.popup" timestamp="1597379327980">
+      <screen x="0" y="22" width="1920" height="1058" />
+    </state>
+    <state x="623" y="255" width="672" height="678" key="search.everywhere.popup/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1597379327980" />
   </component>
 </project>

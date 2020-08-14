@@ -133,119 +133,20 @@ class Pyatoa:
         :type source_name: str
         :param source_name: the event id to be used for tagging and data lookup
         """
-        # Late import because preprocess is loaded before optimize, 
-        # Optimize required to know which iteration/step_count we are at
-        optimize = sys.modules["seisflows_optimize"]
 
         # Set the logging level, which will be outputted to stdout
         for log in ["pyatoa", "pyflex", "pyadjoint"]:
             logging.getLogger(log).setLevel(PAR.LOGGING.upper())
 
-        # Only query FDSN for i00s00, else turn off by setting client to None
-        # Dont fix windows for the first function evaluation
-        if optimize.iter == 1 and optimize.line_search.step_count == 0:
-            client = PAR.CLIENT
-            fix_windows = False
-        else:   
-            client = None
-            fix_windows = PAR.FIX_WINDOWS
-
-        # Establish the Pyatoa Configuration object using Seisflows parameters
-        config = pyatoa.Config(
-                        event_id=source_name,
-                        iteration=optimize.iter,
-                        step_count=optimize.line_search.step_count,
-                        synthetics_only=bool(PAR.CASE.lower() == "synthetic"),
-                        component_list=list(PAR.COMPONENTS), 
-                        rotate_to_rtz=PAR.ROTATE,
-                        min_period=PAR.MIN_PERIOD, 
-                        max_period=PAR.MAX_PERIOD, 
-                        filter_corners=PAR.CORNERS, 
-                        unit_output=PAR.UNIT_OUTPUT,
-                        client=client,
-                        start_pad=PAR.START_PAD, 
-                        end_pad=PAR.END_PAD,
-                        adj_src_type=PAR.ADJ_SRC_TYPE, 
-                        pyflex_preset=PAR.PYFLEX_PRESET,
-                        paths={
-                            "waveforms": [os.path.join(PATH.DATA, "mseeds"),
-                                          os.path.join(cwd, "traces", "obs")],
-                            "synthetics": [os.path.join(cwd, "traces", "syn")],
-                            "responses": [os.path.join(PATH.DATA, "seed")],
-                            }
-                        )
-
-        # Begin processing using Pyatoa, track some stats along the way
-        misfit, nwin = 0, 0
-        _stations, _processed, _exceptions = 0, 0, 0
+        # Generate auxiliary information necessary for misfit assessment
+        config = self.create_config(cwd=cwd, source_name=source_name)
         inv = pyatoa.read_stations(os.path.join(cwd, "DATA", "STATIONS"))
 
-        with ASDFDataSet(os.path.join(self.data, f"{source_name}.h5")) as ds:
-            clean_dataset(ds, iteration=optimize.iter, 
-                          step_count=optimize.line_search.step_count
-                          )
-
-            config.write(write_to=ds)
-            mgmt = pyatoa.Manager(ds=ds, config=config)
-            for net in inv:
-                for sta in net:
-                    _stations += 1
-                    pyatoa.logger.info(
-                        f"\n{'='*80}\n\n{net.code}.{sta.code}\n\n{'='*80}")
-                    mgmt.reset()
-
-                    # Gather data; if fail, move onto the next station
-                    try:
-                        mgmt.gather(code=f"{net.code}.{sta.code}.*.HH*")
-                    except pyatoa.ManagerError as e:
-                        pyatoa.logger.warning(e)
-                        continue
-
-                    # Process data; if fail, move onto waveform plotting
-                    try:
-                        mgmt.flow(fix_windows=fix_windows)
-
-                        self.write_adjoint_traces(
-                                       path=os.path.join(cwd, "traces", "adj"),
-                                       adjsrcs=mgmt.adjsrcs.values(),
-                                       offset=mgmt.stats.time_offset_sec
-                                       )
-
-                        misfit += mgmt.stats.misfit
-                        nwin += mgmt.stats.nwin
-                        _processed += 1
-                    except pyatoa.ManagerError as e:
-                        pyatoa.logger.warning(e)
-                        pass
-                    except Exception as e:
-                        # Uncontrolled exceptions warrant lengthier error msg
-                        pyatoa.logger.warning(e, exc_info=True)
-                        _exceptions += 1
-                        pass
-
-                    if PAR.PLOT:
-                        # Save the data with a specific tag
-                        # e.g. path/to/figures/i01s00_NZ_BFZ.png
-                        mgmt.plot(corners=PAR.MAP_CORNERS, show=False, 
-                                  save=os.path.join(self.figures, source_name, 
-                                                    f"{config.iter_tag}"
-                                                    f"{config.step_tag}_"
-                                                    f"{net.code}_{sta.code}.png"
-                                                    )
-                                  )
+        # Misfit assessment for a given event and set of stations
+        misfit, nwin = self.process_event(config, inv, cwd)
 
         # Generate the necessary files to continue the inversion
         if misfit:
-            # Place some useful information at the end of the Pyatoa log file
-            pyatoa.logger.info(f"\n{'='*80}\n\nSUMMARY\n\n{'='*80}\n"
-                               f"SOURCE NAME: {source_name}\n"
-                               f"STATIONS: {_processed} / {_stations}\n"
-                               f"WINDOWS: {nwin}\n"
-                               f"RAW MISFIT: {misfit:.2f}\n"
-                               f"UNEXPECTED ERRORS: {_exceptions}"
-                               )
-                 
-        
             # Event misfit defined by Tape et al. (2010)
             self.write_residuals(path=path, scaled_misfit=0.5 * misfit / nwin,
                                  source_name=source_name)
@@ -264,20 +165,7 @@ class Pyatoa:
         insp.discover(path=os.path.join(self.data))
         insp.save(path=self.data) 
 
-        # Combine images into a PDF, delete all pngs afterwards
-        unix.cd(self.figures)
-        sources = [os.path.abspath(_) for _ in glob("*") if os.path.isdir(_)]
-        for source in sources:
-            event = os.path.basename(source)
-            unix.cd(source)
-            all_imgs = glob("*.png")
-            img_tags = set([_.split("_")[0] for _ in all_imgs])
-            for tag in img_tags:
-                fids = glob(f"{tag}_*.png")
-                imgs_to_pdf(fids=fids, 
-                            fid_out=os.path.join(self.figures, 
-                                                 f"{tag}_{event}.pdf"))
-            unix.rm(glob("*.png"))
+        self.make_pdfs()
 
     def write_residuals(self, path, scaled_misfit, source_name):
         """
@@ -323,6 +211,145 @@ class Pyatoa:
         total_misfit /= PAR.NTASK
 
         return total_misfit
+
+    def create_config(self, cwd, source_name):
+        """
+        Creates the Pyatoa Configuration object using the internal Seisflows
+        parameters and some unique identifiers from the preprocess module.
+
+        :type cwd: str
+        :param cwd: the path to the current Specfem working directory
+        :type source_name: str
+        :param source_name: the event id to be used for tagging and data lookup
+        """
+        # Late import because preprocess is loaded before optimize,
+        # Optimize required to know which iteration/step_count we are at
+        optimize = sys.modules["seisflows_optimize"]
+
+        # Only query FDSN for i00s00, else turn off by setting client to None
+        # Dont fix windows for the first function evaluation
+        if optimize.iter == 1 and optimize.line_search.step_count == 0:
+            client = PAR.CLIENT
+        else:
+            client = None
+
+        # Establish the Pyatoa Configuration object using Seisflows parameters
+        return pyatoa.Config(
+                        event_id=source_name,
+                        iteration=optimize.iter,
+                        step_count=optimize.line_search.step_count,
+                        synthetics_only=bool(PAR.CASE.lower() == "synthetic"),
+                        component_list=list(PAR.COMPONENTS),
+                        rotate_to_rtz=PAR.ROTATE,
+                        min_period=PAR.MIN_PERIOD,
+                        max_period=PAR.MAX_PERIOD,
+                        filter_corners=PAR.CORNERS,
+                        unit_output=PAR.UNIT_OUTPUT,
+                        client=client,
+                        start_pad=PAR.START_PAD,
+                        end_pad=PAR.END_PAD,
+                        adj_src_type=PAR.ADJ_SRC_TYPE,
+                        pyflex_preset=PAR.PYFLEX_PRESET,
+                        paths={
+                            "waveforms": [os.path.join(PATH.DATA, "mseeds"),
+                                          os.path.join(cwd, "traces", "obs")],
+                            "synthetics": [os.path.join(cwd, "traces", "syn")],
+                            "responses": [os.path.join(PATH.DATA, "seed")],
+                            }
+                        )
+
+    def process_event(self, config, inv, cwd):
+        """
+        Run through the Pyatoa internal processing workflow to gather, process
+        data and output misfit windows and adjoint sources
+
+        :type config: pyatoa.core.config.Config
+        :param config: Configuration object for the given event and function
+            evaluation. Created by create_config()
+        :type inv: obspy.core.inventory.Inventory
+        :param inv: an inventory containing station names to process for a given
+            source. Only network and station codes are required in the inventory
+        :type cwd: str
+        :param cwd: the current SPECFEM solver directory, used only to determine
+            where to write adjoint traces.
+        :return:
+        """
+        # Track the total misfit and number of windows
+        misfit, nwin = 0, 0
+        # Track the number of successes and fails for a summary statement
+        _stations, _processed, _exceptions = 0, 0, 0
+
+        # Check if we want to fix the windows based on the evaluation number
+        if config.iteration == 1 and config.step_count == 0:
+            fix_windows = False
+        else:
+            fix_windows = PAR.FIX_WINDOWS
+
+        # Begin the Pyatoa processing workflow
+        with ASDFDataSet(os.path.join(self.data,
+                                      f"{config.event_id}.h5")) as ds:
+            clean_dataset(ds, iteration=config.iteration,
+                          step_count=config.step_count)
+
+            config.write(write_to=ds)
+            mgmt = pyatoa.Manager(ds=ds, config=config)
+            for net in inv:
+                for sta in net:
+                    _stations += 1
+                    pyatoa.logger.info(
+                        f"\n{'=' * 80}\n\n{net.code}.{sta.code}\n\n{'=' * 80}")
+                    mgmt.reset()
+
+                    # Gather data; if fail, move onto the next station
+                    try:
+                        mgmt.gather(code=f"{net.code}.{sta.code}.*.HH*")
+                    except pyatoa.ManagerError as e:
+                        pyatoa.logger.warning(e)
+                        continue
+
+                    # Process data; if fail, move onto waveform plotting
+                    try:
+                        mgmt.flow(fix_windows=fix_windows)
+
+                        self.write_adjoint_traces(
+                            path=os.path.join(cwd, "traces", "adj"),
+                            adjsrcs=mgmt.adjsrcs.values(),
+                            offset=mgmt.stats.time_offset_sec
+                        )
+
+                        misfit += mgmt.stats.misfit
+                        nwin += mgmt.stats.nwin
+                        _processed += 1
+                    except pyatoa.ManagerError as e:
+                        pyatoa.logger.warning(e)
+                        pass
+                    except Exception as e:
+                        # Uncontrolled exceptions warrant lengthier error msg
+                        pyatoa.logger.warning(e, exc_info=True)
+                        _exceptions += 1
+                        pass
+
+                    if PAR.PLOT:
+                        # Save the data with a specific tag
+                        # e.g. path/to/figures/i01s00_NZ_BFZ.png
+                        mgmt.plot(corners=PAR.MAP_CORNERS, show=False,
+                                  save=os.path.join(self.figures,
+                                                    config.event_id,
+                                                    f"{config.iter_tag}"
+                                                    f"{config.step_tag}_"
+                                                    f"{net.code}_{sta.code}.png"
+                                                    )
+                                  )
+        # Record summary information at the end of the Pyatoa log file
+        pyatoa.logger.info(f"\n{'=' * 80}\n\nSUMMARY\n\n{'=' * 80}\n"
+                           f"SOURCE NAME: {config.event_id}\n"
+                           f"STATIONS: {_processed} / {_stations}\n"
+                           f"WINDOWS: {nwin}\n"
+                           f"RAW MISFIT: {misfit:.2f}\n"
+                           f"UNEXPECTED ERRORS: {_exceptions}"
+                           )
+
+        return misfit, nwin
 
     def write_adjoint_traces(self, path, adjsrcs, offset):
         """
@@ -395,3 +422,23 @@ class Pyatoa:
                                              elv=sta.elevation,
                                              bur=0)
                                 )
+
+    def make_pdfs(self):
+        """
+        Utility function to make PDFs of waveform images for easier transport
+        and access during an inversion. Checks tags based on the file names
+        specified during process_event(). Removes png files after pdf made.
+        """
+        unix.cd(self.figures)
+        sources = [os.path.abspath(_) for _ in glob("*") if os.path.isdir(_)]
+        for source in sources:
+            event = os.path.basename(source)
+            unix.cd(source)
+            all_imgs = glob("*.png")
+            img_tags = set([_.split("_")[0] for _ in all_imgs])
+            for tag in img_tags:
+                fids = glob(f"{tag}_*.png")
+                imgs_to_pdf(fids=fids,
+                            fid_out=os.path.join(self.figures,
+                                                 f"{tag}_{event}.pdf"))
+            unix.rm(glob("*.png"))
