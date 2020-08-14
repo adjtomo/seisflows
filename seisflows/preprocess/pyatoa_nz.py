@@ -58,6 +58,14 @@ class PyatoaNz(custom_import("preprocess", "pyatoa")):
             config.write(write_to=ds)
             mgmt = pyatoa.Manager(ds=ds, config=config)
             for net in inv:
+                # ADDITION:
+                # Bannister network data has already had the instrument
+                # response removed, so we will ignore that.
+                if net.code in ["Z8", "ZX"]:
+                    remove_response = False
+                else:
+                    remove_response = True
+
                 for sta in net:
                     _stations += 1
                     pyatoa.logger.info(
@@ -73,14 +81,6 @@ class PyatoaNz(custom_import("preprocess", "pyatoa")):
 
                     # Process data; if fail, move onto waveform plotting
                     try:
-                        # ADDITION:
-                        # Bannister network data has already had the instrument
-                        # response removed, so ignore that.
-                        if net in ["Z8", "ZX"]:
-                            remove_response = False
-                        else:
-                            remove_response = True
-
                         mgmt.flow(fix_windows=fix_windows,
                                   remove_response=remove_response)
 
