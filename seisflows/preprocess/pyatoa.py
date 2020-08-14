@@ -147,8 +147,8 @@ class Pyatoa:
             client = PAR.CLIENT
             fix_windows = False
         else:   
-            fix_windows = PAR.FIX_WINDOWS
             client = None
+            fix_windows = PAR.FIX_WINDOWS
 
         # Establish the Pyatoa Configuration object using Seisflows parameters
         config = pyatoa.Config(
@@ -167,7 +167,7 @@ class Pyatoa:
                         end_pad=PAR.END_PAD,
                         adj_src_type=PAR.ADJ_SRC_TYPE, 
                         pyflex_preset=PAR.PYFLEX_PRESET,
-                        cfgpaths={
+                        paths={
                             "waveforms": [os.path.join(PATH.DATA, "mseeds"),
                                           os.path.join(cwd, "traces", "obs")],
                             "synthetics": [os.path.join(cwd, "traces", "syn")],
@@ -196,7 +196,7 @@ class Pyatoa:
 
                     # Gather data; if fail, move onto the next station
                     try:
-                        mgmt.gather(station_code=f"{net.code}.{sta.code}.*.HH*")
+                        mgmt.gather(code=f"{net.code}.{sta.code}.*.HH*")
                     except pyatoa.ManagerError as e:
                         pyatoa.logger.warning(e)
                         continue
@@ -266,17 +266,18 @@ class Pyatoa:
 
         # Combine images into a PDF, delete all pngs afterwards
         unix.cd(self.figures)
-        for source in glob("*"):
-            if os.path.isdir(source):
-                unix.cd(source)
-                all_imgs = glob("*.png")
-                img_tags = set([_.split("_")[0] for _ in all_imgs])
-                for tag in img_tags:
-                    fids = glob(f"{tag}_*.png")
-                    imgs_to_pdf(fids=fids, 
-                                fid_out=os.path.join(self.figures, 
-                                                     f"{tag}_{source}.pdf"))
-                unix.rm(glob("*.png"))
+        sources = [os.path.abspath(_) for _ in glob("*") if os.path.isdir(_)]
+        for source in sources:
+            event = os.path.basename(source)
+            unix.cd(source)
+            all_imgs = glob("*.png")
+            img_tags = set([_.split("_")[0] for _ in all_imgs])
+            for tag in img_tags:
+                fids = glob(f"{tag}_*.png")
+                imgs_to_pdf(fids=fids, 
+                            fid_out=os.path.join(self.figures, 
+                                                 f"{tag}_{event}.pdf"))
+            unix.rm(glob("*.png"))
 
     def write_residuals(self, path, scaled_misfit, source_name):
         """

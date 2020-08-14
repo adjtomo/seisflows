@@ -139,17 +139,24 @@ class Base:
 
         output.optim needs to have its lines cleared manually
         """
-        # Wind back dot products by one
-        self.gtg = self.gtg[:-1]
-        self.gtp = self.gtp[:-1]
-        
-        # Move step lens and function evaluations by number of step count
-        original_idx = -1 * self.step_count - 1
-        self.step_lens = self.step_lens[:original_idx]
-        self.func_vals = self.func_vals[:original_idx]
-        
-        # Step back the writer as initialize() will step it forward 
-        self.writer.iter -= 1
+        # First step treated differently
+        if len(self.step_lens) <= 1:
+            self.clear_history()
+            self.writer.iter = 0
+            self.step_count = 0
+    
+        else:
+            # Wind back dot products by one
+            self.gtg = self.gtg[:-1]
+            self.gtp = self.gtp[:-1]
+            
+            # Move step lens and function evaluations by number of step count
+            original_idx = -1 * self.step_count - 1
+            self.step_lens = self.step_lens[:original_idx]
+            self.func_vals = self.func_vals[:original_idx]
+            
+            # Step back the writer as initialize() will step it forward 
+            self.writer.iter -= 1
 
     def search_history(self, sort=True):
         """
