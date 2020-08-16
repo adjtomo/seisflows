@@ -81,7 +81,7 @@ class PyatoaNz(custom_import("preprocess", "pyatoa")):
 
                     # Process data; if fail, move onto waveform plotting
                     try:
-                        mgmt.flow(fix_windows=fix_windows,
+                        mgmt.flow(fix_windows=self.check_fixed_windows(config),
                                   remove_response=remove_response)
 
                         self.write_adjoint_traces(
@@ -102,17 +102,23 @@ class PyatoaNz(custom_import("preprocess", "pyatoa")):
                         _exceptions += 1
                         pass
 
+                    # Save the data with a specific tag
+                    # e.g. path/to/figures/i01s00_NZ_BFZ.png
                     if PAR.PLOT:
-                        # Save the data with a specific tag
-                        # e.g. path/to/figures/i01s00_NZ_BFZ.png
-                        mgmt.plot(corners=PAR.MAP_CORNERS, show=False,
+                        try:
+                            mgmt.plot(
+                                  corners=PAR.MAP_CORNERS, show=False,
                                   save=os.path.join(self.figures,
                                                     config.event_id,
                                                     f"{config.iter_tag}"
                                                     f"{config.step_tag}_"
                                                     f"{net.code}_{sta.code}.png"
                                                     )
-                                  )
+                                  ) 
+                        except pyatoa.ManagerError as e:
+                            pyatoa.logger.warning(e)
+                            pass
+
         # Record summary information at the end of the Pyatoa log file
         pyatoa.logger.info(f"\n{'=' * 80}\n\nSUMMARY\n\n{'=' * 80}\n"
                            f"SOURCE NAME: {config.event_id}\n"

@@ -161,7 +161,7 @@ class Pyatoa:
             Aggregate misfit windows using the Inspector class
             Generate PDFS of waveform figures for easy access
         """
-        insp = pyatoa.Inspector(PAR.TITLE)
+        insp = pyatoa.Inspector(PAR.TITLE, verbose=False)
         insp.discover(path=os.path.join(self.data))
         insp.save(path=self.data) 
 
@@ -211,6 +211,52 @@ class Pyatoa:
         total_misfit /= PAR.NTASK
 
         return total_misfit
+
+    def check_fixed_windows(self, config):
+        """
+        Determine how to address fixed time windows based on the user parameter
+        as well as the current iteration and step count in relation to the 
+        inversion location.
+        
+        Options:
+            True: Always fix windows except for i01s00 because we don't have any
+                  windows for the first function evaluation
+            False: Don't fix windows, always choose a new set of windows
+            Iter: Pick windows only on the initial step count (0th) for each 
+                  iteration. WARNING - does not work well with Thrifty Inversion 
+                  because the 0th step count is usually skipped
+            Once: Pick new windows on the first function evaluation and then fix
+                  windows. Useful for when parameters have changed, e.g. filter
+                  bounds
+
+        :type config: pyatoa.core.config.Config
+        :param config: Config object that should contain current iteration
+            and step_count values
+        :rtype: bool
+        :return: flag to denote whether or not to pick new windows in the 
+            processing workflow
+        """
+        # First function evaluation never fixes windows 
+        if config.iteration == 1 and config.step_count == 0:
+            fix_windows = False
+        # By 'iter'ation only pick new windows on the first step count
+        elif PAR.FIX_WINDOWS.upper() == "ITER":
+            if config.step_count == 0:
+                fix_windows = False
+            else:
+                fix_windows = True
+        # 'Once' picks windows only for the first function evaluation of the 
+        # current set of iterations.
+        elif PAR.FIX_WINDOWS.upper() == "ONCE":
+            if config.iteration == PAR.BEGIN and config.step_count == 0:
+                fix_windows = False 
+            else:
+                fix_windows = True
+        # Bool fix windows simply sets the parameter
+        else:
+            fix_windows = PAR.FIX_WINDOWS
+
+        return fix_windows
 
     def create_config(self, cwd, source_name):
         """
@@ -278,12 +324,7 @@ class Pyatoa:
         misfit, nwin = 0, 0
         # Track the number of successes and fails for a summary statement
         _stations, _processed, _exceptions = 0, 0, 0
-
-        # Check if we want to fix the windows based on the evaluation number
-        if config.iteration == 1 and config.step_count == 0:
-            fix_windows = False
-        else:
-            fix_windows = PAR.FIX_WINDOWS
+    
 
         # Begin the Pyatoa processing workflow
         with ASDFDataSet(os.path.join(self.data,
@@ -309,7 +350,7 @@ class Pyatoa:
 
                     # Process data; if fail, move onto waveform plotting
                     try:
-                        mgmt.flow(fix_windows=fix_windows)
+                        mgmt.flow(fix_windows=self.check_fixed_windows(config))
 
                         self.write_adjoint_traces(
                             path=os.path.join(cwd, "traces", "adj"),
