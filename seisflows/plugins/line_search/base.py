@@ -110,7 +110,8 @@ class Base:
         :rtype status: int
         :return status: current status of the line search
         """
-        self.step_count += 1
+        # This has been moved into workflow.line_search()
+        # self.step_count += 1
         self.step_lens += [step_len]
         self.func_vals += [func_val]
 

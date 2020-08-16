@@ -231,7 +231,8 @@ class Base:
             self.line_search.step_len_max = PAR.STEPLENMAX * norm_m / norm_p
 
         # Determine initial step length
-        alpha, _ = self.line_search.initialize(0., f, gtg, gtp)
+        alpha, _ = self.line_search.initialize(step_len=0., func_val=f, gtg=gtg, 
+                                               gtp=gtp)
 
         # Optional initial step length override
         if PAR.STEPLENINIT and len(self.line_search.step_lens) <= 1:

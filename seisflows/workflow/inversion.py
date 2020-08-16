@@ -238,7 +238,9 @@ class Inversion(custom_import("workflow", "base")):
         optimize.initialize_search()
 
         while True:
-            print(f"TRIAL STEP: {optimize.line_search.step_count + 1}")
+            optimize.line_search.step_count += 1
+
+            print(f"TRIAL STEP: {optimize.line_search.step_count}")
             self.evaluate_function(path=PATH.FUNC, suffix="try")
             status = optimize.update_search()
 
