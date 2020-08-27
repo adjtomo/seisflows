@@ -61,7 +61,7 @@ class Pyatoa:
 
         # Check the existence of required parameters
         required_parameters = ["COMPONENTS", "UNIT_OUTPUT", "MIN_PERIOD",
-                               "MAX_PERIOD", "CORNERS", "CLIENT", "ROTATE",
+                               "MAX_PERIOD", "CORNERS", "ROTATE",
                                "ADJ_SRC_TYPE", "PYFLEX_PRESET",
                                "FIX_WINDOWS", "PLOT", "FORMAT"
                                ]
@@ -86,6 +86,9 @@ class Pyatoa:
 
         if "CLIENT" not in PAR:
             setattr(PAR, "CLIENT", None)
+
+        if "SNAPSHOT" not in PAR:
+            setattr(PAR, "SNAPSHOT", True)
 
         # Used to define the start time of fetched observation waveforms
         if "START_PAD" not in PAR:
@@ -116,6 +119,7 @@ class Pyatoa:
 
         # Make data and figure directories for each source
         unix.mkdir(self.data)  
+        unix.mkdir(os.path.join(self.data, "snapshot"))
         for source_name in solver.source_names:
             unix.mkdir(os.path.join(self.figures, source_name))
 
@@ -153,6 +157,12 @@ class Pyatoa:
 
             # Create blank adjoint sources and STATIONS_ADJOINT
             self.write_additional_adjoint_files(cwd=cwd, inv=inv)
+
+        # Copy the ASDFDataSet after each function evaluation
+        if PAR.SNAPSHOT:
+            src = os.path.join(self.data, f"{config.event_id}.h5")
+            dst = os.path.join(self.data, "snapshot")
+            unix.cp(src, dst)
 
     def finalize(self):
         """
@@ -239,19 +249,20 @@ class Pyatoa:
         # First function evaluation never fixes windows 
         if config.iteration == 1 and config.step_count == 0:
             fix_windows = False
-        # By 'iter'ation only pick new windows on the first step count
-        elif PAR.FIX_WINDOWS.upper() == "ITER":
-            if config.step_count == 0:
-                fix_windows = False
-            else:
-                fix_windows = True
-        # 'Once' picks windows only for the first function evaluation of the 
-        # current set of iterations.
-        elif PAR.FIX_WINDOWS.upper() == "ONCE":
-            if config.iteration == PAR.BEGIN and config.step_count == 0:
-                fix_windows = False 
-            else:
-                fix_windows = True
+        elif isinstance(PAR.FIX_WINDOWS, str):
+            # By 'iter'ation only pick new windows on the first step count
+            if PAR.FIX_WINDOWS.upper() == "ITER":
+                if config.step_count == 0:
+                    fix_windows = False
+                else:
+                    fix_windows = True
+            # 'Once' picks windows only for the first function evaluation of the 
+            # current set of iterations.
+            elif PAR.FIX_WINDOWS.upper() == "ONCE":
+                if config.iteration == PAR.BEGIN and config.step_count == 0:
+                    fix_windows = False 
+                else:
+                    fix_windows = True
         # Bool fix windows simply sets the parameter
         else:
             fix_windows = PAR.FIX_WINDOWS
@@ -479,7 +490,14 @@ class Pyatoa:
             img_tags = set([_.split("_")[0] for _ in all_imgs])
             for tag in img_tags:
                 fids = glob(f"{tag}_*.png")
+                # Unique directory based on current iteration and step
+                iter_ = tag[:3]
+                step = tag[3:]
+                path_out = os.path.join(self.figures, iter_, step)
+                if not os.path.exists(path_out):
+                    os.makedirs(path_out)
+
                 imgs_to_pdf(fids=fids,
-                            fid_out=os.path.join(self.figures,
-                                                 f"{tag}_{event}.pdf"))
+                            fid_out=os.path.join(path_out, f"{tag}_{event}.pdf")
+                            )
             unix.rm(glob("*.png"))
