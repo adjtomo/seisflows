@@ -486,7 +486,7 @@ class Pyatoa:
         for source in sources:
             event = os.path.basename(source)
             unix.cd(source)
-            all_imgs = glob("*.png")
+            all_imgs = sorted(glob("*.png"))
             img_tags = set([_.split("_")[0] for _ in all_imgs])
             for tag in img_tags:
                 fids = glob(f"{tag}_*.png")
