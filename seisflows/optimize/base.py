@@ -200,13 +200,17 @@ class Base:
                                                     pmax=poissons.max())
                       )
                 sys.exit(-1)
+            else:
+                pars["pr"] = poissons 
 
         # Tell the User min and max values of the updated model
         if PAR.VERBOSE:
             print(f"\tModel Parameters ({tag})")
             msg_ = "\t\t{minval:.2f} <= {key} <= {maxval:.2f}"
             for key, vals in pars.items():
-                print(msg_.format(minval=vals.min(), key=key, maxval=vals.max()))
+                print(msg_.format(minval=vals.min(), key=key, 
+                                  maxval=vals.max())
+                      )
 
     def initialize_search(self):
         """
@@ -317,6 +321,9 @@ class Base:
         self.writer("theta", 180. * np.pi ** -1 * angle(p, -g))
 
         self.line_search.writer.newline()
+
+        # Reset line search step count to 0 for next iteration
+        self.line_search.step_count = 0
 
     def retry_status(self):
         """

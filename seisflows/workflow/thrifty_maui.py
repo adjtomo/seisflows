@@ -75,8 +75,10 @@ class ThriftyMaui(custom_import("workflow", "thrifty_inversion")):
         :type suffix: str
         :param suffix: suffix to use for I/O
         """
+        print("EVALUATE FUNCTION\n\tRunning forward simulation")
         self.write_model(path=path, suffix=suffix)
         system.run("solver", "eval_fwd", path=path)
+        print("\tEvaluating misfit")
         system.run_ancil("solver", "eval_misfit", path=path)
         self.write_misfit(path=path, suffix=suffix)
 

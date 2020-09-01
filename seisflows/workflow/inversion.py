@@ -271,7 +271,7 @@ class Inversion(custom_import("workflow", "base")):
         :type suffix: str
         :param suffix: suffix to use for I/O
         """
-        print("EVALUATION FUNCTION\n\tRunning forward simulation")
+        print("EVALUATE FUNCTION\n\tRunning forward simulation")
         self.write_model(path=path, suffix=suffix)
         system.run("solver", "eval_func", path=path)
         self.write_misfit(path=path, suffix=suffix)
