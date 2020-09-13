@@ -257,14 +257,16 @@ class LBFGS:
         :return: status based on status check
         """
         theta = 180. * np.pi ** -1 * angle(g, r)
+        print(f"\tThe new search direction is {theta:.2f}deg from the "
+              f"current search direction")
 
         if not 0. < theta < 90.:
             if self.verbose:
-                print("restarting LBFGS... [not a descent direction]")
+                print("\trestarting LBFGS... [not a descent direction]")
             return 1
         elif theta > 90. - self.thresh:
             if self.verbose:
-                print("restarting LBFGS... [practical safeguard]")
+                print("\trestarting LBFGS... [practical safeguard]")
             return 1
         else:
             return 0

@@ -79,6 +79,14 @@ class PyatoaNz(custom_import("preprocess", "pyatoa")):
                         pyatoa.logger.warning(e)
                         continue
 
+                    # ADDITION:
+                    # Occasionally multiple traces are available for a single
+                    # component which is not ideal. Ignore these, they don't 
+                    # occur often enough to worry about
+                    if mgmt.stats.len_obs > 3:
+                        pyatoa.logger.info("Too many observations, ignoring...")
+                        continue
+
                     # Process data; if fail, move onto waveform plotting
                     try:
                         mgmt.flow(fix_windows=self.check_fixed_windows(config),
