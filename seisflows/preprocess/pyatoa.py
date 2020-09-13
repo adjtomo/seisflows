@@ -389,7 +389,7 @@ class Pyatoa:
                                                     config.event_id,
                                                     f"{config.iter_tag}"
                                                     f"{config.step_tag}_"
-                                                    f"{net.code}_{sta.code}.png"
+                                                    f"{net.code}_{sta.code}.pdf"
                                                     )
                                   )
         # Record summary information at the end of the Pyatoa log file
@@ -486,10 +486,11 @@ class Pyatoa:
         for source in sources:
             event = os.path.basename(source)
             unix.cd(source)
-            all_imgs = sorted(glob("*.png"))
+            all_imgs = glob("*.png")
             img_tags = set([_.split("_")[0] for _ in all_imgs])
             for tag in img_tags:
-                fids = glob(f"{tag}_*.png")
+                fids = sorted(glob(f"{tag}_*.png"))
+
                 # Unique directory based on current iteration and step
                 iter_ = tag[:3]
                 step = tag[3:]
