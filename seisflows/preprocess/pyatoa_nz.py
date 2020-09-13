@@ -7,8 +7,11 @@ Slightly altered processing function for the New Zealand tomography scenario
 import os
 import sys
 import pyatoa
+from glob import glob
 from pyasdf import ASDFDataSet
+from seisflows.tools import unix
 from seisflows.config import custom_import
+from pyatoa.utils.images import merge_pdfs
 from pyatoa.utils.asdf.clean import clean_dataset
 
 PAR = sys.modules["seisflows_parameters"]
@@ -42,12 +45,6 @@ class PyatoaNz(custom_import("preprocess", "pyatoa")):
         misfit, nwin = 0, 0
         # Track the number of successes and fails for a summary statement
         _stations, _processed, _exceptions = 0, 0, 0
-
-        # Check if we want to fix the windows based on the evaluation number
-        if config.iteration == 1 and config.step_count == 0:
-            fix_windows = False
-        else:
-            fix_windows = PAR.FIX_WINDOWS
 
         # Begin the Pyatoa processing workflow
         with ASDFDataSet(os.path.join(self.data,
@@ -113,19 +110,26 @@ class PyatoaNz(custom_import("preprocess", "pyatoa")):
                     # Save the data with a specific tag
                     # e.g. path/to/figures/i01s00_NZ_BFZ.png
                     if PAR.PLOT:
-                        try:
-                            mgmt.plot(
-                                  corners=PAR.MAP_CORNERS, show=False,
+                        # Save the data with a specific tag
+                        # e.g. path/to/figures/i01s00_NZ_BFZ.pdf
+                        mgmt.plot(corners=PAR.MAP_CORNERS, show=False,
                                   save=os.path.join(self.figures,
                                                     config.event_id,
                                                     f"{config.iter_tag}"
                                                     f"{config.step_tag}_"
-                                                    f"{net.code}_{sta.code}.png"
+                                                    f"{net.code}_{sta.code}.pdf"
                                                     )
-                                  ) 
-                        except pyatoa.ManagerError as e:
-                            pyatoa.logger.warning(e)
-                            pass
+                                  )
+
+        # To reduce file count, merge all output pdfs into a single document
+        all_created_pdfs = glob(os.path.join(self.figures, config.event_id,
+                                             "*.pdf"))
+        merge_pdfs(fids=sorted(all_created_pdfs),
+                   fid_out=os.path.join(self.figures, f"{config.iter_tag}"
+                                                      f"{config.step_tag}_"
+                                                      f"{config.event_id}.pdf")
+                   )
+        unix.rm(all_created_pdfs)
 
         # Record summary information at the end of the Pyatoa log file
         pyatoa.logger.info(f"\n{'=' * 80}\n\nSUMMARY\n\n{'=' * 80}\n"
