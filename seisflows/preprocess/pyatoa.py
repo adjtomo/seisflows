@@ -14,9 +14,9 @@ import numpy as np
 from glob import glob
 from pyasdf import ASDFDataSet
 from seisflows.tools import unix
+from pyatoa.utils.images import merge_pdfs
 from seisflows.tools.err import ParameterError
 from pyatoa.utils.asdf.clean import clean_dataset
-from pyatoa.utils.images import imgs_to_pdf
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -175,7 +175,7 @@ class Pyatoa:
         insp.discover(path=os.path.join(self.data))
         insp.save(path=self.data) 
 
-        self.make_pdfs()
+        self.make_final_pdfs()
 
     def write_residuals(self, path, scaled_misfit, source_name):
         """
@@ -335,9 +335,8 @@ class Pyatoa:
         misfit, nwin = 0, 0
         # Track the number of successes and fails for a summary statement
         _stations, _processed, _exceptions = 0, 0, 0
-    
 
-        # Begin the Pyatoa processing workflow
+        # Open the dataset as a context manager incase of unexpected crash
         with ASDFDataSet(os.path.join(self.data,
                                       f"{config.event_id}.h5")) as ds:
             clean_dataset(ds, iteration=config.iteration,
@@ -383,7 +382,7 @@ class Pyatoa:
 
                     if PAR.PLOT:
                         # Save the data with a specific tag
-                        # e.g. path/to/figures/i01s00_NZ_BFZ.png
+                        # e.g. path/to/figures/i01s00_NZ_BFZ.pdf
                         mgmt.plot(corners=PAR.MAP_CORNERS, show=False,
                                   save=os.path.join(self.figures,
                                                     config.event_id,
@@ -392,6 +391,17 @@ class Pyatoa:
                                                     f"{net.code}_{sta.code}.pdf"
                                                     )
                                   )
+
+        # To reduce file count, merge all output pdfs into a single document
+        all_created_pdfs = glob(os.path.join(self.figures, config.event_id,
+                                             "*.pdf"))
+        merge_pdfs(fids=sorted(all_created_pdfs),
+                   fid_out=os.path.join(self.figures, f"{config.iter_tag}"
+                                                      f"{config.step_tag}_"
+                                                      f"{config.event_id}.pdf")
+                   )
+        unix.rm(all_created_pdfs)
+
         # Record summary information at the end of the Pyatoa log file
         pyatoa.logger.info(f"\n{'=' * 80}\n\nSUMMARY\n\n{'=' * 80}\n"
                            f"SOURCE NAME: {config.event_id}\n"
@@ -475,30 +485,31 @@ class Pyatoa:
                                              bur=0)
                                 )
 
-    def make_pdfs(self):
+    def make_final_pdfs(self):
         """
-        Utility function to make PDFs of waveform images for easier transport
-        and access during an inversion. Checks tags based on the file names
-        specified during process_event(). Removes png files after pdf made.
+        Utility function to combine all pdfs for a given event, iteration, and
+        step count into a single pdf. To reduce on file count and provide easier
+        visualization. Removes the original event-based pdfs
         """
         unix.cd(self.figures)
-        sources = [os.path.abspath(_) for _ in glob("*") if os.path.isdir(_)]
-        for source in sources:
-            event = os.path.basename(source)
-            unix.cd(source)
-            all_imgs = glob("*.png")
-            img_tags = set([_.split("_")[0] for _ in all_imgs])
-            for tag in img_tags:
-                fids = sorted(glob(f"{tag}_*.png"))
 
-                # Unique directory based on current iteration and step
-                iter_ = tag[:3]
-                step = tag[3:]
-                path_out = os.path.join(self.figures, iter_, step)
-                if not os.path.exists(path_out):
-                    os.makedirs(path_out)
+        # This glob list contains all pdfs tagged e.g.
+        # '{iter}{step}_{event_id}.pdf', we need to break apart by iter and step
+        sources = glob("*.pdf")
+        iterstep_tags = [_.split("_")[0] for _ in sources]
+        for is_tag in iterstep_tags:
+            event_pdfs = glob(f"{is_tag}_*.pdf")
+            iter_ = is_tag[:3]  # e.g. i01
+            step_ = is_tag[3:]  # e.g. s00
 
-                imgs_to_pdf(fids=fids,
-                            fid_out=os.path.join(path_out, f"{tag}_{event}.pdf")
-                            )
-            unix.rm(glob("*.png"))
+            path_out = os.path.join(self.figures, iter_)
+            if not os.path.exists(path_out):
+                os.makedirs(path_out)
+
+            merge_pdfs(fids=event_pdfs,
+                       fid_out=os.path.join(path_out, f"{iter_}{step_}.pdf")
+                       )
+            unix.rm(event_pdfs)
+
+
+
