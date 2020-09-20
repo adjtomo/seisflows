@@ -496,18 +496,17 @@ class Pyatoa:
         # This glob list contains all pdfs tagged e.g.
         # '{iter}{step}_{event_id}.pdf', we need to break apart by iter and step
         sources = glob("*.pdf")
-        iterstep_tags = [_.split("_")[0] for _ in sources]
+        iterstep_tags = set([_.split("_")[0] for _ in sources])
         for is_tag in iterstep_tags:
             event_pdfs = glob(f"{is_tag}_*.pdf")
             iter_ = is_tag[:3]  # e.g. i01
             step_ = is_tag[3:]  # e.g. s00
 
-            path_out = os.path.join(self.figures, iter_)
-            if not os.path.exists(path_out):
-                os.makedirs(path_out)
+            if not os.path.exists(iter_):
+                os.makedirs(iter_)
 
             merge_pdfs(fids=event_pdfs,
-                       fid_out=os.path.join(path_out, f"{iter_}{step_}.pdf")
+                       fid_out=os.path.join(iter_, f"{iter_}{step_}.pdf")
                        )
             unix.rm(event_pdfs)
 
