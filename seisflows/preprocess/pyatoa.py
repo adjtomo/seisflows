@@ -15,6 +15,7 @@ import pyatoa
 import numpy as np
 from glob import glob
 from seisflows.tools import unix
+from seisflows.config import Dict
 from pyatoa.utils.images import merge_pdfs
 from seisflows.tools.err import ParameterError
 
@@ -110,14 +111,20 @@ class Pyatoa:
         # Late import because preprocess is loaded before optimize
         solver = sys.modules["seisflows_solver"]
 
-        self.data = os.path.join(PATH.PREPROCESS, "data")
-        self.figures = os.path.join(PATH.PREPROCESS, "figures")
+        # Enforce some paths that will be used for Pyatoa I/O
+        required_paths = {"data": os.path.join(PATH.PREPROCESS, "data"),
+                          "figures": os.path.join(PATH.PREPROCESS, "figures"),
+                          "logs": os.path.join(PATH.PREPROCESS, "logs")
+                          }
+        self.paths = Dict(required_paths)
 
         # Make data and figure directories for each source
-        unix.mkdir(self.data)  
-        unix.mkdir(os.path.join(self.data, "snapshot"))
+        unix.mkdir(self.paths.data)  
+        unix.mkdir(self.paths.logs)
+        unix.mkdir(os.path.join(self.paths.data, "snapshot"))
+
         for source_name in solver.source_names:
-            unix.mkdir(os.path.join(self.figures, source_name))
+            unix.mkdir(os.path.join(self.paths.figures, source_name))
 
     def prepare_eval_grad(self, path, cwd, source_name):
         """
@@ -133,16 +140,19 @@ class Pyatoa:
         :type source_name: str
         :param source_name: the event id to be used for tagging and data lookup
         """
-        # Inititate the Pyaflowa class which abstracts processing functions
-        pyaflowa = pyatoa.Pyaflowa(data=self.data, figures=self.figures,
-                                   par=PAR)
+        # Late import because preprocess is loaded before optimize,
+        # Optimize required to know which iteration/step_count we are at
+        optimize = sys.modules["seisflows_optimize"]
 
-        # Set some function evaluation and event specific information
-        pyaflowa.config = self.set_config(config=pyaflowa.config, cwd=cwd,
-                                          source_name=source_name)
+        # Inititate the Pyaflowa class which abstracts processing functions
+        pyaflowa = pyatoa.Pyaflowa(paths=self.paths, par=PAR)
+
+        # Communicate to Pyaflowa the current iteration and step count
+        pyaflowa.config.iteration = optimize.iter
+        pyaflowa.config.step_count = optimize.line_search.step_count
 
         # Process all the stations for a given event using Pyaflowa
-        misfit = pyaflowa.process(cwd=cwd)
+        misfit = pyaflowa.process(source_name)
 
         # Generate the necessary files to continue the inversion
         if misfit:
@@ -160,8 +170,8 @@ class Pyatoa:
             Generate PDFS of waveform figures for easy access
         """
         insp = pyatoa.Inspector(PAR.TITLE, verbose=False)
-        insp.discover(path=os.path.join(self.data))
-        insp.save(path=self.data) 
+        insp.discover(path=os.path.join(self.paths.data, PAR.TITLE))
+        insp.save(path=self.paths.data) 
 
         self.make_final_pdfs()
 
@@ -209,49 +219,15 @@ class Pyatoa:
 
         return total_misfit
 
-    def set_config(self, config, cwd, source_name):
-        """
-        Sets the Pyatoa Configuration object using unique identifiers that are
-        related to the current source that is being processed.
-
-        :type config: pyatoa.core.config.Config
-        :param config: Config object to be set
-        :type cwd: str
-        :param cwd: the path to the current Specfem working directory
-        :type source_name: str
-        :param source_name: the event id to be used for tagging and data lookup
-        """
-        # Late import because preprocess is loaded before optimize,
-        # Optimize required to know which iteration/step_count we are at
-        optimize = sys.modules["seisflows_optimize"]
-
-        # Only query FDSN for i00s00, else turn off by setting client to None
-        # Dont fix windows for the first function evaluation
-        if optimize.iter == 1 and optimize.line_search.step_count == 0:
-            config.client = PAR.CLIENT
-        else:
-            config = None
-
-        # Set event-specific identifiers
-        config.iteration = optimize.iter
-        config.step_count = optimize.line_search.step_count
-        config.event_id = source_name
-        config.paths = {"waveforms": [os.path.join(cwd, PATH.DATA, "mseeds"),
-                                      os.path.join(cwd, "traces", "obs")],
-                        "synthetics": [os.path.join(cwd, "traces", "syn")],
-                        "responses": [os.path.join(cwd, PATH.DATA, "seed")]
-                        }
-        return config
-
     def snapshot(self):
         """
         Copy all ASDFDataSets in the data directory into a separate snapshot
         directory for redundancy
         """
         if PAR.SNAPSHOT:
-            srcs = glob(os.path.join(self.data, "*.h5"))
+            srcs = glob(os.path.join(self.paths.data, "*.h5"))
             for src in srcs:
-                dst = os.path.join(self.data, "snapshot")
+                dst = os.path.join(self.paths.data, "snapshot")
                 unix.cp(src, dst)
 
     def make_final_pdfs(self):
@@ -260,7 +236,7 @@ class Pyatoa:
         step count into a single pdf. To reduce on file count and provide easier
         visualization. Removes the original event-based pdfs
         """
-        unix.cd(self.figures)
+        unix.cd(self.paths.figures)
 
         # This glob list contains all pdfs tagged e.g.
         # '{iter}{step}_{event_id}.pdf', we need to break apart by iter and step
