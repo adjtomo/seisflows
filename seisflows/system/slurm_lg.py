@@ -44,25 +44,7 @@ class SlurmLg(custom_import('system', 'base')):
         """
         Checks parameters and paths
         """
-        # Name of job
-        if "TITLE" not in PAR:
-            setattr(PAR, "TITLE", os.path.basename(os.path.abspath(".")))
-
-        # Time allocated for workflow in minutes
-        if "WALLTIME" not in PAR:
-            setattr(PAR, "WALLTIME", 30.)
-
-        # Time allocated for each individual task in minutes
-        if "TASKTIME" not in PAR:
-            setattr(PAR, "TASKTIME", 15.)
-
-        # Number of tasks
-        if "NTASK" not in PAR:
-            raise ParameterError(PAR, "NTASK")
-
-        # Number of cores per task
-        if "NPROC" not in PAR:
-            raise ParameterError(PAR, "NPROC")
+        super().check()
 
         # Limit on number of concurrent tasks
         if "NTASKMAX" not in PAR:
@@ -80,29 +62,7 @@ class SlurmLg(custom_import('system', 'base')):
         if "ENVIRONS" not in PAR:
             setattr(PAR, "ENVIRONS", "")
 
-        # Level of detail in output messages
-        if "VERBOSE" not in PAR:
-            setattr(PAR, "VERBOSE", 1)
 
-        # Location where job was submitted
-        if "WORKDIR" not in PATH:
-            setattr(PATH, "WORKDIR", os.path.abspath("."))
-
-        # Location where output files are written
-        if "OUTPUT" not in PATH:
-            setattr(PATH, "OUTPUT", os.path.join(PATH.WORKDIR, "output"))
-
-        # Location where temporary files are written
-        if "SCRATCH" not in PATH:
-            setattr(PATH, "SCRATCH", os.path.join(PATH.WORKDIR, "scratch"))
-
-        # Where system files are written
-        if "SYSTEM" not in PATH:
-            setattr(PATH, "SYSTEM", os.path.join(PATH.SCRATCH, "system"))
-
-        # Optional local scratch path
-        if "LOCAL" not in PATH:
-            setattr(PATH, "LOCAL", None)
 
     def setup(self):
         """
