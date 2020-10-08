@@ -41,6 +41,17 @@ class Specfem3D(custom_import("solver", "base")):
         # Run Base class checks
         super().check()
 
+        if "MATERIALS" not in PAR:
+            raise ParameterError(PAR, "MATERIALS")
+        else:
+            assert(PAR.MATERIALS.upper() in ["ELASTIC", "ACOUSTIC"])
+
+        # Set an internal parameter list
+        if PAR.MATERIALS.upper() == "ELASTIC":
+            self.parameters += ["vp", "vs"]
+        elif PAR.MATERIALS.upper() == "ACOUSTIC":
+            self.parameters += ["vp"]
+
         required_parameters = ["NT", "DT", "F0", "FORMAT", "COMPONENTS",
                                "SOURCE_PREFIX"]
         for req in required_parameters:
@@ -98,8 +109,7 @@ class Specfem3D(custom_import("solver", "base")):
         unix.cd(self.cwd)
 
         # Run mesh generation
-        par = getpar("MODEL").strip()
-        if par == "gll":
+        if model_type == "gll":
             self.check_mesh_properties(model_path)
 
             src = glob(os.path.join(model_path, "*"))

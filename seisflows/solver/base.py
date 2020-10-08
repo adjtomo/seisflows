@@ -99,7 +99,7 @@ class Base:
         :param _source_names: the names of all the sources that are being used
             by the solver
         """
-        self.parameters = None
+        self.parameters = []
         self._mesh_properties = None
         self._source_names = None
 
@@ -107,15 +107,13 @@ class Base:
         """
         Checks parameters and paths
         """
-        if "MATERIALS" not in PAR:
-            raise ParameterError(PAR, "MATERIALS")
-        else:
-            assert(PAR.MATERIALS.upper() in ["ELASTIC", "ACOUSTIC"])
-
         if "DENSITY" not in PAR:
             raise ParameterError(PAR, "DENSITY")
         else:
             assert(PAR.DENSITY.upper() in ["CONSTANT", "VARIABLE"])
+
+        if PAR.DENSITY.upper() == "VARIABLE":
+            self.parameters += ["rho"]
 
         # number of processors per simulation
         if "NPROC" not in PAR:
@@ -158,14 +156,6 @@ class Base:
         assert hasattr(self.io, "write_slice"), \
             "IO method has no attribute 'write_slice'"
 
-        # Set an internal parameter list
-        if PAR.MATERIALS.upper() == "ELASTIC":
-            self.parameters = ["vp", "vs"]
-        elif PAR.MATERIALS.upper() == "ACOUSTIC":
-            self.parameters = ["vp"]
-
-        if PAR.DENSITY.upper() == "VARIABLE":
-            self.parameters.append("rho")
 
     def setup(self):
         """ 
