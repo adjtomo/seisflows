@@ -4,13 +4,18 @@ This is the subclass seisflows.system.slurm_lg
 
 This class provides the core utilities interaction with HPC systems which run
 using Slurm management tools
+
+..note::
+    The main development system for SeisFlows3 used SLURM. Therefore the other
+    system supers will not be up to date until access to those systems are
+    granted. This rosetta stone, for converting from SLURM to other workload
+    management tools will be useful: https://slurm.schedmd.com/rosetta.pdf
 """
 import os
 import math
 import sys
 import time
 
-from glob import glob
 from subprocess import check_output
 from seisflows.tools import msg, unix
 from seisflows.tools.err import ParameterError
