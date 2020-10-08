@@ -63,44 +63,6 @@ class SlurmLg(custom_import('system', 'base')):
             setattr(PAR, "ENVIRONS", "")
 
 
-
-    def setup(self):
-        """
-        Create the SeisFlows directory structure in preparation for a
-        SeisFlows workflow. Ensure that if any config information is left over
-        from a previous workflow, that these files are not overwritten by
-        the new workflow. Should be called by submit()
-        """
-        # Create scratch directories
-        unix.mkdir(PATH.SCRATCH)
-        unix.mkdir(PATH.SYSTEM)
-
-        # Create output directories
-        unix.mkdir(PATH.OUTPUT)
-        unix.mkdir(os.path.join(PATH.WORKDIR, "output.slurm"))
-        unix.mkdir(os.path.join(PATH.WORKDIR, "logs"))
-
-        # If a scratch directory is made outside the working directory
-        if not os.path.exists('./scratch'):
-            unix.ln(PATH.SCRATCH, os.path.join(PATH.WORKDIR, "scratch"))
-
-        output_log = os.path.join(PATH.WORKDIR, "output")
-        error_log = os.path.join(PATH.WORKDIR, "error")
-
-        # If resuming, move old log files to keep them out of the way
-        for log in [output_log, error_log]:
-            unix.mv(src=glob(os.path.join(f"{log}*.log")),
-                    dst=os.path.join(PATH.WORKDIR, "logs")
-                    )
-
-        # Copy the parameter.yaml file into the log directoroy
-        par_copy = f"parameters_{PAR.BEGIN}-{PAR.END}.yaml"
-        unix.cp(src="parameters.yaml",
-                dst=os.path.join(PATH.WORKDIR, "logs", par_copy)
-                )
-
-        return output_log, error_log
-
     def submit(self, workflow):
         """
         Submits workflow as a master job
@@ -113,7 +75,8 @@ class SlurmLg(custom_import('system', 'base')):
             f"sbatch", 
             f"{PAR.SLURMARGS}",
             f"--job-name={PAR.TITLE}",
-            f"--output=output.log",
+            f"--output={output_log}-%A.log",
+            f"--error={error_log}-%A.log",
             f"--ntasks-per-node={PAR.NODESIZE}",
             f"--nodes=1",
             f"--time={PAR.WALLTIME:d}",
@@ -148,7 +111,7 @@ class SlurmLg(custom_import('system', 'base')):
             f"--ntasks-per-node={PAR.NODESIZE:d}",
             f"--ntasks={PAR.NPROC:d}",
             f"--time={PAR.TASKTIME:d}",
-            f"--output={os.path.join(PATH.WORKDIR, 'output.slurm', '%A_%a')}",
+            f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
             f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
             f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",
@@ -190,7 +153,7 @@ class SlurmLg(custom_import('system', 'base')):
             f"--ntasks-per-node={PAR.NODESIZE:d}",
             f"--ntasks={PAR.NPROC:d}",
             f"--time={PAR.TASKTIME:d}",
-            f"--output={os.path.join(PATH.WORKDIR, 'output.slurm', '%A_%a')}",
+            f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
             f"--array=0-0",
             f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",
