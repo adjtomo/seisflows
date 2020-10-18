@@ -111,22 +111,11 @@ class Pyatoa:
         # Late import because preprocess is loaded before optimize
         solver = sys.modules["seisflows_solver"]
 
-        # Enforce some paths that will be used for Pyatoa I/O
-        required_paths = {"data": os.path.join(PATH.PREPROCESS, "data"),
-                          "figures": os.path.join(PATH.PREPROCESS, "figures"),
-                          "logs": os.path.join(PATH.PREPROCESS, "logs")
-                          }
-        self.paths = Dict(required_paths)
+        # Inititate a Pyaflowa object to make sure the machinery works
+        pyaflowa = pyatoa.Pyaflowa(structure="seisflows", sfpaths=PATH, 
+                                   sfpar=PAR)
 
-        # Make data and figure directories for each source
-        unix.mkdir(self.paths.data)  
-        unix.mkdir(self.paths.logs)
-        unix.mkdir(os.path.join(self.paths.data, "snapshot"))
-
-        for source_name in solver.source_names:
-            unix.mkdir(os.path.join(self.paths.figures, source_name))
-
-    def prepare_eval_grad(self, path, cwd, source_name):
+    def prepare_eval_grad(self, path, source_name):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms, 
         and measuring misfit between observations and synthetics using Pyatoa.
@@ -135,8 +124,6 @@ class Pyatoa:
 
         :type path: str
         :param path: path to the current function evaluation for saving residual
-        :type cwd: str
-        :param cwd: the path to the current Specfem working directory
         :type source_name: str
         :param source_name: the event id to be used for tagging and data lookup
         """
@@ -145,14 +132,13 @@ class Pyatoa:
         optimize = sys.modules["seisflows_optimize"]
 
         # Inititate the Pyaflowa class which abstracts processing functions
-        pyaflowa = pyatoa.Pyaflowa(paths=self.paths, par=PAR)
-
         # Communicate to Pyaflowa the current iteration and step count
-        pyaflowa.config.iteration = optimize.iter
-        pyaflowa.config.step_count = optimize.line_search.step_count
+        pyaflowa = pyatoa.Pyaflowa(structure="seisflows", sfpaths=self.paths, 
+                                   sfpar=PAR, iteration=optimize.iter,
+                                   step_count=optimize.line_search.step_count)
 
         # Process all the stations for a given event using Pyaflowa
-        misfit = pyaflowa.process(source_name)
+        misfit = pyaflowa.run(source_name, fix_windows=PAR.FIX_WINDOWS)
 
         # Generate the necessary files to continue the inversion
         if misfit:

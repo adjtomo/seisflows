@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/seisflows.iml" filepath="$PROJECT_DIR$/.idea/seisflows.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../seisflows-super/.idea/seisflows-super.iml" filepath="$PROJECT_DIR$/../seisflows-super/.idea/seisflows-super.iml" />
     </modules>
   </component>
 </project>
