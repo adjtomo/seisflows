@@ -138,7 +138,7 @@ class Pyatoa:
                                    step_count=optimize.line_search.step_count)
 
         # Process all the stations for a given event using Pyaflowa
-        misfit = pyaflowa.run(source_name, fix_windows=PAR.FIX_WINDOWS)
+        misfit = pyaflowa.process(source_name, fix_windows=PAR.FIX_WINDOWS)
 
         # Generate the necessary files to continue the inversion
         if misfit:
