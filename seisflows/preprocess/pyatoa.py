@@ -37,8 +37,8 @@ class Pyatoa:
         :type figures: str
         :param figures: directory where figures are stored
         """
-        self.data = None
-        self.figures = None
+        self.path_datasets = None
+        self.path_figures = None
 
     def check(self):
         """ 
@@ -115,6 +115,10 @@ class Pyatoa:
         pyaflowa = pyatoa.Pyaflowa(structure="seisflows", sfpaths=PATH, 
                                    sfpar=PAR)
 
+        # Pull path names from Pyaflowa to keep path structure in one place
+        self.path_datasets = pyaflowa.path_structure.datasets
+        self.path_figures = pyaflowa.path_structure.figures
+
     def prepare_eval_grad(self, path, source_name):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms, 
@@ -133,7 +137,7 @@ class Pyatoa:
 
         # Inititate the Pyaflowa class which abstracts processing functions
         # Communicate to Pyaflowa the current iteration and step count
-        pyaflowa = pyatoa.Pyaflowa(structure="seisflows", sfpaths=self.paths, 
+        pyaflowa = pyatoa.Pyaflowa(structure="seisflows", sfpaths=PATH, 
                                    sfpar=PAR, iteration=optimize.iter,
                                    step_count=optimize.line_search.step_count)
 
@@ -156,8 +160,8 @@ class Pyatoa:
             Generate PDFS of waveform figures for easy access
         """
         insp = pyatoa.Inspector(PAR.TITLE, verbose=False)
-        insp.discover(path=os.path.join(self.paths.data, PAR.TITLE))
-        insp.save(path=self.paths.data) 
+        insp.discover(path=os.path.join(self.path_datasets, PAR.TITLE))
+        insp.save(path=self.path_datasets) 
 
         self.make_final_pdfs()
 
@@ -211,9 +215,13 @@ class Pyatoa:
         directory for redundancy
         """
         if PAR.SNAPSHOT:
-            srcs = glob(os.path.join(self.paths.data, "*.h5"))
+            snapshot_dir = os.path.join(self.path_datasets, "snapshot")
+            if not os.path.exists(snapshot_dir):
+                unix.mkdir(snapshot_dir)
+            
+            srcs = glob(os.path.join(self.path_datasets, "*.h5"))
             for src in srcs:
-                dst = os.path.join(self.paths.data, "snapshot")
+                dst = os.path.join(snapshot_dir, os.path.basename(src))
                 unix.cp(src, dst)
 
     def make_final_pdfs(self):
@@ -222,24 +230,28 @@ class Pyatoa:
         step count into a single pdf. To reduce on file count and provide easier
         visualization. Removes the original event-based pdfs
         """
-        unix.cd(self.paths.figures)
+        # Late import because preprocess is loaded before optimize
+        solver = sys.modules["seisflows_solver"]
 
-        # This glob list contains all pdfs tagged e.g.
-        # '{iter}{step}_{event_id}.pdf', we need to break apart by iter and step
-        sources = glob("*.pdf")
-        iterstep_tags = set([_.split("_")[0] for _ in sources])
-        for is_tag in iterstep_tags:
-            event_pdfs = glob(f"{is_tag}_*.pdf")
-            iter_ = is_tag[:3]  # e.g. i01
-            step_ = is_tag[3:]  # e.g. s00
+        for source_name in solver.source_names:
+            unix.cd(self.paths.figures.format(source_name))
 
-            if not os.path.exists(iter_):
-                os.makedirs(iter_)
+            # This glob list contains all pdfs tagged e.g.
+            # '{iter}{step}_{event_id}.pdf', we need to break apart by iter and step
+            sources = glob("*.pdf")
+            iterstep_tags = set([_.split("_")[0] for _ in sources])
+            for is_tag in iterstep_tags:
+                event_pdfs = glob(f"{is_tag}_*.pdf")
+                iter_ = is_tag[:3]  # e.g. i01
+                step_ = is_tag[3:]  # e.g. s00
 
-            merge_pdfs(fids=event_pdfs,
-                       fid_out=os.path.join(iter_, f"{iter_}{step_}.pdf")
-                       )
-            unix.rm(event_pdfs)
+                if not os.path.exists(iter_):
+                    os.makedirs(iter_)
+
+                merge_pdfs(fids=event_pdfs,
+                           fid_out=os.path.join(iter_, f"{iter_}{step_}.pdf")
+                           )
+                unix.rm(event_pdfs)
 
 
 

@@ -49,6 +49,7 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
             assert(PAR.MATERIALS.upper() in ["ISOTROPIC", "ANISOTROPIC"])
 
         # Overwrite the base class parameters based on the material choice
+        self.parameters = []
         if PAR.MATERIALS.upper() == "Isotropic":
             self.parameters += ["vp", "vs"]
         elif PAR.MATERIALS.upper() == "ANISOTROPIC":

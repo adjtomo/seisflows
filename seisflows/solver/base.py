@@ -107,6 +107,22 @@ class Base:
         """
         Checks parameters and paths
         """
+        # Important to reset parameters to a blank list and let the check
+        # statements fill it. If not, each time workflow is resumed, parameters
+        # list will append redundant parameters and things stop working
+        self.parameters = []
+
+        if "MATERIALS" not in PAR:
+            raise ParameterError(PAR, "MATERIALS")
+        else:
+            assert(PAR.MATERIALS.upper() in ["ELASTIC", "ACOUSTIC"])
+
+        # Set an internal parameter list
+        if PAR.MATERIALS.upper() == "ELASTIC":
+            self.parameters += ["vp", "vs"]
+        elif PAR.MATERIALS.upper() == "ACOUSTIC":
+            self.parameters += ["vp"]
+
         if "DENSITY" not in PAR:
             raise ParameterError(PAR, "DENSITY")
         else:
@@ -358,7 +374,7 @@ class Base:
         # Set default parameters
         if parameters is None:
             parameters = self.parameters
-            # paramters = ["vp", "vs", "rho"]
+            # parameters = ["vp", "vs", "rho"]
 
         # Fill in any missing parameters
         missing_keys = diff(parameters, save_dict.keys())
