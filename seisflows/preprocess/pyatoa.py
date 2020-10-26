@@ -228,30 +228,36 @@ class Pyatoa:
         """
         Utility function to combine all pdfs for a given event, iteration, and
         step count into a single pdf. To reduce on file count and provide easier
-        visualization. Removes the original event-based pdfs
+        visualization. Removes the original event-based pdfs.
+        
+        .. warning::
+            This is a simple function because it won't account for missed 
+            iterations i.e. if this isn't run in the finalization, it will 
+            probably break the next time
+
+        :raises AssertionError: When tags don't match the mainsolvers first tag
         """
         # Late import because preprocess is loaded before optimize
         solver = sys.modules["seisflows_solver"]
 
+        # Relative pathing from here on out boys
+        unix.cd(self.path_figures)
+        sources = []
         for source_name in solver.source_names:
-            unix.cd(self.paths.figures.format(source_name))
+            sources += glob(os.path.join(source_name, "*.pdf"))
 
-            # This glob list contains all pdfs tagged e.g.
-            # '{iter}{step}_{event_id}.pdf', we need to break apart by iter and step
-            sources = glob("*.pdf")
-            iterstep_tags = set([_.split("_")[0] for _ in sources])
-            for is_tag in iterstep_tags:
-                event_pdfs = glob(f"{is_tag}_*.pdf")
-                iter_ = is_tag[:3]  # e.g. i01
-                step_ = is_tag[3:]  # e.g. s00
+        # Incase this is run out of turn and pdfs were already deleted
+        if not sources:
+            return
 
-                if not os.path.exists(iter_):
-                    os.makedirs(iter_)
-
-                merge_pdfs(fids=event_pdfs,
-                           fid_out=os.path.join(iter_, f"{iter_}{step_}.pdf")
-                           )
-                unix.rm(event_pdfs)
-
+        # Figure out how to tag the output file. Follows Pyaflowa naming scheme.
+        iter_step = os.path.basename(sources[0]).split("_")[0]
+        for source in sources:
+            assert(iter_step in source), (f"The file '{source}' does not match "
+                                          f"the expected tag '{iter_step}'") 
+    
+        # Merge all event pdfs into a single pdf, then delete originals
+        merge_pdfs(fids=sorted(sources), fid_out=f"{iter_step}.pdf")
+        unix.rm(sources)
 
 

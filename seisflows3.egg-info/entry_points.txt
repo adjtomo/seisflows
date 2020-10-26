@@ -1,0 +1,9 @@
+[console_scripts]
+seisflows = seisflows.scripts.seisflows:main
+sfcheck = seisflows.scripts.sfcheck:main
+sfclean = seisflows.scripts.seisflows:clean
+sfdebug = seisflows.scripts.seisflows:debug
+sfrestart = seisflows.scripts.seisflows:restart
+sfresume = seisflows.scripts.seisflows:resume
+sfsubmit = seisflows.scripts.seisflows:submit
+
