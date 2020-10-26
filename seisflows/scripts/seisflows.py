@@ -27,19 +27,18 @@ def get_args():
     # Positional arguments
     parser.add_argument("run", type=str, nargs="?",
                         choices=["submit", "clean", "resume", "debug",
-                                 "restart"],
+                                 "restart", "check"],
                         help="task for Seisflows to perform")
 
     # Optional parameters
     parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd())
     parser.add_argument("-p", "--parameter_file", nargs="?",
                         default="parameters.yaml")
-    parser.add_argument("-c", "--continuous", nargs="?", default=True)
 
     return parser.parse_args()
 
 
-def parse(parameters):
+def parse_null(parameters):
     """
     Seisflows was written in such a way that excluding parameters from the 
     parameter file would enforce default values. This becomes confusing however 
@@ -70,7 +69,7 @@ def parse(parameters):
     return parsed_parameters
 
 
-def setup(debug=False):
+def setup(precheck=True):
     """
     Common setup for multiple functions, parses the parameter and paths,
     places them into sys.modules for global accessibiliy.
@@ -79,25 +78,25 @@ def setup(debug=False):
 
     # Check if the filepaths exist
     if not os.path.exists(args.parameter_file):
-        raise Exception(f"Parameter file not found: {args.parameter_file}")
+        raise FileNotFoundError(f"Parameter file not found: "
+                                f"{args.parameter_file}")
 
     # Register parameters
     parameters = loadyaml(args.parameter_file)
-    if not debug:
-        print_parameters(parameters)
-    parameters = parse(parameters)
+    if precheck:
+        precheck_parameters(parameters)
+    parameters = parse_null(parameters)
     sys.modules['seisflows_parameters'] = Dict(parameters)
 
     # Register paths, expand to relative paths to absolute
     paths = tilde_expand(parameters['PATHS'])
-    for key, path in paths.items():
-        paths[key] = os.path.abspath(path)
+    paths = {key: os.path.abspath(path) for key, path in paths.items()}
     sys.modules['seisflows_paths'] = Dict(paths)
 
     return args, paths, parameters
 
 
-def print_parameters(par):
+def precheck_parameters(par):
     """
     Print important arguments before beginning a workflow. This will ensure that
     the User is aware of how key arguments are set that will have major affect
@@ -154,15 +153,12 @@ def submit():
     system.submit(workflow)
 
 
-def resume(debug=False):
+def resume():
     """
-    Resume a previously started workflow
-
-    :type debug: bool
-    :param debug: Do not submit the workflow, but rather open a debugger so the
-        User can search and step through the workflow
+    Resume a previously started workflow by loading the module pickle files and
+    submitting the workflow 
     """
-    args, paths, parameters = setup(debug)
+    args, paths, parameters = setup()
 
     # Work directory should already be created
     unix.cd(args.workdir)
@@ -179,35 +175,61 @@ def resume(debug=False):
     workflow = sys.modules["seisflows_workflow"]
     system = sys.modules["seisflows_system"]
 
-    if not debug:
-        system.submit(workflow)
-    else:
-        # Prematurely distribute modules for easier debugging
-        PATH = sys.modules["seisflows_paths"]
-        PAR = sys.modules["seisflows_parameters"]
-        system = sys.modules["seisflows_system"]
-        solver = sys.modules["seisflows_solver"]
-        optimize = sys.modules["seisflows_optimize"]
-        preprocess = sys.modules["seisflows_preprocess"]
-        postprocess = sys.modules["seisflows_postprocess"]
-            
-        # Import debugging options
-        import ipdb
-        from IPython import embed
-        # This is Seisflows' debug mode.
-        ipdb.set_trace(context=5)
-        embed(colors="Neutral")
-        # type 'n' to access a more useful IPython debugger.
-        # type 'workflow.checkpoint()' to save any changes made here.
+    system.submit(workflow)
 
 
-def clean(workdir):
+def debug():
+    """
+    A debug mode that reloads the system modules and starting an IPython
+    debugger allowing exploration of the package space in an interactive 
+    environment.
+    """
+    args, paths, parameters = setup(precheck=False)
+
+    # Work directory should already be created
+    unix.cd(args.workdir)
+
+    # Reload objects from Pickle files
+    for name in names:
+        fullfile = os.path.join(args.workdir, "output", f"seisflows_{name}.p")
+        sys.modules[f"seisflows_{name}"] = tools.loadobj(fullfile)
+
+    # Check parameters
+    for name in names:
+        sys.modules[f"seisflows_{name}"].check()
+
+    workflow = sys.modules["seisflows_workflow"]
+    system = sys.modules["seisflows_system"]
+
+    # Prematurely distribute modules for easier debugging
+    PATH = sys.modules["seisflows_paths"]
+    PAR = sys.modules["seisflows_parameters"]
+    system = sys.modules["seisflows_system"]
+    solver = sys.modules["seisflows_solver"]
+    optimize = sys.modules["seisflows_optimize"]
+    preprocess = sys.modules["seisflows_preprocess"]
+    postprocess = sys.modules["seisflows_postprocess"]
+
+    # Import debugging options. The following lines will be displayed to console
+    import ipdb
+    from IPython import embed
+    # This is Seisflows' debug mode.
+    ipdb.set_trace(context=5)
+    embed(colors="Neutral")
+    # type 'n' to access a more useful IPython debugger.
+    # type 'workflow.checkpoint()' to save any changes made here.
+
+
+def clean(workdir=None):
     """
     Clean the working directory
 
     :type workdir: str
-    :param workdir: working directory to clean
+    :param workdir: working directory to clean, defaults to cwd
     """
+    if workdir is None:
+        workdir = os.getcwd()
+        
     check = input("\nThis will remove all workflow objects, leaving only the "
                   "parameter file.\nAre you sure you want to clean? (y/[n]): ")
     if check == "y":
@@ -218,16 +240,23 @@ def clean(workdir):
         unix.rm(os.path.join(workdir, "scratch"))
 
 
-if __name__ == "__main__":
+def main():
+    """
+    Main entry point into the SeisFlows package
+    """
     args_ = get_args()
     if args_.run == "submit":
         submit()
     elif args_.run == "resume":
-        resume(debug=False)
+        resume()
     elif args_.run == "debug":
-        resume(debug=True)
+        debug()
     elif args_.run == "clean":
         clean(args_.workdir)
     elif args_.run == "restart":
         clean(args_.workdir)
         submit()
+
+if __name__ == "__main__":
+    main()
+        

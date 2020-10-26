@@ -38,19 +38,9 @@ class Specfem3D(custom_import("solver", "base")):
         """
         Checks parameters and paths
         """
-        # Run Base class checks
+        # Run Base class checks. Important to run these first as they set
+        # the empty parameter list
         super().check()
-
-        if "MATERIALS" not in PAR:
-            raise ParameterError(PAR, "MATERIALS")
-        else:
-            assert(PAR.MATERIALS.upper() in ["ELASTIC", "ACOUSTIC"])
-
-        # Set an internal parameter list
-        if PAR.MATERIALS.upper() == "ELASTIC":
-            self.parameters += ["vp", "vs"]
-        elif PAR.MATERIALS.upper() == "ACOUSTIC":
-            self.parameters += ["vp"]
 
         required_parameters = ["NT", "DT", "F0", "FORMAT", "COMPONENTS",
                                "SOURCE_PREFIX"]
