@@ -2,7 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows-super/preprocess/pyatoa_nz.py" beforeDir="false" afterPath="$PROJECT_DIR$/../seisflows-super/seisflows-super/preprocess/pyatoa_nz.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/Makefile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/conf.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/index.rst" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/make.bat" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -75,6 +80,10 @@
     <option name="version" value="1" />
   </component>
   <component name="WindowStateProjectService">
+    <state x="239" y="58" key="#Plugins" timestamp="1603750158463">
+      <screen x="0" y="22" width="1280" height="778" />
+    </state>
+    <state x="239" y="58" key="#Plugins/0.22.1280.778/-1366.88.1366.746@0.22.1280.778" timestamp="1603750158463" />
     <state x="111" y="-712" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1595371326383">
       <screen x="-35" y="-746" width="1366" height="746" />
     </state>
