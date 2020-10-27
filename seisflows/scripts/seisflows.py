@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 """
-This script controls Seisflows.
-
-This script needs to be run in a directory containing `parameters.yaml` which
-should contain user defined paths and parameters to be used in the workflow
+The main entry point to the SeisFlows package.
 """
 import os
 import sys
@@ -25,9 +22,7 @@ def get_args():
     parser = argparse.ArgumentParser()
 
     # Positional arguments
-    parser.add_argument("run", type=str, nargs="?",
-                        choices=["submit", "clean", "resume", "debug",
-                                 "restart", "check"],
+    parser.add_argument("main_args", type=str, nargs="*",
                         help="task for Seisflows to perform")
 
     # Optional parameters
@@ -140,8 +135,6 @@ def submit():
         print("\n")
         sys.exit()
 
-    # If paths exist, pass to modules
-    sys.modules["seisflows_paths"] = Dict(paths)
     unix.mkdir(args.workdir)
     unix.cd(args.workdir)
 
@@ -149,8 +142,22 @@ def submit():
     config()  # Instantiate all modules and check their parameters
     workflow = sys.modules["seisflows_workflow"]
     system = sys.modules["seisflows_system"]
-
     system.submit(workflow)
+
+
+def clean():
+    """
+    Clean the working directory
+    """
+    args = get_args() 
+    check = input("\nThis will remove all workflow objects, leaving only the "
+                  "parameter file.\nAre you sure you want to clean? (y/[n]): ")
+    if check == "y":
+        for fid in glob(os.path.join(args.workdir, "output*")):
+            unix.rm(fid)
+        for fid in glob(os.path.join(args.workdir, "*log*")):
+            unix.rm(fid)
+        unix.rm(os.path.join(args.workdir, "scratch"))
 
 
 def resume():
@@ -176,6 +183,14 @@ def resume():
     system = sys.modules["seisflows_system"]
 
     system.submit(workflow)
+
+
+def restart():
+    """
+    Restart simply means clean the cwd and submit a new workflow
+    """
+    clean()
+    submit()
 
 
 def debug():
@@ -220,42 +235,114 @@ def debug():
     # type 'workflow.checkpoint()' to save any changes made here.
 
 
-def clean(workdir=None):
+class SeisShows:
     """
-    Clean the working directory
+    A mid-level API that allows the user to manipulate the SeisFlows workflow
+    via command line arguments
+    """
+    def __init__(self):
+        """
+        The same initiation as sfdebug except without starting the debugger
+        """ 
+        args, paths, parameters = setup(precheck=False)
 
-    :type workdir: str
-    :param workdir: working directory to clean, defaults to cwd
-    """
-    if workdir is None:
-        workdir = os.getcwd()
+        # Work directory should already be created
+        unix.cd(args.workdir)
+
+        # Reload objects from Pickle files
+        for name in names:
+            fullfile = os.path.join(args.workdir, "output", 
+                                    f"seisflows_{name}.p")
+            sys.modules[f"seisflows_{name}"] = tools.loadobj(fullfile)
+
+        # Check parameters
+        for name in names:
+            sys.modules[f"seisflows_{name}"].check()
+
+        # If SeisShows is being called, then the format for calling it splits
+        # the argument into (func, *args)
+        func, *extra_args = args.main_args
+        assert(hasattr(self, func)), f"seisflows has no argument '{func}'"
+        getattr(self, func)(*extra_args)
+
+    def check(self, choice, *args):
+        """
+        Mid-level function to simplify calling more specific check functions
+        """
+        if choice == "model":
+            self._check_model_parameters(*args)
+        elif choice == "iter":
+            self._check_current_iteration(*args)
+
+    def reset(self, choice, *args):
+        """
+        Mid-level function to call lower level reset functions
+        """
+        if choice == "line_search":
+            self._reset_line_search(*args)
         
-    check = input("\nThis will remove all workflow objects, leaving only the "
-                  "parameter file.\nAre you sure you want to clean? (y/[n]): ")
-    if check == "y":
-        for fid in glob(os.path.join(workdir, "output*")):
-            unix.rm(fid)
-        for fid in glob(os.path.join(workdir, "*log*")):
-            unix.rm(fid)
-        unix.rm(os.path.join(workdir, "scratch"))
+    def _reset_line_search(self):
+        """
+        Reset the machinery of the line search
+        """
+        optimize = sys.modules["seisflows_optimize"]
+        workflow = sys.modules["seisflows_workflow"]
+        
+        current_step = optimize.line_search.step_count
+        optimize.line_search.reset()
+        new_step = optimize.line_search.step_count
+    
+        print(f"Step Count: {current_step} -> {new_step}")
+        workflow.checkpoint()
 
+    def _check_model_parameters(self, src=None):
+        """
+        Print out the min/max values from one or all of the currently available
+        models. Useful for checking what models are associated with what part of
+        the workflow, e.g. evaluate function, evaluate gradient.
+        """
+        optimize = sys.modules["seisflows_optimize"]
+        PATH = sys.modules["seisflows_paths"]
 
+        avail = glob(os.path.join(PATH.OPTIMIZE, "m_*"))
+        srcs = [os.path.basename(_) for _ in avail]
+        if src:
+            assert(src in srcs), f"{src} not in available models {avail}"
+            srcs = [src]
+        for tag in srcs:
+            m = optimize.load(tag)
+            optimize.check_model_parameters(m, tag)
+
+    def _check_current_iteration(self):
+        """
+        Display the current point in the workflow in terms of the iteration
+        and step count number
+        """
+        optimize = sys.modules["seisflows_optimize"]
+
+        line = optimize.line_search
+        cstr = (f"\n"
+                f"\tIteration:  {optimize.iter}\n"
+                f"\tStep Count: {line.step_count} / {line.step_count_max}\n")
+        print(cstr)
+
+    
 def main():
     """
     Main entry point into the SeisFlows package
     """
-    args_ = get_args()
-    if args_.run == "submit":
-        submit()
-    elif args_.run == "resume":
-        resume()
-    elif args_.run == "debug":
-        debug()
-    elif args_.run == "clean":
-        clean(args_.workdir)
-    elif args_.run == "restart":
-        clean(args_.workdir)
-        submit()
+    sfargs = get_args()
+    main_arg = sfargs.main_args[0]
+
+    # Easy way to convert strings to functions
+    acceptable_args = {"submit": submit, "resume": resume, "clean": clean,
+                       "restart": restart, "debug": debug}
+
+    if main_arg in acceptable_args.keys():
+        acceptable_args[main_arg]()
+    else:
+        SeisShows()
+
 
 if __name__ == "__main__":
     main()
