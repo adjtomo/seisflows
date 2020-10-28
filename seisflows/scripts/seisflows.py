@@ -9,8 +9,8 @@ import argparse
 from glob import glob
 
 from seisflows.tools import unix, tools
-from seisflows.config import config, tilde_expand, Dict, names
-from seisflows.tools.tools import loadyaml
+from seisflows.config import init_seisflows, tilde_expand, Dict, names
+from seisflows.tools.tools import loadyaml, loadpy
 
 
 def get_args():
@@ -30,6 +30,7 @@ def get_args():
     parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd())
     parser.add_argument("-p", "--parameter_file", nargs="?",
                         default="parameters.yaml")
+    parser.add_argument("--path_file", nargs="?", default="paths.py")
 
     return parser.parse_args()
 
@@ -83,19 +84,43 @@ def setup(precheck=True):
         raise FileNotFoundError(f"Parameter file not found: "
                                 f"{args.parameter_file}")
 
-    # Register parameters
-    parameters = loadyaml(args.parameter_file)
+    # Register parameters. Allow for legacy .py parameter file naming but throw
+    # a deprecation warning as a .yaml file is the preferred method.
+    if args.parameter_file.endswith("yaml"):
+        parameters = loadyaml(args.parameter_file)
+        paths = parameters["PATHS"]
+    elif args.parameter_file.endwith("py"):
+        assert(os.path.exists(args.paths_file)), \
+            f"Legacy parameter file requires corresponding path file"
+        parameters = loadpy(args.parameter_file)
+        paths = loadpy(args.path_file)
+    else:
+        raise TypeError(f"Unknown file format for {args.parameter_file} "
+                        f"file must be '.yaml' (preferred) or '.py'")
+
     if precheck:
         precheck_parameters(parameters)
+
+    # Register parameters and ensure they meet standards of the package
     parameters = parse_null(parameters)
     sys.modules["seisflows_parameters"] = Dict(parameters)
 
     # Register paths, expand to relative paths to absolute
-    paths = tilde_expand(parameters["PATHS"])
+    paths = tilde_expand(paths)
     paths = {key: os.path.abspath(path) for key, path in paths.items()}
     sys.modules["seisflows_paths"] = Dict(paths)
 
     return args, paths, parameters
+
+def config():
+    """
+    Generate the parameters.yaml file on the fly by establishing each of the
+    SeisFlows modules, running the check functions for each module, and writing
+    everything to the parameters file
+    :return:
+    """
+    args, paths, parameters = setup(precheck=False)
+
 
 
 def load_modules(**kwargs):
@@ -170,7 +195,7 @@ def submit():
     unix.cd(args.workdir)
 
     # Submit workflow
-    config()  # Instantiate all modules and check their parameters
+    init_seisflows()
     workflow = sys.modules["seisflows_workflow"]
     system = sys.modules["seisflows_system"]
     system.submit(workflow)

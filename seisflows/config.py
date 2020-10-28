@@ -31,14 +31,14 @@ names = ["system", "preprocess", "solver", "postprocess",
          "optimize", "workflow"]
 
 
-def config():
+def init_seisflows():
     """
     Instantiates SeisFlows objects and makes them globally accessible by
     registering them in sys.modules
     """
     # Parameters and paths must already be loaded (normally done by submit)
-    assert('seisflows_parameters' in sys.modules)
-    assert('seisflows_paths' in sys.modules)
+    assert("seisflows_parameters" in sys.modules)
+    assert("seisflows_paths" in sys.modules)
 
     # Check if objects already exist on disk
     if os.path.exists(_output()):
@@ -47,17 +47,17 @@ def config():
 
     # Instantiate and register objects
     for name in names:
-        sys.modules['seisflows_' + name] = custom_import(name)()
+        sys.modules["seisflows_" + name] = custom_import(name)()
 
     # Error checking
     for name in names:
-        sys.modules['seisflows_' + name].check()
+        sys.modules["seisflows_" + name].check()
 
     # Ensure that certain parameters are instantiated
-    if not hasattr(sys.modules['seisflows_parameters'], "WORKFLOW"):
+    if not hasattr(sys.modules["seisflows_parameters"], "WORKFLOW"):
         print(msg.MissingParameter_Workflow)
         sys.exit(-1)
-    if not hasattr(sys.modules['seisflows_parameters'], "SYSTEM"):
+    if not hasattr(sys.modules["seisflows_parameters"], "SYSTEM"):
         print(msg.MissingParameter_System)
         sys.exit(-1)
 
