@@ -1,6 +1,7 @@
 Usage
 ===============
-SeisFlows is built around command line calls and a single parameter file.
+SeisFlows is built around command line calls and a parameter file. In this page
+we explain how to create and set a SeisFlows parameters file
 This page explains how to interact with the SeisFlows package to set up,
 run and check on an inversion workflow.
 
@@ -11,10 +12,10 @@ check() functions
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-The seisflows command
+The **seisflows** command
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The sfcheck command
+SeisFlows debug mode
 ~~~~~~~~~~~~~~~~~~~~
 
 

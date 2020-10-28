@@ -6,26 +6,36 @@
 SeisFlows3
 ===============
 
-SeisFlows is a Python-based waveform inversion package with a growing user base
-in academia and industry. The package has been used for production scale
-inversions, some with over a billion model parameters, for research problems
-related to oil and gas exploration, earthquake seismology, and general
-nonlinear optimization problems.
+SeisFlows is a Python-based waveform inversion package used to tackle the
+problems of full waveform inversion, seismic migration, and adjoint tomography.
 
-SeisFlows3 is the next iteration of SeisFlows, refactored in Python3, with
-streamlined functionalities and additional capabilities that were not present
-in the original SeisFlows package. Due to the incompatability of Python2 and
-Python3, backwards compatability between SeisFlows3 and SeisFlows is not
+With a growing user base in academia and industry, this package has been used
+for production scale inversions, some with over a billion model parameters, for
+research problems related to oil and gas exploration, earthquake seismology, and
+general nonlinear optimization problems.
+
+SeisFlows3 is a fork of SeisFlows and the current main development branch.
+Changes to the package include migration to Python3, updates to source-code
+readability through improved doc strings and comments, stronger adherance to
+PEP-8 standards, and additional functionalities not present in the original
+package.
+
+Throughout the documentation we use the name SeisFlows to refer to this package
+unless explicitely stated otherwise. Due to incompatabilities between
+Python 2 and 3, backwards compatability between SeisFlows and SeisFlows3 is not
 guaranteed.
 
 
 Installation
 =================
 
-In most cases, successful applications of SeisFlows require direct editing of
-the source code. For this reason, SeisFlows should be installed directly
-via the package library using pip. The -e flag in the pip install command
-ensures that SeisFlows is installed in development mode.
+Successful applications of SeisFlows will require direct editing of source code.
+For this reason, SeisFlows should be installed directly via the package library
+using pip.
+
+The -e flag in the pip install command ensures that SeisFlows is
+installed in development mode, meaning changes to the source code are
+immediately acccessible to the Python interpreter.
 
 .. code:: bash
 
@@ -36,8 +46,8 @@ ensures that SeisFlows is installed in development mode.
 Requirements
 -------------
 
-Explain the hardware and sfotware requirements for running SeisFlows.
-
+In most production scale workflows, SeisFlows must be run on a cluster, or
+high performance computing system.
 
 .. toctree::
    :maxdepth: 1

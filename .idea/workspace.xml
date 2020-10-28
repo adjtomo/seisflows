@@ -4,10 +4,11 @@
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows-super/preprocess/pyatoa_nz.py" beforeDir="false" afterPath="$PROJECT_DIR$/../seisflows-super/seisflows-super/preprocess/pyatoa_nz.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/Makefile" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/conf.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/index.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/make.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/docs/background.rst" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/docs/background.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/docs/citeme.rst" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/docs/citeme.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/docs/index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/docs/index.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/docs/overview.rst" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/docs/overview.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/docs/usage.rst" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/docs/usage.rst" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -23,6 +24,7 @@
     <detection-done>true</detection-done>
     <sorting>DEFINITION_ORDER</sorting>
   </component>
+  <component name="JupyterTrust" id="c9889329-74cf-48ae-a7e7-fa65a695388d" />
   <component name="ProjectId" id="1eyJBQkFukzvb1UAYNnxaU8En0X" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
@@ -97,6 +99,14 @@
     </state>
     <state width="498" height="465" key="SwitcherDM/0.0.1280.800/0.-1488.1280.720/-86.-768.1366.768@-86.-768.1366.768" timestamp="1596071852934" />
     <state width="498" height="451" key="SwitcherDM/0.22.1280.778/-35.-746.1366.746@-35.-746.1366.746" timestamp="1595371807769" />
+    <state x="594" y="273" key="VCS.ChangeListViewerDialog" timestamp="1603835258334">
+      <screen x="0" y="22" width="1920" height="1058" />
+    </state>
+    <state x="594" y="273" key="VCS.ChangeListViewerDialog/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1603835258334" />
+    <state x="741" y="471" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1603835249984">
+      <screen x="0" y="22" width="1920" height="1058" />
+    </state>
+    <state x="741" y="471" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1603835249984" />
     <state width="600" height="428" key="javadoc.popup" timestamp="1595295278319">
       <screen x="0" y="22" width="1920" height="1058" />
     </state>
