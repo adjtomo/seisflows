@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
-The main entry point to the SeisFlows package.
+The main entry point to the SeisFlows package. A high-level command line tool 
+that allows user interface with the underlying SeisFlows environment.
 """
 import os
 import sys
@@ -43,7 +44,7 @@ def parse_null(parameters):
     Rather than rewrite this system, we allow the User to set parameters to 
     None, null, '', etc. This function sanitizes those inputs before handing 
     them over to Seisflows. This allows for full parameter files that include 
-    all options that also works with the machinery of Seisflows
+    all options, but that also works within the existing machinery of SeisFlows.
 
     This function also enforces a few string formats 
 
@@ -66,8 +67,14 @@ def parse_null(parameters):
 
 def setup(precheck=True):
     """
-    Common setup for multiple functions, parses the parameter and paths,
-    places them into sys.modules for global accessibiliy.
+    Load the paths and parameters from file into sys modules, set the default
+    parameters if they are missing from the file, and expand all paths to 
+    absolute pathnames.
+
+    :type precheck: bool
+    :param precheck: print out a few key parameters and require user-input 
+        before allowing workflow to be submitted. This is usually run before
+        submit and resume, to prevent job submission without evaluation.
     """
     args = get_args()
 
@@ -81,14 +88,37 @@ def setup(precheck=True):
     if precheck:
         precheck_parameters(parameters)
     parameters = parse_null(parameters)
-    sys.modules['seisflows_parameters'] = Dict(parameters)
+    sys.modules["seisflows_parameters"] = Dict(parameters)
 
     # Register paths, expand to relative paths to absolute
-    paths = tilde_expand(parameters['PATHS'])
+    paths = tilde_expand(parameters["PATHS"])
     paths = {key: os.path.abspath(path) for key, path in paths.items()}
-    sys.modules['seisflows_paths'] = Dict(paths)
+    sys.modules["seisflows_paths"] = Dict(paths)
 
     return args, paths, parameters
+
+
+def load_modules(**kwargs):
+    """
+    A function to load and check each of the SeisFlows modules, initiating
+    the SeisFlows environment. All modules are reliant on one another so any
+    access to SeisFlows requires loading everything simultaenously.
+    Calls setup() beforehand which loads in paths and parameters as well.
+    """
+    args, paths, parameters = setup(**kwargs)
+    
+    # Working directory should already have been created by submit()
+    unix.cd(args.workdir)
+
+    # Reload objects from Pickle files
+    for name in names:
+        fullfile = os.path.join(args.workdir, "output",
+                                f"seisflows_{name}.p")
+        sys.modules[f"seisflows_{name}"] = tools.loadobj(fullfile)
+
+    # Check parameters so that default values are present
+    for name in names:
+        sys.modules[f"seisflows_{name}"].check()
 
 
 def precheck_parameters(par):
@@ -117,9 +147,10 @@ def precheck_parameters(par):
 
 def submit():
     """
-    Submit the workflow for the first time
+    Submit the workflow for the first time. Create the working directory and 
+    any required paths and ensure that all required paths exist.
     """
-    args, paths, parameters = setup()
+    args, paths, parameters = setup(precheck=True)
 
     # Check that paths exist
     paths_dont_exist = []
@@ -147,7 +178,7 @@ def submit():
 
 def clean():
     """
-    Clean the working directory
+    Clean the working directory by deleting everything except the parameter file
     """
     args = get_args() 
     check = input("\nThis will remove all workflow objects, leaving only the "
@@ -163,21 +194,9 @@ def clean():
 def resume():
     """
     Resume a previously started workflow by loading the module pickle files and
-    submitting the workflow 
+    submitting the workflow from where it left off.
     """
-    args, paths, parameters = setup()
-
-    # Work directory should already be created
-    unix.cd(args.workdir)
-
-    # Reload objects from Pickle files
-    for name in names:
-        fullfile = os.path.join(args.workdir, "output", f"seisflows_{name}.p")
-        sys.modules[f"seisflows_{name}"] = tools.loadobj(fullfile)
-
-    # Check parameters
-    for name in names:
-        sys.modules[f"seisflows_{name}"].check()
+    load_modules(precheck=True)
 
     workflow = sys.modules["seisflows_workflow"]
     system = sys.modules["seisflows_system"]
@@ -195,35 +214,21 @@ def restart():
 
 def debug():
     """
-    A debug mode that reloads the system modules and starting an IPython
+    A debug mode that reloads the system modules and starts an IPython
     debugger allowing exploration of the package space in an interactive 
     environment.
     """
-    args, paths, parameters = setup(precheck=False)
-
-    # Work directory should already be created
-    unix.cd(args.workdir)
-
-    # Reload objects from Pickle files
-    for name in names:
-        fullfile = os.path.join(args.workdir, "output", f"seisflows_{name}.p")
-        sys.modules[f"seisflows_{name}"] = tools.loadobj(fullfile)
-
-    # Check parameters
-    for name in names:
-        sys.modules[f"seisflows_{name}"].check()
-
-    workflow = sys.modules["seisflows_workflow"]
-    system = sys.modules["seisflows_system"]
-
-    # Prematurely distribute modules for easier debugging
+    load_modules(precheck=False)
+    
+    # Distribute modules to common names for easy access during debug mode
     PATH = sys.modules["seisflows_paths"]
     PAR = sys.modules["seisflows_parameters"]
     system = sys.modules["seisflows_system"]
-    solver = sys.modules["seisflows_solver"]
-    optimize = sys.modules["seisflows_optimize"]
     preprocess = sys.modules["seisflows_preprocess"]
+    solver = sys.modules["seisflows_solver"]
     postprocess = sys.modules["seisflows_postprocess"]
+    optimize = sys.modules["seisflows_optimize"]
+    workflow = sys.modules["seisflows_workflow"]
 
     # Import debugging options. The following lines will be displayed to console
     import ipdb
@@ -237,49 +242,76 @@ def debug():
 
 class SeisShows:
     """
-    A mid-level API that allows the user to manipulate the SeisFlows workflow
-    via command line arguments
+    A high-level API that allows the user to manipulate or inspect the SeisFlows 
+    workflow via simple command line arguments. Almost every modules requires 
+    loading of other modules so to run checks we must load the entire SeisFlows
+    environment, so this is slower than it could be, but it provides the most 
+    flexibility when accessing internal information.
+
+    Throws sys.exit if invalid arguments are passed to the 'seisflows' command
     """
     def __init__(self):
         """
-        The same initiation as sfdebug except without starting the debugger
+        Initiate the entire SeisFlows workflow and module system then call the
+        requested function provided through command line arguments
         """ 
-        args, paths, parameters = setup(precheck=False)
-
-        # Work directory should already be created
-        unix.cd(args.workdir)
-
-        # Reload objects from Pickle files
-        for name in names:
-            fullfile = os.path.join(args.workdir, "output", 
-                                    f"seisflows_{name}.p")
-            sys.modules[f"seisflows_{name}"] = tools.loadobj(fullfile)
-
-        # Check parameters
-        for name in names:
-            sys.modules[f"seisflows_{name}"].check()
+        args = get_args()
 
         # If SeisShows is being called, then the format for calling it splits
-        # the argument into (func, *args)
-        func, *extra_args = args.main_args
-        assert(hasattr(self, func)), f"seisflows has no argument '{func}'"
-        getattr(self, func)(*extra_args)
+        # the argument into (func, *args). Dont care about the other argparse
+        try:
+            func, *extra_args = args.main_args
 
-    def check(self, choice, *args):
-        """
-        Mid-level function to simplify calling more specific check functions
-        """
-        if choice == "model":
-            self._check_model_parameters(*args)
-        elif choice == "iter":
-            self._check_current_iteration(*args)
+            if not hasattr(self, func):
+                # Available functions are any public methods
+                sys.exit(f"\n\tseisflows has no matching function '{func}'"
+                         f"\n\tbesides main functions, available sub-functions "
+                         f"include:\n\t{self._public_methods}\n")
 
-    def reset(self, choice, *args):
+            getattr(self, func)(*extra_args)
+        # If class initiated with no arguments, assume its for debug reasons
+        except ValueError:
+            pass
+
+    @property
+    def _public_methods(self):
+        """Return a list of all public methods within this class"""
+        return [_ for _ in dir(self) if not _.startswith("_")]
+
+    def check(self, choice=None, *args):
+        """
+        Mid-level function to call more lower level check functions 
+        """
+        acceptable_args = {"model": self._check_model_parameters,
+                           "iter": self._check_current_iteration,
+                           "src": self._check_source_names,
+                           "isrc": self._check_source_index}
+
+        if choice is None:
+            sys.exit(f"\n\tseisflows check requires sub-function from the "
+                     f"following:\n\t{list(acceptable_args.keys())}\n")
+
+        if choice not in acceptable_args.keys():
+            sys.exit(f"\n\tseisflows check has no sub-function '{choice}'\n")
+
+        load_modules()
+        acceptable_args[choice](*args)
+
+    def reset(self, choice=None, *args):
         """
         Mid-level function to call lower level reset functions
         """
-        if choice == "line_search":
-            self._reset_line_search(*args)
+        acceptable_args = {"line_search": self._reset_line_search,}
+
+        if choice is None:
+            sys.exit(f"\n\tseisflows reset requires sub-function from the "
+                     f"following:\n\t{list(acceptable_args.keys())}\n")
+
+        if choice not in acceptable_args.keys():
+            sys.exit(f"\n\tseisflows reset has no sub-function '{choice}'\n")
+
+        load_modules()
+        acceptable_args[choice](*args)
         
     def _reset_line_search(self):
         """
@@ -300,6 +332,10 @@ class SeisShows:
         Print out the min/max values from one or all of the currently available
         models. Useful for checking what models are associated with what part of
         the workflow, e.g. evaluate function, evaluate gradient.
+
+        :type src: str
+        :param src: the name of a specific model to check, e.g. 'm_try', 
+            otherwise will check parameters for all models
         """
         optimize = sys.modules["seisflows_optimize"]
         PATH = sys.modules["seisflows_paths"]
@@ -326,17 +362,51 @@ class SeisShows:
                 f"\tStep Count: {line.step_count} / {line.step_count_max}\n")
         print(cstr)
 
-    
+    def _check_source_names(self, source_name=None):
+        """
+        Sources are tagged by name but also by index in the source names which
+        can be confusing and usually requires doubling checking. This check
+        just prints out source names next to their respective index, or if a
+        source name is requested, provides the index for that
+
+        :type source_name: str
+        :param source_name: name of source to check index, if None will simply
+            print out all sources
+        """     
+        solver = sys.modules["seisflows_solver"]
+
+        if source_name:
+            print(f"{solver.source_names.index(source_name)}: {source_name}")
+        else:
+            for i, source_name in enumerate(solver.source_names):
+                print(f"{i:>3}: {source_name}")
+
+    def _check_source_index(self, idx=None):
+        """
+        Look up source name by index
+
+        :type idx: int
+        :param idx: index of source to look up
+        """     
+        solver = sys.modules["seisflows_solver"]
+        print(f"\n\t{idx}: {solver.source_names[int(idx)]}\n")
+   
+ 
 def main():
     """
     Main entry point into the SeisFlows package
     """
-    sfargs = get_args()
-    main_arg = sfargs.main_args[0]
-
     # Easy way to convert strings to functions
     acceptable_args = {"submit": submit, "resume": resume, "clean": clean,
                        "restart": restart, "debug": debug}
+
+    try:
+        main_arg = get_args().main_args[0]
+    except IndexError:
+        ok_args = list(acceptable_args.keys()) + SeisShows()._public_methods
+        sys.exit(f"\n\tseisflows command requires an argument. "
+                 f"available arguments are:\n\t{ok_args}\n"
+                 f"\ttype 'seisflows -h' for a help message\n")
 
     if main_arg in acceptable_args.keys():
         acceptable_args[main_arg]()

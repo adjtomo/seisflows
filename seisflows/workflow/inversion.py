@@ -235,7 +235,15 @@ class Inversion(custom_import("workflow", "base")):
             status < 0  : failed
         """
         print("LINE SEARCH")
-        optimize.initialize_search()
+
+        # This statement allows restarting a workflow mid line-search. If 
+        # resuming from the start of a line search, the line search machinery
+        # should have been reset and step_count should be 0. If resuming line
+        # search due to a failed step, will not re-initialize search and instead 
+        # pick up line search where it left off
+        if not PAR.RESUME_FROM == "line_search" and \
+                                        not optimize.line_search.step_count:
+            optimize.initialize_search()
 
         while True:
             optimize.line_search.step_count += 1
