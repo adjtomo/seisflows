@@ -5,6 +5,7 @@ This is the base class for the postprocess functionalities
 import sys
 
 from seisflows.tools.tools import exists
+from seisflows.config import SeisFlowsPathsParameters
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -26,25 +27,43 @@ class Base:
         """
         pass
 
-    @staticmethod
-    def check():
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters()
+
+        # Define the Parameters required by this module
+        sf.par("SMOOTH_H", required=False, default=0., par_type=float,
+               docstr="Gaussian half-width for horizontal smoothing in units "
+                      "of meters. If 0., no smoothing applied")
+
+        sf.par("SMOOTH_V", required=False, default=0., par_type=float,
+               docstr="Gaussian half-width for vertical smoothing in units "
+                      "of meters")
+
+        sf.par("TASKTIME_SMOOTH", required=False, default=1., par_type=float,
+               docstr="Large radii smoothing may take longer than normal "
+                      "tasks. Allocate additional smoothing task time "
+                      "as a multiple of TASKTIME")
+
+        # Define the Paths required by this module
+        sf.path("MASK", required=False, default="null",
+               docstr="Directory to mask files for gradient masking")
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        if "SMOOTH_H" not in PAR:
-            setattr(PAR, "SMOOTH_H", 0.)
-        
-        if "SMOOTH_V" not in PAR:
-            setattr(PAR, "SMOOTH_V", 0.)
-
-        if "TASKTIME_SMOOTH" not in PAR:
-            setattr(PAR, "TASKTIME_SMOOTH", 1)
-
-        if "MASK" not in PATH:
-            setattr(PATH, "MASK", None)
+        if validate:
+            self.required.validate()
 
         if PATH.MASK:
-            assert exists(PATH.MASK)
+            assert exists(PATH.MASK), f"PATH.MASK provided but does not exist"
 
     def setup(self):
         """

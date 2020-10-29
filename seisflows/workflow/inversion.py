@@ -56,56 +56,50 @@ class Inversion(custom_import("workflow", "base")):
                docstr="First iteration of workflow, 1 <= BEGIN <= inf")
 
         sf.par("END", required=True, par_type=int,
-               docstr="Final iteration of workflow, BEGIN <= END <= inf")
+               docstr="Last iteration of workflow, BEGIN <= END <= inf")
 
-        sf.par("RESUME_FROM", required=False, default=None, par_type=str,
+        sf.par("RESUME_FROM", required=False, par_type=str,
                docstr="Name of task to resume inversion from")
 
-        sf.par("STOP_AFTER", required=False, default=None, par_type=str,
+        sf.par("STOP_AFTER", required=False, par_type=str,
                docstr="Name of task to stop inversion after finishing")
 
         sf.par("CASE", required=True, par_type=str,
-               docstr="type of inversion, real data or synthetics only, "
-                      "choices are 'data' or 'synthetic'")
+               docstr="Type of inversion, available: "
+                      "['data': real data inversion, "
+                      "'synthetic': synthetic-synthetic inversion]")
 
         sf.par("SAVEMODEL", required=False, default=True, par_type=bool,
                docstr="Save final model files after each iteration")
 
-        sf.par("SAVEGRADIENT", required=False, default=False, par_type=bool,
+        sf.par("SAVEGRADIENT", required=False, default=True, par_type=bool,
                docstr="Save gradient files after each iteration")
 
         sf.par("SAVEKERNELS", required=False, default=False, par_type=bool,
-               docstr="Save kernel files after each iteration")
+               docstr="Save event kernel files after each iteration")
+
+        sf.par("SAVETRACES", required=False, default=False, par_type=bool,
+               docstr="Save waveform traces after each iteration")
 
         sf.par("SAVERESIDUALS", required=False, default=False, par_type=bool,
                docstr="Save waveform residuals after each iteration")
 
         sf.par("SAVEAS", required=False, default="binary", par_type=str,
-               docstr="Format to save models, gradients, kernels, "
-                     "available formats are [binary, vector, both], where "
-                     "'binary' saves files in the native SPECFEM .bin files, "
-                     "vector saves files in NumPy .npy files, and both saves "
-                     "both formats")
+               docstr="Format to save models, gradients, kernels. "
+                      "Available: "
+                      "['binary': save files in native SPECFEM .bin format, "
+                      "'vector': save files as NumPy .npy files, "
+                      "'both': save as both binary and vectors]")
 
         sf.par("VERBOSE", required=False, default=True, par_type=bool,
                docstr="Provide detailed statements to the output logs")
 
         # Define the Paths required by this module
-        sf.path("SCRATCH", required=True,
-                docstr="scratch path to hold temporary data during workflow")
-
-        sf.path("OUTPUT", required=True,
-                docstr="directory to save workflow outputs to disk")
-
         sf.path("MODEL_INIT", required=True,
-                docstr="location of the initial model to be used for workflow")
+                docstr="nitial model to be used for workflow")
 
         sf.path("MODEL_TRUE", required=False,
-                docstr="location of the target model to be used when "
-                      "PAR.CASE == 'synthetic'")
-
-        sf.path("LOCAL", required=False, default=None,
-                docstr="local path to data available to workflow")
+                docstr="target model to be used for PAR.CASE == 'synthetic'")
 
         sf.path("FUNC", required=False,
                 default=os.path.join(PATH.SCRATCH, "evalfunc"),
@@ -129,18 +123,25 @@ class Inversion(custom_import("workflow", "base")):
 
         return sf
 
-    def check(self):
+    def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        self.required.validate()
+        super().check(validate=False)
+        if validate:
+            self.required.validate()
 
-        assert 1 <= PAR.BEGIN <= PAR.END, (f"Incorrect BEGIN or END parameter: "
-                                           f"1 <= {PAR.BEGIN} <= {PAR.END}")
+        for required_path in ["SCRATCH", "OUTPUT", "LOCAL"]:
+            assert(required_path in PATH), \
+                f"Inversion requires path {required_path}"
+
+        assert(1 <= PAR.BEGIN <= PAR.END), \
+            f"Incorrect BEGIN or END parameter: 1 <= {PAR.BEGIN} <= {PAR.END}"
 
         if PAR.CASE.upper() == "SYNTHETIC":
-            assert exists(PATH.MODEL_TRUE), ("CASE == SYNTHETIC requires "
-                                             "PATH.MODEL_TRUE")
+            assert exists(PATH.MODEL_TRUE), \
+                "CASE == SYNTHETIC requires PATH.MODEL_TRUE"
+
     def main(self):
         """
         !!! This function controls the main workflow !!!

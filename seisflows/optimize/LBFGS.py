@@ -6,7 +6,7 @@ It supercedes the `seisflows.optimize.base` class
 import sys
 import numpy as np
 
-from seisflows.config import custom_import
+from seisflows.config import custom_import, SeisFlowsPathsParameters
 from seisflows.plugins import optimize
 
 PAR = sys.modules['seisflows_parameters']
@@ -34,28 +34,41 @@ class LBFGS(custom_import("optimize", "base")):
         self.LBFGS = None
         self.restarted = None
 
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters(super().required)
+
+        # Define the Parameters required by this module
+        sf.par("LINESEARCH", required=False, default="Backtrack", par_type=str,
+               docstr="Algorithm to use for line search, see "
+                      "seisflows.plugins.line_search for available choices")
+
+        sf.par("LBFGSMEM", required=False, default=3, par_type=int,
+               docstr="Max number of previous gradients to retain "
+                      "in local memory")
+
+        sf.par("LBFGSMAX", required=False, default="null", par_type=float,
+               docstr="LBFGS periodic restart interval, between 1 and inf")
+
+        sf.par("LBFGSTHRESH", required=False, default=0., par_type=float,
+               docstr="LBFGS angle restart threshold")
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters, paths, and dependencies
         """
-        # Line search algorithm
-        if "LINESEARCH" not in PAR:
-            setattr(PAR, "LINESEARCH", "Backtrack")
+        super().check(validate=False)
+        if validate:
+            self.required.validate()
 
-        # LBFGS memory
-        if "LBFGSMEM" not in PAR:
-            setattr(PAR, "LBFGSMEM", 3)
-
-        # LBFGS periodic restart interval
-        if "LBFGSMAX" not in PAR:
-            setattr(PAR, "LBFGSMAX", np.inf)
-
-        # LBFGS angle restart threshold
-        if "LBFGSTHRESH" not in PAR:
-            setattr(PAR, "LBFGSTHRESH", 0.)
-
-        # Include all checks from Base class
-        super().check()
+        assert(PAR.LINESEARCH.upper() == "BACKTRACK"), \
+            "LBFGS requires a Backtracking line search"
 
     def setup(self):
         """

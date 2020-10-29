@@ -20,7 +20,7 @@ from subprocess import check_output
 from seisflows.tools import msg, unix
 from seisflows.tools.err import ParameterError
 from seisflows.tools.tools import call, findpath
-from seisflows.config import custom_import
+from seisflows.config import custom_import, SeisFlowsPathsParameters
 
 # Seisflows configuration
 PAR = sys.modules['seisflows_parameters']
@@ -45,28 +45,38 @@ class SlurmLg(custom_import('system', 'base')):
     For important additional information, please see
     http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
     """
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters()
+
+        # Define the Parameters required by this module
+        sf.par("NTASKMASK", required=False, default=100, par_type=int,
+               docstr="Limit on the number of concurrent tasks")
+
+        sf.par("NODESIZE", required=True, par_type=int,
+               docstr="The number of cores per node defined by the system")
+
+        sf.par("SLURMARGS", required=False, default="", par_type=str,
+               docstr="Any optional, additional SLURM arguments that will be "
+                      "passed to the SBATCH scripts")
+
+        sf.par("SLURMARGS", required=False, default="", par_type=str,
+               docstr="Optional environment variables to be provided in the"
+                      "following format VAR1=var1,VAR2=var2...")
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        super().check()
-
-        # Limit on number of concurrent tasks
-        if "NTASKMAX" not in PAR:
-            setattr(PAR, "NTASKMAX", 100)
-
-        # Number of cores per node
-        if "NODESIZE" not in PAR:
-            raise ParameterError(PAR, "NODESIZE")
-
-        # Optional additional SLURM arguments
-        if "SLURMARGS" not in PAR:
-            setattr(PAR, "SLURMARGS", "")
-
-        # Optional environment variable list VAR1=val1,VAR2=val2,...
-        if "ENVIRONS" not in PAR:
-            setattr(PAR, "ENVIRONS", "")
-
+        if validate:
+            self.required.validate()
+        super().check(validate=False)
 
     def submit(self, workflow):
         """

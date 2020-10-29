@@ -7,9 +7,8 @@ be overloaded by subclasses
 import os
 import sys
 from glob import glob
-from seisflows.config import save, saveobj
 from seisflows.tools import unix
-from seisflows.tools.err import ParameterError
+from seisflows.config import save, saveobj, SeisFlowsPathsParameters
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -18,55 +17,61 @@ PATH = sys.modules['seisflows_paths']
 
 class Base:
     """
-    Abstract base class
+    Abstract base class for the Systems module which controls interaction with
+    compute systems such as HPC clusters.
     """
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters()
+
+        # Define the Parameters required by this module
+        sf.par("TITLE", required=False,
+               default=os.path.basename(os.path.abspath(".")), par_type=str,
+               docstr="The name used to submit jobs to the system, defaults "
+                      "to the name of the working directory")
+
+        sf.par("WALLTIME", required=True, par_type=float,
+               docstr="Maximum job time in minutes for main SeisFlows job")
+
+        sf.par("TASKTIME", required=True, par_type=float,
+               docstr="Maximum job time in minutes for each SeisFlows task")
+
+        sf.par("NTASK", required=True, par_type=int,
+               docstr="Number of separate, individual tasks. Also equal to "
+                      "the number of desired sources in workflow")
+
+        sf.par("NPROC", required=True, par_type=int,
+               docstr="Number of processor to use for each simulation")
+
+        # Define the Paths required by this module
+        # note: PATH.WORKDIR has been set by the entry point seisflows.setup()
+        sf.path("SCRATCH", required=False,
+                default=os.path.join(PATH.WORKDIR, "scratch"),
+                docstr="scratch path to hold temporary data during workflow")
+
+        sf.path("OUTPUT", required=False,
+                default=os.path.join(PATH.WORKDIR, "output"),
+                docstr="directory to save workflow outputs to disk")
+
+        sf.path("SYSTEM", required=False,
+                default=os.path.join(PATH.WORKDIR, "scratch", "system"),
+                docstr="scratch path to hold any system related data")
+
+        sf.path("LOCAL", required=False, default="null",
+                docstr="path to local data to be used during workflow")
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        # Name of job
-        if "TITLE" not in PAR:
-            setattr(PAR, "TITLE", os.path.basename(os.path.abspath(".")))
-
-        # Time allocated for workflow in minutes
-        if "WALLTIME" not in PAR:
-            setattr(PAR, "WALLTIME", 30.)
-
-        # Time allocated for each individual task in minutes
-        if "TASKTIME" not in PAR:
-            setattr(PAR, "TASKTIME", 15.)
-
-        # Number of tasks
-        if "NTASK" not in PAR:
-            raise ParameterError(PAR, "NTASK")
-
-        # Number of cores per task
-        if "NPROC" not in PAR:
-            raise ParameterError(PAR, "NPROC")
-
-        # Level of detail in output messages
-        if "VERBOSE" not in PAR:
-            setattr(PAR, "VERBOSE", 1)
-
-        # Location where job was submitted
-        if "WORKDIR" not in PATH:
-            setattr(PATH, "WORKDIR", os.path.abspath("."))
-
-        # Location where output files are written
-        if "OUTPUT" not in PATH:
-            setattr(PATH, "OUTPUT", os.path.join(PATH.WORKDIR, "output"))
-
-        # Location where temporary files are written
-        if "SCRATCH" not in PATH:
-            setattr(PATH, "SCRATCH", os.path.join(PATH.WORKDIR, "scratch"))
-
-        # Where system files are written
-        if "SYSTEM" not in PATH:
-            setattr(PATH, "SYSTEM", os.path.join(PATH.SCRATCH, "system"))
-
-        # Optional local scratch path
-        if "LOCAL" not in PATH:
-            setattr(PATH, "LOCAL", None)
+        if validate:
+            self.required.validate()
 
     def setup(self):
         """

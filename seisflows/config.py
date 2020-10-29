@@ -178,28 +178,28 @@ class Null(object):
 class SeisFlowsPathsParameters:
     """
     A class used to simplify defining required or optional paths and parameters
-    by specifying the string explanation of the parameter, if it is optional
-    or required, and if optional, the default value. Also replaces the old
-    lengthy check() functions by performing a validate() function to ensure
-    that required parameters and paths are present, while setting default
-    values for non-required paths and parameters.
+    by enforcing a specific structure to their entry into the environment.
+    Replaces the functionalities of the old check() functions.
+
+    .. note::
+        if a path or parameter is optional it requires a default value.
     """
-    def __init__(self, base_class=None):
+    def __init__(self, base=None):
         """
         We simply store paths and parameters as nested dictioanries. Due to the
         use of inheritance, the class can be passed to itself on initialization
         which means paths and parameters can be adopted from base class
 
-        :type base_class: seisflows.config.DefinePathsParameters
-        :param base_class: paths and parameters from base class that need to be
+        :type base: seisflows.config.DefinePathsParameters
+        :param base: paths and parameters from base class that need to be
             inherited by the current child class.
         """
         self.parameters, self.paths = {}, {}
-        if base_class:
-            self.parameters.update(base_class.parameters)
-            self.paths.update(base_class.paths)
+        if base:
+            self.parameters.update(base.parameters)
+            self.paths.update(base.paths)
 
-    def par(self, parameter, required, docstr, par_type, default=None):
+    def par(self, parameter, required, docstr, par_type, default="null"):
         """
         Add a parameter to the internal list of parameters
 
@@ -223,7 +223,7 @@ class SeisFlowsPathsParameters:
         self.parameters[parameter] = {"docstr": docstr, "required": required,
                                       "default": default, "type": par_type}
 
-    def path(self, path, required, docstr, default=None):
+    def path(self, path, required, docstr, default="null"):
         """
         Add a path to the internal list of paths
 
@@ -244,24 +244,32 @@ class SeisFlowsPathsParameters:
         self.paths[path] = {"docstr": docstr, "required": required,
                             "default": default}
 
-    def validate(self):
+    def validate(self, paths=True, parameters=True):
         """
-        Set paths and parameter values into sys.modules, ensuring that required
-        paths and parameters are set, and that default values are stored
+        Set internal paths and parameter values into sys.modules. Should be
+        called by each modules check() function.
+
+        Ensures that required paths and parameters are set by the user, and that
+        default values are stored for any optional paths and parameters.
+
+        :raises ParameterError: if a required path or parameter is not set by
+            the user.
         """
-        PAR = sys.modules["seisflows_parameters"]
-        PATH = sys.modules["seisflows_paths"]
+        if paths:
+            PATH = sys.modules["seisflows_paths"]
+            for key, attrs in self.paths.items():
+                if attrs["required"] and (key in PATH):
+                    raise ParameterError(PATH, key)
+                elif key not in PATH:
+                    setattr(PATH, key, attrs["default"])
 
-        # Ensure that required paths and parameters are made and
-        # non-required paths or parameters are set to default values
-        for choice, container in zip([self.parameters, self.paths],
-                                     [PAR, PATH]):
-            for key, attrs in choice.items():
-                if attrs["required"] and key not in container:
-                    raise ParameterError(container, key)
-                elif key not in container:
-                    setattr(container, key, attrs["default"])
-
+        if parameters:
+            PAR = sys.modules["seisflows_parameters"]
+            for key, attrs in self.parameters.items():
+                if attrs["required"] and (key in PAR):
+                    raise ParameterError(PAR, key)
+                elif key not in PAR:
+                    setattr(PAR, key, attrs["default"])
 
 def custom_import(name=None, module=None, classname=None):
     """

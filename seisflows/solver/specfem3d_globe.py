@@ -22,7 +22,8 @@ from seisflows.plugins.io import loadbypar, copybin, loadbin, savebin
 from seisflows.tools import unix
 from seisflows.tools.seismic import call_solver
 from seisflows.tools.tools import Struct, exists
-from seisflows.config import ParameterError, custom_import
+from seisflows.config import (ParameterError, custom_import,
+                              SeisFlowsPathsParameters)
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -37,30 +38,32 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
 
     !!! See base class for method descriptions !!!
     """
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters(super().required)
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters and paths on top of the base class checks.
         """
-        super().check()
+        if validate:
+            self.required.validate()
+        super().check(validate=False)
 
-        if "MATERIALS" not in PAR:
-            raise ParameterError(PAR, "MATERIALS")
-        else:
-            assert(PAR.MATERIALS.upper() in ["ISOTROPIC", "ANISOTROPIC"])
+        assert(PAR.MATERIALS.upper() in ["ISOTROPIC", "ANISOTROPIC"])
 
         # Overwrite the base class parameters based on the material choice
         self.parameters = []
-        if PAR.MATERIALS.upper() == "Isotropic":
+        if PAR.MATERIALS.upper() == "ISOTROPIC":
             self.parameters += ["vp", "vs"]
         elif PAR.MATERIALS.upper() == "ANISOTROPIC":
             self.parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
-
-        if "COMPONENTS" not in PAR:
-            setattr(PAR, "CHANNELS", "ENZ")
-
-        # check data format
-        if "FORMAT" not in PAR:
-            raise ParameterError(PAR, "FORMAT")
 
     def load(self, path, prefix='reg1_', suffix='', verbose=False):
         """

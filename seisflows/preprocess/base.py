@@ -14,6 +14,7 @@ from seisflows.tools import signal
 from seisflows.tools.err import ParameterError
 from seisflows.tools.tools import exists, getset
 from seisflows.plugins import adjoint, misfit, readers, writers
+from seisflows.config import SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -26,38 +27,54 @@ class Base:
     Provides data processing functions for seismic traces, with options for
     data misfit, filtering, normalization and muting
     """
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters()
+
+        # Define the Parameters required by this module
+        sf.par("FORMAT", required=True,  par_type=str,
+               docstr="File format for waveforms, available: ['ascii', 'su']")
+
+        sf.par("MISFIT", required=False, default="null", par_type=str,
+               docstr="Misfit function for waveform comparisons, for available "
+                      "see seisflows.plugins.misfit")
+
+        sf.par("BACKPROJECT", required=False, default="null", par_type=str,
+               docstr="Backprojection function for migration, for available "
+                      "see seisflows.plugins.adjoint")
+
+        sf.par("NORMALIZE", required=False, default="null", par_type=str,
+               docstr="Data normalization option")
+
+        sf.par("MUTE", required=False, default="null", par_type=str,
+               docstr="Data muting option")
+
+        sf.par("FILTER", required=False, default="null", par_type=str,
+               docstr="Data filtering option")
+
+        return sf
+
+    def check(self, validate=True):
         """ 
         Checks parameters and paths
         """
-        # Used for inversion
-        if "MISFIT" not in PAR:
-            setattr(PAR, "MISFIT", None)
-
-        # Used for migration
-        if "BACKPROJECT" not in PAR:
-            setattr(PAR, "BACKPROJECT", None)
-
-        # Data file format
-        if "FORMAT" not in PAR:
-            raise ParameterError(PAR, "FORMAT")
+        if validate:
+            self.required.validate()
 
         # Data normalization option
-        if "NORMALIZE" not in PAR:
-            setattr(PAR, "NORMALIZE", None)
-        else:
+        if PAR.NORMALIZE:
             self.check_normalize_parameters()
 
         # Data muting option
-        if "MUTE" not in PAR:
-            setattr(PAR, "MUTE", None)
-        else:
+        if PAR.MUTE:
             self.check_mute_parameters()
 
         # Data filtering option using Obspy
-        if "FILTER" not in PAR:
-            setattr(PAR, "FILTER", None)
-        else:
+        if PAR.FILTER
             self.check_filter_parameters()
 
         # Assert that readers and writers available

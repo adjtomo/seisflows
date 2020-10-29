@@ -6,12 +6,9 @@ for testing purposes
 """
 import os
 import sys
-import numpy as np
 
-import os
 from seisflows.tools import unix
-from seisflows.config import custom_import
-from seisflows.tools.err import ParameterError
+from seisflows.config import custom_import, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -21,49 +18,34 @@ class Serial(custom_import("system", "base")):
     """
     Run tasks in a serial fashion on a single local machine
     """
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters(super().required)
+
+        # Define the Parameters required by this module
+        sf.par("NTASK", required=False, default=1, par_type=int,
+               docstr="Number of separate, individual tasks. Also equal to "
+                      "the number of desired sources in workflow")
+
+        sf.par("NPROC", required=False, default=1, par_type=int,
+               docstr="Number of processor to use for each simulation")
+
+        sf.par("MPIEXEC", required=False, default="", par_type=str,
+               docstr="Function used to invoke parallel executables")
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        # name of the job
-        if "TITLE" not in PAR:
-            setattr(PAR, "TITLE", os.path.basename(os.path.abspath(".")))
-
-        # number of tasks
-        if "NTASK" not in PAR:
-            setattr(PAR, "NTASK", 1)
-
-        # number of processers per task
-        if "NPROC" not in PAR:
-            setattr(PAR, "NPROC", 1)
-
-        # how to invoke executables
-        if "MPIEXEC" not in PAR:
-            setattr(PAR, "MPIEXEC", "")
-
-        # level of detail in output messages
-        if "VERBOSE" not in PAR:
-            setattr(PAR, "VERBOSE", 1)
-
-        # where job was submitted
-        if "WORKDIR" not in PATH:
-            setattr(PATH, "WORKDIR", os.path.abspath("."))
-
-        # where output files are written
-        if "OUTPUT" not in PATH:
-            setattr(PATH, "OUTPUT", os.path.join(PATH.WORKDIR, "output"))
-
-        # where temporary files are written
-        if "SCRATCH" not in PATH:
-            setattr(PATH, "SCRATCH", os.path.join(PATH.WORKDIR, "scratch"))
-
-        # where system files are written
-        if "SYSTEM" not in PATH:
-            setattr(PATH, "SYSTEM", os.path.join(PATH.SCRATCH, "system"))
-
-        # optional local filesystem scratch path
-        if "LOCAL" not in PATH:
-            setattr(PATH, "LOCAL", None)
+        super().check(validate=False)
+        if validate:
+            self.required.validate()
 
     def submit(self, workflow):
         """

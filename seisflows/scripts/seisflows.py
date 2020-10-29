@@ -5,10 +5,9 @@ that allows user interface with the underlying SeisFlows environment.
 """
 import os
 import sys
-import yaml
 import argparse
 from glob import glob
-
+from textwrap import wrap
 from seisflows.tools import unix, tools
 from seisflows.config import (init_seisflows, tilde_expand, Dict, names, 
                               custom_import)
@@ -90,8 +89,13 @@ def setup(precheck=True):
     # a deprecation warning as a .yaml file is the preferred method.
     if args.parameter_file.endswith(".yaml"):
         parameters = loadyaml(args.parameter_file)
-        paths = parameters["PATHS"]
-        parameters.pop("PATHS")  # remove redundant path entry
+        try:
+            paths = parameters["PATHS"]
+            parameters.pop("PATHS")
+        except KeyError:
+            paths = {}
+        if "WORKDIR" not in paths:
+            paths["WORKDIR"] = args.workdir
     elif args.parameter_file.endwith(".py"):
         assert(os.path.exists(args.paths_file)), \
             f"Legacy parameter file requires corresponding path file"
@@ -120,11 +124,19 @@ def configure():
     Generate the parameters.yaml file on the fly by establishing each of the
     SeisFlows modules, running the check functions for each module, and writing
     everything to the parameters file
-    :return:
     """
-    # str header to separate values in the parameter file
-    separator = f"\n# {'=' * 78}\n#\n"
+    # Set some re-usable strings to provide a consistentl ook to the par file
+    BLANK = "\n"
+    COMMENT = "#\n"
+    DIVIDER = f"# {'=' * 78}\n"
+    HEADER = "# {} {}\n"
+    UNDERLINE = f"# {'-' * 25}\n"
+    TAB = "    "
 
+    HEADER_TOP = BLANK + DIVIDER + COMMENT + HEADER + UNDERLINE + COMMENT
+    HEADER_BOT = COMMENT + DIVIDER
+
+    # Establish the provided paths and parameters provided by the user
     args, paths, parameters = setup(precheck=False)
     assert(args.parameter_file.endswith(".yaml")), (f"configure only works "
                                                     f"with .yaml paramter " 
@@ -134,25 +146,45 @@ def configure():
     for name in names:
         sys.modules[f"seisflows_{name}"] = custom_import(name)()
 
-    for name in names:
-        if name != "workflow":
-            continue
+    # System defines foundational directory structure required by other modules
+    sys.modules["seisflows_system"].required.validate(paths=True,
+                                                      parameters=False)
 
-        req = sys.modules[f"seisflows_{name}"].required
-        with open(args.parameter_file, "a") as f:
+    # Paths are collected from each module but are written at the end together
+    seisflows_paths = {}
+    with open(args.parameter_file, "a") as f:
+        for name in names:
+            req = sys.modules[f"seisflows_{name}"].required
+            seisflows_paths.update(req.paths)
+
             # Write the docstring header with all parameters
-            f.write(separator)
-            f.write(f"# {name.upper()} PARAMETERS"
-                    f"# -------------------------\n"
-                    f"#\n")
+            f.write(HEADER_TOP.format(name.upper(), "PARAMETERS"))
             for key, attrs in req.parameters.items():
-                docstr = attrs["docstr"]
-                f.write(f"# {key} ({attrs['type']}): {docstr}\n")
-            f.write(separator)
+                f.write(f"# {key} ({attrs['type']}):\n")
+                # Ensure that header lines are no more than 80 char
+                docstrs = wrap(attrs["docstr"], width=80-len(TAB),
+                               break_long_words=False)
+                for line, docstr in enumerate(docstrs):
+                    f.write(f"#{TAB}{docstr}\n")
+            f.write(HEADER_BOT)
 
-            # Write the actual parameters below the docstring
+            # Write parameters in a YAML consistent format
             for key, attrs in req.parameters.items():
                 f.write(f"{key}: {attrs['default']}\n")
+
+        # Write the paths in the same format as parameters
+        f.write(HEADER_TOP.format("PATHS", ""))
+        for key, attrs in seisflows_paths.items():
+            # Ensure that header lines are no more than 80 char
+            docstr_ = f"{key}: {attrs['docstr']}"
+            docstrs = wrap(docstr_, width=80 - len(TAB), break_long_words=False)
+            for line, docstr in enumerate(docstrs):
+                f.write(f"# {docstr}\n")
+        f.write(HEADER_BOT)
+
+        f.write("PATHS:\n")
+        for key, attrs in seisflows_paths.items():
+            f.write(f"{TAB}{key}: {attrs['default']}\n")
 
 
 def load_modules(**kwargs):

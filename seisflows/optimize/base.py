@@ -9,10 +9,11 @@ import numpy as np
 
 from seisflows.plugins import line_search, preconds
 from seisflows.tools import msg, unix
-from seisflows.tools.err import ParameterError
 from seisflows.tools.tools import loadnpy, savenpy
 from seisflows.tools.math import angle, poissons_ratio
 from seisflows.tools.seismic import Writer
+from seisflows.config import SeisFlowsPathsParameters
+
 
 # seisflows.config objects 
 PAR = sys.modules['seisflows_parameters']
@@ -82,57 +83,67 @@ class Base:
         self.writer = None
         self.restarted = None
 
-    @staticmethod
-    def check():
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters()
+
+        # Define the Parameters required by this module
+        sf.par("LINESEARCH", required=False, default="Bracket", par_type=str,
+               docstr="Algorithm to use for line search, see "
+                      "seisflows.plugins.line_search for available choices")
+
+        sf.par("PRECOND", required=False, par_type=str,
+               docstr="Algorithm to use for preconditioning gradients, see "
+                      "seisflows.plugins.preconds for available choices")
+
+        sf.par("STEPCOUNTMAX", required=False, default=10, par_type=int,
+               docstr="Max number of trial steps in line search before a "
+                      "change in line serach behavior")
+
+        sf.par("STEPLENINIT", required=False, default=0.05, par_type=float,
+               docstr="Initial line serach step length, as a fraction "
+                      "of current model parameters")
+
+        sf.par("STEPLENMAX", required=False, default=0.5, par_type=float,
+               docstr="Max allowable step length, as a fraction of "
+                      "current model parameters")
+
+        # Define the Paths required by this module
+        sf.path("OPTIMIZE", required=False,
+                default=os.path.join(PATH.SCRATCH, "optimize"),
+                docstr="scratch path for nonlinear optimization data")
+
+        sf.path("WORKDIR", required=True, docstr="SeisFlows working directory")
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters, paths, and dependencies
         """
-        # line search algorithm
-        if "LINESEARCH" not in PAR:
-            setattr(PAR, "LINESEARCH", "Bracket")
-        
-        # Preconditioner
-        if "PRECOND" not in PAR:
-            setattr(PAR, "PRECOND", None)
+        if validate:
+            self.required.validate()
 
-        # Maximum number of trial steps
-        if "STEPCOUNTMAX" not in PAR:
-            setattr(PAR, "STEPCOUNTMAX", 10)
-
-        # Initial step length as fraction of current model
-        if "STEPLENINIT" not in PAR:
-            setattr(PAR, "STEPLENINIT", 0.05)
-
-        # Maximum step length as fraction of current model
-        if "STEPLENMAX" not in PAR:
-            setattr(PAR, "STEPLENMAX", 0.5)
-
-        # Location of temporary files
-        if "OPTIMIZE" not in PATH:
-            setattr(PATH, "OPTIMIZE", f"{PATH.SCRATCH}/optimize")
-
-        # Assertions
-        if "WORKDIR" not in PATH:
-            raise ParameterError
-
-        if PAR.OPTIMIZE in ['base']:
+        if PAR.OPTIMIZE == "base":
             print(msg.CompatibilityError1)
             sys.exit(-1)
 
         if PAR.LINESEARCH:
-            assert PAR.LINESEARCH in dir(line_search)
+            assert PAR.LINESEARCH in dir(line_search), \
+                f"LINESEARCH parameter must be in {dir(line_search)}"
 
         if PAR.PRECOND:
-            assert PAR.PRECOND in dir(preconds)
+            assert PAR.PRECOND in dir(preconds), \
+                f"PRECOND must be in {dir(preconds)}"
 
-        if PAR.STEPLENINIT:
-            assert 0. < PAR.STEPLENINIT
-
-        if PAR.STEPLENMAX:
-            assert 0. < PAR.STEPLENMAX
-
-        if PAR.STEPLENINIT and PAR.STEPLENMAX:
-            assert PAR.STEPLENINIT < PAR.STEPLENMAX
+        assert 0. < PAR.STEPLENINIT, f"STEPLENINIT must be >= 0."
+        assert 0. < PAR.STEPLENMAX, f"STEPLENMAX must be >= 0."
+        assert PAR.STEPLENINIT < PAR.STEPLENMAX, \
+            f"STEPLENINIT must be < STEPLENMAX"
 
     def setup(self):
         """

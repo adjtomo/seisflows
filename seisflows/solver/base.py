@@ -13,6 +13,7 @@ from seisflows.tools import msg, unix
 from seisflows.tools.err import ParameterError
 from seisflows.tools.seismic import Container, call_solver
 from seisflows.tools.tools import Struct, diff, exists
+from seisflows.config import SeisFlowsPathsParameters
 
 
 # Seisflows configuration
@@ -103,19 +104,60 @@ class Base:
         self._mesh_properties = None
         self._source_names = None
 
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters()
+
+        # Define the Parameters required by this module
+        sf.par("MATERIALS", required=True, par_type=str,
+               docstr="Material parameters used to define model. Available: "
+                      "['ELASTIC': Vp, Vs, 'ACOUSTIC': Vp, 'ISOTROPIC', "
+                      "'ANISOTROPIC']")
+
+        sf.par("DENSITY", required=True, par_type=str,
+               docstr="How to treat density during inversion. Available: "
+                      "['CONSTANT': Do not update density, "
+                      "'VARIABLE': Update density]")
+
+        sf.par("NPROC", required=True, par_type=int,
+               docstr="Number of processor to use for each simulation")
+
+        sf.par("SOLVERIO", required=False, default="fortran_binary",
+               par_type=int,
+               docstr="The format external solver files. Available: "
+                      "['fortran_binary', 'adios']")
+
+        sf.path("SOLVER", required=False,
+                default=os.path.join(PATH.SCRATCH, "solver"),
+                docstr="scratch path to hold solver working directories")
+
+        sf.path("SPECFEM_BIN", required=True,
+                docstr="path to the SPECFEM binary executables")
+
+        sf.path("SPECFEM_DATA", required=True,
+                docstr="path to the SPECFEM DATA/ directory containing the "
+                       "'Par_file', 'STATIONS' file and 'CMTSOLUTION' files")
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters and paths
         """
+        if validate:
+            self.required.validate()
+
         # Important to reset parameters to a blank list and let the check
         # statements fill it. If not, each time workflow is resumed, parameters
         # list will append redundant parameters and things stop working
         self.parameters = []
 
-        if "MATERIALS" not in PAR:
-            raise ParameterError(PAR, "MATERIALS")
-        else:
-            assert(PAR.MATERIALS.upper() in ["ELASTIC", "ACOUSTIC"])
+        assert(PAR.MATERIALS.upper() in ["ELASTIC", "ACOUSTIC"]), \
+            "MATERIALS must be 'ELASTIC', or 'ACOUSTIC'"
 
         # Set an internal parameter list
         if PAR.MATERIALS.upper() == "ELASTIC":
@@ -123,47 +165,11 @@ class Base:
         elif PAR.MATERIALS.upper() == "ACOUSTIC":
             self.parameters += ["vp"]
 
-        if "DENSITY" not in PAR:
-            raise ParameterError(PAR, "DENSITY")
-        else:
-            assert(PAR.DENSITY.upper() in ["CONSTANT", "VARIABLE"])
+        assert(PAR.DENSITY.upper() in ["CONSTANT", "VARIABLE"]), \
+            "DENSITY must be 'CONSTANT' or 'VARIABLE'"
 
         if PAR.DENSITY.upper() == "VARIABLE":
             self.parameters += ["rho"]
-
-        # number of processors per simulation
-        if "NPROC" not in PAR:
-            raise ParameterError(PAR, "NPROC")
-
-        # Format used by SPECFEM for reading, writing models
-        # Currently, SPECFEM offers "fortran_binary", "adios"
-        if "SOLVERIO" not in PAR:
-            setattr(PAR, "SOLVERIO", "fortran_binary")
-
-        if "VERBOSE" not in PAR:
-            setattr(PAR, "VERBOSE", True)
-
-        # Required: Solver scratch path
-        if "SCRATCH" not in PATH:
-            raise ParameterError(PATH, "SCRATCH")
-
-        # To override placing solver in scratch directory
-        if "LOCAL" not in PATH:
-            setattr(PATH, "LOCAL", None)
-
-        # To override the location of solver directory
-        if "SOLVER" not in PATH:
-            if PATH.LOCAL:
-                setattr(PATH, "SOLVER", os.path.join(PATH.LOCAL, "solver"))
-            else:
-                setattr(PATH, "SOLVER", os.path.join(PATH.SCRATCH, "solver"))
-
-        # Required: Solver input paths
-        if "SPECFEM_BIN" not in PATH:
-            raise ParameterError(PATH, "SPECFEM_BIN")
-
-        if "SPECFEM_DATA" not in PATH:
-            raise ParameterError(PATH, "SPECFEM_DATA")
 
         # Ensure parameters set properly
         assert hasattr(solver_io, PAR.SOLVERIO)
@@ -171,7 +177,6 @@ class Base:
             "IO method has no attribute 'read_slice'"
         assert hasattr(self.io, "write_slice"), \
             "IO method has no attribute 'write_slice'"
-
 
     def setup(self):
         """ 

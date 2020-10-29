@@ -13,9 +13,8 @@ from seisflows.plugins.solver.specfem2d import smooth_legacy
 from seisflows.tools.seismic import getpar, setpar
 from seisflows.tools import unix
 from seisflows.tools.tools import exists
-from seisflows.config import custom_import
+from seisflows.config import custom_import, SeisFlowsPathsParameters
 from seisflows.tools.seismic import call_solver
-from seisflows.tools.err import ParameterError
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -32,11 +31,39 @@ class Specfem2D(custom_import("solver", "base")):
 
     !!! See base class for method descriptions !!!
     """
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters(super().required)
+
+        # Define the Parameters required by this module
+        sf.par("NT", required=True, par_type=float,
+               docstr="Number of time steps set in the SPECFEM Par_file")
+
+        sf.par("DT", required=True, par_type=float,
+               docstr="Time step or delta set in the SPECFEM Par_file")
+
+        sf.par("F0", required=True, par_type=float,
+               docstr="Dominant source frequency")
+
+        sf.par("FORMAT", required=True, par_type=float,
+               docstr="Format of synthetic waveforms used during workflow, "
+                      "available options: ['ascii', 'su']")
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        super().check()
+        self.parameters = []
+
+        if validate:
+            self.required.validate()
+        super().check(validate=False)
 
         # Set an internal parameter list
         if PAR.MATERIALS.upper() == "ELASTIC":
@@ -44,14 +71,9 @@ class Specfem2D(custom_import("solver", "base")):
         elif PAR.MATERIALS.upper() == "ACOUSTIC":
             self.parameters += ["vp"]
 
-        required_parameters = ["NT", "DT", "F0", "FORMAT"]
-        for req in required_parameters:
-            if req not in PAR:
-                raise ParameterError(self, req)
-
         acceptable_formats = ["SU"]
-        if PAR.FORMAT.upper() not in acceptable_formats:
-            raise Exception(f"'FORMAT' must be {acceptable_formats}")
+        assert(PAR.FORMAT.upper() in acceptable_formats), \
+            f"FORMAT must be {acceptable_formats}"
 
     def check_solver_parameter_files(self):
         """

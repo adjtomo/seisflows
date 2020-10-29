@@ -3,7 +3,7 @@
 This is the Base class for seisflows.workflow.
 It contains mandatory functions that must be called by subclasses
 """
-from seisflows.config import save, DefinePathsParameters
+from seisflows.config import save, SeisFlowsPathsParameters
 
 
 class Base:
@@ -16,24 +16,21 @@ class Base:
         A hard definition of paths and parameters required by this class,
         alongside their necessity for the class and their string explanations.
         """
-        p = DefinePathsParameters()
-        p.par("TEST", required=True, par_type=bool, docstr="test")
+        sf = SeisFlowsPathsParameters()
 
-        return p
+        return sf
 
     def check(self):
         """
-        Checks parameters and paths
+        Checks parameters and paths. Must be implemented by sub-class
         """
-        raise NotImplementedError("Must be implemented by subclass.")
+        pass
 
     def main(self):
         """
-        Main routine
-
-        Execution of a workflow is equivalent to stepping through workflow.main
+        Execution of a workflow is equal to stepping through workflow.main()
         """
-        raise NotImplementedError("Must be implemented by subclass.")
+        pass
 
     @staticmethod
     def checkpoint():

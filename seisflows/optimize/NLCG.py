@@ -6,7 +6,7 @@ It supercedes the `seisflows.optimize.base` class
 import sys
 import numpy as np
 
-from seisflows.config import custom_import
+from seisflows.config import custom_import, SeisFlowsPathsParameters
 from seisflows.plugins import optimize
 
 PAR = sys.modules['seisflows_parameters']
@@ -26,23 +26,33 @@ class NLCG(custom_import("optimize", "base")):
         self.NLCG = None
         self.restarted = None
 
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters(super().required)
+
+        # Define the Parameters required by this module
+        sf.par("NLCGMAX", required=False, default="null", par_type=float,
+               docstr="NLCG periodic restart interval, between 1 and inf")
+
+        sf.par("NLCGTHRESH", required=False, default="null", par_type=float,
+               docstr="NLCG conjugacy restart threshold, between 1 and inf")
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters, paths, and dependencies
         """
-        # Line search algorithm
-        if "LINESEARCH" not in PAR:
-            setattr(PAR, "LINESEARCH", "Bracket")
+        if validate:
+            self.required.validate()
+        super().check(validate=False)
 
-        # NLCG periodic restart interval
-        if "NLCGMAX" not in PAR:
-            setattr(PAR, "NLCGMAX", np.inf)
-
-        # NLCG conjugacy restart threshold
-        if "NLCGTHRESH" not in PAR:
-            setattr(PAR, "NLCGTHRESH", np.inf)
-
-        super().check()
+        assert(PAR.LINESEARCH.upper() == "BRACKET"), \
+            f"NLCG requires a bracketing line search algorithm"
 
     def setup(self):
         """

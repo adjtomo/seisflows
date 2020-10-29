@@ -15,7 +15,7 @@ import seisflows.plugins.solver.specfem3d as solvertools
 from seisflows.tools import unix
 from seisflows.tools.err import ParameterError
 from seisflows.tools.tools import exists
-from seisflows.config import custom_import
+from seisflows.config import custom_import, SeisFlowsPathsParameters
 from seisflows.tools.seismic import call_solver, getpar, setpar
 
 
@@ -34,19 +34,43 @@ class Specfem3D(custom_import("solver", "base")):
 
     !!! See base class for method descriptions !!!
     """
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters(super().required)
+
+        # Define the Parameters required by this module
+        sf.par("NT", required=True, par_type=float,
+               docstr="Number of time steps set in the SPECFEM Par_file")
+
+        sf.par("DT", required=True, par_type=float,
+               docstr="Time step or delta set in the SPECFEM Par_file")
+
+        sf.par("FORMAT", required=True, par_type=float,
+               docstr="Format of synthetic waveforms used during workflow, "
+                      "available options: ['ascii', 'su']")
+
+        sf.par("COMPONENTS", required=False, default="ZNE", par_type=str,
+               docstr="Components used to generate data, formatted as a single "
+                      "string, e.g. ZNE or NZ or E")
+
+        sf.par("SOURCE_PREFIX", required=False, default="CMTSOLUTION",
+               par_type=str,
+               docstr="Prefix of SOURCE files in path SPECFEM_DATA. Available "
+                      "['CMTSOLUTION', FORCESOLUTION']")
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        # Run Base class checks. Important to run these first as they set
-        # the empty parameter list
-        super().check()
-
-        required_parameters = ["NT", "DT", "F0", "FORMAT", "COMPONENTS",
-                               "SOURCE_PREFIX"]
-        for req in required_parameters:
-            if req not in PAR:
-                raise ParameterError(self, req)
+        if validate:
+            self.required.validate()
+        super().check(validate=False)
 
         acceptable_formats = ["SU", "ASCII"]
         if PAR.FORMAT.upper() not in acceptable_formats:

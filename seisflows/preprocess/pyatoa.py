@@ -15,9 +15,8 @@ import pyatoa
 import numpy as np
 from glob import glob
 from seisflows.tools import unix
-from seisflows.config import Dict
+from seisflows.config import SeisFlowsPathsParameters
 from pyatoa.utils.images import merge_pdfs
-from seisflows.tools.err import ParameterError
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -40,65 +39,108 @@ class Pyatoa:
         self.path_datasets = None
         self.path_figures = None
 
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters()
+
+        # Define the Parameters required by this module
+        sf.par("FORMAT", required=False, default="ascii",  par_type=str,
+               docstr="File format for waveforms, available: ['ascii']")
+
+        sf.par("UNIT_OUTPUT", required=True, par_type=str,
+               docstr="Data units. Must match the synthetic output of external "
+                      "solver. Available: ['DISP': displacement, "
+                      "'VEL': velocity, 'ACC': acceleration]")
+
+        sf.par("MIN_PERIOD", required=True, par_type=float,
+               docstr="Minimum filter corner in seconds")
+
+        sf.par("MAX_PERIOD", required=True, par_type=float,
+               docstr="Maximum filter corner in seconds")
+
+        sf.par("CORNERS", required=False, default=4, par_type=int,
+               docstr="Number of filter corners")
+
+        sf.par("CLIENT", required=False, default="null", par_type=str,
+               docstr="Client name for ObsPy FDSN data gathering")
+
+        sf.par("START_PAD", required=False, default=0, par_type=float,
+               docstr="For data gathering; time before origin time to gather. "
+                      "START_PAD >= T_0 in SPECFEM constants.h.in. "
+                      "Positive values only")
+
+        sf.par("END_PAD", required=True, par_type=float,
+               docstr="For data gathering; time after origin time to gather. "
+                      "END_PAD >= NT * DT (of Par_file). Positive values only")
+
+        sf.par("ROTATE", required=False, default=False, par_type=bool,
+               docstr="Rotate waveform components NEZ -> RTZ")
+
+        sf.par("ADJ_SRC_TYPE", required=True, par_type=str,
+               docstr="Adjoint source type to use. Available: "
+                      "['cc': cross-correlation, 'mt': multitaper, "
+                      "wav: waveform']")
+
+        sf.par("PYFLEX_PRESET", required=True, par_type=str,
+               docstr="Parameter map for Pyflex config. For available choices, "
+                      "see Pyatoa docs page")
+
+        sf.par("FIX_WINDOWS", required=False, default=False,
+               par_type="bool or str",
+               docstr="Time window evaluation: available: "
+                      "[True, False, 'ITER', 'ONCE'] "
+                      "True: Same windows for all but i01s00; "
+                      "False: New windows at each evaluation; "
+                      "'ITER': New windows at first evaluation of each iter; "
+                      "'ONCE': New windows at first evaluation of workflow")
+
+        sf.par("PLOT", required=False, default=True, par_type=bool,
+               docstr="Plot waveforms and maps as .pdf files")
+
+        sf.par("SNAPSHOT", required=False, default=True, par_type=bool,
+               docstr="Copy ASDFDataSets on disk for data redundancy")
+
+        sf.par("LOGGING", required=False, default="DEBUG", par_type=str,
+               docstr="Log level. Available: "
+                      "['null': no logging, 'warning': warnings only, "
+                      "'info': task tracking, 'debug': log everything]")
+
+        # Define the Paths required by this module
+        sf.path("PREPROCESS", required=False,
+                default=os.path.join(PATH.SCRATCH, "preprocess"),
+                docstr="scratch path to store waveform data and figures")
+
+        sf.path("DATA", required=False,
+                docstr="Directory to locally stored data")
+
+        return sf
+
+    def check(self, validate=True):
         """ 
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
         """
-        # Check the path requirements
-        if "PREPROCESS" not in PATH:
-            setattr(PATH, "PREPROCESS", 
-                    os.path.join(PATH.SCRATCH, "preprocess"))
+        if validate:
+            self.required.validate()
 
-        if "DATA" not in PATH:
-            setattr(PATH, "DATA", None)
+        # Check that other modules have set parameters that will be used here
+        for required_parameter in ["COMPONENTS", "FORMAT"]:
+            assert(required_parameter in PAR), \
+                f"Pyatoa requires {required_parameter}"
 
-        if "RESPONSE" not in PATH:
-            setattr(PATH, "RESPONSE", None)
 
-        # Check the existence of required parameters
-        required_parameters = ["COMPONENTS", "UNIT_OUTPUT", "MIN_PERIOD",
-                               "MAX_PERIOD", "CORNERS", "ROTATE",
-                               "ADJ_SRC_TYPE", "PYFLEX_PRESET",
-                               "FIX_WINDOWS", "PLOT", "FORMAT"
-                               ]
-        for req in required_parameters:
-            if req not in PAR:
-                raise ParameterError(PAR, req)
-
-        # Check specific parameter requirements
         if PAR.FORMAT != "ascii":
             raise ValueError("Pyatoa preprocess currently only works with "
                              "the 'ascii' format")
 
-        # Set default values parameters for any non-set parameters
-        if "PLOT" not in PAR:
-            setattr(PAR, "PLOT", True)
-
-        if "LOGGING" not in PAR:
-            setattr(PAR, "LOGGING", "DEBUG")
-
-        if "MAP_CORNERS" not in PAR:
-            setattr(PAR, "MAP_CORNERS", None)
-
-        if "CLIENT" not in PAR:
-            setattr(PAR, "CLIENT", None)
-
-        if "SNAPSHOT" not in PAR:
-            setattr(PAR, "SNAPSHOT", True)
-
-        # Used to define the start time of fetched observation waveforms
-        if "START_PAD" not in PAR:
-            setattr(PAR, "START_PAD", 20)
-
-        # Used to define the end time of fetched observation waveforms
-        if "END_PAD" not in PAR:
-            setattr(PAR, "END_PAD", PAR.DT * PAR.NT + PAR.START_PAD + 5)
-        else:
-            if PAR.DT * PAR.NT >= PAR.START_PAD + PAR.END_PAD:
-                raise ValueError("Pyatoa preprocess parameters START_PAD and "
-                                 "END_PAD will not provide long enough obs."
-                                 "traces to match the length of synthetics")
+        if PAR.DT * PAR.NT >= PAR.START_PAD + PAR.END_PAD:
+            raise ValueError("Pyatoa preprocess parameters START_PAD and "
+                             "END_PAD will not provide long enough obs."
+                             "traces to match the length of synthetics")
 
     def setup(self):
         """

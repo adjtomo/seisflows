@@ -10,6 +10,8 @@ from seisflows.tools import unix
 from seisflows.tools.tools import exists
 from seisflows.tools.err import ParameterError
 from seisflows.workflow.base import Base
+from seisflows.config import SeisFlowsPathsParameters
+
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -27,40 +29,51 @@ class Migration(Base):
     Performs the workflow of an inversion up to the postprocessing. In the
     terminology of seismic exploration, implements a 'reverse time migration'.
     """
-    def check(self):
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters(super().required)
+
+        # Define the Paths required by this module
+        sf.path("SCRATCH", required=True,
+                docstr="scratch path to hold temporary data during workflow")
+
+        sf.path("OUTPUT", required=True,
+                docstr="directory to save workflow outputs to disk")
+
+        sf.path("LOCAL", required=False, default="null",
+                docstr="local path to data available to workflow")
+
+        sf.path("DATA", required=False, default="null",
+                docstr="path to data available to workflow")
+
+        sf.path("MODEL_INIT", required=True,
+                docstr="location of the initial model to be used for workflow")
+
+        sf.par("SAVEGRADIENT", required=False, default=True, par_type=bool,
+               docstr="Save gradient files after each iteration")
+
+        sf.par("SAVEKERNELS", required=False, default=False, par_type=bool,
+               docstr="Save event kernel files after each iteration")
+
+        sf.par("SAVETRACES", required=False, default=False, par_type=bool,
+               docstr="Save waveform traces after each iteration")
+
+        return sf
+
+    def check(self, validate=True):
         """ 
         Checks parameters and paths
         """
-        # check paths
-        if "SCRATCH" not in PATH:
-            raise ParameterError(PATH, "SCRATCH")
-
-        if "LOCAL" not in PATH:
-            setattr(PATH, "LOCAL", None)
-
-        if "OUTPUT" not in PATH:
-            raise ParameterError(PATH, "OUTPUT")
-
-        # check input
-        if "DATA" not in PATH:
-            setattr(PATH, "DATA", None)
+        if validate:
+            self.required.validate()
+        super().check(validate=False)
 
         if not exists(PATH.DATA):
-            assert "MODEL_TRUE" in PATH
-
-        if "MODEL_INIT" not in PATH:
-            raise ParameterError(PATH, "MODEL_INIT")
-
-        # check output
-        if "SAVEGRADIENT" not in PAR:
-            setattr(PAR, "SAVEGRADIENT", 1)
-
-        if "SAVEKERNELS" not in PAR:
-            setattr(PAR, "SAVEKERNELS", 0)
-
-        if "SAVETRACES" not in PAR:
-            setattr(PAR, "SAVETRACES", 0)
-
+            assert "MODEL_TRUE" in PATH, f"DATA or MODEL_TRUE must exist"
 
     def main(self):
         """ Migrates seismic data
@@ -106,9 +119,6 @@ class Migration(Base):
             self.save_kernels_sum()
 
         print "Finished\n"
-
-
-    ### utility functions
 
     def prepare_model(self):
         model = PATH.OUTPUT +"/"+ "model_init"
