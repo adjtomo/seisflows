@@ -23,6 +23,7 @@ from seisflows.tools import msg
 from seisflows.tools import unix
 from seisflows.tools.tools import loadjson, loadobj, savejson, saveobj
 from seisflows.tools.tools import module_exists
+from seisflows.tools.err import ParameterError
 
 
 # The following list is one of the few hardwired aspects of the whole
@@ -172,6 +173,94 @@ class Null(object):
 
     def __delattr__(self, key):
         return self
+
+
+class SeisFlowsPathsParameters:
+    """
+    A class used to simplify defining required or optional paths and parameters
+    by specifying the string explanation of the parameter, if it is optional
+    or required, and if optional, the default value. Also replaces the old
+    lengthy check() functions by performing a validate() function to ensure
+    that required parameters and paths are present, while setting default
+    values for non-required paths and parameters.
+    """
+    def __init__(self, base_class=None):
+        """
+        We simply store paths and parameters as nested dictioanries. Due to the
+        use of inheritance, the class can be passed to itself on initialization
+        which means paths and parameters can be adopted from base class
+
+        :type base_class: seisflows.config.DefinePathsParameters
+        :param base_class: paths and parameters from base class that need to be
+            inherited by the current child class.
+        """
+        self.parameters, self.paths = {}, {}
+        if base_class:
+            self.parameters.update(base_class.parameters)
+            self.paths.update(base_class.paths)
+
+    def par(self, parameter, required, docstr, par_type, default=None):
+        """
+        Add a parameter to the internal list of parameters
+
+        :type parameter: str
+        :param paremeter: name of the parameter
+        :type required: bool
+        :param required: whether or not the parameter is required. If it is not
+            required, then a default value should be given
+        :type docstr: str
+        :param docstr: Short explanatory doc string that defines what the
+            parameter is used for.
+        :type par_type: class or str
+        :param par_type: the parameter type, used for doc strings and also
+            parameter validation
+        :param default: default value for the parameter, can be any type
+        """
+        if required:
+            default = "!!! REQUIRED PARAMETER !!!"
+        if type(par_type) == type:
+            par_type = par_type.__name__
+        self.parameters[parameter] = {"docstr": docstr, "required": required,
+                                      "default": default, "type": par_type}
+
+    def path(self, path, required, docstr, default=None):
+        """
+        Add a path to the internal list of paths
+
+        :type path: str
+        :param path: name of the parameter
+        :type required: bool
+        :param required: whether or not the path is required. If it is not
+            required, then a default value should be given
+        :type docstr: str
+        :param docstr: Short explanatory doc string that defines what the
+            path is used for.
+        :type default: str
+        :param default: default value for the path
+
+        """
+        if required:
+            default = "!!! REQUIRED PATH !!!"
+        self.paths[path] = {"docstr": docstr, "required": required,
+                            "default": default}
+
+    def validate(self):
+        """
+        Set paths and parameter values into sys.modules, ensuring that required
+        paths and parameters are set, and that default values are stored
+        """
+        PAR = sys.modules["seisflows_parameters"]
+        PATH = sys.modules["seisflows_paths"]
+
+        # Ensure that required paths and parameters are made and
+        # non-required paths or parameters are set to default values
+        for choice, container in zip([self.parameters, self.paths],
+                                     [PAR, PATH]):
+            for key, attrs in choice.items():
+                if attrs["required"] and key not in container:
+                    raise ParameterError(container, key)
+                elif key not in container:
+                    setattr(container, key, attrs["default"])
 
 
 def custom_import(name=None, module=None, classname=None):

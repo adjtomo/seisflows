@@ -199,12 +199,12 @@ def loadpy(filename):
     :type filename: str
     :param filename: filename of .py file
     """
-    if not exists(filename):
+    if not os.path.exists(filename):
         print(msg.FileError.format(file=filename))
         raise IOError
 
     # Load module
-    name = re.sub('.py$', '', basename(filename))
+    name = re.sub('.py$', '', os.path.basename(filename))
     module = load_source(name, filename)
 
     # Strip private attributes

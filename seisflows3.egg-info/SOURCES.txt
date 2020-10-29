@@ -36,7 +36,6 @@ seisflows/preprocess/base.py
 seisflows/preprocess/pyatoa.py
 seisflows/scripts/__init__.py
 seisflows/scripts/seisflows.py
-seisflows/scripts/sfcheck.py
 seisflows/solver/__init__.py
 seisflows/solver/base.py
 seisflows/solver/specfem2d.py

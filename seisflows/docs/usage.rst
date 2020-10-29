@@ -7,6 +7,8 @@ run and check on an inversion workflow.
 
 The SeisFlows Parameters File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SeisFlows is designed around a parameter file which defines all the parameters
+that control the underlying machinery in the package.
 
 check() functions
 ~~~~~~~~~~~~~~~~~~~~~~~~

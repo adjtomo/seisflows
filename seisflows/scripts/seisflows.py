@@ -5,11 +5,13 @@ that allows user interface with the underlying SeisFlows environment.
 """
 import os
 import sys
+import yaml
 import argparse
 from glob import glob
 
 from seisflows.tools import unix, tools
-from seisflows.config import init_seisflows, tilde_expand, Dict, names
+from seisflows.config import (init_seisflows, tilde_expand, Dict, names, 
+                              custom_import)
 from seisflows.tools.tools import loadyaml, loadpy
 
 
@@ -86,10 +88,11 @@ def setup(precheck=True):
 
     # Register parameters. Allow for legacy .py parameter file naming but throw
     # a deprecation warning as a .yaml file is the preferred method.
-    if args.parameter_file.endswith("yaml"):
+    if args.parameter_file.endswith(".yaml"):
         parameters = loadyaml(args.parameter_file)
         paths = parameters["PATHS"]
-    elif args.parameter_file.endwith("py"):
+        parameters.pop("PATHS")  # remove redundant path entry
+    elif args.parameter_file.endwith(".py"):
         assert(os.path.exists(args.paths_file)), \
             f"Legacy parameter file requires corresponding path file"
         parameters = loadpy(args.parameter_file)
@@ -112,15 +115,44 @@ def setup(precheck=True):
 
     return args, paths, parameters
 
-def config():
+def configure():
     """
     Generate the parameters.yaml file on the fly by establishing each of the
     SeisFlows modules, running the check functions for each module, and writing
     everything to the parameters file
     :return:
     """
-    args, paths, parameters = setup(precheck=False)
+    # str header to separate values in the parameter file
+    separator = f"\n# {'=' * 78}\n#\n"
 
+    args, paths, parameters = setup(precheck=False)
+    assert(args.parameter_file.endswith(".yaml")), (f"configure only works "
+                                                    f"with .yaml paramter " 
+                                                    f"files")
+
+    # Need to initiate all modules before we use any of them
+    for name in names:
+        sys.modules[f"seisflows_{name}"] = custom_import(name)()
+
+    for name in names:
+        if name != "workflow":
+            continue
+
+        req = sys.modules[f"seisflows_{name}"].required
+        with open(args.parameter_file, "a") as f:
+            # Write the docstring header with all parameters
+            f.write(separator)
+            f.write(f"# {name.upper()} PARAMETERS"
+                    f"# -------------------------\n"
+                    f"#\n")
+            for key, attrs in req.parameters.items():
+                docstr = attrs["docstr"]
+                f.write(f"# {key} ({attrs['type']}): {docstr}\n")
+            f.write(separator)
+
+            # Write the actual parameters below the docstring
+            for key, attrs in req.parameters.items():
+                f.write(f"{key}: {attrs['default']}\n")
 
 
 def load_modules(**kwargs):
@@ -423,7 +455,8 @@ def main():
     """
     # Easy way to convert strings to functions
     acceptable_args = {"submit": submit, "resume": resume, "clean": clean,
-                       "restart": restart, "debug": debug}
+                       "restart": restart, "debug": debug,
+                       "configure": configure}
 
     try:
         main_arg = get_args().main_args[0]

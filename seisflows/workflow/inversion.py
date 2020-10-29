@@ -13,8 +13,7 @@ import numpy as np
 from seisflows.config import custom_import
 from seisflows.tools import unix
 from seisflows.tools.tools import exists
-from seisflows.config import save
-from seisflows.tools.err import ParameterError
+from seisflows.config import save, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -44,94 +43,104 @@ class Inversion(custom_import("workflow", "base")):
     Commands for running in serial or parallel on a workstation or cluster
     are abstracted through the "system" interface.
     """
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters(super().required)
+
+        # Define the Parameters required by this module
+        sf.par("BEGIN", required=True, par_type=int,
+               docstr="First iteration of workflow, 1 <= BEGIN <= inf")
+
+        sf.par("END", required=True, par_type=int,
+               docstr="Final iteration of workflow, BEGIN <= END <= inf")
+
+        sf.par("RESUME_FROM", required=False, default=None, par_type=str,
+               docstr="Name of task to resume inversion from")
+
+        sf.par("STOP_AFTER", required=False, default=None, par_type=str,
+               docstr="Name of task to stop inversion after finishing")
+
+        sf.par("CASE", required=True, par_type=str,
+               docstr="type of inversion, real data or synthetics only, "
+                      "choices are 'data' or 'synthetic'")
+
+        sf.par("SAVEMODEL", required=False, default=True, par_type=bool,
+               docstr="Save final model files after each iteration")
+
+        sf.par("SAVEGRADIENT", required=False, default=False, par_type=bool,
+               docstr="Save gradient files after each iteration")
+
+        sf.par("SAVEKERNELS", required=False, default=False, par_type=bool,
+               docstr="Save kernel files after each iteration")
+
+        sf.par("SAVERESIDUALS", required=False, default=False, par_type=bool,
+               docstr="Save waveform residuals after each iteration")
+
+        sf.par("SAVEAS", required=False, default="binary", par_type=str,
+               docstr="Format to save models, gradients, kernels, "
+                     "available formats are [binary, vector, both], where "
+                     "'binary' saves files in the native SPECFEM .bin files, "
+                     "vector saves files in NumPy .npy files, and both saves "
+                     "both formats")
+
+        sf.par("VERBOSE", required=False, default=True, par_type=bool,
+               docstr="Provide detailed statements to the output logs")
+
+        # Define the Paths required by this module
+        sf.path("SCRATCH", required=True,
+                docstr="scratch path to hold temporary data during workflow")
+
+        sf.path("OUTPUT", required=True,
+                docstr="directory to save workflow outputs to disk")
+
+        sf.path("MODEL_INIT", required=True,
+                docstr="location of the initial model to be used for workflow")
+
+        sf.path("MODEL_TRUE", required=False,
+                docstr="location of the target model to be used when "
+                      "PAR.CASE == 'synthetic'")
+
+        sf.path("LOCAL", required=False, default=None,
+                docstr="local path to data available to workflow")
+
+        sf.path("FUNC", required=False,
+                default=os.path.join(PATH.SCRATCH, "evalfunc"),
+                docstr="scratch path to store data related to function "
+                       "evaluations")
+
+        sf.path("GRAD", required=False,
+                default=os.path.join(PATH.SCRATCH, "evalgrad"),
+                docstr="scratch path to store data related to gradient "
+                       "evaluations")
+
+        sf.path("HESS", required=False,
+               default=os.path.join(PATH.SCRATCH, "evalhess"),
+               docstr="scratch path to store data related to Hessian "
+                      "evaluations")
+
+        sf.path("OPTIMIZE", required=False,
+                default=os.path.join(PATH.SCRATCH, "optimize"),
+                docstr="scratch path to store data related to nonlinear "
+                       "optimization")
+
+        return sf
+
     def check(self):
         """
         Checks parameters and paths
         """
-        # Starting and stopping iterations
-        if "BEGIN" not in PAR:
-            raise ParameterError(PAR, "BEGIN")
+        self.required.validate()
 
-        if "END" not in PAR:
-            raise ParameterError(PAR, "END")
+        assert 1 <= PAR.BEGIN <= PAR.END, (f"Incorrect BEGIN or END parameter: "
+                                           f"1 <= {PAR.BEGIN} <= {PAR.END}")
 
-        # Scratch paths
-        if "SCRATCH" not in PATH:
-            raise ParameterError(PATH, "SCRATCH")
-
-        if "LOCAL" not in PATH:
-            setattr(PATH, "LOCAL", None)
-
-        if "FUNC" not in PATH:
-            setattr(PATH, "FUNC", os.path.join(PATH.SCRATCH, "evalfunc"))
-
-        if "GRAD" not in PATH:
-            setattr(PATH, "GRAD", os.path.join(PATH.SCRATCH, "evalgrad"))
-
-        if "HESS" not in PATH:
-            setattr(PATH, "HESS", os.path.join(PATH.SCRATCH, "evalhess"))
-
-        if "OPTIMIZE" not in PATH:
-            setattr(PATH, "OPTIMIZE", os.path.join(PATH.SCRATCH, "optimize"))
-
-        # Input paths
-        if "DATA" not in PATH:
-            setattr(PATH, "DATA", None)
-
-        if "MODEL_INIT" not in PATH:
-            raise ParameterError(PATH, "MODEL_INIT")
-
-        # Output paths
-        if "OUTPUT" not in PATH:
-            raise ParameterError(PATH, "OUTPUT")
-
-        # Outputs to disk 
-        if "SAVEMODEL" not in PAR:
-            setattr(PAR, "SAVEMODEL", True)
-
-        if "SAVEGRADIENT" not in PAR:
-            setattr(PAR, "SAVEGRADIENT", False)
-
-        if "SAVEKERNELS" not in PAR:
-            setattr(PAR, "SAVEKERNELS", False)
-
-        if "SAVEAS" not in PAR:
-            setattr(PAR, "SAVEAS", "binary")
-
-        if "SAVETRACES" not in PAR:
-            setattr(PAR, "SAVETRACES", False)
-
-        if "SAVERESIDUALS" not in PAR:
-            setattr(PAR, "SAVERESIDUALS", False)
-
-        # Print statement outputs
-        if "VERBOSE" not in PAR:
-            setattr(PAR, "VERBOSE", True)
-
-        # Parameter assertions
-        assert 1 <= PAR.BEGIN <= PAR.END
-
-        # Path assertions
-        if PATH.DATA in PAR and not exists(PATH.DATA):
-            assert "MODEL_TRUE" in PATH, "MODEL_TRUE must be in PATH"
-            assert exists(PATH.MODEL_TRUE), "MODEL_TRUE does not exist"
-
-        # Check that there is a given starting model
-        if not exists(PATH.MODEL_INIT):
-            raise Exception("MODEL_INIT does not exist")
-
-        # Check if this is a synthetic-synthetic or data-synthetic inversion
-        if "CASE" not in PAR:
-            raise ParameterError(PAR, "CASE")
-        elif PAR.CASE.upper() == "SYNTHETIC" and not exists(PATH.MODEL_TRUE):
-            raise Exception("CASE == SYNTHETIC requires PATH.MODEL_TRUE")
-
-        if "RESUME_FROM" not in PAR:
-            setattr(PAR, "RESUME_FROM", None)
-
-        if "STOP_AFTER" not in PAR:
-            setattr(PAR, "STOP_AFTER", None)
-
+        if PAR.CASE.upper() == "SYNTHETIC":
+            assert exists(PATH.MODEL_TRUE), ("CASE == SYNTHETIC requires "
+                                             "PATH.MODEL_TRUE")
     def main(self):
         """
         !!! This function controls the main workflow !!!

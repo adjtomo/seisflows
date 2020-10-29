@@ -25,14 +25,24 @@ class Base:
     Nonlinear optimization abstract base class
 
     Base class on top of which steepest descent, nonlinear conjugate, quasi-
-    Newton and Newton methods can be implemented.  Includes methods for
-    both search direction and line search.
+    Newton and Newton methods can be implemented. Includes methods for both
+    search direction and line search.
 
-    To reduce memory overhead, vectors are read from disk rather than passed
-    from calling routines. For example, at the beginning of compute_direction
-    the current gradient is  read from  'g_new' and the resulting search
-    direction is written to 'p_new'. As the inversion progresses, other
-    information is stored as well.
+    .. note::
+        To reduce memory overhead, vectors are read from disk rather than passed
+        from calling routines. For example, at the beginning of
+        compute_direction the current gradient is  read from  'g_new' and the
+        resulting search direction is written to 'p_new'. As the inversion
+        progresses, other information is stored as well.
+
+    .. note::
+        The default numerical parameters defined below should work well for a
+        range of applications without manual tuning. If the nonlinear
+        optimization procedure stagnates, it may be due to issues involving
+        data quality or the choice of data misfit, data processing, or
+        regularization parameters.  Problems in any of these areas usually
+        manifest themselves through stagnation of the nonlinear optimization
+        algorithm.
 
     Variables:
         m_new - current model
@@ -76,15 +86,6 @@ class Base:
     def check():
         """
         Checks parameters, paths, and dependencies
-
-        Note:
-        The default numerical parameters defined below should work well for a
-        range of applications without manual tuning. If the nonlinear
-        optimization procedure stagnates, it may be due to issues involving
-        data quality or the choice of data misfit, data processing, or
-        regularization parameters.  Problems in any of these areas usually
-        manifest themselves through stagnation of the nonlinear optimization
-        algorithm.
         """
         # line search algorithm
         if "LINESEARCH" not in PAR:

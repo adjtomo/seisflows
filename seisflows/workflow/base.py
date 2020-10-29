@@ -3,13 +3,24 @@
 This is the Base class for seisflows.workflow.
 It contains mandatory functions that must be called by subclasses
 """
-from seisflows.config import save
+from seisflows.config import save, DefinePathsParameters
 
 
 class Base:
     """
     Workflow abstract base class
     """
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        p = DefinePathsParameters()
+        p.par("TEST", required=True, par_type=bool, docstr="test")
+
+        return p
+
     def check(self):
         """
         Checks parameters and paths
