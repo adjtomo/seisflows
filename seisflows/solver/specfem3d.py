@@ -13,7 +13,6 @@ import warnings
 import seisflows.plugins.solver.specfem3d as solvertools
 
 from seisflows.tools import unix
-from seisflows.tools.err import ParameterError
 from seisflows.tools.tools import exists
 from seisflows.config import custom_import, SeisFlowsPathsParameters
 from seisflows.tools.seismic import call_solver, getpar, setpar

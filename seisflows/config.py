@@ -12,7 +12,6 @@ a class that is instantiated and made accessible via sys.modules, and a
 parameter in a global dictionary. Once in memory, these objects can be thought
 of as comprising the complete 'state' of a SeisFlows session
 """
-
 import os
 import sys
 import types
@@ -30,6 +29,11 @@ from seisflows.tools.err import ParameterError
 # SeisFlows package. Any changes may result in circular imports, other problems
 names = ["system", "preprocess", "solver", "postprocess",
          "optimize", "workflow"]
+
+
+# Set the location of the main repository as well as the template parameter file
+ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+PAR_FILE = os.path.join(ROOT_DIR, "parameters.yaml")
 
 
 def init_seisflows():
@@ -317,7 +321,7 @@ def custom_import(name=None, module=None, classname=None):
             classname = module.title().replace("_", "")
 
     # Generate package list
-    packages = ["seisflows"]
+    packages = ["seisflows", "seisflows-super"]
 
     # Check if modules exist, otherwise raise custom exception
     _exists = False

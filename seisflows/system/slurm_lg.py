@@ -27,7 +27,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class SlurmLg(custom_import('system', 'base')):
+class SlurmLg(custom_import("system", "base")):
     """
     An interface through which to submit workflows, run tasks in serial or
     parallel, and perform other system functions.
@@ -51,7 +51,7 @@ class SlurmLg(custom_import('system', 'base')):
         A hard definition of paths and parameters required by this class,
         alongside their necessity for the class and their string explanations.
         """
-        sf = SeisFlowsPathsParameters()
+        sf = SeisFlowsPathsParameters(super().required)
 
         # Define the Parameters required by this module
         sf.par("NTASKMASK", required=False, default=100, par_type=int,

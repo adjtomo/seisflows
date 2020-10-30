@@ -34,7 +34,8 @@ class Serial(custom_import("system", "base")):
         sf.par("NPROC", required=False, default=1, par_type=int,
                docstr="Number of processor to use for each simulation")
 
-        sf.par("MPIEXEC", required=False, default="", par_type=str,
+
+        sf.par("MPIEXEC", required=False, default="null", par_type=str,
                docstr="Function used to invoke parallel executables")
 
         return sf

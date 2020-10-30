@@ -49,6 +49,10 @@ class Base:
 
         # Define the Paths required by this module
         # note: PATH.WORKDIR has been set by the entry point seisflows.setup()
+        sf.path("SFSUPER", required=False,
+                docstr="seisflows-super directory containing any modules "
+                       "meant to overload the main package modules")
+
         sf.path("SCRATCH", required=False,
                 default=os.path.join(PATH.WORKDIR, "scratch"),
                 docstr="scratch path to hold temporary data during workflow")
@@ -60,6 +64,7 @@ class Base:
         sf.path("SYSTEM", required=False,
                 default=os.path.join(PATH.WORKDIR, "scratch", "system"),
                 docstr="scratch path to hold any system related data")
+
 
         sf.path("LOCAL", required=False, default="null",
                 docstr="path to local data to be used during workflow")

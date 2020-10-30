@@ -2,15 +2,23 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows-super/preprocess/pyatoa_nz.py" beforeDir="false" afterPath="$PROJECT_DIR$/../seisflows-super/seisflows-super/preprocess/pyatoa_nz.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/optimize/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/postprocess/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/preprocess/pyatoa_nz.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/solver/specfem3d_maui.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/system/chinook_lg.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/system/maui_lg.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/workflow/thrifty_inversion.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/workflow/thrifty_maui.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/optimize/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/parameters.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/parameters.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/preprocess/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/preprocess/base.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/solver/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/solver/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/inversion.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/inversion.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/solver/specfem3d.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/solver/specfem3d.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/system/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/system/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/system/serial.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/system/serial.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/system/slurm_lg.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/system/slurm_lg.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

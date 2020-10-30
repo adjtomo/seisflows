@@ -9,9 +9,9 @@ import argparse
 from glob import glob
 from textwrap import wrap
 from seisflows.tools import unix, tools
-from seisflows.config import (init_seisflows, tilde_expand, Dict, names, 
-                              custom_import)
 from seisflows.tools.tools import loadyaml, loadpy
+from seisflows.config import (init_seisflows, tilde_expand, Dict, names, 
+                              custom_import, ROOT_DIR, PAR_FILE)
 
 
 def get_args():
@@ -29,16 +29,18 @@ def get_args():
 
     # Optional parameters
     parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd())
+    parser.add_argument("--path_file", nargs="?", default="paths.py")
     parser.add_argument("-p", "--parameter_file", nargs="?",
                         default="parameters.yaml")
-    parser.add_argument("--path_file", nargs="?", default="paths.py")
+    parser.add_argument("-s", "--super", nargs="?")
 
     return parser.parse_args()
 
 
 def init():
     """
-    Grab the parameter file from the directory and stick it in the working dir
+    Initiate a SeisFlows working directory by setting up a template parameter
+    file and symlinking the source code for easy access to the repo.
     """
     args = get_args()
     if os.path.exists(args.parameter_file):
@@ -49,15 +51,12 @@ def init():
         else:
             sys.exit()
 
-    # Find the absolute location of the SeisFlows source code
-    REPO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-
     # Template parameter file should be located in the main package directory
-    unix.cp(os.path.join(REPO_DIR, "parameters.yaml"), args.workdir)
+    unix.cp(PAR_FILE, args.workdir)
 
     # Symlink the source code for easy access to repo
     if not os.path.exists(os.path.join(args.workdir, "source_code")):
-        unix.ln(REPO_DIR, os.path.join(args.workdir, "source_code"))
+        unix.ln(ROOT_DIR, os.path.join(args.workdir, "source_code"))
 
 
 def parse_null(parameters):
@@ -118,6 +117,7 @@ def setup(precheck=True):
             parameters.pop("PATHS")
         except KeyError:
             paths = {}
+        # WORKDIR needs to be set here as it's expected by most modules
         if "WORKDIR" not in paths:
             paths["WORKDIR"] = args.workdir
     elif args.parameter_file.endwith(".py"):
