@@ -35,6 +35,9 @@
 * Completely overhauled the parameter setting functionality by mandating 
   parameters be set using a SeisFlowsPathsParameters class, which requires
   docstrings, type and default values to be set. 
+* New parameter system mandates that parameters only belong to 
+  one module, other modules that make use of these parameters can verify 
+  they are set using their check() functions.
 * Overhauled parameter settings now allows for dynamic generation of the 
   parameter file, meaning the user doesnt have to hunt down individual 
   parameters anymore, and with the mandate of docstrings, users can 
@@ -49,3 +52,5 @@
   which removes the need to 'export PYTHONPATH' to another directory and keeps
   all development in a single main repo
 * Totally new documentation page that will include tutorials, examples and API
+* custom_import() now throws sys.exit and not Expections for cleaner 
+  parameter errors
