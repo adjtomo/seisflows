@@ -159,9 +159,10 @@ class Pyatoa:
             Aggregate misfit windows using the Inspector class
             Generate PDFS of waveform figures for easy access
         """
+        unix.cd(self.path_datasets)
         insp = pyatoa.Inspector(PAR.TITLE, verbose=False)
-        insp.discover(path=os.path.join(self.path_datasets, PAR.TITLE))
-        insp.save(path=self.path_datasets) 
+        insp.discover()
+        insp.save() 
 
         self.make_final_pdfs()
 
@@ -250,14 +251,11 @@ class Pyatoa:
         if not sources:
             return
 
-        # Figure out how to tag the output file. Follows Pyaflowa naming scheme.
-        iter_step = os.path.basename(sources[0]).split("_")[0]
-        for source in sources:
-            assert(iter_step in source), (f"The file '{source}' does not match "
-                                          f"the expected tag '{iter_step}'") 
-    
-        # Merge all event pdfs into a single pdf, then delete originals
-        merge_pdfs(fids=sorted(sources), fid_out=f"{iter_step}.pdf")
-        unix.rm(sources)
+        iter_steps = set([os.path.basename(_).split("_")[0] for _ in sources])
+        for iter_step in iter_steps:
+            # Merge pdfs that correspond to the same iteration and step count 
+            fids = [_ for _ in sources if iter_step in _]
+            merge_pdfs(fids=sorted(fids), fid_out=f"{iter_step}.pdf")
+            unix.rm(fids)
 
 
