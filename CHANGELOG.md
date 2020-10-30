@@ -30,3 +30,27 @@
   easier identification of paths being called within the code
 * Replaced literal path concatenations ('path' + '/' + 'to') with os.path.join()
 * Replaced some print statement warnings with actual warnings package calls
+
+## 1.2.0
+* Completely overhauled the parameter setting functionality by mandating 
+  parameters be set using a SeisFlowsPathsParameters class, which requires
+  docstrings, type and default values to be set. 
+* New parameter system mandates that parameters only belong to 
+  one module, other modules that make use of these parameters can verify 
+  they are set using their check() functions.
+* Overhauled parameter settings now allows for dynamic generation of the 
+  parameter file, meaning the user doesnt have to hunt down individual 
+  parameters anymore, and with the mandate of docstrings, users can 
+  automatically determine type and use of each parameter that is set
+* Changed name of seisflows.config.config() to init_seisflows() for a more 
+  descriptive name of the function and to avoid naming confusion
+* Modern setup.py file that provides command line entry points to the package
+* Command line seisflows tool that allows easier interaction with the package
+  and provides things like init and config functions that streamline the 
+  initiation of a seisflows workflow
+* seisflows-super directory now present in the main package repository, 
+  which removes the need to 'export PYTHONPATH' to another directory and keeps
+  all development in a single main repo
+* Totally new documentation page that will include tutorials, examples and API
+* custom_import() now throws sys.exit and not Expections for cleaner 
+  parameter errors
