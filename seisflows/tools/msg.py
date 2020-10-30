@@ -153,7 +153,7 @@ TASK ERROR
 
     Task failed:  {classname}.{method}
 
-    For more information, see output.slurm/{job_id}
+    For more information, see output.logs/{job_id}
 
     Stopping workflow...
 

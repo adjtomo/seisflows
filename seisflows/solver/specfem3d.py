@@ -38,7 +38,8 @@ class Specfem3D(custom_import("solver", "base")):
         """
         Checks parameters and paths
         """
-        # Run Base class checks
+        # Run Base class checks. Important to run these first as they set
+        # the empty parameter list
         super().check()
 
         required_parameters = ["NT", "DT", "F0", "FORMAT", "COMPONENTS",
@@ -98,8 +99,7 @@ class Specfem3D(custom_import("solver", "base")):
         unix.cd(self.cwd)
 
         # Run mesh generation
-        par = getpar("MODEL").strip()
-        if par == "gll":
+        if model_type == "gll":
             self.check_mesh_properties(model_path)
 
             src = glob(os.path.join(model_path, "*"))

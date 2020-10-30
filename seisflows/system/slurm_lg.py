@@ -4,6 +4,12 @@ This is the subclass seisflows.system.slurm_lg
 
 This class provides the core utilities interaction with HPC systems which run
 using Slurm management tools
+
+..note::
+    The main development system for SeisFlows3 used SLURM. Therefore the other
+    system supers will not be up to date until access to those systems are
+    granted. This rosetta stone, for converting from SLURM to other workload
+    management tools will be useful: https://slurm.schedmd.com/rosetta.pdf
 """
 import os
 import math
@@ -43,25 +49,7 @@ class SlurmLg(custom_import('system', 'base')):
         """
         Checks parameters and paths
         """
-        # Name of job
-        if "TITLE" not in PAR:
-            setattr(PAR, "TITLE", os.path.basename(os.path.abspath(".")))
-
-        # Time allocated for workflow in minutes
-        if "WALLTIME" not in PAR:
-            setattr(PAR, "WALLTIME", 30.)
-
-        # Time allocated for each individual task in minutes
-        if "TASKTIME" not in PAR:
-            setattr(PAR, "TASKTIME", 15.)
-
-        # Number of tasks
-        if "NTASK" not in PAR:
-            raise ParameterError(PAR, "NTASK")
-
-        # Number of cores per task
-        if "NPROC" not in PAR:
-            raise ParameterError(PAR, "NPROC")
+        super().check()
 
         # Limit on number of concurrent tasks
         if "NTASKMAX" not in PAR:
@@ -79,42 +67,12 @@ class SlurmLg(custom_import('system', 'base')):
         if "ENVIRONS" not in PAR:
             setattr(PAR, "ENVIRONS", "")
 
-        # Level of detail in output messages
-        if "VERBOSE" not in PAR:
-            setattr(PAR, "VERBOSE", 1)
-
-        # Location where job was submitted
-        if "WORKDIR" not in PATH:
-            setattr(PATH, "WORKDIR", os.path.abspath("."))
-
-        # Location where output files are written
-        if "OUTPUT" not in PATH:
-            setattr(PATH, "OUTPUT", os.path.join(PATH.WORKDIR, "output"))
-
-        # Location where temporary files are written
-        if "SCRATCH" not in PATH:
-            setattr(PATH, "SCRATCH", os.path.join(PATH.WORKDIR, "scratch"))
-
-        # Where system files are written
-        if "SYSTEM" not in PATH:
-            setattr(PATH, "SYSTEM", os.path.join(PATH.SCRATCH, "system"))
-
-        # Optional local scratch path
-        if "LOCAL" not in PATH:
-            setattr(PATH, "LOCAL", None)
 
     def submit(self, workflow):
         """
         Submits workflow as a master job
         """
-        # create scratch directories
-        unix.mkdir(PATH.SCRATCH)
-        unix.mkdir(PATH.SYSTEM)
-
-        # Create output directories
-        unix.mkdir(PATH.OUTPUT)
-        unix.mkdir(os.path.join(PATH.WORKDIR, "output.slurm"))
-
+        output_log, error_log = self.setup()
         workflow.checkpoint()
 
         # Submit using sbatch
@@ -122,7 +80,8 @@ class SlurmLg(custom_import('system', 'base')):
             f"sbatch", 
             f"{PAR.SLURMARGS}",
             f"--job-name={PAR.TITLE}",
-            f"--output=output.log",
+            f"--output={output_log}-%A.log",
+            f"--error={error_log}-%A.log",
             f"--ntasks-per-node={PAR.NODESIZE}",
             f"--nodes=1",
             f"--time={PAR.WALLTIME:d}",
@@ -157,7 +116,7 @@ class SlurmLg(custom_import('system', 'base')):
             f"--ntasks-per-node={PAR.NODESIZE:d}",
             f"--ntasks={PAR.NPROC:d}",
             f"--time={PAR.TASKTIME:d}",
-            f"--output={os.path.join(PATH.WORKDIR, 'output.slurm', '%A_%a')}",
+            f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
             f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
             f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",
@@ -199,7 +158,7 @@ class SlurmLg(custom_import('system', 'base')):
             f"--ntasks-per-node={PAR.NODESIZE:d}",
             f"--ntasks={PAR.NPROC:d}",
             f"--time={PAR.TASKTIME:d}",
-            f"--output={os.path.join(PATH.WORKDIR, 'output.slurm', '%A_%a')}",
+            f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
             f"--array=0-0",
             f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",

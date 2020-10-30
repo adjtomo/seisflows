@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 """
-These are functions used by seisflows.solver.specfem3d
-
-??? Are these necessary ???
+Plugins used for the numerical solver SPECFEM3D_CARTESIAN
 """
 import os
 from seisflows.tools.tools import findpath
