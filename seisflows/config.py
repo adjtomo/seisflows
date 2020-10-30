@@ -52,11 +52,11 @@ def init_seisflows():
 
     # Instantiate and register objects
     for name in names:
-        sys.modules["seisflows_" + name] = custom_import(name)()
+        sys.modules[f"seisflows_{name}"] = custom_import(name)()
 
     # Error checking
     for name in names:
-        sys.modules["seisflows_" + name].check()
+        sys.modules[f"seisflows_{name}"].check()
 
     # Ensure that certain parameters are instantiated
     if not hasattr(sys.modules["seisflows_parameters"], "WORKFLOW"):
@@ -262,7 +262,7 @@ class SeisFlowsPathsParameters:
         if paths:
             PATH = sys.modules["seisflows_paths"]
             for key, attrs in self.paths.items():
-                if attrs["required"] and (key in PATH):
+                if attrs["required"] and (key not in PATH):
                     raise ParameterError(PATH, key)
                 elif key not in PATH:
                     setattr(PATH, key, attrs["default"])
@@ -270,10 +270,11 @@ class SeisFlowsPathsParameters:
         if parameters:
             PAR = sys.modules["seisflows_parameters"]
             for key, attrs in self.parameters.items():
-                if attrs["required"] and (key in PAR):
+                if attrs["required"] and (key not in PAR):
                     raise ParameterError(PAR, key)
                 elif key not in PAR:
                     setattr(PAR, key, attrs["default"])
+
 
 def custom_import(name=None, module=None, classname=None):
     """

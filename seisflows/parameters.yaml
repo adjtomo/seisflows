@@ -7,8 +7,8 @@
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
 # These modules correspond to the structure of the source code, and determine
-# SeisFlow's behavior at runtime. Check the source code directory for available 
-# module names. Each module corresponds to an additional set of sub parameters. 
+# SeisFlows' behavior at runtime. Check the source code directory for available 
+# module names. Each module will require its own set of sub parameters. 
 #
 # To fill this parameter file with docstrings and default values, run:
 #

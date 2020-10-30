@@ -108,8 +108,7 @@ def setup(precheck=True):
         raise FileNotFoundError(f"Parameter file not found: "
                                 f"{args.parameter_file}")
 
-    # Register parameters. Allow for legacy .py parameter file naming but throw
-    # a deprecation warning as a .yaml file is the preferred method.
+    # Register parameters from the parameter file
     if args.parameter_file.endswith(".yaml"):
         parameters = loadyaml(args.parameter_file)
         try:
@@ -117,7 +116,7 @@ def setup(precheck=True):
             parameters.pop("PATHS")
         except KeyError:
             paths = {}
-
+    #  Allow for legacy .py parameter file naming
     elif args.parameter_file.endwith(".py"):
         import warnings
         warnings.warn(".py parameter and path files are deprecated in favor "
@@ -137,10 +136,9 @@ def setup(precheck=True):
     if "WORKDIR" not in paths:
         paths["WORKDIR"] = args.workdir
 
+    # Register parameters to sys, ensure they meet standards of the package
     if precheck:
         precheck_parameters(parameters)
-
-    # Register parameters to sys, ensure they meet standards of the package
     parameters = parse_null(parameters)
     sys.modules["seisflows_parameters"] = Dict(parameters)
 
