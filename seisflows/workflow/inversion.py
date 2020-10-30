@@ -96,10 +96,10 @@ class Inversion(custom_import("workflow", "base")):
 
         # Define the Paths required by this module
         sf.path("MODEL_INIT", required=True,
-                docstr="nitial model to be used for workflow")
+                docstr="Initial model to be used for workflow")
 
         sf.path("MODEL_TRUE", required=False,
-                docstr="target model to be used for PAR.CASE == 'synthetic'")
+                docstr="Target model to be used for PAR.CASE == 'synthetic'")
 
         sf.path("FUNC", required=False,
                 default=os.path.join(PATH.SCRATCH, "evalfunc"),

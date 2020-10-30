@@ -36,6 +36,30 @@ def get_args():
     return parser.parse_args()
 
 
+def init():
+    """
+    Grab the parameter file from the directory and stick it in the working dir
+    """
+    args = get_args()
+    if os.path.exists(args.parameter_file):
+        print(f"\n\tParameter file '{args.parameter_file}' already exists\n")
+        check = input(f"\tOverwrite with blank file? (y/[n]): ")
+        if check == "y":
+            unix.rm(args.parameter_file)
+        else:
+            sys.exit()
+
+    # Find the absolute location of the SeisFlows source code
+    REPO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+
+    # Template parameter file should be located in the main package directory
+    unix.cp(os.path.join(REPO_DIR, "parameters.yaml"), args.workdir)
+
+    # Symlink the source code for easy access to repo
+    if not os.path.exists(os.path.join(args.workdir, "source_code")):
+        unix.ln(REPO_DIR, os.path.join(args.workdir, "source_code"))
+
+
 def parse_null(parameters):
     """
     Seisflows was written in such a way that excluding parameters from the 
@@ -119,13 +143,14 @@ def setup(precheck=True):
 
     return args, paths, parameters
 
+
 def configure():
     """
-    Generate the parameters.yaml file on the fly by establishing each of the
-    SeisFlows modules, running the check functions for each module, and writing
-    everything to the parameters file
+    Dynamically generate the parameter file by writing out docstrings and
+    default values for each of the SeisFlows modules. Writes the file
+    consistent with the .YAML file format.
     """
-    # Set some re-usable strings to provide a consistentl ook to the par file
+    # Set some re-usable strings to provide a consistent look
     BLANK = "\n"
     COMMENT = "#\n"
     DIVIDER = f"# {'=' * 78}\n"
@@ -136,17 +161,17 @@ def configure():
     HEADER_TOP = BLANK + DIVIDER + COMMENT + HEADER + UNDERLINE + COMMENT
     HEADER_BOT = COMMENT + DIVIDER
 
-    # Establish the provided paths and parameters provided by the user
+    # Establish the paths and parameters provided by the user
     args, paths, parameters = setup(precheck=False)
-    assert(args.parameter_file.endswith(".yaml")), (f"configure only works "
-                                                    f"with .yaml paramter " 
-                                                    f"files")
+    assert(args.parameter_file.endswith(".yaml")), \
+        f"seisflows configure only applicable to .yaml parameter files"
 
     # Need to initiate all modules before we use any of them
     for name in names:
         sys.modules[f"seisflows_{name}"] = custom_import(name)()
 
     # System defines foundational directory structure required by other modules
+    # Don't validate the parameters because those won't have been set yet
     sys.modules["seisflows_system"].required.validate(paths=True,
                                                       parameters=False)
 
@@ -177,7 +202,7 @@ def configure():
         for key, attrs in seisflows_paths.items():
             # Ensure that header lines are no more than 80 char
             docstr_ = f"{key}: {attrs['docstr']}"
-            docstrs = wrap(docstr_, width=80 - len(TAB), break_long_words=False)
+            docstrs = wrap(docstr_, width=79 - len(TAB), break_long_words=False)
             for line, docstr in enumerate(docstrs):
                 f.write(f"# {docstr}\n")
         f.write(HEADER_BOT)
@@ -486,17 +511,20 @@ def main():
     Main entry point into the SeisFlows package
     """
     # Easy way to convert strings to functions
-    acceptable_args = {"submit": submit, "resume": resume, "clean": clean,
+    acceptable_args = {"init": init, "configure": configure,
+                       "submit": submit, "resume": resume, "clean": clean,
                        "restart": restart, "debug": debug,
-                       "configure": configure}
+                       }
 
     try:
         main_arg = get_args().main_args[0]
     except IndexError:
-        ok_args = list(acceptable_args.keys()) + SeisShows()._public_methods
+        ok_args = "\n\t\t".join(list(acceptable_args.keys()) +
+                           SeisShows()._public_methods)
         sys.exit(f"\n\tseisflows command requires an argument. "
-                 f"available arguments are:\n\t{ok_args}\n"
-                 f"\ttype 'seisflows -h' for a help message\n")
+                 f"available arguments are:\n"
+                 f"\n\t\t{ok_args}\n"
+                 f"\n\ttype 'seisflows -h' for a help message\n")
 
     if main_arg in acceptable_args.keys():
         acceptable_args[main_arg]()

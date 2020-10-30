@@ -74,7 +74,7 @@ class Base:
             self.check_mute_parameters()
 
         # Data filtering option using Obspy
-        if PAR.FILTER
+        if PAR.FILTER:
             self.check_filter_parameters()
 
         # Assert that readers and writers available

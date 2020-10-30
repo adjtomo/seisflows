@@ -123,9 +123,6 @@ class Base:
                       "['CONSTANT': Do not update density, "
                       "'VARIABLE': Update density]")
 
-        sf.par("NPROC", required=True, par_type=int,
-               docstr="Number of processor to use for each simulation")
-
         sf.par("SOLVERIO", required=False, default="fortran_binary",
                par_type=int,
                docstr="The format external solver files. Available: "
@@ -150,6 +147,11 @@ class Base:
         """
         if validate:
             self.required.validate()
+
+        # Check that other modules have set parameters that will be used here
+        for required_parameter in ["NPROC"]:
+            assert (required_parameter in PAR), \
+                f"Solver requires {required_parameter}"
 
         # Important to reset parameters to a blank list and let the check
         # statements fill it. If not, each time workflow is resumed, parameters

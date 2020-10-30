@@ -117,8 +117,6 @@ class Base:
                 default=os.path.join(PATH.SCRATCH, "optimize"),
                 docstr="scratch path for nonlinear optimization data")
 
-        sf.path("WORKDIR", required=True, docstr="SeisFlows working directory")
-
         return sf
 
     def check(self, validate=True):

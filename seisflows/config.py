@@ -297,10 +297,10 @@ def custom_import(name=None, module=None, classname=None):
     # Parse input arguments for custom import
     # Allow empty system to be called so that import error message can be thrown
     if name is None:
-        raise Exception(msg.ImportError1)
+        sys.exit(msg.ImportError1)
     # Invalid `system` call
     elif name not in names:
-        raise Exception(msg.ImportError2)
+        sys.exit(msg.ImportError2)
     # Attempt to retrieve currently assigned classname from parameters
     if module is None:
         module = _try(name)
@@ -327,10 +327,8 @@ def custom_import(name=None, module=None, classname=None):
             _exists = True
             break
     if not _exists:
-        raise Exception(
-            msg.ImportError3.format(name=name, module=module,
-                                    module_upper=module.upper())
-        )
+        sys.exit(msg.ImportError3.format(name=name, module=module,
+                                         module_upper=name.upper()))
     # Import module
     module = import_module(full_dotted_name)
 
@@ -338,10 +336,8 @@ def custom_import(name=None, module=None, classname=None):
     try:
         return getattr(module, classname)
     except AttributeError:
-        raise Exception(
-            msg.ImportError4.format(name=name, module=module,
-                                    classname=classname)
-        )
+        sys.exit(msg.ImportError4.format(name=name, module=module,
+                                         classname=classname))
 
 
 def tilde_expand(mydict):

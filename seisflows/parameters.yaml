@@ -6,29 +6,27 @@
 #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
-#                                    MODULES                                  
+# These modules correspond to the structure of the source code, and determine
+# SeisFlow's behavior at runtime. Check the source code directory for available 
+# module names. Each module corresponds to an additional set of sub parameters. 
 #
-# These modules correspond to the structure of the source code, determining
-# which modules are loaded at runtime. Each of these modules may also 
-# correspond to a sub-set of parameters below, which in turn may have custom
-# parameters that relate to overwritten/super'd modules
-# 
+# To fill this parameter file with docstrings and default values, run:
 #
-# PARAMETERS:
+# > seisflows configure
+#
+# MODULES:
 # -----------
-# WORKFLOW: The method for running Seisflows
-# SOLVER: External solver to use
-# SYSTEM: Computer architecture
-# OPTIMIZE: Optimization algorithm for the inverse problem
-# LINESEARCH: Line-search algorithm to be used in optimization
-# PREPROCESS: Preprocessing schema for waveform data
-# POSTPROCESS: Postprocessing schema for kernel and gradients
+# WORKFLOW:    The method for running SeisFlows. Equivalent to main()
+# SOLVER:      External numerical solver to use for waveform simulations.
+# SYSTEM:      Computer architecture of the system being used to run SeisFlows
+# OPTIMIZE:    Optimization algorithm for the inverse problem
+# PREPROCESS:  Preprocessing schema for waveform data
+# POSTPROCESS: Postprocessing schema for kernels and gradients
 #
 # ==============================================================================
 WORKFLOW: inversion
 SOLVER: specfem3d
 SYSTEM: serial
 OPTIMIZE: LBFGS 
-LINESEARCH: backtrack
 PREPROCESS: pyatoa
 POSTPROCESS: base
