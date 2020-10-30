@@ -117,26 +117,34 @@ def setup(precheck=True):
             parameters.pop("PATHS")
         except KeyError:
             paths = {}
-        # WORKDIR needs to be set here as it's expected by most modules
-        if "WORKDIR" not in paths:
-            paths["WORKDIR"] = args.workdir
+
     elif args.parameter_file.endwith(".py"):
+        import warnings
+        warnings.warn(".py parameter and path files are deprecated in favor "
+                      "of a .yaml parameter file. Please consider switching as "
+                      "the use of legacy .py files may have unintended"
+                      "consequences at runtime", DeprecationWarning)
+
         assert(os.path.exists(args.paths_file)), \
             f"Legacy parameter file requires corresponding path file"
         parameters = loadpy(args.parameter_file)
         paths = loadpy(args.path_file)
     else:
         raise TypeError(f"Unknown file format for {args.parameter_file} "
-                        f"file must be '.yaml' (preferred) or '.py'")
+                        f"file must be '.yaml' (preferred) or '.py' (legacy)")
+
+    # WORKDIR needs to be set here as it's expected by most modules
+    if "WORKDIR" not in paths:
+        paths["WORKDIR"] = args.workdir
 
     if precheck:
         precheck_parameters(parameters)
 
-    # Register parameters and ensure they meet standards of the package
+    # Register parameters to sys, ensure they meet standards of the package
     parameters = parse_null(parameters)
     sys.modules["seisflows_parameters"] = Dict(parameters)
 
-    # Register paths, expand to relative paths to absolute
+    # Register paths to sys, expand to relative paths to absolute
     paths = tilde_expand(paths)
     paths = {key: os.path.abspath(path) for key, path in paths.items()}
     sys.modules["seisflows_paths"] = Dict(paths)
@@ -166,7 +174,7 @@ def configure():
     assert(args.parameter_file.endswith(".yaml")), \
         f"seisflows configure only applicable to .yaml parameter files"
 
-    # Need to initiate all modules before we use any of them
+    # Need to attempt importing all modules before we access any of them
     for name in names:
         sys.modules[f"seisflows_{name}"] = custom_import(name)()
 
@@ -177,39 +185,52 @@ def configure():
 
     # Paths are collected from each module but are written at the end together
     seisflows_paths = {}
-    with open(args.parameter_file, "a") as f:
-        for name in names:
-            req = sys.modules[f"seisflows_{name}"].required
-            seisflows_paths.update(req.paths)
 
-            # Write the docstring header with all parameters
-            f.write(HEADER_TOP.format(name.upper(), "PARAMETERS"))
-            for key, attrs in req.parameters.items():
-                f.write(f"# {key} ({attrs['type']}):\n")
+    # If writing to parameter file fails for any reason, the file will be
+    # mangled, so create a temporary copy that can be re-instated upon failure
+    temp_par_file = f".{args.parameter_file}"
+    unix.cp(args.parameter_file, temp_par_file)
+    try:
+        with open(args.parameter_file, "a") as f:
+            for name in names:
+                req = sys.modules[f"seisflows_{name}"].required
+                seisflows_paths.update(req.paths)
+
+                # Write the docstring header with all parameters
+                f.write(HEADER_TOP.format(name.upper(), "PARAMETERS"))
+                for key, attrs in req.parameters.items():
+                    f.write(f"# {key} ({attrs['type']}):\n")
+                    # Ensure that header lines are no more than 80 char
+                    docstrs = wrap(attrs["docstr"], width=80-len(TAB),
+                                   break_long_words=False)
+                    for line, docstr in enumerate(docstrs):
+                        f.write(f"#{TAB}{docstr}\n")
+                f.write(HEADER_BOT)
+                # Write parameters in a YAML consistent format
+                for key, attrs in req.parameters.items():
+                    f.write(f"{key}: {attrs['default']}\n")
+
+            # Write the paths in the same format as parameters
+            f.write(HEADER_TOP.format("PATHS", ""))
+            for key, attrs in seisflows_paths.items():
                 # Ensure that header lines are no more than 80 char
-                docstrs = wrap(attrs["docstr"], width=80-len(TAB),
+                docstr_ = f"{key}: {attrs['docstr']}"
+                docstrs = wrap(docstr_, width=79 - len(TAB),
                                break_long_words=False)
                 for line, docstr in enumerate(docstrs):
-                    f.write(f"#{TAB}{docstr}\n")
+                    f.write(f"# {docstr}\n")
             f.write(HEADER_BOT)
 
-            # Write parameters in a YAML consistent format
-            for key, attrs in req.parameters.items():
-                f.write(f"{key}: {attrs['default']}\n")
-
-        # Write the paths in the same format as parameters
-        f.write(HEADER_TOP.format("PATHS", ""))
-        for key, attrs in seisflows_paths.items():
-            # Ensure that header lines are no more than 80 char
-            docstr_ = f"{key}: {attrs['docstr']}"
-            docstrs = wrap(docstr_, width=79 - len(TAB), break_long_words=False)
-            for line, docstr in enumerate(docstrs):
-                f.write(f"# {docstr}\n")
-        f.write(HEADER_BOT)
-
-        f.write("PATHS:\n")
-        for key, attrs in seisflows_paths.items():
-            f.write(f"{TAB}{key}: {attrs['default']}\n")
+            f.write("PATHS:\n")
+            for key, attrs in seisflows_paths.items():
+                f.write(f"{TAB}{key}: {attrs['default']}\n")
+    except Exception as e:
+        # General error catch as anything can happen here
+        unix.rm(args.parameter_file)
+        unix.cp(temp_par_file, args.parameter_file)
+        sys.exit(f"\n\tseisflows configure failed with exception:\n\t{e}\n")
+    else:
+        unix.rm(temp_par_file)
 
 
 def load_modules(**kwargs):
