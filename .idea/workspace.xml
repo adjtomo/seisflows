@@ -4,8 +4,12 @@
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/docs/development.rst" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/docs/development.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/parameters.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/tools/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/tools/tools.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3.egg-info/SOURCES.txt" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3.egg-info/SOURCES.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3.egg-info/entry_points.txt" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3.egg-info/entry_points.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3.egg-info/top_level.txt" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3.egg-info/top_level.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -99,10 +103,10 @@
       <screen x="0" y="22" width="1920" height="1058" />
     </state>
     <state x="741" y="471" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1603933336667" />
-    <state x="623" y="255" width="672" height="678" key="search.everywhere.popup" timestamp="1604278254445">
+    <state x="623" y="255" width="672" height="678" key="search.everywhere.popup" timestamp="1604295173719">
       <screen x="0" y="22" width="1920" height="1058" />
     </state>
     <state x="415" y="193" width="672" height="499" key="search.everywhere.popup/0.22.1280.778@0.22.1280.778" timestamp="1603964568096" />
-    <state x="623" y="255" width="672" height="678" key="search.everywhere.popup/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1604278254445" />
+    <state x="623" y="255" width="672" height="678" key="search.everywhere.popup/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1604295173719" />
   </component>
 </project>

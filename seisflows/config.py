@@ -25,13 +25,22 @@ from seisflows.tools.tools import module_exists
 from seisflows.tools.err import ParameterError
 
 
-# The following list is one of the few hardwired aspects of the whole
-# SeisFlows package. Any changes may result in circular imports, other problems
-names = ["system", "preprocess", "solver", "postprocess",
-         "optimize", "workflow"]
+"""
+!!! WARNING !!!
+The following constants are (some of the only) hardwired components
+of the pacakge. The naming, order, etc. of each constant may be important,
+and any changes to these will more-than-likely break the underlying mechanics
+of the package. Do not touch!
+"""
 
+# List of module names required by SeisFlows for module imports. Order-sensitive
+NAMES = ["system", "preprocess", "solver",
+         "postprocess", "optimize", "workflow"]
 
-# Set the location of the main repository as well as the template parameter file
+# Packages that define the source code, used to search for base- and subclasses
+PACKAGES = ["seisflows", "seisflows-super"]
+
+# The location of the main repository as well as the template parameter file
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 PAR_FILE = os.path.join(ROOT_DIR, "templates", "parameters.yaml")
 
@@ -51,11 +60,11 @@ def init_seisflows():
         sys.exit()
 
     # Instantiate and register objects
-    for name in names:
+    for name in NAMES:
         sys.modules[f"seisflows_{name}"] = custom_import(name)()
 
     # Error checking
-    for name in names:
+    for name in NAMES:
         sys.modules[f"seisflows_{name}"].check()
 
     # Ensure that certain parameters are instantiated
@@ -79,7 +88,7 @@ def save():
         savejson(fullfile, sys.modules[f"seisflows_{name}"].__dict__)
 
     # Save the current workflow as pickle objects
-    for name in names:
+    for name in NAMES:
         fullfile = os.path.join(_output(), f"seisflows_{name}.p")
         saveobj(fullfile, sys.modules[f"seisflows_{name}"])
 
@@ -97,7 +106,7 @@ def load(path):
         sys.modules[f"seisflows_{name}"] = Dict(loadjson(fullfile))
 
     # Load the saved workflow from pickle objects
-    for name in names:
+    for name in NAMES:
         fullfile = os.path.join(_full(path), f"seisflows_{name}.p")
         sys.modules[f"seisflows_{name}"] = loadobj(fullfile)
 
@@ -321,12 +330,9 @@ def custom_import(name=None, module=None, classname=None):
         else:
             classname = module.title().replace("_", "")
 
-    # Generate package list
-    packages = ["seisflows", "seisflows-super"]
-
     # Check if modules exist, otherwise raise custom exception
     _exists = False
-    for package in packages:
+    for package in PACKAGES:
         full_dotted_name = ".".join([package, name, module])
         if module_exists(full_dotted_name):
             _exists = True

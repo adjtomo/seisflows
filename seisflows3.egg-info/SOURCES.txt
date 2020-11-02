@@ -2,6 +2,9 @@ README.md
 setup.py
 seisflows/__init__.py
 seisflows/config.py
+seisflows-super/__init__.py
+seisflows-super/optimize/__init__.py
+seisflows-super/postprocess/__init__.py
 seisflows/optimize/LBFGS.py
 seisflows/optimize/NLCG.py
 seisflows/optimize/__init__.py

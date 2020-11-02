@@ -10,9 +10,9 @@ import argparse
 from glob import glob
 from textwrap import wrap
 from seisflows.tools import unix, tools
-from seisflows.tools.tools import loadyaml, loadpy
-from seisflows.config import (init_seisflows, tilde_expand, Dict, names, 
-                              custom_import, ROOT_DIR, PAR_FILE)
+from seisflows.tools.tools import loadyaml, loadpy, parse_null
+from seisflows.config import (init_seisflows, tilde_expand, Dict, custom_import,
+                              NAMES, PACKAGES, ROOT_DIR, PAR_FILE)
 
 
 def get_args():
@@ -25,35 +25,26 @@ def get_args():
     parser = argparse.ArgumentParser()
 
     # Positional arguments
-    parser.add_argument("main_args", type=str, nargs="*",
-                        help="task for Seisflows to perform")
+    parser.add_argument("task", type=str, nargs="?",
+                        help="A task for SeisFlows to perform. Type "
+                             "'seisflows help' for available tasks")
+    parser.add_argument("arguments", type=str, nargs="*",
+                        help="Optional arguments passed to the given task")
 
     # Optional parameters
-    parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd())
-    parser.add_argument("--path_file", nargs="?", default="paths.py")
+    parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd(),
+                        help="The SeisFlows working directory, defaults to the "
+                             "current working directory")
     parser.add_argument("-p", "--parameter_file", nargs="?",
-                        default="parameters.yaml")
+                        default="parameters.yaml",
+                        help="The file id of the SeisFlows parameters file, "
+                             "defaults to 'parameters.yaml'")
+    parser.add_argument("--path_file", nargs="?", default="paths.py",
+                        help="File id for defined pathnames if the legacy "
+                             "'.py' format is used for parameters and paths. "
+                             "Defaults to 'paths.py'")
 
     return parser.parse_args()
-
-
-def _parse_null(dictionary):
-    """
-    Remove null, None or '' values from a dictionary
-
-    :type dictionary: dict
-    :param dictionary: dict of parameters to parse
-    :rtype: dict
-    :return: dictionary that has been sanitized of all null values
-    """
-    # Copy the dictionary to get around deleting keys while iterating
-    parsed_dict = dict(dictionary)
-    for key, item in dictionary.items():
-        # Search for all None and "" items, ignore bools, 0's etc.
-        if not item and isinstance(item, (type(None), str)):
-            del parsed_dict[key]
-
-    return parsed_dict
 
 
 class SeisFlows:
@@ -78,20 +69,20 @@ class SeisFlows:
         self._paths = None
         self._parameters = None
 
-        # If SeisFlows is being called, then the format for calling it splits
-        # the argument into (func, *args). Ignore the other argparse arguments
-        try:
-            func, *extra_args = self._args.main_args
+        if self._args.task is None:
+            avail_tasks = "\n\t\t".join(self._public_methods)
+            sys.exit(f"\n\tseisflows requires a task parameter."
+                     f"\n\tavailable tasks include:\n"
+                     f"\n\t\t{avail_tasks}\n"
+                     f"\n\ttype 'seisflows help' for an overall help message"
+                     f"\n\ttype 'seisflows help [task]' for individual task "
+                     f"help messages\n")
 
-            if not hasattr(self, func):
-                # Available functions are any public methods
-                sys.exit(f"\n\tseisflows has no matching function '{func}'"
-                         f"\n\ttype 'seisflows' for available functions\n")
+        if not hasattr(self, self._args.task):
+            sys.exit(f"\n\tno matching function '{self._args.task}'"
+                     f"\n\ttype 'seisflows' for available functions\n")
 
-            getattr(self, func)(*extra_args)
-        # If class initiated with no arguments, assume its for debug reasons
-        except ValueError:
-            pass
+        getattr(self, self._args.task)(*self._args.arguments)
 
     @property
     def _public_methods(self):
@@ -143,8 +134,8 @@ class SeisFlows:
             paths = loadpy(self._args.path_file)
         else:
             raise TypeError(f"Unknown file format for "
-                            f"{self._args.parameter_file}, file must be '.yaml' "
-                            f"(preferred) or '.py' (legacy)")
+                            f"{self._args.parameter_file}, file must be "
+                            f"'.yaml' (preferred) or '.py' (legacy)")
 
         # WORKDIR needs to be set here as it's expected by most modules
         if "WORKDIR" not in paths:
@@ -171,11 +162,11 @@ class SeisFlows:
                 sys.exit(-1)
 
         # Register parameters to sys, ensure they meet standards of the package
-        # parameters = _parse_null(parameters)
+        # parameters = parse_null(parameters)
         sys.modules["seisflows_parameters"] = Dict(parameters)
 
         # Register paths to sys, expand to relative paths to absolute, drop null
-        paths = tilde_expand(_parse_null(paths))
+        paths = tilde_expand(parse_null(paths))
         paths = {key: os.path.abspath(path) for key, path in paths.items()}
         sys.modules["seisflows_paths"] = Dict(paths)
 
@@ -195,14 +186,106 @@ class SeisFlows:
         unix.cd(self._args.workdir)
 
         # Reload objects from Pickle files
-        for name in names:
+        for name in NAMES:
             fullfile = os.path.join(self._args.workdir, "output",
                                     f"seisflows_{name}.p")
             sys.modules[f"seisflows_{name}"] = tools.loadobj(fullfile)
 
         # Check parameters so that default values are present
-        for name in names:
+        for name in NAMES:
             sys.modules[f"seisflows_{name}"].check()
+
+    def help(self, choice=None):
+        """
+        Help messages regarding available SeisFlows tasks.
+        Breaks up help messages as dictionary entries so that individual help
+        messages can be requested.
+
+        :type choice: str
+        :param choice: if not None, will request an indvidual help message
+        """
+        help_msgs = dict(
+            header= """
+        ========================================================================
+
+                                       SeisFlows
+
+        ========================================================================
+        SeisFlows is Python-based waveform inversion package. 
+        The following commands can used to inteface with the SeisFlows package:
+        """,
+            setup="""
+        > seisflows setup 
+
+            Initiate a SeisFlows working directory from scratch. 
+            Establish a template parameter file and symlink the source code for 
+            easy access.""",
+            configure="""
+        > seisflows configure
+
+            Dynamically fill out the parameter file based on chosen modules.
+            Some parameters will require user definitions.""",
+            submit="""        
+        > seisflows submit
+
+            Main SeisFlows execution command. Submit the SeisFlows workflow to 
+            the chosen system, and execute seisflows.workflow.main()""",
+            clean="""
+        > seisflow clean
+
+            Clean the SeisFlows working directory except for the parameter file.
+            """,
+            restart="""
+         > seisflows restart
+
+            Clean the SeisFlows working directory and submit a new workflow.""",
+            modules="""
+        > seisflows modules
+
+            Print out the available modules in the SeisFlows repository.""",
+            init="""
+        > seisflows init
+
+            Establish a SeisFlows working environment without error checking. 
+            Useful for debugging, development and code exploration purposes.""",
+            debug="""
+        > seisflows debug
+
+            Initiate an IPython debugging environment to explore the currently
+            active SeisFlows environment.""",
+            check="""
+        > seisflows check [arguments]
+        """,
+        )
+
+        if choice:
+            try:
+                print(f"{help_msgs[choice]}\n")
+            except KeyError:
+                sys.exit(f"\n\tseisflows help has no entry '{choice}'\n")
+        else:
+            print("\n".join([_ for _ in help_msgs.values()]))
+
+    def modules(self):
+        """
+        Search for the available modules in the listed packages.
+        Not a very smart function, simply checks all the files with a .py
+        extension inside each of the sub-directories, and ignores any hidden
+        files like __init__.py.
+        """
+        REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
+
+        for name in NAMES:
+            print(f"\n\t{name.upper()}")
+            for package in PACKAGES:
+                print(f"\t\t{package}")
+                mod_dir = os.path.join(REPO_DIR, package, name)
+                for pyfile in sorted(glob(os.path.join(mod_dir, "*.py"))):
+                    stripped_pyfile = os.path.basename(pyfile)
+                    stripped_pyfile = os.path.splitext(stripped_pyfile)[0]
+                    if not stripped_pyfile.startswith("_"):
+                        print(f"\t\t\t{os.path.basename(stripped_pyfile)}")
+        print("\n")
 
     def setup(self):
         """
@@ -249,7 +332,7 @@ class SeisFlows:
             f"seisflows configure only applicable to .yaml parameter files"
 
         # Need to attempt importing all modules before we access any of them
-        for name in names:
+        for name in NAMES:
             sys.modules[f"seisflows_{name}"] = custom_import(name)()
 
         # System defines foundational directory structure required by other
@@ -266,7 +349,7 @@ class SeisFlows:
         unix.cp(self._args.parameter_file, temp_par_file)
         try:
             with open(self._args.parameter_file, "a") as f:
-                for name in names:
+                for name in NAMES:
                     req = sys.modules[f"seisflows_{name}"].required
                     seisflows_paths.update(req.paths)
 
@@ -636,25 +719,11 @@ class SeisFlows:
         """     
         solver = sys.modules["seisflows_solver"]
         print(f"\n\t{idx}: {solver.source_names[int(idx)]}\n")
-   
- 
+
+
 def main():
     """
-    Main entry point into the SeisFlows package via the SeisFlows class
+    Main entry point into the SeisFlows package is via the SeisFlows class
     """
-    try:
-        # Force help message if no arguments provided with command
-        get_args().main_args[0]
-    except IndexError:
-        acceptable_args = "\n\t\t".join(SeisFlows()._public_methods)
-        sys.exit(f"\n\tseisflows command requires an argument. "
-                 f"available arguments are:\n"
-                 f"\n\t\t{acceptable_args}\n"
-                 f"\n\ttype 'seisflows -h' for a help message\n")
-
     SeisFlows()
 
-
-if __name__ == "__main__":
-    main()
-        

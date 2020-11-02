@@ -284,6 +284,25 @@ def getset(arg):
         return set(arg)
 
 
+def parse_null(dictionary):
+    """
+    Remove null, None or '' values from a dictionary
+
+    :type dictionary: dict
+    :param dictionary: dict of parameters to parse
+    :rtype: dict
+    :return: dictionary that has been sanitized of all null values
+    """
+    # Copy the dictionary to get around deleting keys while iterating
+    parsed_dict = dict(dictionary)
+    for key, item in dictionary.items():
+        # Search for all None and "" items, ignore bools, 0's etc.
+        if not item and isinstance(item, (type(None), str)):
+            del parsed_dict[key]
+
+    return parsed_dict
+
+
 def loadtxt(filename):
     """
     Load scalar from text file
