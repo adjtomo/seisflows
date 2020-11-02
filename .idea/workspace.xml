@@ -4,15 +4,8 @@
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/docs/background.rst" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/docs/background.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/optimize/LBFGS.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/LBFGS.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/plugins/optimize/LBFGS.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/optimize/LBFGS.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/postprocess/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/postprocess/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/preprocess/pyatoa.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/preprocess/pyatoa.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/system/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/system/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/system/serial.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/system/serial.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/docs/development.rst" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/docs/development.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/parameters.yaml" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

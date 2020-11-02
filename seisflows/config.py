@@ -33,7 +33,7 @@ names = ["system", "preprocess", "solver", "postprocess",
 
 # Set the location of the main repository as well as the template parameter file
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-PAR_FILE = os.path.join(ROOT_DIR, "parameters.yaml")
+PAR_FILE = os.path.join(ROOT_DIR, "templates", "parameters.yaml")
 
 
 def init_seisflows():
