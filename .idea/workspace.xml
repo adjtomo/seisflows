@@ -5,11 +5,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/tools/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/tools/tools.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3.egg-info/SOURCES.txt" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3.egg-info/SOURCES.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3.egg-info/entry_points.txt" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3.egg-info/entry_points.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3.egg-info/top_level.txt" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3.egg-info/top_level.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

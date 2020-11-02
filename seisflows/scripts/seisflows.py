@@ -12,7 +12,7 @@ from textwrap import wrap
 from seisflows.tools import unix, tools
 from seisflows.tools.tools import loadyaml, loadpy, parse_null
 from seisflows.config import (init_seisflows, tilde_expand, Dict, custom_import,
-                              NAMES, PACKAGES, ROOT_DIR, PAR_FILE)
+                              NAMES, PACKAGES, ROOT_DIR)
 
 
 def get_args():
@@ -300,6 +300,8 @@ class SeisFlows:
                 unix.rm(self._args.parameter_file)
             else:
                 sys.exit()
+
+        PAR_FILE =  os.path.join(ROOT_DIR, "templates", "parameters.yaml")
 
         # Template parameter file should be located in the main directory
         unix.cp(PAR_FILE, self._args.workdir)
