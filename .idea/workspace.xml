@@ -2,21 +2,17 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/optimize/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/postprocess/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/preprocess/pyatoa_nz.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/solver/specfem3d_maui.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/system/chinook_lg.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/system/maui_lg.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/workflow/thrifty_inversion.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../seisflows-super/seisflows/workflow/thrifty_maui.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/parameters.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/parameters.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/docs/background.rst" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/docs/background.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/optimize/LBFGS.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/LBFGS.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/plugins/optimize/LBFGS.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/plugins/optimize/LBFGS.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/postprocess/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/postprocess/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/preprocess/pyatoa.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/preprocess/pyatoa.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/system/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/system/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/system/serial.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/system/serial.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/workflow/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/base.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -94,19 +90,14 @@
       <screen x="0" y="22" width="1280" height="778" />
     </state>
     <state x="239" y="58" key="#Plugins/0.22.1280.778/-1366.88.1366.746@0.22.1280.778" timestamp="1603750158463" />
-    <state x="111" y="-712" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1595371326383">
-      <screen x="-35" y="-746" width="1366" height="746" />
-    </state>
-    <state x="111" y="-712" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.22.1280.778/-35.-746.1366.746@-35.-746.1366.746" timestamp="1595371326383" />
-    <state x="539" y="186" key="SettingsEditor" timestamp="1601846895991">
+    <state x="539" y="186" key="SettingsEditor" timestamp="1604271062590">
       <screen x="0" y="22" width="1920" height="1058" />
     </state>
-    <state x="539" y="186" key="SettingsEditor/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1601846895991" />
+    <state x="539" y="186" key="SettingsEditor/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1604271062590" />
     <state width="498" height="465" key="SwitcherDM" timestamp="1596071852934">
       <screen x="-86" y="-768" width="1366" height="768" />
     </state>
     <state width="498" height="465" key="SwitcherDM/0.0.1280.800/0.-1488.1280.720/-86.-768.1366.768@-86.-768.1366.768" timestamp="1596071852934" />
-    <state width="498" height="451" key="SwitcherDM/0.22.1280.778/-35.-746.1366.746@-35.-746.1366.746" timestamp="1595371807769" />
     <state x="594" y="273" key="VCS.ChangeListViewerDialog" timestamp="1603835258334">
       <screen x="0" y="22" width="1920" height="1058" />
     </state>
@@ -115,10 +106,10 @@
       <screen x="0" y="22" width="1920" height="1058" />
     </state>
     <state x="741" y="471" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1603933336667" />
-    <state x="415" y="193" width="672" height="499" key="search.everywhere.popup" timestamp="1603964568096">
-      <screen x="0" y="22" width="1280" height="778" />
+    <state x="623" y="255" width="672" height="678" key="search.everywhere.popup" timestamp="1604278254445">
+      <screen x="0" y="22" width="1920" height="1058" />
     </state>
     <state x="415" y="193" width="672" height="499" key="search.everywhere.popup/0.22.1280.778@0.22.1280.778" timestamp="1603964568096" />
-    <state x="623" y="255" width="672" height="678" key="search.everywhere.popup/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1600037499817" />
+    <state x="623" y="255" width="672" height="678" key="search.everywhere.popup/0.22.1920.1058/-1280.120.1280.1002@0.22.1920.1058" timestamp="1604278254445" />
   </component>
 </project>

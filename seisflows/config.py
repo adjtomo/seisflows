@@ -203,7 +203,7 @@ class SeisFlowsPathsParameters:
             self.parameters.update(base.parameters)
             self.paths.update(base.paths)
 
-    def par(self, parameter, required, docstr, par_type, default="null"):
+    def par(self, parameter, required, docstr, par_type, default=None):
         """
         Add a parameter to the internal list of parameters
 
@@ -227,7 +227,7 @@ class SeisFlowsPathsParameters:
         self.parameters[parameter] = {"docstr": docstr, "required": required,
                                       "default": default, "type": par_type}
 
-    def path(self, path, required, docstr, default="null"):
+    def path(self, path, required, docstr, default=None):
         """
         Add a path to the internal list of paths
 
@@ -354,7 +354,7 @@ def tilde_expand(mydict):
     """
     for key, val in mydict.items():
         if not isinstance(val, str):
-            raise Exception("Expanded objects must type: str")
+            raise TypeError("Expanded objects must type: str")
         else:
             mydict[key] = os.path.expanduser(val)
 

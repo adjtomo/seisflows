@@ -14,6 +14,13 @@ characteristics of an existing class. This allows new users to build upon
 existing work, reducing the amount of efforts required to tailor existing
 classes to their specific needs.
 
+* Baseclass: Class that defines its own attributes and does not inherit
+* Superclass: A class being inherited from (Parent)
+* Subclass: A class that inherits some or all of its attributes (Child)
+
+A class can be both a super and a subclass if there are multiple levels of
+inheritance.
+
 To do:
  * Create a small Jupyter notebook that shows off how inheritance and the
    super() function work in Python.

@@ -257,8 +257,7 @@ class LBFGS:
         :return: status based on status check
         """
         theta = 180. * np.pi ** -1 * angle(g, r)
-        print(f"\tThe new search direction is {theta:.2f}deg from the "
-              f"current search direction")
+        print(f"\tNew search direction is {theta:.2f}deg from current")
 
         if not 0. < theta < 90.:
             if self.verbose:

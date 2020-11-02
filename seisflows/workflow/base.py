@@ -20,7 +20,7 @@ class Base:
 
         return sf
 
-    def check(self):
+    def check(self, validate=True):
         """
         Checks parameters and paths. Must be implemented by sub-class
         """

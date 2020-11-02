@@ -50,8 +50,8 @@ class Base:
                       "as a multiple of TASKTIME")
 
         # Define the Paths required by this module
-        sf.path("MASK", required=False, default="null",
-               docstr="Directory to mask files for gradient masking")
+        sf.path("MASK", required=False, 
+                docstr="Directory to mask files for gradient masking")
 
         return sf
 
@@ -61,7 +61,7 @@ class Base:
         """
         if validate:
             self.required.validate()
-
+        
         if PATH.MASK:
             assert exists(PATH.MASK), f"PATH.MASK provided but does not exist"
 

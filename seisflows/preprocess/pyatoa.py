@@ -65,7 +65,7 @@ class Pyatoa:
         sf.par("CORNERS", required=False, default=4, par_type=int,
                docstr="Number of filter corners")
 
-        sf.par("CLIENT", required=False, default="null", par_type=str,
+        sf.par("CLIENT", required=False, par_type=str,
                docstr="Client name for ObsPy FDSN data gathering")
 
         sf.par("START_PAD", required=False, default=0, par_type=float,
