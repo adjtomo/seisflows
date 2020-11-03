@@ -244,41 +244,38 @@ class Inversion(custom_import("workflow", "base")):
             status == 0 : not finished
             status < 0  : failed
         """
-        print("LINE SEARCH")
-
-        # This statement allows restarting a workflow mid line-search. If 
-        # resuming from the start of a line search, the line search machinery
-        # should have been reset and step_count should be 0. If resuming line
-        # search due to a failed step, will not re-initialize search and instead 
-        # pick up line search where it left off
-        if not PAR.RESUME_FROM == "line_search" and \
-                                        not optimize.line_search.step_count:
+        # Calculate the initial step length based on optimization algorithm
+        if optimize.line_search.step_count == 0:
+            print("LINE SEARCH")
             optimize.initialize_search()
 
-        while True:
-            optimize.line_search.step_count += 1
+        # Attempt a new trial step with the given step length
+        optimize.line_search.step_count += 1
+        print(f"TRIAL STEP: {optimize.line_search.step_count}")
+        self.evaluate_function(path=PATH.FUNC, suffix="try")
 
-            print(f"TRIAL STEP: {optimize.line_search.step_count}")
-            self.evaluate_function(path=PATH.FUNC, suffix="try")
-            status = optimize.update_search()
+        # Check the function evaluation against line search history
+        status = optimize.update_search()
 
-            # Determine the outcome of the line search
-            if status > 0:
-                print("\tTrial step successful")
-                optimize.finalize_search()
-                break
-            elif status == 0:
-                print("\tRetrying with new trial step")
-                continue
-            elif status < 0:
-                if optimize.retry_status():
-                    print("\tLine search failed\n\n Restarting optimization...")
-                    optimize.restart()
-                    self.line_search()
-                    break
-                else:
-                    print("\tLine search failed\n\n Aborting...")
-                    sys.exit(-1)
+        # Proceed based on the outcome of the line search
+        if status > 0:
+            print("\tTrial step successful")
+            # Save outcome of line search to disk; reset step to 0 for next iter
+            optimize.finalize_search()
+            return
+        elif status == 0:
+            print("\tRetrying with new trial step")
+            # Recursively call this function to attempt another trial step
+            self.line_search()
+        elif status < 0:
+            if optimize.retry_status():
+                print("\tLine search failed\n\n Restarting optimization...")
+                # Reset the line search machinery, do not reset step count (?)
+                optimize.restart()
+                self.line_search()
+            else:
+                print("\tLine search failed\n\n Aborting...")
+                sys.exit(-1)
 
     def evaluate_function(self, path, suffix):
         """
