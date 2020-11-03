@@ -8,6 +8,7 @@ import sys
 import inspect
 import warnings
 import argparse
+import subprocess
 from glob import glob
 from textwrap import wrap
 from seisflows.tools import unix, tools
@@ -83,7 +84,12 @@ class SeisFlows:
             sys.exit(f"\n\tno matching function '{self._args.task}'"
                      f"\n\ttype 'seisflows' for available functions\n")
 
-        getattr(self, self._args.task)(*self._args.arguments)
+        try:
+            getattr(self, self._args.task)(*self._args.arguments)
+        except TypeError as e:
+            # Missing required parameters will throw TypeErrors, ignore the
+            # traceback information and simply throw the formatted error message
+            sys.exit(f"\n\tseisflows {e}\n")
 
     @property
     def _public_methods(self):
@@ -211,7 +217,6 @@ class SeisFlows:
                                        SeisFlows
 
         ========================================================================
-        SeisFlows is Python-based waveform inversion package. 
         The following commands can used to inteface with the SeisFlows package:
         """,
             setup="""
@@ -253,6 +258,12 @@ class SeisFlows:
 
             Initiate an IPython debugging environment to explore the currently
             active SeisFlows environment.""",
+            par="""
+        > seisflows par [parameter] [value]
+        
+            Check and set parameters in the SeisFlows parameter file. If [value]
+            is not provided, simply returns the current parameter value. To set
+            value to None, use value = 'null'""",
             check="""
         > seisflows check [arguments]
         """,
@@ -292,23 +303,23 @@ class SeisFlows:
         Setup a SeisFlows working directory by copying in a template parameter
         file and symlinking the source code for easy access to the repo.
         """
+        PAR_FILE =  os.path.join(ROOT_DIR, "templates", "parameters.yaml")
+        REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
+
         if os.path.exists(self._args.parameter_file):
             print(f"\n\tParameter file '{self._args.parameter_file}' "
                   f"already exists\n")
             check = input(f"\tOverwrite with blank file? (y/[n]): ")
             if check == "y":
                 unix.rm(self._args.parameter_file)
-            else:
-                sys.exit()
-
-        PAR_FILE =  os.path.join(ROOT_DIR, "templates", "parameters.yaml")
-
-        # Template parameter file should be located in the main directory
-        unix.cp(PAR_FILE, self._args.workdir)
+                unix.cp(PAR_FILE, self._args.workdir)
 
         # Symlink the source code for easy access to repo
-        if not os.path.exists(os.path.join(self._args.workdir, "source_code")):
-            unix.ln(ROOT_DIR, os.path.join(self._args.workdir, "source_code"))
+        src_code = os.path.join(self._args.workdir, "source_code")
+        if not os.path.exists(src_code):
+            unix.mkdir(src_code)
+            for package in PACKAGES:
+                unix.ln(os.path.join(REPO_DIR, package), src_code)
 
     def configure(self):
         """
@@ -511,10 +522,11 @@ class SeisFlows:
         # > Type 'n' to access a more useful IPython debugger.
         # > Type 'workflow.checkpoint()' to save any changes made here.
 
-    def set(self, par, val=None):
+    def par(self, parameter, value=None):
         """
         Set or check values in the parameter file. Since there are comments, we
-        can't open/dump with yaml so check and write on a line-by-line basis.
+        can't open/dump with yaml because it can't handle comments, so we need
+        to check and write on a line-by-line basis.
 
         .. note::
             `par` is case insensitive, it will automatically be converted to
@@ -524,33 +536,62 @@ class SeisFlows:
             To set values to NoneType, `val` must be 'null' to conform to yaml
             standards
 
-        :type par: str
-        :param par: parameter to check in parameter file. case insensitive.
-        :type val: str
-        :param val: value to set for parameter. if None, will simply print out
+        :type parameter: str
+        :param parameter: parameter to check in parameter file. case insensitive.
+        :type value: str
+        :param value: value to set for parameter. if None, will simply print out
             the current value of the parameter
         :return:
         """
-        assert(os.path.exists(self._args.parameter_file)), \
-            f"Parameter file does not exist"
+        # SeisFlows parameter file dictates upper-case parameters
+        parameter = parameter.upper()
 
-        if val.lower() == "none":
+        assert(os.path.exists(self._args.parameter_file)), \
+            f"\n\tParameter file does not exist"
+
+        if value is not None and value.lower() == "none":
             warnings.warn("To set values to NoneType, use 'null' not 'None'",
                          UserWarning)
 
         with open(self._args.parameter_file, "r") as f:
             lines = f.readlines()
+
         for i, line in enumerate(lines):
-            if f"{par.upper()}: " in line and "#" not in line:
-                if val is not None:
-                    lines[i] = f"{par.upper()}: {val}\n"
+            if f"{parameter}: " in line and "#" not in line:
+                if value is not None:
+                    current_val = line.split(" ")[-1].strip()
+                    lines[i] = f"{parameter}: {value}\n"
+                    print(f"\n\t{parameter}: {current_val} -> {value}\n")
                     with open(self._args.parameter_file, "w") as f:
                         f.writelines(lines)
                 else:
                     print(f"\n\t{line}")
                 break
         else:
-            sys.exit(f"\n\t'{par}' not found in parameter file\n")
+            sys.exit(f"\n\t'{parameter}' not found in parameter file\n")
+
+    def edit(self, name, module, editor=None):
+        """
+        Open a SeisFlows source code file with a given editor
+
+        :param module:
+        :param classname:
+        :return:
+        """
+        editor = editor or os.environ.get("EDITOR")
+        if editor is None:
+            sys.exit("\n\t$EDITOR environment variable not set, set manually\n")
+
+        REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
+        assert(name in NAMES), f"\n\t{name} not in SeisFlows names: {NAMES}\n"
+
+        for package in PACKAGES:
+            fid_try = os.path.join(REPO_DIR, package, name, f"{module}.py")
+            if os.path.exists(fid_try):
+                subprocess.call([editor, fid_try])
+                sys.exit(f"\n\tEdited file: {fid_try}\n")
+        else:
+            sys.exit(f"\n\tseisflows.{name}.{module} not found\n")
 
     def check(self, choice=None, *args):
         """
