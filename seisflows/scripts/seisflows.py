@@ -6,6 +6,7 @@ that allows user interface with the underlying SeisFlows environment.
 import os
 import sys
 import inspect
+import warnings
 import argparse
 from glob import glob
 from textwrap import wrap
@@ -121,7 +122,6 @@ class SeisFlows:
                 paths = {}
         #  Allow for legacy .py parameter file naming
         elif self._args.parameter_file.endwith(".py"):
-            import warnings
             warnings.warn(".py parameter and path files are deprecated in "
                           "favor of a .yaml parameter file. Please consider "
                           "switching as the use of legacy .py files may have "
@@ -511,6 +511,47 @@ class SeisFlows:
         # > Type 'n' to access a more useful IPython debugger.
         # > Type 'workflow.checkpoint()' to save any changes made here.
 
+    def set(self, par, val=None):
+        """
+        Set or check values in the parameter file. Since there are comments, we
+        can't open/dump with yaml so check and write on a line-by-line basis.
+
+        .. note::
+            `par` is case insensitive, it will automatically be converted to
+            upper.
+
+        .. note::
+            To set values to NoneType, `val` must be 'null' to conform to yaml
+            standards
+
+        :type par: str
+        :param par: parameter to check in parameter file. case insensitive.
+        :type val: str
+        :param val: value to set for parameter. if None, will simply print out
+            the current value of the parameter
+        :return:
+        """
+        assert(os.path.exists(self._args.parameter_file)), \
+            f"Parameter file does not exist"
+
+        if val.lower() == "none":
+            warnings.warn("To set values to NoneType, use 'null' not 'None'",
+                         UserWarning)
+
+        with open(self._args.parameter_file, "r") as f:
+            lines = f.readlines()
+        for i, line in enumerate(lines):
+            if f"{par.upper()}: " in line and "#" not in line:
+                if val is not None:
+                    lines[i] = f"{par.upper()}: {val}\n"
+                    with open(self._args.parameter_file, "w") as f:
+                        f.writelines(lines)
+                else:
+                    print(f"\n\t{line}")
+                break
+        else:
+            sys.exit(f"\n\t'{par}' not found in parameter file\n")
+
     def check(self, choice=None, *args):
         """
         Mid-level function to wrap more lower level check functions
@@ -556,6 +597,31 @@ class SeisFlows:
             self._inspect_module_hierarchy(*args)
         elif len(args) == 2:
             self._inspect_class_that_defined_method(*args)
+
+    def convert(self, name, path=None, **kwargs):
+        """
+        Convert a model from vector to binary representation. Kwargs are passed
+        through to solver.save()
+
+        :type name: str
+        :param name: name of the model to convert, e.g. 'm_try'
+        :type path: str
+        :param path: path and file id to save the output model. if None, will
+            default to saving in the output directory under the name of the
+            model
+        """
+        self._load_modules(precheck=False)
+
+        solver = sys.modules["seisflows_solver"]
+        optimize = sys.modules["seisflows_optimize"]
+        PATH = sys.modules["seisflows_paths"]
+
+        if path is None:
+            path = os.path.join(PATH.OUTPUT, name)
+        assert not os.path.exists(path), \
+            f"{path} exists and this action would overwrite the existing path"
+
+        solver.save(solver.split(optimize.load(name)), path=path, **kwargs )
 
     @staticmethod
     def _inspect_class_that_defined_method(name, func):
