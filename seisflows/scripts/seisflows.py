@@ -134,8 +134,9 @@ class SeisFlows:
                           "unintended consequences at runtime",
                           DeprecationWarning)
 
-            assert(os.path.exists(self._args.paths_file)), \
-                f"Legacy parameter file requires corresponding path file"
+            if not os.path.exists(self._args.paths_file):
+                sys.exit(f"\n\tLegacy parameter file requires corresponding "
+                         f"path file\n")
             parameters = loadpy(self._args.parameter_file)
             paths = loadpy(self._args.path_file)
         else:
@@ -218,6 +219,7 @@ class SeisFlows:
 
         ========================================================================
         The following commands can used to inteface with the SeisFlows package:
+        Note: *[arg] denotes an optional argument, while [arg] is required
         """,
             setup="""
         > seisflows setup 
@@ -259,11 +261,18 @@ class SeisFlows:
             Initiate an IPython debugging environment to explore the currently
             active SeisFlows environment.""",
             par="""
-        > seisflows par [parameter] [value]
+        > seisflows par [parameter] *[value]
         
             Check and set parameters in the SeisFlows parameter file. If [value]
             is not provided, simply returns the current parameter value. To set
             value to None, use value = 'null'""",
+            edit="""
+        > seisflows edit [name] [module] *[editor]
+
+            Directly edit the SeisFlows source code matching the given name
+            and module with the chosen text editor. If [editor] is not given, 
+            defaults to the system editor defined by $EDITOR. If [editor] is set
+            to 'q' for quit, no editor opened, but the file id is returned""",
             check="""
         > seisflows check [arguments]
         """,
@@ -341,8 +350,9 @@ class SeisFlows:
         HEADER_BOT = COMMENT + DIVIDER
 
         # Establish the paths and parameters provided by the user
-        assert(self._args.parameter_file.endswith(".yaml")), \
-            f"seisflows configure only applicable to .yaml parameter files"
+        if not self._args.parameter_file.endswith(".yaml"):
+            sys.exit(f"\n\tseisflows configure only applicable to .yaml "
+                     f"parameter files\n")
 
         # Need to attempt importing all modules before we access any of them
         for name in NAMES:
@@ -546,8 +556,8 @@ class SeisFlows:
         # SeisFlows parameter file dictates upper-case parameters
         parameter = parameter.upper()
 
-        assert(os.path.exists(self._args.parameter_file)), \
-            f"\n\tParameter file does not exist"
+        if not os.path.exists(self._args.parameter_file):
+            sys.exit(f"\n\tParameter file does not exist\n")
 
         if value is not None and value.lower() == "none":
             warnings.warn("To set values to NoneType, use 'null' not 'None'",
@@ -583,13 +593,17 @@ class SeisFlows:
             sys.exit("\n\t$EDITOR environment variable not set, set manually\n")
 
         REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
-        assert(name in NAMES), f"\n\t{name} not in SeisFlows names: {NAMES}\n"
+        if name not in NAMES:
+            sys.exit(f"\n\t{name} not in SeisFlows names: {NAMES}\n")
 
         for package in PACKAGES:
             fid_try = os.path.join(REPO_DIR, package, name, f"{module}.py")
             if os.path.exists(fid_try):
-                subprocess.call([editor, fid_try])
-                sys.exit(f"\n\tEdited file: {fid_try}\n")
+                if editor != "q":
+                    subprocess.call([editor, fid_try])
+                    sys.exit(f"\n\tEdited file: {fid_try}\n")
+                else:
+                    sys.exit(f"\n{fid_try}\n")
         else:
             sys.exit(f"\n\tseisflows.{name}.{module} not found\n")
 
@@ -659,8 +673,9 @@ class SeisFlows:
 
         if path is None:
             path = os.path.join(PATH.OUTPUT, name)
-        assert not os.path.exists(path), \
-            f"{path} exists and this action would overwrite the existing path"
+        if os.path.exists(path):
+            sys.exit(f"\n\t{path} exists and this action would overwrite the "
+                     f"existing path\n")
 
         solver.save(solver.split(optimize.load(name)), path=path, **kwargs )
 
@@ -716,7 +731,7 @@ class SeisFlows:
         :param name: choice of module, if None, will print hierarchies for all
             modules.
         """
-        for name_ in names:
+        for name_ in NAMES:
             if name and name_ != name:
                 continue
             module = sys.modules[f"seisflows_{name_}"]
@@ -781,7 +796,8 @@ class SeisFlows:
         avail = glob(os.path.join(PATH.OPTIMIZE, "m_*"))
         srcs = [os.path.basename(_) for _ in avail]
         if src:
-            assert(src in srcs), f"{src} not in available models {avail}"
+            if src not in srcs:
+                sys.exit(f"\n\t{src} not in available models {avail}\n")
             srcs = [src]
         for tag in srcs:
             m = optimize.load(tag)
