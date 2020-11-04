@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 The main entry point to the SeisFlows package. A high-level command line tool 
-that allows user interface with the underlying SeisFlows environment.
+that facilitates interface with the underlying SeisFlows environment, package.
 """
 import os
 import sys
@@ -63,7 +63,7 @@ class SeisFlows:
     """
     def __init__(self):
         """
-        Parse user-defined arguments
+        Parse user-defined arguments, call internal method with given arguments
         """
         self._args = get_args()
 
@@ -204,94 +204,39 @@ class SeisFlows:
 
     def help(self, choice=None):
         """
-        Help messages regarding available SeisFlows tasks.
-        Breaks up help messages as dictionary entries so that individual help
-        messages can be requested.
+        Help messages regarding available SeisFlows tasks. Prints out the
+        docstrings for each of the public methods available in this class.
 
         :type choice: str
         :param choice: if not None, will request an indvidual help message
         """
-        help_msgs = dict(
-            header= """
-        ========================================================================
-
-                                       SeisFlows
-
-        ========================================================================
-        The following commands can used to inteface with the SeisFlows package:
-        Note: *[arg] denotes an optional argument, while [arg] is required
-        """,
-            setup="""
-        > seisflows setup 
-
-            Initiate a SeisFlows working directory from scratch. 
-            Establish a template parameter file and symlink the source code for 
-            easy access.""",
-            configure="""
-        > seisflows configure
-
-            Dynamically fill out the parameter file based on chosen modules.
-            Some parameters will require user definitions.""",
-            submit="""        
-        > seisflows submit
-
-            Main SeisFlows execution command. Submit the SeisFlows workflow to 
-            the chosen system, and execute seisflows.workflow.main()""",
-            clean="""
-        > seisflow clean
-
-            Clean the SeisFlows working directory except for the parameter file.
-            """,
-            restart="""
-         > seisflows restart
-
-            Clean the SeisFlows working directory and submit a new workflow.""",
-            modules="""
-        > seisflows modules
-
-            Print out the available modules in the SeisFlows repository.""",
-            init="""
-        > seisflows init
-
-            Establish a SeisFlows working environment without error checking. 
-            Useful for debugging, development and code exploration purposes.""",
-            debug="""
-        > seisflows debug
-
-            Initiate an IPython debugging environment to explore the currently
-            active SeisFlows environment.""",
-            par="""
-        > seisflows par [parameter] *[value]
-        
-            Check and set parameters in the SeisFlows parameter file. If [value]
-            is not provided, simply returns the current parameter value. To set
-            value to None, use value = 'null'""",
-            edit="""
-        > seisflows edit [name] [module] *[editor]
-
-            Directly edit the SeisFlows source code matching the given name
-            and module with the chosen text editor. If [editor] is not given, 
-            defaults to the system editor defined by $EDITOR. If [editor] is set
-            to 'q' for quit, no editor opened, but the file id is returned""",
-            check="""
-        > seisflows check [arguments]
-        """,
-        )
+        DIVIDER = "=" * 80
+        BLANK = "\n"
+        SFNAME = f"{' ' * 36}SeisFlows"
+        NOTE = ("The main functions are: setup, submit, resume, clean\n" 
+                "> seisflows help [function] for individual help messages")
+        HEADER = DIVIDER + BLANK * 2 + SFNAME + BLANK * 2 + DIVIDER
+        FOOTER = DIVIDER + BLANK * 2 + NOTE + BLANK * 2 + DIVIDER
 
         if choice:
             try:
-                print(f"{help_msgs[choice]}\n")
-            except KeyError:
+                docstr = getattr(self, choice).__doc__
+                print(f"\n> seisflows {choice}\n"
+                      f"{docstr}")
+            except AttributeError:
                 sys.exit(f"\n\tseisflows help has no entry '{choice}'\n")
         else:
-            print("\n".join([_ for _ in help_msgs.values()]))
+            print(HEADER)
+            for meth in self._public_methods:
+                print(f"\n> seisflows {meth}")
+                print(getattr(self, meth).__doc__)
+            print(FOOTER)
 
     def modules(self):
         """
-        Search for the available modules in the listed packages.
-        Not a very smart function, simply checks all the files with a .py
-        extension inside each of the sub-directories, and ignores any hidden
-        files like __init__.py.
+        Search for the names of available modules in SeisFlows name space.
+        This simple function checks for files with a '.py' extension inside
+        each of the sub-directories, ignoring private files like __init__.py.
         """
         REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
 
@@ -309,8 +254,8 @@ class SeisFlows:
 
     def setup(self):
         """
-        Setup a SeisFlows working directory by copying in a template parameter
-        file and symlinking the source code for easy access to the repo.
+        Initiate a SeisFlows working directory from scratch; establish a
+        template parameter file and symlink the source code for easy access
         """
         PAR_FILE =  os.path.join(ROOT_DIR, "templates", "parameters.yaml")
         REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
@@ -333,8 +278,8 @@ class SeisFlows:
     def configure(self):
         """
         Dynamically generate the parameter file by writing out docstrings and
-        default values for each of the SeisFlows modules. Writes the files
-        manually, but consistent with the .yaml file format.
+        default values for each of the SeisFlows module parameters.
+        This function writes files manually, consistent with the .yaml format.
         """
         self._register(precheck=False)
 
@@ -423,10 +368,9 @@ class SeisFlows:
 
     def init(self):
         """
-        Initiate a SeisFlows environment and save the initial state in pickles.
-        Similar to submit() but with no path checking and no workflow
-        submission. Useful for exploring the environment prior to a workflow
-        submission or for debug and development purposes.
+        Establish a SeisFlows working environment without error checking.
+        Save the initial state as pickle files for environment inspection.
+        Useful for debugging, development and code exploration purposes.
         """
         self._register(precheck=False)
 
@@ -440,8 +384,10 @@ class SeisFlows:
 
     def submit(self):
         """
-        Submit the workflow for the first time. Create the working directory and
-        any required paths and ensure that all required paths exist.
+        Main SeisFlows execution command. Submit the SeisFlows workflow to
+        the chosen system, and execute seisflows.workflow.main(). Will create
+        the working directory and any required paths and ensure that all
+        required paths exist.
         """
         self._register(precheck=True)
 
@@ -449,7 +395,7 @@ class SeisFlows:
         REQ_PATHS = ["SPECFEM_BIN", "SPECFEM_DATA", "MODEL_INIT", "MODEL_TRUE",
                      "DATA", "LOCAL", "MASK"]
 
-        # Check that paths exist
+        # Check that all required paths exist before submitting workflow
         paths_dont_exist = []
         for key in REQ_PATHS:
             if key in self._paths and not os.path.exists(self._paths[key]):
@@ -464,16 +410,15 @@ class SeisFlows:
         unix.mkdir(self._args.workdir)
         unix.cd(self._args.workdir)
 
-        # Submit workflow
+        # Submit workflow.main() to the system
         init_seisflows()
         workflow = sys.modules["seisflows_workflow"]
         system = sys.modules["seisflows_system"]
-
         system.submit(workflow)
 
     def clean(self):
         """
-        Clean the working directory by deleting everything except parameter file
+        Clean the SeisFlows working directory except for the parameter file.
         """
         check = input("\n\tThis will remove all workflow objects, leaving only "
                       "the parameter file.\n\tAre you sure you want to clean? "
@@ -500,16 +445,17 @@ class SeisFlows:
 
     def restart(self):
         """
-        Restart simply means clean the workding dir and submit a new workflow
+        Restart simply means clean the workding dir and submit a new workflow.
         """
         self.clean()
         self.submit()
 
     def debug(self):
         """
-        A debug mode that reloads the system modules and starts an IPython
-        debugger allowing exploration of the package space in an interactive
-        debugging environment.
+        Initiate an IPython debugging environment to explore the currently
+        active SeisFlows environment. Reloads the system modules in an
+        interactive environment allowing exploration of the package space.
+        Requires 'ipdb' and 'IPython'
         """
         self._load_modules(precheck=False)
 
@@ -529,35 +475,41 @@ class SeisFlows:
         # > This is SeisFlows' debug mode.
         ipdb.set_trace(context=5)
         embed(colors="Neutral")
-        # > Type 'n' to access a more useful IPython debugger.
+        # > Type 'n' to access a more useful IPython debugger environment.
         # > Type 'workflow.checkpoint()' to save any changes made here.
 
     def par(self, parameter, value=None):
         """
-        Set or check values in the parameter file. Since there are comments, we
-        can't open/dump with yaml because it can't handle comments, so we need
-        to check and write on a line-by-line basis.
+        Check or set parameters in the SeisFlows parameter file.
 
-        .. note::
-            `par` is case insensitive, it will automatically be converted to
-            upper.
+        USAGE
 
-        .. note::
-            To set values to NoneType, `val` must be 'null' to conform to yaml
-            standards
+            seisflows par [parameter] [value]
+
+            To check the parameter 'NPROC' from the command line:
+
+                seisflows par nproc
+
+            To set the parameter 'BEGIN' to 2:
+
+                seisflows par begin 2
+
+            To change the scratch path to the current working directory:
+
+                seisflows par scratch ./
 
         :type parameter: str
-        :param parameter: parameter to check in parameter file. case insensitive.
+        :param parameter: parameter to check in parameter file. case insensitive
         :type value: str
         :param value: value to set for parameter. if None, will simply print out
-            the current value of the parameter
-        :return:
+            the current parameter value. To set as Nonetype, set to 'null'
         """
         # SeisFlows parameter file dictates upper-case parameters
         parameter = parameter.upper()
 
         if not os.path.exists(self._args.parameter_file):
-            sys.exit(f"\n\tParameter file does not exist\n")
+            sys.exit(f"\n\tParameter file '{self._args.parameter_file}' "
+                     f"does not exist\n")
 
         if value is not None and value.lower() == "none":
             warnings.warn("To set values to NoneType, use 'null' not 'None'",
@@ -569,9 +521,15 @@ class SeisFlows:
         for i, line in enumerate(lines):
             if f"{parameter}: " in line and "#" not in line:
                 if value is not None:
-                    current_val = line.split(" ")[-1].strip()
-                    lines[i] = f"{parameter}: {value}\n"
-                    print(f"\n\t{parameter}: {current_val} -> {value}\n")
+                    # These values still have string formatters attached
+                    current_par, current_val = line.split(":")
+
+                    # This retains the string formatters of the line
+                    new_val = current_val.replace(current_val.strip(), value)
+                    lines[i] = ":".join([current_par, new_val])
+                    print(f"\n\t{current_par.strip()}: "
+                          f"{current_val.strip()} -> {value}\n")
+
                     with open(self._args.parameter_file, "w") as f:
                         f.writelines(lines)
                 else:
@@ -582,11 +540,29 @@ class SeisFlows:
 
     def edit(self, name, module, editor=None):
         """
-        Open a SeisFlows source code file with a given editor
+        Directly edit the SeisFlows source code matching the given name
+        and module using the chosen text editor.
 
-        :param module:
-        :param classname:
-        :return:
+        USAGE
+
+            seisflows edit [name] [module] [editor]
+
+            To edit the base Solver class using vim, one would run:
+
+                seisflows edit solver base vim
+
+            To simply find the location of the inversion workflow source code:
+
+                seisflows edit workflow inversion q
+
+        :type name: str
+        :param name: name of module, must match seisflows.config.NAMES
+        :type module: str
+        :param module: the module name contained under the SeisFlows namespace
+        :type editor: str
+        :param editor: optional chosen text editor to open the file.
+            * If NoneType: defaults to system environment $EDITOR
+            * If 'q': For quit, does not open an editor, simply prints fid
         """
         editor = editor or os.environ.get("EDITOR")
         if editor is None:
@@ -609,7 +585,34 @@ class SeisFlows:
 
     def check(self, choice=None, *args):
         """
-        Mid-level function to wrap more lower level check functions
+        Check parameters, state or values  of an active SeisFlows environment.
+
+        USAGE
+
+            seisflows check [choice] [*arguments]
+
+
+            MODEL: Check the min/max values of current models tracked by
+                optimize. Optional 'name' returns values for the chosen model.
+
+                seisflows check model [name]
+
+            ITER: Check the current iteration and step count of the workflow
+
+                seisflows check iter
+
+            SRC: Check the names of the sources used in the workflow, and their
+                respective indices. Optional 'name' only searches for a unique
+                source name
+
+                seisflows check src [name]
+
+            ISRC: Check for source name corresponding to the given index
+
+                seisflows check isrc [idx]
+
+        :type choice: str
+        :param choice: underlying sub-function to choose
         """
         acceptable_args = {"model": self._check_model_parameters,
                            "iter": self._check_current_iteration,
@@ -644,7 +647,27 @@ class SeisFlows:
 
     def inspect(self, *args):
         """
-        Inspect inheritance hierarchy of the package for easier debugging
+        Inspect inheritance hierarchy of classes, methods defined by SeisFlows.
+        Useful when developing or debugging, facilitates identification of
+        the package top-level.
+
+        USAGE
+
+            seisflows inspect [name] [method]
+
+            To view overall hierarchy for all names in the SeisFlows namespace
+
+                seisflows inspect
+
+            To check the inheritance hierarchy of the 'workflow' module
+
+                seisflows inspect workflow
+
+            To check which class defined a given method, e.g. the 'eval_func'
+            method attributed to the solver module
+
+                seisflows inspect solver eval_func
+
         """
         self._load_modules(precheck=False)
 
@@ -655,8 +678,17 @@ class SeisFlows:
 
     def convert(self, name, path=None, **kwargs):
         """
-        Convert a model from vector to binary representation. Kwargs are passed
-        through to solver.save()
+        Convert a model in the OUTPUT directory between vector to binary
+        representation. Kwargs are passed through to solver.save()
+
+        USAGE
+
+            seisflows convert [name] [path] [**kwargs]
+
+            To convert the vector model 'm_try' to binary representation in the
+            output directory
+
+                seisflows convert m_try
 
         :type name: str
         :param name: name of the model to convert, e.g. 'm_try'
@@ -738,33 +770,6 @@ class SeisFlows:
             print(f"\n{name_.upper()}")
             for i, cls in enumerate(inspect.getmro(type(module))[::-1]):
                 print(f"{(i + 1) * '  '}{cls.__name__}")
-
-    # @staticmethod
-    # def _inspect_module_hierarchy(name=None):
-    #     """
-    #     This doesn't work, only prints out the new methods but doesnt tell
-    #     if methods have been overwritten
-    #     """
-    #     for name_ in names:
-    #         if name and name_ != name:
-    #             continue
-    #         module = sys.modules[f"seisflows_{name_}"]
-    #         print(f"\n{name_.upper()}")
-    #         # Start from the type and move to Baseclass and each Subclass
-    #         method_list_sub, method_list_super = [], []
-    #         for cls in inspect.getmro(type(module))[::-1]:
-    #             # Get a list of public methods from the class that do not match
-    #             # the parent class methods, in order to define a list of unique
-    #             # methods only defined in this subclass
-    #             method_list_super = [func for func in dir(cls) if
-    #                                  callable(getattr(cls, func))
-    #                                  and not func.startswith("_")
-    #                                  and not func in method_list_sub]
-    #             print(f"{'=' * 80}\n{cls.__name__}\n{'=' * 80}")
-    #             for method in method_list_super:
-    #                 print(method)
-    #             # Keep track of already defined methods
-    #             method_list_sub += method_list_super
 
     def _reset_line_search(self):
         """
