@@ -239,6 +239,7 @@ class Inversion(custom_import("workflow", "base")):
     def line_search(self):
         """
         Conducts line search in given search direction
+
         Status codes:
             status > 0  : finished
             status == 0 : not finished

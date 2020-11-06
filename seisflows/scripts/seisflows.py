@@ -17,36 +17,61 @@ from seisflows.config import (init_seisflows, tilde_expand, Dict, custom_import,
                               NAMES, PACKAGES, ROOT_DIR)
 
 
-def get_args():
+def main_parser():
     """
     Get User defined arguments, or assign defaults
 
     :rtype: argparse.ArgumentParser()
     :return: User defined or default arguments
     """
-    parser = argparse.ArgumentParser()
+    # noinspection PyTypeChecker
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="""
+These are common SeisFlows commands and their intended usages:
+
+initiate a working directory from scratch:
+    setup       Initiate a blank parameter file, symlink the source code
+    modules     List out available modules names based on file availability
+    configure   Set parameter file with docstrings and defaults based on modules
+    init        Initiate a SeisFlows working environment.
+
+submit a SeisFlows workflow to the system:
+    submit      Main execution command, submit initial workflow to system
+    resume      Re-submit a previously submitted workflow
+    clean       Clean up working directory, leave parameter file
+    
+view / manipulate an active environment (see also: seisflows [command] --help):
+    par         View and edit values in the parameter file
+    check       Check parameters, state, or values of an active environment
+    convert     Convert a model from binary to numpy array or vice-versa
+    reset       Reset chosen underlying machinery
+    
+debug and development tools:
+    inspect     Inspect inheritance hierarchy and method ownership
+    debug       Start an IPython debugger to explore an active working state
+    edit        Edit a given source code file with a preferred text editor
+    help        Print out docstrings for methods listed here
+""",
+    )
 
     # Positional arguments
-    parser.add_argument("task", type=str, nargs="?",
-                        help="A task for SeisFlows to perform. Type "
-                             "'seisflows help' for available tasks")
+    parser.add_argument("command", type=str, nargs="?",
+                        help="A task for SeisFlows to perform")
     parser.add_argument("arguments", type=str, nargs="*",
-                        help="Optional arguments passed to the given task")
+                        help="Optional arguments for given command")
 
     # Optional parameters
     parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd(),
-                        help="The SeisFlows working directory, defaults to the "
-                             "current working directory")
+                        help="The SeisFlows working directory, default: cwd")
     parser.add_argument("-p", "--parameter_file", nargs="?",
                         default="parameters.yaml",
-                        help="The file id of the SeisFlows parameters file, "
-                             "defaults to 'parameters.yaml'")
+                        help="Parameters file, default: 'parameters.yaml'")
     parser.add_argument("--path_file", nargs="?", default="paths.py",
-                        help="File id for defined pathnames if the legacy "
-                             "'.py' format is used for parameters and paths. "
-                             "Defaults to 'paths.py'")
+                        help="Legacy path file, default: 'paths.py'")
 
-    return parser.parse_args()
+
+    return parser
 
 
 class SeisFlows:
@@ -65,27 +90,22 @@ class SeisFlows:
         """
         Parse user-defined arguments, call internal method with given arguments
         """
-        self._args = get_args()
+        self._parser = main_parser()
+        self._args = self._parser.parse_args()
 
         # To be set by _register()
         self._paths = None
         self._parameters = None
 
-        if self._args.task is None:
-            avail_tasks = "\n\t\t".join(self._public_methods)
-            sys.exit(f"\n\tseisflows requires a task parameter."
-                     f"\n\tavailable tasks include:\n"
-                     f"\n\t\t{avail_tasks}\n"
-                     f"\n\ttype 'seisflows help' for an overall help message"
-                     f"\n\ttype 'seisflows help [task]' for individual task "
-                     f"help messages\n")
+        if self._args.command is None:
+            self._parser.print_help()
+            sys.exit(0)
 
-        if not hasattr(self, self._args.task):
-            sys.exit(f"\n\tno matching function '{self._args.task}'"
+        if not hasattr(self, self._args.command):
+            sys.exit(f"\n\tno matching function '{self._args.command}'"
                      f"\n\ttype 'seisflows' for available functions\n")
-
         try:
-            getattr(self, self._args.task)(*self._args.arguments)
+            getattr(self, self._args.command)(*self._args.arguments)
         except TypeError as e:
             # Missing required parameters will throw TypeErrors, ignore the
             # traceback information and simply throw the formatted error message
@@ -115,8 +135,8 @@ class SeisFlows:
         """
         # Check if the filepaths exist
         if not os.path.exists(self._args.parameter_file):
-            raise FileNotFoundError(f"Parameter file not found: "
-                                    f"{self._args.parameter_file}")
+            sys.exit(f"\n\tSeisFlows parameter file not found: "
+                     f"{self._args.parameter_file}\n")
 
         # Register parameters from the parameter file
         if self._args.parameter_file.endswith(".yaml"):
@@ -148,23 +168,19 @@ class SeisFlows:
         if "WORKDIR" not in paths:
             paths["WORKDIR"] = self._args.workdir
 
-        # For submit() and resume(), provide a dialogue and require a visual
-        # pre-check before submitting the workflow
-        if precheck:
-            msg = f"""
-              Beginning workflow "{parameters['TITLE']}"...
-                  WORKFLOW: {parameters['WORKFLOW']}
-                  BEGIN: {parameters['BEGIN']}
-                  END: {parameters['END']}
-                  RESUME_FROM: {parameters['RESUME_FROM']}
-                  STOP_AFTER: {parameters['STOP_AFTER']}
-                  NTASK: {parameters['NTASK']}
-                  WALLTIME: {parameters['WALLTIME']}
-                  CASE: {parameters['CASE']}
-                  SMOOTH H,V: {parameters['SMOOTH_H']}, {parameters['SMOOTH_V']}
-                  """
-            print(msg)
-            check = input("Continue? (y/[n]): ")
+        # For submit() and resume(), provide a dialogue to stdout requiring a
+        # visual pre-check of parameters before submitting workflow
+        if precheck and parameters["PRECHECK"]:
+            print("\n\tSEISFLOWS PARAMETER CHECK"
+                  "\n\t=========================\n")
+            for par in parameters["PRECHECK"]:
+                par = par.upper()
+                try:
+                    print(f"\t{par}: {parameters[par]}")
+                except KeyError:
+                    print(f"\t{par}: !!! PARAMETER NOT FOUND !!!")
+            print("\n")
+            check = input("\tContinue? (y/[n]): ")
             if check != "y":
                 sys.exit(-1)
 
@@ -196,6 +212,11 @@ class SeisFlows:
         for name in NAMES:
             fullfile = os.path.join(self._args.workdir, "output",
                                     f"seisflows_{name}.p")
+
+            if not os.path.exists(fullfile):
+                sys.exit(f"\n\tNot a SeisFlows working directory, state file "
+                         f"not found:\n\t{fullfile}\n")
+
             sys.modules[f"seisflows_{name}"] = tools.loadobj(fullfile)
 
         # Check parameters so that default values are present
@@ -210,14 +231,6 @@ class SeisFlows:
         :type choice: str
         :param choice: if not None, will request an indvidual help message
         """
-        DIVIDER = "=" * 80
-        BLANK = "\n"
-        SFNAME = f"{' ' * 36}SeisFlows"
-        NOTE = ("The main functions are: setup, submit, resume, clean\n" 
-                "> seisflows help [function] for individual help messages")
-        HEADER = DIVIDER + BLANK * 2 + SFNAME + BLANK * 2 + DIVIDER
-        FOOTER = DIVIDER + BLANK * 2 + NOTE + BLANK * 2 + DIVIDER
-
         if choice:
             try:
                 docstr = getattr(self, choice).__doc__
@@ -226,11 +239,9 @@ class SeisFlows:
             except AttributeError:
                 sys.exit(f"\n\tseisflows help has no entry '{choice}'\n")
         else:
-            print(HEADER)
             for meth in self._public_methods:
                 print(f"\n> seisflows {meth}")
                 print(getattr(self, meth).__doc__)
-            print(FOOTER)
 
     def modules(self):
         """
@@ -266,7 +277,7 @@ class SeisFlows:
             check = input(f"\tOverwrite with blank file? (y/[n]): ")
             if check == "y":
                 unix.rm(self._args.parameter_file)
-                unix.cp(PAR_FILE, self._args.workdir)
+        unix.cp(PAR_FILE, self._args.workdir)
 
         # Symlink the source code for easy access to repo
         src_code = os.path.join(self._args.workdir, "source_code")
@@ -287,7 +298,7 @@ class SeisFlows:
         BLANK = "\n"
         COMMENT = "#\n"
         DIVIDER = f"# {'=' * 78}\n"
-        HEADER = "# {} {}\n"
+        HEADER = "# {}\n"
         UNDERLINE = f"# {'-' * 25}\n"
         TAB = "    "
 
@@ -322,30 +333,35 @@ class SeisFlows:
                     seisflows_paths.update(req.paths)
 
                     # Write the docstring header with all parameters
-                    f.write(HEADER_TOP.format(name.upper(), "PARAMETERS"))
+                    f.write(HEADER_TOP.format(name.upper()))
                     for key, attrs in req.parameters.items():
                         f.write(f"# {key} ({attrs['type']}):\n")
                         # Ensure that header lines are no more than 80 char
-                        docstrs = wrap(attrs["docstr"], width=80-len(TAB),
+                        docstrs = wrap(attrs["docstr"], width=77 - len(TAB),
                                        break_long_words=False)
                         for line, docstr in enumerate(docstrs):
                             f.write(f"#{TAB}{docstr}\n")
                     f.write(HEADER_BOT)
+
                     # Write parameters in a YAML consistent format
                     for key, attrs in req.parameters.items():
-                        # Yaml writes None as 'null'
-                        if attrs["default"] is None:
-                            default = "null"
+                        # Lists need to be treated differently
+                        if isinstance(attrs["default"], list):
+                            f.write(f"{key}:\n")
+                            for val in attrs["default"]:
+                                f.write(f"{TAB}- {val}\n")
                         else:
-                            default = attrs["default"]
-                        f.write(f"{key}: {default}\n")
+                            # Yaml writes None as 'null'
+                            if attrs["default"] is None:
+                                attrs["default"] = "null"
+                            f.write(f"{key}: {attrs['default']}\n")
 
                 # Write the paths in the same format as parameters
-                f.write(HEADER_TOP.format("PATHS", ""))
+                f.write(HEADER_TOP.format("PATHS"))
                 for key, attrs in seisflows_paths.items():
                     # Ensure that header lines are no more than 80 char
                     docstr_ = f"{key}: {attrs['docstr']}"
-                    docstrs = wrap(docstr_, width=79 - len(TAB),
+                    docstrs = wrap(docstr_, width=77 - len(TAB),
                                    break_long_words=False)
                     for line, docstr in enumerate(docstrs):
                         f.write(f"# {docstr}\n")
@@ -586,48 +602,50 @@ class SeisFlows:
     def check(self, choice=None, *args):
         """
         Check parameters, state or values  of an active SeisFlows environment.
-
-        USAGE
-
-            seisflows check [choice] [*arguments]
-
-
-            MODEL: Check the min/max values of current models tracked by
-                optimize. Optional 'name' returns values for the chosen model.
-
-                seisflows check model [name]
-
-            ITER: Check the current iteration and step count of the workflow
-
-                seisflows check iter
-
-            SRC: Check the names of the sources used in the workflow, and their
-                respective indices. Optional 'name' only searches for a unique
-                source name
-
-                seisflows check src [name]
-
-            ISRC: Check for source name corresponding to the given index
-
-                seisflows check isrc [idx]
+        Type 'seisflows check --help' for a detailed help message.
 
         :type choice: str
         :param choice: underlying sub-function to choose
         """
+        # Initiate a sub parser to provide nested help functions
+        subparser = self._parser.add_subparsers(help="subcommand help")
+        parser_check = subparser.add_parser(
+            name="check", usage=" seisflows check [-h] [subcommand]",
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description="""
+Check parameters, state, or values of an active environment
+    
+    model     check the min/max values of currently active models tracked by
+              optimize. 'seisflows check model [name]' to check specific model.
+    iter      Check current interation and step count of workflow
+    src       List source names and respective internal indices
+    isrc      Check source name for corresponding index
+            """,
+            help="Additional help for the check subcommand")
+        parser_check.add_argument("subcommand", type=str, nargs="?",
+                                  help="subcommand provided to check command"
+                                  )
+        parser_check.add_argument("subargs", type=str, default=None, nargs="?",
+                                  help="Optional name argument for subcommand")
+
+        if not sys.argv[2:]:
+            parser_check.print_help()
+            sys.exit(0)
+        else:
+            # Must ignore the initial positional argument
+            args = parser_check.parse_args(sys.argv[2:])
+
         acceptable_args = {"model": self._check_model_parameters,
                            "iter": self._check_current_iteration,
                            "src": self._check_source_names,
                            "isrc": self._check_source_index}
 
-        if choice is None:
-            sys.exit(f"\n\tseisflows check requires sub-function from the "
-                     f"following:\n\t{list(acceptable_args.keys())}\n")
-
-        if choice not in acceptable_args.keys():
-            sys.exit(f"\n\tseisflows check has no sub-function '{choice}'\n")
+        if args.subcommand not in acceptable_args.keys():
+            parser_check.print_help()
+            sys.exit(0)
 
         self._load_modules(precheck=False)
-        acceptable_args[choice](*args)
+        acceptable_args[args.subcommand](args.subargs)
 
     def reset(self, choice=None, *args):
         """
@@ -767,9 +785,11 @@ class SeisFlows:
             if name and name_ != name:
                 continue
             module = sys.modules[f"seisflows_{name_}"]
-            print(f"\n{name_.upper()}")
+            print(f"\n\t{name_.upper()}", end=" ")
             for i, cls in enumerate(inspect.getmro(type(module))[::-1]):
-                print(f"{(i + 1) * '  '}{cls.__name__}")
+                print(f"-> {cls.__name__}", end=" ")
+        print("\n\n\tseisflows inspect [name] [method] to inspect "
+              "method ownership\n")
 
     def _reset_line_search(self):
         """
@@ -808,18 +828,22 @@ class SeisFlows:
             m = optimize.load(tag)
             optimize.check_model_parameters(m, tag)
 
-    def _check_current_iteration(self):
+    def _check_current_iteration(self, *args):
         """
         Display the current point in the workflow in terms of the iteration
-        and step count number
+        and step count number. Args are not used by allow for a more general
+        check() function.
         """
         optimize = sys.modules["seisflows_optimize"]
-
-        line = optimize.line_search
-        cstr = (f"\n"
-                f"\tIteration:  {optimize.iter}\n"
-                f"\tStep Count: {line.step_count} / {line.step_count_max}\n")
-        print(cstr)
+        try:
+            line = optimize.line_search
+            cstr = (f"\n"
+                    f"\tIteration:  {optimize.iter}\n"
+                    f"\tStep Count: {line.step_count} / {line.step_count_max}\n"
+                    )
+            print(cstr)
+        except AttributeError:
+            sys.exit("\n\toptimization module has not been initialized yet\n")
 
     def _check_source_names(self, source_name=None):
         """

@@ -4,7 +4,6 @@ This is the custom class for an NLCG optimization schema.
 It supercedes the `seisflows.optimize.base` class
 """
 import sys
-import numpy as np
 
 from seisflows.config import custom_import, SeisFlowsPathsParameters
 from seisflows.plugins import optimize

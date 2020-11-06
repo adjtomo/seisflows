@@ -28,7 +28,7 @@ from seisflows.tools.err import ParameterError
 """
 !!! WARNING !!!
 The following constants are (some of the only) hardwired components
-of the pacakge. The naming, order, etc. of each constant may be important,
+of the pacakge. The naming, order, case, etc. of each constant may be important,
 and any changes to these will more-than-likely break the underlying mechanics
 of the package. Do not touch!
 """
@@ -40,7 +40,7 @@ NAMES = ["system", "preprocess", "solver",
 # Packages that define the source code, used to search for base- and subclasses
 PACKAGES = ["seisflows", "seisflows-super"]
 
-# The location of the main repository as well as the template parameter file
+# The location of this config file, which is the main repository
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -312,7 +312,7 @@ def custom_import(name=None, module=None, classname=None):
     if name is None:
         sys.exit(msg.ImportError1)
     # Invalid `system` call
-    elif name not in names:
+    elif name not in NAMES:
         sys.exit(msg.ImportError2)
     # Attempt to retrieve currently assigned classname from parameters
     if module is None:

@@ -47,6 +47,13 @@ class Base:
         sf.par("NPROC", required=True, par_type=int,
                docstr="Number of processor to use for each simulation")
 
+        sf.par("PRECHECK", required=False, par_type=list,
+               default=["TITLE", "BEGIN", "END", "WALLTIME"],
+               docstr="A list of parameters that will be displayed to stdout "
+                      "before 'submit' or 'resume' is run. Useful for "
+                      "manually reviewing important parameters prior to "
+                      "system submission")
+
         # Define the Paths required by this module
         # note: PATH.WORKDIR has been set by the entry point seisflows.setup()
         sf.path("SCRATCH", required=False,
