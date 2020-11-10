@@ -14,8 +14,9 @@
 #
 # > seisflows configure
 #
-# MODULES:
-# -----------
+#                                    MODULES
+#                                    -------
+#
 # WORKFLOW:    The method for running SeisFlows. Equivalent to main()
 # SOLVER:      External numerical solver to use for waveform simulations.
 # SYSTEM:      Computer architecture of the system being used to run SeisFlows

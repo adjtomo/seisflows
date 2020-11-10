@@ -3,11 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/optimize/NLCG.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/optimize/NLCG.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/scripts/seisflows.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/system/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/system/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows/workflow/inversion.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/workflow/inversion.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows/templates/parameters.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows/templates/parameters.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
