@@ -83,6 +83,7 @@ class Specfem2D(custom_import("solver", "base")):
             """
             Re-used function to wrap getpar() in a try-except
             To allow for different SPECFEM2D Par_file version
+
             :type trial_list: list
             :param trial_list: list of strings to check in par file
             :type cast: str
@@ -156,17 +157,17 @@ class Specfem2D(custom_import("solver", "base")):
         call_solver(system.mpiexec(), "bin/xmeshfem2D", output="mesher.log")
         call_solver(system.mpiexec(), "bin/xspecfem2D", output="solver.log")
 
-        if PAR.FORMAT in ['SU', 'su']:
-            src = glob('OUTPUT_FILES/*.su')
-            # work around SPECFEM2D's different file names (depending on the
-            # version used :
-            unix.rename('single_p.su', 'single.su', src)
-            src = glob('OUTPUT_FILES/*.su')
-            dst = 'traces/obs'
-            unix.mv(src, dst)
+        if PAR.FORMAT.upper() == "SU":
+            # Work around SPECFEM2D's version dependent file names
+            for tag in ["d", "v", "a", "p"]:
+                unix.rename(old=f"single_{tag}.su", new="single.su",
+                            names=glob(os.path.join("OUTPUT_FILES", "*.su")))
+
+        unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
+                dst=os.path.join("traces", "obs"))
 
         if PAR.SAVETRACES:
-            self.export_traces(PATH.OUTPUT+'/'+'traces/obs')
+            self.export_traces(os.path.join(PATH.OUTPUT, "traces", "obs"))
 
     def initialize_adjoint_traces(self):
         """
@@ -184,16 +185,14 @@ class Specfem2D(custom_import("solver", "base")):
         # regular traces and 'adjoint' traces
         if PAR.FORMAT.upper() == "SU":
             files = glob(os.path.join(self.cwd, "traces", "adj", "*SU"))
-            unix.rename(old='_SU', new='_SU.adj', names=files)
+            unix.rename(old="_SU", new="_SU.adj", names=files)
 
-        # work around SPECFEM2D's requirement that all components exist,
-        # even ones not in use
+        # SPECFEM2D requires that all components exist even if ununsed
         if PAR.FORMAT.upper() == "SU":
             unix.cd(os.path.join(self.cwd, "traces", "adj"))
-
-            for channel in ['x', 'y', 'z', 'p']:
+            for channel in ["x", "y", "z", "p"]:
                 src = f"U{PAR.CHANNELS[0]}_file_single.su.adj"
-                dst = f"{channel}s_file_single.su.adj"
+                dst = f"U{channel}s_file_single.su.adj"
                 if not exists(dst):
                     unix.cp(src, dst)
 
@@ -241,16 +240,17 @@ class Specfem2D(custom_import("solver", "base")):
         setpar("SIMULATION_TYPE", "1")
         setpar("SAVE_FORWARD", ".true.")
 
-        call_solver(system.mpiexec(), "bin/xmeshfem2D")
-        call_solver(system.mpiexec(), "bin/xspecfem2D")
+        call_solver(mpiexec=system.mpiexec(), executable="bin/xmeshfem2D")
+        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem2D")
 
         if PAR.FORMAT.upper() == "SU":
-            filenames = glob(os.path.join("OUTPUT_FILES", "*.su"))
+            # Work around SPECFEM2D's version dependent file names
+            for tag in ["d", "v", "a", "p"]:
+                unix.rename(old=f"single_{tag}.su", new="single.su",
+                            names=glob(os.path.join("OUTPUT_FILES", "*.su")))
 
-            # Work around SPECFEM2D's different file names (version dependent)
-            unix.rename("single_p.su", "single.su", filenames)
-
-            unix.mv(filenames, path)
+        unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
+                dst=path)
 
     def adjoint(self):
         """
@@ -266,11 +266,11 @@ class Specfem2D(custom_import("solver", "base")):
         # Deal with different SPECFEM2D name conventions for regular traces and
         # "adjoint" traces
         if PAR.FORMAT.upper == "SU":
-            files = glob(os.path.join("traces", "adj", "*.su"))
-            unix.rename(".su", ".su.adj", files)
+            unix.rename(old=".su", new=".su.adj",
+                        names=glob(os.path.join("traces", "adj", "*.su")))
 
-        call_solver(system.mpiexec(), "bin/xmeshfem2D")
-        call_solver(system.mpiexec(), "bin/xspecfem2D")
+        call_solver(mpiexec=system.mpiexec(), executable="bin/xmeshfem2D")
+        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem2D")
 
     def import_model(self, path):
         """
@@ -333,6 +333,19 @@ class Specfem2D(custom_import("solver", "base")):
         The location of databases for model outputs
         """
         return os.path.join(self.cwd, "OUTPUT_FILES")
+
+    @property
+    def data_wildcard(self):
+        """
+        Returns a wildcard identifier for synthetic data
+
+        :rtype: str
+        :return: wildcard identifier for channels
+        """
+        if PAR.FORMAT.upper() == "SU":
+            return f"*.su"
+        elif PAR.FORMAT.upper() == "ASCII":
+            return f"*.?X?.sem?"
 
     @property
     def source_prefix(self):

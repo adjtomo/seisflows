@@ -219,6 +219,7 @@ class Inversion(custom_import("workflow", "base")):
         preprocess.setup()
         postprocess.setup()
         optimize.setup()
+        # Run solver.setup() in parallel
         system.run("solver", "setup")
 
     def initialize(self):

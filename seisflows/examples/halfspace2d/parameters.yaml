@@ -1,0 +1,33 @@
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+#                 Seisflows YAML Parameter File and Path Input
+#
+#   variables set to '', or `null`, will be ignored and set to default values 
+#
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+# These modules correspond to the structure of the source code, and determine
+# SeisFlows' behavior at runtime. Check the source code directory for available 
+# module names. Each module will require its own set of sub parameters. 
+#
+# To fill this parameter file with docstrings and default values, run:
+#
+# > seisflows configure
+#
+#                                    MODULES
+#                                    -------
+#
+# WORKFLOW:    The method for running SeisFlows. Equivalent to main()
+# SOLVER:      External numerical solver to use for waveform simulations.
+# SYSTEM:      Computer architecture of the system being used to run SeisFlows
+# OPTIMIZE:    Optimization algorithm for the inverse problem
+# PREPROCESS:  Preprocessing schema for waveform data
+# POSTPROCESS: Postprocessing schema for kernels and gradients
+#
+# ==============================================================================
+WORKFLOW: inversion
+SOLVER: specfem2d
+SYSTEM: serial
+OPTIMIZE: LBFGS 
+PREPROCESS: base
+POSTPROCESS: base

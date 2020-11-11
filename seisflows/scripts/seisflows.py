@@ -34,12 +34,6 @@ def sfparser():
                "of each command.",
     )
 
-    # Positional arguments
-    # parser.add_argument("command", type=str, nargs="?",
-    #                     help="A task for SeisFlows to perform")
-    # parser.add_argument("arguments", type=str, nargs="*",
-    #                     help="Optional arguments for given command")
-
     # Optional parameters
     parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd(),
                         help="The SeisFlows working directory, default: cwd")
@@ -49,12 +43,13 @@ def sfparser():
     parser.add_argument("--path_file", nargs="?", default="paths.py",
                         help="Legacy path file, default: 'paths.py'")
 
-    # Initiate a sub parser to provide nested help functions.
+    # Initiate a sub parser to provide nested help functions and sub commands
     subparser = parser.add_subparsers(
         title="Available Commands",
         description="Common SeisFlows commands and their intended usages",
         dest="command",
     )
+    # The following subparsers constitute the available SeisFlows commands
     # =========================================================================
     setup = subparser.add_parser(
         "setup", help="Setup working directory from scratch",
@@ -141,7 +136,7 @@ def sfparser():
         description="""Directly edit values in the parameter file by providing
         the parameter and corresponding value. If no value is provided, will 
         simply print out the current value of the given parameter. Works also
-        with path names"""
+        with path names."""
     )
     par.add_argument("parameter", nargs="?", help="Parameter to edit or view")
     par.add_argument("value", nargs="?", default=None,
@@ -365,21 +360,6 @@ class SeisFlows:
         for name in NAMES:
             sys.modules[f"seisflows_{name}"].check()
 
-    def help(self, choice, **kwargs):
-        """
-        Help messages regarding available SeisFlows tasks. Prints out the
-        docstrings for each of the public methods available in this class.
-
-        :type choice: str
-        :param choice: if not None, will request an indvidual help message
-        """
-        try:
-            docstr = getattr(self, choice).__doc__
-            print(f"\n> seisflows {choice}\n"
-                  f"{docstr}")
-        except AttributeError:
-            sys.exit(f"\n\tseisflows help has no entry '{choice}'\n")
-
     def modules(self, name=None, package=None, **kwargs):
         """
         Search for the names of available modules in SeisFlows name space.
@@ -456,7 +436,7 @@ class SeisFlows:
                    f"# {name.upper():^78}\n# {'-' * len(name):^78}\n"
                    f"#\n")
             BOT = f"\n# {'=' * 78}\n"
-            TAB = "    "
+            TAB = "    "  # 4spacegang
 
             f.write(TOP)
             for key, attrs in paths_or_parameters.items():
@@ -500,14 +480,13 @@ class SeisFlows:
         sys.modules["seisflows_system"].required.validate(paths=True,
                                                           parameters=False)
 
-        # Paths are collected from each module but written at the end together
-        seisflows_paths = {}
-
         # If writing to parameter file fails for any reason, the file will be
         # mangled, create a temporary copy that can be re-instated upon failure
         temp_par_file = f".{self._args.parameter_file}"
         unix.cp(self._args.parameter_file, temp_par_file)
         try:
+            # Paths are collected for each but written at the end
+            seisflows_paths = {}
             with open(self._args.parameter_file, "a") as f:
                 for name in NAMES:
                     req = sys.modules[f"seisflows_{name}"].required
@@ -767,6 +746,7 @@ class SeisFlows:
         """
         if name is None:
             self._subparser.print_help()
+            sys.exit(0)
 
         editor = editor or os.environ.get("EDITOR")
         if editor is None:
