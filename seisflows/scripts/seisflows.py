@@ -25,8 +25,21 @@ def sfparser():
     :rtype: argparse.ArgumentParser()
     :return: User defined or default arguments
     """
+    class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
+        """
+        Override the help statement to NOT print out available subcommands
+
+        https://stackoverflow.com/questions/13423540/
+                              argparse-subparser-hide-metavar-in-command-listing
+        """
+        def _format_action(self, action):
+            parts = super()._format_action(action)
+            if action.nargs == argparse.PARSER:
+                parts = "\n".join(parts.split("\n")[1:])
+            return parts
+
     parser = argparse.ArgumentParser(
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=SubcommandHelpFormatter,
         description=f"{'='*80}\n\n"
                     f"{'SeisFlows: Waveform Inversion Package':^80}\n\n"
                     f"{'='*80}",
@@ -45,8 +58,8 @@ def sfparser():
 
     # Initiate a sub parser to provide nested help functions and sub commands
     subparser = parser.add_subparsers(
-        title="Available Commands",
-        description="Common SeisFlows commands and their intended usages",
+        title="command",
+        description="Available SeisFlows arguments and their intended usages",
         dest="command",
     )
     # The following subparsers constitute the available SeisFlows commands

@@ -17,7 +17,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class MauiLg(custom_import("system", "slurm_lg")):
+class Maui(custom_import("system", "slurm_lg")):
     """
     System interface for the New Zealand Tomography problem
 

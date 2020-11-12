@@ -53,6 +53,11 @@ class Specfem2D(custom_import("solver", "base")):
                docstr="Format of synthetic waveforms used during workflow, "
                       "available options: ['ascii', 'su']")
 
+        sf.par("SOURCE_PREFIX", required=False, default="SOURCE",
+               par_type=str,
+               docstr="Prefix of SOURCE files in path SPECFEM_DATA. By "
+                      "default, 'SOURCE' for SPECFEM2D")
+
         return sf
 
     def check(self, validate=True):
@@ -191,7 +196,7 @@ class Specfem2D(custom_import("solver", "base")):
         if PAR.FORMAT.upper() == "SU":
             unix.cd(os.path.join(self.cwd, "traces", "adj"))
             for channel in ["x", "y", "z", "p"]:
-                src = f"U{PAR.CHANNELS[0]}_file_single.su.adj"
+                src = f"U{PAR.COMPONENTS[0]}_file_single.su.adj"
                 dst = f"U{channel}s_file_single.su.adj"
                 if not exists(dst):
                     unix.cp(src, dst)
@@ -307,11 +312,11 @@ class Specfem2D(custom_import("solver", "base")):
         :rtype: list
         :return: list of data filenames
         """
-        if PAR.CHANNELS:
+        if PAR.COMPONENTS:
             if PAR.FORMAT in ['SU', 'su']:
                 filenames = []
-                for channel in PAR.CHANNELS:
-                    filenames += [f"U{channel}_file_single.su"]
+                for comp in PAR.COMPONENTS:
+                    filenames += [f"U{comp}_file_single.su"]
                 return filenames
         else:
             unix.cd(self.cwd)

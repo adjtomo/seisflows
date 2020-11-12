@@ -123,6 +123,10 @@ class Base:
                       "['CONSTANT': Do not update density, "
                       "'VARIABLE': Update density]")
 
+        sf.par("COMPONENTS", required=False, default="ZNE", par_type=str,
+               docstr="Components used to generate data, formatted as a single "
+                      "string, e.g. ZNE or NZ or E")
+
         sf.par("SOLVERIO", required=False, default="fortran_binary",
                par_type=int,
                docstr="The format external solver files. Available: "

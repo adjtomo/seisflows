@@ -52,10 +52,6 @@ class Specfem3D(custom_import("solver", "base")):
                docstr="Format of synthetic waveforms used during workflow, "
                       "available options: ['ascii', 'su']")
 
-        sf.par("COMPONENTS", required=False, default="ZNE", par_type=str,
-               docstr="Components used to generate data, formatted as a single "
-                      "string, e.g. ZNE or NZ or E")
-
         sf.par("SOURCE_PREFIX", required=False, default="CMTSOLUTION",
                par_type=str,
                docstr="Prefix of SOURCE files in path SPECFEM_DATA. Available "
