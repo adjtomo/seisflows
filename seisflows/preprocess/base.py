@@ -132,9 +132,14 @@ class Base:
             if PAR.MISFIT:
                 self.write_residuals(cwd, syn, obs)
 
-            # Write the adjoint traces
+            # Write the adjoint traces. Rename file extension for Specfem
+            if PAR.FORMAT.upper() == "ASCII":
+                # Change the extension to '.adj' from whatever it is
+                ext = os.path.splitext(filename)[-1]
+                filename_out = filename.replace(ext, ".adj")
+
             self.write_adjoint_traces(path=os.path.join(cwd, "traces", "adj"),
-                                      syn=syn, obs=obs, channel=filename)
+                                      syn=syn, obs=obs, filename=filename_out)
 
     def write_residuals(self, path, syn, obs):
         """
@@ -175,7 +180,7 @@ class Base:
 
         return total_misfit
 
-    def write_adjoint_traces(self, path, syn, obs, channel):
+    def write_adjoint_traces(self, path, syn, obs, filename):
         """
         Writes "adjoint traces" required for gradient computation
 
@@ -195,7 +200,7 @@ class Base:
         for ii in range(nn):
             adj[ii].data = self.adjoint(syn[ii].data, obs[ii].data, nt, dt)
 
-        self.writer(adj, path, channel)
+        self.writer(adj, path, filename)
 
     def apply_filter(self, st):
         """

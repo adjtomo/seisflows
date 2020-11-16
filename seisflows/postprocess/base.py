@@ -103,7 +103,7 @@ class Base:
         Combines contributions from individual sources and material parameters
         to get the gradient, and optionally applies user-supplied scaling
 
-        Note:
+        .. note::
             Because processing operations can be quite expensive, they must be
             run through the HPC system interface; processing does not involve
             embarassingly parallel tasks, we use system.run_single instead of

@@ -288,6 +288,37 @@ class Specfem2D(custom_import("solver", "base")):
         call_solver(mpiexec=system.mpiexec(), executable="bin/xmeshfem2D")
         call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem2D")
 
+    def smooth(self, input_path, **kwargs):
+        """
+        Specfem2D requires additional model parameters in directory to perform
+        the xsmooth_sem task. This function will copy these files into the 
+        directory before performing the base smooth operations. 
+
+        Kwargs should match arguments of solver.base.smooth()
+        
+        .. note::
+            This operation is usually run with 'run_single' so only one task
+            will be performing these operations.
+
+        :type input_path: str
+        :param input_path: path to data
+        """
+        # Redundant to 'base' class but necessary
+        if not exists(input_path):
+            unix.mkdir(input_path)
+
+        unix.cd(self.cwd)
+        unix.cd("DATA")
+
+        # Copy over only the files that are required. Won't execute if no match
+        files = []
+        for tag in ["jacobian", "NSPEC_ibool", "x", "y", "z"]:
+            files += glob(f"*_{tag}.bin")
+        for src in files:
+            unix.cp(src=src, dst=input_path) 
+
+        super().smooth(input_path=input_path, **kwargs)
+
     def import_model(self, path):
         """
         File transfer utility to move a SPEFEM2D model into the correct location
