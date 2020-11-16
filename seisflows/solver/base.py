@@ -143,6 +143,11 @@ class Base:
                 docstr="path to the SPECFEM DATA/ directory containing the "
                        "'Par_file', 'STATIONS' file and 'CMTSOLUTION' files")
 
+        sf.path("DATA", required=False, 
+                docstr="path to a directory containing any external data "
+                       "required by the workflow. Catch all directory that "
+                       "can be accessed by all modules")
+
         return sf
 
     def check(self, validate=True):
@@ -672,7 +677,7 @@ class Base:
         # Create directory structure
         for cwd_dir in ["bin", "DATA", "OUTPUT_FILES/DATABASES_MPI",
                         "traces/obs", "traces/syn", "traces/adj",
-                        self.model_databases, self.kernel_database]:
+                        self.model_databases, self.kernel_databases]:
             unix.mkdir(cwd_dir)
 
         # Copy exectuables

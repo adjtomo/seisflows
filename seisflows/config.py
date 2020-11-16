@@ -44,7 +44,7 @@ PACKAGES = ["seisflows", "seisflows-super"]
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
 
-def init_seisflows():
+def init_seisflows(force=False):
     """
     Instantiates SeisFlows objects and makes them globally accessible by
     registering them in sys.modules

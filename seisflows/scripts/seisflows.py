@@ -102,7 +102,8 @@ def sfparser():
         marked appropriately. Required parameters must be set before a workflow
         can be submitted."""
     )
-    subparser.add_parser(
+    # =========================================================================
+    init = subparser.add_parser(
         "init", help="Initiate working environment",
         description="""Establish a SeisFlows working environment but don't 
         submit the workflow to the system and do not perform variable  error 
@@ -110,6 +111,9 @@ def sfparser():
         environment inspection prior to running 'submit'. Useful for debugging, 
         development and code exploration."""
     )
+    init.add_argument("-c", "--check", action="store_true",
+                      help="Perform parameter and path checking to ensure that "
+                           "user-defined parameters are accepatable")
     # =========================================================================
     submit = subparser.add_parser(
         "submit", help="Submit initial workflow to system",
@@ -359,19 +363,19 @@ class SeisFlows:
         unix.cd(self._args.workdir)
 
         # Reload objects from Pickle files
-        for name in NAMES:
+        for NAME in NAMES:
             fullfile = os.path.join(self._args.workdir, "output",
-                                    f"seisflows_{name}.p")
+                                    f"seisflows_{NAME}.p")
 
             if not os.path.exists(fullfile):
                 sys.exit(f"\n\tNot a SeisFlows working directory, state file "
                          f"not found:\n\t{fullfile}\n")
 
-            sys.modules[f"seisflows_{name}"] = tools.loadobj(fullfile)
+            sys.modules[f"seisflows_{NAME}"] = tools.loadobj(fullfile)
 
         # Check parameters so that default values are present
-        for name in NAMES:
-            sys.modules[f"seisflows_{name}"].check()
+        for NAME in NAMES:
+            sys.modules[f"seisflows_{NAME}"].check()
 
     def modules(self, name=None, package=None, **kwargs):
         """
@@ -474,10 +478,12 @@ class SeisFlows:
                     for val in attrs["default"]:
                         f.write(f"{TAB}- {val}\n")
                 else:
-                    # Yaml saves NoneType values as 'null'
+                    # Yaml saves NoneType values as 'null' or blank lines
                     if attrs["default"] is None:
-                        attrs["default"] = "null"
-                    f.write(f"{indent}{key}: {attrs['default']}\n")
+                        # f.write(f"{indent}{key}: null\n")
+                        f.write(f"{indent}{key}:\n")
+                    else:
+                        f.write(f"{indent}{key}: {attrs['default']}\n")
 
         # Establish the paths and parameters provided by the user
         if not self._args.parameter_file.endswith(".yaml"):
@@ -485,8 +491,8 @@ class SeisFlows:
                      f"parameter files\n")
 
         # Need to attempt importing all modules before we access any of them
-        for name in NAMES:
-            sys.modules[f"seisflows_{name}"] = custom_import(name)()
+        for NAME in NAMES:
+            sys.modules[f"seisflows_{NAME}"] = custom_import(NAME)()
 
         # System defines foundational directory structure required by other
         # modules. Don't validate the parameters because they aren't yet set
@@ -501,8 +507,8 @@ class SeisFlows:
             # Paths are collected for each but written at the end
             seisflows_paths = {}
             with open(self._args.parameter_file, "a") as f:
-                for name in NAMES:
-                    req = sys.modules[f"seisflows_{name}"].required
+                for NAME in NAMES:
+                    req = sys.modules[f"seisflows_{NAME}"].required
                     seisflows_paths.update(req.paths)
                     write_header(f, req.parameters, name)
                     write_paths_parameters(f, req.parameters)
@@ -530,8 +536,13 @@ class SeisFlows:
         unix.cd(self._args.workdir)
 
         init_seisflows()
+
         workflow = sys.modules["seisflows_workflow"]
         workflow.checkpoint()
+
+        if self._args.check:
+            for NAME in NAMES:
+                sys.modules[f"seisflows_{NAME}"].required.validate()
 
     def submit(self, stop_after=None, precheck_off=False, **kwargs):
         """
@@ -618,8 +629,6 @@ class SeisFlows:
         if resume_from is not None:
             self.par(parameter="RESUME_FROM", value=resume_from)
 
-        import ipdb;ipdb.set_trace()
-
         self._register(precheck=not precheck_off)
         self._load_modules()
 
@@ -659,7 +668,8 @@ class SeisFlows:
             import ipdb
             from IPython import embed
         except ImportError as e:
-            sys.exit("ipdb, IPython are required packages for debug mode, {e}")
+            sys.exit(f"\n\nipdb, IPython are required packages "
+                     f"for debug mode, {e}\n")
 
         # > This is SeisFlows' debug mode.
         ipdb.set_trace(context=5)
@@ -935,11 +945,11 @@ class SeisFlows:
         :param name: choice of module, if None, will print hierarchies for all
             modules.
         """
-        for name_ in NAMES:
-            if name and name_ != name:
+        for NAME in NAMES:
+            if name and NAME != name:
                 continue
-            module = sys.modules[f"seisflows_{name_}"]
-            print(f"\n\t{name_.upper()}", end=" ")
+            module = sys.modules[f"seisflows_{NAME}"]
+            print(f"\n\t{NAME.upper()}", end=" ")
             for i, cls in enumerate(inspect.getmro(type(module))[::-1]):
                 print(f"-> {cls.__name__}", end=" ")
         print("\n")

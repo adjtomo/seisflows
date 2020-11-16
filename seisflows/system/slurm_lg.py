@@ -54,7 +54,7 @@ class SlurmLg(custom_import("system", "base")):
         sf = SeisFlowsPathsParameters(super().required)
 
         # Define the Parameters required by this module
-        sf.par("NTASKMASK", required=False, default=100, par_type=int,
+        sf.par("NTASKMAX", required=False, default=100, par_type=int,
                docstr="Limit on the number of concurrent tasks")
 
         sf.par("NODESIZE", required=True, par_type=int,
@@ -64,7 +64,7 @@ class SlurmLg(custom_import("system", "base")):
                docstr="Any optional, additional SLURM arguments that will be "
                       "passed to the SBATCH scripts")
 
-        sf.par("SLURMARGS", required=False, default="", par_type=str,
+        sf.par("ENVIRONS", required=False, default="", par_type=str,
                docstr="Optional environment variables to be provided in the"
                       "following format VAR1=var1,VAR2=var2...")
 

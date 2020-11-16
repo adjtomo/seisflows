@@ -64,19 +64,11 @@ class Specfem2D(custom_import("solver", "base")):
         """
         Checks parameters and paths
         """
-        self.parameters = []
-
         if validate:
             self.required.validate()
         super().check(validate=False)
 
-        # Set an internal parameter list
-        if PAR.MATERIALS.upper() == "ELASTIC":
-            self.parameters += ["vp", "vs"]
-        elif PAR.MATERIALS.upper() == "ACOUSTIC":
-            self.parameters += ["vp"]
-
-        acceptable_formats = ["SU"]
+        acceptable_formats = ["SU", "ASCII"]
         assert(PAR.FORMAT.upper() in acceptable_formats), \
             f"FORMAT must be {acceptable_formats}"
 

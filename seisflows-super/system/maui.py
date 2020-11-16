@@ -112,6 +112,7 @@ class Maui(custom_import("system", "slurm_lg")):
             os.path.join(findpath("seisflows.system"), "wrappers", "submit"),
             PATH.OUTPUT
         ])
+
         call(submit_call)
 
     def run(self, classname, method, scale_tasktime=1, *args, **kwargs):
