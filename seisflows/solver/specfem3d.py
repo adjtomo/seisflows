@@ -114,7 +114,6 @@ class Specfem3D(custom_import("solver", "base")):
         assert(model_type in available_model_types), \
             f"{model_type} not in available types {available_model_types}"
 
-        self.initialize_solver_directories()
         unix.cd(self.cwd)
 
         # Run mesh generation
