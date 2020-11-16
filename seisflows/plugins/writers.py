@@ -35,29 +35,24 @@ def su(st, path, filename):
     st.write(os.path.join(path, filename), format='SU')
 
 
-def ascii(st, path):
+def ascii(st, path, filename=None):
     """
-    Writes seismic traces as ascii files
+    Writes seismic traces as ascii files. Kwargs are left to keep structure of 
+    inputs compatible with other input formats.
 
     :type st: obspy.core.stream.Stream
     :param st: stream to write
     :type path: str
     :param path: path to datasets
     """
-    for ir, tr in enumerate(st):
-        nt = tr.stats.npts
-        t1 = float(tr.stats.starttime)
-        t2 = t1 + tr.stats.npts * tr.stats.sampling_rate
+    for tr in st:
+        if filename is None:
+            filename = tr.stats.filename
 
-        print(nt, t1, t2)
+        fid_out = os.path.join(path, filename)
 
-        t = np.linspace(t1, t2, nt)
-        w = tr.data
+        time_offset = float(tr.stats.starttime) 
+        data_out = np.vstack((tr.times() + time_offset, tr.data)).T
 
-        print(os.path.join(path, tr.stats.filename))
-        print(tr.times.shape, tr.data.shape)
-
-        np.savetxt(os.path.join(path, tr.stats.filename),
-                   np.column_stack((t, w))
-                   )
+        np.savetxt(fid_out, data_out, ["%13.7f", "%17.7f"])
 

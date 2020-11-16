@@ -101,20 +101,23 @@ class Base:
         self.reader = getattr(readers, PAR.FORMAT)
         self.writer = getattr(writers, PAR.FORMAT)
 
-    def prepare_eval_grad(self, path='./', **kwargs):
+    def prepare_eval_grad(self, cwd="./", **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
         adjoint traces
 
-        :type path: str
-        :param path: directory containing observed and synthetic seismic data
+        :type cwd: str
+        :param cwd: current specfem working directory containing observed and 
+            synthetic seismic data to be read and processed
         """
         # Need to load solver mid-workflow as preprocess is loaded first
         solver = sys.modules["seisflows_solver"]
 
         for filename in solver.data_filenames:
-            obs = self.reader(os.path.join(path, "traces", "obs", filename))
-            syn = self.reader(os.path.join(path, "traces", "syn", filename))
+            obs = self.reader(path=os.path.join(cwd, "traces", "obs"),
+                              filename=filename)
+            syn = self.reader(path=os.path.join(cwd, "traces", "syn"), 
+                              filename=filename)
 
             # Process observations
             obs = self.apply_filter(obs)
@@ -127,10 +130,10 @@ class Base:
             syn = self.apply_normalize(syn)
 
             if PAR.MISFIT:
-                self.write_residuals(path, syn, obs)
+                self.write_residuals(cwd, syn, obs)
 
             # Write the adjoint traces
-            self.write_adjoint_traces(path=os.path.join(path, "traces", "adj"),
+            self.write_adjoint_traces(path=os.path.join(cwd, "traces", "adj"),
                                       syn=syn, obs=obs, channel=filename)
 
     def write_residuals(self, path, syn, obs):
@@ -153,7 +156,7 @@ class Base:
 
         filename = os.path.join(path, "residuals")
         if exists(filename):
-            residuals.extend(list(np.loadtxt(filename)))
+            residuals = np.append(residuals, np.loadtxt(filename))
 
         np.savetxt(filename, residuals)
 

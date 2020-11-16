@@ -16,6 +16,7 @@ import math
 import sys
 import time
 
+from warnings import warn
 from subprocess import check_output
 from seisflows.tools import msg, unix
 from seisflows.tools.err import ParameterError
@@ -210,9 +211,17 @@ class SlurmLg(custom_import("system", "base")):
         try:
             return int(os.getenv('SEISFLOWS_TASKID'))
         except TypeError:
-            # TypeError thrown when 'SEISFLOWS_TASKID' is returned as None
-            return int(os.getenv('SLURM_ARRAY_TASK_ID'))
-
+            try:
+                # TypeError thrown when 'SEISFLOWS_TASKID' is returned as None
+                return int(os.getenv('SLURM_ARRAY_TASK_ID'))    
+            except TypeError:
+                # This should only be thrown during debug processes when no 
+                # job have been submitted but 'taskid' may be called from the
+                # debugger
+                warn("No task ID; returning index 0. "
+                     "Assuming debug environment, if not please check system.")
+                return 0
+                
     def job_array_status(self, classname, method, jobs):
         """
         Determines completion status of job or job array

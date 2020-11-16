@@ -177,21 +177,41 @@ class Specfem2D(custom_import("solver", "base")):
             overwritten with nonzero values later on.
         """
         super().initialize_adjoint_traces()
+    
+        unix.cd(self.cwd)
+        unix.cd(os.path.join("traces", "adj"))
 
         # work around SPECFEM2D's use of different name conventions for
         # regular traces and 'adjoint' traces
         if PAR.FORMAT.upper() == "SU":
-            files = glob(os.path.join(self.cwd, "traces", "adj", "*SU"))
+            files = glob("*SU")
             unix.rename(old="_SU", new="_SU.adj", names=files)
+        elif PAR.FORMAT.upper() == "ASCII":
+            files = glob("*sem?")
+
+            # Get the available extensions, which are named based on unit
+            extensions = set([os.path.splitext(_)[-1] for _ in files])
+            for extension in extensions:
+                unix.rename(old=extension, new=".adj", names=files)
 
         # SPECFEM2D requires that all components exist even if ununsed
+        components = ["x", "y", "z", "p"]
+
         if PAR.FORMAT.upper() == "SU":
-            unix.cd(os.path.join(self.cwd, "traces", "adj"))
-            for channel in ["x", "y", "z", "p"]:
+            for comp in components:
                 src = f"U{PAR.COMPONENTS[0]}_file_single.su.adj"
-                dst = f"U{channel}s_file_single.su.adj"
+                dst = f"U{comp.lower()}s_file_single.su.adj"
                 if not exists(dst):
                     unix.cp(src, dst)
+        elif PAR.FORMAT.upper() == "ASCII":
+            for fid in glob("*.adj"):
+                net, sta, cha, ext = fid.split(".")
+                for comp in components:
+                    # Replace the last value in the channel with new component
+                    cha_check = cha[:-1] + comp.upper()
+                    fid_check = ".".join([net, sta, cha_check, ext])
+                    if not exists(fid_check):
+                        unix.cp(fid, fid_check)
 
     def generate_mesh(self, model_path, model_name, model_type='gll'):
         """
@@ -303,18 +323,20 @@ class Specfem2D(custom_import("solver", "base")):
         :rtype: list
         :return: list of data filenames
         """
-        if PAR.COMPONENTS:
-            if PAR.FORMAT in ['SU', 'su']:
-                filenames = []
-                for comp in PAR.COMPONENTS:
-                    filenames += [f"U{comp}_file_single.su"]
-                return filenames
-        else:
-            unix.cd(self.cwd)
-            unix.cd('traces/obs')
+        unix.cd(self.cwd)
+        unix.cd(os.path.join("traces", "obs"))
 
-            if PAR.FORMAT in ['SU', 'su']:
-                return glob('U?_file_single.su')
+        if PAR.COMPONENTS:
+            filenames = []
+            if PAR.FORMAT.upper() == "SU":
+                for comp in PAR.COMPONENTS:
+                    filenames += [f"U{comp.lower()}_file_single.su"]
+            elif PAR.FORMAT.upper() == "ASCII":
+                for comp in PAR.COMPONENTS:
+                    filenames += glob(f"*.?X{comp.upper()}.sem?")
+            return filenames
+        else:
+            return glob(self.data_wildcard)
 
     @property
     def model_databases(self):
@@ -339,7 +361,8 @@ class Specfem2D(custom_import("solver", "base")):
         :return: wildcard identifier for channels
         """
         if PAR.FORMAT.upper() == "SU":
-            return f"*.su"
+            # return f"*.su"  # too vague but maybe for a reason? -bryant
+            return f"U?_file_single.su"
         elif PAR.FORMAT.upper() == "ASCII":
             return f"*.?X?.sem?"
 

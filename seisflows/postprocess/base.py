@@ -44,7 +44,7 @@ class Base:
                docstr="Gaussian half-width for vertical smoothing in units "
                       "of meters")
 
-        sf.par("TASKTIME_SMOOTH", required=False, default=1., par_type=float,
+        sf.par("TASKTIME_SMOOTH", required=False, default=1, par_type=int,
                docstr="Large radii smoothing may take longer than normal "
                       "tasks. Allocate additional smoothing task time "
                       "as a multiple of TASKTIME")

@@ -239,7 +239,13 @@ def savenpy(filename, v):
 
 
 def loadyaml(filename):
-
+    """
+    Define how the PyYaml yaml loading function behaves. 
+    Replaces None and inf strings with NoneType and numpy.inf respectively
+    
+    :type filename: str
+    :param filename: .yaml file to load in
+    """
     # work around PyYAML bugs
     yaml.SafeLoader.add_implicit_resolver(
         u'tag:yaml.org,2002:float',
@@ -258,11 +264,12 @@ def loadyaml(filename):
     if mydict is None:
         mydict = dict()
 
-    # Replace None
-    if 'None' in mydict.values():
-        for key, val in mydict.items():
-            if val == 'None':
-                mydict[key] = None
+    # Replace 'None' and 'inf' values to match expectations
+    for key, val in mydict.items():
+        if val == "None":
+            mydict[key] = None
+        if val == "inf":
+            mydict[key] = np.inf
 
     return mydict
 

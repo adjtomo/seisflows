@@ -6,6 +6,9 @@ introduce an additonal level of indirection
 Used by the PREPROCESS class and specified by the READER parameter
 """
 import os
+from numpy import loadtxt
+from obspy import read 
+from obspy.core import Stream, Stats, Trace
 
 
 def su(path, filename):
@@ -17,14 +20,12 @@ def su(path, filename):
     :type filename: str
     :param filename: file to read
     """
-    from obspy import read
-
     st = read(os.path.join(path, filename), format='SU', byteorder='<')
     
     return st
 
 
-def ascii(path, filenames):
+def ascii(path, filename):
     """
     Reads SPECFEM3D-style ASCII data
 
@@ -33,28 +34,25 @@ def ascii(path, filenames):
     :type filenames: list
     :param filenames: files to read
     """
-    from numpy import loadtxt
-    from obspy.core import Stream, Stats, Trace
-
     stream = Stream()
-    for filename in filenames:
-        stats = Stats()
-        data = loadtxt(os.path.join(path, filename))
+    stats = Stats()
 
-        stats.filename = filename
-        stats.starttime = data[0, 0]
-        stats.sampling_rate = data[0, 1] - data[0, 0]
-        stats.npts = len(data[:, 0])
+    time, data = loadtxt(os.path.join(path, filename)).T
 
-        try:
-            parts = filename.split('.')
-            stats.network = parts[0]
-            stats.station = parts[1]
-            stats.channel = parts[2]
-        except:
-            pass
+    stats.filename = filename
+    stats.starttime = time[0]
+    stats.sampling_rate = time[1] - time[0]
+    stats.npts = len(data)
 
-        stream.append(Trace(data=data[:, 1], header=stats))
+    try:
+        parts = filename.split(".")
+        stats.network = parts[0]
+        stats.station = parts[1]
+        stats.channel = parts[2]
+    except:
+        pass
+
+    stream.append(Trace(data=data, header=stats))
 
     return stream
 

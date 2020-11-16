@@ -51,8 +51,8 @@ class LBFGS(custom_import("optimize", "base")):
                docstr="Max number of previous gradients to retain "
                       "in local memory")
 
-        sf.par("LBFGSMAX", required=False, par_type=float,
-               docstr="LBFGS periodic restart interval, between 1 and inf")
+        sf.par("LBFGSMAX", required=False, par_type=int, default="inf",
+               docstr="LBFGS periodic restart interval, between 1 and 'inf'")
 
         sf.par("LBFGSTHRESH", required=False, default=0., par_type=float,
                docstr="LBFGS angle restart threshold")

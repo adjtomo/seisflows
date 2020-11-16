@@ -268,9 +268,9 @@ class Base:
         self.forward()
 
         if write_residuals:
-            preprocess.prepare_eval_grad(path, self.cwd, self.source_name)
-            if export_traces:
-                self.export_residuals(path)
+            preprocess.prepare_eval_grad(path=self.cwd, 
+                                         source_name=self.source_name)
+            self.export_residuals(path)
 
     def eval_grad(self, path='', export_traces=False):
         """
@@ -478,8 +478,8 @@ class Base:
 
         unix.cd(self.cwd)
         # Write the source names into the kernel paths file for SEM
-        with open('kernel_paths', 'w') as file:
-            file.writelines(
+        with open('kernel_paths', 'w') as f:
+            f.writelines(
                 [os.path.join(input_path, f"{name}\n")
                  for name in self.source_names]
             )
@@ -720,20 +720,20 @@ class Base:
             Channels actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
         """
-        if PAR.PREPROCESS == "base":
+        if PAR.PREPROCESS.lower() == "base":
             for filename in self.data_filenames:
                 d = preprocess.reader(
                             path=os.path.join(self.cwd, "traces", "obs"),
                             filename=filename
                             )
 
-                # Set the data traces to zero
+                # Set the data traces to zero to be overwritten later
                 for t in d:
                     t.data[:] = 0.
 
-                # Write traces
+                # Write traces back to the adjoint trace directory
                 preprocess.writer(
-                         stream=d, path=os.path.join(self.cwd, "traces", "adj"),
+                         st=d, path=os.path.join(self.cwd, "traces", "adj"),
                          filename=filename
                          )
 
