@@ -268,7 +268,7 @@ class Base:
         self.forward()
 
         if write_residuals:
-            preprocess.prepare_eval_grad(path=self.cwd, 
+            preprocess.prepare_eval_grad(cwd=self.cwd, path=path, 
                                          source_name=self.source_name)
             self.export_residuals(path)
 

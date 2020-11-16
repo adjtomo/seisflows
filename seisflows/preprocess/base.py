@@ -467,6 +467,9 @@ class Base:
             return sx, sy, sz
         else:
             raise NotImplementedError
-
-
-
+    
+    def finalize(self):
+        """
+        Any finalization processes that need to take place at the end of an iter
+        """
+        pass
