@@ -358,10 +358,14 @@ def tilde_expand(mydict):
     :param mydict: dictionary of paths to be expanded
     """
     for key, val in mydict.items():
-        if not isinstance(val, str):
-            raise TypeError("Expanded objects must type: str")
-        else:
+        try:
             mydict[key] = os.path.expanduser(val)
+        except TypeError:
+            continue
+        # if not isinstance(val, str):
+        #     raise TypeError("Expanded objects must type: str")
+        # else:
+        #     mydict[key] = os.path.expanduser(val)
 
     return mydict
 
