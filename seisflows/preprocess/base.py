@@ -36,9 +36,6 @@ class Base:
         sf = SeisFlowsPathsParameters()
 
         # Define the Parameters required by this module
-        sf.par("FORMAT", required=True,  par_type=str,
-               docstr="File format for waveforms, available: ['ascii', 'su']")
-
         sf.par("MISFIT", required=False, default="null", par_type=str,
                docstr="Misfit function for waveform comparisons, for available "
                       "see seisflows.plugins.misfit")

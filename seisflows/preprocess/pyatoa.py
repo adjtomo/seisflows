@@ -48,9 +48,6 @@ class Pyatoa:
         sf = SeisFlowsPathsParameters()
 
         # Define the Parameters required by this module
-        sf.par("FORMAT", required=False, default="ascii",  par_type=str,
-               docstr="File format for waveforms, available: ['ascii']")
-
         sf.par("UNIT_OUTPUT", required=True, par_type=str,
                docstr="Data units. Must match the synthetic output of external "
                       "solver. Available: ['DISP': displacement, "

@@ -2,7 +2,7 @@
 #
 #                 Seisflows YAML Parameter File and Path Input
 #
-#   variables set to '', or `null`, will be ignored and set to default values 
+#  For NoneType, set variables to `None` or `null`. For infinity, set to `inf`
 #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
@@ -29,5 +29,5 @@ WORKFLOW: inversion
 SOLVER: specfem3d
 SYSTEM: serial
 OPTIMIZE: LBFGS 
-PREPROCESS: pyatoa
+PREPROCESS: base
 POSTPROCESS: base

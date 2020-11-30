@@ -104,7 +104,7 @@ class Bracket(Base):
         # Stop because safeguard prevents us from going further
         elif alpha > self.step_len_max:
             if self.verbose:
-                print("step_len_max exceeded, manual set alpha")
+                print("\tstep_len_max exceeded, manual set alpha")
             alpha = self.step_len_max
             status = 1
 
@@ -117,9 +117,6 @@ class Bracket(Base):
 
         Looks at the minimum of the misfit values calculated through eval func
         to see if the misfit has been reduced w.r.t the initial misfit
-
-        !!! This function is defined outside the class because the Base class
-        !!! doesn't require the function, but this subclass does
 
         :type step_lens: numpy.array
         :param step_lens: an array of the step lengths taken during iteration

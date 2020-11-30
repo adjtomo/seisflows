@@ -12,7 +12,7 @@ import subprocess
 from glob import glob
 from textwrap import wrap
 from seisflows.tools import unix, tools
-from seisflows.tools.tools import loadyaml, loadpy, parse_null
+from seisflows.tools.tools import loadyaml, loadpy
 from seisflows.config import (init_seisflows, tilde_expand, Dict, custom_import,
                               NAMES, PACKAGES, ROOT_DIR)
 
@@ -341,11 +341,10 @@ class SeisFlows:
                 sys.exit(-1)
 
         # Register parameters to sys, ensure they meet standards of the package
-        # parameters = parse_null(parameters)
         sys.modules["seisflows_parameters"] = Dict(parameters)
 
-        # Register paths to sys, expand to relative paths to absolute, drop null
-        paths = tilde_expand(parse_null(paths))
+        # Register paths to sys, expand to relative paths to absolute
+        paths = tilde_expand(paths)
         paths = {key: os.path.abspath(path) for key, path in paths.items()}
         sys.modules["seisflows_paths"] = Dict(paths)
 
@@ -510,7 +509,7 @@ class SeisFlows:
                 for NAME in NAMES:
                     req = sys.modules[f"seisflows_{NAME}"].required
                     seisflows_paths.update(req.paths)
-                    write_header(f, req.parameters, name)
+                    write_header(f, req.parameters, NAME)
                     write_paths_parameters(f, req.parameters)
                 # Write the paths in the same format as parameters
                 write_header(f, seisflows_paths, name="PATHS")
