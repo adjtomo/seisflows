@@ -350,7 +350,7 @@ def custom_import(name=None, module=None, classname=None):
                                          classname=classname))
 
 
-def tilde_expand(mydict):
+def path_expand(mydict):
     """
     Expands tilde character (~) in Path strings
 
@@ -359,7 +359,7 @@ def tilde_expand(mydict):
     """
     for key, val in mydict.items():
         try:
-            mydict[key] = os.path.expanduser(val)
+            mydict[key] = os.path.expanduser(os.path.abspath(val))
         except TypeError:
             continue
         # if not isinstance(val, str):

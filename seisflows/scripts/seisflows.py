@@ -143,6 +143,13 @@ def sfparser():
                         help="Optional override of the 'STOP_AFTER' parameter")
     # =========================================================================
     subparser.add_parser(
+        "restart", help="Remove current environment and submit new workflow",
+        description="""Akin to running seisflows clean; seisflows submit. 
+        Restarts the workflow by removing the current state and submitting a 
+        fresh workflow."""
+    )
+    # =========================================================================
+    subparser.add_parser(
         "clean", help="Remove active working environment",
         description="""Delete all SeisFlows related files in the working 
         directory, except for the parameter file."""
@@ -344,8 +351,7 @@ class SeisFlows:
         sys.modules["seisflows_parameters"] = Dict(parameters)
 
         # Register paths to sys, expand to relative paths to absolute
-        paths = tilde_expand(paths)
-        paths = {key: os.path.abspath(path) for key, path in paths.items()}
+        paths = path_expand(paths)
         sys.modules["seisflows_paths"] = Dict(paths)
 
         self._paths = paths
