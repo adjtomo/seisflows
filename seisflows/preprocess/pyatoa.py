@@ -15,6 +15,7 @@ import pyatoa
 import numpy as np
 from glob import glob
 from seisflows.tools import unix
+from seisflows.config import custom_import
 from seisflows.config import SeisFlowsPathsParameters
 from pyatoa.utils.images import merge_pdfs
 
@@ -22,7 +23,7 @@ PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
 
 
-class Pyatoa:
+class Pyatoa(custom_import("preprocess", "base")):
     """
     Data preprocessing class using the Pyatoa package
     """
