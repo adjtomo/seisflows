@@ -5,17 +5,17 @@ differences between data and synthetics.
 
 All functions defined have four required positional arguments
 
-:type syn: np.array
-:param syn: synthetic data array
-:type obs: np.array
-:param obs: observed data array
-:type nt: int
-:param nt: number of time steps in the data array
-:type dt: float
-:param dt: time step in sec
+    :type syn: np.array
+    :param syn: synthetic data array
+    :type obs: np.array
+    :param obs: observed data array
+    :type nt: int
+    :param nt: number of time steps in the data array
+    :type dt: float
+    :param dt: time step in sec
 """
 import numpy as np
-from scipy.signal import hilbert as _analytic
+from scipy.signal import hilbert as analytic
 
 
 def waveform(syn, obs, nt, dt):
@@ -49,8 +49,8 @@ def envelope(syn, obs, nt, dt):
     :type dt: float
     :param dt: time step in sec
     """
-    env_syn = abs(_analytic(syn))
-    env_obs = abs(_analytic(obs))
+    env_syn = abs(analytic(syn))
+    env_obs = abs(analytic(obs))
 
     # Residual of envelopes
     env_rsd = env_syn - env_obs
@@ -71,12 +71,12 @@ def instantaneous_phase(syn, obs, nt, dt):
     :type dt: float
     :param dt: time step in sec
     """
-    r = np.real(_analytic(syn))
-    i = np.imag(_analytic(syn))
+    r = np.real(analytic(syn))
+    i = np.imag(analytic(syn))
     phi_syn = np.arctan2(i, r)
 
-    r = np.real(_analytic(obs))
-    i = np.imag(_analytic(obs))
+    r = np.real(analytic(obs))
+    i = np.imag(analytic(obs))
     phi_obs = np.arctan2(i, r)
 
     phi_rsd = phi_syn - phi_obs
@@ -157,8 +157,8 @@ def envelope2(syn, obs, nt, dt):
     :type dt: float
     :param dt: time step in sec
     """
-    env_syn = abs(_analytic(syn))
-    env_obs = abs(_analytic(obs))
+    env_syn = abs(analytic(syn))
+    env_obs = abs(analytic(obs))
 
     raise NotImplementedError
 
@@ -176,8 +176,8 @@ def envelope3(syn, obs, nt, dt, eps=0.):
     :type dt: float
     :param dt: time step in sec
     """
-    env_syn = abs(_analytic(syn))
-    env_obs = abs(_analytic(obs))
+    env_syn = abs(analytic(syn))
+    env_obs = abs(analytic(obs))
 
     return Traveltime(env_syn, env_obs, nt, dt)
 
@@ -195,25 +195,25 @@ def instantaneous_phase2(syn, obs, nt, dt, eps=0.):
     :type dt: float
     :param dt: time step in sec
     """
-    env_syn = abs(_analytic(syn))
-    env_obs = abs(_analytic(obs))
+    env_syn = abs(analytic(syn))
+    env_obs = abs(analytic(obs))
 
     env_syn1 = env_syn + eps * max(env_syn)
     env_obs1 = env_obs + eps * max(env_obs)
 
     diff = (syn / env_syn1) - (obs / env_obs1)
 
-    return np.sqrt(np.sum((diff ** 2) * dt))
+    return np.sqrt(np.sum(diff * diff * dt))
 
 
 def displacement(syn, obs, nt, dt):
-    return Exception('This function can only used for migration.')
+    return Exception("This function can only used for migration.")
 
 
 def velocity(syn, obs, nt, dt):
-    return Exception('This function can only used for migration.')
+    return Exception("This function can only used for migration.")
 
 
 def acceleration(syn, obs, nt, dt):
-    return Exception('This function can only used for migration.')
+    return Exception("This function can only used for migration.")
 
