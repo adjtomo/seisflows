@@ -1,100 +1,219 @@
+#!/usr/bin/env python
+"""
+Misfit functions used by the 'default' preprocess class use to quantify 
+differences between data and synthetics. 
 
-# used by the PREPROCESS class and specified by the MISFIT parameter
+All functions defined have four required positional arguments
 
-
-
+:type syn: np.array
+:param syn: synthetic data array
+:type obs: np.array
+:param obs: observed data array
+:type nt: int
+:param nt: number of time steps in the data array
+:type dt: float
+:param dt: time step in sec
+"""
 import numpy as np
 from scipy.signal import hilbert as _analytic
 
 
-def Waveform(syn, obs, nt, dt):
-    # waveform difference
-    wrsd = syn-obs
-    return np.sqrt(np.sum(wrsd*wrsd*dt))
+def waveform(syn, obs, nt, dt):
+    """
+    Direct waveform differencing
+
+    :type syn: np.array
+    :param syn: synthetic data array
+    :type obs: np.array
+    :param obs: observed data array
+    :type nt: int
+    :param nt: number of time steps in the data array
+    :type dt: float
+    :param dt: time step in sec
+    """
+    wrsd = syn - obs
+
+    return np.sqrt(np.sum(wrsd * wrsd * dt))
 
 
-def Envelope(syn, obs, nt, dt, eps=0.05):
-    # envelope difference
-    # (Yuan et al 2015, eq 9)
-    esyn = abs(_analytic(syn))
-    eobs = abs(_analytic(obs))
-    ersd = esyn-eobs
-    return np.sqrt(np.sum(ersd*ersd*dt))
+def envelope(syn, obs, nt, dt):
+    """
+    Waveform envelope difference from Yuan et al. 2015 Eq. 9
+
+    :type syn: np.array
+    :param syn: synthetic data array
+    :type obs: np.array
+    :param obs: observed data array
+    :type nt: int
+    :param nt: number of time steps in the data array
+    :type dt: float
+    :param dt: time step in sec
+    """
+    env_syn = abs(_analytic(syn))
+    env_obs = abs(_analytic(obs))
+
+    # Residual of envelopes
+    env_rsd = env_syn - env_obs
+
+    return np.sqrt(np.sum(env_rsd * env_rsd * dt))
 
 
-def InstantaneousPhase(syn, obs, nt, dt, eps=0.05):
-    # instantaneous phase 
-    # from Bozdag et al. 2011
+def instantaneous_phase(syn, obs, nt, dt):
+    """
+    Instantaneous phase difference from Bozdag et al. 2011
 
+    :type syn: np.array
+    :param syn: synthetic data array
+    :type obs: np.array
+    :param obs: observed data array
+    :type nt: int
+    :param nt: number of time steps in the data array
+    :type dt: float
+    :param dt: time step in sec
+    """
     r = np.real(_analytic(syn))
     i = np.imag(_analytic(syn))
-    phi_syn = np.arctan2(i,r)
+    phi_syn = np.arctan2(i, r)
 
     r = np.real(_analytic(obs))
     i = np.imag(_analytic(obs))
-    phi_obs = np.arctan2(i,r)
+    phi_obs = np.arctan2(i, r)
 
     phi_rsd = phi_syn - phi_obs
-    return np.sqrt(np.sum(phi_rsd*phi_rsd*dt))
+
+    return np.sqrt(np.sum(phi_rsd * phi_rsd * dt))
 
 
-def Traveltime(syn, obs, nt, dt):
+def traveltime(syn, obs, nt, dt):
+    """
+    Cross-correlation traveltime 
+
+    :type syn: np.array
+    :param syn: synthetic data array
+    :type obs: np.array
+    :param obs: observed data array
+    :type nt: int
+    :param nt: number of time steps in the data array
+    :type dt: float
+    :param dt: time step in sec
+    """
     cc = abs(np.convolve(obs, np.flipud(syn)))
-    return (np.argmax(cc)-nt+1)*dt
+
+    return (np.argmax(cc) - nt + 1) * dt
 
 
-def TraveltimeInexact(syn, obs, nt, dt):
-    # much faster but possibly inaccurate
+def traveltime_inexact(syn, obs, nt, dt):
+    """
+    A faster cc traveltime function but possibly innacurate
+
+    :type syn: np.array
+    :param syn: synthetic data array
+    :type obs: np.array
+    :param obs: observed data array
+    :type nt: int
+    :param nt: number of time steps in the data array
+    :type dt: float
+    :param dt: time step in sec
+    """
     it = np.argmax(syn)
     jt = np.argmax(obs)
-    return (jt-it)*dt
+
+    return (jt - it) * dt
 
 
-def Amplitude(syn, obs, nt, dt):
-    # cross correlation amplitude
-    ioff = (np.argmax(cc)-nt+1)*dt
+def amplitude(syn, obs, nt, dt):
+    """
+    Cross-correlation amplitude difference
+
+    :type syn: np.array
+    :param syn: synthetic data array
+    :type obs: np.array
+    :param obs: observed data array
+    :type nt: int
+    :param nt: number of time steps in the data array
+    :type dt: float
+    :param dt: time step in sec
+    """
+    ioff = (np.argmax(cc) - nt + 1) * dt
+
     if ioff <= 0:
         wrsd = syn[ioff:] - obs[:-ioff]
     else:
         wrsd = syn[:-ioff] - obs[ioff:]
-    return np.sqrt(np.sum(wrsd*wrsd*dt))
+
+    return np.sqrt(np.sum(wrsd * wrsd * dt))
 
 
-def Envelope2(syn, obs, nt, dt, eps=0.):
-    # envelope amplitude ratio
-    # (Yuan et al 2015, eq B-1)
-    esyn = abs(_analytic(syn))
-    eobs = abs(_analytic(obs))
+def envelope2(syn, obs, nt, dt):
+    """
+    Envelope amplitude ratio from Yuan et al. 2015 Eq. B-1
+
+    :type syn: np.array
+    :param syn: synthetic data array
+    :type obs: np.array
+    :param obs: observed data array
+    :type nt: int
+    :param nt: number of time steps in the data array
+    :type dt: float
+    :param dt: time step in sec
+    """
+    env_syn = abs(_analytic(syn))
+    env_obs = abs(_analytic(obs))
+
     raise NotImplementedError
 
 
-def Envelope3(syn, obs, nt, dt, eps=0.):
-    # envelope cross-correlation lag
-    # (Yuan et al 2015, eqs B-4)
-    esyn = abs(_analytic(syn))
-    eobs = abs(_analytic(obs))
-    return Traveltime(esyn, eobs, nt, dt)
+def envelope3(syn, obs, nt, dt, eps=0.):
+    """
+    Envelope cross-correlation lag from Yuan et al. 2015, Eq. B-4
+
+    :type syn: np.array
+    :param syn: synthetic data array
+    :type obs: np.array
+    :param obs: observed data array
+    :type nt: int
+    :param nt: number of time steps in the data array
+    :type dt: float
+    :param dt: time step in sec
+    """
+    env_syn = abs(_analytic(syn))
+    env_obs = abs(_analytic(obs))
+
+    return Traveltime(env_syn, env_obs, nt, dt)
 
 
-def InstantaneousPhase2(syn, obs, nt, dt, eps=0.):
-    esyn = abs(_analytic(syn))
-    eobs = abs(_analytic(obs))
+def instantaneous_phase2(syn, obs, nt, dt, eps=0.):
+    """
+    Alterative instantaneous phase function
 
-    esyn1 = esyn + eps*max(esyn)
-    eobs1 = eobs + eps*max(eobs)
+    :type syn: np.array
+    :param syn: synthetic data array
+    :type obs: np.array
+    :param obs: observed data array
+    :type nt: int
+    :param nt: number of time steps in the data array
+    :type dt: float
+    :param dt: time step in sec
+    """
+    env_syn = abs(_analytic(syn))
+    env_obs = abs(_analytic(obs))
 
-    diff = syn/esyn1 - obs/eobs1
+    env_syn1 = env_syn + eps * max(env_syn)
+    env_obs1 = env_obs + eps * max(env_obs)
 
-    return np.sqrt(np.sum(diff*diff*dt))
+    diff = (syn / env_syn1) - (obs / env_obs1)
+
+    return np.sqrt(np.sum((diff ** 2) * dt))
 
 
-
-def Displacement(syn, obs, nt, dt):
+def displacement(syn, obs, nt, dt):
     return Exception('This function can only used for migration.')
 
-def Velocity(syn, obs, nt, dt):
+
+def velocity(syn, obs, nt, dt):
     return Exception('This function can only used for migration.')
 
-def Acceleration(syn, obs, nt, dt):
+
+def acceleration(syn, obs, nt, dt):
     return Exception('This function can only used for migration.')
 
