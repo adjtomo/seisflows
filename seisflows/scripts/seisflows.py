@@ -13,7 +13,7 @@ from glob import glob
 from textwrap import wrap
 from seisflows.tools import unix, tools
 from seisflows.tools.tools import loadyaml, loadpy
-from seisflows.config import (init_seisflows, tilde_expand, Dict, custom_import,
+from seisflows.config import (init_seisflows, format_paths, Dict, custom_import,
                               NAMES, PACKAGES, ROOT_DIR)
 
 
@@ -91,7 +91,7 @@ def sfparser():
     modules.add_argument("-p", "--package", nargs="?", type=str,
                          help="Optional name to specify individual package")
     # =========================================================================
-    subparser.add_parser(
+    configure = subparser.add_parser(
         "configure", help="Fill parameter file with defaults",
         description="""SeisFlows parameter files will vary depending on 
         chosen modules and their respective required parameters. This function 
@@ -102,6 +102,8 @@ def sfparser():
         marked appropriately. Required parameters must be set before a workflow
         can be submitted."""
     )
+    configure.add_argument("-r", "--relative_paths", action="store_true",
+                           help="Set default paths relative to cwd")
     # =========================================================================
     init = subparser.add_parser(
         "init", help="Initiate working environment",
@@ -351,7 +353,7 @@ class SeisFlows:
         sys.modules["seisflows_parameters"] = Dict(parameters)
 
         # Register paths to sys, expand to relative paths to absolute
-        paths = path_expand(paths)
+        paths = format_paths(paths)
         sys.modules["seisflows_paths"] = Dict(paths)
 
         self._paths = paths
@@ -520,6 +522,12 @@ class SeisFlows:
                 # Write the paths in the same format as parameters
                 write_header(f, seisflows_paths, name="PATHS")
                 f.write("PATHS:\n")
+                if self._args.relative_paths:
+                    # If requested, set the paths relative to the current dir
+                    for key, attrs in seisflows_paths.items():
+                        if attrs["default"] is not None:
+                            seisflows_paths[key]["default"] = os.path.relpath(
+                                                               attrs["default"])
                 write_paths_parameters(f, seisflows_paths, indent="    ")
         except Exception as e:
             # General error catch as anything can happen here
@@ -565,6 +573,9 @@ class SeisFlows:
         :param precheck_off: if True, turns off the parameter precheck and
             simply submits the workflow
         """
+        # Ensure that the 'RESUME_FROM' parameter is not set, incase of restart
+        self.par(parameter="resume_from", value="")
+
         if stop_after is not None:
             self.par(parameter="STOP_AFTER", value=stop_after)
 
@@ -577,8 +588,10 @@ class SeisFlows:
         # Check that all required paths exist before submitting workflow
         paths_dont_exist = []
         for key in REQ_PATHS:
-            if key in self._paths and not os.path.exists(self._paths[key]):
-                paths_dont_exist.append(self._paths[key])
+            if key in self._paths:
+                # If a required path is given (not None) and doesnt exist, exit
+                if self._paths[key] and not os.path.exists(self._paths[key]):
+                    paths_dont_exist.append(self._paths[key])
         if paths_dont_exist:
             print("\nThe following paths do not exist:\n")
             for path_ in paths_dont_exist:
@@ -727,14 +740,16 @@ class SeisFlows:
             lines = f.readlines()
 
         for i, line in enumerate(lines):
-            if f"{parameter}: " in line and "#" not in line:
+            if f"{parameter}:" in line and "#" not in line:
                 if value is not None:
                     # These values still have string formatters attached
                     current_par, current_val = line.split(":")
 
                     # This retains the string formatters of the line
-                    new_val = current_val.replace(current_val.strip(), value)
-                    lines[i] = ":".join([current_par, new_val])
+                    new_val = current_val.strip().replace(current_val.strip(), 
+                                                          value)
+                    lines[i] = f"{current_par}: {new_val}\n"
+                    # lines[i] = ": ".join([current_par, new_val])
                     print(f"\n\t{current_par.strip()}: "
                           f"{current_val.strip()} -> {value}\n")
 
