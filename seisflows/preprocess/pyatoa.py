@@ -59,8 +59,7 @@ class Pyatoa:
         # Check the existence of required parameters
         required_parameters = ["COMPONENTS", "UNIT_OUTPUT", "MIN_PERIOD",
                                "MAX_PERIOD", "CORNERS", "ROTATE",
-                               "ADJ_SRC_TYPE", "PYFLEX_PRESET",
-                               "FIX_WINDOWS", "PLOT", "FORMAT"
+                               "ADJ_SRC_TYPE", "FIX_WINDOWS", "PLOT", "FORMAT"
                                ]
         for req in required_parameters:
             if req not in PAR:
@@ -80,6 +79,9 @@ class Pyatoa:
 
         if "MAP_CORNERS" not in PAR:
             setattr(PAR, "MAP_CORNERS", None)
+
+        if "PYFLEX_PRESET" not in PAR:
+            setattr(PAR, "PYFLEX_PRESET", None)
 
         if "CLIENT" not in PAR:
             setattr(PAR, "CLIENT", None)
@@ -119,7 +121,7 @@ class Pyatoa:
         self.path_datasets = pyaflowa.path_structure.datasets
         self.path_figures = pyaflowa.path_structure.figures
 
-    def prepare_eval_grad(self, path, source_name):
+    def prepare_eval_grad(self, path, source_name, **kwargs):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms, 
         and measuring misfit between observations and synthetics using Pyatoa.
@@ -142,7 +144,8 @@ class Pyatoa:
                                    step_count=optimize.line_search.step_count)
 
         # Process all the stations for a given event using Pyaflowa
-        misfit = pyaflowa.process(source_name, fix_windows=PAR.FIX_WINDOWS)
+        misfit = pyaflowa.process_event(source_name, 
+                                        fix_windows=PAR.FIX_WINDOWS)
 
         # Generate the necessary files to continue the inversion
         if misfit:
@@ -150,7 +153,7 @@ class Pyatoa:
             self.write_residuals(path=path, scaled_misfit=misfit,
                                  source_name=source_name)
         
-        self.snapshot()
+        # self.snapshot()
 
     def finalize(self):
         """
