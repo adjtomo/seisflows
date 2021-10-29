@@ -314,7 +314,8 @@ class Specfem3D(custom_import("solver", "base")):
     @property
     def kernel_databases(self):
         """
-        The location of databases for kernel outputs
+        The location of databases for kernel outputs, relative to the current
+        working directory. 
         """
         return os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
 
