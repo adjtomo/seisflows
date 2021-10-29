@@ -246,9 +246,14 @@ class Inversion(custom_import("workflow", "base")):
             status == 0 : not finished
             status < 0  : failed
         """
+<<<<<<< HEAD
         # Calculate the initial step length based on optimization algorithm
         if optimize.line_search.step_count == 0:
             print("LINE SEARCH")
+=======
+        print("LINE SEARCH")
+        if optimize.line_search.step_count == 0:
+>>>>>>> seisflows3
             optimize.initialize_search()
 
         # Attempt a new trial step with the given step length
@@ -293,12 +298,12 @@ class Inversion(custom_import("workflow", "base")):
         system.run("solver", "eval_func", path=path)
         self.write_misfit(path=path, suffix=suffix)
 
-    def evaluate_gradient(self):
+    def evaluate_gradient(self, path=None):
         """
         Performs adjoint simulation to retrieve the gradient of the objective 
         """
         print("EVALUATE GRADIENT\n\tRunning adjoint simulation")
-        system.run("solver", "eval_grad", path=PATH.GRAD,
+        system.run("solver", "eval_grad", path=path or PATH.GRAD,
                    export_traces=PAR.SAVETRACES)
 
     def finalize(self):

@@ -42,6 +42,7 @@ class Pyatoa:
     @property
     def required(self):
         """
+<<<<<<< HEAD
         A hard definition of paths and parameters required by this class,
         alongside their necessity for the class and their string explanations.
         """
@@ -76,6 +77,31 @@ class Pyatoa:
 
         sf.par("ROTATE", required=False, default=False, par_type=bool,
                docstr="Rotate waveform components NEZ -> RTZ")
+=======
+        # Check the path requirements
+        if "PREPROCESS" not in PATH:
+            setattr(PATH, "PREPROCESS", 
+                    os.path.join(PATH.SCRATCH, "preprocess"))
+
+        if "DATA" not in PATH:
+            setattr(PATH, "DATA", None)
+
+        if "RESPONSE" not in PATH:
+            setattr(PATH, "RESPONSE", None)
+
+        # Check the existence of required parameters
+        required_parameters = ["COMPONENTS", "UNIT_OUTPUT", "MIN_PERIOD",
+                               "MAX_PERIOD", "CORNERS", "ROTATE",
+                               "ADJ_SRC_TYPE", "FIX_WINDOWS", "PLOT", "FORMAT"
+                               ]
+        for req in required_parameters:
+            if req not in PAR:
+                raise ParameterError(PAR, req)
+
+        # Check specific parameter requirements
+        if PAR.FORMAT != "ascii":
+            raise ValueError("Pyatoa preprocess currently only works with "
+                             "the 'ascii' format")
 
         sf.par("ADJ_SRC_TYPE", required=True, par_type=str,
                docstr="Adjoint source type to use. Available: "
@@ -158,7 +184,7 @@ class Pyatoa:
         self.path_datasets = pyaflowa.path_structure.datasets
         self.path_figures = pyaflowa.path_structure.figures
 
-    def prepare_eval_grad(self, path, source_name):
+    def prepare_eval_grad(self, path, source_name, **kwargs):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms, 
         and measuring misfit between observations and synthetics using Pyatoa.
@@ -181,7 +207,8 @@ class Pyatoa:
                                    step_count=optimize.line_search.step_count)
 
         # Process all the stations for a given event using Pyaflowa
-        misfit = pyaflowa.process(source_name, fix_windows=PAR.FIX_WINDOWS)
+        misfit = pyaflowa.process_event(source_name, 
+                                        fix_windows=PAR.FIX_WINDOWS)
 
         # Generate the necessary files to continue the inversion
         if misfit:
@@ -189,7 +216,7 @@ class Pyatoa:
             self.write_residuals(path=path, scaled_misfit=misfit,
                                  source_name=source_name)
         
-        self.snapshot()
+        # self.snapshot()
 
     def finalize(self):
         """
@@ -198,9 +225,10 @@ class Pyatoa:
             Aggregate misfit windows using the Inspector class
             Generate PDFS of waveform figures for easy access
         """
+        unix.cd(self.path_datasets)
         insp = pyatoa.Inspector(PAR.TITLE, verbose=False)
-        insp.discover(path=os.path.join(self.path_datasets, PAR.TITLE))
-        insp.save(path=self.path_datasets) 
+        insp.discover()
+        insp.save() 
 
         self.make_final_pdfs()
 
@@ -289,14 +317,11 @@ class Pyatoa:
         if not sources:
             return
 
-        # Figure out how to tag the output file. Follows Pyaflowa naming scheme.
-        iter_step = os.path.basename(sources[0]).split("_")[0]
-        for source in sources:
-            assert(iter_step in source), (f"The file '{source}' does not match "
-                                          f"the expected tag '{iter_step}'") 
-    
-        # Merge all event pdfs into a single pdf, then delete originals
-        merge_pdfs(fids=sorted(sources), fid_out=f"{iter_step}.pdf")
-        unix.rm(sources)
+        iter_steps = set([os.path.basename(_).split("_")[0] for _ in sources])
+        for iter_step in iter_steps:
+            # Merge pdfs that correspond to the same iteration and step count 
+            fids = [_ for _ in sources if iter_step in _]
+            merge_pdfs(fids=sorted(fids), fid_out=f"{iter_step}.pdf")
+            unix.rm(fids)
 
 
