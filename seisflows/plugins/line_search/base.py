@@ -130,6 +130,7 @@ class Base:
         self.step_lens = []
         self.gtg = []
         self.gtp = []
+        self.step_count = 0
 
     def reset(self):
         """
@@ -144,7 +145,6 @@ class Base:
         if len(self.step_lens) <= 1:
             self.clear_history()
             self.writer.iter = 0
-            self.step_count = 0
     
         else:
             # Wind back dot products by one

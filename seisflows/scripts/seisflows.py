@@ -9,7 +9,7 @@ import argparse
 from glob import glob
 
 from seisflows.tools import unix, tools
-from seisflows.config import config, tilde_expand, Dict, names
+from seisflows.config import config, tilde_expand, Dict, names, load
 from seisflows.tools.tools import loadyaml
 
 
@@ -28,6 +28,7 @@ def get_args():
 
     # Optional parameters
     parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd())
+    parser.add_argument("-c", "--console", action="store_true")
     parser.add_argument("-p", "--parameter_file", nargs="?",
                         default="parameters.yaml")
 
@@ -173,7 +174,14 @@ def submit():
     config()  # Instantiate all modules and check their parameters
     workflow = sys.modules["seisflows_workflow"]
     system = sys.modules["seisflows_system"]
-    system.submit(workflow)
+
+    # Submit console via the command line, or submit to the cluster
+    if args.console:
+        unix.cd(PATH.OUTPUT)
+        load(PATH.OUTPUT)
+        workflow.main()
+    else:
+        system.submit(workflow)
 
 
 def clean():
@@ -196,12 +204,20 @@ def resume():
     Resume a previously started workflow by loading the module pickle files and
     submitting the workflow from where it left off.
     """
+    args = get_args() 
     load_modules(precheck=True)
 
     workflow = sys.modules["seisflows_workflow"]
     system = sys.modules["seisflows_system"]
+    PATH = sys.modules["seisflows_paths"]
 
-    system.submit(workflow)
+    # Submit console via the command line, or submit to the cluster
+    if args.console:
+        unix.cd(PATH.OUTPUT)
+        load(PATH.OUTPUT)
+        workflow.main()
+    else:
+        system.submit(workflow)
 
 
 def restart():

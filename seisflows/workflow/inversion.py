@@ -235,14 +235,7 @@ class Inversion(custom_import("workflow", "base")):
             status < 0  : failed
         """
         print("LINE SEARCH")
-
-        # This statement allows restarting a workflow mid line-search. If 
-        # resuming from the start of a line search, the line search machinery
-        # should have been reset and step_count should be 0. If resuming line
-        # search due to a failed step, will not re-initialize search and instead 
-        # pick up line search where it left off
-        if not PAR.RESUME_FROM == "line_search" and \
-                                        not optimize.line_search.step_count:
+        if optimize.line_search.step_count == 0:
             optimize.initialize_search()
 
         while True:
@@ -284,12 +277,12 @@ class Inversion(custom_import("workflow", "base")):
         system.run("solver", "eval_func", path=path)
         self.write_misfit(path=path, suffix=suffix)
 
-    def evaluate_gradient(self):
+    def evaluate_gradient(self, path=None):
         """
         Performs adjoint simulation to retrieve the gradient of the objective 
         """
         print("EVALUATE GRADIENT\n\tRunning adjoint simulation")
-        system.run("solver", "eval_grad", path=PATH.GRAD,
+        system.run("solver", "eval_grad", path=path or PATH.GRAD,
                    export_traces=PAR.SAVETRACES)
 
     def finalize(self):
