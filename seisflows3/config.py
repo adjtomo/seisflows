@@ -18,11 +18,11 @@ import types
 import copyreg
 from importlib import import_module
 
-from seisflows.tools import msg
-from seisflows.tools import unix
-from seisflows.tools.tools import loadjson, loadobj, savejson, saveobj
-from seisflows.tools.tools import module_exists
-from seisflows.tools.err import ParameterError
+from seisflows3.tools import msg
+from seisflows3.tools import unix
+from seisflows3.tools.tools import loadjson, loadobj, savejson, saveobj
+from seisflows3.tools.tools import module_exists
+from seisflows3.tools.err import ParameterError
 
 
 """
@@ -39,7 +39,7 @@ NAMES = ["system", "preprocess", "solver",
          "postprocess", "optimize", "workflow"]
 
 # Packages that define the source code, used to search for base- and subclasses
-PACKAGES = ["seisflows", "seisflows-super"]
+PACKAGES = ["seisflows3", "seisflows3-super"]
 
 # The location of this config file, which is the main repository
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))

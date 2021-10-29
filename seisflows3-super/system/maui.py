@@ -9,8 +9,8 @@ import sys
 import math
 import time
 from subprocess import check_output, call, CalledProcessError
-from seisflows.tools.tools import call, findpath
-from seisflows.config import custom_import, SeisFlowsPathsParameters
+from seisflows3.tools.tools import call, findpath
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
 # Seisflows configuration
 PAR = sys.modules['seisflows_parameters']

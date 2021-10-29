@@ -13,8 +13,8 @@ InversionPyatoa rather than Inversion
 """
 import sys
 
-from seisflows.tools import unix
-from seisflows.config import custom_import
+from seisflows3.tools import unix
+from seisflows3.config import custom_import
 
 # Seisflows Configuration
 PAR = sys.modules['seisflows_parameters']

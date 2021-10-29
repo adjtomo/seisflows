@@ -11,9 +11,9 @@ import argparse
 import subprocess
 from glob import glob
 from textwrap import wrap
-from seisflows.tools import unix, tools
-from seisflows.tools.tools import loadyaml, loadpy
-from seisflows.config import (init_seisflows, format_paths, Dict, custom_import,
+from seisflows3.tools import unix, tools
+from seisflows3.tools.tools import loadyaml, loadpy
+from seisflows3.config import (init_seisflows, format_paths, Dict, custom_import,
                               NAMES, PACKAGES, ROOT_DIR)
 
 

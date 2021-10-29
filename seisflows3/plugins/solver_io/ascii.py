@@ -5,7 +5,7 @@ import os
 import numpy as np
 from glob import glob
 from shutil import copyfile
-from seisflows.tools.tools import iterable
+from seisflows3.tools.tools import iterable
 
 
 def read_slice(path, parameters, iproc):

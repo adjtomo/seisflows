@@ -7,8 +7,8 @@ be overloaded by subclasses
 import os
 import sys
 from glob import glob
-from seisflows.tools import unix
-from seisflows.config import save, saveobj, SeisFlowsPathsParameters
+from seisflows3.tools import unix
+from seisflows3.config import save, saveobj, SeisFlowsPathsParameters
 
 
 PAR = sys.modules['seisflows_parameters']

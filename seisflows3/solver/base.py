@@ -8,12 +8,12 @@ import sys
 import numpy as np
 from glob import glob
 from functools import partial
-from seisflows.plugins import solver_io
-from seisflows.tools import msg, unix
-from seisflows.tools.err import ParameterError
-from seisflows.tools.seismic import Container, call_solver
-from seisflows.tools.tools import Struct, diff, exists
-from seisflows.config import SeisFlowsPathsParameters
+from seisflows3.plugins import solver_io
+from seisflows3.tools import msg, unix
+from seisflows3.tools.err import ParameterError
+from seisflows3.tools.seismic import Container, call_solver
+from seisflows3.tools.tools import Struct, diff, exists
+from seisflows3.config import SeisFlowsPathsParameters
 
 
 # Seisflows configuration

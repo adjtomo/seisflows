@@ -7,7 +7,7 @@ Line search is called on by the optimization procedure
 import os
 import numpy as np
 
-from seisflows.tools.array import count_zeros
+from seisflows3.tools.array import count_zeros
 
 
 class Base:

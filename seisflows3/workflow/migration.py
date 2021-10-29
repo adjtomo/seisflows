@@ -6,11 +6,11 @@ This is a main Seisflows class, it controls the main workflow.
 """
 import sys
 
-from seisflows.tools import unix
-from seisflows.tools.tools import exists
-from seisflows.tools.err import ParameterError
-from seisflows.workflow.base import Base
-from seisflows.config import SeisFlowsPathsParameters
+from seisflows3.tools import unix
+from seisflows3.tools.tools import exists
+from seisflows3.tools.err import ParameterError
+from seisflows3.workflow.base import Base
+from seisflows3.config import SeisFlowsPathsParameters
 
 
 PAR = sys.modules['seisflows_parameters']

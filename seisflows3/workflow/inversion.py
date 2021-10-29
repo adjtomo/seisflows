@@ -10,10 +10,10 @@ import time
 from glob import glob
 
 import numpy as np
-from seisflows.config import custom_import
-from seisflows.tools import unix
-from seisflows.tools.tools import exists
-from seisflows.config import save, SeisFlowsPathsParameters
+from seisflows3.config import custom_import
+from seisflows3.tools import unix
+from seisflows3.tools.tools import exists
+from seisflows3.config import save, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

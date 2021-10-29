@@ -4,7 +4,7 @@ This is a SeisFlows Base class
 """
 import os
 import sys
-from seisflows.config import SeisFlowsPathsParameters
+from seisflows3.config import SeisFlowsPathsParameters
 
 # Required SeisFlows configuration
 PAR = sys.modules['seisflows_parameters']

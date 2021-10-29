@@ -16,10 +16,10 @@ import sys
 import warnings
 
 from glob import glob
-from seisflows.tools import unix
-from seisflows.tools.tools import exists
-from seisflows.config import custom_import, SeisFlowsPathsParameters
-from seisflows.tools.seismic import call_solver, getpar, setpar
+from seisflows3.tools import unix
+from seisflows3.tools.tools import exists
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
+from seisflows3.tools.seismic import call_solver, getpar, setpar
 
 
 # Seisflows configuration
@@ -33,7 +33,7 @@ preprocess = sys.modules['seisflows_preprocess']
 class Specfem3DMaui(custom_import("solver", "specfem3d")):
     """
     Python interface to Specfem3D Cartesian. This subclass inherits functions
-    from seisflows.solver.specfem3d
+    from seisflows3.solver.specfem3d
 
     !!! See base class for method descriptions !!!
     """

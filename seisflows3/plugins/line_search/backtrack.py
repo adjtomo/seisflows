@@ -2,8 +2,8 @@
 """
 This is the subclass class for seisflows.plugins.line_search.backtrack
 """
-from seisflows.plugins.line_search.bracket import Bracket
-from seisflows.tools.math import backtrack2
+from seisflows3.plugins.line_search.bracket import Bracket
+from seisflows3.tools.math import backtrack2
 
 
 class Backtrack(Bracket):

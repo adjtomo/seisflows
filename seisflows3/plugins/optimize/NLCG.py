@@ -8,9 +8,9 @@ It is called in as a plugin for seisflows.optimize.NLCG
 import os
 import numpy as np
 
-from seisflows.tools import unix
-from seisflows.tools.math import dot
-from seisflows.tools.tools import loadtxt, savetxt, loadnpy, savenpy
+from seisflows3.tools import unix
+from seisflows3.tools.math import dot
+from seisflows3.tools.tools import loadtxt, savetxt, loadnpy, savenpy
 
 
 class NLCG:

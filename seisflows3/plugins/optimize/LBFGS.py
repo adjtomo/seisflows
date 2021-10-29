@@ -7,9 +7,9 @@ It is called in as a plugin for seisflows.optimize.LBFGS
 """
 import numpy as np
 
-from seisflows.tools import unix
-from seisflows.tools.tools import exists, loadnpy, savenpy
-from seisflows.tools.math import angle
+from seisflows3.tools import unix
+from seisflows3.tools.tools import exists, loadnpy, savenpy
+from seisflows3.tools.math import angle
 
 
 class LBFGS:

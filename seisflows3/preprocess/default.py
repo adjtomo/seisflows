@@ -9,13 +9,13 @@ import sys
 import obspy
 import numpy as np
 
-from seisflows.tools import msg
-from seisflows.tools import signal, unix
-from seisflows.config import custom_import
-from seisflows.tools.err import ParameterError
-from seisflows.tools.tools import exists, getset
-from seisflows.plugins import adjoint, misfit, readers, writers
-from seisflows.config import SeisFlowsPathsParameters
+from seisflows3.tools import msg
+from seisflows3.tools import signal, unix
+from seisflows3.config import custom_import
+from seisflows3.tools.err import ParameterError
+from seisflows3.tools.tools import exists, getset
+from seisflows3.plugins import adjoint, misfit, readers, writers
+from seisflows3.config import SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

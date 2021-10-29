@@ -6,8 +6,8 @@ It supercedes the `seisflows.optimize.base` class
 import sys
 import numpy as np
 
-from seisflows.config import custom_import, SeisFlowsPathsParameters
-from seisflows.plugins import optimize
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
+from seisflows3.plugins import optimize
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']

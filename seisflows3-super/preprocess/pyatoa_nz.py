@@ -7,7 +7,7 @@ Slightly altered processing function for the New Zealand tomography scenario
 import sys
 import pyatoa
 from pyasdf import ASDFDataSet
-from seisflows.config import custom_import
+from seisflows3.config import custom_import
 from pyatoa.utils.read import read_station_codes
 
 PAR = sys.modules["seisflows_parameters"]

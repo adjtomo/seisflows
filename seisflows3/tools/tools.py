@@ -14,7 +14,7 @@ from imp import load_source
 from importlib import import_module
 from pkgutil import find_loader
 
-from seisflows.tools import msg
+from seisflows3.tools import msg
 
 
 class Struct(dict):

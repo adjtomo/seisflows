@@ -10,11 +10,11 @@ import sys
 import time
 from subprocess import check_output
 
-from seisflows.tools import msg
-from seisflows.tools import unix
-from seisflows.tools.err import ParameterError
-from seisflows.tools.tools import call, findpath, saveobj
-from seisflows.config import custom_import
+from seisflows3.tools import msg
+from seisflows3.tools import unix
+from seisflows3.tools.err import ParameterError
+from seisflows3.tools.tools import call, findpath, saveobj
+from seisflows3.config import custom_import
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']

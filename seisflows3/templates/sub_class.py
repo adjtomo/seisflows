@@ -3,7 +3,7 @@
 This is a SeisFlows subclass which inherits attributes from a parent class
 """
 import sys
-from seisflows.config import SeisFlowsPathsParameters, custom_import
+from seisflows3.config import SeisFlowsPathsParameters, custom_import
 
 # Required SeisFlows configuration
 PAR = sys.modules['seisflows_parameters']

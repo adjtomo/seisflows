@@ -14,9 +14,9 @@ import sys
 import pyatoa
 import numpy as np
 from glob import glob
-from seisflows.tools import unix
-from seisflows.config import custom_import
-from seisflows.config import SeisFlowsPathsParameters
+from seisflows3.tools import unix
+from seisflows3.config import custom_import
+from seisflows3.config import SeisFlowsPathsParameters
 from pyatoa.utils.images import merge_pdfs
 
 PAR = sys.modules["seisflows_parameters"]

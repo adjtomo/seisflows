@@ -5,7 +5,7 @@ This is the main seisflows.preprocess.base
 This is a main Seisflows class, it controls the preprocessing of waveforms and
 generation of adjoint sources
 """
-from seisflows.config import SeisFlowsPathsParameters
+from seisflows3.config import SeisFlowsPathsParameters
 
 
 class Base:

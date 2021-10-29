@@ -5,7 +5,7 @@ It supercedes the `seisflows.optimize.base` class
 """
 import sys
 
-from seisflows.config import custom_import, SeisFlowsPathsParameters
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']

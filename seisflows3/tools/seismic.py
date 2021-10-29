@@ -7,8 +7,8 @@ import numpy as np
 import subprocess
 
 from collections import defaultdict
-from seisflows.tools import msg, unix
-from seisflows.tools.tools import iterable
+from seisflows3.tools import msg, unix
+from seisflows3.tools.tools import iterable
 
 
 def call_solver(mpiexec, executable, output='solver.log'):

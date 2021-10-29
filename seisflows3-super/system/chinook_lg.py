@@ -11,9 +11,9 @@ import time
 from glob import glob
 from subprocess import check_output, call, CalledProcessError
 
-from seisflows.tools import unix
-from seisflows.tools.tools import call, findpath
-from seisflows.config import custom_import
+from seisflows3.tools import unix
+from seisflows3.tools.tools import call, findpath
+from seisflows3.config import custom_import
 
 # Seisflows configuration
 PAR = sys.modules['seisflows_parameters']

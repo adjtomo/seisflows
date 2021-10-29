@@ -18,10 +18,10 @@ import time
 
 from warnings import warn
 from subprocess import check_output
-from seisflows.tools import msg, unix
-from seisflows.tools.err import ParameterError
-from seisflows.tools.tools import call, findpath
-from seisflows.config import custom_import, SeisFlowsPathsParameters
+from seisflows3.tools import msg, unix
+from seisflows3.tools.err import ParameterError
+from seisflows3.tools.tools import call, findpath
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
 # Seisflows configuration
 PAR = sys.modules['seisflows_parameters']

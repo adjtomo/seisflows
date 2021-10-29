@@ -3,7 +3,7 @@
 This is the Base class for seisflows.workflow.
 It contains mandatory functions that must be called by subclasses
 """
-from seisflows.config import save, SeisFlowsPathsParameters
+from seisflows3.config import save, SeisFlowsPathsParameters
 
 
 class Base:

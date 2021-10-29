@@ -4,8 +4,8 @@ This is the subclass class for seisflows.plugins.line_search.bracket
 """
 import numpy as np
 
-from seisflows.plugins.line_search.base import Base
-from seisflows.tools.math import backtrack2, polyfit2
+from seisflows3.plugins.line_search.base import Base
+from seisflows3.tools.math import backtrack2, polyfit2
 
 
 class Bracket(Base):

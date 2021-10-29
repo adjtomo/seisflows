@@ -7,8 +7,8 @@ for testing purposes
 import os
 import sys
 
-from seisflows.tools import unix
-from seisflows.config import custom_import, SeisFlowsPathsParameters
+from seisflows3.tools import unix
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

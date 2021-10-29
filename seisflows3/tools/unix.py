@@ -7,7 +7,7 @@ import shutil
 import socket
 import time
 
-from seisflows.tools.tools import iterable
+from seisflows3.tools.tools import iterable
 
 
 def cat(src, *dst):

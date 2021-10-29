@@ -7,12 +7,12 @@ import os
 import sys
 import numpy as np
 
-from seisflows.plugins import line_search, preconds
-from seisflows.tools import msg, unix
-from seisflows.tools.tools import loadnpy, savenpy
-from seisflows.tools.math import angle, poissons_ratio
-from seisflows.tools.seismic import Writer
-from seisflows.config import SeisFlowsPathsParameters
+from seisflows3.plugins import line_search, preconds
+from seisflows3.tools import msg, unix
+from seisflows3.tools.tools import loadnpy, savenpy
+from seisflows3.tools.math import angle, poissons_ratio
+from seisflows3.tools.seismic import Writer
+from seisflows3.config import SeisFlowsPathsParameters
 
 
 # seisflows.config objects 

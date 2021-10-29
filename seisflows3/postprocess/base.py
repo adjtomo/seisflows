@@ -4,8 +4,8 @@ This is the base class for the postprocess functionalities
 """
 import sys
 
-from seisflows.tools.tools import exists
-from seisflows.config import SeisFlowsPathsParameters
+from seisflows3.tools.tools import exists
+from seisflows3.config import SeisFlowsPathsParameters
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
