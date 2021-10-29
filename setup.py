@@ -7,7 +7,7 @@ setup(name="seisflows3",
       author="Seisflows Development Team",
       packages=find_packages(),
       entry_points={
-          "console_scripts": ["seisflows=seisflows.scripts.seisflows:main",]},
+          "console_scripts": ["seisflows=seisflows3.scripts.seisflows:main",]},
       license="GPL",
       zip_save=False
       )
