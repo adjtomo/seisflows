@@ -1,4 +1,3 @@
-▽
 #!/usr/bin/env python
 """
 Adjoints used by the 'default' preprocess class use to generate adjoint sources
@@ -21,7 +20,7 @@ from seisflows.plugins import misfit
 from seisflows.tools.math import hilbert as hilbert
 
 
-def waveform(syn, obs, **kwargs):
+def waveform(syn, obs, *args, **kwargs):
     """
     Waveform difference from Tromp et al 2005 Eq 9
 
@@ -35,7 +34,7 @@ def waveform(syn, obs, **kwargs):
     return wadj
 
 
-def envelope(syn, obs, nt, dt, eps=0.05):
+def envelope(syn, obs, nt, dt, eps=0.05, *args, **kwargs):
     """
     Waveform envelope difference from Yuan et al. 2015 Eq. 16
 
@@ -58,7 +57,7 @@ def envelope(syn, obs, nt, dt, eps=0.05):
     return wadj
 
 
-def instantaneous_phase(syn, obs, nt, dt, eps=0.05):
+def instantaneous_phase(syn, obs, nt, dt, eps=0.05, *args, **kwargs):
     """
     Instantaneous phase difference from Bozdag et al. 2011 Eq. 27
 
@@ -91,7 +90,7 @@ def instantaneous_phase(syn, obs, nt, dt, eps=0.05):
     return wadj
 
 
-def traveltime(syn, obs, nt, dt):
+def traveltime(syn, obs, nt, dt, *args, **kwargs):
     """
     Cross-correlation traveltime from Tromp et al. 2005 Eq. 45
 
@@ -113,7 +112,7 @@ def traveltime(syn, obs, nt, dt):
     return wadj
 
 
-def traveltime_inexact(syn, obs, nt, dt):
+def traveltime_inexact(syn, obs, nt, dt, *args, **kwargs):
     """
     A faster cc traveltime function but possibly innacurate
 
@@ -136,7 +135,7 @@ def traveltime_inexact(syn, obs, nt, dt):
     return wadj
 
 
-def amplitude(syn, obs, nt, dt):
+def amplitude(syn, obs, nt, dt, *args, **kwargs):
     """
     Cross-correlation amplitude difference
 
@@ -155,7 +154,7 @@ def amplitude(syn, obs, nt, dt):
     return wadj
 
 
-def envelope2(syn, obs, nt, dt, eps=0.):
+def envelope2(syn, obs, nt, dt, eps=0., *args, **kwargs):
     """
     Envelope amplitude ratio from Yuan et al. 2015 Eq. B-2
 
@@ -171,7 +170,7 @@ def envelope2(syn, obs, nt, dt, eps=0.):
     raise NotImplementedError
 
 
-def envelope3(syn, obs, nt, dt, eps=0.):
+def envelope3(syn, obs, nt, dt, eps=0., *args, **kwargs):
     """
     Envelope lag from Yuan et al. 2015 Eq. B-2, B-5
 
@@ -197,7 +196,7 @@ def envelope3(syn, obs, nt, dt, eps=0.):
     return wadj
 
 
-def instantaneous_phase2(syn, obs, nt, dt, eps=0.):
+def instantaneous_phase2(syn, obs, nt, dt, eps=0., *args, **kwargs):
     """
     Alterative instantaneous phase function
 
@@ -236,7 +235,7 @@ def displacement(*args, **kwargs):
     return obs
 
 
-def velocity(syn, obs, nt, dt):
+def velocity(syn, obs, nt, dt, *args, **kwargs):
     """
     Velocity waveform for migration, taking derivative of obs
     """
@@ -245,7 +244,7 @@ def velocity(syn, obs, nt, dt):
     return adj
 
 
-def acceleration(syn, obs, nt, dt):
+def acceleration(syn, obs, nt, dt, *args, **kwargs):
     """
     Acceleration waveform for migration, second derivative of obs
     """    

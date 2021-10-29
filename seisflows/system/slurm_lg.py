@@ -56,7 +56,7 @@ class SlurmLg(custom_import("system", "base")):
 
         # Define the Parameters required by this module
         sf.par("NTASKMAX", required=False, default=100, par_type=int,
-               docstr="Limit on the number of concurrent tasks")
+               docstr="Limit on the number of concurrent tasks in array")
 
         sf.par("NODESIZE", required=True, par_type=int,
                docstr="The number of cores per node defined by the system")

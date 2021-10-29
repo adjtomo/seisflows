@@ -101,6 +101,9 @@ class Inversion(custom_import("workflow", "base")):
         sf.path("MODEL_TRUE", required=False,
                 docstr="Target model to be used for PAR.CASE == 'synthetic'")
 
+        sf.path("DATA", required=False, default=None,
+                docstr="path to data available to workflow")
+
         sf.path("FUNC", required=False,
                 default=os.path.join(PATH.SCRATCH, "evalfunc"),
                 docstr="scratch path to store data related to function "

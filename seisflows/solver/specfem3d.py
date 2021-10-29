@@ -302,9 +302,9 @@ class Specfem3D(custom_import("solver", "base")):
             components = PAR.COMPONENTS
 
             if PAR.FORMAT.upper() == "SU":
-                return f"*_d[{components.lower()}]_SU"
+                return sorted(glob(f"*_d[{components.lower()}]_SU"))
             elif PAR.FORMAT.upper() == "ASCII":
-                return f"*.?X[{components.upper()}].sem?"
+                return sorted(glob(f"*.?X[{components.upper()}].sem?"))
         else:
             if PAR.FORMAT.upper() == "SU":
                 return sorted(glob("*_d?_SU"))

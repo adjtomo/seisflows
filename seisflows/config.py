@@ -27,6 +27,7 @@ from seisflows.tools.err import ParameterError
 
 """
 !!! WARNING !!!
+
 The following constants are (some of the only) hardwired components
 of the pacakge. The naming, order, case, etc. of each constant may be important,
 and any changes to these will more-than-likely break the underlying mechanics
@@ -43,8 +44,11 @@ PACKAGES = ["seisflows", "seisflows-super"]
 # The location of this config file, which is the main repository
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
+"""
+!!! WARNING !!!
+"""
 
-def init_seisflows(force=False):
+def init_seisflows():
     """
     Instantiates SeisFlows objects and makes them globally accessible by
     registering them in sys.modules
@@ -82,7 +86,7 @@ def save():
     unix.mkdir(_output())
 
     # Save the paths and parameters into a JSON file
-    for name in ['parameters', 'paths']:
+    for name in ["parameters", "paths"]:
         fullfile = os.path.join(_output(), f"seisflows_{name}.json")
         savejson(fullfile, sys.modules[f"seisflows_{name}"].__dict__)
 
@@ -112,7 +116,7 @@ def load(path):
 
 class Dict(object):
     """
-    Re defined dictionary-like object for holding parameters or paths
+    Re-defined dictionary-like object for holding parameters or paths
 
     Allows for easier access of dictionary items, does not allow resets of
     attributes once defined, only allows updates through new dictionaries.
@@ -203,8 +207,8 @@ class SeisFlowsPathsParameters:
         which means paths and parameters can be adopted from base class
 
         :type base: seisflows.config.DefinePathsParameters
-        :param base: paths and parameters from base class that need to be
-            inherited by the current child class.
+        :param base: paths and parameters from abstract Base class that need to 
+            be inherited by the current child class.
         """
         self.parameters, self.paths = {}, {}
         if base:
@@ -264,6 +268,10 @@ class SeisFlowsPathsParameters:
         Ensures that required paths and parameters are set by the user, and that
         default values are stored for any optional paths and parameters.
 
+        :type paths: bool
+        :param paths: validate the internal path values
+        :type parameters: bool
+        :param parameters: validate the internal parameter values
         :raises ParameterError: if a required path or parameter is not set by
             the user.
         """
@@ -293,7 +301,7 @@ def custom_import(name=None, module=None, classname=None):
         custom_import('workflow', 'inversion')
 
         imports 'seisflows.workflow.inversion' and, from this module, extracts
-        class 'inversion'.
+        class 'Inversion'.
 
     :type name: str
     :param name: component of the workflow to import, defined by `names`,
@@ -350,23 +358,22 @@ def custom_import(name=None, module=None, classname=None):
                                          classname=classname))
 
 
-def path_expand(mydict):
+def format_paths(mydict):
     """
-    Expands tilde character (~) in Path strings
+    Ensure that paths have a standardized format before being allowed into
+    an active working environment. 
+    Expands tilde character (~) in path strings and expands absolute paths
 
     :type mydict: dict
     :param mydict: dictionary of paths to be expanded
+    :rtype: dict
+    :return: formatted path dictionary
     """
     for key, val in mydict.items():
         try:
             mydict[key] = os.path.expanduser(os.path.abspath(val))
         except TypeError:
             continue
-        # if not isinstance(val, str):
-        #     raise TypeError("Expanded objects must type: str")
-        # else:
-        #     mydict[key] = os.path.expanduser(val)
-
     return mydict
 
 

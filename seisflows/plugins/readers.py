@@ -41,7 +41,7 @@ def ascii(path, filename):
 
     stats.filename = filename
     stats.starttime = time[0]
-    stats.sampling_rate = time[1] - time[0]
+    stats.delta = time[1] - time[0]
     stats.npts = len(data)
 
     try:

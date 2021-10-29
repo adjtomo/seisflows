@@ -29,5 +29,5 @@ WORKFLOW: inversion
 SOLVER: specfem3d
 SYSTEM: serial
 OPTIMIZE: LBFGS 
-PREPROCESS: base
+PREPROCESS: default
 POSTPROCESS: base

@@ -1,6 +1,6 @@
 """
 SeisFlows uses obspy stream objects for holding and processing seismic data.
-In some cases, obspy.read doesn't  provide the desired behavior,
+In some cases, obspy.read doesn't provide the desired behavior,
 so we introduce an additonal level of indirection
 
 Used by the PREPROCESS class and specified by the WRITER parameter
@@ -50,8 +50,10 @@ def ascii(st, path, filename=None):
             filename = tr.stats.filename
 
         fid_out = os.path.join(path, filename)
+        
+        # Float provides the time difference between starttime and default time
+        time_offset = float(tr.stats.starttime)
 
-        time_offset = float(tr.stats.starttime) 
         data_out = np.vstack((tr.times() + time_offset, tr.data)).T
 
         np.savetxt(fid_out, data_out, ["%13.7f", "%17.7f"])

@@ -18,7 +18,7 @@ import numpy as np
 from scipy.signal import hilbert as analytic
 
 
-def waveform(syn, obs, nt, dt):
+def waveform(syn, obs, nt, dt, *args, **kwargs):
     """
     Direct waveform differencing
 
@@ -36,7 +36,7 @@ def waveform(syn, obs, nt, dt):
     return np.sqrt(np.sum(wrsd * wrsd * dt))
 
 
-def envelope(syn, obs, nt, dt):
+def envelope(syn, obs, nt, dt, *args, **kwargs):
     """
     Waveform envelope difference from Yuan et al. 2015 Eq. 9
 
@@ -58,7 +58,7 @@ def envelope(syn, obs, nt, dt):
     return np.sqrt(np.sum(env_rsd * env_rsd * dt))
 
 
-def instantaneous_phase(syn, obs, nt, dt):
+def instantaneous_phase(syn, obs, nt, dt, *args, **kwargs):
     """
     Instantaneous phase difference from Bozdag et al. 2011
 
@@ -84,7 +84,7 @@ def instantaneous_phase(syn, obs, nt, dt):
     return np.sqrt(np.sum(phi_rsd * phi_rsd * dt))
 
 
-def traveltime(syn, obs, nt, dt):
+def traveltime(syn, obs, nt, dt, *args, **kwargs):
     """
     Cross-correlation traveltime 
 
@@ -102,7 +102,7 @@ def traveltime(syn, obs, nt, dt):
     return (np.argmax(cc) - nt + 1) * dt
 
 
-def traveltime_inexact(syn, obs, nt, dt):
+def traveltime_inexact(syn, obs, nt, dt, *args, **kwargs):
     """
     A faster cc traveltime function but possibly innacurate
 
@@ -121,7 +121,7 @@ def traveltime_inexact(syn, obs, nt, dt):
     return (jt - it) * dt
 
 
-def amplitude(syn, obs, nt, dt):
+def amplitude(syn, obs, nt, dt, *args, **kwargs):
     """
     Cross-correlation amplitude difference
 
@@ -144,7 +144,7 @@ def amplitude(syn, obs, nt, dt):
     return np.sqrt(np.sum(wrsd * wrsd * dt))
 
 
-def envelope2(syn, obs, nt, dt):
+def envelope2(syn, obs, nt, dt, *args, **kwargs):
     """
     Envelope amplitude ratio from Yuan et al. 2015 Eq. B-1
 
@@ -163,7 +163,7 @@ def envelope2(syn, obs, nt, dt):
     raise NotImplementedError
 
 
-def envelope3(syn, obs, nt, dt, eps=0.):
+def envelope3(syn, obs, nt, dt, eps=0., *args, **kwargs):
     """
     Envelope cross-correlation lag from Yuan et al. 2015, Eq. B-4
 
@@ -182,7 +182,7 @@ def envelope3(syn, obs, nt, dt, eps=0.):
     return Traveltime(env_syn, env_obs, nt, dt)
 
 
-def instantaneous_phase2(syn, obs, nt, dt, eps=0.):
+def instantaneous_phase2(syn, obs, nt, dt, eps=0., *args, **kwargs):
     """
     Alterative instantaneous phase function
 
@@ -206,14 +206,14 @@ def instantaneous_phase2(syn, obs, nt, dt, eps=0.):
     return np.sqrt(np.sum(diff * diff * dt))
 
 
-def displacement(syn, obs, nt, dt):
+def displacement(*args, **kwargs):
     return Exception("This function can only used for migration.")
 
 
-def velocity(syn, obs, nt, dt):
+def velocity(*args, **kwargs):
     return Exception("This function can only used for migration.")
 
 
-def acceleration(syn, obs, nt, dt):
+def acceleration(*args, **kwargs):
     return Exception("This function can only used for migration.")
 

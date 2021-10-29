@@ -10,7 +10,7 @@ import obspy
 import numpy as np
 
 from seisflows.tools import msg
-from seisflows.tools import signal
+from seisflows.tools import signal, unix
 from seisflows.config import custom_import
 from seisflows.tools.err import ParameterError
 from seisflows.tools.tools import exists, getset
@@ -143,6 +143,12 @@ class Default(custom_import("preprocess", "base")):
 
             self.write_adjoint_traces(path=os.path.join(cwd, "traces", "adj"),
                                       syn=syn, obs=obs, filename=filename_out)
+
+        # Copy over the STATIONS file to STATIONS_ADJOINT required by Specfem
+        src = os.path.join(cwd, "DATA", "STATIONS")
+        dst = os.path.join(cwd, "DATA", "STATIONS_ADJOINT")
+        unix.cp(src, dst)
+        
 
     def write_residuals(self, path, syn, obs):
         """

@@ -143,10 +143,10 @@ class Base:
                 docstr="path to the SPECFEM DATA/ directory containing the "
                        "'Par_file', 'STATIONS' file and 'CMTSOLUTION' files")
 
-        sf.path("DATA", required=False, 
-                docstr="path to a directory containing any external data "
-                       "required by the workflow. Catch all directory that "
-                       "can be accessed by all modules")
+        # sf.path("DATA", required=False, 
+        #         docstr="path to a directory containing any external data "
+        #                "required by the workflow. Catch all directory that "
+        #                "can be accessed by all modules")
 
         return sf
 
@@ -206,7 +206,8 @@ class Base:
         unix.rm(self.cwd)
         self.initialize_solver_directories()
 
-        if PATH.DATA:
+        # Determine where observation data will come from
+        if PATH.DATA is not None and os.path.exists(PATH.DATA):
             # If Data provided by user, copy directly into the solver directory
             unix.cp(src=glob(os.path.join(PATH.DATA, self.source_name, "*")),
                     dst=os.path.join("traces", "obs")
