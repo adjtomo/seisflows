@@ -37,7 +37,7 @@ class Inversion(custom_import("workflow", "base")):
     "evaluate_gradient", which can be easily overloaded.
 
     Calls to forward and adjoint solvers are abstracted through the "solver"
-    interface so that various forward modeling packages can be used
+    interface so that various forward modeling packages canf be used
     interchangeably.
 
     Commands for running in serial or parallel on a workstation or cluster
@@ -249,14 +249,9 @@ class Inversion(custom_import("workflow", "base")):
             status == 0 : not finished
             status < 0  : failed
         """
-<<<<<<< HEAD
         # Calculate the initial step length based on optimization algorithm
         if optimize.line_search.step_count == 0:
             print("LINE SEARCH")
-=======
-        print("LINE SEARCH")
-        if optimize.line_search.step_count == 0:
->>>>>>> seisflows3
             optimize.initialize_search()
 
         # Attempt a new trial step with the given step length

@@ -12,14 +12,9 @@ import subprocess
 from glob import glob
 from textwrap import wrap
 from seisflows.tools import unix, tools
-<<<<<<< HEAD
 from seisflows.tools.tools import loadyaml, loadpy
 from seisflows.config import (init_seisflows, format_paths, Dict, custom_import,
                               NAMES, PACKAGES, ROOT_DIR)
-=======
-from seisflows.config import config, tilde_expand, Dict, names, load
-from seisflows.tools.tools import loadyaml
->>>>>>> seisflows3
 
 
 def sfparser():
@@ -53,13 +48,8 @@ def sfparser():
     )
 
     # Optional parameters
-<<<<<<< HEAD
     parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd(),
                         help="The SeisFlows working directory, default: cwd")
-=======
-    parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd())
-    parser.add_argument("-c", "--console", action="store_true")
->>>>>>> seisflows3
     parser.add_argument("-p", "--parameter_file", nargs="?",
                         default="parameters.yaml",
                         help="Parameters file, default: 'parameters.yaml'")
@@ -558,27 +548,11 @@ class SeisFlows:
         unix.mkdir(self._args.workdir)
         unix.cd(self._args.workdir)
 
-<<<<<<< HEAD
         init_seisflows()
-=======
-    # Submit workflow
-    config()  # Instantiate all modules and check their parameters
-    workflow = sys.modules["seisflows_workflow"]
-    system = sys.modules["seisflows_system"]
-
-    # Submit console via the command line, or submit to the cluster
-    if args.console:
-        unix.cd(PATH.OUTPUT)
-        load(PATH.OUTPUT)
-        workflow.main()
-    else:
-        system.submit(workflow)
->>>>>>> seisflows3
 
         workflow = sys.modules["seisflows_workflow"]
         workflow.checkpoint()
 
-<<<<<<< HEAD
         if self._args.check:
             for NAME in NAMES:
                 sys.modules[f"seisflows_{NAME}"].required.validate()
@@ -672,42 +646,6 @@ class SeisFlows:
             self.par(parameter="STOP_AFTER", value=stop_after)
         if resume_from is not None:
             self.par(parameter="RESUME_FROM", value=resume_from)
-=======
-def clean():
-    """
-    Clean the working directory by deleting everything except the parameter file
-    """
-    args = get_args() 
-    check = input("\nThis will remove all workflow objects, leaving only the "
-                  "parameter file.\nAre you sure you want to clean? (y/[n]): ")
-    if check == "y":
-        for fid in glob(os.path.join(args.workdir, "output*")):
-            unix.rm(fid)
-        for fid in glob(os.path.join(args.workdir, "*log*")):
-            unix.rm(fid)
-        unix.rm(os.path.join(args.workdir, "scratch"))
-
-
-def resume():
-    """
-    Resume a previously started workflow by loading the module pickle files and
-    submitting the workflow from where it left off.
-    """
-    args = get_args() 
-    load_modules(precheck=True)
-
-    workflow = sys.modules["seisflows_workflow"]
-    system = sys.modules["seisflows_system"]
-    PATH = sys.modules["seisflows_paths"]
-
-    # Submit console via the command line, or submit to the cluster
-    if args.console:
-        unix.cd(PATH.OUTPUT)
-        load(PATH.OUTPUT)
-        workflow.main()
-    else:
-        system.submit(workflow)
->>>>>>> seisflows3
 
         self._register(precheck=not precheck_off)
         self._load_modules()
