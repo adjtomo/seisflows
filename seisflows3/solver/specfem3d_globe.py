@@ -16,7 +16,7 @@ from glob import glob
 import numpy as np
 
 # Local imports
-import seisflows.plugins.solver.specfem3d_globe as solvertools
+import seisflows3.plugins.solver.specfem3d_globe as solvertools
 from seisflows3.tools.seismic import getpar, setpar, Model, Minmax
 from seisflows3.plugins.io import loadbypar, copybin, loadbin, savebin
 from seisflows3.tools import unix

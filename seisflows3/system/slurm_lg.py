@@ -89,14 +89,14 @@ class SlurmLg(custom_import("system", "base")):
         # Submit using sbatch
         submit_call = " ".join([
             f"sbatch", 
-            f"{PAR.SLURMARGS}",
+            f"{PAR.SLURMARGS or ''}",
             f"--job-name={PAR.TITLE}",
             f"--output={output_log}-%A.log",
             f"--error={error_log}-%A.log",
             f"--ntasks-per-node={PAR.NODESIZE}",
             f"--nodes=1",
             f"--time={PAR.WALLTIME:d}",
-            os.path.join(findpath("seisflows.system"), "wrappers", "submit"),
+            os.path.join(findpath("seisflows3.system"), "wrappers", "submit"),
             PATH.OUTPUT
         ])
 
@@ -121,7 +121,7 @@ class SlurmLg(custom_import("system", "base")):
         # Submit job array
         run_call = " ".join([
             "sbatch",
-            f"{PAR.SLURMARGS}",
+            f"{PAR.SLURMARGS or ''}",
             f"--job-name={PAR.TITLE}",
             f"--nodes={math.ceil(PAR.NPROC/float(PAR.NODESIZE)):d}",
             f"--ntasks-per-node={PAR.NODESIZE:d}",
@@ -129,7 +129,7 @@ class SlurmLg(custom_import("system", "base")):
             f"--time={PAR.TASKTIME:d}",
             f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
             f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
-            f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
+            f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",
             f"{classname}",
             f"{method}",
@@ -163,7 +163,7 @@ class SlurmLg(custom_import("system", "base")):
         # Submit job array
         run_call = " ".join([
             "sbatch",
-            f"{PAR.SLURMARGS}",
+            f"{PAR.SLURMARGS or ''}",
             f"--job-name={PAR.TITLE}",
             f"--nodes={math.ceil(PAR.NPROC/float(PAR.NODESIZE)):d}",
             f"--ntasks-per-node={PAR.NODESIZE:d}",
@@ -171,7 +171,7 @@ class SlurmLg(custom_import("system", "base")):
             f"--time={PAR.TASKTIME:d}",
             f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
             f"--array=0-0",
-            f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
+            f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",
             f"{classname}",
             f"{method}",

@@ -10,7 +10,7 @@ from glob import glob
 
 import sys
 import warnings
-import seisflows.plugins.solver.specfem3d as solvertools
+import seisflows3.plugins.solver.specfem3d as solvertools
 
 from seisflows3.tools import unix
 from seisflows3.tools.tools import exists

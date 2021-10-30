@@ -1,2 +1,2 @@
-seisflows
-seisflows-super
+seisflows3
+seisflows3-super

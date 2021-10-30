@@ -99,7 +99,7 @@ class Maui(custom_import("system", "slurm_lg")):
 
         # Submit to maui_ancil
         submit_call = " ".join([
-            f"sbatch {PAR.SLURMARGS}",
+            f"sbatch {PAR.SLURMARGS or ''}",
             f"--account={PAR.ACCOUNT}",
             f"--cluster={PAR.ANCIL_CLUSTER}",
             f"--partition={PAR.ANCIL_PARTITION}",
@@ -109,7 +109,7 @@ class Maui(custom_import("system", "slurm_lg")):
             f"--ntasks=1",
             f"--cpus-per-task=1",
             f"--time={PAR.WALLTIME:d}",
-            os.path.join(findpath("seisflows.system"), "wrappers", "submit"),
+            os.path.join(findpath("seisflows3.system"), "wrappers", "submit"),
             PATH.OUTPUT
         ])
 
@@ -138,7 +138,7 @@ class Maui(custom_import("system", "slurm_lg")):
 
         run_call = " ".join([
             "sbatch",
-            f"{PAR.SLURMARGS}",
+            f"{PAR.SLURMARGS or ''}",
             f"--account={PAR.ACCOUNT}",
             f"--job-name={PAR.TITLE}",
             f"--clusters={PAR.MAIN_CLUSTER}",
@@ -149,7 +149,7 @@ class Maui(custom_import("system", "slurm_lg")):
             f"--time={PAR.TASKTIME * scale_tasktime:d}",
             f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
             f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
-            f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
+            f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",
             f"{classname}",
             f"{method}",
@@ -203,7 +203,7 @@ class Maui(custom_import("system", "slurm_lg")):
         # Submit job
         run_call = " ".join([
             "sbatch",
-            f"{PAR.SLURMARGS}",
+            f"{PAR.SLURMARGS or ''}",
             f"--account={PAR.ACCOUNT}",
             f"--job-name={PAR.TITLE}",
             f"--clusters={PAR.MAIN_CLUSTER}",
@@ -214,7 +214,7 @@ class Maui(custom_import("system", "slurm_lg")):
             f"--time={PAR.TASKTIME * scale_tasktime:d}",
             f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
             f"--array=0-0",
-            f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
+            f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",
             f"{classname}",
             f"{method}",
@@ -268,7 +268,7 @@ class Maui(custom_import("system", "slurm_lg")):
 
         run_call = " ".join([
             "sbatch",
-            f"{PAR.SLURMARGS}",
+            f"{PAR.SLURMARGS or ''}",
             f"--account={PAR.ACCOUNT}",
             f"--job-name={PAR.TITLE}",
             f"--clusters={PAR.ANCIL_CLUSTER}",
@@ -277,7 +277,7 @@ class Maui(custom_import("system", "slurm_lg")):
             f"--time={ANCIL_TASKTIME:d}",
             f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
             f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
-            f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
+            f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",
             f"{classname}",
             f"{method}",

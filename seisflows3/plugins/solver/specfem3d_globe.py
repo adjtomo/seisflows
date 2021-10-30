@@ -11,7 +11,7 @@ from seisflows3.tools.seismic import setpar
 def write_sources(PAR, h, path='.'):
     """ Writes source information to text file
     """
-    filename = findpath('sesiflows.plugins') + '/' + 'specfem3d/SOURCE'
+    filename = findpath('seisflows.plugins') + '/' + 'specfem3d/SOURCE'
     with open(filename, 'r') as f:
         lines = f.readlines()
 

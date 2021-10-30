@@ -43,7 +43,6 @@ class Pyatoa(custom_import("preprocess", "base")):
     @property
     def required(self):
         """
-<<<<<<< HEAD
         A hard definition of paths and parameters required by this class,
         alongside their necessity for the class and their string explanations.
         """
@@ -78,31 +77,6 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         sf.par("ROTATE", required=False, default=False, par_type=bool,
                docstr="Rotate waveform components NEZ -> RTZ")
-=======
-        # Check the path requirements
-        if "PREPROCESS" not in PATH:
-            setattr(PATH, "PREPROCESS", 
-                    os.path.join(PATH.SCRATCH, "preprocess"))
-
-        if "DATA" not in PATH:
-            setattr(PATH, "DATA", None)
-
-        if "RESPONSE" not in PATH:
-            setattr(PATH, "RESPONSE", None)
-
-        # Check the existence of required parameters
-        required_parameters = ["COMPONENTS", "UNIT_OUTPUT", "MIN_PERIOD",
-                               "MAX_PERIOD", "CORNERS", "ROTATE",
-                               "ADJ_SRC_TYPE", "FIX_WINDOWS", "PLOT", "FORMAT"
-                               ]
-        for req in required_parameters:
-            if req not in PAR:
-                raise ParameterError(PAR, req)
-
-        # Check specific parameter requirements
-        if PAR.FORMAT != "ascii":
-            raise ValueError("Pyatoa preprocess currently only works with "
-                             "the 'ascii' format")
 
         sf.par("ADJ_SRC_TYPE", required=True, par_type=str,
                docstr="Adjoint source type to use. Available: "

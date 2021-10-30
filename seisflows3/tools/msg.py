@@ -11,7 +11,7 @@ To delete data and start a new workflow type:
   seisflows restart
 
 To resume existing workflow type:
-  sesiflows resume
+  seisflows resume
 """
 
 FileError = """
