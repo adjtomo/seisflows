@@ -159,7 +159,7 @@ class Pyatoa(custom_import("preprocess", "base")):
         self.path_datasets = pyaflowa.path_structure.datasets
         self.path_figures = pyaflowa.path_structure.figures
 
-    def prepare_eval_grad(self, path, source_name, **kwargs):
+    def prepare_eval_grad(self, cwd, source_name, **kwargs):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms, 
         and measuring misfit between observations and synthetics using Pyatoa.
@@ -188,8 +188,7 @@ class Pyatoa(custom_import("preprocess", "base")):
         # Generate the necessary files to continue the inversion
         if misfit:
             # Event misfit defined by Tape et al. (2010)
-            self.write_residuals(path=path, scaled_misfit=misfit,
-                                 source_name=source_name)
+            self.write_residuals(path=cwd, scaled_misfit=misfit)
         
         # self.snapshot()
 
@@ -207,7 +206,7 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         self.make_final_pdfs()
 
-    def write_residuals(self, path, scaled_misfit, source_name):
+    def write_residuals(self, path, scaled_misfit):
         """
         Computes residuals and saves them to a text file in the appropriate path
 
@@ -220,14 +219,8 @@ class Pyatoa(custom_import("preprocess", "base")):
         :param source_name: name of the source related to the misfit, used
             for file naming
         """
-        residuals_dir = os.path.join(path, "residuals")        
-
-        if not os.path.exists(residuals_dir):
-            unix.mkdir(residuals_dir)
-        
-        event_residual = os.path.join(residuals_dir, source_name)        
-     
-        np.savetxt(event_residual, [scaled_misfit], fmt="%11.6e")
+        residuals_file = os.path.join(path, "residuals")        
+        np.savetxt(residuals_file, [scaled_misfit], fmt="%11.6e")
 
     def sum_residuals(self, files):
         """
