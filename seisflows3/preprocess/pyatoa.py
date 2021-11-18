@@ -159,7 +159,7 @@ class Pyatoa(custom_import("preprocess", "base")):
         self.path_datasets = pyaflowa.path_structure.datasets
         self.path_figures = pyaflowa.path_structure.figures
 
-    def prepare_eval_grad(self, cwd, source_name, **kwargs):
+    def prepare_eval_grad(self, source_name, **kwargs):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms, 
         and measuring misfit between observations and synthetics using Pyatoa.
@@ -187,6 +187,8 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         # Generate the necessary files to continue the inversion
         if misfit:
+            # Construct cwd using Pyaflowa
+            cwd = pyaflowa.path_structure.cwd.format(source_name=source_name)
             # Event misfit defined by Tape et al. (2010)
             self.write_residuals(path=cwd, scaled_misfit=misfit)
         
