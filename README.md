@@ -1,5 +1,9 @@
 SeisFlows3
 ==========
+---
+`Documentation` can be found on Read the Docs: https://seisflows3.rtfd.io (in development)
+
+---
 
 SeisFlows is a Python-based waveform inversion package used to tackle the problems of full waveform inversion, seismic migration, and adjoint tomography.  
                                                                                  
