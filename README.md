@@ -5,10 +5,7 @@ SeisFlows is a Python-based waveform inversion package used to tackle the proble
                                                                                  
 With a growing user base in academia and industry, this package has been used for production scale inversions, some with over a billion model parameters, for research problems related to oil and gas exploration, earthquake seismology, and general nonlinear optimization problems.                                         
                                                                                  
-SeisFlows3 is a fork of SeisFlows and the current main development branch. Changes to the package include migration to Python3, updates to source-code readability through improved doc strings and comments, stronger adherance to PEP-8 standards, and additional functionalities not present in the original package.                                                                         
-                                                                                 
-Throughout the documentation we use the name SeisFlows to refer to this package unless explicitely stated otherwise. Due to incompatabilities between Python 2 and 3, backwards compatability between SeisFlows and SeisFlows3 is not guaranteed. 
-
+SeisFlows3 is a fork of SeisFlows and the current main development branch. Changes to the package include migration to Python3, updates to source-code readability through improved doc strings and comments, stronger adherance to PEP-8 standards, and additional functionalities not present in the original package.                                                                       
 
 References
 ----------
