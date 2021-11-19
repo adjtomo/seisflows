@@ -1,5 +1,5 @@
-SeisFlows
-=========
+SeisFlows3
+==========
 
 SeisFlows is a Python-based waveform inversion package used to tackle the problems of full waveform inversion, seismic migration, and adjoint tomography.  
                                                                                  
