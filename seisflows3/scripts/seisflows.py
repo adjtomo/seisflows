@@ -740,7 +740,9 @@ class SeisFlows:
             lines = f.readlines()
 
         for i, line in enumerate(lines):
-            if f"{parameter}:" in line and "#" not in line:
+            # Check exact parameter name and ignore comment
+            if f"{parameter}:" in line.strip()[:len(parameter) + 1] and \
+                                                                 line[0] != "#":
                 if value is not None:
                     # These values still have string formatters attached
                     current_par, current_val = line.split(":")
