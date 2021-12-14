@@ -121,32 +121,32 @@ def getpar(key, file='DATA/Par_file', sep='=', cast=str):
         raise KeyError
 
 
-def setpar(key, val, filename='DATA/Par_file', path='.', sep='='):
+def setpar(key, val, filename="DATA/Par_file", path=".", sep="="):
     """
-    Writes parameter to text file. Used to change Specfem3D parameter file
+    Overwrites parameter value to text file. 
+    Used to change values in SPECFEM parameter file.
+
+    .. note::
+        To ensure we only get the parameter were after, we search for the exact 
+        parameter name + first trailing space. Avoids collecting parameters that
+        contain other parameter names, e.g., searching for 'SAVE' may return 
+        'SAVE_FORWARD', but searching 'SAVE ' should only return the parameter 
+        we're after
     """
     val = str(val)
 
-    # Read line by line
-    with open(os.path.join(path, filename), "r") as file:
-        lines = []
-        for line in file:
-            if line.find(key) == 0:
-                # Read key
-                key, _ = _split(line, sep)
-                # Read comment
-                _, comment = _split(line, '#')
-                n = len(line) - len(key) - len(val) - len(comment) - 2
-                # Replace line with new value
-                if comment:
-                    line = _merge(key, sep, val, ' '*n, '#', comment)
-                else:
-                    line = _merge(key, sep, str(val), '\n')
-            lines.append(line)
+    with open(os.path.join(path, filename), "r") as f:
+        lines = f.readlines()
+        for i, line in enumerate(lines[:]):
+            # Search for key + first trailing space
+            if line[:len(key) + 1] == f"{key} ":
+                _, _, old_val, *_ = line.strip().split()  
+                lines[i] = line.replace(old_val, val)
+                break
 
-    # Write file
-    with open(os.path.join(path, filename), 'w') as file:
-        file.writelines(lines)
+    # Write amended file back to same file name
+    with open(os.path.join(path, filename), "w") as f:
+        f.writelines(lines)
 
 
 def _split(string, sep):
@@ -169,7 +169,7 @@ def _merge(*parts):
     """
     Utility function to merge various strings together with no breaks
     """
-    return ''.join(parts)
+    return ' '.join(parts)
 
 
 def _zip(keys, vals):
