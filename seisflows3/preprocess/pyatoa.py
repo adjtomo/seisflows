@@ -183,7 +183,8 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         # Process all the stations for a given event using Pyaflowa
         misfit = pyaflowa.process_event(source_name, 
-                                        fix_windows=PAR.FIX_WINDOWS)
+                                        fix_windows=PAR.FIX_WINDOWS,
+                                        event_id_prefix=PAR.SOURCE_PREFIX)
 
         # Generate the necessary files to continue the inversion
         if misfit:
