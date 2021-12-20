@@ -1,7 +1,7 @@
 *.exe
 *.pyc
 *.swp
-seisflows/docs/_build
+seisflows3/docs/_build
 docs-old
 parameters*c
 paths*c

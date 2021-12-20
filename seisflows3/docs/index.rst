@@ -81,5 +81,6 @@ high performance computing system.
 
    citeme
    development
+   devplan
    seisflows_api
 
