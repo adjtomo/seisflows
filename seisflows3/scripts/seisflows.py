@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 """
-The main entry point to the SeisFlows package. A high-level command line tool 
-that facilitates interface with the underlying SeisFlows environment, package.
+A command line tool for using and manipulating SeisFlows3.
+The main entry point to the SeisFlows3 package, this command line tool
+facilitates interface with the underlying SeisFlows3 package.
+
+.. rubric::
+    $ seisflows -h  # runs the help command to investigate package features
 """
 import os
 import sys
@@ -14,20 +18,27 @@ from textwrap import wrap
 from seisflows3.tools import unix, tools
 from seisflows3.tools.tools import loadyaml, loadpy
 from seisflows3.config import (init_seisflows, format_paths, Dict, custom_import,
-                              NAMES, PACKAGES, ROOT_DIR)
+                               NAMES, PACKAGES, ROOT_DIR)
 
 
 def sfparser():
     """
-    Get User defined arguments, or assign defaults. Make use of subparsers to
+    An command-line argument parser which allows for intuitive exploration of
+    the available functions.
+
+    Gets User defined arguments or assign defaults. Makes use of subparsers to
     get individual help statements for each of the main functions.
+
+    .. rubric::
+        $ seisflows {main arg} {optional sub arg}
 
     :rtype: argparse.ArgumentParser()
     :return: User defined or default arguments
     """
     class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
         """
-        Override the help statement to NOT print out available subcommands
+        Override the help statement to NOT print out available subcommands for a
+        cleaner UI when calling this CLI tool.
 
         https://stackoverflow.com/questions/13423540/
                               argparse-subparser-hide-metavar-in-command-listing
@@ -38,6 +49,7 @@ def sfparser():
                 parts = "\n".join(parts.split("\n")[1:])
             return parts
 
+    # Initiate the argument parser with a nicely formatted ASCII descriptor
     parser = argparse.ArgumentParser(
         formatter_class=SubcommandHelpFormatter,
         description=f"{'='*80}\n\n"
@@ -62,7 +74,8 @@ def sfparser():
         description="Available SeisFlows arguments and their intended usages",
         dest="command",
     )
-    # The following subparsers constitute the available SeisFlows commands
+    # The following subparsers constitute the available SeisFlows3 commands
+    # and each refers to a function within the SeisFlows class.
     # =========================================================================
     setup = subparser.add_parser(
         "setup", help="Setup working directory from scratch",
@@ -238,6 +251,7 @@ e.g. 'seisflows inspect solver eval_func'
     edit.add_argument("-d", "--dont_open", action="store_true",
                       help="Dont open the text editor, just list full pathname")
     # =========================================================================
+    # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
                       "edit": edit}
     if parser.parse_args().command in subparser_dict:
@@ -248,33 +262,69 @@ e.g. 'seisflows inspect solver eval_func'
 
 class SeisFlows:
     """
-    The main entry point to the SeisFlows package. Responsible for setting up
-    or re-creating a SeisFlows enviornment, (re-)submitting workflows, or
-    inspecting, manipulating or viewing a live environment via command line
-    arguments.
+    The main entry point to the SeisFlows3 package, to be interacted with
+    through the command line. This class is responsible for:
+        1) setting up or re-creating a SeisFlows3 working enviornment,
+        2) (re-)submitting workflows to the system,
+        3) inspecting, manipulating or viewing a live working environment via
+            command line arguments.
+
+    .. rubric::
+        $ seisflows -h
 
     .. note::
         Almost every modules requires loading of other modules, i.e. to run
         any checks we must load the entire SeisFlows environment, which is slow
         but provides the most flexibility when accessing internal information
     """
-    def __init__(self):
+    def __init__(self, command=None, return_self=False, **kwargs):
         """
-        Parse user-defined arguments, call internal method with given arguments
+        Parse user-defined arguments and then call the internal method with the
+        given names of the arguments and sub-arguments.
+
+        .. rubric::
+            # From the command line
+            $ seisflows {command} {optional subcommand}
+
+            # From inside a Python environment
+            > from seisflows3.scripts.seisflows import SeisFlows
+            > SeisFlows("{command}", {optional subcommand}={value})
+
+        :type command: str
+        :param command: If not None, allows controlling this class from inside
+            a Python environment. If sub-commands are required, these are
+            inserted using the kwargs.
+            Usually not required unless writing tests or scripting SF3 in Python
+        :type return_self: bool
+        :param return_self: if True, do not execute a command, which init
+            usually does, but return the SeisFlows class itself. This is used
+            just for testing purposes
         """
         self._parser, self._subparser = sfparser()
         self._paths = None
         self._parameters = None
-
-        # Print out the help statement if no command is given
-        if len(sys.argv) == 1:
-            self._parser.print_help()
-            sys.exit(0)
-
         self._args = self._parser.parse_args()
 
-        # Throw in all arguments as kwargs and let the function sort it out
-        getattr(self, self._args.command)(**vars(self._args))
+    def __call__(self, command=None, **kwargs):
+        """
+        When called, SeisFlows will execute one of its internal functions
+        :return:
+        """
+        if command is not None:
+            # This allows running SeisFlows() from inside a Python environment
+            # mostly used for testing purposes but can also be used for scripts
+            kwargs = {**kwargs, **vars(self._args)}  # include argparse defaults
+            getattr(self, command)(**kwargs)
+        else:
+            # This is the main command-line functionality of the class
+            # Print out the help statement if no command is given
+            if len(sys.argv) == 1:
+                self._parser.print_help()
+                sys.exit(0)
+
+            # Call the given function based on the user-defined name.
+            # Throw in all arguments as kwargs and let the function sort it out
+            getattr(self, self._args.command)(**vars(self._args))
 
     @property
     def _public_methods(self):
@@ -289,9 +339,14 @@ class SeisFlows:
 
     def _register(self, precheck=True):
         """
-        Load the paths and parameters from file into sys modules, set the
+        Load the paths and parameters from file into sys.modules, set the
         default parameters if they are missing from the file, and expand all
         paths to absolute pathnames.
+
+        .. note::
+            This is ideally the FIRST thing that happens everytime SeisFlows3
+            is initiated. The package cannot do anything without the resulting
+            PATH and PARAMETER variables.
 
         :type precheck: bool
         :param precheck: print out a few key parameters and require user-input
@@ -1066,5 +1121,5 @@ def main():
     """
     Main entry point into the SeisFlows package is via the SeisFlows class
     """
-    SeisFlows()
-
+    sf = SeisFlows()
+    sf()
