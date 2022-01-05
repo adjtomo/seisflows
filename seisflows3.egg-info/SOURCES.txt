@@ -1,3 +1,4 @@
+LICENSE
 README.md
 setup.py
 seisflows3/__init__.py
