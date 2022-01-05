@@ -791,7 +791,7 @@ class Base:
         # Check path
         path = PATH.SPECFEM_DATA
         if not exists(path):
-            raise Exception
+            raise FileNotFoundError(f"SPECFEM_DATA: {path} does not exist")
 
         # Apply wildcard rule and check for available sources
         wildcard = f"{self.source_prefix}_*"
