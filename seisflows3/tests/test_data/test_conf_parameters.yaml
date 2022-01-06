@@ -26,10 +26,10 @@
 #
 # ==============================================================================
 WORKFLOW: inversion
-SOLVER: specfem2d
+SOLVER: specfem3d
 SYSTEM: serial
 OPTIMIZE: LBFGS 
-PREPROCESS: pyatoa
+PREPROCESS: default
 POSTPROCESS: base
 
 # ==============================================================================
@@ -57,9 +57,9 @@ POSTPROCESS: base
 #    Function used to invoke parallel executables
 
 # ==============================================================================
-TITLE: specfem2d_local
-WALLTIME: 10
-TASKTIME: 5
+TITLE: test_data
+WALLTIME: !!! REQUIRED PARAMETER !!!
+TASKTIME: !!! REQUIRED PARAMETER !!!
 NTASK: 1
 NPROC: 1
 PRECHECK:
@@ -67,66 +67,32 @@ PRECHECK:
     - BEGIN
     - END
     - WALLTIME
-MPIEXEC: ''
+MPIEXEC:
 
 # ==============================================================================
 #
 #                                   PREPROCESS                                  
 #                                   ----------                                  
 #
-# UNIT_OUTPUT (str):
-#    Data units. Must match the synthetic output of external solver.
-#    Available: ['DISP': displacement, 'VEL': velocity, 'ACC': acceleration]
-# MIN_PERIOD (float):
-#    Minimum filter corner in seconds
-# MAX_PERIOD (float):
-#    Maximum filter corner in seconds
-# CORNERS (int):
-#    Number of filter corners
-# CLIENT (str):
-#    Client name for ObsPy FDSN data gathering
-# START_PAD (float):
-#    For data gathering; time before origin time to gather. START_PAD >= T_0
-#    in SPECFEM constants.h.in. Positive values only
-# END_PAD (float):
-#    For data gathering; time after origin time to gather. END_PAD >= NT * DT
-#    (of Par_file). Positive values only
-# ROTATE (bool):
-#    Rotate waveform components NEZ -> RTZ
-# ADJ_SRC_TYPE (str):
-#    Adjoint source type to use. Available: ['cc': cross-correlation, 'mt':
-#    multitaper, wav: waveform']
-# PYFLEX_PRESET (str):
-#    Parameter map for Pyflex config. For available choices, see Pyatoa docs
-#    page
-# FIX_WINDOWS (bool or str):
-#    Time window evaluation: available: [True, False, 'ITER', 'ONCE'] True:
-#    Same windows for all but i01s00; False: New windows at each evaluation;
-#    'ITER': New windows at first evaluation of each iter; 'ONCE': New windows
-#    at first evaluation of workflow
-# PLOT (bool):
-#    Plot waveforms and maps as .pdf files
-# SNAPSHOT (bool):
-#    Copy ASDFDataSets on disk for data redundancy
-# LOGGING (str):
-#    Log level. Available: ['null': no logging, 'warning': warnings only,
-#    'info': task tracking, 'debug': log everything]
+# MISFIT (str):
+#    Misfit function for waveform comparisons, for available see
+#    seisflows.plugins.misfit
+# BACKPROJECT (str):
+#    Backprojection function for migration, for available see
+#    seisflows.plugins.adjoint
+# NORMALIZE (str):
+#    Data normalization option
+# MUTE (str):
+#    Data muting option
+# FILTER (str):
+#    Data filtering option
 
 # ==============================================================================
-UNIT_OUTPUT: DISP
-MIN_PERIOD: .065
-MAX_PERIOD: 1
-CORNERS: 4
-CLIENT:
-START_PAD: 0
-END_PAD: 2
-ROTATE: False
-ADJ_SRC_TYPE: cc
-PYFLEX_PRESET: default
-FIX_WINDOWS: False
-PLOT: True
-SNAPSHOT: True
-LOGGING: DEBUG
+MISFIT: null
+BACKPROJECT: null
+NORMALIZE: null
+MUTE: null
+FILTER: null
 
 # ==============================================================================
 #
@@ -148,25 +114,22 @@ LOGGING: DEBUG
 #    Number of time steps set in the SPECFEM Par_file
 # DT (float):
 #    Time step or delta set in the SPECFEM Par_file
-# F0 (float):
-#    Dominant source frequency
 # FORMAT (float):
 #    Format of synthetic waveforms used during workflow, available options:
 #    ['ascii', 'su']
 # SOURCE_PREFIX (str):
-#    Prefix of SOURCE files in path SPECFEM_DATA. By default, 'SOURCE' for
-#    SPECFEM2D
+#    Prefix of SOURCE files in path SPECFEM_DATA. Available ['CMTSOLUTION',
+#    FORCESOLUTION']
 
 # ==============================================================================
-MATERIALS: elastic
-DENSITY: CONSTANT
+MATERIALS: !!! REQUIRED PARAMETER !!!
+DENSITY: !!! REQUIRED PARAMETER !!!
 COMPONENTS: ZNE
 SOLVERIO: fortran_binary
-NT: 1600
-DT: .0011
-F0: 10.
-FORMAT: ascii
-SOURCE_PREFIX: SOURCE
+NT: !!! REQUIRED PARAMETER !!!
+DT: !!! REQUIRED PARAMETER !!!
+FORMAT: !!! REQUIRED PARAMETER !!!
+SOURCE_PREFIX: CMTSOLUTION
 
 # ==============================================================================
 #
@@ -257,11 +220,11 @@ LBFGSTHRESH: 0.0
 #    Provide detailed statements to the output logs
 
 # ==============================================================================
-BEGIN: 1
-END: 1
-RESUME_FROM: 
+BEGIN: !!! REQUIRED PARAMETER !!!
+END: !!! REQUIRED PARAMETER !!!
+RESUME_FROM:
 STOP_AFTER:
-CASE: synthetic 
+CASE: !!! REQUIRED PARAMETER !!!
 SAVEMODEL: True
 SAVEGRADIENT: True
 SAVEKERNELS: False
@@ -283,10 +246,6 @@ VERBOSE: True
 #    scratch path to hold any system related data
 # LOCAL:
 #    path to local data to be used during workflow
-# PREPROCESS:
-#    scratch path to store waveform data and figures
-# DATA:
-#    path to data available to workflow
 # SOLVER:
 #    scratch path to hold solver working directories
 # SPECFEM_BIN:
@@ -302,6 +261,8 @@ VERBOSE: True
 #    Initial model to be used for workflow
 # MODEL_TRUE:
 #    Target model to be used for PAR.CASE == 'synthetic'
+# DATA:
+#    path to data available to workflow
 # FUNC:
 #    scratch path to store data related to function evaluations
 # GRAD:
@@ -311,19 +272,18 @@ VERBOSE: True
 
 # ==============================================================================
 PATHS:
-    SCRATCH: ./scratch 
-    OUTPUT: ./output
-    SYSTEM: ./system
+    SCRATCH: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch
+    OUTPUT: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/output
+    SYSTEM: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/system
     LOCAL:
-    PREPROCESS: ./scratch/preprocess
-    DATA:
-    SOLVER: ./scratch/solver 
-    SPECFEM_BIN: ./specfem2d/bin 
-    SPECFEM_DATA: ./specfem2d/DATA
+    SOLVER: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/solver
+    SPECFEM_BIN: !!! REQUIRED PATH !!!
+    SPECFEM_DATA: !!! REQUIRED PATH !!!
     MASK:
-    OPTIMIZE: ./scratch/optimize
-    MODEL_INIT: ./specfem2d/MODEL_INIT
-    MODEL_TRUE: ./specfem2d/MODEL_TRUE
-    FUNC: ./scratch/evalfunc 
-    GRAD: ./scratch/evalgrad
-    HESS: ./scratch/evalhess
+    OPTIMIZE: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/optimize
+    MODEL_INIT: !!! REQUIRED PATH !!!
+    MODEL_TRUE:
+    DATA:
+    FUNC: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/evalfunc
+    GRAD: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/evalgrad
+    HESS: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/evalhess
