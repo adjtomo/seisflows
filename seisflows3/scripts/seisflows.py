@@ -454,7 +454,7 @@ class SeisFlows:
         :type package: str
         :param package: specify an indivdual package to search
         """
-        module_list = self._return_modules()
+        module_list = return_modules()
         for name_, package_dict in module_list.items():
             if name is not None and name != name_:
                 continue
@@ -465,33 +465,6 @@ class SeisFlows:
                 print(f" * {package_}")
                 for module_ in module_list:
                     print(f"\t{module_}")
-
-    @staticmethod
-    def _return_modules():
-        """
-        Search for the names of available modules in SeisFlows name space.
-        This simple function checks for files with a '.py' extension inside
-        each of the sub-directories, ignoring private files like __init__.py.
-
-        :rtype: dict of dict of lists
-        :return: a dict with keys matching names and values as dicts for each
-            package. nested list contains all the avaialble modules
-        """
-        REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
-
-        module_dict = {}
-        for NAME in NAMES:
-            module_dict[NAME] = {}
-            for PACKAGE in PACKAGES:
-                module_dict[NAME][PACKAGE] = []
-                mod_dir = os.path.join(REPO_DIR, PACKAGE, NAME)
-                for pyfile in sorted(glob(os.path.join(mod_dir, "*.py"))):
-                    stripped_pyfile = os.path.basename(pyfile)
-                    stripped_pyfile = os.path.splitext(stripped_pyfile)[0]
-                    if not stripped_pyfile.startswith("_"):
-                        module_dict[NAME][PACKAGE].append(stripped_pyfile)
-
-        return module_dict
 
     def setup(self, symlink=False, overwrite=False, **kwargs):
         """
@@ -1141,6 +1114,33 @@ class SeisFlows:
         """     
         solver = sys.modules["seisflows_solver"]
         print(f"\n\t{idx}: {solver.source_names[int(idx)]}\n")
+
+
+def return_modules():
+    """
+    Search for the names of available modules in SeisFlows name space.
+    This simple function checks for files with a '.py' extension inside
+    each of the sub-directories, ignoring private files like __init__.py.
+
+    :rtype: dict of dict of lists
+    :return: a dict with keys matching names and values as dicts for each
+        package. nested list contains all the avaialble modules
+    """
+    REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
+
+    module_dict = {}
+    for NAME in NAMES:
+        module_dict[NAME] = {}
+        for PACKAGE in PACKAGES:
+            module_dict[NAME][PACKAGE] = []
+            mod_dir = os.path.join(REPO_DIR, PACKAGE, NAME)
+            for pyfile in sorted(glob(os.path.join(mod_dir, "*.py"))):
+                stripped_pyfile = os.path.basename(pyfile)
+                stripped_pyfile = os.path.splitext(stripped_pyfile)[0]
+                if not stripped_pyfile.startswith("_"):
+                    module_dict[NAME][PACKAGE].append(stripped_pyfile)
+
+    return module_dict
 
 
 def main():

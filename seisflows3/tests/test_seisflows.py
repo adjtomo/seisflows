@@ -222,18 +222,6 @@ def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
         assert(check == par)
 
 
-def test_cmd_init(tmpdir, copy_par_file):
-    """
-    Test setting up the SeisFlows3 working directory
-    """
-    os.chdir(tmpdir)
-
-    with patch.object(sys, "argv", ["seisflows"]):
-        sf = SeisFlows()
-        sf.init()
-    pytest.set_trace()
-
-
 def blank(tmpdir):
     """
     Test setting up the SeisFlows3 working directory

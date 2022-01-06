@@ -68,7 +68,6 @@ class Base:
                 default=os.path.join(PATH.WORKDIR, "scratch", "system"),
                 docstr="scratch path to hold any system related data")
 
-
         sf.path("LOCAL", required=False,
                 docstr="path to local data to be used during workflow")
 

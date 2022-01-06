@@ -42,6 +42,7 @@ def sfinit(tmpdir, copy_par_file):
 
     return sf
 
+
 def test_seisflows_constants():
     """
     Ensure that the constants set in the Config file have not changed
