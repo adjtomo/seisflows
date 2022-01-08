@@ -5,7 +5,7 @@ This is the subclass seisflows.system.slurm_lg
 This class provides the core utilities interaction with HPC systems which run
 using Slurm management tools
 
-..note::
+.. note::
     The main development system for SeisFlows3 used SLURM. Therefore the other
     system supers will not be up to date until access to those systems are
     granted. This rosetta stone, for converting from SLURM to other workload

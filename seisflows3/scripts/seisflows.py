@@ -969,6 +969,25 @@ class SeisFlows:
 
         solver.save(solver.split(optimize.load(name)), path=path, **kwargs )
 
+    def validate(self, module=None, name=None):
+        """
+        Ensure that all the modules (and their respective subclasses) meet some
+        necessary requirements such as having specific functions and parameters.
+        Not a full replacement for running the test suite, but useful for
+        checking newly written subclasses.
+
+        USAGE
+
+            To validate a specific subclass:
+
+                seisflows validate workflow inversion
+
+            To validate the entire codebase
+
+                seisflows validate
+        """
+        raise NotImplementedError
+
     @staticmethod
     def _inspect_class_that_defined_method(name, func, **kwargs):
         """

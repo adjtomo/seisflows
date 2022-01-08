@@ -13,11 +13,20 @@ from seisflows3.scripts.seisflows import SeisFlows, return_modules
 
 # The module that we're testing, allows for copy-pasting these test suites
 MODULE = "system"
+# Ensures that these parameters are always defined, even when using subclasses
+REQUIRED_PARAMETERS = ["WALLTIME", "TASKTIME", "NTASK", "NPROC"]
+REQUIRED_FUNCTIONS = ["required", "check", "setup", "submit", "run",
+                      "run_single", "taskid", "checkpoint", "wrong"
+                      ]
 
 # Define some re-used paths
 TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
 REPO_DIR = os.path.abspath(os.path.join(config.ROOT_DIR, ".."))
 
+
+from subprocess import run
+def ls():
+    run(["ls", "-l"])
 
 @pytest.fixture
 def copy_par_file(tmpdir):
@@ -66,17 +75,102 @@ def test_import(sfinit, modules):
     for package, module_list in modules.items():
         for module in module_list:
             loaded_module = config.custom_import(MODULE, module)()
+            # !!! This doesn't work because we have required parameters that
+            # !!! are not set in the parameter file
             # Not sure what the best way to check these things are but
             # for now we run a validate which just makes sure all the
             # paths and parameters are set into sys.modules
+            # pytest.set_trace()
             loaded_module.required.validate()
 
 
-def test_required(sfinit, modules):
+def test_required_parameters(sfinit, modules):
     """
-    Ensure that the path/parameter checking mechanism is working as advertised
+    Ensure that the required parameters are set in all the classes/subclasses
     """
-    REQUIRED_PARAMETERS = ["WALLTIME", "TASKTIME", "NTASK", "NPROC"]
     sf = sfinit
+    for package, module_list in modules.items():
+        for module in module_list:
+            loaded_module = config.custom_import(MODULE, module)()
+            sf_pp = loaded_module.required
+            # Check that required parameters are set
+            for req_par in REQUIRED_PARAMETERS:
+                assert(req_par in sf_pp.parameters.keys()), \
+                    f"{req_par} is a required parameter for module {MODULE}"
 
-    pytest.set_trace()
+            pytest.set_trace()
+
+
+def test_required_functions(sfinit, modules):
+    """
+    Make sure that the named, required functions exist within the class
+    """
+    sf = sfinit
+    for package, module_list in modules.items():
+        for module in module_list:
+            loaded_module = config.custom_import(MODULE, module)()
+            for func in REQUIRED_FUNCTIONS:
+                assert(func in dir(loaded_module)), \
+                    f"'{func}' is a required function in module: {MODULE}.{module}"
+
+
+def test_setup(sfinit, modules):
+    """
+    Make sure that setup creates the necessary directory structure
+
+    :param sfinit:
+    :param modules:
+    :return:
+    """
+    sf = sfinit
+    PATHS = sys.modules["seisflows_paths"]
+    SETUP_CREATES = [PATHS.SCRATCH, PATHS.SYSTEM, PATHS.OUTPUT]
+    for package, module_list in modules.items():
+        for module in module_list:
+            loaded_module = config.custom_import(MODULE, module)()
+
+            # Make sure these don't already exist
+            for path_ in SETUP_CREATES:
+                assert(not os.path.exists(path_))
+
+            loaded_module.setup()
+
+            # Check that the minimum required directories were created
+            for path_ in SETUP_CREATES:
+                assert(os.path.exists(path_))
+
+            # Remove created paths so we can check the next module
+            for path_ in SETUP_CREATES:
+                if os.path.isdir(path_):
+                    shutil.rmtree(path_)
+                else:
+                    os.remove(path_)
+
+
+def test_submit():
+    """
+
+    :return:
+    """
+
+
+def test_run():
+    """
+
+    :return:
+    """
+
+
+def test_run_single():
+    """
+
+    :return:
+    """
+
+
+def test_taskid():
+    """
+    Simply assert that this function returns an integer
+    :return:
+    """
+    

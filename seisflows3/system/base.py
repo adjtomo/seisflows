@@ -35,10 +35,10 @@ class Base:
                       "to the name of the working directory")
 
         sf.par("WALLTIME", required=True, par_type=float,
-               docstr="Maximum job time in minutes for main SeisFlows job")
+               docstr="Maximum job time in minutes for main SeisFlows3 job")
 
         sf.par("TASKTIME", required=True, par_type=float,
-               docstr="Maximum job time in minutes for each SeisFlows task")
+               docstr="Maximum job time in minutes for each SeisFlows3 task")
 
         sf.par("NTASK", required=True, par_type=int,
                docstr="Number of separate, individual tasks. Also equal to "
@@ -82,10 +82,17 @@ class Base:
 
     def setup(self):
         """
-        Create the SeisFlows directory structure in preparation for a
-        SeisFlows workflow. Ensure that if any config information is left over
+        Create the SeisFlows3 directory structure in preparation for a
+        SeisFlows3 workflow. Ensure that if any config information is left over
         from a previous workflow, that these files are not overwritten by
         the new workflow. Should be called by submit()
+
+        .. note::
+            This function is expected to create dirs: SCRATCH, SYSTEM, OUTPUT
+            and the following log files: output, error
+
+        :rtype: tuple of str
+        :return: (path to output log, path to error log)
         """
         # Create scratch directories
         unix.mkdir(PATH.SCRATCH)
@@ -96,6 +103,7 @@ class Base:
         unix.mkdir(os.path.join(PATH.WORKDIR, "output.logs"))
         unix.mkdir(os.path.join(PATH.WORKDIR, "logs.old"))
 
+        # ??? Can I delete this symlink part, don't think it's necessary
         # If a scratch directory is made outside the working directory, make
         # sure its accessible from within the working directory
         if not os.path.exists("./scratch"):
@@ -120,31 +128,62 @@ class Base:
 
     def submit(self):
         """
-        Submits workflow
+        Main insertion point of SeisFlows3 onto the compute system.
+
+        .. rubric::
+            $ seisflows submit
+
+        .. note::
+            The expected behavior of the submit() function is to:
+            1) run system setup, creating directory structure,
+            2) execute workflow by submitting workflow.main()
         """
         raise NotImplementedError('Must be implemented by subclass.')
 
     def run(self, classname, method, *args, **kwargs):
         """
-        Runs task multiple times
+        Runs a task multiple times in parallel
+
+        .. note::
+            The expected behavior of the run() function is to: submit N jobs to
+            the system in parallel. For example, in a simulation step, run()
+            submits N jobs to the compute system where N is the number of
+            events requiring an adjoint simulation.
+
+        :rtype: None
+        :return: This function is not expected to return anything
         """
         raise NotImplementedError('Must be implemented by subclass.')
 
     def run_single(self, classname, method, *args, **kwargs):
         """
-        Runs task a single time
+        Runs a task a single time
+
+        .. note::
+            The expected behavior of the run_single() function is to submit ONE
+            job to the compute system. This could be used for, submitting a job
+            to smooth a model, which only needs to be done once.
+
+        :rtype: None
+        :return: This function is not expected to return anything
         """
         raise NotImplementedError('Must be implemented by subclass.')
 
     def taskid(self):
         """
-        Provides a unique identifier for each running task
+        Provides a unique identifier for each running task. This is
+        compute system specific.
+
+        :rtype: int
+        :return: this function is expected to return a unique numerical
+            identifier.
         """
         raise NotImplementedError('Must be implemented by subclass.')
 
     def checkpoint(self, path, classname, method, args, kwargs):
         """
-        Writes information to disk so tasks can be executed remotely
+        Writes the SeisFlows3 working environment to disk so that new tasks can
+        be executed in a separate/new/restarted working environment.
 
         :type path: str
         :param path: path the kwargs
