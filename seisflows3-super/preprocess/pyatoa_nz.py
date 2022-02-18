@@ -68,7 +68,7 @@ class PyatoaNz(custom_import("preprocess", "pyatoa")):
     Data preprocessing class using the Pyatoa package with a custom processing
     function to deal with NZ data
     """
-    def prepare_eval_grad(self, path, source_name):
+    def prepare_eval_grad(self, source_name, **kwargs):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms,
         and measuring misfit between observations and synthetics using Pyatoa.
@@ -91,17 +91,16 @@ class PyatoaNz(custom_import("preprocess", "pyatoa")):
         # Communicate to Pyaflowa the current iteration and step count
         pyaflowa = pyatoa.Pyaflowa(structure="seisflows", sfpaths=PATH,
                                    sfpar=PAR, iteration=optimize.iter,
-                                   step_count=optimize.line_search.step_count,
-                                   plot=True)
+                                   step_count=optimize.line_search.step_count)
 
         # Process all the stations for a given event using Pyaflowa
         misfit = pyaflowa.process_event(source_name, 
-                                        fix_windows=PAR.FIX_WINDOWS)
+                                        fix_windows=PAR.FIX_WINDOWS,
+                                        event_id_prefix=PAR.SOURCE_PREFIX)
 
         # Generate the necessary files to continue the inversion
-        if misfit:
-            # Event misfit defined by Tape et al. (2010)
-            self.write_residuals(path=path, scaled_misfit=misfit,
-                                 source_name=source_name)
+        cwd = pyaflowa.path_structure.cwd.format(source_name=source_name) 
 
-        self.snapshot()
+        # Event misfit defined by Tape et al. (2010) written to solver dir. 
+        self.write_residuals(path=cwd, scaled_misfit=misfit)  
+
