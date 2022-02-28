@@ -132,6 +132,9 @@ def setpar(key, val, filename="DATA/Par_file", path=".", sep="="):
         contain other parameter names, e.g., searching for 'SAVE' may return 
         'SAVE_FORWARD', but searching 'SAVE ' should only return the parameter 
         we're after
+
+    .. note::
+        Assumes the SPECFEM par file is written in the form: key = value
     """
     val = str(val)
 
@@ -140,7 +143,7 @@ def setpar(key, val, filename="DATA/Par_file", path=".", sep="="):
         for i, line in enumerate(lines[:]):
             # Search for key + first trailing space
             if line[:len(key) + 1] == f"{key} ":
-                _, _, old_val, *_ = line.strip().split()  
+                _, old_val, *_ = line.strip().split("=")  
                 lines[i] = line.replace(old_val, val)
                 break
 
