@@ -3,10 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/scripts/seisflows.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/scripts/seisflows.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/system/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/system/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/system/serial.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/system/serial.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/system/slurm_lg.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/system/slurm_lg.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/docs/index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/docs/index.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_system.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tests/test_system.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

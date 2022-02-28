@@ -20,34 +20,46 @@ readability through improved doc strings and comments, stronger adherance to
 PEP-8 standards, and additional functionalities not present in the original
 package.
 
-Throughout the documentation we use the name SeisFlows to refer to this package
-unless explicitely stated otherwise. Due to incompatabilities between
+Throughout the documentation we may use the names SeisFlows and SeisFlows3
+interchangeably to refer to this package. Any reference to the original
+SeisFlows will be made explicitely. Due to incompatabilities between
 Python 2 and 3, backwards compatability between SeisFlows and SeisFlows3 is not
-guaranteed.
+supported.
 
 
 Installation
 =================
 
-Successful applications of SeisFlows will require direct editing of source code.
-For this reason, SeisFlows should be installed directly via the package library
-using pip.
+Successful applications of SeisFlows3 will typically require direct editing of
+source code. For this reason, SeisFlows3 should be installed directly via the
+package library using pip, using the -e flag to ensure that SeisFlows3 is
+installed in development mode, allowing source code changes to be immediately
+acccessible to Python.
 
-The -e flag in the pip install command ensures that SeisFlows is
-installed in development mode, meaning changes to the source code are
-immediately acccessible to the Python interpreter.
+The `devel` branch houses the most up-to-date codebase. We recommend installing
+SeisFlows3 within a virtual environment (e.g., Conda) to preserve your root
+environment.
 
 .. code:: bash
 
-   $ git clone https://github.com/seisflows/seisflows.git
+   $ conda create -n seisflows3 python=3.7
+   $ conda activate seisflows3
+   $ git clone --branch devel  https://github.com/bch0w/seisflows3/
    $ cd seisflows
    $ pip install -e .
+
+.. note::
+   At an undetermined future date we will migrate this package to the
+   more permanent org page: https://github.com/seisflows. Please check back
+   to this page to be alerted of this transition.
 
 Requirements
 -------------
 
-In most production scale workflows, SeisFlows must be run on a cluster, or
-high performance computing system.
+In most production-scale workflows, SeisFlows3 must be run on a cluster, or
+high performance computing system. However, serially run example problems
+making use of 2D solvers like SPECFEM2D are available for small problems and
+workflow tutorials.
 
 .. toctree::
    :maxdepth: 1
