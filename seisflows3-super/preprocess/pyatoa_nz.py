@@ -47,7 +47,7 @@ def process_event(self, source_name, codes=None, **kwargs):
                                    loc="??", cha="HH?")
 
     # Open the dataset as a context manager and process all events in serial
-    with ASDFDataSet(io.paths.dsfid) as ds:
+    with ASDFDataSet(io.paths.ds_file) as ds:
         mgmt = pyatoa.Manager(ds=ds, config=io.config)
         for code in codes:
             net, sta, loc, cha = code.split(".")
