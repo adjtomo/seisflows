@@ -2,6 +2,7 @@
 *.pyc
 *.swp
 seisflows3/docs/_build
+seisflows3/docs/.ipynb_checkpoints
 docs-old
 parameters*c
 paths*c
