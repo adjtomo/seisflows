@@ -6,6 +6,12 @@ facilitates interface with the underlying SeisFlows3 package.
 
 .. rubric::
     $ seisflows -h  # runs the help command to investigate package features
+
+.. note::
+    To add new functions to the seisflows command line tool, you must:
+    - Write a new function within the SeisFlows class
+    - Add a new subparser with optional arguments to sfparser()
+    - Add subparser to subparser dict at the end of sfparser()
 """
 import os
 import sys
@@ -177,8 +183,21 @@ def sfparser():
         simply print out the current value of the given parameter. Works also
         with path names."""
     )
-    par.add_argument("parameter", nargs="?", help="Parameter to edit or view")
+    par.add_argument("parameter", nargs="?", help="Parameter to edit or view, "
+                     "(case independent)")
     par.add_argument("value", nargs="?", default=None,
+                     help="Optional value to set parameter to.")\
+    # =========================================================================
+    sempar = subparser.add_parser(
+        "sempar", help="View and edit SPECFEM parameter file",
+        description="""Directly edit values in the SPECFEM parameter file by 
+        providing the parameter and corresponding value. If no value is 
+        provided, will simply print out the current value of the given 
+        parameter. Works also with path names."""
+    )
+    sempar.add_argument("parameter", nargs="?", help="Parameter to edit or "
+                        "view (case independent)")
+    sempar.add_argument("value", nargs="?", default=None,
                      help="Optional value to set parameter to.")
     # =========================================================================
     check = subparser.add_parser(
@@ -253,7 +272,7 @@ e.g. 'seisflows inspect solver eval_func'
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
-                      "edit": edit}
+                      "edit": edit, "sempar": sempar}
     if parser.parse_args().command in subparser_dict:
         return parser, subparser_dict[parser.parse_args().command]
     else:
@@ -749,23 +768,100 @@ class SeisFlows:
         # > Type 'n' to access a more useful IPython debugger environment.
         # > Type 'workflow.checkpoint()' to save any changes made here.
 
+    def sempar(self, parameter, value=None, **kwargs):
+        """
+        check or set parameters in the SPECFEM parameter file.
+        By default assumes the SPECFEM parameter file is called 'Par_file'
+        But this can be overwritten by using the '-p' flag.
+
+        usage
+
+            seisflows sempar [parameter] [value]
+
+            to check the parameter 'nproc' from the command line:
+
+                seisflows sempar nstep
+
+            to set the parameter 'model' to 'GLL':
+
+                seisflows sempar model GLL
+
+        :type parameter: str
+        :param parameter: parameter to check in parameter file. case insensitive
+        :type value: str
+        :param value: value to set for parameter. if none, will simply print out
+            the current parameter value. to set as nonetype, set to 'null'
+        """
+        if parameter is None:
+            self._subparser.print_help()
+            sys.exit(0)
+
+        # SPECFEM parameter file has both upper and lower case parameters,
+        # force upper just for string checking
+        parameter = parameter.upper()
+
+        # !!! We are assuming here that the parameter file is called 'Par_file'
+        if not os.path.exists(self._args.parameter_file):
+            par_file = "Par_file"
+        else:
+            par_file = self._args.parameter_file
+
+        if value is not None and value.lower() == "none":
+            warnings.warn("to set values to nonetype, use 'null' not 'none'",
+                         userwarning)
+
+        with open(par_file, "r") as f:
+            lines = f.readlines()
+
+        # Determine the number of white spaces between key and delimiter to keep
+        # formatting pretty 
+        for line in lines:
+            if "=" in line:
+                breakdown = line.strip().split(" ")
+                space = breakdown.count("")
+                break
+
+        # Parse through the lines and find the corresponding value
+        for i, line in enumerate(lines):
+            # check exact parameter name and ignore comment
+            if f"{parameter:<{space}}" in line.upper() and line[0] != "#":
+                if value is not None:
+                    # these values still have string formatters attached
+                    current_par, current_val = line.split("=")
+
+                    # this retains the string formatters of the line
+                    new_val = current_val.strip().replace(current_val.strip(), 
+                                                          value)
+
+                    lines[i] = f"{current_par:<{space}}= {new_val}\n"
+                    print(f"\n\t{current_par.strip()} = "
+                          f"{current_val.strip()} -> {value}\n")
+
+                    with open(self._args.parameter_file, "w") as f:
+                        f.writelines(lines)
+                else:
+                    print(f"\n\t{line}")
+                break
+        else:
+            sys.exit(f"\n\t'{parameter}' not found in parameter file\n")
+
     def par(self, parameter, value=None, **kwargs):
         """
-        Check or set parameters in the SeisFlows3 parameter file.
+        Check or set parameters in the seisflows3 parameter file.
 
         USAGE
 
             seisflows par [parameter] [value]
 
-            To check the parameter 'NPROC' from the command line:
+            to check the parameter 'NPROC' from the command line:
 
                 seisflows par nproc
 
-            To set the parameter 'BEGIN' to 2:
+            to set the parameter 'BEGIN' to 2:
 
                 seisflows par begin 2
 
-            To change the scratch path to the current working directory:
+            to change the scratch path to the current working directory:
 
                 seisflows par scratch ./
 
@@ -773,7 +869,7 @@ class SeisFlows:
         :param parameter: parameter to check in parameter file. case insensitive
         :type value: str
         :param value: value to set for parameter. if None, will simply print out
-            the current parameter value. To set as Nonetype, set to 'null'
+            the current parameter value. to set as nonetype, set to 'null'
         """
         if parameter is None:
             self._subparser.print_help()
@@ -783,12 +879,12 @@ class SeisFlows:
         parameter = parameter.upper()
 
         if not os.path.exists(self._args.parameter_file):
-            sys.exit(f"\n\tParameter file '{self._args.parameter_file}' "
+            sys.exit(f"\n\tparameter file '{self._args.parameter_file}' "
                      f"does not exist\n")
 
-        if value is not None and value.lower() == "none":
-            warnings.warn("To set values to NoneType, use 'null' not 'None'",
-                         UserWarning)
+        if value is not none and value.lower() == "none":
+            warnings.warn("to set values to nonetype, use 'null' not 'none'",
+                         userwarning)
 
         with open(self._args.parameter_file, "r") as f:
             lines = f.readlines()
@@ -801,7 +897,7 @@ class SeisFlows:
                     # These values still have string formatters attached
                     current_par, current_val = line.split(":")
 
-                    # This retains the string formatters of the line
+                    # this retains the string formatters of the line
                     new_val = current_val.strip().replace(current_val.strip(), 
                                                           value)
                     lines[i] = f"{current_par}: {new_val}\n"
