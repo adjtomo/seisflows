@@ -187,13 +187,10 @@ class Pyatoa(custom_import("preprocess", "base")):
                                         event_id_prefix=PAR.SOURCE_PREFIX)
 
         # Generate the necessary files to continue the inversion
-        if misfit:
-            # Construct cwd using Pyaflowa
-            cwd = pyaflowa.path_structure.cwd.format(source_name=source_name)
-            # Event misfit defined by Tape et al. (2010)
-            self.write_residuals(path=cwd, scaled_misfit=misfit)
-        
-        # self.snapshot()
+        cwd = pyaflowa.path_structure.cwd.format(source_name=source_name)
+
+        # Event misfit defined by Tape et al. (2010) written to solver dir.
+        self.write_residuals(path=cwd, scaled_misfit=misfit)
 
     def finalize(self):
         """

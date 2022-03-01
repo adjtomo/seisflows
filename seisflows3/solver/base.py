@@ -207,16 +207,16 @@ class Base:
         self.initialize_solver_directories()
 
         # Determine where observation data will come from
-        if PATH.DATA is not None and os.path.exists(PATH.DATA):
-            # If Data provided by user, copy directly into the solver directory
-            unix.cp(src=glob(os.path.join(PATH.DATA, self.source_name, "*")),
-                    dst=os.path.join("traces", "obs")
-                    )
-        elif PAR.CASE.upper() == "SYNTHETIC":
+        if PAR.CASE.upper() == "SYNTHETIC" and PATH.MODEL_TRUE is not None:
             # Generate synthetic data on the fly using the true model
             self.generate_data(model_path=PATH.MODEL_TRUE,
                                model_name="model_true",
                                model_type="gll")
+        elif PATH.DATA is not None and os.path.exists(PATH.DATA):
+            # If Data provided by user, copy directly into the solver directory
+            unix.cp(src=glob(os.path.join(PATH.DATA, self.source_name, "*")),
+                    dst=os.path.join("traces", "obs")
+                    )
 
         # Prepare initial model
         self.generate_mesh(model_path=PATH.MODEL_INIT,
