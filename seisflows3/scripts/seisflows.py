@@ -837,7 +837,7 @@ class SeisFlows:
                     print(f"\n\t{current_par.strip()} = "
                           f"{current_val.strip()} -> {value}\n")
 
-                    with open(self._args.parameter_file, "w") as f:
+                    with open(par_file, "w") as f:
                         f.writelines(lines)
                 else:
                     print(f"\n\t{line}")
