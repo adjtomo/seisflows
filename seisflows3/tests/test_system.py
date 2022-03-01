@@ -1,0 +1,176 @@
+"""
+Test suite for the SeisFlows3 system module, which controls interaction with
+various compute systems
+"""
+import os
+import sys
+import shutil
+import pytest
+from unittest.mock import patch
+from seisflows3 import config
+from seisflows3.scripts.seisflows import SeisFlows, return_modules
+
+
+# The module that we're testing, allows for copy-pasting these test suites
+MODULE = "system"
+# Ensures that these parameters are always defined, even when using subclasses
+REQUIRED_PARAMETERS = ["WALLTIME", "TASKTIME", "NTASK", "NPROC"]
+REQUIRED_FUNCTIONS = ["required", "check", "setup", "submit", "run",
+                      "run_single", "taskid", "checkpoint", "wrong"
+                      ]
+
+# Define some re-used paths
+TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
+REPO_DIR = os.path.abspath(os.path.join(config.ROOT_DIR, ".."))
+
+
+from subprocess import run
+def ls():
+    run(["ls", "-l"])
+
+@pytest.fixture
+def copy_par_file(tmpdir):
+    """
+    Copy the template parameter file into the temporary test directory
+    :rtype: str
+    :return: location of the parameter file
+    """
+    src = os.path.join(TEST_DIR, "test_data", "test_filled_parameters.yaml")
+    dst = os.path.join(tmpdir, "parameters.yaml")
+    shutil.copy(src, dst)
+
+
+@pytest.fixture
+def modules():
+    """
+    Return a list of subclasses that falls under the System module
+    """
+    return return_modules()[MODULE]
+
+
+@pytest.fixture
+def sfinit(tmpdir, copy_par_file):
+    """
+    Re-used function that will initate a SeisFlows3 working environment in
+    sys modules
+    :return:
+    """
+    copy_par_file
+    os.chdir(tmpdir)
+    with patch.object(sys, "argv", ["seisflows"]):
+        sf = SeisFlows()
+        sf._register(precheck=False)
+    config.init_seisflows()
+
+    return sf
+
+
+def test_import(sfinit, modules):
+    """
+    Test code execution by importing all of the available modules in the package
+    If any of these fails then the module itself has some error (e.g.,
+    syntax errors) or the 'required' statement is failing
+    """
+    sf = sfinit
+    for package, module_list in modules.items():
+        for module in module_list:
+            loaded_module = config.custom_import(MODULE, module)()
+            # !!! This doesn't work because we have required parameters that
+            # !!! are not set in the parameter file
+            # Not sure what the best way to check these things are but
+            # for now we run a validate which just makes sure all the
+            # paths and parameters are set into sys.modules
+            # pytest.set_trace()
+            loaded_module.required.validate()
+
+
+def test_required_parameters(sfinit, modules):
+    """
+    Ensure that the required parameters are set in all the classes/subclasses
+    """
+    sf = sfinit
+    for package, module_list in modules.items():
+        for module in module_list:
+            loaded_module = config.custom_import(MODULE, module)()
+            sf_pp = loaded_module.required
+            # Check that required parameters are set
+            for req_par in REQUIRED_PARAMETERS:
+                assert(req_par in sf_pp.parameters.keys()), \
+                    f"{req_par} is a required parameter for module {MODULE}"
+
+            pytest.set_trace()
+
+
+def test_required_functions(sfinit, modules):
+    """
+    Make sure that the named, required functions exist within the class
+    """
+    sf = sfinit
+    for package, module_list in modules.items():
+        for module in module_list:
+            loaded_module = config.custom_import(MODULE, module)()
+            for func in REQUIRED_FUNCTIONS:
+                assert(func in dir(loaded_module)), \
+                    f"'{func}' is a required function in module: {MODULE}.{module}"
+
+
+def test_setup(sfinit, modules):
+    """
+    Make sure that setup creates the necessary directory structure
+
+    :param sfinit:
+    :param modules:
+    :return:
+    """
+    sf = sfinit
+    PATHS = sys.modules["seisflows_paths"]
+    SETUP_CREATES = [PATHS.SCRATCH, PATHS.SYSTEM, PATHS.OUTPUT]
+    for package, module_list in modules.items():
+        for module in module_list:
+            loaded_module = config.custom_import(MODULE, module)()
+
+            # Make sure these don't already exist
+            for path_ in SETUP_CREATES:
+                assert(not os.path.exists(path_))
+
+            loaded_module.setup()
+
+            # Check that the minimum required directories were created
+            for path_ in SETUP_CREATES:
+                assert(os.path.exists(path_))
+
+            # Remove created paths so we can check the next module
+            for path_ in SETUP_CREATES:
+                if os.path.isdir(path_):
+                    shutil.rmtree(path_)
+                else:
+                    os.remove(path_)
+
+
+def test_submit():
+    """
+
+    :return:
+    """
+
+
+def test_run():
+    """
+
+    :return:
+    """
+
+
+def test_run_single():
+    """
+
+    :return:
+    """
+
+
+def test_taskid():
+    """
+    Simply assert that this function returns an integer
+    :return:
+    """
+

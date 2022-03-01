@@ -34,7 +34,6 @@ class Serial(custom_import("system", "base")):
         sf.par("NPROC", required=False, default=1, par_type=int,
                docstr="Number of processor to use for each simulation")
 
-
         sf.par("MPIEXEC", required=False, par_type=str,
                docstr="Function used to invoke parallel executables")
 
@@ -52,13 +51,8 @@ class Serial(custom_import("system", "base")):
         """
         Submits the main workflow job
         """
-        # create scratch directories
-        unix.mkdir(PATH.SCRATCH)
-        unix.mkdir(PATH.SYSTEM)
-
-        # create output directories
-        unix.mkdir(PATH.OUTPUT)
-
+        # Run setup to create necessary directory structure
+        output_log, error_log = self.setup()
         workflow.checkpoint()
 
         # execute workflow
