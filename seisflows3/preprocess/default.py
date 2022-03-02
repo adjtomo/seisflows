@@ -37,7 +37,7 @@ class Default(custom_import("preprocess", "base")):
         sf = SeisFlowsPathsParameters()
 
         # Define the Parameters required by this module
-        sf.par("MISFIT", required=False, default="null", par_type=str,
+        sf.par("MISFIT", required=False, default="waveform", par_type=str,
                docstr="Misfit function for waveform comparisons, for available "
                       "see seisflows.plugins.misfit")
 
@@ -87,7 +87,7 @@ class Default(custom_import("preprocess", "base")):
         # Assert that either misfit or backproject exists 
         if PAR.WORKFLOW.upper() == "INVERSION" and not PAR.MISFIT:
             # !!! Need a better error here
-            raise ParameterError()
+            raise ParameterError("PAR.MISFIT must be set w/ default preprocess")
 
     def setup(self):
         """

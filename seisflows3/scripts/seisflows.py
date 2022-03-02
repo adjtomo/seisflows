@@ -786,11 +786,23 @@ class SeisFlows:
 
                 seisflows sempar model GLL
 
+            to check the values of a velocity model (SPECFEM2D)
+
+                seisflows sempar velocity_model
+
+            to edit the values of a velocity model (SPECFEM2D)
+                
+                seisflows sempar velocity_model \
+                    "1 1 2600.d0 5800.d0 3500.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0\n"
+
         :type parameter: str
         :param parameter: parameter to check in parameter file. case insensitive
         :type value: str
         :param value: value to set for parameter. if none, will simply print out
             the current parameter value. to set as nonetype, set to 'null'
+            SPECFEM2D: if set to 'velocity_model' allows the user to set and 
+            edit the velocity model defined in the SPECMFE2D Par_file. Not a 
+            very smart capability, likely easier to do this manually.
         """
         if parameter is None:
             self._subparser.print_help()
@@ -806,19 +818,52 @@ class SeisFlows:
         else:
             par_file = self._args.parameter_file
 
-        if value is not None and value.lower() == "none":
-            warnings.warn("to set values to nonetype, use 'null' not 'none'",
-                         userwarning)
-
         with open(par_file, "r") as f:
             lines = f.readlines()
 
+
+        # SPECIAL CASE: the internal mesher velocity model does not have a key
+        # it is just simply a list of numbers. Allow the user to check and edit
+        # this using a special keyword. The following constants assume that
+        # the Par_file hasn't changed from version cf893667 (Nov. 29, 2021)
+        MESHER_KEYWORD = "VELOCITY_MODEL"
+        MESHER_INPUT_NUM = 15
+        nbmodels = 1
+        if parameter == MESHER_KEYWORD:
+            for i, line in enumerate(lines):
+                # Ignore commented lines, ignore other parameters 
+                if "=" in line.strip() or "#" in line.strip():
+                    continue
+
+                # ASSUME: nbmodels comes before the velocity model AND number 
+                # of velocity model lines is the same as nbmodels
+                elif "nbmodels " in line:
+                    key, val = line.strip().split()
+                    nbmodels = int(val)  # replace the current val of 1
+                else:
+                    parts = line.strip().split()
+                    if len(parts) == MESHER_INPUT_NUM:
+                        MODEL = "".join(lines[i:i+nbmodels+1])
+                        # At this point we have confirmed that we are looking at
+                        # the velocity model
+                        if value is None:
+                            print(f"\n{MODEL}")
+                        else:
+                            print(f"\n{line}\n->")
+                            lines[i] = f"{value}\n"
+                            print(f"\n{value}")
+                            with open(par_file, "w") as f:
+                                f.writelines(lines)
+                        break
+            sys.exit(0)
+
+        # STANDARD CASE: check or edit parameters in the Par_file
         # Determine the number of white spaces between key and delimiter to keep
         # formatting pretty 
         for line in lines:
             if "=" in line:
-                breakdown = line.strip().split(" ")
-                space = breakdown.count("")
+                parts = line.strip().split(" ")
+                space = parts.count("")
                 break
 
         # Parse through the lines and find the corresponding value
@@ -882,7 +927,7 @@ class SeisFlows:
             sys.exit(f"\n\tparameter file '{self._args.parameter_file}' "
                      f"does not exist\n")
 
-        if value is not none and value.lower() == "none":
+        if value is not None and value.lower() == "none":
             warnings.warn("to set values to nonetype, use 'null' not 'none'",
                          userwarning)
 
