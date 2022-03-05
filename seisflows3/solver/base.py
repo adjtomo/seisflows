@@ -615,8 +615,15 @@ class Base:
         :param path: path to save residuals
         """
         unix.mkdir(os.path.join(path, "residuals"))
-
         src = os.path.join(self.cwd, "residuals")
+
+        # If this residuals directory has not been created, something
+        # has gone wrong with the preprocessing and workflow cannot proceed
+        if not os.path.exists(src):
+            from seisflows3.tools.msg import ExportResidualsError
+            print(ExportResidualsError)
+            sys.exit(-1)
+
         dst = os.path.join(path, "residuals", self.source_name)
         unix.mv(src, dst)
 
@@ -699,8 +706,10 @@ class Base:
         unix.ln(src, dst)
 
         if self.taskid == 0: 
+            mainsolver = os.path.join(PATH.SOLVER, "mainsolver")
             # Symlink taskid_0 as mainsolver in solver directory for convenience
-            unix.ln(self.source_name, os.path.join(PATH.SOLVER, "mainsolver"))
+            if not os.path.exists(mainsolver):
+                unix.ln(self.source_name, mainsolver)
         else:
             # Copy the initial model from mainsolver into current directory
             # Avoids the need to run multiple instances of xgenerate_databases
