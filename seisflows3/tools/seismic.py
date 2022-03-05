@@ -29,6 +29,7 @@ def call_solver(mpiexec, executable, output='solver.log'):
         exc_cmd = f"./{executable}"
     else:
         exc_cmd = f"{mpiexec} {executable}"
+
     try:
         f = open(output, 'w')
         subprocess.check_call(exc_cmd, shell=True, stdout=f)
@@ -69,7 +70,7 @@ class Container(defaultdict):
 class Writer(object):
     """
     Utility for appending values to text files.
-    Used for writing statistical outputs
+    Used for writing statistical outputs to the output.stats file
     """
     def __init__(self, path="./output.stat"):
         self.path = os.path.abspath(path)

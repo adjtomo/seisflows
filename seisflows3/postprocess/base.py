@@ -123,8 +123,9 @@ class Base:
 
         system.run_single("postprocess", "process_kernels",
                           path=f"{path}/kernels",
+                          parameters=solver.parameters,
                           scale_tasktime=PAR.TASKTIME_SMOOTH,
-                          parameters=solver.parameters)
+                          )
 
         # Access the gradient information stored in the kernel summation
         gradient = solver.load(f"{path}/kernels/sum", suffix="_kernel")

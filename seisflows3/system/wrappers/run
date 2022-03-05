@@ -27,7 +27,9 @@ if __name__ == '__main__':
     """
     nargs = len(sys.argv[1:])
 
-    # Parse command line arguments
+    # Parse command line arguments which should be something like
+    # python path_to_output class method optional_env_var
+    # i.e., python output postprocess process_kernels env,var,csv
     mypath = sys.argv[1]
     myclass = sys.argv[2]
     myfunc = sys.argv[3]

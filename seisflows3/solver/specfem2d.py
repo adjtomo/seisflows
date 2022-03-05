@@ -351,6 +351,11 @@ class Specfem2D(custom_import("solver", "base")):
         Returns the filenames of all data, either by the requested components
         or by all available files in the directory.
 
+        .. note:: 
+            If the glob returns an  empty list, this function exits the 
+            workflow because filenames should  not be empty is they're being 
+            queried
+
         :rtype: list
         :return: list of data filenames
         """
@@ -369,21 +374,27 @@ class Specfem2D(custom_import("solver", "base")):
                             self.data_wildcard.format(comp=comp.upper())
                             )
                     # filenames += glob(f"*.?X{comp.upper()}.sem?")
-            return filenames
         else:
-            return glob(self.data_wildcard)
+            filenames = glob(self.data_wildcard)
+
+        if not filenames:
+            from seisflows3.tools.msg import DataFilenamesError
+            print(DataFilenamesError)
+            sys.exit(-1)
+
+        return filenames
 
     @property
     def model_databases(self):
         """
-        The location of databases for kernel outputs
+        The location of model inputs and outputs as defined by SPECFEM2D
         """
         return os.path.join(self.cwd, "DATA")
 
     @property
-    def kernel_datwhabases(self):
+    def kernel_databases(self):
         """
-        The location of databases for model outputs
+        The location of kernel inputs and outputs as defined by SPECFEM2D
         """
         return os.path.join(self.cwd, "OUTPUT_FILES")
 

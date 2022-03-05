@@ -70,9 +70,9 @@ class Serial(custom_import("system", "base")):
             func = getattr(__import__("seisflows_" + classname), method)
             func(**kwargs)
 
-    def run_single(self, classname, method, *args, **kwargs):
+    def run_single(self, classname, method, scale_tasktime=1, *args, **kwargs):
         """
-        Runs task a single time
+        Runs task a single time, used for running serial tasks such as smoothing
         """
         os.environ["SEISFLOWS_TASKID"] = "0"
         func = getattr(__import__("seisflows_" + classname), method)

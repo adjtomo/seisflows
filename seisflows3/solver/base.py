@@ -460,8 +460,11 @@ class Base:
 
     def combine(self, input_path, output_path, parameters=None):
         """
-        Postprocessing wrapper: xcombine_sem
-        Sums individual source contributions.
+        Postprocessing wrapper: xcombine_sem 
+        Sums kernels from individual source contributions to create gradient.
+
+        .. note::
+            The binary xcombine_sem simply sums matching databases (.bin) 
 
         :type input_path: str
         :param input_path: path to data
@@ -489,6 +492,8 @@ class Base:
         for name in parameters:
             # Example call:
             # mpiexec ./bin/xcombine_sem alpha_kernel kernel_paths output
+            # !!! TO DO: define call as a variable so it looks cleaner? instead
+            # !!! TO DO: of a join statement
             call_solver(mpiexec=system.mpiexec(),
                         executable=" ".join([f"{PATH.SPECFEM_BIN}/xcombine_sem",
                                              f"{name}_kernel", "kernel_paths",

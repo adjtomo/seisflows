@@ -132,7 +132,7 @@ class Default(custom_import("preprocess", "base")):
             syn = self.apply_mute(syn)
             syn = self.apply_normalize(syn)
 
-            if PAR.MISFIT:
+            if PAR.MISFIT is not None:
                 self.write_residuals(cwd, syn, obs)
 
             # Write the adjoint traces. Rename file extension for Specfem
@@ -144,7 +144,9 @@ class Default(custom_import("preprocess", "base")):
             self.write_adjoint_traces(path=os.path.join(cwd, "traces", "adj"),
                                       syn=syn, obs=obs, filename=filename_out)
 
+
         # Copy over the STATIONS file to STATIONS_ADJOINT required by Specfem
+        # ASSUMING that all stations are used in adjoint simulation
         src = os.path.join(cwd, "DATA", "STATIONS")
         dst = os.path.join(cwd, "DATA", "STATIONS_ADJOINT")
         unix.cp(src, dst)
@@ -152,7 +154,14 @@ class Default(custom_import("preprocess", "base")):
 
     def write_residuals(self, path, syn, obs):
         """
-        Computes residuals
+        Computes residuals between observed and synthetic seismogram based on
+        the misfit function PAR.MISFIT. Saves the residuals for each 
+        data-synthetic pair into a text file located at: 
+        
+        ./scratch/solver/*/residuals
+
+        The resulting file will be a single-column ASCII file that needs to be
+        summed before use by the solver
 
         :type path: str
         :param path: location "adjoint traces" will be written

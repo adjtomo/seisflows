@@ -59,7 +59,7 @@ def sfparser():
     parser = argparse.ArgumentParser(
         formatter_class=SubcommandHelpFormatter,
         description=f"{'='*80}\n\n"
-                    f"{'SeisFlows: Waveform Inversion Package':^80}\n\n"
+                    f"{'SeisFlows3: Waveform Inversion Package':^80}\n\n"
                     f"{'='*80}",
         epilog="'seisflows [command] -h' for more detailed descriptions "
                "of each command.",
