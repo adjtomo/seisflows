@@ -80,9 +80,20 @@ class Serial(custom_import("system", "base")):
 
     def taskid(self):
         """
-        Provides a unique identifier for each running task
+        Provides a unique identifier for each running task, which should be set
+        by the 'run' or 'run_single' command.
         """
-        return int(os.environ["SEISFLOWS_TASKID"])
+        try:
+            tid = int(os.environ["SEISFLOWS_TASKID"])
+        except KeyError:
+            # This should only return a KeyError if you're running in debug mode
+            # and aren't assigned a TASKID by the OS. Return task id = 0 
+            # i.e., mainsolver, so that user can efficiently run debug commands
+            from seisflows3.tools.msg import TaskIDWarning
+            print(TaskIDWarning)
+            tid = 0
+
+        return tid
 
     def mpiexec(self):
         """

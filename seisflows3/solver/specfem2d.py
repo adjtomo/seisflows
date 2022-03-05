@@ -361,10 +361,14 @@ class Specfem2D(custom_import("solver", "base")):
             filenames = []
             if PAR.FORMAT.upper() == "SU":
                 for comp in PAR.COMPONENTS:
-                    filenames += [f"U{comp.lower()}_file_single.su"]
+                    filenames += [self.data_wildcard.format(comp=comp.lower())]
+                    # filenames += [f"U{comp.lower()}_file_single.su"]
             elif PAR.FORMAT.upper() == "ASCII":
                 for comp in PAR.COMPONENTS:
-                    filenames += glob(f"*.?X{comp.upper()}.sem?")
+                    filenames += glob(
+                            self.data_wildcard.format(comp=comp.upper())
+                            )
+                    # filenames += glob(f"*.?X{comp.upper()}.sem?")
             return filenames
         else:
             return glob(self.data_wildcard)
@@ -377,25 +381,29 @@ class Specfem2D(custom_import("solver", "base")):
         return os.path.join(self.cwd, "DATA")
 
     @property
-    def kernel_databases(self):
+    def kernel_datwhabases(self):
         """
         The location of databases for model outputs
         """
         return os.path.join(self.cwd, "OUTPUT_FILES")
 
     @property
-    def data_wildcard(self):
+    def data_wildcard(self, comp="?"):
         """
-        Returns a wildcard identifier for synthetic data
+        Returns a wildcard identifier for synthetic data based on SPECFEM2D
+        file naming schema. Allows formatting dcomponent e.g., 
+        when called by solver.data_filenames
 
+        :type comp: str
+        :param comp: component formatter, defaults to wildcard '?'
         :rtype: str
         :return: wildcard identifier for channels
         """
         if PAR.FORMAT.upper() == "SU":
             # return f"*.su"  # too vague but maybe for a reason? -bryant
-            return f"U?_file_single.su"
+            return f"U{comp}_file_single.su"
         elif PAR.FORMAT.upper() == "ASCII":
-            return f"*.?X?.sem?"
+            return f"*.?X{comp}.sem?"
 
     @property
     def source_prefix(self):

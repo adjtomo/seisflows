@@ -19,13 +19,16 @@ def call_solver(mpiexec, executable, output='solver.log'):
     subprocess.call(f"{mpiexec} {executable}", shell=True)
 
     :type mpiexec: str
-    :param mpiexec: call to mpi
+    :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
     :type executable: str
     :param executable: executable function to call
     :type output: str
     :param output: where to redirect stdout
     """
-    exc_cmd = f"{mpiexec} {executable}"
+    if mpiexec is None:
+        exc_cmd = f"./{executable}"
+    else:
+        exc_cmd = f"{mpiexec} {executable}"
     try:
         f = open(output, 'w')
         subprocess.check_call(exc_cmd, shell=True, stdout=f)

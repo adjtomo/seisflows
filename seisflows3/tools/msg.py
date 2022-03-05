@@ -1,5 +1,6 @@
 """
-Pre-defined Warning and Error messages so that Seisflows has a uniform look
+Pre-defined Warning and Error messages so that Seisflows has a uniform look and
+to reduce text clutter within the actual codebase
 """
 
 
@@ -12,6 +13,7 @@ To delete data and start a new workflow type:
 
 To resume existing workflow type:
   seisflows resume
+
 """
 
 FileError = """
@@ -329,5 +331,39 @@ ERROR CHECKING MODEL PARAMETERS
     bounds were found to be:
 
     {pmin:.2f} < PR < {pmax:.2f}
+
+"""
+
+ExportResidualsError = """
+
+PREPROCESSING ERROR
+
+    The Solver function 'export_residuals' expected 'residuals' directories to 
+    be created but could not find them and cannot continue the workflow. 
+    
+    Please check the preprocess.prepare_eval_grad() function which is
+    responsible for exporting the 'residuals' directory. Or use 
+    'seisflows debug' to investigate the error more closely.
+
+
+"""
+
+TaskIDWarning = """
+
+    WARNING: system.taskid() OS environment variable 'SEISFLOWS_TASKID' not 
+    found, SeisFlows3 is assuming debug mode and returning taskid=0. 
+    If you are not running in debug mode, please check your SYSTEM.run() or
+    SYSTEM.run_single() commands, which are responsible for setting 
+    the 'SEISFLOWS_TASKID'
+
+"""
+
+DataFilenamesError = """
+
+    ERROR: The property solver.data_filenames, which is used to search for 
+    trace data in ./scratch/solver/*/traces is empty and should not be. 
+    Please check solver.data_filenames and solver.data_wildcard against filenames
+    in the traces/ directory.
+    
 
 """
