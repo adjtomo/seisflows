@@ -199,7 +199,7 @@ class SlurmLg(custom_import("system", "base")):
         :rtype: str
         :return: the MPI exectuabel for a Slurm system
         """
-        return 'srun -u '
+        return PAR.MPIEXEC or "srun -u "
 
     def taskid(self):
         """

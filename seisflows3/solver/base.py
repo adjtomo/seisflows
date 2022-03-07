@@ -466,6 +466,11 @@ class Base:
         .. note::
             The binary xcombine_sem simply sums matching databases (.bin) 
 
+        .. note::
+            It is ASSUMED that this function is being called by
+            system.run_single() so that we can use the main solver directory to
+            perform the kernel summation task
+
         :type input_path: str
         :param input_path: path to data
         :type output_path: str
@@ -481,33 +486,38 @@ class Base:
             unix.mkdir(output_path)
 
         unix.cd(self.cwd)
+
         # Write the source names into the kernel paths file for SEM
-        with open('kernel_paths', 'w') as f:
+        with open("kernel_paths", "w") as f:
             f.writelines(
                 [os.path.join(input_path, f"{name}\n")
                  for name in self.source_names]
             )
 
-        # Call on bin/xcombine_sem
+        # Call on xcombine_sem 
         for name in parameters:
             # Example call:
             # mpiexec ./bin/xcombine_sem alpha_kernel kernel_paths output
-            # !!! TO DO: define call as a variable so it looks cleaner? instead
-            # !!! TO DO: of a join statement
             call_solver(mpiexec=system.mpiexec(),
-                        executable=" ".join([f"{PATH.SPECFEM_BIN}/xcombine_sem",
+                        executable=" ".join([f"bin/xcombine_sem",
                                              f"{name}_kernel", "kernel_paths",
                                              output_path])
                         )
 
     def smooth(self, input_path, output_path, parameters=None, span_h=0.,
-               span_v=0., output='solver.log'):
+               span_v=0., output="solver.log"):
         """
         Postprocessing wrapper: xsmooth_sem
         Smooths kernels by convolving them with a Gaussian.
 
-        Note:
+        .. note::
             paths require a trailing `/` character when calling xsmooth_sem
+
+
+        .. note::
+            It is ASSUMED that this function is being called by
+            system.run_single() so that we can use the main solver directory to
+            perform the kernel smooth task
 
         :type input_path: str
         :param input_path: path to data
@@ -529,11 +539,14 @@ class Base:
         if not exists(output_path):
             unix.mkdir(output_path)
 
-        # Apply smoothing operator
+        # Apply smoothing operator inside scratch/solver/*
         unix.cd(self.cwd)
+
+        # Example call:
+        # mpiexec ./bin/xsmooth_sem SMOOTH_H SMOOTH_V name input output use_gpu
         for name in parameters:
             call_solver(mpiexec=system.mpiexec(),
-                        executable=" ".join([f"{PATH.SPECFEM_BIN}/xsmooth_sem",
+                        executable=" ".join(["bin/xsmooth_sem",
                                              str(span_h), str(span_v),
                                              f"{name}_kernel",
                                              os.path.join(input_path, ""),
@@ -625,8 +638,7 @@ class Base:
         # If this residuals directory has not been created, something
         # has gone wrong with the preprocessing and workflow cannot proceed
         if not os.path.exists(src):
-            from seisflows3.tools.msg import ExportResidualsError
-            print(ExportResidualsError)
+            print(msg.ExportResidualsError)
             sys.exit(-1)
 
         dst = os.path.join(path, "residuals", self.source_name)

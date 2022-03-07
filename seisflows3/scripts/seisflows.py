@@ -21,7 +21,7 @@ import argparse
 import subprocess
 from glob import glob
 from textwrap import wrap
-from seisflows3.tools import unix, tools
+from seisflows3.tools import unix, tools, msg
 from seisflows3.tools.tools import loadyaml, loadpy
 from seisflows3.config import (init_seisflows, format_paths, Dict, custom_import,
                                NAMES, PACKAGES, ROOT_DIR)
@@ -184,9 +184,12 @@ def sfparser():
         with path names."""
     )
     par.add_argument("parameter", nargs="?", help="Parameter to edit or view, "
-                     "(case independent)")
+                     "(case independent).")
     par.add_argument("value", nargs="?", default=None,
-                     help="Optional value to set parameter to.")\
+                     help="Optional value to set parameter to. If not given, "
+                     "will print out current parameter. If given, will replace "
+                     "current parameter with new value. Set as 'null' "
+                     "for NoneType and set '' for empty string")
     # =========================================================================
     sempar = subparser.add_parser(
         "sempar", help="View and edit SPECFEM parameter file",
@@ -415,8 +418,7 @@ class SeisFlows:
         # For submit() and resume(), provide a dialogue to stdout requiring a
         # visual pre-check of parameters before submitting workflow
         if precheck and parameters["PRECHECK"]:
-            print("\n\tSEISFLOWS PARAMETER CHECK"
-                  "\n\t=========================\n")
+            print(msg.ParameterCheckStatement)
             for par in parameters["PRECHECK"]:
                 par = par.upper()
                 try:

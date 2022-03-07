@@ -174,16 +174,16 @@ class Base:
         """
         Computes search direction
 
-        Note:
+        .. note::
             This function implements steepest descent, for other algorithms,
             simply overload this method
         """
-        g_new = self.load('g_new')
-        if self.precond:
-            p_new = -self.precond(g_new)
+        g_new = self.load("g_new")
+        if self.precond is not None:
+            p_new = -1 * self.precond(g_new)
         else:
-            p_new = -g_new
-        self.save('p_new', p_new)
+            p_new = -1 * g_new
+        self.save("p_new", p_new)
 
     @staticmethod
     def check_model_parameters(m, tag):

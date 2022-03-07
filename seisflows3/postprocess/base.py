@@ -71,33 +71,6 @@ class Base:
         """
         pass
 
-    @staticmethod
-    def process_kernels(path, parameters):
-        """
-        Sums kernels from individual sources, with optional smoothing
-        This should be run in paralell
-
-        :type path: str
-        :param path: directory containing sensitivity kernels
-        :type parameters: list
-        :param parameters: material parameters e.g. ['vp','vs']
-        """
-        # Check if the path exists
-        if not exists(path):
-            raise FileNotFoundError
-
-        # If specified, smooth the kernels in the vertical and horizontal
-        if PAR.SMOOTH_H > 0:
-            solver.combine(input_path=path, output_path=f"{path}/sum_nosmooth",
-                           parameters=parameters)
-
-            solver.smooth(input_path=f"{path}/sum_nosmooth",
-                          output_path=f"{path}/sum", parameters=parameters,
-                          span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
-        else:
-            solver.combine(input_path=path, output_path=f"{path}/sum",
-                           parameters=parameters)
-
     def write_gradient(self, path):
         """
         Combines contributions from individual sources and material parameters
@@ -117,10 +90,10 @@ class Base:
         if not exists(path):
             raise FileNotFoundError
 
-        # Run postprocessing on the cluster
         if PAR.VERBOSE and PAR.SMOOTH_H > 0:
             print(f"\tSmoothing gradient: H={PAR.SMOOTH_H}, V={PAR.SMOOTH_V}")
 
+        # Run postprocessing as separate job as its computationally intensive
         system.run_single("postprocess", "process_kernels",
                           path=f"{path}/kernels",
                           parameters=solver.parameters,
@@ -160,3 +133,35 @@ class Base:
                         parameters=solver.parameters,
                         suffix="_kernel")
 
+
+    @staticmethod
+    def process_kernels(path, parameters):
+        """
+        Sums kernels from individual sources, with optional smoothing
+
+        Private method because this function needs to be run on system, i.e.,
+        called by system.run() or system.run_single(). 
+
+        :type path: str
+        :param path: directory containing sensitivity kernels
+        :type parameters: list
+        :param parameters: solver-defined list of material parameters 
+            e.g. ['vp','vs']. This is ideally defined externally by PAR.MATERIALS
+        """
+        # Check if the path exists
+        if not exists(path):
+            raise FileNotFoundError(f"{path} for postprocess.process_kernels() "
+                                    f"not found, exiting.")
+
+        # If specified, smooth the kernels in the vertical and horizontal
+        if PAR.SMOOTH_H > 0:
+            solver.combine(input_path=path, output_path=f"{path}/sum_nosmooth",
+                           parameters=parameters)
+
+            solver.smooth(input_path=f"{path}/sum_nosmooth",
+                          output_path=f"{path}/sum", parameters=parameters,
+                          span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
+        # Combine all the input kernels, generating the unscaled gradient
+        else:
+            solver.combine(input_path=path, output_path=f"{path}/sum",
+                           parameters=parameters)

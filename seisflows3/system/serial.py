@@ -7,7 +7,7 @@ for testing purposes
 import os
 import sys
 
-from seisflows3.tools import unix
+from seisflows3.tools import unix, msg
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
@@ -89,8 +89,7 @@ class Serial(custom_import("system", "base")):
             # This should only return a KeyError if you're running in debug mode
             # and aren't assigned a TASKID by the OS. Return task id = 0 
             # i.e., mainsolver, so that user can efficiently run debug commands
-            from seisflows3.tools.msg import TaskIDWarning
-            print(TaskIDWarning)
+            print(msg.TaskIDWarning)
             tid = 0
 
         return tid
@@ -98,6 +97,12 @@ class Serial(custom_import("system", "base")):
     def mpiexec(self):
         """
         Specifies MPI executable used to invoke solver
+
+        .. note::
+            For serial runs, MPIEXEC should be './' This is enforced in 
+            tools.seismic.call_solver, which is the main function that uses
+            PAR.MPIEXEC
+
         """
         return PAR.MPIEXEC
 

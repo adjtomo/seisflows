@@ -1,5 +1,9 @@
 """
-Seismic signal processing related tools
+Utilities to interact with, manipulate or call on the external solver, 
+i.e., SPECFEM2D/3D/3D_GLOBE
+
+!!! TO DO !!!
+Rename this utility script as the name is somewhat confusing
 """
 import os
 import sys
@@ -11,9 +15,10 @@ from seisflows3.tools import msg, unix
 from seisflows3.tools.tools import iterable
 
 
-def call_solver(mpiexec, executable, output='solver.log'):
+def call_solver(mpiexec, executable, output="solver.log"):
     """
-    Calls MPI solver executable
+    Calls MPI solver executable to run solver binaries, used by individual 
+    processes to run the solver on system.
 
     A less complicated version, without error catching, would be
     subprocess.call(f"{mpiexec} {executable}", shell=True)
@@ -25,8 +30,11 @@ def call_solver(mpiexec, executable, output='solver.log'):
     :type output: str
     :param output: where to redirect stdout
     """
+    # mpiexec is None when running in serial mode
     if mpiexec is None:
-        exc_cmd = f"./{executable}"
+       exc_cmd = f"./{executable}"
+
+    # Otherwise mpiexec is system dependent (e.g., srun, mpirun)
     else:
         exc_cmd = f"{mpiexec} {executable}"
 

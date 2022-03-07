@@ -1,6 +1,9 @@
 """
-Pre-defined Warning and Error messages so that Seisflows has a uniform look and
-to reduce text clutter within the actual codebase
+Pre-defined SeisFlows3 standard out messages for uniform and aesthetically 
+pleasing print statements that do not clutter the actual codebase. 
+Used when warnings, statements or error messages need to be shown to the user.
+Some statements have format strings that need to be formatted by the 
+module that called it.
 """
 
 
@@ -28,7 +31,9 @@ SolverError = """
 
 SOLVER FAILED
 
-    Nonzero exit status returned by:  {exc}
+    Nonzero exit status returned by the following command:  
+    
+    {exc}
 
     Subsequent tasks may fail because expected solver output is not in place.
     Users running on clusters without fault tolerance should consider stopping 
@@ -365,5 +370,17 @@ DataFilenamesError = """
     Please check solver.data_filenames and solver.data_wildcard against filenames
     in the traces/ directory.
     
+
+"""
+
+ParameterCheckStatement = """
+
+\t===============================================
+\t+                SEISFLOWS3                   +
+\t+        PRE-SUBMIT PARAMETER CHECK           +
+\t+        --------------------------           +
+\t+    Ensure that below are set correctly      +
+\t+   Checked parameters set by PAR.PRECHECK    +
+\t===============================================
 
 """
