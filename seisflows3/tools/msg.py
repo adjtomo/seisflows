@@ -1,4 +1,6 @@
 """
+SeisFlows3 Messages Tool
+
 Pre-defined SeisFlows3 standard out messages for uniform and aesthetically 
 pleasing print statements that do not clutter the actual codebase. 
 Used when warnings, statements or error messages need to be shown to the user.
