@@ -7,10 +7,10 @@ This is a main Seisflows class, it controls the main workflow.
 import os
 import sys
 import time
+import logging
 from glob import glob
 
 import numpy as np
-from seisflows3 import logger
 from seisflows3.config import custom_import
 from seisflows3.tools import msg, unix
 from seisflows3.tools.tools import exists
@@ -44,6 +44,8 @@ class Inversion(custom_import("workflow", "base")):
     Commands for running in serial or parallel on a workstation or cluster
     are abstracted through the "system" interface.
     """
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     @property
     def required(self):
         """
@@ -131,7 +133,7 @@ class Inversion(custom_import("workflow", "base")):
         """
         Checks parameters and paths
         """
-        msg.check(type(self))
+        self.logger.info("checking parameters")
 
         super().check(validate=False)
         if validate:

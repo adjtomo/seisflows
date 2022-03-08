@@ -51,7 +51,7 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
 def init_seisflows():
     """
-    Instantiates SeisFlows objects and makes them globally accessible by
+    Instantiates SeisFlows3 objects and makes them globally accessible by
     registering them in sys.modules
     """
     # Parameters and paths must already be loaded (normally done by submit)

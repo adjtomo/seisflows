@@ -16,11 +16,14 @@ facilitates interface with the underlying SeisFlows3 package.
 import os
 import sys
 import inspect
+import logging
 import warnings
 import argparse
 import subprocess
 from glob import glob
 from textwrap import wrap
+
+from seisflows3 import logger
 from seisflows3.tools import unix, tools, msg
 from seisflows3.tools.tools import loadyaml, loadpy
 from seisflows3.config import (init_seisflows, format_paths, Dict, custom_import,
@@ -227,7 +230,9 @@ Check parameters, state, or values of an active environment
                        help="Generic arguments passed to check functions")
     # =========================================================================
     subparser.add_parser("convert", help="Convert model file format", )
-    subparser.add_parser("reset", help="Reset underlying machinery")
+    # =========================================================================
+    subparser.add_parser("reset", help="Reset underlying machinery. "
+                         "Equal to running seisflows clean; seisflows submit")
     # =========================================================================
     inspect = subparser.add_parser(
         "inspect", help="View inheritenace and ownership",
@@ -280,7 +285,8 @@ e.g. 'seisflows inspect solver eval_func'
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
-            "edit": edit, "sempar": sempar, "clean": clean, "restart": restart}
+                      "edit": edit, "sempar": sempar, "clean": clean, 
+                      "restart": restart}
     if parser.parse_args().command in subparser_dict:
         return parser, subparser_dict[parser.parse_args().command]
     else:
@@ -442,8 +448,35 @@ class SeisFlows:
         paths = format_paths(paths)
         sys.modules["seisflows_paths"] = Dict(paths)
 
+        # Configure the logging module with user inputs
+        self._config_logging(level=parameters["LOG_LEVEL"], 
+                             filename=paths["LOG"])
+
         self._paths = paths
         self._parameters = parameters
+
+    def _config_logging(self, level="DEBUG", filename="./output_log.txt", 
+                        filemode="a"):
+        """
+        Explicitely configure the logging module with some parameters defined
+        by the user in the System module. 
+        """
+        fmt_str = ("\n%(asctime)s - %(levelname)-5s - [%(name)s.%(funcName)s()]"
+                   "\n%(message)s\n")
+        # fmt_str = "[%(asctime)s] %(levelname)-5s %(name)-10s\n%(message)s"
+        datefmt = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(fmt_str, datefmt=datefmt)
+
+        # Instantiate logger during _register() as we now have user-defined
+        # log file and log level
+        logger.setLevel(level)
+        st_handler = logging.StreamHandler()
+        st_handler.setFormatter(formatter)
+        logger.addHandler(st_handler)
+
+        file_handler = logging.FileHandler(filename, filemode)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
     def _load_modules(self):
         """
@@ -1233,8 +1266,6 @@ class SeisFlows:
         :param src: the name of a specific model to check, e.g. 'm_try', 
             otherwise will check parameters for all models
         """
-        import ipdb;ipdb.set_trace()
-
         optimize = sys.modules["seisflows_optimize"]
         PATH = sys.modules["seisflows_paths"]
 

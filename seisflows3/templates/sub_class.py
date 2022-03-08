@@ -3,6 +3,8 @@
 This is a SeisFlows subclass which inherits attributes from a parent class
 """
 import sys
+from seisflows3 import logger
+from seisflows3.tools import msg
 from seisflows3.config import SeisFlowsPathsParameters, custom_import
 
 # Required SeisFlows configuration
@@ -45,6 +47,9 @@ class Subclass(custom_import("MODULE NAME HERE", "PARENT CLASS NAME HERE")):
         required paths and parameters are accounted for, and that all
         optional paths and parameters are set to user-defined or default values.
         """
+        # Call to output log statement identifying this specific module + class
+        msg.check(type(self))
+
         if validate:
             self.required.validate()
         # Validation only required by the lowest subclass, which will validate

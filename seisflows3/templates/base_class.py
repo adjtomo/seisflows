@@ -4,6 +4,8 @@ This is a SeisFlows Base class
 """
 import os
 import sys
+from seisflows3 import logger
+from seisflows3.tools import msg
 from seisflows3.config import SeisFlowsPathsParameters
 
 # Required SeisFlows configuration
@@ -62,5 +64,13 @@ class Base:
         required paths and parameters are accounted for, and that all
         optional paths and parameters are set to user-defined or default values.
         """
+        # Call to output log statement identifying this specific module + class
+        msg.check(type(self))
+
+        # Multiple logging levels determine how verbose the module will be
+        logger.info("important log statement goes here")
+        logger.debug("debugging log statement goes here")
+        logger.warning("warnings can be passed here")
+
         if validate:
             self.required.validate()
