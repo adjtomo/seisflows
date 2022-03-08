@@ -7,6 +7,7 @@ import os
 import sys
 import numpy as np
 
+from seisflows3 import logger
 from seisflows3.plugins import line_search, preconds
 from seisflows3.tools import msg, unix
 from seisflows3.tools.tools import loadnpy, savenpy
@@ -123,6 +124,8 @@ class Base:
         """
         Checks parameters, paths, and dependencies
         """
+        msg.check(type(self))
+
         if validate:
             self.required.validate()
 
@@ -147,11 +150,12 @@ class Base:
         """
         Sets up nonlinear optimization machinery
         """
+        msg.setup(type(self))
+
         # Prepare line search machinery
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
             step_count_max=PAR.STEPCOUNTMAX,
             path=os.path.join(PATH.WORKDIR, "output.optim"),
-            verbose=PAR.VERBOSE
         )
 
         # Prepare preconditioner
@@ -170,6 +174,19 @@ class Base:
             self.save("m_new", m_new)
             self.check_model_parameters(m_new, "m_new")
 
+    @property
+    def eval_str(self):
+        """
+        Print out the evaluation string, which states what iteration and line
+        search step count we are at. Useful for log statements
+
+        For example, an inversion at iteration 1 and step count 2 will return
+        'i01s02'
+        """
+        iter_ = self.iter
+        step = self.line_search.step_count
+        return f"i{iter_:0>2}s{step:0>2}"
+
     def compute_direction(self):
         """
         Computes search direction
@@ -178,6 +195,8 @@ class Base:
             This function implements steepest descent, for other algorithms,
             simply overload this method
         """
+        msg.whoami(type(self), prepend="computing search direction with ")
+
         g_new = self.load("g_new")
         if self.precond is not None:
             p_new = -1 * self.precond(g_new)
@@ -185,8 +204,7 @@ class Base:
             p_new = -1 * g_new
         self.save("p_new", p_new)
 
-    @staticmethod
-    def check_model_parameters(m, tag):
+    def check_model_parameters(self, m, tag):
         """
         Check to ensure that the model parameters fall within the guidelines 
         of the solver. Print off min/max model parameters for the User.
@@ -214,13 +232,11 @@ class Base:
                 pars["pr"] = poissons 
 
         # Tell the User min and max values of the updated model
-        if PAR.VERBOSE:
-            print(f"\tModel Parameters ({tag})")
-            msg_ = "\t\t{minval:.2f} <= {key} <= {maxval:.2f}"
-            for key, vals in pars.items():
-                print(msg_.format(minval=vals.min(), key=key, 
-                                  maxval=vals.max())
-                      )
+        logger.info(f"model parameters ({tag} {self.eval_str}):")
+        msg_ = "{minval:.2f} <= {key} <= {maxval:.2f}"
+        for key, vals in pars.items():
+            logger.info(msg_.format(minval=vals.min(), key=key,
+                        maxval=vals.max()))
 
     def initialize_search(self):
         """
@@ -251,8 +267,8 @@ class Base:
         # Optional initial step length override
         if PAR.STEPLENINIT and len(self.line_search.step_lens) <= 1:
             alpha = PAR.STEPLENINIT * norm_m / norm_p
-            if PAR.VERBOSE:
-                print("\t\tStep length override due to PAR.STEPLENINIT")
+            logger.debug(f"step length override due to "
+                         f"PAR.STEPLENINIT={PAR.STEPLENINIT}")
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
@@ -389,6 +405,8 @@ class Base:
         :param filename: filename to read from
         :return:
         """
+        fid_out = os.path.join(PATH.OPTIMIZE, filename)
+        # logger.debug(f"loading model vector from: {fid_out}")
         return loadnpy(os.path.join(PATH.OPTIMIZE, filename))
 
     @staticmethod
@@ -402,7 +420,9 @@ class Base:
         :param array: array to be saved
         :return:
         """
-        savenpy(os.path.join(PATH.OPTIMIZE, filename), array)
+        fid_out = os.path.join(PATH.OPTIMIZE, filename)
+        # logger.debug(f"saving model vector to: {fid_out}")
+        savenpy(fid_out, array)
 
     @staticmethod
     def loadtxt(filename):

@@ -78,8 +78,8 @@ class NLCG:
         :rtype: tuple (np.array, int)
         :return: search direction, status of search
         """
-        if self.verbose:
-            print("\tComputing search direction w/ NLCG")
+        logger.debug(f"computing search direction w/ NLCG"
+                     f"({msg.whoami(type(self))})")
 
         self.iter += 1
         savetxt(os.path.join(self.path, "NLCG", "iter", self.iter))
@@ -92,8 +92,7 @@ class NLCG:
             return -g_new, 0
         # Force restart if the iterations have surpassed the maximum number iter
         elif self.iter > self.maxiter:
-            if self.verbose:
-                print("restarting NLCG... [periodic restart]")
+            logger.info("restarting NLCG... [periodic restart]")
             self.restart()
             return -g_new, 1
 
@@ -111,13 +110,11 @@ class NLCG:
 
         # Check restart conditions, return search direction and status
         if check_conjugacy(g_new, g_old) > self.thresh:
-            if self.verbose:
-                print("restarting NLCG... [loss of conjugacy]")
+            logger.info("restarting NLCG... [loss of conjugacy]")
             self.restart()
             return -g_new, 1
         elif check_descent(p_new, g_new) > 0.:
-            if self.verbose:
-                print("restarting NLCG... [not a descent direction]")
+            logger.info("restarting NLCG... [not a descent direction]")
             self.restart()
             return -g_new, 1
         else:

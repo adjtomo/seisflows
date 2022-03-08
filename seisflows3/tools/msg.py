@@ -7,6 +7,84 @@ Used when warnings, statements or error messages need to be shown to the user.
 Some statements have format strings that need to be formatted by the 
 module that called it.
 """
+from seisflows3 import logger
+
+
+def check(cls):
+    """
+    Standardized log message sent from the check() function that is required 
+    within each module and submodule. Simply notifies the user that checks 
+    are being performed within the given module
+
+    :type cls: 'type'
+    :param cls: self.__class__ or type(self) which should be passed in from 
+        INSIDE a function defined INSIDE a class. 
+        e.g., <class 'seisflows3.preprocess.default.Default'>
+    :rtype: str
+    :return: formatted check string describing the module and classname
+        e.g., preprocess.default
+    """
+    module, clsname = split_cls(cls)
+    logger.debug(f"check paths/pars module: {module}.{clsname}")
+
+    
+def setup(cls):
+    """
+    Standardized log message sent from the setup() function that is required 
+    within each module and submodule. Simply notifies the user that checks 
+    are being performed within the given module
+
+    :type cls: 'type'
+    :param cls: self.__class__ which should be passed in from INSIDE a function
+        defined INSIDE a class. 
+        e.g., <class 'seisflows3.preprocess.default.Default'>
+    :rtype: str
+    :return: formatted string describing the module and classname
+        e.g., preprocess.default
+            
+    """
+    module, clsname = split_cls(cls)
+    logger.debug(f"setting up module: {module}.{clsname}")
+
+
+def whoami(cls, append="", prepend=""):
+    """
+    Standardized log message sent from any function inside a class. Used in logs
+    for subclasses to declare who they are before running functions, makes it
+    easier to track down what's happening where
+
+    :type cls: 'type'
+    :param cls: self.__class__ which should be passed in from INSIDE a function
+        defined INSIDE a class. 
+        e.g., <class 'seisflows3.preprocess.default.Default'>
+    :type append: str
+    :param append: add any string after the whoami statement
+    :type prepend: str
+    :param prepend: add any string in front of the whoami statment
+    :rtype: str
+    :return: formatted string describing the module and classname
+        e.g., preprocess.default
+    """
+    module, clsname = split_cls(cls)
+    logger.debug(f"{prepend}{module}.{clsname}{append}")
+
+
+def split_cls(cls):
+    """
+    Repeatedly used function to split the output of type(self) or self.__class__
+    into separate strings
+
+
+    :type cls: 'type'
+    :param cls: self.__class__ which should be passed in from INSIDE a function
+        defined INSIDE a class. 
+        e.g., <class 'seisflows3.preprocess.default.Default'>
+    :rtype: tuple of strings
+    :return: module, classname
+    """
+    type_, str_, brkt = str(cls).split("'")
+    sf3, module, fid, clsname = str_.split(".")
+    return module, clsname
 
 
 WarningOverwrite = """

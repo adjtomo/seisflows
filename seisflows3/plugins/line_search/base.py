@@ -28,8 +28,7 @@ class Base:
         status < 0  : failed
 
     """
-    def __init__(self, step_count_max=10, step_len_max=None, path=None,
-                 verbose=True):
+    def __init__(self, step_count_max=10, step_len_max=None, path=None):
         """
 
         :type step_count_max: int
@@ -40,9 +39,6 @@ class Base:
             that is unbounded step length
         :type path: str
         :param path: path to set the writer to, defaults to current dir
-        :type verbose: bool
-        :param verbose: determines how descriptive the chosen line search
-            algorithm is in the log files
         """
         # Set maximum number of trial steps
         self.step_count_max = step_count_max
@@ -62,7 +58,6 @@ class Base:
         self.gtg = []
         self.gtp = []
         self.step_count = 0
-        self.verbose = verbose
 
     def initialize(self, step_len, func_val, gtg, gtp):
         """

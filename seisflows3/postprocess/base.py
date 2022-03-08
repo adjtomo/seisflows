@@ -2,8 +2,11 @@
 """
 This is the base class for the postprocess functionalities
 """
+import os
 import sys
 
+from seisflows3 import logger
+from seisflows3.tools import msg
 from seisflows3.tools.tools import exists
 from seisflows3.config import SeisFlowsPathsParameters
 
@@ -59,6 +62,8 @@ class Base:
         """
         Checks parameters and paths
         """
+        msg.check(type(self))
+
         if validate:
             self.required.validate()
         
@@ -69,6 +74,7 @@ class Base:
         """
         Placeholder for initialization or setup tasks
         """
+        msg.setup(type(self))
         pass
 
     def write_gradient(self, path):
@@ -86,12 +92,12 @@ class Base:
         :param path: directory from which kernels are read and to which
         gradient is written
         """
+        msg.whoami(type(self), prepend="writing gradient from ")
+
         # Check that the given path exists
         if not exists(path):
             raise FileNotFoundError
 
-        if PAR.VERBOSE and PAR.SMOOTH_H > 0:
-            print(f"\tSmoothing gradient: H={PAR.SMOOTH_H}, V={PAR.SMOOTH_V}")
 
         # Run postprocessing as separate job as its computationally intensive
         system.run_single("postprocess", "process_kernels",
@@ -154,14 +160,23 @@ class Base:
                                     f"not found, exiting.")
 
         # If specified, smooth the kernels in the vertical and horizontal
-        if PAR.SMOOTH_H > 0:
-            solver.combine(input_path=path, output_path=f"{path}/sum_nosmooth",
+        path_sum_nosmooth = os.path.join(path, "sum_nosmooth")
+        path_sum = os.path.join(path, "sum")
+        if (PAR.SMOOTH_H > 0) or (PAR.SMOOTH_V > 0):
+            logger.debug(f"saving unsmoothed, summed kernels to "
+                         f"{path_sum_nosmooth}")
+            solver.combine(input_path=path, output_path=path_sum_nosmooth,
                            parameters=parameters)
 
-            solver.smooth(input_path=f"{path}/sum_nosmooth",
-                          output_path=f"{path}/sum", parameters=parameters,
+            logger.info(f"smoothing gradient: H={PAR.SMOOTH_H}m, "
+                        f"V={PAR.SMOOTH_V}m")
+            logger.debug(f"saving smoothed kernels to {path_sum}")
+            solver.smooth(input_path=path_sum_nosmooth, output_path=path_sum, 
+                          parameters=parameters,
                           span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
+
         # Combine all the input kernels, generating the unscaled gradient
         else:
-            solver.combine(input_path=path, output_path=f"{path}/sum",
+            logger.debug(f"saving summed kernels to {path_sum}")
+            solver.combine(input_path=path, output_path=path_sum,
                            parameters=parameters)

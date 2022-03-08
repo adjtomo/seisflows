@@ -11,9 +11,15 @@ __path__ = extend_path(__path__, __name__)
 
 # Set up the SeisFlows3 Logging environment
 logger = logging.getLogger("seisflows3")
-logger.setLevel(logging.INFO)  # default level 
-ch = logging.StreamHandler()
-fmt_str = "[%(asctime)s] %(levelname)s: %(message)s"
+logger.setLevel(logging.DEBUG)  # default level 
+
+fmt_str = "[%(asctime)s] %(levelname)-6s- %(message)s"
 formatter = logging.Formatter(fmt_str, datefmt="%Y-%m-%d %H:%M:%S")
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+
+st_handler = logging.StreamHandler()
+st_handler.setFormatter(formatter)
+logger.addHandler(st_handler)
+
+file_handler = logging.FileHandler("output_log.txt", "a")
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)

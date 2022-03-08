@@ -143,10 +143,10 @@ class Base:
                 docstr="path to the SPECFEM DATA/ directory containing the "
                        "'Par_file', 'STATIONS' file and 'CMTSOLUTION' files")
 
-        # sf.path("DATA", required=False, 
-        #         docstr="path to a directory containing any external data "
-        #                "required by the workflow. Catch all directory that "
-        #                "can be accessed by all modules")
+        sf.path("DATA", required=False, 
+                docstr="path to a directory containing any external data "
+                       "required by the workflow. Catch all directory that "
+                       "can be accessed by all modules")
 
         return sf
 
@@ -154,6 +154,8 @@ class Base:
         """
         Checks parameters and paths
         """
+        msg.check(type(self))
+
         if validate:
             self.required.validate()
 
@@ -195,13 +197,16 @@ class Base:
         Sets up directory structure expected by SPECFEM and copies or generates
         seismic data to be inverted or migrated
 
-        Note:
+        .. note:;
             As input for an inversion or migration, users can choose between
             providing data, or providing a target model from which data are
             generated on the fly.
             In the former case, a value for PATH.DATA must be supplied;
             in the latter case, a value for PATH.MODEL_TRUE must be provided.
         """
+        if self.taskid == 0:
+            msg.setup(type(self))
+
         # Clean up for new inversion
         unix.rm(self.cwd)
         self.initialize_solver_directories()

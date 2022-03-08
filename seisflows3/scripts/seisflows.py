@@ -163,18 +163,23 @@ def sfparser():
     resume.add_argument("-s", "--stop_after", default=None, type=str,
                         help="Optional override of the 'STOP_AFTER' parameter")
     # =========================================================================
-    subparser.add_parser(
+    restart = subparser.add_parser(
         "restart", help="Remove current environment and submit new workflow",
         description="""Akin to running seisflows clean; seisflows submit. 
         Restarts the workflow by removing the current state and submitting a 
         fresh workflow."""
     )
+    restart.add_argument("-f", "--force", action="store_true",
+                         help="Skip the clean and submit precheck statements")
     # =========================================================================
-    subparser.add_parser(
+    clean = subparser.add_parser(
         "clean", help="Remove active working environment",
         description="""Delete all SeisFlows related files in the working 
         directory, except for the parameter file."""
     )
+    clean.add_argument("-f", "--force", action="store_true", 
+                       help="Skip the warning check that precedes the clean "
+                       "function")
     # =========================================================================
     par = subparser.add_parser(
         "par", help="View and edit parameter file",
@@ -275,7 +280,7 @@ e.g. 'seisflows inspect solver eval_func'
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
-                      "edit": edit, "sempar": sempar}
+            "edit": edit, "sempar": sempar, "clean": clean, "restart": restart}
     if parser.parse_args().command in subparser_dict:
         return parser, subparser_dict[parser.parse_args().command]
     else:
@@ -683,13 +688,21 @@ class SeisFlows:
         system = sys.modules["seisflows_system"]
         system.submit(workflow)
 
-    def clean(self, **kwargs):
+    def clean(self, force=False, **kwargs):
         """
         Clean the SeisFlows3 working directory except for the parameter file.
+
+        :type force: bool
+        :param force: ignore the warning check that precedes the clean() 
+            function, useful if you don't want any input messages popping up
         """
-        check = input("\n\tThis will remove all workflow objects, leaving only "
-                      "the parameter file.\n\tAre you sure you want to clean? "
-                      "(y/[n]): ")
+        if force:
+            check = "y"
+        else:
+            check = input("\n\tThis will remove all workflow objects, "
+                          "\n\tleaving only the parameter file. "
+                          "\n\tAre you sure you want to clean? "
+                          "(y/[n]):\n")
 
         if check == "y":
             for fid in glob(os.path.join(self._args.workdir, "output*")):
@@ -730,12 +743,16 @@ class SeisFlows:
 
         system.submit(workflow)
 
-    def restart(self, **kwargs):
+    def restart(self, force=False, **kwargs):
         """
         Restart simply means clean the workding dir and submit a new workflow.
+
+        :type force: bool
+        :param force: ignore the warning check that precedes the clean() 
+            function, useful if you don't want any input messages popping up
         """
-        self.clean()
-        self.submit()
+        self.clean(force=force)
+        self.submit(precheck_off=force)
 
     def debug(self, **kwargs):
         """

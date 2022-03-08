@@ -7,6 +7,7 @@ It is called in as a plugin for seisflows.optimize.LBFGS
 """
 import numpy as np
 
+from seisflows3 import logger
 from seisflows3.tools import unix
 from seisflows3.tools.tools import exists, loadnpy, savenpy
 from seisflows3.tools.math import angle
@@ -92,8 +93,8 @@ class LBFGS:
         :rtype: tuple (np.array, int)
         :return: search direction, status of search
         """
-        if self.verbose:
-            print("\tComputing search direction w/ L-BFGS")
+        logger.info(f"computing search direction w/ L-BFGS "
+                    f"({msg.whoami(type(self))})")
 
         self.iter += 1
         unix.cd(self.path)
@@ -104,8 +105,7 @@ class LBFGS:
         if self.iter == 1:
             return -g, 0
         elif self.iter > self.maxiter:
-            if self.verbose:
-                print("\trestarting LBFGS... [periodic restart]")
+            logger.info("restarting LBFGS... [periodic restart]")
             self.restart()
             return -g, 1
 
@@ -257,15 +257,13 @@ class LBFGS:
         :return: status based on status check
         """
         theta = 180. * np.pi ** -1 * angle(g, r)
-        print(f"\tNew search direction is {theta:.2f}deg from current")
+        logger.info(f"new search direction is {theta:.2f}deg from current")
 
         if not 0. < theta < 90.:
-            if self.verbose:
-                print("\trestarting LBFGS... [not a descent direction]")
+            logger.info("restarting LBFGS... [not a descent direction]")
             return 1
         elif theta > 90. - self.thresh:
-            if self.verbose:
-                print("\trestarting LBFGS... [practical safeguard]")
+            logger.info("restarting LBFGS... [practical safeguard]")
             return 1
         else:
             return 0

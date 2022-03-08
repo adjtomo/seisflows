@@ -14,6 +14,8 @@ import sys
 import pyatoa
 import numpy as np
 from glob import glob
+
+from seisflows3 import logger
 from seisflows3.tools import unix
 from seisflows3.config import custom_import
 from seisflows3.config import SeisFlowsPathsParameters
@@ -122,6 +124,8 @@ class Pyatoa(custom_import("preprocess", "base")):
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
         """
+        msg.check(type(self))
+
         if validate:
             self.required.validate()
 
@@ -148,6 +152,8 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         Akin to an __init__ class, but to be called externally by the workflow.
         """
+        msg.setup(type(self))
+
         # Late import because preprocess is loaded before optimize
         solver = sys.modules["seisflows_solver"]
 

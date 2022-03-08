@@ -9,6 +9,7 @@ import sys
 import obspy
 import numpy as np
 
+from seisflows3 import logger
 from seisflows3.tools import msg
 from seisflows3.tools import signal, unix
 from seisflows3.config import custom_import
@@ -60,6 +61,8 @@ class Default(custom_import("preprocess", "base")):
         """ 
         Checks parameters and paths
         """
+        msg.check(type(self))
+
         if validate:
             self.required.validate()
 
@@ -93,11 +96,15 @@ class Default(custom_import("preprocess", "base")):
         """
         Sets up data preprocessing machinery
         """
+        msg.setup(type(self))
+
         # Define misfit function and adjoint trace generator
         if PAR.MISFIT:
+            logger.debug(f"misfit function is: '{PAR.MISFIT}'")
             self.misfit = getattr(misfit, PAR.MISFIT.lower())
             self.adjoint = getattr(adjoint, PAR.MISFIT.lower())
         elif PAR.BACKPROJECT:
+            logger.debug(f"backproject function is: '{PAR.BACKPROJECT}'")
             self.adjoint = getattr(adjoint, PAR.BACKPROJECT.lower())
 
         # Define seismic data reader and writer
