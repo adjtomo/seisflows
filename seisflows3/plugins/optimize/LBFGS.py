@@ -8,7 +8,7 @@ It is called in as a plugin for seisflows.optimize.LBFGS
 import numpy as np
 
 from seisflows3 import logger
-from seisflows3.tools import unix
+from seisflows3.tools import unix, msg
 from seisflows3.tools.tools import exists, loadnpy, savenpy
 from seisflows3.tools.math import angle
 
@@ -93,8 +93,7 @@ class LBFGS:
         :rtype: tuple (np.array, int)
         :return: search direction, status of search
         """
-        logger.info(f"computing search direction w/ L-BFGS "
-                    f"({msg.whoami(type(self))})")
+        logger.info(f"computing search direction w/ L-BFGS plugin")
 
         self.iter += 1
         unix.cd(self.path)

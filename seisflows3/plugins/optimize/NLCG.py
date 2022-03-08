@@ -8,7 +8,8 @@ It is called in as a plugin for seisflows.optimize.NLCG
 import os
 import numpy as np
 
-from seisflows3.tools import unix
+from seisflows3 import logger
+from seisflows3.tools import unix, msg
 from seisflows3.tools.math import dot
 from seisflows3.tools.tools import loadtxt, savetxt, loadnpy, savenpy
 
@@ -78,8 +79,7 @@ class NLCG:
         :rtype: tuple (np.array, int)
         :return: search direction, status of search
         """
-        logger.debug(f"computing search direction w/ NLCG"
-                     f"({msg.whoami(type(self))})")
+        logger.debug(f"computing search direction w/ NLCG plugin")
 
         self.iter += 1
         savetxt(os.path.join(self.path, "NLCG", "iter", self.iter))

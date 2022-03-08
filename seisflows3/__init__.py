@@ -14,6 +14,7 @@ logger = logging.getLogger("seisflows3")
 logger.setLevel(logging.DEBUG)  # default level 
 
 fmt_str = "[%(asctime)s] %(levelname)-6s- %(message)s"
+# fmt_str = "%(message)s"
 formatter = logging.Formatter(fmt_str, datefmt="%Y-%m-%d %H:%M:%S")
 
 st_handler = logging.StreamHandler()

@@ -44,8 +44,8 @@ class Bracket(Base):
 
         # Print out the current line search parameters for convenience
         logger.debug("line search module: {msg.whoami(type(self))}")
-        x_str = ", ".join([str(_) for _ in x])
-        f_str = ", ".join([str(_) for _ in f])
+        x_str = ", ".join([f"{_:.2E}" for _ in x])
+        f_str = ", ".join([f"{_:.2E}" for _ in f])
         logger.debug(f"step length(s) = {x_str}")
         logger.debug(f"misfit val(s)  = {f_str}")
         
