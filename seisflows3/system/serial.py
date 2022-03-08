@@ -6,6 +6,7 @@ for testing purposes
 """
 import os
 import sys
+import logging
 
 from seisflows3.tools import unix, msg
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
@@ -18,6 +19,8 @@ class Serial(custom_import("system", "base")):
     """
     Run tasks in a serial fashion on a single local machine
     """
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     @property
     def required(self):
         """

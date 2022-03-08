@@ -7,15 +7,11 @@ This class provides utilities for the Seisflows solver interactions with
 Specfem3D Globe. It inherits all attributes from seisflows3.solver.Base,
 and overwrites these functions to provide specified interaction with Specfem3D.
 """
-import subprocess
 import os
 import sys
+import logging
 from glob import glob
 
-# Import Numpy
-import numpy as np
-
-# Local imports
 import seisflows3.plugins.solver.specfem3d_globe as solvertools
 from seisflows3.tools.seismic import getpar, setpar, Model, Minmax
 from seisflows3.plugins.io import loadbypar, copybin, loadbin, savebin
@@ -38,6 +34,9 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
 
     !!! See base class for method descriptions !!!
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     @property
     def required(self):
         """

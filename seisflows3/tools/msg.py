@@ -7,7 +7,6 @@ Used when warnings, statements or error messages need to be shown to the user.
 Some statements have format strings that need to be formatted by the 
 module that called it.
 """
-from seisflows3 import logger
 
 
 def check(cls):
@@ -25,7 +24,7 @@ def check(cls):
         e.g., preprocess.default
     """
     module, clsname = split_cls(cls)
-    logger.debug(f"check paths/pars module: {module}.{clsname}")
+    return f"check paths/pars module: {module}.{clsname}"
 
     
 def setup(cls):
@@ -44,7 +43,7 @@ def setup(cls):
             
     """
     module, clsname = split_cls(cls)
-    logger.debug(f"setting up module: {module}.{clsname}")
+    return f"setting up module: {module}.{clsname}"
 
 
 def whoami(cls, append="", prepend=""):
@@ -66,7 +65,7 @@ def whoami(cls, append="", prepend=""):
         e.g., preprocess.default
     """
     module, clsname = split_cls(cls)
-    logger.debug(f"{prepend}{module}.{clsname}{append}")
+    return f"{prepend}{module}.{clsname}{append}"
 
 
 def split_cls(cls):
@@ -85,6 +84,30 @@ def split_cls(cls):
     type_, str_, brkt = str(cls).split("'")
     sf3, module, fid, clsname = str_.split(".")
     return module, clsname
+
+
+# The following message formatters are used to block off sections in the log 
+# file with visually distinctive separators
+# For main messages, usually for functions defined in workflow.main.flow()
+main = """
+================================================================================
+{:^80s}
+================================================================================
+"""
+
+# For key messages, describing things like what iteration were at
+key = """
+--------------------------------------------------------------------------------
+{:^80s}
+--------------------------------------------------------------------------------
+"""
+
+# For sub-critical messages, for things like notes and warnings and reminders
+sub = """
+................................................................................
+{:<80s}
+................................................................................
+"""
 
 
 WarningOverwrite = """

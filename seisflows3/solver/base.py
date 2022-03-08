@@ -5,12 +5,13 @@ This class provides the core utilities for the Seisflows solver interactions
 """
 import os
 import sys
+import logging
 import numpy as np
 from glob import glob
 from functools import partial
+
 from seisflows3.plugins import solver_io
 from seisflows3.tools import msg, unix
-from seisflows3.tools.err import ParameterError
 from seisflows3.tools.seismic import Container, call_solver
 from seisflows3.tools.tools import Struct, diff, exists
 from seisflows3.config import SeisFlowsPathsParameters
@@ -85,6 +86,9 @@ class Base:
         !!! Required functions which must be implemented by subclass !!!
 
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self):
         """
         These parameters should not be set by the User_!
@@ -99,6 +103,9 @@ class Base:
         :type _source_names: hidden attribute,
         :param _source_names: the names of all the sources that are being used
             by the solver
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
         """
         self.parameters = []
         self._mesh_properties = None
@@ -271,9 +278,13 @@ class Base:
         """
         unix.cd(self.cwd)
         self.import_model(path)
+        if self.taskid == 0:
+            self.logger.info("running forward simulations")
         self.forward()
 
         if write_residuals:
+            if self.taskid == 0:
+                self.logger.debug("calling preprocess.prepare_eval_grad()")
             preprocess.prepare_eval_grad(cwd=self.cwd, 
                                          source_name=self.source_name)
             self.export_residuals(path)
@@ -292,6 +303,8 @@ class Base:
             if False, discard traces
         """
         unix.cd(self.cwd)
+        if self.taskid == 0:
+            self.logger.debug("running adjoint simulations")
         self.adjoint()
         self.export_kernels(path)
 
@@ -620,6 +633,9 @@ class Base:
         :type path: str
         :param path: path to save kernels
         """
+        if self.taskid == 0:
+            self.logger.debug(f"exporting kernels to {path}")
+
         unix.cd(self.kernel_databases)
 
         # Work around conflicting name conventions
@@ -637,6 +653,9 @@ class Base:
         :type path: str
         :param path: path to save residuals
         """
+        if self.taskid == 0:
+            self.logger.debug(f"exporting residuals to: {path}")
+
         unix.mkdir(os.path.join(path, "residuals"))
         src = os.path.join(self.cwd, "residuals")
 
@@ -658,6 +677,9 @@ class Base:
         :type prefix: str
         :param prefix: location of traces w.r.t self.cwd
         """
+        if self.taskid == 0:
+            self.logger.debug("exporting traces to {path} {prefix}")
+
         unix.mkdir(os.path.join(path))
 
         src = os.path.join(self.cwd, prefix)
@@ -701,6 +723,9 @@ class Base:
         for intra-directory commnunications, at the cost of redundancy and 
         extra files
         """
+        if self.taskid == 0:
+            self.logger.debug("intializing solver directories")
+
         unix.mkdir(self.cwd)
         unix.cd(self.cwd)
 
@@ -752,6 +777,9 @@ class Base:
             Channels actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
         """
+        if self.taskid == 0:
+            self.logger.debug("intializing empty adjoint traces")
+
         if PAR.PREPROCESS.lower() == "base":
             for filename in self.data_filenames:
                 d = preprocess.reader(

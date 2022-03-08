@@ -3,6 +3,7 @@
 This is the Base class for seisflows.workflow.
 It contains mandatory functions that must be called by subclasses
 """
+import logging
 from seisflows3.config import save, SeisFlowsPathsParameters
 
 
@@ -10,6 +11,16 @@ class Base:
     """
     Workflow abstract base class
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+        """
+        pass
+
     @property
     def required(self):
         """

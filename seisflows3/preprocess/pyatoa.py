@@ -12,11 +12,11 @@ misfit measurement.
 import os
 import sys
 import pyatoa
+import logging
 import numpy as np
 from glob import glob
 
-from seisflows3 import logger
-from seisflows3.tools import unix
+from seisflows3.tools import unix, msg
 from seisflows3.config import custom_import
 from seisflows3.config import SeisFlowsPathsParameters
 from pyatoa.utils.images import merge_pdfs
@@ -38,9 +38,13 @@ class Pyatoa(custom_import("preprocess", "base")):
         :param data: directory where data from the preprocessing is stored
         :type figures: str
         :param figures: directory where figures are stored
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
         """
         self.path_datasets = None
         self.path_figures = None
+        self.logger = \
+            logging.getLogger(self.__name__).getChild(self.__qualname__)
 
     @property
     def required(self):
@@ -133,7 +137,6 @@ class Pyatoa(custom_import("preprocess", "base")):
         for required_parameter in ["COMPONENTS", "FORMAT"]:
             assert(required_parameter in PAR), \
                 f"Pyatoa requires {required_parameter}"
-
 
         if PAR.FORMAT != "ascii":
             raise ValueError("Pyatoa preprocess currently only works with "

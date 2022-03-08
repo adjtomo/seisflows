@@ -4,6 +4,7 @@ This is the custom class for an NLCG optimization schema.
 It supercedes the `seisflows.optimize.base` class
 """
 import sys
+import logging
 
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
 from seisflows3.plugins import optimize
@@ -20,11 +21,22 @@ class NLCG(custom_import("optimize", "base")):
         """
         These parameters should not be set by the user.
         Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        :type NLCG: Class
+        :param NLCG: plugin NLCG class that controls the machinery of the
+            NLCG optimization schema
+        :type restarted: int
+        :param restarted: a flag to let Seisflows know if the NLCG algorithm
+            has been restarted
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
         """
         super().__init__()
         self.NLCG = None
         self.restarted = None
-
+        self.logger = \
+            logging.getLogger(self.__name__).getChild(self.__qualname__)
     @property
     def required(self):
         """

@@ -4,6 +4,7 @@ This is the custom class for an steepest descent optimization schema.
 It supercedes the `seisflows.optimize.base` class
 """
 import sys
+import logging
 
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
@@ -16,7 +17,21 @@ class SteepestDescent(custom_import("optimize", "base")):
     Steepest descent method
     """
     def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+
+        :type restarted: int
+        :param restarted: a flag to let Seisflows know if the NLCG algorithm
+            has been restarted
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
+        """
         self.restarted = False
+        self.logger = \
+            logging.getLogger(self.__name__).getChild(self.__qualname__)
 
     @property
     def required(self):

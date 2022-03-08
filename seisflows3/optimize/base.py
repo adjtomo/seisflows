@@ -5,9 +5,9 @@ This class provides the core utilities for the Seisflows optimization schema.
 """
 import os
 import sys
+import logging
 import numpy as np
 
-from seisflows3 import logger
 from seisflows3.plugins import line_search, preconds
 from seisflows3.tools import msg, unix
 from seisflows3.tools.tools import loadnpy, savenpy
@@ -58,6 +58,9 @@ class Base:
         p_new - current search direction
         p_old - previous search direction
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self):
         """
         These parameters should not be set by __init__!
@@ -152,10 +155,13 @@ class Base:
         """
         msg.setup(type(self))
 
+        # Where to write optimization statistics etc.
+        path_stats = os.path.join(PATH.WORKDIR, "stats")
+
         # Prepare line search machinery
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
             step_count_max=PAR.STEPCOUNTMAX,
-            path=os.path.join(PATH.WORKDIR, "output.optim"),
+            path=os.path.join(path_stats, "output.optim"),
         )
 
         # Prepare preconditioner
@@ -165,7 +171,7 @@ class Base:
             self.precond = None
 
         # Prepare output logs
-        self.writer = Writer(path=os.path.join(PATH.WORKDIR, "output.stats"))
+        self.writer = Writer(path=path_stats)
 
         # Prepare scratch directory and save initial model
         unix.mkdir(PATH.OPTIMIZE)
@@ -232,11 +238,11 @@ class Base:
                 pars["pr"] = poissons 
 
         # Tell the User min and max values of the updated model
-        logger.info(f"model parameters ({tag} {self.eval_str}):")
+        self.logger.info(f"model parameters ({tag} {self.eval_str}):")
         msg_ = "{minval:.2f} <= {key} <= {maxval:.2f}"
         for key, vals in pars.items():
-            logger.info(msg_.format(minval=vals.min(), key=key,
-                        maxval=vals.max()))
+            self.logger.info(msg_.format(minval=vals.min(), key=key,
+                                         maxval=vals.max()))
 
     def initialize_search(self):
         """
@@ -267,8 +273,8 @@ class Base:
         # Optional initial step length override
         if PAR.STEPLENINIT and len(self.line_search.step_lens) <= 1:
             alpha = PAR.STEPLENINIT * norm_m / norm_p
-            logger.debug(f"step length override due to "
-                         f"PAR.STEPLENINIT={PAR.STEPLENINIT}")
+            self.logger.debug(f"step length override due to "
+                              f"PAR.STEPLENINIT={PAR.STEPLENINIT}")
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values

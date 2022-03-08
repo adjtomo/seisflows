@@ -5,6 +5,7 @@ This is the base class seisflows.workflow.migration
 This is a main Seisflows class, it controls the main workflow.
 """
 import sys
+import logging
 
 from seisflows3.tools import unix
 from seisflows3.tools.tools import exists
@@ -29,6 +30,17 @@ class Migration(Base):
     Performs the workflow of an inversion up to the postprocessing. In the
     terminology of seismic exploration, implements a 'reverse time migration'.
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        """
+        super().__init__()
+
     @property
     def required(self):
         """

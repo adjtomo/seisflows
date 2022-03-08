@@ -6,6 +6,7 @@ Line search is called on by the optimization procedure
 """
 import os
 import numpy as np
+import logging
 
 from seisflows3.tools.array import count_zeros
 
@@ -28,6 +29,9 @@ class Base:
         status < 0  : failed
 
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self, step_count_max=10, step_len_max=None, path=None):
         """
 

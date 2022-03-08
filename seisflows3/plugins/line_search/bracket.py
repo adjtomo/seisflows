@@ -2,10 +2,9 @@
 """
 This is the subclass class for seisflows.plugins.line_search.bracket
 """
+import logging
 import numpy as np
 
-from seisflows3 import logger
-from seisflows3.tools import msg
 from seisflows3.plugins.line_search.base import Base
 from seisflows3.tools.math import backtrack2, polyfit2
 
@@ -28,6 +27,9 @@ class Bracket(Base):
         status == 0 : not finished
         status < 0  : failed
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self, **kwargs):
         """
         These parameters should not be set by the user.
@@ -43,69 +45,66 @@ class Bracket(Base):
         x, f, gtg, gtp, step_count, update_count = self.search_history()
 
         # Print out the current line search parameters for convenience
-        logger.debug("line search module: {msg.whoami(type(self))}")
+        self.logger.debug("evaluating bracketing line search")
         x_str = ", ".join([f"{_:.2E}" for _ in x])
         f_str = ", ".join([f"{_:.2E}" for _ in f])
-        logger.debug(f"step length(s) = {x_str}")
-        logger.debug(f"misfit val(s)  = {f_str}")
+        self.logger.debug(f"step length(s) = {x_str}")
+        self.logger.debug(f"misfit val(s)  = {f_str}")
         
         # For the first inversion and initial step, set alpha manually
         if step_count == 0 and update_count == 0:
             # Based on idea from Dennis and Schnabel
             alpha = gtg[-1] ** -1
-            logger.info(f"first iteration, guessing trial step")
+            self.logger.info(f"first iteration, guessing trial step")
             status = 0
         # For every i'th inversions initial step, set alpha manually
         elif step_count == 0:
             # Based on the first equation in sec 3.5 of Nocedal and Wright 2ed
             idx = np.argmin(self.func_vals[:-1])
             alpha = self.step_lens[idx] * gtp[-2] / gtp[-1]
-            logger.info(f"first step, setting scaled step length")
+            self.logger.info(f"first step, setting scaled step length")
             status = 0
         # If misfit is reduced and then increased, we've bracketed. Pass
         elif self._check_bracket(x, f) and self._good_enough(x,f):
             alpha = x[f.argmin()]
-            logger.info(f"bracket okay, step length reasonable, pass")
+            self.logger.info(f"bracket okay, step length reasonable, pass")
             status = 1
         # If misfit is reduced but not close, set to quadratic fit
         elif self._check_bracket(x, f):
             alpha = polyfit2(x, f)
-            logger.info(f"bracket okay, step length unreasonable, manual step")
+            self.logger.info(f"bracket okay, step length unreasonable, manual step")
             status = 0
         # If misfit continues to step down, increase step length
         elif step_count <= self.step_count_max and all(f <= f[0]):
             alpha = 1.618034 * x[-1]  # 1.618034 is the 'golden ratio'
-            logger.info(f"misfit not bracketed, increasing step length")
+            self.logger.info(f"misfit not bracketed, increasing step length")
             status = 0
         # If misfit increases, reduce step length by backtracking
         elif step_count <= self.step_count_max:
             slope = gtp[-1] / gtg[-1]
             alpha = backtrack2(f0=f[0], g0=slope, x1=x[1], f1=f[1], b1=0.1,
                                b2=0.5)
-            logger.info(f"misfit increasing, reducing step length to")
+            self.logger.info(f"misfit increasing, reducing step length to")
             status = 0
         # step_count_max exceeded, fail
         else:
-            logger.info(f"bracketing failed, "
-                        f"step_count_max={self.step_count_max} exceeded")
+            self.logger.info(f"bracketing failed, "
+                             f"step_count_max={self.step_count_max} exceeded")
             alpha = None
             status = -1
-
 
         # Apply optional step length safeguard
         if alpha > self.step_len_max and step_count == 0:
             alpha = 0.618034 * self.step_len_max
-            logger.info(f"initial step length safegaurd, setting manual "
-                        f"step length")
+            self.logger.info(f"initial step length safegaurd, setting manual "
+                             f"step length")
             status = 0
         # Stop because safeguard prevents us from going further
         elif alpha > self.step_len_max:
-            logger.info(f"step_len_max={self.step_len_max} exceeded, manual "
-                        f"set alpha")
+            self.logger.info(f"step_len_max={self.step_len_max} exceeded, manual "
+                             f"set alpha")
             alpha = self.step_len_max
             status = 1
-
-        logger.debug(f"step length (alpha) = {alpha}")
 
         return alpha, status
 

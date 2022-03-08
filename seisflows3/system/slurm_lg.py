@@ -15,11 +15,11 @@ import os
 import math
 import sys
 import time
+import logging
 
 from warnings import warn
 from subprocess import check_output
 from seisflows3.tools import msg, unix
-from seisflows3.tools.err import ParameterError
 from seisflows3.tools.tools import call, findpath
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
@@ -46,6 +46,16 @@ class SlurmLg(custom_import("system", "base")):
     For important additional information, please see
     http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+        """
+        super().__init__()
+
     @property
     def required(self):
         """
@@ -127,7 +137,7 @@ class SlurmLg(custom_import("system", "base")):
             f"--ntasks-per-node={PAR.NODESIZE:d}",
             f"--ntasks={PAR.NPROC:d}",
             f"--time={PAR.TASKTIME:d}",
-            f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
+            f"--output={os.path.join(PATH.WORKDIR, 'logs', '%A_%a')}",
             f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
             f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",
@@ -169,7 +179,7 @@ class SlurmLg(custom_import("system", "base")):
             f"--ntasks-per-node={PAR.NODESIZE:d}",
             f"--ntasks={PAR.NPROC:d}",
             f"--time={PAR.TASKTIME:d}",
-            f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
+            f"--output={os.path.join(PATH.WORKDIR, 'logs', '%A_%a')}",
             f"--array=0-0",
             f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
             f"{PATH.OUTPUT}",

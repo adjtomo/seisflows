@@ -7,9 +7,9 @@ This is a main Seisflows class, it controls the preprocessing.
 import os
 import sys
 import obspy
+import logging
 import numpy as np
 
-from seisflows3 import logger
 from seisflows3.tools import msg
 from seisflows3.tools import signal, unix
 from seisflows3.config import custom_import
@@ -29,6 +29,20 @@ class Default(custom_import("preprocess", "base")):
     Provides data processing functions for seismic traces, with options for
     data misfit, filtering, normalization and muting
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by __init__!
+        Attributes are just initialized as NoneTypes for clarity and docstrings
+        """
+        super().__init__()
+        self.misfit = None
+        self.adjoint = None
+        self.reader = None
+        self.writer = None
+
     @property
     def required(self):
         """
@@ -61,7 +75,7 @@ class Default(custom_import("preprocess", "base")):
         """ 
         Checks parameters and paths
         """
-        msg.check(type(self))
+        self.logger.debug(msg.check(type(self)))
 
         if validate:
             self.required.validate()
@@ -96,15 +110,15 @@ class Default(custom_import("preprocess", "base")):
         """
         Sets up data preprocessing machinery
         """
-        msg.setup(type(self))
+        self.logger.debug(msg.setup(type(self)))
 
         # Define misfit function and adjoint trace generator
         if PAR.MISFIT:
-            logger.debug(f"misfit function is: '{PAR.MISFIT}'")
+            self.logger.debug(f"misfit function is: '{PAR.MISFIT}'")
             self.misfit = getattr(misfit, PAR.MISFIT.lower())
             self.adjoint = getattr(adjoint, PAR.MISFIT.lower())
         elif PAR.BACKPROJECT:
-            logger.debug(f"backproject function is: '{PAR.BACKPROJECT}'")
+            self.logger.debug(f"backproject function is: '{PAR.BACKPROJECT}'")
             self.adjoint = getattr(adjoint, PAR.BACKPROJECT.lower())
 
         # Define seismic data reader and writer
@@ -122,6 +136,9 @@ class Default(custom_import("preprocess", "base")):
         """
         # Need to load solver mid-workflow as preprocess is loaded first
         solver = sys.modules["seisflows_solver"]
+
+        if solver.taskid == 0:
+            self.logger.debug("preparing files for gradient evaluation")
 
         for filename in solver.data_filenames:
             obs = self.reader(path=os.path.join(cwd, "traces", "obs"),
@@ -151,13 +168,11 @@ class Default(custom_import("preprocess", "base")):
             self.write_adjoint_traces(path=os.path.join(cwd, "traces", "adj"),
                                       syn=syn, obs=obs, filename=filename_out)
 
-
         # Copy over the STATIONS file to STATIONS_ADJOINT required by Specfem
         # ASSUMING that all stations are used in adjoint simulation
         src = os.path.join(cwd, "DATA", "STATIONS")
         dst = os.path.join(cwd, "DATA", "STATIONS_ADJOINT")
         unix.cp(src, dst)
-        
 
     def write_residuals(self, path, syn, obs):
         """

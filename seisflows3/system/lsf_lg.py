@@ -8,10 +8,10 @@ using the Platform Load Sharing Facility (LSF) workload management platform.
 import os
 import sys
 import time
+import logging
 from subprocess import check_output
 
-from seisflows3.tools import msg
-from seisflows3.tools import unix
+from seisflows3.tools import msg, unix
 from seisflows3.tools.err import ParameterError
 from seisflows3.tools.tools import call, findpath, saveobj
 from seisflows3.config import custom_import
@@ -38,6 +38,18 @@ class LsfLg(custom_import("system", "base")):
     For important additional information, please see
     http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
     """
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
+        """
+        super().__init__()
+        self.logger = \
+            logging.getLogger(self.__name__).getChild(self.__qualname__)
     def check(self):
         """
         Checks parameters and paths

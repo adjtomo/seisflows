@@ -4,6 +4,7 @@ This is the custom class for an LBFGS optimization schema.
 It supercedes the `seisflows.optimize.base` class
 """
 import sys
+import logging
 import numpy as np
 
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
@@ -18,6 +19,9 @@ class LBFGS(custom_import("optimize", "base")):
     The Limited memory BFGS algorithm
     Calls upon seisflows.plugin.optimize.LBFGS to accomplish LBFGS algorithm
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self):
         """
         These parameters should not be set by the user.

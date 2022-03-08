@@ -4,8 +4,8 @@ This is the base class for the postprocess functionalities
 """
 import os
 import sys
+import logging
 
-from seisflows3 import logger
 from seisflows3.tools import msg
 from seisflows3.tools.tools import exists
 from seisflows3.config import SeisFlowsPathsParameters
@@ -23,6 +23,9 @@ class Base:
     regularization, smoothing, sharpening, masking and related operations
     on models or gradients
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self):
         """
         These parameters should not be set by __init__!
@@ -98,11 +101,11 @@ class Base:
         if not exists(path):
             raise FileNotFoundError
 
-
         # Run postprocessing as separate job as its computationally intensive
         system.run_single("postprocess", "process_kernels",
                           path=f"{path}/kernels",
                           parameters=solver.parameters,
+                          logger=self.logger,
                           scale_tasktime=PAR.TASKTIME_SMOOTH,
                           )
 
@@ -139,9 +142,8 @@ class Base:
                         parameters=solver.parameters,
                         suffix="_kernel")
 
-
     @staticmethod
-    def process_kernels(path, parameters):
+    def process_kernels(path, parameters, logger):
         """
         Sums kernels from individual sources, with optional smoothing
 
@@ -152,7 +154,11 @@ class Base:
         :param path: directory containing sensitivity kernels
         :type parameters: list
         :param parameters: solver-defined list of material parameters 
-            e.g. ['vp','vs']. This is ideally defined externally by PAR.MATERIALS
+            e.g. ['vp','vs']. This is ideally defined externally by
+            PAR.MATERIALS
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
         """
         # Check if the path exists
         if not exists(path):

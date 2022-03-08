@@ -5,6 +5,7 @@ This is the main seisflows.preprocess.base
 This is a main Seisflows class, it controls the preprocessing of waveforms and
 generation of adjoint sources
 """
+import logging
 from seisflows3.config import SeisFlowsPathsParameters
 
 
@@ -15,6 +16,17 @@ class Base:
     Provides data processing functions for seismic traces, with options for
     data misfit, filtering, normalization and muting
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)\
+
+
+    def __init__(self):
+        """
+        These parameters should not be set by __init__!
+        Attributes are just initialized as NoneTypes for clarity and docstrings
+        """
+        pass
+
     @property
     def required(self):
         """

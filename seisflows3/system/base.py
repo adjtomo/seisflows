@@ -6,8 +6,10 @@ be overloaded by subclasses
 """
 import os
 import sys
+import logging
 from glob import glob
-from seisflows3.tools import unix
+
+from seisflows3.tools import unix, msg
 from seisflows3.config import save, saveobj, SeisFlowsPathsParameters
 
 
@@ -20,6 +22,9 @@ class Base:
     Abstract base class for the Systems module which controls interaction with
     compute systems such as HPC clusters.
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     @property
     def required(self):
         """
@@ -87,6 +92,8 @@ class Base:
         """
         Checks parameters and paths
         """
+        msg.check(type(self))
+
         if validate:
             self.required.validate()
 
@@ -104,34 +111,30 @@ class Base:
         :rtype: tuple of str
         :return: (path to output log, path to error log)
         """
+        msg.setup(type(self))
+
         # Create scratch directories
         unix.mkdir(PATH.SCRATCH)
         unix.mkdir(PATH.SYSTEM)
 
         # Create output directories
         unix.mkdir(PATH.OUTPUT)
-        unix.mkdir(os.path.join(PATH.WORKDIR, "output.logs"))
-        unix.mkdir(os.path.join(PATH.WORKDIR, "logs.old"))
+        log_files = os.path.join(PATH.WORKDIR, "logs")
+        old_logs = os.path.join(log_files, "previous")
+        unix.mkdir(log_files)
+        unix.mkdir(old_logs)
 
-        # ??? Can I delete this symlink part, don't think it's necessary
-        # If a scratch directory is made outside the working directory, make
-        # sure its accessible from within the working directory
-        if not os.path.exists("./scratch"):
-            unix.ln(PATH.SCRATCH, os.path.join(PATH.WORKDIR, "scratch"))
-
-        output_log = os.path.join(PATH.WORKDIR, "output")
-        error_log = os.path.join(PATH.WORKDIR, "error")
+        output_log = PATH.LOG
+        error_log = os.path.join(PATH.WORKDIR, "error_log.txt")
 
         # If resuming, move old log files to keep them out of the way
         for log in [output_log, error_log]:
-            unix.mv(src=glob(os.path.join(f"{log}*.log")),
-                    dst=os.path.join(PATH.WORKDIR, "logs.old")
-                    )
+            unix.mv(src=glob(os.path.join(f"{log}*.txt")), dst=old_logs)
 
         # Copy the parameter.yaml file into the log directoroy
         par_copy = f"parameters_{PAR.BEGIN}-{PAR.END}.yaml"
         unix.cp(src="parameters.yaml",
-                dst=os.path.join(PATH.WORKDIR, "logs.old", par_copy)
+                dst=os.path.join(log_files, par_copy)
                 )
 
         return output_log, error_log
@@ -204,6 +207,8 @@ class Base:
         :type kwargs: dict
         :param kwargs: dictionary to pass to object saving
         """
+        self.logger.debug("checkpointing working environment to disk")
+
         argspath = os.path.join(path, "kwargs")
         argsfile = os.path.join(argspath, f"{classname}_{method}.p")
         unix.mkdir(argspath)

@@ -450,30 +450,42 @@ class SeisFlows:
 
         # Configure the logging module with user inputs
         self._config_logging(level=parameters["LOG_LEVEL"], 
-                             filename=paths["LOG"])
+                             filename=paths["LOG"], 
+                             verbose=parameters["VERBOSE"])
 
         self._paths = paths
         self._parameters = parameters
 
     def _config_logging(self, level="DEBUG", filename="./output_log.txt", 
-                        filemode="a"):
+                        filemode="a", verbose=True):
         """
         Explicitely configure the logging module with some parameters defined
         by the user in the System module. 
         """
-        fmt_str = ("\n%(asctime)s - %(levelname)-5s - [%(name)s.%(funcName)s()]"
-                   "\n%(message)s\n")
-        # fmt_str = "[%(asctime)s] %(levelname)-5s %(name)-10s\n%(message)s"
+        # Two levels of verbosity on log level
+        fmt_str_debug = ("%(asctime)s | %(levelname)-5s | "
+                         "%(name)s.%(funcName)s()\n"
+                         "> %(message)s")
+        fmt_str_clean = "%(asctime)s | %(message)s"
+
         datefmt = "%Y-%m-%d %H:%M:%S"
+
+        if verbose:
+            fmt_str = fmt_str_debug
+        else:
+            fmt_str = fmt_str_clean
+
         formatter = logging.Formatter(fmt_str, datefmt=datefmt)
 
-        # Instantiate logger during _register() as we now have user-defined
-        # log file and log level
+        # Instantiate logger during _register() as we now have user-defined pars
         logger.setLevel(level)
+
+        # Stream handler to print log statements to stdout
         st_handler = logging.StreamHandler()
         st_handler.setFormatter(formatter)
         logger.addHandler(st_handler)
 
+        # File handler to print log statements to text file
         file_handler = logging.FileHandler(filename, filemode)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)

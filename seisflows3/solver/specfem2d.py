@@ -7,9 +7,9 @@ Specfem2D. It inherits all attributes from seisflows3.solver.Base,
 """
 import os
 import sys
+import logging
 from glob import glob
 
-from seisflows3.plugins.solver.specfem2d import smooth_legacy
 from seisflows3.tools.seismic import getpar, setpar
 from seisflows3.tools import unix
 from seisflows3.tools.tools import exists
@@ -31,6 +31,20 @@ class Specfem2D(custom_import("solver", "base")):
 
     !!! See base class for method descriptions !!!
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
+        """
+        super().__init__()
+
     @property
     def required(self):
         """

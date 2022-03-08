@@ -6,12 +6,12 @@ Specfem3D Cartesian. It inherits all attributes from seisflows3.solver.Base,
 and overwrites these functions to provide specified interaction with Specfem3D
 """
 import os
+import sys
+import logging
+import warnings
 from glob import glob
 
-import sys
-import warnings
 import seisflows3.plugins.solver.specfem3d as solvertools
-
 from seisflows3.tools import unix
 from seisflows3.tools.tools import exists
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
@@ -33,6 +33,18 @@ class Specfem3D(custom_import("solver", "base")):
 
     !!! See base class for method descriptions !!!
     """
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
+        """
+        super().__init__()
+        self.logger = \
+            logging.getLogger(self.__name__).getChild(self.__qualname__)
     @property
     def required(self):
         """
