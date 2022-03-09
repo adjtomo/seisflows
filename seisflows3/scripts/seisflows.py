@@ -571,7 +571,7 @@ class SeisFlows:
         default values for each of the SeisFlows3 module parameters.
         This function writes files manually, consistent with the .yaml format.
         """
-        self._register(force=False)
+        self._register(force=True)
 
         def write_header(f, paths_or_parameters, name=""):
             """Re-usable function to write docstring comments"""
@@ -663,7 +663,7 @@ class SeisFlows:
         Save the initial state as pickle files for environment inspection.
         Useful for debugging, development and code exploration purposes.
         """
-        self._register(force=False)
+        self._register(force=True)
 
         unix.mkdir(self._args.workdir)
         unix.cd(self._args.workdir)
