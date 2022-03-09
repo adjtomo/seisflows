@@ -101,9 +101,6 @@ class Inversion(custom_import("workflow", "base")):
                       "'vector': save files as NumPy .npy files, "
                       "'both': save as both binary and vectors]")
 
-        sf.par("VERBOSE", required=False, default=True, par_type=bool,
-               docstr="Provide detailed statements to the output logs")
-
         # Define the Paths required by this module
         sf.path("MODEL_INIT", required=True,
                 docstr="Initial model to be used for workflow")
@@ -157,11 +154,15 @@ class Inversion(custom_import("workflow", "base")):
             assert exists(PATH.MODEL_TRUE), \
                 "CASE == SYNTHETIC requires PATH.MODEL_TRUE"
 
-    def main(self):
+    def main(self, return_flow=False):
         """
         !!! This function controls the main workflow !!!
 
         Carries out seismic inversion by running a series of functions in order
+
+        :type return_flow: bool
+        :param return_flow: for CLI tool, simply returns the flow function
+            rather than running the workflow. Used for print statements etc.
         """
         self.logger.info(msg.main.format("STARTING INVERSION WORKFLOW"))
 
@@ -174,6 +175,8 @@ class Inversion(custom_import("workflow", "base")):
                 self.finalize,
                 self.clean
                 ]
+        if return_flow:
+            return flow
 
         optimize.iter = PAR.BEGIN
 

@@ -207,7 +207,7 @@ class Writer(object):
     Utility for writing one or more columns to text file.
     Used to write the line search history into a text file with a set format.
     """
-    def __init__(self, path="./output.optim"):
+    def __init__(self, path="./stats/output.optim"):
         """
         Initiate the Writer class. Internally used `iter` variable references
         the current iteration of the workflow.

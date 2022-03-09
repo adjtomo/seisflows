@@ -157,6 +157,7 @@ class Base:
 
         # Where to write optimization statistics etc.
         path_stats = os.path.join(PATH.WORKDIR, "stats")
+        unix.mkdir(path_stats)
 
         # Prepare line search machinery
         self.line_search = getattr(line_search, PAR.LINESEARCH)(

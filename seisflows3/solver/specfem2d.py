@@ -118,34 +118,39 @@ class Specfem2D(custom_import("solver", "base")):
                                       cast=int, tag="nt")
         if nt != PAR.NT:
             if self.taskid == 0:
-                print(f"WARNING: nt={nt} not equal PAR.NT={PAR.NT},"
-                      f"setting PAR FILE nt={PAR.NT}")
-            setpar(nt_str, PAR.NT)
+                self.logger.warning(f"WARNING: nt={nt} not equal "
+                                    f"PAR.NT={PAR.NT},"
+                                    f"setting scratch/solver/*/DATA/Par_file "
+                                    f"nt={PAR.NT}")
+                setpar(nt_str, PAR.NT)
 
         # Check the dt step discretization in the SPECFEM2D Par_file
         dt_str, dt = getpar_tryexcept(trial_list=["DT", "deltat"],
                                       cast=float, tag="dt")
         if dt != PAR.DT:
             if self.taskid == 0:
-                print(f"WARNING: dt={dt} not equal PAR.DT={PAR.DT},"
-                      f"setting PAR FILE dt={PAR.DT}")
+                self.logger.warning(f"WARNING: dt={dt} not equal PAR.DT={PAR.DT},"
+                               f"setting scratch/solver/*/DATA/Par_file "
+                               f"dt={PAR.DT}")
             setpar(dt_str, PAR.DT)
 
         # Check the central frequency in the SPECFEM2D SOURCE file
         f0 = getpar("f0", file="DATA/SOURCE", cast=float)
         if f0 != PAR.F0:
             if self.taskid == 0:
-                print(f"WARNING: f0={f0} not equal PAR.F0={PAR.F0},"
-                      f"setting SOURCE f0={PAR.F0}")
+                self.logger.warning(f"WARNING: f0={f0} not equal "
+                                    f"PAR.F0={PAR.F0}, setting "
+                                    f"SOURCE f0={PAR.F0}")
             setpar("f0", PAR.F0, filename="DATA/SOURCE")
 
         # Ensure that NPROC matches the MESH values
         if self.mesh_properties.nproc != PAR.NPROC:
             if self.taskid == 0:
-                print(f"Warning: "
-                      f"mesh_properties.nproc={self.mesh_properties.nproc} "
-                      f"not equal  PAR.NPROC={PAR.NPROC}"
-                      )
+                self.logger.warning(
+                    f"Warning: "
+                    f"mesh_properties.nproc={self.mesh_properties.nproc} "
+                    f"not equal PAR.NPROC={PAR.NPROC}"
+                )
 
         if "MULTIPLES" in PAR:
             if PAR.MULTIPLES:

@@ -80,7 +80,7 @@ class Writer(object):
     Utility for appending values to text files.
     Used for writing statistical outputs to the output.stats file
     """
-    def __init__(self, path="./output.stat"):
+    def __init__(self, path="./stats"):
         self.path = os.path.abspath(path)
         try:
             os.mkdir(path)

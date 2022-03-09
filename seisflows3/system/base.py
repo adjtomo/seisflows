@@ -60,9 +60,15 @@ class Base:
                       "system submission")
 
         sf.par("LOG_LEVEL", required=False, par_type=str, default="DEBUG",
-               docstr="Verbosity output of logger. Available from least to "
+               docstr="Verbosity output of SF3 logger. Available from least to "
                       "most verbosity: 'CRITICAL', 'WARNING', 'INFO', 'DEBUG'; "
                       "defaults to 'DEBUG'")
+
+        sf.par("VERBOSE", required=False, default=True, par_type=bool,
+               docstr="Level of verbosity provided to the output log. If True, "
+                      "log statements will declare what module/class/function "
+                      "they are being called from. Useful for debugging but "
+                      "also very noisy.")
 
         # Define the Paths required by this module
         # note: PATH.WORKDIR has been set by the entry point seisflows.setup()
