@@ -3,26 +3,35 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-SeisFlows3
+SeisFlows
 ===============
 
-SeisFlows is a Python-based waveform inversion package used to tackle the
-problems of full waveform inversion, seismic migration, and adjoint tomography.
+`SeisFlows <https://github.com/rmodrak/seisflows>`__ is a Python-based 
+waveform inversion package used to tackle the problems of full waveform 
+inversion, seismic migration, and adjoint tomography.
 
-With a growing user base in academia and industry, this package has been used
+With a user base in both academia and industry, ``SeisFlows`` has been used
 for production scale inversions, some with over a billion model parameters, for
 research problems related to oil and gas exploration, earthquake seismology, and
 general nonlinear optimization problems.
 
-SeisFlows3 is a fork of SeisFlows and the current main development branch.
-Changes to the package include migration to Python3, updates to source-code
-readability through improved doc strings and comments, stronger adherance to
-PEP-8 standards, and additional functionalities not present in the original
-package.
+SeisFlows3
+===========
+
+`SeisFlows3 <https://github.com/bch0w/seisflows3>`__  is a hard fork of 
+SeisFlows and the current main development branch. 
+
+Backwards-incompatible changes from the original codebase include migration to 
+Python3, aesthetic updates to source-code for improved readability, including 
+richer doc strings, comments, and stronger adherance to PEP-8 standards. 
+Additional functionalities such as a command line interface tool, and native
+integration with the waveform misfit quantification tool 
+`Pyatoa <https://github.com/bch0w/pyatoa>`__ have also been added to 
+`SeisFlows3`.
 
 Throughout the documentation we may use the names SeisFlows and SeisFlows3
-interchangeably to refer to this package. Any reference to the original
-SeisFlows will be made explicitely. Due to incompatabilities between
+interchangeably to refer to this package (SeisFlows3). Any reference to the 
+original SeisFlows will be noted explicitely. Due to incompatabilities between
 Python 2 and 3, backwards compatability between SeisFlows and SeisFlows3 is not
 supported.
 
@@ -32,7 +41,7 @@ Installation
 
 Successful applications of SeisFlows3 will typically require direct editing of
 source code. For this reason, SeisFlows3 should be installed directly via the
-package library using pip, using the -e flag to ensure that SeisFlows3 is
+package library using Pip using the '-e' flag to ensure that SeisFlows3 is
 installed in development mode, allowing source code changes to be immediately
 acccessible to Python.
 
@@ -44,12 +53,26 @@ environment.
 
    $ conda create -n seisflows3 python=3.7
    $ conda activate seisflows3
-   $ git clone --branch devel  https://github.com/bch0w/seisflows3/
+   $ git clone --branch devel https://github.com/bch0w/seisflows3.git
    $ cd seisflows
    $ pip install -e .
 
+
+To include the waveform measurement capabilities of Pyatoa, you must install 
+separately. See the `Pyatoa documentation 
+<https://pyatoa.readthedocs.io/en/latest/>`__ for the most up to date 
+install instructions. 
+
+.. code:: bash
+
+   $ cd ..
+   $ git clone --branch devel https://github.com/bch0w/pyatoa.git
+   $ cd pyatoa
+   $ pip install .
+
+
 .. note::
-   At an undetermined future date we will migrate this package to the
+   At a not yet determined future date we will migrate this package to the
    more permanent org page: https://github.com/seisflows. Please check back
    to this page to be alerted of this transition.
 
