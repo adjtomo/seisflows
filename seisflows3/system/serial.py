@@ -61,11 +61,13 @@ class Serial(custom_import("system", "base")):
         # execute workflow
         workflow.main()
 
-    def run(self, classname, method, hosts="all", **kwargs):
+    def run(self, classname, method, hosts="all", *args, **kwargs):
         """
         Executes task multiple times in serial
         """
         unix.mkdir(PATH.SYSTEM)
+
+        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
 
         for taskid in range(PAR.NTASK):
             os.environ["SEISFLOWS_TASKID"] = str(taskid)
@@ -77,6 +79,8 @@ class Serial(custom_import("system", "base")):
         """
         Runs task a single time, used for running serial tasks such as smoothing
         """
+        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
+        
         os.environ["SEISFLOWS_TASKID"] = "0"
         func = getattr(__import__("seisflows_" + classname), method)
         func(**kwargs)

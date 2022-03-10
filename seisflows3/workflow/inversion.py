@@ -166,8 +166,8 @@ class Inversion(custom_import("workflow", "base")):
         """
         self.logger.info(msg.main.format("STARTING INVERSION WORKFLOW"))
 
-        # The workflow is a list of functions that can be called dynamically
-        flow = [self.initialize,
+        # The workFLOW is a list of functions that can be called dynamically
+        FLOW = [self.initialize,
                 self.evaluate_gradient,
                 self.write_gradient,
                 self.compute_direction,
@@ -176,7 +176,10 @@ class Inversion(custom_import("workflow", "base")):
                 self.clean
                 ]
         if return_flow:
-            return flow
+            return FLOW
+        else:
+            # FLOW is a constant, when we run, we flow 
+            flow = FLOW
 
         optimize.iter = PAR.BEGIN
 
@@ -184,7 +187,8 @@ class Inversion(custom_import("workflow", "base")):
         if PAR.RESUME_FROM:
             # Determine the index that corresponds to the resume function named
             try:
-                resume_idx = [_.__name__ for _ in flow].index(PAR.RESUME_FROM)
+                resume_idx = [_.__name__ for _ in FLOW].index(PAR.RESUME_FROM)
+                resume_fx = FLOW[resume_idx].__name__
             except ValueError:
                 logger.info(f"{PAR.RESUME_FROM} does not correspond to any "
                             f"workflow functions. Exiting...")
@@ -192,11 +196,11 @@ class Inversion(custom_import("workflow", "base")):
             
             self.logger.info(
                     msg.key.format(f"RESUME ITERATION {optimize.iter} "
-                                   f"(from function "
-                                   f"'{flow[resume_idx].__name__}')")
+                                   f"(from '{resume_fx}')")
                     )
             # Curtail the flow argument during resume_from
-            flow = flow[resume_idx:]
+            flow = FLOW[resume_idx:]
+
         # First-time and one-time intialization of the workflow
         elif optimize.iter == 1:
             self.setup()
@@ -206,13 +210,15 @@ class Inversion(custom_import("workflow", "base")):
             self.logger.info(
                     msg.key.format(f"ITERATION {optimize.iter} / {PAR.END}")
                     )
+            # Execute the functions within the flow
             for func in flow:
                 func()
-                # Forcefully stop the workflow at STOP_AFTER if requested
+
+                # Forcefully stop the workflow at STOP_AFTER (if requested)
                 if PAR.STOP_AFTER and func.__name__ == PAR.STOP_AFTER:
                     self.logger.info(
-                            msg.key.format(f"STOPPED ITERATION {optimize.iter} "
-                                f"AT FUNCTION: '{PAR.STOP_AFTER}'")
+                            msg.main.format(f"STOP ITERATION {optimize.iter} "
+                                            f"AT FUNCTION: '{PAR.STOP_AFTER}'")
                             )
                     sys.exit(0)
             # Finish. Assuming completion of all arguments in flow() 
@@ -221,6 +227,9 @@ class Inversion(custom_import("workflow", "base")):
                     )
             optimize.iter += 1
             self.logger.info(f"SETTING ITERATION = {optimize.iter}")
+    
+            # Reset flow incase 'resume_from' curtailed some of the arguments 
+            flow = FLOW
 
     def setup(self):
         """

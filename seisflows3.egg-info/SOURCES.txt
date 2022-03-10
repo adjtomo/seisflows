@@ -3,6 +3,7 @@ README.md
 setup.py
 seisflows3/__init__.py
 seisflows3/config.py
+seisflows3/seisflows.py
 seisflows3-super/__init__.py
 seisflows3-super/optimize/__init__.py
 seisflows3-super/postprocess/__init__.py
@@ -45,8 +46,6 @@ seisflows3/preprocess/__init__.py
 seisflows3/preprocess/base.py
 seisflows3/preprocess/default.py
 seisflows3/preprocess/pyatoa.py
-seisflows3/scripts/__init__.py
-seisflows3/scripts/seisflows.py
 seisflows3/solver/__init__.py
 seisflows3/solver/base.py
 seisflows3/solver/specfem2d.py

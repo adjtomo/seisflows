@@ -22,6 +22,7 @@ import argparse
 import subprocess
 from glob import glob
 from textwrap import wrap
+from IPython import embed
 
 from seisflows3 import logger
 from seisflows3.tools import unix, tools, msg
@@ -817,18 +818,19 @@ class SeisFlows:
         optimize = sys.modules["seisflows_optimize"]
         workflow = sys.modules["seisflows_workflow"]
 
-        try:
-            import ipdb
-            from IPython import embed
-        except ImportError as e:
-            sys.exit(f"\n\nipdb, IPython are required packages "
-                     f"for debug mode, {e}\n")
+        print("""
+        ==================DEBUG MODE==================
 
-        # > This is SeisFlows' debug mode.
-        ipdb.set_trace(context=5)
+        SeisFlows3's debug mode is an embedded IPython 
+        environment. All modules are loaded by default. 
+        Any changes made here will not be saved unless 
+        you explicitely run 'workflow.checkpoint()'
+
+        ==================DEBUG MODE==================
+        \n"""
+        )
+
         embed(colors="Neutral")
-        # > Type 'n' to access a more useful IPython debugger environment.
-        # > Type 'workflow.checkpoint()' to save any changes made here.
 
     def sempar(self, parameter, value=None, **kwargs):
         """
