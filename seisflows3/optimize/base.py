@@ -85,7 +85,7 @@ class Base:
         self.line_search = None
         self.precond = None
         self.writer = None
-        self.restarted = None
+        self.restarted = 0
 
     @property
     def required(self):

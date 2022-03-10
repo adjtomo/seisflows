@@ -164,7 +164,6 @@ class Inversion(custom_import("workflow", "base")):
         :param return_flow: for CLI tool, simply returns the flow function
             rather than running the workflow. Used for print statements etc.
         """
-        self.logger.info(msg.main.format("STARTING INVERSION WORKFLOW"))
 
         # The workFLOW is a list of functions that can be called dynamically
         FLOW = [self.initialize,
@@ -195,14 +194,15 @@ class Inversion(custom_import("workflow", "base")):
                 sys.exit(-1)
             
             self.logger.info(
-                    msg.key.format(f"RESUME ITERATION {optimize.iter} "
-                                   f"(from '{resume_fx}')")
+                    msg.main.format(f"RESUME ITERATION {optimize.iter} "
+                                    f"FROM FUNCTION: '{resume_fx}'")
                     )
             # Curtail the flow argument during resume_from
             flow = FLOW[resume_idx:]
 
         # First-time and one-time intialization of the workflow
         elif optimize.iter == 1:
+            self.logger.info(msg.main.format("STARTING INVERSION WORKFLOW"))
             self.setup()
 
         # Run the workflow until from the current iteration until PAR.END

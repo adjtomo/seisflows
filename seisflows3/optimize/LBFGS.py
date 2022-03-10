@@ -30,13 +30,9 @@ class LBFGS(custom_import("optimize", "base")):
         :type LBFGS: Class
         :param LBFGS: plugin LBFGS class that controls the machinery of the
             L-BFGS optimization schema
-        :type restarted: int
-        :param restarted: a flag to let Seisflows know if the LBFGS algorithm
-            has been restarted
         """
         super().__init__()
         self.LBFGS = None
-        self.restarted = None
 
     @property
     def required(self):

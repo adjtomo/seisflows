@@ -746,12 +746,16 @@ class SeisFlows:
                           "\n\tAre you sure you want to clean? "
                           "(y/[n]):\n")
 
+        delete = ["logs", "output*", "stats", "scratch"]
+
         if check == "y":
-            for fid in glob(os.path.join(self._args.workdir, "output*")):
-                unix.rm(fid)
-            for fid in glob(os.path.join(self._args.workdir, "*log*")):
-                unix.rm(fid)
-            unix.rm(os.path.join(self._args.workdir, "scratch"))
+            for fid in delete:
+                for fid in glob(os.path.join(self._args.workdir, fid)):
+                    # Safeguards against deleting files that should not be dltd
+                    assert("parameters.yaml" not in fid)
+                    assert(not os.path.islink(fid))
+
+                    unix.rm(fid)
 
     def resume(self, stop_after=None, resume_from=None, force=False,
                **kwargs):
@@ -802,7 +806,7 @@ class SeisFlows:
         Initiate an IPython debugging environment to explore the currently
         active SeisFlows3 environment. Reloads the system modules in an
         interactive environment allowing exploration of the package space.
-        Requires 'ipdb' and 'IPython'
+        Does not allow stepping through of code (not a breakpoint).
         """
         self._register(force=True)
         self._load_modules()

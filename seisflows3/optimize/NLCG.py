@@ -17,6 +17,9 @@ class NLCG(custom_import("optimize", "base")):
     """
     Nonlinear conjugate gradient method
     """
+    # Class-specific logger accessed using self.logger                           
+    logger = logging.getLogger(__name__).getChild(__qualname__)       
+
     def __init__(self):
         """
         These parameters should not be set by the user.
@@ -25,18 +28,10 @@ class NLCG(custom_import("optimize", "base")):
         :type NLCG: Class
         :param NLCG: plugin NLCG class that controls the machinery of the
             NLCG optimization schema
-        :type restarted: int
-        :param restarted: a flag to let Seisflows know if the NLCG algorithm
-            has been restarted
-        :type logger: Logger
-        :param logger: Class-specific logging module, log statements pushed
-            from this logger will be tagged by its specific module/classname
         """
         super().__init__()
         self.NLCG = None
-        self.restarted = None
-        self.logger = \
-            logging.getLogger(self.__name__).getChild(self.__qualname__)
+
     @property
     def required(self):
         """
