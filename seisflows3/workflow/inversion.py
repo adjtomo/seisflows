@@ -182,9 +182,23 @@ class Inversion(custom_import("workflow", "base")):
 
         # Allow workflow resume from a given mid-workflow location
         if PAR.RESUME_FROM:
-            self.resume_from(flow)
+            # Determine the index that corresponds to the resume function named
+            try:
+                resume_idx = [_.__name__ for _ in flow].index(PAR.RESUME_FROM)
+            except ValueError:
+                logger.info(f"{PAR.RESUME_FROM} does not correspond to any "
+                            f"workflow functions. Exiting...")
+                sys.exit(-1)
+            
+            self.logger.info(
+                    msg.key.format(f"RESUME ITERATION {optimize.iter} "
+                                   f"(from function "
+                                   f"'{flow[resume_idx].__name__}')")
+                    )
+            # Curtail the flow argument during resume_from
+            flow = flow[resume_idx:]
+        # First-time and one-time intialization of the workflow
         elif optimize.iter == 1:
-            # First-time and one-time intialization of the workflow
             self.setup()
 
         # Run the workflow until from the current iteration until PAR.END
@@ -194,42 +208,19 @@ class Inversion(custom_import("workflow", "base")):
                     )
             for func in flow:
                 func()
-                # Stop the workflow at STOP_AFTER if requested
+                # Forcefully stop the workflow at STOP_AFTER if requested
                 if PAR.STOP_AFTER and func.__name__ == PAR.STOP_AFTER:
-                    self.logger.info(f"STOPPED ITERATION {optimize.iter} "
-                                     f"AT FUNCTION {PAR.STOP_AFTER}")
-                    break
+                    self.logger.info(
+                            msg.key.format(f"STOPPED ITERATION {optimize.iter} "
+                                f"AT FUNCTION: '{PAR.STOP_AFTER}'")
+                            )
+                    sys.exit(0)
+            # Finish. Assuming completion of all arguments in flow() 
             self.logger.info(
                     msg.main.format(f"FINISHED ITERATION {optimize.iter}")
                     )
             optimize.iter += 1
-
-    def resume_from(self, flow):
-        """
-        Resume the workflow from a given function, proceed in the same fashion 
-        as main until the end of the current iteration.
-
-        :type flow: list of functions
-        :param flow: the order of functions defined in main(), which should be
-            parsed to determine where workflow should be resumed from
-        """ 
-        # Determine the index that corresponds to the resume function named
-        try:
-            resume_idx = [_.__name__ for _ in flow].index(PAR.RESUME_FROM)
-        except ValueError:
-            logger.info(f"{PAR.RESUME_FROM} does not correspond to any "
-                        f"workflow functions. Exiting...")
-            sys.exit(-1)
-
-        logger.info(f"RESUME ITERATION {optimize.iter} (from function "
-                    f"{flow[resume_idx].__name__})")
-        
-        for func in flow[resume_idx:]:
-            func()
-
-        logger.info(f"FINISHED ITERATION {optimize.iter}")
-        optimize.iter += 1
-        logger.info(f"SETTING ITERATION = {optimize.iter}")
+            self.logger.info(f"SETTING ITERATION = {optimize.iter}")
 
     def setup(self):
         """
