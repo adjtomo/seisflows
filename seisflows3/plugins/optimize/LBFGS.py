@@ -231,40 +231,8 @@ class LBFGS:
 
         return r
 
-    def restart(self):
-        """
-        Discards history from memmaps and resets counters
-        """
-        self.iter = 1
-        self.memory_used = 0
 
-        unix.cd(self.path)
-        s = np.memmap(filename="LBFGS/S", mode="r+")
-        y = np.memmap(filename="LBFGS/Y", mode="r+")
-        s[:] = 0.
-        y[:] = 0.
 
-    def check_status(self, g, r):
-        """
-        Check the status of the apply(), determine if restart necessary
 
-        :type g: np.array
-        :param g: current gradient direction
-        :type r: np.array
-        :param r: new gradient direction
-        :rtype: int
-        :return: status based on status check
-        """
-        theta = 180. * np.pi ** -1 * angle(g, r)
-        logger.info(f"new search direction is {theta:.2f}deg from current")
-
-        if not 0. < theta < 90.:
-            logger.info("restarting LBFGS... [not a descent direction]")
-            return 1
-        elif theta > 90. - self.thresh:
-            logger.info("restarting LBFGS... [practical safeguard]")
-            return 1
-        else:
-            return 0
 
 

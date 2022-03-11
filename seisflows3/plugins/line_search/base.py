@@ -2,7 +2,10 @@
 """
 This is the Base class for seisflows.plugins.line_search
 
-Line search is called on by the optimization procedure
+Line search is called on by the optimization procedure and should not really
+have any agency (i.e. it should not be able to iterate its own step count etc.,
+this should be completely left to the optimization algorithm to keep everything
+in one place)
 """
 import os
 import numpy as np
@@ -32,17 +35,17 @@ class Base:
     # Class-specific logger accessed using self.logger
     logger = logging.getLogger(__name__).getChild(__qualname__)
 
-    def __init__(self, step_count_max=10, step_len_max=None, path=None):
+    def __init__(self, step_count_max, step_len_max, log_file):
         """
 
         :type step_count_max: int
         :param step_count_max: maximum number of step counts before changing
-            line search behavior.
+            line search behavior. set by PAR.STEP_COUNT_MAX
         :type step_len_max: int
         :param step_len_max: maximum length of the step, defaults to infinity,
-            that is unbounded step length
-        :type path: str
-        :param path: path to set the writer to, defaults to current dir
+            that is unbounded step length. set by PAR.STEP_LEN_MAX
+        :type log_file: str
+        :param log_file: path to write line search stats to. set by optimize.setup()
         """
         # Set maximum number of trial steps
         self.step_count_max = step_count_max
@@ -53,8 +56,8 @@ class Base:
         else:
             self.step_len_max = step_len_max
 
-        # Prepare output log, by default set the path to the current dir
-        self.writer = Writer(path or os.path.abspath("."))
+        # Write header information to line search file
+        self.write(path=log_file)
 
         # Prepare lists for line search history
         self.func_vals = []
@@ -63,11 +66,13 @@ class Base:
         self.gtp = []
         self.step_count = 0
 
-    def initialize(self, step_len, func_val, gtg, gtp):
+    def initialize(self, iter, step_len, func_val, gtg, gtp):
         """
         Initialize a new search from step count 0 and calculate the step
         direction and length
 
+        :type iter: int
+        :param iter: current iteration defined by OPTIMIZE.iter
         :type step_len: float
         :param step_len: initial step length determined by optimization
         :type func_val: float
@@ -87,19 +92,22 @@ class Base:
         self.gtg += [gtg]
         self.gtp += [gtp]
 
-        self.writer(step_len, func_val)
+        # Write the current misfit evaluation to disk
+        self.write(iter=iter, step_len=step_len, func_val=func_val)
 
         # Call calculate step, must be implemented by subclass
         alpha, status = self.calculate_step()
 
         return alpha, status
 
-    def update(self, step_len, func_val):
+    def update(self, iter, step_len, func_val):
         """
         Update search history by appending internal attributes, writing the
         current list of step lengths and function evaluations, and calculating a
         new step length
 
+        :type iter: int
+        :param iter: current iteration defined by OPTIMIZE.iter
         :type step_len: float
         :param step_len: step length determined by optimization
         :type func_val: float
@@ -114,7 +122,8 @@ class Base:
         self.step_lens += [step_len]
         self.func_vals += [func_val]
 
-        self.writer(step_len, func_val)
+        # Write the current misfit evaluation to disk
+        self.write(iter=iter, step_len=step_len, func_val=func_val)
 
         # Call calcuate step, must be implemented by subclass
         alpha, status = self.calculate_step()
@@ -143,8 +152,8 @@ class Base:
         # First step treated differently
         if len(self.step_lens) <= 1:
             self.clear_history()
-            self.writer.iter = 0
-    
+            # self.writer.iter = 0
+
         else:
             # Wind back dot products by one
             self.gtg = self.gtg[:-1]
@@ -156,7 +165,41 @@ class Base:
             self.func_vals = self.func_vals[:original_idx]
             
             # Step back the writer as initialize() will step it forward 
-            self.writer.iter -= 1
+            # self.writer.iter -= 1
+
+    def write(self, path, iter=None, step_len=None, func_val=None):
+        """
+        Write the line search history into a formatted text file that looks
+        something like this:
+
+            ITER     STEPLEN     MISFIT
+        ========  ========== ==========
+              1            0          1
+
+        :type path: str
+        :param path: path to write the line search history to. by defaul this
+            should be defined by OPTIMIZE.setup()
+        :type iter: int
+        :param iter: the current iteration defined by OPTIMIZATION.iter
+        :type step_len: float
+        :param step_len: Current step length of the line search, also known
+            as 'alpha' in the optimization algorithm
+        :type func_val: float
+        :param func_val: the function evaluation, i.e., the misfit, associated
+            with the given step length (alpha)
+        """
+        if not os.path.exists(path):
+            # Write out the header of the file to a NEW FILE
+            self.logger.info(f"writing line search history file: {path}")
+            with open(path, "w") as f:
+                f.write(f"{'ITER':^10}  {'STEPLEN':^10}  {'MISFIT':^10}\n")
+                f.write(f"{'='*10}  {'='*10}  {'='*10}\n")
+        else:
+            with open(path, "a") as f:
+                # Aesthetic choice, don't repeat iteration numbers in the file
+                if steplen == 0:
+                    iter = ""
+                f.write(f"{iter:>10}  {step_len:10.3e}  {func_val:10.3e}\n")
 
     def search_history(self, sort=True):
         """
@@ -201,78 +244,79 @@ class Base:
         """
         raise NotImplementedError("Must be implemented by subclass")
 
-
-class Writer(object):
-    """
-    Utility for writing one or more columns to text file.
-    Used to write the line search history into a text file with a set format.
-    """
-    def __init__(self, path="./stats/output.optim"):
-        """
-        Initiate the Writer class. Internally used `iter` variable references
-        the current iteration of the workflow.
-
-        !!! This should be changed, it's confusing to have multiple values for
-        !!! iter floating around. Ideally it would reference optimize.iter
-
-        :type path: str
-        :param path: path to the file that the writer will write to
-        """
-        self.iter = 0
-        self.filename = os.path.abspath(path)
-        self.write_header()
-
-    def __call__(self, steplen=None, funcval=None):
-        """
-        When the function is called, it writes to self.filename
-
-        :type steplen: float
-        :param steplen: step length
-        :type funcval: float
-        :param funcval: misfit functional value for given step
-        """
-        iter_ = "{iteration:10d}  {step_length:10.3e}  {function_value:10.3e}\n"
-        step_ = "{space:s}  {step_length:10.3e}  {function_value:10.3e}\n"
-
-        with open(self.filename, "a") as fileobj:
-            # First iteration or step length of 0 means new iteration
-            if self.iter == 0 or steplen == 0:
-                self.iter += 1
-                fileobj.write(iter_.format(iteration=self.iter,
-                                           step_length=steplen,
-                                           function_value=funcval)
-                              )
-            # Non-new iteration means trial step lengths, do not iterate
-            else:
-                fileobj.write(step_.format(space=" " * 10,
-                                           step_length=steplen,
-                                           function_value=funcval)
-                              )
-
-    def write_header(self):
-        """
-        Write the header of the text file
-        """
-        headers = ["ITER", "STEPLEN", "MISFIT"]
-
-        with open(self.filename, "a") as fileobj:
-            # Write the headers
-            for header in headers:
-                fileobj.write(f"{header:>10s}  ")
-            fileobj.write('\n')
-            # Write some separators
-            for _ in range(len(headers)):
-                separator = "=" * 10
-                fileobj.write(f"{separator:>10s}  ")
-
-            fileobj.write('\n')
-
-    def newline(self):
-        """
-        Write a new line to the text file
-        """
-        with open(self.filename, "a") as fileobj:
-            fileobj.write("\n")
+#
+#
+# class Writer(object):
+#     """
+#     Utility for writing one or more columns to text file.
+#     Used to write the line search history into a text file with a set format.
+#     """
+#     def __init__(self, path="./stats/output.optim"):
+#         """
+#         Initiate the Writer class. Internally used `iter` variable references
+#         the current iteration of the workflow.
+#
+#         !!! This should be changed, it's confusing to have multiple values for
+#         !!! iter floating around. Ideally it would reference optimize.iter
+#
+#         :type path: str
+#         :param path: path to the file that the writer will write to
+#         """
+#         self.iter = 0
+#         self.filename = os.path.abspath(path)
+#         self.write_header()
+#
+#     def __call__(self, steplen=None, funcval=None):
+#         """
+#         When the function is called, it writes to self.filename
+#
+#         :type steplen: float
+#         :param steplen: step length
+#         :type funcval: float
+#         :param funcval: misfit functional value for given step
+#         """
+#         iter_ = "{iteration:10d}  {step_length:10.3e}  {function_value:10.3e}\n"
+#         step_ = "{space:s}  {step_length:10.3e}  {function_value:10.3e}\n"
+#
+#         with open(self.filename, "a") as fileobj:
+#             # First iteration or step length of 0 means new iteration
+#             if self.iter == 0 or steplen == 0:
+#                 self.iter += 1
+#                 fileobj.write(iter_.format(iteration=self.iter,
+#                                            step_length=steplen,
+#                                            function_value=funcval)
+#                               )
+#             # Non-new iteration means trial step lengths, do not iterate
+#             else:
+#                 fileobj.write(step_.format(space=" " * 10,
+#                                            step_length=steplen,
+#                                            function_value=funcval)
+#                               )
+#
+#     def write_header(self):
+#         """
+#         Write the header of the text file
+#         """
+#         headers = ["ITER", "STEPLEN", "MISFIT"]
+#
+#         with open(self.filename, "a") as fileobj:
+#             # Write the headers
+#             for header in headers:
+#                 fileobj.write(f"{header:>10s}  ")
+#             fileobj.write('\n')
+#             # Write some separators
+#             for _ in range(len(headers)):
+#                 separator = "=" * 10
+#                 fileobj.write(f"{separator:>10s}  ")
+#
+#             fileobj.write('\n')
+#
+#     def newline(self):
+#         """
+#         Write a new line to the text file
+#         """
+#         with open(self.filename, "a") as fileobj:
+#             fileobj.write("\n")
 
 
 

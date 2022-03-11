@@ -77,7 +77,7 @@ class NLCG(custom_import("optimize", "base")):
         """
         # g_new = self.load('g_new')
         p_new, self.restarted = self.NLCG()
-        self.save('p_new', p_new)
+        self.save(self.p_new, p_new)
 
     def restart(self):
         """

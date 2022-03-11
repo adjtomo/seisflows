@@ -46,17 +46,6 @@ class Base:
         manifest themselves through stagnation of the nonlinear optimization
         algorithm.
 
-    Variables:
-        m_new - current model
-        m_old - previous model
-        m_try - line search model
-        f_new - current objective function value
-        f_old - previous objective function value
-        f_try - line search function value
-        g_new - current gradient direction
-        g_old - previous gradient direction
-        p_new - current search direction
-        p_old - previous search direction
     """
     # Class-specific logger accessed using self.logger
     logger = logging.getLogger(__name__).getChild(__qualname__)
@@ -80,12 +69,50 @@ class Base:
         :type restarted: int
         :param restarted: a flag signalling if the optimization algorithm has
             been restarted recently
+
+        :param m_new: current model
+        :param m_old: previous model
+        :param m_try: line search model
+        :param f_new: current objective function value
+        :param f_old: previous objective function value
+        :param f_try: line search function value
+        :param g_new: current gradient direction
+        :param g_old: previous gradient direction
+        :param p_new: current search direction
+        :param p_old: previous search direction
         """
-        self.iter = None
+        self.iter = 1
         self.line_search = None
         self.precond = None
         self.writer = None
         self.restarted = 0
+
+        # Define the names of output stats logs to keep all paths in one place
+        self.log_line_search = "line_search.txt"
+        self.log_factor = "factor.txt"
+        self.log_gradient_norm_L1 = "gradient_norm_L1.txt"
+        self.log_gradient_norm_L2 = "gradient_norm_L2.txt"
+        self.log_misfit = "misfit.txt"
+        self.log_restarted = "restarted.txt"
+        self.log_slope = "slope.txt"
+        self.log_step_count = "step_count.txt"
+        self.log_step_length = "step_length.txt"
+        self.log_theta = "theta.txt"
+
+        # Define the names of variables used to keep track of models etc. so
+        # that we don't have multiple strings floating around defining the same
+        # thing
+        self.m_new = "m_new"
+        self.m_old = "m_old"
+        self.m_try = "m_try"
+        self.f_new = "f_ew"
+        self.f_old = "f_old"
+        self.f_try = "f_try"
+        self.g_new = "g_new"
+        self.g_old = "g_old"
+        self.p_new = "p_new"
+        self.p_old = "p_old"
+        self.alpha = "alpha"
 
     @property
     def required(self):
@@ -162,7 +189,7 @@ class Base:
         # Prepare line search machinery
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
             step_count_max=PAR.STEPCOUNTMAX,
-            path=os.path.join(path_stats, "output.optim"),
+            log_file=os.path.join(path_stats, self.log_line_search),
         )
 
         # Prepare preconditioner
@@ -172,15 +199,15 @@ class Base:
             self.precond = None
 
         # Ensure that line search step count starts at 0 (workflow.intialize)
-        self.write_stats("step_count", 0)
+        self.write_stats(self.log_step_count, 0)
         # self.writer = Writer(path=path_stats)
 
         # Prepare scratch directory and save initial model
         unix.mkdir(PATH.OPTIMIZE)
         if "MODEL_INIT" in PATH:
             m_new = solver.merge(solver.load(PATH.MODEL_INIT))
-            self.save("m_new", m_new)
-            self.check_model_parameters(m_new, "m_new")
+            self.save(self.m_new, m_new)
+            self.check_model_parameters(m_new, self.m_new)
 
     @property
     def eval_str(self):
@@ -205,17 +232,19 @@ class Base:
         """
         msg.whoami(type(self), prepend="computing search direction with ")
 
-        g_new = self.load("g_new")
+        g_new = self.load(self.g_new)
         if self.precond is not None:
             p_new = -1 * self.precond(g_new)
         else:
             p_new = -1 * g_new
-        self.save("p_new", p_new)
+        self.save(self.p_new, p_new)
 
     def check_model_parameters(self, m, tag):
         """
         Check to ensure that the model parameters fall within the guidelines 
         of the solver. Print off min/max model parameters for the User.
+
+        !!! Clean this up
         
         :type m: np.array
         :param m: model to check parameters of 
@@ -251,10 +280,10 @@ class Base:
         Determines first step length in line search
         """
         # Load in and calucate the necessary variables
-        m = self.load('m_new')
-        g = self.load('g_new')
-        p = self.load('p_new')
-        f = self.loadtxt('f_new')
+        m = self.load(self.m_new)
+        g = self.load(self.g_new)
+        p = self.load(self.p_new)
+        f = self.loadtxt(self.f_new)
         norm_m = max(abs(m))
         norm_p = max(abs(p))
         gtg = self.dot(g, g)
@@ -269,8 +298,9 @@ class Base:
             self.line_search.step_len_max = PAR.STEPLENMAX * norm_m / norm_p
 
         # Determine initial step length
-        alpha, _ = self.line_search.initialize(step_len=0., func_val=f, gtg=gtg, 
-                                               gtp=gtp)
+        alpha, _ = self.line_search.initialize(iter=self.iter, step_len=0.,
+                                               func_val=f, gtg=gtg, gtp=gtp
+                                               )
 
         # Optional initial step length override
         if PAR.STEPLENINIT and len(self.line_search.step_lens) <= 1:
@@ -283,11 +313,11 @@ class Base:
         m_try = m + alpha * p
 
         # Write model corresponding to chosen step length
-        self.save("m_try", m_try)
-        self.savetxt("alpha", alpha)
+        self.save(self.m_try, m_try)
+        self.savetxt(self.alpha, alpha)
 
         # Check the new model and update the User on a few parameters
-        self.check_model_parameters(m_try, "m_try")
+        self.check_model_parameters(m_try, self.m_try)
 
     def update_search(self):
         """
@@ -298,17 +328,19 @@ class Base:
             status == 0 : not finished
             status < 0  : failed
         """
-        alpha, status = self.line_search.update(self.loadtxt("alpha"),
-                                                self.loadtxt("f_try"))
+        alpha, status = self.line_search.update(
+            iter=self.iter, step_len=self.loadtxt(self.alpha),
+            func_val=self.loadtxt(self.f_try)
+        )
 
         # write model corresponding to chosen step length
         if status >= 0:
-            m = self.load("m_new")
-            p = self.load("p_new")
-            self.savetxt("alpha", alpha)
+            m = self.load(self.m_new)
+            p = self.load(self.p_new)
+            self.savetxt(self.alpha, alpha)
             m_try = m + alpha * p
-            self.save("m_try", m_try)
-            self.check_model_parameters(m_try, "m_try")
+            self.save(self.m_try, m_try)
+            self.check_model_parameters(m_try, self.m_try)
 
         return status
 
@@ -320,8 +352,8 @@ class Base:
         sets up new current parameters and writes statistic outputs
         """
         # m = self.load('m_new')  # unusued variable
-        g = self.load('g_new')
-        p = self.load('p_new')
+        g = self.load(self.g_new)
+        p = self.load(self.p_new)
         x = self.line_search.search_history()[0]
         f = self.line_search.search_history()[1]
 
@@ -329,33 +361,38 @@ class Base:
         unix.cd(PATH.OPTIMIZE)
         # Remove the old model parameters
         if self.iter > 1:
-            for fid in ["m_old", "f_old", "g_old", "p_old", "s_old"]:
+            for fid in [self.m_old, self.f_old, self.g_old, self.p_old]:
                 unix.rm(fid)
 
         # Rename current model parameters to "_old" for new search
-        unix.mv("m_new", "m_old")
-        unix.mv("f_new", "f_old")
-        unix.mv("g_new", "g_old")
-        unix.mv("p_new", "p_old")
+        unix.mv(self.m_new, self.m_old)
+        unix.mv(self.f_new, self.f_old)
+        unix.mv(self.g_new, self.g_old)
+        unix.mv(self.p_new, self.p_old)
 
         # Setup the current model parameters
-        unix.mv("m_try", "m_new")
-        self.savetxt("f_new", f.min())
+        unix.mv(self.m_try, self.m_new)
+        self.savetxt(self.f_new, f.min())
 
-        # Output the latest statistics to disk
-        self.write_stats("factor",
+        # Output the latest statistics to text files
+        # !!! Describe what stats are being written here
+        self.write_stats(filename=self.log_factor, value=
                          -self.dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
                          )
-        self.write_stats("gradient_norm_L1", np.linalg.norm(g, 1))
-        self.write_stats("gradient_norm_L2", np.linalg.norm(g, 2))
-        self.write_stats("misfit", f[0])
-        self.write_stats("restarted", self.restarted)
-        self.write_stats("slope", (f[1] - f[0]) / (x[1] - x[0]))
-        self.write_stats("step_count", self.line_search.step_count)
-        self.write_stats("step_length", x[f.argmin()])
-        self.write_stats("theta", 180. * np.pi ** -1 * angle(p, -g))
-
-        self.line_search.writer.newline()
+        self.write_stats(filename=self.log_gradient_norm_L1,
+                         value=np.linalg.norm(g, 1))
+        self.write_stats(filename=self.log_gradient_norm_L2,
+                         value=np.linalg.norm(g, 2))
+        self.write_stats(filename=self.log_misfit, value=f[0])
+        self.write_stats(filename=self.log_restarted, value=self.restarted)
+        self.write_stats(filename=self.log_slope,
+                         value=(f[1] - f[0]) / (x[1] - x[0]))
+        self.write_stats(filename=self.log_step_count,
+                         value=self.line_search.step_count)
+        self.write_stats(filename=self.log_step_length,
+                         value=x[f.argmin()])
+        self.write_stats(filename=self.log_theta,
+                         value=180. * np.pi ** -1 * angle(p, -g))
 
         # Reset line search step count to 0 for next iteration
         self.line_search.step_count = 0
@@ -366,8 +403,8 @@ class Base:
         by checking, in effect, if the search direction was the same as gradient
         direction
         """
-        g = self.load("g_new")
-        p = self.load("p_new")
+        g = self.load(self.g_new)
+        p = self.load(self.p_new)
         theta = angle(p, -g)
 
         self.logger.debug(f"theta: {theta:6.3f}")
@@ -385,15 +422,14 @@ class Base:
         nonlinear optimization algorithm in an attempt to recover from
         numerical stagnation.
         """
-        g = self.load("g_new")
-        self.save("p_new", -g)
+        g = self.load(self.g_new)
+        self.save(self.p_new, -g)
         self.line_search.clear_history()
         self.restarted = 1
-        self.line_search.writer.iter -= 1
-        self.line_search.writer.newline()
+        # self.line_search.writer.iter -= 1
+        # self.line_search.writer.newline()
 
-    @staticmethod
-    def write_stats(filename, value, format="e"):
+    def write_stats(self, filename, value, format="e"):
         """
         Simplified write function to append values to text files in the
         STATSDIR. Used because stats line search information can be overwritten
@@ -407,7 +443,9 @@ class Base:
         :type format: str
         :param format: string formatter for value
         """
-        fid = os.path.join(CFGPATHS.STATSDIR, filename)
+        fid = os.path.join(CFGPATHS.STATSDIR, {filename})
+        if not os.path.exists(fid):
+            self.logger.debug(f"creating stats file: {fid}")
         with open(fid, "a") as f:
             f.write(f"{value:{format}}\n")
 
