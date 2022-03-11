@@ -1,15 +1,26 @@
-Development Plan
+Code Development Plan
 ===========================
-A short- and long-term to-do list for SeisFlows3 development. This is a community document meant to highlight what
-the SeisFlows3 developers deem as priorities for the package, allowing community members to target their contributions
-more effectively.
+Based on the `Computational Infrastructure for Geodynamics
+<https://geodynamics.org/>`__ (CIG) `Software Development Best Practices 
+<https://github.com/geodynamics/best_practices/blob/master/
+SoftwareDevelopmentBestPractices.md>`__ we propose the following (yearly updated)
+Code Development Plan (CDP) which lays out prioritization of new features and
+estimated timetables for their implementation.
 
-The following plan sets the roadmap for the one year mark (11/22). The main objective for this dev plan is a
-stable release of SeisFlows3, featuring a comprehensive documentation page, extensive unit and integration testing, and
+
+A short- and long-term to-do list for SeisFlows3 development. This is a 
+community document meant to highlight what the SeisFlows3 developers deem as 
+priorities for the package, allowing community members to target their 
+contributions more effectively.
+
+The following plan sets the roadmap for the one year mark (11/22). The main 
+objective for this dev plan is a stable release of SeisFlows3, featuring a 
+comprehensive documentation page, extensive unit and integration testing, and
 usable working examples for new users.
 
-Expected difficulty (i.e., easy, medium, hard) of each problem is provided in bracketed terms, e.g., [easy].
-This difficulty is subjective and based on required Python/coding experience, package familiarity, and time required.
+Expected difficulty (i.e., easy, medium, hard) of each problem is provided in 
+bracketed terms, e.g., [easy]. This difficulty is subjective and based on 
+required Python/coding experience, package familiarity, and time required.
 Tasks are also categorized, e.g., (general), when possible.
 
 Version 1.0 (Updated Nov. 18, 2021)

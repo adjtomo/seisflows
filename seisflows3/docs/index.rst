@@ -91,6 +91,7 @@ workflow tutorials.
 
    overview
    background
+   citeme
 
 .. toctree::
    :maxdepth: 1
@@ -107,15 +108,14 @@ workflow tutorials.
    :hidden:
    :caption: Examples and Tutorials
 
-   tutorials
-
+   specfem2d_example
+    
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: Additional Material
+   :caption: Development
 
-   citeme
    development
-   devplan
+   code_dev_plan
    seisflows_api
 

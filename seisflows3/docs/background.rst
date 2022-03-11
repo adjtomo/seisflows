@@ -1,4 +1,4 @@
-Background Knowledge
+Background
 ==========================
 Understanding what SeisFlows is meant for and how it works requires a level of
 background understanding. Here we provide brief explanations aimed to providing
