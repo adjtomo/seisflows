@@ -10,7 +10,7 @@ import logging
 import numpy as np
 from glob import glob
 
-from seisflows3.config import custom_import
+from seisflows3.config import custom_import, CFGPATHS
 from seisflows3.tools import msg, unix
 from seisflows3.tools.tools import exists
 from seisflows3.config import save, SeisFlowsPathsParameters
@@ -112,7 +112,7 @@ class Inversion(custom_import("workflow", "base")):
                 docstr="path to data available to workflow")
 
         sf.path("FUNC", required=False,
-                default=os.path.join(PATH.SCRATCH, "evalfunc"),
+                default=os.path.join(PATH.SCRATCH, CFGPATHS.SCRATCHDIR),
                 docstr="scratch path to store data related to function "
                        "evaluations")
 

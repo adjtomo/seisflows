@@ -44,6 +44,15 @@ PACKAGES = ["seisflows3", "seisflows3-super"]
 # The location of this config file, which is the main repository
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
+# Define a package-wide default directory and file naming schema. This will
+# be returned as a Dict() object, defined below.
+CFGPATHS = dict(
+    PAR_FILE= "parameters.yaml",
+    SCRATCHDIR = "scratch",
+    STATSDIR = "stats",
+    OUTPUTDIR = "output",
+    LOGFILE = "output_sf3.txt"
+)
 """
 !!! ^^^ WARNING ^^^ !!!
 """
@@ -481,3 +490,6 @@ def _unpickle_method(func_name, obj, cls):
 
 copyreg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
+# Because we defined Dict inside this file, we need to convert our CFGPATHS
+# to a Dict at the end of the file to allow direct variable access
+CFGPATHS = Dict(CFGPATHS)

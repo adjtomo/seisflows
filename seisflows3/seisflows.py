@@ -27,8 +27,9 @@ from IPython import embed
 from seisflows3 import logger
 from seisflows3.tools import unix, tools, msg
 from seisflows3.tools.tools import loadyaml, loadpy
-from seisflows3.config import (init_seisflows, format_paths, Dict, custom_import,
-                               NAMES, PACKAGES, ROOT_DIR)
+from seisflows3.config import (init_seisflows, format_paths, Dict,
+                               custom_import, NAMES, PACKAGES, ROOT_DIR,
+                               CFGPATHS)
 
 
 def sfparser():
@@ -73,8 +74,8 @@ def sfparser():
     parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd(),
                         help="The SeisFlows working directory, default: cwd")
     parser.add_argument("-p", "--parameter_file", nargs="?",
-                        default="parameters.yaml",
-                        help="Parameters file, default: 'parameters.yaml'")
+                        default=CFGPATHS.PAR_FILE,
+                        help=f"Parameters file, default: '{CFGPATHS.PAR_FILE}'")
     parser.add_argument("--path_file", nargs="?", default="paths.py",
                         help="Legacy path file, default: 'paths.py'")
 
@@ -164,7 +165,7 @@ def sfparser():
                          help="Skip the clean and submit precheck statements")
     # =========================================================================
     clean = subparser.add_parser(
-        "clean", help="Remove active working environment",
+        "clean", help="Remove files relating to an active working environment",
         description="""Delete all SeisFlows related files in the working 
         directory, except for the parameter file."""
     )
@@ -173,7 +174,7 @@ def sfparser():
                        "function")
     # =========================================================================
     par = subparser.add_parser(
-        "par", help="View and edit parameter file",
+        "par", help="View and edit SeisFlows3 parameter file",
         description="""Directly edit values in the parameter file by providing
         the parameter and corresponding value. If no value is provided, will 
         simply print out the current value of the given parameter. Works also
@@ -225,8 +226,12 @@ Check parameters, state, or values of an active environment
         description="""
 Print information related to an active environment
 
-    modules    Print available module names for all available packages
-    flow       Print out the workflow.main() flow arguments
+    module        List available module names for all available packages
+    flow          Print out the workflow.main() flow arguments
+    inherit       Track inheritance chain for all modules, determine method 
+                  ownership for a given function. 
+                  seisflows print inherit {optional module} {optional function}
+                  e.g., seisflows inherit workflow main
                     """,
         help="Print information related to an active environment")
 
@@ -237,29 +242,38 @@ Print information related to an active environment
     # =========================================================================
     subparser.add_parser("convert", help="Convert model file format", )
     # =========================================================================
-    subparser.add_parser("reset", help="Clean current and submit new workflow",
-                         description="Equal to running seisflows clean; "
-                                     "seisflows submit")
+    reset = subparser.add_parser(
+        "reset", formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="Reset modules within an active state", description="""
+Occasionally the machinery of a given module must be reset within an active 
+working state before the workflow can be resumed
+
+    line_search     Reset line search, step count returns to 1
+                         """)
+    reset.add_argument("choice", type=str, nargs="?", default=None,
+                       help="Choice of module/component to reset")
+    reset.add_argument("args", type=str, nargs="*",
+                        help="Generic arguments passed to reset functions")
     # =========================================================================
-    inspect = subparser.add_parser(
-        "inspect", help="View inheritenace and ownership",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="""\
-Display the order of inheritance for one or all of the SeisFlows modules.
-e.g. 'seisflows inspect solver'
-
-  OR
-
-Determine method ownership for a given function, listing the exact package and 
-module that defined it. This functionality occurs if both 'name' and 'func' are 
-provided as positional arguments.
-e.g. 'seisflows inspect solver eval_func'
-"""
-    )
-    inspect.add_argument("name", type=str,  nargs="?", default=None,
-                         help="Optional name of SeisFlows module to inspect")
-    inspect.add_argument("func", type=str,  nargs="?", default=None,
-                         help="Optional method name to inspect ownership for")
+#     inspect = subparser.add_parser(
+#         "inspect", help="View inheritenace and ownership",
+#         formatter_class=argparse.RawDescriptionHelpFormatter,
+#         description="""\
+# Display the order of inheritance for one or all of the SeisFlows modules.
+# e.g. 'seisflows inspect solver'
+#
+#   OR
+#
+# n, listing the exact package and
+# module that defined it. This functionality occurs if both 'name' and 'func' are
+# provided as positional arguments.
+# e.g. 'seisflows inspect solver eval_func'
+# """
+#     )
+#     inspect.add_argument("name", type=str,  nargs="?", default=None,
+#                          help="Optional name of SeisFlows module to inspect")
+#     inspect.add_argument("func", type=str,  nargs="?", default=None,
+#                          help="Optional method name to inspect ownership for")
     # =========================================================================
     subparser.add_parser(
         "debug", help="Start interactive debug environment",
@@ -293,7 +307,7 @@ e.g. 'seisflows inspect solver eval_func'
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
                       "edit": edit, "sempar": sempar, "clean": clean, 
-                      "restart": restart, "print": print_}
+                      "restart": restart, "print": print_, "reset": reset}
     if parser.parse_args().command in subparser_dict:
         return parser, subparser_dict[parser.parse_args().command]
     else:
@@ -416,6 +430,7 @@ class SeisFlows:
                 paths = {}
         #  Allow for legacy .py parameter file naming
         elif self._args.parameter_file.endwith(".py"):
+            # !!! move this warning into tools/msg
             warnings.warn(".py parameter and path files are deprecated in "
                           "favor of a .yaml parameter file. Please consider "
                           "switching as the use of legacy .py files may have "
@@ -435,6 +450,10 @@ class SeisFlows:
         # WORKDIR needs to be set here as it's expected by most modules
         if "WORKDIR" not in paths:
             paths["WORKDIR"] = self._args.workdir
+
+        # Parameter file is set here as well so that it can be user-defined
+        if "PAR_FILE" not in paths:
+            paths["PAR_FILE"] = self._args.parameter_file
 
         # For submit() and resume(), provide a dialogue to stdout requiring a
         # visual pre-check of parameters before submitting workflow
@@ -762,7 +781,7 @@ class SeisFlows:
         """
         Resume a previously started workflow by loading the module pickle files
         and submitting the workflow from where it left off.
-                :type stop_after: str
+        :type stop_after: str
         :param stop_after: allow the function to overwrite the 'STOP_AFTER'
             parameter in the parameter file, which dictates how far the workflow
             will proceed until stopping. Must match flow function names in
@@ -1108,8 +1127,9 @@ class SeisFlows:
         :type choice: str
         :param choice: underlying sub-function to choose
         """
-        acceptable_args = {"modules": self._print_modules,
-                           "flow": self._print_flow}
+        acceptable_args = {"module": self._print_modules,
+                           "flow": self._print_flow,
+                           "inherit": self._print_inheritance}
 
         # Ensure that help message is thrown for empty commands
         if choice not in acceptable_args.keys():
@@ -1132,37 +1152,6 @@ class SeisFlows:
         self._register(force=True)
         self._load_modules()
         acceptable_args[choice](*self._args.args, **kwargs)
-
-    def inspect(self, name=None, func=None, **kwargs):
-        """
-        Inspect inheritance hierarchy of classes, methods defined by SeisFlows.
-        Useful when developing or debugging, facilitates identification of
-        the package top-level.
-
-        USAGE
-
-            seisflows inspect [name] [method]
-
-            To view overall hierarchy for all names in the SeisFlows3 namespace
-
-                seisflows inspect
-
-            To check the inheritance hierarchy of the 'workflow' module
-
-                seisflows inspect workflow
-
-            To check which class defined a given method, e.g. the 'eval_func'
-            method attributed to the solver module
-
-                seisflows inspect solver eval_func
-
-        """
-        self._register(force=True)
-        self._load_modules()
-        if func is None:
-            self._inspect_module_hierarchy(name, **kwargs)
-        else:
-            self._inspect_class_that_defined_method(name, func, **kwargs)
 
     def convert(self, name, path=None, **kwargs):
         """
@@ -1334,6 +1323,37 @@ class SeisFlows:
         print(f"\n\tFLOW ARGUMENTS")
         print(f"\t{type(workflow)}\n")
         print(f"\t{flow_str}\n")
+
+    def _print_inheritance(self, name=None, func=None, **kwargs):
+        """
+        Inspect inheritance hierarchy of classes, methods defined by SeisFlows.
+        Useful when developing or debugging, facilitates identification of
+        the package top-level.
+
+        USAGE
+
+            seisflows inspect [name] [method]
+
+            To view overall hierarchy for all names in the SeisFlows3 namespace
+
+                seisflows inspect
+
+            To check the inheritance hierarchy of the 'workflow' module
+
+                seisflows inspect workflow
+
+            To check which class defined a given method, e.g. the 'eval_func'
+            method attributed to the solver module
+
+                seisflows inspect solver eval_func
+
+        """
+        self._register(force=True)
+        self._load_modules()
+        if func is None:
+            self._inspect_module_hierarchy(name, **kwargs)
+        else:
+            self._inspect_class_that_defined_method(name, func, **kwargs)
 
     def _check_model_parameters(self, src=None, **kwargs):
         """

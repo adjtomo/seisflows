@@ -13,7 +13,7 @@ from seisflows3.tools import msg, unix
 from seisflows3.tools.tools import loadnpy, savenpy
 from seisflows3.tools.math import angle, poissons_ratio
 from seisflows3.tools.seismic import Writer
-from seisflows3.config import SeisFlowsPathsParameters
+from seisflows3.config import SeisFlowsPathsParameters, CFGPATHS
 
 
 # seisflows.config objects 
@@ -156,7 +156,7 @@ class Base:
         msg.setup(type(self))
 
         # Where to write optimization statistics etc.
-        path_stats = os.path.join(PATH.WORKDIR, "stats")
+        path_stats = os.path.join(PATH.WORKDIR, CFGPATHS.STATSDIR)
         unix.mkdir(path_stats)
 
         # Prepare line search machinery
@@ -171,8 +171,9 @@ class Base:
         else:
             self.precond = None
 
-        # Prepare output logs
-        self.writer = Writer(path=path_stats)
+        # Ensure that line search step count starts at 0 (workflow.intialize)
+        self.write_stats("step_count", 0)
+        # self.writer = Writer(path=path_stats)
 
         # Prepare scratch directory and save initial model
         unix.mkdir(PATH.OPTIMIZE)
@@ -341,17 +342,18 @@ class Base:
         unix.mv("m_try", "m_new")
         self.savetxt("f_new", f.min())
 
-        # Output latest statistics
-        self.writer("factor",
-                    -self.dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0]))
-        self.writer("gradient_norm_L1", np.linalg.norm(g, 1))
-        self.writer("gradient_norm_L2", np.linalg.norm(g, 2))
-        self.writer("misfit", f[0])
-        self.writer("restarted", self.restarted)
-        self.writer("slope", (f[1] - f[0]) / (x[1] - x[0]))
-        self.writer("step_count", self.line_search.step_count)
-        self.writer("step_length", x[f.argmin()])
-        self.writer("theta", 180. * np.pi ** -1 * angle(p, -g))
+        # Output the latest statistics to disk
+        self.write_stats("factor",
+                         -self.dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
+                         )
+        self.write_stats("gradient_norm_L1", np.linalg.norm(g, 1))
+        self.write_stats("gradient_norm_L2", np.linalg.norm(g, 2))
+        self.write_stats("misfit", f[0])
+        self.write_stats("restarted", self.restarted)
+        self.write_stats("slope", (f[1] - f[0]) / (x[1] - x[0]))
+        self.write_stats("step_count", self.line_search.step_count)
+        self.write_stats("step_length", x[f.argmin()])
+        self.write_stats("theta", 180. * np.pi ** -1 * angle(p, -g))
 
         self.line_search.writer.newline()
 
@@ -368,8 +370,7 @@ class Base:
         p = self.load("p_new")
         theta = angle(p, -g)
 
-        if PAR.VERBOSE:
-            print(f" theta: {theta:6.3f}")
+        self.logger.debug(f"theta: {theta:6.3f}")
 
         thresh = 1.e-3
         if abs(theta) < thresh:
@@ -392,7 +393,26 @@ class Base:
         self.line_search.writer.newline()
 
     @staticmethod
-    def dot( x, y):
+    def write_stats(filename, value, format="e"):
+        """
+        Simplified write function to append values to text files in the
+        STATSDIR. Used because stats line search information can be overwritten
+        by subsequent iterations so we need to append values to text files
+        if they should be retained.
+
+        :type filename: str
+        :param filename: name of the file to write to
+        :type value: float
+        :param value: value to write to file
+        :type format: str
+        :param format: string formatter for value
+        """
+        fid = os.path.join(CFGPATHS.STATSDIR, filename)
+        with open(fid, "a") as f:
+            f.write(f"{value:{format}}\n")
+
+    @staticmethod
+    def dot(x, y):
         """
         Utility function to computes inner product between vectors
 
