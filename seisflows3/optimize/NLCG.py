@@ -50,7 +50,6 @@ class NLCG(custom_import("optimize", "base")):
         """
         super().__init__()
         self.NLCG_iter = 0
-        self.NLCG_dir = "NLCG"
         self.calc_beta = pollak_ribere  # !!! Allow the user to choose this fx?
 
     @property

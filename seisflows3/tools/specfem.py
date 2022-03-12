@@ -75,37 +75,6 @@ class Container(defaultdict):
         self.minmax = Minmax()
 
 
-class Writer(object):
-    """
-    Utility for appending values to text files.
-    Used for writing statistical outputs to the output.stats file
-    """
-    def __init__(self, path="./stats"):
-        self.path = os.path.abspath(path)
-        try:
-            os.mkdir(path)
-        except FileExistsError:
-            print(f"Warning, {os.path.basename(path)} exists\n"
-                  "Appending to this files without deleting them may lead to "
-                  "unintended consequences")
-
-        self.__call__('step_count', 0)
-
-    def __call__(self, filename, val):
-        """
-        Define function for calling Writer
-
-        :type filename: str
-        :param filename: file to write to
-        :type val: float
-        :param val: value to write to file
-        """
-        fullfile = os.path.join(self.path, filename)
-
-        with open(fullfile, 'a') as f:
-            f.write(f"{val:e}\n")
-
-
 def getpar(key, file='DATA/Par_file', sep='=', cast=str):
     """
     Reads parameter from Specfem3D parameter file

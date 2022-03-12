@@ -15,7 +15,7 @@ import seisflows3.plugins.solver.specfem3d as solvertools
 from seisflows3.tools import unix
 from seisflows3.tools.tools import exists
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
-from seisflows3.tools.seismic import call_solver, getpar, setpar
+from seisflows3.tools.specfem import call_solver, getpar, setpar
 
 
 # Seisflows configuration

@@ -13,13 +13,12 @@ import logging
 from glob import glob
 
 import seisflows3.plugins.solver.specfem3d_globe as solvertools
-from seisflows3.tools.seismic import getpar, setpar, Model, Minmax
+from seisflows3.tools.specfem import getpar, setpar, Model, Minmax, call_solver
 from seisflows3.plugins.io import loadbypar, copybin, loadbin, savebin
 from seisflows3.tools import unix
-from seisflows3.tools.seismic import call_solver
 from seisflows3.tools.tools import Struct, exists
 from seisflows3.config import (ParameterError, custom_import,
-                              SeisFlowsPathsParameters)
+                               SeisFlowsPathsParameters)
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

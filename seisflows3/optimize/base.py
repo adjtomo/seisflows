@@ -12,7 +12,6 @@ from seisflows3.plugins import line_search, preconds
 from seisflows3.tools import msg, unix
 from seisflows3.tools.tools import loadnpy, savenpy
 from seisflows3.tools.math import angle, poissons_ratio
-from seisflows3.tools.seismic import Writer
 from seisflows3.config import SeisFlowsPathsParameters, CFGPATHS
 
 
@@ -63,9 +62,6 @@ class Base:
         :type precond: Class
         :param precond: a class controlling the preconditioner functionality
             for preconditiong gradient information
-        :type writer: Class
-        :param writer: a class that has simple write-to-text functions for
-            outputting the status of an optimization
         :type restarted: int
         :param restarted: a flag signalling if the optimization algorithm has
             been restarted recently
@@ -84,7 +80,6 @@ class Base:
         self.iter = 1
         self.line_search = None
         self.precond = None
-        self.writer = None
         self.restarted = 0
 
         # Define the names of output stats logs to keep all paths in one place
@@ -200,7 +195,6 @@ class Base:
 
         # Ensure that line search step count starts at 0 (workflow.intialize)
         self.write_stats(self.log_step_count, 0)
-        # self.writer = Writer(path=path_stats)
 
         # Prepare scratch directory and save initial model
         unix.mkdir(PATH.OPTIMIZE)
@@ -426,8 +420,6 @@ class Base:
         self.save(self.p_new, -g)
         self.line_search.clear_history()
         self.restarted = 1
-        # self.line_search.writer.iter -= 1
-        # self.line_search.writer.newline()
 
     def write_stats(self, filename, value, format="e"):
         """
