@@ -8,9 +8,8 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows3/optimize/LBFGS.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/optimize/LBFGS.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows3/optimize/NLCG.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/optimize/NLCG.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/optimize/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/optimize/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/plugins/line_search/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/plugins/line_search/base.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows3/plugins/optimize/LBFGS.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/plugins/optimize/LBFGS.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/plugins/optimize/NLCG.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/plugins/optimize/NLCG.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

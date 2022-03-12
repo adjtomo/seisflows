@@ -6,6 +6,7 @@ This class provides the core utilities for the Seisflows optimization schema.
 It is called in as a plugin for seisflows.optimize.LBFGS
 """
 import numpy as np
+from warnings import DeprecationWarning
 
 from seisflows3 import logger
 from seisflows3.tools import unix, msg
@@ -68,6 +69,11 @@ class LBFGS:
         :type precond: function
         :param precond: optional preconditioner function
         """
+        raise DeprecationWarning("This plugin class is deprecated, all "
+                                 "functionality has been moved into"
+                                 "optimize.LBFGS. This class will be removed"
+                                 "in the next release")
+
         # Create the LBFGS directory in the path
         assert exists(path)
         unix.cd(path)

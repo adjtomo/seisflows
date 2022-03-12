@@ -3,12 +3,15 @@
 This is the custom class for an LBFGS optimization schema.
 It supercedes the `seisflows.optimize.base` class
 """
+import os
 import sys
 import logging
 import numpy as np
 
+from seisflows3.tools import unix
+from seisflows3.tools.tools import exists, loadnpy, savenpy
+from seisflows3.tools.math import angle
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
-# from seisflows3.plugins import optimize
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -18,6 +21,34 @@ class LBFGS(custom_import("optimize", "base")):
     """
     The Limited memory BFGS algorithm
     Calls upon seisflows.plugin.optimize.LBFGS to accomplish LBFGS algorithm
+
+    Includes optional safeguards: periodic restarting and descent conditions.
+
+    To conserve memory, most vectors are read from disk rather than passed
+    from a calling routine.
+
+    L-BFGS Variables:
+        s: memory of model differences
+        y: memory of gradient differences
+
+    Optimization Variables:
+        m: model
+        f: objective function value
+        g: gradient direction
+        p: search direction
+
+    Line Search Variables:
+        x: list of step lenths from current line search
+        f: correpsonding list of function values
+        m: number of step lengths in current line search
+        n: number of model updates in optimization problem
+        gtg: dot product of gradient with itself
+        gtp: dot product of gradient and search direction
+
+    Status codes
+        status > 0  : finished
+        status == 0 : not finished
+        status < 0  : failed
     """
     # Class-specific logger accessed using self.logger
     logger = logging.getLogger(__name__).getChild(__qualname__)
@@ -54,7 +85,6 @@ class LBFGS(custom_import("optimize", "base")):
         self.LBFGS_dir = "LBFGS"
         self.y_file = os.path.join(self.LBFGS_dir, "Y")
         self.s_file = os.path.join(self.LBFGS_dir, "S")
-
 
     @property
     def required(self):
@@ -105,7 +135,18 @@ class LBFGS(custom_import("optimize", "base")):
     def compute_direction(self):
         """
         Call on the L-BFGS optimization machinery to compute a search
-        direction using internally stored memory of previous gradients
+        direction using internally stored memory of previous gradients.
+        The potential outcomes when computing direction with L-BFGS
+
+        1. First iteration of L-BFGS optimization, search direction is defined
+            as the inverse gradient
+        2. L-BFGS internal iteration ticks over the maximum allowable number of
+            iterations, force a restart condition, search direction is the
+            inverse gradient
+        3. New search direction vector is too far from previous direction,
+            force a restart, search direction is inverse gradient
+        4. New search direction is acceptably angled from previous,
+            becomes the new search direction
         """
         self.logger.info(f"computing search direction with L-BFGS")
         self.LBFGS_iter += 1
@@ -115,48 +156,51 @@ class LBFGS(custom_import("optimize", "base")):
         # Load the current gradient direction, which is the L-BFGS search
         # direction if this is the first iteration
         g = self.load(self.g_new)
-
-        # Restart condition or first iteration lead to setting search direction
-        # as the inverse gradient (i.e., default to steepest descent)
         if self.LBFGS_iter == 1:
             self.logger.info("first L-BFGS iteration, setting search direction"
                              "as inverse gradient")
-            self.save(self.p_new, -g)
-            self.restarted = 0
-            return
+            p_new = -g
+            restarted = 0
+        # Restart condition or first iteration lead to setting search direction
+        # as the inverse gradient (i.e., default to steepest descent)
         elif self.LBFGS_iter > PAR.LBFGSMAX:
             self.logger.info("restarting L-BFGS due to periodic restart "
                              "condition. setting search direction as"
                              "inverse gradient")
             self.restart()
-            self.save(self.p_new, -g)
-            self.restarted = 1
-            return
+            p_new = -g
+            restarted = 1
+        # Normal LBFGS direction computation
+        else:
+            # Update the search direction, apply the inverse Hessian such that
+            # 'q' becomes the new search direction 'g'
+            self.logger.info("applying inverse Hessian to gradient")
+            s, y = self.update()
+            q = self.apply(g, s, y)
 
-        # Update the search direction, apply the inverse Hessian
-        # 'q' becomes the new search direction 'g'
-        self.logger.info("applying inverse Hessian to gradient")
-        s, y = self.update()
-        q = self.apply(g, s, y)
+            # Determine if the new search direction is appropriate by checking its
+            # angle to the previous search direction
+            status = self.check_status(g, q)
 
-        # Determine if the new search direction is appropriate by checking its
-        # angle to the previous search direction
-        status = self.check_status(g, q)
+            if status == 1:
+                self.logger.info("new search direction not appropriate, "
+                                 "defaulting to inverse gradient")
+                self.restart()
+                p_new = -g
+                restarted = 1
+            elif status == 1:
+                self.logger.info("new L-BFGS search direction found")
+                p_new = -q
+                restarted = 0
 
-        if status == 0:
-            self.logger.info("new L-BFGS search direction found")
-            self.save(self.p_new, -q)
-            self.restarted = status
-        elif status == 1:
-            self.logger.info("new search direction not appropriate, defaulting "
-                             "to inverse gradient")
-            self.restart()
-            self.save(self.p_new, -g)
-            self.restarted = status
+        # Save values to disk and memory
+        self.save(self.p_new, p_new)
+        self.restarted = restarted
 
     def restart(self):
         """
-        Overwrite the Base restart class and include a restart of the LBFGS
+        On top of base restart class, include a restart of the LBFGS internal
+        memory and memmaps
         """
         super().restart()
 

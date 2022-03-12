@@ -7,6 +7,7 @@ It is called in as a plugin for seisflows.optimize.NLCG
 """
 import os
 import numpy as np
+from warnings import DeprecationWarning
 
 from seisflows3 import logger
 from seisflows3.tools import unix, msg
@@ -57,6 +58,11 @@ class NLCG:
         :type precond: function
         :param precond: optional preconditioner function
         """
+        raise DeprecationWarning("This plugin class is deprecated, all "
+                                 "functionality has been moved into"
+                                 "optimize.LBFGS. This class will be removed"
+                                 "in the next release")
+
         self.path = path
         self.load = load
         self.save = save
