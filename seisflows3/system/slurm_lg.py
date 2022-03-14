@@ -20,7 +20,7 @@ import logging
 from warnings import warn
 from subprocess import check_output
 from seisflows3.tools import msg, unix
-from seisflows3.tools.tools import call, findpath
+from seisflows3.tools.wrappers import call, findpath
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
 # Seisflows configuration

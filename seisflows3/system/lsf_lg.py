@@ -13,7 +13,7 @@ from subprocess import check_output
 
 from seisflows3.tools import msg, unix
 from seisflows3.tools.err import ParameterError
-from seisflows3.tools.tools import call, findpath, saveobj
+from seisflows3.tools.wrappers import call, findpath, saveobj
 from seisflows3.config import custom_import
 
 PAR = sys.modules['seisflows_parameters']

@@ -11,7 +11,7 @@ import logging
 from glob import glob
 
 from seisflows3.tools import unix
-from seisflows3.tools.tools import exists
+from seisflows3.tools.wrappers import exists
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
 from seisflows3.tools.specfem import call_solver, getpar, setpar
 

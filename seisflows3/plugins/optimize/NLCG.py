@@ -12,7 +12,7 @@ from warnings import DeprecationWarning
 from seisflows3 import logger
 from seisflows3.tools import unix, msg
 from seisflows3.tools.math import dot
-from seisflows3.tools.tools import loadtxt, savetxt, loadnpy, savenpy
+from seisflows3.tools.wrappers import loadtxt, savetxt, loadnpy, savenpy
 
 
 class NLCG:

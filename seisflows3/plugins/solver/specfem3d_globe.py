@@ -4,7 +4,7 @@ Plugins used for the numerical solver SPECFEM3D_GLOBE
 """
 
 # Local imports
-from seisflows3.tools.tools import findpath
+from seisflows3.tools.wrappers import findpath
 from seisflows3.tools.specfem import setpar
 
 

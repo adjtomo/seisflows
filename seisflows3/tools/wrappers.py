@@ -1,5 +1,6 @@
 """
-Functional tools employed by Seisflows
+Wrappers of commonly used functions to reduce line count and provide an
+aesthetically similar look in SeisFlows3
 """
 import os
 import re
@@ -28,7 +29,7 @@ class Struct(dict):
 
 def call(*args, **kwargs):
     """
-    Subprocess check call
+    Subprocess check call wrapper
     """
     if 'shell' not in kwargs:
         kwargs['shell'] = True

@@ -9,7 +9,7 @@ import logging
 import numpy as np
 
 from seisflows3.tools import unix
-from seisflows3.tools.tools import exists, loadnpy, savenpy
+from seisflows3.tools.wrappers import exists, loadnpy, savenpy
 from seisflows3.tools.math import angle
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
 

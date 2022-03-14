@@ -5,7 +5,7 @@ A wrapper for running tasks within the currently executing workflow
 import os
 import sys
 
-from seisflows3.tools.tools import loadjson, loadobj
+from seisflows3.tools.wrappers import loadjson, loadobj
 from seisflows3.config import load
 
 def export(myenv):

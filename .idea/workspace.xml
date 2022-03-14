@@ -5,11 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/seisflows.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/seisflows.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/plugins/solver/specfem2d.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/plugins/solver/specfem2d.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/plugins/solver/specfem3d.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/plugins/solver/specfem3d.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/plugins/solver/specfem3d_globe.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/plugins/solver/specfem3d_globe.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/system/serial.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/system/serial.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/templates/base_class.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/templates/base_class.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/templates/sub_class.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/templates/sub_class.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tools/specfem.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tools/specfem.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tools/tools.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,7 +53,7 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
-    <property name="settings.editor.selected.configurable" value="reference.settingsdialog.IDE.editor.colors" />
+    <property name="settings.editor.selected.configurable" value="editor.preferences.folding" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">

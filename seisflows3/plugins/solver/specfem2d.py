@@ -4,7 +4,7 @@ Plugins used for the numerical solver SPECFEM2D
 """
 import sys
 from seisflows3.tools import array, unix
-from seisflows3.tools.tools import exists, findpath
+from seisflows3.tools.wrappers import exists, findpath
 from seisflows3.tools.specfem import getpar, setpar
 
 

@@ -20,8 +20,8 @@ from importlib import import_module
 
 from seisflows3.tools import msg
 from seisflows3.tools import unix
-from seisflows3.tools.tools import loadjson, loadobj, savejson, saveobj
-from seisflows3.tools.tools import module_exists
+from seisflows3.tools.wrappers import loadjson, loadobj, savejson, saveobj
+from seisflows3.tools.wrappers import module_exists
 from seisflows3.tools.err import ParameterError
 
 

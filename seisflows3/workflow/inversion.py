@@ -12,7 +12,7 @@ from glob import glob
 
 from seisflows3.config import custom_import, CFGPATHS
 from seisflows3.tools import msg, unix
-from seisflows3.tools.tools import exists
+from seisflows3.tools.wrappers import exists
 from seisflows3.config import save, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]

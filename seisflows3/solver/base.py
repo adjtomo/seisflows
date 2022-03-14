@@ -13,7 +13,7 @@ from functools import partial
 from seisflows3.plugins import solver_io
 from seisflows3.tools import msg, unix
 from seisflows3.tools.specfem import Container, call_solver
-from seisflows3.tools.tools import Struct, diff, exists
+from seisflows3.tools.wrappers import Struct, diff, exists
 from seisflows3.config import SeisFlowsPathsParameters
 
 
@@ -97,7 +97,7 @@ class Base:
         :type parameters: list of str
         :param parameters: a list detailing the parameters to be used to
             define the model, available: ['vp', 'vs', 'rho']
-        :type _mesh_properties: seisflows.tools.tools.Struct
+        :type _mesh_properties: seisflows.tools.wrappers.Struct
         :param _mesh_properties: hidden attribute, a dictionary of mesh
             properties, including the ngll points, nprocs, and mesh coordinates
         :type _source_names: hidden attribute,

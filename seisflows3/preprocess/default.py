@@ -14,7 +14,7 @@ from seisflows3.tools import msg
 from seisflows3.tools import signal, unix
 from seisflows3.config import custom_import
 from seisflows3.tools.err import ParameterError
-from seisflows3.tools.tools import exists, getset
+from seisflows3.tools.wrappers import exists, getset
 from seisflows3.plugins import adjoint, misfit, readers, writers
 from seisflows3.config import SeisFlowsPathsParameters
 

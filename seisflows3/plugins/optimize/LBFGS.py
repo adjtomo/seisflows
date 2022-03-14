@@ -10,7 +10,7 @@ from warnings import DeprecationWarning
 
 from seisflows3 import logger
 from seisflows3.tools import unix, msg
-from seisflows3.tools.tools import exists, loadnpy, savenpy
+from seisflows3.tools.wrappers import exists, loadnpy, savenpy
 from seisflows3.tools.math import angle
 
 

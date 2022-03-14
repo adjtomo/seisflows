@@ -16,7 +16,7 @@ import seisflows3.plugins.solver.specfem3d_globe as solvertools
 from seisflows3.tools.specfem import getpar, setpar, Model, Minmax, call_solver
 from seisflows3.plugins.io import loadbypar, copybin, loadbin, savebin
 from seisflows3.tools import unix
-from seisflows3.tools.tools import Struct, exists
+from seisflows3.tools.wrappers import Struct, exists
 from seisflows3.config import (ParameterError, custom_import,
                                SeisFlowsPathsParameters)
 

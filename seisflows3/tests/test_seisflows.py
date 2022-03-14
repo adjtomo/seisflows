@@ -14,7 +14,7 @@ import subprocess
 from unittest.mock import patch
 from seisflows3.scripts.seisflows import sfparser, SeisFlows
 from seisflows3.config import Dict, ROOT_DIR
-from seisflows3.tools.tools import loadyaml
+from seisflows3.tools.wrappers import loadyaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
 

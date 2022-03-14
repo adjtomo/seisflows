@@ -12,7 +12,7 @@ from glob import glob
 from subprocess import check_output, call, CalledProcessError
 
 from seisflows3.tools import unix
-from seisflows3.tools.tools import call, findpath
+from seisflows3.tools.wrappers import call, findpath
 from seisflows3.config import custom_import
 
 # Seisflows configuration

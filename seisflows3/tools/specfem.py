@@ -1,9 +1,6 @@
 """
 Utilities to interact with, manipulate or call on the external solver, 
 i.e., SPECFEM2D/3D/3D_GLOBE
-
-!!! TO DO !!!
-Rename this utility script as the name is somewhat confusing
 """
 import os
 import sys
@@ -12,7 +9,7 @@ import subprocess
 
 from collections import defaultdict
 from seisflows3.tools import msg, unix
-from seisflows3.tools.tools import iterable
+from seisflows3.tools.wrappers import iterable
 
 
 def call_solver(mpiexec, executable, output="solver.log"):

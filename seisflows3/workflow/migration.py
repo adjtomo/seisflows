@@ -8,7 +8,7 @@ import sys
 import logging
 
 from seisflows3.tools import unix
-from seisflows3.tools.tools import exists
+from seisflows3.tools.wrappers import exists
 from seisflows3.tools.err import ParameterError
 from seisflows3.workflow.base import Base
 from seisflows3.config import SeisFlowsPathsParameters

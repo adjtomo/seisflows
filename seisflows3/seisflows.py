@@ -26,7 +26,7 @@ from IPython import embed
 
 from seisflows3 import logger
 from seisflows3.tools import unix, tools, msg
-from seisflows3.tools.tools import loadyaml, loadpy
+from seisflows3.tools.wrappers import loadyaml, loadpy
 from seisflows3.config import (init_seisflows, format_paths, Dict,
                                custom_import, NAMES, PACKAGES, ROOT_DIR,
                                CFGPATHS)
