@@ -18,8 +18,8 @@ import types
 import copyreg
 from importlib import import_module
 
-from seisflows3.tools import msg
-from seisflows3.tools import unix
+from seisflows3 import logger
+from seisflows3.tools import msg, unix
 from seisflows3.tools.wrappers import loadjson, loadobj, savejson, saveobj
 from seisflows3.tools.wrappers import module_exists
 from seisflows3.tools.err import ParameterError
@@ -63,6 +63,8 @@ def init_seisflows():
     Instantiates SeisFlows3 objects and makes them globally accessible by
     registering them in sys.modules
     """
+    logger.info("initializing SeisFlows3 in sys.modules")
+
     # Parameters and paths must already be loaded (normally done by submit)
     assert("seisflows_parameters" in sys.modules)
     assert("seisflows_paths" in sys.modules)
@@ -93,6 +95,7 @@ def save():
     """
     Export the current session to disk
     """
+    logger.info("exporting current working environment to disk")
     unix.mkdir(_output())
 
     # Save the paths and parameters into a JSON file
@@ -113,6 +116,8 @@ def load(path):
     :type path: str
     :param path: path to the previously saved session
     """
+    logger.info("loading current working environment from disk")
+
     # Load parameters and paths from a JSON file
     for name in ['parameters', 'paths']:
         fullfile = os.path.join(_full(path), f"seisflows_{name}.json")

@@ -184,7 +184,7 @@ class Base:
         """
         if not os.path.exists(self.log):
             # Write out the header of the file to a NEW FILE
-            self.logger.info(f"writing line search history file: {self.log}")
+            self.logger.info(f"writing line search history file:\n{self.log}")
             with open(self.log, "w") as f:
                 f.write(f"{'ITER':>10}  {'STEPLEN':>10}  {'MISFIT':>10}\n")
                 f.write(f"{'='*10}  {'='*10}  {'='*10}\n")

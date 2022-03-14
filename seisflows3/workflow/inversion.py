@@ -482,7 +482,8 @@ class Inversion(custom_import("workflow", "base")):
         """
         Save the waveform traces to disk.
 
-        !!! This doesn't work
+        !!! This doesn't work? Traces are not saved to PATH.GRAD so src does
+        !!! not exist
         """
         src = os.path.join(PATH.GRAD, "traces")
         dst = os.path.join(PATH.OUTPUT, f"traces_{optimize.iter:04d}")

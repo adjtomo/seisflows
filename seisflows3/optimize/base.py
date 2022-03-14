@@ -202,7 +202,7 @@ class Base:
         if "MODEL_INIT" in PATH:
             m_new = solver.merge(solver.load(PATH.MODEL_INIT))
             self.save(self.m_new, m_new)
-            self.check_model_parameters(m_new, self.m_new)
+            self.check_model(m_new, self.m_new)
 
     @property
     def eval_str(self):
@@ -233,37 +233,6 @@ class Base:
         else:
             p_new = -1 * g_new
         self.save(self.p_new, p_new)
-
-    def check_model_parameters(self, m, tag):
-        """
-        Check to ensure that the model parameters fall within the guidelines 
-        of the solver. Print off min/max model parameters for the User.
-
-        !!! Clean this up
-        
-        :type m: np.array
-        :param m: model to check parameters of 
-        :type tag: str
-        :param tag: tag of the model to be used for more specific error msgs
-        """
-        # Dynamic way to split up the model based on number of params
-        pars = {}
-        for i, par in enumerate(solver.parameters):
-            pars[par] = np.split(m, len(solver.parameters))[i]
-
-        # Check Poisson's ratio, which will error our SPECFEM if outside limits
-        if (pars["vp"] is not None) and (pars["vs"] is not None):
-            self.logger.debug(f"checking model parameters for: {tag}")
-            pars["pr"] = check_poissons_ratio(vp=pars["vp"], vs=pars["vs"])
-
-        # Tell the User min and max values of the updated model
-        model_msg = f"model parameters ({tag} {self.eval_str}):"
-        parts = "\n{minval:.2f} <= {key} <= {maxval:.2f}"
-        for key, vals in pars.items():
-           model_msg += parts.format(minval=vals.min(), key=key,
-                                     maxval=vals.max())
-
-        self.logger.info(model_msg)
 
     def initialize_search(self):
         """
@@ -306,7 +275,7 @@ class Base:
         self.savetxt(self.alpha, alpha)
 
         # Check the new model and update the User on a few parameters
-        self.check_model_parameters(m_try, self.m_try)
+        self.check_model(m_try, self.m_try)
 
     def update_search(self):
         """
@@ -329,7 +298,7 @@ class Base:
             self.savetxt(self.alpha, alpha)
             m_try = m + alpha * p
             self.save(self.m_try, m_try)
-            self.check_model_parameters(m_try, self.m_try)
+            self.check_model(m_try, self.m_try)
 
         return status
 
@@ -342,7 +311,6 @@ class Base:
         """
         self.logger.info(msg.sub("FINALIZING LINE SEARCH"))
 
-        # m = self.load('m_new')  # unusued variable
         g = self.load(self.g_new)
         p = self.load(self.p_new)
         x = self.line_search.search_history()[0]
@@ -350,23 +318,29 @@ class Base:
 
         # Clean scratch directory
         unix.cd(PATH.OPTIMIZE)
+
         # Remove the old model parameters
         if self.iter > 1:
+            self.logger.info("removing previously accepted model files (old)")
             for fid in [self.m_old, self.f_old, self.g_old, self.p_old]:
                 unix.rm(fid)
 
         # Rename current model parameters to "_old" for new search
+        self.logger.info("shifting current model (new) to previous model (old)")
         unix.mv(self.m_new, self.m_old)
         unix.mv(self.f_new, self.f_old)
         unix.mv(self.g_new, self.g_old)
         unix.mv(self.p_new, self.p_old)
 
         # Setup the current model parameters
+        self.logger.info("setting accepted line search model as current model")
         unix.mv(self.m_try, self.m_new)
         self.savetxt(self.f_new, f.min())
+        self.logger.info(f"current misfit is {self.f_new}={f.min():.3E}")
 
         # Output the latest statistics to text files
         # !!! Describe what stats are being written here
+        self.logger.info(f"writing optimization stats to: {CFGPATHS.STATSDIR}")
         self.write_stats(filename=self.log_factor, value=
                          -self.dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
                          )
@@ -386,6 +360,7 @@ class Base:
                          value=180. * np.pi ** -1 * angle(p, -g))
 
         # Reset line search step count to 0 for next iteration
+        self.logger.info("resetting line search step count to 0")
         self.line_search.step_count = 0
 
     def retry_status(self):
@@ -433,10 +408,38 @@ class Base:
         :param format: string formatter for value
         """
         fid = os.path.join(PATH.WORKDIR, CFGPATHS.STATSDIR, filename)
-        if not os.path.exists(fid):
-            self.logger.debug(f"creating stats file: {fid}")
         with open(fid, "a") as f:
             f.write(f"{value:{format}}\n")
+
+    def check_model(self, m, tag):
+        """
+        Check to ensure that the model parameters fall within the guidelines
+        of the solver. Print off min/max model parameters for the User.
+
+        :type m: np.array
+        :param m: model to check parameters of
+        :type tag: str
+        :param tag: tag of the model to be used for more specific error msgs
+        """
+        # Dynamic way to split up the model based on number of params
+        pars = {}
+        for i, par in enumerate(solver.parameters):
+            pars[par] = np.split(m, len(solver.parameters))[i]
+
+        # Check Poisson's ratio, which will error our SPECFEM if outside limits
+        if (pars["vp"] is not None) and (pars["vs"] is not None):
+            self.logger.debug(f"checking poissons ratio for: '{tag}'")
+            pars["pr"] = check_poissons_ratio(vp=pars["vp"], vs=pars["vs"])
+            if pars["pr"].min() < 0:
+                self.logger.warning("minimum poisson's ratio is negative")
+
+        # Tell the User min and max values of the updated model
+        self.logger.info(f"model parameters ({tag} {self.eval_str}):")
+        parts = "{minval:.2f} <= {key} <= {maxval:.2f}"
+        for key, vals in pars.items():
+            self.logger.info(parts.format(minval=vals.min(), key=key,
+                                          maxval=vals.max())
+                             )
 
     @staticmethod
     def dot(x, y):
