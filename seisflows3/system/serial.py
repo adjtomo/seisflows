@@ -107,7 +107,7 @@ class Serial(custom_import("system", "base")):
 
         .. note::
             For serial runs, MPIEXEC should be './' This is enforced in 
-            tools.seismic.call_solver, which is the main function that uses
+            tools.specfem.call_solver, which is the main function that uses
             PAR.MPIEXEC
 
         """

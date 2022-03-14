@@ -5,7 +5,7 @@ Plugins used for the numerical solver SPECFEM3D_GLOBE
 
 # Local imports
 from seisflows3.tools.tools import findpath
-from seisflows3.tools.seismic import setpar
+from seisflows3.tools.specfem import setpar
 
 
 def write_sources(PAR, h, path='.'):

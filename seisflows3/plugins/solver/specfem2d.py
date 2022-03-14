@@ -5,7 +5,7 @@ Plugins used for the numerical solver SPECFEM2D
 import sys
 from seisflows3.tools import array, unix
 from seisflows3.tools.tools import exists, findpath
-from seisflows3.tools.seismic import getpar, setpar
+from seisflows3.tools.specfem import getpar, setpar
 
 
 def write_sources(coords, path='.', ws=1., suffix=''):
