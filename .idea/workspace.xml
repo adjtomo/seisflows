@@ -5,13 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/seisflows.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/seisflows.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/templates/base_class.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/templates/base_class.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/templates/sub_class.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/templates/sub_class.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/tools/specfem.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tools/specfem.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/tools/tools.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/plugins/adjoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/plugins/adjoint.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/plugins/solver/specfem2d.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/plugins/solver/specfem2d.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tools/array.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tools/array.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tools/msg.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tools/msg.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tools/signal.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tools/signal.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tools/unix.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tools/unix.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/workflow/inversion.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/workflow/inversion.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

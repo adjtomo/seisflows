@@ -1,112 +1,84 @@
 """
-SeisFlows3 Messages Tool
-
-Pre-defined SeisFlows3 standard out messages for uniform and aesthetically 
-pleasing print statements that do not clutter the actual codebase. 
-Used when warnings, statements or error messages need to be shown to the user.
-Some statements have format strings that need to be formatted by the 
-module that called it.
+SeisFlows3 messages tool. For providing a uniform look to SeisFlows3 print
+and log statements.
 """
 
 
-def check(cls):
+def mjr(val):
     """
-    Standardized log message sent from the check() function that is required 
-    within each module and submodule. Simply notifies the user that checks 
-    are being performed within the given module
+    Message formatter used to block off sections in log files with visually
+    distinctive separators. Defined as individual functions to simplify
+    calling and reduce code length.
 
-    :type cls: 'type'
-    :param cls: self.__class__ or type(self) which should be passed in from 
-        INSIDE a function defined INSIDE a class. 
-        e.g., <class 'seisflows3.preprocess.default.Default'>
+    Major: For important or workflow.main() messages like starting workflow
+
+    :type val: str
+    :param val: formatted message to return
     :rtype: str
-    :return: formatted check string describing the module and classname
-        e.g., preprocess.default
+    :return: formatted string message to be printed to std out
     """
-    module, clsname = split_cls(cls)
-    return f"check paths/pars module: {module}.{clsname}"
-
-    
-def setup(cls):
-    """
-    Standardized log message sent from the setup() function that is required 
-    within each module and submodule. Simply notifies the user that checks 
-    are being performed within the given module
-
-    :type cls: 'type'
-    :param cls: self.__class__ which should be passed in from INSIDE a function
-        defined INSIDE a class. 
-        e.g., <class 'seisflows3.preprocess.default.Default'>
-    :rtype: str
-    :return: formatted string describing the module and classname
-        e.g., preprocess.default
-            
-    """
-    module, clsname = split_cls(cls)
-    return f"setting up module: {module}.{clsname}"
-
-
-def whoami(cls, append="", prepend=""):
-    """
-    Standardized log message sent from any function inside a class. Used in logs
-    for subclasses to declare who they are before running functions, makes it
-    easier to track down what's happening where
-
-    :type cls: 'type'
-    :param cls: self.__class__ which should be passed in from INSIDE a function
-        defined INSIDE a class. 
-        e.g., <class 'seisflows3.preprocess.default.Default'>
-    :type append: str
-    :param append: add any string after the whoami statement
-    :type prepend: str
-    :param prepend: add any string in front of the whoami statment
-    :rtype: str
-    :return: formatted string describing the module and classname
-        e.g., preprocess.default
-    """
-    module, clsname = split_cls(cls)
-    return f"{prepend}{module}.{clsname}{append}"
-
-
-def split_cls(cls):
-    """
-    Repeatedly used function to split the output of type(self) or self.__class__
-    into separate strings
-
-
-    :type cls: 'type'
-    :param cls: self.__class__ which should be passed in from INSIDE a function
-        defined INSIDE a class. 
-        e.g., <class 'seisflows3.preprocess.default.Default'>
-    :rtype: tuple of strings
-    :return: module, classname
-    """
-    type_, str_, brkt = str(cls).split("'")
-    sf3, module, fid, clsname = str_.split(".")
-    return module, clsname
-
-
-# The following message formatters are used to block off sections in the log 
-# file with visually distinctive separators
-# For main messages, usually for functions defined in workflow.main.flow()
-main = """
+    mjr_ =  """
 ================================================================================
 {:^80s}
 ================================================================================
 """
 
-# For key messages, describing things like what iteration were at
-key = """
+    return mjr_.format(val)
+
+
+def mnr(val):
+    """
+    Message formatter used to block off sections in log files with visually
+    distinctive separators. Defined as individual functions to simplify
+    calling and reduce code length.
+
+    Minor: For key messages, describing things like what iteration were at
+
+    :type val: str
+    :param val: formatted message to return
+    :rtype: str
+    :return: formatted string message to be printed to std out
+    """
+    mnr_ = """
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+{:^80s}
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+"""
+
+    return mnr_.format(val)
+
+
+def sub(val):
+    """
+    Message formatter used to block off sections in log files with visually
+    distinctive separators. Defined as individual functions to simplify
+    calling and reduce code length.
+
+    Sub: For sub-critical messages, describing things like notes and warnings
+
+    :type val: str
+    :param val: formatted message to return
+    :rtype: str
+    :return: formatted string message to be printed to std out
+    """
+    sub_ = """
 --------------------------------------------------------------------------------
 {:^80s}
 --------------------------------------------------------------------------------
 """
+    return sub_.format(val)
 
-# For sub-critical messages, for things like notes and warnings and reminders
-sub = """
-................................................................................
-{:<80s}
-................................................................................
+
+ParameterCheckStatement = """
+
+\t===============================================
+\t+                SEISFLOWS3                   +
+\t+        PRE-SUBMIT PARAMETER CHECK           +
+\t+        --------------------------           +
+\t+    Ensure that below are set correctly      +
+\t+   Checked parameters set by PAR.PRECHECK    +
+\t===============================================
+
 """
 
 
@@ -119,6 +91,48 @@ To delete data and start a new workflow type:
 
 To resume existing workflow type:
   seisflows resume
+
+"""
+
+SystemWarning = """
+
+Please double check SYSTEM parameter
+
+    Expected hostname: {}
+    Actual hostname: {}
+
+"""
+
+ParameterWarning_SPECFEM = """
+
+PARAMETER WARNING
+
+    There is a conflict between parameters.
+
+    SPECFEM Parameter:  "{}"
+    Old Value:  {}
+    Overwriting with:  {}
+
+"""
+
+DataFormatWarning = """
+
+DATA FORMAT WARNING
+
+    reader format: {}
+    writer format: {}
+
+    Incompatible file formats may result in job failure or other problems.
+
+"""
+
+TaskIDWarning = """
+
+    WARNING: system.taskid() OS environment variable 'SEISFLOWS_TASKID' not 
+    found, SeisFlows3 is assuming debug mode and returning taskid=0. 
+    If you are not running in debug mode, please check your SYSTEM.run() or
+    SYSTEM.run_single() commands, which are responsible for setting 
+    the 'SEISFLOWS_TASKID'
 
 """
 
@@ -148,14 +162,6 @@ SOLVER FAILED
 
 """
 
-SystemWarning = """
-
-Please double check SYSTEM parameter
-
-    Expected hostname: {}
-    Actual hostname: {}
-
-"""
 
 ReceiverError_SPECFEM = """
 
@@ -176,28 +182,6 @@ ERROR READING SOURCES
 
 """
 
-ParameterWarning_SPECFEM = """
-
-PARAMETER WARNING
-
-    There is a conflict between parameters.
-
-    SPECFEM Parameter:  "{}"
-    Old Value:  {}
-    Overwriting with:  {}
-
-"""
-
-DataFormatWarning = """
-
-DATA FORMAT WARNING
-
-    reader format: {}
-    writer format: {}
-
-    Incompatible file formats may result in job failure or other problems.
-
-"""
 
 ReaderError = """
 
@@ -456,15 +440,6 @@ PREPROCESSING ERROR
 
 """
 
-TaskIDWarning = """
-
-    WARNING: system.taskid() OS environment variable 'SEISFLOWS_TASKID' not 
-    found, SeisFlows3 is assuming debug mode and returning taskid=0. 
-    If you are not running in debug mode, please check your SYSTEM.run() or
-    SYSTEM.run_single() commands, which are responsible for setting 
-    the 'SEISFLOWS_TASKID'
-
-"""
 
 DataFilenamesError = """
 
@@ -476,14 +451,79 @@ DataFilenamesError = """
 
 """
 
-ParameterCheckStatement = """
 
-\t===============================================
-\t+                SEISFLOWS3                   +
-\t+        PRE-SUBMIT PARAMETER CHECK           +
-\t+        --------------------------           +
-\t+    Ensure that below are set correctly      +
-\t+   Checked parameters set by PAR.PRECHECK    +
-\t===============================================
+def check(cls):
+    """
+    Standardized log message sent from the check() function that is required
+    within each module and submodule. Simply notifies the user that checks
+    are being performed within the given module
 
-"""
+    :type cls: 'type'
+    :param cls: self.__class__ or type(self) which should be passed in from
+        INSIDE a function defined INSIDE a class.
+        e.g., <class 'seisflows3.preprocess.default.Default'>
+    :rtype: str
+    :return: formatted check string describing the module and classname
+        e.g., preprocess.default
+    """
+    module, clsname = split_cls(cls)
+    return f"check paths/pars module: {module}.{clsname}"
+
+
+def setup(cls):
+    """
+    Standardized log message sent from the setup() function that is required
+    within each module and submodule. Simply notifies the user that checks
+    are being performed within the given module
+
+    :type cls: 'type'
+    :param cls: self.__class__ which should be passed in from INSIDE a function
+        defined INSIDE a class.
+        e.g., <class 'seisflows3.preprocess.default.Default'>
+    :rtype: str
+    :return: formatted string describing the module and classname
+        e.g., preprocess.default
+
+    """
+    module, clsname = split_cls(cls)
+    return f"setting up module: {module}.{clsname}"
+
+
+def whoami(cls, append="", prepend=""):
+    """
+    Standardized log message sent from any function inside a class. Used in logs
+    for subclasses to declare who they are before running functions, makes it
+    easier to track down what's happening where
+
+    :type cls: 'type'
+    :param cls: self.__class__ which should be passed in from INSIDE a function
+        defined INSIDE a class.
+        e.g., <class 'seisflows3.preprocess.default.Default'>
+    :type append: str
+    :param append: add any string after the whoami statement
+    :type prepend: str
+    :param prepend: add any string in front of the whoami statment
+    :rtype: str
+    :return: formatted string describing the module and classname
+        e.g., preprocess.default
+    """
+    module, clsname = split_cls(cls)
+    return f"{prepend}{module}.{clsname}{append}"
+
+
+def split_cls(cls):
+    """
+    Repeatedly used function to split the output of type(self) or self.__class__
+    into separate strings
+
+
+    :type cls: 'type'
+    :param cls: self.__class__ which should be passed in from INSIDE a function
+        defined INSIDE a class.
+        e.g., <class 'seisflows3.preprocess.default.Default'>
+    :rtype: tuple of strings
+    :return: module, classname
+    """
+    type_, str_, brkt = str(cls).split("'")
+    sf3, module, fid, clsname = str_.split(".")
+    return module, clsname

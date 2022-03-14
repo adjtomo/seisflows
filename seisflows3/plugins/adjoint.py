@@ -188,7 +188,7 @@ def envelope3(syn, obs, nt, dt, eps=0., *args, **kwargs):
 
     env_rat = np.zeros(nt)
     env_rat[1:-1] = (env_syn[2:] - env_syn[0:-2]) / (2. * dt)
-    env_rat[1:-1] /= esyn[1:-1]
+    env_rat[1:-1] /= env_syn[1:-1]
     env_rat *= misfit.envelope3(syn, obs, nt, dt)
 
     wadj = -env_rat * syn + hilbert(env_rat * hilbert(env_syn))
@@ -228,7 +228,7 @@ def instantaneous_phase2(syn, obs, nt, dt, eps=0., *args, **kwargs):
     return wadj
 
 
-def displacement(*args, **kwargs):
+def displacement(syn, obs, nt, dt, *args, **kwargs):
     """
     Displacement waveform for migration
     """
@@ -239,6 +239,7 @@ def velocity(syn, obs, nt, dt, *args, **kwargs):
     """
     Velocity waveform for migration, taking derivative of obs
     """
+    adj = np.zeros(nt)
     adj[1:-1] = (obs[2:] - obs[0:-2]) / (2. * dt)
 
     return adj
@@ -247,7 +248,9 @@ def velocity(syn, obs, nt, dt, *args, **kwargs):
 def acceleration(syn, obs, nt, dt, *args, **kwargs):
     """
     Acceleration waveform for migration, second derivative of obs
-    """    
+    Use finite difference to differentiate observatio nwaveform
+    """
+    adj = np.zeros(nt)
     adj[1:-1] = (-obs[2:] + 2. * obs[1:-1] - obs[0:-2]) / (2. * dt)
 
     return adj

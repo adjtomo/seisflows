@@ -1,8 +1,8 @@
-
+"""
+Signal processing functions which are used to manipulate time seriess
+"""
 import numpy as np
 
-
-### functions acting on whole record sections
 
 def sconvolve(s, h, w, inplace=True):
     nt = h.nt

@@ -1,5 +1,6 @@
 """
-Unix functions wrapped in Python
+Unix functions wrapped in Python3. Used to simplify function calling and
+provide a uniform look to SeisFlows3 source code.
 """
 import os
 import random

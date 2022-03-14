@@ -12,7 +12,7 @@ def write_sources(coords, path='.', ws=1., suffix=''):
     """
     Writes source information to text file
         TODO this has to be adapted for new versions of specfem because the
-        source file format has changed
+             source file format has changed
     """
     sx, sy, sz = coords
 

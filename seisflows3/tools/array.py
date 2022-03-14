@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-These are tools useful for array manipulation in Seisflows
+Tools useful for array manipulation in Seisflows
 """
 import os
 
