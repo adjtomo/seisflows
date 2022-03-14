@@ -8,10 +8,11 @@ import sys
 import logging
 import numpy as np
 
-from seisflows3.plugins import line_search, preconds
 from seisflows3.tools import msg, unix
+from seisflows3.tools.math import angle
+from seisflows3.plugins import line_search, preconds
 from seisflows3.tools.wrappers import loadnpy, savenpy
-from seisflows3.tools.math import angle, poissons_ratio
+from seisflows3.tools.specfem import check_poissons_ratio
 from seisflows3.config import SeisFlowsPathsParameters, CFGPATHS
 
 
@@ -100,7 +101,7 @@ class Base:
         self.m_new = "m_new"
         self.m_old = "m_old"
         self.m_try = "m_try"
-        self.f_new = "f_ew"
+        self.f_new = "f_new"
         self.f_old = "f_old"
         self.f_try = "f_try"
         self.g_new = "g_new"
@@ -181,9 +182,9 @@ class Base:
         path_stats = os.path.join(PATH.WORKDIR, CFGPATHS.STATSDIR)
         unix.mkdir(path_stats)
 
-        # Prepare line search machinery
+        # Prepare line search machinery defined as a plugin class
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
-            step_count_max=PAR.STEPCOUNTMAX,
+            step_count_max=PAR.STEPCOUNTMAX, step_len_max=PAR.STEPLENMAX,
             log_file=os.path.join(path_stats, self.log_line_search),
         )
 
@@ -250,24 +251,19 @@ class Base:
         for i, par in enumerate(solver.parameters):
             pars[par] = np.split(m, len(solver.parameters))[i]
 
-        # Check the Poisson's ratio based on Specfem3D upper/lower bounds
-        if pars["vp"] is not None and pars["vs"] is not None:
-            poissons = poissons_ratio(vp=pars["vp"], vs=pars["vs"])
-            if (poissons.min() < -1) or (poissons.max() > 0.5):
-                print(msg.PoissonsRatioError.format(tag=tag,
-                                                    pmin=poissons.min(),
-                                                    pmax=poissons.max())
-                      )
-                sys.exit(-1)
-            else:
-                pars["pr"] = poissons 
+        # Check Poisson's ratio, which will error our SPECFEM if outside limits
+        if (pars["vp"] is not None) and (pars["vs"] is not None):
+            self.logger.debug(f"checking model parameters for: {tag}")
+            pars["pr"] = check_poissons_ratio(vp=pars["vp"], vs=pars["vs"])
 
         # Tell the User min and max values of the updated model
-        self.logger.info(f"model parameters ({tag} {self.eval_str}):")
-        msg_ = "{minval:.2f} <= {key} <= {maxval:.2f}"
+        model_msg = f"model parameters ({tag} {self.eval_str}):"
+        parts = "\n{minval:.2f} <= {key} <= {maxval:.2f}"
         for key, vals in pars.items():
-            self.logger.info(msg_.format(minval=vals.min(), key=key,
-                                         maxval=vals.max()))
+           model_msg += parts.format(minval=vals.min(), key=key,
+                                     maxval=vals.max())
+
+        self.logger.info(model_msg)
 
     def initialize_search(self):
         """
@@ -299,8 +295,7 @@ class Base:
         # Optional initial step length override
         if PAR.STEPLENINIT and len(self.line_search.step_lens) <= 1:
             alpha = PAR.STEPLENINIT * norm_m / norm_p
-            self.logger.debug(f"step length override due to "
-                              f"PAR.STEPLENINIT={PAR.STEPLENINIT}")
+            self.logger.debug(f"manually setting initial step length")
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
@@ -345,6 +340,8 @@ class Base:
         Removes old model/search parameters, moves current parameters to old,
         sets up new current parameters and writes statistic outputs
         """
+        self.logger.info(msg.sub("FINALIZING LINE SEARCH"))
+
         # m = self.load('m_new')  # unusued variable
         g = self.load(self.g_new)
         p = self.load(self.p_new)
@@ -435,7 +432,7 @@ class Base:
         :type format: str
         :param format: string formatter for value
         """
-        fid = os.path.join(CFGPATHS.STATSDIR, {filename})
+        fid = os.path.join(PATH.WORKDIR, CFGPATHS.STATSDIR, filename)
         if not os.path.exists(fid):
             self.logger.debug(f"creating stats file: {fid}")
         with open(fid, "a") as f:

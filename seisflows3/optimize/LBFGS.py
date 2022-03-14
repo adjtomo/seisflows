@@ -157,7 +157,7 @@ class LBFGS(custom_import("optimize", "base")):
         # direction if this is the first iteration
         g = self.load(self.g_new)
         if self.LBFGS_iter == 1:
-            self.logger.info("first L-BFGS iteration, setting search direction"
+            self.logger.info("first L-BFGS iteration, setting search direction "
                              "as inverse gradient")
             p_new = -g
             restarted = 0

@@ -634,7 +634,7 @@ class Base:
         :param path: path to save kernels
         """
         if self.taskid == 0:
-            self.logger.debug(f"exporting kernels to {path}")
+            self.logger.debug(f"exporting kernels to:\n{path}")
 
         unix.cd(self.kernel_databases)
 
@@ -654,7 +654,7 @@ class Base:
         :param path: path to save residuals
         """
         if self.taskid == 0:
-            self.logger.debug(f"exporting residuals to: {path}")
+            self.logger.debug(f"exporting residuals to:\n{path}")
 
         unix.mkdir(os.path.join(path, "residuals"))
         src = os.path.join(self.cwd, "residuals")

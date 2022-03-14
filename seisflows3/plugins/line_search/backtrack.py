@@ -3,6 +3,8 @@
 This is the subclass class for seisflows.plugins.line_search.backtrack
 """
 import logging
+
+from seisflows3.tools import msg
 from seisflows3.plugins.line_search.bracket import Bracket
 from seisflows3.tools.math import backtrack2
 
@@ -55,7 +57,7 @@ class Backtrack(Bracket):
         # Assumed well scaled search direction, attempt backtracking line search 
         # with unit step length
         else:
-            self.logger.info("evaluating backtracking line search")
+            self.logger.info(msg.sub("EVALUATE BACKTRACKING LINE SEARCH"))
             x_str = ", ".join([f"{_:.2E}" for _ in x])
             f_str = ", ".join([f"{_:.2E}" for _ in f])
             self.logger.debug(f"step length(s) = {x_str}")

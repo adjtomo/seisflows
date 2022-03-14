@@ -25,8 +25,8 @@ from textwrap import wrap
 from IPython import embed
 
 from seisflows3 import logger
-from seisflows3.tools import unix, tools, msg
-from seisflows3.tools.wrappers import loadyaml, loadpy
+from seisflows3.tools import unix, msg
+from seisflows3.tools.wrappers import loadyaml, loadpy, loadobj
 from seisflows3.config import (init_seisflows, format_paths, Dict,
                                custom_import, NAMES, PACKAGES, ROOT_DIR,
                                CFGPATHS)
@@ -545,7 +545,7 @@ class SeisFlows:
                 sys.exit(f"\n\tNot a SeisFlows working directory, state file "
                          f"not found:\n\t{fullfile}\n")
 
-            sys.modules[f"seisflows_{NAME}"] = tools.loadobj(fullfile)
+            sys.modules[f"seisflows_{NAME}"] = loadobj(fullfile)
 
         # Check parameters so that default values are present
         logger

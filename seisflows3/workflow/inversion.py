@@ -284,22 +284,22 @@ class Inversion(custom_import("workflow", "base")):
 
         # Proceed based on the outcome of the line search
         if status > 0:
-            self.logger.info(msg.sub("trial step successful. finalizing..."))
+            self.logger.info("trial step successful")
             # Save outcome of line search to disk; reset step to 0 for next iter
             optimize.finalize_search()
             return
         elif status == 0:
-            self.logger.info(msg.sub("retrying with new trial step"))
+            self.logger.info("retrying with new trial step")
             # Recursively call this function to attempt another trial step
             self.line_search()
         elif status < 0:
             if optimize.retry_status():
-                self.logger.info(msg.sub("line search failed. restarting..."))
+                self.logger.info("line search failed. restarting line search")
                 # Reset the line search machinery, do not reset step count (?)
                 optimize.restart()
                 self.line_search()
             else:
-                self.logger.info(msg.sub("line search failed. aborting..."))
+                self.logger.info("line search failed. aborting inversion.")
                 sys.exit(-1)
 
     def evaluate_function(self, path, suffix):
@@ -313,22 +313,24 @@ class Inversion(custom_import("workflow", "base")):
         """
         self.logger.info(msg.sub("EVALUATE OBJECTIVE FUNCTION"))
 
-        self.write_model(path=path, suffix=suffix)
-        self.logger.debug(f"results saved to with suffix '{suffix}' to path: "
-                          f"{path}")
+        # Ensure that we are referencing the same tags as defined in OPTIMIZE
+        model_tag = getattr(optimize, f"m_{suffix}")
+        misfit_tag = getattr(optimize, f"f_{suffix}")
 
-        self.logger.info(f"evaluating objective function {PAR.NPROC} times")
+        self.write_model(path=path, tag=model_tag)
+
+        self.logger.debug(f"evaluating objective function {PAR.NPROC} times")
         system.run("solver", "eval_func", path=path)
 
-        self.logger.info("summing residuals with preprocess module")
-        self.write_misfit(path=path, suffix=suffix)
+        self.write_misfit(path=path, tag=misfit_tag)
 
     def evaluate_gradient(self, path=None):
         """
         Performs adjoint simulation to retrieve the gradient of the objective 
         """
         self.logger.info(msg.mnr("EVALUATING GRADIENT"))
-        self.logger.info(f"evaluating gradient {PAR.NPROC} times")
+        self.logger.debug(f"evaluating gradient {PAR.NPROC} times")
+
         system.run("solver", "eval_grad", path=path or PATH.GRAD,
                    export_traces=PAR.SAVETRACES)
 
@@ -375,19 +377,20 @@ class Inversion(custom_import("workflow", "base")):
         """
         save()
 
-    def write_model(self, path, suffix):
+    def write_model(self, path, tag):
         """
         Writes model in format expected by solver
 
         :type path: str
         :param path: path to write the model to
-        :type suffix: str
-        :param suffix: suffix to add to the model
+        :type src: str
+        :param src: name of the model to be saved, usually tagged as 'm' with
+            a suffix depending on where in the inversion we are. e.g., 'm_try'.
+            Expected that these tags are defined in OPTIMIZE module
         """
-        src = f"m_{suffix}"
+        src = tag
         dst = os.path.join(path, "model")
-
-        self.logger.debug(f"saving model '{src}' to: {dst}")
+        self.logger.debug(f"saving model '{src}' to:\n{dst}")
         solver.save(solver.split(optimize.load(src)), dst)
 
     def write_gradient(self):
@@ -395,7 +398,7 @@ class Inversion(custom_import("workflow", "base")):
         Writes gradient in format expected by non-linear optimization library.
         Calls the postprocess module, which will smooth/precondition gradient.
         """
-        self.logger.info(msg.key("POSTPROCESSING KERNELS"))
+        self.logger.info(msg.mnr("POSTPROCESSING KERNELS"))
         src = os.path.join(PATH.GRAD, "gradient")
         dst = f"g_new"
 
@@ -404,7 +407,7 @@ class Inversion(custom_import("workflow", "base")):
 
         optimize.save(dst, solver.merge(parts))
 
-    def write_misfit(self, path, suffix):
+    def write_misfit(self, path, tag):
         """
         Writes misfit in format expected by nonlinear optimization library.
         Collects all misfit values within the given residuals directory and sums
@@ -412,14 +415,17 @@ class Inversion(custom_import("workflow", "base")):
 
         :type path: str
         :param path: path to write the misfit to
-        :type suffix: str
-        :param suffix: suffix to add to the misfit
+        :type tag: str
+        :param tag: name of the model to be saved, usually tagged as 'f' with
+            a suffix depending on where in the inversion we are. e.g., 'f_try'.
+            Expected that these tags are defined in OPTIMIZE module
         """
+        self.logger.info("summing residuals with preprocess module")
         src = glob(os.path.join(path, "residuals", "*"))
-        dst = f"f_{suffix}"
-
+        dst = tag
         total_misfit = preprocess.sum_residuals(src)
-        self.logger.debug(f"saving misfit {total_misfit:.3E} to: '{dst}'")
+
+        self.logger.debug(f"saving misfit {total_misfit:.3E} to tag '{dst}'")
         optimize.savetxt(dst, total_misfit)
 
     def save_gradient(self):
@@ -432,12 +438,16 @@ class Inversion(custom_import("workflow", "base")):
         """
         dst = os.path.join(PATH.OUTPUT, f"gradient_{optimize.iter:04d}")
 
+
         if PAR.SAVEAS in ["binary", "both"]:
             src = os.path.join(PATH.GRAD, "gradient")
             unix.mv(src, dst)
         if PAR.SAVEAS in ["vector", "both"]:
-            src = os.path.join(PATH.OPTIMIZE, "g_old")
+            src = os.path.join(PATH.OPTIMIZE, optimize.g_old)
             unix.cp(src, dst + ".npy")
+
+        self.logger.debug(f"saving gradient to path:\n{dst}")
+
 
     def save_model(self):
         """
@@ -447,8 +457,11 @@ class Inversion(custom_import("workflow", "base")):
         Saving as a vector saves on file count, but requires numpy and seisflows
         functions to read
         """
-        src = "m_new"
+        src = optimize.m_new
         dst = os.path.join(PATH.OUTPUT, f"model_{optimize.iter:04d}")
+
+        self.logger.debug(f"saving model '{src}' to path:\n{dst}")
+
         if PAR.SAVEAS in ["binary", "both"]:
             solver.save(solver.split(optimize.load(src)), dst)
         if PAR.SAVEAS in ["vector", "both"]:
@@ -460,14 +473,22 @@ class Inversion(custom_import("workflow", "base")):
         """
         src = os.path.join(PATH.GRAD, "kernels")
         dst = os.path.join(PATH.OUTPUT, f"kernels_{optimize.iter:04d}")
+
+        self.logger.debug(f"saving kernels to path:\n{dst}")
+
         unix.mv(src, dst)
 
     def save_traces(self):
         """
-        Save the waveform traces to disk
+        Save the waveform traces to disk.
+
+        !!! This doesn't work
         """
         src = os.path.join(PATH.GRAD, "traces")
         dst = os.path.join(PATH.OUTPUT, f"traces_{optimize.iter:04d}")
+
+        self.logger.debug(f"saving traces to path:\n{dst}")
+
         unix.mv(src, dst)
 
     def save_residuals(self):
@@ -476,5 +497,8 @@ class Inversion(custom_import("workflow", "base")):
         """
         src = os.path.join(PATH.GRAD, "residuals")
         dst = os.path.join(PATH.OUTPUT, f"residuals_{optimize.iter:04d}")
+
+        self.logger.debug(f"saving residuals to path:\n{dst}")
+
         unix.mv(src, dst)
 

@@ -95,8 +95,6 @@ class Base:
         :param path: directory from which kernels are read and to which
         gradient is written
         """
-        msg.whoami(type(self), prepend="writing gradient from ")
-
         # Check that the given path exists
         if not exists(path):
             raise FileNotFoundError
@@ -120,8 +118,7 @@ class Base:
         gradient *= solver.merge(solver.load(f"{path}/model"))
 
         if PATH.MASK:
-            if PAR.VERBOSE:
-                print(f"\tMasking gradient")
+            self.logger.info(f"masking gradient")
             # to scale the gradient, users can supply "masks" by exactly
             # mimicking the file format in which models stored
             mask = solver.merge(solver.load(PATH.MASK))
@@ -169,20 +166,20 @@ class Base:
         path_sum_nosmooth = os.path.join(path, "sum_nosmooth")
         path_sum = os.path.join(path, "sum")
         if (PAR.SMOOTH_H > 0) or (PAR.SMOOTH_V > 0):
-            logger.debug(f"saving unsmoothed, summed kernels to "
+            logger.debug(f"saving unsmoothed and summed kernels to:\n"
                          f"{path_sum_nosmooth}")
             solver.combine(input_path=path, output_path=path_sum_nosmooth,
                            parameters=parameters)
 
             logger.info(f"smoothing gradient: H={PAR.SMOOTH_H}m, "
                         f"V={PAR.SMOOTH_V}m")
-            logger.debug(f"saving smoothed kernels to {path_sum}")
+            logger.debug(f"saving smoothed kernels to:\n{path_sum}")
             solver.smooth(input_path=path_sum_nosmooth, output_path=path_sum, 
                           parameters=parameters,
                           span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
 
         # Combine all the input kernels, generating the unscaled gradient
         else:
-            logger.debug(f"saving summed kernels to {path_sum}")
+            logger.debug(f"saving summed kernels to:\n{path_sum}")
             solver.combine(input_path=path, output_path=path_sum,
                            parameters=parameters)

@@ -8,7 +8,8 @@ import numpy as np
 import subprocess
 
 from collections import defaultdict
-from seisflows3.tools import msg, unix
+from seisflows3.tools import msg
+from seisflows3.tools.math import poissons_ratio
 from seisflows3.tools.wrappers import iterable
 
 
@@ -128,6 +129,32 @@ def setpar(key, val, filename="DATA/Par_file", path=".", sep="="):
     # Write amended file back to same file name
     with open(os.path.join(path, filename), "w") as f:
         f.writelines(lines)
+
+
+def check_poissons_ratio(vp, vs, min_val=-1., max_val=0.5):
+    """
+    Check Poisson's ratio based on Vp and Vs model vectors. Exit SeisFlows3 if
+    Poisson's ratio is outside `min_val` or `max_val` which by default are
+    set internally by SPECFEM. Otherwise return the value
+
+    :type vp: np.array
+    :param vp: P-wave velocity model vector
+    :type vs: np.array
+    :param vp: S-wave velocity model vector
+    :type min_val: float
+    :param min_val: minimum model-wide acceptable value for poissons ratio
+    :type max_val: float
+    :param max_val: maximum model-wide acceptable value for poissons ratio
+    :return:
+    """
+    poissons = poissons_ratio(vp=vp, vs=vs)
+    if (poissons.min() < min_val) or (poissons.max() > max_val):
+        print(msg.PoissonsRatioError.format(min_val=min_val, max_val=max_val,
+                                            pmin=poissons.min(),
+                                            pmax=poissons.max())
+              )
+        sys.exit(-1)
+    return poissons
 
 
 def _split(string, sep):

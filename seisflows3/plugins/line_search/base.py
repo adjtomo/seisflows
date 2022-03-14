@@ -57,7 +57,8 @@ class Base:
             self.step_len_max = step_len_max
 
         # Write header information to line search file
-        self.write(path=log_file)
+        self.log = log_file
+        self.write_log()
 
         # Prepare lists for line search history
         self.func_vals = []
@@ -93,7 +94,7 @@ class Base:
         self.gtp += [gtp]
 
         # Write the current misfit evaluation to disk
-        self.write(iter=iter, step_len=step_len, func_val=func_val)
+        self.write_log(iter=iter, step_len=step_len, func_val=func_val)
 
         # Call calculate step, must be implemented by subclass
         alpha, status = self.calculate_step()
@@ -123,7 +124,7 @@ class Base:
         self.func_vals += [func_val]
 
         # Write the current misfit evaluation to disk
-        self.write(iter=iter, step_len=step_len, func_val=func_val)
+        self.write_log(iter=iter, step_len=step_len, func_val=func_val)
 
         # Call calcuate step, must be implemented by subclass
         alpha, status = self.calculate_step()
@@ -163,18 +164,15 @@ class Base:
             self.func_vals = self.func_vals[:original_idx]
 
 
-    def write(self, path, iter=None, step_len=None, func_val=None):
+    def write_log(self, iter=None, step_len=None, func_val=None):
         """
-        Write the line search history into a formatted text file that looks
-        something like this:
+        Write the line search history into a formatted text file (self.log)
+        that looks something like this:
 
             ITER     STEPLEN     MISFIT
         ========  ========== ==========
               1            0          1
 
-        :type path: str
-        :param path: path to write the line search history to. by defaul this
-            should be defined by OPTIMIZE.setup()
         :type iter: int
         :param iter: the current iteration defined by OPTIMIZATION.iter
         :type step_len: float
@@ -184,16 +182,16 @@ class Base:
         :param func_val: the function evaluation, i.e., the misfit, associated
             with the given step length (alpha)
         """
-        if not os.path.exists(path):
+        if not os.path.exists(self.log):
             # Write out the header of the file to a NEW FILE
-            self.logger.info(f"writing line search history file: {path}")
-            with open(path, "w") as f:
-                f.write(f"{'ITER':^10}  {'STEPLEN':^10}  {'MISFIT':^10}\n")
+            self.logger.info(f"writing line search history file: {self.log}")
+            with open(self.log, "w") as f:
+                f.write(f"{'ITER':>10}  {'STEPLEN':>10}  {'MISFIT':>10}\n")
                 f.write(f"{'='*10}  {'='*10}  {'='*10}\n")
         else:
-            with open(path, "a") as f:
+            with open(self.log, "a") as f:
                 # Aesthetic choice, don't repeat iteration numbers in the file
-                if steplen == 0:
+                if step_len > 0:
                     iter = ""
                 f.write(f"{iter:>10}  {step_len:10.3e}  {func_val:10.3e}\n")
 

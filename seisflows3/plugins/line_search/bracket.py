@@ -5,6 +5,7 @@ This is the subclass class for seisflows.plugins.line_search.bracket
 import logging
 import numpy as np
 
+from seisflows3.tools import msg
 from seisflows3.plugins.line_search.base import Base
 from seisflows3.tools.math import backtrack2, polyfit2
 
@@ -45,7 +46,7 @@ class Bracket(Base):
         x, f, gtg, gtp, step_count, update_count = self.search_history()
 
         # Print out the current line search parameters for convenience
-        self.logger.debug("evaluating bracketing line search")
+        self.logger.debug(msg.sub("EVALUATE BRACKETING LINE SEARCH"))
         x_str = ", ".join([f"{_:.2E}" for _ in x])
         f_str = ", ".join([f"{_:.2E}" for _ in f])
         self.logger.debug(f"step length(s) = {x_str}")

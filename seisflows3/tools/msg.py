@@ -61,9 +61,7 @@ def sub(val):
     :rtype: str
     :return: formatted string message to be printed to std out
     """
-    sub_ = """
---------------------------------------------------------------------------------
-{:^80s}
+    sub_ = """{}
 --------------------------------------------------------------------------------
 """
     return sub_.format(val)
@@ -415,12 +413,11 @@ please let us know.
 
 PoissonsRatioError = """
                 
-ERROR CHECKING MODEL PARAMETERS
+ERROR CHECKING POISSON'S RATIO
 
-    The Poisson's ratio of '{tag}' is out of bounds with respect 
-    to the range defined by Specfem3D (-1, 0.5). This will cause 
-    an error in the process xgenerate_databases. The model 
-    bounds were found to be:
+    The Poisson's ratio of the given model is out of bounds with respect 
+    to the defined range ({min_val}, {max_val}). The model bounds were found 
+    to be:
 
     {pmin:.2f} < PR < {pmax:.2f}
 
