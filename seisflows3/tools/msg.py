@@ -79,6 +79,7 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
         =======================
                 HEADER
                 //////
+
         text
 
         item1
@@ -117,10 +118,13 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
         output_str += f"{header.upper():^{wraplen}}\n"
         output_str += f"{hchar * len(header):^{wraplen}}\n"
     # Format the actual input string with a text wrap
-    output_str += "\n".join(wrap(text, width=wraplen, break_long_words=False))
+    if text:
+        output_str += "\n".join(wrap(text, width=wraplen, break_long_words=False))
     # Add list items in order of list
     if items:
-        output_str += "\n\n"
+        # Sometimes text is blank so we don't need the double newline
+        if text:
+            output_str += "\n\n"
         output_str += "\n".join(items)
     # Add bottom border
     if border is not None:

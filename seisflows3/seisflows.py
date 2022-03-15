@@ -1362,7 +1362,8 @@ class SeisFlows:
         srcs = [os.path.basename(_) for _ in avail]
         if src:
             if src not in srcs:
-                sys.exit(f"\n\t{src} not in available models {avail}\n")
+                print(msg.cli(f"{src} not in available models: {avail}"))
+                sys.exit(-1)
             srcs = [src]
         for tag in srcs:
             m = optimize.load(tag)
@@ -1376,14 +1377,15 @@ class SeisFlows:
         """
         optimize = sys.modules["seisflows_optimize"]
         try:
-            line = optimize.line_search
-            cstr = (f"\n"
-                    f"\tIteration:  {optimize.iter}\n"
-                    f"\tStep Count: {line.step_count} / {line.step_count_max}\n"
-                    )
-            print(cstr)
+            items = []
+            ln = optimize.line_search
+            items.append(f"Iteration: {optimize.iter}")
+            items.append(f"Step Count: {ln.step_count} / {ln.step_count_max}")
+            print(msg.cli(items=items))
         except AttributeError:
-            sys.exit("\n\toptimization module has not been initialized yet\n")
+            print(msg.cli("OPTIMIZATION module has not been initialized yet, "
+                          "cannot retrieve iteration or step count values."))
+            sys.exit(-1)
 
     def _check_source_names(self, source_name=None, **kwargs):
         """
@@ -1396,13 +1398,14 @@ class SeisFlows:
         :param source_name: name of source to check index, if None will simply
             print out all sources
         """     
-        solver = sys.modules["seisflows_solver"]
-
+        source_names = sys.modules["seisflows_solver"].source_names
         if source_name:
-            print(f"{solver.source_names.index(source_name)}: {source_name}")
+            print(msg.cli(f"{source_names.index(source_name)}: {source_name}"))
         else:
-            for i, source_name in enumerate(solver.source_names):
-                print(f"{i:>3}: {source_name}")
+            items = []
+            for i, source_name in enumerate(source_names):
+                items.append(f"{i:>3}: {source_name}")
+            print(msg.cli(items=items, header="source names"))
 
     def _check_source_index(self, idx=None, **kwargs):
         """
@@ -1410,9 +1413,15 @@ class SeisFlows:
 
         :type idx: int
         :param idx: index of source to look up
-        """     
-        solver = sys.modules["seisflows_solver"]
-        print(f"\n\t{idx}: {solver.source_names[int(idx)]}\n")
+        """
+        if idx is None:
+            self._check_source_names(source_name=None)
+        else:
+            solver = sys.modules["seisflows_solver"]
+            try:
+                print(msg.cli(f"{idx}: {solver.source_names[int(idx)]}"))
+            except IndexError:
+                print(msg.cli(f"idx out of range: {len(solver.source_names)}"))
 
 
 def return_modules():
