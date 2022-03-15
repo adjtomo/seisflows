@@ -13,6 +13,7 @@ from seisflows3.scripts.seisflows import SeisFlows, return_modules
 
 # The module that we're testing, allows for copy-pasting these test suites
 MODULE = "system"
+
 # Ensures that these parameters are always defined, even when using subclasses
 REQUIRED_PARAMETERS = ["WALLTIME", "TASKTIME", "NTASK", "NPROC"]
 REQUIRED_FUNCTIONS = ["required", "check", "setup", "submit", "run",
@@ -27,6 +28,7 @@ REPO_DIR = os.path.abspath(os.path.join(config.ROOT_DIR, ".."))
 from subprocess import run
 def ls():
     run(["ls", "-l"])
+
 
 @pytest.fixture
 def copy_par_file(tmpdir):

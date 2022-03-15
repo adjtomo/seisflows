@@ -12,7 +12,7 @@ import pytest
 import contextlib
 import subprocess
 from unittest.mock import patch
-from seisflows3.scripts.seisflows import sfparser, SeisFlows
+from seisflows3.seisflows import sfparser, SeisFlows
 from seisflows3.config import Dict, ROOT_DIR
 from seisflows3.tools.wrappers import loadyaml
 
@@ -123,7 +123,7 @@ def test_register(tmpdir, par_file_dict, copy_par_file):
         sf = SeisFlows()
         assert(sf._paths is None)
         assert(sf._parameters is None)
-        sf._register(precheck=False)
+        sf._register(force=True)
 
     # Check that paths and parameters have been set in sys.modules
     paths = sys.modules["seisflows_paths"]
@@ -133,24 +133,6 @@ def test_register(tmpdir, par_file_dict, copy_par_file):
     assert(par_file_dict.LBFGSMAX == parameters.LBFGSMAX)
     path_check_full = os.path.abspath(par_file_dict.PATHS["SCRATCH"])
     assert(path_check_full == paths.SCRATCH)
-
-
-def test_cmd_modules():
-    """
-    Test module command which simply lists out the available (sub)modules
-    :return:
-    """
-    with patch.object(sys, "argv", ["seisflows"]):
-        f = io.StringIO()
-        with contextlib.redirect_stdout(f):
-            sf = SeisFlows()
-            sf(command="modules", name="workflow", package="seisflows3")
-        stdout = f.getvalue().strip().split()
-
-    # Assuming that these workflows will always be in the package
-    check_vals = ["base", "inversion", "migration"]
-    for check_val in check_vals:
-        assert(check_val in stdout)
 
 
 def test_cmd_setup(tmpdir):

@@ -2,6 +2,7 @@
 SeisFlows3 messages tool. For providing a uniform look to SeisFlows3 print
 and log statements.
 """
+from textwrap import wrap
 
 
 def mjr(val):
@@ -67,17 +68,67 @@ def sub(val):
     return sub_.format(val)
 
 
-ParameterCheckStatement = """
+def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
+    """
+    Provide a standardized look to the SeisFlows command line interface messages
+    The look we are after is something like:
 
-\t===============================================
-\t+                SEISFLOWS3                   +
-\t+        PRE-SUBMIT PARAMETER CHECK           +
-\t+        --------------------------           +
-\t+    Ensure that below are set correctly      +
-\t+   Checked parameters set by PAR.PRECHECK    +
-\t===============================================
 
-"""
+    $ seisflows cmd
+
+        =======================
+                HEADER
+                //////
+        text
+
+        item1
+        item2
+        ...
+        itemN
+        =======================
+
+    $ ls -l
+
+    :type text: str
+    :param text: text to format into the cli look
+    :type items: list
+    :param items: optional list of items that will be displayed on new lines
+        after the text. Useful for listing parameters or paths. The items here
+        are NOT wrapped.
+    :type wraplen: int
+    :param wraplen: desired line length to wrap messages.
+    :type header: str
+    :param header: optional header line that will be centered (wraplen/2) and
+        capitalized. Useful for things like 'WARNING' and 'ERROR'
+    :type border: str
+    :param border: a character to use to block off
+    :type hchar: str
+    :param hchar: character to underline the header with
+    :rtype output_str: str
+    :return output_str: formatted string to print out
+    """
+    # Start with a newline to space from command line arg
+    output_str = "\n"
+    # Add top border
+    if border is not None:
+        output_str += f"{border * wraplen}\n"
+    # Add header below top border and a line below that
+    if header is not None:
+        output_str += f"{header.upper():^{wraplen}}\n"
+        output_str += f"{hchar * len(header):^{wraplen}}\n"
+    # Format the actual input string with a text wrap
+    output_str += "\n".join(wrap(text, width=wraplen, break_long_words=False))
+    # Add list items in order of list
+    if items:
+        output_str += "\n\n"
+        output_str += "\n".join(items)
+    # Add bottom border
+    if border is not None:
+        output_str += f"\n{border * wraplen}"
+    # Final newline to space from next cli
+    output_str += "\n"
+    return output_str
+
 
 
 WarningOverwrite = """

@@ -47,11 +47,11 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 # Define a package-wide default directory and file naming schema. This will
 # be returned as a Dict() object, defined below.
 CFGPATHS = dict(
-    PAR_FILE= "parameters.yaml",
-    SCRATCHDIR = "scratch",
-    STATSDIR = "stats",
-    OUTPUTDIR = "output",
-    LOGFILE = "output_sf3.txt"
+    PAR_FILE="parameters.yaml",
+    SCRATCHDIR="scratch",
+    STATSDIR="stats",
+    OUTPUTDIR="output",
+    LOGFILE="output_sf3.txt"
 )
 """
 !!! ^^^ WARNING ^^^ !!!
@@ -135,6 +135,13 @@ class Dict(object):
 
     Allows for easier access of dictionary items, does not allow resets of
     attributes once defined, only allows updates through new dictionaries.
+
+    !!! TODO Not sure if it makes sense to define an entirely new object here
+    !!! TODO as we are essentially re-inventing the wheel? Why not inhereit
+    !!! TODO dict, i.e., Dict(dict), and then modify a few of the key attributes
+    !!! TODO that we don't want, like setattr and delattr. Dict is pretty
+    !!! TODO central to seisflows though so I don't want to break anything
+    !!! TODO without sufficient tests in place to figure out what broke.
     """
     def __iter__(self):
         return iter(sorted(self.__dict__.keys()))
@@ -157,6 +164,9 @@ class Dict(object):
 
     def update(self, newdict):
         super(Dict, self).__setattr__('__dict__', newdict)
+
+    def values(self):
+        return self.__dict__.values()
 
     def __init__(self, newdict):
         self.update(newdict)

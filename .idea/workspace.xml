@@ -5,11 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/seisflows.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/seisflows.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows3/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/optimize/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/optimize/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/plugins/line_search/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/plugins/line_search/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/workflow/inversion.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/workflow/inversion.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/seisflows.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/seisflows.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_optimize.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_plugins.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_postprocess.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_preprocess.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_seisflows.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tests/test_seisflows.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_solver.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_system.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tests/test_system.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_workflow.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tools/msg.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tools/msg.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
