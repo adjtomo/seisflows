@@ -505,7 +505,7 @@ class SeisFlows:
 
         # Reload objects from Pickle files
         for NAME in NAMES:
-            fullfile = os.path.join(self._args.workdir, "output",
+            fullfile = os.path.join(self._args.workdir, CFGPATHS.OUTPUTDIR,
                                     f"seisflows_{NAME}.p")
 
             if not os.path.exists(fullfile):
@@ -567,45 +567,6 @@ class SeisFlows:
         """
         self._register(force=True)
 
-        def write_header(f, paths_or_parameters, name=""):
-            """Re-usable function to write docstring comments"""
-            # Some aesthetically pleasing dividers to separate sections
-            TOP = (f"\n# {'=' * 78}\n#\n"
-                   f"# {name.upper():^78}\n# {'-' * len(name):^78}\n"
-                   f"#\n")
-            BOT = f"\n# {'=' * 78}\n"
-            TAB = "    "  # 4spacegang
-
-            f.write(TOP)
-            for key, attrs in paths_or_parameters.items():
-                if "type" in attrs:
-                    f.write(f"# {key} ({attrs['type']}):\n")
-                else:
-                    f.write(f"# {key}:\n")
-                # Ensure that total line width is no more than 80 characters
-                docstrs = wrap(attrs["docstr"], width=77 - len(TAB),
-                               break_long_words=False)
-                for line, docstr in enumerate(docstrs):
-                    f.write(f"#{TAB}{docstr}\n")
-            f.write(BOT)
-
-        def write_paths_parameters(f, paths_or_parameters, indent=""):
-            """Re-usable function to write paths or parameters in yaml format"""
-            TAB = "    "
-            for key, attrs in paths_or_parameters.items():
-                # Lists need to be treated differently in yaml format
-                if isinstance(attrs["default"], list):
-                    f.write(f"{key}:\n")
-                    for val in attrs["default"]:
-                        f.write(f"{TAB}- {val}\n")
-                else:
-                    # Yaml saves NoneType values as 'null' or blank lines
-                    if attrs["default"] is None:
-                        # f.write(f"{indent}{key}: null\n")
-                        f.write(f"{indent}{key}:\n")
-                    else:
-                        f.write(f"{indent}{key}: {attrs['default']}\n")
-
         # Need to attempt importing all modules before we access any of them
         for NAME in NAMES:
             sys.modules[f"seisflows_{NAME}"] = custom_import(NAME)()
@@ -626,18 +587,22 @@ class SeisFlows:
                 for NAME in NAMES:
                     req = sys.modules[f"seisflows_{NAME}"].required
                     seisflows_paths.update(req.paths)
-                    write_header(f, req.parameters, NAME)
-                    write_paths_parameters(f, req.parameters)
+
+                    # Write the docstring header and then the parameters in YAML
+                    msg.write_par_file_header(f, req.parameters, NAME)
+                    msg.write_par_file_paths_pars(f, req.parameters)
+
                 # Write the paths in the same format as parameters
-                write_header(f, seisflows_paths, name="PATHS")
+                msg.write_par_file_header(f, seisflows_paths, name="PATHS")
                 f.write("PATHS:\n")
+
                 if self._args.relative_paths:
                     # If requested, set the paths relative to the current dir
                     for key, attrs in seisflows_paths.items():
                         if attrs["default"] is not None:
                             seisflows_paths[key]["default"] = os.path.relpath(
                                                                attrs["default"])
-                write_paths_parameters(f, seisflows_paths, indent="    ")
+                msg.write_par_file_paths_pars(f, seisflows_paths, indent=4)
         except Exception as e:
             # General error catch as anything can happen here
             unix.rm(self._args.parameter_file)
@@ -1290,9 +1255,9 @@ class SeisFlows:
             for package_, module_list in package_dict.items():
                 if package is not None and package_ != package:
                     continue
-                items.append(f"\t- {package_}")
+                items.append(f"\t- {package_}".expandtabs(tabsize=4))
                 for module_ in module_list:
-                    items.append(f"\t\t* {module_}")
+                    items.append(f"\t\t* {module_}".expandtabs(tabsize=4))
         print(msg.cli("'+': package, '-': module, '*': class", items=items,
                       header="seisflows3 modules"))
 

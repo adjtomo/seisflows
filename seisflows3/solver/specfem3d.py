@@ -33,6 +33,8 @@ class Specfem3D(custom_import("solver", "base")):
 
     !!! See base class for method descriptions !!!
     """
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self):
         """
         These parameters should not be set by the user.
@@ -43,8 +45,7 @@ class Specfem3D(custom_import("solver", "base")):
             from this logger will be tagged by its specific module/classname
         """
         super().__init__()
-        self.logger = \
-            logging.getLogger(self.__name__).getChild(self.__qualname__)
+
     @property
     def required(self):
         """
