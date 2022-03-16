@@ -8,7 +8,7 @@ import shutil
 import pytest
 from unittest.mock import patch
 from seisflows3 import config
-from seisflows3.scripts.seisflows import SeisFlows
+from seisflows3.seisflows import SeisFlows
 
 
 TEST_DIR = os.path.join(config.ROOT_DIR, "tests")

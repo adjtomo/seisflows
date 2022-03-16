@@ -1,21 +1,26 @@
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# ==============================================================================
 #
-#                 Seisflows YAML Parameter File and Path Input
-#
-#  For NoneType, set variables to `None` or `null`. For infinity, set to `inf`
-#
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#                         SeisFlows3 YAML Parameter File
+# 
+# //////////////////////////////////////////////////////////////////////////////
 #
 # These modules correspond to the structure of the source code, and determine
 # SeisFlows' behavior at runtime. Check the source code directory for available 
 # module names. Each module will require its own set of sub parameters. 
 #
+# To set values as NoneType, use string: 'null'. 
+# To set values as infinity, use string: 'inf'
+#
 # To fill this parameter file with docstrings and default values, run:
 #
 # > seisflows configure
 #
+# To determine available options for modules listed below, run:
+#
+# > seisflows print module
+#
 #                                    MODULES
-#                                    -------
+#                                    ///////
 #
 # WORKFLOW:    The method for running SeisFlows. Equivalent to main()
 # SOLVER:      External numerical solver to use for waveform simulations.

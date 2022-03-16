@@ -21,12 +21,11 @@ import warnings
 import argparse
 import subprocess
 from glob import glob
-from textwrap import wrap
 from IPython import embed
 
 from seisflows3 import logger
 from seisflows3.tools import unix, msg
-from seisflows3.tools.wrappers import loadyaml, loadpy, loadobj
+from seisflows3.tools.wrappers import loadyaml, loadobj
 from seisflows3.config import (init_seisflows, format_paths, Dict,
                                custom_import, NAMES, PACKAGES, ROOT_DIR,
                                CFGPATHS)
@@ -909,7 +908,8 @@ class SeisFlows:
                     print(f"\n\t{line}")
                 break
         else:
-            sys.exit(f"\n\t'{parameter}' not found in parameter file\n")
+            print(msg.cli(f"'{parameter}' not found in {par_file}"))
+            sys.exit(-1)
 
     def par(self, parameter, value=None, skip_print=False, **kwargs):
         """
@@ -981,7 +981,9 @@ class SeisFlows:
                         print(f"\n\t{line}")
                 break
         else:
-            sys.exit(f"\n\t'{parameter}' not found in parameter file\n")
+            print(msg.cli(f"'{parameter}' not found in "
+                          f"{self._args.parameter_file}"))
+            sys.exit(-1)
 
     def edit(self, name, module, editor=None, **kwargs):
         """

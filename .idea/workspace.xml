@@ -7,9 +7,12 @@
     <list default="true" id="77028f02-18a8-4d4a-9721-d32cfd93a940" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows3/seisflows.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/seisflows.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/solver/specfem3d.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/solver/specfem3d.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/seisflows3/templates/parameters.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/templates/parameters.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/seisflows3/tools/msg.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tools/msg.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tests/test_config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_data/test_conf_parameters.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tests/test_data/test_conf_parameters.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_data/test_filled_parameters.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tests/test_data/test_filled_parameters.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_data/test_setup_parameters.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tests/test_data/test_setup_parameters.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/seisflows3/tests/test_seisflows.py" beforeDir="false" afterPath="$PROJECT_DIR$/seisflows3/tests/test_seisflows.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

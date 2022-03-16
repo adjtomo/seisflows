@@ -165,7 +165,7 @@ def test_cmd_setup(tmpdir):
             assert(test_phrase in f.read())
 
         # With overwriting
-        sf.setup(symlink=False, overwrite=True)
+        sf.setup(symlink=False, overwrite=True, force=True)
         assert(os.path.exists(par_file))
         with open(par_file, "r") as f:
             text = f.read()
