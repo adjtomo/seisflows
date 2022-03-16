@@ -403,13 +403,24 @@ class SeisFlows:
             sys.exit(-1)
 
         # Register parameters from the parameter file
-        if self._args.parameter_file.endswith(".yaml"):
+        try:
             parameters = loadyaml(self._args.parameter_file)
-            try:
-                paths = parameters["PATHS"]
-                parameters.pop("PATHS")
-            except KeyError:
-                paths = {}
+        except Exception as e:
+            print(msg.cli(f"Please check that your parameter file is properly "
+                          f"formatted in the YAML format. If you have just run "
+                          f"'seisflows configure', you may have some required "
+                          f"parameters that will need to be filled out before "
+                          f"you can proceed. The error message is:",
+                          items=[str(e)], header="parameter file read error",
+                          border="="))
+            sys.exit(-1)
+
+        # Distribute the paths and parameters internally and separately
+        # If we are running seisflows configure, paths will be empty
+        try:
+            paths = parameters.pop("PATHS")
+        except KeyError:
+            paths = {}
 
         # WORKDIR needs to be set here as it's expected by most modules
         if "WORKDIR" not in paths:
@@ -549,7 +560,7 @@ class SeisFlows:
                 sys.exit(0)
 
         unix.cp(PAR_FILE, self._args.workdir)
-
+        print(msg.cli(f"creating parameter file: {self._args.parameter_file}"))
         # Symlink the source code for easy access to repo
         if symlink:
             src_code = os.path.join(self._args.workdir, "source_code")
@@ -564,6 +575,7 @@ class SeisFlows:
         default values for each of the SeisFlows3 module parameters.
         This function writes files manually, consistent with the .yaml format.
         """
+        print(msg.cli(f"filling {self._args.parameter_file} w/ default values"))
         self._register(force=True)
 
         # Need to attempt importing all modules before we access any of them

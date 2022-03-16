@@ -10,7 +10,7 @@ import logging
 from glob import glob
 
 from seisflows3.tools import unix, msg
-from seisflows3.config import save, saveobj, SeisFlowsPathsParameters
+from seisflows3.config import save, saveobj, SeisFlowsPathsParameters, CFGPATHS
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -73,24 +73,25 @@ class Base:
         # Define the Paths required by this module
         # note: PATH.WORKDIR has been set by the entry point seisflows.setup()
         sf.path("SCRATCH", required=False,
-                default=os.path.join(PATH.WORKDIR, "scratch"),
+                default=os.path.join(PATH.WORKDIR, CFGPATHS.SCRATCHDIR),
                 docstr="scratch path to hold temporary data during workflow")
 
         sf.path("OUTPUT", required=False,
-                default=os.path.join(PATH.WORKDIR, "output"),
+                default=os.path.join(PATH.WORKDIR, CFGPATHS.OUTPUTDIR),
                 docstr="directory to save workflow outputs to disk")
 
         sf.path("SYSTEM", required=False,
-                default=os.path.join(PATH.WORKDIR, "scratch", "system"),
+                default=os.path.join(PATH.WORKDIR, CFGPATHS.SCRATCHDIR,
+                                     "system"),
                 docstr="scratch path to hold any system related data")
 
         sf.path("LOCAL", required=False,
                 docstr="path to local data to be used during workflow")
 
         sf.path("LOG", required=False, 
-                default=os.path.join(PATH.WORKDIR, "output_seisflows3.txt"),
-                docstr="path to write log statements to. defaults to "
-                       "'output_seisflows3.txt'")
+                default=os.path.join(PATH.WORKDIR, CFGPATHS.LOGFILE),
+                docstr="path to write log statements to. defaults to:"
+                       f"'{CFGPATHS.LOGFILE}'")
 
         return sf
 
@@ -125,17 +126,30 @@ class Base:
 
         # Create output directories
         unix.mkdir(PATH.OUTPUT)
-        log_files = os.path.join(PATH.WORKDIR, "logs")
-        old_logs = os.path.join(log_files, "previous")
+        log_files = os.path.join(PATH.WORKDIR, CFGPATHS.LOGDIR)
         unix.mkdir(log_files)
-        unix.mkdir(old_logs)
 
         output_log = PATH.LOG
-        error_log = os.path.join(PATH.WORKDIR, "error_log.txt")
+        error_log = os.path.join(PATH.WORKDIR, CFGPATHS.ERRLOGFILE)
+        par_file = PATH.PAR_FILE
 
-        # If resuming, move old log files to keep them out of the way
-        for log in [output_log, error_log]:
-            unix.mv(src=glob(os.path.join(f"{log}*.txt")), dst=old_logs)
+        # If resuming, move old log files to keep them out of the way. Number
+        # in ascending order, so we don't end up overwriting things
+        for src in [output_log, error_log]:
+            if os.path.exists(src):
+                ext = os.path.splitext(src)[-1]  # e.g., .txt
+                # e.g. WORKDIR/logs/output_sf3_000.txt
+                i = 0
+                new_log = src.replace(ext, f"{'{i:0>3}'}{ext}")
+                dst = os.path.join(log_files, new_log.format(i))
+                # Increment the file numbering until something suitable is found
+                #  e.g. WORKDIR/logs/output_sf3_001.txt
+                while os.path.exists(dst):
+                    i += 1
+                    dst = os.path.join(log_files, new_log.format(i))
+
+                self.logger.debug(f"moving current log file to: {dst}")
+                unix.mv(src=src, dst=dst)
 
         # Copy the parameter.yaml file into the log directoroy
         par_copy = f"parameters_{PAR.BEGIN}-{PAR.END}.yaml"

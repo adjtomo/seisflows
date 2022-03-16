@@ -1,6 +1,7 @@
 """
 Wrappers of commonly used functions to reduce line count and provide an
-aesthetically similar look in SeisFlows3
+aesthetically similar look in SeisFlows3. Mostly concerend with file
+manipulation, but also math and calling functions as well.
 """
 import os
 import re

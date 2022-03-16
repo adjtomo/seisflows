@@ -55,7 +55,9 @@ CFGPATHS = dict(
     SCRATCHDIR="scratch",
     STATSDIR="stats",
     OUTPUTDIR="output",
-    LOGFILE="output_sf3.txt"
+    LOGFILE="output_sf3.txt",
+    ERRLOGFILE="error_sf3.txt",
+    LOGDIR="logs",
 )
 """
 !!! ^^^ WARNING ^^^ !!!
@@ -74,7 +76,8 @@ def init_seisflows():
     assert(PATH in sys.modules)
 
     # Check if objects already exist on disk, exit so as to not overwrite
-    if os.path.exists():
+    if "OUTPUT" in sys.modules[PATH] and \
+            os.path.exists(sys.modules[PATH]["OUTPUT"]):
         print(msg.cli("Data from previous workflow found in working directory.",
                       items=["> seisflows restart: delete data and start new "
                              "workflow",
@@ -94,7 +97,7 @@ def init_seisflows():
     # Bare minimum module requirements for SeisFlows3
     req_modules = ["WORKFLOW", "SYSTEM"]
     for req in req_modules:
-        if not hasattr(sys.modules[PATH], req):
+        if not hasattr(sys.modules[PAR], req):
             print(msg.cli(f"SeisFlows3 requires defining: {req_modules}."
                           "Please specify these in the parameter file. Use "
                           "'seisflows print module' to determine suitable "
@@ -106,7 +109,7 @@ def save():
     Export the current session to disk
     """
     logger.info("exporting current working environment to disk")
-    output = sys.modules[PATH]["output"]
+    output = sys.modules[PATH]["OUTPUT"]
     unix.mkdir(output)
 
     # Save the paths and parameters into a JSON file
@@ -186,22 +189,18 @@ class Dict(object):
         """
         Pretty print dictionaries and first level nested dictionaries
         """
-        str_ = "{"
-        for key, item in vars(self).items():
-            if isinstance(item, str):
-                str_ += f"{key}: '{item}'\n"
-            elif isinstance(item, dict):
-                str_ += key + ": {\n"
-                for key2, item2 in vars(self)[key].items():
-                    if isinstance(item2, str):
-                        str_ += f"\t{key2}: '{item2}'\n"
-                    else:
-                        str_ += f"\t{key2}: {item2}\n"
-                str_ += "}\n"
-            else:
-                str_ += f"{key}: {item}\n"
-        str_ += "}"
+        str_ = ""
+        longest_key = max([len(_) for _ in self.__dict__.keys()])
+        for key, val in self.__dict__.items():
+            str_ += f"{key:<{longest_key}}: {val}\n"
         return str_
+
+    def __repr__(self):
+        """
+        Pretty print
+        :return:
+        """
+        return(self.__str__())
         
 
 class Null(object):
