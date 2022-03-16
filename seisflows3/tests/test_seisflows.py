@@ -79,8 +79,8 @@ def test_call_seisflows(tmpdir, par_file_dict, copy_par_file):
                                  universal_newlines=True)
             assert(out.stdout.strip() == f"{name.upper()}: {check_val}")
 
-            # Test from inside a Python environment; we need to redirect stdout to
-            # make sure the print statement is working as expected
+            # Test from inside a Python environment; we need to redirect stdout
+            # to make sure the print statement is working as expected
             f = io.StringIO()
             with contextlib.redirect_stdout(f):
                 sf = SeisFlows()
@@ -183,11 +183,31 @@ def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
     dst = os.path.join(tmpdir, "parameters.yaml")
     shutil.copy(src, dst)
 
-    # Configure the empty parameter file
+    # run seisflows init
+    with patch.object(sys, "argv", ["seisflows"]):
+        sf = SeisFlows()
+        sf.init()
+
+    # Check to make sure that the output directory has been created
+    from IPython import embed;embed()
+
+
+def test_cmd_init(tmpdir, filled_par_file):
+    """
+    Test 'seisflows init' command
+    :return:
+    """
+    os.chdir(tmpdir)
+
+    # Copy in the setup par file so we can configure it
+    src = filled_par_file
+    dst = os.path.join(tmpdir, "parameters.yaml")
+    shutil.copy(src, dst)
+
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows()
         # Need to run this via command line because there are sub arguments
-        cmd_line_arg = ["seisflows", "configure"]
+        cmd_line_arg = ["seisflows", "init"]
         subprocess.run(cmd_line_arg, capture_output=True,
                        universal_newlines=True)
 
@@ -202,6 +222,8 @@ def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
             break
         # Otherwise all the lines should be the same
         assert(check == par)
+
+
 
 
 def blank(tmpdir):

@@ -10,8 +10,6 @@ import json
 import pickle
 import subprocess
 import numpy as np
-
-from imp import load_source
 from importlib import import_module
 from pkgutil import find_loader
 
@@ -195,11 +193,18 @@ def savejson(filename, obj):
 def loadpy(filename):
     """
     Load a .py file. Used to load old parameter.py and paths.py files.
-    Deprecated in favor of using .yaml files
+    Deprecated in favor of using .yaml files.
 
     :type filename: str
     :param filename: filename of .py file
     """
+    raise DeprecationWarning("The legacy method of .py path and parameter "
+                             "files is deprecated. Please use the current "
+                             "method of a YAML parameter file"
+                             )
+    sys.exit(-1)
+    from imp import load_source
+
     if not os.path.exists(filename):
         print(msg.FileError.format(file=filename))
         raise IOError

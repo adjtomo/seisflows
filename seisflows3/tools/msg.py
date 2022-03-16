@@ -225,18 +225,6 @@ def write_par_file_paths_pars(f, paths_or_parameters, indent=0, tabsize=4):
                 )
 
 
-WarningOverwrite = """
-
-WARNING: Data from previous workflow found in working directory.
-
-To delete data and start a new workflow type:
-  seisflows restart
-
-To resume existing workflow type:
-  seisflows resume
-
-"""
-
 SystemWarning = """
 
 Please double check SYSTEM parameter
@@ -467,62 +455,6 @@ Please specify a system interface by adding a line to the parameter file, e.g.
     SYSTEM='serial';
 
 for a list of available interfaces, see seisflows/system in the source code
-
-"""
-
-ImportError1 = """
-
-SEISFLOWS IMPORT ERROR
-
-    Please check that "custom_import" utility is being used as follows:
-
-        custom_import(name1, name2)
-
-    The resulting full dotted name "seisflows.name1.name2" must correspond to a
-    module in the SeisFlows package.
-
-"""
-
-ImportError2 = """
-
-SEISFLOWS IMPORT ERROR
-
-    custom_import(system, classname, method)
-
-    Please check that "name1" is one of the following
-
-        workflow
-        solver
-        optimize
-        preprocess
-        postprocess
-        system
-
-"""
-
-ImportError3 = """
-
-SEISFLOWS IMPORT ERROR
-
-    The following module was not found in the SeisFlows package:
-
-        seisflows.{name}.{module}
-
-    Please check user-supplied {module_upper} parameter.
-
-"""
-
-ImportError4 = """
-
-SEISFLOWS IMPORT ERROR
-
-    By convention, SeisFlows module 
-
-        seisflows.{name}.{module}
-
-    must contain a class named
-
-        {classname}
 
 """
 
