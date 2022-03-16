@@ -209,7 +209,7 @@ class LBFGS(custom_import("optimize", "base")):
         self.LBFGS_iter = 1
         self.memory_used = 0
 
-        unix.cd(self.path)
+        unix.cd(PATH.OPTIMIZE)
         s = np.memmap(filename=self.s_file, mode="r+")
         y = np.memmap(filename=self.y_file, mode="r+")
         s[:] = 0.

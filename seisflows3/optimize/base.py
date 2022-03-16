@@ -84,16 +84,18 @@ class Base:
         self.restarted = 0
 
         # Define the names of output stats logs to keep all paths in one place
-        self.log_line_search = "line_search.txt"
-        self.log_factor = "factor.txt"
-        self.log_gradient_norm_L1 = "gradient_norm_L1.txt"
-        self.log_gradient_norm_L2 = "gradient_norm_L2.txt"
-        self.log_misfit = "misfit.txt"
-        self.log_restarted = "restarted.txt"
-        self.log_slope = "slope.txt"
-        self.log_step_count = "step_count.txt"
-        self.log_step_length = "step_length.txt"
-        self.log_theta = "theta.txt"
+        # Line search log is named differently so that optimize doesn't
+        # overwrite this log file when intiating the stats directory
+        self.line_search_log = "line_search"
+        self.log_factor = "factor"
+        self.log_gradient_norm_L1 = "gradient_norm_L1"
+        self.log_gradient_norm_L2 = "gradient_norm_L2"
+        self.log_misfit = "misfit"
+        self.log_restarted = "restarted"
+        self.log_slope = "slope"
+        self.log_step_count = "step_count"
+        self.log_step_length = "step_length"
+        self.log_theta = "theta"
 
         # Define the names of variables used to keep track of models etc. so
         # that we don't have multiple strings floating around defining the same
@@ -185,7 +187,7 @@ class Base:
         # Prepare line search machinery defined as a plugin class
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
             step_count_max=PAR.STEPCOUNTMAX, step_len_max=PAR.STEPLENMAX,
-            log_file=os.path.join(path_stats, self.log_line_search),
+            log_file=os.path.join(path_stats, f"{self.line_search_log}.txt"),
         )
 
         # Prepare preconditioner
@@ -193,6 +195,12 @@ class Base:
             self.precond = getattr(preconds, PAR.PRECOND)()
         else:
             self.precond = None
+
+        # Instantiate all log files in stats/ directory as empty text files
+        # OVERWRITES any existing stats/ log files that may already be there
+        for key, val in vars(self).items():
+            if "log_" in key:
+                self.write_stats(val)
 
         # Ensure that line search step count starts at 0 (workflow.intialize)
         self.write_stats(self.log_step_count, 0)
@@ -341,22 +349,17 @@ class Base:
         # Output the latest statistics to text files
         # !!! Describe what stats are being written here
         self.logger.info(f"writing optimization stats to: {CFGPATHS.STATSDIR}")
-        self.write_stats(filename=self.log_factor, value=
+        self.write_stats(self.log_factor, value=
                          -self.dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
                          )
-        self.write_stats(filename=self.log_gradient_norm_L1,
-                         value=np.linalg.norm(g, 1))
-        self.write_stats(filename=self.log_gradient_norm_L2,
-                         value=np.linalg.norm(g, 2))
-        self.write_stats(filename=self.log_misfit, value=f[0])
-        self.write_stats(filename=self.log_restarted, value=self.restarted)
-        self.write_stats(filename=self.log_slope,
-                         value=(f[1] - f[0]) / (x[1] - x[0]))
-        self.write_stats(filename=self.log_step_count,
-                         value=self.line_search.step_count)
-        self.write_stats(filename=self.log_step_length,
-                         value=x[f.argmin()])
-        self.write_stats(filename=self.log_theta,
+        self.write_stats(self.log_gradient_norm_L1, value=np.linalg.norm(g, 1))
+        self.write_stats(self.log_gradient_norm_L2, value=np.linalg.norm(g, 2))
+        self.write_stats(self.log_misfit, value=f[0])
+        self.write_stats(self.log_restarted, value=self.restarted)
+        self.write_stats(self.log_slope, value=(f[1] - f[0]) / (x[1] - x[0]))
+        self.write_stats(self.log_step_count, value=self.line_search.step_count)
+        self.write_stats(self.log_step_length, value=x[f.argmin()])
+        self.write_stats(self.log_theta,
                          value=180. * np.pi ** -1 * angle(p, -g))
 
         # Reset line search step count to 0 for next iteration
@@ -393,23 +396,38 @@ class Base:
         self.line_search.clear_history()
         self.restarted = 1
 
-    def write_stats(self, filename, value, format="e"):
+    def write_stats(self, log, value=None, format="18.6E"):
         """
         Simplified write function to append values to text files in the
         STATSDIR. Used because stats line search information can be overwritten
         by subsequent iterations so we need to append values to text files
         if they should be retained.
 
-        :type filename: str
-        :param filename: name of the file to write to
+        Log files will look something like:
+
+        ITER  FACTOR
+        ====  ======
+           1     0.0
+
+        :type log: str
+        :param log: name of the file to write to. Will append .txt to it
         :type value: float
         :param value: value to write to file
         :type format: str
         :param format: string formatter for value
         """
-        fid = os.path.join(PATH.WORKDIR, CFGPATHS.STATSDIR, filename)
-        with open(fid, "a") as f:
-            f.write(f"{value:{format}}\n")
+        fid = os.path.join(PATH.WORKDIR, CFGPATHS.STATSDIR, f"{log}.txt")
+
+        # If no value is given, assuming we are being run from setup() and
+        # writing to new files. Will OVERWRITE any existing files
+        if value is None:
+            with open(fid, "w") as f:
+                f.write(f"{'ITER':>4}  {log.upper():>18}\n")
+                f.write(f"{'='*4}  {'='*18}\n")
+
+        else:
+            with open(fid, "a") as f:
+                f.write(f"{self.iter:>4}  {value:{format}}\n")
 
     def check_model(self, m, tag):
         """

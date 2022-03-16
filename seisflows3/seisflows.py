@@ -715,6 +715,7 @@ class SeisFlows:
         if check == "y":
             # CFGPATHS defines the outermost directory structure of SeisFlows3
             # We safeguard below against deleting the parameter file
+            items = []
             for fid_ in CFGPATHS.values():
                 for fid in glob(os.path.join(self._args.workdir, fid_)):
                     # Safeguards against deleting files that should not be dltd
@@ -722,10 +723,11 @@ class SeisFlows:
                         assert("yaml" not in fid)
                         assert(not os.path.islink(fid))
                         unix.rm(fid)
-                        print(f"- deleting file/folder: {fid}")
+                        items.append(f"- deleting file/folder: {fid}")
                     except AssertionError:
-                        print(f"+ skipping over: {fid}")
+                        items.append(f"+ skipping over: {fid}")
                         continue
+            print(msg.cli(items=items, header="clean", border="="))
 
     def resume(self, stop_after=None, resume_from=None, force=False,
                **kwargs):

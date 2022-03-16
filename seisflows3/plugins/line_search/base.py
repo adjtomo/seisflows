@@ -174,7 +174,7 @@ class Base:
               1            0          1
 
         :type iter: int
-        :param iter: the current iteration defined by OPTIMIZATION.iter
+        :param iter: the current iteration defined by OPTIMIZATION.iter.
         :type step_len: float
         :param step_len: Current step length of the line search, also known
             as 'alpha' in the optimization algorithm
@@ -182,7 +182,7 @@ class Base:
         :param func_val: the function evaluation, i.e., the misfit, associated
             with the given step length (alpha)
         """
-        if not os.path.exists(self.log):
+        if (iter is None) or (not os.path.exists(self.log)):
             # Write out the header of the file to a NEW FILE
             self.logger.info(f"writing line search history file:\n{self.log}")
             with open(self.log, "w") as f:
@@ -191,7 +191,7 @@ class Base:
         else:
             with open(self.log, "a") as f:
                 # Aesthetic choice, don't repeat iteration numbers in the file
-                if step_len > 0:
+                if (step_len is not None) and (step_len > 0):
                     iter = ""
                 f.write(f"{iter:>10}  {step_len:10.3e}  {func_val:10.3e}\n")
 

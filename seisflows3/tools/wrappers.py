@@ -331,6 +331,30 @@ def savetxt(filename, v):
     np.savetxt(filename, [v], '%11.6e')
 
 
+def number_fid(fid, i=0):
+    """
+    Number a filename. Used to store old log files without overwriting them.
+    Premise is, if you have a file e.g., called: output.txt
+    This function would return incrementing filenames:
+    output_000.txt, output_001.txt, output_002.txt, ouput_003.txt ...
+
+    .. note::
+        Replace statement is catch all so we assume that there is only one \
+        instance of the file extension in the entire path.
+
+    :type filename: str
+    :param filename: path to the file that you want to increment
+    :rtype: str
+    :return: filename with appended number. filename ONLY, will strip away
+        the original path location
+    """
+    fid_only = os.path.basename(fid)
+    ext = os.path.splitext(fid_only)[-1]  # e.g., .txt
+    new_ext =  f"_{i:0>3}{ext}"   # e.g., _000.txt
+    new_fid = fid_only.replace(ext, new_ext)
+    return new_fid
+
+
 def nproc():
     """
     Get the number of processors available

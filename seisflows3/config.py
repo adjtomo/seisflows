@@ -34,7 +34,8 @@ important, and any changes to these will more-than-likely break the underlying
 mechanics of the package. Do not touch unless you know what you're doing!
 """
 
-# List of module names required by SeisFlows for module imports. Order-sensitive
+# List of module names required by SeisFlows3 for imports. Order-sensitive
+# In sys.modules these will be prepended by 'seisflows_', e.g., seisflows_system
 NAMES = ["system", "preprocess", "solver",
          "postprocess", "optimize", "workflow"]
 
@@ -49,15 +50,16 @@ PATH = "seisflows_paths"
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
 # Define a package-wide default directory and file naming schema. This will
-# be returned as a Dict() object, defined below.
+# be returned as a Dict() object, defined below. All of these files and
+# directories will be created relative to the user-defined working directory
 CFGPATHS = dict(
-    PAR_FILE="parameters.yaml",
-    SCRATCHDIR="scratch",
-    STATSDIR="stats",
-    OUTPUTDIR="output",
-    LOGFILE="output_sf3.txt",
-    ERRLOGFILE="error_sf3.txt",
-    LOGDIR="logs",
+    PAR_FILE="parameters.yaml",  # Default SeisFlows3 parameter file
+    SCRATCHDIR="scratch",        # SeisFlows3 internal working directory
+    STATSDIR="stats",            # Optimization module log file output
+    OUTPUTDIR="output",          # Permanent disk storage for state and outputs
+    LOGFILE="output_sf3.txt",    # Log files for all system log
+    ERRLOGFILE="error_sf3.txt",  # StdErr dump site for crash messages
+    LOGDIR="logs",               # Dump site for previously created log files
 )
 """
 !!! ^^^ WARNING ^^^ !!!

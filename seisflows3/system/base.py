@@ -10,6 +10,7 @@ import logging
 from glob import glob
 
 from seisflows3.tools import unix, msg
+from seisflows3.tools.wrappers import number_fid
 from seisflows3.config import save, saveobj, SeisFlowsPathsParameters, CFGPATHS
 
 
@@ -135,27 +136,15 @@ class Base:
 
         # If resuming, move old log files to keep them out of the way. Number
         # in ascending order, so we don't end up overwriting things
-        for src in [output_log, error_log]:
+        for src in [output_log, error_log, par_file]:
+            i = 1
             if os.path.exists(src):
-                ext = os.path.splitext(src)[-1]  # e.g., .txt
-                # e.g. WORKDIR/logs/output_sf3_000.txt
-                i = 0
-                new_log = src.replace(ext, f"{'{i:0>3}'}{ext}")
-                dst = os.path.join(log_files, new_log.format(i))
-                # Increment the file numbering until something suitable is found
-                #  e.g. WORKDIR/logs/output_sf3_001.txt
+                dst = os.path.join(log_files, number_fid(src, i))
                 while os.path.exists(dst):
                     i += 1
-                    dst = os.path.join(log_files, new_log.format(i))
-
-                self.logger.debug(f"moving current log file to: {dst}")
-                unix.mv(src=src, dst=dst)
-
-        # Copy the parameter.yaml file into the log directoroy
-        par_copy = f"parameters_{PAR.BEGIN}-{PAR.END}.yaml"
-        unix.cp(src="parameters.yaml",
-                dst=os.path.join(log_files, par_copy)
-                )
+                    dst = os.path.join(log_files, number_fid(src, i))
+                self.logger.debug(f"copying par/log file to: {dst}")
+                unix.cp(src=src, dst=dst)
 
         return output_log, error_log
 
