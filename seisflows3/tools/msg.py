@@ -5,7 +5,7 @@ and log statements.
 from textwrap import wrap
 
 
-def mjr(val):
+def mjr(val, char="="):
     """
     Message formatter used to block off sections in log files with visually
     distinctive separators. Defined as individual functions to simplify
@@ -15,19 +15,15 @@ def mjr(val):
 
     :type val: str
     :param val: formatted message to return
+    :type char: str
+    :param char: border character to separate the message from remainder of logs
     :rtype: str
     :return: formatted string message to be printed to std out
     """
-    mjr_ =  """
-================================================================================
-{:^80s}
-================================================================================
-"""
-
-    return mjr_.format(val)
+    return f"\n{char*80}\n{val:^80s}\n{char*80}"
 
 
-def mnr(val):
+def mnr(val, char="/"):
     """
     Message formatter used to block off sections in log files with visually
     distinctive separators. Defined as individual functions to simplify
@@ -37,19 +33,15 @@ def mnr(val):
 
     :type val: str
     :param val: formatted message to return
+    :type char: str
+    :param char: border character to separate the message from remainder of logs
     :rtype: str
     :return: formatted string message to be printed to std out
     """
-    mnr_ = """
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-{:^80s}
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-"""
-
-    return mnr_.format(val)
+    return f"\n{char * 80}\n{val:^80s}\n{char * 80}"
 
 
-def sub(val):
+def sub(val, char="-"):
     """
     Message formatter used to block off sections in log files with visually
     distinctive separators. Defined as individual functions to simplify
@@ -59,13 +51,12 @@ def sub(val):
 
     :type val: str
     :param val: formatted message to return
+    :type char: str
+    :param char: border character to separate the message from remainder of logs
     :rtype: str
     :return: formatted string message to be printed to std out
     """
-    sub_ = """{}
---------------------------------------------------------------------------------
-"""
-    return sub_.format(val)
+    return f"\n{val}\n{char*80}"
 
 
 def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
