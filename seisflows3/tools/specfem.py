@@ -133,6 +133,11 @@ def getpar(key, file, delim="=", match_partial=False):
                 val = val.split("#")[0]
             # One last strip to remove any whitespace
             val = val.strip()
+            # Address the fact that SPECFEM Par_file sometimes lists values as
+            # formattedcd strings, e.g., 38.0d-2
+            if len(val.split("d")) == 2:
+                num, exp = val.split("d")
+                val = str(float(num) * 10 ** int(exp))
             break
     else:
         raise KeyError(f"Could not find matching key '{key}' in file: {file}")
@@ -256,7 +261,7 @@ def setpar_vel_model(file, model):
 
     # Set nbmodels to the correct value
     setpar(key="nbmodels", val=len(model), file=file)
-    
+
 
 def check_poissons_ratio(vp, vs, min_val=-1., max_val=0.5):
     """

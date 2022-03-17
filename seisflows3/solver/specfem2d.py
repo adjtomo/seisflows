@@ -10,7 +10,7 @@ import sys
 import logging
 from glob import glob
 
-from seisflows3.tools import unix
+from seisflows3.tools import unix, msg
 from seisflows3.tools.wrappers import exists
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
 from seisflows3.tools.specfem import call_solver, getpar, setpar
@@ -87,75 +87,57 @@ class Specfem2D(custom_import("solver", "base")):
 
     def check_solver_parameter_files(self):
         """
-        Checks solver parameters
+        Checks SPECFEM2D Par_file for acceptable parameters and matches with
+        the internally set parameters
         """
-        def getpar_tryexcept(trial_list, cast, tag=""):
-            """
-            Re-used function to wrap getpar() in a try-except
-            To allow for different SPECFEM2D Par_file version
-
-            :type trial_list: list
-            :param trial_list: list of strings to check in par file
-            :type cast: str
-            :param cast: cast the output results as this type
-            :type tag: str
-            :param tag: tag used incase error raised, for more useful message
-            :rtype tuple: (str, cast)
-            :return: the correct check from the trial list and corresponding val
-            """
-            for check in trial_list:
-                try:
-                    return check, getpar(check, cast=cast)
-                except KeyError as e:
-                    pass
-            else:
-                raise KeyError(f"Parameter '{tag}' not found when looking for "
-                               f"{trial_list}") from e
-
         # Check the number of steps in the SPECFEM2D Par_file
-        nt_str, nt = getpar_tryexcept(trial_list=["NSTEP", "nt"],
-                                      cast=int, tag="nt")
-        if nt != PAR.NT:
+        nt_str, nt, nt_i = getpar(key="NSTEP", file="DATA/Par_file")
+        if int(nt) != PAR.NT:
             if self.taskid == 0:
-                self.logger.warning(f"WARNING: nt={nt} not equal "
-                                    f"PAR.NT={PAR.NT},"
-                                    f"setting scratch/solver/*/DATA/Par_file "
-                                    f"nt={PAR.NT}")
-                setpar(nt_str, PAR.NT)
+                print(msg.cli(f"SPECFEM2D {nt_str}=={nt} is not equal "
+                              f"SeisFlows3 PAR.NT=={PAR.NT}. Please ensure "
+                              f"that these values match in both files.",
+                              header="parameter match error", border="=")
+                      )
+                sys.exit(-1)
 
-        # Check the dt step discretization in the SPECFEM2D Par_file
-        dt_str, dt = getpar_tryexcept(trial_list=["DT", "deltat"],
-                                      cast=float, tag="dt")
-        if dt != PAR.DT:
+        dt_str, dt, dt_i = getpar(key="DT", file="DATA/Par_file")
+        if float(dt) != PAR.DT:
             if self.taskid == 0:
-                self.logger.warning(f"WARNING: dt={dt} not equal PAR.DT={PAR.DT},"
-                               f"setting scratch/solver/*/DATA/Par_file "
-                               f"dt={PAR.DT}")
-            setpar(dt_str, PAR.DT)
+                print(msg.cli(f"SPECFEM2D {dt_str}=={dt} is not equal "
+                              f"SeisFlows3 PAR.DT=={PAR.DT}. Please ensure "
+                              f"that these values match in both files.",
+                              header="parameter match error", border="=")
+                      )
+                sys.exit(-1)
 
         # Check the central frequency in the SPECFEM2D SOURCE file
-        f0 = getpar("f0", file="DATA/SOURCE", cast=float)
-        if f0 != PAR.F0:
+        f0_str, f0, f0_i = getpar(key="f0", file="DATA/SOURCE")
+        if float(f0) != PAR.F0:
             if self.taskid == 0:
-                self.logger.warning(f"WARNING: f0={f0} not equal "
-                                    f"PAR.F0={PAR.F0}, setting "
-                                    f"SOURCE f0={PAR.F0}")
-            setpar("f0", PAR.F0, filename="DATA/SOURCE")
+                print(msg.cli(f"SPECFEM2D {f0_str}=={f0} is not equal "
+                              f"SeisFlows3 PAR.F0=={PAR.F0}. Please ensure "
+                              f"that these values match the DATA/SOURCE file.",
+                              header="parameter match error", border="=")
+                      )
+                sys.exit(-1)
 
         # Ensure that NPROC matches the MESH values
-        if self.mesh_properties.nproc != PAR.NPROC:
+        nproc = self.mesh_properties.nproc
+        if nproc != PAR.NPROC:
             if self.taskid == 0:
-                self.logger.warning(
-                    f"Warning: "
-                    f"mesh_properties.nproc={self.mesh_properties.nproc} "
-                    f"not equal PAR.NPROC={PAR.NPROC}"
-                )
+                print(msg.cli(f"SPECFEM2D mesh NPROC=={nproc} is not equal"
+                              f"SeisFlows3 PAR.NPROC=={PAR.NPROC}. "
+                              f"Please check that your mesh matches this val.",
+                              header="parameter match error", border="=")
+                      )
+                sys.exit(-1)
 
         if "MULTIPLES" in PAR:
             if PAR.MULTIPLES:
-                setpar("absorbtop", ".false.")
+                setpar(key="absorbtop", val=".false.", file="DATA/Par_file")
             else:
-                setpar("absorbtop", ".true.")
+                setpar(key="absorbtop", val=".true.", file="DATA/Par_file")
 
     def generate_data(self, **model_kwargs):
         """
@@ -166,8 +148,8 @@ class Specfem2D(custom_import("solver", "base")):
         self.generate_mesh(**model_kwargs)
 
         unix.cd(self.cwd)
-        setpar("SIMULATION_TYPE", "1")
-        setpar("SAVE_FORWARD", ".true.")
+        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
 
         call_solver(system.mpiexec(), "bin/xmeshfem2D", output="mesher.log")
         call_solver(system.mpiexec(), "bin/xspecfem2D", output="solver.log")
@@ -271,8 +253,8 @@ class Specfem2D(custom_import("solver", "base")):
         :type path: str
         :param path: path to export traces to after completion of simulation
         """
-        setpar("SIMULATION_TYPE", "1")
-        setpar("SAVE_FORWARD", ".true.")
+        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
 
         call_solver(mpiexec=system.mpiexec(), executable="bin/xmeshfem2D")
         call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem2D")
@@ -291,8 +273,8 @@ class Specfem2D(custom_import("solver", "base")):
         Calls SPECFEM2D adjoint solver, creates the `SEM` folder with adjoint
         traces which is required by the adjoint solver
         """
-        setpar("SIMULATION_TYPE", "3")
-        setpar("SAVE_FORWARD", ".false.")
+        setpar(key="SIMULATION_TYPE", val="3", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".false.", file="DATA/Par_file")
 
         unix.rm("SEM")
         unix.ln("traces/adj", "SEM")
