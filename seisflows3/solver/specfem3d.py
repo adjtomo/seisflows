@@ -96,7 +96,10 @@ class Specfem3D(custom_import("solver", "base")):
         unix.cd(self.cwd)
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
-        setpar(key="ATTENUATION ", val=".true.", file="DATA/Par_file")
+        if PAR.ATTENUATION:
+            setpar(key="ATTENUATION ", val=".true.", file="DATA/Par_file")
+        else:
+            setpar(key="ATTENUATION ", val=".false`.", file="DATA/Par_file")
 
         call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
 
@@ -162,7 +165,10 @@ class Specfem3D(custom_import("solver", "base")):
         # Set parameters and run forward simulation
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
-        setpar(key="ATTENUATION ", val=".true.", file="DATA/Par_file")
+        if PAR.ATTENUATION:
+            setpar(key="ATTENUATION ", val=".true.", file="DATA/Par_file")
+        else:
+            setpar(key="ATTENUATION ", val=".false`.", file="DATA/Par_file")
 
         call_solver(mpiexec=system.mpiexec(),
                     executable="bin/xgenerate_databases")

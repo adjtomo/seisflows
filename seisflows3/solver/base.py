@@ -130,6 +130,11 @@ class Base:
                       "['CONSTANT': Do not update density, "
                       "'VARIABLE': Update density]")
 
+        sf.par("ATTENUATION", required=True, par_type=str,
+               docstr="If True, turn on attenuation during forward "
+                      "simulations, otherwise set attenuation off. Attenuation "
+                      "is always off for adjoint simulations.")
+
         sf.par("COMPONENTS", required=False, default="ZNE", par_type=str,
                docstr="Components used to generate data, formatted as a single "
                       "string, e.g. ZNE or NZ or E")
