@@ -169,7 +169,7 @@ def test_cmd_setup(tmpdir):
         assert(os.path.exists(par_file))
         with open(par_file, "r") as f:
             text = f.read()
-            assert(test_phrase not in f.read())
+            assert(test_phrase not in text)
 
 
 def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):

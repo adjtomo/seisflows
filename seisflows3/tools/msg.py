@@ -9,14 +9,14 @@ def mjr(val, char="="):
     """
     Message formatter used to block off sections in log files with visually
     distinctive separators. Defined as individual functions to reduce call
-    call length.
+    length.
 
     Major: For important or workflow.main() messages like starting workflow
 
     .. rubric::
-        print(msg.mjr("Important message here"))
+        >>> print(msg.mjr("Important message here"))
         or
-        logger.info.(msg.mjr("Important message here"))
+        >>> logger.info.(msg.mjr("Important message here"))
 
     :type val: str
     :param val: formatted message to return
@@ -32,14 +32,14 @@ def mnr(val, char="/"):
     """
     Message formatter used to block off sections in log files with visually
     distinctive separators. Defined as individual functions to reduce call
-    call length.
+    length.
 
     Minor: For key messages, describing things like what iteration were at
 
     .. rubric::
-        print(msg.mnr("Semi important message here"))
+        >>> print(msg.mnr("Semi important message here"))
         OR
-        logger.info.(msg.mnr("Semi important message here"))
+        >>> logger.info.(msg.mnr("Semi important message here"))
 
     :type val: str
     :param val: formatted message to return
@@ -55,14 +55,14 @@ def sub(val, char="-"):
     """
     Message formatter used to block off sections in log files with visually
     distinctive separators. Defined as individual functions to reduce call
-    call length.
+    length.
 
     Sub: For sub-critical messages, describing things like notes and warnings
 
     .. rubric::
-        print(msg.mnr("Sub-critical message here"))
+        >>> print(msg.mnr("Sub-critical message here"))
         OR
-        logger.info.(msg.sub("Sub-critical message here"))
+        >>> logger.info.(msg.sub("Sub-critical message here"))
 
 
     :type val: str
@@ -96,6 +96,19 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
         =======================
 
     $ ls -l
+
+    .. rubric::
+        >>> print(msg.cli("stdout text here", items=["a", "b", "c"],\
+                          header="warning", border="="))
+        ========================================================================
+                                        WARNING
+                                        ///////
+        stdout text here
+
+        a
+        b
+        c
+        ========================================================================
 
     :type text: str
     :param text: text to format into the cli look
@@ -143,7 +156,7 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
 
 
 def write_par_file_header(f, paths_or_parameters, name="", tabsize=4,
-                          uline="/"):
+                          border="=", uline="/"):
     """
     Re-usable function to write docstring comments inside the SeisFlows3
     parameter file. Used by seisflows.SeisFlows.configure()
@@ -156,7 +169,7 @@ def write_par_file_header(f, paths_or_parameters, name="", tabsize=4,
     # PAR (type):
     #     description of par
     # ===========================
-
+    PAR: val
 
     :type f: _io.TextIO
     :param f: open text file to write to
@@ -168,22 +181,28 @@ def write_par_file_header(f, paths_or_parameters, name="", tabsize=4,
         the header of the docstring
     :type tabsize: int
     :param tabsize: how large to expand tab character '\t' as spaces
+    :type border: str
+    :param border: character to use as the header and footer border
     :type uline: str
     :param uline: how to underline the header
     """
     # Some aesthetically pleasing dividers to separate sections
-    top = (f"\n# {'=' * 78}\n#\n"
-           f"# {name.upper():^78}\n# {uline * len(name):^78}\n"
-           f"#\n")
-    bot = f"\n# {'=' * 78}\n"
+    # Length 77 ensure that total line width is no more than 80 characters
+    # including the '#' and spaces
+    top = (f"\n# {border * 77}"
+           f"\n# {name.upper():^77}"
+           f"\n# {uline * len(name):^77}"
+           f"\n"
+           )
+    bot = f"# {border * 77}\n"
 
+    # Write top header, all parameters, types and descriptions, and then footer
     f.write(top)
     for key, attrs in paths_or_parameters.items():
         if "type" in attrs:
             f.write(f"# {key} ({attrs['type']}):\n")
         else:
             f.write(f"# {key}:\n")
-        # Ensure that total line width is no more than 80 characters
         docstrs = wrap(attrs["docstr"], width=77 - tabsize,
                        break_long_words=False)
         for line, docstr in enumerate(docstrs):
