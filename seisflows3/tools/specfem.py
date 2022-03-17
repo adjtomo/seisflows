@@ -13,39 +13,6 @@ from seisflows3.tools.math import poissons_ratio
 from seisflows3.tools.wrappers import iterable
 
 
-def call_solver(mpiexec, executable, output="solver.log"):
-    """
-    Calls MPI solver executable to run solver binaries, used by individual 
-    processes to run the solver on system.
-
-    A less complicated version, without error catching, would be
-    subprocess.call(f"{mpiexec} {executable}", shell=True)
-
-    :type mpiexec: str
-    :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
-    :type executable: str
-    :param executable: executable function to call
-    :type output: str
-    :param output: where to redirect stdout
-    """
-    # mpiexec is None when running in serial mode
-    if mpiexec is None:
-       exc_cmd = f"./{executable}"
-
-    # Otherwise mpiexec is system dependent (e.g., srun, mpirun)
-    else:
-        exc_cmd = f"{mpiexec} {executable}"
-
-    try:
-        f = open(output, 'w')
-        subprocess.check_call(exc_cmd, shell=True, stdout=f)
-    except (subprocess.CalledProcessError, OSError):
-        print(msg.SolverError.format(exc=exc_cmd))
-        sys.exit(-1)
-    finally:
-        f.close()
-
-
 class Minmax(defaultdict):
     """
     Keeps track of min, max values of model or kernel
@@ -73,63 +40,223 @@ class Container(defaultdict):
         self.minmax = Minmax()
 
 
-def getpar(key, file='DATA/Par_file', sep='=', cast=str):
+def call_solver(mpiexec, executable, output="solver.log"):
     """
-    Reads parameter from Specfem3D parameter file
-    """
-    val = None
-    with open(file, 'r') as f:
-        # Read line by line
-        for line in f:
-            if line.find(key) == 0:
-                # Read key
-                key, val = _split(line, sep)
-                if not key:
-                    continue
-                # Read val
-                val, _ = _split(val, '#')
-                val.strip()
-                break
+    Calls MPI solver executable to run solver binaries, used by individual
+    processes to run the solver on system.
 
-    if val:
-        if cast == float:
-            val = val.replace('d', 'e')
-        return cast(val)
+    A less complicated version, without error catching, would be
+    subprocess.call(f"{mpiexec} {executable}", shell=True)
+
+    TODO Move the log name definition out of this function and into solver
+
+    :type mpiexec: str
+    :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
+    :type executable: str
+    :param executable: executable function to call
+    :type output: str
+    :param output: where to redirect stdout
+    """
+    # mpiexec is None when running in serial mode
+    if mpiexec is None:
+        exc_cmd = f"./{executable}"
+
+    # Otherwise mpiexec is system dependent (e.g., srun, mpirun)
     else:
-        print(f"Not found in parameter file: {key}\n")
-        raise KeyError
+        exc_cmd = f"{mpiexec} {executable}"
+
+    try:
+        # Write solver stdout (log files) to text file
+        f = open(output, "w")
+        subprocess.check_call(exc_cmd, shell=True, stdout=f)
+    except (subprocess.CalledProcessError, OSError) as e:
+        print(msg.cli("The external numerical solver has returned a nonzero "
+                      "exit code (failure). Consider stopping any currently "
+                      "running jobs to avoid wasted computational resources. "
+                      f"Check 'scratch/solver/mainsolver/{output}' for the "
+                      f"solvers stdout log message. "
+                      f"The failing command and error message are: ",
+                      items=[exc_cmd, e], header="external solver error",
+                      border="=")
+              )
+        sys.exit(-1)
+    finally:
+        f.close()
 
 
-def setpar(key, val, filename="DATA/Par_file", path=".", sep="="):
+def getpar(key, file, delim="=", match_partial=False):
     """
-    Overwrites parameter value to text file. 
-    Used to change values in SPECFEM parameter file.
+    Reads and returns parameters from a SPECFEM or SeisFlows3 parameter file
+    Assumes the parameter file is formatted in the following way:
 
-    .. note::
-        To ensure we only get the parameter were after, we search for the exact 
-        parameter name + first trailing space. Avoids collecting parameters that
-        contain other parameter names, e.g., searching for 'SAVE' may return 
-        'SAVE_FORWARD', but searching 'SAVE ' should only return the parameter 
-        we're after
+    # comment comment comment
+    {key}      {delim} VAL
 
-    .. note::
-        Assumes the SPECFEM par file is written in the form: key = value
+    :type key: str
+    :param key: case-insensitive key to match in par_file. must be EXACT match
+    :type file: str
+    :param file: The SPECFEM Par_file to match against
+    :type delim: str
+    :param delim: delimiter between parameters and values within the file.
+        default is '=', which matches for SPECFEM2D and SPECFEM3D_Cartesian
+    :type match_partial: bool
+    :param match_partial: allow partial key matches, e.g., allow key='tit' to
+        return value for 'title'. Defaults to False as this can have
+        unintended consequences
+    :rtype: tuple (str, str, int)
+    :return: a tuple of the key, value and line number (indexed from 0).
+        The key will match exactly how it looks in the Par_file
+        The value will be returned as a string, regardless of its expected type
+        IF no matches found, returns (None, None, None)
     """
-    val = str(val)
+    lines = open(file, "r").readlines()
 
-    with open(os.path.join(path, filename), "r") as f:
-        lines = f.readlines()
-        for i, line in enumerate(lines[:]):
-            # Search for key + first trailing space
-            if line[:len(key) + 1] == f"{key} ":
-                _, old_val, *_ = line.strip().split("=")  
-                lines[i] = line.replace(old_val, val)
-                break
+    for i, line in enumerate(lines):
+        # Find the first occurence, CASE-INSENSITIVE search, strip whitespace
+        if line.upper().startswith(key.upper()):
+            try:
+                key_out, val = line.strip().split(delim)
+            except ValueError as e:
+                raise ValueError(
+                    f"Could not split line with delimiter '{delim}'. Error "
+                    f"message: {e}"
+                )
+            # Strip white space now so we can match keys
+            key_out = key_out.strip()
+            # Unless explcitely authorized, don't allow partial matches,
+            # which str.find() will return on. Can have unintended consequences
+            # e.g., 'tit' will return 'title'
+            if (not match_partial) and (key_out.upper() != key.upper()):
+                continue
+            # Drop any trailing line comments
+            if "#" in val:
+                val = val.split("#")[0]
+            # One last strip to remove any whitespace
+            val = val.strip()
+            break
+    else:
+        raise KeyError(f"Could not find matching key '{key}' in file: {file}")
+    return key_out, val, i
 
-    # Write amended file back to same file name
-    with open(os.path.join(path, filename), "w") as f:
+
+def setpar(key, val, file, delim="=", match_partial=False):
+    """
+    Overwrites parameter value to a SPECFEM Par_file.
+
+    :type key: str
+    :param key: case-insensitive key to match in par_file. must be EXACT match
+    :type val: str
+    :param val: value to OVERWRITE to the given key
+    :type file: str
+    :param file: The SPECFEM Par_file to match against
+    :type delim: str
+    :param delim: delimiter between parameters and values within the file.
+        default is '=', which matches for SPECFEM2D and SPECFEM3D_Cartesian
+    :type match_partial: bool
+    :param match_partial: allow partial key matches, e.g., allow key='tit' to
+        return value for 'title'. Defaults to False as this can have
+        unintended consequences
+    """
+    # getpar() will throw a sys.exit if the key is not matched
+    key_out, val_out, i = getpar(key, file, delim, match_partial)
+    if key_out is None:
+        return
+
+    lines = open(file, "r").readlines()
+    # Replace value in place
+    lines[i] = lines[i].replace(val_out, str(val))
+    with open(file, "w") as f:
         f.writelines(lines)
 
+
+def getpar_vel_model(file):
+    """
+    SPECFEM2D doesn't follow standard formatting when defining its internal
+    velocity models so we need a special function to address this specifically.
+    Velocity models are ASSUMED to be formatted in the following way in the
+    SPECFEM2D Par_file (with any number of comment lines in between)
+
+    nbmodels                        = 4
+    1 1 2700.d0 3000.d0 1732.051d0 0 0 9999 9999 0 0 0 0 0 0
+    2 1 2500.d0 2700.d0 0 0 0 9999 9999 0 0 0 0 0 0
+    3 1 2200.d0 2500.d0 1443.375d0 0 0 9999 9999 0 0 0 0 0 0
+    4 1 2200.d0 2200.d0 1343.375d0 0 0 9999 9999 0 0 0 0 0 0
+    TOMOGRAPHY_FILE                 = ./DATA/tomo_file.xyz
+
+    :type file: str
+    :param file: The SPECFEM Par_file to match against
+    :rtype: list of str
+    :return: list of all the layers of the velocity model as strings
+    """
+    _, _, i_start = getpar("nbmodels", file)
+    _, _, i_end = getpar("tomography_file", file)
+
+    # i_start + 1 to skip over the 'nbmodels' parameter
+    lines = open(file, "r").readlines()[i_start + 1:i_end]
+    vel_model = []
+    for line in lines:
+        # Skip comments, empty lines, newlines
+        for not_allowed in [" ", "#", "\n"]:
+            if line.startswith(not_allowed):
+                break
+        else:
+            vel_model.append(line.strip())
+    return vel_model
+
+
+def setpar_vel_model(file, model):
+    """
+    Set velocity model values in a SPECFEM2D Par_file, see getpar_vel_model
+    for more information.
+
+    Deletes the old model from the Par_file, writes the new model in the same
+    place, and then changes the value of 'nbmodels'
+
+    :type file: str
+    :param file: The SPECFEM Par_file to match against
+    :type model: list of str
+    :param model: input model
+    :rtype: list of str
+    :return: list of all the layers of the velocity model as strings, e.g.:
+        model = ["1 1 2700.d0 3000.d0 1732.051d0 0 0 9999 9999 0 0 0 0 0 0",
+                 "2 1 2500.d0 2700.d0 0 0 0 9999 9999 0 0 0 0 0 0"]
+    """
+    _, nbmodels, i_start = getpar("nbmodels", file)
+    i_start += 1  # increase by one to start AFTER nbmodels line
+    _, _, i_end = getpar("tomography_file", file)
+
+    lines = open(file, "r").readlines()
+    model_lines = []
+    # i_start + 1 to skip over the 'nbmodels' parameter
+    for i, line in enumerate(lines[i_start:i_end]):
+        # Skip comments, empty lines, newlines
+        for not_allowed in [" ", "#", "\n"]:
+            if line.startswith(not_allowed):
+                break
+        else:
+            # We will use these indices to delete the original model
+            model_lines.append(i)
+
+    # Make sure that our indices are relative to the list and not enumeration
+    model_lines = [_ + i_start for _ in model_lines]
+
+    # one-liner to get rid of the original model
+    lines = [i for j, i in enumerate(lines) if j not in model_lines]
+
+    # Throw a new line onto the last line of the model to get proper formatting
+    model[-1] = model[-1] + "\n"
+
+    # Drop in the new model one line at a time
+    for i, val in enumerate(model):
+        lines.insert(i + model_lines[0], f"{val.strip()}\n")
+
+    # Overwrite with new lines containing updated velocity model
+    with open(file, "w") as f:
+        f.writelines(lines)
+
+    # Set nbmodels to the correct value
+    setpar(key="nbmodels", val=len(model), file=file)
+    
 
 def check_poissons_ratio(vp, vs, min_val=-1., max_val=0.5):
     """

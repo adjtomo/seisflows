@@ -301,24 +301,6 @@ FILE NOT FOUND
 
 """
 
-SolverError = """
-
-SOLVER FAILED
-
-    Nonzero exit status returned by the following command:  
-    
-    {exc}
-
-    Subsequent tasks may fail because expected solver output is not in place.
-    Users running on clusters without fault tolerance should consider stopping 
-    any remaining workflow tasks to avoid further loss of resources. 
-
-    To troubleshoot solver errors, navigate to ./scratch/solver to browse solver
-    output or try running solver manually in the directories set up in
-    ./scratch/solver. 
-
-"""
-
 
 ReceiverError_SPECFEM = """
 

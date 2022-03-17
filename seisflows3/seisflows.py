@@ -25,6 +25,8 @@ from IPython import embed
 
 from seisflows3 import logger
 from seisflows3.tools import unix, msg
+from seisflows3.tools.specfem import (getpar, setpar, getpar_vel_model,
+                                      setpar_vel_model)
 from seisflows3.tools.wrappers import loadyaml, loadobj
 from seisflows3.config import (init_seisflows, format_paths, Dict,
                                custom_import, NAMES, PACKAGES, ROOT_DIR,
@@ -200,7 +202,14 @@ def sfparser():
     sempar.add_argument("parameter", nargs="?", help="Parameter to edit or "
                         "view (case independent)")
     sempar.add_argument("value", nargs="?", default=None,
-                     help="Optional value to set parameter to.")
+                        help="Optional value to set parameter to.")
+    sempar.add_argument("-P", "--par_file", nargs="?", default="Par_file",
+                        help="Parameter file")
+    sempar.add_argument("-p", "--skip_print", action="store_true",
+                        default=False,
+                        help="Skip the print statement which is typically "
+                             "sent to stdout after changing parameters.")
+
     # =========================================================================
     check = subparser.add_parser(
         "check",  formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -461,13 +470,31 @@ class SeisFlows:
                         filemode="a", verbose=True):
         """
         Explicitely configure the logging module with some parameters defined
-        by the user in the System module. 
+        by the user in the System module. Instantiates a stream logger to write
+        to stdout, and a file logger which writes to `filename`. Two levels of
+        verbosity and three levels of log messages allow the user to determine
+        how much output they want to see.
+
+        :type level: str
+        :param level: log level to be passed to logger, available are
+            'CRITICAL', 'WARNING', 'INFO', 'DEBUG'
+        :type filename: str
+        :param filename: name of the log file to write log statements to
+        :type filemode: str
+        :param filemode: method for opening the log file. defaults to append 'a'
+        :type verbose: bool
+        :param verbose: if True, writes a more detailed log message stating the
+            type of log (warning, info, debug), and the class and method which
+            called the logger (e.g., seisflows3.solver.specfem2d.save()). This
+            is much more useful for debugging but clutters up the log file.
+            if False, only write the time and message in the log statement.
         """
         PAR = sys.modules["seisflows_parameters"]
         PATH = sys.modules["seisflows_paths"]
 
         # Try to overload default parameters with user-defined. This will not
-        # be possible if we haven't started the workflow yet.
+        # be possible if we haven't started the workflow yet, at which point
+        # the default values will be used
         try:
             level = PAR.LOG_LEVEL
             verbose = PAR.VERBOSE
@@ -475,30 +502,27 @@ class SeisFlows:
         except KeyError:
             pass
 
-        # Two levels of verbosity on log level
-        fmt_str_debug = ("%(asctime)s | %(levelname)-5s | "
-                         "%(name)s.%(funcName)s()\n"
-                         "> %(message)s")
-        fmt_str_clean = "%(asctime)s | %(message)s"
-
-        datefmt = "%Y-%m-%d %H:%M:%S"
-
+        # Two levels of verbosity on log level, triggered with PAR.VERBOSE
         if verbose:
-            fmt_str = fmt_str_debug
+            # More verbose logging statement with levelname and func name
+            fmt_str = (
+                "%(asctime)s | %(levelname)-5s | %(name)s.%(funcName)s()\n"
+                "> %(message)s"
+            )
         else:
-            fmt_str = fmt_str_clean
-
-        formatter = logging.Formatter(fmt_str, datefmt=datefmt)
+            # Clean logging statement with only time and message
+            fmt_str = "%(asctime)s | %(message)s"
 
         # Instantiate logger during _register() as we now have user-defined pars
         logger.setLevel(level)
+        formatter = logging.Formatter(fmt_str, datefmt="%Y-%m-%d %H:%M:%S")
 
         # Stream handler to print log statements to stdout
         st_handler = logging.StreamHandler()
         st_handler.setFormatter(formatter)
         logger.addHandler(st_handler)
 
-        # File handler to print log statements to text file
+        # File handler to print log statements to text file `filename`
         file_handler = logging.FileHandler(filename, filemode)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
@@ -508,7 +532,7 @@ class SeisFlows:
         A function to load and check each of the SeisFlows modules,
         re-initiating the SeisFlows environment. All modules are reliant on one
         another so any access to SeisFlows requires loading everything
-        simultaneously.
+        simultaneously and in correct order
         """
         # Working directory should already have been created by submit()
         unix.cd(self._args.workdir)
@@ -809,7 +833,8 @@ class SeisFlows:
 
         embed(colors="Neutral")
 
-    def sempar(self, parameter, value=None, **kwargs):
+    def sempar(self, parameter, value=None, skip_print=False,
+               par_file="Par_file", **kwargs):
         """
         check or set parameters in the SPECFEM parameter file.
         By default assumes the SPECFEM parameter file is called 'Par_file'
@@ -834,7 +859,18 @@ class SeisFlows:
             to edit the values of a velocity model (SPECFEM2D)
                 
                 seisflows sempar velocity_model \
-                    "1 1 2600.d0 5800.d0 3500.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0\n"
+                    "1 1 2600.d0 5800.d0 3500.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0"
+
+                OR for a two-layered model
+
+                seisflows sempar velocity_model \
+                "1 1 2600.d0 5800.d0 3500.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0 + \
+                 1 1 2600.d0 5800.d0 3500.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0"
+
+                .. note::
+                    For multi-layered models, the delimiter " + " is important,
+                    you must have the whitespace on either side else the
+                    function won't recognize these are separate layers.
 
         :type parameter: str
         :param parameter: parameter to check in parameter file. case insensitive
@@ -844,6 +880,11 @@ class SeisFlows:
             SPECFEM2D: if set to 'velocity_model' allows the user to set and 
             edit the velocity model defined in the SPECMFE2D Par_file. Not a 
             very smart capability, likely easier to do this manually.
+        :type par_file: str
+        :param par_file: name of the SPECFEM parameter file, defaults: Par_file
+        :type skip_print: bool
+        :param skip_print: skip the print statement which is typically sent
+            to stdout after changing parameters.
         """
         if parameter is None:
             self._subparser.print_help()
@@ -852,84 +893,39 @@ class SeisFlows:
         # SPECFEM parameter file has both upper and lower case parameters,
         # force upper just for string checking
         parameter = parameter.upper()
+        items = []  # for stdout printing
 
-        # !!! We are assuming here that the parameter file is called 'Par_file'
-        if not os.path.exists(self._args.parameter_file):
-            par_file = "Par_file"
+        # Use the specfem tool to grab related information
+        # Special case where the velocity model in SPECFEM2D doesn't isnt
+        # formatted the same as the rest of the file
+        if parameter == "VELOCITY_MODEL":
+            key = parameter
+            items = getpar_vel_model(file=par_file)
+            cur_val = ""
         else:
-            par_file = self._args.parameter_file
+            try:
+                key, cur_val, _ = getpar(key=parameter, file=par_file,
+                                         delim="=")
+            except KeyError:
+                print(msg.cli(f"'{parameter}' not found in {par_file}"))
+                sys.exit(-1)
 
-        with open(par_file, "r") as f:
-            lines = f.readlines()
-
-        # SPECIAL CASE: the internal mesher velocity model does not have a key
-        # it is just simply a list of numbers. Allow the user to check and edit
-        # this using a special keyword. The following constants assume that
-        # the Par_file hasn't changed from version cf893667 (Nov. 29, 2021)
-        MESHER_KEYWORD = "VELOCITY_MODEL"
-        MESHER_INPUT_NUM = 15
-        nbmodels = 1
-        if parameter == MESHER_KEYWORD:
-            for i, line in enumerate(lines):
-                # Ignore commented lines, ignore other parameters 
-                if "=" in line.strip() or "#" in line.strip():
-                    continue
-
-                # ASSUME: nbmodels comes before the velocity model AND number 
-                # of velocity model lines is the same as nbmodels
-                elif "nbmodels " in line:
-                    key, val = line.strip().split()
-                    nbmodels = int(val)  # replace the current val of 1
-                else:
-                    parts = line.strip().split()
-                    if len(parts) == MESHER_INPUT_NUM:
-                        MODEL = "".join(lines[i:i+nbmodels+1])
-                        # At this point we have confirmed that we are looking at
-                        # the velocity model
-                        if value is None:
-                            print(f"\n{MODEL}")
-                        else:
-                            print(f"\n{line}\n->")
-                            lines[i] = f"{value}\n"
-                            print(f"\n{value}")
-                            with open(par_file, "w") as f:
-                                f.writelines(lines)
-                        break
-            sys.exit(0)
-
-        # STANDARD CASE: check or edit parameters in the Par_file
-        # Determine the number of white spaces between key and delimiter to keep
-        # formatting pretty 
-        for line in lines:
-            if "=" in line:
-                parts = line.strip().split(" ")
-                space = parts.count("")
-                break
-
-        # Parse through the lines and find the corresponding value
-        for i, line in enumerate(lines):
-            # check exact parameter name and ignore comment
-            if f"{parameter:<{space}}" in line.upper() and line[0] != "#":
-                if value is not None:
-                    # these values still have string formatters attached
-                    current_par, current_val = line.split("=")
-
-                    # this retains the string formatters of the line
-                    new_val = current_val.strip().replace(current_val.strip(), 
-                                                          value)
-
-                    lines[i] = f"{current_par:<{space}}= {new_val}\n"
-                    print(f"\n\t{current_par.strip()} = "
-                          f"{current_val.strip()} -> {value}\n")
-
-                    with open(par_file, "w") as f:
-                        f.writelines(lines)
-                else:
-                    print(f"\n\t{line}")
-                break
+        # Option 1: Simply print out the value of the given parameter
+        if value is None:
+            if not skip_print:
+                print(msg.cli(f"{key}: {cur_val}", items=items))
+        # Option 2: Replace value with user-defined input
         else:
-            print(msg.cli(f"'{parameter}' not found in {par_file}"))
-            sys.exit(-1)
+            if parameter == "VELOCITY_MODEL":
+                setpar_vel_model(file=par_file, model=value.split("+"))
+                if not skip_print:
+                    items.append("->")
+                    items += getpar_vel_model(file=par_file)
+                    print(msg.cli(f"{key}:", items=items))
+            else:
+                setpar(key=parameter, val=value, file=par_file, delim="=")
+                if not skip_print:
+                    print(msg.cli(f"{key}: {cur_val} -> {value}"))
 
     def par(self, parameter, value=None, skip_print=False, **kwargs):
         """
@@ -975,35 +971,26 @@ class SeisFlows:
             warnings.warn("to set values to nonetype, use 'null' not 'none'",
                           UserWarning)
 
-        with open(self._args.parameter_file, "r") as f:
-            lines = f.readlines()
-
-        for i, line in enumerate(lines):
-            # Check exact parameter name and ignore comment
-            if f"{parameter}:" in line.strip()[:len(parameter) + 1] and \
-                                                                 line[0] != "#":
-                if value is not None:
-                    # These values still have string formatters attached
-                    current_par, current_val = line.split(":")
-
-                    # this retains the string formatters of the line
-                    new_val = current_val.strip().replace(current_val.strip(), 
-                                                          value)
-                    lines[i] = f"{current_par}: {new_val}\n"
-                    # lines[i] = ": ".join([current_par, new_val])
-                    if not skip_print:
-                        print(f"\n\t{current_par.strip()}: "
-                              f"{current_val.strip()} -> {value}\n")
-                    with open(self._args.parameter_file, "w") as f:
-                        f.writelines(lines)
-                else:
-                    if not skip_print:
-                        print(f"\n\t{line}")
-                break
-        else:
+        # Use the specfem tool to grab related information
+        try:
+            key, cur_val, i = getpar(key=parameter,
+                                     file=self._args.parameter_file,
+                                     delim=":")
+        except KeyError:
             print(msg.cli(f"'{parameter}' not found in "
                           f"{self._args.parameter_file}"))
             sys.exit(-1)
+
+        # Option 1: Simply print out the value of the given parameter
+        if value is None:
+            if not skip_print:
+                print(msg.cli(f"{key}: {cur_val}"))
+        # Option 2: Replace value with user-defined input
+        else:
+            setpar(key=parameter, val=value, file=self._args.parameter_file,
+                   delim=":")
+            if not skip_print:
+                print(msg.cli(f"{key}: {cur_val} -> {value}"))
 
     def edit(self, name, module, editor=None, **kwargs):
         """

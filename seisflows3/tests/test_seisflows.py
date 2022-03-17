@@ -12,8 +12,10 @@ import pytest
 import contextlib
 import subprocess
 from unittest.mock import patch
+
+from seisflows3 import logger
 from seisflows3.seisflows import sfparser, SeisFlows
-from seisflows3.config import Dict, ROOT_DIR, NAMES, CFGPATHS
+from seisflows3.config import save, Dict, ROOT_DIR, NAMES, CFGPATHS
 from seisflows3.tools.wrappers import loadyaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
@@ -261,14 +263,34 @@ def test_cmd_clean(tmpdir):
         assert(os.path.exists(fid))
 
 
-
-def test_config_logging(tmpdir):
+def test_config_logging(tmpdir, filled_par_file):
     """
-
+    Test logging configuration to make sure we can print to file
     :param tmpdir:
     :return:
     """
-    raise NotImplementedError
+    # Run init first to create a working state
+    os.chdir(tmpdir)
+
+    # Copy in the setup par file so we can configure it
+    src = filled_par_file
+    dst = os.path.join(tmpdir, "parameters.yaml")
+    shutil.copy(src, dst)
+
+    msg = "This is an example log that will be checked for test purposes"
+    with patch.object(sys, "argv", ["seisflows"]):
+        sf = SeisFlows()
+        sf._register(force=True)
+        sf._config_logging()
+        logger.debug(msg)
+
+    # Check that we created the log file and wrote the message in
+    assert(os.path.exists(CFGPATHS.LOGFILE))
+    with open(CFGPATHS.LOGFILE, "r") as f:
+        lines = f.read()
+    assert(msg in lines)
+    assert("DEBUG" in lines)  # levelname
+    assert("test_config_logging()" in lines)  # funcName
 
 
 def test_load_modules(tmpdir, filled_par_file):
@@ -297,18 +319,16 @@ def test_load_modules(tmpdir, filled_par_file):
         sf = SeisFlows()
         sf.init()
 
-    # See if we can load modules
+    # Check a random parameter and then set it to something different
+    preprocess = sys.modules["seisflows_preprocess"]
+    assert(preprocess.misfit is None)
+    preprocess.misfit = 1
+
+    # See if we can load modules and restore previous working state which
+    # overwrites the previous operation
     sf._load_modules()
+    assert(sys.modules["seisflows_preprocess"].misfit != 1)
 
-    pytest.set_trace()
-
-def test_cmd_debug(tmpdir):
-    """
-
-    :param tmpdir:
-    :return:
-    """
-    raise NotImplementedError
 
 
 def test_cmd_sempar(tmpdir):
