@@ -113,7 +113,8 @@ def getpar(key, file, delim="=", match_partial=False):
 
     for i, line in enumerate(lines):
         # Find the first occurence, CASE-INSENSITIVE search, strip whitespace
-        if line.upper().startswith(key.upper()):
+        # To allow for nested parameters
+        if line.strip().upper().startswith(key.upper()):
             try:
                 key_out, val = line.strip().split(delim)
             except ValueError as e:
@@ -134,7 +135,7 @@ def getpar(key, file, delim="=", match_partial=False):
             # One last strip to remove any whitespace
             val = val.strip()
             # Address the fact that SPECFEM Par_file sometimes lists values as
-            # formattedcd strings, e.g., 38.0d-2
+            # formatted strings, e.g., 38.0d-2
             if len(val.split("d")) == 2:
                 num, exp = val.split("d")
                 val = str(float(num) * 10 ** int(exp))
@@ -162,14 +163,19 @@ def setpar(key, val, file, delim="=", match_partial=False):
         return value for 'title'. Defaults to False as this can have
         unintended consequences
     """
-    # getpar() will throw a sys.exit if the key is not matched
     key_out, val_out, i = getpar(key, file, delim, match_partial)
     if key_out is None:
         return
 
     lines = open(file, "r").readlines()
+
     # Replace value in place
-    lines[i] = lines[i].replace(val_out, str(val))
+    if val_out != "":
+        lines[i] = lines[i].replace(val_out, str(val))
+    else:
+        # Special case where the initial parameter is empty so we just replace
+        # the newline formatter at the end
+        lines[i] = lines[i].replace("\n", f" {val}\n")
     with open(file, "w") as f:
         f.writelines(lines)
 

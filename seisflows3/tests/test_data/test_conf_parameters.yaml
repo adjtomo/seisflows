@@ -105,6 +105,9 @@ FILTER: null
 # DENSITY (str):
 #   How to treat density during inversion. Available: ['CONSTANT': Do not
 #   update density, 'VARIABLE': Update density]
+# ATTENUATION (str):
+#   If True, turn on attenuation during forward simulations, otherwise set
+#   attenuation off. Attenuation is always off for adjoint simulations.
 # COMPONENTS (str):
 #   Components used to generate data, formatted as a single string, e.g. ZNE
 #   or NZ or E
@@ -123,6 +126,7 @@ FILTER: null
 # =============================================================================
 MATERIALS: !!! REQUIRED PARAMETER !!!
 DENSITY: !!! REQUIRED PARAMETER !!!
+ATTENUATION: !!! REQUIRED PARAMETER !!!
 COMPONENTS: ZNE
 SOLVERIO: fortran_binary
 NT: !!! REQUIRED PARAMETER !!!

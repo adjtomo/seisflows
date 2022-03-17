@@ -257,7 +257,7 @@ class SeisFlowsPathsParameters:
         Add a parameter to the internal list of parameters
 
         :type parameter: str
-        :param paremeter: name of the parameter
+        :param parameter: name of the parameter
         :type required: bool
         :param required: whether or not the parameter is required. If it is not
             required, then a default value should be given

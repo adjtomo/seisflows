@@ -18,6 +18,7 @@ seisflows par -p format ascii
 seisflows par -p begin 1
 seisflows par -p end 1
 seisflows par -p case synthetic
+seisflows par -p attenuation False
 seisflows par -p specfem_bin ./bin
 seisflows par -p specfem_data ./DATA
 seisflows par -p model_init ./MODEL_INIT
