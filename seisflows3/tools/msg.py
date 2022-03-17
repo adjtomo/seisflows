@@ -8,10 +8,15 @@ from textwrap import wrap
 def mjr(val, char="="):
     """
     Message formatter used to block off sections in log files with visually
-    distinctive separators. Defined as individual functions to simplify
-    calling and reduce code length.
+    distinctive separators. Defined as individual functions to reduce call
+    call length.
 
     Major: For important or workflow.main() messages like starting workflow
+
+    .. rubric::
+        print(msg.mjr("Important message here"))
+        or
+        logger.info.(msg.mjr("Important message here"))
 
     :type val: str
     :param val: formatted message to return
@@ -26,10 +31,15 @@ def mjr(val, char="="):
 def mnr(val, char="/"):
     """
     Message formatter used to block off sections in log files with visually
-    distinctive separators. Defined as individual functions to simplify
-    calling and reduce code length.
+    distinctive separators. Defined as individual functions to reduce call
+    call length.
 
     Minor: For key messages, describing things like what iteration were at
+
+    .. rubric::
+        print(msg.mnr("Semi important message here"))
+        OR
+        logger.info.(msg.mnr("Semi important message here"))
 
     :type val: str
     :param val: formatted message to return
@@ -44,10 +54,16 @@ def mnr(val, char="/"):
 def sub(val, char="-"):
     """
     Message formatter used to block off sections in log files with visually
-    distinctive separators. Defined as individual functions to simplify
-    calling and reduce code length.
+    distinctive separators. Defined as individual functions to reduce call
+    call length.
 
     Sub: For sub-critical messages, describing things like notes and warnings
+
+    .. rubric::
+        print(msg.mnr("Sub-critical message here"))
+        OR
+        logger.info.(msg.sub("Sub-critical message here"))
+
 
     :type val: str
     :param val: formatted message to return

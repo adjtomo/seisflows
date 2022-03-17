@@ -13,7 +13,7 @@ import contextlib
 import subprocess
 from unittest.mock import patch
 from seisflows3.seisflows import sfparser, SeisFlows
-from seisflows3.config import Dict, ROOT_DIR
+from seisflows3.config import Dict, ROOT_DIR, NAMES, CFGPATHS
 from seisflows3.tools.wrappers import loadyaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
@@ -174,7 +174,7 @@ def test_cmd_setup(tmpdir):
 
 def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
     """
-    Test configuring a parameter file
+    Test configuring a parameter file from a template par file
     """
     os.chdir(tmpdir)
 
@@ -186,15 +186,19 @@ def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
     # run seisflows init
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows()
-        sf.init()
+        sf.configure(relative_paths=False)
 
-    # Check to make sure that the output directory has been created
-    from IPython import embed;embed()
+    # Simple check that the configuration parameter file has the same number
+    # of lines as the one that has been created by configure
+    lines_conf = open(conf_par_file, "r").readlines()
+    lines_fill = open("parameters.yaml", "r").readlines()
+    assert(len(lines_conf) == len(lines_fill))
 
 
 def test_cmd_init(tmpdir, filled_par_file):
     """
-    Test 'seisflows init' command
+    Test 'seisflows init' command which instantiates a working directory and
+    saves the active working state as pickle files
     :return:
     """
     os.chdir(tmpdir)
@@ -204,36 +208,170 @@ def test_cmd_init(tmpdir, filled_par_file):
     dst = os.path.join(tmpdir, "parameters.yaml")
     shutil.copy(src, dst)
 
+    # Create necessary paths to get past some assertion errors
+    parameters = loadyaml(dst)
+    paths = parameters.pop("PATHS")
+
+    for key in ["MODEL_INIT", "MODEL_TRUE"]:
+        os.mkdir(paths[key])
+
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows()
-        # Need to run this via command line because there are sub arguments
-        cmd_line_arg = ["seisflows", "init"]
-        subprocess.run(cmd_line_arg, capture_output=True,
-                       universal_newlines=True)
+        sf.init()
 
-    # We will be checking against an already configured par file
-    for check, par in zip(open(conf_par_file).readlines(),
-                          open(dst).readlines()):
-        # Titles will be difference since it's based on relative path
-        if "TITLE" in check:
-            continue
-        # Paths will also be different since they're relative
-        elif "PATH" in check:
-            break
-        # Otherwise all the lines should be the same
-        assert(check == par)
+    for name in NAMES:
+        assert(os.path.exists(os.path.join(paths["OUTPUT"],
+                                           f"seisflows_{name}.p"))
+               )
 
 
-
-
-def blank(tmpdir):
+def test_cmd_submit(tmpdir):
     """
-    Test setting up the SeisFlows3 working directory
+    Test submit, also test the functionality of resume and restart which
+    are essentially wrappers for this call
+    :param tmpdir:
+    :return:
     """
-    pass
+    raise NotImplementedError
+
+
+def test_cmd_clean(tmpdir):
+    """
+
+    :param tmpdir:
+    :return:
+    """
     os.chdir(tmpdir)
 
+    # Create a bunch of files that match what should be deleted. Make them as
+    # directories even though some should be files because we just want to see
+    # if they get deleted or not
+    for path in CFGPATHS.values():
+        os.mkdir(path)
+
+    # Symlink the last file to make sure it still exists even if it matches
+    shutil.rmtree(path)
+    os.symlink(src=CFGPATHS.PAR_FILE, dst=path)
+
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows()
-        sf._register(precheck=False)
+        sf.clean(force=True)
+
+    for fid in [path, CFGPATHS.PAR_FILE]:
+        assert(os.path.exists(fid))
+
+
+
+def test_config_logging(tmpdir):
+    """
+
+    :param tmpdir:
+    :return:
+    """
+    raise NotImplementedError
+
+
+def test_load_modules(tmpdir, filled_par_file):
+    """
+    Test if module loading from sys.modules works
+
+    :param tmpdir:
+    :return:
+    """
+    # Run init first to create a working state
+    os.chdir(tmpdir)
+
+    # Copy in the setup par file so we can configure it
+    src = filled_par_file
+    dst = os.path.join(tmpdir, "parameters.yaml")
+    shutil.copy(src, dst)
+
+    # Create necessary paths to get past some assertion errors
+    parameters = loadyaml(dst)
+    paths = parameters.pop("PATHS")
+
+    for key in ["MODEL_INIT", "MODEL_TRUE"]:
+        os.mkdir(paths[key])
+
+    with patch.object(sys, "argv", ["seisflows"]):
+        sf = SeisFlows()
+        sf.init()
+
+    # See if we can load modules
+    sf._load_modules()
+
+    pytest.set_trace()
+
+def test_cmd_debug(tmpdir):
+    """
+
+    :param tmpdir:
+    :return:
+    """
+    raise NotImplementedError
+
+
+def test_cmd_sempar(tmpdir):
+    """
+
+    :param tmpdir:
+    :return:
+    """
+    raise NotImplementedError
+
+
+def test_cmd_par(tmpdir):
+    """
+
+    :param tmpdir:
+    :return:
+    """
+    raise NotImplementedError
+
+
+def test_cmd_check(tmpdir):
+    """
+
+    :param tmpdir:
+    :return:
+    """
+    raise NotImplementedError
+
+
+def test_cmd_print(tmpdir):
+    """
+
+    :param tmpdir:
+    :return:
+    """
+    raise NotImplementedError
+
+
+def test_cmd_convert(tmpdir):
+    """
+
+    :param tmpdir:
+    :return:
+    """
+    raise NotImplementedError
+
+
+def test_cmd_validate(tmpdir):
+    """
+
+    :param tmpdir:
+    :return:
+    """
+    raise NotImplementedError
+
+
+# def blank(tmpdir):
+#     """
+#     Test setting up the SeisFlows3 working directory
+#     """
+#     os.chdir(tmpdir)
+#
+#     with patch.object(sys, "argv", ["seisflows"]):
+#         sf = SeisFlows()
+#         sf._register(precheck=False)
 

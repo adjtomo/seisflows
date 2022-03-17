@@ -123,9 +123,9 @@ def sfparser():
         environment inspection prior to running 'submit'. Useful for debugging, 
         development and code exploration."""
     )
-    init.add_argument("-c", "--check", action="store_true",
-                      help="Perform parameter and path checking to ensure that "
-                           "user-defined parameters are accepatable")
+    # init.add_argument("-c", "--check", action="store_true",
+    #                   help="Perform parameter and path checking to ensure that "
+    #                        "user-defined parameters are accepatable")
     # =========================================================================
     submit = subparser.add_parser(
         "submit", help="Submit initial workflow to system",
@@ -569,11 +569,15 @@ class SeisFlows:
                 for package in PACKAGES:
                     unix.ln(os.path.join(REPO_DIR, package), src_code)
 
-    def configure(self, **kwargs):
+    def configure(self, relative_paths=False, **kwargs):
         """
         Dynamically generate the parameter file by writing out docstrings and
         default values for each of the SeisFlows3 module parameters.
         This function writes files manually, consistent with the .yaml format.
+
+        :type relative_paths: bool
+        :param relative_paths: if True, expand pathnames to absolute paths,
+            else if False, use path names relative to the working directory.
         """
         print(msg.cli(f"filling {self._args.parameter_file} w/ default values"))
         self._register(force=True)
@@ -607,7 +611,7 @@ class SeisFlows:
                 msg.write_par_file_header(f, seisflows_paths, name="PATHS")
                 f.write("PATHS:\n")
 
-                if self._args.relative_paths:
+                if relative_paths:
                     # If requested, set the paths relative to the current dir
                     for key, attrs in seisflows_paths.items():
                         if attrs["default"] is not None:
@@ -628,6 +632,7 @@ class SeisFlows:
         Establish a SeisFlows3 working environment without error checking.
         Save the initial state as pickle files for environment inspection.
         Useful for debugging, development and code exploration purposes.
+
         """
         self._register(force=True)
 
@@ -639,9 +644,10 @@ class SeisFlows:
         workflow = sys.modules["seisflows_workflow"]
         workflow.checkpoint()
 
-        if self._args.check:
-            for NAME in NAMES:
-                sys.modules[f"seisflows_{NAME}"].required.validate()
+        # Ensure that all parameters and paths that need to be instantiated
+        # are present in sys modules
+        for NAME in NAMES:
+            sys.modules[f"seisflows_{NAME}"].required.validate()
 
     def submit(self, stop_after=None, force=False, **kwargs):
         """

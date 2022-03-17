@@ -5,7 +5,7 @@ rm *yaml
 seisflows setup
 cp parameters.yaml test_setup_parameters.yaml
 
-seisflows configure
+seisflows configure -r
 cp parameters.yaml test_conf_parameters.yaml
 
 seisflows par -p walltime 10 
@@ -21,6 +21,7 @@ seisflows par -p case synthetic
 seisflows par -p specfem_bin ./bin
 seisflows par -p specfem_data ./DATA
 seisflows par -p model_init ./MODEL_INIT
+seisflows par -p model_true ./MODEL_TRUE
 
 mv parameters.yaml test_filled_parameters.yaml
 

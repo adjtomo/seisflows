@@ -258,7 +258,7 @@ SAVEAS: binary
 # LOCAL:
 #   path to local data to be used during workflow
 # LOG:
-#   path to write log statements to. defaults to 'output_seisflows3.txt'
+#   path to write log statements to. defaults to:'output_sf3.txt'
 # SOLVER:
 #   scratch path to hold solver working directories
 # SPECFEM_BIN:
@@ -285,19 +285,19 @@ SAVEAS: binary
 
 # ==============================================================================
 PATHS:
-    SCRATCH: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch
-    OUTPUT: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/output
-    SYSTEM: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/system
+    SCRATCH: scratch
+    OUTPUT: output
+    SYSTEM: scratch/system
     LOCAL:
-    LOG: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/output_seisflows3.txt
-    SOLVER: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/solver
+    LOG: output_sf3.txt
+    SOLVER: scratch/solver
     SPECFEM_BIN: ./bin
     SPECFEM_DATA: ./DATA
     DATA:
     MASK:
-    OPTIMIZE: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/optimize
+    OPTIMIZE: scratch/optimize
     MODEL_INIT: ./MODEL_INIT
-    MODEL_TRUE:
-    FUNC: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/scratch
-    GRAD: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/evalgrad
-    HESS: /home/bchow/REPOSITORIES/seisflows3/seisflows3/tests/test_data/scratch/evalhess
+    MODEL_TRUE: ./MODEL_TRUE
+    FUNC: scratch/scratch
+    GRAD: scratch/evalgrad
+    HESS: scratch/evalhess
