@@ -319,8 +319,9 @@ class SeisFlowsPathsParameters:
         Set internal paths and parameter values into sys.modules. Should be
         called by each modules check() function.
 
-        Ensures that required paths and parameters are set by the user, and that
-        default values are stored for any optional paths and parameters.
+        Ensures that required paths and parameters are set by the User in the
+        parameter file and that default values are stored for any optional
+        paths and parameters which are not explicitely set.
 
         :type paths: bool
         :param paths: validate the internal path values
@@ -390,6 +391,10 @@ def custom_import(name=None, module=None, classname=None):
         try:
             module = sys.modules[PAR][name.upper()]
         except KeyError:
+            return Null
+        # If this still returns nothing, then no module has been assigned
+        # likely the User has turned this module OFF
+        if module is None:
             return Null
     # If no method specified, convert classname to PEP-8
     if classname is None:

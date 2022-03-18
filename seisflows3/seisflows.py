@@ -21,6 +21,7 @@ import warnings
 import argparse
 import subprocess
 from glob import glob
+from copy import copy
 from IPython import embed
 
 from seisflows3 import logger
@@ -606,7 +607,13 @@ class SeisFlows:
         print(msg.cli(f"filling {self._args.parameter_file} w/ default values"))
         self._register(force=True)
 
-        # Need to attempt importing all modules before we access any of them
+        # Check if the User set any modules to None (do not instantiate)
+        names = copy(NAMES)
+        for name, choice in self._parameters.items():
+            if choice is None:
+                names.remove(name.lower())
+
+        # Need to attempt importing all modules before we access their par/paths
         for NAME in NAMES:
             sys.modules[f"seisflows_{NAME}"] = custom_import(NAME)()
 
@@ -623,12 +630,12 @@ class SeisFlows:
             # Paths are collected for each but written at the end
             seisflows_paths = {}
             with open(self._args.parameter_file, "a") as f:
-                for NAME in NAMES:
-                    req = sys.modules[f"seisflows_{NAME}"].required
+                for name in names:
+                    req = sys.modules[f"seisflows_{name}"].required
                     seisflows_paths.update(req.paths)
 
                     # Write the docstring header and then the parameters in YAML
-                    msg.write_par_file_header(f, req.parameters, NAME)
+                    msg.write_par_file_header(f, req.parameters, name)
                     msg.write_par_file_paths_pars(f, req.parameters)
 
                 # Write the paths in the same format as parameters
