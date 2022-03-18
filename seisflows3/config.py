@@ -106,6 +106,7 @@ def init_seisflows():
                           "choices.", header="error", border="="))
             sys.exit(-1)
 
+
 def save():
     """
     Export the current session to disk
