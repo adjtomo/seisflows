@@ -66,10 +66,16 @@ CFGPATHS = dict(
 """
 
 
-def init_seisflows():
+def init_seisflows(check=True):
     """
     Instantiates SeisFlows3 objects and makes them globally accessible by
     registering them in sys.modules
+
+    :type check: bool
+    :param check: Run parameter and path checking, defined in the module.check()
+        functions. By default should be True, to ensure that paths and
+        parameters are set correctly. It should only be set False for debug
+        and testing purposes when we need to force our way past this safeguard.
     """
     logger.info("initializing SeisFlows3 in sys.modules")
 
@@ -92,9 +98,19 @@ def init_seisflows():
     for name in NAMES:
         sys.modules[f"seisflows_{name}"] = custom_import(name)()
 
-    # Error checking
-    for name in NAMES:
-        sys.modules[f"seisflows_{name}"].check()
+    # Parameter import error checking, missing or improperly set parameters will
+    # throw assertion errors
+    if check:
+        errors = []
+        for name in NAMES:
+            try:
+                sys.modules[f"seisflows_{name}"].check()
+            except AssertionError as e:
+                errors.append(f"{name}: {e}")
+        if errors:
+            print(msg.cli("Module check failed with:", items=errors,
+                          header="module check error", border="="))
+            sys.exit(-1)
 
     # Bare minimum module requirements for SeisFlows3
     req_modules = ["WORKFLOW", "SYSTEM"]

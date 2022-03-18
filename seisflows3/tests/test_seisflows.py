@@ -306,9 +306,10 @@ def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
         PAR). I think this is because of how seisflows.configure() registers
         a relatively empty parameter file (only modules are defined), and this
         gets saved into sys modules, affecting subsequent tests which end up
-        accessing sys.modules. This behavior shouldn't get encountered in a
-        real run because we won't need to run init() and configure() in the
-        same python runtime environment, but I leave this warning here
+        accessing sys.modules. I tried flushing sys.modules but it didn't work.
+        This behavior shouldn't get encountered in a real run because we
+        won't need to run init() and configure() in the same python
+        runtime environment, but I leave this warning here
         wondering if I'll have to fix it at some point... -B
     """
     os.chdir(tmpdir)
@@ -329,84 +330,106 @@ def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
     lines_fill = open("parameters.yaml", "r").readlines()
     assert (len(lines_conf) == len(lines_fill))
 
-    from seisflows3.config import NAMES, PAR, PATH
-    for name in NAMES:
-        del sys.modules[f"seisflows_{name}"]
-    del sys.modules[PAR]
-    del sys.modules[PATH]
+    # My attempt to flush sys.modules which did NOT work
+    # from seisflows3.config import NAMES, PAR, PATH
+    # for name in NAMES:
+    #     del sys.modules[f"seisflows_{name}"]
+    # del sys.modules[PAR]
+    # del sys.modules[PATH]
 
 
-# def test_cmd_par(tmpdir):
+def test_cmd_par(tmpdir, copy_par_file):
+    """
+    Make sure the 'par' command can print and edit the parameter file
+    :param tmpdir:
+    :return:
+    """
+    # Run init first to create a working state
+    os.chdir(tmpdir)
+    copy_par_file
+
+    parameter = "begin"
+    expected_val = "1"
+    new_val = "2"
+
+    # testing the get option: seisflows par `parameter`
+    with patch.object(sys, "argv", ["seisflows"]):
+        sf = SeisFlows()
+        # Run this with subprocess so we can capture the print statement
+        cmd_line_arg = ["seisflows", "par", parameter]
+        out = subprocess.run(cmd_line_arg, capture_output=True,
+                             universal_newlines=True)
+
+    # Check that we printed out the correct value
+    par, val = out.stdout.strip().split(":")
+    assert(par.upper() == parameter.upper())
+    assert(int(val) == int(expected_val))
+
+    # testing the set option: seisflows par `parameter` `value`
+    with patch.object(sys, "argv", ["seisflows"]):
+        sf = SeisFlows()
+        # Run this with subprocess so we can capture the print statement
+        cmd_line_arg = ["seisflows", "par", parameter, new_val]
+        out1 = subprocess.run(cmd_line_arg, capture_output=True,
+                              universal_newlines=True)
+
+        # Run this with subprocess so we can capture the print statement
+        cmd_line_arg = ["seisflows", "par", parameter]
+        out2 = subprocess.run(cmd_line_arg, capture_output=True,
+                              universal_newlines=True)
+
+    # Check that the changed print statement works
+    par, vals = out1.stdout.strip().split(":")
+    val_old, val_new = vals.strip().split(" -> ")
+    assert(par.upper() == parameter.upper())
+    assert(int(val_old) == int(expected_val))
+    assert(int(val_new) == int(new_val))
+
+    # Check that we printed out the correctly changed value
+    par, val = out2.stdout.strip().split(":")
+    assert(par.upper() == parameter.upper())
+    assert(int(val) == int(new_val))
+
+# def test_cmd_sempar(tmpdir):
 #     """
-#     Make sure the 'par' command can print and edit the parameter file
+#
 #     :param tmpdir:
 #     :return:
 #     """
-#     # Run init first to create a working state
-#     os.chdir(tmpdir)
+#     pass
 #
-#     # Copy in the setup par file so we can configure it
-#     src = filled_par_file
-#     dst = os.path.join(tmpdir, "parameters.yaml")
-#     shutil.copy(src, dst)
 #
-#     with patch.object(sys, "argv", ["seisflows"]):
-#         sf = SeisFlows()
-#         sf.par(parameter="BEGIN")
-
-
-def test_cmd_sempar(tmpdir):
-    """
-
-    :param tmpdir:
-    :return:
-    """
-    pass
-
-
-def test_cmd_check(tmpdir):
-    """
-
-    :param tmpdir:
-    :return:
-    """
-    pass
-
-
-def test_cmd_print(tmpdir):
-    """
-
-    :param tmpdir:
-    :return:
-    """
-    pass
-
-
-def test_cmd_convert(tmpdir):
-    """
-
-    :param tmpdir:
-    :return:
-    """
-    pass
-
-
-def test_cmd_validate(tmpdir):
-    """
-
-    :param tmpdir:
-    :return:
-    """
-    pass
-
-
-# def blank(tmpdir):
+# def test_cmd_check(tmpdir):
 #     """
-#     Test setting up the SeisFlows3 working directory
+#     Very simple
+#     :param tmpdir:
+#     :return:
 #     """
-#     os.chdir(tmpdir)
+#     pass
 #
-#     with patch.object(sys, "argv", ["seisflows"]):
-#         sf = SeisFlows()
-#         sf._register(precheck=False)
-
+#
+# def test_cmd_print(tmpdir):
+#     """
+#
+#     :param tmpdir:
+#     :return:
+#     """
+#     pass
+#
+#
+# def test_cmd_convert(tmpdir):
+#     """
+#
+#     :param tmpdir:
+#     :return:
+#     """
+#     pass
+#
+#
+# def test_cmd_validate(tmpdir):
+#     """
+#
+#     :param tmpdir:
+#     :return:
+#     """
+#     pass

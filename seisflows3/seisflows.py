@@ -673,6 +673,9 @@ class SeisFlows:
         for NAME in NAMES:
             sys.modules[f"seisflows_{NAME}"].required.validate()
 
+        print(msg.cli(f"instantiating SeisFlows3 working state in directory: "
+                      f"{CFGPATHS.OUTPUTDIR}"))
+
     def submit(self, stop_after=None, force=False, **kwargs):
         """
         Main SeisFlows3 execution command. Submit the SeisFlows3 workflow to
@@ -1371,8 +1374,13 @@ class SeisFlows:
         :type source_name: str
         :param source_name: name of source to check index, if None will simply
             print out all sources
-        """     
-        source_names = sys.modules["seisflows_solver"].source_names
+        """
+        try:
+            source_names = sys.modules["seisflows_solver"].source_names
+        except FileNotFoundError as e:
+            print(msg.cli(str(e)))
+            sys.exit(-1)
+
         if source_name:
             print(msg.cli(f"{source_names.index(source_name)}: {source_name}"))
         else:

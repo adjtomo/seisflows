@@ -6,9 +6,10 @@ import os
 import sys
 import shutil
 import pytest
+from subprocess import run
 from unittest.mock import patch
 from seisflows3 import config
-from seisflows3.scripts.seisflows import SeisFlows, return_modules
+from seisflows3.seisflows import SeisFlows, return_modules
 
 
 # The module that we're testing, allows for copy-pasting these test suites
@@ -25,8 +26,8 @@ TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
 REPO_DIR = os.path.abspath(os.path.join(config.ROOT_DIR, ".."))
 
 
-from subprocess import run
 def ls():
+    """Convenience function to run inside a pdb debugger"""
     run(["ls", "-l"])
 
 
@@ -61,8 +62,8 @@ def sfinit(tmpdir, copy_par_file):
     os.chdir(tmpdir)
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows()
-        sf._register(precheck=False)
-    config.init_seisflows()
+        sf._register(force=True)
+    config.init_seisflows(check=False)
 
     return sf
 
@@ -74,6 +75,7 @@ def test_import(sfinit, modules):
     syntax errors) or the 'required' statement is failing
     """
     sf = sfinit
+    pytest.set_trace()
     for package, module_list in modules.items():
         for module in module_list:
             loaded_module = config.custom_import(MODULE, module)()

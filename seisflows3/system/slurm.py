@@ -28,7 +28,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class SlurmLg(custom_import("system", "base")):
+class Slurm(custom_import("system", "base")):
     """
     An interface through which to submit workflows, run tasks in serial or
     parallel, and perform other system functions.

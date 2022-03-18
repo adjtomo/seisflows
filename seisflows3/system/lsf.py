@@ -20,7 +20,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class LsfLg(custom_import("system", "base")):
+class Lsf(custom_import("system", "base")):
     """
     An interface through which to submit workflows, run tasks in serial or
     parallel, and perform other system functions.
@@ -38,6 +38,8 @@ class LsfLg(custom_import("system", "base")):
     For important additional information, please see
     http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
     """
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self):
         """
         These parameters should not be set by the user.
@@ -48,8 +50,7 @@ class LsfLg(custom_import("system", "base")):
             from this logger will be tagged by its specific module/classname
         """
         super().__init__()
-        self.logger = \
-            logging.getLogger(self.__name__).getChild(self.__qualname__)
+
     def check(self):
         """
         Checks parameters and paths
