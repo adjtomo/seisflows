@@ -6,7 +6,6 @@ import os
 import sys
 import shutil
 import pytest
-from subprocess import run
 from unittest.mock import patch
 from seisflows3 import config
 from seisflows3.seisflows import SeisFlows, return_modules
@@ -24,11 +23,6 @@ REQUIRED_FUNCTIONS = ["required", "check", "setup", "submit", "run",
 # Define some re-used paths
 TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
 REPO_DIR = os.path.abspath(os.path.join(config.ROOT_DIR, ".."))
-
-
-def ls():
-    """Convenience function to run inside a pdb debugger"""
-    run(["ls", "-l"])
 
 
 @pytest.fixture
@@ -70,21 +64,36 @@ def sfinit(tmpdir, copy_par_file):
 
 def test_import(sfinit, modules):
     """
-    Test code execution by importing all of the available modules in the package
-    If any of these fails then the module itself has some error (e.g.,
-    syntax errors) or the 'required' statement is failing
+    Test code by importing all available classes for this module.
+    If any of these fails then the module itself has some code error
+    (e.g., syntax errors, inheritance errors).
     """
-    sf = sfinit
+    sfinit
+    for package, module_list in modules.items():
+        for module in module_list:
+            config.custom_import(MODULE, module)()
+
+
+def test_validate(sfinit, modules):
+    """
+    Test out path and parameter validation, essentially checking that all
+    the paths and parameters are set properly
+
+    .. note::
+        This doesn't work because we have required parameters that are not
+        set in the default parameter file. We can run configure beforehand
+        but does that make sense?
+    :return:
+    """
+    pass
+    sfinit
     for package, module_list in modules.items():
         for module in module_list:
             loaded_module = config.custom_import(MODULE, module)()
-            # !!! This doesn't work because we have required parameters that
-            # !!! are not set in the parameter file
-            # Not sure what the best way to check these things are but
-            # for now we run a validate which just makes sure all the
-            # paths and parameters are set into sys.modules
-            # pytest.set_trace()
-            # loaded_module.required.validate()
+            pytest.set_trace()
+            from IPython import embed;embed()
+            loaded_module.required.validate()
+
 
 
 def test_required_parameters(sfinit, modules):

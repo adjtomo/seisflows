@@ -607,7 +607,7 @@ class SeisFlows:
         print(msg.cli(f"filling {self._args.parameter_file} w/ default values"))
         self._register(force=True)
 
-        # Check if the User set any modules to None (do not instantiate)
+        # Check if the User set turn off any modules (if None, dont instantiate)
         names = copy(NAMES)
         for name, choice in self._parameters.items():
             if choice is None:
