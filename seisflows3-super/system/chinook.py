@@ -20,7 +20,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class ChinookLg(custom_import('system', 'slurm_lg')):
+class Chinook(custom_import("system", "slurm")):
     """
     System interface for the University of Alaska cluster, Chinook.
 
