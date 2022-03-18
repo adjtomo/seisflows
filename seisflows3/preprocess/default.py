@@ -63,11 +63,36 @@ class Default(custom_import("preprocess", "base")):
         sf.par("NORMALIZE", required=False, default="null", par_type=str,
                docstr="Data normalization option")
 
-        sf.par("MUTE", required=False, default="null", par_type=str,
-               docstr="Data muting option")
-
         sf.par("FILTER", required=False, default="null", par_type=str,
-               docstr="Data filtering option")
+               docstr="Data filtering type, available options are:"
+                      "BANDPASS (req. MIN/MAX PERIOD/FREQ);"
+                      "LOWPASS (req. MAX_FREQ or MIN_PERIOD); "
+                      "HIGHPASS (req. MIN_FREQ or MAX_PERIOD) ")
+
+        sf.par("MIN_PERIOD", required=False, par_type=float,
+               docstr="Minimum filter period applied to time series."
+                      "See also MIN_FREQ, MAX_FREQ, if User defines FREQ "
+                      "parameters, they will overwrite PERIOD parameters.")
+
+        sf.par("MAX_PERIOD", required=False, par_type=float,
+               docstr="Maximum filter period applied to time series."
+                      "See also MIN_FREQ, MAX_FREQ, if User defines FREQ "
+                      "parameters, they will overwrite PERIOD parameters.")
+
+        sf.par("MIN_FREQ", required=False, par_type=float,
+               docstr="Maximum filter frequency applied to time series."
+                      "See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ "
+                      "parameters, they will overwrite PERIOD parameters.")
+
+        sf.par("MAX_FREQ", required=False, par_type=float,
+               docstr="Maximum filter frequency applied to time series,"
+                      "See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ "
+                      "parameters, they will overwrite PERIOD parameters.")
+
+        sf.par("MUTE", required=False, par_type=list, default=[],
+               docstr="Data mute parameters used to zero out early / late "
+                      "arrivals or offsets. Choose any number of: "
+                      "EARLYARRIVALS: "
 
         return sf
 
@@ -88,9 +113,43 @@ class Default(custom_import("preprocess", "base")):
         if PAR.MUTE:
             self.check_mute_parameters()
 
-        # Data filtering option using Obspy
+        # Data filtering options that will be passed to ObsPy filters
         if PAR.FILTER:
-            self.check_filter_parameters()
+            acceptable_filters = ["BANDPASS", "LOWPASS", "HIGHPASS"]
+            assert PAR.FILTER.upper() in acceptable_filters, \
+                f"PAR.FILTER must be in {acceptable_filters}"
+
+            # Set the min/max frequencies and periods, frequency takes priority
+            if PAR.MIN_FREQ is not None:
+                PAR.MAX_PERIOD = 1 / PAR.MIN_FREQ
+            elif PAR.MAX_PERIOD is not None:
+                PAR.MIN_FREQ = 1 / PAR.MAX_PERIOD
+
+            if PAR.MAX_FREQ is not None:
+                PAR.MIN_PERIOD = 1 / PAR.MAX_FREQ
+            elif PAR.MIN_PERIOD is not None:
+                PAR.MAX_FREQ = 1 / PAR.MIN_PERIOD
+
+            # Check that the correct filter bounds have been set
+            if PAR.FILTER.upper() == "BANDPASS":
+                assert(PAR.MIN_FREQ is not None and PAR.MAX_FREQ is not None), \
+                    ("BANDPASS filter PAR.MIN_PERIOD and PAR.MAX_PERIOD or " 
+                     "PAR.MIN_FREQ and PAR.MAX_FREQ")
+            elif PAR.FILTER.upper() == "LOWPASS":
+                assert(PAR.MAX_FREQ is not None or PAR.MIN_PERIOD is not None),\
+                    "LOWPASS requires PAR.MAX_FREQ or PAR.MIN_PERIOD"
+            elif PAR.FILTER.upper() == "HIGHPASS":
+                assert(PAR.MIN_FREQ is not None or PAR.MAX_PERIOD is not None),\
+                    "HIGHPASS requires PAR.MIN_FREQ or PAR.MAX_PERIOD"
+
+            # Check that filter bounds make sense
+            if PAR.MIN_FREQ is not None:
+                assert(PAR.MIN_FREQ > 0), "Minimum frequency must be > 0"
+            if (PAR.MIN_FREQ is not None) and (PAR.MAX_FREQ is not None):
+                assert(PAR.MIN_FREQ < PAR.MAX_FREQ), \
+                    "Minimum frequency must be less than maximum frequency"
+            if PAR.MAX_FREQ is not None:
+                assert(PAR.MAX_FREQ < np.inf), "Maximum frequency must be < inf"
 
         # Assert that readers and writers available
         if PAR.FORMAT not in dir(readers):
@@ -146,15 +205,22 @@ class Default(custom_import("preprocess", "base")):
             syn = self.reader(path=os.path.join(cwd, "traces", "syn"), 
                               filename=filename)
 
-            # Process observations
-            obs = self.apply_filter(obs)
-            obs = self.apply_mute(obs)
-            obs = self.apply_normalize(obs)
-
-            # Process synthetics
-            syn = self.apply_filter(syn)
-            syn = self.apply_mute(syn)
-            syn = self.apply_normalize(syn)
+            # Process observations and synthetics identically
+            if PAR.FILTER:
+                if solver.taskid == 0:
+                    self.logger.debug(f"applying {PAR.FILTER} filter to data")
+                obs = self.apply_filter(obs)
+                syn = self.apply_filter(syn)
+            if PAR.MUTE:
+                if solver.taskid == 0:
+                    self.logger.debug(f"applying {PAR.MUTE} mute to data")
+                obs = self.apply_mute(obs)
+                syn = self.apply_mute(syn)
+            if PAR.NORMALIZE:
+                if solver.taskid == 0:
+                    self.logger.debug(f"normalizing {PAR.NORMALIZE} data")
+                obs = self.apply_normalize(obs)
+                syn = self.apply_normalize(syn)
 
             if PAR.MISFIT is not None:
                 self.write_residuals(cwd, syn, obs)
@@ -164,6 +230,8 @@ class Default(custom_import("preprocess", "base")):
                 # Change the extension to '.adj' from whatever it is
                 ext = os.path.splitext(filename)[-1]
                 filename_out = filename.replace(ext, ".adj")
+            elif PAR.FORMAT.upper() == "SU":
+                raise NotImplementedError
 
             self.write_adjoint_traces(path=os.path.join(cwd, "traces", "adj"),
                                       syn=syn, obs=obs, filename=filename_out)
@@ -244,29 +312,25 @@ class Default(custom_import("preprocess", "base")):
 
     def apply_filter(self, st):
         """
-        Apply a filter using Obspy
+        Apply a filter to waveform data using ObsPy
 
         :type st: obspy.core.stream.Stream
         :param st: stream to be filtered
         :rtype: obspy.core.stream.Stream
         :return: filtered traces
         """
-        # If no filter given, don't do anything
-        if PAR.FILTER is None:
-            return st
-
         # Pre-processing before filtering
         st.detrend("demean")
         st.detrend("linear")
         st.taper(0.05, type="hann")
 
         if PAR.FILTER.upper() == "BANDPASS":
-            st.filter("bandpass", zerophase=True,
-                      freqmin=PAR.FREQMIN, freqmax=PAR.FREQMAX)
+            st.filter("bandpass", zerophase=True, freqmin=PAR.MIN_FREQ,
+                      freqmax=PAR.FREQMAX)
         elif PAR.FILTER.upper() == "LOWPASS":
-            st.filter("lowpass", zerophase=True, freq=PAR.FREQ)
+            st.filter("lowpass", zerophase=True, freq=PAR.MAX_FREQ)
         elif PAR.FILTER.upper() == "HIGHPASS":
-            st.filter("highpass", zerophase=True, freq=PAR.FREQ)
+            st.filter("highpass", zerophase=True, freq=PAR.MIN_FREQ)
 
         return st
 
@@ -317,7 +381,7 @@ class Default(custom_import("preprocess", "base")):
 
     def apply_normalize(self, traces):
         """
-
+        Normalize the amplitudes of the waveforms
         :param traces:
         :return:
         """
@@ -371,45 +435,6 @@ class Default(custom_import("preprocess", "base")):
             tr.data = np.flip(tr.data)
 
         return traces
-
-    def check_filter_parameters(self):
-        """
-        Checks filter settings based on user parameters and user provided
-        filter corners
-        """
-        assert PAR.FILTER.upper() in ["BANDPASS", "LOWPASS", "HIGHPASS"]
-
-        if PAR.FILTER.upper() == "BANDPASS":
-            # Check that filter parameters are provided
-            if "MIN_FREQ" not in PAR and "MAX_FREQ" not in PAR:
-                raise ParameterError("MIN_FREQ / MAX_FREQ>")
-            if "MIN_PERIOD" not in PAR and "MAX_PERIOD" not in PAR:
-                raise ParameterError("MIN_PERIOD / MAX_PERIOD")
-
-            # Assign the corresponding frequencies or periods
-            if "MIN_FREQ" in PAR:
-                PAR.MIN_PERIOD = 1 / PAR.MAX_FREQ
-                PAR.MAX_PERIOD = 1 / PAR.MIN_FREQ
-            elif "MIN_PERIOD" in PAR:
-                PAR.MIN_FREQ = 1 / PAR.MAX_PERIOD
-                PAR.MAX_FREQ = 1 / PAR.MIN_PERIOD
-
-            # Check that the values provided make sense
-            assert PAR.MIN_FREQ > 0., "Minimum frequency must be > 0"
-            assert PAR.MIN_FREQ < PAR.MAX_FREQ, "Max freq < min freq"
-            assert PAR.FREQMAX < np.inf, "Max freq > infity"
-
-        elif PAR.FILTER.upper() in ["LOWPASS", "HIGHPASS"]:
-            if "FREQ" not in PAR or "PERIOD" not in PAR:
-                raise ParameterError("FREQ / PERIOD")
-
-            if PAR.FREQ:
-                PAR.PERIOD = 1 / PAR.FREQ
-            elif PAR.PERIOD:
-                PAR.FREQ = 1 / PAR.PERIOD
-
-            assert PAR.FREQ > 0., "Freq must be > 0"
-            assert PAR.FREQ < np.inf, "Freq > infinity"
 
     def check_mute_parameters(self):
         """
