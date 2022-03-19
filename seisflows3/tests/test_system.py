@@ -141,6 +141,7 @@ def test_setup(sfinit, modules):
     sf = sfinit
     PATHS = sys.modules["seisflows_paths"]
     SETUP_CREATES = [PATHS.SCRATCH, PATHS.SYSTEM, PATHS.OUTPUT]
+
     for package, module_list in modules.items():
         for module in module_list:
             loaded_module = config.custom_import(MODULE, module)()
@@ -162,7 +163,9 @@ def test_setup(sfinit, modules):
                 else:
                     os.remove(path_)
 
-
+# ==============================================================================
+# MODULE AND FUNCTION SPECIFIC TESTS TO FOLLOW
+# ==============================================================================
 def test_submit():
     """
 

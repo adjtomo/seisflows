@@ -12,12 +12,12 @@ from seisflows3.seisflows import SeisFlows, return_modules
 
 
 # The module that we're testing, allows for copy-pasting these test suites
-MODULE = "preprocess"
+MODULE = "solver"
 
 # Ensures that these parameters are always defined, even when using subclasses
-REQUIRED_PARAMETERS = []
-REQUIRED_FUNCTIONS = ["required", "check", "setup", "prepare_eval_grad",
-                      "sum_residuals", "finalize"]
+REQUIRED_PARAMETERS = ["MATERIALS", "DENSITY", "ATTENUATION"]
+# !!! TODO Figure out what solver functions are called from other modules
+REQUIRED_FUNCTIONS = []
 
 # Define some re-used paths
 TEST_DIR = os.path.join(config.ROOT_DIR, "tests")

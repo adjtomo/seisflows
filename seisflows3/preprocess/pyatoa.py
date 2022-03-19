@@ -11,15 +11,15 @@ misfit measurement.
 """
 import os
 import sys
-import pyatoa
 import logging
 import numpy as np
-from glob import glob
+import pyatoa
 
+from glob import glob
+from pyatoa.utils.images import merge_pdfs
 from seisflows3.tools import unix, msg
 from seisflows3.config import custom_import
 from seisflows3.config import SeisFlowsPathsParameters
-from pyatoa.utils.images import merge_pdfs
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -29,6 +29,8 @@ class Pyatoa(custom_import("preprocess", "base")):
     """
     Data preprocessing class using the Pyatoa package
     """
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self):
         """
         These parameters should not be set by __init__!
@@ -43,8 +45,6 @@ class Pyatoa(custom_import("preprocess", "base")):
         """
         self.path_datasets = None
         self.path_figures = None
-        self.logger = \
-            logging.getLogger(self.__name__).getChild(self.__qualname__)
 
     @property
     def required(self):
@@ -91,7 +91,7 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         sf.par("PYFLEX_PRESET", required=True, par_type=str,
                docstr="Parameter map for Pyflex config. For available choices, "
-                      "see Pyatoa docs page")
+                      "see Pyatoa docs page (pyatoa.rtfd.io)")
 
         sf.par("FIX_WINDOWS", required=False, default=False,
                par_type="bool or str",
