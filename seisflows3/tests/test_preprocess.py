@@ -1,5 +1,5 @@
 """
-Test suite for the SeisFlows3 SYSTEM module, which controls interaction with
+Test suite for the SeisFlows3 system module, which controls interaction with
 various compute systems
 """
 import os
@@ -12,13 +12,12 @@ from seisflows3.seisflows import SeisFlows, return_modules
 
 
 # The module that we're testing, allows for copy-pasting these test suites
-MODULE = "system"
+MODULE = "preprocess"
 
 # Ensures that these parameters are always defined, even when using subclasses
 REQUIRED_PARAMETERS = ["WALLTIME", "TASKTIME", "NTASK", "NPROC"]
-REQUIRED_FUNCTIONS = ["required", "check", "setup", "submit", "run",
-                      "run_single", "taskid", "checkpoint"
-                      ]
+REQUIRED_FUNCTIONS = ["required", "check", "prepare_eval_grad", "sum_residuals",
+                      "finalize"]
 
 # Define some re-used paths
 TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
@@ -126,67 +125,3 @@ def test_required_functions_exist(sfinit, modules):
                 assert(func in dir(loaded_module)), \
                     f"'{func}' is a required function in module: " \
                     f"{MODULE}.{module}"
-
-
-def test_setup(sfinit, modules):
-    """
-    Test the expected behavior of each of the rqeuired functions.
-
-    Setup: make sure that setup creates the necessary directory structure
-
-    :param sfinit:
-    :param modules:
-    :return:
-    """
-    sf = sfinit
-    PATHS = sys.modules["seisflows_paths"]
-    SETUP_CREATES = [PATHS.SCRATCH, PATHS.SYSTEM, PATHS.OUTPUT]
-    for package, module_list in modules.items():
-        for module in module_list:
-            loaded_module = config.custom_import(MODULE, module)()
-
-            # Make sure these don't already exist
-            for path_ in SETUP_CREATES:
-                assert(not os.path.exists(path_))
-
-            loaded_module.setup()
-
-            # Check that the minimum required directories were created
-            for path_ in SETUP_CREATES:
-                assert(os.path.exists(path_))
-
-            # Remove created paths so we can check the next module
-            for path_ in SETUP_CREATES:
-                if os.path.isdir(path_):
-                    shutil.rmtree(path_)
-                else:
-                    os.remove(path_)
-
-
-def test_submit():
-    """
-
-    :return:
-    """
-
-
-def test_run():
-    """
-
-    :return:
-    """
-
-
-def test_run_single():
-    """
-
-    :return:
-    """
-
-
-def test_taskid():
-    """
-    Simply assert that this function returns an integer
-    :return:
-    """
-

@@ -1,5 +1,6 @@
 """
-Signal processing functions which are used to manipulate time series
+Signal processing functions which are used to manipulate time series, or
+interact with ObsPy trace and stream objects
 
 .. note::
     These functions have been refactored from the original SeisFlows but have
@@ -66,7 +67,7 @@ def mask(slope, const, offset, nt, dt, length=400):
     return mask_arr
 
 
-def mute_arrivals(st, slope, const, nt, dt, s_coords, r_coords, choice):
+def mute_arrivals(st, slope, const, choice):
     """
     Apply a tapered mask to a record section to mute early or late arrivals
 
@@ -76,23 +77,20 @@ def mute_arrivals(st, slope, const, nt, dt, s_coords, r_coords, choice):
     :param slope: slope applied to source receiver distance to mute arrivals
     :type const: float
     :param const: a constant time offset used to shift the mask in time
-    :type nt: int
-    :param nt: number of samples in the waveform to be masked
-    :type dt: float
-    :param dt: sampling rate of the waveform to be masked
-    :type s_coords: tuple of lists
-    :param s_coords: list of source coordinates, matching the order in `st`
-        ([sx], [sy], [sz])
-    :type r_coords: list
-    :param r_coords: list of receiver coordinates, matching the order in `st`
-        ([rx], [ry], [rz])
     :type choice: str
     :param choice: "early" to mute early arrivals, "late" to mute late arrivals
     :rtype: obspy.stream
     :return: muted stream object
     """
-    assert choice in ["early", "late"]
+    assert choice.upper() in ["EARLY", "LATE"]
     st_out = st.copy()
+
+    # Get the source and receiver coordinates and time info
+    nt = st_out[0].stats.npts
+    dt = st_out[0].stats.delta
+    s_coords = get_receiver_coords(st)
+    r_coords = get_receiver_coords(st)
+
     for i, tr in enumerate(st_out):
         sx, sy, sz = s_coords[:][i]
         rx, ry, rz = r_coords[:][i]
@@ -107,7 +105,7 @@ def mute_arrivals(st, slope, const, nt, dt, s_coords, r_coords, choice):
     return st_out
 
 
-def mute_offsets(st, dist, s_coords, r_coords, choice):
+def mute_offsets(st, dist, choice):
     """
     Mute traces based on a given distance (`dist`)
     short: ||s-r|| < `dist`
@@ -117,20 +115,19 @@ def mute_offsets(st, dist, s_coords, r_coords, choice):
     :param st: Stream object containing waveforms to mute
     :type dist: float
     :param dist: cutoff distance
-    :type s_coords: tuple of lists
-    :param s_coords: list of source coordinates, matching the order in `st`
-        ([sx], [sy], [sz])
-    :type r_coords: list
-    :param r_coords: list of receiver coordinates, matching the order in `st`
-        ([rx], [ry], [rz])
     :type choice: str
     :param choice: "short" to mute short src-rcv distances,
         "long" to mute long src-rcv distances
     :rtype: obspy.stream
     :return: muted stream object
     """
-    assert choice in ["long", "short"]
+    assert choice.upper() in ["LONG", "SHORT"]
     st_out = st.copy()
+
+    # Get the source and receiver coordinates
+    s_coords = get_receiver_coords(st)
+    r_coords = get_receiver_coords(st)
+
     for i, tr in enumerate(st_out):
         sx, sy, sz = s_coords[:][i]
         rx, ry, rz = r_coords[:][i]
@@ -143,6 +140,53 @@ def mute_offsets(st, dist, s_coords, r_coords, choice):
             tr.data *= 0
 
     return st_out
+
+
+def get_receiver_coords(st):
+    """
+    Retrieve the coordinates from a Stream object.
+    Only works for SU format currently
+
+    :type st: obspy.core.stream.Stream
+    :param st: a stream to query for coordinates
+    :rtype r_coords: list
+    :return r_coords: list of receiver coordinates, matching the order in `st`
+        ([rx], [ry], [rz])
+    """
+    # Seismic-Unix format
+    if hasattr(st[0].stats, "su"):
+        rx, ry, rz = [], [], []
+
+        for tr in st:
+            rx += [tr.stats.su.trace_header.group_coordinate_x]
+            ry += [tr.stats.su.trace_header.group_coordinate_y]
+            rz += [0.]
+        return rx, ry, rz
+    else:
+        raise NotImplementedError
+
+
+def get_source_coords(st):
+    """
+    Get the coordinates of the source object.
+    Only works for SU format currently
+
+
+    :type st: obspy.core.stream.Stream
+    :param st: a stream to query for coordinates
+    :rtype s_coords: tuple of lists
+    :return s_coords: list of source coordinates, matching the order in `st`
+        ([sx], [sy], [sz])
+    """
+    if hasattr(st[0].stats, "su"):
+        sx, sy, sz = [], [], []
+        for tr in st:
+            sx += [tr.stats.su.trace_header.source_coordinate_x]
+            sy += [tr.stats.su.trace_header.source_coordinate_y]
+            sz += [0.]
+        return sx, sy, sz
+    else:
+        raise NotImplementedError
 
 
 # From the original SeisFlows code, not used but left just incase
@@ -177,4 +221,22 @@ def mute_offsets(st, dist, s_coords, r_coords, choice):
 #         for ir in range(nr):
 #             s2[:,ir] = np.convolve(s[:,ir], w, 'same')
 #         return s2
-
+#
+# def apply_filter_backwards(self, traces):
+#     """
+#     !!! This was located in seisflows.preprocess.default, but wasn't called
+#     !!! anywhere. Have relinquished it to this graveyard until further notice.
+#     Run the apply_filter() function but backwards
+#
+#     :param traces:
+#     :return:
+#     """
+#     for tr in traces:
+#         tr.data = np.flip(tr.data)
+#
+#     traces = self.apply_filter()
+#
+#     for tr in traces:
+#         tr.data = np.flip(tr.data)
+#
+#     return traces

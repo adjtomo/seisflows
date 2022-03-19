@@ -40,8 +40,8 @@ class Base:
                docstr="The name used to submit jobs to the system, defaults "
                       "to the name of the working directory")
 
-        sf.par("WALLTIME", required=True, par_type=float,
-               docstr="Maximum job time in minutes for main SeisFlows3 job")
+        # sf.par("WALLTIME", required=True, par_type=float,
+        #        docstr="Maximum job time in minutes for main SeisFlows3 job")
 
         sf.par("TASKTIME", required=True, par_type=float,
                docstr="Maximum job time in minutes for each SeisFlows3 task")

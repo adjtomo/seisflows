@@ -238,9 +238,12 @@ def write_par_file_paths_pars(f, paths_or_parameters, indent=0, tabsize=4):
     for key, attrs in paths_or_parameters.items():
         # Lists need to be treated differently in yaml format
         if isinstance(attrs["default"], list):
-            f.write(f"{key}:\n")
-            for val in attrs["default"]:
-                f.write(f"\t- {val}\n".expandtabs(tabsize=tabsize))
+            if len(attrs["default"]) == 0:
+                f.write(f"{key}: []\n")
+            else:
+                f.write(f"{key}:\n")
+                for val in attrs["default"]:
+                    f.write(f"\t- {val}\n".expandtabs(tabsize=tabsize))
         else:
             # Yaml saves NoneType values as 'null' or blank lines
             if attrs["default"] is None:

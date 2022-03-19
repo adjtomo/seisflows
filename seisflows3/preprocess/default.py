@@ -14,7 +14,7 @@ from seisflows3.tools import msg
 from seisflows3.tools import signal, unix
 from seisflows3.config import custom_import
 from seisflows3.tools.err import ParameterError
-from seisflows3.tools.wrappers import exists, getset
+from seisflows3.tools.wrappers import exists
 from seisflows3.plugins import adjoint, misfit, readers, writers
 from seisflows3.config import SeisFlowsPathsParameters
 
@@ -92,7 +92,19 @@ class Default(custom_import("preprocess", "base")):
         sf.par("MUTE", required=False, par_type=list, default=[],
                docstr="Data mute parameters used to zero out early / late "
                       "arrivals or offsets. Choose any number of: "
-                      "EARLYARRIVALS: "
+                      "EARLY: mute early arrivals; "
+                      "LATE: mute late arrivals; "
+                      "SHORT: mute short source-receiver distances; "
+                      "LONG: mute long source-receiver distances")
+        sf.par("NORMALIZE", required=False, par_type=list, default=[],
+               docstr="Data normalization parameters used to normalize the "
+                      "amplitudes of waveforms. Choose from two sets:"
+                      "ENORML1: normalize per event by L1 of traces; OR"
+                      "ENORML2: normalize per event by L2 of traces; AND"
+                      "TNORML1: normalize per trace by L1 of itself; OR"
+                      "TNORML2: normalize per trace by L2 of itself")
+
+        # TODO: Add the mute parameters here, const, slope and dist
 
         return sf
 
@@ -107,11 +119,29 @@ class Default(custom_import("preprocess", "base")):
 
         # Data normalization option
         if PAR.NORMALIZE:
-            self.check_normalize_parameters()
+            acceptable_norms = {"TNORML1", "TNORML2", "ENORML1", "ENORML2"}
+            chosen_norms = [_.upper() for _ in PAR.NORMALIZE]
+            assert(set(chosen_norms).issubset(acceptable_norms))
 
-        # Data muting option
+        # Data muting options
         if PAR.MUTE:
-            self.check_mute_parameters()
+            acceptable_mutes = {"EARLY", "LATE", "LONG", "SHORT"}
+            chosen_mutes = [_.upper() for _ in PAR.MUTE]
+            assert(set(chosen_mutes).issubset(acceptable_mutes))
+            if "EARLY" in chosen_mutes:
+                assert(PAR.EARLY_SLOPE is not None)
+                assert(PAR.EARLY_SLOPE >= 0.)
+                assert(PAR.EARLY_CONST is not None)
+            if "LATE" in chosen_mutes:
+                assert(PAR.LATE_SLOPE is not None)
+                assert(PAR.LATE_SLOPE >= 0.)
+                assert(PAR.LATE_CONST is not None)
+            if "SHORT" in chosen_mutes:
+                assert(PAR.SHORT_DIST is not None)
+                assert (PAR.SHORT_DIST > 0)
+            if "LONG" in chosen_mutes:
+                assert(PAR.LONG_DIST is not None)
+                assert (PAR.LONG_DIST > 0)
 
         # Data filtering options that will be passed to ObsPy filters
         if PAR.FILTER:
@@ -213,12 +243,12 @@ class Default(custom_import("preprocess", "base")):
                 syn = self.apply_filter(syn)
             if PAR.MUTE:
                 if solver.taskid == 0:
-                    self.logger.debug(f"applying {PAR.MUTE} mute to data")
+                    self.logger.debug(f"applying {PAR.MUTE} mutes to data")
                 obs = self.apply_mute(obs)
                 syn = self.apply_mute(syn)
             if PAR.NORMALIZE:
                 if solver.taskid == 0:
-                    self.logger.debug(f"normalizing {PAR.NORMALIZE} data")
+                    self.logger.debug(f"normalizing data with: {PAR.NORMALIZE}")
                 obs = self.apply_normalize(obs)
                 syn = self.apply_normalize(syn)
 
@@ -260,12 +290,9 @@ class Default(custom_import("preprocess", "base")):
         :type obs: obspy.core.stream.Stream
         :param syn: observed data
         """
-        nt, dt, _ = self.get_time_scheme(syn)
-        nn, _ = self.get_network_size(syn)
-
         residuals = []
-        for ii in range(nn):
-            residuals.append(self.misfit(syn[ii].data, obs[ii].data, nt, dt))
+        for obs_, syn_ in zip(obs, syn):
+            residuals.append(self.misfit(syn_.data, obs_.data, PAR.NT, PAR.DT))
 
         filename = os.path.join(path, "residuals")
         if exists(filename):
@@ -298,15 +325,13 @@ class Default(custom_import("preprocess", "base")):
         :param syn: synthetic data
         :type obs: obspy.core.stream.Stream
         :param syn: observed data
-        :type channel: str
-        :param channel: channel or component code used by writer
+        :type filename: str
+        :param filename: filename to write adjoint traces to
         """
-        nt, dt, _ = self.get_time_scheme(syn)
-        nn, _ = self.get_network_size(syn)
-
-        adj = syn
-        for ii in range(nn):
-            adj[ii].data = self.adjoint(syn[ii].data, obs[ii].data, nt, dt)
+        # Use the synthetics as a template for the adjoint sources
+        adj = syn.copy()
+        for adj_, obs_, syn_ in zip(adj, obs, syn):
+            adj.data = self.adjoint(syn_.data, obs_.data, PAR.NT, PAR.DT)
 
         self.writer(adj, path, filename)
 
@@ -336,210 +361,79 @@ class Default(custom_import("preprocess", "base")):
 
     def apply_mute(self, st):
         """
-        Apply mute on data
+        Apply mute on data based on early or late arrivals, and short or long
+        source receiver distances
+
+        .. note::
+            The underlying mute functions have been refactored but not tested
+            as I was not aware of the intended functionality. Not gauranteed
+            to work, use at your own risk.
 
         :type st: obspy.core.stream.Stream
         :param st: stream to mute
-        :return:
+        :rtype: obspy.core.stream.Stream
+        :return: muted stream object
         """
-        if not PAR.MUTE:
-            return st
+        mute_choices = [_.upper() for _ in PAR.MUTE]
+        if "EARLY" in mute_choices:
+            st = signal.mute_arrivals(st, slope=PAR.EARLY_SLOPE,
+                                      const=PAR.EARLY_CONST,
+                                      choice="EARLY")
+        if "LATE" in mute_choices:
+            st = signal.mute_arrivals(st, slope=PAR.LATE_SLOPE,
+                                      const=PAR.LATE_CONST,
+                                      choice="LATE")
+        if "SHORT" in mute_choices:
+            st = signal.mute_offsets(st, dist=PAR.SHORT_DIST,
+                                      choice="SHORT")
+        if "LONG" in mute_choices:
+            st = signal.mute_arrivals(st, dist=PAR.LONG_DIST,
+                                      choice="LONG")
 
-        if 'MuteEarlyArrivals' in PAR.MUTE:
-            traces = signal.mute_early_arrivals(
-                st,
-                PAR.MUTE_EARLY_ARRIVALS_SLOPE,  # (units: time/distance)
-                PAR.MUTE_EARLY_ARRIVALS_CONST,  # (units: time)
-                self.get_time_scheme(st),
-                self.get_source_coords(st),
-                self.get_receiver_coords(st))
+        return st
 
-        if 'MuteLateArrivals' in PAR.MUTE:
-            traces = signal.mute_late_arrivals(
-                st,
-                PAR.MUTE_LATE_ARRIVALS_SLOPE,  # (units: time/distance)
-                PAR.MUTE_LATE_ARRIVALS_CONST,  # (units: time)
-                self.get_time_scheme(st),
-                self.get_source_coords(st),
-                self.get_receiver_coords(st))
-
-        if 'MuteShortOffsets' in PAR.MUTE:
-            traces = signal.mute_short_offsets(
-                st,
-                PAR.MUTE_SHORT_OFFSETS_DIST,
-                self.get_source_coords(st),
-                self.get_receiver_coords(st))
-
-        if 'MuteLongOffsets' in PAR.MUTE:
-            traces = signal.mute_long_offsets(
-                st,
-                PAR.MUTE_LONG_OFFSETS_DIST,
-                self.get_source_coords(st),
-                self.get_receiver_coords(st))
-
-        return traces
-
-    def apply_normalize(self, traces):
+    def apply_normalize(self, st):
         """
-        Normalize the amplitudes of the waveforms
-        :param traces:
-        :return:
-        """
-        if not PAR.NORMALIZE:
-            return traces
+        Normalize the amplitudes of waveforms based on user choice
 
-        if 'NormalizeEventsL1' in PAR.NORMALIZE:
-            # normalize event by L1 norm of all traces
+        .. note::
+            The normalization function has been refactored but not tested
+            as I was not aware of the intended functionality. Not gauranteed
+            to work, use at your own risk.
+
+        :type st: obspy.core.stream.Stream
+        :param st: All of the data streams to be normalized
+        :rtype: obspy.core.stream.Stream
+        :return: stream with normalized traces
+        """
+        st_out = st.copy()
+        norm_choices = [_.upper() for _ in PAR.NORMALIZE]
+        # Normalize an event by the L1 norm of all traces
+        if 'ENORML1' in norm_choices:
             w = 0.
-            for tr in traces:
+            for tr in st_out:
                 w += np.linalg.norm(tr.data, ord=1)
-            for tr in traces:
+            for tr in st_out:
                 tr.data /= w
-
-        elif 'NormalizeEventsL2' in PAR.NORMALIZE:
-            # normalize event by L2 norm of all traces
+        # Normalize an event by the L2 norm of all traces
+        elif "ENORML2" in norm_choices:
             w = 0.
-            for tr in traces:
+            for tr in st_out:
                 w += np.linalg.norm(tr.data, ord=2)
-            for tr in traces:
+            for tr in st_out:
                 tr.data /= w
-
-        if 'NormalizeTracesL1' in PAR.NORMALIZE:
-            # normalize each trace by its L1 norm
-            for tr in traces:
+        # Normalize each trace by its L1 norm
+        if "TNORML1" in norm_choices:
+            for tr in st_out:
                 w = np.linalg.norm(tr.data, ord=1)
                 if w > 0:
                     tr.data /= w
-
-        elif 'NormalizeTracesL2' in PAR.NORMALIZE:
+        elif "TNORML2" in norm_choices:
             # normalize each trace by its L2 norm
-            for tr in traces:
+            for tr in st_out:
                 w = np.linalg.norm(tr.data, ord=2)
                 if w > 0:
                     tr.data /= w
+        return st_out
 
-        return traces
 
-    def apply_filter_backwards(self, traces):
-        """
-
-        :param traces:
-        :return:
-        """
-        for tr in traces:
-            tr.data = np.flip(tr.data)
-
-        traces = self.apply_filter()
-
-        for tr in traces:
-            tr.data = np.flip(tr.data)
-
-        return traces
-
-    def check_mute_parameters(self):
-        """
-        Checks mute settings, which are used to zero out early or late arrivals
-        or offsets
-        """
-        assert getset(PAR.MUTE) <= {'MuteEarlyArrivals',
-                                    'MuteLateArrivals',
-                                    'MuteShortOffsets',
-                                    'MuteLongOffsets'}
-
-        if 'MuteEarlyArrivals' in PAR.MUTE:
-            assert 'MUTE_EARLY_ARRIVALS_SLOPE' in PAR
-            assert 'MUTE_EARLY_ARRIVALS_CONST' in PAR
-            assert PAR.MUTE_EARLY_ARRIVALS_SLOPE >= 0.
-
-        if 'MuteLateArrivals' in PAR.MUTE:
-            assert 'MUTE_LATE_ARRIVALS_SLOPE' in PAR
-            assert 'MUTE_LATE_ARRIVALS_CONST' in PAR
-            assert PAR.MUTE_LATE_ARRIVALS_SLOPE >= 0.
-
-        if 'MuteShortOffsets' in PAR.MUTE:
-            assert 'MUTE_SHORT_OFFSETS_DIST' in PAR
-            assert 0 < PAR.MUTE_SHORT_OFFSETS_DIST
-
-        if 'MuteLongOffsets' in PAR.MUTE:
-            assert 'MUTE_LONG_OFFSETS_DIST' in PAR
-            assert 0 < PAR.MUTE_LONG_OFFSETS_DIST
-
-        if 'MuteShortOffsets' not in PAR.MUTE:
-            setattr(PAR, 'MUTE_SHORT_OFFSETS_DIST', 0.)
-
-        if 'MuteLongOffsets' not in PAR.MUTE:
-            setattr(PAR, 'MUTE_LONG_OFFSETS_DIST', 0.)
-
-    def check_normalize_parameters(self):
-        """
-        Check that the normalization parameters are properly set
-        """
-        assert getset(PAR.NORMALIZE) < {'NormalizeTracesL1',
-                                        'NormalizeTracesL2',
-                                        'NormalizeEventsL1',
-                                        'NormalizeEventsL2'}
-
-    def get_time_scheme(self, traces):
-        """
-        FIXME: extract time scheme from trace headers rather than parameters
-
-        :param traces:
-        :return:
-        """
-        nt = PAR.NT
-        dt = PAR.DT
-        t0 = 0.
-        return nt, dt, t0
-
-    def get_network_size(self, traces):
-        """
-
-        :param traces:
-        :return:
-        """
-        nrec = len(traces)
-        nsrc = 1
-        return nrec, nsrc
-
-    def get_receiver_coords(self, st):
-        """
-        Retrieve the coordinates from a Stream object
-
-        :type st: obspy.core.stream.Stream
-        :param st: a stream to query for coordinates
-        :return:
-        """
-        if PAR.FORMAT.upper == "SU":
-            rx, ry, rz = [], [], []
-
-            for tr in st:
-                rx += [tr.stats.su.trace_header.group_coordinate_x]
-                ry += [tr.stats.su.trace_header.group_coordinate_y]
-                rz += [0.]
-            return rx, ry, rz
-        else:
-            raise NotImplementedError
-
-    def get_source_coords(self, st):
-        """
-        Get the coordinates of the source object
-
-        :type st: obspy.core.stream.Stream
-        :param st: a stream to query for coordinates
-        :return:
-        """
-        if PAR.FORMAT.upper() == "SU":
-            sx, sy, sz = [], [], []
-            for tr in st:
-                sx += [tr.stats.su.trace_header.source_coordinate_x]
-                sy += [tr.stats.su.trace_header.source_coordinate_y]
-                sz += [0.]
-            return sx, sy, sz
-        else:
-            raise NotImplementedError
-    
-    def finalize(self):
-        """
-        Any finalization processes that need to take place at the end of an iter
-        """
-        pass
