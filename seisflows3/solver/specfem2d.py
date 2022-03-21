@@ -79,6 +79,7 @@ class Specfem2D(custom_import("solver", "base")):
         """
         if validate:
             self.required.validate()
+
         super().check(validate=False)
 
         acceptable_formats = ["SU", "ASCII"]

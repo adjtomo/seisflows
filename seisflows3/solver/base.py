@@ -181,14 +181,23 @@ class Base:
         # list will append redundant parameters and things stop working
         self.parameters = []
 
-        assert(PAR.MATERIALS.upper() in ["ELASTIC", "ACOUSTIC"]), \
-            "MATERIALS must be 'ELASTIC', or 'ACOUSTIC'"
+        available_materials = ["ELASTIC", "ACOUSTIC",  # specfem2d, specfem3d
+                               "ISOTROPIC", "ANISOTROPIC"]  # specfem3d_globe
+        assert(PAR.MATERIALS.upper() in available_materials), \
+            f"MATERIALS must be in {available_materials}"
 
         # Set an internal parameter list
         if PAR.MATERIALS.upper() == "ELASTIC":
             self.parameters += ["vp", "vs"]
+            assert(PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
         elif PAR.MATERIALS.upper() == "ACOUSTIC":
             self.parameters += ["vp"]
+            assert (PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
+        elif PAR.MATERIALS.upper() == "ISOTROPIC":
+            self.parameters += ["vp", "vs"]
+            assert(PAR.SOLVER.lower() in ["specfem3d_globe"])
+        elif PAR.MATERIALS.upper() == "ANISOTROPIC":
+            self.parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
 
         assert(PAR.DENSITY.upper() in ["CONSTANT", "VARIABLE"]), \
             "DENSITY must be 'CONSTANT' or 'VARIABLE'"

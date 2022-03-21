@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 """
-!!! This superclass is work in progress !!!
-
 This is the subclass seisflows.solver.specfem3d_globe
 This class provides utilities for the Seisflows solver interactions with
-Specfem3D Globe. It inherits all attributes from seisflows3.solver.Base,
+Specfem3D Globe. It inherits all attributes from seisflows3.solver.specfem3d,
 and overwrites these functions to provide specified interaction with Specfem3D.
 """
 import os
@@ -22,19 +20,29 @@ from seisflows3.config import (ParameterError, custom_import,
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
-
 system = sys.modules["seisflows_system"]
 
 
 class Specfem3DGlobe(custom_import("solver", "specfem3d")):
     """
-    Python interface to Specfem3D Cartesian. This subclass inherits functions
+    Python interface to Specfem3D Globe. This subclass inherits functions
     from seisflows3.solver.specfem3d.Specfem3D
 
     !!! See base class for method descriptions !!!
     """
     # Class-specific logger accessed using self.logger
     logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
+        """
+        super().__init__()
 
     @property
     def required(self):
@@ -50,14 +58,18 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
         """
         Checks parameters and paths on top of the base class checks.
         """
+        msg.check(type(self))
+
         if validate:
             self.required.validate()
+
         super().check(validate=False)
 
         assert(PAR.MATERIALS.upper() in ["ISOTROPIC", "ANISOTROPIC"])
 
         # Overwrite the base class parameters based on the material choice
         self.parameters = []
+
         if PAR.MATERIALS.upper() == "ISOTROPIC":
             self.parameters += ["vp", "vs"]
         elif PAR.MATERIALS.upper() == "ANISOTROPIC":
