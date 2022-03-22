@@ -94,5 +94,5 @@ class Test(custom_import("workflow", "base")):
         time.sleep(3)
         system.run_single(classname="workflow", method="test_function")
 
-    def 
+    def test_preprocess(self):
 

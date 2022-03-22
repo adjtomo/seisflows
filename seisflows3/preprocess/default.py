@@ -117,6 +117,7 @@ class Default(custom_import("preprocess", "base")):
             self.required.validate()
 
         # Data normalization option
+        import pdb;pdb.set_trace()
         if PAR.NORMALIZE:
             acceptable_norms = {"TNORML1", "TNORML2", "ENORML1", "ENORML2"}
             chosen_norms = [_.upper() for _ in PAR.NORMALIZE]

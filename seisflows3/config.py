@@ -164,8 +164,22 @@ def load(path):
     for name in NAMES:
         fullfile = os.path.join(os.path.abspath(path), f"seisflows_{name}.p")
         with open(fullfile, "rb") as f:
-            sys.modules[f"seisflows_{name}"] = pickle.load(fullfile)
+            sys.modules[f"seisflows_{name}"] = pickle.load(f)
 
+
+def flush():
+    """
+    It is sometimes necessary to flush the currently active working state to
+    avoid affecting subsequent working states (e.g., running tests back to back)
+    This command will flush sys.modules of all `seisflows_{}` modules that are
+    typically instantiated using load(), or init_seisflows()
+
+    https://stackoverflow.com/questions/1668223/how-to-de-import-a-python-module
+    """
+    for name in NAMES:
+        mod_name = f"seisflows_{name}"
+        if mod_name in sys.modules:
+            del sys.modules[mod_name]
 
 class Dict(object):
     """
@@ -184,7 +198,7 @@ class Dict(object):
         at once, usually done by reading in a new parameter file at the start
         of a workflow"""
         super(Dict, self).__setattr__('__dict__', newdict)
-    
+
     def __str__(self):
         """Pretty print dictionaries and first level nested dictionaries"""
         str_ = ""
@@ -272,7 +286,7 @@ class SeisFlowsPathsParameters:
         which means paths and parameters can be adopted from base class
 
         :type base: seisflows.config.DefinePathsParameters
-        :param base: paths and parameters from abstract Base class that need to 
+        :param base: paths and parameters from abstract Base class that need to
             be inherited by the current child class.
         """
         self.parameters, self.paths = {}, {}
@@ -444,7 +458,7 @@ def custom_import(name=None, module=None, classname=None):
 def format_paths(mydict):
     """
     Ensure that paths have a standardized format before being allowed into
-    an active working environment. 
+    an active working environment.
     Expands tilde character (~) in path strings and expands absolute paths
 
     :type mydict: dict

@@ -51,6 +51,9 @@ def sfinit(tmpdir, copy_par_file):
     sys modules
     :return:
     """
+    # Ensure that there is not a currently active working state
+    config.flush()
+
     copy_par_file
     os.chdir(tmpdir)
     with patch.object(sys, "argv", ["seisflows"]):
@@ -150,6 +153,7 @@ def test_default_check(sfinit):
     }
     for key, val in incorrect_parameters.items():
         og_val = PAR[key]
+        print(key)
         with pytest.raises(AssertionError):
             PAR.force_set(key, val)
             preprocess.check()
@@ -179,7 +183,7 @@ def test_default_setup(sfinit):
     """
     Ensure that default setup correctly sets up the preprocessing machinery
     """
-    sfinit
+    sf = sfinit
     PAR = sys.modules["seisflows_parameters"]
     preprocess = sys.modules["seisflows_preprocess"]
 
@@ -195,7 +199,6 @@ def test_default_setup(sfinit):
     PAR.force_set("MISFIT", misfit_name)
     PAR.force_set("FORMAT", io_name)
     preprocess.setup()
-    pytest.set_trace()
 
     assert(preprocess.misfit.__name__ == misfit_name)
     assert(preprocess.adjoint.__name__ == misfit_name)

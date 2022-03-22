@@ -37,7 +37,7 @@ def sfinit(tmpdir, copy_par_file):
     os.chdir(tmpdir)
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows()
-        sf._register(precheck=False)
+        sf._register(force=True)
     config.init_seisflows()
 
     return sf

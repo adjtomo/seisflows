@@ -166,30 +166,30 @@ def test_setup(sfinit, modules):
 # ==============================================================================
 # MODULE AND FUNCTION SPECIFIC TESTS TO FOLLOW
 # ==============================================================================
-def test_submit():
-    """
-
-    :return:
-    """
-
-
-def test_run():
-    """
-
-    :return:
-    """
-
-
-def test_run_single():
-    """
-
-    :return:
-    """
-
-
-def test_taskid():
-    """
-    Simply assert that this function returns an integer
-    :return:
-    """
+# def test_submit():
+#     """
+#
+#     :return:
+#     """
+#
+#
+# def test_run():
+#     """
+#
+#     :return:
+#     """
+#
+#
+# def test_run_single():
+#     """
+#
+#     :return:
+#     """
+#
+#
+# def test_taskid():
+#     """
+#     Simply assert that this function returns an integer
+#     :return:
+#     """
 

@@ -25,8 +25,8 @@
 # POSTPROCESS (str): Postprocessing schema for kernels and gradients
 # ==============================================================================
 WORKFLOW: inversion
-SOLVER: specfem3d
-SYSTEM: serial
+SOLVER: specfem2d
+SYSTEM: workstation
 OPTIMIZE: LBFGS 
 PREPROCESS: default
 POSTPROCESS: base
@@ -34,18 +34,13 @@ POSTPROCESS: base
 # =============================================================================
 #                                    SYSTEM                                    
 #                                    //////                                    
+# MPIEXEC (str):
+#   Function used to invoke executables on the system. For example 'sbatch'
+#   on SLURM systems, or './' on a workstation. If left blank, will guess
+#   based on the system.
 # TITLE (str):
 #   The name used to submit jobs to the system, defaults to the name of the
 #   working directory
-# WALLTIME (float):
-#   Maximum job time in minutes for main SeisFlows3 job
-# TASKTIME (float):
-#   Maximum job time in minutes for each SeisFlows3 task
-# NTASK (int):
-#   Number of separate, individual tasks. Also equal to the number of desired
-#   sources in workflow
-# NPROC (int):
-#   Number of processor to use for each simulation
 # PRECHECK (list):
 #   A list of parameters that will be displayed to stdout before 'submit' or
 #   'resume' is run. Useful for manually reviewing important parameters prior
@@ -57,22 +52,20 @@ POSTPROCESS: base
 #   Level of verbosity provided to the output log. If True, log statements
 #   will declare what module/class/function they are being called from.
 #   Useful for debugging but also very noisy.
-# MPIEXEC (str):
-#   Function used to invoke parallel executables
+# NTASK (int):
+#   Number of separate, individual tasks. Also equal to the number of desired
+#   sources in workflow
+# NPROC (int):
+#   Number of processor to use for each simulation
 # =============================================================================
+MPIEXEC:
 TITLE: test_data
-WALLTIME: !!! REQUIRED PARAMETER !!!
-TASKTIME: !!! REQUIRED PARAMETER !!!
-NTASK: 1
-NPROC: 1
 PRECHECK:
     - TITLE
-    - BEGIN
-    - END
-    - WALLTIME
 LOG_LEVEL: DEBUG
 VERBOSE: True
-MPIEXEC:
+NTASK: 1
+NPROC: 1
 
 # =============================================================================
 #                                  PREPROCESS                                  
@@ -83,18 +76,45 @@ MPIEXEC:
 # BACKPROJECT (str):
 #   Backprojection function for migration, for available see
 #   seisflows.plugins.adjoint
-# NORMALIZE (str):
-#   Data normalization option
-# MUTE (str):
-#   Data muting option
+# NORMALIZE (list):
+#   Data normalization parameters used to normalize the amplitudes of
+#   waveforms. Choose from two sets:ENORML1: normalize per event by L1 of
+#   traces; ORENORML2: normalize per event by L2 of traces; ANDTNORML1:
+#   normalize per trace by L1 of itself; ORTNORML2: normalize per trace by L2
+#   of itself
 # FILTER (str):
-#   Data filtering option
+#   Data filtering type, available options are:BANDPASS (req. MIN/MAX
+#   PERIOD/FREQ);LOWPASS (req. MAX_FREQ or MIN_PERIOD); HIGHPASS (req.
+#   MIN_FREQ or MAX_PERIOD)
+# MIN_PERIOD (float):
+#   Minimum filter period applied to time series.See also MIN_FREQ, MAX_FREQ,
+#   if User defines FREQ parameters, they will overwrite PERIOD parameters.
+# MAX_PERIOD (float):
+#   Maximum filter period applied to time series.See also MIN_FREQ, MAX_FREQ,
+#   if User defines FREQ parameters, they will overwrite PERIOD parameters.
+# MIN_FREQ (float):
+#   Maximum filter frequency applied to time series.See also MIN_PERIOD,
+#   MAX_PERIOD, if User defines FREQ parameters, they will overwrite PERIOD
+#   parameters.
+# MAX_FREQ (float):
+#   Maximum filter frequency applied to time series,See also MIN_PERIOD,
+#   MAX_PERIOD, if User defines FREQ parameters, they will overwrite PERIOD
+#   parameters.
+# MUTE (list):
+#   Data mute parameters used to zero out early / late arrivals or offsets.
+#   Choose any number of: EARLY: mute early arrivals; LATE: mute late
+#   arrivals; SHORT: mute short source-receiver distances; LONG: mute long
+#   source-receiver distances
 # =============================================================================
 MISFIT: waveform
 BACKPROJECT: null
-NORMALIZE: null
-MUTE: null
+NORMALIZE: []
 FILTER: null
+MIN_PERIOD:
+MAX_PERIOD:
+MIN_FREQ:
+MAX_FREQ:
+MUTE: []
 
 # =============================================================================
 #                                    SOLVER                                    
@@ -117,12 +137,14 @@ FILTER: null
 #   Number of time steps set in the SPECFEM Par_file
 # DT (float):
 #   Time step or delta set in the SPECFEM Par_file
+# F0 (float):
+#   Dominant source frequency
 # FORMAT (float):
 #   Format of synthetic waveforms used during workflow, available options:
 #   ['ascii', 'su']
 # SOURCE_PREFIX (str):
-#   Prefix of SOURCE files in path SPECFEM_DATA. Available ['CMTSOLUTION',
-#   FORCESOLUTION']
+#   Prefix of SOURCE files in path SPECFEM_DATA. By default, 'SOURCE' for
+#   SPECFEM2D
 # =============================================================================
 MATERIALS: !!! REQUIRED PARAMETER !!!
 DENSITY: !!! REQUIRED PARAMETER !!!
@@ -131,8 +153,9 @@ COMPONENTS: ZNE
 SOLVERIO: fortran_binary
 NT: !!! REQUIRED PARAMETER !!!
 DT: !!! REQUIRED PARAMETER !!!
+F0: !!! REQUIRED PARAMETER !!!
 FORMAT: !!! REQUIRED PARAMETER !!!
-SOURCE_PREFIX: CMTSOLUTION
+SOURCE_PREFIX: SOURCE
 
 # =============================================================================
 #                                  POSTPROCESS                                 
@@ -186,14 +209,14 @@ LBFGSTHRESH: 0.0
 # =============================================================================
 #                                   WORKFLOW                                   
 #                                   ////////                                   
-# BEGIN (int):
-#   First iteration of workflow, 1 <= BEGIN <= inf
-# END (int):
-#   Last iteration of workflow, BEGIN <= END <= inf
 # RESUME_FROM (str):
 #   Name of task to resume inversion from
 # STOP_AFTER (str):
 #   Name of task to stop inversion after finishing
+# BEGIN (int):
+#   First iteration of workflow, 1 <= BEGIN <= inf
+# END (int):
+#   Last iteration of workflow, BEGIN <= END <= inf
 # CASE (str):
 #   Type of inversion, available: ['data': real data inversion, 'synthetic':
 #   synthetic-synthetic inversion]
@@ -212,10 +235,10 @@ LBFGSTHRESH: 0.0
 #   files in native SPECFEM .bin format, 'vector': save files as NumPy .npy
 #   files, 'both': save as both binary and vectors]
 # =============================================================================
-BEGIN: !!! REQUIRED PARAMETER !!!
-END: !!! REQUIRED PARAMETER !!!
 RESUME_FROM:
 STOP_AFTER:
+BEGIN: !!! REQUIRED PARAMETER !!!
+END: !!! REQUIRED PARAMETER !!!
 CASE: !!! REQUIRED PARAMETER !!!
 SAVEMODEL: True
 SAVEGRADIENT: True
@@ -235,8 +258,6 @@ SAVEAS: binary
 #   scratch path to hold any system related data
 # LOCAL:
 #   path to local data to be used during workflow
-# LOG:
-#   path to write log statements to. defaults to:'output_sf3.txt'
 # SOLVER:
 #   scratch path to hold solver working directories
 # SPECFEM_BIN:
@@ -266,7 +287,6 @@ PATHS:
     OUTPUT: output
     SYSTEM: scratch/system
     LOCAL:
-    LOG: output_sf3.txt
     SOLVER: scratch/solver
     SPECFEM_BIN: !!! REQUIRED PATH !!!
     SPECFEM_DATA: !!! REQUIRED PATH !!!

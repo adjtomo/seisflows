@@ -468,7 +468,7 @@ class SeisFlows:
         self._paths = paths
         self._parameters = parameters
 
-    def _config_logging(self, level="DEBUG", filename=CFGPATHS.PAR_FILE,
+    def _config_logging(self, level="DEBUG", filename=CFGPATHS.LOGFILE,
                         filemode="a", verbose=True):
         """
         Explicitely configure the logging module with some parameters defined
