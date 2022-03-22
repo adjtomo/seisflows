@@ -6,12 +6,13 @@ be overloaded by subclasses
 """
 import os
 import sys
+import pickle
 import logging
 from glob import glob
 
 from seisflows3.tools import unix, msg
 from seisflows3.tools.wrappers import number_fid
-from seisflows3.config import save, saveobj, SeisFlowsPathsParameters, CFGPATHS
+from seisflows3.config import save, SeisFlowsPathsParameters, CFGPATHS
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -211,6 +212,7 @@ class Base:
         argspath = os.path.join(path, "kwargs")
         argsfile = os.path.join(argspath, f"{classname}_{method}.p")
         unix.mkdir(argspath)
-        saveobj(argsfile, kwargs)
+        with open(argsfile, "wb") as f:
+            pickle.dump(kwargs, f)
         save()
 
