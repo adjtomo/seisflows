@@ -20,8 +20,8 @@ import logging
 from warnings import warn
 from subprocess import check_output
 from seisflows3.tools import msg, unix
-from seisflows3.tools.wrappers import call, findpath
-from seisflows3.config import custom_import, SeisFlowsPathsParameters
+from seisflows3.tools.wrappers import findpath
+from seisflows3.config import ROOT_DIR, custom_import, SeisFlowsPathsParameters
 
 # Seisflows configuration
 PAR = sys.modules['seisflows_parameters']
@@ -91,10 +91,10 @@ class Slurm(custom_import("system", "cluster")):
             f"--ntasks-per-node={PAR.NODESIZE}",
             f"--nodes=1",
             f"--time={PAR.WALLTIME:d}",
-            os.path.join(findpath("seisflows3.system"), "wrappers", "submit"),
-            PATH.OUTPUT
+            f"{os.path.join(ROOT_DIR, 'scripts', 'submit')}",
+            "--output {PATH.OUTPUT}"
         ])
-
+        self.logger.debug(submit_call)
         super().submit(workflow, submit_call)
 
     def run(self, classname, method, *args, **kwargs):
@@ -102,6 +102,10 @@ class Slurm(custom_import("system", "cluster")):
         Runs task multiple times in embarrassingly parallel fasion on a SLURM
         cluster. Executes classname.method(*args, **kwargs) `NTASK` times,
         each time on `NPROC` CPU cores
+
+        .. note::
+            The actual CLI call structure looks something like this
+            $ sbatch --args wrappers/run OUTPUT class method --environs
 
         :type classname: str
         :param classname: the class to run
@@ -122,13 +126,13 @@ class Slurm(custom_import("system", "cluster")):
             f"--time={PAR.TASKTIME:d}",
             f"--output={os.path.join(PATH.WORKDIR, 'logs', '%A_%a')}",
             f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
-            f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
-            f"{PATH.OUTPUT}",
-            f"{classname}",
-            f"{method}",
-            f"{PAR.ENVIRONS}"
+            f"{os.path.join(ROOT_DIR, 'scripts', 'run')}",
+            f"--output {PATH.OUTPUT}",
+            f"--classname {classname}",
+            f"--funcname {method}",
+            f"--environment {PAR.ENVIRONS}"
         ])
-
+        self.logger.debug(run_call)
         stdout = check_output(run_call, shell=True)
 
         # Keep track of job ids
@@ -148,8 +152,10 @@ class Slurm(custom_import("system", "cluster")):
 
         Executes classname.method(*args, **kwargs) a single time on NPROC
         CPU cores
-        """
 
+        TODO roll this into run(), they're esentially the same call except
+        TODO for the --array argument
+        """
         # Checkpoint this individual method before proceeding
         self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
 
@@ -164,12 +170,11 @@ class Slurm(custom_import("system", "cluster")):
             f"--time={PAR.TASKTIME:d}",
             f"--output={os.path.join(PATH.WORKDIR, 'logs', '%A_%a')}",
             f"--array=0-0",
-            f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
-            f"{PATH.OUTPUT}",
-            f"{classname}",
-            f"{method}",
-            f"{PAR.ENVIRONS}"
-            f"SEISFLOWS_TASKID=0"
+            f"{os.path.join(ROOT_DIR, 'scripts', 'run')}",
+            f"--output {PATH.OUTPUT}",
+            f"--classname {classname}",
+            f"--funcname {method}",
+            f"--environment {PAR.ENVIRONS}"
         ])
 
         stdout = check_output(run_call, shell=True)

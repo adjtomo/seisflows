@@ -14,13 +14,14 @@ of as comprising the complete 'state' of a SeisFlows session
 """
 import os
 import sys
+import json
 import types
+import pickle
 import copyreg
 from importlib import import_module
 
 from seisflows3 import logger
 from seisflows3.tools import msg, unix
-from seisflows3.tools.wrappers import loadjson, loadobj, savejson, saveobj
 from seisflows3.tools.wrappers import module_exists
 from seisflows3.tools.err import ParameterError
 
@@ -134,12 +135,14 @@ def save():
     # Save the paths and parameters into a JSON file
     for name in [PAR, PATH]:
         fullfile = os.path.join(output, f"{name}.json")
-        savejson(fullfile, sys.modules[name].__dict__)
+        with open(fullfile, "w") as f:
+            json.dump(sys.modules[name].__dict__, f, sort_keys=True, indent=4)
 
     # Save the current workflow as pickle objects
     for name in NAMES:
         fullfile = os.path.join(output, f"seisflows_{name}.p")
-        saveobj(fullfile, sys.modules[f"seisflows_{name}"])
+        with open(fullfile, "wb") as f:
+            pickle.dump(sys.modules[f"seisflows_{name}"], f)
 
 
 def load(path):
@@ -154,12 +157,14 @@ def load(path):
     # Load parameters and paths from a JSON file
     for name in [PAR, PATH]:
         fullfile = os.path.join(os.path.abspath(path), f"{name}.json")
-        sys.modules[name] = Dict(loadjson(fullfile))
+        with open(fullfile, "r") as f:
+            sys.modules[name] = Dict(json.load(f))
 
     # Load the saved workflow from pickle objects
     for name in NAMES:
         fullfile = os.path.join(os.path.abspath(path), f"seisflows_{name}.p")
-        sys.modules[f"seisflows_{name}"] = loadobj(fullfile)
+        with open(fullfile, "rb") as f:
+            sys.modules[f"seisflows_{name}"] = pickle.load(fullfile)
 
 
 class Dict(object):

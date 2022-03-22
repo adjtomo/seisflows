@@ -9,6 +9,7 @@ import os
 import sys
 import logging
 from glob import glob
+from subprocess import check_call
 
 from seisflows3.tools import unix, msg
 from seisflows3.tools.wrappers import call
@@ -88,7 +89,7 @@ class Cluster(custom_import("system", "base")):
         """
         self.setup()
         workflow.checkpoint()
-        call(submit_call)
+        check_call(submit_call, shell=True)
 
     def run(self, classname, method, *args, **kwargs):
         """

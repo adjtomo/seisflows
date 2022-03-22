@@ -13,5 +13,6 @@ setup(name="seisflows3",
           "obspy>=1.2.2",
           "pyyaml>=5.3.1",
           "IPython>=7.31.1"
+          ],
       zip_save=False
       )

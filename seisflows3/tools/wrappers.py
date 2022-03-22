@@ -26,15 +26,6 @@ class Struct(dict):
         self.__dict__ = self
 
 
-def call(*args, **kwargs):
-    """
-    Subprocess check call wrapper
-    """
-    if 'shell' not in kwargs:
-        kwargs['shell'] = True
-    subprocess.check_call(*args, **kwargs)
-
-
 def diff(list1, list2):
     """
     Difference between unique elements of lists
@@ -156,39 +147,39 @@ def timestamp():
     return time.strftime('%H:%M:%S')
 
 
-def loadobj(filename):
-    """
-    Load object using pickle
-
-    :type filename: str
-    :param filename: object to load
-    """
-    with open(filename, 'rb') as f:
-        return pickle.load(f)
-
-
-def saveobj(filename, obj):
-    """
-    Save object using pickle
-    """
-    with open(filename, 'wb') as f:
-        pickle.dump(obj, f)
-
-
-def loadjson(filename):
-    """
-    Load object using json
-    """
-    with open(filename, 'r') as f:
-        return json.load(f)
-
-
-def savejson(filename, obj):
-    """
-    Save object using json
-    """
-    with open(filename, 'w') as f:
-        json.dump(obj, f, sort_keys=True, indent=4)
+# def loadobj(filename):
+#     """
+#     Load object using pickle
+#
+#     :type filename: str
+#     :param filename: object to load
+#     """
+#     with open(filename, 'rb') as f:
+#         return pickle.load(f)
+#
+#
+# def saveobj(filename, obj):
+#     """
+#     Save object using pickle
+#     """
+#     with open(filename, 'wb') as f:
+#         pickle.dump(obj, f)
+#
+#
+# def loadjson(filename):
+#     """
+#     Load object using json
+#     """
+#     with open(filename, 'r') as f:
+#         return json.load(f)
+#
+#
+# def savejson(filename, obj):
+#     """
+#     Save object using json
+#     """
+#     with open(filename, 'w') as f:
+#         json.dump(obj, f, sort_keys=True, indent=4)
 
 
 def loadpy(filename):

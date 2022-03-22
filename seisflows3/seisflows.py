@@ -15,6 +15,7 @@ facilitates interface with the underlying SeisFlows3 package.
 """
 import os
 import sys
+import pickle
 import inspect
 import logging
 import warnings
@@ -28,7 +29,7 @@ from seisflows3 import logger
 from seisflows3.tools import unix, msg
 from seisflows3.tools.specfem import (getpar, setpar, getpar_vel_model,
                                       setpar_vel_model)
-from seisflows3.tools.wrappers import loadyaml, loadobj
+from seisflows3.tools.wrappers import loadyaml
 from seisflows3.config import (init_seisflows, format_paths, Dict,
                                custom_import, NAMES, PACKAGES, ROOT_DIR,
                                CFGPATHS)
@@ -550,7 +551,8 @@ class SeisFlows:
                               "directory.")
                       )
                 sys.exit(-1)
-            sys.modules[f"seisflows_{NAME}"] = loadobj(fullfile)
+            with open(fullfile, "rb") as f:
+                sys.modules[f"seisflows_{NAME}"] = pickle.load(f)
 
         # Check parameters so that default values are present
         for NAME in NAMES:
