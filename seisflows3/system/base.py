@@ -27,7 +27,11 @@ class Base:
     logger = logging.getLogger(__name__).getChild(__qualname__)
 
     def __init__(self):
-        self.output_log = PATH.LOG
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+        """
+        self.output_log = os.path.join(PATH.WORKDIR, CFGPATHS.LOGFILE)
         self.error_log = os.path.join(PATH.WORKDIR, CFGPATHS.ERRLOGFILE)
 
     @property
@@ -50,8 +54,7 @@ class Base:
                docstr="The name used to submit jobs to the system, defaults "
                       "to the name of the working directory")
 
-        sf.par("PRECHECK", required=False, par_type=list,
-               default=["TITLE", "BEGIN", "END", "WALLTIME"],
+        sf.par("PRECHECK", required=False, par_type=list, default=["TITLE"],
                docstr="A list of parameters that will be displayed to stdout "
                       "before 'submit' or 'resume' is run. Useful for "
                       "manually reviewing important parameters prior to "
@@ -85,11 +88,6 @@ class Base:
 
         sf.path("LOCAL", required=False,
                 docstr="path to local data to be used during workflow")
-
-        sf.path("LOG", required=False, 
-                default=os.path.join(PATH.WORKDIR, CFGPATHS.LOGFILE),
-                docstr="path to write log statements to. defaults to:"
-                       f"'{CFGPATHS.LOGFILE}'")
 
         return sf
 

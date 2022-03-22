@@ -68,12 +68,6 @@ class Inversion(custom_import("workflow", "base")):
         sf.par("END", required=True, par_type=int,
                docstr="Last iteration of workflow, BEGIN <= END <= inf")
 
-        sf.par("RESUME_FROM", required=False, par_type=str,
-               docstr="Name of task to resume inversion from")
-
-        sf.par("STOP_AFTER", required=False, par_type=str,
-               docstr="Name of task to stop inversion after finishing")
-
         sf.par("CASE", required=True, par_type=str,
                docstr="Type of inversion, available: "
                       "['data': real data inversion, "

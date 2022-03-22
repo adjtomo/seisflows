@@ -703,7 +703,7 @@ class SeisFlows:
         self.par(parameter="resume_from", value="", skip_print=True)
 
         if stop_after is not None:
-            self.par(parameter="STOP_AFTER", value=stop_after, skip_print=True)
+            self.par(parameter="stop_after", value=stop_after, skip_print=True)
 
         self._register(force=force)
         self._config_logging()

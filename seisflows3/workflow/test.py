@@ -9,7 +9,7 @@ import sys
 import time
 import logging
 from seisflows3.tools import msg
-from seisflows3.config import SeisFlowsPathsParameters
+from seisflows3.config import SeisFlowsPathsParameters, custom_import
 
 # Required SeisFlows configuration
 PAR = sys.modules['seisflows_parameters']
@@ -23,7 +23,7 @@ preprocess = sys.modules["seisflows_preprocess"]
 postprocess = sys.modules["seisflows_postprocess"]
 
 
-class Test:
+class Test(custom_import("workflow", "base")):
     """
     This is a template Base class
     """
@@ -43,7 +43,7 @@ class Test:
         :return: Paths and parameters that define the given class
 
         """
-        sf = SeisFlowsPathsParameters()
+        sf = SeisFlowsPathsParameters(super().required)
 
         return sf
 
@@ -83,7 +83,7 @@ class Test:
         """
         print(f"Hello world, from taskid {system.taskid()}")
 
-    def test_system(self, *args, **kwargs):
+    def test_system(self):
         """
         This is an example test function which can take any number of args
         or kwargs. The base class is responsible for setting all of the
@@ -94,5 +94,5 @@ class Test:
         time.sleep(3)
         system.run_single(classname="workflow", method="test_function")
 
-
+    def 
 

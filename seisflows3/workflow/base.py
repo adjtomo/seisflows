@@ -29,6 +29,12 @@ class Base:
         """
         sf = SeisFlowsPathsParameters()
 
+        sf.par("RESUME_FROM", required=False, par_type=str,
+               docstr="Name of task to resume inversion from")
+
+        sf.par("STOP_AFTER", required=False, par_type=str,
+               docstr="Name of task to stop inversion after finishing")
+
         return sf
 
     def check(self, validate=True):
