@@ -179,33 +179,42 @@ class Base:
         # Important to reset parameters to a blank list and let the check
         # statements fill it. If not, each time workflow is resumed, parameters
         # list will append redundant parameters and things stop working
-        self.parameters = []
 
         available_materials = ["ELASTIC", "ACOUSTIC",  # specfem2d, specfem3d
                                "ISOTROPIC", "ANISOTROPIC"]  # specfem3d_globe
         assert(PAR.MATERIALS.upper() in available_materials), \
             f"MATERIALS must be in {available_materials}"
 
-        # Set an internal parameter list
-        if PAR.MATERIALS.upper() == "ELASTIC":
-            self.parameters += ["vp", "vs"]
-            assert(PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
-        elif PAR.MATERIALS.upper() == "ACOUSTIC":
-            self.parameters += ["vp"]
-            assert (PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
-        elif PAR.MATERIALS.upper() == "ISOTROPIC":
-            self.parameters += ["vp", "vs"]
-            assert(PAR.SOLVER.lower() in ["specfem3d_globe"])
-        elif PAR.MATERIALS.upper() == "ANISOTROPIC":
-            self.parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
+        acceptable_densities = ["CONSTANT", "VARIABLE"]
+        assert(PAR.DENSITY.upper() in acceptable_densities), \
+            f"DENSITY must be in {acceptable_densities}"
 
-        assert(PAR.DENSITY.upper() in ["CONSTANT", "VARIABLE"]), \
-            "DENSITY must be 'CONSTANT' or 'VARIABLE'"
+        # Set an internal parameter list based on user-input material choices
+        self.parameters = []
+
+        if PAR.MATERIALS.upper() == "ELASTIC":
+            assert(PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
+            self.parameters.append("vp")
+            self.parameters.append("vs")
+        elif PAR.MATERIALS.upper() == "ACOUSTIC":
+            assert(PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
+            self.parameters.append("vp")
+        elif PAR.MATERIALS.upper() == "ISOTROPIC":
+            assert(PAR.SOLVER.lower() in ["specfem3d_globe"])
+            self.parameters.append("vp")
+            self.parameters.append("vs")
+        elif PAR.MATERIALS.upper() == "ANISOTROPIC":
+            assert(PAR.SOLVER.lower() in ["specfem3d_globe"])
+            self.parameters.append("vpv")
+            self.parameters.append("vph")
+            self.parameters.append("vsv")
+            self.parameters.append("vsh")
+            self.parameters.append("eta")
 
         if PAR.DENSITY.upper() == "VARIABLE":
-            self.parameters += ["rho"]
+            self.parameters.append("rho")
 
-        # Ensure parameters set properly
+        # Ensure that the SOLVERIO plugin can read and write model parameters
         assert hasattr(solver_io, PAR.SOLVERIO)
         assert hasattr(self.io, "read_slice"), \
             "IO method has no attribute 'read_slice'"
@@ -276,7 +285,7 @@ class Base:
         """
         raise NotImplementedError
 
-    def eval_func(self, path='', export_traces=False, write_residuals=True):
+    def eval_func(self, path='', write_residuals=True):
         """
         High level solver interface
 
@@ -299,8 +308,10 @@ class Base:
         if write_residuals:
             if self.taskid == 0:
                 self.logger.debug("calling preprocess.prepare_eval_grad()")
-            preprocess.prepare_eval_grad(cwd=self.cwd, 
-                                         source_name=self.source_name)
+            preprocess.prepare_eval_grad(cwd=self.cwd, taskid=self.taskid,
+                                         source_name=self.source_name,
+                                         filenames=self.data_filenames
+                                         )
             self.export_residuals(path)
 
     def eval_grad(self, path='', export_traces=False):
@@ -375,19 +386,19 @@ class Base:
         """
         return getattr(solver_io, PAR.SOLVERIO)
 
-    def load(self, path, parameters=None, prefix='', suffix=''):
+    def load(self, path, prefix="", suffix="", parameters=None,):
         """ 
         Solver I/O: Loads SPECFEM2D/3D models or kernels
 
         :type path: str
         :param path: directory from which model is read
-        :type parameters: list
-        :param parameters: material parameters to be read
-            (if empty, defaults to self.parameters)
         :type prefix: str
         :param prefix: optional filename prefix
         :type suffix: str
         :param suffix: optional filename suffix, eg '_kernel'
+        :type parameters: list
+        :param parameters: material parameters to be read
+            (if empty, defaults to self.parameters)
         :rtype: dict
         :return: model or kernels indexed by material parameter and
             processor rank, ie dict[parameter][iproc]
@@ -606,7 +617,7 @@ class Base:
         :type path: str
         :param path: path to model
         """
-        model = self.load(os.path.join(path, "model"))
+        model = self.load(path=os.path.join(path, "model"))
         self.save(model, self.model_databases)
 
     def import_traces(self, path):
@@ -892,7 +903,8 @@ class Base:
     @property
     def taskid(self):
         """
-        It is sometimes useful to overload system.taskid
+        Returns the currently running process for embarassingly parallelized
+        tasks.
 
         :rtype: int
         :return: task id for given solver

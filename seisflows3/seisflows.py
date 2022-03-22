@@ -660,10 +660,10 @@ class SeisFlows:
 
     def init(self, **kwargs):
         """
-        Establish a SeisFlows3 working environment without error checking.
-        Save the initial state as pickle files for environment inspection.
-        Useful for debugging, development and code exploration purposes.
-
+        Establish a SeisFlows3 working environment on disk. Instantiates a
+        working state in memory (sys.modules) and then writes this state as \
+        pickle files to the OUTPUT directory for User inspection and debug
+        purposes.
         """
         self._register(force=True)
 

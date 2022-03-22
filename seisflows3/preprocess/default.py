@@ -13,7 +13,6 @@ import numpy as np
 from seisflows3.tools import msg
 from seisflows3.tools import signal, unix
 from seisflows3.config import custom_import
-from seisflows3.tools.err import ParameterError
 from seisflows3.tools.wrappers import exists
 from seisflows3.plugins import adjoint, misfit, readers, writers
 from seisflows3.config import SeisFlowsPathsParameters
@@ -151,14 +150,14 @@ class Default(custom_import("preprocess", "base")):
 
             # Set the min/max frequencies and periods, frequency takes priority
             if PAR.MIN_FREQ is not None:
-                PAR.MAX_PERIOD = 1 / PAR.MIN_FREQ
+                PAR.force_set("MAX_PERIOD", 1 / PAR.MIN_FREQ)
             elif PAR.MAX_PERIOD is not None:
-                PAR.MIN_FREQ = 1 / PAR.MAX_PERIOD
+                PAR.force_set("MIN_FREQ", 1 / PAR.MAX_PERIOD)
 
             if PAR.MAX_FREQ is not None:
-                PAR.MIN_PERIOD = 1 / PAR.MAX_FREQ
+                PAR.force_set("MIN_PERIOD", 1 / PAR.MAX_FREQ)
             elif PAR.MIN_PERIOD is not None:
-                PAR.MAX_FREQ = 1 / PAR.MIN_PERIOD
+                PAR.force_set("MAX_FREQ", 1 / PAR.MIN_PERIOD)
 
             # Check that the correct filter bounds have been set
             if PAR.FILTER.upper() == "BANDPASS":
@@ -172,28 +171,21 @@ class Default(custom_import("preprocess", "base")):
                 assert(PAR.MIN_FREQ is not None or PAR.MAX_PERIOD is not None),\
                     "HIGHPASS requires PAR.MIN_FREQ or PAR.MAX_PERIOD"
 
-            # Check that filter bounds make sense
-            if PAR.MIN_FREQ is not None:
-                assert(PAR.MIN_FREQ > 0), "Minimum frequency must be > 0"
-            if (PAR.MIN_FREQ is not None) and (PAR.MAX_FREQ is not None):
-                assert(PAR.MIN_FREQ < PAR.MAX_FREQ), \
-                    "Minimum frequency must be less than maximum frequency"
-            if PAR.MAX_FREQ is not None:
-                assert(PAR.MAX_FREQ < np.inf), "Maximum frequency must be < inf"
+            # Check that filter bounds make sense, by this point, MIN and MAX
+            # FREQ and PERIOD should be set, so we just check the FREQ
+            assert(0 < PAR.MIN_FREQ < np.inf), "0 < PAR.MIN_FREQ < inf"
+            assert(0 < PAR.MAX_FREQ < np.inf), "0 < PAR.MAX_FREQ < inf"
+            assert(PAR.MIN_FREQ < PAR.MAX_FREQ), "PAR.MIN_FREQ < PAR.MAX_FREQ"
 
         # Assert that readers and writers available
-        if PAR.FORMAT not in dir(readers):
-            print(msg.ReaderError)
-            raise ParameterError()
-
-        if PAR.FORMAT not in dir(writers):
-            print(msg.WriterError)
-            raise ParameterError()
+        # TODO | This is a bit vague as dir contains imported modules and hidden
+        # TODO | variables (e.g., np, __name__)
+        assert(PAR.FORMAT in dir(readers)), msg.ReaderError
+        assert(PAR.FORMAT in dir(writers)), msg.WriterError
 
         # Assert that either misfit or backproject exists 
-        if PAR.WORKFLOW.upper() == "INVERSION" and not PAR.MISFIT:
-            # !!! Need a better error here
-            raise ParameterError("PAR.MISFIT must be set w/ default preprocess")
+        if PAR.WORKFLOW.upper() == "INVERSION":
+            assert(PAR.MISFIT is not None)
 
     def setup(self):
         """
@@ -214,40 +206,48 @@ class Default(custom_import("preprocess", "base")):
         self.reader = getattr(readers, PAR.FORMAT)
         self.writer = getattr(writers, PAR.FORMAT)
 
-    def prepare_eval_grad(self, cwd="./", **kwargs):
+    def prepare_eval_grad(self, cwd, taskid, filenames, **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
-        adjoint traces
+        adjoint traces. Meant to be called by solver.eval_func().
+
+        Reads in observed and synthetic waveforms, applies optional
+        preprocessing, assesses misfit, and writes out adjoint sources and
+        STATIONS_ADJOINT file.
+
+        .. note::
+            Meant to be called by solver.eval_func(), may have unused arguments
+            to keep functions general across subclasses.
 
         :type cwd: str
-        :param cwd: current specfem working directory containing observed and 
-            synthetic seismic data to be read and processed
+        :param cwd: current specfem working directory containing observed and
+            synthetic seismic data to be read and processed. Should be defined
+            by solver.cwd
+        :type filenames: list of str
+        :param filenames: list of filenames defining the files in traces
         """
-        # Need to load solver mid-workflow as preprocess is loaded first
-        solver = sys.modules["seisflows_solver"]
-
-        if solver.taskid == 0:
+        if taskid == 0:
             self.logger.debug("preparing files for gradient evaluation")
 
-        for filename in solver.data_filenames:
+        for filename in filenames:
             obs = self.reader(path=os.path.join(cwd, "traces", "obs"),
                               filename=filename)
-            syn = self.reader(path=os.path.join(cwd, "traces", "syn"), 
+            syn = self.reader(path=os.path.join(cwd, "traces", "syn"),
                               filename=filename)
 
             # Process observations and synthetics identically
             if PAR.FILTER:
-                if solver.taskid == 0:
+                if taskid == 0:
                     self.logger.debug(f"applying {PAR.FILTER} filter to data")
                 obs = self.apply_filter(obs)
                 syn = self.apply_filter(syn)
             if PAR.MUTE:
-                if solver.taskid == 0:
+                if taskid == 0:
                     self.logger.debug(f"applying {PAR.MUTE} mutes to data")
                 obs = self.apply_mute(obs)
                 syn = self.apply_mute(syn)
             if PAR.NORMALIZE:
-                if solver.taskid == 0:
+                if taskid == 0:
                     self.logger.debug(f"normalizing data with: {PAR.NORMALIZE}")
                 obs = self.apply_normalize(obs)
                 syn = self.apply_normalize(syn)
@@ -385,7 +385,7 @@ class Default(custom_import("preprocess", "base")):
                                       choice="LATE")
         if "SHORT" in mute_choices:
             st = signal.mute_offsets(st, dist=PAR.SHORT_DIST,
-                                      choice="SHORT")
+                                     choice="SHORT")
         if "LONG" in mute_choices:
             st = signal.mute_arrivals(st, dist=PAR.LONG_DIST,
                                       choice="LONG")
@@ -408,6 +408,7 @@ class Default(custom_import("preprocess", "base")):
         """
         st_out = st.copy()
         norm_choices = [_.upper() for _ in PAR.NORMALIZE]
+
         # Normalize an event by the L1 norm of all traces
         if 'ENORML1' in norm_choices:
             w = 0.
@@ -435,5 +436,3 @@ class Default(custom_import("preprocess", "base")):
                 if w > 0:
                     tr.data /= w
         return st_out
-
-

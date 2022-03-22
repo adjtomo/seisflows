@@ -13,7 +13,7 @@ from glob import glob
 import seisflows3.plugins.solver.specfem3d_globe as solvertools
 from seisflows3.tools.specfem import getpar, setpar, Model, Minmax, call_solver
 from seisflows3.plugins.io import loadbypar, copybin, loadbin, savebin
-from seisflows3.tools import unix
+from seisflows3.tools import unix, msg
 from seisflows3.tools.wrappers import Struct, exists
 from seisflows3.config import (ParameterError, custom_import,
                                SeisFlowsPathsParameters)
@@ -54,39 +54,33 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
 
         return sf
 
-    def check(self, validate=True):
-        """
-        Checks parameters and paths on top of the base class checks.
-        """
-        msg.check(type(self))
-
-        if validate:
-            self.required.validate()
-
-        super().check(validate=False)
-
-        assert(PAR.MATERIALS.upper() in ["ISOTROPIC", "ANISOTROPIC"])
-
-        # Overwrite the base class parameters based on the material choice
-        self.parameters = []
-
-        if PAR.MATERIALS.upper() == "ISOTROPIC":
-            self.parameters += ["vp", "vs"]
-        elif PAR.MATERIALS.upper() == "ANISOTROPIC":
-            self.parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
-
-    def load(self, path, prefix='reg1_', suffix='', verbose=False):
+    def load(self, path, prefix="reg1_", suffix="",  parameters=None):
         """
         Reads SPECFEM model or kernel
 
         Models are stored in Fortran binary format and separated into
         multiple files according to material parameter and processor rank.
+
+        :type path: str
+        :param path: directory from which model is read
+        :type prefix: str
+        :param prefix: optional filename prefix
+        :type suffix: str
+        :param suffix: optional filename suffix, eg '_kernel'
+        :type parameters: list
+        :param parameters: material parameters to be read
+            (if empty, defaults to self.parameters)
+        :rtype: dict
+        :return: model or kernels indexed by material parameter and
+            processor rank, ie dict[parameter][iproc]
         """
-        model = Model(self.parameters)
-        minmax = Minmax(self.parameters)
+        parameters = parameters or self.parameters
+
+        model = Model(parameters)
+        minmax = Minmax(parameters)
 
         for iproc in range(self.mesh_properties.nproc):
-            # read database files
+            # read database files based on parameters
             keys, vals = loadbypar(path, self.parameters, iproc, prefix,
                                    suffix)
             for key, val in zip(keys, vals):
@@ -94,12 +88,9 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
 
             minmax.update(keys, vals)
 
-        if verbose:
-            minmax.write(path, logpath=PATH.SUBMIT)
-
         return model
 
-    def save(self, path, model, prefix='reg1_', suffix=''):
+    def save(self, path, model, prefix="reg1_", suffix=""):
         """
         Writes SPECFEM3D_GLOBE transerverly isotropic model
 

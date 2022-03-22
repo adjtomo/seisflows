@@ -1,5 +1,6 @@
 # Run a few SeisFlows3 commands to generate test data. Useful if the parameter
 # file ever changes, at which point we will need to generate new files.
+cd ..
 rm *yaml
 
 seisflows setup
@@ -17,7 +18,7 @@ seisflows par -p dt .01
 seisflows par -p format ascii
 seisflows par -p begin 1
 seisflows par -p end 1
-seisflows par -p case synthetic
+seisflows par -p case data
 seisflows par -p attenuation False
 seisflows par -p specfem_bin ./bin
 seisflows par -p specfem_data ./DATA

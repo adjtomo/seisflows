@@ -89,6 +89,11 @@ class Serial(custom_import("system", "base")):
         """
         Provides a unique identifier for each running task, which should be set
         by the 'run' or 'run_single' command.
+
+        :rtype: int
+        :return: returns the os environment variable SEISFLOWS_TASKID which is
+            set by run() or run_single() to label each of the currently
+            running processes on the SYSTEM.
         """
         try:
             tid = int(os.environ["SEISFLOWS_TASKID"])
@@ -96,7 +101,11 @@ class Serial(custom_import("system", "base")):
             # This should only return a KeyError if you're running in debug mode
             # and aren't assigned a TASKID by the OS. Return task id = 0 
             # i.e., mainsolver, so that user can efficiently run debug commands
-            print(msg.TaskIDWarning)
+            print(msg.cli("system.taskid() environment variable not found. "
+                          "Assuming DEBUG mode and returning taskid==0. "
+                          "If not DEBUG mode, please check "
+                          "SYSTEM.run() or SYSTEM.run_single().",
+                          header="warning", border="="))
             tid = 0
 
         return tid

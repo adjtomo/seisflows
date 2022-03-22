@@ -164,50 +164,24 @@ def load(path):
 
 class Dict(object):
     """
-    Re-defined dictionary-like object for holding parameters or paths
+    A barebones dictionary-like object for holding parameters or paths.
 
     Allows for easier access of dictionary items, does not allow resets of
-    attributes once defined, only allows updates through new dictionaries.
+    attributes once defined, nor does it allow deleting attributes once defined.
+    This helps keep a workflow on rails by preventing the User from editing
+    paths and parameters during a workflow.
 
-    !!! TODO Not sure if it makes sense to define an entirely new object here
-    !!! TODO as we are essentially re-inventing the wheel? Why not inhereit
-    !!! TODO dict, i.e., Dict(dict), and then modify a few of the key attributes
-    !!! TODO that we don't want, like setattr and delattr. Dict is pretty
-    !!! TODO central to seisflows though so I don't want to break anything
-    !!! TODO without sufficient tests in place to figure out what broke.
+    TODO | Does it make sense to have this inherit dict() rather than defining
+    TODO | an entirely new object?
     """
-    def __iter__(self):
-        return iter(sorted(self.__dict__.keys()))
-
-    def __getattr__(self, key):
-        return self.__dict__[key]
-
-    def __getitem__(self, key):
-        return self.__dict__[key]
-
-    def __setattr__(self, key, val):
-        if key in self.__dict__:
-            raise TypeError("Once defined, parameters cannot be changed.")
-        self.__dict__[key] = val
-
-    def __delattr__(self, key):
-        if key in self.__dict__:
-            raise TypeError("Once defined, parameters cannot be deleted.")
-        raise KeyError
-
-    def update(self, newdict):
-        super(Dict, self).__setattr__('__dict__', newdict)
-
-    def values(self):
-        return self.__dict__.values()
-
     def __init__(self, newdict):
-        self.update(newdict)
+        """Internal dictionary can ONLY be updated by updating the ENTIRE set
+        at once, usually done by reading in a new parameter file at the start
+        of a workflow"""
+        super(Dict, self).__setattr__('__dict__', newdict)
     
     def __str__(self):
-        """
-        Pretty print dictionaries and first level nested dictionaries
-        """
+        """Pretty print dictionaries and first level nested dictionaries"""
         str_ = ""
         longest_key = max([len(_) for _ in self.__dict__.keys()])
         for key, val in self.__dict__.items():
@@ -215,12 +189,44 @@ class Dict(object):
         return str_
 
     def __repr__(self):
-        """
-        Pretty print
-        :return:
-        """
+        """Pretty print when calling an instance of this object"""
         return(self.__str__())
-        
+
+    def __iter__(self):
+        """Return an iterable list of sorted keys"""
+        return iter(sorted(self.__dict__.keys()))
+
+    def __getattr__(self, key):
+        """Attribute-like access of the internal dictionary attributes"""
+        return self.__dict__[key]
+
+    def __getitem__(self, key):
+        """.get() like access of the internal dictionary attributes """
+        return self.__dict__[key]
+
+    def __setattr__(self, key, val):
+        """Setting attributes can only be performed one time"""
+        if key in self.__dict__:
+            raise TypeError("Once defined, parameters cannot be changed.")
+        self.__dict__[key] = val
+
+    def __delattr__(self, key):
+        """Attributes cannot be deleted once set to avoid editing a parameter
+        set during an active workflow"""
+        if key in self.__dict__:
+            raise TypeError("Once defined, parameters cannot be deleted.")
+        raise KeyError
+
+    def force_set(self, key, val):
+        """Force-set variables even though the intended behavior of this class
+        is to not allow deleting or replacing already set variables.
+        This should be used for check() functions and testing purposes only"""
+        self.__dict__[key] = val
+
+    def values(self):
+        """Return values from the internal dictionary"""
+        return self.__dict__.values()
+
 
 class Null(object):
     """
