@@ -12,15 +12,15 @@ import logging
 from subprocess import check_output
 
 from seisflows3.tools import msg, unix
-from seisflows3.tools.err import ParameterError
 from seisflows3.tools.wrappers import call, findpath, saveobj
-from seisflows3.config import custom_import
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
+
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class Lsf(custom_import("system", "base")):
+class Lsf(custom_import("system", "cluster")):
     """
     An interface through which to submit workflows, run tasks in serial or
     parallel, and perform other system functions.
@@ -44,66 +44,48 @@ class Lsf(custom_import("system", "base")):
         """
         These parameters should not be set by the user.
         Attributes are initialized as NoneTypes for clarity and docstrings.
-
-        :type logger: Logger
-        :param logger: Class-specific logging module, log statements pushed
-            from this logger will be tagged by its specific module/classname
         """
         super().__init__()
 
-    def check(self):
+    @property
+    def required(self):
         """
         Checks parameters and paths
         """
-        super().check()
+        sf = SeisFlowsPathsParameters(super().required)
 
-        # Limit on number of concurrent tasks
-        if "NTASKMAX" not in PAR:
-            setattr(PAR, "NTASKMAX", PAR.NTASK)
+        # Define the Parameters required by this module
+        sf.par("NTASKMAX", required=False, default=100, par_type=int,
+               docstr="Limit on the number of concurrent tasks in array")
 
-        # Number of cores per node
-        if "NODESIZE" not in PAR:
-            raise ParameterError(PAR, "NODESIZE")
+        sf.par("NODESIZE", required=True, par_type=int,
+               docstr="The number of cores per node defined by the system")
 
-        # How to invoke executables
-        if "MPIEXEC" not in PAR:
-            setattr(PAR, "MPIEXEC", "mpiexec")
-
-        # Optional additional LSF arguments
-        if "LSFARGS" not in PAR:
-            setattr(PAR, "LSFARGS", "")
-
-        # Optional environment variable list VAR1=val1,VAR2=val2,...
-        if "ENVIRONS" not in PAR:
-            setattr(PAR, "ENVIRONS", "")
-
-        # Level of detail in output messages
-        if "VERBOSE" not in PAR:
-            setattr(PAR, "VERBOSE", 1)
+        sf.par("LSFARGS", required=False, default="", par_type=str,
+               docstr="Any optional, additional LSG arguments that will be "
+                      "passed to the LSF submit scripts")
 
     def submit(self, workflow):
         """
         Submits workflow
         """
-        output_log, error_log = self.setup()
-        workflow.checkpoint()
-
         # Prepare 'bsub' arguments
         submit_call = " ".join([
             f"bsub",
             f"{PAR.LSFARGS}",
             f"-J {PAR.TITLE}",
-            f"-o {output_log}.log",
-            f"-e {error_log}.log",
+            f"-o {self.output_log}.log",
+            f"-e {self.error_log}.log",
             f"-n {PAR.NODESIZE}",
             f'-R "span[ptile={PAR.NODESIZE}"',
             f"-W {PAR.WALLTIME:d}:00",
             os.path.join(findpath("seisflows.system"), "wrappers", "submit"),
             PATH.OUTPUT
         ])
-        call(submit_call)
 
-    def run(self, classname, method, hosts='all', *args, **kwargs):
+        super().submit(workflow, submit_call)
+
+    def run(self, classname, method, *args, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on the
         maui cluster
@@ -149,7 +131,7 @@ class Lsf(custom_import("system", "base")):
             if isdone:
                 return
 
-    def run_single(self, classname, method, hosts='all', *args, **kwargs):
+    def run_single(self, classname, method, *args, **kwargs):
         """ Runs task multiple times in embarrassingly parallel fasion
 
           Executes classname.method(*args, **kwargs) NTASK times, each time on
@@ -232,7 +214,7 @@ class Lsf(custom_import("system", "base")):
         """
         Specifies MPI executable used to invoke solver
         """
-        return PAR.MPIEXEC
+        return PAR.MPIEXEC or "mpiexec"
 
     def _query(self, jobid):
         """

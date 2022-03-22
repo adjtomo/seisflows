@@ -78,7 +78,6 @@ class Base:
         Placeholder for initialization or setup tasks
         """
         msg.setup(type(self))
-        pass
 
     def write_gradient(self, path):
         """

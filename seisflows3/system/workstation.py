@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 """
-This is a subclass seisflows.system.Serial
-Provides utilities for submitting jobs in serial on a single machine, mostly
-for testing purposes
+This is a subclass seisflows.system.workstation
+Provides utilities for submitting jobs in serial on a single machine
 """
 import os
 import sys
@@ -15,7 +14,7 @@ PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
 
 
-class Serial(custom_import("system", "base")):
+class Workstation(custom_import("system", "base")):
     """
     Run tasks in a serial fashion on a single local machine
     """
@@ -37,9 +36,6 @@ class Serial(custom_import("system", "base")):
         sf.par("NPROC", required=False, default=1, par_type=int,
                docstr="Number of processor to use for each simulation")
 
-        sf.par("MPIEXEC", required=False, par_type=str,
-               docstr="Function used to invoke parallel executables")
-
         return sf
 
     def check(self, validate=True):
@@ -55,13 +51,13 @@ class Serial(custom_import("system", "base")):
         Submits the main workflow job
         """
         # Run setup to create necessary directory structure
-        output_log, error_log = self.setup()
+        self.setup()
         workflow.checkpoint()
 
         # execute workflow
         workflow.main()
 
-    def run(self, classname, method, hosts="all", *args, **kwargs):
+    def run(self, classname, method, *args, **kwargs):
         """
         Executes task multiple times in serial
         """

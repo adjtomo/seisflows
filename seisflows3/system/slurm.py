@@ -28,7 +28,7 @@ PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class Slurm(custom_import("system", "base")):
+class Slurm(custom_import("system", "cluster")):
     """
     An interface through which to submit workflows, run tasks in serial or
     parallel, and perform other system functions.
@@ -75,34 +75,19 @@ class Slurm(custom_import("system", "base")):
                docstr="Any optional, additional SLURM arguments that will be "
                       "passed to the SBATCH scripts")
 
-        sf.par("ENVIRONS", required=False, default="", par_type=str,
-               docstr="Optional environment variables to be provided in the"
-                      "following format VAR1=var1,VAR2=var2...")
-
         return sf
-
-    def check(self, validate=True):
-        """
-        Checks parameters and paths
-        """
-        if validate:
-            self.required.validate()
-        super().check(validate=False)
 
     def submit(self, workflow):
         """
         Submits workflow as a master job
         """
-        output_log, error_log = self.setup()
-        workflow.checkpoint()
-
         # Submit using sbatch
         submit_call = " ".join([
-            f"sbatch", 
+            f"sbatch",
             f"{PAR.SLURMARGS or ''}",
             f"--job-name={PAR.TITLE}",
-            f"--output={output_log}-%A.log",
-            f"--error={error_log}-%A.log",
+            f"--output={self.output_log}-%A.log",
+            f"--error={self.error_log}-%A.log",
             f"--ntasks-per-node={PAR.NODESIZE}",
             f"--nodes=1",
             f"--time={PAR.WALLTIME:d}",
@@ -110,15 +95,13 @@ class Slurm(custom_import("system", "base")):
             PATH.OUTPUT
         ])
 
-        call(submit_call)
+        super().submit(workflow, submit_call)
 
     def run(self, classname, method, *args, **kwargs):
         """
-        Runs task multiple times in embarrassingly parallel fasion on the
-        maui cluster
-
-        Executes classname.method(*args, **kwargs) NTASK times,
-        each time on NPROC CPU cores
+        Runs task multiple times in embarrassingly parallel fasion on a SLURM
+        cluster. Executes classname.method(*args, **kwargs) `NTASK` times,
+        each time on `NPROC` CPU cores
 
         :type classname: str
         :param classname: the class to run

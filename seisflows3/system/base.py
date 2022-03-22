@@ -26,6 +26,10 @@ class Base:
     # Class-specific logger accessed using self.logger
     logger = logging.getLogger(__name__).getChild(__qualname__)
 
+    def __init__(self):
+        self.output_log = PATH.LOG
+        self.error_log = os.path.join(PATH.WORKDIR, CFGPATHS.ERRLOGFILE)
+
     @property
     def required(self):
         """
@@ -35,23 +39,16 @@ class Base:
         sf = SeisFlowsPathsParameters()
 
         # Define the Parameters required by this module
+        sf.par("MPIEXEC", required=False, par_type=str,
+               docstr="Function used to invoke executables on the system. "
+                      "For example 'sbatch' on SLURM systems, or './' on a "
+                      "workstation. If left blank, will guess based on the "
+                      "system.")
+
         sf.par("TITLE", required=False,
                default=os.path.basename(os.path.abspath(".")), par_type=str,
                docstr="The name used to submit jobs to the system, defaults "
                       "to the name of the working directory")
-
-        sf.par("WALLTIME", required=True, par_type=float,
-               docstr="Maximum job time in minutes for main SeisFlows3 job")
-
-        sf.par("TASKTIME", required=True, par_type=float,
-               docstr="Maximum job time in minutes for each SeisFlows3 task")
-
-        sf.par("NTASK", required=True, par_type=int,
-               docstr="Number of separate, individual tasks. Also equal to "
-                      "the number of desired sources in workflow")
-
-        sf.par("NPROC", required=True, par_type=int,
-               docstr="Number of processor to use for each simulation")
 
         sf.par("PRECHECK", required=False, par_type=list,
                default=["TITLE", "BEGIN", "END", "WALLTIME"],
@@ -130,13 +127,9 @@ class Base:
         log_files = os.path.join(PATH.WORKDIR, CFGPATHS.LOGDIR)
         unix.mkdir(log_files)
 
-        output_log = PATH.LOG
-        error_log = os.path.join(PATH.WORKDIR, CFGPATHS.ERRLOGFILE)
-        par_file = PATH.PAR_FILE
-
         # If resuming, move old log files to keep them out of the way. Number
         # in ascending order, so we don't end up overwriting things
-        for src in [output_log, error_log, par_file]:
+        for src in [self.output_log, self.error_log, PATH.PAR_FILE]:
             i = 1
             if os.path.exists(src):
                 dst = os.path.join(log_files, number_fid(src, i))
@@ -145,8 +138,6 @@ class Base:
                     dst = os.path.join(log_files, number_fid(src, i))
                 self.logger.debug(f"copying par/log file to: {dst}")
                 unix.cp(src=src, dst=dst)
-
-        return output_log, error_log
 
     def submit(self):
         """
@@ -164,6 +155,7 @@ class Base:
 
     def run(self, classname, method, *args, **kwargs):
         """
+        Runs a task multiple times in parallel
         Runs a task multiple times in parallel
 
         .. note::
