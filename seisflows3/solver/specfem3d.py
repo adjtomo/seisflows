@@ -99,7 +99,7 @@ class Specfem3D(custom_import("solver", "base")):
         if PAR.ATTENUATION:
             setpar(key="ATTENUATION ", val=".true.", file="DATA/Par_file")
         else:
-            setpar(key="ATTENUATION ", val=".false`.", file="DATA/Par_file")
+            setpar(key="ATTENUATION ", val=".false.", file="DATA/Par_file")
 
         call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
 
@@ -110,7 +110,7 @@ class Specfem3D(custom_import("solver", "base")):
         if PAR.SAVETRACES:
             self.export_traces(os.path.join(PATH.OUTPUT, "traces", "obs"))
 
-    def generate_mesh(self, model_path, model_name, model_type='gll'):
+    def generate_mesh(self, model_path, model_name, model_type=None):
         """
         Performs meshing with internal mesher Meshfem3D and database generation
 
@@ -122,9 +122,11 @@ class Specfem3D(custom_import("solver", "base")):
         :param model_type: available model types to be passed to the Specfem3D
             Par_file. See Specfem3D Par_file for available options.
         """
+        available_model_types = ["gll"]
+
         assert(exists(model_path)), f"model {model_path} does not exist"
 
-        available_model_types = ["gll"]
+        model_type = model_type or getpar(key="MODEL", file="DATA/Par_file")
         assert(model_type in available_model_types), \
             f"{model_type} not in available types {available_model_types}"
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 This is the base class seisflows.solver.Base
-This class provides the core utilities for the Seisflows solver interactions
+This class provides the core utilities for the SeisFlows3 solver interactions
 """
 import os
 import sys
@@ -872,25 +872,7 @@ class Base:
         Note:
             Source list is sorted and collected from start up to PAR.NTASK
         """
-        # Check path
-        path = PATH.SPECFEM_DATA
-        if not exists(path):
-            raise FileNotFoundError(f"SPECFEM_DATA: {path} does not exist")
 
-        # Apply wildcard rule and check for available sources
-        wildcard = f"{self.source_prefix}_*"
-        globstar = sorted(glob(os.path.join(path, wildcard)))
-
-        if not globstar:
-            print(msg.SourceError_SPECFEM.format(path, wildcard))
-            sys.exit(-1)
-
-        # Create internal definition of available source names
-        names = []
-        for path in globstar:
-            names += [os.path.basename(path).split('_')[-1]]
-
-        self._source_names = names[:PAR.NTASK]
 
     def check_solver_parameter_files(self):
         """

@@ -123,18 +123,18 @@ class Base:
         # Define the Parameters required by this module
         sf.par("LINESEARCH", required=False, default="Bracket", par_type=str,
                docstr="Algorithm to use for line search, see "
-                      "seisflows.plugins.line_search for available choices")
+                      "seisflows3.plugins.line_search for available choices")
 
         sf.par("PRECOND", required=False, par_type=str,
                docstr="Algorithm to use for preconditioning gradients, see "
-                      "seisflows.plugins.preconds for available choices")
+                      "seisflows3.plugins.preconds for available choices")
 
         sf.par("STEPCOUNTMAX", required=False, default=10, par_type=int,
                docstr="Max number of trial steps in line search before a "
-                      "change in line serach behavior")
+                      "change in line search behavior")
 
         sf.par("STEPLENINIT", required=False, default=0.05, par_type=float,
-               docstr="Initial line serach step length, as a fraction "
+               docstr="Initial line search step length, as a fraction "
                       "of current model parameters")
 
         sf.par("STEPLENMAX", required=False, default=0.5, par_type=float,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This is the subclass seisflows.solver.Specfem3DSerial
+This is the subclass seisflows.solver.Specfem3DMaui
 
 This class is almost the same as Specfem3D, except the setup step is run as
 a serial task. This is useful as HPC job queues are long on Maui, so it saves
@@ -19,7 +19,7 @@ from glob import glob
 from seisflows3.tools import unix
 from seisflows3.tools.wrappers import exists
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
-from seisflows3.tools.seismic import call_solver, getpar, setpar
+from seisflows3.tools.specfem import call_solver, getpar, setpar
 
 
 # Seisflows configuration
@@ -88,9 +88,12 @@ class Specfem3DMaui(custom_import("solver", "specfem3d")):
         """
         unix.cd(self.cwd)
 
-        setpar("SIMULATION_TYPE", "1")
-        setpar("SAVE_FORWARD", ".false.")
-        setpar("ATTENUATION ", ".true.")
+        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
+        if PAR.ATTENUATION:
+            setpar(key="ATTENUATION ", val=".true.", file="DATA/Par_file")
+        else:
+            setpar(key="ATTENUATION ", val=".false.", file="DATA/Par_file")
 
         call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
 
@@ -109,7 +112,6 @@ class Specfem3DMaui(custom_import("solver", "specfem3d")):
         the main solver, which are then copied in serial by the function
         distribute_databases()
 
-
         :type model_path: str
         :param model_path: path to the model to be used for mesh generation
         :type model_name: str
@@ -118,15 +120,18 @@ class Specfem3DMaui(custom_import("solver", "specfem3d")):
         :param model_type: available model types to be passed to the Specfem3D
             Par_file. See Specfem3D Par_file for available options.
         """
+        available_model_types = ["gll"]
+
         assert(exists(model_path)), f"model {model_path} does not exist"
 
-        available_model_types = ["gll"]
+        model_type = model_type or getpar(key="MODEL", file="DATA/Par_file")
         assert(model_type in available_model_types), \
             f"{model_type} not in available types {available_model_types}"
 
-        # Ensure this is only run by taskid 0, mainsolver
-        cwd = os.path.join(PATH.SOLVER, self.mainsolver)
-        unix.cd(cwd)
+        # Ensure that we're running on the main solver only
+        assert(self.taskid == 0)
+
+        unix.cd(self.cwd)
 
         # Check that the model parameter falls into the acceptable types
         par = getpar("MODEL").strip()
@@ -140,6 +145,7 @@ class Specfem3DMaui(custom_import("solver", "specfem3d")):
             src = glob(os.path.join(model_path, "*"))
             dst = self.model_databases
             unix.cp(src, dst)
+
             call_solver(mpiexec=system.mpiexec(),
                         executable="bin/xgenerate_databases")
 
@@ -156,7 +162,10 @@ class Specfem3DMaui(custom_import("solver", "specfem3d")):
         :param export_traces: option to save the observation traces to disk
         :return:
         """
-        preprocess.prepare_eval_grad(path, self.source_name)
+        preprocess.prepare_eval_grad(cwd=self.cwd, taskid=self.taskid,
+                                     source_name=self.source_name,
+                                     filenames=self.data_filenames
+                                     )
         if export_traces:
             self.export_residuals(path)
 
@@ -274,7 +283,6 @@ class Specfem3DMaui(custom_import("solver", "specfem3d")):
 
         if "MULTIPLES" in PAR:
             raise NotImplementedError
-
 
     @property
     def mainsolver(self):

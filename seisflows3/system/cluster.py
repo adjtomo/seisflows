@@ -8,13 +8,10 @@ be overloaded by subclasses
 import os
 import sys
 import logging
-from glob import glob
 from subprocess import check_call
 
 from seisflows3.tools import unix, msg
-from seisflows3.tools.wrappers import call
-from seisflows3.config import (custom_import, save, saveobj,
-                               SeisFlowsPathsParameters, CFGPATHS)
+from seisflows3.config import custom_import, save, SeisFlowsPathsParameters
 
 
 PAR = sys.modules['seisflows_parameters']

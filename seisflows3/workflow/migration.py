@@ -4,26 +4,25 @@ This is the base class seisflows.workflow.migration
 
 This is a main Seisflows class, it controls the main workflow.
 """
+import os
 import sys
 import logging
 
-from seisflows3.tools import unix
+from seisflows3.tools import unix, msg
 from seisflows3.tools.wrappers import exists
-from seisflows3.tools.err import ParameterError
-from seisflows3.workflow.base import Base
-from seisflows3.config import SeisFlowsPathsParameters
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
 
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
+PAR = sys.modules["seisflows_parameters"]
+PATH = sys.modules["seisflows_paths"]
 
-system = sys.modules['seisflows_system']
-solver = sys.modules['seisflows_solver']
-preprocess = sys.modules['seisflows_preprocess']
-postprocess = sys.modules['seisflows_postprocess']
+system = sys.modules["seisflows_system"]
+solver = sys.modules["seisflows_solver"]
+preprocess = sys.modules["seisflows_preprocess"]
+postprocess = sys.modules["seisflows_postprocess"]
 
 
-class Migration(Base):
+class Migration(custom_import("workflow", "base")):
     """
     Migration base class.
 
@@ -49,78 +48,26 @@ class Migration(Base):
         """
         sf = SeisFlowsPathsParameters(super().required)
 
-        # Define the Paths required by this module
-        sf.path("SCRATCH", required=True,
-                docstr="scratch path to hold temporary data during workflow")
-
-        sf.path("OUTPUT", required=True,
-                docstr="directory to save workflow outputs to disk")
-
-        sf.path("LOCAL", required=False, default="null",
-                docstr="local path to data available to workflow")
-
-        sf.path("DATA", required=False, default="null",
-                docstr="path to data available to workflow")
-
-        sf.path("MODEL_INIT", required=True,
-                docstr="location of the initial model to be used for workflow")
-
-        sf.par("SAVEGRADIENT", required=False, default=True, par_type=bool,
-               docstr="Save gradient files after each iteration")
-
-        sf.par("SAVEKERNELS", required=False, default=False, par_type=bool,
-               docstr="Save event kernel files after each iteration")
-
-        sf.par("SAVETRACES", required=False, default=False, par_type=bool,
-               docstr="Save waveform traces after each iteration")
-
         return sf
 
-    def check(self, validate=True):
-        """ 
-        Checks parameters and paths
+    def main(self, return_flow=False):
         """
-        if validate:
-            self.required.validate()
-        super().check(validate=False)
-
-        if not exists(PATH.DATA):
-            assert "MODEL_TRUE" in PATH, f"DATA or MODEL_TRUE must exist"
-
-    def main(self):
-        """ Migrates seismic data
+        Migrates seismic data
         """
-        # set up workflow machinery
-        preprocess.setup()
-        postprocess.setup()
+        flow = [self.setup,
+                self.generate_synthetics,
+                self.backproject,
+                self.process_kernels
+                ]
+        if return_flow:
+            return flow
+        else:
+            # FLOW is a constant, when we run, we flow
+            flow = FLOW
 
-        # set up solver machinery
-        print "Preparing solver..."
-        system.run("solver", "setup")
-
-        self.prepare_model()
-
-        # perform migration
-        print "Generating synthetics..."
-        system.run("solver", "eval_func",
-                   path=PATH.SCRATCH,
-                   write_residuals=False)
-
-        print "Backprojecting..."
-        system.run("solver", "eval_grad",
-                   path=PATH.SCRATCH,
-                   export_traces=PAR.SAVETRACES)
-
-        system.run_single("postprocess", "process_kernels",
-                 path=PATH.SCRATCH+"/"+"kernels",
-                 parameters=solver.parameters)
-
-        try:
-            system.run_single("postprocess", "process_kernels",
-                     path=PATH.SCRATCH+"/"+"kernels",
-                     parameters=["rhop"])
-        except:
-            pass
+        # Run each argument in flow
+        for func in flow:
+            func()
 
         if PAR.SAVETRACES:
             self.save_traces()
@@ -130,12 +77,54 @@ class Migration(Base):
         else:
             self.save_kernels_sum()
 
-        print "Finished\n"
+    def setup(self):
+        """
+        Sets up the SeisFlows3 modules for the Migration
+        """
+        # Set up all the requisite modules from the master job
+        self.logger.info(msg.mnr("PERFORMING MODULE SETUP"))
+        preprocess.setup()
+        postprocess.setup()
+        system.run("solver", "setup")
 
-    def prepare_model(self):
-        model = PATH.OUTPUT +"/"+ "model_init"
-        assert exists(model)
-        unix.cp(model, PATH.SCRATCH +"/"+ "model")
+    def generate_synthetics(self):
+        """
+        Performs forward simulation, and evaluates the objective function
+        """
+        self.logger.info(msg.sub("PREPARING VELOCITY MODEL"))
+        src = os.path.join(PATH.OUTPUT, "model_init")
+        dst = os.path.join(PATH.SCRATCH, "model")
+
+        assert os.path.exists(src)
+        unix.cp(src, dst)
+
+        self.logger.info(msg.sub("EVALUATE OBJECTIVE FUNCTION"))
+        system.run("solver", "eval_func", path=PATH.SCRATCH,
+                   write_residuals=True)
+
+    def backproject(self):
+        """
+        Backproject or create kernels by running adjoint simulations
+        """
+        self.logger.info(msg.sub("BACKPROJECT / EVALUATE GRADIENT"))
+        system.run("solver", "eval_grad", path=PATH.SCRATCH,
+                   export_traces=PAR.SAVETRACES)
+
+    def process_kernels(self):
+        """
+        Backproject to create kernels from synthetics
+        """
+        system.run_single("postprocess", "process_kernels",
+                          path=os.path.join(PATH.SCRATCH, "kernels"),
+                          parameters=solver.parameters)
+
+        try:
+            # TODO Figure out a better method for running this try except
+            system.run_single("postprocess", "process_kernels",
+                              path=os.path.join(PATH.SCRATCH, "kernels"),
+                              parameters=["rhop"])
+        except:
+            pass
 
     def save_kernels_sum(self):
         src = PATH.SCRATCH +"/"+ "kernels/sum"

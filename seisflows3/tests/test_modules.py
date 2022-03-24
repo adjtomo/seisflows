@@ -1,6 +1,8 @@
 """
-Test suite for the SeisFlows3 SYSTEM module, which controls interaction with
-various compute systems
+General test suite for all SeisFlows3 modules. Defines required parameters and
+functions for each of the modules, tests importing each of the modules and that
+each of the required parameters and functions exist. A sort of first-pass test
+which makes sure the package is set up correctly.
 """
 import os
 import sys
@@ -11,14 +13,47 @@ from seisflows3 import config
 from seisflows3.seisflows import SeisFlows, return_modules
 
 
-# The module that we're testing, allows for copy-pasting these test suites
-MODULE = "system"
+# Define dictionary dictating the bare-minimum SeisFlows3 structure.
+# Each subclass will be checked to see if it meets these requirements which
+# ensure that the package will work as intended. The required functions are
+# determined by whether or not other submodules call for these functions, e.g.,
+# an inversion workflow will call solver.eval_func()
+required_structure = {
+    "system": {
+        "parameters": ["WALLTIME", "TASKTIME", "NTASK", "NPROC"],
+        "functions": ["required", "check", "setup", "submit", "run",
+                      "run_single", "taskid", "checkpoint"]
+    },
+    "preprocess": {
+        "parameters": [],
+        "functions": ["required", "check", "setup", "prepare_eval_grad",
+                      "sum_residuals", "finalize"]
+    },
+    "solver": {
+        "parameters": ["MATERIALS", "DENSITY", "ATTENUATION"],
+        "functions": ["required", "check", "setup", "generate_data",
+                      "generate_mesh", "eval_func", "eval_grad", "load",
+                      "save", "merge", "split", "source_names", "parameters"]
+    },
+    "postprocess": {
+        "parameters": [],
+        "functions": ["check", "setup", "write_gradient"]
+    },
+    "optimize": {
+        "parameters": [],
+        "functions": ["setup", "check", "compute_direction",
+                      "initialize_search", "update_search",
+                      "finalize_search", "retry_status",
+                      "restart", "save", "load"]
+    },
+    "workflow": {
+        "parameters": [],
+        "functions": ["check", "main", "checkpoint"]
+    },
+}
 
-# Ensures that these parameters are always defined, even when using subclasses
-REQUIRED_PARAMETERS = ["WALLTIME", "TASKTIME", "NTASK", "NPROC"]
-REQUIRED_FUNCTIONS = ["required", "check", "setup", "submit", "run",
-                      "run_single", "taskid", "checkpoint"
-                      ]
+# Just make sure that the structure here is dictated by the Config
+assert(set(required_structure.keys()) == set(config.NAMES))
 
 # Define some re-used paths
 TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
@@ -38,14 +73,6 @@ def copy_par_file(tmpdir):
 
 
 @pytest.fixture
-def modules():
-    """
-    Return a list of subclasses that falls under the System module
-    """
-    return return_modules()[MODULE]
-
-
-@pytest.fixture
 def sfinit(tmpdir, copy_par_file):
     """
     Re-used function that will initate a SeisFlows3 working environment in
@@ -62,16 +89,21 @@ def sfinit(tmpdir, copy_par_file):
     return sf
 
 
-def test_import(sfinit, modules):
+def test_import(sfinit):
     """
     Test code by importing all available classes for this module.
     If any of these fails then the module itself has some code error
     (e.g., syntax errors, inheritance errors).
     """
     sfinit
-    for package, module_list in modules.items():
-        for module in module_list:
-            config.custom_import(MODULE, module)()
+    for name in config.NAMES:
+        modules = return_modules()[name]
+        for package, module_list in modules.items():
+            for module in module_list:
+                print(module)
+                if "pyatoa" in module:
+                    continue
+                config.custom_import(name, module)()
 
 
 def test_validate(sfinit, modules):
@@ -90,7 +122,6 @@ def test_validate(sfinit, modules):
     for package, module_list in modules.items():
         for module in module_list:
             loaded_module = config.custom_import(MODULE, module)()
-            pytest.set_trace()
             from IPython import embed;embed()
             loaded_module.required.validate()
 
@@ -128,68 +159,7 @@ def test_required_functions_exist(sfinit, modules):
                     f"{MODULE}.{module}"
 
 
-def test_setup(sfinit, modules):
-    """
-    Test the expected behavior of each of the rqeuired functions.
-
-    Setup: make sure that setup creates the necessary directory structure
-
-    :param sfinit:
-    :param modules:
-    :return:
-    """
-    sf = sfinit
-    PATHS = sys.modules["seisflows_paths"]
-    SETUP_CREATES = [PATHS.SCRATCH, PATHS.SYSTEM, PATHS.OUTPUT]
-
-    for package, module_list in modules.items():
-        for module in module_list:
-            loaded_module = config.custom_import(MODULE, module)()
-
-            # Make sure these don't already exist
-            for path_ in SETUP_CREATES:
-                assert(not os.path.exists(path_))
-
-            loaded_module.setup()
-
-            # Check that the minimum required directories were created
-            for path_ in SETUP_CREATES:
-                assert(os.path.exists(path_))
-
-            # Remove created paths so we can check the next module
-            for path_ in SETUP_CREATES:
-                if os.path.isdir(path_):
-                    shutil.rmtree(path_)
-                else:
-                    os.remove(path_)
-
 # ==============================================================================
 # MODULE AND FUNCTION SPECIFIC TESTS TO FOLLOW
 # ==============================================================================
-# def test_submit():
-#     """
-#
-#     :return:
-#     """
-#
-#
-# def test_run():
-#     """
-#
-#     :return:
-#     """
-#
-#
-# def test_run_single():
-#     """
-#
-#     :return:
-#     """
-#
-#
-# def test_taskid():
-#     """
-#     Simply assert that this function returns an integer
-#     :return:
-#     """
 

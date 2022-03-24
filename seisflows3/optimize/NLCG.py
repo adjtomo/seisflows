@@ -7,7 +7,6 @@ import sys
 import logging
 
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
-from seisflows3.plugins import optimize
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']

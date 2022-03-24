@@ -16,6 +16,8 @@ class SteepestDescent(custom_import("optimize", "base")):
     """
     Steepest descent method
     """
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self):
         """
         These parameters should not be set by the user.
@@ -30,8 +32,6 @@ class SteepestDescent(custom_import("optimize", "base")):
             from this logger will be tagged by its specific module/classname
         """
         self.restarted = False
-        self.logger = \
-            logging.getLogger(self.__name__).getChild(self.__qualname__)
 
     @property
     def required(self):

@@ -11,12 +11,11 @@ import logging
 from glob import glob
 
 import seisflows3.plugins.solver.specfem3d_globe as solvertools
-from seisflows3.tools.specfem import getpar, setpar, Model, Minmax, call_solver
-from seisflows3.plugins.io import loadbypar, copybin, loadbin, savebin
+from seisflows3.tools.specfem import Minmax  # Model, Minmax,
+# from seisflows3.plugins.io import loadbypar, copybin, loadbin, savebin
 from seisflows3.tools import unix, msg
 from seisflows3.tools.wrappers import Struct, exists
-from seisflows3.config import (ParameterError, custom_import,
-                               SeisFlowsPathsParameters)
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -161,7 +160,7 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
         Specfem3D's uses different name conventions for regular traces
         and 'adjoint' traces
         """
-        files = glob(os.path.join(self.cwd, "traces", "adj", "*sem.ascii")
+        files = glob(os.path.join(self.cwd, "traces", "adj", "*sem.ascii"))
         unix.rename("sem.ascii", "sem.ascii.adj", files)
 
     def initialize_adjoint_traces(self):
@@ -180,7 +179,7 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
         # workaround for  SPECFEM's use of different name conventions for
         # regular traces and 'adjoint' traces
         if PAR.FORMAT.upper() in ['ASCII', 'ascii']:
-            files = glob(os.path.join(self.cwd, "traces", "adj", "*sem.ascii")
+            files = glob(os.path.join(self.cwd, "traces", "adj", "*sem.ascii"))
             unix.rename("sem.ascii", "adj", files)
 
     @property

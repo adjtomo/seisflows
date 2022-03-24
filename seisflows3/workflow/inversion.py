@@ -12,7 +12,6 @@ from glob import glob
 
 from seisflows3.config import custom_import, CFGPATHS
 from seisflows3.tools import msg, unix
-from seisflows3.tools.wrappers import exists
 from seisflows3.config import save, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
@@ -68,43 +67,7 @@ class Inversion(custom_import("workflow", "base")):
         sf.par("END", required=True, par_type=int,
                docstr="Last iteration of workflow, BEGIN <= END <= inf")
 
-        sf.par("CASE", required=True, par_type=str,
-               docstr="Type of inversion, available: "
-                      "['data': real data inversion, "
-                      "'synthetic': synthetic-synthetic inversion]")
-
-        sf.par("SAVEMODEL", required=False, default=True, par_type=bool,
-               docstr="Save final model files after each iteration")
-
-        sf.par("SAVEGRADIENT", required=False, default=True, par_type=bool,
-               docstr="Save gradient files after each iteration")
-
-        sf.par("SAVEKERNELS", required=False, default=False, par_type=bool,
-               docstr="Save event kernel files after each iteration")
-
-        sf.par("SAVETRACES", required=False, default=False, par_type=bool,
-               docstr="Save waveform traces after each iteration")
-
-        sf.par("SAVERESIDUALS", required=False, default=False, par_type=bool,
-               docstr="Save waveform residuals after each iteration")
-
-        sf.par("SAVEAS", required=False, default="binary", par_type=str,
-               docstr="Format to save models, gradients, kernels. "
-                      "Available: "
-                      "['binary': save files in native SPECFEM .bin format, "
-                      "'vector': save files as NumPy .npy files, "
-                      "'both': save as both binary and vectors]")
-
         # Define the Paths required by this module
-        sf.path("MODEL_INIT", required=True,
-                docstr="Initial model to be used for workflow")
-
-        sf.path("MODEL_TRUE", required=False,
-                docstr="Target model to be used for PAR.CASE == 'synthetic'")
-
-        sf.path("DATA", required=False, default=None,
-                docstr="path to data available to workflow")
-
         sf.path("FUNC", required=False,
                 default=os.path.join(PATH.SCRATCH, CFGPATHS.SCRATCHDIR),
                 docstr="scratch path to store data related to function "
@@ -144,23 +107,24 @@ class Inversion(custom_import("workflow", "base")):
         assert(1 <= PAR.BEGIN <= PAR.END), \
             f"Incorrect BEGIN or END parameter: 1 <= {PAR.BEGIN} <= {PAR.END}"
 
-        if PAR.CASE.upper() == "SYNTHETIC":
-            assert exists(PATH.MODEL_TRUE), \
-                "CASE == SYNTHETIC requires PATH.MODEL_TRUE"
-
     def main(self, return_flow=False):
         """
         !!! This function controls the main workflow !!!
 
         Carries out seismic inversion by running a series of functions in order
 
+        .. note::
+            FLOW is a constant list of functions to evaluate in order
+            flow (lowercase) is a manipulable list that allows main to start and
+                stop a workflow from within the FLOW list
+
         :type return_flow: bool
         :param return_flow: for CLI tool, simply returns the flow function
             rather than running the workflow. Used for print statements etc.
         """
-
         # The workFLOW is a list of functions that can be called dynamically
-        FLOW = [self.initialize,
+        FLOW = [self.setup,
+                self.initialize,
                 self.evaluate_gradient,
                 self.write_gradient,
                 self.compute_direction,
@@ -171,35 +135,15 @@ class Inversion(custom_import("workflow", "base")):
         if return_flow:
             return FLOW
         else:
-            # FLOW is a constant, when we run, we flow 
+            # FLOW is a constant, when we run, we flow
             flow = FLOW
 
-        optimize.iter = PAR.BEGIN
-
-        # Allow workflow resume from a given mid-workflow location
+        # Allow workflow resume from a given mid-flow location
         if PAR.RESUME_FROM:
-            # Determine the index that corresponds to the resume function named
-            try:
-                resume_idx = [_.__name__ for _ in FLOW].index(PAR.RESUME_FROM)
-                resume_fx = FLOW[resume_idx].__name__
-            except ValueError:
-                self.logger.info(f"{PAR.RESUME_FROM} does not correspond to any "
-                                 f"workflow functions. Exiting...")
-                sys.exit(-1)
-            
-            self.logger.info(
-                    msg.mjr(f"RESUME ITERATION {optimize.iter} FROM FUNCTION: "
-                            f"'{resume_fx}'")
-                    )
-            # Curtail the flow argument during resume_from
-            flow = FLOW[resume_idx:]
-
-        # First-time and one-time intialization of the workflow
-        elif optimize.iter == 1:
-            self.logger.info(msg.mjr("STARTING INVERSION WORKFLOW"))
-            self.setup()
+            flow = self.resume_from(flow)
 
         # Run the workflow until from the current iteration until PAR.END
+        optimize.iter = PAR.BEGIN
         while optimize.iter <= PAR.END:
             self.logger.info(msg.mnr(f"ITERATION {optimize.iter} / {PAR.END}"))
 
@@ -215,27 +159,32 @@ class Inversion(custom_import("workflow", "base")):
                     sys.exit(0)
             # Finish. Assuming completion of all arguments in flow() 
             self.logger.info(msg.mjr(f"FINISHED ITERATION {optimize.iter}"))
+
             optimize.iter += 1
             self.logger.info(msg.sub(f"SETTING ITERATION = {optimize.iter}"))
     
-            # Reset flow incase 'resume_from' curtailed some of the arguments 
+            # Reset flow in case 'resume_from()' curtailed some of the arguments
             flow = FLOW
 
     def setup(self):
         """
         Lays groundwork for inversion by running setup() functions for the 
-        involved sub-modules, and generating synthetic true data if necessary, 
-        and generating the pre-requisite database files. Should only be run once
-        at the iteration 1
-        """
-        # Set up all the requisite modules from the master job
-        self.logger.info(msg.mnr("PERFORMING MODULE SETUP"))
-        preprocess.setup()
-        postprocess.setup()
-        optimize.setup()
+        involved sub-modules, generating True model synthetic data if necessary,
+        and generating the pre-requisite database files.
 
-        # Run solver.setup() in parallel
-        system.run("solver", "setup")
+        .. note::
+            This function should only be run one time, at the start of iter 1
+        """
+        self.logger.info(msg.mjr("STARTING INVERSION WORKFLOW"))
+        if optimize.iter == 1:
+            # Set up all the requisite modules from the master job
+            self.logger.info(msg.mnr("PERFORMING MODULE SETUP"))
+            preprocess.setup()
+            postprocess.setup()
+            optimize.setup()
+
+            # Run solver.setup() in parallel
+            system.run("solver", "setup")
 
     def initialize(self):
         """

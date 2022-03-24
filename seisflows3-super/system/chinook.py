@@ -7,12 +7,9 @@ be overloaded by subclasses
 import os
 import sys
 import math
-import time
-from glob import glob
-from subprocess import check_output, call, CalledProcessError
+from subprocess import call
 
-from seisflows3.tools import unix
-from seisflows3.tools.wrappers import call, findpath
+from seisflows3.tools.wrappers import findpath
 from seisflows3.config import custom_import
 
 # Seisflows configuration
