@@ -134,26 +134,24 @@ class Base:
         for func in flow[start:stop]:
             func()
 
-            # Allow User to stop a currently executing workflow mid-FLOW,
-            # useful, e.g., to stop after evaluating the objective function to
-            # assess whether data-synthetic misfit is acceptable .
-            if PAR.STOP_AFTER:
-                self.check_stop_after(func)
-
-            # If an inversion-like workflow is run, `FLOW` will be executed
-            # repeatedly, we then need to reset `flow` for subsequent iterations
-            # In the case of a single-step migration, this step is not necessary
+            # If an multi-iteration workflow is run, `FLOW` will be executed
+            # repeatedly, so reset start and stop for subsequent iterations
             start, stop = 0, -1
 
         self.logger.info(msg.mjr("FINISHED EXAMPLE WORKFLOW"))
 
     def check_stop_resume_cond(self, flow):
         """
-        Allow the main() function to resume a workflow from a given flow
-        argument. Allows User to attempt restarting failed or stopped workflow
+        Chek the stop after and resume from conditions
 
-        Also check whether a given function matches the user input STOP
-        criteria, which means we should halt the workflow mid FLOW
+        Allow the main() function to resume a workflow from a given flow
+        argument, or stop the workflow after a given argument. In the event
+        that a previous workflow errored, or if the User had previously
+        stopped a workflow to look at results and they want to pick up where
+        they left off.
+
+        Late check: Exits the workflow if RESUME_FROM or STOP_AFTER arguments
+        do not match any of the given flow arguments.
 
         :type flow: tuple of functions
         :param flow: an ordered list of functions that will be
@@ -163,14 +161,13 @@ class Base:
             conditions are NOT given by the user, start and stop will be 0 and
             -1 respectively, meaning we should execute the ENTIRE list
         """
-        fxnames = [_.__name__ for _ in flow]
+        fxnames = [func.__name__ for func in flow]
 
         # Default values which dictate that flow will execute in its entirety
         start_idx = 0
         stop_idx = -1
 
-        # Overwrite start if RESUME_FROM provided, exit condition if it
-        # it doesn't match list of flow names
+        # Overwrite start_idx if RESUME_FROM given, exit condition if no match
         if PAR.RESUME_FROM:
             try:
                 start_idx = [_.__name__ for _ in fxnames].index(PAR.RESUME_FROM)
@@ -188,8 +185,7 @@ class Base:
                 )
                 sys.exit(-1)
 
-        # Overwrite start if STOP_AFTER provided, exit condition if it
-        # it doesn't match list of flow names
+        # Overwrite stop_idx if STOP_AFTER provided, exit condition if no match
         if PAR.STOP_AFTER:
             try:
                 stop_idx = [_.__name__ for _ in fxnames].index(PAR.STOP_AFTER)
