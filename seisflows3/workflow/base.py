@@ -96,30 +96,119 @@ class Base:
         if not exists(PATH.DATA):
             assert "MODEL_TRUE" in PATH, f"DATA or MODEL_TRUE must exist"
 
-    def main(self, flow, return_flow=False):
+    def main(self, return_flow=False):
         """
         Execution of a workflow is equal to stepping through workflow.main()
-        """
-        pass
 
-    def resume_from(self, flow):
+        An example main() script is provided below which details the requisite
+        parts. This function will NOT execute as it is written in pseudocode.
+
+        :type return_flow: bool
+        :param return_flow: for CLI tool, simply returns the flow function
+            rather than running the workflow. Used for print statements etc.
+        """
+        self.logger.warning("The current definition of workflow.main() will "
+                            "NOT execute, it must be overwritten by a "
+                            "subclass")
+
+        # The FLOW function defines a list of functions to execute IN ORDER
+        flow = (self.func1,
+                self.func2,
+                # ...
+                self.funcN
+                )
+
+        # REQUIRED: CLI command `seisflows print flow` needs this for output
+        if return_flow:
+            return flow
+
+        # Allow User to start the workflow mid-FLOW, in the event that a
+        # previous workflow errored, or if the User had previously stopped
+        # a workflow to look at results and they want to pick up where
+        # they left off
+        start, stop = self.check_stop_resume_cond(flow)
+
+        self.logger.info(msg.mjr("BEGINNING EXAMPLE WORKFLOW"))
+
+        # Iterate through the `FLOW` to step through workflow.main()
+        for func in flow[start:stop]:
+            func()
+
+            # Allow User to stop a currently executing workflow mid-FLOW,
+            # useful, e.g., to stop after evaluating the objective function to
+            # assess whether data-synthetic misfit is acceptable .
+            if PAR.STOP_AFTER:
+                self.check_stop_after(func)
+
+            # If an inversion-like workflow is run, `FLOW` will be executed
+            # repeatedly, we then need to reset `flow` for subsequent iterations
+            # In the case of a single-step migration, this step is not necessary
+            start, stop = 0, -1
+
+        self.logger.info(msg.mjr("FINISHED EXAMPLE WORKFLOW"))
+
+    def check_stop_resume_cond(self, flow):
         """
         Allow the main() function to resume a workflow from a given flow
         argument. Allows User to attempt restarting failed or stopped workflow
-        """
-        try:
-            resume_idx = [_.__name__ for _ in flow].index(PAR.RESUME_FROM)
-            resume_fx = flow[resume_idx].__name__
-        except ValueError:
-            self.logger.info(f"{PAR.RESUME_FROM} does not correspond to any "
-                             f"workflow functions. Exiting...")
-            sys.exit(-1)
 
-        self.logger.info(
-            msg.mjr(f"RESUME WORKFLOW FROM FUNCTION: '{resume_fx}'")
-        )
-        # Curtail the flow argument during resume_from
-        return flow[resume_idx:]
+        Also check whether a given function matches the user input STOP
+        criteria, which means we should halt the workflow mid FLOW
+
+        :type flow: tuple of functions
+        :param flow: an ordered list of functions that will be
+        :rtype: tuple of int
+        :return: (start, stop) indices of the `flow` input dictating where the
+            list should be begun and ended. If RESUME_FROM and STOP_AFTER
+            conditions are NOT given by the user, start and stop will be 0 and
+            -1 respectively, meaning we should execute the ENTIRE list
+        """
+        fxnames = [_.__name__ for _ in flow]
+
+        # Default values which dictate that flow will execute in its entirety
+        start_idx = 0
+        stop_idx = -1
+
+        # Overwrite start if RESUME_FROM provided, exit condition if it
+        # it doesn't match list of flow names
+        if PAR.RESUME_FROM:
+            try:
+                start_idx = [_.__name__ for _ in fxnames].index(PAR.RESUME_FROM)
+                fx_name = flow[start_idx].__name__
+                self.logger.info(
+                    msg.mnr(f"WORKFLOW WILL RESUME FROM FUNC: '{fx_name}'")
+                )
+            except ValueError:
+                self.logger.info(
+                    msg.cli(f"{PAR.RESUME_FROM} does not correspond to any FLOW "
+                            f"functions. Please check that PAR.RESUME_FROM "
+                            f"matches one of the functions listed out in "
+                            f"`seisflows print flow`.", header="error",
+                            border="=")
+                )
+                sys.exit(-1)
+
+        # Overwrite start if STOP_AFTER provided, exit condition if it
+        # it doesn't match list of flow names
+        if PAR.STOP_AFTER:
+            try:
+                stop_idx = [_.__name__ for _ in fxnames].index(PAR.STOP_AFTER)
+                stop_idx += 1  # !!! Increment to stop AFTER, not before
+                fx_name = flow[stop_idx].__name__
+                self.logger.info(
+                    msg.mnr(f"WORKFLOW WILL STOP AFTER FUNC: '{fx_name}'")
+                )
+            except ValueError:
+                self.logger.info(
+                    msg.cli(f"{PAR.STOP_AFTER} does not correspond to any FLOW "
+                            f"functions. Please check that PAR.STOP_AFTER "
+                            f"matches one of the functions listed out in "
+                            f"`seisflows print flow`.", header="error",
+                            border="=")
+                )
+                sys.exit(-1)
+
+        return start_idx, stop_idx
 
     @staticmethod
     def checkpoint():

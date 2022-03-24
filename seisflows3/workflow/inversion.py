@@ -109,21 +109,17 @@ class Inversion(custom_import("workflow", "base")):
 
     def main(self, return_flow=False):
         """
-        !!! This function controls the main workflow !!!
-
-        Carries out seismic inversion by running a series of functions in order
-
-        .. note::
-            FLOW is a constant list of functions to evaluate in order
-            flow (lowercase) is a manipulable list that allows main to start and
-                stop a workflow from within the FLOW list
+        This function controls the main SeisFlows3 workflow, and is submitted
+        to system by the call `seisflows submit` or `seisflows resume`. It
+        proceeds to evaluate a list of functions in order until a User defined
+        stop criteria is met.
 
         :type return_flow: bool
         :param return_flow: for CLI tool, simply returns the flow function
             rather than running the workflow. Used for print statements etc.
         """
-        # The workFLOW is a list of functions that can be called dynamically
-        FLOW = [self.setup,
+        # The workFLOW is a tuple of functions that can be called dynamically
+        flow = (self.setup,
                 self.initialize,
                 self.evaluate_gradient,
                 self.write_gradient,
@@ -131,40 +127,30 @@ class Inversion(custom_import("workflow", "base")):
                 self.line_search,
                 self.finalize,
                 self.clean
-                ]
+                )
         if return_flow:
-            return FLOW
-        else:
-            # FLOW is a constant, when we run, we flow
-            flow = FLOW
+            return flow
 
-        # Allow workflow resume from a given mid-flow location
-        if PAR.RESUME_FROM:
-            flow = self.resume_from(flow)
+        # Allow workflow resume from and stop after given flow functions
+        start, stop = self.check_stop_resume_cond(flow)
 
         # Run the workflow until from the current iteration until PAR.END
         optimize.iter = PAR.BEGIN
+        self.logger.info(msg.mjr("STARTING INVERSION WORKFLOW"))
         while optimize.iter <= PAR.END:
             self.logger.info(msg.mnr(f"ITERATION {optimize.iter} / {PAR.END}"))
 
             # Execute the functions within the flow
-            for func in flow:
+            for func in flow[start:stop]:
                 func()
 
-                # Forcefully stop the workflow at STOP_AFTER (if requested)
-                if PAR.STOP_AFTER and func.__name__ == PAR.STOP_AFTER:
-                    self.logger.info(msg.mjr(f"STOP ITERATION {optimize.iter} "
-                                             f"AT FUNCTION: '{PAR.STOP_AFTER}'")
-                                     )
-                    sys.exit(0)
-            # Finish. Assuming completion of all arguments in flow() 
-            self.logger.info(msg.mjr(f"FINISHED ITERATION {optimize.iter}"))
+            # Finish. Assuming completion of all arguments in flow()
+            self.logger.info(msg.mjr(f"FINISHED FLOW EXECUTION"))
 
-            optimize.iter += 1
-            self.logger.info(msg.sub(f"SETTING ITERATION = {optimize.iter}"))
-    
-            # Reset flow in case 'resume_from()' curtailed some of the arguments
-            flow = FLOW
+            # Reset flow for subsequent iterations
+            start, stop = 0, -1
+
+        self.logger.info(msg.mjr("FINISHED INVERSION WORKFLOW"))
 
     def setup(self):
         """
@@ -175,7 +161,7 @@ class Inversion(custom_import("workflow", "base")):
         .. note::
             This function should only be run one time, at the start of iter 1
         """
-        self.logger.info(msg.mjr("STARTING INVERSION WORKFLOW"))
+        # Iter check is done inside setup() so that we can include fx in FLOW
         if optimize.iter == 1:
             # Set up all the requisite modules from the master job
             self.logger.info(msg.mnr("PERFORMING MODULE SETUP"))
@@ -238,7 +224,7 @@ class Inversion(custom_import("workflow", "base")):
         elif status < 0:
             if optimize.retry_status():
                 self.logger.info("line search failed. restarting line search")
-                # Reset the line search machinery, do not reset step count (?)
+                # Reset the line search machinery; set step count to 0
                 optimize.restart()
                 self.line_search()
             else:
@@ -279,9 +265,11 @@ class Inversion(custom_import("workflow", "base")):
 
     def finalize(self):
         """
-        Saves results from current model update iteration
+        Saves results from current model update iteration and increment the
+        iteration number to set up for the next iteration. Finalization is
+        expected to the be LAST function in workflow.main()'s  flow list.
         """
-        self.logger.info(msg.mnr("FINALIZING WORKFLOW"))
+        self.logger.info(msg.mjr(f"FINALIZING ITERATION {optimize.iter}"))
 
         self.checkpoint()
         preprocess.finalize()
@@ -301,6 +289,9 @@ class Inversion(custom_import("workflow", "base")):
 
         if PAR.SAVERESIDUALS:
             self.save_residuals()
+
+        optimize.iter += 1
+        self.logger.info(msg.sub(f"INCREMENT ITERATION TO {optimize.iter}"))
 
     def clean(self):
         """
@@ -381,7 +372,6 @@ class Inversion(custom_import("workflow", "base")):
         """
         dst = os.path.join(PATH.OUTPUT, f"gradient_{optimize.iter:04d}")
 
-
         if PAR.SAVEAS in ["binary", "both"]:
             src = os.path.join(PATH.GRAD, "gradient")
             unix.mv(src, dst)
@@ -390,7 +380,6 @@ class Inversion(custom_import("workflow", "base")):
             unix.cp(src, dst + ".npy")
 
         self.logger.debug(f"saving gradient to path:\n{dst}")
-
 
     def save_model(self):
         """

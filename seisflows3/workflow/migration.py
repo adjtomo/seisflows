@@ -51,31 +51,30 @@ class Migration(custom_import("workflow", "base")):
         return sf
 
     def main(self, return_flow=False):
+        """s
+        Migrates seismic data to generate sensitivity kernels
+
+        :type return_flow: bool
+        :param return_flow: for CLI tool, simply returns the flow function
+            rather than running the workflow. Used for print statements etc.
         """
-        Migrates seismic data
-        """
-        flow = [self.setup,
+        flow = (self.setup,
                 self.generate_synthetics,
                 self.backproject,
-                self.process_kernels
-                ]
+                self.process_kernels,
+                self.finalize,
+                )
         if return_flow:
             return flow
-        else:
-            # FLOW is a constant, when we run, we flow
-            flow = FLOW
+
+        # Allow workflow resume from and stop after given flow functions
+        start, stop = self.check_stop_resume_cond(flow)
 
         # Run each argument in flow
-        for func in flow:
+        self.logger.info(msg.mjr("STARTING MIGRATION WORKFLOW"))
+        for func in flow[start:stop]:
             func()
-
-        if PAR.SAVETRACES:
-            self.save_traces()
-
-        if PAR.SAVEKERNELS:
-            self.save_kernels()
-        else:
-            self.save_kernels_sum()
+        self.logger.info(msg.mjr("FINISHED MIGRATION WORKFLOW"))
 
     def setup(self):
         """
@@ -126,20 +125,42 @@ class Migration(custom_import("workflow", "base")):
         except:
             pass
 
+    def finalize(self):
+        """
+        Saves results from current model update iteration
+        """
+        self.logger.info(msg.mnr("FINALIZING MIGRATION WORKFLOW"))
+
+        if PAR.SAVETRACES:
+            self.save_traces()
+        if PAR.SAVEKERNELS:
+            self.save_kernels()
+        else:
+            self.save_kernels_sum()
+
     def save_kernels_sum(self):
-        src = PATH.SCRATCH +"/"+ "kernels/sum"
-        dst = PATH.OUTPUT +"/"+ "kernels"
+        """
+        Same summed kernels into the output directory
+        """
+        src = os.path.join(PATH.SCRATCH, "kernels", "sum")
+        dst = os.path.join(PATH.OUTPUT, "kernels")
         unix.mkdir(dst)
         unix.cp(src, dst)
 
     def save_kernels(self):
-        src = PATH.SCRATCH +"/"+ "kernels"
+        """
+        Save individual kernels into the output directory
+        """
+        src = os.path.join(PATH.SCRATCH, "kernels")
         dst = PATH.OUTPUT
         unix.mkdir(dst)
         unix.cp(src, dst)
 
     def save_traces(self):
-        src = PATH.SCRATCH +"/"+ "traces"
+        """
+        Save waveform traces into the output directory
+        """
+        src = os.path.join(PATH.SCRATCH, "traces")
         dst = PATH.OUTPUT
         unix.cp(src, dst)
 
