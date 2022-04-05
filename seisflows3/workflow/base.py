@@ -170,7 +170,7 @@ class Base:
         # Overwrite start_idx if RESUME_FROM given, exit condition if no match
         if PAR.RESUME_FROM:
             try:
-                start_idx = [_.__name__ for _ in fxnames].index(PAR.RESUME_FROM)
+                start_idx = fxnames.index(PAR.RESUME_FROM)
                 fx_name = flow[start_idx].__name__
                 self.logger.info(
                     msg.mnr(f"WORKFLOW WILL RESUME FROM FUNC: '{fx_name}'")
@@ -188,7 +188,7 @@ class Base:
         # Overwrite stop_idx if STOP_AFTER provided, exit condition if no match
         if PAR.STOP_AFTER:
             try:
-                stop_idx = [_.__name__ for _ in fxnames].index(PAR.STOP_AFTER)
+                stop_idx = fxnames.index(PAR.STOP_AFTER)
                 stop_idx += 1  # !!! Increment to stop AFTER, not before
                 fx_name = flow[stop_idx].__name__
                 self.logger.info(

@@ -9,12 +9,13 @@ import logging
 import numpy as np
 
 from seisflows3.tools import unix
+from seisflows3.tools.msg import DEG
 from seisflows3.tools.wrappers import exists, loadnpy, savenpy
 from seisflows3.tools.math import angle
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
+PAR = sys.modules["seisflows_parameters"]
+PATH = sys.modules["seisflows_paths"]
 
 
 class LBFGS(custom_import("optimize", "base")):
@@ -178,20 +179,18 @@ class LBFGS(custom_import("optimize", "base")):
             s, y = self.update()
             q = self.apply(g, s, y)
 
-            # Determine if the new search direction is appropriate by checking its
-            # angle to the previous search direction
-            status = self.check_status(g, q)
-
-            if status == 1:
+            # Determine if the new search direction is appropriate by checking
+            # its angle to the previous search direction
+            if self.check_status(g, q):
+                self.logger.info("new L-BFGS search direction found")
+                p_new = -q
+                restarted = 0
+            else:
                 self.logger.info("new search direction not appropriate, "
                                  "defaulting to inverse gradient")
                 self.restart()
                 p_new = -g
                 restarted = 1
-            elif status == 1:
-                self.logger.info("new L-BFGS search direction found")
-                p_new = -q
-                restarted = 0
 
         # Save values to disk and memory
         self.save(self.p_new, p_new)
@@ -305,8 +304,8 @@ class LBFGS(custom_import("optimize", "base")):
         al = np.zeros(kk)
         for ii in range(kk):
             rh[ii] = 1 / np.dot(y[:, ii], s[:, ii])
-            al[ii] = rh[ii] * np.dot(s[:,ii], q)
-            q = q - al[ii] * y[:,ii]
+            al[ii] = rh[ii] * np.dot(s[:, ii], q)
+            q = q - al[ii] * y[:, ii]
 
         # Apply a preconditioner if available
         if self.precond:
@@ -330,23 +329,24 @@ class LBFGS(custom_import("optimize", "base")):
     def check_status(self, g, r):
         """
         Check the status of the apply() function, determine if restart necessary
-        Return of 1 means restart, return of 0 means good to go.
+        Return of False means restart, return of True means good to go.
 
         :type g: np.array
         :param g: current gradient direction
         :type r: np.array
         :param r: new gradient direction
-        :rtype: int
-        :return: status based on status check. 0=good, 1=bad
+        :rtype: bool
+        :return: okay status based on status check (False==bad, True==good)
         """
         theta = 180. * np.pi ** -1 * angle(g, r)
-        self.logger.info(f"new search direction is {theta:.2f}deg from current")
+        self.logger.info(f"new search direction: {theta:.2f}{DEG} from current")
 
         if not 0. < theta < 90.:
             self.logger.info("restarting L-BFGS, theta not a descent direction")
-            return 1
+            okay = False
         elif theta > 90. - PAR.LBFGSTHRESH:
             self.logger.info("restarting L-BFGS due to practical safeguard")
-            return 1
+            okay = False
         else:
-            return 0
+            okay = True
+        return okay

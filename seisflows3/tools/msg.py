@@ -4,6 +4,9 @@ and log statements.
 """
 from textwrap import wrap
 
+# Unicode degree symbol for log statements etc.
+DEG = u"\N{DEGREE SIGN}"
+
 
 def mjr(val, char="="):
     """
@@ -310,17 +313,6 @@ ReceiverError_SPECFEM = """
 ERROR READING RECEIVERS
 
     Error reading receivers.
-
-"""
-
-SourceError_SPECFEM = """
-
-ERROR READING SOURCES
-
-    In DIRECTORY, there must be one or more files matching WILDCARD.
-
-    DIRECTORY:  "{}"
-    WILDCARD:  "{}"
 
 """
 

@@ -79,9 +79,9 @@ class Inversion(custom_import("workflow", "base")):
                        "evaluations")
 
         sf.path("HESS", required=False,
-               default=os.path.join(PATH.SCRATCH, "evalhess"),
-               docstr="scratch path to store data related to Hessian "
-                      "evaluations")
+                default=os.path.join(PATH.SCRATCH, "evalhess"),
+                docstr="scratch path to store data related to Hessian "
+                       "evaluations")
 
         sf.path("OPTIMIZE", required=False,
                 default=os.path.join(PATH.SCRATCH, "optimize"),

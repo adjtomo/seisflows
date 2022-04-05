@@ -737,19 +737,17 @@ class Base:
 
     def initialize_solver_directories(self):
         """
-        Setup Utility:
-        Creates directory structure expected by SPECFEM3D, copies
+        Creates directory structure expected by SPECFEM3D (bin/, DATA/) copies
         executables, and prepares input files. Executables must be supplied
-        by user as there is currently no mechanism for automatically
-        compiling from source.
+        by user as there is no mechanism for automatically compiling from source
 
-        Directories will act as completely indepedent Specfem run directories.
-        This allows for embarassing parallelization while avoiding the need 
-        for intra-directory commnunications, at the cost of redundancy and 
-        extra files
+        Directories will act as completely independent Specfem run directories.
+        This allows for embarrassing parallelization while avoiding the need
+        for intra-directory communications, at the cost of redundancy and
+        extra files.
         """
         if self.taskid == 0:
-            self.logger.debug("intializing solver directories")
+            self.logger.info(f"initializing {PAR.NTASK} solver directories")
 
         unix.mkdir(self.cwd)
         unix.cd(self.cwd)
@@ -760,7 +758,7 @@ class Base:
                         self.model_databases, self.kernel_databases]:
             unix.mkdir(cwd_dir)
 
-        # Copy exectuables
+        # Copy exectuables into the bin/ directory
         src = glob(os.path.join(PATH.SPECFEM_BIN, "*"))
         dst = os.path.join("bin", "")
         unix.cp(src, dst)
@@ -771,7 +769,8 @@ class Base:
         dst = os.path.join("DATA", "")
         unix.cp(src, dst)
 
-        # Symlink event source specifically
+        # Symlink event source specifically, strip the source name as SPECFEM
+        # just expects `source_name`
         src = os.path.join(PATH.SPECFEM_DATA, 
                            f"{self.source_prefix}_{self.source_name}")
         dst = os.path.join("DATA", self.source_prefix)
@@ -782,6 +781,8 @@ class Base:
             # Symlink taskid_0 as mainsolver in solver directory for convenience
             if not os.path.exists(mainsolver):
                 unix.ln(self.source_name, mainsolver)
+                self.logger.debug(f"source {self.source_name} symlinked as "
+                                  f"mainsolver")
         else:
             # Copy the initial model from mainsolver into current directory
             # Avoids the need to run multiple instances of xgenerate_databases
@@ -797,30 +798,29 @@ class Base:
         Setup utility: Creates the "adjoint traces" expected by SPECFEM.
         This is only done for the 'base' the Preprocess class.
 
-        Note:
+        .. note::
             Adjoint traces are initialized by writing zeros for all channels.
             Channels actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
         """
-        if self.taskid == 0:
-            self.logger.debug("intializing empty adjoint traces")
+        if PAR.PREPROCESS.lower() == "default":
+            if self.taskid == 0:
+                self.logger.debug(f"intializing {len(self.data_filenames)} "
+                                  f"empty adjoint traces per event")
 
-        if PAR.PREPROCESS.lower() == "base":
             for filename in self.data_filenames:
-                d = preprocess.reader(
+                st = preprocess.reader(
                             path=os.path.join(self.cwd, "traces", "obs"),
                             filename=filename
                             )
-
-                # Set the data traces to zero to be overwritten later
-                for t in d:
-                    t.data[:] = 0.
+                # Zero out data just so we have empty adjoint traces as SPECFEM
+                # will expect all adjoint sources to have all components
+                st *= 0
 
                 # Write traces back to the adjoint trace directory
-                preprocess.writer(
-                         st=d, path=os.path.join(self.cwd, "traces", "adj"),
-                         filename=filename
-                         )
+                preprocess.writer(st=st, filename=filename,
+                                  path=os.path.join(self.cwd, "traces", "adj")
+                                  )
 
     def check_mesh_properties(self, path=None):
         """
@@ -869,10 +869,25 @@ class Base:
         Determines names of sources by applying wildcard rule to
         user-supplied input files
 
-        Note:
+        .. note::
             Source list is sorted and collected from start up to PAR.NTASK
         """
+        # Apply wildcard rule and check for available sources, exit if no
+        # sources found because then we can't proceed
+        wildcard = f"{self.source_prefix}_*"
+        fids = sorted(glob(os.path.join(PATH.SPECFEM_DATA, wildcard)))
+        if not fids:
+            print(msg.cli("No matching source files when searching PATH for"
+                          "the given WILDCARD",
+                          items=[f"PATH: {PATH.SPECFEM_DATA}",
+                                 f"WILDCARD: {wildcard}"], header="error"
+                          )
+                  )
+            sys.exit(-1)
 
+        # Create internal definition of sources names by stripping prefixes
+        names = [os.path.basename(fid).split("_")[-1] for fid in fids]
+        self._source_names = names[:PAR.NTASK]
 
     def check_solver_parameter_files(self):
         """
