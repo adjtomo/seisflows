@@ -1,13 +1,8 @@
 #!/usr/bin/env python
 """
-This is the base class seisflows.preprocess.Pyatoa
-
-This is a main Seisflows class, it controls the preprocessing.
-This class uses the Python package Pyatoa to perform preprocessing, and
-misfit measurement.
-
-..warning::
-    This might break if no residuals are written for a given event
+The Pyatoa preprocessing module abstracts all preprocessing functionality
+onto Pyatoa (https://github.com/bch0w/pyatoa/). The module defined below is
+meant to set up and execute Pyatoa within a running SeisFlows3 workflow.
 """
 import os
 import sys
@@ -27,7 +22,10 @@ PATH = sys.modules["seisflows_paths"]
 
 class Pyatoa(custom_import("preprocess", "base")):
     """
-    Data preprocessing class using the Pyatoa package
+    Data preprocessing class using the Pyaflowa class within the Pyatoa package.
+    In charge of data discovery, preprocessing, filtering, misfiti
+    quantification and data storage. The User does not need to implement Pyatoa,
+    but rather interacts with it via the parameters and paths of SeisFlows3.
     """
     logger = logging.getLogger(__name__).getChild(__qualname__)
 
@@ -140,7 +138,7 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         if PAR.FORMAT != "ascii":
             raise ValueError("Pyatoa preprocess currently only works with "
-                             "the 'ascii' format")
+                             "format 'ascii'")
 
         if PAR.DT * PAR.NT >= PAR.START_PAD + PAR.END_PAD:
             raise ValueError("Pyatoa preprocess parameters START_PAD and "
@@ -155,10 +153,7 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         Akin to an __init__ class, but to be called externally by the workflow.
         """
-        msg.setup(type(self))
-
-        # Late import because preprocess is loaded before optimize
-        solver = sys.modules["seisflows_solver"]
+        self.logger.debug(msg.setup(type(self)))
 
         # Inititate a Pyaflowa object to make sure the machinery works
         pyaflowa = pyatoa.Pyaflowa(structure="seisflows", sfpaths=PATH, 
@@ -261,8 +256,13 @@ class Pyatoa(custom_import("preprocess", "base")):
         :rtype: float
         :return: average misfit
         """
-        assert(len(files) == PAR.NTASK), \
-            "Number of misfit files does not match the number of events"
+        if len(files) != PAR.NTASK:
+            print(msg.cli(f"Pyatoa preprocessing module did not recover the "
+                          f"correct number of residual files "
+                          f"({len(files)}/{PAR.NTASK}). Please check that "
+                          f"the preprocessing logs", header="error")
+                  )
+            sys.exit(-1)
 
         total_misfit = 0
         for filename in files:
@@ -291,6 +291,8 @@ class Pyatoa(custom_import("preprocess", "base")):
         Utility function to combine all pdfs for a given event, iteration, and
         step count into a single pdf. To reduce on file count and provide easier
         visualization. Removes the original event-based pdfs.
+
+        TODO Can we shift this functinonality into Pyatoa?
         
         .. warning::
             This is a simple function because it won't account for missed 

@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """
-This is the base class seisflows.solver.Base
-This class provides the core utilities for the SeisFlows3 solver interactions
+This Solver module is in charge of interacting with external numerical solvers
+such as SPECFEM (2D/3D/3D_GLOBE). The Base class provides general functions
+that work with SPECFEM, while subclasses provide details to differentiate the
+various types of SPECFEM.
 """
 import os
 import sys
@@ -17,10 +19,8 @@ from seisflows3.tools.wrappers import Struct, diff, exists
 from seisflows3.config import SeisFlowsPathsParameters
 
 
-# Seisflows configuration
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
-
 system = sys.modules['seisflows_system']
 preprocess = sys.modules['seisflows_preprocess']
 
@@ -34,9 +34,8 @@ class Base:
     SPECFEM3D
     SPECFEM3D_GLOBE
 
-    Note:
-    This class supports only acoustic and isotropic elastic inversions.
-    For additional options, see github.com/rmodrak/seisflows-multiparameter
+    .. note:::
+        This class supports only acoustic and isotropic elastic inversions.
 
     Function descriptors:
 
@@ -119,7 +118,6 @@ class Base:
         """
         sf = SeisFlowsPathsParameters()
 
-        # Define the Parameters required by this module
         sf.par("MATERIALS", required=True, par_type=str,
                docstr="Material parameters used to define model. Available: "
                       "['ELASTIC': Vp, Vs, 'ACOUSTIC': Vp, 'ISOTROPIC', "
@@ -189,32 +187,24 @@ class Base:
         assert(PAR.DENSITY.upper() in acceptable_densities), \
             f"DENSITY must be in {acceptable_densities}"
 
-        # Set an internal parameter list based on user-input material choices
+        # Internal parameter list based on user-input material choices
         self.parameters = []
-
         if PAR.MATERIALS.upper() == "ELASTIC":
             assert(PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
-            self.parameters.append("vp")
-            self.parameters.append("vs")
+            self.parameters += ["vp", "vs"]
         elif PAR.MATERIALS.upper() == "ACOUSTIC":
             assert(PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
-            self.parameters.append("vp")
+            self.parameters += ["vp"]
         elif PAR.MATERIALS.upper() == "ISOTROPIC":
             assert(PAR.SOLVER.lower() in ["specfem3d_globe"])
-            self.parameters.append("vp")
-            self.parameters.append("vs")
+            self.parameters += ["vp", "vs"]
         elif PAR.MATERIALS.upper() == "ANISOTROPIC":
             assert(PAR.SOLVER.lower() in ["specfem3d_globe"])
-            self.parameters.append("vpv")
-            self.parameters.append("vph")
-            self.parameters.append("vsv")
-            self.parameters.append("vsh")
-            self.parameters.append("eta")
+            self.parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
 
         if PAR.DENSITY.upper() == "VARIABLE":
             self.parameters.append("rho")
 
-        # Ensure that the SOLVERIO plugin can read and write model parameters
         assert hasattr(solver_io, PAR.SOLVERIO)
         assert hasattr(self.io, "read_slice"), \
             "IO method has no attribute 'read_slice'"
@@ -235,7 +225,7 @@ class Base:
             in the latter case, a value for PATH.MODEL_TRUE must be provided.
         """
         if self.taskid == 0:
-            msg.setup(type(self))
+            self.logger.debug(msg.setup(type(self)))
 
         # Clean up for new inversion
         unix.rm(self.cwd)
@@ -263,7 +253,8 @@ class Base:
 
     def clean(self):
         """
-        Clean up the run directory and set up for new run
+        Clean up solver-dependent run directory by removing the OUTPUT_FILES/
+        directory
         """
         unix.cd(self.cwd)
         unix.rm("OUTPUT_FILES")
@@ -285,24 +276,23 @@ class Base:
         """
         raise NotImplementedError
 
-    def eval_func(self, path='', write_residuals=True):
+    def eval_func(self, path, write_residuals=True):
         """
         High level solver interface
 
         Performs forward simulations and evaluates the misfit function
 
         :type path: str
-        :param path: directory from which model is imported
-        :type export_traces: bool
-        :param export_traces: if True, save traces to OUTPUT.
-            if False, discard traces
+        :param path: directory from which model is imported and where residuals
+            will be exported
         :type write_residuals: bool
         :param write_residuals: calculate and export residuals
         """
-        unix.cd(self.cwd)
-        self.import_model(path)
         if self.taskid == 0:
             self.logger.info("running forward simulations")
+
+        unix.cd(self.cwd)
+        self.import_model(path)
         self.forward()
 
         if write_residuals:
@@ -314,12 +304,11 @@ class Base:
                                          )
             self.export_residuals(path)
 
-    def eval_grad(self, path='', export_traces=False):
+    def eval_grad(self, path, export_traces=False):
         """
-        High level solver interface
-
-        Evaluates gradient by carrying out adjoint simulations.
-        Note: A function evaluation must already have been carried out.
+        High level solver interface that evaluates gradient by carrying out
+        adjoint simulations. A function evaluation must already have been
+        carried out.
 
         :type path: str
         :param path: directory from which model is imported
@@ -327,9 +316,10 @@ class Base:
         :param export_traces: if True, save traces to OUTPUT.
             if False, discard traces
         """
-        unix.cd(self.cwd)
         if self.taskid == 0:
             self.logger.debug("running adjoint simulations")
+
+        unix.cd(self.cwd)
         self.adjoint()
         self.export_kernels(path)
 
@@ -339,19 +329,22 @@ class Base:
             self.export_traces(path=os.path.join(path, "traces", "adj"),
                                prefix="traces/adj")
 
-    def apply_hess(self, path=''):
+    def apply_hess(self, path):
         """
-        High level solver interface
+        High level solver interface that computes action of Hessian on a given
+        model vector. A gradient evaluation must have already been carried out.
 
-        Computes action of Hessian on a given model vector.
-        Note: A gradient evaluation must have already been carried out.
+        TODO preprocess has no function prepare_apply_hess()
 
         :type path: str
         :param path: directory to which output files are exported
         """
+        raise NotImplementedError
+
         unix.cd(self.cwd)
         self.import_model(path)
         unix.mkdir("traces/lcg")
+
         self.forward("traces/lcg")
         preprocess.prepare_apply_hess(self.cwd)
         self.adjoint()
@@ -410,7 +403,8 @@ class Base:
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters:
                 load_dict[key] += self.io.read_slice(
-                    path=path, parameters=f"{prefix}{key}{suffix}", iproc=iproc)
+                    path=path, parameters=f"{prefix}{key}{suffix}", iproc=iproc
+                )
 
         return load_dict
 
@@ -431,10 +425,8 @@ class Base:
         """
         unix.mkdir(path)
 
-        # Set default parameters
         if parameters is None:
             parameters = self.parameters
-            # parameters = ["vp", "vs", "rho"]
 
         # Fill in any missing parameters
         missing_keys = diff(parameters, save_dict.keys())
@@ -442,7 +434,8 @@ class Base:
             for key in missing_keys:
                 save_dict[key] += self.io.read_slice(
                     path=PATH.MODEL_INIT, parameters=f"{prefix}{key}{suffix}",
-                    iproc=iproc)
+                    iproc=iproc
+                )
 
         # Write slices to disk
         for iproc in range(self.mesh_properties.nproc):
@@ -530,17 +523,16 @@ class Base:
 
         unix.cd(self.cwd)
 
-        # Write the source names into the kernel paths file for SEM
+        # Write the source names into the kernel paths file for SEM/ directory
         with open("kernel_paths", "w") as f:
             f.writelines(
                 [os.path.join(input_path, f"{name}\n")
                  for name in self.source_names]
             )
 
-        # Call on xcombine_sem 
+        # Call on xcombine_sem to combine kernels into a single file
         for name in parameters:
-            # Example call:
-            # mpiexec ./bin/xcombine_sem alpha_kernel kernel_paths output
+            # e.g.: mpiexec ./bin/xcombine_sem alpha_kernel kernel_paths output
             call_solver(mpiexec=system.mpiexec(),
                         executable=" ".join([f"bin/xcombine_sem",
                                              f"{name}_kernel", "kernel_paths",
@@ -555,7 +547,6 @@ class Base:
 
         .. note::
             paths require a trailing `/` character when calling xsmooth_sem
-
 
         .. note::
             It is ASSUMED that this function is being called by
@@ -585,7 +576,6 @@ class Base:
         # Apply smoothing operator inside scratch/solver/*
         unix.cd(self.cwd)
 
-        # Example call:
         # mpiexec ./bin/xsmooth_sem SMOOTH_H SMOOTH_V name input output use_gpu
         for name in parameters:
             call_solver(mpiexec=system.mpiexec(),

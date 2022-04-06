@@ -50,11 +50,8 @@ class Workstation(custom_import("system", "base")):
         """
         Submits the main workflow job
         """
-        # Run setup to create necessary directory structure
         self.setup()
         workflow.checkpoint()
-
-        # execute workflow
         workflow.main()
 
     def run(self, classname, method, *args, **kwargs):
@@ -76,7 +73,6 @@ class Workstation(custom_import("system", "base")):
         Runs task a single time, used for running serial tasks such as smoothing
         """
         self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
-        
         os.environ["SEISFLOWS_TASKID"] = "0"
         func = getattr(__import__("seisflows_" + classname), method)
         func(**kwargs)

@@ -7,7 +7,7 @@ import numpy as np
 
 from seisflows3.tools import msg
 from seisflows3.plugins.line_search.base import Base
-from seisflows3.tools.math import backtrack2, polyfit2
+from seisflows3.tools.math import parabolic_backtrack, polynomial_fit
 
 
 class Bracket(Base):
@@ -72,8 +72,9 @@ class Bracket(Base):
             status = 1
         # If misfit is reduced but not close, set to quadratic fit
         elif self._check_bracket(x, f):
-            alpha = polyfit2(x, f)
-            self.logger.info(f"bracket okay, step length unreasonable, manual step")
+            alpha = polynomial_fit(x, f)
+            self.logger.info(f"bracket okay, step length unreasonable, "
+                             f"manual step")
             status = 0
         # If misfit continues to step down, increase step length
         elif step_count <= self.step_count_max and all(f <= f[0]):
@@ -83,8 +84,8 @@ class Bracket(Base):
         # If misfit increases, reduce step length by backtracking
         elif step_count <= self.step_count_max:
             slope = gtp[-1] / gtg[-1]
-            alpha = backtrack2(f0=f[0], g0=slope, x1=x[1], f1=f[1], b1=0.1,
-                               b2=0.5)
+            alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
+                                        f1=f[1], b1=0.1, b2=0.5)
             self.logger.info(f"misfit increasing, reducing step length to")
             status = 0
         # step_count_max exceeded, fail
@@ -121,15 +122,16 @@ class Bracket(Base):
         :param step_lens: an array of the step lengths taken during iteration
         :type func_vals: numpy.array
         :param func_vals: array of misfit values from eval func function
-        :rtype: int
+        :rtype: bool
         :return: status of function as a bool
         """
         x, f = step_lens, func_vals
         imin, fmin = f.argmin(), f.min()
         if (fmin < f[0]) and any(f[imin:] > fmin):
-            return 1
+            okay = True
         else:
-            return 0
+            okay = False
+        return okay
 
     def _good_enough(self, step_lens, func_vals, thresh=np.log10(1.2)):
         """
@@ -141,17 +143,19 @@ class Bracket(Base):
         :param func_vals: array of misfit values from eval func function
         :type thresh: numpy.float64
         :param thresh: threshold value for comparison against quadratic estimate
-        :rtype: int
+        :rtype: bool
         :return: status of function as a bool
         """
         x, f = step_lens, func_vals
         if not self._check_bracket(x, f):
-            return 0
-        x0 = polyfit2(x, f)
-        if any(np.abs(np.log10(x[1:] / x0)) < thresh):
-            return 1
+            okay = False
         else:
-            return 0
+            x0 = polynomial_fit(x, f)
+            if any(np.abs(np.log10(x[1:] / x0)) < thresh):
+                okay = True
+            else:
+                okay = False
+        return okay
 
 
 

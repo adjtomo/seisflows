@@ -6,7 +6,7 @@ import logging
 
 from seisflows3.tools import msg
 from seisflows3.plugins.line_search.bracket import Bracket
-from seisflows3.tools.math import backtrack2
+from seisflows3.tools.math import parabolic_backtrack
 
 
 class Backtrack(Bracket):
@@ -77,8 +77,8 @@ class Backtrack(Bracket):
             elif step_count <= self.step_count_max:
                 self.logger.info("misfit increase, decreasing step length")
                 slope = gtp[-1] / gtg[-1]
-                alpha = backtrack2(f0=f[0], g0=slope, x1=x[1], f1=f[1], b1=0.1,
-                                   b2=0.5)
+                alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
+                                            f1=f[1], b1=0.1, b2=0.5)
                 status = 0
             # Failed because step_count_max exceeded
             else:

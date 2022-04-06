@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-This is the base class seisflows.system.Base
-This class provides the core utilities interaction with HPC systems which must
-be overloaded by subclasses
+The System module provides the basic core utilities for interaction with compute
+systems. The Base class must be overloaded by subclasses related to specific
+compute system types (cluster vs. workstation) and even specific HPCs.
 """
 import os
 import sys
@@ -15,8 +15,8 @@ from seisflows3.tools.wrappers import number_fid
 from seisflows3.config import save, SeisFlowsPathsParameters, CFGPATHS
 
 
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
+PAR = sys.modules["seisflows_parameters"]
+PATH = sys.modules["seisflows_paths"]
 
 
 class Base:

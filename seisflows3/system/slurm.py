@@ -12,13 +12,13 @@ using Slurm management tools
     management tools will be useful: https://slurm.schedmd.com/rosetta.pdf
 """
 import os
-import math
 import sys
+import math
 import time
 import logging
+import subprocess
 
 from warnings import warn
-from subprocess import check_output
 from seisflows3.tools import msg, unix
 from seisflows3.tools.wrappers import findpath
 from seisflows3.config import ROOT_DIR, custom_import, SeisFlowsPathsParameters
@@ -133,7 +133,7 @@ class Slurm(custom_import("system", "cluster")):
             f"--environment {PAR.ENVIRONS}"
         ])
         self.logger.debug(run_call)
-        stdout = check_output(run_call, shell=True)
+        stdout = subprocess.check_output(run_call, shell=True)
 
         # Keep track of job ids
         jobs = self.job_id_list(stdout, PAR.NTASK)
@@ -177,7 +177,7 @@ class Slurm(custom_import("system", "cluster")):
             f"--environment {PAR.ENVIRONS}"
         ])
 
-        stdout = check_output(run_call, shell=True)
+        stdout = subprocess.check_output(run_call, shell=True)
 
         # Keep track of job ids
         jobs = self.job_id_list(stdout, PAR.NTASK)
@@ -278,7 +278,7 @@ class Slurm(custom_import("system", "cluster")):
         :type job: str
         :param job: job id to query
         """
-        stdout = check_output(
+        stdout = subprocess.check_output(
             "sacct -nL -o jobid,state -j " + job.split("_")[0],
             shell=True)
 

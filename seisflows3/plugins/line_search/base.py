@@ -8,8 +8,8 @@ this should be completely left to the optimization algorithm to keep everything
 in one place)
 """
 import os
-import numpy as np
 import logging
+import numpy as np
 
 from seisflows3.tools.array import count_zeros
 
@@ -30,7 +30,6 @@ class Base:
         status > 0  : finished
         status == 0 : not finished
         status < 0  : failed
-
     """
     # Class-specific logger accessed using self.logger
     logger = logging.getLogger(__name__).getChild(__qualname__)
@@ -83,7 +82,7 @@ class Base:
         :type gtp: float
         :param gtp: dot product of gradient `g` with search direction `p`
         :rtype alpha: float
-        :return alpha: the calculated rial step length
+        :return alpha: the calculated trial step length
         :rtype status: int
         :return status: current status of the line search
         """
@@ -162,7 +161,6 @@ class Base:
             original_idx = -1 * self.step_count - 1
             self.step_lens = self.step_lens[:original_idx]
             self.func_vals = self.func_vals[:original_idx]
-
 
     def write_log(self, iter=None, step_len=None, func_val=None):
         """

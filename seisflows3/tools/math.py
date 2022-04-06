@@ -3,119 +3,7 @@
 Mathematical tools for Seisflows
 """
 import numpy as np
-
 from scipy.signal import hilbert as analytic
-
-infinity = np.inf
-
-
-def gauss2(X, Y, mu, sigma, normalize=True):
-    """
-    Evaluates Gaussian over points of X, Y
-
-    :type X: np.ndarray
-    :param X: x-axis to evaluate gaussian over
-    :type Y: np.ndarray
-    :param Y: y-axis to evaluate gaussian over
-    :type mu: ???
-    :param mu: expected value
-    :type sigma: ???
-    :param sigma: standard deviation
-    :type normalize: bool
-    :param normalize: normalize the results
-    """
-    # evaluates Gaussian over X,Y
-    D = (sigma[0, 0] * sigma[1, 1]) - (sigma[0, 1] * sigma[1, 0])
-    B = np.linalg.inv(sigma)
-
-    X = X - mu[0]
-    Y = Y - mu[1]
-    Z = (B[0, 0] * X ** 2. +
-         B[0, 1] * X * Y +
-         B[1, 0] * X * Y +
-         B[1, 1] * Y ** 2.)
-    Z = np.exp(-0.5 * Z)
-
-    if normalize:
-        Z *= (2. * np.pi * np.sqrt(D)) ** -1.
-
-    return Z
-
-
-def backtrack2(f0, g0, x1, f1, b1=0.1, b2=0.5):
-    """
-    Safeguarded parabolic backtrack
-
-    Note for equation look to
-        Nocedal & Wright, 2006 ??
-
-    :type f0: float
-    :param f0: initial misfit function value
-    :type g0: float
-    :param g0: slope
-    :type x1: float
-    :param x1: step length value
-    :type f1: float
-    :param f1: current misfit function value (?)
-    :type b1: float
-    :param b1: constant for safeguard
-    :type b2: float
-    :param b2: constant for safeguard
-    """
-    # Parabolic backtrack
-    x2 = -g0 * x1 ** 2 / (2 * (f1 - f0 - g0 * x1))
-
-    # Apply safeguards
-    if x2 > b2 * x1:
-        x2 = b2 * x1
-    elif x2 < b1 * x1:
-        x2 = b1 * x1
-
-    return x2
-
-
-def backtrack3(f0, g0, x1, f1, x2, f2):
-    """
-    Safeguarded cubic backtrack
-    """
-    raise NotImplementedError
-
-
-def polyfit2(x, f):
-    """
-    Parabolic line fitting
-
-    :type x: np.array
-    :param x: x coordinates
-    :type f: np.array
-    :param f: y coordinates
-    """
-    # parabolic fit
-    i = np.argmin(f)
-    p = np.polyfit(x[i-1:i+2], f[i-1:i+2], 2)
-
-    if p[0] > 0:
-        return -p[1] / (2 * p[0])
-    else:
-        print(-1)
-        raise Exception()
-
-
-def lsq2(x, f):
-    """
-    Parabolic least squares fit
-
-    :type x: np.array
-    :param x: x coordinates
-    :type f: np.array
-    :param f: y coordinates
-    """
-    p = np.polyfit(x, f, 2)
-    if p[0] > 0:
-        return -p[1]/(2*p[0])
-    else:
-        print -1
-        raise Exception()
 
 
 def angle(x, y):
@@ -126,11 +14,12 @@ def angle(x, y):
     :param x: vector 1
     :type y: np.array
     :param y: vector 2
+    :rtype: float
+    :return: the angle in degrees between `x` and `y`
     """
     xy = dot(x, y)
     xx = dot(x, x)
     yy = dot(y, y)
-
     return np.arccos(xy / (xx * yy) ** 0.5)
 
 
@@ -142,6 +31,8 @@ def dot(x, y):
     :param x: vector 1
     :type y: np.array
     :param y: vector 2
+    :rtype: float
+    :return: The dot product between `x` and `y`
     """
     return np.dot(np.squeeze(x), np.squeeze(y))
 
@@ -150,8 +41,13 @@ def hilbert(w):
     """
     Take the Hilbert transform of some function to get the analytic signal
 
+    TODO Change the naming here, it seems confusing to rename a scipy function
+    TODO and then overwrite its name with this function.
+
     :type w: np.array
     :param w: signal data, must be real
+    :rtype: float
+    :return: imaginary part of the analytic signal
     """
     return np.imag(analytic(w))
 
@@ -169,6 +65,113 @@ def poissons_ratio(vp, vs):
     :return: Poissons ratio
     """
     return 0.5 * (vp * vp - 2 * vs * vs) / (vp * vp - vs * vs)
+
+
+def parabolic_backtrack(f0, g0, x1, f1, b1=0.1, b2=0.5):
+    """
+    Safeguarded parabolic backtracking function
+    Equation provided in Nocedal & Wright, 2006 ??
+
+    :type f0: float
+    :param f0: initial misfit function value
+    :type g0: float
+    :param g0: slope
+    :type x1: float
+    :param x1: step length value
+    :type f1: float
+    :param f1: current misfit function value (?)
+    :type b1: float
+    :param b1: constant for safeguard
+    :type b2: float
+    :param b2: constant for safeguard
+    :rtype: float
+    :return: trial step length (alpha)
+    """
+    # Parabolic backtrack
+    x2 = -g0 * x1 ** 2 / (2 * (f1 - f0 - g0 * x1))
+
+    # Apply safeguards
+    if x2 > b2 * x1:
+        x2 = b2 * x1
+    elif x2 < b1 * x1:
+        x2 = b1 * x1
+
+    return x2
+
+
+def gaussian(x, y, mu, sigma, normalize=True):
+    """
+    Evaluates Gaussian over points of X, Y
+
+    :type x: np.ndarray
+    :param x: x-axis to evaluate gaussian over
+    :type y: np.ndarray
+    :param y: y-axis to evaluate gaussian over
+    :type mu: ???
+    :param mu: expected value
+    :type sigma: ???
+    :param sigma: standard deviation
+    :type normalize: bool
+    :param normalize: normalize the results
+    """
+    # evaluates Gaussian over X,Y
+    d = (sigma[0, 0] * sigma[1, 1]) - (sigma[0, 1] * sigma[1, 0])
+    b = np.linalg.inv(sigma)
+
+    x = x - mu[0]
+    y = y - mu[1]
+    z = (b[0, 0] * x ** 2. +
+         b[0, 1] * x * y +
+         b[1, 0] * x * y +
+         b[1, 1] * y ** 2.)
+    z = np.exp(-0.5 * z)
+
+    if normalize:
+        z *= (2. * np.pi * np.sqrt(d)) ** -1.
+
+    return z
+
+
+def polynomial_fit(x, f):
+    """
+    Least squares (polynomial) line fitting used to fit a line to the
+    objective function.
+
+    :type x: np.array
+    :param x: trial step lengths
+    :type f: np.array
+    :param f: misfit values
+    :rtype: float
+    :return: trial step length (alpha)
+    """
+    i = np.argmin(f)
+    p = np.polyfit(x[i-1:i+2], f[i-1:i+2], 2)
+
+    if p[0] <= 0:
+        # TODO Figure out why this exit condition is here
+        print(msg.cli("Polynomial line fitting returned a negative p[0] value"))
+        sys.exit(-1)
+
+    return -p[1] / (2 * p[0])
+
+
+# The below functions were included in the original SeisFlows package but
+# currently serve no purpose in SeisFlows3. They are retained for legacy.
+def lsq2(x, f):
+    """
+    Parabolic least squares fit
+
+    :type x: np.array
+    :param x: x coordinates
+    :type f: np.array
+    :param f: y coordinates
+    """
+    p = np.polyfit(x, f, 2)
+    if p[0] > 0:
+        return -p[1]/(2*p[0])
+    else:
+        print -1
+        raise Exception()
 
 
 def nabla(V, h=[]):

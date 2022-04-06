@@ -8,7 +8,7 @@ import numpy as np
 import scipy.signal as _signal
 import scipy.interpolate as _interp
 
-from seisflows3.tools.math import gauss2
+from seisflows3.tools.math import gaussian
 
 
 def count_zeros(a):
@@ -88,7 +88,7 @@ def uniquerows(a, sort_array=False, return_index=False):
 
 def stack(*args):
     """
-    Column-wose stack arrays
+    Column-wise stack arrays
     """
     return np.column_stack(args)
 
@@ -118,7 +118,7 @@ def gridsmooth(Z, span):
     mu = np.array([0., 0.])
     sigma = np.diag([span, span])**2.
     
-    F = gauss2(X, Y, mu, sigma)
+    F = gaussian(X, Y, mu, sigma)
     F = F/np.sum(F)
     W = np.ones(Z.shape)
     Z = _signal.convolve2d(Z, F, "same")

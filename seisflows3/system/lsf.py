@@ -9,7 +9,7 @@ import os
 import sys
 import time
 import logging
-from subprocess import check_output
+import subprocess
 
 from seisflows3.tools import msg, unix
 from seisflows3.tools.wrappers import findpath
@@ -118,7 +118,7 @@ class Lsf(custom_import("system", "cluster")):
             f"{PAR.ENVIRONS}"
         ])
 
-        stdout = check_output(run_call, shell=True)
+        stdout = subprocess.check_output(run_call, shell=True)
 
         # keep track of job ids
         jobs = self.job_id_list(stdout, PAR.NTASK)

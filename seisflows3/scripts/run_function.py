@@ -63,8 +63,8 @@ def export(myenv):
     :type myenv: str
     :param myevn: the system environment to take variables from
     """
-    for item in myenv.split(','):
-        os.environ.update([item.split('=')])
+    for item in myenv.split(","):
+        os.environ.update([item.split("=")])
 
 
 if __name__ == '__main__':

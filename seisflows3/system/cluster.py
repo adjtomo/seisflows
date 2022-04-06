@@ -1,21 +1,20 @@
 #!/usr/bin/env python
 """
-This is the base class seisflows.system.cluster
-
-This class provides the core utilities interaction with HPC systems which must
-be overloaded by subclasses
+The Cluster class provides the core utilities interaction with HPC systems
+which must be overloaded by subclasses for specific workload managers, or
+specific clusters.
 """
 import os
 import sys
 import logging
-from subprocess import check_call
+import subprocess
 
 from seisflows3.tools import unix, msg
 from seisflows3.config import custom_import, save, SeisFlowsPathsParameters
 
 
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
+PAR = sys.modules["seisflows_parameters"]
+PATH = sys.modules["seisflows_paths"]
 
 
 class Cluster(custom_import("system", "base")):
@@ -86,7 +85,7 @@ class Cluster(custom_import("system", "base")):
         """
         self.setup()
         workflow.checkpoint()
-        check_call(submit_call, shell=True)
+        subprocess.check_call(submit_call, shell=True)
 
     def run(self, classname, method, *args, **kwargs):
         """

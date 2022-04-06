@@ -1,7 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-This is the base class for seisflows.optimize
-This class provides the core utilities for the Seisflows optimization schema.
+The Optimization library contains classes and methods used to solve nonlinear
+optimization problems, i.e., misfit minimization. Various subclasses implement
+different optimization algorithms.
+
+.. note::
+    By default the base class implements a steepest descent optimization
 """
 import os
 import sys
@@ -9,26 +13,24 @@ import logging
 import numpy as np
 
 from seisflows3.tools import msg, unix
-from seisflows3.tools.math import angle
+from seisflows3.tools.math import angle, dot
 from seisflows3.plugins import line_search, preconds
-from seisflows3.tools.wrappers import loadnpy, savenpy
 from seisflows3.tools.specfem import check_poissons_ratio
 from seisflows3.config import SeisFlowsPathsParameters, CFGPATHS
 
-
-# seisflows.config objects 
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
-solver = sys.modules['seisflows_solver']
+PAR = sys.modules["seisflows_parameters"]
+PATH = sys.modules["seisflows_paths"]
+solver = sys.modules["seisflows_solver"]
 
 
 class Base:
     """
-    Nonlinear optimization abstract base class
+    Nonlinear optimization abstract base class.
 
-    Base class on top of which steepest descent, nonlinear conjugate, quasi-
-    Newton and Newton methods can be implemented. Includes methods for both
-    search direction and line search.
+    This base class provides a steepest descent optimization algorithm.
+
+    Nonlinear conjugate, quasi-Newton and Newton methods can be implemented on
+    top of this base class.
 
     .. note::
         To reduce memory overhead, vectors are read from disk rather than passed
@@ -63,7 +65,7 @@ class Base:
         :type precond: Class
         :param precond: a class controlling the preconditioner functionality
             for preconditiong gradient information
-        :type restarted: int
+        :type restarted: bool
         :param restarted: a flag signalling if the optimization algorithm has
             been restarted recently
 
@@ -81,7 +83,7 @@ class Base:
         self.iter = 1
         self.line_search = None
         self.precond = None
-        self.restarted = 0
+        self.restarted = False
 
         # Define the names of output stats logs to keep all paths in one place
         # Line search log is named differently so that optimize doesn't
@@ -100,17 +102,17 @@ class Base:
         # Define the names of variables used to keep track of models etc. so
         # that we don't have multiple strings floating around defining the same
         # thing
-        self.m_new = "m_new"
-        self.m_old = "m_old"
-        self.m_try = "m_try"
-        self.f_new = "f_new"
-        self.f_old = "f_old"
-        self.f_try = "f_try"
-        self.g_new = "g_new"
-        self.g_old = "g_old"
-        self.p_new = "p_new"
-        self.p_old = "p_old"
-        self.alpha = "alpha"
+        self.m_new = "m_new.npy"
+        self.m_old = "m_old.npy"
+        self.m_try = "m_try.npy"
+        self.f_new = "f_new.npy"
+        self.f_old = "f_old.npy"
+        self.f_try = "f_try.npy"
+        self.g_new = "g_new.npy"
+        self.g_old = "g_old.npy"
+        self.p_new = "p_new.npy"
+        self.p_old = "p_old.npy"
+        self.alpha = "alpha.npy"
 
     @property
     def required(self):
@@ -158,7 +160,10 @@ class Base:
             self.required.validate()
 
         if PAR.OPTIMIZE == "base":
-            print(msg.CompatibilityError1)
+            print(msg.cli("Base optimization cannot be used standalone, and "
+                          "must be over-loaded by a subclass. You can run"
+                          "'seisflows print module' to find available "
+                          "subclasses", header="error", border="="))
             sys.exit(-1)
 
         if PAR.LINESEARCH:
@@ -180,17 +185,16 @@ class Base:
         """
         msg.setup(type(self))
 
-        # Where to write optimization statistics etc.
+        # All ptimization statistics text files will be written to path_stats
         path_stats = os.path.join(PATH.WORKDIR, CFGPATHS.STATSDIR)
         unix.mkdir(path_stats)
 
-        # Prepare line search machinery defined as a plugin class
+        # Line search machinery is defined externally as a plugin class
         self.line_search = getattr(line_search, PAR.LINESEARCH)(
             step_count_max=PAR.STEPCOUNTMAX, step_len_max=PAR.STEPLENMAX,
             log_file=os.path.join(path_stats, f"{self.line_search_log}.txt"),
         )
 
-        # Prepare preconditioner
         if PAR.PRECOND:
             self.precond = getattr(preconds, PAR.PRECOND)()
         else:
@@ -205,7 +209,6 @@ class Base:
         # Ensure that line search step count starts at 0 (workflow.intialize)
         self.write_stats(self.log_step_count, 0)
 
-        # Prepare scratch directory and save initial model
         unix.mkdir(PATH.OPTIMIZE)
         if "MODEL_INIT" in PATH:
             m_new = solver.merge(solver.load(PATH.MODEL_INIT))
@@ -227,13 +230,13 @@ class Base:
 
     def compute_direction(self):
         """
-        Computes search direction
+        Computes a steepest descent search direction (inverse gradient)
+        with an optional user-defined preconditioner.
 
         .. note::
-            This function implements steepest descent, for other algorithms,
-            simply overload this method
+            Other optimization algorithms must overload this method
         """
-        msg.whoami(type(self), prepend="computing search direction with ")
+        self.logger.info(f"computing search direction with {PAR.OPTIMIZE}")
 
         g_new = self.load(self.g_new)
         if self.precond is not None:
@@ -244,27 +247,29 @@ class Base:
 
     def initialize_search(self):
         """
-        Determines first step length in line search
+        Initialize the plugin line search machinery. Should only be run at
+        the beginning of line search, by the main workflow module.
         """
-        # Load in and calucate the necessary variables
         m = self.load(self.m_new)
         g = self.load(self.g_new)
         p = self.load(self.p_new)
         f = self.loadtxt(self.f_new)
         norm_m = max(abs(m))
         norm_p = max(abs(p))
-        gtg = self.dot(g, g)
-        gtp = self.dot(g, p)
+        gtg = dot(g, g)
+        gtp = dot(g, p)
 
-        # Restart line search if necessary
+        # Restart plugin line search if the optimization library restarts
         if self.restarted:
             self.line_search.clear_history()
 
-        # Optional step length safeguard
+        # Optional safeguard to prevent step length from getting too large
         if PAR.STEPLENMAX:
             self.line_search.step_len_max = PAR.STEPLENMAX * norm_m / norm_p
+            self.logger.debug(f"max step length safeguard is: "
+                              f"{self.line_search.step_len_max:.2E}")
 
-        # Determine initial step length
+        # Alpha defines the trial step length
         alpha, _ = self.line_search.initialize(iter=self.iter, step_len=0.,
                                                func_val=f, gtg=gtg, gtp=gtp
                                                )
@@ -272,35 +277,33 @@ class Base:
         # Optional initial step length override
         if PAR.STEPLENINIT and len(self.line_search.step_lens) <= 1:
             alpha = PAR.STEPLENINIT * norm_m / norm_p
-            self.logger.debug(f"manually setting initial step length")
+            self.logger.debug(f"manually set initial step length: {alpha:.2E}")
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
         m_try = m + alpha * p
 
-        # Write model corresponding to chosen step length
         self.save(self.m_try, m_try)
         self.savetxt(self.alpha, alpha)
-
-        # Check the new model and update the User on a few parameters
         self.check_model(m_try, self.m_try)
 
     def update_search(self):
         """
-        Updates line search status and step length
+        Updates line search status and step length and checks if the line search
+        has been completed.
 
-        Status codes:
-            status > 0  : finished
+        Available status codes from line_search.update():
+            status == 1  : finished
             status == 0 : not finished
-            status < 0  : failed
+            status == -1  : failed
         """
         alpha, status = self.line_search.update(
             iter=self.iter, step_len=self.loadtxt(self.alpha),
             func_val=self.loadtxt(self.f_try)
         )
 
-        # write model corresponding to chosen step length
-        if status >= 0:
+        # New search direction needs to be searchable on disk
+        if status in [0, 1]:
             m = self.load(self.m_new)
             p = self.load(self.p_new)
             self.savetxt(self.alpha, alpha)
@@ -333,24 +336,21 @@ class Base:
             for fid in [self.m_old, self.f_old, self.g_old, self.p_old]:
                 unix.rm(fid)
 
-        # Rename current model parameters to "_old" for new search
         self.logger.info("shifting current model (new) to previous model (old)")
         unix.mv(self.m_new, self.m_old)
         unix.mv(self.f_new, self.f_old)
         unix.mv(self.g_new, self.g_old)
         unix.mv(self.p_new, self.p_old)
 
-        # Setup the current model parameters
         self.logger.info("setting accepted line search model as current model")
         unix.mv(self.m_try, self.m_new)
         self.savetxt(self.f_new, f.min())
         self.logger.info(f"current misfit is {self.f_new}={f.min():.3E}")
 
-        # Output the latest statistics to text files
-        # !!! Describe what stats are being written here
+        # !!! TODO Describe what stats are being written here
         self.logger.info(f"writing optimization stats to: {CFGPATHS.STATSDIR}")
         self.write_stats(self.log_factor, value=
-                         -self.dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
+                         -dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
                          )
         self.write_stats(self.log_gradient_norm_L1, value=np.linalg.norm(g, 1))
         self.write_stats(self.log_gradient_norm_L2, value=np.linalg.norm(g, 2))
@@ -362,7 +362,6 @@ class Base:
         self.write_stats(self.log_theta,
                          value=180. * np.pi ** -1 * angle(p, -g))
 
-        # Reset line search step count to 0 for next iteration
         self.logger.info("resetting line search step count to 0")
         self.line_search.step_count = 0
 
@@ -386,15 +385,19 @@ class Base:
 
     def restart(self):
         """
-        Restarts nonlinear optimization algorithm.
+        Restarts nonlinear optimization algorithm for any schema that is NOT
+        steepest descent (default base class).
+
         Keeps current position in model space, but discards history of
         nonlinear optimization algorithm in an attempt to recover from
         numerical stagnation.
         """
-        g = self.load(self.g_new)
-        self.save(self.p_new, -g)
-        self.line_search.clear_history()
-        self.restarted = 1
+        # Steepest descent (base) does not need to be restarted
+        if PAR.OPTIMIZE != "base":
+            g = self.load(self.g_new)
+            self.save(self.p_new, -g)
+            self.line_search.clear_history()
+            self.restarted = 1
 
     def write_stats(self, log, value=None, format="18.6E"):
         """
@@ -460,67 +463,63 @@ class Base:
                              )
 
     @staticmethod
-    def dot(x, y):
-        """
-        Utility function to computes inner product between vectors
-
-        :type x: np.array
-        :param x: vector 1
-        :type y: np.array
-        :param y: vector 2
-        """
-        return np.dot(np.squeeze(x), np.squeeze(y))
-
-    @staticmethod
     def load(filename):
         """
-        Reads vectors from disk
+        Convenience function to reads vectors from disk as Numpy files,
+        reads directly from PATH.OPTIMIZE. Works around Numpy's behavior of
+        appending '.npy' to files that it saves.
 
         :type filename: str
         :param filename: filename to read from
-        :return:
+        :rtype: np.array
+        :return: vector read from disk
         """
-        fid_out = os.path.join(PATH.OPTIMIZE, filename)
-        # logger.debug(f"loading model vector from: {fid_out}")
-        return loadnpy(os.path.join(PATH.OPTIMIZE, filename))
+        fid = os.path.join(PATH.OPTIMIZE, filename)
+        if not os.path.exists(fid):
+            fid += ".npy"
+        return np.load(fid)
 
     @staticmethod
     def save(filename, array):
         """
-        Writes vectors to disk
+        Convenience function to write vectors to disk as numpy files.
+        Reads directly from PATH.OPTIMIZE
 
         :type filename: str
         :param filename: filename to read from
         :type array: np.array
         :param array: array to be saved
-        :return:
         """
-        fid_out = os.path.join(PATH.OPTIMIZE, filename)
-        # logger.debug(f"saving model vector to: {fid_out}")
-        savenpy(fid_out, array)
+        np.save(os.path.join(PATH.OPTIMIZE, filename), array)
 
     @staticmethod
     def loadtxt(filename):
         """
-        Reads scalars from disk
+        Reads scalars from optimize directory on disk,
+        accounts for savetxt() appending file extension
 
         :type filename: str
         :param filename: filename to read from
-        :return:
+        :rtype: float
+        :return: scalar read from disk
         """
+        if not os.path.splitext(filename)[1]:
+            filename += ".txt"
         return float(np.loadtxt(os.path.join(PATH.OPTIMIZE, filename)))
 
     @staticmethod
     def savetxt(filename, scalar):
         """
-        Writes scalars to disk
+        Writes scalars to disk with a specific format, appends .txt to the
+        filename to make it clear that these are text files.
 
         :type filename: str
         :param filename: filename to read from
         :type scalar: float
         :param scalar: value to write to disk
-        :return:
         """
+        if not os.path.splitext(filename)[1]:
+            filename += ".txt"
         np.savetxt(os.path.join(PATH.OPTIMIZE, filename), [scalar], "%11.6e")
 
 

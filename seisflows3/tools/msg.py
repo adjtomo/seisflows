@@ -461,20 +461,6 @@ for a list of available interfaces, see seisflows/system in the source code
 
 """
 
-CompatibilityError1 = """
-
-Parameter settings have changed.
-
-In your parameter file, please remove
-    OPTIMIZE='base'
-
-and add one of the following instead
-    OPTIMIZE='LBFGS'
-    OPTIMIZE'=NLCG'
-    OPTIMIZE='SteepestDescent'
-
-"""
-
 Warning_pbs_sm = """
 
 WARNING:  PBS_SM hasn't been tested for a long while because we don't own a PBS

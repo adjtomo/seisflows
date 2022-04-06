@@ -179,28 +179,6 @@ def loadpy(filename):
     return output
 
 
-def loadnpy(filename):
-    """
-    Wrapper function for loading numpy binary file
-    :type filename: str
-    :param filename: file to load with numpy
-    """
-    return np.load(filename)
-
-
-def savenpy(filename, v):
-    """
-    Saves numpy binary file without the '.npy' file ending
-
-    :type filename: str
-    :param filename: file to save using numpy
-    :type v: np.array
-    :param v: array to save
-    """
-    np.save(filename, v)
-    os.rename(f"{filename}.npy", filename)
-
-
 def loadyaml(filename):
     """
     Define how the PyYaml yaml loading function behaves. 

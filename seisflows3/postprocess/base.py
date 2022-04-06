@@ -73,7 +73,8 @@ class Base:
             self.required.validate()
         
         if PATH.MASK:
-            assert exists(PATH.MASK), f"PATH.MASK provided but does not exist"
+            assert os.path.exists(PATH.MASK), \
+                f"PATH.MASK provided but does not exist"
 
     def setup(self):
         """
@@ -94,51 +95,56 @@ class Base:
 
         :type path: str
         :param path: directory from which kernels are read and to which
-        gradient is written
+            gradient is written
         """
-        # Check that the given path exists
-        if not exists(path):
-            raise FileNotFoundError
+        if not os.path.exists(path):
+            print(msg.cli("Gradient path does in postprocess.write_gradient "
+                          "does not exist but should",
+                          items=[path], header="error"))
+            sys.exit(-1)
 
-        # Run postprocessing as separate job as its computationally intensive
+        # Postprocess file structure defined here once-and-for-all
+        path_grad = os.path.join(path, "gradient")
+        path_grad_nomask = os.path.join(path, "gradient_nomask")
+        path_kernels = os.path.join(path, "kernels")
+        path_kernels_sum = os.path.join(path_kernels, "sum")
+        path_model = os.path.join(path, "model")
+
+        # Run postprocessing as job on system as it's computationally intensive
         system.run_single("postprocess", "process_kernels",
-                          path=f"{path}/kernels",
-                          parameters=solver.parameters,
+                          path=path_kernels, parameters=solver.parameters,
                           logger=self.logger,
                           scale_tasktime=PAR.TASKTIME_SMOOTH,
                           )
 
         # Access the gradient information stored in the kernel summation
-        gradient = solver.load(f"{path}/kernels/sum", suffix="_kernel")
+        gradient = solver.load(path_kernels_sum, suffix="_kernel")
 
         # Merge the gradients into a single vector
         gradient = solver.merge(gradient)
 
         # Convert to absolute perturbations:
         # log dm --> dm (see Eq.13 Tromp et al 2005)
-        gradient *= solver.merge(solver.load(f"{path}/model"))
+        gradient *= solver.merge(solver.load(path_model))
 
         if PATH.MASK:
             self.logger.info(f"masking gradient")
             # to scale the gradient, users can supply "masks" by exactly
-            # mimicking the file format in which models stored
+            # mimicking the file format in which models are stored
             mask = solver.merge(solver.load(PATH.MASK))
 
             # While both masking and preconditioning involve scaling the
             # gradient, they are fundamentally different operations:
             # masking is ad hoc, preconditioning is a change of variables;
-            # see Modrak & Tromp 2016 GJI
-            solver.save(solver.split(gradient), f"{path}/gradient_nomask",
-                        parameters=solver.parameters,
-                        suffix="_kernel")
+            # For more info, see Modrak & Tromp 2016 GJI
+            solver.save(solver.split(gradient), path=path_grad_nomask,
+                        parameters=solver.parameters, suffix="_kernel")
 
-            solver.save(solver.split(gradient*mask), f"{path}/gradient",
-                        parameters=solver.parameters,
-                        suffix="_kernel")
+            solver.save(solver.split(gradient*mask), path=path_grad,
+                        parameters=solver.parameters, suffix="_kernel")
         else:
-            solver.save(solver.split(gradient), f"{path}/gradient",
-                        parameters=solver.parameters,
-                        suffix="_kernel")
+            solver.save(solver.split(gradient), path=path_grad,
+                        parameters=solver.parameters, suffix="_kernel")
 
     @staticmethod
     def process_kernels(path, parameters, logger):
@@ -158,14 +164,16 @@ class Base:
         :param logger: Class-specific logging module, log statements pushed
             from this logger will be tagged by its specific module/classname
         """
-        # Check if the path exists
-        if not exists(path):
-            raise FileNotFoundError(f"{path} for postprocess.process_kernels() "
-                                    f"not found, exiting.")
+        if not os.path.exists(path):
+            print(msg.cli("Gradient path does in postprocess.process_kernels "
+                          "does not exist but should",
+                          items=[path], header="error"))
+            sys.exit(-1)
 
         # If specified, smooth the kernels in the vertical and horizontal
         path_sum_nosmooth = os.path.join(path, "sum_nosmooth")
         path_sum = os.path.join(path, "sum")
+
         if (PAR.SMOOTH_H > 0) or (PAR.SMOOTH_V > 0):
             logger.debug(f"saving unsmoothed and summed kernels to:\n"
                          f"{path_sum_nosmooth}")
