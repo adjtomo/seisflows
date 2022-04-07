@@ -9,6 +9,7 @@ import pytest
 from unittest.mock import patch
 from seisflows3 import config
 from seisflows3.seisflows import SeisFlows
+from seisflows3.tools.err import ParameterError
 
 
 TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
@@ -97,12 +98,28 @@ def test_save_and_load(sfinit):
         assert(f"seisflows_{name}" in sys.modules)
 
 
-def test_seisflows_paths_parameters():
+def test_seisflows_paths_parameters(sfinit):
     """
     Test the class that makes inputting and checking paths and parameters easier
+    Recreates the required() function at the top of each class.
     """
-    # !!! TO DO
-    pass
+    sf = sfinit
+    sfpp = config.SeisFlowsPathsParameters()
+
+    # All of these parameters are defined in the test parameter file
+    sfpp.par("SOLVER", required=True, par_type=str,
+           docstr="This is a required parameter")
+    sfpp.par("MIN_PERIOD", required=False, default=10., par_type=float,
+           docstr="This is an optional parameter")
+    sfpp.path("SPECFEM_BIN", required=True, docstr="This is a required path")
+    sfpp.path("LOCAL", required=False, docstr="This is an optional path")
+    sfpp.validate()
+
+    # These parameters are not defined and are expected to throw parameter error
+    sfpp.path("UNDEFINED", required=True,
+              docstr="This path is not in the test parameter file")
+    with pytest.raises(ParameterError):
+        sfpp.validate()
 
 
 def test_custom_import(sfinit):
@@ -121,8 +138,8 @@ def test_custom_import(sfinit):
     assert(module.__module__ == "seisflows3.optimize.LBFGS")
 
     # Check one more to be safe
-    module = config.custom_import(name="optimize", module="steepest_descent")
-    assert(module.__name__ == "SteepestDescent")
-    assert(module.__module__ == "seisflows3.optimize.steepest_descent")
+    module = config.custom_import(name="optimize", module="base")
+    assert(module.__name__ == "Base")
+    assert(module.__module__ == "seisflows3.optimize.base")
 
 
