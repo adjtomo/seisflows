@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 The Pyatoa preprocessing module abstracts all preprocessing functionality
 onto Pyatoa (https://github.com/bch0w/pyatoa/). The module defined below is

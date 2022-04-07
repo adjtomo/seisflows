@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is a SeisFlows subclass which inherits attributes from a parent class
 """

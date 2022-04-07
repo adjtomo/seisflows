@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 The System module provides the basic core utilities for interaction with compute
 systems. The Base class must be overloaded by subclasses related to specific
@@ -193,7 +193,7 @@ class Base:
         """
         raise NotImplementedError('Must be implemented by subclass.')
 
-    def checkpoint(self, path, classname, method, args, kwargs):
+    def checkpoint(self, path, classname, method, kwargs):
         """
         Writes the SeisFlows3 working environment to disk so that new tasks can
         be executed in a separate/new/restarted working environment.

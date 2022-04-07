@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the main class for seisflows.line_search.preconds.diagonal
 This class provides the utilities for a diagonal preconditioner

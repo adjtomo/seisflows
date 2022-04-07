@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Adjoints used by the 'default' preprocess class use to generate adjoint sources
 

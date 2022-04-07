@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the subclass class for seisflows.plugins.line_search.bracket
 """

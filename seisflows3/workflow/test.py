@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is a SeisFlows3 Test class which is used to test out the underlying
 machinery before running an actual workflow. Contains simple functions used to

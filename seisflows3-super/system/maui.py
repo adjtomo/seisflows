@@ -1,33 +1,51 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-This is the subclass seisflows.system.maui_lg
-This class provides the core utilities interaction with HPC systems which must
-be overloaded by subclasses
+Maui is a New Zealand eScience Infrastructure (NeSI) high performance computer.
+Maui operates on a SLURM workload manager and therefore overloads the SLURM
+System module. Maui-specific parameters and functions are defined here.
+
+Information on Maui can be found here:
+https://support.nesi.org.nz/hc/en-gb/articles/360000163695-M%C4%81ui
+
+.. note::
+    Python and conda capabilities are NOT accessible from Maui, these
+    capabilities have been shifted onto a separate cluster: Maui ancil
+    This subclass therefore moves all Python dependent capabilities
+    (i.e., SeisFlows3, Pyatoa) onto the ancilary cluster.
+
+    See also: https://support.nesi.org.nz/hc/en-gb/articles/\
+                                          360000203776-M%C4%81ui-Ancillary-Nodes
+
 """
 import os
 import sys
-import time
-from subprocess import check_output, call, CalledProcessError
-from seisflows3.tools.wrappers import findpath
-from seisflows3.config import custom_import, SeisFlowsPathsParameters
+import math
+import logging
+from seisflows3.config import custom_import, SeisFlowsPathsParameters, ROOT_DIR
 
-# Seisflows configuration
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
+PAR = sys.modules["seisflows_parameters"]
+PATH = sys.modules["seisflows_paths"]
 
 
 class Maui(custom_import("system", "slurm")):
     """
-    System interface for the New Zealand Tomography problem
-
-    Inversions are run on New Zealand eScience Infrascructure (NeSI) HPCs
-    Heavy simulation work is run on Maui
-    Preprocessing tasks, via Pyatoa, are run on Maui_ancil, the ancillary
-    cluster attached to Maui.
-
-    Both clusters are run with the Slurm system, and
-    so MauiLG inherits attributes from `slurm_lg` system
+    System interface for Maui, which operates on a SLURM system
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        :type partitions: dict
+        :param partitions: Maui has various partitions which each have their
+            own number of cores per compute node, defined here
+        """
+        super().__init__()
+        self.partitions = {"nesi_research": 40}
+
     @property
     def required(self):
         """
@@ -39,17 +57,13 @@ class Maui(custom_import("system", "slurm")):
         sf.par("ACCOUNT", required=True, par_type=str,
                docstr="The account name to submit jobs under")
 
-        sf.par("NODES", required=True, par_type=int,
-               docstr="The number of nodes to use per job. Rough estimate "
-                      "would be NPROC//NODESIZE")
-
         sf.par("CPUS_PER_TASK", required=False, default=1, par_type=int,
                docstr="Multiple CPUS per task allows for multithreading jobs")
 
-        sf.par("MAIN_CLUSTER", required=False, default="maui", par_type=str,
-               docstr="Name of main cluster for job submission")
+        sf.par("CLUSTER", required=False, default="maui", par_type=str,
+               docstr="Name of main cluster for parallel job submission")
 
-        sf.par("MAIN_PARTITION", required=False, default="nesi_research",
+        sf.par("PARTITION", required=False, default="nesi_research",
                par_type=str, docstr="Name of partition on main cluster")
 
         sf.par("ANCIL_CLUSTER", required=False, default="maui_ancil",
@@ -79,48 +93,41 @@ class Maui(custom_import("system", "slurm")):
             self.required.validate()
         super().check(validate=False)
 
-        assert(PAR.NODESIZE == 40), f"Maui NODESIZE is physically set to 40"
+        assert(PAR.NODESIZE == self.partitions[PAR.PARTITION]), \
+            (f"PARTITION {PAR.PARTITION} is expected to have NODESIZE=" 
+             f"{self.partitions[PAR.PARTITION]}, not current {PAR.NODESIZE}")
 
-    def submit(self, workflow):
+    def submit(self):
         """
-        Overwrites seisflows.workflow.slurm_lg.submit()
+        Submits master job workflow to maui_ancil cluster as a single-core
+        process
 
-        Submits master job workflow to maui_ancil cluster with a more in-depth
-        logging system that saves old output logs and names logs based on
-        the job name
-
-        Note:
+        .. note::
             The master job must be run on maui_ancil because Maui does
             not have the ability to run the command "sacct"
         """
-        output_log, error_log = self.setup()
-        workflow.checkpoint()
-
-        # Submit to maui_ancil
-        submit_call = " ".join([
+        maui_submit_call = " ".join([
             f"sbatch {PAR.SLURMARGS or ''}",
             f"--account={PAR.ACCOUNT}",
             f"--cluster={PAR.ANCIL_CLUSTER}",
             f"--partition={PAR.ANCIL_PARTITION}",
-            f"--job-name=main_{PAR.TITLE}",  # main_ prefix means master
-            f"--output={output_log}-%A.log",
-            f"--error={error_log}-%A.log",
+            f"--job-name={PAR.TITLE}",
+            f"--output={self.output_log}-%A.log",
+            f"--error={self.error_log}-%A.log",
             f"--ntasks=1",
             f"--cpus-per-task=1",
             f"--time={PAR.WALLTIME:d}",
-            os.path.join(findpath("seisflows3.system"), "wrappers", "submit"),
-            PATH.OUTPUT
+            f"{os.path.join(ROOT_DIR, 'scripts', 'submit')}",
+            f"--output {PATH.OUTPUT}"
         ])
+        self.logger.debug(maui_submit_call)
+        super().submit(maui_submit_call)
 
-        call(submit_call)
-
-    def run(self, classname, method, scale_tasktime=1, *args, **kwargs):
+    def run(self, classname, method, single=False, **kwargs):
         """
-        Runs task multiple times in embarrassingly parallel fasion on the
-        maui cluster
-
-        Executes classname.method(*args, **kwargs) NTASK times,
-        each time on NPROC CPU cores
+        Runs task multiple times in embarrassingly parallel fasion on a SLURM
+        cluster. Executes classname.method(*args, **kwargs) `NTASK` times,
+        each time on `NPROC` CPU cores
 
         :type classname: str
         :param classname: the class to run
@@ -132,140 +139,39 @@ class Maui(custom_import("system", "slurm")):
             to set the tasktimes for all other tasks. This lets you scale the
             time of specific tasks by PAR.TASKTIME * scale_tasktime
         """
-        # Checkpoint this individual method before proceeding
-        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
-
-        run_call = " ".join([
+        maui_run_call = " ".join([
             "sbatch",
             f"{PAR.SLURMARGS or ''}",
             f"--account={PAR.ACCOUNT}",
             f"--job-name={PAR.TITLE}",
-            f"--clusters={PAR.MAIN_CLUSTER}",
-            f"--partition={PAR.MAIN_PARTITION}",
+            f"--clusters={PAR.CLUSTER}",
+            f"--partition={PAR.PARTITION}",
             f"--cpus-per-task={PAR.CPUS_PER_TASK}",
-            f"--nodes={PAR.NODES:d}",
+            f"--nodes={math.ceil(PAR.NPROC / float(PAR.NODESIZE)):d}",
             f"--ntasks={PAR.NPROC:d}",
-            f"--time={PAR.TASKTIME * scale_tasktime:d}",
-            f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
+            f"--time={PAR.TASKTIME:d}",
+            f"--output={os.path.join(PATH.WORKDIR, 'logs', '%A_%a')}",
             f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
-            f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
-            f"{PATH.OUTPUT}",
-            f"{classname}",
-            f"{method}",
-            f"{PAR.ENVIRONS}"
+            f"{os.path.join(ROOT_DIR, 'scripts', 'run')}",
+            f"--output {PATH.OUTPUT}",
+            f"--classname {classname}",
+            f"--funcname {method}",
+            f"--environment {PAR.ENVIRONS}"
         ])
+        self.logger.debug(maui_run_call)
+        super().run(classname, method, single, run_call=maui_run_call, **kwargs)
 
-        stdout = check_output(run_call, shell=True)
-        
-        # Keep track of Job IDS
-        jobs = self.job_id_list(stdout, PAR.NTASK)
-
-        # Check for job completion status
-        check_status_error = 0
-        while True:
-            # Wait a few seconds between queries
-            time.sleep(5)
-
-            # Occassionally connections using 'sacct' are refused leading to job
-            # failure. Wrap in a try-except and allow a handful of failures 
-            # incase the failure was a one-off connection problem
-            try:
-                isdone, jobs = self.job_array_status(classname, method, jobs)
-            except CalledProcessError:
-                check_status_error += 1
-                if check_status_error >= 10:
-                    print("check job status with sacct failed 10 times")
-                    sys.exit(-1)
-                pass
-            if isdone:
-                return
-        
-    def run_single(self, classname, method, scale_tasktime=1, *args, **kwargs):
+    def run_ancil(self, classname, method, **kwargs):
         """
-        Runs task a single time
-
-        Executes classname.method(*args, **kwargs) a single time on NPROC
-        CPU cores
-
-        :type classname: str
-        :param classname: the class to run
-        :type method: str
-        :param method: the method from the given `classname` to run
-        :type scale_tasktime: int
-        :param scale_tasktime: a way to get over the hard-set tasktime, because
-            some tasks take longer (e.g. smoothing), but you don't want these
-            to set the tasktimes for all other tasks. This lets you scale the
-            time of specific tasks by PAR.TASKTIME * scale_tasktime
-        """
-        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
-
-        # Submit job
-        run_call = " ".join([
-            "sbatch",
-            f"{PAR.SLURMARGS or ''}",
-            f"--account={PAR.ACCOUNT}",
-            f"--job-name={PAR.TITLE}",
-            f"--clusters={PAR.MAIN_CLUSTER}",
-            f"--partition={PAR.MAIN_PARTITION}",
-            f"--cpus-per-task={PAR.CPUS_PER_TASK}",
-            f"--nodes={PAR.NODES:d}",
-            f"--ntasks={PAR.NPROC:d}",
-            f"--time={PAR.TASKTIME * scale_tasktime:d}",
-            f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
-            f"--array=0-0",
-            f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
-            f"{PATH.OUTPUT}",
-            f"{classname}",
-            f"{method}",
-            f"{PAR.ENVIRONS}",
-            f"SEISFLOWS_TASKID=0"
-        ])
-        
-        stdout = check_output(run_call, shell=True)
-        
-        # Keep track of job ids
-        jobs = self.job_id_list(stdout, 1)
-
-        # Check for job completion status
-        check_status_error = 0
-        while True:
-            # Wait a few seconds between queries
-            time.sleep(5)
-
-            # Occassionally connections using 'sacct' are refused leading to job
-            # failure. Wrap in a try-except and allow a handful of failures
-            # incase the failure was a one-off connection problem
-            try:
-                isdone, jobs = self.job_array_status(classname, method, jobs)
-            except CalledProcessError:
-                check_status_error += 1
-                if check_status_error >= 10:
-                    print("check job status with sacct failed 10 times")
-                    sys.exit(-1)
-                pass
-            if isdone:
-                return
-
-    def run_ancil(self, classname, method, *args, **kwargs):
-        """
-        Runs task a single time. For Maui this is run on maui ancil
-        and also includes some extra arguments for eval_func
+        Runs prepost jobs on Maui ancil, the ancilary cluster which contains
+        the conda and Python capabilities for Maui.
 
         :type classname: str
         :param classname: the class to run
         :type method: str
         :param method: the method from the given `classname` to run
         """
-        # Set the tasktime required for ancillary tasks
-        if PAR.ANCIL_TASKTIME is None:
-            ANCIL_TASKTIME = PAR.TASKTIME
-        else:
-            ANCIL_TASKTIME = PAR.ANCIL_TASKTIME
-
-        # Checkpoint this individual method before proceeding
-        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
-
-        run_call = " ".join([
+        ancil_run_call = " ".join([
             "sbatch",
             f"{PAR.SLURMARGS or ''}",
             f"--account={PAR.ACCOUNT}",
@@ -273,69 +179,19 @@ class Maui(custom_import("system", "slurm")):
             f"--clusters={PAR.ANCIL_CLUSTER}",
             f"--partition={PAR.ANCIL_PARTITION}",
             f"--cpus-per-task={PAR.CPUS_PER_TASK}",
-            f"--time={ANCIL_TASKTIME:d}",
-            f"--output={os.path.join(PATH.WORKDIR, 'output.logs', '%A_%a')}",
+            f"--time={PAR.ANCIL_TASKTIME:d}",
+            f"--output={os.path.join(PATH.WORKDIR, 'logs', '%A_%a')}",
             f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
-            f"{os.path.join(findpath('seisflows3.system'), 'wrappers', 'run')}",
-            f"{PATH.OUTPUT}",
-            f"{classname}",
-            f"{method}",
-            f"{PAR.ENVIRONS}",
+            f"{os.path.join(ROOT_DIR, 'scripts', 'run')}",
+            f"--output {PATH.OUTPUT}",
+            f"--classname {classname}",
+            f"--funcname {method}",
+            f"--environment {PAR.ENVIRONS}"
         ])
+        self.logger.debug(ancil_run_call)
+        super().run(classname, method, single=False, run_call=ancil_run_call,
+                    **kwargs)
 
-        stdout = check_output(run_call, shell=True)
-
-        # Keep track of job ids
-        jobs = self.job_id_list(stdout, PAR.NTASK)
-
-        # Check for job completion status
-        check_status_error = 0
-        while True:
-            # Wait a few seconds between queries
-            time.sleep(5)
-
-            # Occassionally connections using 'sacct' are refused leading to job
-            # failure. Wrap in a try-except and allow a handful of failures
-            # incase the failure was a one-off connection problem
-            try:
-                isdone, jobs = self.job_array_status(classname, method, jobs)
-            except CalledProcessError:
-                check_status_error += 1
-                if check_status_error >= 10:
-                    print("check job status with sacct failed 10 times")
-                    sys.exit(-1)
-                pass
-            if isdone:
-                return
-
-    def job_id_list(self, stdout, ntask):
-        """
-        Overwrite seisflows.system.workflow.slurm_log.job_id_list()
-
-        Parses job id list from sbatch standard output. 
-        Decode class bytes to str using UTF-8 from subprocess.check_output()
-
-        Note:
-            Submitting jobs across clusters on Maui means the phrase
-            "on cluster X" gets appended to the end of stdout and the job is no
-            longer stdout().split()[-1]. Instead, scan through stdout and try
-            to find the number using float() to break on words.
-
-        :type stdout: str or bytes
-        :param stdout: the output of subprocess.check_output()
-        :type ntask: int
-        :param ntask: number of tasks currently running
-        """    
-        if isinstance(stdout, bytes):
-            stdout = stdout.decode("UTF-8")
-
-        for parts in stdout.split():
-            try:
-                job_id = parts.strip()
-                _ = float(job_id)  # this can raise a ValueError
-                return [f"{job_id}_{str(ii)}" for ii in range(ntask)]
-            except ValueError:
-                continue
 
 
     

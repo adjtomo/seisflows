@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the Seisflows Config script, it contains utilities that are called upon
 throughout the Seisflows workflow. It also (re)defines some important functions

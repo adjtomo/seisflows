@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 A command line tool for using and manipulating SeisFlows3.
 The main entry point to the SeisFlows3 package, this command line tool
@@ -20,6 +20,7 @@ import inspect
 import logging
 import warnings
 import argparse
+import traceback
 import subprocess
 from glob import glob
 from copy import copy
@@ -628,6 +629,7 @@ class SeisFlows:
         # mangled, create a temporary copy that can be re-instated upon failure
         temp_par_file = f".{self._args.parameter_file}"
         unix.cp(self._args.parameter_file, temp_par_file)
+
         try:
             # Paths are collected for each but written at the end
             seisflows_paths = {}
@@ -655,7 +657,8 @@ class SeisFlows:
             # General error catch as anything can happen here
             unix.rm(self._args.parameter_file)
             unix.cp(temp_par_file, self._args.parameter_file)
-            print(msg.cli(text=str(e), header="error", border="="))
+            print(msg.cli(text="seisflows configure traceback", header="error"))
+            print(traceback.format_exc())
             sys.exit(-1)
         else:
             unix.rm(temp_par_file)
@@ -734,9 +737,8 @@ class SeisFlows:
 
         # Submit workflow.main() to the system
         init_seisflows()
-        workflow = sys.modules["seisflows_workflow"]
         system = sys.modules["seisflows_system"]
-        system.submit(workflow)
+        system.submit()
 
     def clean(self, force=False, **kwargs):
         """

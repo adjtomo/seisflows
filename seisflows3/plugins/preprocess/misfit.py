@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Misfit functions used by the 'default' preprocess class use to quantify 
 differences between data and synthetics. 

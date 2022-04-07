@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is a subclass seisflows.system.workstation
 Provides utilities for submitting jobs in serial on a single machine
@@ -54,28 +54,35 @@ class Workstation(custom_import("system", "base")):
         workflow.checkpoint()
         workflow.main()
 
-    def run(self, classname, method, *args, **kwargs):
+    def run(self, classname, method, single=False, *args, **kwargs):
         """
-        Executes task multiple times in serial
+        Executes task multiple times in serial.
+
+        :type classname: str
+        :param classname: the class to run
+        :type method: str
+        :param method: the method from the given `classname` to run
+        :type single: bool
+        :param single: run a single-process, non-parallel task, such as
+            smoothing the gradient, which only needs to be run by once.
+            This will change how the job array and the number of tasks is
+            defined, such that the job is submitted as a single-core job to
+            the system.
         """
         unix.mkdir(PATH.SYSTEM)
 
         self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
 
-        for taskid in range(PAR.NTASK):
-            os.environ["SEISFLOWS_TASKID"] = str(taskid)
-            self.progress(taskid)
+        if single:
+            os.environ["SEISFLOWS_TASKID"] = "0"
             func = getattr(__import__("seisflows_" + classname), method)
             func(**kwargs)
-
-    def run_single(self, classname, method, scale_tasktime=1, *args, **kwargs):
-        """
-        Runs task a single time, used for running serial tasks such as smoothing
-        """
-        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
-        os.environ["SEISFLOWS_TASKID"] = "0"
-        func = getattr(__import__("seisflows_" + classname), method)
-        func(**kwargs)
+        else:
+            for taskid in range(PAR.NTASK):
+                os.environ["SEISFLOWS_TASKID"] = str(taskid)
+                self.progress(taskid)
+                func = getattr(__import__("seisflows_" + classname), method)
+                func(**kwargs)
 
     def taskid(self):
         """
@@ -87,20 +94,15 @@ class Workstation(custom_import("system", "base")):
             set by run() or run_single() to label each of the currently
             running processes on the SYSTEM.
         """
-        try:
-            tid = int(os.environ["SEISFLOWS_TASKID"])
-        except KeyError:
-            # This should only return a KeyError if you're running in debug mode
-            # and aren't assigned a TASKID by the OS. Return task id = 0 
-            # i.e., mainsolver, so that user can efficiently run debug commands
+        sftaskid = os.getenv("SEISFLOWS_TASKID")
+        if sftaskid is None:
             print(msg.cli("system.taskid() environment variable not found. "
                           "Assuming DEBUG mode and returning taskid==0. "
                           "If not DEBUG mode, please check "
                           "SYSTEM.run() or SYSTEM.run_single().",
                           header="warning", border="="))
-            tid = 0
-
-        return tid
+            sftaskid = 0
+        return int(sftaskid)
 
     def mpiexec(self):
         """

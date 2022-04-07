@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 The Cluster class provides the core utilities interaction with HPC systems
 which must be overloaded by subclasses for specific workload managers, or
@@ -7,6 +7,7 @@ specific clusters.
 import os
 import sys
 import logging
+import pickle
 import subprocess
 
 from seisflows3.tools import unix, msg
@@ -31,7 +32,7 @@ class Cluster(custom_import("system", "base")):
         A hard definition of paths and parameters required by this class,
         alongside their necessity for the class and their string explanations.
         """
-        sf = SeisFlowsPathsParameters()
+        sf = SeisFlowsPathsParameters(super().required)
 
         # Define the Parameters required by this module
         sf.par("WALLTIME", required=True, par_type=float,
@@ -49,7 +50,8 @@ class Cluster(custom_import("system", "base")):
 
         sf.par("ENVIRONS", required=False, default="", par_type=str,
                docstr="Optional environment variables to be provided in the"
-                      "following format VAR1=var1,VAR2=var2...")
+                      "following format VAR1=var1,VAR2=var2... Will be set"
+                      "using os.environs")
 
         return sf
 
@@ -64,7 +66,7 @@ class Cluster(custom_import("system", "base")):
 
         super().check(validate=False)
 
-    def submit(self, workflow, submit_call):
+    def submit(self, submit_call):
         """
         Main insertion point of SeisFlows3 onto the compute system.
 
@@ -84,8 +86,11 @@ class Cluster(custom_import("system", "base")):
             subclasses.
         """
         self.setup()
+        workflow = sys.modules["seisflows_workflow"]
         workflow.checkpoint()
-        subprocess.check_call(submit_call, shell=True)
+
+        # check==True: subprocess will wait for workflow.main() to finish
+        subprocess.run(submit_call, shell=True, check=True)
 
     def run(self, classname, method, *args, **kwargs):
         """
@@ -126,26 +131,3 @@ class Cluster(custom_import("system", "base")):
             identifier.
         """
         raise NotImplementedError('Must be implemented by subclass.')
-
-    def checkpoint(self, path, classname, method, args, kwargs):
-        """
-        Writes the SeisFlows3 working environment to disk so that new tasks can
-        be executed in a separate/new/restarted working environment.
-
-        :type path: str
-        :param path: path the kwargs
-        :type classname: str
-        :param classname: name of the class to save
-        :type method: str
-        :param method: the specific function to be checkpointed
-        :type kwargs: dict
-        :param kwargs: dictionary to pass to object saving
-        """
-        self.logger.debug("checkpointing working environment to disk")
-
-        argspath = os.path.join(path, "kwargs")
-        argsfile = os.path.join(argspath, f"{classname}_{method}.p")
-        unix.mkdir(argspath)
-        saveobj(argsfile, kwargs)
-        save()
-

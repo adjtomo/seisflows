@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the Base class for seisflows.workflow.
 It contains mandatory functions that must be called by subclasses

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This Solver module is in charge of interacting with external numerical solvers
 such as SPECFEM (2D/3D/3D_GLOBE). The Base class provides general functions

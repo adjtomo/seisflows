@@ -1,87 +1,74 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-This is the subclass seisflows.system.chinook_lg
-This class provides the core utilities interaction with HPC systems which must
-be overloaded by subclasses
+Chinook is the University of Alaska Fairbanks (UAF) high performance computer,
+operated by the Geophysical Institute's Research Computing Systems (RCS).
+Chinook operates on a SLURM workload manager and therefore overloads the SLURM
+System module. Chinook-specific parameters and functions are defined here.
+
+Information on Chinook can be found here:
+https://uaf-rcs.gitbook.io/uaf-rcs-hpc-docs/hpc
 """
 import os
 import sys
-import math
-from subprocess import call
+import logging
 
-from seisflows3.tools.wrappers import findpath
-from seisflows3.config import custom_import
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
-# Seisflows configuration
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
+PAR = sys.modules["seisflows_parameters"]
+PATH = sys.modules["seisflows_paths"]
 
 
 class Chinook(custom_import("system", "slurm")):
     """
-    System interface for the University of Alaska cluster, Chinook.
-
-    Pre/postprocessing tasks must be run on separate partitions
+    System interface for the University of Alaska HPC Chinook, which operates
+    on a SLURM system.
     """
-    def check(self):
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        :type partitions: dict
+        :param partitions: Chinook has various partitions which each have their
+            own number of cores per compute node, defined here
+        """
+        super().__init__()
+        self.partitions = {"debug": 24, "t1small": 28, "t2small": 28,
+                           "t1standard": 40, "t2standard": 40, "analysis": 28
+                           }
+
+    @property
+    def required(self):
+        """
+        A hard definition of paths and parameters required by this class,
+        alongside their necessity for the class and their string explanations.
+        """
+        sf = SeisFlowsPathsParameters(super().required)
+
+        sf.par("PARTITION", required=False, default="t1small", par_type=int,
+               docstr="Name of partition on main cluster, available: "
+                      "analysis, t1small, t2small, t1standard, t2standard, gpu")
+
+        sf.par("MPIEXEC", required=False, default="srun", par_type=str,
+               docstr="Function used to invoke parallel executables")
+
+        return sf
+
+    def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        # Run SlurmLG checks first
-        super().check()
+        if validate:
+            self.required.validate()
+        super().check(validate=False)
 
-        # RCS Nodesize is set at 24 or 28 cores per node
-        if PAR.NODESIZE != 24:
-            print("Chinook must have a nodesize of 24, overwriting user set")
-            setattr(PAR, "NODESIZE", 24)
+        assert(PAR.PARTITION in self.partitions.keys()), \
+            f"Chinook partition must be in {self.partitions.keys()}"
 
-        # How to invoke executables
-        if "MPIEXEC" not in PAR:
-            setattr(PAR, "MPIEXEC", "mpiexec")
+        assert(PAR.NODESIZE == self.partitions[PAR.PARTITION]), \
+            (f"PARTITION {PAR.PARTITION} is expected to have NODESIZE=" 
+             f"{self.partitions[PAR.PARTITION]}, not current {PAR.NODESIZE}")
 
-        # Specific partition of the main cluster
-        if "MAIN_PARTITION" not in PAR:
-            setattr(PAR, "MAIN_PARTITION", "t1small")
-
-        # Specific partition of ancilary cluster
-        if "ANCIL_PARTITION" not in PAR:
-            setattr(PAR, "ANCIL_PARTITION", "analysis")
-
-        # If preprocessing tasks are much less than PAR.TASKTIME, it can be
-        # useful to manually set a shorter tasktime
-        if "ANCIL_TASKTIME" not in PAR:
-            setattr(PAR, "ANCIL_TASKTIME", PAR.TASKTIME)
-
-        # If number of nodes not given, automatically calculate.
-        # if the "nomultithread" hint is given, the number of nodes will need 
-        # to be manually set
-        if "NODES" not in PAR:
-            setattr(PAR, "NODES", math.ceil(PAR.NPROC/float(PAR.NODESIZE)))
-
-        # Optional additional SLURM arguments
-        if "SLURMARGS" not in PAR:
-            setattr(PAR, "SLURMARGS", "")
-
-    def submit(self, workflow):
-        """
-        Overwrites seisflows.workflow.slurm_lg.submit()
-
-        Submits master job workflow to main cluster
-        """
-        output_log, error_log = self.setup()
-        workflow.checkpoint()
-
-        # Submit to maui_ancil
-        submit_call = " ".join([
-            f"sbatch {PAR.SLURMARGS}",
-            f"--partition={PAR.MAIN_PARTITION}",
-            f"--job-name=main_{PAR.TITLE}",  # main_ prefix means master
-            f"--output={output_log}-%A.log",
-            f"--error={error_log}-%A.log",
-            f"--nodes=1",
-            f"--ntasks-per-node={PAR.NODESIZE}",
-            f"--time={PAR.WALLTIME:d}",
-            os.path.join(findpath("seisflows.system"), "wrappers", "submit"),
-            PATH.OUTPUT
-        ])
-        call(submit_call)

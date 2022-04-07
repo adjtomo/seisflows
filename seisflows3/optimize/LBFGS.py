@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the custom class for an LBFGS optimization schema.
 It supercedes the `seisflows.optimize.base` class

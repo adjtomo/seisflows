@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Plugins used for the numerical solver SPECFEM3D_CARTESIAN
 """

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the subclass seisflows.solver.specfem3d_globe
 This class provides utilities for the Seisflows solver interactions with
