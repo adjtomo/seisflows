@@ -92,7 +92,7 @@ class Cluster(custom_import("system", "base")):
         # check==True: subprocess will wait for workflow.main() to finish
         subprocess.run(submit_call, shell=True, check=True)
 
-    def run(self, classname, method, *args, **kwargs):
+    def run(self, classname, method, **kwargs):
         """
         Runs a task multiple times in parallel
 
@@ -101,20 +101,6 @@ class Cluster(custom_import("system", "base")):
             the system in parallel. For example, in a simulation step, run()
             submits N jobs to the compute system where N is the number of
             events requiring an adjoint simulation.
-
-        :rtype: None
-        :return: This function is not expected to return anything
-        """
-        raise NotImplementedError('Must be implemented by subclass.')
-
-    def run_single(self, classname, method, *args, **kwargs):
-        """
-        Runs a task a single time
-
-        .. note::
-            The expected behavior of the run_single() function is to submit ONE
-            job to the compute system. This could be used for, submitting a job
-            to smooth a model, which only needs to be done once.
 
         :rtype: None
         :return: This function is not expected to return anything

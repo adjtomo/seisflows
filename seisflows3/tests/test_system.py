@@ -17,7 +17,7 @@ MODULE = "system"
 # Ensures that these parameters are always defined, even when using subclasses
 REQUIRED_PARAMETERS = ["WALLTIME", "TASKTIME", "NTASK", "NPROC"]
 REQUIRED_FUNCTIONS = ["required", "check", "setup", "submit", "run",
-                      "run_single", "taskid", "checkpoint"
+                      "taskid", "checkpoint"
                       ]
 
 # Define some re-used paths

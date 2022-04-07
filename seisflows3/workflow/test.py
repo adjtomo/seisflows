@@ -78,8 +78,7 @@ class Test(custom_import("workflow", "base")):
 
     def test_function(self):
         """
-        A simple function that can be called by system.run() or
-        system.run_single()
+        A simple function that can be called by system.run()
         """
         print(f"Hello world, from taskid {system.taskid()}")
 
@@ -92,7 +91,7 @@ class Test(custom_import("workflow", "base")):
         system.run(classname="workflow", method="test_function")
         # Wait a bit for system to catch up
         time.sleep(3)
-        system.run_single(classname="workflow", method="test_function")
+        system.run(classname="workflow", method="test_function", single=True)
 
     def test_preprocess(self):
 

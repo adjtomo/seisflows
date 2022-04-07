@@ -57,10 +57,10 @@ class ThriftyMaui(custom_import("workflow", "thrifty_inversion")):
         solver.initialize_solver_directories()
 
         if PAR.CASE.upper() == "SYNTHETIC":
-            system.run_single("solver", "setup", model="true")
+            system.run("solver", "setup", single=True, model="true")
             system.run("solver", "generate_data")
 
-        system.run_single("solver", "setup", model="init")
+        system.run("solver", "setup", single=True, model="init")
 
     def evaluate_function(self, path, suffix):
         """

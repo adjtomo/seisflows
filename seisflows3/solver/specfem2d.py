@@ -298,8 +298,8 @@ class Specfem2D(custom_import("solver", "base")):
         Kwargs should match arguments of solver.base.smooth()
         
         .. note::
-            This operation is usually run with 'run_single' so only one task
-            will be performing these operations.
+            This operation is usually run with run(single=True) so only one
+            task will be performing these operations.
 
         :type input_path: str
         :param input_path: path to data

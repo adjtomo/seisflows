@@ -87,19 +87,18 @@ class Workstation(custom_import("system", "base")):
     def taskid(self):
         """
         Provides a unique identifier for each running task, which should be set
-        by the 'run' or 'run_single' command.
+        by the 'run'' command.
 
         :rtype: int
         :return: returns the os environment variable SEISFLOWS_TASKID which is
-            set by run() or run_single() to label each of the currently
+            set by run() to label each of the currently
             running processes on the SYSTEM.
         """
         sftaskid = os.getenv("SEISFLOWS_TASKID")
         if sftaskid is None:
             print(msg.cli("system.taskid() environment variable not found. "
                           "Assuming DEBUG mode and returning taskid==0. "
-                          "If not DEBUG mode, please check "
-                          "SYSTEM.run() or SYSTEM.run_single().",
+                          "If not DEBUG mode, please check SYSTEM.run()",
                           header="warning", border="="))
             sftaskid = 0
         return int(sftaskid)

@@ -203,8 +203,7 @@ class Slurm(custom_import("system", "cluster")):
             if sftaskid is None:
                 print(msg.cli("system.taskid() environment variable not found. "
                               "Assuming DEBUG mode and returning taskid==0. "
-                              "If not DEBUG mode, please check "
-                              "SYSTEM.run() or SYSTEM.run_single().",
+                              "If not DEBUG mode, please check SYSTEM.run()",
                               header="warning", border="="))
                 sftaskid = 0
 

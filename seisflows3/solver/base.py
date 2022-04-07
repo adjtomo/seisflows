@@ -504,8 +504,8 @@ class Base:
 
         .. note::
             It is ASSUMED that this function is being called by
-            system.run_single() so that we can use the main solver directory to
-            perform the kernel summation task
+            system.run(single=True) so that we can use the main solver
+            directory to perform the kernel summation task
 
         :type input_path: str
         :param input_path: path to data
@@ -550,8 +550,8 @@ class Base:
 
         .. note::
             It is ASSUMED that this function is being called by
-            system.run_single() so that we can use the main solver directory to
-            perform the kernel smooth task
+            system.run(single=True) so that we can use the main solver
+            directory to perform the kernel smooth task
 
         :type input_path: str
         :param input_path: path to data

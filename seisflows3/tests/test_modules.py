@@ -22,7 +22,7 @@ required_structure = {
     "system": {
         "parameters": ["WALLTIME", "TASKTIME", "NTASK", "NPROC"],
         "functions": ["required", "check", "setup", "submit", "run",
-                      "run_single", "taskid", "checkpoint"]
+                      "taskid", "checkpoint"]
     },
     "preprocess": {
         "parameters": [],

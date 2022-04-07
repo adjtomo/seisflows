@@ -7,8 +7,7 @@ Acts as a Python script to submit certain SeisFlows3 functions or tasks to a
 compute system.
 
 .. note::
-    Not to be called by the user, this script is meant to be called by
-    system.run() or system.run_single()
+    Not to be called by the user, this script is to be called by system.run()
 
 .. rubric::
     >> python run --output ./OUTPUT --classname solver \

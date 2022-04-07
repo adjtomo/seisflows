@@ -152,10 +152,9 @@ class Base:
         """
         raise NotImplementedError('Must be implemented by subclass.')
 
-    def run(self, classname, method, *args, **kwargs):
+    def run(self, classname, method, single=False, **kwargs):
         """
-        Runs a task multiple times in parallel
-        Runs a task multiple times in parallel
+        Runs a task multiple times in am embarassingly parallel fashion
 
         .. note::
             The expected behavior of the run() function is to: submit N jobs to
@@ -163,20 +162,16 @@ class Base:
             submits N jobs to the compute system where N is the number of
             events requiring an adjoint simulation.
 
-        :rtype: None
-        :return: This function is not expected to return anything
-        """
-        raise NotImplementedError('Must be implemented by subclass.')
-
-    def run_single(self, classname, method, *args, **kwargs):
-        """
-        Runs a task a single time
-
-        .. note::
-            The expected behavior of the run_single() function is to submit ONE
-            job to the compute system. This could be used for, submitting a job
-            to smooth a model, which only needs to be done once.
-
+        :type classname: str
+        :param classname: the class to run
+        :type method: str
+        :param method: the method from the given `classname` to run
+        :type single: bool
+        :param single: run a single-process, non-parallel task, such as
+            smoothing the gradient, which only needs to be run by once.
+            This will change how the job array and the number of tasks is
+            defined, such that the job is submitted as a single-core job to
+            the system.
         :rtype: None
         :return: This function is not expected to return anything
         """

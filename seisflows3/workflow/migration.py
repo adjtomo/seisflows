@@ -113,15 +113,15 @@ class Migration(custom_import("workflow", "base")):
         """
         Backproject to create kernels from synthetics
         """
-        system.run_single("postprocess", "process_kernels",
-                          path=os.path.join(PATH.SCRATCH, "kernels"),
-                          parameters=solver.parameters)
+        system.run("postprocess", "process_kernels", single=True,
+                   path=os.path.join(PATH.SCRATCH, "kernels"),
+                   parameters=solver.parameters)
 
         try:
             # TODO Figure out a better method for running this try except
-            system.run_single("postprocess", "process_kernels",
-                              path=os.path.join(PATH.SCRATCH, "kernels"),
-                              parameters=["rhop"])
+            system.run("postprocess", "process_kernels", single=True,
+                       path=os.path.join(PATH.SCRATCH, "kernels"),
+                       parameters=["rhop"])
         except:
             pass
 
