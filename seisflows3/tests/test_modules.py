@@ -20,7 +20,7 @@ from seisflows3.seisflows import SeisFlows, return_modules
 # an inversion workflow will call solver.eval_func()
 required_structure = {
     "system": {
-        "parameters": ["WALLTIME", "TASKTIME", "NTASK", "NPROC"],
+        "parameters": [],
         "functions": ["required", "check", "setup", "submit", "run",
                       "taskid", "checkpoint"]
     },
@@ -47,7 +47,7 @@ required_structure = {
                       "restart", "save", "load"]
     },
     "workflow": {
-        "parameters": [],
+        "parameters": ["CASE"],
         "functions": ["check", "main", "checkpoint"]
     },
 }
@@ -100,66 +100,78 @@ def test_import(sfinit):
         modules = return_modules()[name]
         for package, module_list in modules.items():
             for module in module_list:
-                print(module)
-                if "pyatoa" in module:
-                    continue
                 config.custom_import(name, module)()
 
 
-def test_validate(sfinit, modules):
-    """
-    Test out path and parameter validation, essentially checking that all
-    the paths and parameters are set properly
-
-    .. note::
-        This doesn't work because we have required parameters that are not
-        set in the default parameter file. We can run configure beforehand
-        but does that make sense?
-    :return:
-    """
-    return
-    sfinit
-    for package, module_list in modules.items():
-        for module in module_list:
-            loaded_module = config.custom_import(MODULE, module)()
-            from IPython import embed;embed()
-            loaded_module.required.validate()
-
-
-def test_required_parameters_exist(sfinit, modules):
+def test_required_parameters_exist(sfinit):
     """
     Ensure that the required parameters are set in all the classes/subclasses
     That is, that the parameters defined above in REQUIRED_PARAMETERS have been
     defined by each SYSTEM class
     """
     sfinit
-    for package, module_list in modules.items():
-        for module in module_list:
-            loaded_module = config.custom_import(MODULE, module)()
-            sf_pp = loaded_module.required
-            # Check that required parameters are set
-            for req_par in REQUIRED_PARAMETERS:
-                assert(req_par in sf_pp.parameters.keys()), \
-                    f"{req_par} is a required parameter for module {MODULE}"
+    for name in config.NAMES:
+        for package, module_list in return_modules()[name].items():
+            for module in module_list:
+                loaded_module = config.custom_import(name, module)()
+                sf_pp = loaded_module.required
+                # Check that required parameters are set
+                for req_par in required_structure[name]["parameters"]:
+                    assert(req_par in sf_pp.parameters.keys()), \
+                        f"{req_par} is a required parameter for module: " \
+                        f"{name}.{module}"
 
 
-def test_required_functions_exist(sfinit, modules):
+def test_required_functions_exist(sfinit):
     """
     Make sure that the named, required functions exist within the class
     Do not execute just make sure they're defined, because they will be
     expected by other modules
     """
     sfinit
+    for name in config.NAMES:
+        for package, module_list in return_modules()[name].items():
+            for module in module_list:
+                loaded_module = config.custom_import(name, module)()
+                # Check that required parameters are set
+                for func in required_structure[name]["functions"]:
+                    assert(func in dir(loaded_module)), \
+                        f"{func} is a required function for module: " \
+                        f"{name}.{module}"
+
+
+def test_setup(sfinit, modules):
+    """
+    Test the expected behavior of each of the rqeuired functions.
+
+    Setup: make sure that setup creates the necessary directory structure
+
+    :param sfinit:
+    :param modules:
+    :return:
+    """
+    return
+    sf = sfinit
+    PATH = sys.modules["seisflows_paths"]
+    SETUP_CREATES = [PATH.SCRATCH, PATH.SYSTEM, PATH.OUTPUT]
+
     for package, module_list in modules.items():
         for module in module_list:
             loaded_module = config.custom_import(MODULE, module)()
-            for func in REQUIRED_FUNCTIONS:
-                assert(func in dir(loaded_module)), \
-                    f"'{func}' is a required function in module: " \
-                    f"{MODULE}.{module}"
 
+            # Make sure these don't already exist
+            for path_ in SETUP_CREATES:
+                assert(not os.path.exists(path_))
 
-# ==============================================================================
-# MODULE AND FUNCTION SPECIFIC TESTS TO FOLLOW
-# ==============================================================================
+            loaded_module.setup()
 
+            # Check that the minimum required directories were created
+            for path_ in SETUP_CREATES:
+                assert(os.path.exists(path_))
+
+            # Remove created paths so we can check the next module
+            for path_ in SETUP_CREATES:
+                if os.path.isdir(path_):
+                    shutil.rmtree(path_)
+                else:
+                    os.remove(path_)

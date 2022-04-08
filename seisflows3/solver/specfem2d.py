@@ -152,8 +152,8 @@ class Specfem2D(custom_import("solver", "base")):
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
 
-        call_solver(system.mpiexec(), "bin/xmeshfem2D", output="mesher.log")
-        call_solver(system.mpiexec(), "bin/xspecfem2D", output="solver.log")
+        call_solver(PAR.MPIEXEC, "bin/xmeshfem2D", output="mesher.log")
+        call_solver(PAR.MPIEXEC, "bin/xspecfem2D", output="solver.log")
 
         if PAR.FORMAT.upper() == "SU":
             # Work around SPECFEM2D's version dependent file names
@@ -257,8 +257,8 @@ class Specfem2D(custom_import("solver", "base")):
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
 
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xmeshfem2D")
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem2D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D")
 
         if PAR.FORMAT.upper() == "SU":
             # Work around SPECFEM2D's version dependent file names
@@ -286,8 +286,8 @@ class Specfem2D(custom_import("solver", "base")):
             unix.rename(old=".su", new=".su.adj",
                         names=glob(os.path.join("traces", "adj", "*.su")))
 
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xmeshfem2D")
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem2D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D")
 
     def smooth(self, input_path, **kwargs):
         """

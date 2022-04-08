@@ -54,6 +54,12 @@ class Lsf(custom_import("system", "cluster")):
         """
         sf = SeisFlowsPathsParameters(super().required)
 
+        sf.par("MPIEXEC", required=False, default="mpiexec", par_type=str,
+               docstr="Function used to invoke executables on the system. "
+                      "For example 'srun' on SLURM systems, or './' on a "
+                      "workstation. If left blank, will guess based on the "
+                      "system.")
+
         # Define the Parameters required by this module
         sf.par("NTASKMAX", required=False, default=100, par_type=int,
                docstr="Limit on the number of concurrent tasks in array")
@@ -209,12 +215,6 @@ class Lsf(custom_import("system", "cluster")):
         isdone = all(job_finished)
 
         return isdone, jobs
-
-    def mpiexec(self):
-        """
-        Specifies MPI executable used to invoke solver
-        """
-        return PAR.MPIEXEC or "mpiexec"
 
     def _query(self, jobid):
         """

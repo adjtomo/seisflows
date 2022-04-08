@@ -50,6 +50,12 @@ class Slurm(custom_import("system", "cluster")):
         """
         sf = SeisFlowsPathsParameters(super().required)
 
+        sf.par("MPIEXEC", required=False, default="srun -u", par_type=str,
+               docstr="Function used to invoke executables on the system. "
+                      "For example 'srun' on SLURM systems, or './' on a "
+                      "workstation. If left blank, will guess based on the "
+                      "system.")
+
         sf.par("NTASKMAX", required=False, default=100, par_type=int,
                docstr="Limit on the number of concurrent tasks in array")
 
@@ -178,15 +184,6 @@ class Slurm(custom_import("system", "cluster")):
                         sys.exit(-1)
             # Wait a bit to avoid rapidly querying sacct
             time.sleep(5)
-
-    def mpiexec(self):
-        """
-        Specifies MPI executable used to invoke solver
-
-        :rtype: str
-        :return: the MPI exectuabel for a Slurm system
-        """
-        return PAR.MPIEXEC or "srun -u "
 
     def taskid(self):
         """

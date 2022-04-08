@@ -4,13 +4,11 @@ The Cluster class provides the core utilities interaction with HPC systems
 which must be overloaded by subclasses for specific workload managers, or
 specific clusters.
 """
-import os
 import sys
 import logging
-import pickle
 import subprocess
 
-from seisflows3.tools import unix, msg
+from seisflows3.tools import msg
 from seisflows3.config import custom_import, save, SeisFlowsPathsParameters
 
 

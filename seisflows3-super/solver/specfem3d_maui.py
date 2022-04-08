@@ -95,7 +95,7 @@ class Specfem3DMaui(custom_import("solver", "specfem3d")):
         else:
             setpar(key="ATTENUATION ", val=".false.", file="DATA/Par_file")
 
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
 
         # move ASCII .sem? files into appropriate directory
         unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
@@ -146,7 +146,7 @@ class Specfem3DMaui(custom_import("solver", "specfem3d")):
             dst = self.model_databases
             unix.cp(src, dst)
 
-            call_solver(mpiexec=system.mpiexec(),
+            call_solver(mpiexec=PAR.MPIEXEC,
                         executable="bin/xgenerate_databases")
 
         self.export_model(os.path.join(PATH.OUTPUT, model_name))

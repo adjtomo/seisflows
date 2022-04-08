@@ -93,5 +93,4 @@ class Test(custom_import("workflow", "base")):
         time.sleep(3)
         system.run(classname="workflow", method="test_function", single=True)
 
-    def test_preprocess(self):
 

@@ -533,7 +533,7 @@ class Base:
         # Call on xcombine_sem to combine kernels into a single file
         for name in parameters:
             # e.g.: mpiexec ./bin/xcombine_sem alpha_kernel kernel_paths output
-            call_solver(mpiexec=system.mpiexec(),
+            call_solver(mpiexec=PAR.MPIEXEC,
                         executable=" ".join([f"bin/xcombine_sem",
                                              f"{name}_kernel", "kernel_paths",
                                              output_path])
@@ -578,7 +578,7 @@ class Base:
 
         # mpiexec ./bin/xsmooth_sem SMOOTH_H SMOOTH_V name input output use_gpu
         for name in parameters:
-            call_solver(mpiexec=system.mpiexec(),
+            call_solver(mpiexec=PAR.MPIEXEC,
                         executable=" ".join(["bin/xsmooth_sem",
                                              str(span_h), str(span_v),
                                              f"{name}_kernel",

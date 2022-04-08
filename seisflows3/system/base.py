@@ -8,7 +8,6 @@ import os
 import sys
 import pickle
 import logging
-from glob import glob
 
 from seisflows3.tools import unix, msg
 from seisflows3.tools.wrappers import number_fid
@@ -42,13 +41,6 @@ class Base:
         alongside their necessity for the class and their string explanations.
         """
         sf = SeisFlowsPathsParameters()
-
-        # Define the Parameters required by this module
-        sf.par("MPIEXEC", required=False, par_type=str,
-               docstr="Function used to invoke executables on the system. "
-                      "For example 'sbatch' on SLURM systems, or './' on a "
-                      "workstation. If left blank, will guess based on the "
-                      "system.")
 
         sf.par("TITLE", required=False,
                default=os.path.basename(os.path.abspath(".")), par_type=str,
@@ -150,7 +142,7 @@ class Base:
             1) run system setup, creating directory structure,
             2) execute workflow by submitting workflow.main()
         """
-        raise NotImplementedError('Must be implemented by subclass.')
+        raise NotImplementedError("Must be implemented by subclass")
 
     def run(self, classname, method, single=False, **kwargs):
         """
@@ -175,7 +167,7 @@ class Base:
         :rtype: None
         :return: This function is not expected to return anything
         """
-        raise NotImplementedError('Must be implemented by subclass.')
+        raise NotImplementedError("Must be implemented by subclass")
 
     def taskid(self):
         """
@@ -186,7 +178,7 @@ class Base:
         :return: this function is expected to return a unique numerical
             identifier.
         """
-        raise NotImplementedError('Must be implemented by subclass.')
+        raise NotImplementedError("Must be implemented by subclass")
 
     def checkpoint(self, path, classname, method, kwargs):
         """
@@ -194,7 +186,7 @@ class Base:
         be executed in a separate/new/restarted working environment.
 
         :type path: str
-        :param path: path the kwargs
+        :param path: path to save the checkpointed pickle files to
         :type classname: str
         :param classname: name of the class to save
         :type method: str

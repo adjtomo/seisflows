@@ -34,7 +34,7 @@ def ascii(path, filename):
     :type filenames: list
     :param filenames: files to read
     """
-    stream = Stream()
+    st = Stream()
     stats = Stats()
 
     time, data = loadtxt(os.path.join(path, filename)).T
@@ -52,7 +52,7 @@ def ascii(path, filename):
     except:
         pass
 
-    stream.append(Trace(data=data, header=stats))
+    st.append(Trace(data=data, header=stats))
 
-    return stream
+    return st
 

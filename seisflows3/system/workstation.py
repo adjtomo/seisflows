@@ -28,7 +28,12 @@ class Workstation(custom_import("system", "base")):
         """
         sf = SeisFlowsPathsParameters(super().required)
 
-        # Define the Parameters required by this module
+        sf.par("MPIEXEC", required=False, default=None, par_type=str,
+               docstr="Function used to invoke executables on the system. "
+                      "For example 'srun' on SLURM systems, or './' on a "
+                      "workstation. If left blank, will guess based on the "
+                      "system.")
+
         sf.par("NTASK", required=False, default=1, par_type=int,
                docstr="Number of separate, individual tasks. Also equal to "
                       "the number of desired sources in workflow")
@@ -54,9 +59,12 @@ class Workstation(custom_import("system", "base")):
         workflow.checkpoint()
         workflow.main()
 
-    def run(self, classname, method, single=False, *args, **kwargs):
+    def run(self, classname, method, single=False, **kwargs):
         """
         Executes task multiple times in serial.
+
+        .. note::
+            kwargs will be passed to the underlying `method` that is called
 
         :type classname: str
         :param classname: the class to run
@@ -69,20 +77,26 @@ class Workstation(custom_import("system", "base")):
             defined, such that the job is submitted as a single-core job to
             the system.
         """
-        unix.mkdir(PATH.SYSTEM)
+        self.checkpoint(PATH.OUTPUT, classname, method, kwargs)
 
-        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
+        # Allows dynamic retrieval of any function from within package, e.g.,
+        # <bound method Base.eval_func of <seisflows3.solver.specfem2d...
+        class_module = sys.modules[f"seisflows_{classname}"]
+        function = getattr(class_module, method)
 
         if single:
-            os.environ["SEISFLOWS_TASKID"] = "0"
-            func = getattr(__import__("seisflows_" + classname), method)
-            func(**kwargs)
+            ntasks = 1
         else:
-            for taskid in range(PAR.NTASK):
-                os.environ["SEISFLOWS_TASKID"] = str(taskid)
-                self.progress(taskid)
-                func = getattr(__import__("seisflows_" + classname), method)
-                func(**kwargs)
+            ntasks = PAR.NTASK
+
+        for taskid in range(ntasks):
+            # os environment variables can only be strings, these need to be
+            # converted back to integers by system.taskid()
+            os.environ["SEISFLOWS_TASKID"] = str(taskid)
+            if taskid == 0:
+                self.logger.info(f"running task {classname}_{method} "
+                                 f"{PAR.NTASK} times")
+            function(**kwargs)
 
     def taskid(self):
         """
@@ -102,22 +116,3 @@ class Workstation(custom_import("system", "base")):
                           header="warning", border="="))
             sftaskid = 0
         return int(sftaskid)
-
-    def mpiexec(self):
-        """
-        Specifies MPI executable used to invoke solver
-
-        .. note::
-            For serial runs, MPIEXEC should be './' This is enforced in 
-            tools.specfem.call_solver, which is the main function that uses
-            PAR.MPIEXEC
-
-        """
-        return PAR.MPIEXEC
-
-    def progress(self, taskid):
-        """
-        Provides status update by printing the current task being performed
-        """
-        if PAR.NTASK > 1:
-            print(f"task {taskid + 1:02d} of {PAR.NTASK:02d}")
