@@ -164,8 +164,8 @@ class Base:
         fxnames = [func.__name__ for func in flow]
 
         # Default values which dictate that flow will execute in its entirety
-        start_idx = 0
-        stop_idx = -1
+        start_idx = None
+        stop_idx = None
 
         # Overwrite start_idx if RESUME_FROM given, exit condition if no match
         if PAR.RESUME_FROM:
@@ -189,8 +189,8 @@ class Base:
         if PAR.STOP_AFTER:
             try:
                 stop_idx = fxnames.index(PAR.STOP_AFTER)
-                stop_idx += 1  # !!! Increment to stop AFTER, not before
                 fx_name = flow[stop_idx].__name__
+                stop_idx += 1  # increment to stop AFTER, due to python indexing
                 self.logger.info(
                     msg.mnr(f"WORKFLOW WILL STOP AFTER FUNC: '{fx_name}'")
                 )
@@ -201,6 +201,18 @@ class Base:
                             f"matches one of the functions listed out in "
                             f"`seisflows print flow`.", header="error",
                             border="=")
+                )
+                sys.exit(-1)
+
+        # Make sure stop after doesn't come before resume_from, otherwise none
+        # of the flow will execute
+        if PAR.STOP_AFTER and PAR.RESUME_FROM:
+            if stop_idx <= start_idx:
+                self.logger.info(
+                    msg.cli(f"PAR.STOP_AFTER=='{PAR.STOP_AFTER}' is called "
+                            f"before PAR.RESUME_FROM=='{PAR.RESUME_FROM}' in "
+                            f"the FLOW functions. Please adjust accordingly "
+                            f"and rerun.", header="error", border="=")
                 )
                 sys.exit(-1)
 

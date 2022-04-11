@@ -209,6 +209,14 @@ class Pyatoa(custom_import("preprocess", "base")):
                                         fix_windows=PAR.FIX_WINDOWS,
                                         event_id_prefix=PAR.SOURCE_PREFIX)
 
+        if misfit is None:
+            self.logger.warning(
+                f"Event {source_name} returned no misfit, you may want to "
+                f"check waveform comparison parameters or discard this event "
+                f"completely to avoid wasting computational resources"
+            )
+            misfit = 0.
+
         # Event misfit defined by Tape et al. (2010) written to solver dir.
         self.write_residuals(path=cwd, scaled_misfit=misfit)
 

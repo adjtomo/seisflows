@@ -316,10 +316,20 @@ class Base:
         :param export_traces: if True, save traces to OUTPUT.
             if False, discard traces
         """
+        unix.cd(self.cwd)
         if self.taskid == 0:
             self.logger.debug("running adjoint simulations")
 
-        unix.cd(self.cwd)
+        # Check to make sure that preprocessing module created adjoint traces
+        adjoint_traces_wildcard = os.path.join("traces", "adj", "*")
+        if not glob(adjoint_traces_wildcard):
+            print(msg.cli(f"Event {self.source_name} has no adjoint traces, "
+                          f"which will lead to an external solver error. "
+                          f"Please check that solver.eval_func() executed "
+                          f"properly", border="=", header="solver error")
+                  )
+            sys.exit(-1)
+
         self.adjoint()
         self.export_kernels(path)
 
