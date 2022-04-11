@@ -17,7 +17,6 @@ seisflows3/optimize/LBFGS.py
 seisflows3/optimize/NLCG.py
 seisflows3/optimize/__init__.py
 seisflows3/optimize/base.py
-seisflows3/optimize/steepest_descent.py
 seisflows3/plugins/__init__.py
 seisflows3/plugins/line_search/__init__.py
 seisflows3/plugins/line_search/backtrack.py
@@ -43,7 +42,6 @@ seisflows3/postprocess/__init__.py
 seisflows3/postprocess/base.py
 seisflows3/preprocess/__init__.py
 seisflows3/preprocess/base.py
-seisflows3/preprocess/default.py
 seisflows3/preprocess/pyatoa.py
 seisflows3/solver/__init__.py
 seisflows3/solver/base.py

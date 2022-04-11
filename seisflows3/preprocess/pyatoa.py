@@ -8,10 +8,12 @@ import os
 import sys
 import logging
 import numpy as np
+
 import pyatoa
 
 from glob import glob
 from pyatoa.utils.images import merge_pdfs
+
 from seisflows3.tools import unix, msg
 from seisflows3.config import custom_import
 from seisflows3.config import SeisFlowsPathsParameters
@@ -136,14 +138,13 @@ class Pyatoa(custom_import("preprocess", "base")):
             assert(required_parameter in PAR), \
                 f"Pyatoa requires {required_parameter}"
 
-        if PAR.FORMAT != "ascii":
-            raise ValueError("Pyatoa preprocess currently only works with "
-                             "format 'ascii'")
+        assert(PAR.FORMAT.upper() == "ASCII"), \
+            "Pyatoa preprocess requires PAR.FORMAT=='ASCII'"
 
-        if PAR.DT * PAR.NT >= PAR.START_PAD + PAR.END_PAD:
-            raise ValueError("Pyatoa preprocess parameters START_PAD and "
-                             "END_PAD will not provide long enough obs."
-                             "traces to match the length of synthetics")
+        assert((PAR.DT * PAR.NT) >= (PAR.START_PAD + PAR.END_PAD)), \
+            ("Pyatoa preprocess must have (PAR.START_PAD + PAR.END_PAD) >= "
+             "(PAR.DT * PAR.NT), current values will not provide sufficiently"
+             "long data traces")
 
     def setup(self):
         """

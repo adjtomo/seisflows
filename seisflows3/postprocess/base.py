@@ -110,10 +110,7 @@ class Base:
 
         # Run postprocessing as job on system as it's computationally intensive
         system.run("postprocess", "process_kernels", single=True,
-                   path=path_kernels, parameters=solver.parameters,
-                   logger=self.logger,
-                   scale_tasktime=PAR.TASKTIME_SMOOTH,
-                   )
+                   path=path_kernels, logger=self.logger)
 
         # Access the gradient information stored in the kernel summation
         gradient = solver.load(path_kernels_sum, suffix="_kernel")
@@ -136,34 +133,32 @@ class Base:
             # masking is ad hoc, preconditioning is a change of variables;
             # For more info, see Modrak & Tromp 2016 GJI
             solver.save(solver.split(gradient), path=path_grad_nomask,
-                        parameters=solver.parameters, suffix="_kernel")
+                        suffix="_kernel")
 
-            solver.save(solver.split(gradient*mask), path=path_grad,
-                        parameters=solver.parameters, suffix="_kernel")
+            solver.save(solver.split(gradient * mask), path=path_grad,
+                        suffix="_kernel")
         else:
             solver.save(solver.split(gradient), path=path_grad,
-                        parameters=solver.parameters, suffix="_kernel")
+                        suffix="_kernel")
 
     @staticmethod
-    def process_kernels(path, parameters, logger):
+    def process_kernels(path, logger):
         """
         Sums kernels from individual sources, with optional smoothing
 
-        Private method because this function needs to be run on system, i.e.,
-        called by system.run(single=True)
+        .. note::
+            This function needs to be run on system, i.e., called by
+            system.run(single=True)
 
         :type path: str
-        :param path: directory containing sensitivity kernels
-        :type parameters: list
-        :param parameters: solver-defined list of material parameters 
-            e.g. ['vp','vs']. This is ideally defined externally by
-            PAR.MATERIALS
+        :param path: directory containing sensitivity kernels in the scratch
+            directory
         :type logger: Logger
         :param logger: Class-specific logging module, log statements pushed
             from this logger will be tagged by its specific module/classname
         """
         if not os.path.exists(path):
-            print(msg.cli("Gradient path does in postprocess.process_kernels "
+            print(msg.cli("Gradient path in postprocess.process_kernels "
                           "does not exist but should",
                           items=[path], header="error"))
             sys.exit(-1)
@@ -175,18 +170,15 @@ class Base:
         if (PAR.SMOOTH_H > 0) or (PAR.SMOOTH_V > 0):
             logger.debug(f"saving unsmoothed and summed kernels to:\n"
                          f"{path_sum_nosmooth}")
-            solver.combine(input_path=path, output_path=path_sum_nosmooth,
-                           parameters=parameters)
+            solver.combine(input_path=path, output_path=path_sum_nosmooth)
 
             logger.info(f"smoothing gradient: H={PAR.SMOOTH_H}m, "
                         f"V={PAR.SMOOTH_V}m")
             logger.debug(f"saving smoothed kernels to:\n{path_sum}")
             solver.smooth(input_path=path_sum_nosmooth, output_path=path_sum, 
-                          parameters=parameters,
                           span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
 
         # Combine all the input kernels, generating the unscaled gradient
         else:
             logger.debug(f"saving summed kernels to:\n{path_sum}")
-            solver.combine(input_path=path, output_path=path_sum,
-                           parameters=parameters)
+            solver.combine(input_path=path, output_path=path_sum)

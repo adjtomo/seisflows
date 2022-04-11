@@ -18,6 +18,7 @@ import json
 import types
 import pickle
 import copyreg
+import traceback
 from importlib import import_module
 
 from seisflows3 import logger
@@ -109,8 +110,9 @@ def init_seisflows(check=True):
             except AssertionError as e:
                 errors.append(f"{name}: {e}")
         if errors:
-            print(msg.cli("Module check failed with:", items=errors,
-                          header="module check error", border="="))
+            print(msg.cli("seisflows.config module check failed with:",
+                          items=errors, header="module check error",
+                          border="="))
             sys.exit(-1)
 
     # Bare minimum module requirements for SeisFlows3
@@ -443,8 +445,16 @@ def custom_import(name=None, module=None, classname=None):
                       header="custom import error", border="=")
               )
         sys.exit(-1)
-    # Import module
-    module = import_module(full_dotted_name)
+
+    # If importing the module doesn't work, throw an error. Usually this happens
+    # when am external dependency isn't available, e.g., Pyatoa
+    try:
+        module = import_module(full_dotted_name)
+    except Exception as e:
+        print(msg.cli(f"Module could not be imported {full_dotted_name}",
+                      items=[str(e)], header="custom import error", border="="))
+        print(traceback.print_exc())
+        sys.exit(-1)
 
     # Extract classname from module if possible
     try:

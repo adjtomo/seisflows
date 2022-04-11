@@ -262,9 +262,10 @@ class Base:
                 ext = os.path.splitext(filename)[-1]
                 filename_out = filename.replace(ext, ".adj")
             elif PAR.FORMAT.upper() == "SU":
+                # TODO implement this
                 raise NotImplementedError
 
-            self.write_adjoint_traces(path=os.path.join(cwd, "traces", "adj"),
+            self._write_adjoint_traces(path=os.path.join(cwd, "traces", "adj"),
                                       syn=syn, obs=obs, filename=filename_out)
 
         # Copy over the STATIONS file to STATIONS_ADJOINT required by Specfem

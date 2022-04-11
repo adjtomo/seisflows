@@ -408,7 +408,7 @@ class Base:
 
         return load_dict
 
-    def save(self, save_dict, path, parameters=None, prefix='', suffix=''):
+    def save(self, save_dict, path, parameters=None, prefix="", suffix=""):
         """ 
         Solver I/O: Saves SPECFEM2D/3D models or kernels
 
@@ -531,7 +531,7 @@ class Base:
             )
 
         # Call on xcombine_sem to combine kernels into a single file
-        for name in parameters:
+        for name in self.parameters:
             # e.g.: mpiexec ./bin/xcombine_sem alpha_kernel kernel_paths output
             call_solver(mpiexec=PAR.MPIEXEC,
                         executable=" ".join([f"bin/xcombine_sem",

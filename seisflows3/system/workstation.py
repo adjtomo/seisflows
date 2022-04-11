@@ -51,11 +51,12 @@ class Workstation(custom_import("system", "base")):
         if validate:
             self.required.validate()
 
-    def submit(self, workflow):
+    def submit(self):
         """
         Submits the main workflow job
         """
         self.setup()
+        workflow = sys.modules["seisflows_workflow"]
         workflow.checkpoint()
         workflow.main()
 
