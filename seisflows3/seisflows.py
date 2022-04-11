@@ -802,10 +802,8 @@ class SeisFlows:
         self._load_modules()
         self._config_logging()
 
-        workflow = sys.modules["seisflows_workflow"]
         system = sys.modules["seisflows_system"]
-
-        system.submit(workflow)
+        system.submit()
 
     def restart(self, force=False, **kwargs):
         """

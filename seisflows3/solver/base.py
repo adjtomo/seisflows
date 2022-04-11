@@ -770,7 +770,7 @@ class Base:
             mainsolver = os.path.join(PATH.SOLVER, "mainsolver")
             # Symlink taskid_0 as mainsolver in solver directory for convenience
             if not os.path.exists(mainsolver):
-                unix.ln(self.source_name, mainsolver)
+                unix.ln(self.cwd, mainsolver)
                 self.logger.debug(f"source {self.source_name} symlinked as "
                                   f"mainsolver")
         else:

@@ -76,7 +76,8 @@ def call_solver(mpiexec, executable, output="solver.log"):
                       f"Check 'scratch/solver/mainsolver/{output}' for the "
                       f"solvers stdout log message. "
                       f"The failing command and error message are: ",
-                      items=[exc_cmd, e], header="external solver error",
+                      items=[f"exc: {exc_cmd}", f"err: {e}"],
+                      header="external solver error",
                       border="=")
               )
         sys.exit(-1)
