@@ -19,7 +19,7 @@ import sys
 import argparse
 
 from seisflows3.tools import unix
-from seisflows3.config import load
+from seisflows3.config import load, config_logger
 
 
 def parse_args():
@@ -47,6 +47,11 @@ if __name__ == '__main__':
     # Ensure that the two main modules are loaded
     workflow = sys.modules["seisflows_workflow"]
     system = sys.modules["seisflows_system"]
+
+    # Set up logging on the compute system
+    PAR = sys.modules["seisflows_parameters"]
+    PATH = sys.modules["seisflows_paths"]
+    config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE)
 
     # Execute MASTER JOB as workflow.main()
     workflow.main()

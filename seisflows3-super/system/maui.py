@@ -112,8 +112,8 @@ class Maui(custom_import("system", "slurm")):
             f"--cluster={PAR.ANCIL_CLUSTER}",
             f"--partition={PAR.ANCIL_PARTITION}",
             f"--job-name={PAR.TITLE}",
-            f"--output=output-%A.txt",
-            f"--error=error-%A.txt",
+            f"--output={self.output_log}",
+            f"--error={self.error_log}",
             f"--ntasks=1",
             f"--cpus-per-task=1",
             f"--time={PAR.WALLTIME:d}",
@@ -156,7 +156,7 @@ class Maui(custom_import("system", "slurm")):
             f"--output {PATH.OUTPUT}",
             f"--classname {classname}",
             f"--funcname {method}",
-            f"--environment {PAR.ENVIRONS}"
+            f"--environment {PAR.ENVIRONS or ''}"
         ])
         self.logger.debug(maui_run_call)
         super().run(classname, method, single, run_call=maui_run_call, **kwargs)
@@ -186,7 +186,7 @@ class Maui(custom_import("system", "slurm")):
             f"--output {PATH.OUTPUT}",
             f"--classname {classname}",
             f"--funcname {method}",
-            f"--environment {PAR.ENVIRONS}"
+            f"--environment {PAR.ENVIRONS or ''}"
         ])
         self.logger.debug(ancil_run_call)
         super().run(classname, method, single=False, run_call=ancil_run_call,

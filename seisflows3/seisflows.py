@@ -31,8 +31,8 @@ from seisflows3.tools import unix, msg
 from seisflows3.tools.specfem import (getpar, setpar, getpar_vel_model,
                                       setpar_vel_model)
 from seisflows3.tools.wrappers import loadyaml
-from seisflows3.config import (init_seisflows, format_paths, Dict,
-                               custom_import, NAMES, PACKAGES, ROOT_DIR,
+from seisflows3.config import (init_seisflows, format_paths, config_logger,
+                               Dict, custom_import, NAMES, PACKAGES, ROOT_DIR,
                                CFGPATHS)
 
 
@@ -393,7 +393,7 @@ class SeisFlows:
         """
         Load the paths and parameters from file into sys.modules, set the
         default parameters if they are missing from the file, and expand all
-        paths to absolute pathnames.
+        paths to absolute pathnames. Also configure the logger.
 
         .. note::
             This is ideally the FIRST thing that happens everytime SeisFlows3
@@ -459,76 +459,19 @@ class SeisFlows:
             if check != "y":
                 sys.exit(-1)
 
+        # Expand all paths to be absolute on the filesystem
+        paths = format_paths(paths)
+
+        # Configure the logging module to print to stdout and write to file
+        config_logger(level=parameters["LOG_LEVEL"], 
+                      verbose=parameters["VERBOSE"], 
+                      filename=CFGPATHS.LOGFILE)
+
         # Register parameters to sys, ensure they meet standards of the package
         sys.modules["seisflows_parameters"] = Dict(parameters)
-
-        # Register paths to sys, expand to relative paths to absolute
-        paths = format_paths(paths)
         sys.modules["seisflows_paths"] = Dict(paths)
-
         self._paths = paths
         self._parameters = parameters
-
-    def _config_logging(self, level="DEBUG", filename=CFGPATHS.LOGFILE,
-                        filemode="a", verbose=True):
-        """
-        Explicitely configure the logging module with some parameters defined
-        by the user in the System module. Instantiates a stream logger to write
-        to stdout, and a file logger which writes to `filename`. Two levels of
-        verbosity and three levels of log messages allow the user to determine
-        how much output they want to see.
-
-        :type level: str
-        :param level: log level to be passed to logger, available are
-            'CRITICAL', 'WARNING', 'INFO', 'DEBUG'
-        :type filename: str
-        :param filename: name of the log file to write log statements to
-        :type filemode: str
-        :param filemode: method for opening the log file. defaults to append 'a'
-        :type verbose: bool
-        :param verbose: if True, writes a more detailed log message stating the
-            type of log (warning, info, debug), and the class and method which
-            called the logger (e.g., seisflows3.solver.specfem2d.save()). This
-            is much more useful for debugging but clutters up the log file.
-            if False, only write the time and message in the log statement.
-        """
-        PAR = sys.modules["seisflows_parameters"]
-        PATH = sys.modules["seisflows_paths"]
-
-        # Try to overload default parameters with user-defined. This will not
-        # be possible if we haven't started the workflow yet, at which point
-        # the default values will be used
-        try:
-            level = PAR.LOG_LEVEL
-            verbose = PAR.VERBOSE
-            filename = PATH.LOG
-        except KeyError:
-            pass
-
-        # Two levels of verbosity on log level, triggered with PAR.VERBOSE
-        if verbose:
-            # More verbose logging statement with levelname and func name
-            fmt_str = (
-                "%(asctime)s | %(levelname)-5s | %(name)s.%(funcName)s()\n"
-                "> %(message)s"
-            )
-        else:
-            # Clean logging statement with only time and message
-            fmt_str = "%(asctime)s | %(message)s"
-
-        # Instantiate logger during _register() as we now have user-defined pars
-        logger.setLevel(level)
-        formatter = logging.Formatter(fmt_str, datefmt="%Y-%m-%d %H:%M:%S")
-
-        # Stream handler to print log statements to stdout
-        st_handler = logging.StreamHandler()
-        st_handler.setFormatter(formatter)
-        logger.addHandler(st_handler)
-
-        # File handler to print log statements to text file `filename`
-        file_handler = logging.FileHandler(filename, filemode)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
 
     def _load_modules(self):
         """
@@ -711,7 +654,7 @@ class SeisFlows:
             self.par(parameter="stop_after", value=stop_after, skip_print=True)
 
         self._register(force=force)
-        self._config_logging()
+        config_logger()
 
         # A list of paths that need to exist if provided by user
         # !!! TODO Move this required paths somewhere more visible? config?
@@ -800,7 +743,6 @@ class SeisFlows:
 
         self._register(force=force)
         self._load_modules()
-        self._config_logging()
 
         system = sys.modules["seisflows_system"]
         system.submit()
@@ -825,7 +767,6 @@ class SeisFlows:
         """
         self._register(force=True)
         self._load_modules()
-        self._config_logging()
 
         # Distribute modules to common names for easy access during debug mode
         PATH = sys.modules["seisflows_paths"]

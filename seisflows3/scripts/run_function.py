@@ -81,7 +81,7 @@ if __name__ == '__main__':
     # Files will be something like: 'solver_eval_func.p'
     kwargs_fid = f"{args.classname}_{args.funcname}.p"
     kwargs_path = os.path.join(args.output, "kwargs", kwargs_fid)
-    with open(kwargs_fid, "rb") as f:
+    with open(kwargs_path, "rb") as f:
         kwargs = pickle.load(f)
 
     # Get the actual function so we can evaluate it

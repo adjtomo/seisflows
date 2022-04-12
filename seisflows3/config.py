@@ -18,6 +18,7 @@ import json
 import types
 import pickle
 import copyreg
+import logging
 import traceback
 from importlib import import_module
 
@@ -182,6 +183,56 @@ def flush():
         mod_name = f"seisflows_{name}"
         if mod_name in sys.modules:
             del sys.modules[mod_name]
+
+
+def config_logger(level="DEBUG", filename=CFGPATHS["LOGFILE"],
+                  filemode="a", verbose=True):
+    """
+    Explicitely configure the logging module with some parameters defined
+    by the user in the System module. Instantiates a stream logger to write
+    to stdout, and a file logger which writes to `filename`. Two levels of
+    verbosity and three levels of log messages allow the user to determine
+    how much output they want to see.
+
+    :type level: str
+    :param level: log level to be passed to logger, available are
+        'CRITICAL', 'WARNING', 'INFO', 'DEBUG'
+    :type filename: str
+    :param filename: name of the log file to write log statements to
+    :type filemode: str
+    :param filemode: method for opening the log file. defaults to append 'a'
+    :type verbose: bool
+    :param verbose: if True, writes a more detailed log message stating the
+        type of log (warning, info, debug), and the class and method which
+        called the logger (e.g., seisflows3.solver.specfem2d.save()). This
+        is much more useful for debugging but clutters up the log file.
+        if False, only write the time and message in the log statement.
+    """
+    # Two levels of verbosity on log level, triggered with PAR.VERBOSE
+    if verbose:
+        # More verbose logging statement with levelname and func name
+        fmt_str = (
+            "%(asctime)s | %(levelname)-5s | %(name)s.%(funcName)s()\n"
+            "> %(message)s"
+        )
+    else:
+        # Clean logging statement with only time and message
+        fmt_str = "%(asctime)s | %(message)s"
+
+    # Instantiate logger during _register() as we now have user-defined pars
+    logger.setLevel(level)
+    formatter = logging.Formatter(fmt_str, datefmt="%Y-%m-%d %H:%M:%S")
+
+    # Stream handler to print log statements to stdout
+    st_handler = logging.StreamHandler(sys.stdout)
+    st_handler.setFormatter(formatter)
+    logger.addHandler(st_handler)
+
+    # File handler to print log statements to text file `filename`
+    file_handler = logging.FileHandler(filename, filemode)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
 
 class Dict(object):
     """
