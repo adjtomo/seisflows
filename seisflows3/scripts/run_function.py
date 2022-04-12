@@ -21,7 +21,6 @@ import pickle
 import argparse
 
 from seisflows3.config import load
-from seisflows3.tools.wrappers import loadjson, loadobj
 
 
 def parse_args():

@@ -84,8 +84,8 @@ class Slurm(custom_import("system", "cluster")):
                 f"sbatch",
                 f"{PAR.SLURMARGS or ''}",
                 f"--job-name={PAR.TITLE}",
-                f"--output={self.output_log}-%A.log",
-                f"--error={self.error_log}-%A.log",
+                f"--output={self.output_log}",
+                f"--error={self.error_log}",
                 f"--ntasks-per-node={PAR.NODESIZE}",
                 f"--nodes=1",
                 f"--time={PAR.WALLTIME:d}",
@@ -289,8 +289,8 @@ class Slurm(custom_import("system", "cluster")):
         :type job: str
         :param job: job id to query
         """
-        cmd = "sacct -nL -o jobid,state -j {}"
-        stdout = subprocess.run(cmd.format(job_id),stdout=subprocess.PIPE,
+        cmd = f"sacct -nL -o jobid,state -j {job_id}"
+        stdout = subprocess.run(cmd, stdout=subprocess.PIPE,
                                 text=True, shell=True).stdout
 
         # Undefined status will be retured if we cannot match the job id with
