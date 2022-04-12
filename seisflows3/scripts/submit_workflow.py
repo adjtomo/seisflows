@@ -50,7 +50,6 @@ if __name__ == '__main__':
 
     # Set up logging on the compute system
     PAR = sys.modules["seisflows_parameters"]
-    PATH = sys.modules["seisflows_paths"]
     config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE)
 
     # Execute MASTER JOB as workflow.main()

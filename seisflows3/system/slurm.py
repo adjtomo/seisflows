@@ -169,14 +169,14 @@ class Slurm(custom_import("system", "cluster")):
         # Contiously check for job completion on ALL running array jobs
         is_done = False
         count = 0
+        bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY"]
         while not is_done:
             # Wait a bit to avoid rapidly querying sacct
             time.sleep(5)
             is_done, states = self.job_array_status(job_ids)
-
+            print(states)
             # EXIT CONDITION: if any of the jobs provide job failure codes
             if not is_done:
-                bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY"]
                 for i, state in enumerate(states):
                     if state in bad_states:
                         print(msg.cli("Stopping workflow for {state} job",
@@ -278,7 +278,7 @@ class Slurm(custom_import("system", "cluster")):
             states.append(state.upper())
 
         # All array jobs must be completed to return is_done == True
-        is_done = bool([state.upper() == "COMPLETED" for state in states])
+        is_done = all([state.upper() == "COMPLETED" for state in states])
 
         return is_done, states
 
@@ -299,11 +299,12 @@ class Slurm(custom_import("system", "cluster")):
         .. note::
             -L flag in sacct queries all available clusters, not just the
             cluster that ran the `sacct` call
+            -X supress the .batch and .extern jobname
 
         :type job: str
         :param job: job id to query
         """
-        cmd = f"sacct -nL -o jobid,state -j {job_id}"
+        cmd = f"sacct -nLX -o jobid,state -j {job_id}"
         stdout = subprocess.run(cmd, stdout=subprocess.PIPE,
                                 text=True, shell=True).stdout
 

@@ -20,7 +20,7 @@ import sys
 import pickle
 import argparse
 
-from seisflows3.config import load
+from seisflows3.config import load, config_logger
 
 
 def parse_args():
@@ -83,6 +83,10 @@ if __name__ == '__main__':
     kwargs_path = os.path.join(args.output, "kwargs", kwargs_fid)
     with open(kwargs_path, "rb") as f:
         kwargs = pickle.load(f)
+
+    # Configure the CPU-dependent logger
+    PAR = sys.modules["seisflows_parameters"]
+    config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE)
 
     # Get the actual function so we can evaluate it
     func = getattr(sys.modules[f"seisflows_{args.classname}"], args.funcname)
