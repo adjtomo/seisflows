@@ -140,7 +140,7 @@ class Slurm(custom_import("system", "cluster")):
                 f"--output {PATH.OUTPUT}",
                 f"--classname {classname}",
                 f"--funcname {method}",
-                f"--environment {PAR.ENVIRONS}"
+                f"--environment {PAR.ENVIRONS or ''}"
             ])
             self.logger.debug(run_call)
 
@@ -155,9 +155,12 @@ class Slurm(custom_import("system", "cluster")):
                     run_call.replace(part, "--array=0-0")
                 elif "--ntasks" in part:
                     run_call.replace(part, "--ntasks=1")
-            # TODO Can this be cleaner, it's assumed that environment will be
-            # TODO the last entry but that might not always be the case?
-            run_call += ",SEISFLOWS_TASKID=0"
+            # Append taskid to environment variable, deal with the case where
+            # PAR.ENVIRONS is an empty string
+            task_id_str = "SEISFLOWS_TASKID=0"
+            if not run_call.strip().endswith("--environment"):
+                task_id_str = f",{task_id_str}"  # appending to the list of vars
+            run_call += task_id_str
             self.logger.debug(run_call)
 
         # The standard response from SLURM when submitting jobs
@@ -174,16 +177,15 @@ class Slurm(custom_import("system", "cluster")):
             # Wait a bit to avoid rapidly querying sacct
             time.sleep(5)
             is_done, states = self.job_array_status(job_ids)
-            print(states)
             # EXIT CONDITION: if any of the jobs provide job failure codes
             if not is_done:
                 for i, state in enumerate(states):
                     if state in bad_states:
-                        print(msg.cli("Stopping workflow for {state} job",
+                        print(msg.cli(f"Stopping workflow for {state} job",
                                       items=[f"TASK:    {classname}.{method}",
                                              f"TASK ID: {job_ids[i]}",
                                              f"SBATCH:  {run_call}"],
-                                      header="error", border="="))
+                                      header="slurm run error", border="="))
                         sys.exit(-1)    
             # WAIT CONDITION: if sacct is not working, we'll get stuck in a loop
             if "UNDEFINED" in states:
@@ -207,6 +209,7 @@ class Slurm(custom_import("system", "cluster")):
         """
         # If not set, this environment variable will return None
         sftaskid = os.getenv("SEISFLOWS_TASKID")
+
 
         if sftaskid is None:
             sftaskid = os.getenv("SLURM_ARRAY_TASK_ID")

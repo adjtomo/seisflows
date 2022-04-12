@@ -23,6 +23,7 @@ import argparse
 from seisflows3.config import load, config_logger
 
 
+
 def parse_args():
     """
     Get command line arguments
@@ -54,15 +55,29 @@ def parse_args():
 
 def export(myenv):
     """
-    Exports comma delimited list of environment variables
+    Exports comma delimited list of environment variables also allows deleting 
+    environment variables by providing VARNAME with no corresponding value 
 
-    e.g. VARNAME1=value1,VARNAME2=value2
+    e.g. VARNAME1=value1,VARNAME2=value2,VARNAME3
+    will add VARNAME1 and VARNAME2 to the environment with corresponding values, 
+    and remove VARNAME3 from the environment
+
+    .. note::
+        The ability to delete environment variables came from the Maui upgrade
+        to Slurm 21.08, which enforced mutually exclusivity of --mem-per-cpu 
+        and --mem-per-node, which are both defined on cross-cluster submissions.
+        We needed a mechanism to remove one of these
 
     :type myenv: str
-    :param myevn: the system environment to take variables from
+    :param myenv: the system environment to take variables from
     """
     for item in myenv.split(","):
-        os.environ.update([item.split("=")])
+        try:
+            key, val = item.split("=") 
+            os.environ[key] = val
+        # Variables to be deleted will not split on '=', throwing the ValueError
+        except ValueError:
+            del os.environ[item]
 
 
 if __name__ == '__main__':

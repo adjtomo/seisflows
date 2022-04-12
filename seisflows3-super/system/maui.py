@@ -105,9 +105,13 @@ class Maui(custom_import("system", "slurm")):
         .. note::
             The master job must be run on maui_ancil because Maui does
             not have the ability to run the command "sacct"
+
+        .. note::
+            We do not place SLURMARGS into the sbatch command to avoid the
+            export=None which will not propagate the conda environment
         """
         maui_submit_call = " ".join([
-            f"sbatch {PAR.SLURMARGS or ''}",
+            f"sbatch",
             f"--account={PAR.ACCOUNT}",
             f"--cluster={PAR.ANCIL_CLUSTER}",
             f"--partition={PAR.ANCIL_PARTITION}",

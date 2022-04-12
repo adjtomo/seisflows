@@ -379,8 +379,12 @@ class Specfem2D(custom_import("solver", "base")):
             filenames = glob(self.data_wildcard)
 
         if not filenames:
-            from seisflows3.tools.msg import DataFilenamesError
-            print(DataFilenamesError)
+            print(msg.cli("The property solver.data_filenames, used to search "
+                          "for traces in 'scratch/solver/*/traces' is empty "
+                          "and should not be. Please check solver parameters: ",
+                          items=[f"data_wildcard: {self.data_wildcard}"],
+                          header="data filenames error", border="=")
+                  )
             sys.exit(-1)
 
         return filenames

@@ -504,17 +504,6 @@ PREPROCESSING ERROR
 """
 
 
-DataFilenamesError = """
-
-    ERROR: The property solver.data_filenames, which is used to search for 
-    trace data in ./scratch/solver/*/traces is empty and should not be. 
-    Please check solver.data_filenames and solver.data_wildcard against filenames
-    in the traces/ directory.
-    
-
-"""
-
-
 def check(cls):
     """
     Standardized log message sent from the check() function that is required
