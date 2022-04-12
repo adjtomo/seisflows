@@ -1,33 +1,32 @@
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# //////////////////////////////////////////////////////////////////////////////
 #
-#                 Seisflows YAML Parameter File and Path Input
+#                        SeisFlows3 YAML Parameter File
 #
-#  For NoneType, set variables to `None` or `null`. For infinity, set to `inf`
+# //////////////////////////////////////////////////////////////////////////////
 #
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Modules correspond to the structure of the source code, and determine
+# SeisFlows3' behavior at runtime. Each module requires its own sub-parameters.
 #
-# These modules correspond to the structure of the source code, and determine
-# SeisFlows' behavior at runtime. Check the source code directory for available 
-# module names. Each module will require its own set of sub parameters. 
-#
-# To fill this parameter file with docstrings and default values, run:
-#
-# > seisflows configure
+# .. rubric::
+#   - To determine available options for modules listed below, run:
+#       > seisflows print module
+#   - To auto-fill with docstrings and default values (recommended), run:
+#       > seisflows configure
+#   - To set values as NoneType, use: null
+#   - To set values as infinity, use: inf
 #
 #                                    MODULES
-#                                    -------
-#
-# WORKFLOW:    The method for running SeisFlows. Equivalent to main()
-# SOLVER:      External numerical solver to use for waveform simulations.
-# SYSTEM:      Computer architecture of the system being used to run SeisFlows
-# OPTIMIZE:    Optimization algorithm for the inverse problem
-# PREPROCESS:  Preprocessing schema for waveform data
-# POSTPROCESS: Postprocessing schema for kernels and gradients
-#
+#                                    ///////
+# WORKFLOW (str):    The method for running SeisFlows3; equivalent to main()
+# SOLVER (str):      External numerical solver to use for waveform simulations
+# SYSTEM (str):      Computer architecture of the system being used
+# OPTIMIZE (str):    Optimization algorithm for the inverse problem
+# PREPROCESS (str):  Preprocessing schema for waveform data
+# POSTPROCESS (str): Postprocessing schema for kernels and gradients
 # ==============================================================================
 WORKFLOW: inversion
-SOLVER: specfem3d
-SYSTEM: serial
+SOLVER: specfem2d
+SYSTEM: workstation
 OPTIMIZE: LBFGS 
-PREPROCESS: default
+PREPROCESS: base
 POSTPROCESS: base

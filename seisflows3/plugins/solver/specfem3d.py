@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Plugins used for the numerical solver SPECFEM3D_CARTESIAN
 """
 import os
-from seisflows3.tools.tools import findpath
-from seisflows3.tools.seismic import setpar
+from seisflows3.tools.wrappers import findpath
+from seisflows3.tools.specfem import setpar
 
 
 def write_sources(par, h, path="."):

@@ -1,10 +1,14 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-This is the base class for the postprocess functionalities
+This class provides the core utilities for the SeisFlows3 postprocessing
+functionalities, including kernel/gradient smoothing and masking as well as
+kernel summation
 """
+import os
 import sys
+import logging
 
-from seisflows3.tools.tools import exists
+from seisflows3.tools import msg
 from seisflows3.config import SeisFlowsPathsParameters
 
 PAR = sys.modules['seisflows_parameters']
@@ -20,6 +24,9 @@ class Base:
     regularization, smoothing, sharpening, masking and related operations
     on models or gradients
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self):
         """
         These parameters should not be set by __init__!
@@ -59,44 +66,20 @@ class Base:
         """
         Checks parameters and paths
         """
+        msg.check(type(self))
+
         if validate:
             self.required.validate()
         
         if PATH.MASK:
-            assert exists(PATH.MASK), f"PATH.MASK provided but does not exist"
+            assert os.path.exists(PATH.MASK), \
+                f"PATH.MASK provided but does not exist"
 
     def setup(self):
         """
         Placeholder for initialization or setup tasks
         """
-        pass
-
-    @staticmethod
-    def process_kernels(path, parameters):
-        """
-        Sums kernels from individual sources, with optional smoothing
-        This should be run in paralell
-
-        :type path: str
-        :param path: directory containing sensitivity kernels
-        :type parameters: list
-        :param parameters: material parameters e.g. ['vp','vs']
-        """
-        # Check if the path exists
-        if not exists(path):
-            raise FileNotFoundError
-
-        # If specified, smooth the kernels in the vertical and horizontal
-        if PAR.SMOOTH_H > 0:
-            solver.combine(input_path=path, output_path=f"{path}/sum_nosmooth",
-                           parameters=parameters)
-
-            solver.smooth(input_path=f"{path}/sum_nosmooth",
-                          output_path=f"{path}/sum", parameters=parameters,
-                          span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
-        else:
-            solver.combine(input_path=path, output_path=f"{path}/sum",
-                           parameters=parameters)
+        msg.setup(type(self))
 
     def write_gradient(self, path):
         """
@@ -106,56 +89,96 @@ class Base:
         .. note::
             Because processing operations can be quite expensive, they must be
             run through the HPC system interface; processing does not involve
-            embarassingly parallel tasks, we use system.run_single instead of
-            system.run
+            embarassingly parallel tasks, we use run(single=True)
 
         :type path: str
         :param path: directory from which kernels are read and to which
-        gradient is written
+            gradient is written
         """
-        # Check that the given path exists
-        if not exists(path):
-            raise FileNotFoundError
+        if not os.path.exists(path):
+            print(msg.cli("Gradient path does in postprocess.write_gradient "
+                          "does not exist but should",
+                          items=[path], header="error"))
+            sys.exit(-1)
 
-        # Run postprocessing on the cluster
-        if PAR.VERBOSE and PAR.SMOOTH_H > 0:
-            print(f"\tSmoothing gradient: H={PAR.SMOOTH_H}, V={PAR.SMOOTH_V}")
+        # Postprocess file structure defined here once-and-for-all
+        path_grad = os.path.join(path, "gradient")
+        path_grad_nomask = os.path.join(path, "gradient_nomask")
+        path_kernels = os.path.join(path, "kernels")
+        path_kernels_sum = os.path.join(path_kernels, "sum")
+        path_model = os.path.join(path, "model")
 
-        system.run_single("postprocess", "process_kernels",
-                          path=f"{path}/kernels",
-                          scale_tasktime=PAR.TASKTIME_SMOOTH,
-                          parameters=solver.parameters)
+        # Run postprocessing as job on system as it's computationally intensive
+        system.run("postprocess", "process_kernels", single=True,
+                   path=path_kernels, logger=self.logger)
 
         # Access the gradient information stored in the kernel summation
-        gradient = solver.load(f"{path}/kernels/sum", suffix="_kernel")
+        gradient = solver.load(path_kernels_sum, suffix="_kernel")
 
         # Merge the gradients into a single vector
         gradient = solver.merge(gradient)
 
         # Convert to absolute perturbations:
         # log dm --> dm (see Eq.13 Tromp et al 2005)
-        gradient *= solver.merge(solver.load(f"{path}/model"))
+        gradient *= solver.merge(solver.load(path_model))
 
         if PATH.MASK:
-            if PAR.VERBOSE:
-                print(f"\tMasking gradient")
+            self.logger.info(f"masking gradient")
             # to scale the gradient, users can supply "masks" by exactly
-            # mimicking the file format in which models stored
+            # mimicking the file format in which models are stored
             mask = solver.merge(solver.load(PATH.MASK))
 
             # While both masking and preconditioning involve scaling the
             # gradient, they are fundamentally different operations:
             # masking is ad hoc, preconditioning is a change of variables;
-            # see Modrak & Tromp 2016 GJI
-            solver.save(solver.split(gradient), f"{path}/gradient_nomask",
-                        parameters=solver.parameters,
+            # For more info, see Modrak & Tromp 2016 GJI
+            solver.save(solver.split(gradient), path=path_grad_nomask,
                         suffix="_kernel")
 
-            solver.save(solver.split(gradient*mask), f"{path}/gradient",
-                        parameters=solver.parameters,
+            solver.save(solver.split(gradient * mask), path=path_grad,
                         suffix="_kernel")
         else:
-            solver.save(solver.split(gradient), f"{path}/gradient",
-                        parameters=solver.parameters,
+            solver.save(solver.split(gradient), path=path_grad,
                         suffix="_kernel")
 
+    @staticmethod
+    def process_kernels(path, logger):
+        """
+        Sums kernels from individual sources, with optional smoothing
+
+        .. note::
+            This function needs to be run on system, i.e., called by
+            system.run(single=True)
+
+        :type path: str
+        :param path: directory containing sensitivity kernels in the scratch
+            directory
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
+        """
+        if not os.path.exists(path):
+            print(msg.cli("Gradient path in postprocess.process_kernels "
+                          "does not exist but should",
+                          items=[path], header="error"))
+            sys.exit(-1)
+
+        # If specified, smooth the kernels in the vertical and horizontal
+        path_sum_nosmooth = os.path.join(path, "sum_nosmooth")
+        path_sum = os.path.join(path, "sum")
+
+        if (PAR.SMOOTH_H > 0) or (PAR.SMOOTH_V > 0):
+            logger.debug(f"saving unsmoothed and summed kernels to:\n"
+                         f"{path_sum_nosmooth}")
+            solver.combine(input_path=path, output_path=path_sum_nosmooth)
+
+            logger.info(f"smoothing gradient: H={PAR.SMOOTH_H}m, "
+                        f"V={PAR.SMOOTH_V}m")
+            logger.debug(f"saving smoothed kernels to:\n{path_sum}")
+            solver.smooth(input_path=path_sum_nosmooth, output_path=path_sum, 
+                          span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
+
+        # Combine all the input kernels, generating the unscaled gradient
+        else:
+            logger.debug(f"saving summed kernels to:\n{path_sum}")
+            solver.combine(input_path=path, output_path=path_sum)

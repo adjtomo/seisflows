@@ -1,43 +1,48 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-!!! This superclass is work in progress !!!
-
 This is the subclass seisflows.solver.specfem3d_globe
 This class provides utilities for the Seisflows solver interactions with
-Specfem3D Globe. It inherits all attributes from seisflows3.solver.Base,
+Specfem3D Globe. It inherits all attributes from seisflows3.solver.specfem3d,
 and overwrites these functions to provide specified interaction with Specfem3D.
 """
-import subprocess
 import os
 import sys
+import logging
 from glob import glob
 
-# Import Numpy
-import numpy as np
-
-# Local imports
 import seisflows3.plugins.solver.specfem3d_globe as solvertools
-from seisflows3.tools.seismic import getpar, setpar, Model, Minmax
-from seisflows3.plugins.io import loadbypar, copybin, loadbin, savebin
-from seisflows3.tools import unix
-from seisflows3.tools.seismic import call_solver
-from seisflows3.tools.tools import Struct, exists
-from seisflows3.config import (ParameterError, custom_import,
-                              SeisFlowsPathsParameters)
+from seisflows3.tools.specfem import Minmax  # Model, Minmax,
+# from seisflows3.plugins.io import loadbypar, copybin, loadbin, savebin
+from seisflows3.tools import unix, msg
+from seisflows3.tools.wrappers import Struct, exists
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
-
 system = sys.modules["seisflows_system"]
 
 
 class Specfem3DGlobe(custom_import("solver", "specfem3d")):
     """
-    Python interface to Specfem3D Cartesian. This subclass inherits functions
+    Python interface to Specfem3D Globe. This subclass inherits functions
     from seisflows3.solver.specfem3d.Specfem3D
 
     !!! See base class for method descriptions !!!
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
+        """
+        super().__init__()
+
     @property
     def required(self):
         """
@@ -48,35 +53,33 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
 
         return sf
 
-    def check(self, validate=True):
-        """
-        Checks parameters and paths on top of the base class checks.
-        """
-        if validate:
-            self.required.validate()
-        super().check(validate=False)
-
-        assert(PAR.MATERIALS.upper() in ["ISOTROPIC", "ANISOTROPIC"])
-
-        # Overwrite the base class parameters based on the material choice
-        self.parameters = []
-        if PAR.MATERIALS.upper() == "ISOTROPIC":
-            self.parameters += ["vp", "vs"]
-        elif PAR.MATERIALS.upper() == "ANISOTROPIC":
-            self.parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
-
-    def load(self, path, prefix='reg1_', suffix='', verbose=False):
+    def load(self, path, prefix="reg1_", suffix="",  parameters=None):
         """
         Reads SPECFEM model or kernel
 
         Models are stored in Fortran binary format and separated into
         multiple files according to material parameter and processor rank.
+
+        :type path: str
+        :param path: directory from which model is read
+        :type prefix: str
+        :param prefix: optional filename prefix
+        :type suffix: str
+        :param suffix: optional filename suffix, eg '_kernel'
+        :type parameters: list
+        :param parameters: material parameters to be read
+            (if empty, defaults to self.parameters)
+        :rtype: dict
+        :return: model or kernels indexed by material parameter and
+            processor rank, ie dict[parameter][iproc]
         """
-        model = Model(self.parameters)
-        minmax = Minmax(self.parameters)
+        parameters = parameters or self.parameters
+
+        model = Model(parameters)
+        minmax = Minmax(parameters)
 
         for iproc in range(self.mesh_properties.nproc):
-            # read database files
+            # read database files based on parameters
             keys, vals = loadbypar(path, self.parameters, iproc, prefix,
                                    suffix)
             for key, val in zip(keys, vals):
@@ -84,12 +87,9 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
 
             minmax.update(keys, vals)
 
-        if verbose:
-            minmax.write(path, logpath=PATH.SUBMIT)
-
         return model
 
-    def save(self, path, model, prefix='reg1_', suffix=''):
+    def save(self, path, model, prefix="reg1_", suffix=""):
         """
         Writes SPECFEM3D_GLOBE transerverly isotropic model
 
@@ -160,7 +160,7 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
         Specfem3D's uses different name conventions for regular traces
         and 'adjoint' traces
         """
-        files = glob(os.path.join(self.cwd, "traces", "adj", "*sem.ascii")
+        files = glob(os.path.join(self.cwd, "traces", "adj", "*sem.ascii"))
         unix.rename("sem.ascii", "sem.ascii.adj", files)
 
     def initialize_adjoint_traces(self):
@@ -179,7 +179,7 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
         # workaround for  SPECFEM's use of different name conventions for
         # regular traces and 'adjoint' traces
         if PAR.FORMAT.upper() in ['ASCII', 'ascii']:
-            files = glob(os.path.join(self.cwd, "traces", "adj", "*sem.ascii")
+            files = glob(os.path.join(self.cwd, "traces", "adj", "*sem.ascii"))
             unix.rename("sem.ascii", "adj", files)
 
     @property

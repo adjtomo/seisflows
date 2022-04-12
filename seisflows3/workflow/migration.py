@@ -1,34 +1,45 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the base class seisflows.workflow.migration
 
 This is a main Seisflows class, it controls the main workflow.
 """
+import os
 import sys
+import logging
 
-from seisflows3.tools import unix
-from seisflows3.tools.tools import exists
-from seisflows3.tools.err import ParameterError
-from seisflows3.workflow.base import Base
-from seisflows3.config import SeisFlowsPathsParameters
-
-
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
-
-system = sys.modules['seisflows_system']
-solver = sys.modules['seisflows_solver']
-preprocess = sys.modules['seisflows_preprocess']
-postprocess = sys.modules['seisflows_postprocess']
+from seisflows3.tools import unix, msg
+from seisflows3.tools.wrappers import exists
+from seisflows3.config import custom_import, SeisFlowsPathsParameters
 
 
-class Migration(Base):
+PAR = sys.modules["seisflows_parameters"]
+PATH = sys.modules["seisflows_paths"]
+
+system = sys.modules["seisflows_system"]
+solver = sys.modules["seisflows_solver"]
+preprocess = sys.modules["seisflows_preprocess"]
+postprocess = sys.modules["seisflows_postprocess"]
+
+
+class Migration(custom_import("workflow", "base")):
     """
     Migration base class.
 
     Performs the workflow of an inversion up to the postprocessing. In the
     terminology of seismic exploration, implements a 'reverse time migration'.
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        """
+        super().__init__()
+
     @property
     def required(self):
         """
@@ -37,108 +48,119 @@ class Migration(Base):
         """
         sf = SeisFlowsPathsParameters(super().required)
 
-        # Define the Paths required by this module
-        sf.path("SCRATCH", required=True,
-                docstr="scratch path to hold temporary data during workflow")
-
-        sf.path("OUTPUT", required=True,
-                docstr="directory to save workflow outputs to disk")
-
-        sf.path("LOCAL", required=False, default="null",
-                docstr="local path to data available to workflow")
-
-        sf.path("DATA", required=False, default="null",
-                docstr="path to data available to workflow")
-
-        sf.path("MODEL_INIT", required=True,
-                docstr="location of the initial model to be used for workflow")
-
-        sf.par("SAVEGRADIENT", required=False, default=True, par_type=bool,
-               docstr="Save gradient files after each iteration")
-
-        sf.par("SAVEKERNELS", required=False, default=False, par_type=bool,
-               docstr="Save event kernel files after each iteration")
-
-        sf.par("SAVETRACES", required=False, default=False, par_type=bool,
-               docstr="Save waveform traces after each iteration")
-
         return sf
 
-    def check(self, validate=True):
-        """ 
-        Checks parameters and paths
-        """
-        if validate:
-            self.required.validate()
-        super().check(validate=False)
+    def main(self, return_flow=False):
+        """s
+        Migrates seismic data to generate sensitivity kernels
 
-        if not exists(PATH.DATA):
-            assert "MODEL_TRUE" in PATH, f"DATA or MODEL_TRUE must exist"
-
-    def main(self):
-        """ Migrates seismic data
+        :type return_flow: bool
+        :param return_flow: for CLI tool, simply returns the flow function
+            rather than running the workflow. Used for print statements etc.
         """
-        # set up workflow machinery
+        flow = (self.setup,
+                self.generate_synthetics,
+                self.backproject,
+                self.process_kernels,
+                self.finalize,
+                )
+        if return_flow:
+            return flow
+
+        # Allow workflow resume from and stop after given flow functions
+        start, stop = self.check_stop_resume_cond(flow)
+
+        # Run each argument in flow
+        self.logger.info(msg.mjr("STARTING MIGRATION WORKFLOW"))
+        for func in flow[start:stop]:
+            func()
+        self.logger.info(msg.mjr("FINISHED MIGRATION WORKFLOW"))
+
+    def setup(self):
+        """
+        Sets up the SeisFlows3 modules for the Migration
+        """
+        # Set up all the requisite modules from the master job
+        self.logger.info(msg.mnr("PERFORMING MODULE SETUP"))
         preprocess.setup()
         postprocess.setup()
-
-        # set up solver machinery
-        print "Preparing solver..."
         system.run("solver", "setup")
 
-        self.prepare_model()
+    def generate_synthetics(self):
+        """
+        Performs forward simulation, and evaluates the objective function
+        """
+        self.logger.info(msg.sub("PREPARING VELOCITY MODEL"))
+        src = os.path.join(PATH.OUTPUT, "model_init")
+        dst = os.path.join(PATH.SCRATCH, "model")
 
-        # perform migration
-        print "Generating synthetics..."
-        system.run("solver", "eval_func",
-                   path=PATH.SCRATCH,
-                   write_residuals=False)
+        assert os.path.exists(src)
+        unix.cp(src, dst)
 
-        print "Backprojecting..."
-        system.run("solver", "eval_grad",
-                   path=PATH.SCRATCH,
+        self.logger.info(msg.sub("EVALUATE OBJECTIVE FUNCTION"))
+        system.run("solver", "eval_func", path=PATH.SCRATCH,
+                   write_residuals=True)
+
+    def backproject(self):
+        """
+        Backproject or create kernels by running adjoint simulations
+        """
+        self.logger.info(msg.sub("BACKPROJECT / EVALUATE GRADIENT"))
+        system.run("solver", "eval_grad", path=PATH.SCRATCH,
                    export_traces=PAR.SAVETRACES)
 
-        system.run_single("postprocess", "process_kernels",
-                 path=PATH.SCRATCH+"/"+"kernels",
-                 parameters=solver.parameters)
+    def process_kernels(self):
+        """
+        Backproject to create kernels from synthetics
+        """
+        system.run("postprocess", "process_kernels", single=True,
+                   path=os.path.join(PATH.SCRATCH, "kernels"),
+                   parameters=solver.parameters)
 
         try:
-            system.run_single("postprocess", "process_kernels",
-                     path=PATH.SCRATCH+"/"+"kernels",
-                     parameters=["rhop"])
+            # TODO Figure out a better method for running this try except
+            system.run("postprocess", "process_kernels", single=True,
+                       path=os.path.join(PATH.SCRATCH, "kernels"),
+                       parameters=["rhop"])
         except:
             pass
 
+    def finalize(self):
+        """
+        Saves results from current model update iteration
+        """
+        self.logger.info(msg.mnr("FINALIZING MIGRATION WORKFLOW"))
+
         if PAR.SAVETRACES:
             self.save_traces()
-
         if PAR.SAVEKERNELS:
             self.save_kernels()
         else:
             self.save_kernels_sum()
 
-        print "Finished\n"
-
-    def prepare_model(self):
-        model = PATH.OUTPUT +"/"+ "model_init"
-        assert exists(model)
-        unix.cp(model, PATH.SCRATCH +"/"+ "model")
-
     def save_kernels_sum(self):
-        src = PATH.SCRATCH +"/"+ "kernels/sum"
-        dst = PATH.OUTPUT +"/"+ "kernels"
+        """
+        Same summed kernels into the output directory
+        """
+        src = os.path.join(PATH.SCRATCH, "kernels", "sum")
+        dst = os.path.join(PATH.OUTPUT, "kernels")
         unix.mkdir(dst)
         unix.cp(src, dst)
 
     def save_kernels(self):
-        src = PATH.SCRATCH +"/"+ "kernels"
+        """
+        Save individual kernels into the output directory
+        """
+        src = os.path.join(PATH.SCRATCH, "kernels")
         dst = PATH.OUTPUT
         unix.mkdir(dst)
         unix.cp(src, dst)
 
     def save_traces(self):
-        src = PATH.SCRATCH +"/"+ "traces"
+        """
+        Save waveform traces into the output directory
+        """
+        src = os.path.join(PATH.SCRATCH, "traces")
         dst = PATH.OUTPUT
         unix.cp(src, dst)
 

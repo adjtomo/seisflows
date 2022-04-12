@@ -7,7 +7,12 @@ setup(name="seisflows3",
       author="Seisflows Development Team",
       packages=find_packages(),
       entry_points={
-          "console_scripts": ["seisflows=seisflows3.scripts.seisflows:main",]},
+          "console_scripts": ["seisflows=seisflows3.seisflows:main",]},
       license="GPL",
+      install_requires=[
+          "obspy>=1.2.2",
+          "pyyaml>=5.3.1",
+          "IPython>=7.31.1"
+          ],
       zip_save=False
       )

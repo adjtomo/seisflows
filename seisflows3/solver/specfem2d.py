@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the subclass seisflows.solver.specfem2d
 
@@ -7,14 +7,13 @@ Specfem2D. It inherits all attributes from seisflows3.solver.Base,
 """
 import os
 import sys
+import logging
 from glob import glob
 
-from seisflows3.plugins.solver.specfem2d import smooth_legacy
-from seisflows3.tools.seismic import getpar, setpar
-from seisflows3.tools import unix
-from seisflows3.tools.tools import exists
+from seisflows3.tools import unix, msg
+from seisflows3.tools.wrappers import exists
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
-from seisflows3.tools.seismic import call_solver
+from seisflows3.tools.specfem import call_solver, getpar, setpar
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -31,6 +30,20 @@ class Specfem2D(custom_import("solver", "base")):
 
     !!! See base class for method descriptions !!!
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
+        """
+        super().__init__()
+
     @property
     def required(self):
         """
@@ -66,6 +79,7 @@ class Specfem2D(custom_import("solver", "base")):
         """
         if validate:
             self.required.validate()
+
         super().check(validate=False)
 
         acceptable_formats = ["SU", "ASCII"]
@@ -74,70 +88,57 @@ class Specfem2D(custom_import("solver", "base")):
 
     def check_solver_parameter_files(self):
         """
-        Checks solver parameters
+        Checks SPECFEM2D Par_file for acceptable parameters and matches with
+        the internally set parameters
         """
-        def getpar_tryexcept(trial_list, cast, tag=""):
-            """
-            Re-used function to wrap getpar() in a try-except
-            To allow for different SPECFEM2D Par_file version
-
-            :type trial_list: list
-            :param trial_list: list of strings to check in par file
-            :type cast: str
-            :param cast: cast the output results as this type
-            :type tag: str
-            :param tag: tag used incase error raised, for more useful message
-            :rtype tuple: (str, cast)
-            :return: the correct check from the trial list and corresponding val
-            """
-            for check in trial_list:
-                try:
-                    return check, getpar(check, cast=cast)
-                except KeyError as e:
-                    pass
-            else:
-                raise KeyError(f"Parameter '{tag}' not found when looking for "
-                               f"{trial_list}") from e
-
         # Check the number of steps in the SPECFEM2D Par_file
-        nt_str, nt = getpar_tryexcept(trial_list=["NSTEP", "nt"],
-                                      cast=int, tag="nt")
-        if nt != PAR.NT:
+        nt_str, nt, nt_i = getpar(key="NSTEP", file="DATA/Par_file")
+        if int(nt) != PAR.NT:
             if self.taskid == 0:
-                print(f"WARNING: nt={nt} not equal PAR.NT={PAR.NT},"
-                      f"setting PAR FILE nt={PAR.NT}")
-            setpar(nt_str, PAR.NT)
+                print(msg.cli(f"SPECFEM2D {nt_str}=={nt} is not equal "
+                              f"SeisFlows3 PAR.NT=={PAR.NT}. Please ensure "
+                              f"that these values match in both files.",
+                              header="parameter match error", border="=")
+                      )
+                sys.exit(-1)
 
-        # Check the dt step discretization in the SPECFEM2D Par_file
-        dt_str, dt = getpar_tryexcept(trial_list=["DT", "deltat"],
-                                      cast=float, tag="dt")
-        if dt != PAR.DT:
+        dt_str, dt, dt_i = getpar(key="DT", file="DATA/Par_file")
+        if float(dt) != PAR.DT:
             if self.taskid == 0:
-                print(f"WARNING: dt={dt} not equal PAR.DT={PAR.DT},"
-                      f"setting PAR FILE dt={PAR.DT}")
-            setpar(dt_str, PAR.DT)
+                print(msg.cli(f"SPECFEM2D {dt_str}=={dt} is not equal "
+                              f"SeisFlows3 PAR.DT=={PAR.DT}. Please ensure "
+                              f"that these values match in both files.",
+                              header="parameter match error", border="=")
+                      )
+                sys.exit(-1)
 
         # Check the central frequency in the SPECFEM2D SOURCE file
-        f0 = getpar("f0", file="DATA/SOURCE", cast=float)
-        if f0 != PAR.F0:
+        f0_str, f0, f0_i = getpar(key="f0", file="DATA/SOURCE")
+        if float(f0) != PAR.F0:
             if self.taskid == 0:
-                print(f"WARNING: f0={f0} not equal PAR.F0={PAR.F0},"
-                      f"setting SOURCE f0={PAR.F0}")
-            setpar("f0", PAR.F0, filename="DATA/SOURCE")
+                print(msg.cli(f"SPECFEM2D {f0_str}=={f0} is not equal "
+                              f"SeisFlows3 PAR.F0=={PAR.F0}. Please ensure "
+                              f"that these values match the DATA/SOURCE file.",
+                              header="parameter match error", border="=")
+                      )
+                sys.exit(-1)
 
         # Ensure that NPROC matches the MESH values
-        if self.mesh_properties.nproc != PAR.NPROC:
+        nproc = self.mesh_properties.nproc
+        if nproc != PAR.NPROC:
             if self.taskid == 0:
-                print(f"Warning: "
-                      f"mesh_properties.nproc={self.mesh_properties.nproc} "
-                      f"not equal  PAR.NPROC={PAR.NPROC}"
+                print(msg.cli(f"SPECFEM2D mesh NPROC=={nproc} is not equal"
+                              f"SeisFlows3 PAR.NPROC=={PAR.NPROC}. "
+                              f"Please check that your mesh matches this val.",
+                              header="parameter match error", border="=")
                       )
+                sys.exit(-1)
 
         if "MULTIPLES" in PAR:
             if PAR.MULTIPLES:
-                setpar("absorbtop", ".false.")
+                setpar(key="absorbtop", val=".false.", file="DATA/Par_file")
             else:
-                setpar("absorbtop", ".true.")
+                setpar(key="absorbtop", val=".true.", file="DATA/Par_file")
 
     def generate_data(self, **model_kwargs):
         """
@@ -148,11 +149,11 @@ class Specfem2D(custom_import("solver", "base")):
         self.generate_mesh(**model_kwargs)
 
         unix.cd(self.cwd)
-        setpar("SIMULATION_TYPE", "1")
-        setpar("SAVE_FORWARD", ".true.")
+        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
 
-        call_solver(system.mpiexec(), "bin/xmeshfem2D", output="mesher.log")
-        call_solver(system.mpiexec(), "bin/xspecfem2D", output="solver.log")
+        call_solver(PAR.MPIEXEC, "bin/xmeshfem2D", output="mesher.log")
+        call_solver(PAR.MPIEXEC, "bin/xspecfem2D", output="solver.log")
 
         if PAR.FORMAT.upper() == "SU":
             # Work around SPECFEM2D's version dependent file names
@@ -253,11 +254,11 @@ class Specfem2D(custom_import("solver", "base")):
         :type path: str
         :param path: path to export traces to after completion of simulation
         """
-        setpar("SIMULATION_TYPE", "1")
-        setpar("SAVE_FORWARD", ".true.")
+        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
 
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xmeshfem2D")
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem2D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D")
 
         if PAR.FORMAT.upper() == "SU":
             # Work around SPECFEM2D's version dependent file names
@@ -273,8 +274,8 @@ class Specfem2D(custom_import("solver", "base")):
         Calls SPECFEM2D adjoint solver, creates the `SEM` folder with adjoint
         traces which is required by the adjoint solver
         """
-        setpar("SIMULATION_TYPE", "3")
-        setpar("SAVE_FORWARD", ".false.")
+        setpar(key="SIMULATION_TYPE", val="3", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".false.", file="DATA/Par_file")
 
         unix.rm("SEM")
         unix.ln("traces/adj", "SEM")
@@ -285,8 +286,8 @@ class Specfem2D(custom_import("solver", "base")):
             unix.rename(old=".su", new=".su.adj",
                         names=glob(os.path.join("traces", "adj", "*.su")))
 
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xmeshfem2D")
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem2D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D")
 
     def smooth(self, input_path, **kwargs):
         """
@@ -297,8 +298,8 @@ class Specfem2D(custom_import("solver", "base")):
         Kwargs should match arguments of solver.base.smooth()
         
         .. note::
-            This operation is usually run with 'run_single' so only one task
-            will be performing these operations.
+            This operation is usually run with run(single=True) so only one
+            task will be performing these operations.
 
         :type input_path: str
         :param input_path: path to data
@@ -351,6 +352,11 @@ class Specfem2D(custom_import("solver", "base")):
         Returns the filenames of all data, either by the requested components
         or by all available files in the directory.
 
+        .. note:: 
+            If the glob returns an  empty list, this function exits the 
+            workflow because filenames should  not be empty is they're being 
+            queried
+
         :rtype: list
         :return: list of data filenames
         """
@@ -361,41 +367,55 @@ class Specfem2D(custom_import("solver", "base")):
             filenames = []
             if PAR.FORMAT.upper() == "SU":
                 for comp in PAR.COMPONENTS:
-                    filenames += [f"U{comp.lower()}_file_single.su"]
+                    filenames += [self.data_wildcard.format(comp=comp.lower())]
+                    # filenames += [f"U{comp.lower()}_file_single.su"]
             elif PAR.FORMAT.upper() == "ASCII":
                 for comp in PAR.COMPONENTS:
-                    filenames += glob(f"*.?X{comp.upper()}.sem?")
-            return filenames
+                    filenames += glob(
+                            self.data_wildcard.format(comp=comp.upper())
+                            )
+                    # filenames += glob(f"*.?X{comp.upper()}.sem?")
         else:
-            return glob(self.data_wildcard)
+            filenames = glob(self.data_wildcard)
+
+        if not filenames:
+            from seisflows3.tools.msg import DataFilenamesError
+            print(DataFilenamesError)
+            sys.exit(-1)
+
+        return filenames
 
     @property
     def model_databases(self):
         """
-        The location of databases for kernel outputs
+        The location of model inputs and outputs as defined by SPECFEM2D
         """
         return os.path.join(self.cwd, "DATA")
 
     @property
     def kernel_databases(self):
         """
-        The location of databases for model outputs
+        The location of kernel inputs and outputs as defined by SPECFEM2D
         """
         return os.path.join(self.cwd, "OUTPUT_FILES")
 
     @property
-    def data_wildcard(self):
+    def data_wildcard(self, comp="?"):
         """
-        Returns a wildcard identifier for synthetic data
+        Returns a wildcard identifier for synthetic data based on SPECFEM2D
+        file naming schema. Allows formatting dcomponent e.g., 
+        when called by solver.data_filenames
 
+        :type comp: str
+        :param comp: component formatter, defaults to wildcard '?'
         :rtype: str
         :return: wildcard identifier for channels
         """
         if PAR.FORMAT.upper() == "SU":
             # return f"*.su"  # too vague but maybe for a reason? -bryant
-            return f"U?_file_single.su"
+            return f"U{comp}_file_single.su"
         elif PAR.FORMAT.upper() == "ASCII":
-            return f"*.?X?.sem?"
+            return f"*.?X{comp}.sem?"
 
     @property
     def source_prefix(self):

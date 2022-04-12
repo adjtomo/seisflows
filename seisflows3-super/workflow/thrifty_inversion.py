@@ -1,61 +1,79 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-This is the subclass seisflows.workflow.thrifty_pyatoa.
+Thrifty: using resources carefully and not wastefully
 
-This is a Seisflows subclass, it controls the main workflow.
-
-This subclass inherits from the seisflows.workflow.inversion_pyatoa class
-It allows the inversion to skip the costly intialization step if the final
-forward simulations from the previous iteration can be used in the current one.
-
-This is a direct copy of `ThriftyInversion`, but custom imports from
-InversionPyatoa rather than Inversion
+A thrifty inversion skips the costly intialization step (i.e., forward
+simulations and misfit quantification) if the final forward simulations from
+the previous iteration's line search can be used in the current one.
 """
 import sys
+import logging
 
-from seisflows3.tools import unix
+from seisflows3.tools import unix, msg
 from seisflows3.config import custom_import
 
-# Seisflows Configuration
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
 
-optimize = sys.modules['seisflows_optimize']
+PAR = sys.modules["seisflows_parameters"]
+PATH = sys.modules["seisflows_paths"]
+optimize = sys.modules["seisflows_optimize"]
 
 
 class ThriftyInversion(custom_import("workflow", "inversion")):
     """
-    Thrifty inversion subclass for InversionPyatoa
+    Thrifty inversion which attempts to save resources by re-using previous
+    line search results for the current iteration.
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self):
         """
-        :type status: int
-        :param status: the current status of the inversion.
-            0: First iteration, restart, or other conditions means inversion
-               must default to normal behavior
-            1: A well-scaled inversion can skip the function evaluation of the
-               next iteration by using the previous iteration.
+        :type thrifty: bool
+        :param thrifty: the current status of the inversion.
+            if False: assumed to be first iteration, a restart, or some other
+            condition has been met which means inversion is defaulting to normal
+            behavior
+            if True: A well-scaled inversion can skip the function evaluation
+            of the next iteration by using the line search results of the
+            previous iteration
         """
-        self.status = 0
+        super().__init__()
+        self.thrifty = False
+
+    def check(self, validate=True):
+        """
+        Checks parameters and paths
+        """
+        msg.check(type(self))
+
+        super().check(validate=False)
+        if validate:
+            self.required.validate()
+
+        assert PAR.LINESEARCH == "Backtrack", \
+            "Thrifty inversion requires backtracking line search"
 
     def initialize(self):
         """
         If line search can be carried over, skip initialization step
         Or if manually starting a new run, start with normal inversion init
         """
-        if (self.status == 0) or (optimize.iter == PAR.BEGIN):
+        if not self.thrifty or optimize.iter == PAR.BEGIN:
             super().initialize()
         else:
-            print("THRIFTY INITIALIZE")
+            self.logger.info(msg.mjr("INITIALIZING THRIFTY INVERSION"))
 
     def clean(self):
         """
-        Determine if forward simulation from line search can be carried over
+        Determine if forward simulation from line search can be carried over.
+        We assume clean() is the final flow() argument so that we can update
+        the thrifty status here.
         """
         self.update_status()
 
-        if self.status == 1:
-            print("THRIFTY CLEAN")
+        if self.thrifty:
+            self.logger.info(msg.mnr("THRIFTY CLEANING  WORKDIR FOR NEXT "
+                                     "ITERATION"))
             unix.rm(PATH.GRAD)
             unix.mv(PATH.FUNC, PATH.GRAD)
             unix.mkdir(PATH.FUNC)
@@ -64,34 +82,25 @@ class ThriftyInversion(custom_import("workflow", "inversion")):
 
     def update_status(self):
         """
-        Determine if line search forward simulation can be carried over
+        Determine if line search forward simulation can be carried over based
+        on a number of criteria
         """
-        print("THRIFTY STATUS")
-        # Only works for backtracking line search
-        if PAR.LINESEARCH != "Backtrack":
-            print("\t Line search not 'Backtrack', cannot run thrifty")
-            self.status = 0
-        # May not work on first iteration
-        elif optimize.iter == PAR.BEGIN:
-            print("\t First iteration of workflow, defaulting to Inversion")
-            self.status = 0
-        # May not work following restart
+        self.logger.info("updating thrifty inversion status")
+        if optimize.iter == PAR.BEGIN:
+            self.logger.info("1st iteration, defaulting to inversion workflow")
+            thrifty = False
         elif optimize.restarted:
-            print("\t Optimization has been restarted, defaulting to Inversion")
-            self.status = 0
-        # May not work after resuming saved workflow
+            self.logger.info("optimization has been restarted, defaulting to "
+                             "inversion workflow")
+            thrifty = False
         elif optimize.iter == PAR.END:
-            print("\t End of workflow, defaulting to Inversion")
-            self.status = 0
-        # May not work if using local filesystems
-        elif PATH.LOCAL:
-            print("\t Local filesystem, cannot run thrifty")
-            self.status = 0
-        # Otherwise, continue with thrifty inversion
+            self.logger.info("final iteration, defaulting to inversion workflow")
+            thrifty = False
         else:
-            print("\t Continuing with Thrifty Inversion")
-            self.status = 1
+            self.logger.info("continuing with thrifty inversion workflow")
+            thrifty = True
 
+        self.thrifty = thrifty
 
 
 

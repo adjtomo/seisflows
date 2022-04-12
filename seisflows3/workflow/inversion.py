@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the base class seisflows.workflow.Inversion
 
@@ -6,13 +6,12 @@ This is a main Seisflows class, it controls the main workflow.
 """
 import os
 import sys
-import time
+import logging
+import numpy as np
 from glob import glob
 
-import numpy as np
-from seisflows3.config import custom_import
-from seisflows3.tools import unix
-from seisflows3.tools.tools import exists
+from seisflows3.config import custom_import, CFGPATHS
+from seisflows3.tools import msg, unix
 from seisflows3.config import save, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
@@ -43,6 +42,16 @@ class Inversion(custom_import("workflow", "base")):
     Commands for running in serial or parallel on a workstation or cluster
     are abstracted through the "system" interface.
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+        """
+        super().__init__()
+
     @property
     def required(self):
         """
@@ -58,54 +67,9 @@ class Inversion(custom_import("workflow", "base")):
         sf.par("END", required=True, par_type=int,
                docstr="Last iteration of workflow, BEGIN <= END <= inf")
 
-        sf.par("RESUME_FROM", required=False, par_type=str,
-               docstr="Name of task to resume inversion from")
-
-        sf.par("STOP_AFTER", required=False, par_type=str,
-               docstr="Name of task to stop inversion after finishing")
-
-        sf.par("CASE", required=True, par_type=str,
-               docstr="Type of inversion, available: "
-                      "['data': real data inversion, "
-                      "'synthetic': synthetic-synthetic inversion]")
-
-        sf.par("SAVEMODEL", required=False, default=True, par_type=bool,
-               docstr="Save final model files after each iteration")
-
-        sf.par("SAVEGRADIENT", required=False, default=True, par_type=bool,
-               docstr="Save gradient files after each iteration")
-
-        sf.par("SAVEKERNELS", required=False, default=False, par_type=bool,
-               docstr="Save event kernel files after each iteration")
-
-        sf.par("SAVETRACES", required=False, default=False, par_type=bool,
-               docstr="Save waveform traces after each iteration")
-
-        sf.par("SAVERESIDUALS", required=False, default=False, par_type=bool,
-               docstr="Save waveform residuals after each iteration")
-
-        sf.par("SAVEAS", required=False, default="binary", par_type=str,
-               docstr="Format to save models, gradients, kernels. "
-                      "Available: "
-                      "['binary': save files in native SPECFEM .bin format, "
-                      "'vector': save files as NumPy .npy files, "
-                      "'both': save as both binary and vectors]")
-
-        sf.par("VERBOSE", required=False, default=True, par_type=bool,
-               docstr="Provide detailed statements to the output logs")
-
         # Define the Paths required by this module
-        sf.path("MODEL_INIT", required=True,
-                docstr="Initial model to be used for workflow")
-
-        sf.path("MODEL_TRUE", required=False,
-                docstr="Target model to be used for PAR.CASE == 'synthetic'")
-
-        sf.path("DATA", required=False, default=None,
-                docstr="path to data available to workflow")
-
         sf.path("FUNC", required=False,
-                default=os.path.join(PATH.SCRATCH, "evalfunc"),
+                default=os.path.join(PATH.SCRATCH, CFGPATHS.SCRATCHDIR),
                 docstr="scratch path to store data related to function "
                        "evaluations")
 
@@ -115,9 +79,9 @@ class Inversion(custom_import("workflow", "base")):
                        "evaluations")
 
         sf.path("HESS", required=False,
-               default=os.path.join(PATH.SCRATCH, "evalhess"),
-               docstr="scratch path to store data related to Hessian "
-                      "evaluations")
+                default=os.path.join(PATH.SCRATCH, "evalhess"),
+                docstr="scratch path to store data related to Hessian "
+                       "evaluations")
 
         sf.path("OPTIMIZE", required=False,
                 default=os.path.join(PATH.SCRATCH, "optimize"),
@@ -130,6 +94,8 @@ class Inversion(custom_import("workflow", "base")):
         """
         Checks parameters and paths
         """
+        msg.check(type(self))
+
         super().check(validate=False)
         if validate:
             self.required.validate()
@@ -141,103 +107,88 @@ class Inversion(custom_import("workflow", "base")):
         assert(1 <= PAR.BEGIN <= PAR.END), \
             f"Incorrect BEGIN or END parameter: 1 <= {PAR.BEGIN} <= {PAR.END}"
 
-        if PAR.CASE.upper() == "SYNTHETIC":
-            assert exists(PATH.MODEL_TRUE), \
-                "CASE == SYNTHETIC requires PATH.MODEL_TRUE"
-
-    def main(self):
+    def main(self, return_flow=False):
         """
-        !!! This function controls the main workflow !!!
+        This function controls the main SeisFlows3 workflow, and is submitted
+        to system by the call `seisflows submit` or `seisflows resume`. It
+        proceeds to evaluate a list of functions in order until a User defined
+        stop criteria is met.
 
-        Carries out seismic inversion by running a series of functions in order
+        :type return_flow: bool
+        :param return_flow: for CLI tool, simply returns the flow function
+            rather than running the workflow. Used for print statements etc.
         """
-        # The workflow is a list of functions that can be called dynamically
-        flow = [self.initialize,
+        # The workFLOW is a tuple of functions that can be called dynamic ally
+        flow = (self.setup,
+                self.initialize,
                 self.evaluate_gradient,
                 self.write_gradient,
                 self.compute_direction,
                 self.line_search,
                 self.finalize,
                 self.clean
-                ]
+                )
+        if return_flow:
+            return flow
 
-        print(f"BEGINNING WORKFLOW AT {time.asctime()}")
-        optimize.iter = PAR.BEGIN
-        print(f"{optimize.iter} <= {PAR.END}")
-
-        # Allow workflow resume from a given mid-workflow location
-        if PAR.RESUME_FROM:
-            self.resume_from(flow)
-        elif optimize.iter == 1:
-            # First-time intialization of the workflow
-            self.setup()
+        # Allow workflow resume from and stop after given flow functions
+        start, stop = self.check_stop_resume_cond(flow)
 
         # Run the workflow until from the current iteration until PAR.END
-        while optimize.iter <= PAR.END:
-            print(f"ITERATION {optimize.iter}")
-            for func in flow:
+        optimize.iter = PAR.BEGIN
+        self.logger.info(msg.mjr("STARTING INVERSION WORKFLOW"))
+
+        while True:
+            self.logger.info(msg.mnr(f"ITERATION {optimize.iter} / {PAR.END}"))
+
+            # Execute the functions within the flow
+            for func in flow[start:stop]:
                 func()
-                # Stop the workflow at STOP_AFTER if requested
-                if PAR.STOP_AFTER and func.__name__ == PAR.STOP_AFTER:
-                    print(f"STOP ITERATION {optimize.iter} AT {PAR.STOP_AFTER}")
-                    break
-            print(f"FINISHED ITERATION {optimize.iter} AT {time.asctime()}\n")
-            optimize.iter += 1
 
-    def resume_from(self, flow):
-        """
-        Resume the workflow from a given function, proceed in the same fashion 
-        as main until the end of the current iteration.
+            # Finish. Assuming completion of all arguments in flow()
+            self.logger.info(msg.mjr(f"FINISHED FLOW EXECUTION"))
 
-        :type flow: list of functions
-        :param flow: the order of functions defined in main(), which should be
-            parsed to determine where workflow should be resumed from
-        """ 
-        # Determine the index that corresponds to the resume function named
-        try:
-            resume_idx = [_.__name__ for _ in flow].index(PAR.RESUME_FROM)
-        except ValueError:
-            print(f"{PAR.RESUME_FROM} does not correspond to any workflow "
-                  "functions. Exiting...")
-            sys.exit(-1)
+            # Reset flow for subsequent iterations
+            start, stop = None, None
 
-        print(f"RESUME ITERATION {optimize.iter} (from function "
-              f"{flow[resume_idx].__name__})")
-        
-        for func in flow[resume_idx:]:
-            func()
+            if optimize.iter == PAR.END:
+                break
 
-        print(f"FINISHED ITERATION {optimize.iter} AT {time.asctime()}\n")
-        optimize.iter += 1
+        self.logger.info(msg.mjr("FINISHED INVERSION WORKFLOW"))
 
     def setup(self):
         """
         Lays groundwork for inversion by running setup() functions for the 
-        involved sub-modules, and generating synthetic true data if necessary, 
-        and generating the pre-requisite database files. Should only be run once
-        at the iteration 1
+        involved sub-modules, generating True model synthetic data if necessary,
+        and generating the pre-requisite database files.
+
+        .. note::
+            This function should only be run one time, at the start of iter 1
         """
-        # Set up all the requisite modules
-        print("SETUP")
-        preprocess.setup()
-        postprocess.setup()
-        optimize.setup()
-        # Run solver.setup() in parallel
-        system.run("solver", "setup")
+        # Iter check is done inside setup() so that we can include fx in FLOW
+        if optimize.iter == 1:
+            # Set up all the requisite modules from the master job
+            self.logger.info(msg.mnr("PERFORMING MODULE SETUP"))
+            preprocess.setup()
+            postprocess.setup()
+            optimize.setup()
+
+            # Run solver.setup() in parallel
+            system.run("solver", "setup")
 
     def initialize(self):
         """
         Generates synthetics via a forward simulation, calculates misfits
         for the forward simulation. Writes misfit for use in optimization.
         """
-        print("INITIALIZE")
+        self.logger.info(msg.mjr("INITIALIZING INVERSION"))
         self.evaluate_function(path=PATH.GRAD, suffix="new")
 
     def compute_direction(self):
         """
         Computes search direction
         """
-        print("COMPUTE SEARCH DIRECTION")
+        self.logger.info(msg.mnr("COMPUTING SEARCH DIRECTION"))
         optimize.compute_direction()
 
     def line_search(self):
@@ -251,12 +202,14 @@ class Inversion(custom_import("workflow", "base")):
         """
         # Calculate the initial step length based on optimization algorithm
         if optimize.line_search.step_count == 0:
-            print("LINE SEARCH")
+            self.logger.info(msg.mjr(f"CONDUCTING LINE SEARCH "
+                                     f"({optimize.eval_str})")
+                             )
             optimize.initialize_search()
 
         # Attempt a new trial step with the given step length
         optimize.line_search.step_count += 1
-        print(f"TRIAL STEP: {optimize.line_search.step_count}")
+        self.logger.info(msg.mnr(f"TRIAL STEP COUNT: {optimize.eval_str}"))
         self.evaluate_function(path=PATH.FUNC, suffix="try")
 
         # Check the function evaluation against line search history
@@ -264,22 +217,22 @@ class Inversion(custom_import("workflow", "base")):
 
         # Proceed based on the outcome of the line search
         if status > 0:
-            print("\tTrial step successful")
+            self.logger.info("trial step successful")
             # Save outcome of line search to disk; reset step to 0 for next iter
             optimize.finalize_search()
             return
         elif status == 0:
-            print("\tRetrying with new trial step")
+            self.logger.info("retrying with new trial step")
             # Recursively call this function to attempt another trial step
             self.line_search()
         elif status < 0:
             if optimize.retry_status():
-                print("\tLine search failed\n\n Restarting optimization...")
-                # Reset the line search machinery, do not reset step count (?)
+                self.logger.info("line search failed. restarting line search")
+                # Reset the line search machinery; set step count to 0
                 optimize.restart()
                 self.line_search()
             else:
-                print("\tLine search failed\n\n Aborting...")
+                self.logger.info("line search failed. aborting inversion.")
                 sys.exit(-1)
 
     def evaluate_function(self, path, suffix):
@@ -291,23 +244,37 @@ class Inversion(custom_import("workflow", "base")):
         :type suffix: str
         :param suffix: suffix to use for I/O
         """
-        print("EVALUATE FUNCTION\n\tRunning forward simulation")
-        self.write_model(path=path, suffix=suffix)
+        self.logger.info(msg.sub("EVALUATE OBJECTIVE FUNCTION"))
+
+        # Ensure that we are referencing the same tags as defined in OPTIMIZE
+        model_tag = getattr(optimize, f"m_{suffix}")
+        misfit_tag = getattr(optimize, f"f_{suffix}")
+
+        self.write_model(path=path, tag=model_tag)
+
+        self.logger.debug(f"evaluating objective function {PAR.NPROC} times")
         system.run("solver", "eval_func", path=path)
-        self.write_misfit(path=path, suffix=suffix)
+
+        self.write_misfit(path=path, tag=misfit_tag)
 
     def evaluate_gradient(self, path=None):
         """
         Performs adjoint simulation to retrieve the gradient of the objective 
         """
-        print("EVALUATE GRADIENT\n\tRunning adjoint simulation")
+        self.logger.info(msg.mnr("EVALUATING GRADIENT"))
+        self.logger.debug(f"evaluating gradient {PAR.NPROC} times")
+
         system.run("solver", "eval_grad", path=path or PATH.GRAD,
                    export_traces=PAR.SAVETRACES)
 
     def finalize(self):
         """
-        Saves results from current model update iteration
+        Saves results from current model update iteration and increment the
+        iteration number to set up for the next iteration. Finalization is
+        expected to the be LAST function in workflow.main()'s  flow list.
         """
+        self.logger.info(msg.mjr(f"FINALIZING ITERATION {optimize.iter}"))
+
         self.checkpoint()
         preprocess.finalize()
 
@@ -327,12 +294,15 @@ class Inversion(custom_import("workflow", "base")):
         if PAR.SAVERESIDUALS:
             self.save_residuals()
 
+        optimize.iter += 1
+        self.logger.info(msg.sub(f"INCREMENT ITERATION TO {optimize.iter}"))
+
     def clean(self):
         """
         Cleans directories in which function and gradient evaluations were
         carried out
         """
-        print("CLEAN")
+        self.logger.info(msg.mnr("CLEANING WORKDIR FOR NEXT ITERATION"))
 
         unix.rm(PATH.GRAD)
         unix.rm(PATH.FUNC)
@@ -345,18 +315,20 @@ class Inversion(custom_import("workflow", "base")):
         """
         save()
 
-    def write_model(self, path, suffix):
+    def write_model(self, path, tag):
         """
         Writes model in format expected by solver
 
         :type path: str
         :param path: path to write the model to
-        :type suffix: str
-        :param suffix: suffix to add to the model
+        :type src: str
+        :param src: name of the model to be saved, usually tagged as 'm' with
+            a suffix depending on where in the inversion we are. e.g., 'm_try'.
+            Expected that these tags are defined in OPTIMIZE module
         """
-        src = f"m_{suffix}"
+        src = tag
         dst = os.path.join(path, "model")
-
+        self.logger.debug(f"saving model '{src}' to:\n{dst}")
         solver.save(solver.split(optimize.load(src)), dst)
 
     def write_gradient(self):
@@ -364,15 +336,16 @@ class Inversion(custom_import("workflow", "base")):
         Writes gradient in format expected by non-linear optimization library.
         Calls the postprocess module, which will smooth/precondition gradient.
         """
-        print("POSTPROCESSING")
+        self.logger.info(msg.mnr("POSTPROCESSING KERNELS"))
         src = os.path.join(PATH.GRAD, "gradient")
         dst = f"g_new"
 
         postprocess.write_gradient(PATH.GRAD)
         parts = solver.load(src, suffix="_kernel")
+
         optimize.save(dst, solver.merge(parts))
 
-    def write_misfit(self, path, suffix):
+    def write_misfit(self, path, tag):
         """
         Writes misfit in format expected by nonlinear optimization library.
         Collects all misfit values within the given residuals directory and sums
@@ -380,13 +353,17 @@ class Inversion(custom_import("workflow", "base")):
 
         :type path: str
         :param path: path to write the misfit to
-        :type suffix: str
-        :param suffix: suffix to add to the misfit
+        :type tag: str
+        :param tag: name of the model to be saved, usually tagged as 'f' with
+            a suffix depending on where in the inversion we are. e.g., 'f_try'.
+            Expected that these tags are defined in OPTIMIZE module
         """
+        self.logger.info("summing residuals with preprocess module")
         src = glob(os.path.join(path, "residuals", "*"))
-        dst = f"f_{suffix}"
-
+        dst = tag
         total_misfit = preprocess.sum_residuals(src)
+
+        self.logger.debug(f"saving misfit {total_misfit:.3E} to tag '{dst}'")
         optimize.savetxt(dst, total_misfit)
 
     def save_gradient(self):
@@ -403,8 +380,10 @@ class Inversion(custom_import("workflow", "base")):
             src = os.path.join(PATH.GRAD, "gradient")
             unix.mv(src, dst)
         if PAR.SAVEAS in ["vector", "both"]:
-            src = os.path.join(PATH.OPTIMIZE, "g_old")
+            src = os.path.join(PATH.OPTIMIZE, optimize.g_old)
             unix.cp(src, dst + ".npy")
+
+        self.logger.debug(f"saving gradient to path:\n{dst}")
 
     def save_model(self):
         """
@@ -414,8 +393,11 @@ class Inversion(custom_import("workflow", "base")):
         Saving as a vector saves on file count, but requires numpy and seisflows
         functions to read
         """
-        src = "m_new"
+        src = optimize.m_new
         dst = os.path.join(PATH.OUTPUT, f"model_{optimize.iter:04d}")
+
+        self.logger.debug(f"saving model '{src}' to path:\n{dst}")
+
         if PAR.SAVEAS in ["binary", "both"]:
             solver.save(solver.split(optimize.load(src)), dst)
         if PAR.SAVEAS in ["vector", "both"]:
@@ -427,14 +409,23 @@ class Inversion(custom_import("workflow", "base")):
         """
         src = os.path.join(PATH.GRAD, "kernels")
         dst = os.path.join(PATH.OUTPUT, f"kernels_{optimize.iter:04d}")
+
+        self.logger.debug(f"saving kernels to path:\n{dst}")
+
         unix.mv(src, dst)
 
     def save_traces(self):
         """
-        Save the waveform traces to disk
+        Save the waveform traces to disk.
+
+        !!! This doesn't work? Traces are not saved to PATH.GRAD so src does
+        !!! not exist
         """
         src = os.path.join(PATH.GRAD, "traces")
         dst = os.path.join(PATH.OUTPUT, f"traces_{optimize.iter:04d}")
+
+        self.logger.debug(f"saving traces to path:\n{dst}")
+
         unix.mv(src, dst)
 
     def save_residuals(self):
@@ -443,5 +434,8 @@ class Inversion(custom_import("workflow", "base")):
         """
         src = os.path.join(PATH.GRAD, "residuals")
         dst = os.path.join(PATH.OUTPUT, f"residuals_{optimize.iter:04d}")
+
+        self.logger.debug(f"saving residuals to path:\n{dst}")
+
         unix.mv(src, dst)
 

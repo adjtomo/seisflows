@@ -19,7 +19,7 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'SeisFlows3'
-copyright = '2021, SeisFlows Development Team'
+copyright = '2022, SeisFlows3 Development Team'
 author = 'Ryan Modrak, Bryant Chow'
 
 

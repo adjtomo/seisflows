@@ -1,23 +1,22 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-This is the base class seisflows.preprocess.Pyatoa
-
-This is a main Seisflows class, it controls the preprocessing.
-This class uses the Python package Pyatoa to perform preprocessing, and
-misfit measurement.
-
-..warning::
-    This might break if no residuals are written for a given event
+The Pyatoa preprocessing module abstracts all preprocessing functionality
+onto Pyatoa (https://github.com/bch0w/pyatoa/). The module defined below is
+meant to set up and execute Pyatoa within a running SeisFlows3 workflow.
 """
 import os
 import sys
-import pyatoa
+import logging
 import numpy as np
+
+import pyatoa
+
 from glob import glob
-from seisflows3.tools import unix
+from pyatoa.utils.images import merge_pdfs
+
+from seisflows3.tools import unix, msg
 from seisflows3.config import custom_import
 from seisflows3.config import SeisFlowsPathsParameters
-from pyatoa.utils.images import merge_pdfs
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -25,8 +24,13 @@ PATH = sys.modules["seisflows_paths"]
 
 class Pyatoa(custom_import("preprocess", "base")):
     """
-    Data preprocessing class using the Pyatoa package
+    Data preprocessing class using the Pyaflowa class within the Pyatoa package.
+    In charge of data discovery, preprocessing, filtering, misfiti
+    quantification and data storage. The User does not need to implement Pyatoa,
+    but rather interacts with it via the parameters and paths of SeisFlows3.
     """
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self):
         """
         These parameters should not be set by __init__!
@@ -36,6 +40,8 @@ class Pyatoa(custom_import("preprocess", "base")):
         :param data: directory where data from the preprocessing is stored
         :type figures: str
         :param figures: directory where figures are stored
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
         """
         self.path_datasets = None
         self.path_figures = None
@@ -85,7 +91,7 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         sf.par("PYFLEX_PRESET", required=True, par_type=str,
                docstr="Parameter map for Pyflex config. For available choices, "
-                      "see Pyatoa docs page")
+                      "see Pyatoa docs page (pyatoa.rtfd.io)")
 
         sf.par("FIX_WINDOWS", required=False, default=False,
                par_type="bool or str",
@@ -122,6 +128,8 @@ class Pyatoa(custom_import("preprocess", "base")):
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
         """
+        msg.check(type(self))
+
         if validate:
             self.required.validate()
 
@@ -130,15 +138,13 @@ class Pyatoa(custom_import("preprocess", "base")):
             assert(required_parameter in PAR), \
                 f"Pyatoa requires {required_parameter}"
 
+        assert(PAR.FORMAT.upper() == "ASCII"), \
+            "Pyatoa preprocess requires PAR.FORMAT=='ASCII'"
 
-        if PAR.FORMAT != "ascii":
-            raise ValueError("Pyatoa preprocess currently only works with "
-                             "the 'ascii' format")
-
-        if PAR.DT * PAR.NT >= PAR.START_PAD + PAR.END_PAD:
-            raise ValueError("Pyatoa preprocess parameters START_PAD and "
-                             "END_PAD will not provide long enough obs."
-                             "traces to match the length of synthetics")
+        assert((PAR.DT * PAR.NT) >= (PAR.START_PAD + PAR.END_PAD)), \
+            ("Pyatoa preprocess must have (PAR.START_PAD + PAR.END_PAD) >= "
+             "(PAR.DT * PAR.NT), current values will not provide sufficiently"
+             "long data traces")
 
     def setup(self):
         """
@@ -148,8 +154,7 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         Akin to an __init__ class, but to be called externally by the workflow.
         """
-        # Late import because preprocess is loaded before optimize
-        solver = sys.modules["seisflows_solver"]
+        self.logger.debug(msg.setup(type(self)))
 
         # Inititate a Pyaflowa object to make sure the machinery works
         pyaflowa = pyatoa.Pyaflowa(structure="seisflows", sfpaths=PATH, 
@@ -159,21 +164,39 @@ class Pyatoa(custom_import("preprocess", "base")):
         self.path_datasets = pyaflowa.path_structure.datasets
         self.path_figures = pyaflowa.path_structure.figures
 
-    def prepare_eval_grad(self, source_name, **kwargs):
+    def prepare_eval_grad(self, cwd, source_name, taskid, **kwargs):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms, 
         and measuring misfit between observations and synthetics using Pyatoa.
-        
-        This is a process specific task and intended to be run in parallel
 
-        :type path: str
-        :param path: path to the current function evaluation for saving residual
+        Reads in observed and synthetic waveforms, applies optional
+        preprocessing, assesses misfit, and writes out adjoint sources and
+        STATIONS_ADJOINT file.
+
+        .. note::
+            Meant to be called by solver.eval_func(), may have unused arguments
+            to keep functions general across subclasses.
+
+        :type cwd: str
+        :param cwd: current specfem working directory containing observed and
+            synthetic seismic data to be read and processed. Should be defined
+            by solver.cwd
         :type source_name: str
-        :param source_name: the event id to be used for tagging and data lookup
+        :param source_name: the event id to be used for tagging and data lookup.
+            Should be defined by solver.source_name
+        :type taskid: int
+        :param taskid: identifier of the currently running solver instance.
+            Should be defined by solver.taskid
+        :type filenames: list of str
+        :param filenames: [not used] list of filenames defining the files in
+            traces
         """
         # Late import because preprocess is loaded before optimize,
         # Optimize required to know which iteration/step_count we are at
         optimize = sys.modules["seisflows_optimize"]
+
+        if taskid == 0:
+            self.logger.debug("preparing files for gradient evaluation")
 
         # Inititate the Pyaflowa class which abstracts processing functions
         # Communicate to Pyaflowa the current iteration and step count
@@ -182,12 +205,17 @@ class Pyatoa(custom_import("preprocess", "base")):
                                    step_count=optimize.line_search.step_count)
 
         # Process all the stations for a given event using Pyaflowa
-        misfit = pyaflowa.process_event(source_name, 
+        misfit = pyaflowa.process_event(source_name,
                                         fix_windows=PAR.FIX_WINDOWS,
                                         event_id_prefix=PAR.SOURCE_PREFIX)
 
-        # Generate the necessary files to continue the inversion
-        cwd = pyaflowa.path_structure.cwd.format(source_name=source_name)
+        if misfit is None:
+            self.logger.warning(
+                f"Event {source_name} returned no misfit, you may want to "
+                f"check waveform comparison parameters or discard this event "
+                f"completely to avoid wasting computational resources"
+            )
+            misfit = 0.
 
         # Event misfit defined by Tape et al. (2010) written to solver dir.
         self.write_residuals(path=cwd, scaled_misfit=misfit)
@@ -196,8 +224,9 @@ class Pyatoa(custom_import("preprocess", "base")):
         """
         Run some serial finalization tasks specific to Pyatoa, which will help
         aggregate the collection of output information:
-            Aggregate misfit windows using the Inspector class
-            Generate PDFS of waveform figures for easy access
+            - Aggregate misfit windows using the Inspector class
+            - Generate PDFS of waveform figures for easy access
+            - Snapshot HDF5 files in a separate directory
         """
         unix.cd(self.path_datasets)
         insp = pyatoa.Inspector(PAR.TITLE, verbose=False)
@@ -205,6 +234,9 @@ class Pyatoa(custom_import("preprocess", "base")):
         insp.save() 
 
         self.make_final_pdfs()
+
+        if PAR.SNAPSHPOT:
+            self.snapshot()
 
     def write_residuals(self, path, scaled_misfit):
         """
@@ -233,8 +265,13 @@ class Pyatoa(custom_import("preprocess", "base")):
         :rtype: float
         :return: average misfit
         """
-        assert(len(files) == PAR.NTASK), \
-            "Number of misfit files does not match the number of events"
+        if len(files) != PAR.NTASK:
+            print(msg.cli(f"Pyatoa preprocessing module did not recover the "
+                          f"correct number of residual files "
+                          f"({len(files)}/{PAR.NTASK}). Please check that "
+                          f"the preprocessing logs", header="error")
+                  )
+            sys.exit(-1)
 
         total_misfit = 0
         for filename in files:
@@ -247,23 +284,24 @@ class Pyatoa(custom_import("preprocess", "base")):
     def snapshot(self):
         """
         Copy all ASDFDataSets in the data directory into a separate snapshot
-        directory for redundancy
+        directory for a safeguard against HDF5 file corruption
         """
-        if PAR.SNAPSHOT:
-            snapshot_dir = os.path.join(self.path_datasets, "snapshot")
-            if not os.path.exists(snapshot_dir):
-                unix.mkdir(snapshot_dir)
-            
-            srcs = glob(os.path.join(self.path_datasets, "*.h5"))
-            for src in srcs:
-                dst = os.path.join(snapshot_dir, os.path.basename(src))
-                unix.cp(src, dst)
+        snapshot_dir = os.path.join(self.path_datasets, "snapshot")
+        if not os.path.exists(snapshot_dir):
+            unix.mkdir(snapshot_dir)
+
+        srcs = glob(os.path.join(self.path_datasets, "*.h5"))
+        for src in srcs:
+            dst = os.path.join(snapshot_dir, os.path.basename(src))
+            unix.cp(src, dst)
 
     def make_final_pdfs(self):
         """
         Utility function to combine all pdfs for a given event, iteration, and
         step count into a single pdf. To reduce on file count and provide easier
         visualization. Removes the original event-based pdfs.
+
+        TODO Can we shift this functinonality into Pyatoa?
         
         .. warning::
             This is a simple function because it won't account for missed 

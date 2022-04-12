@@ -1,5 +1,5 @@
-Package Development
-===========================
+Extending SeisFlows3
+==================================
 The design philosophy of SeisFlows is such that being a user of the codebase
 more-than-likely requires also becoming a developer, as custom-made subclasses
 are often required to tailor the functionalities of SeisFlows to a specific

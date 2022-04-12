@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the Seisflows Config script, it contains utilities that are called upon
 throughout the Seisflows workflow. It also (re)defines some important functions
@@ -14,14 +14,16 @@ of as comprising the complete 'state' of a SeisFlows session
 """
 import os
 import sys
+import json
 import types
+import pickle
 import copyreg
+import traceback
 from importlib import import_module
 
-from seisflows3.tools import msg
-from seisflows3.tools import unix
-from seisflows3.tools.tools import loadjson, loadobj, savejson, saveobj
-from seisflows3.tools.tools import module_exists
+from seisflows3 import logger
+from seisflows3.tools import msg, unix
+from seisflows3.tools.wrappers import module_exists
 from seisflows3.tools.err import ParameterError
 
 
@@ -29,71 +31,120 @@ from seisflows3.tools.err import ParameterError
 !!! WARNING !!!
 
 The following constants are (some of the only) hardwired components
-of the pacakge. The naming, order, case, etc. of each constant may be important,
-and any changes to these will more-than-likely break the underlying mechanics
-of the package. Do not touch!
+of the pacakge. The naming, order, case, etc., of each constant may be 
+important, and any changes to these will more-than-likely break the underlying 
+mechanics of the package. Do not touch unless you know what you're doing!
 """
 
-# List of module names required by SeisFlows for module imports. Order-sensitive
+# List of module names required by SeisFlows3 for imports. Order-sensitive
+# In sys.modules these will be prepended by 'seisflows_', e.g., seisflows_system
 NAMES = ["system", "preprocess", "solver",
          "postprocess", "optimize", "workflow"]
 
 # Packages that define the source code, used to search for base- and subclasses
 PACKAGES = ["seisflows3", "seisflows3-super"]
 
+# These define the sys.modules names where parameter values and paths are stored
+PAR = "seisflows_parameters"
+PATH = "seisflows_paths"
+
 # The location of this config file, which is the main repository
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
+# Define a package-wide default directory and file naming schema. This will
+# be returned as a Dict() object, defined below. All of these files and
+# directories will be created relative to the user-defined working directory
+CFGPATHS = dict(
+    PAR_FILE="parameters.yaml",  # Default SeisFlows3 parameter file
+    SCRATCHDIR="scratch",        # SeisFlows3 internal working directory
+    STATSDIR="stats",            # Optimization module log file output
+    OUTPUTDIR="output",          # Permanent disk storage for state and outputs
+    LOGFILE="output_sf3.txt",    # Log files for all system log
+    ERRLOGFILE="error_sf3.txt",  # StdErr dump site for crash messages
+    LOGDIR="logs",               # Dump site for previously created log files
+)
 """
-!!! WARNING !!!
+!!! ^^^ WARNING ^^^ !!!
 """
 
-def init_seisflows():
+
+def init_seisflows(check=True):
     """
-    Instantiates SeisFlows objects and makes them globally accessible by
+    Instantiates SeisFlows3 objects and makes them globally accessible by
     registering them in sys.modules
-    """
-    # Parameters and paths must already be loaded (normally done by submit)
-    assert("seisflows_parameters" in sys.modules)
-    assert("seisflows_paths" in sys.modules)
 
-    # Check if objects already exist on disk
-    if os.path.exists(_output()):
-        print(msg.WarningOverwrite)
-        sys.exit()
+    :type check: bool
+    :param check: Run parameter and path checking, defined in the module.check()
+        functions. By default should be True, to ensure that paths and
+        parameters are set correctly. It should only be set False for debug
+        and testing purposes when we need to force our way past this safeguard.
+    """
+    logger.info("initializing SeisFlows3 in sys.modules")
+
+    # Parameters and paths must already be loaded (normally done by submit)
+    assert(PAR in sys.modules)
+    assert(PATH in sys.modules)
+
+    # Check if objects already exist on disk, exit so as to not overwrite
+    if "OUTPUT" in sys.modules[PATH] and \
+            os.path.exists(sys.modules[PATH]["OUTPUT"]):
+        print(msg.cli("Data from previous workflow found in working directory.",
+                      items=["> seisflows restart: delete data and start new "
+                             "workflow",
+                             "> seisflows resume: resume existing workflow"],
+                      header="warning", border="=")
+              )
+        sys.exit(-1)
 
     # Instantiate and register objects
     for name in NAMES:
         sys.modules[f"seisflows_{name}"] = custom_import(name)()
 
-    # Error checking
-    for name in NAMES:
-        sys.modules[f"seisflows_{name}"].check()
+    # Parameter import error checking, missing or improperly set parameters will
+    # throw assertion errors
+    if check:
+        errors = []
+        for name in NAMES:
+            try:
+                sys.modules[f"seisflows_{name}"].check()
+            except AssertionError as e:
+                errors.append(f"{name}: {e}")
+        if errors:
+            print(msg.cli("seisflows.config module check failed with:",
+                          items=errors, header="module check error",
+                          border="="))
+            sys.exit(-1)
 
-    # Ensure that certain parameters are instantiated
-    if not hasattr(sys.modules["seisflows_parameters"], "WORKFLOW"):
-        print(msg.MissingParameter_Workflow)
-        sys.exit(-1)
-    if not hasattr(sys.modules["seisflows_parameters"], "SYSTEM"):
-        print(msg.MissingParameter_System)
-        sys.exit(-1)
+    # Bare minimum module requirements for SeisFlows3
+    req_modules = ["WORKFLOW", "SYSTEM"]
+    for req in req_modules:
+        if not hasattr(sys.modules[PAR], req):
+            print(msg.cli(f"SeisFlows3 requires defining: {req_modules}."
+                          "Please specify these in the parameter file. Use "
+                          "'seisflows print module' to determine suitable "
+                          "choices.", header="error", border="="))
+            sys.exit(-1)
 
 
 def save():
     """
     Export the current session to disk
     """
-    unix.mkdir(_output())
+    logger.info("exporting current working environment to disk")
+    output = sys.modules[PATH]["OUTPUT"]
+    unix.mkdir(output)
 
     # Save the paths and parameters into a JSON file
-    for name in ["parameters", "paths"]:
-        fullfile = os.path.join(_output(), f"seisflows_{name}.json")
-        savejson(fullfile, sys.modules[f"seisflows_{name}"].__dict__)
+    for name in [PAR, PATH]:
+        fullfile = os.path.join(output, f"{name}.json")
+        with open(fullfile, "w") as f:
+            json.dump(sys.modules[name].__dict__, f, sort_keys=True, indent=4)
 
     # Save the current workflow as pickle objects
     for name in NAMES:
-        fullfile = os.path.join(_output(), f"seisflows_{name}.p")
-        saveobj(fullfile, sys.modules[f"seisflows_{name}"])
+        fullfile = os.path.join(output, f"seisflows_{name}.p")
+        with open(fullfile, "wb") as f:
+            pickle.dump(sys.modules[f"seisflows_{name}"], f)
 
 
 def load(path):
@@ -103,70 +154,100 @@ def load(path):
     :type path: str
     :param path: path to the previously saved session
     """
+    logger.info("loading current working environment from disk")
+
     # Load parameters and paths from a JSON file
-    for name in ['parameters', 'paths']:
-        fullfile = os.path.join(_full(path), f"seisflows_{name}.json")
-        sys.modules[f"seisflows_{name}"] = Dict(loadjson(fullfile))
+    for name in [PAR, PATH]:
+        fullfile = os.path.join(os.path.abspath(path), f"{name}.json")
+        with open(fullfile, "r") as f:
+            sys.modules[name] = Dict(json.load(f))
 
     # Load the saved workflow from pickle objects
     for name in NAMES:
-        fullfile = os.path.join(_full(path), f"seisflows_{name}.p")
-        sys.modules[f"seisflows_{name}"] = loadobj(fullfile)
+        fullfile = os.path.join(os.path.abspath(path), f"seisflows_{name}.p")
+        with open(fullfile, "rb") as f:
+            sys.modules[f"seisflows_{name}"] = pickle.load(f)
 
+
+def flush():
+    """
+    It is sometimes necessary to flush the currently active working state to
+    avoid affecting subsequent working states (e.g., running tests back to back)
+    This command will flush sys.modules of all `seisflows_{}` modules that are
+    typically instantiated using load(), or init_seisflows()
+
+    https://stackoverflow.com/questions/1668223/how-to-de-import-a-python-module
+    """
+    for name in NAMES:
+        mod_name = f"seisflows_{name}"
+        if mod_name in sys.modules:
+            del sys.modules[mod_name]
 
 class Dict(object):
     """
-    Re-defined dictionary-like object for holding parameters or paths
+    A barebones dictionary-like object for holding parameters or paths.
 
     Allows for easier access of dictionary items, does not allow resets of
-    attributes once defined, only allows updates through new dictionaries.
+    attributes once defined, nor does it allow deleting attributes once defined.
+    This helps keep a workflow on rails by preventing the User from editing
+    paths and parameters during a workflow.
+
+    TODO | Does it make sense to have this inherit dict() rather than defining
+    TODO | an entirely new object?
     """
+    def __init__(self, newdict):
+        """Internal dictionary can ONLY be updated by updating the ENTIRE set
+        at once, usually done by reading in a new parameter file at the start
+        of a workflow"""
+        super(Dict, self).__setattr__('__dict__', newdict)
+
+    def __str__(self):
+        """Pretty print dictionaries and first level nested dictionaries"""
+        str_ = ""
+        longest_key = max([len(_) for _ in self.__dict__.keys()])
+        for key, val in self.__dict__.items():
+            str_ += f"{key:<{longest_key}}: {val}\n"
+        return str_
+
+    def __repr__(self):
+        """Pretty print when calling an instance of this object"""
+        return(self.__str__())
+
     def __iter__(self):
+        """Return an iterable list of sorted keys"""
         return iter(sorted(self.__dict__.keys()))
 
     def __getattr__(self, key):
+        """Attribute-like access of the internal dictionary attributes"""
         return self.__dict__[key]
 
     def __getitem__(self, key):
+        """.get() like access of the internal dictionary attributes """
         return self.__dict__[key]
 
     def __setattr__(self, key, val):
+        """Setting attributes can only be performed one time"""
         if key in self.__dict__:
             raise TypeError("Once defined, parameters cannot be changed.")
         self.__dict__[key] = val
 
     def __delattr__(self, key):
+        """Attributes cannot be deleted once set to avoid editing a parameter
+        set during an active workflow"""
         if key in self.__dict__:
             raise TypeError("Once defined, parameters cannot be deleted.")
         raise KeyError
 
-    def update(self, newdict):
-        super(Dict, self).__setattr__('__dict__', newdict)
+    def force_set(self, key, val):
+        """Force-set variables even though the intended behavior of this class
+        is to not allow deleting or replacing already set variables.
+        This should be used for check() functions and testing purposes only"""
+        self.__dict__[key] = val
 
-    def __init__(self, newdict):
-        self.update(newdict)
-    
-    def __str__(self):
-        """
-        Pretty print dictionaries and first level nested dictionaries
-        """
-        str_ = "{"
-        for key, item in vars(self).items():
-            if isinstance(item, str):
-                str_ += f"{key}: '{item}'\n"
-            elif isinstance(item, dict):
-                str_ += key + ": {\n"
-                for key2, item2 in vars(self)[key].items():
-                    if isinstance(item2, str):
-                        str_ += f"\t{key2}: '{item2}'\n"
-                    else:
-                        str_ += f"\t{key2}: {item2}\n"
-                str_ += "}\n"
-            else:
-                str_ += f"{key}: {item}\n"
-        str_ += "}"
-        return str_
-        
+    def values(self):
+        """Return values from the internal dictionary"""
+        return self.__dict__.values()
+
 
 class Null(object):
     """
@@ -207,7 +288,7 @@ class SeisFlowsPathsParameters:
         which means paths and parameters can be adopted from base class
 
         :type base: seisflows.config.DefinePathsParameters
-        :param base: paths and parameters from abstract Base class that need to 
+        :param base: paths and parameters from abstract Base class that need to
             be inherited by the current child class.
         """
         self.parameters, self.paths = {}, {}
@@ -220,7 +301,7 @@ class SeisFlowsPathsParameters:
         Add a parameter to the internal list of parameters
 
         :type parameter: str
-        :param paremeter: name of the parameter
+        :param parameter: name of the parameter
         :type required: bool
         :param required: whether or not the parameter is required. If it is not
             required, then a default value should be given
@@ -265,8 +346,9 @@ class SeisFlowsPathsParameters:
         Set internal paths and parameter values into sys.modules. Should be
         called by each modules check() function.
 
-        Ensures that required paths and parameters are set by the user, and that
-        default values are stored for any optional paths and parameters.
+        Ensures that required paths and parameters are set by the User in the
+        parameter file and that default values are stored for any optional
+        paths and parameters which are not explicitely set.
 
         :type paths: bool
         :param paths: validate the internal path values
@@ -276,20 +358,20 @@ class SeisFlowsPathsParameters:
             the user.
         """
         if paths:
-            PATH = sys.modules["seisflows_paths"]
+            sys_path = sys.modules[PATH]
             for key, attrs in self.paths.items():
-                if attrs["required"] and (key not in PATH):
-                    raise ParameterError(PATH, key)
-                elif key not in PATH:
-                    setattr(PATH, key, attrs["default"])
+                if attrs["required"] and (key not in sys_path):
+                    raise ParameterError(sys_path, key)
+                elif key not in sys_path:
+                    setattr(sys_path, key, attrs["default"])
 
         if parameters:
-            PAR = sys.modules["seisflows_parameters"]
+            sys_par = sys.modules[PAR]
             for key, attrs in self.parameters.items():
-                if attrs["required"] and (key not in PAR):
-                    raise ParameterError(PAR, key)
-                elif key not in PAR:
-                    setattr(PAR, key, attrs["default"])
+                if attrs["required"] and (key not in sys_par):
+                    raise ParameterError(sys_par, key)
+                elif key not in sys_par:
+                    setattr(sys_par, key, attrs["default"])
 
 
 def custom_import(name=None, module=None, classname=None):
@@ -318,14 +400,27 @@ def custom_import(name=None, module=None, classname=None):
     # Parse input arguments for custom import
     # Allow empty system to be called so that import error message can be thrown
     if name is None:
-        sys.exit(msg.ImportError1)
+        print(msg.cli(
+            "Please check that 'custom_import' utility is being used as "
+            "follows: custom_import(name, module). The resulting full dotted "
+            "name 'seisflows3.name.module' must correspond to a module "
+            "within this package.", header="custom import error", border="="))
+        sys.exit(-1)
     # Invalid `system` call
     elif name not in NAMES:
-        sys.exit(msg.ImportError2)
+        print(msg.cli(
+            "Please check that the use of custom_import(name, module, class) "
+            "is implemented correctly, where name must be in the following:",
+            items=NAMES, header="custom import error", border="="))
+        sys.exit(-1)
     # Attempt to retrieve currently assigned classname from parameters
     if module is None:
-        module = _try(name)
-        # If no module by that name, return Null
+        try:
+            module = sys.modules[PAR][name.upper()]
+        except KeyError:
+            return Null
+        # If this still returns nothing, then no module has been assigned
+        # likely the User has turned this module OFF
         if module is None:
             return Null
     # If no method specified, convert classname to PEP-8
@@ -345,23 +440,35 @@ def custom_import(name=None, module=None, classname=None):
             _exists = True
             break
     if not _exists:
-        sys.exit(msg.ImportError3.format(name=name, module=module,
-                                         module_upper=name.upper()))
-    # Import module
-    module = import_module(full_dotted_name)
+        print(msg.cli(f"The following module was not found within the package: "
+                      f"seisflows3.{name}.{module}",
+                      header="custom import error", border="=")
+              )
+        sys.exit(-1)
+
+    # If importing the module doesn't work, throw an error. Usually this happens
+    # when am external dependency isn't available, e.g., Pyatoa
+    try:
+        module = import_module(full_dotted_name)
+    except Exception as e:
+        print(msg.cli(f"Module could not be imported {full_dotted_name}",
+                      items=[str(e)], header="custom import error", border="="))
+        print(traceback.print_exc())
+        sys.exit(-1)
 
     # Extract classname from module if possible
     try:
         return getattr(module, classname)
     except AttributeError:
-        sys.exit(msg.ImportError4.format(name=name, module=module,
-                                         classname=classname))
+        print(msg.cli(f"The following method was not found in the imported "
+                      f"class: seisflows3.{name}.{module}.{classname}"))
+        sys.exit(-1)
 
 
 def format_paths(mydict):
     """
     Ensure that paths have a standardized format before being allowed into
-    an active working environment. 
+    an active working environment.
     Expands tilde character (~) in path strings and expands absolute paths
 
     :type mydict: dict
@@ -375,70 +482,6 @@ def format_paths(mydict):
         except TypeError:
             continue
     return mydict
-
-
-def _par(key):
-    """
-    Utility function to return a global parameter
-
-    :type key: str
-    :param key: key to be passed to the parameter dict
-    :return: value for given key
-    """
-    return sys.modules['seisflows_parameters'][key.upper()]
-
-
-def _path(key):
-    """
-    Utility function to return a global pathname
-
-    :type key: str
-    :param key: key to be passed to the parameter dict
-    :return: value for given key
-    """
-    return sys.modules['seisflows_paths'][key.upper()]
-
-
-def _try(key):
-    """
-    Utility function to try to return a global parameter
-
-    :type key: str
-    :param key: key to be passed to the parameter dict
-    :return: value for given key or None
-    """
-    try:
-        return _par(key)
-    except KeyError:
-        return None
-
-
-def _output():
-    """
-    Utility function to return the full path to the output directory
-
-    :rtype: str
-    :return: full path to output directory
-    """
-    try:
-        return _full(_path("output"))
-    except IOError:
-        return _full(os.path.join(".", "output"))
-
-
-def _full(path):
-    """
-    Utility function to return a full path with trailing '/'
-
-    :type path: str
-    :param path: path to be returned in full
-    :rtype: str
-    :return: full path
-    """
-    try:
-        return os.path.join(os.path.abspath(path), '')
-    except Exception as e:
-        raise IOError
 
 
 def _pickle_method(method):
@@ -480,3 +523,7 @@ def _unpickle_method(func_name, obj, cls):
 
 copyreg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
+# Because we defined Dict inside this file, we need to convert our CFGPATHS
+# to a Dict at the end of the file to allow direct variable access
+# !!! TODO I don't really like this implementation, can it be changed?
+CFGPATHS = Dict(CFGPATHS)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the subclass seisflows.solver.Specfem3D
 This class provides utilities for the Seisflows solver interactions with
@@ -6,16 +6,15 @@ Specfem3D Cartesian. It inherits all attributes from seisflows3.solver.Base,
 and overwrites these functions to provide specified interaction with Specfem3D
 """
 import os
+import sys
+import logging
 from glob import glob
 
-import sys
-import warnings
 import seisflows3.plugins.solver.specfem3d as solvertools
-
-from seisflows3.tools import unix
-from seisflows3.tools.tools import exists
+from seisflows3.tools import unix, msg
+from seisflows3.tools.wrappers import exists
 from seisflows3.config import custom_import, SeisFlowsPathsParameters
-from seisflows3.tools.seismic import call_solver, getpar, setpar
+from seisflows3.tools.specfem import call_solver, getpar, setpar
 
 
 # Seisflows configuration
@@ -33,6 +32,19 @@ class Specfem3D(custom_import("solver", "base")):
 
     !!! See base class for method descriptions !!!
     """
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
+    def __init__(self):
+        """
+        These parameters should not be set by the user.
+        Attributes are initialized as NoneTypes for clarity and docstrings.
+
+        :type logger: Logger
+        :param logger: Class-specific logging module, log statements pushed
+            from this logger will be tagged by its specific module/classname
+        """
+        super().__init__()
+
     @property
     def required(self):
         """
@@ -82,12 +94,14 @@ class Specfem3D(custom_import("solver", "base")):
 
         # Run the Forward simulation
         unix.cd(self.cwd)
+        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
+        if PAR.ATTENUATION:
+            setpar(key="ATTENUATION ", val=".true.", file="DATA/Par_file")
+        else:
+            setpar(key="ATTENUATION ", val=".false.", file="DATA/Par_file")
 
-        setpar("SIMULATION_TYPE", "1")
-        setpar("SAVE_FORWARD", ".true.")
-        setpar("ATTENUATION ", ".true.")
-
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
 
         unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
                 dst=os.path.join("traces", "obs"))
@@ -96,7 +110,7 @@ class Specfem3D(custom_import("solver", "base")):
         if PAR.SAVETRACES:
             self.export_traces(os.path.join(PATH.OUTPUT, "traces", "obs"))
 
-    def generate_mesh(self, model_path, model_name, model_type='gll'):
+    def generate_mesh(self, model_path, model_name, model_type=None):
         """
         Performs meshing with internal mesher Meshfem3D and database generation
 
@@ -108,9 +122,11 @@ class Specfem3D(custom_import("solver", "base")):
         :param model_type: available model types to be passed to the Specfem3D
             Par_file. See Specfem3D Par_file for available options.
         """
+        available_model_types = ["gll"]
+
         assert(exists(model_path)), f"model {model_path} does not exist"
 
-        available_model_types = ["gll"]
+        model_type = model_type or getpar(key="MODEL", file="DATA/Par_file")
         assert(model_type in available_model_types), \
             f"{model_type} not in available types {available_model_types}"
 
@@ -124,8 +140,8 @@ class Specfem3D(custom_import("solver", "base")):
             dst = self.model_databases
             unix.cp(src, dst)
 
-            call_solver(mpiexec=system.mpiexec(), executable="bin/xmeshfem3D")
-            call_solver(mpiexec=system.mpiexec(), 
+            call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem3D")
+            call_solver(mpiexec=PAR.MPIEXEC, 
                         executable="bin/xgenerate_databases")
 
         # Export the model for future use in the workflow
@@ -149,13 +165,16 @@ class Specfem3D(custom_import("solver", "base")):
         :param path: path to export traces to after completion of simulation
         """
         # Set parameters and run forward simulation
-        setpar("SIMULATION_TYPE", "1")
-        setpar("SAVE_FORWARD", ".true.")
-        setpar("ATTENUATION ", ".true.")
+        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
+        if PAR.ATTENUATION:
+            setpar(key="ATTENUATION ", val=".true.", file="DATA/Par_file")
+        else:
+            setpar(key="ATTENUATION ", val=".false`.", file="DATA/Par_file")
 
-        call_solver(mpiexec=system.mpiexec(),
+        call_solver(mpiexec=PAR.MPIEXEC,
                     executable="bin/xgenerate_databases")
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
 
         # Find and move output traces, by default to synthetic traces dir
         unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
@@ -166,39 +185,50 @@ class Specfem3D(custom_import("solver", "base")):
         Calls SPECFEM3D adjoint solver, creates the `SEM` folder with adjoint
         traces which is required by the adjoint solver
         """
-        setpar("SIMULATION_TYPE", "3")
-        setpar("SAVE_FORWARD", ".false.")
-        setpar("ATTENUATION ", ".false.")
+        setpar(key="SIMULATION_TYPE", val="3", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".false.", file="DATA/Par_file")
+        setpar(key="ATTENUATION ", val=".false.", file="DATA/Par_file")
 
         unix.rm("SEM")
         unix.ln("traces/adj", "SEM")
 
-        call_solver(mpiexec=system.mpiexec(), executable="bin/xspecfem3D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
 
     def check_solver_parameter_files(self):
         """
         Checks solver parameters 
         """
-        nt = getpar(key="NSTEP", cast=int)
-        dt = getpar(key="DT", cast=float)
-
-        if nt != PAR.NT:
+        # Check the number of steps in the SPECFEM2D Par_file
+        nt_str, nt, nt_i = getpar(key="NSTEP", file="DATA/Par_file")
+        if int(nt) != PAR.NT:
             if self.taskid == 0:
-                warnings.warn("Specfem3D NSTEP != PAR.NT\n"
-                              "overwriting Specfem3D with Seisflows parameter"
-                              )
-            setpar(key="NSTEP", val=PAR.NT)
+                print(msg.cli(f"SPECFEM2D {nt_str}=={nt} is not equal "
+                              f"SeisFlows3 PAR.NT=={PAR.NT}. Please ensure "
+                              f"that these values match in both files.",
+                              header="parameter match error", border="=")
+                      )
+                sys.exit(-1)
 
-        if dt != PAR.DT:
+        dt_str, dt, dt_i = getpar(key="DT", file="DATA/Par_file")
+        if float(dt) != PAR.DT:
             if self.taskid == 0:
-                warnings.warn("Specfem3D DT != PAR.DT\n"
-                              "overwriting Specfem3D with Seisflows parameter"
-                              )
-            setpar(key="DT", val=PAR.DT)
+                print(msg.cli(f"SPECFEM2D {dt_str}=={dt} is not equal "
+                              f"SeisFlows3 PAR.DT=={PAR.DT}. Please ensure "
+                              f"that these values match in both files.",
+                              header="parameter match error", border="=")
+                      )
+                sys.exit(-1)
 
-        if self.mesh_properties.nproc != PAR.NPROC:
+        # Ensure that NPROC matches the MESH values
+        nproc = self.mesh_properties.nproc
+        if nproc != PAR.NPROC:
             if self.taskid == 0:
-                warnings.warn("Specfem3D mesh nproc != PAR.NPROC")
+                print(msg.cli(f"SPECFEM2D mesh NPROC=={nproc} is not equal"
+                              f"SeisFlows3 PAR.NPROC=={PAR.NPROC}. "
+                              f"Please check that your mesh matches this val.",
+                              header="parameter match error", border="=")
+                      )
+                sys.exit(-1)
 
         if "MULTIPLES" in PAR:
             raise NotImplementedError
@@ -260,8 +290,7 @@ class Specfem3D(custom_import("solver", "base")):
             but incorrect number of parameters is forwarded !!!
         """
         unix.cd(self.cwd)
-        setpar(key="use_existing_STATIONS",
-               val=".true.")
+        setpar(key="use_existing_STATIONS", val=".true", file="DATA/Par_file")
 
         _, h = preprocess.load("traces/obs")
         solvertools.write_receivers(h.nr, h.rx, h.rz)

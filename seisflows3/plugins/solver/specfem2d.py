@@ -1,18 +1,18 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Plugins used for the numerical solver SPECFEM2D
 """
 import sys
 from seisflows3.tools import array, unix
-from seisflows3.tools.tools import exists, findpath
-from seisflows3.tools.seismic import getpar, setpar
+from seisflows3.tools.wrappers import exists, findpath
+from seisflows3.tools.specfem import getpar, setpar
 
 
 def write_sources(coords, path='.', ws=1., suffix=''):
     """
     Writes source information to text file
         TODO this has to be adapted for new versions of specfem because the
-        source file format has changed
+             source file format has changed
     """
     sx, sy, sz = coords
 

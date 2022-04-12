@@ -1,9 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is the subclass class for seisflows.plugins.line_search.backtrack
 """
+import logging
+
+from seisflows3.tools import msg
 from seisflows3.plugins.line_search.bracket import Bracket
-from seisflows3.tools.math import backtrack2
+from seisflows3.tools.math import parabolic_backtrack
 
 
 class Backtrack(Bracket):
@@ -29,6 +32,9 @@ class Backtrack(Bracket):
         status == 0 : not finished
         status < 0  : failed
     """
+    # Class-specific logger accessed using self.logger
+    logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self, **kwargs):
         """
         These parameters should not be set by the user.
@@ -51,34 +57,32 @@ class Backtrack(Bracket):
         # Assumed well scaled search direction, attempt backtracking line search 
         # with unit step length
         else:
-            if self.verbose:
-                print("\tBacktracking line search")
-                print(f"\t\tStep Length(s) = {x}")
-                print(f"\t\tMisfit(s) = {f}")
+            self.logger.info(msg.sub("EVALUATE BACKTRACKING LINE SEARCH"))
+            x_str = ", ".join([f"{_:.2E}" for _ in x])
+            f_str = ", ".join([f"{_:.2E}" for _ in f])
+            self.logger.debug(f"step length(s) = {x_str}")
+            self.logger.debug(f"misfit val(s)  = {f_str}")
+
             # Initial unit step length
             if step_count == 0:
-                if self.verbose:
-                    print("\t\tAttempting unit step length")
+                self.logger.info("attempting unit step length")
                 alpha = min(1., self.step_len_max)
                 status = 0
             # Pass if misfit is reduced
             elif self._check_decrease(x, f):
-                if self.verbose:
-                    print("\t\tMisfit decrease, pass")
+                self.logger.info("misfit decrease, pass")
                 alpha = x[f.argmin()]
                 status = 1
             # If misfit continually increases, decrease step length
             elif step_count <= self.step_count_max:
-                if self.verbose:
-                    print("\t\tMisfit increase, decreasing step length")
+                self.logger.info("misfit increase, decreasing step length")
                 slope = gtp[-1] / gtg[-1]
-                alpha = backtrack2(f0=f[0], g0=slope, x1=x[1], f1=f[1], b1=0.1,
-                                   b2=0.5)
+                alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
+                                            f1=f[1], b1=0.1, b2=0.5)
                 status = 0
             # Failed because step_count_max exceeded
             else:
-                if self.verbose:
-                    print("\t\tBacktracking failed, step_count_max exceeded")
+                self.logger.info("backtracking failed, step_count_max exceeded")
                 alpha = None
                 status = -1
 
