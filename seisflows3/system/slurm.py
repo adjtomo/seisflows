@@ -168,7 +168,10 @@ class Slurm(custom_import("system", "cluster")):
 
         # Contiously check for job completion on ALL running array jobs
         is_done = False
+        count = 0
         while not is_done:
+            # Wait a bit to avoid rapidly querying sacct
+            time.sleep(5)
             is_done, states = self.job_array_status(job_ids)
 
             # EXIT CONDITION: if any of the jobs provide job failure codes
@@ -181,9 +184,19 @@ class Slurm(custom_import("system", "cluster")):
                                              f"TASK ID: {job_ids[i]}",
                                              f"SBATCH:  {run_call}"],
                                       header="error", border="="))
-                        sys.exit(-1)
-            # Wait a bit to avoid rapidly querying sacct
-            time.sleep(5)
+                        sys.exit(-1)    
+            # WAIT CONDITION: if sacct is not working, we'll get stuck in a loop
+            if "UNDEFINED" in states:
+                count += 1
+                # Every 10 counts, warn the user this is unexpected behavior
+                if not count % 10:
+                    job_id = job_ids[states.index("UNDEFINED")]
+                    self.logger.warning(f"SLURM command 'sacct {job_id}' has "
+                                        f"returned unexpected response {count} "
+                                        f"times. This job may have failed "
+                                        f"unexpectedly. Consider checking "
+                                        f"manually")
+                 
 
     def taskid(self):
         """
@@ -269,7 +282,8 @@ class Slurm(custom_import("system", "cluster")):
 
         return is_done, states
 
-    def _check_job_state(self, job_id):
+    @staticmethod
+    def _check_job_state(job_id):
         """
         Queries completion status of a single job by running:
             $ sacct -nL -o jobid,state -j {job_id}
@@ -299,9 +313,14 @@ class Slurm(custom_import("system", "cluster")):
         state = "UNDEFINED"
         lines = stdout.strip().split("\n")
         for line in lines:
-            # e.g., 441628  COMPLETED
-            job_id_check, status = line.split()
-            if job_id == job_id_check:
+            # expecting e.g., 441628  COMPLETED
+            try:
+                job_id_check, state = line.split()
+            # str.split() will throw ValueError on non-matching strings
+            except ValueError:
+                continue
+            # Use in to allow for array jobs to match job ids
+            if job_id in job_id_check:
                 break
 
         return state

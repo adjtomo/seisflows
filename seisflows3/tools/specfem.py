@@ -43,12 +43,8 @@ class Container(defaultdict):
 def call_solver(mpiexec, executable, output="solver.log"):
     """
     Calls MPI solver executable to run solver binaries, used by individual
-    processes to run the solver on system.
-
-    A less complicated version, without error catching, would be
-    subprocess.call(f"{mpiexec} {executable}", shell=True)
-
-    TODO Move the log name definition out of this function and into solver
+    processes to run the solver on system. If the external solver returns a 
+    non-zero exit code (failure), this function will return a negative boolean.
 
     :type mpiexec: str
     :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
@@ -57,10 +53,9 @@ def call_solver(mpiexec, executable, output="solver.log"):
     :type output: str
     :param output: where to redirect stdout
     """
-    # mpiexec is None when running in serial mode
+    # mpiexec is None when running in serial mode, so e.g., ./xmeshfem2D
     if mpiexec is None:
         exc_cmd = f"./{executable}"
-
     # Otherwise mpiexec is system dependent (e.g., srun, mpirun)
     else:
         exc_cmd = f"{mpiexec} {executable}"
@@ -68,7 +63,7 @@ def call_solver(mpiexec, executable, output="solver.log"):
     try:
         # Write solver stdout (log files) to text file
         f = open(output, "w")
-        subprocess.check_call(exc_cmd, shell=True, stdout=f)
+        subprocess.run(exc_cmd, shell=True, check=True, stdout=f)
     except (subprocess.CalledProcessError, OSError) as e:
         print(msg.cli("The external numerical solver has returned a nonzero "
                       "exit code (failure). Consider stopping any currently "
@@ -80,7 +75,6 @@ def call_solver(mpiexec, executable, output="solver.log"):
                       header="external solver error",
                       border="=")
               )
-        sys.exit(-1)
     finally:
         f.close()
 
