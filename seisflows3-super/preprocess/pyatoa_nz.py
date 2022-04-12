@@ -44,7 +44,7 @@ def process_event(self, source_name, codes=None, **kwargs):
     # Allow user to provide a list of codes, else read from station file
     if codes is None:
         codes = read_station_codes(io.paths.stations_file,
-                                   loc="??", cha="HH?")
+                                   loc="*",cha="HH?")
 
     # Open the dataset as a context manager and process all events in serial
     with ASDFDataSet(io.paths.ds_file) as ds:
