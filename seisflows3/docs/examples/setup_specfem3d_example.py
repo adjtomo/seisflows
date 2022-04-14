@@ -20,7 +20,8 @@ from seisflows3.seisflows import SeisFlows
 # WORKDIR: points to your own working directory
 # SPECFEM2D: points to an existing specfem2D repository if available
 WORKDIR = os.getcwd()
-SPECFEM2D_ORIGINAL = "/scale_wlg_persistent/filesets/project/gns03247/bchow/specfem/specfem2d"
+SPECFEM2D_ORIGINAL = ("/scale_wlg_persistent/filesets/project/gns03247/bchow/"
+                      "specfem/specfem2d")
 
 assert(os.path.exists(SPECFEM2D_ORIGINAL)), f"SPECFEM2D repo doesn't exist: {SPECFEM2D}"
 

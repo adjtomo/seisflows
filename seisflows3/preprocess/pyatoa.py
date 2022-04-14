@@ -128,7 +128,7 @@ class Pyatoa(custom_import("preprocess", "base")):
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
         """
-        msg.check(type(self))
+        self.logger.debug(msg.check(type(self)))
 
         if validate:
             self.required.validate()

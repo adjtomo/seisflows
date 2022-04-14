@@ -90,6 +90,7 @@ if __name__ == '__main__':
         export(args.environment)
 
     # Load the last checkpointed working state from the 'seisflows_?.p` files
+    # Allowing access through sys.modules
     load(args.output)
 
     # Load keyword arguments required by this function
@@ -99,9 +100,18 @@ if __name__ == '__main__':
     with open(kwargs_path, "rb") as f:
         kwargs = pickle.load(f)
 
-    # Configure the CPU-dependent logger
+    # Load in some of the working state from sys.modules
     PAR = sys.modules["seisflows_parameters"]
-    config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE)
+    PATH = sys.modules["seisflows_paths"]
+    system = sys.modules["seisflows_system"]
+
+    # Configure the CPU-dependent logger which will log to stdout only
+    # But mainsolver will log to the main log file as well
+    if system.taskid == 0: 
+        filename = PATH.LOGFILE
+    else:
+        filename = None
+    config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE, filename=filename)
 
     # Get the actual function so we can evaluate it
     func = getattr(sys.modules[f"seisflows_{args.classname}"], args.funcname)

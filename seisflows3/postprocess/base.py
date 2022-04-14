@@ -66,7 +66,7 @@ class Base:
         """
         Checks parameters and paths
         """
-        msg.check(type(self))
+        self.logger.debug(msg.check(type(self)))
 
         if validate:
             self.required.validate()
@@ -79,7 +79,7 @@ class Base:
         """
         Placeholder for initialization or setup tasks
         """
-        msg.setup(type(self))
+        self.logger.debug(msg.setup(type(self)))
 
     def write_gradient(self, path):
         """
@@ -109,6 +109,7 @@ class Base:
         path_model = os.path.join(path, "model")
 
         # Run postprocessing as job on system as it's computationally intensive
+        self.logger.info("processing kernels into gradient on system...")
         system.run("postprocess", "process_kernels", single=True,
                    path=path_kernels, logger=self.logger)
 

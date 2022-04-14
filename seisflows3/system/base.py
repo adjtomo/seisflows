@@ -14,6 +14,7 @@ from seisflows3.tools.wrappers import number_fid
 from seisflows3.config import save, SeisFlowsPathsParameters, CFGPATHS
 
 
+
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
 
@@ -82,6 +83,10 @@ class Base:
         sf.path("LOCAL", required=False,
                 docstr="path to local data to be used during workflow")
 
+        sf.path("LOGFILE", required=False, default=self.output_log,
+                docstr="the main output log file where all processes will "
+                       "track their status")
+
         return sf
 
     def check(self, validate=True):
@@ -93,6 +98,10 @@ class Base:
         if validate:
             self.required.validate()
 
+        # !!! This system could be better, currently defining log file twice
+        if self.output_log != PATH.LOGFILE:
+            self.output_log = PATH.LOGFILE
+
     def setup(self):
         """
         Create the SeisFlows3 directory structure in preparation for a
@@ -103,6 +112,10 @@ class Base:
         .. note::
             This function is expected to create dirs: SCRATCH, SYSTEM, OUTPUT
             and the following log files: output, error
+
+        .. note::
+            Logger is configured here as all workflows, independent of system,
+            will be calling setup()
 
         :rtype: tuple of str
         :return: (path to output log, path to error log)

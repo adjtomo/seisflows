@@ -154,7 +154,7 @@ class Base:
         """
         Checks parameters, paths, and dependencies
         """
-        msg.check(type(self))
+        self.logger.debug(msg.check(type(self)))
 
         if validate:
             self.required.validate()

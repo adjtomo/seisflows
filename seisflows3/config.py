@@ -185,8 +185,7 @@ def flush():
             del sys.modules[mod_name]
 
 
-def config_logger(level="DEBUG", filename=CFGPATHS["LOGFILE"],
-                  filemode="a", verbose=True):
+def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
     """
     Explicitely configure the logging module with some parameters defined
     by the user in the System module. Instantiates a stream logger to write
@@ -197,8 +196,9 @@ def config_logger(level="DEBUG", filename=CFGPATHS["LOGFILE"],
     :type level: str
     :param level: log level to be passed to logger, available are
         'CRITICAL', 'WARNING', 'INFO', 'DEBUG'
-    :type filename: str
-    :param filename: name of the log file to write log statements to
+    :type filename: str or None
+    :param filename: name of the log file to write log statements to. If None,
+        logs will be written to STDOUT ONLY, and `filemode` will not be used.
     :type filemode: str
     :param filemode: method for opening the log file. defaults to append 'a'
     :type verbose: bool
@@ -229,9 +229,10 @@ def config_logger(level="DEBUG", filename=CFGPATHS["LOGFILE"],
     logger.addHandler(st_handler)
 
     # File handler to print log statements to text file `filename`
-    file_handler = logging.FileHandler(filename, filemode)
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    if filename is not None:
+        file_handler = logging.FileHandler(filename, filemode)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
 
 class Dict(object):

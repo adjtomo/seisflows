@@ -150,8 +150,9 @@ class Inversion(custom_import("workflow", "base")):
 
             # Reset flow for subsequent iterations
             start, stop = None, None
-
-            if optimize.iter == PAR.END:
+        
+            # '>=' because finalize() may increment iter above PAR.END
+            if optimize.iter >= PAR.END:
                 break
 
         self.logger.info(msg.mjr("FINISHED INVERSION WORKFLOW"))
@@ -174,6 +175,7 @@ class Inversion(custom_import("workflow", "base")):
             optimize.setup()
 
             # Run solver.setup() in parallel
+            self.logger.info("setting up solver on system...")
             system.run("solver", "setup")
 
     def initialize(self):
@@ -252,7 +254,8 @@ class Inversion(custom_import("workflow", "base")):
 
         self.write_model(path=path, tag=model_tag)
 
-        self.logger.debug(f"evaluating objective function {PAR.NPROC} times")
+        self.logger.debug(f"evaluating objective function {PAR.NPROC} times "
+                          f"on system...")
         system.run("solver", "eval_func", path=path)
 
         self.write_misfit(path=path, tag=misfit_tag)
@@ -262,8 +265,8 @@ class Inversion(custom_import("workflow", "base")):
         Performs adjoint simulation to retrieve the gradient of the objective 
         """
         self.logger.info(msg.mnr("EVALUATING GRADIENT"))
-        self.logger.debug(f"evaluating gradient {PAR.NPROC} times")
 
+        self.logger.debug(f"evaluating gradient {PAR.NPROC} times on system...")
         system.run("solver", "eval_grad", path=path or PATH.GRAD,
                    export_traces=PAR.SAVETRACES)
 

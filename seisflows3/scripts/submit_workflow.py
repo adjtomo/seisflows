@@ -40,6 +40,7 @@ if __name__ == '__main__':
     Submit workflow.main() as a MASTER JOB on the compute system
     """
     args = parse_args()
+
     # Load the currently active working state
     unix.cd(args.output)
     load(args.output)
@@ -48,9 +49,10 @@ if __name__ == '__main__':
     workflow = sys.modules["seisflows_workflow"]
     system = sys.modules["seisflows_system"]
 
-    # Set up logging on the compute system
+    # Set up logging on the compute system to print to stdout only
     PAR = sys.modules["seisflows_parameters"]
-    config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE)
+    PATH = sys.modules["seisflows_paths"]
+    config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE) 
 
     # Execute MASTER JOB as workflow.main()
     workflow.main()

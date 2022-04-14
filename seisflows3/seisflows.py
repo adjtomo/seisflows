@@ -462,10 +462,10 @@ class SeisFlows:
         # Expand all paths to be absolute on the filesystem
         paths = format_paths(paths)
 
-        # Configure the logging module to print to stdout and write to file
+        # Set logger to print to stdout and write to a file
         config_logger(level=parameters["LOG_LEVEL"], 
                       verbose=parameters["VERBOSE"], 
-                      filename=CFGPATHS.LOGFILE)
+                      filename=paths["LOGFILE"]) 
 
         # Register parameters to sys, ensure they meet standards of the package
         sys.modules["seisflows_parameters"] = Dict(parameters)
@@ -654,7 +654,6 @@ class SeisFlows:
             self.par(parameter="stop_after", value=stop_after, skip_print=True)
 
         self._register(force=force)
-        config_logger()
 
         # A list of paths that need to exist if provided by user
         # !!! TODO Move this required paths somewhere more visible? config?
@@ -1294,7 +1293,7 @@ class SeisFlows:
             srcs = [src]
         for tag in srcs:
             m = optimize.load(tag)
-            optimize.check_model_parameters(m, tag)
+            optimize.check_model(m, tag)
 
     def _check_current_iteration(self, **kwargs):
         """
