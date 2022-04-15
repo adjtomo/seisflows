@@ -181,9 +181,11 @@ class Slurm(custom_import("system", "cluster")):
             if not is_done:
                 for i, state in enumerate(states):
                     if state in bad_states:
-                        print(msg.cli(f"Stopping workflow for {state} job",
+                        print(msg.cli((f"Stopping workflow for {state} job. "
+                                       f"Please check log file for details."),
                                       items=[f"TASK:    {classname}.{method}",
                                              f"TASK ID: {job_ids[i]}",
+                                             f"LOG:     logs/{job_ids[i]}",
                                              f"SBATCH:  {run_call}"],
                                       header="slurm run error", border="="))
                         sys.exit(-1)    

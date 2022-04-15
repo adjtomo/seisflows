@@ -75,6 +75,7 @@ def call_solver(mpiexec, executable, output="solver.log"):
                       header="external solver error",
                       border="=")
               )
+        sys.exit(-1)
     finally:
         f.close()
 
