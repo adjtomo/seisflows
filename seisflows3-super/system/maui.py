@@ -97,6 +97,13 @@ class Maui(custom_import("system", "slurm")):
             (f"PARTITION {PAR.PARTITION} is expected to have NODESIZE=" 
              f"{self.partitions[PAR.PARTITION]}, not current {PAR.NODESIZE}")
 
+        assert("SLURM_MEM_PER_CPU" in (PAR.ENVIRONS or "")), \
+            ("Maui runs Slurm>=21 which enforces mutually exclusivity of Slurm "
+             "memory environment variables SLURM_MEM_PER_CPU and "
+             "SLURM_MEM_PER_NODE. Due to the cross-cluster nature of "
+             "running SeisFlows3 on Maui, we must remove one env. variable. "
+             "Please add 'SLURM_MEM_PER_CPU' to PAR.ENVIRONS.")
+
     def submit(self):
         """
         Submits master job workflow to maui_ancil cluster as a single-core

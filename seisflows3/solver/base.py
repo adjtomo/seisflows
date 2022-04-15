@@ -833,7 +833,9 @@ class Base:
             path = PATH.MODEL_INIT
 
         if not exists(path):
-            raise FileNotFoundError(f"Mesh path {path} does not exist")
+            print(msg.cli(f"The following mesh path does not exist but should",
+                          items=[path], header="solver error", border="="))
+            sys.exit(-1)
 
         # Count slices and grid points
         key = self.parameters[0]

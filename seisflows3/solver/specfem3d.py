@@ -97,9 +97,9 @@ class Specfem3D(custom_import("solver", "base")):
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
         if PAR.ATTENUATION:
-            setpar(key="ATTENUATION ", val=".true.", file="DATA/Par_file")
+            setpar(key="ATTENUATION", val=".true.", file="DATA/Par_file")
         else:
-            setpar(key="ATTENUATION ", val=".false.", file="DATA/Par_file")
+            setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
         call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
 
@@ -202,7 +202,7 @@ class Specfem3D(custom_import("solver", "base")):
         nt_str, nt, nt_i = getpar(key="NSTEP", file="DATA/Par_file")
         if int(nt) != PAR.NT:
             if self.taskid == 0:
-                print(msg.cli(f"SPECFEM2D {nt_str}=={nt} is not equal "
+                print(msg.cli(f"SPECFEM3D {nt_str}=={nt} is not equal "
                               f"SeisFlows3 PAR.NT=={PAR.NT}. Please ensure "
                               f"that these values match in both files.",
                               header="parameter match error", border="=")
@@ -212,7 +212,7 @@ class Specfem3D(custom_import("solver", "base")):
         dt_str, dt, dt_i = getpar(key="DT", file="DATA/Par_file")
         if float(dt) != PAR.DT:
             if self.taskid == 0:
-                print(msg.cli(f"SPECFEM2D {dt_str}=={dt} is not equal "
+                print(msg.cli(f"SPECFEM3D {dt_str}=={dt} is not equal "
                               f"SeisFlows3 PAR.DT=={PAR.DT}. Please ensure "
                               f"that these values match in both files.",
                               header="parameter match error", border="=")
@@ -223,7 +223,7 @@ class Specfem3D(custom_import("solver", "base")):
         nproc = self.mesh_properties.nproc
         if nproc != PAR.NPROC:
             if self.taskid == 0:
-                print(msg.cli(f"SPECFEM2D mesh NPROC=={nproc} is not equal"
+                print(msg.cli(f"SPECFEM3D mesh NPROC=={nproc} is not equal "
                               f"SeisFlows3 PAR.NPROC=={PAR.NPROC}. "
                               f"Please check that your mesh matches this val.",
                               header="parameter match error", border="=")
