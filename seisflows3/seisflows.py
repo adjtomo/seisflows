@@ -850,6 +850,8 @@ class SeisFlows:
         :param skip_print: skip the print statement which is typically sent
             to stdout after changing parameters.
         """
+        if not os.path.exists(par_file):
+            sys.exit(f"\n\tparameter file '{par_file}' does not exist\n")
         if parameter is None:
             self._subparser.print_help()
             sys.exit(0)
