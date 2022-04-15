@@ -57,8 +57,6 @@ class Cluster(custom_import("system", "base")):
         """
         Checks parameters and paths
         """
-        msg.check(type(self))
-
         if validate:
             self.required.validate()
 

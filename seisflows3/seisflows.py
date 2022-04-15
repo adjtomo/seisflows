@@ -591,8 +591,8 @@ class SeisFlows:
                             seisflows_paths[key]["default"] = os.path.relpath(
                                                                attrs["default"])
                 msg.write_par_file_paths_pars(f, seisflows_paths, indent=4)
+        # General error catch as anything can happen here
         except Exception as e:
-            # General error catch as anything can happen here
             unix.rm(self._args.parameter_file)
             unix.cp(temp_par_file, self._args.parameter_file)
             print(msg.cli(text="seisflows configure traceback", header="error"))

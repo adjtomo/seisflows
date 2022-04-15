@@ -147,38 +147,6 @@ def timestamp():
     return time.strftime('%H:%M:%S')
 
 
-def loadpy(filename):
-    """
-    Load a .py file. Used to load old parameter.py and paths.py files.
-    Deprecated in favor of using .yaml files.
-
-    :type filename: str
-    :param filename: filename of .py file
-    """
-    raise DeprecationWarning("The legacy method of .py path and parameter "
-                             "files is deprecated. Please use the current "
-                             "method of a YAML parameter file"
-                             )
-    sys.exit(-1)
-    from imp import load_source
-
-    if not os.path.exists(filename):
-        print(msg.FileError.format(file=filename))
-        raise IOError
-
-    # Load module
-    name = re.sub('.py$', '', os.path.basename(filename))
-    module = load_source(name, filename)
-
-    # Strip private attributes
-    output = Struct()
-    for key, val in vars(module).items():
-        if key[0] != '_':
-            output[key] = val
-
-    return output
-
-
 def loadyaml(filename):
     """
     Define how the PyYaml yaml loading function behaves. 

@@ -93,8 +93,6 @@ class Base:
         """
         Checks parameters and paths
         """
-        msg.check(type(self))
-
         if validate:
             self.required.validate()
 
@@ -120,8 +118,6 @@ class Base:
         :rtype: tuple of str
         :return: (path to output log, path to error log)
         """
-        msg.setup(type(self))
-
         # Create scratch directories
         unix.mkdir(PATH.SCRATCH)
         unix.mkdir(PATH.SYSTEM)

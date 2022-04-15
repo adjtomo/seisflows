@@ -85,7 +85,6 @@ class Base:
         """
         Checks parameters and paths. Must be implemented by sub-class
         """
-        msg.check(type(self))
         if validate:
             self.required.validate()
 

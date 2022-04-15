@@ -73,9 +73,6 @@ class Base:
         :type validate: bool
         :param validate: set required paths and parameters into sys.modules
         """
-        # Call to output log statement identifying this specific module + class
-        msg.check(type(self))
-
         # The validate statement is used internally to set required paths
         # and parameters into sys.modules. Default values are stored for
         # optional terms
@@ -88,7 +85,6 @@ class Base:
         or kwargs. The base class is responsible for setting all of the
         necessary functions
         """
-        #
         super.test()
         # Multiple logging levels determine how verbose the module will be
         self.logger.info("important log statement goes here")

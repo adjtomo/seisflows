@@ -11,7 +11,6 @@ import os
 import glob
 import shutil
 import subprocess
-import numpy as np
 
 from seisflows3.tools import unix
 from seisflows3.seisflows import SeisFlows
@@ -20,9 +19,11 @@ from seisflows3.seisflows import SeisFlows
 # WORKDIR: points to your own working directory
 # SPECFEM2D: points to an existing specfem2D repository if available
 WORKDIR = os.getcwd()
-SPECFEM2D_ORIGINAL = "/scale_wlg_persistent/filesets/project/gns03247/bchow/specfem/specfem2d"
+SPECFEM2D_ORIGINAL = input("Path to SPECFEM2D respository with compiled "
+                           "binaries?: ")
 
-assert(os.path.exists(SPECFEM2D_ORIGINAL)), f"SPECFEM2D repo doesn't exist: {SPECFEM2D}"
+assert(os.path.exists(SPECFEM2D_ORIGINAL)), \
+    f"SPECFEM2D repo doesn't exist: {SPECFEM2D_ORIGINAL}"
 
 # Instantiate the SeisFlows class to use its command line arguments
 sf = SeisFlows()
@@ -109,7 +110,8 @@ with open("xspecfem2D.out", "w") as f:
 # where SeisFlows3 expects them
 unix.mv(glob.glob("DATA/*bin"), "OUTPUT_FILES")
 
-# Make sure we don't overwrite this initial model when creating our target model in the next step
+# Make sure we don't overwrite this initial model when creating our target
+# model in the next step
 unix.mv("OUTPUT_FILES", "OUTPUT_FILES_INIT")
 
 # ==============================================================================
@@ -142,8 +144,6 @@ with open("xspecfem2D.out", "w") as f:
 # Move the model files (*.bin) into the OUTPUT_FILES directory, 
 # where SeisFlows3 expects them
 unix.mv(glob.glob("DATA/*bin"), "OUTPUT_FILES")
-
-# Make sure we don't overwrite this initial model when creating our target model in the next step
 unix.mv("OUTPUT_FILES", "OUTPUT_FILES_TRUE")
 
 # ==============================================================================

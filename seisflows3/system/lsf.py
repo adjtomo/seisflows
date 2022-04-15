@@ -208,8 +208,9 @@ class Lsf(custom_import("system", "cluster")):
                 job_finished.append(False)
 
             if state == "EXIT":
-                print("LSF job failed: {job}")
-                print(msg.TaskError_LSF.format((classname, method, job)))
+                print(msg.cli(f"LSF job {job} failed to execute "
+                              f"{classname}.{method}.", header="error",
+                              border="="))
                 sys.exit(-1)
 
         isdone = all(job_finished)

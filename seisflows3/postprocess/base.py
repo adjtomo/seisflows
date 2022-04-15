@@ -66,20 +66,12 @@ class Base:
         """
         Checks parameters and paths
         """
-        self.logger.debug(msg.check(type(self)))
-
         if validate:
             self.required.validate()
         
         if PATH.MASK:
             assert os.path.exists(PATH.MASK), \
                 f"PATH.MASK provided but does not exist"
-
-    def setup(self):
-        """
-        Placeholder for initialization or setup tasks
-        """
-        self.logger.debug(msg.setup(type(self)))
 
     def write_gradient(self, path):
         """

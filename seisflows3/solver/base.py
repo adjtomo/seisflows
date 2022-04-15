@@ -164,8 +164,6 @@ class Base:
         """
         Checks parameters and paths
         """
-        msg.check(type(self))
-
         if validate:
             self.required.validate()
 
@@ -224,9 +222,6 @@ class Base:
             In the former case, a value for PATH.DATA must be supplied;
             in the latter case, a value for PATH.MODEL_TRUE must be provided.
         """
-        if self.taskid == 0:
-            self.logger.debug(msg.setup(type(self)))
-
         # Clean up for new inversion
         unix.rm(self.cwd)
         self.initialize_solver_directories()
@@ -687,7 +682,11 @@ class Base:
         # If this residuals directory has not been created, something
         # has gone wrong with the preprocessing and workflow cannot proceed
         if not os.path.exists(src):
-            print(msg.ExportResidualsError)
+            print(msg.cli("The Solver function 'export_residuals' expected "
+                          "'residuals' directories to be created but could not "
+                          "find them and cannot continue the workflow. Please "
+                          "check the preprocess.prepare_eval_grad() function",
+                          header="preprocess error", border="="))
             sys.exit(-1)
 
         dst = os.path.join(path, "residuals", self.source_name)

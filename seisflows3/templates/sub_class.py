@@ -53,9 +53,6 @@ class Subclass(custom_import("MODULE NAME HERE", "PARENT CLASS NAME HERE")):
         required paths and parameters are accounted for, and that all
         optional paths and parameters are set to user-defined or default values.
         """
-        # Call to output log statement identifying this specific module + class
-        msg.check(type(self))
-
         if validate:
             self.required.validate()
 

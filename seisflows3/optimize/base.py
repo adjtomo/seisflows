@@ -154,8 +154,6 @@ class Base:
         """
         Checks parameters, paths, and dependencies
         """
-        self.logger.debug(msg.check(type(self)))
-
         if validate:
             self.required.validate()
 
@@ -183,8 +181,6 @@ class Base:
         """
         Sets up nonlinear optimization machinery
         """
-        msg.setup(type(self))
-
         # All ptimization statistics text files will be written to path_stats
         path_stats = os.path.join(PATH.WORKDIR, CFGPATHS.STATSDIR)
         unix.mkdir(path_stats)

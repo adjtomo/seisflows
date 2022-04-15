@@ -286,9 +286,12 @@ def check_poissons_ratio(vp, vs, min_val=-1., max_val=0.5):
     """
     poissons = poissons_ratio(vp=vp, vs=vs)
     if (poissons.min() < min_val) or (poissons.max() > max_val):
-        print(msg.PoissonsRatioError.format(min_val=min_val, max_val=max_val,
-                                            pmin=poissons.min(),
-                                            pmax=poissons.max())
+        print(msg.cli(f"The Poisson's ratio of the given model is out of "
+                      f"bounds with respect to the defined range "
+                      f"({min_val}, {max_val}). "
+                      f"The model bounds were found to be:",
+                      items=["{pmin:.2f} < PR < {pmax:.2f}"], border="=",
+                      header="Poisson's Ratio Error")
               )
         sys.exit(-1)
     return poissons

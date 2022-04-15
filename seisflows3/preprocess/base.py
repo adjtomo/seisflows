@@ -110,8 +110,6 @@ class Base:
         """ 
         Checks parameters and paths
         """
-        self.logger.debug(msg.check(type(self)))
-
         if validate:
             self.required.validate()
 
@@ -179,8 +177,8 @@ class Base:
         # Assert that readers and writers available
         # TODO | This is a bit vague as dir contains imported modules and hidden
         # TODO | variables (e.g., np, __name__)
-        assert(PAR.FORMAT in dir(readers)), msg.ReaderError
-        assert(PAR.FORMAT in dir(writers)), msg.WriterError
+        assert(PAR.FORMAT in dir(readers)), f"Reader {PAR.FORMAT} not found"
+        assert(PAR.FORMAT in dir(writers)), f"Writer {PAR.FORMAT} not found"
 
         # Assert that either misfit or backproject exists 
         if PAR.WORKFLOW.upper() == "INVERSION":
@@ -192,8 +190,6 @@ class Base:
         misfit, adjoint source type, and specifying the expected file type
         for input and output seismic data.
         """
-        self.logger.debug(msg.setup(type(self)))
-
         # Define misfit function and adjoint trace generator
         if PAR.MISFIT:
             self.logger.debug(f"misfit function is: '{PAR.MISFIT}'")

@@ -94,8 +94,6 @@ class Inversion(custom_import("workflow", "base")):
         """
         Checks parameters and paths
         """
-        msg.check(type(self))
-
         super().check(validate=False)
         if validate:
             self.required.validate()
