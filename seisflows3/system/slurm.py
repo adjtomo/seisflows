@@ -200,7 +200,8 @@ class Slurm(custom_import("system", "cluster")):
                                         f"times. This job may have failed "
                                         f"unexpectedly. Consider checking "
                                         f"manually")
-                 
+
+        self.logger.info(f"Task {classname}.{method} finished successfully")
 
     def taskid(self):
         """

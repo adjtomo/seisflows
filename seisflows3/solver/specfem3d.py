@@ -168,9 +168,9 @@ class Specfem3D(custom_import("solver", "base")):
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
         if PAR.ATTENUATION:
-            setpar(key="ATTENUATION ", val=".true.", file="DATA/Par_file")
+            setpar(key="ATTENUATION", val=".true.", file="DATA/Par_file")
         else:
-            setpar(key="ATTENUATION ", val=".false`.", file="DATA/Par_file")
+            setpar(key="ATTENUATION", val=".false`.", file="DATA/Par_file")
 
         call_solver(mpiexec=PAR.MPIEXEC,
                     executable="bin/xgenerate_databases")
@@ -187,7 +187,7 @@ class Specfem3D(custom_import("solver", "base")):
         """
         setpar(key="SIMULATION_TYPE", val="3", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".false.", file="DATA/Par_file")
-        setpar(key="ATTENUATION ", val=".false.", file="DATA/Par_file")
+        setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
         unix.rm("SEM")
         unix.ln("traces/adj", "SEM")
