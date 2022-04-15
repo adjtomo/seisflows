@@ -228,6 +228,8 @@ class Base:
 
         # Determine where observation data will come from
         if PAR.CASE.upper() == "SYNTHETIC" and PATH.MODEL_TRUE is not None:
+            if self.task_id == 0:
+                self.logger.info("generating 'data' with MODEL_TRUE synthetics")
             # Generate synthetic data on the fly using the true model
             self.generate_data(model_path=PATH.MODEL_TRUE,
                                model_name="model_true",
@@ -239,6 +241,8 @@ class Base:
                     )
 
         # Prepare initial model
+        if self.task_id == 0:
+            self.logger.info("running mesh generation for MODEL_INIT")
         self.generate_mesh(model_path=PATH.MODEL_INIT,
                            model_name="model_init",
                            model_type="gll")
