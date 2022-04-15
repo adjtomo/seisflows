@@ -172,7 +172,8 @@ class Slurm(custom_import("system", "cluster")):
         # Contiously check for job completion on ALL running array jobs
         is_done = False
         count = 0
-        bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY"]
+        bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY"
+                      "CANCELLED"]
         while not is_done:
             # Wait a bit to avoid rapidly querying sacct
             time.sleep(5)

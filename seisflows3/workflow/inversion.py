@@ -135,9 +135,7 @@ class Inversion(custom_import("workflow", "base")):
         # Run the workflow until from the current iteration until PAR.END
         optimize.iter = PAR.BEGIN
         self.logger.info(msg.mjr("STARTING INVERSION WORKFLOW"))
-
-        # '<=' because finalize() may increment iter above PAR.END
-        while optimize.iter <= PAR.END:
+        while True:
             self.logger.info(msg.mnr(f"ITERATION {optimize.iter} / {PAR.END}"))
 
             # Execute the functions within the flow
@@ -149,6 +147,10 @@ class Inversion(custom_import("workflow", "base")):
 
             # Reset flow for subsequent iterations
             start, stop = None, None
+
+            # '>=' because finalize() may increment iter above PAR.END
+            if optimize.iter >= PAR.END:
+                break
 
         self.logger.info(msg.mjr("FINISHED INVERSION WORKFLOW"))
 
@@ -249,7 +251,7 @@ class Inversion(custom_import("workflow", "base")):
 
         self.write_model(path=path, tag=model_tag)
 
-        self.logger.debug(f"evaluating objective function {PAR.NPROC} times "
+        self.logger.debug(f"evaluating objective function {PAR.NTASK} times "
                           f"on system...")
         system.run("solver", "eval_func", path=path)
 
@@ -261,7 +263,7 @@ class Inversion(custom_import("workflow", "base")):
         """
         self.logger.info(msg.mnr("EVALUATING GRADIENT"))
 
-        self.logger.debug(f"evaluating gradient {PAR.NPROC} times on system...")
+        self.logger.debug(f"evaluating gradient {PAR.NTASK} times on system...")
         system.run("solver", "eval_grad", path=path or PATH.GRAD,
                    export_traces=PAR.SAVETRACES)
 
