@@ -167,21 +167,23 @@ class Slurm(custom_import("system", "cluster")):
         # is something like 'Submitted batch job 441636', we want job number
         stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
                                 text=True, shell=True).stdout
-        job_ids = self.job_id_list(stdout, single)
+        job_ids = job_id_list(stdout, single)
 
         # Contiously check for job completion on ALL running array jobs
         is_done = False
         count = 0
-        bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY"
+        bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY",
                       "CANCELLED"]
         while not is_done:
             # Wait a bit to avoid rapidly querying sacct
             time.sleep(5)
-            is_done, states = self.job_array_status(job_ids)
+            is_done, states = job_array_status(job_ids)
             # EXIT CONDITION: if any of the jobs provide job failure codes
             if not is_done:
                 for i, state in enumerate(states):
-                    if state in bad_states:
+                    # Sometimes states can be something like 'CANCELLED+', so
+                    # we can't do exact string matching, check partial matches
+                    if any([check in state for check in bad_states]):
                         print(msg.cli((f"Stopping workflow for {state} job. "
                                        f"Please check log file for details."),
                                       items=[f"TASK:    {classname}.{method}",
@@ -214,7 +216,6 @@ class Slurm(custom_import("system", "cluster")):
         # If not set, this environment variable will return None
         sftaskid = os.getenv("SEISFLOWS_TASKID")
 
-
         if sftaskid is None:
             sftaskid = os.getenv("SLURM_ARRAY_TASK_ID")
             if sftaskid is None:
@@ -226,111 +227,112 @@ class Slurm(custom_import("system", "cluster")):
 
         return int(sftaskid)
 
-    def job_id_list(self, stdout, single):
-        """
-        Parses job id list from sbatch standard output. Stdout typically looks
-        like: 'Submitted batch job 441636', but if submitting jobs cross-cluster
-        (e.g., like on Maui), stdout might be:
-        'Submitted batch job 441636 on cluster Maui'
 
-        .. note::
-            In order to find the job number, we just scan each word in stdout
-            until we find the number, ASSUMING that there is only one number in
-            the string
+def job_id_list(stdout, single):
+    """
+    Parses job id list from sbatch standard output. Stdout typically looks
+    like: 'Submitted batch job 441636', but if submitting jobs cross-cluster
+    (e.g., like on Maui), stdout might be:
+    'Submitted batch job 441636 on cluster Maui'
 
-        TODO Should failing to return job_id break in reasonable way?
+    .. note::
+        In order to find the job number, we just scan each word in stdout
+        until we find the number, ASSUMING that there is only one number in
+        the string
 
-        The output job arrays will look something like:
-        [44163_0, 44163_1, ..., 44163_PAR.NTASK]
+    TODO Should failing to return job_id break in reasonable way?
 
-        :type stdout: str
-        :param stdout: the text response from running 'sbatch' on SLURM
-        :type single: bool
-        :param single: if running a single process job, returns a list of length
-            1 with a single job id, else returns a list of length PAR.NTASK
-            for all arrayed jobs
-        :rtype: list
-        :return: a list of array jobs that should be currently running
-        """
-        if single:
-            ntask = 1
-        else:
-            ntask = PAR.NTASK
+    The output job arrays will look something like:
+    [44163_0, 44163_1, ..., 44163_PAR.NTASK]
 
-        # Splitting e.g.,: 'Submitted batch job 441636\n'
-        for part in stdout.strip().split():
-            try:
-                # The int will keep throwing ValueError until we find the num
-                job_id = int(part)
-                break
-            except ValueError:
-                continue
-        return [f"{job_id}_{i}" for i in range(ntask)]
+    :type stdout: str
+    :param stdout: the text response from running 'sbatch' on SLURM, which
+        should be returned by subprocess.run(stdout=PIPE)
+    :type single: bool
+    :param single: if running a single process job, returns a list of length
+        1 with a single job id, else returns a list of length PAR.NTASK
+        for all arrayed jobs
+    :rtype: list
+    :return: a list of array jobs that should be currently running
+    """
+    if single:
+        ntask = 1
+    else:
+        ntask = PAR.NTASK
 
-    def job_array_status(self, job_ids):
-        """
-        Determines current status of job or job array
+    # Splitting e.g.,: 'Submitted batch job 441636\n'
+    for part in stdout.strip().split():
+        try:
+            # The int will keep throwing ValueError until we find the num
+            job_id = int(part)
+            break
+        except ValueError:
+            continue
+    return [f"{job_id}_{i}" for i in range(ntask)]
 
-        :type job_ids: list
-        :param job_ids: list of SLURM job id numbers to check completion of
-            Will not return unless all jobs have completed
-        :rtype is_done: bool
-        :return is_done: True if all jobs in the array have been completed
-        :rtype states: list
-        :return states: list of states returned from sacct
-        """
-        states = []
-        for job_id in job_ids:
-            state = self._check_job_state(job_id)
-            states.append(state.upper())
+def job_array_status(job_ids):
+    """
+    Determines current status of job or job array
 
-        # All array jobs must be completed to return is_done == True
-        is_done = all([state.upper() == "COMPLETED" for state in states])
+    :type job_ids: list
+    :param job_ids: list of SLURM job id numbers to check completion of
+        Will not return unless all jobs have completed
+    :rtype is_done: bool
+    :return is_done: True if all jobs in the array have been completed
+    :rtype states: list
+    :return states: list of states returned from sacct
+    """
+    states = []
+    for job_id in job_ids:
+        state = check_job_state(job_id)
+        states.append(state.upper())
 
-        return is_done, states
+    # All array jobs must be completed to return is_done == True
+    is_done = all([state.upper() == "COMPLETED" for state in states])
 
-    @staticmethod
-    def _check_job_state(job_id):
-        """
-        Queries completion status of a single job by running:
-            $ sacct -nL -o jobid,state -j {job_id}
+    return is_done, states
 
-            # Example outputs from this sacct command
-            # JOB_ID    STATUS
-            441630_0  PENDING  # array job will have the array number
-            441630    COMPLETED  # if --array=0-0, jobs will not have suffix
-            441628.batch    COMPLETED  # we don't want to check these
+def check_job_state(job_id):
+    """
+    Queries completion status of a single job by running:
+        $ sacct -nL -o jobid,state -j {job_id}
 
-        Available job states: https://slurm.schedmd.com/sacct.html
+        # Example outputs from this sacct command
+        # JOB_ID    STATUS
+        441630_0  PENDING  # array job will have the array number
+        441630    COMPLETED  # if --array=0-0, jobs will not have suffix
+        441628.batch    COMPLETED  # we don't want to check these
 
-        .. note::
-            -L flag in sacct queries all available clusters, not just the
-            cluster that ran the `sacct` call
-            -X supress the .batch and .extern jobname
+    Available job states: https://slurm.schedmd.com/sacct.html
 
-        :type job: str
-        :param job: job id to query
-        """
-        cmd = f"sacct -nLX -o jobid,state -j {job_id}"
-        stdout = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                text=True, shell=True).stdout
+    .. note::
+        -L flag in sacct queries all available clusters, not just the
+        cluster that ran the `sacct` call
+        -X supress the .batch and .extern jobname
 
-        # Undefined status will be retured if we cannot match the job id with
-        # the sacct output
-        # TODO should undefined state throw an error?
-        state = "UNDEFINED"
-        lines = stdout.strip().split("\n")
-        for line in lines:
-            # expecting e.g., 441628  COMPLETED
-            try:
-                job_id_check, state = line.split()
-            # str.split() will throw ValueError on non-matching strings
-            except ValueError:
-                continue
-            # Use in to allow for array jobs to match job ids
-            if job_id in job_id_check:
-                break
+    :type job: str
+    :param job: job id to query
+    """
+    cmd = f"sacct -nLX -o jobid,state -j {job_id}"
+    stdout = subprocess.run(cmd, stdout=subprocess.PIPE,
+                            text=True, shell=True).stdout
 
-        return state
+    # Undefined status will be retured if we cannot match the job id with
+    # the sacct output
+    # TODO should undefined state throw an error?
+    state = "UNDEFINED"
+    lines = stdout.strip().split("\n")
+    for line in lines:
+        # expecting e.g., 441628  COMPLETED
+        try:
+            job_id_check, state = line.split()
+        # str.split() will throw ValueError on non-matching strings
+        except ValueError:
+            continue
+        # Use in to allow for array jobs to match job ids
+        if job_id in job_id_check:
+            break
+
+    return state
 
 
