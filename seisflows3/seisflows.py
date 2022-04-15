@@ -462,11 +462,6 @@ class SeisFlows:
         # Expand all paths to be absolute on the filesystem
         paths = format_paths(paths)
 
-        # Set logger to print to stdout and write to a file
-        config_logger(level=parameters["LOG_LEVEL"], 
-                      verbose=parameters["VERBOSE"], 
-                      filename=paths["LOGFILE"]) 
-
         # Register parameters to sys, ensure they meet standards of the package
         sys.modules["seisflows_parameters"] = Dict(parameters)
         sys.modules["seisflows_paths"] = Dict(paths)
@@ -677,6 +672,12 @@ class SeisFlows:
         unix.mkdir(self._args.workdir)
         unix.cd(self._args.workdir)
 
+        # Set logger to print to stdout and write to a file
+        PATH = sys.modules["seisflows_paths"]
+        PAR = sys.modules["seisflows_parameters"]
+        config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE, 
+                      filename=PATH.LOGFILE) 
+
         # Submit workflow.main() to the system
         init_seisflows()
         system = sys.modules["seisflows_system"]
@@ -742,6 +743,12 @@ class SeisFlows:
 
         self._register(force=force)
         self._load_modules()
+
+        # Set logger to print to stdout and write to a file
+        PATH = sys.modules["seisflows_paths"]
+        PAR = sys.modules["seisflows_parameters"]
+        config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE, 
+                      filename=PATH.LOGFILE) 
 
         system = sys.modules["seisflows_system"]
         system.submit()
