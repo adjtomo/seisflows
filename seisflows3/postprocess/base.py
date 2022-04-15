@@ -73,6 +73,13 @@ class Base:
             assert os.path.exists(PATH.MASK), \
                 f"PATH.MASK provided but does not exist"
 
+    def setup(self):
+        """
+        A placeholder function for initialization or setup tasks. Base 
+        postprocessing does not require any setup
+        """
+        pass
+
     def write_gradient(self, path):
         """
         Combines contributions from individual sources and material parameters

@@ -61,7 +61,7 @@ class Inversion(custom_import("workflow", "base")):
         sf = SeisFlowsPathsParameters(super().required)
 
         # Define the Parameters required by this module
-        sf.par("BEGIN", required=True, par_type=int,
+        sf.par("BEGIN", required=False, default=1, par_type=int,
                docstr="First iteration of workflow, 1 <= BEGIN <= inf")
 
         sf.par("END", required=True, par_type=int,
