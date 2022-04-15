@@ -270,6 +270,7 @@ def job_id_list(stdout, single):
             continue
     return [f"{job_id}_{i}" for i in range(ntask)]
 
+
 def job_array_status(job_ids):
     """
     Determines current status of job or job array
@@ -291,6 +292,7 @@ def job_array_status(job_ids):
     is_done = all([state.upper() == "COMPLETED" for state in states])
 
     return is_done, states
+
 
 def check_job_state(job_id):
     """
