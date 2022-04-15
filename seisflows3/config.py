@@ -333,6 +333,9 @@ class SeisFlowsPathsParameters:
     .. note::
         if a path or parameter is optional it requires a default value.
     """
+    default_par = "!!! REQUIRED PARAMETER !!!"
+    default_path = "!!! REQUIRED PATH !!!"
+
     def __init__(self, base=None):
         """
         We simply store paths and parameters as nested dictioanries. Due to the
@@ -366,7 +369,7 @@ class SeisFlowsPathsParameters:
         :param default: default value for the parameter, can be any type
         """
         if required:
-            default = "!!! REQUIRED PARAMETER !!!"
+            default = self.default_par
         if type(par_type) == type:
             par_type = par_type.__name__
         self.parameters[parameter] = {"docstr": docstr, "required": required,
@@ -389,7 +392,7 @@ class SeisFlowsPathsParameters:
 
         """
         if required:
-            default = "!!! REQUIRED PATH !!!"
+            default = self.default_path
         self.paths[path] = {"docstr": docstr, "required": required,
                             "default": default}
 

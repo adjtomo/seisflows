@@ -34,7 +34,8 @@ sf = SeisFlows()
 # will downloaded/reference
 SPECFEM3D_BIN_ORIGINAL = os.path.join(SPECFEM3D_ORIGINAL, "bin")
 SPECFEM3D_DATA_ORIGINAL = os.path.join(SPECFEM3D_ORIGINAL, "DATA")
-TAPE_2007_EXAMPLE = os.path.join(SPECFEM3D_ORIGINAL, "EXAMPLES", "Tape2007")
+TAPE_2007_EXAMPLE = os.path.join(SPECFEM3D_ORIGINAL, "EXAMPLES", 
+                                 "homogeneous_halfspace")
 
 # The SPECFEM3D working directory that we will create separate from the
 # downloaded repo
@@ -67,31 +68,6 @@ shutil.copytree(SPECFEM3D_BIN_ORIGINAL, "bin")
 shutil.copytree(os.path.join(TAPE_2007_EXAMPLE, "DATA"), "DATA")
 
 # ==============================================================================
-# First we will set the correct SOURCE and STATION files.
-# This is the same task as shown in ./run_this_example.sh
-os.chdir(SPECFEM3D_DATA)
-
-# Symlink source 001 as our main source
-if os.path.exists("SOURCE"):
-    os.remove("SOURCE")
-os.symlink("SOURCE_001", "SOURCE")
-
-# Copy the correct Par_file so that edits do not affect the original file
-if os.path.exists("Par_file"):
-    os.remove("Par_file")
-shutil.copy("Par_file_Tape2007_onerec", "Par_file")
-
-# ==============================================================================
-print("Adjusting SPECFEM3D parameter file")
-# Ensure that parameter files are set correctly
-os.chdir(SPECFEM3D_DATA)
-
-sf.sempar("setup_with_binary_database", 1, skip_print=True)
-sf.sempar("save_model", "binary", skip_print=True)
-sf.sempar("save_ascii_kernels", ".false.", skip_print=True)
-
-os.chdir(SPECFEM3D_WORKDIR)
-
 if os.path.exists(SPECFEM3D_OUTPUT):
     shutil.rmtree(SPECFEM3D_OUTPUT)
 
@@ -101,11 +77,13 @@ os.mkdir(SPECFEM3D_OUTPUT)
 print("Generating initial model from Tape 2007 example")
 os.chdir(SPECFEM3D_WORKDIR)
 
-with open("xmeshfem2D.out", "w") as f:
-    subprocess.run("./bin/xmeshfem2D", shell=True, stdout=f)
+cmd = f"./bin/xdecompose_mesh 4 ./MESH-default {SPECFEM3D_OUTPUT}/DATABASES_MPI"
+with open("xdecompose_mesh.out", "w") as f:
+    subprocess.run(cmd.split(), shell=True, stdout=f)
 
-with open("xSPECFEM3D.out", "w") as f:
-    subprocess.run("./bin/xSPECFEM3D", shell=True, stdout=f)
+cmd = f"mpirun -np 4 ./bin/xgenerate_databases"
+with open("xgenerate_databases.out", "w") as f:
+    subprocess.run("mpiexec ./bin/xSPECFEM3D", shell=True, stdout=f)
 
 # Move the model files (*.bin) into the OUTPUT_FILES directory, 
 # where SeisFlows3 expects them

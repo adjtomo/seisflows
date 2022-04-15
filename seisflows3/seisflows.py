@@ -32,8 +32,8 @@ from seisflows3.tools.specfem import (getpar, setpar, getpar_vel_model,
                                       setpar_vel_model)
 from seisflows3.tools.wrappers import loadyaml
 from seisflows3.config import (init_seisflows, format_paths, config_logger,
-                               Dict, custom_import, NAMES, PACKAGES, ROOT_DIR,
-                               CFGPATHS)
+                               Dict, custom_import, SeisFlowsPathsParameters,
+                               NAMES, PACKAGES, ROOT_DIR, CFGPATHS)
 
 
 def sfparser():
@@ -194,6 +194,11 @@ def sfparser():
     par.add_argument("-p", "--skip_print", action="store_true", default=False,
                      help="Skip the print statement which is typically "
                           "sent to stdout after changing parameters.")
+    par.add_argument("-r", "--required", action="store_true", default=False,
+                     help="Only list parameters which have not been set as a "
+                          "default value, typically set with some attention "
+                          "catching argument. 'parameter' and 'value' will be "
+                          "ignored.")
     # =========================================================================
     sempar = subparser.add_parser(
         "sempar", help="View and edit SPECFEM parameter file",
@@ -886,7 +891,8 @@ class SeisFlows:
                 if not skip_print:
                     print(msg.cli(f"{key}: {cur_val} -> {value}"))
 
-    def par(self, parameter, value=None, skip_print=False, **kwargs):
+    def par(self, parameter, value=None, skip_print=False, required=False,
+            **kwargs):
         """
         Check or set parameters in the seisflows3 parameter file.
 
@@ -902,9 +908,10 @@ class SeisFlows:
 
                 seisflows par begin 2
 
-            to change the scratch path to the current working directory:
+            to change the scratch path to the current working directory, don't
+            print to stdout:
 
-                seisflows par scratch ./
+                seisflows par scratch ./ -p
 
         :type parameter: str
         :param parameter: parameter to check in parameter file. case insensitive
@@ -914,18 +921,23 @@ class SeisFlows:
         :type skip_print: bool
         :param skip_print: skip the print statement which is typically sent
             to stdout after changing parameters.
+        :type required: bool
+        :param required: Only list parameters which have not been set as a
+            default value, 'parameter' and 'value' will be ignored.
         """
-        if parameter is None:
-            self._subparser.print_help()
-            sys.exit(0)
-
-        # SeisFlows3 parameter file dictates upper-case parameters
-        parameter = parameter.upper()
-
         if not os.path.exists(self._args.parameter_file):
             sys.exit(f"\n\tparameter file '{self._args.parameter_file}' "
                      f"does not exist\n")
 
+        if parameter is None and not required:
+            self._subparser.print_help()
+            sys.exit(0)
+        elif required:
+            self._par_required()
+            sys.exit(0)
+
+        # SeisFlows3 parameter file dictates upper-case parameters
+        parameter = parameter.upper()
         if value is not None and value.lower() == "none":
             warnings.warn("to set values to nonetype, use 'null' not 'none'",
                           UserWarning)
@@ -950,6 +962,20 @@ class SeisFlows:
                    delim=":")
             if not skip_print:
                 print(msg.cli(f"{key}: {cur_val} -> {value}"))
+
+    def _par_required(self):
+        """
+        Only list parameters which have not been set as a default value.
+        Filled in with default values defined in SeisFlowsPathParameters
+        """
+        sf = SeisFlowsPathsParameters
+        with open(self._args.parameter_file, "r") as f:
+            lines = f.readlines()
+            for check in [sf.default_par, sf.default_path]:
+                print(f"\n{check}")
+                for line in lines:
+                    if check in line:
+                        print(f"\t{line.split(':')[0].strip()}")
 
     def edit(self, name, module, editor=None, **kwargs):
         """
