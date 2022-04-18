@@ -43,6 +43,7 @@ class Pyatoa(custom_import("preprocess", "base")):
         :param logger: Class-specific logging module, log statements pushed
             from this logger will be tagged by its specific module/classname
         """
+        self.pyaflowa = None
         self.path_datasets = None
         self.path_figures = None
 
@@ -128,7 +129,7 @@ class Pyatoa(custom_import("preprocess", "base")):
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
         """
-       if validate:
+        if validate:
             self.required.validate()
 
         # Check that other modules have set parameters that will be used here
@@ -153,12 +154,13 @@ class Pyatoa(custom_import("preprocess", "base")):
         Akin to an __init__ class, but to be called externally by the workflow.
         """
         # Inititate a Pyaflowa object to make sure the machinery works
-        pyaflowa = pyatoa.Pyaflowa(structure="seisflows", sfpaths=PATH, 
-                                   sfpar=PAR)
+        self.pyaflowa = pyatoa.Pyaflowa(structure="seisflows", 
+                                        sfpaths=PATH, sfpar=PAR, 
+                                        source_prefix=PAR.SOURCE_PREFIX)
 
         # Pull path names from Pyaflowa to keep path structure in one place
-        self.path_datasets = pyaflowa.path_structure.datasets
-        self.path_figures = pyaflowa.path_structure.figures
+        self.path_datasets = self.pyaflowa.path_structure.datasets
+        self.path_figures = self.pyaflowa.path_structure.figures
 
     def prepare_eval_grad(self, cwd, source_name, taskid, **kwargs):
         """
@@ -187,41 +189,51 @@ class Pyatoa(custom_import("preprocess", "base")):
         :param filenames: [not used] list of filenames defining the files in
             traces
         """
+        if taskid == 0:
+            self.logger.debug("preparing files for gradient evaluation")
+
+        # Process all the stations for a given event using Pyaflowa
+        io, config, pyaflowa = self.setup_pyaflowa(source_name)
+        misfit = pyaflowa.process_event(io, config)
+
+        if misfit is None:
+            print(msg.cli(f"Event {source_name} returned no misfit, you may "
+                          f"want to check waveform comparison parameters or "
+                          f"discard this event from your workflow", 
+                          header="preprocessing error", border="="))
+            sys.exit(-1)
+
+        # Event misfit defined by Tape et al. (2010) written to solver dir.
+        self.write_residuals(path=cwd, scaled_misfit=misfit)
+
+    def setup_pyaflowa(self, source_name):
+        """
+        A convenience function to set up a Pyaflowa processing instance.
+        Called by prepare_eval_grad but also useful for debugging and manual
+        processing
+        """
         # Late import because preprocess is loaded before optimize,
         # Optimize required to know which iteration/step_count we are at
         optimize = sys.modules["seisflows_optimize"]
 
-        if taskid == 0:
-            self.logger.debug("preparing files for gradient evaluation")
+        iteration = optimize.iter
+        step_count = optimize.line_search.step_count
+        fix_windows = self.check_fix_windows(iteration, step_count)
 
-        # Inititate the Pyaflowa class which abstracts processing functions
-        # Communicate to Pyaflowa the current iteration and step count
-        pyaflowa = pyatoa.Pyaflowa(structure="seisflows", sfpaths=PATH, 
-                                   sfpar=PAR, iteration=optimize.iter,
-                                   step_count=optimize.line_search.step_count)
-
-        # Process all the stations for a given event using Pyaflowa
-        misfit = pyaflowa.process_event(source_name,
-                                        fix_windows=PAR.FIX_WINDOWS,
-                                        event_id_prefix=PAR.SOURCE_PREFIX)
-
-        if misfit is None:
-            self.logger.warning(
-                f"Event {source_name} returned no misfit, you may want to "
-                f"check waveform comparison parameters or discard this event "
-                f"completely to avoid wasting computational resources"
-            )
-            misfit = 0.
-
-        # Event misfit defined by Tape et al. (2010) written to solver dir.
-        self.write_residuals(path=cwd, scaled_misfit=misfit)
+        pyaflowa = self.pyaflowa.copy()
+        io, config = pyaflowa.setup(source_name=source_name,
+                                    iteration=iteration, step_count=step_count,
+                                    fix_windows=fix_windows, 
+                                    source_prefix=PAR.SOURCE_PREFIX)
+        
+        return io, config, pyaflowa
 
     def finalize(self):
         """
         Run some serial finalization tasks specific to Pyatoa, which will help
         aggregate the collection of output information:
             - Aggregate misfit windows using the Inspector class
-            - Generate PDFS of waveform figures for easy access
+            - Generate PDFs of waveform figures for easy access
             - Snapshot HDF5 files in a separate directory
         """
         unix.cd(self.path_datasets)
@@ -276,6 +288,47 @@ class Pyatoa(custom_import("preprocess", "base")):
         total_misfit /= PAR.NTASK
 
         return total_misfit
+
+    def check_fix_windows(self, iteration, step_count):
+        """
+        Determine how to address re-using misfit windows during  
+
+        Options for PAR.FIX_WINDOWS:
+            True: Always fix windows except for i01s00 because we don't have any
+                  windows for the first function evaluation
+            False: Don't fix windows, always choose a new set of windows
+            Iter: Pick windows only on the initial step count (0th) for each
+                  iteration. WARNING - does not work well with Thrifty Inversion
+                  because the 0th step count is usually skipped
+            Once: Pick new windows on the first function evaluation and then fix
+                  windows. Useful for when parameters have changed, e.g. filter
+                  bounds
+
+        :rtype: bool
+        :return: bool on whether to use windows from the previous step
+        """
+        # First function evaluation never fixes windows
+        if iteration == 1 and step_count == 0:
+            fix_windows = False
+        elif isinstance(PAR.FIX_WINDOWS, str):
+            # By 'iter'ation only pick new windows on the first step count
+            if PAR.FIX_WINDOWS.upper() == "ITER":
+                if step_count == 0:
+                    fix_windows = False
+                else:
+                    fix_windows = True
+            # 'Once' picks windows only for the first function evaluation of 
+            # the current set of iterations.
+            elif PAR.FIX_WINDOWS.upper() == "ONCE":
+                if iteration == PAR.BEGIN and step_count == 0:
+                    fix_windows = False
+                else:
+                    fix_windows = True
+        # Bool fix windows simply sets the parameter
+        elif isinstance(PAR.FIX_WINDOWS, bool):
+            fix_windows = PAR.FIX_WINDOWS
+
+        return fix_windows
 
     def snapshot(self):
         """

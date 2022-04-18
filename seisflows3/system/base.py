@@ -59,7 +59,7 @@ class Base:
                       "most verbosity: 'CRITICAL', 'WARNING', 'INFO', 'DEBUG'; "
                       "defaults to 'DEBUG'")
 
-        sf.par("VERBOSE", required=False, default=True, par_type=bool,
+        sf.par("VERBOSE", required=False, default=False, par_type=bool,
                docstr="Level of verbosity provided to the output log. If True, "
                       "log statements will declare what module/class/function "
                       "they are being called from. Useful for debugging but "
