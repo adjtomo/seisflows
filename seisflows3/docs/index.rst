@@ -39,6 +39,9 @@ Throughout the documentation we use the names
 this package (SeisFlows3). Any reference to the original SeisFlows will be
 noted explicitely.
 
+.. warning::
+    This docs page is currently under active development and may have missing information or unfinished pages. We are doing our best to complete it in a timely manner.
+
 ---------------------------------
 
 Installation
