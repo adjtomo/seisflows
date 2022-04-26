@@ -86,7 +86,7 @@ def _get_filename(path, iproc):
     """
     filename_glob = os.path.join(path, f"proc{int(iproc):06d}_*.dat")
     filename = glob(filename_glob)
-    assert(len(filename) == 1),
+    assert(len(filename) == 1), \
         f"Expected only one .dat file, found {len(filename)}"
 
     return filename[0]

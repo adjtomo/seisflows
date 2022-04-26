@@ -126,5 +126,5 @@ install instructions.
    changelog
    development
    code_dev_plan
-   seisflows_api
+#   seisflows_api
 
