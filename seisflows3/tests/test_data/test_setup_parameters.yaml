@@ -28,5 +28,5 @@ WORKFLOW: inversion
 SOLVER: specfem2d
 SYSTEM: workstation
 OPTIMIZE: LBFGS 
-PREPROCESS: default
+PREPROCESS: base
 POSTPROCESS: base
