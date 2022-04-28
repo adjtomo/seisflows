@@ -148,8 +148,7 @@ class Inversion(custom_import("workflow", "base")):
             # Reset flow for subsequent iterations
             start, stop = None, None
 
-            # '>=' because finalize() may increment iter above PAR.END
-            if optimize.iter >= PAR.END:
+            if optimize.iter > PAR.END:
                 break
 
         self.logger.info(msg.mjr("FINISHED INVERSION WORKFLOW"))

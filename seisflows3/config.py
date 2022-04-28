@@ -208,6 +208,11 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
         is much more useful for debugging but clutters up the log file.
         if False, only write the time and message in the log statement.
     """
+    # Make sure that we don't already have handlers described, which may happen
+    # if this function gets run multiple times, and leads to duplicate logs
+    while logger.hasHandlers():
+        logger.removeHandler(logger.handlers[0])
+
     # Two levels of verbosity on log level, triggered with PAR.VERBOSE
     if verbose:
         # More verbose logging statement with levelname and func name

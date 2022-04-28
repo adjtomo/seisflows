@@ -291,7 +291,7 @@ def check_poissons_ratio(vp, vs, min_val=-1., max_val=0.5):
                       f"bounds with respect to the defined range "
                       f"({min_val}, {max_val}). "
                       f"The model bounds were found to be:",
-                      items=["{pmin:.2f} < PR < {pmax:.2f}"], border="=",
+                      items=[f"{pmin:.2f} < PR < {pmax:.2f}"], border="=",
                       header="Poisson's Ratio Error")
               )
         sys.exit(-1)

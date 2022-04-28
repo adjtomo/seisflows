@@ -696,6 +696,14 @@ class SeisFlows:
         :param force: ignore the warning check that precedes the clean() 
             function, useful if you don't want any input messages popping up
         """
+        # Check if the filepaths exist
+        if not os.path.exists(self._args.parameter_file):
+            print(msg.cli(f"SeisFlows3 parameter file not found: "
+                          f"'{self._args.parameter_file}'. Run 'seisflows "
+                          f"init' to instantiate a new working directory.")
+                  )
+            sys.exit(-1)
+
         if force:
             check = "y"
         else:
