@@ -242,7 +242,7 @@ Check parameters, state, or values of an active environment
         description="""
 Print information related to an active environment
 
-    module        List available module names for all available packages
+    modules       List available module names for all available packages
     flow          Print out the workflow.main() flow arguments
     inherit       Track inheritance chain for all modules, determine method 
                   ownership for a given function. 
@@ -300,10 +300,24 @@ working state before the workflow can be resumed
     edit.add_argument("-d", "--dont_open", action="store_true",
                       help="Dont open the text editor, just list full pathname")
     # =========================================================================
+    examples = subparser.add_parser(
+        "examples", help="Look at and run pre-configured example problems",
+        description="""Lists out available example problems and allows the
+        user to run example problems directly from the command line. Some 
+        example problems may have pre-run prompts mainly involving the
+        numerical solver
+        """
+    )
+    examples.add_argument("run", type=str, nargs="?", default=None,
+                          help="Run your choice of example problem")
+    examples.add_argument("choice", type=str,  nargs="?", default=None,
+                          help="Name of the specific example problem to run")
+    # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
                       "edit": edit, "sempar": sempar, "clean": clean, 
-                      "restart": restart, "print": print_, "reset": reset}
+                      "restart": restart, "print": print_, "reset": reset,
+                      "examples": examples}
     if parser.parse_args().command in subparser_dict:
         return parser, subparser_dict[parser.parse_args().command]
     else:
@@ -1043,6 +1057,57 @@ class SeisFlows:
             print(msg.cli(f"seisflows.{name}.{module} not found"))
             sys.exit(-1)
 
+    def examples(self, run=None, choice=None, **kwargs):
+        """
+        List or run a SeisFlows3 example problem
+
+        USAGE
+
+            seisflows examples [run] [choice]
+
+            To list available examples:
+
+                seisflows examples
+
+            To run a specific example (this is the same as 'python example.py')
+
+                seisflows examples run 1
+
+        :type run: bool
+        :param run: if True, run an example of choice `choice`
+        :type choice: str
+        :param choice: The choice of example, must match the given tag or file
+            name that is assigned to it
+        """
+        examples_dir = os.path.join(ROOT_DIR, "scripts", "examples")
+        examples_list = []
+        for i, fid in enumerate(glob(os.path.join(examples_dir, "ex*.py"))):
+            example_name = os.path.splitext(os.path.basename(fid))[0]
+            examples_list.append((i+1, example_name, fid))
+
+        # Just list out the available examples
+        if run is None or (not run and choice) or (run and not choice):
+            items = [f"{j}: {exname}" for j, exname, fid in examples_list]
+            print(msg.cli("'seisflows examples run <name_or_idx>' to run an "
+                          "example, where <name_or_idx> is either the example "
+                          "name or the index provided", items=items,
+                          header="seisflows3 examples"))
+        # Run one of the examples using subprocess, allow user to input their
+        # selected example by index number or by name
+        else:
+            try:
+                choice = int(choice)
+            except ValueError:
+                pass
+
+            for ex_tup in examples_list:
+                j, exname, fid = ex_tup
+                if choice in [j, exname]:
+                    print(f"Running example: {exname}")
+                    subprocess.run(f"python {fid}", shell=True, check=False)
+                else:
+                    print(f"SeisFlows3 example '{choice}' does not exist")
+
     def check(self, choice=None, **kwargs):
         """
         Check parameters, state or values  of an active SeisFlows3 environment.
@@ -1073,7 +1138,7 @@ class SeisFlows:
         :type choice: str
         :param choice: underlying sub-function to choose
         """
-        acceptable_args = {"module": self._print_modules,
+        acceptable_args = {"modules": self._print_modules,
                            "flow": self._print_flow,
                            "inherit": self._print_inheritance}
 
