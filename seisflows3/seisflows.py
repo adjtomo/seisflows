@@ -80,8 +80,6 @@ def sfparser():
     parser.add_argument("-p", "--parameter_file", nargs="?",
                         default=CFGPATHS.PAR_FILE,
                         help=f"Parameters file, default: '{CFGPATHS.PAR_FILE}'")
-    parser.add_argument("--path_file", nargs="?", default="paths.py",
-                        help="Legacy path file, default: 'paths.py'")
 
     # Initiate a sub parser to provide nested help functions and sub commands
     subparser = parser.add_subparsers(
