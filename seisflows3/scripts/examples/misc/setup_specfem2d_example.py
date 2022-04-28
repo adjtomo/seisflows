@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Script to setup a Specfem2D example problem on any system. The only
 manual step required by the User is to compile Specfem2D binaries.
@@ -13,22 +12,8 @@ import glob
 import shutil
 import subprocess
 
-from seisflows3.config import Dict
 from seisflows3.tools import unix
 from seisflows3.seisflows import SeisFlows
-
-
-def path_structure():
-    """
-    Define the required path structure which is dependent on the SPECFEM2D
-    respository.
-
-    .. note::
-        The SPECFEM2D directory structure was last confirmed with the devel
-        branch commit hash: bdba4389
-        Last accessed Apr 27, 2022 - Bryant Chow
-    """
-
 
 # USER CAN EDIT THE FOLLOWING PATHS:
 # WORKDIR: points to your own working directory

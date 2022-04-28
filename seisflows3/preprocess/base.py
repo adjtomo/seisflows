@@ -96,10 +96,10 @@ class Base:
                       "LONG: mute long source-receiver distances")
         sf.par("NORMALIZE", required=False, par_type=list, default=[],
                docstr="Data normalization parameters used to normalize the "
-                      "amplitudes of waveforms. Choose from two sets:"
-                      "ENORML1: normalize per event by L1 of traces; OR"
-                      "ENORML2: normalize per event by L2 of traces; AND"
-                      "TNORML1: normalize per trace by L1 of itself; OR"
+                      "amplitudes of waveforms. Choose from two sets: "
+                      "ENORML1: normalize per event by L1 of traces; OR "
+                      "ENORML2: normalize per event by L2 of traces; AND "
+                      "TNORML1: normalize per trace by L1 of itself; OR "
                       "TNORML2: normalize per trace by L2 of itself")
 
         # TODO: Add the mute parameters here, const, slope and dist
