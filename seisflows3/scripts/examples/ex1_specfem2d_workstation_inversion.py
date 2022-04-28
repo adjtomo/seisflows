@@ -19,7 +19,7 @@ The tasks involved include:
 
     OR
 
-    $ seisflows example run 1
+    $ seisflows examples run 1
 """
 import os
 import sys
@@ -193,7 +193,6 @@ def setup_seisflows_working_directory(sf, workdir_paths):
     Create and set the SeisFlows3 parameter file, making sure all required
     parameters are set correctly for this example problem
     """
-    sf.clean(force=True)  # Delete any old workflows
     sf.setup(force=True)  # Force will delete any existing parameter file
     sf.configure()
 
@@ -251,7 +250,7 @@ if __name__ == "__main__":
         configure_specfem2d_and_make_binaries()
     except subprocess.CalledProcessError as e:
         print(f"configure and make step has failed, please check and retry. "
-              f"If this command repeatedly fails, you may need to download, "
+              f"If this command repeatedly fails, you may need to "
               f"configure and compile SPECFEM2D manually.")
         sys.exit(-1)
 

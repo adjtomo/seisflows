@@ -429,7 +429,7 @@ class SeisFlows:
         if not os.path.exists(self._args.parameter_file):
             print(msg.cli(f"SeisFlows3 parameter file not found: "
                           f"'{self._args.parameter_file}'. Run 'seisflows "
-                          f"init' to instantiate a new working directory.")
+                          f"setup' to create a new parameter file.")
                   )
             sys.exit(-1)
 
@@ -714,7 +714,7 @@ class SeisFlows:
         if not os.path.exists(self._args.parameter_file):
             print(msg.cli(f"SeisFlows3 parameter file not found: "
                           f"'{self._args.parameter_file}'. Run 'seisflows "
-                          f"init' to instantiate a new working directory.")
+                          f"setup' to create a new parameter file.")
                   )
             sys.exit(-1)
 
