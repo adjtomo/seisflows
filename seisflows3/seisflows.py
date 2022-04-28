@@ -940,7 +940,7 @@ class SeisFlows:
 
         # SeisFlows3 parameter file dictates upper-case parameters
         parameter = parameter.upper()
-        if value is not None and value.lower() == "none":
+        if isinstance(value, str) and value.lower() == "none":
             warnings.warn("to set values to nonetype, use 'null' not 'none'",
                           UserWarning)
 
