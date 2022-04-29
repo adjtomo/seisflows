@@ -116,7 +116,7 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         # Define the Paths required by this module
         sf.path("PREPROCESS", required=False,
-                default=os.path.join(PATH.SCRATCH, "preprocess"),
+                default=os.path.join(PATH.SCRATCH, "pyatoa"),
                 docstr="scratch path to store waveform data and figures")
 
         sf.path("DATA", required=False,
@@ -153,6 +153,8 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         Akin to an __init__ class, but to be called externally by the workflow.
         """
+        unix.mkdir(PATH.PREPROCESS)
+
         # Inititate a Pyaflowa object to make sure the machinery works
         self.pyaflowa = pyatoa.Pyaflowa(structure="seisflows", 
                                         sfpaths=PATH, sfpar=PAR, 

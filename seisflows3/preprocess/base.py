@@ -104,6 +104,11 @@ class Base:
 
         # TODO: Add the mute parameters here, const, slope and dist
 
+        # Define the Paths required by this module
+        sf.path("PREPROCESS", required=False,
+                default=os.path.join(PATH.SCRATCH, "preprocess"),
+                docstr="scratch path to store any preprocessing outputs")
+
         return sf
 
     def check(self, validate=True):
@@ -190,6 +195,8 @@ class Base:
         misfit, adjoint source type, and specifying the expected file type
         for input and output seismic data.
         """
+        unix.mkdir(PATH.PREPROCESS)
+
         # Define misfit function and adjoint trace generator
         if PAR.MISFIT:
             self.logger.debug(f"misfit function is: '{PAR.MISFIT}'")
