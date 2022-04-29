@@ -95,7 +95,7 @@ class Workstation(custom_import("system", "base")):
             # converted back to integers by system.taskid()
             os.environ["SEISFLOWS_TASKID"] = str(taskid)
             if taskid == 0:
-                self.logger.info(f"running task {classname}_{method} "
+                self.logger.info(f"running task {classname}.{method} "
                                  f"{PAR.NTASK} times")
             function(**kwargs)
 

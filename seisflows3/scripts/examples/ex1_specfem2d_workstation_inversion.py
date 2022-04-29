@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 """
-                SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE
+                SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE 1
 
-This is  example, which will run two iterations of an inversion to assess
-misfit between two synthetic homogeneous halfspace models with slightly
-different velocity values.
+This example will run two iterations of an inversion to assess misfit between
+a homogeneous halfspace model and a slightly perturbed homogeneous halfspace
+model using 3 events and 1 receiver.
 
-The tasks involved include:
+.. note::
+    You can change the number of events (NTASK) and iterations (NITER) by
+    changing the constants below the import statements
+
+.. warning::
+    Because we are using 3 events and only 1 receiver, the results of this
+    inversion will be of questionable quality. This example is only meant
+    to highlight how SeisFlows3 operates during an inversion workflow.
+
+.. note::
+    The tasks involved include:
     1. Download, configure and compile SPECFEM2D
     2. Set up a SPECFEM2D working directory
     3. Generate starting model from Tape2007 example
@@ -31,6 +41,12 @@ from seisflows3.tools import msg
 from seisflows3.config import Dict
 from seisflows3.seisflows import SeisFlows
 from seisflows3.tools.unix import cd, cp, rm, ln, mv, mkdir
+
+# You are free to change the number of events (NTASK) and iterations (NITER).
+# 1 <= NTASK <= 25
+# 1 <= NITER <= inf
+NTASK = 3
+NITER = 2
 
 
 def define_dir_structures(cwd, specfem2d_repo, ex="Tape2007"):
@@ -130,14 +146,11 @@ def setup_specfem2d_for_model_init(sf):
     """
     assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
 
-    print("setting the SPECFEM2D Par_file for SeisFlows3 compatiblility")
+    print("> Setting the SPECFEM2D Par_file for SeisFlows3 compatiblility")
 
     sf.sempar("setup_with_binary_database", 1)  # allow creation of .bin files
     sf.sempar("save_model", "binary")  # output model in .bin database format
     sf.sempar("save_ASCII_kernels", ".false.")  # output kernels in .bin format
-
-    rm(workdir_paths.output)
-    mkdir(workdir_paths.output)
 
 
 def setup_specfem2d_for_model_true(sf):
@@ -151,14 +164,11 @@ def setup_specfem2d_for_model_true(sf):
     """
     assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
 
-    print("updating initial homogeneous velocity model values")
+    print("> Updating initial homogeneous velocity model values")
 
     new_model = "1 1 2600.d0 5900.d0 3550.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0"
 
     sf.sempar("velocity_model", new_model)
-
-    rm(workdir_paths.output)
-    mkdir(workdir_paths.output)
 
 
 def run_xspecfem2d_binaries():
@@ -180,7 +190,7 @@ def cleanup_xspecfem2d_run(workdir_paths, new_name=None):
     in the correct locations, and rename the OUTPUT_FILES directory so that it
     does not get overwritten by subsequent runs
     """
-    print("cleaning up after xspecfem2d, moving files to correct locations")
+    print("> Cleaning up after xspecfem2d, moving files to correct locations")
     cd(workdir_paths.workdir)
     mv(glob.glob("DATA/*bin"), workdir_paths.output)
 
@@ -188,7 +198,7 @@ def cleanup_xspecfem2d_run(workdir_paths, new_name=None):
         mv(workdir_paths.output, new_name)
 
 
-def setup_seisflows_working_directory(sf, workdir_paths):
+def setup_seisflows_working_directory(sf, workdir_paths, ntask=3, niter=1):
     """
     Create and set the SeisFlows3 parameter file, making sure all required
     parameters are set correctly for this example problem
@@ -196,7 +206,7 @@ def setup_seisflows_working_directory(sf, workdir_paths):
     sf.setup(force=True)  # Force will delete any existing parameter file
     sf.configure()
 
-    sf.par("ntask", 3)  # we will be using 3 sources for this example
+    sf.par("ntask", ntask)  # we will be using 3 sources for this example
     sf.par("materials", "elastic")  # how the velocity model is parameterized
     sf.par("density", "constant")  # update density or keep constant
     sf.par("nt", 5000)  # set by SPECFEM2D Par_file
@@ -204,7 +214,7 @@ def setup_seisflows_working_directory(sf, workdir_paths):
     sf.par("f0", 0.084)  # set by SOURCE file
     sf.par("format", "ascii")  # how to output synthetic seismograms
     sf.par("begin", 1)  # first iteration
-    sf.par("end", 2)  # final iteration -- we will run 2
+    sf.par("end", niter)  # final iteration -- we will run 2
     sf.par("case", "synthetic")  # synthetic-synthetic inversion
     sf.par("attenuation", False)
 
@@ -214,22 +224,11 @@ def setup_seisflows_working_directory(sf, workdir_paths):
     sf.par("model_true", workdir_paths.model_true)
 
 
-if __name__ == "__main__":
-    # Some header information before starting to inform the user of goings ons
-    print(msg.ascii_logo_small)
-    print(msg.cli("This is a [SPECFEM2D] [WORKSTATION] example, which will run "
-                  "two iterations of an inversion to assess misfit between two "
-                  "synthetic homogeneous halfspace models with slightly "
-                  "different velocities. The tasks involved include: ",
-                  items=["1. Download, configure and compile SPECFEM2D",
-                         "2. Set up a SPECFEM2D working directory",
-                         "3. Generate starting model from Tape2007 example",
-                         "4. Generate target model w/ perturbed starting model",
-                         "5. Set up a SeisFlows3 working directory",
-                         "6. Run two iterations of an inversion workflow"],
-                  header="seisflows3 example",
-                  border="="))
-
+def main():
+    """
+    The actual run function for this example
+    """
+    sys.argv = [sys.argv[0]]  # Ensure that no arguments are given to the CLI
     sf3_cli_tool = SeisFlows()
     cwd = os.getcwd()
     specfem2d_repo = input("REQUEST: If you have already downloaded SPECMFE2D, "
@@ -258,17 +257,25 @@ if __name__ == "__main__":
     print(msg.cli("SETTING UP SPECFEM2D WORKING DIRECTORY", border="="))
     create_specfem2d_working_directory(sem2d_paths, workdir_paths)
 
+    # Step 2a: Par_file manipulations and prepare directory structure
     cd(workdir_paths.data)
     setup_specfem2d_for_model_init(sf3_cli_tool)
+    rm(workdir_paths.output)
+    mkdir(workdir_paths.output)
 
+    # Step 2b: Generate MODEL_INIT, rearrange consequent directory structure
     cd(workdir_paths.workdir)
     print(msg.cli("GENERATING INITIAL MODEL", border="="))
     run_xspecfem2d_binaries()
     cleanup_xspecfem2d_run(workdir_paths, new_name=workdir_paths.model_init)
 
+    # Step 3b: Prepare Par_file and directory for MODEL_TRUE generation
     cd(workdir_paths.data)
     setup_specfem2d_for_model_true(sf3_cli_tool)
+    rm(workdir_paths.output)
+    mkdir(workdir_paths.output)
 
+    # Step 3d: Generate MODEL_TRUE, rearrange consequent directory structure
     print(msg.cli("GENERATING TRUE MODEL", border="="))
     cd(workdir_paths.workdir)
     run_xspecfem2d_binaries()
@@ -278,15 +285,37 @@ if __name__ == "__main__":
     #   Using the velocity models we just generated
     print(msg.cli("SETTING UP SEISFLOWS3", border="="))
     cd(cwd)
-    setup_seisflows_working_directory(sf3_cli_tool, workdir_paths)
+    setup_seisflows_working_directory(sf3_cli_tool, workdir_paths, ntask=NTASK,
+                                      niter=NITER)
 
+    # Step 3b: last minute Par_file edits
     cd(workdir_paths.data)
     sf3_cli_tool.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
 
     # Step 4: Run the inversion!
     print(msg.cli("RUNNING SEISFLOWS3 INVERSION WORKFLOW", border="="))
-    cd(cwd)
-
     # Run SeisFlows3 Inversion as an external process so that it doesn't get
     # affected by our current environment
+    cd(cwd)
     subprocess.run("seisflows submit -f", check=False, shell=True)
+
+if __name__ == "__main__":
+    # Some header information before starting to inform the user of goings ons
+    print(msg.ascii_logo_small)
+    print(msg.cli(f"This is a [SPECFEM2D] [WORKSTATION] example, which will "
+                  f"run {NITER} iterations of an inversion to assess misfit "
+                  f"between two homogeneous halfspace models with slightly "
+                  f"different velocities, {NTASK} sources and 1 receiver. "
+                  f"The tasks involved include: ",
+                  items=["1. Download, configure and compile SPECFEM2D",
+                         "2. Set up a SPECFEM2D working directory",
+                         "3. Generate starting model from Tape2007 example",
+                         "4. Generate target model w/ perturbed starting model",
+                         "5. Set up a SeisFlows3 working directory",
+                         f"6. Run {NITER} iterations of an inversion workflow"],
+                  header="seisflows3 example 1",
+                  border="="))
+
+    if len(sys.argv) > 1 and sys.argv[1] == "run":
+        main()
+

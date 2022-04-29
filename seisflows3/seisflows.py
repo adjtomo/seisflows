@@ -1079,32 +1079,47 @@ class SeisFlows:
         """
         examples_dir = os.path.join(ROOT_DIR, "scripts", "examples")
         examples_list = []
-        for i, fid in enumerate(glob(os.path.join(examples_dir, "ex*.py"))):
+        example_names = sorted(glob(os.path.join(examples_dir, "ex*.py")))
+
+        for i, fid in enumerate(example_names):
             example_name = os.path.splitext(os.path.basename(fid))[0]
             examples_list.append((i+1, example_name, fid))
 
-        # Just list out the available examples
-        if run is None or (not run and choice) or (run and not choice):
-            items = [f"{j}: {exname}" for j, exname, fid in examples_list]
-            print(msg.cli("'seisflows examples run <name_or_idx>' to run an "
-                          "example, where <name_or_idx> is either the example "
-                          "name or the index provided", items=items,
-                          header="seisflows3 examples"))
-        # Run one of the examples using subprocess, allow user to input their
-        # selected example by index number or by name
-        else:
+        if run:
+            # Case 1: seisflows examples 1 OR seisflows examples ex1_...
+            if choice is None:
+                arg1 = run
+                arg2 = ""
+            # Case 2: seisflows examples run 1 OR seisflows examples run ex1_...
+            elif run == "run":
+                arg1 = choice
+                arg2 = " run"
+            else:
+                arg1, arg2 = None, None
+        if arg1:
+            # Allow for matching against index (int) and name (str)
             try:
-                choice = int(choice)
+                arg1 = int(arg1)
             except ValueError:
                 pass
 
             for ex_tup in examples_list:
                 j, exname, fid = ex_tup
-                if choice in [j, exname]:
+                if arg1 in [j, exname]:
                     print(f"Running example: {exname}")
-                    subprocess.run(f"python {fid}", shell=True, check=False)
-                else:
-                    print(f"SeisFlows3 example '{choice}' does not exist")
+                    subprocess.run(f"python {fid}{arg2}", shell=True,
+                                   check=False)
+                    return
+
+        # Default behavior is to just print this help dialogue
+        items = [f"{j}: {exname}" for j, exname, fid in examples_list]
+        print(msg.cli("'seisflows examples <name_or_idx>' to print example "
+                      "help dialogue, or 'seisflows examples run "
+                      "<name_or_idx>' to run the example. "
+                      "Where <name_or_idx> is either the example name or "
+                      "index provided below.",
+                      items=items,
+                      header="seisflows3 examples"))
 
     def check(self, choice=None, **kwargs):
         """
