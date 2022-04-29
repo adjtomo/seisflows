@@ -1,0 +1,3 @@
+[console_scripts]
+seisflows = seisflows3.seisflows:main
+
