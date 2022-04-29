@@ -109,7 +109,7 @@ install instructions.
    :hidden:
    :caption: How To
 
-   usage
+   command_line_tool
    structure
    standards
    tips_and_tricks

@@ -1,5 +1,8 @@
-SeisFlows3
-==========
+---
+<p align="center">
+  <img src="seisflows3/docs/images/sf3_globe_banner_alpha.png" />
+</p>
+
 ---
 `Documentation` can be found on Read the Docs: https://seisflows3.rtfd.io (in development)
 
