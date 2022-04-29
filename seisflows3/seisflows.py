@@ -1085,17 +1085,16 @@ class SeisFlows:
             example_name = os.path.splitext(os.path.basename(fid))[0]
             examples_list.append((i+1, example_name, fid))
 
+        arg1, arg2 = None, None
         if run:
             # Case 1: seisflows examples 1 OR seisflows examples ex1_...
             if choice is None:
                 arg1 = run
                 arg2 = ""
             # Case 2: seisflows examples run 1 OR seisflows examples run ex1_...
-            elif run == "run":
+            elif run in ["run", "setup"]:
                 arg1 = choice
-                arg2 = " run"
-            else:
-                arg1, arg2 = None, None
+                arg2 = f" {run}"  # space so that we do $ python ex.py run
         if arg1:
             # Allow for matching against index (int) and name (str)
             try:
@@ -1106,20 +1105,24 @@ class SeisFlows:
             for ex_tup in examples_list:
                 j, exname, fid = ex_tup
                 if arg1 in [j, exname]:
-                    print(f"Running example: {exname}")
+                    print(f"{run.capitalize()} example: {exname}")
                     subprocess.run(f"python {fid}{arg2}", shell=True,
                                    check=False)
                     return
 
         # Default behavior is to just print this help dialogue
         items = [f"{j}: {exname}" for j, exname, fid in examples_list]
-        print(msg.cli("'seisflows examples <name_or_idx>' to print example "
-                      "help dialogue, or 'seisflows examples run "
-                      "<name_or_idx>' to run the example. "
-                      "Where <name_or_idx> is either the example name or "
-                      "index provided below.",
-                      items=items,
-                      header="seisflows3 examples"))
+        print(msg.cli("Example options where <name_or_idx> is either the "
+                      "example name or corresponding index, provided below.",
+                      items=[
+            "'seisflows examples <name_or_idx>': print example description",
+            "'seisflows examples setup <name_or_idx>': setup example but "
+            "don't run workflow",
+            "'seisflows examples run <name_or_idx>': setup and run example"
+        ],
+            header="seisflows3 examples"
+        ))
+        print(msg.cli(items=items))
 
     def check(self, choice=None, **kwargs):
         """

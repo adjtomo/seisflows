@@ -53,6 +53,13 @@ def define_dir_structures(cwd, specfem2d_repo, ex="Tape2007"):
     """
     Define the example directory structure, which will contain abridged
     versions of the SPECFEM2D working directory
+
+    :type cwd: str
+    :param cwd: current working directory
+    :type specfem2d_repo: str
+    :param specfem2d_repo: location of the SPECFEM2D repository
+    :type ex: str
+    :type ex: The name of the example problem inside SPECFEM2D/EXAMPLES
     """
     if not specfem2d_repo:
         print(f"No existing SPECFEM2D repo given, default to: {cwd}/specfem2d")
@@ -71,6 +78,10 @@ def define_dir_structures(cwd, specfem2d_repo, ex="Tape2007"):
         "example": os.path.join(specfem2d_repo, "EXAMPLES", ex),
         "example_data": os.path.join(specfem2d_repo, "EXAMPLES", ex, "DATA")
     }
+    assert(os.path.exists(sem2d["example"])), (
+        f"SPECFEM2D/EXAMPLE directory: '{sem2d['example']}' "
+        f"does not exist, please check this path and try again."
+    )
     # This defines a working directory structure which we will create
     working_directory = os.path.join(cwd, "specfem2d_workdir")
     workdir = {
@@ -86,7 +97,8 @@ def define_dir_structures(cwd, specfem2d_repo, ex="Tape2007"):
 
 def download_specfem2d():
     """
-    Download the latest version of SPECFEM2D from GitHub
+    Download the latest version of SPECFEM2D from GitHub, devel branch.
+    Last successfully tested 4/28/22
     """
     cmd = ("git clone --recursive --branch devel " 
            "https://github.com/geodynamics/specfem2d.git")
@@ -98,7 +110,8 @@ def download_specfem2d():
 def configure_specfem2d_and_make_binaries():
     """
     Run ./configure within the SPECFEM2D repo directory.
-    This function assumes it is being run from inside the repo.
+    This function assumes it is being run from inside the repo. Should guess
+    all the configuration options. Probably the least stable part of the example
     """
     if not os.path.exists("./config.log"):
         cmd = "./configure"
@@ -119,6 +132,11 @@ def create_specfem2d_working_directory(sem2d_paths, workdir_paths):
     """
     Create the working directory where we will generate our initial and
     final models using one of the SPECFEM2D examples
+
+    :type sem2d_paths: Dict
+    :param sem2d_paths: path dictionary for the SPECFEM2D repository
+    :type workdir_paths: Dict
+    :param workdir_paths: path dictionary for the SPECFEM2D working directory
     """
     # Incase this example has written before, remove dir. that were created
     rm(workdir_paths.workdir)
@@ -174,7 +192,8 @@ def setup_specfem2d_for_model_true(sf):
 def run_xspecfem2d_binaries():
     """
     Runs the xmeshfem2d and then xspecfem2d binaries using subprocess and then
-    do some cleanup to get files in the correct locations
+    do some cleanup to get files in the correct locations. Assumes that we
+    can run the binaries directly with './'
     """
     cmd_mesh = f"./bin/xmeshfem2D > OUTPUT_FILES/mesher.log.txt"
     cmd_spec = f"./bin/xspecfem2D > OUTPUT_FILES/solver.log.txt"
@@ -189,6 +208,12 @@ def cleanup_xspecfem2d_run(workdir_paths, new_name=None):
     Do some cleanup after running the SPECFEM2D binaries to make sure files are
     in the correct locations, and rename the OUTPUT_FILES directory so that it
     does not get overwritten by subsequent runs
+
+    :type workdir_paths: Dict
+    :param workdir_paths: path dictionary for the SPECFEM2D working directory
+    :type new_name: str
+    :param new_name: if we want to rename OUTPUT_FILES to something else,
+        so that it does not get overwritten by subsequent simulations
     """
     print("> Cleaning up after xspecfem2d, moving files to correct locations")
     cd(workdir_paths.workdir)
@@ -198,10 +223,19 @@ def cleanup_xspecfem2d_run(workdir_paths, new_name=None):
         mv(workdir_paths.output, new_name)
 
 
-def setup_seisflows_working_directory(sf, workdir_paths, ntask=3, niter=1):
+def setup_seisflows_working_directory(sf, workdir_paths, ntask=3, niter=2):
     """
     Create and set the SeisFlows3 parameter file, making sure all required
     parameters are set correctly for this example problem
+
+    :type sf: seisflows3.seisflows.SeisFlows
+    :param sf: the SeisFlows3 command line tool
+    :type workdir_paths: Dict
+    :param workdir_paths: path dictionary for the SPECFEM2D working directory
+    :type ntask: int
+    :param ntask: Number of sources to include in the inversion
+    :type niter: int
+    :param ninter: number of iterations to perform within the inversion
     """
     sf.setup(force=True)  # Force will delete any existing parameter file
     sf.configure()
@@ -224,9 +258,12 @@ def setup_seisflows_working_directory(sf, workdir_paths, ntask=3, niter=1):
     sf.par("model_true", workdir_paths.model_true)
 
 
-def main():
+def main(run_example=False):
     """
-    The actual run function for this example
+    Setup the example and then optionally run the actual seisflows workflow
+
+    :type run_example: bool
+    :param run_example: Directly run the seisflows workflow after the setup
     """
     sys.argv = [sys.argv[0]]  # Ensure that no arguments are given to the CLI
     sf3_cli_tool = SeisFlows()
@@ -250,7 +287,7 @@ def main():
     except subprocess.CalledProcessError as e:
         print(f"configure and make step has failed, please check and retry. "
               f"If this command repeatedly fails, you may need to "
-              f"configure and compile SPECFEM2D manually.")
+              f"configure and compile SPECFEM2D manually.\n{e}")
         sys.exit(-1)
 
     # Step 2: Create a working directory and generate the initial/final models
@@ -292,12 +329,14 @@ def main():
     cd(workdir_paths.data)
     sf3_cli_tool.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
 
-    # Step 4: Run the inversion!
-    print(msg.cli("RUNNING SEISFLOWS3 INVERSION WORKFLOW", border="="))
-    # Run SeisFlows3 Inversion as an external process so that it doesn't get
-    # affected by our current environment
-    cd(cwd)
-    subprocess.run("seisflows submit -f", check=False, shell=True)
+    if run_example == "run":
+        # Step 4: Run the inversion!
+        print(msg.cli("RUNNING SEISFLOWS3 INVERSION WORKFLOW", border="="))
+        # Run SeisFlows3 Inversion as an external process so that it doesn't get
+        # affected by our current environment
+        cd(cwd)
+        subprocess.run("seisflows submit -f", check=False, shell=True)
+
 
 if __name__ == "__main__":
     # Some header information before starting to inform the user of goings ons
@@ -316,6 +355,6 @@ if __name__ == "__main__":
                   header="seisflows3 example 1",
                   border="="))
 
-    if len(sys.argv) > 1 and sys.argv[1] == "run":
-        main()
+    if len(sys.argv) > 1:
+        main(run_example=sys.argv[1])
 

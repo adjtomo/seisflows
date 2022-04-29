@@ -38,7 +38,8 @@ from seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion import (
     define_dir_structures, download_specfem2d,
     configure_specfem2d_and_make_binaries, create_specfem2d_working_directory,
     setup_specfem2d_for_model_init, run_xspecfem2d_binaries,
-    cleanup_xspecfem2d_run, cleanup_xspecfem2d_run
+    cleanup_xspecfem2d_run, cleanup_xspecfem2d_run,
+    setup_seisflows_working_directory
 )
 from seisflows3.tools import msg
 from seisflows3.config import Dict
@@ -64,11 +65,7 @@ def setup_specfem2d_for_model_true(sf):
     """
     assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
 
-    print("> Updating SPECFEM2D to set checkerboard model as MODEL_TRUE")
-
-    # !!! DOES THIS WORK?
-    rm(workdir_paths.output)
-    mkdir(workdir_paths.output)
+    print("> EX2: Updating SPECFEM2D to set checkerboard model as MODEL_TRUE")
 
     sf.sempar("model", "legacy")  # To read the model_velocity.dat_checker
     rm("proc000000_model_velocity.dat_input")
@@ -83,7 +80,7 @@ def setup_specfem2d_for_seisflows3_inversion(sf):
     rather than create them from the Par_file
     rather than create them from the Par_file
     """
-    print("> Finalizing SPECFEM2D Par_file for SeisFlows3 inversion")
+    print("> EX2: Finalizing SPECFEM2D Par_file for SeisFlows3 inversion")
     sf.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
     sf.sempar("use_existing_stations", ".true.")  # Use STATIONS file
     # Assign STATIONS_checker file which has 132 stations
@@ -91,9 +88,15 @@ def setup_specfem2d_for_seisflows3_inversion(sf):
     ln("STATIONS_checker", "STATIONS")
 
 
-def main():
+def main(run_example=False):
     """
-    The actual run function for this example
+    Setup the example and then optionally run the actual seisflows workflow
+
+    TODO Figure out how to not have to repeat this code block, which is
+    TODO an exact copy of example 1
+
+    :type run_example: bool
+    :param run_example: Directly run the seisflows workflow after the setup
     """
     sys.argv = [sys.argv[0]]  # Ensure that no arguments are given to the CLI
     sf3_cli_tool = SeisFlows()
@@ -117,7 +120,7 @@ def main():
     except subprocess.CalledProcessError as e:
         print(f"configure and make step has failed, please check and retry. "
               f"If this command repeatedly fails, you may need to "
-              f"configure and compile SPECFEM2D manually.")
+              f"configure and compile SPECFEM2D manually.\n{e}")
         sys.exit(-1)
 
     # Step 2: Create a working directory and generate the initial/final models
@@ -159,12 +162,14 @@ def main():
     cd(workdir_paths.data)
     sf3_cli_tool.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
 
-    # Step 4: Run the inversion!
-    print(msg.cli("RUNNING SEISFLOWS3 INVERSION WORKFLOW", border="="))
-    # Run SeisFlows3 Inversion as an external process so that it doesn't get
-    # affected by our current environment
-    cd(cwd)
-    subprocess.run("seisflows submit -f", check=False, shell=True)
+    if run_example == "run":
+        # Step 4: Run the inversion!
+        print(msg.cli("RUNNING SEISFLOWS3 INVERSION WORKFLOW", border="="))
+        # Run SeisFlows3 Inversion as an external process so that it doesn't get
+        # affected by our current environment
+        cd(cwd)
+        subprocess.run("seisflows submit -f", check=False, shell=True)
+
 
 if __name__ == "__main__":
     # Some header information before starting to inform the user of goings ons
@@ -183,5 +188,5 @@ if __name__ == "__main__":
                   header="seisflows3 example 2",
                   border="="))
 
-    if len(sys.argv) > 1 and sys.argv[1] == "run":
-        main()
+    if len(sys.argv) > 1:
+        main(run_example=sys.argv[1])
