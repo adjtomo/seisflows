@@ -16,8 +16,76 @@ activate the required Conda environment.
 
 --------------
 
-The following Table of Contents outlines the steps we will take in this
+Option 1: Automated run
+-----------------------
+
+We have set up this example to run using a single command line argument.
+The following command will run an example script which will (1) download
+and compile SPECFEM2D, (2) setup a SPECFEM2D working directory to
+generate initial and target models, and (3) Run a SeisFlows3 inversion.
+
+.. warning:: 
+    This example attempts to automatically download and compile SPECFEM2D. This step may fail if you are software required by SPECFEM2D, there are issues with the SPECFEM2D repository itself, or the configuration and compiling steps fail. If you run any issues, it is recommended that you manually install and compile SPECFEM2D, and directly provide its path to this example problem when prompted.
+
+.. code:: ipython3
+
+    seisflows examples run 1
+
+
+.. parsed-literal::
+
+    Run example: ex1_specfem2d_workstation_inversion
+    
+                                        @@@@@@@@@@                        
+                                   .@@@@.    .%&(  %@.          
+                                @@@@   @@@@   &@@@@@@ ,%@       
+                             @@@@   @@@,  /@@              @    
+                            @@@   @@@@   @@@              @     
+                          @@@@   @@@@   @@@                @  @ 
+                          @@@   @@@@   ,@@@                @ @  
+                         @@@@   @@@@    @@@@              @@ @ @
+                         @@@@   @@@@@    @@@@@          @@@ @@ @
+                         @@@@    @@@@@     @@@@@@@@@@@@@@  @@  @
+                          @@@@    @@@@@@        @@@&     @@@  @ 
+                          @@@@@     @@@@@@@@         %@@@@#  @@ 
+                            @@@@#      @@@@@@@@@@@@@@@@@   @@   
+                             &@@@@@          @@@@(       @@&    
+                                @@@@@@@             /@@@@       
+                                    @@@@@@@@@@@@@@@@@
+                                        @@@@@@@@@@          
+    
+    ================================================================================
+                                  SEISFLOWS3 EXAMPLE 1                              
+                                  ////////////////////                              
+    This is a [SPECFEM2D] [WORKSTATION] example, which will run 2 iterations of an
+    inversion to assess misfit between two homogeneous halfspace models with
+    slightly different velocities, 3 sources and 1 receiver. The tasks involved
+    include:
+    
+    1. (optional) Download, configure, compile SPECFEM2D
+    2. Set up a SPECFEM2D working directory
+    3. Generate starting model from Tape2007 example
+    4. Generate target model w/ perturbed starting model
+    5. Set up a SeisFlows3 working directory
+    6. Run 2 iterations of an inversion workflow
+    ================================================================================
+    If you have already downloaded SPECMFE2D, please input its path here. If blank,
+    this example will pull the latest version from GitHub and attempt to configure
+    and make the binaries: >
+
+--------------
+
+Option 2: Manual run
+--------------------
+
+The notebook below details a walkthrough of the automated run shown
+above. This is meant for those who want to understand what is going on
+under the hood. You are welcome to follow along on your workstation. The
+following Table of Contents outlines the steps we will take in this
 tutorial:
+
+.. warning:: 
+    Navigation links will not work outside of Jupyter. Please use the navigation bar to the left.
 
 1. `Setup SPECFEM2D <#1.-Setup-SPECFEM2D>`__
 
@@ -47,14 +115,14 @@ tutorial:
 4. `Conclusions <#4.-Conclusions>`__
 
 1. Setup SPECFEM2D
-------------------
+~~~~~~~~~~~~~~~~~~
 
-1a. Download and compile codebase\*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1a. Download and compile codebase (optional)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-   **\*** If you have already downloaded and compiled SPECFEM2D, you can
-   skip most of this subsection (1a). However you will need to edit the
-   first two paths in the following cell (WORKDIR and
+   **NOTE**: If you have already downloaded and compiled SPECFEM2D, you
+   can skip most of this subsection (1a). However you will need to edit
+   the first two paths in the following cell (WORKDIR and
    SPECFEM2D_ORIGINAL), and execute the path structure defined in the
    cell.
 
@@ -73,12 +141,12 @@ Python, but this can easily be accomplished in bash.
 
 .. code:: ipython3
 
-    # USER MUST EDIT THE FOLLOWING PATHS:
-    # WORKDIR: points to your own working directory
-    # SPECFEM2D: points to an existing specfem2D repository if available (if not set as '')
+    # vvv USER MUST EDIT THE FOLLOWING PATHS vvv
     WORKDIR = "/home/bchow/Work/work/sf3_specfem2d_example" 
     SPECFEM2D = "/home/bchow/REPOSITORIES/specfem2d"
-    
+    # where WORKDIR: points to your own working directory
+    # and SPECFEM2D: points to an existing specfem2D repository if available (if not set as '')
+    # ^^^ USER MUST EDIT THE FOLLOWING PATHS ^^^
     # ======================================================================================================
     
     # Distribute the necessary file structure of the SPECFEM2D repository that we will downloaded/reference
@@ -115,7 +183,7 @@ Python, but this can easily be accomplished in bash.
 
 .. parsed-literal::
 
-    SPECFEM2D repository already found, you may skip this subsection
+    Existing SPECMFE2D respository found, symlinking to working directory
 
 
 .. code:: ipython3
@@ -148,7 +216,7 @@ Python, but this can easily be accomplished in bash.
 
 
 1b. Create a separate SPECFEM2D working directory
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Next we’ll create a new SPECFEM2D working directory, separate from the
 original repository. The intent here is to isolate the original
@@ -158,9 +226,8 @@ step for using SeisFlows3, but it helps keep file structure clean in the
 long run, and is the SeisFlows3 dev team’s preferred method of using
 SPECFEM.
 
-   **NOTE:** All SPECFEM2D/3D/3D_GLOBE need to run successfully are the
-   **bin/**, **DATA/**, and **OUTPUT_FILES/** directories. Everything
-   else in the repository is not mandatory for running binaries.
+.. note::
+    All SPECFEM2D/3D/3D_GLOBE need to run successfully are the bin/, DATA/, and OUTPUT_FILES/ directories. Everything else in the repository is not mandatory for running binaries.
 
 In this tutorial we will be using the `Tape2007 example
 problem <https://github.com/geodynamics/specfem2d/tree/devel/EXAMPLES/Tape2007>`__
@@ -198,8 +265,9 @@ to define our **DATA/** directory (last tested 3/9/22, cf893667).
     os.chdir(TAPE_2007_EXAMPLE)
     ! ./run_this_example.sh > output_log.txt
     
-    assert(os.path.exists("OUTPUT_FILES/AA.S000000.BXY.semd")), \
-        "Example did not run, the remainder the doc is likely not to work"
+    assert(os.path.exists("OUTPUT_FILES/forward_image000004800.jpg")), \
+        (f"Example did not run, the remainder of this docs page will likely not work."
+         f"Please check the following directory: {TAPE_2007_EXAMPLE}")
     
     ! tail output_log.txt
 
@@ -208,14 +276,14 @@ to define our **DATA/** directory (last tested 3/9/22, cf893667).
 
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
-     D a t e : 10 - 03 - 2022                                 T i m e  : 14:36:50
+     D a t e : 29 - 04 - 2022                                 T i m e  : 12:24:51
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
     
     see results in directory: OUTPUT_FILES/
     
     done
-    Thu Mar 10 14:36:50 AKST 2022
+    Fri Apr 29 12:24:51 AKDT 2022
 
 
 --------------
@@ -231,10 +299,8 @@ how SeisFlows3 operates within the SPECFEM2D framework):
 3. \__OUTPUT_FILES/proc??????_*.bin_\_ files which define the starting
    (and target) models
 
-..
-
-   **NOTE:** This file structure is the same for all versions of SPECFEM
-   (2D/3D/3D_GLOBE)
+.. note:: 
+    This file structure is the same for all versions of SPECFEM (2D/3D/3D_GLOBE)
 
 .. code:: ipython3
 
@@ -269,7 +335,7 @@ how SeisFlows3 operates within the SPECFEM2D framework):
 
 
 1c. Generate initial and target models
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Since we’re doing a synthetic-synthetic inversion, we need to manually
 set up the velocity models with which we generate our synthetic
@@ -287,9 +353,8 @@ Tape2007 example problem. We will need to run both ``xmeshfem2D`` and
 We will generate our target model by slightly perturbing the parameters
 of the initial model.
 
-   **NOTE:** We can use the SeisFlows3 command line option
-   ``seisflows sempar`` to directly edit the SPECFEM2D Par_file in the
-   command line. This will work for the SPECFEM3D Par_file as well.
+.. note::
+    We can use the SeisFlows3 command line option `seisflows sempar` to directly edit the SPECFEM2D Par_file in the command line. This will work for the SPECFEM3D Par_file as well.
 
 .. code:: ipython3
 
@@ -303,15 +368,9 @@ of the initial model.
 
 .. parsed-literal::
 
-    
-    	setup_with_binary_database = 0 -> 1
-    
-    
-    	SAVE_MODEL = default -> binary
-    
-    
-    	save_ASCII_kernels = .true. -> .false.
-    
+    setup_with_binary_database: 0 -> 1
+    SAVE_MODEL: default -> binary
+    save_ASCII_kernels: .true. -> .false.
 
 
 .. code:: ipython3
@@ -370,7 +429,7 @@ of the initial model.
      Tape-Liu-Tromp (GJI 2007)
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
-     D a t e : 10 - 03 - 2022                                 T i m e  : 14:45:55
+     D a t e : 29 - 04 - 2022                                 T i m e  : 12:25:24
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
 
@@ -394,11 +453,10 @@ directly.
 
 .. parsed-literal::
 
+    VELOCITY_MODEL:
     
     1 1 2600.d0 5800.d0 3500.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0
-    
     ->
-    
     1 1 2600.d0 5900.d0 3550.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0
 
 
@@ -443,7 +501,7 @@ directly.
      Tape-Liu-Tromp (GJI 2007)
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
-     D a t e : 10 - 03 - 2022                                 T i m e  : 14:45:55
+     D a t e : 29 - 04 - 2022                                 T i m e  : 12:25:24
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
 
@@ -460,13 +518,13 @@ directly.
 
 
 2. Initialize SeisFlows3 (SF3)
-------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In this Section we will look at a SeisFlows3 working directory,
 parameter file, and working state.
 
 2a. SF3 working directory and parameter file
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 As with SPECFEM, SeisFlows3 requires a parameter file
 (**parameters.yaml**) that controls how an automated workflow will
@@ -474,11 +532,14 @@ proceed. Because SeisFlows3 is modular, there are a large number of
 potential parameters which may be present in SF3 parameter file, as each
 sub-module may have its own set of unique parameters.
 
-Different to SPECFEM’s method of listing all available parameters and
+In contrast to SPECFEM’s method of listing all available parameters and
 leaving it up the User to determine which ones are relevant to them,
 SeisFlows3 dynamically builds its parameter file based on User inputs.
 In this subsection we will use the built-in SeisFlows3 command line
 tools to generate and populate the parameter file.
+
+.. note::
+    See the `parameter file documentation page <parameter_file.html>`__ for a more in depth exploration of this central SeisFlows3 file.
 
 In the previous section we saw the ``sempar`` command in action. We can
 use the ``-h`` or help flag to list all available SiesFlows3 command
@@ -492,8 +553,7 @@ line commands.
 .. parsed-literal::
 
     usage: seisflows [-h] [-w [WORKDIR]] [-p [PARAMETER_FILE]]
-                     [--path_file [PATH_FILE]]
-                     {setup,configure,init,submit,resume,restart,clean,par,sempar,check,print,convert,reset,inspect,debug,edit}
+                     {setup,configure,init,submit,resume,restart,clean,par,sempar,check,print,convert,reset,debug,edit,examples}
                      ...
     
     ================================================================================
@@ -508,8 +568,6 @@ line commands.
                             The SeisFlows working directory, default: cwd
       -p [PARAMETER_FILE], --parameter_file [PARAMETER_FILE]
                             Parameters file, default: 'parameters.yaml'
-      --path_file [PATH_FILE]
-                            Legacy path file, default: 'paths.py'
     
     command:
       Available SeisFlows arguments and their intended usages
@@ -520,16 +578,16 @@ line commands.
         submit              Submit initial workflow to system
         resume              Re-submit previous workflow to system
         restart             Remove current environment and submit new workflow
-        clean               Remove active working environment
-        par                 View and edit parameter file
+        clean               Remove files relating to an active working environment
+        par                 View and edit SeisFlows3 parameter file
         sempar              View and edit SPECFEM parameter file
         check               Check state of an active environment
         print               Print information related to an active environment
         convert             Convert model file format
-        reset               Clean current and submit new workflow
-        inspect             View inheritenace and ownership
+        reset               Reset modules within an active state
         debug               Start interactive debug environment
         edit                Open source code file in text editor
+        examples            Look at and run pre-configured example problems
     
     'seisflows [command] -h' for more detailed descriptions of each command.
 
@@ -537,13 +595,15 @@ line commands.
 .. code:: ipython3
 
     # The command 'setup' creates the 'parameters.yaml' file that controls all of SeisFlows3
+    # the '-f' flag removes any exist 'parameters.yaml' file that might be in the directory
     os.chdir(WORKDIR)
-    ! seisflows setup
+    ! seisflows setup -f
     ! ls
 
 
 .. parsed-literal::
 
+    creating parameter file: parameters.yaml
     parameters.yaml  specfem2d  specfem2d_workdir
 
 
@@ -555,38 +615,37 @@ line commands.
 
 .. parsed-literal::
 
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # //////////////////////////////////////////////////////////////////////////////
     #
-    #                 Seisflows YAML Parameter File and Path Input
+    #                        SeisFlows3 YAML Parameter File
     #
-    #  For NoneType, set variables to `None` or `null`. For infinity, set to `inf`
+    # //////////////////////////////////////////////////////////////////////////////
     #
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # Modules correspond to the structure of the source code, and determine
+    # SeisFlows3' behavior at runtime. Each module requires its own sub-parameters.
     #
-    # These modules correspond to the structure of the source code, and determine
-    # SeisFlows' behavior at runtime. Check the source code directory for available 
-    # module names. Each module will require its own set of sub parameters. 
-    #
-    # To fill this parameter file with docstrings and default values, run:
-    #
-    # > seisflows configure
+    # .. rubric::
+    #   - To determine available options for modules listed below, run:
+    #       > seisflows print module
+    #   - To auto-fill with docstrings and default values (recommended), run:
+    #       > seisflows configure
+    #   - To set values as NoneType, use: null
+    #   - To set values as infinity, use: inf
     #
     #                                    MODULES
-    #                                    -------
-    #
-    # WORKFLOW:    The method for running SeisFlows. Equivalent to main()
-    # SOLVER:      External numerical solver to use for waveform simulations.
-    # SYSTEM:      Computer architecture of the system being used to run SeisFlows
-    # OPTIMIZE:    Optimization algorithm for the inverse problem
-    # PREPROCESS:  Preprocessing schema for waveform data
-    # POSTPROCESS: Postprocessing schema for kernels and gradients
-    #
+    #                                    ///////
+    # WORKFLOW (str):    The method for running SeisFlows3; equivalent to main()
+    # SOLVER (str):      External numerical solver to use for waveform simulations
+    # SYSTEM (str):      Computer architecture of the system being used
+    # OPTIMIZE (str):    Optimization algorithm for the inverse problem
+    # PREPROCESS (str):  Preprocessing schema for waveform data
+    # POSTPROCESS (str): Postprocessing schema for kernels and gradients
     # ==============================================================================
     WORKFLOW: inversion
-    SOLVER: specfem3d
-    SYSTEM: serial
+    SOLVER: specfem2d
+    SYSTEM: workstation
     OPTIMIZE: LBFGS 
-    PREPROCESS: default
+    PREPROCESS: base
     POSTPROCESS: base
 
 
@@ -598,57 +657,53 @@ line commands.
 
 .. parsed-literal::
 
+                                   SEISFLOWS3 MODULES                               
+                                   //////////////////                               
+    '+': package, '-': module, '*': class
     
-    SYSTEM
-     * seisflows3
-    	base
-    	lsf_lg
-    	serial
-    	slurm_lg
-     * seisflows3-super
-    	chinook_lg
-    	maui
-    
-    PREPROCESS
-     * seisflows3
-    	base
-    	default
-    	pyatoa
-     * seisflows3-super
-    	pyatoa_nz
-    
-    SOLVER
-     * seisflows3
-    	base
-    	specfem2d
-    	specfem3d
-    	specfem3d_globe
-     * seisflows3-super
-    	specfem3d_maui
-    
-    POSTPROCESS
-     * seisflows3
-    	base
-     * seisflows3-super
-    
-    OPTIMIZE
-     * seisflows3
-    	LBFGS
-    	NLCG
-    	base
-    	steepest_descent
-     * seisflows3-super
-    
-    WORKFLOW
-     * seisflows3
-    	base
-    	inversion
-    	migration
-     * seisflows3-super
-    	thrifty_inversion
-    	thrifty_maui
-    
-    
+    + SYSTEM
+        - seisflows3
+            * base
+            * cluster
+            * lsf
+            * slurm
+            * workstation
+        - seisflows3-super
+            * chinook
+            * maui
+    + PREPROCESS
+        - seisflows3
+            * base
+            * pyatoa
+        - seisflows3-super
+            * pyatoa_nz
+    + SOLVER
+        - seisflows3
+            * base
+            * specfem2d
+            * specfem3d
+            * specfem3d_globe
+        - seisflows3-super
+            * specfem3d_maui
+    + POSTPROCESS
+        - seisflows3
+            * base
+        - seisflows3-super
+    + OPTIMIZE
+        - seisflows3
+            * LBFGS
+            * NLCG
+            * base
+        - seisflows3-super
+    + WORKFLOW
+        - seisflows3
+            * base
+            * inversion
+            * migration
+            * test
+        - seisflows3-super
+            * thrifty_inversion
+            * thrifty_maui
 
 
 .. code:: ipython3
@@ -661,41 +716,38 @@ line commands.
 
 .. parsed-literal::
 
-    
-    	SOLVER: specfem3d -> specfem2d
-    
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SOLVER: specfem2d -> specfem2d
+    # //////////////////////////////////////////////////////////////////////////////
     #
-    #                 Seisflows YAML Parameter File and Path Input
+    #                        SeisFlows3 YAML Parameter File
     #
-    #  For NoneType, set variables to `None` or `null`. For infinity, set to `inf`
+    # //////////////////////////////////////////////////////////////////////////////
     #
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # Modules correspond to the structure of the source code, and determine
+    # SeisFlows3' behavior at runtime. Each module requires its own sub-parameters.
     #
-    # These modules correspond to the structure of the source code, and determine
-    # SeisFlows' behavior at runtime. Check the source code directory for available 
-    # module names. Each module will require its own set of sub parameters. 
-    #
-    # To fill this parameter file with docstrings and default values, run:
-    #
-    # > seisflows configure
+    # .. rubric::
+    #   - To determine available options for modules listed below, run:
+    #       > seisflows print module
+    #   - To auto-fill with docstrings and default values (recommended), run:
+    #       > seisflows configure
+    #   - To set values as NoneType, use: null
+    #   - To set values as infinity, use: inf
     #
     #                                    MODULES
-    #                                    -------
-    #
-    # WORKFLOW:    The method for running SeisFlows. Equivalent to main()
-    # SOLVER:      External numerical solver to use for waveform simulations.
-    # SYSTEM:      Computer architecture of the system being used to run SeisFlows
-    # OPTIMIZE:    Optimization algorithm for the inverse problem
-    # PREPROCESS:  Preprocessing schema for waveform data
-    # POSTPROCESS: Postprocessing schema for kernels and gradients
-    #
+    #                                    ///////
+    # WORKFLOW (str):    The method for running SeisFlows3; equivalent to main()
+    # SOLVER (str):      External numerical solver to use for waveform simulations
+    # SYSTEM (str):      Computer architecture of the system being used
+    # OPTIMIZE (str):    Optimization algorithm for the inverse problem
+    # PREPROCESS (str):  Preprocessing schema for waveform data
+    # POSTPROCESS (str): Postprocessing schema for kernels and gradients
     # ==============================================================================
     WORKFLOW: inversion
     SOLVER: specfem2d
-    SYSTEM: serial
+    SYSTEM: workstation
     OPTIMIZE: LBFGS 
-    PREPROCESS: default
+    PREPROCESS: base
     POSTPROCESS: base
 
 
@@ -723,143 +775,158 @@ Comments next to each evaluation describe the choice for each.
 
 .. parsed-literal::
 
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    filling parameters.yaml w/ default values
+    # //////////////////////////////////////////////////////////////////////////////
     #
-    #                 Seisflows YAML Parameter File and Path Input
+    #                        SeisFlows3 YAML Parameter File
     #
-    #  For NoneType, set variables to `None` or `null`. For infinity, set to `inf`
+    # //////////////////////////////////////////////////////////////////////////////
     #
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # Modules correspond to the structure of the source code, and determine
+    # SeisFlows3' behavior at runtime. Each module requires its own sub-parameters.
     #
-    # These modules correspond to the structure of the source code, and determine
-    # SeisFlows' behavior at runtime. Check the source code directory for available 
-    # module names. Each module will require its own set of sub parameters. 
-    #
-    # To fill this parameter file with docstrings and default values, run:
-    #
-    # > seisflows configure
+    # .. rubric::
+    #   - To determine available options for modules listed below, run:
+    #       > seisflows print module
+    #   - To auto-fill with docstrings and default values (recommended), run:
+    #       > seisflows configure
+    #   - To set values as NoneType, use: null
+    #   - To set values as infinity, use: inf
     #
     #                                    MODULES
-    #                                    -------
-    #
-    # WORKFLOW:    The method for running SeisFlows. Equivalent to main()
-    # SOLVER:      External numerical solver to use for waveform simulations.
-    # SYSTEM:      Computer architecture of the system being used to run SeisFlows
-    # OPTIMIZE:    Optimization algorithm for the inverse problem
-    # PREPROCESS:  Preprocessing schema for waveform data
-    # POSTPROCESS: Postprocessing schema for kernels and gradients
-    #
+    #                                    ///////
+    # WORKFLOW (str):    The method for running SeisFlows3; equivalent to main()
+    # SOLVER (str):      External numerical solver to use for waveform simulations
+    # SYSTEM (str):      Computer architecture of the system being used
+    # OPTIMIZE (str):    Optimization algorithm for the inverse problem
+    # PREPROCESS (str):  Preprocessing schema for waveform data
+    # POSTPROCESS (str): Postprocessing schema for kernels and gradients
     # ==============================================================================
     WORKFLOW: inversion
     SOLVER: specfem2d
-    SYSTEM: serial
+    SYSTEM: workstation
     OPTIMIZE: LBFGS 
-    PREPROCESS: default
+    PREPROCESS: base
     POSTPROCESS: base
     
-    # ==============================================================================
-    #
-    #                                     SYSTEM                                    
-    #                                     ------                                    
-    #
+    # =============================================================================
+    #                                    SYSTEM                                    
+    #                                    //////                                    
     # TITLE (str):
-    #    The name used to submit jobs to the system, defaults to the name of the
-    #    working directory
-    # WALLTIME (float):
-    #    Maximum job time in minutes for main SeisFlows3 job
-    # TASKTIME (float):
-    #    Maximum job time in minutes for each SeisFlows3 task
-    # NTASK (int):
-    #    Number of separate, individual tasks. Also equal to the number of desired
-    #    sources in workflow
-    # NPROC (int):
-    #    Number of processor to use for each simulation
+    #   The name used to submit jobs to the system, defaults to the name of the
+    #   working directory
     # PRECHECK (list):
-    #    A list of parameters that will be displayed to stdout before 'submit' or
-    #    'resume' is run. Useful for manually reviewing important parameters prior
-    #    to system submission
+    #   A list of parameters that will be displayed to stdout before 'submit' or
+    #   'resume' is run. Useful for manually reviewing important parameters prior
+    #   to system submission
     # LOG_LEVEL (str):
-    #    Verbosity output of SF3 logger. Available from least to most verbosity:
-    #    'CRITICAL', 'WARNING', 'INFO', 'DEBUG'; defaults to 'DEBUG'
+    #   Verbosity output of SF3 logger. Available from least to most verbosity:
+    #   'CRITICAL', 'WARNING', 'INFO', 'DEBUG'; defaults to 'DEBUG'
     # VERBOSE (bool):
-    #    Level of verbosity provided to the output log. If True, log statements
-    #    will declare what module/class/function they are being called from.
-    #    Useful for debugging but also very noisy.
+    #   Level of verbosity provided to the output log. If True, log statements
+    #   will declare what module/class/function they are being called from.
+    #   Useful for debugging but also very noisy.
     # MPIEXEC (str):
-    #    Function used to invoke parallel executables
-    
-    # ==============================================================================
+    #   Function used to invoke executables on the system. For example 'srun' on
+    #   SLURM systems, or './' on a workstation. If left blank, will guess based
+    #   on the system.
+    # NTASK (int):
+    #   Number of separate, individual tasks. Also equal to the number of desired
+    #   sources in workflow
+    # NPROC (int):
+    #   Number of processor to use for each simulation
+    # =============================================================================
     TITLE: sf3_specfem2d_example
-    WALLTIME: !!! REQUIRED PARAMETER !!!
-    TASKTIME: !!! REQUIRED PARAMETER !!!
-    NTASK: 1
-    NPROC: 1
     PRECHECK:
         - TITLE
-        - BEGIN
-        - END
-        - WALLTIME
     LOG_LEVEL: DEBUG
-    VERBOSE: True
+    VERBOSE: False
     MPIEXEC:
+    NTASK: 1
+    NPROC: 1
     
-    # ==============================================================================
-    #
-    #                                   PREPROCESS                                  
-    #                                   ----------                                  
-    #
+    # =============================================================================
+    #                                  PREPROCESS                                  
+    #                                  //////////                                  
     # MISFIT (str):
-    #    Misfit function for waveform comparisons, for available see
-    #    seisflows.plugins.misfit
+    #   Misfit function for waveform comparisons, for available see
+    #   seisflows.plugins.misfit
     # BACKPROJECT (str):
-    #    Backprojection function for migration, for available see
-    #    seisflows.plugins.adjoint
-    # NORMALIZE (str):
-    #    Data normalization option
-    # MUTE (str):
-    #    Data muting option
+    #   Backprojection function for migration, for available see
+    #   seisflows.plugins.adjoint
+    # NORMALIZE (list):
+    #   Data normalization parameters used to normalize the amplitudes of
+    #   waveforms. Choose from two sets: ENORML1: normalize per event by L1 of
+    #   traces; OR ENORML2: normalize per event by L2 of traces; AND TNORML1:
+    #   normalize per trace by L1 of itself; OR TNORML2: normalize per trace by
+    #   L2 of itself
     # FILTER (str):
-    #    Data filtering option
-    
-    # ==============================================================================
+    #   Data filtering type, available options are:BANDPASS (req. MIN/MAX
+    #   PERIOD/FREQ);LOWPASS (req. MAX_FREQ or MIN_PERIOD); HIGHPASS (req.
+    #   MIN_FREQ or MAX_PERIOD)
+    # MIN_PERIOD (float):
+    #   Minimum filter period applied to time series.See also MIN_FREQ, MAX_FREQ,
+    #   if User defines FREQ parameters, they will overwrite PERIOD parameters.
+    # MAX_PERIOD (float):
+    #   Maximum filter period applied to time series.See also MIN_FREQ, MAX_FREQ,
+    #   if User defines FREQ parameters, they will overwrite PERIOD parameters.
+    # MIN_FREQ (float):
+    #   Maximum filter frequency applied to time series.See also MIN_PERIOD,
+    #   MAX_PERIOD, if User defines FREQ parameters, they will overwrite PERIOD
+    #   parameters.
+    # MAX_FREQ (float):
+    #   Maximum filter frequency applied to time series,See also MIN_PERIOD,
+    #   MAX_PERIOD, if User defines FREQ parameters, they will overwrite PERIOD
+    #   parameters.
+    # MUTE (list):
+    #   Data mute parameters used to zero out early / late arrivals or offsets.
+    #   Choose any number of: EARLY: mute early arrivals; LATE: mute late
+    #   arrivals; SHORT: mute short source-receiver distances; LONG: mute long
+    #   source-receiver distances
+    # =============================================================================
     MISFIT: waveform
     BACKPROJECT: null
-    NORMALIZE: null
-    MUTE: null
+    NORMALIZE: []
     FILTER: null
+    MIN_PERIOD:
+    MAX_PERIOD:
+    MIN_FREQ:
+    MAX_FREQ:
+    MUTE: []
     
-    # ==============================================================================
-    #
-    #                                     SOLVER                                    
-    #                                     ------                                    
-    #
+    # =============================================================================
+    #                                    SOLVER                                    
+    #                                    //////                                    
     # MATERIALS (str):
-    #    Material parameters used to define model. Available: ['ELASTIC': Vp, Vs,
-    #    'ACOUSTIC': Vp, 'ISOTROPIC', 'ANISOTROPIC']
+    #   Material parameters used to define model. Available: ['ELASTIC': Vp, Vs,
+    #   'ACOUSTIC': Vp, 'ISOTROPIC', 'ANISOTROPIC']
     # DENSITY (str):
-    #    How to treat density during inversion. Available: ['CONSTANT': Do not
-    #    update density, 'VARIABLE': Update density]
+    #   How to treat density during inversion. Available: ['CONSTANT': Do not
+    #   update density, 'VARIABLE': Update density]
+    # ATTENUATION (str):
+    #   If True, turn on attenuation during forward simulations, otherwise set
+    #   attenuation off. Attenuation is always off for adjoint simulations.
     # COMPONENTS (str):
-    #    Components used to generate data, formatted as a single string, e.g. ZNE
-    #    or NZ or E
+    #   Components used to generate data, formatted as a single string, e.g. ZNE
+    #   or NZ or E
     # SOLVERIO (int):
-    #    The format external solver files. Available: ['fortran_binary', 'adios']
+    #   The format external solver files. Available: ['fortran_binary', 'adios']
     # NT (float):
-    #    Number of time steps set in the SPECFEM Par_file
+    #   Number of time steps set in the SPECFEM Par_file
     # DT (float):
-    #    Time step or delta set in the SPECFEM Par_file
+    #   Time step or delta set in the SPECFEM Par_file
     # F0 (float):
-    #    Dominant source frequency
+    #   Dominant source frequency
     # FORMAT (float):
-    #    Format of synthetic waveforms used during workflow, available options:
-    #    ['ascii', 'su']
+    #   Format of synthetic waveforms used during workflow, available options:
+    #   ['ascii', 'su']
     # SOURCE_PREFIX (str):
-    #    Prefix of SOURCE files in path SPECFEM_DATA. By default, 'SOURCE' for
-    #    SPECFEM2D
-    
-    # ==============================================================================
+    #   Prefix of SOURCE files in path SPECFEM_DATA. By default, 'SOURCE' for
+    #   SPECFEM2D
+    # =============================================================================
     MATERIALS: !!! REQUIRED PARAMETER !!!
     DENSITY: !!! REQUIRED PARAMETER !!!
+    ATTENUATION: !!! REQUIRED PARAMETER !!!
     COMPONENTS: ZNE
     SOLVERIO: fortran_binary
     NT: !!! REQUIRED PARAMETER !!!
@@ -868,52 +935,46 @@ Comments next to each evaluation describe the choice for each.
     FORMAT: !!! REQUIRED PARAMETER !!!
     SOURCE_PREFIX: SOURCE
     
-    # ==============================================================================
-    #
-    #                                  POSTPROCESS                                  
-    #                                  -----------                                  
-    #
+    # =============================================================================
+    #                                  POSTPROCESS                                 
+    #                                  ///////////                                 
     # SMOOTH_H (float):
-    #    Gaussian half-width for horizontal smoothing in units of meters. If 0.,
-    #    no smoothing applied
+    #   Gaussian half-width for horizontal smoothing in units of meters. If 0.,
+    #   no smoothing applied
     # SMOOTH_V (float):
-    #    Gaussian half-width for vertical smoothing in units of meters
+    #   Gaussian half-width for vertical smoothing in units of meters
     # TASKTIME_SMOOTH (int):
-    #    Large radii smoothing may take longer than normal tasks. Allocate
-    #    additional smoothing task time as a multiple of TASKTIME
-    
-    # ==============================================================================
+    #   Large radii smoothing may take longer than normal tasks. Allocate
+    #   additional smoothing task time as a multiple of TASKTIME
+    # =============================================================================
     SMOOTH_H: 0.0
     SMOOTH_V: 0.0
     TASKTIME_SMOOTH: 1
     
-    # ==============================================================================
-    #
-    #                                    OPTIMIZE                                   
-    #                                    --------                                   
-    #
+    # =============================================================================
+    #                                   OPTIMIZE                                   
+    #                                   ////////                                   
     # LINESEARCH (str):
-    #    Algorithm to use for line search, see seisflows.plugins.line_search for
-    #    available choices
+    #   Algorithm to use for line search, see seisflows.plugins.line_search for
+    #   available choices
     # PRECOND (str):
-    #    Algorithm to use for preconditioning gradients, see
-    #    seisflows.plugins.preconds for available choices
+    #   Algorithm to use for preconditioning gradients, see
+    #   seisflows3.plugins.preconds for available choices
     # STEPCOUNTMAX (int):
-    #    Max number of trial steps in line search before a change in line serach
-    #    behavior
+    #   Max number of trial steps in line search before a change in line search
+    #   behavior
     # STEPLENINIT (float):
-    #    Initial line serach step length, as a fraction of current model
-    #    parameters
+    #   Initial line search step length, as a fraction of current model
+    #   parameters
     # STEPLENMAX (float):
-    #    Max allowable step length, as a fraction of current model parameters
+    #   Max allowable step length, as a fraction of current model parameters
     # LBFGSMEM (int):
-    #    Max number of previous gradients to retain in local memory
+    #   Max number of previous gradients to retain in local memory
     # LBFGSMAX (int):
-    #    LBFGS periodic restart interval, between 1 and 'inf'
+    #   LBFGS periodic restart interval, between 1 and 'inf'
     # LBFGSTHRESH (float):
-    #    LBFGS angle restart threshold
-    
-    # ==============================================================================
+    #   LBFGS angle restart threshold
+    # =============================================================================
     LINESEARCH: Backtrack
     PRECOND:
     STEPCOUNTMAX: 10
@@ -923,96 +984,90 @@ Comments next to each evaluation describe the choice for each.
     LBFGSMAX: inf
     LBFGSTHRESH: 0.0
     
-    # ==============================================================================
-    #
-    #                                    WORKFLOW                                   
-    #                                    --------                                   
-    #
-    # BEGIN (int):
-    #    First iteration of workflow, 1 <= BEGIN <= inf
-    # END (int):
-    #    Last iteration of workflow, BEGIN <= END <= inf
-    # RESUME_FROM (str):
-    #    Name of task to resume inversion from
-    # STOP_AFTER (str):
-    #    Name of task to stop inversion after finishing
+    # =============================================================================
+    #                                   WORKFLOW                                   
+    #                                   ////////                                   
     # CASE (str):
-    #    Type of inversion, available: ['data': real data inversion, 'synthetic':
-    #    synthetic-synthetic inversion]
+    #   Type of inversion, available: ['data': real data inversion, 'synthetic':
+    #   synthetic-synthetic inversion]
+    # RESUME_FROM (str):
+    #   Name of task to resume inversion from
+    # STOP_AFTER (str):
+    #   Name of task to stop inversion after finishing
     # SAVEMODEL (bool):
-    #    Save final model files after each iteration
+    #   Save final model files after each iteration
     # SAVEGRADIENT (bool):
-    #    Save gradient files after each iteration
+    #   Save gradient files after each iteration
     # SAVEKERNELS (bool):
-    #    Save event kernel files after each iteration
+    #   Save event kernel files after each iteration
     # SAVETRACES (bool):
-    #    Save waveform traces after each iteration
+    #   Save waveform traces after each iteration
     # SAVERESIDUALS (bool):
-    #    Save waveform residuals after each iteration
+    #   Save waveform residuals after each iteration
     # SAVEAS (str):
-    #    Format to save models, gradients, kernels. Available: ['binary': save
-    #    files in native SPECFEM .bin format, 'vector': save files as NumPy .npy
-    #    files, 'both': save as both binary and vectors]
-    
-    # ==============================================================================
-    BEGIN: !!! REQUIRED PARAMETER !!!
-    END: !!! REQUIRED PARAMETER !!!
+    #   Format to save models, gradients, kernels. Available: ['binary': save
+    #   files in native SPECFEM .bin format, 'vector': save files as NumPy .npy
+    #   files, 'both': save as both binary and vectors]
+    # BEGIN (int):
+    #   First iteration of workflow, 1 <= BEGIN <= inf
+    # END (int):
+    #   Last iteration of workflow, BEGIN <= END <= inf
+    # =============================================================================
+    CASE: !!! REQUIRED PARAMETER !!!
     RESUME_FROM:
     STOP_AFTER:
-    CASE: !!! REQUIRED PARAMETER !!!
     SAVEMODEL: True
     SAVEGRADIENT: True
     SAVEKERNELS: False
     SAVETRACES: False
     SAVERESIDUALS: False
     SAVEAS: binary
+    BEGIN: 1
+    END: !!! REQUIRED PARAMETER !!!
     
-    # ==============================================================================
-    #
-    #                                     PATHS                                     
-    #                                     -----                                     
-    #
+    # =============================================================================
+    #                                     PATHS                                    
+    #                                     /////                                    
     # SCRATCH:
-    #    scratch path to hold temporary data during workflow
+    #   scratch path to hold temporary data during workflow
     # OUTPUT:
-    #    directory to save workflow outputs to disk
+    #   directory to save workflow outputs to disk
     # SYSTEM:
-    #    scratch path to hold any system related data
+    #   scratch path to hold any system related data
     # LOCAL:
-    #    path to local data to be used during workflow
-    # LOG:
-    #    path to write log statements to. defaults to 'output_seisflows3.txt'
+    #   path to local data to be used during workflow
+    # LOGFILE:
+    #   the main output log file where all processes will track their status
     # SOLVER:
-    #    scratch path to hold solver working directories
+    #   scratch path to hold solver working directories
     # SPECFEM_BIN:
-    #    path to the SPECFEM binary executables
+    #   path to the SPECFEM binary executables
     # SPECFEM_DATA:
-    #    path to the SPECFEM DATA/ directory containing the 'Par_file', 'STATIONS'
-    #    file and 'CMTSOLUTION' files
+    #   path to the SPECFEM DATA/ directory containing the 'Par_file', 'STATIONS'
+    #   file and 'CMTSOLUTION' files
     # DATA:
-    #    path to data available to workflow
+    #   path to data available to workflow
     # MASK:
-    #    Directory to mask files for gradient masking
+    #   Directory to mask files for gradient masking
     # OPTIMIZE:
-    #    scratch path to store data related to nonlinear optimization
+    #   scratch path to store data related to nonlinear optimization
     # MODEL_INIT:
-    #    Initial model to be used for workflow
+    #   location of the initial model to be used for workflow
     # MODEL_TRUE:
-    #    Target model to be used for PAR.CASE == 'synthetic'
+    #   Target model to be used for PAR.CASE == 'synthetic'
     # FUNC:
-    #    scratch path to store data related to function evaluations
+    #   scratch path to store data related to function evaluations
     # GRAD:
-    #    scratch path to store data related to gradient evaluations
+    #   scratch path to store data related to gradient evaluations
     # HESS:
-    #    scratch path to store data related to Hessian evaluations
-    
-    # ==============================================================================
+    #   scratch path to store data related to Hessian evaluations
+    # =============================================================================
     PATHS:
         SCRATCH: /home/bchow/Work/work/sf3_specfem2d_example/scratch
         OUTPUT: /home/bchow/Work/work/sf3_specfem2d_example/output
         SYSTEM: /home/bchow/Work/work/sf3_specfem2d_example/scratch/system
         LOCAL:
-        LOG: /home/bchow/Work/work/sf3_specfem2d_example/output_seisflows3.txt
+        LOGFILE: /home/bchow/Work/work/sf3_specfem2d_example/output_sf3.txt
         SOLVER: /home/bchow/Work/work/sf3_specfem2d_example/scratch/solver
         SPECFEM_BIN: !!! REQUIRED PATH !!!
         SPECFEM_DATA: !!! REQUIRED PATH !!!
@@ -1021,18 +1076,43 @@ Comments next to each evaluation describe the choice for each.
         OPTIMIZE: /home/bchow/Work/work/sf3_specfem2d_example/scratch/optimize
         MODEL_INIT: !!! REQUIRED PATH !!!
         MODEL_TRUE:
-        FUNC: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalfunc
+        FUNC: /home/bchow/Work/work/sf3_specfem2d_example/scratch/scratch
         GRAD: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalgrad
         HESS: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalhess
 
 
 .. code:: ipython3
 
+    # We can check which parameters we will NEED to fill out before running the workflow with the --required flag
+    ! seisflows par --required
+
+
+.. parsed-literal::
+
+    !!! REQUIRED PARAMETER !!!
+    ==========================
+    	MATERIALS
+    	DENSITY
+    	ATTENUATION
+    	NT
+    	DT
+    	F0
+    	FORMAT
+    	CASE
+    	END
+    !!! REQUIRED PATH !!!
+    =====================
+    	SPECFEM_BIN
+    	SPECFEM_DATA
+    	MODEL_INIT
+
+
+.. code:: ipython3
+
     # EDIT THE SEISFLOWS3 PARAMETER FILE
-    ! seisflows par walltime 10  # master job run time in minutes
-    ! seisflows par tasktime 1  # individual job run time in minutes
     ! seisflows par materials elastic  # how the velocity model is parameterized
     ! seisflows par density constant  # update density or keep constant
+    ! seisflows par attenuation False
     ! seisflows par nt 5000  # set by SPECFEM2D Par_file
     ! seisflows par dt .06  # set by SPECFEM2D Par_file
     ! seisflows par f0 0.084  # set by SOURCE file
@@ -1050,39 +1130,16 @@ Comments next to each evaluation describe the choice for each.
 
 .. parsed-literal::
 
-    
-    	WALLTIME: !!! REQUIRED PARAMETER !!! -> 10
-    
-    
-    	TASKTIME: !!! REQUIRED PARAMETER !!! -> 1
-    
-    
-    	MATERIALS: !!! REQUIRED PARAMETER !!! -> elastic
-    
-    
-    	DENSITY: !!! REQUIRED PARAMETER !!! -> constant
-    
-    
-    	NT: !!! REQUIRED PARAMETER !!! -> 5000
-    
-    
-    	DT: !!! REQUIRED PARAMETER !!! -> .06
-    
-    
-    	F0: !!! REQUIRED PARAMETER !!! -> 0.084
-    
-    
-    	FORMAT: !!! REQUIRED PARAMETER !!! -> ascii
-    
-    
-    	BEGIN: !!! REQUIRED PARAMETER !!! -> 1
-    
-    
-    	END: !!! REQUIRED PARAMETER !!! -> 1
-    
-    
-    	CASE: !!! REQUIRED PARAMETER !!! -> synthetic
-    
+    MATERIALS: !!! REQUIRED PARAMETER !!! -> elastic
+    DENSITY: !!! REQUIRED PARAMETER !!! -> constant
+    ATTENUATION: !!! REQUIRED PARAMETER !!! -> False
+    NT: !!! REQUIRED PARAMETER !!! -> 5000
+    DT: !!! REQUIRED PARAMETER !!! -> .06
+    F0: !!! REQUIRED PARAMETER !!! -> 0.084
+    FORMAT: !!! REQUIRED PARAMETER !!! -> ascii
+    BEGIN: 1 -> 1
+    END: !!! REQUIRED PARAMETER !!! -> 1
+    CASE: !!! REQUIRED PARAMETER !!! -> synthetic
 
 
 
@@ -1108,13 +1165,11 @@ Par_file.
 
 .. parsed-literal::
 
-    
-    	MODEL = default -> gll
-    
+    MODEL: default -> gll
 
 
 2b. Initialize SF3 working state
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The SeisFlows3 command ``seisflows init`` will generate the a SeisFlows3
 working state without submitting any jobs to the system. This is useful
@@ -1147,6 +1202,7 @@ than needing to restart the workflow.
 
 .. parsed-literal::
 
+    instantiating SeisFlows3 working state in directory: output
     seisflows_optimize.p	   seisflows_postprocess.p  seisflows_system.p
     seisflows_parameters.json  seisflows_preprocess.p   seisflows_workflow.p
     seisflows_paths.json	   seisflows_solver.p
@@ -1162,6 +1218,7 @@ than needing to restart the workflow.
 .. parsed-literal::
 
     {
+        "ATTENUATION": false,
         "BACKPROJECT": null,
         "BEGIN": 1,
         "CASE": "synthetic",
@@ -1169,8 +1226,7 @@ than needing to restart the workflow.
         "DENSITY": "constant",
         "DT": 0.06,
         "END": 1,
-        "F0": 5.196,
-        "FILTER": null,
+        "F0": 0.084,
 
 
 .. code:: ipython3
@@ -1184,24 +1240,24 @@ than needing to restart the workflow.
 
     {
         "DATA": null,
-        "FUNC": "/home/bchow/Work/work/sf3_specfem2d_example/scratch/evalfunc",
+        "FUNC": "/home/bchow/Work/work/sf3_specfem2d_example/scratch/scratch",
         "GRAD": "/home/bchow/Work/work/sf3_specfem2d_example/scratch/evalgrad",
         "HESS": "/home/bchow/Work/work/sf3_specfem2d_example/scratch/evalhess",
         "LOCAL": null,
-        "LOG": "/home/bchow/Work/work/sf3_specfem2d_example/output_seisflows3.txt",
+        "LOGFILE": "/home/bchow/Work/work/sf3_specfem2d_example/output_sf3.txt",
         "MASK": null,
         "MODEL_INIT": "/home/bchow/Work/work/sf3_specfem2d_example/specfem2d_workdir/OUTPUT_FILES_INIT",
         "MODEL_TRUE": "/home/bchow/Work/work/sf3_specfem2d_example/specfem2d_workdir/OUTPUT_FILES_TRUE",
 
 
 3. Run SeisFlows3
------------------
+~~~~~~~~~~~~~~~~~
 
 In this Section we will run SeisFlows3 to generate synthetic
 seismograms, kernels, a gradient, and an updated velocity model.
 
 3a. Forward simulations
-~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^
 
 SeisFlows3 is an automated workflow tool, such that once we run
 ``seisflows submit`` we should not need to intervene in the workflow.
@@ -1224,18 +1280,18 @@ us what functions will be run from main().
 
 .. parsed-literal::
 
+                                SEISFLOWS3 WORKFLOW MAIN                            
+                                ////////////////////////                            
+    Flow arguments for <class 'seisflows3.workflow.inversion.Inversion'>
     
-    	FLOW ARGUMENTS
-    	<class 'seisflows3.workflow.inversion.Inversion'>
-    
-    	1: initialize
-    	2: evaluate_gradient
-    	3: write_gradient
-    	4: compute_direction
-    	5: line_search
-    	6: finalize
-    	7: clean
-    
+    1: setup
+    2: initialize
+    3: evaluate_gradient
+    4: write_gradient
+    5: compute_direction
+    6: line_search
+    7: finalize
+    8: clean
 
 
 --------------
@@ -1283,12 +1339,8 @@ simple. We will explore the ``verbose``\ ==True option in a later cell.
 
 .. parsed-literal::
 
-    
-    	STOP_AFTER:  -> initialize
-    
-    
-    	VERBOSE: True -> False
-    
+    STOP_AFTER:  -> initialize
+    VERBOSE: False -> False
 
 
 --------------
@@ -1313,7 +1365,7 @@ standard input prompt that asks the User if they are sure they want to
 clean and submit.
 
 But first we’ll try to run ``seisflows submit`` to show why Option 1
-will not work.
+**will not work**.
 
 .. code:: ipython3
 
@@ -1322,17 +1374,15 @@ will not work.
 
 .. parsed-literal::
 
+    2022-04-29 12:32:17 | initializing SeisFlows3 in sys.modules
+    ================================================================================
+                                        WARNING                                     
+                                        ///////                                     
+    Data from previous workflow found in working directory.
     
-    
-    WARNING: Data from previous workflow found in working directory.
-    
-    To delete data and start a new workflow type:
-      seisflows restart
-    
-    To resume existing workflow type:
-      seisflows resume
-    
-    
+    > seisflows restart: delete data and start new workflow
+    > seisflows resume: resume existing workflow
+    ================================================================================
 
 
 --------------
@@ -1351,335 +1401,84 @@ our inversion
 
 .. parsed-literal::
 
-    2022-03-10 14:49:42 | check paths/pars module: preprocess.Default
-    2022-03-10 14:49:49 | 
+    ================================================================================
+                                         CLEAN                                      
+                                         /////                                      
+    + skipping over: /home/bchow/Work/work/sf3_specfem2d_example/parameters.yaml
+    - deleting file/folder: /home/bchow/Work/work/sf3_specfem2d_example/scratch
+    - deleting file/folder: /home/bchow/Work/work/sf3_specfem2d_example/stats
+    - deleting file/folder: /home/bchow/Work/work/sf3_specfem2d_example/output
+    - deleting file/folder: /home/bchow/Work/work/sf3_specfem2d_example/output_sf3.txt
+    - deleting file/folder: /home/bchow/Work/work/sf3_specfem2d_example/logs
+    ================================================================================
+    2022-04-29 12:38:37 | initializing SeisFlows3 in sys.modules
+    2022-04-29 12:38:42 | copying par/log file to: /home/bchow/Work/work/sf3_specfem2d_example/logs/output_sf3_001.txt
+    2022-04-29 12:38:42 | copying par/log file to: /home/bchow/Work/work/sf3_specfem2d_example/logs/parameters_001.yaml
+    2022-04-29 12:38:42 | exporting current working environment to disk
+    2022-04-29 12:38:42 | 
+    ////////////////////////////////////////////////////////////////////////////////
+                      WORKFLOW WILL STOP AFTER FUNC: 'initialize'                   
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:38:42 | 
     ================================================================================
                               STARTING INVERSION WORKFLOW                           
     ================================================================================
-    
-    2022-03-10 14:49:49 | 
-    --------------------------------------------------------------------------------
-                                PERFORMING MODULE SETUP                             
-    --------------------------------------------------------------------------------
-    
-    2022-03-10 14:49:49 | setting up module: preprocess.Default
-    2022-03-10 14:49:49 | misfit function is: 'waveform'
-    Warning, stats exists
-    Appending to this files without deleting them may lead to unintended consequences
-    2022-03-10 14:49:52 | model parameters (m_new i01s00):
-    2022-03-10 14:49:52 | 5800.00 <= vp <= 5800.00
-    2022-03-10 14:49:52 | 3500.00 <= vs <= 3500.00
-    2022-03-10 14:49:52 | 0.21 <= pr <= 0.21
-    2022-03-10 14:49:55 | checkpointing working environment to disk
-    2022-03-10 14:49:57 | intializing solver directories
-    2022-03-10 14:50:13 | intializing empty adjoint traces
-    2022-03-10 14:50:13 | 
-    --------------------------------------------------------------------------------
+    2022-04-29 12:38:42 | 
+    ////////////////////////////////////////////////////////////////////////////////
                                     ITERATION 1 / 1                                 
-    --------------------------------------------------------------------------------
-    
-    2022-03-10 14:50:13 | 
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:38:42 | 
+    ////////////////////////////////////////////////////////////////////////////////
+                                PERFORMING MODULE SETUP                             
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:38:42 | misfit function is: 'waveform'
+    2022-04-29 12:38:43 | writing line search history file:
+    /home/bchow/Work/work/sf3_specfem2d_example/stats/line_search.txt
+    2022-04-29 12:38:44 | checking poissons ratio for: 'm_new.npy'
+    2022-04-29 12:38:44 | model parameters (m_new.npy i01s00):
+    2022-04-29 12:38:44 | 5800.00 <= vp <= 5800.00
+    2022-04-29 12:38:44 | 3500.00 <= vs <= 3500.00
+    2022-04-29 12:38:44 | 0.21 <= pr <= 0.21
+    2022-04-29 12:38:46 | setting up solver on system...
+    2022-04-29 12:38:46 | checkpointing working environment to disk
+    2022-04-29 12:38:47 | exporting current working environment to disk
+    2022-04-29 12:38:48 | running task solver.setup 1 times
+    2022-04-29 12:38:48 | initializing 1 solver directories
+    2022-04-29 12:38:53 | source 001 symlinked as mainsolver
+    2022-04-29 12:38:53 | generating 'data' with MODEL_TRUE synthetics
+    2022-04-29 12:39:00 | running mesh generation for MODEL_INIT
+    2022-04-29 12:39:02 | 
     ================================================================================
                                  INITIALIZING INVERSION                             
     ================================================================================
-    
-    2022-03-10 14:50:13 | 
-    ................................................................................
-    EVALUATE OBJECTIVE FUNCTION                                                     
-    ................................................................................
-    
-    2022-03-10 14:50:13 | saving model 'm_new' to: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalgrad/model
-    2022-03-10 14:50:14 | results saved to with suffix 'new' to path: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalgrad
-    2022-03-10 14:50:14 | evaluating objective function 1 times
-    2022-03-10 14:50:15 | checkpointing working environment to disk
-    2022-03-10 14:50:17 | running forward simulations
-    2022-03-10 14:50:23 | calling preprocess.prepare_eval_grad()
-    2022-03-10 14:50:23 | preparing files for gradient evaluation
-    2022-03-10 14:50:23 | exporting residuals to: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalgrad
-    2022-03-10 14:50:25 | summing residuals with preprocess module
-    2022-03-10 14:50:25 | saving misfit 1.748E-03 to: 'f_new'
-    2022-03-10 14:50:25 | 
-    ================================================================================
-                       STOP ITERATION 1 AT FUNCTION: 'initialize'                   
-    ================================================================================
-    
-
-
-3b. Exploring the SF3 directory structure
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This is a good point to have a look around at the SeisFlows3 directory
-structure, which has been created during the module setup stage. In this
-subsection we will look at files and directories within an active
-SeisFlows3 working directory and explain what each file is and what its
-purpose is within this workflow.
-
-.. code:: ipython3
-
-    os.chdir(WORKDIR)
-    ! ls -l
-
-
-.. parsed-literal::
-
-    total 20
-    drwxrwxr-x. 1 bchow bchow    54 Mar  9 15:26 logs
-    drwxrwxr-x. 1 bchow bchow   372 Mar  9 15:26 output
-    -rw-rw-r--. 1 bchow bchow  3048 Mar  9 15:26 output_seisflows3.txt
-    -rw-rw-r--. 1 bchow bchow 10992 Mar  9 15:25 parameters.yaml
-    drwxrwxr-x. 1 bchow bchow    56 Mar  9 15:26 scratch
-    lrwxrwxrwx. 1 bchow bchow    35 Mar  2 12:12 specfem2d -> /home/bchow/REPOSITORIES/specfem2d/
-    drwxrwxr-x. 1 bchow bchow    82 Mar  9 11:27 specfem2d_workdir
-    drwxrwxr-x. 1 bchow bchow    44 Mar  9 15:20 stats
-
-
-Directory structure: - **logs/:** Where any auxiliary logs are stored,
-e.g., submitted parameter files, output logs from individual cores (not
-applicable in this tutorial) - **previous/:** Old output logs
-(output_seisflows3.txt) so that they are not overwritten by other
-workflows - **output/:** The current active state of SeisFlows3,
-containing pickle and JSON files. Also storage of any files that are to
-be permanently saved (e.g., models, kernels, traces). - **scratch/:**
-Active working directory of SeisFlows3, more detailed information in the
-following slide. - **stats/:** Text files describing the optimization
-statistics of the current workflow
-
-.. code:: ipython3
-
-    ! ls logs
-
-
-.. parsed-literal::
-
-    parameters_1-1.yaml  previous
-
-
-.. code:: ipython3
-
-    ! head output_seisflows3.txt
-
-
-.. parsed-literal::
-
-    2022-03-09 15:26:00 | check paths/pars module: preprocess.Default
-    2022-03-09 15:26:03 | 
-    ================================================================================
-                              STARTING INVERSION WORKFLOW                           
-    ================================================================================
-    
-    2022-03-09 15:26:03 | 
+    2022-04-29 12:39:02 | 
+    EVALUATE OBJECTIVE FUNCTION
     --------------------------------------------------------------------------------
-                                PERFORMING MODULE SETUP                             
-    --------------------------------------------------------------------------------
-
-
-.. code:: ipython3
-
-    ! ls stats
-
-
-.. parsed-literal::
-
-    output.optim  step_count
-
-
-.. code:: ipython3
-
-    ! cat stats/output.optim
-
-
-.. parsed-literal::
-
-          ITER     STEPLEN      MISFIT  
-    ==========  ==========  ==========  
-
-
---------------
-
-The SeisFlows3 scratch/ directory
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This directory defines the SeisFlows3 working directory. It contains
-sub-directories defining individual processes and modules within a
-SeisFlows3 workflow.
-
-.. code:: ipython3
-
-    ! ls scratch
-
-
-.. parsed-literal::
-
-    evalgrad  optimize  solver  system
-
-
-**scratch/evalgrad/:** Disk storage for files related to gradient
-evaluation
-
-.. code:: ipython3
-
-    ! ls scratch/evalgrad
-
-
-.. parsed-literal::
-
-    model  residuals
-
-
-.. code:: ipython3
-
-    # The current model used for gradient evaluation
-    ! ls scratch/evalgrad/model
-
-
-.. parsed-literal::
-
-    proc000000_vp.bin  proc000000_vs.bin
-
-
-.. code:: ipython3
-
-    # Per-event text files which define the residual or misfit 
-    ! ls scratch/evalgrad/residuals
-
-
-.. parsed-literal::
-
-    001
-
-
-.. code:: ipython3
-
-    # Each line in the residual files relate to a given source-receiver pair
-    ! cat scratch/evalgrad/residuals/001
-
-
-.. parsed-literal::
-
-    2.413801941841247842e-02
-    2.413801941841247842e-02
-    2.413801941841247842e-02
-
-
---------------
-
-**scratch/optimize/:** Values relating to the optimization algorithm.
-Variable names are described in the `base optimization
-module <https://github.com/bch0w/seisflows3/blob/master/seisflows3/optimize/base.py>`__
-and are copied here for reference:
-
-| **Optimization Variable Names**:
-| - m_new: current model
-| - m_old: previous model
-| - m_try: line search model
-| - f_new: current objective function value
-| - f_old: previous objective function value
-| - f_try: line search function value
-| - g_new: current gradient direction
-| - g_old: previous gradient direction
-| - p_new: current search direction
-| - p_old: previous search direction
-
-.. code:: ipython3
-
-    ! ls scratch/optimize
-
-
-.. parsed-literal::
-
-    f_new  LBFGS  m_new
-
-
-.. code:: ipython3
-
-    ! head scratch/optimize/f_new
-
-
-.. parsed-literal::
-
-    1.747932e-03
-
-
-.. code:: ipython3
-
-    # Internally, SeisFlows3 stores models as vectors in a .npy format (NumPy arrays)
-    m_new = np.load("scratch/optimize/m_new")
-    print(m_new[:10])
-
-
-.. parsed-literal::
-
-    [5800. 5800. 5800. 5800. 5800. 5800. 5800. 5800. 5800. 5800.]
-
-
-+----------------------+
-| **scratch/system**:  |
-| Storage of any       |
-| system related       |
-| files. Currently     |
-| empty but any system |
-| errors or            |
-| system-wide log      |
-| messages will be     |
-| sent here.           |
-+----------------------+
-
-**scratch/solver**: Solver related files. Each event has its own
-directory which is a copy of the SPECFEM working directory. SeisFlows3
-runs the numerical solver by generating embarassingly-parallel
-individual working directories for each event/process.
-
-   **NOTE:** The **mainsolver/** directory is a symlink pointing to the
-   first (alphabetical) source. This is not a necessary symlink (i.e.,
-   you can delete it and nothing will break in SeisFlows3), but it
-   conventiently provides an easy access point for the main solver,
-   which is typically used for non-parallel processes such as kernel
-   summation (xcombine_sem) and gradient smoothing (xsmooth_sem), since
-   source names can vary wildly.
-
-.. code:: ipython3
-
-    ! ls scratch/solver
-
-
-.. parsed-literal::
-
-    001  mainsolver
-
-
-.. code:: ipython3
-
-    # We can see that each solver sub-directory is simply a SPECFEM2D working directory
-    ! ls scratch/solver/001
-
-
-.. parsed-literal::
-
-    bin  DATA  mesher.log  OUTPUT_FILES  solver.log  traces
-
-
-.. code:: ipython3
-
-    # The traces/ directory contains all the waveforms that have been generated during the SeisFlows3 inversion
-    # these include the observed waveforms (data, or obs/), the synthetic waveforms (syn) and the adjoing sources (adj)
-    ! ls scratch/solver/001/traces
-
-
-.. parsed-literal::
-
-    adj  obs  syn
-
-
-.. code:: ipython3
-
-    # We can take a look at the adjoint sources which were created by the preprocessing module
-    ! ls scratch/solver/001/traces/adj
-
-
-.. parsed-literal::
-
-    AA.S0001.BXY.adj
-
+    2022-04-29 12:39:02 | saving model 'm_new.npy' to:
+    /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalgrad/model
+    2022-04-29 12:39:03 | evaluating objective function 1 times on system...
+    2022-04-29 12:39:03 | checkpointing working environment to disk
+    2022-04-29 12:39:05 | exporting current working environment to disk
+    2022-04-29 12:39:05 | running task solver.eval_func 1 times
+    2022-04-29 12:39:05 | running forward simulations
+    2022-04-29 12:39:11 | calling preprocess.prepare_eval_grad()
+    2022-04-29 12:39:11 | preparing files for gradient evaluation
+    2022-04-29 12:39:11 | exporting residuals to:
+    /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalgrad
+    2022-04-29 12:39:12 | summing residuals with preprocess module
+    2022-04-29 12:39:12 | saving misfit 1.748E-03 to tag 'f_new.txt'
+    2022-04-29 12:39:12 | 
+    ================================================================================
+                                FINISHED FLOW EXECUTION                             
+    ================================================================================
+    2022-04-29 12:39:12 | 
+    ================================================================================
+                              FINISHED INVERSION WORKFLOW                           
+    ================================================================================
+
+
+.. note::
+    For a detailed exploration of a SeisFlows3 working directory, see the `working directory <working_directory.html>`__ documentation page where we explain each of the files and directories that have been generated during this workflow. Below we just look at two files which are required for our adjoint simulation, the adjoint sources (.adj) and STATIONS_ADJOINT file
 
 .. code:: ipython3
 
@@ -1713,8 +1512,8 @@ individual working directories for each event/process.
     S0001    AA       180081.4100000       388768.7100000       0.0         0.0
 
 
-3c. Adjoint simulations
-~~~~~~~~~~~~~~~~~~~~~~~
+3b. Adjoint simulations
+^^^^^^^^^^^^^^^^^^^^^^^
 
 Now that we have all the required files for running an adjoint
 simulation (*.adj waveforms and STATIONS_ADJOINT file), we can continue
@@ -1731,18 +1530,18 @@ functions again:
 
 .. parsed-literal::
 
+                                SEISFLOWS3 WORKFLOW MAIN                            
+                                ////////////////////////                            
+    Flow arguments for <class 'seisflows3.workflow.inversion.Inversion'>
     
-    	FLOW ARGUMENTS
-    	<class 'seisflows3.workflow.inversion.Inversion'>
-    
-    	1: initialize
-    	2: evaluate_gradient
-    	3: write_gradient
-    	4: compute_direction
-    	5: line_search
-    	6: finalize
-    	7: clean
-    
+    1: setup
+    2: initialize
+    3: evaluate_gradient
+    4: write_gradient
+    5: compute_direction
+    6: line_search
+    7: finalize
+    8: clean
 
 
 .. code:: ipython3
@@ -1755,12 +1554,8 @@ functions again:
 
 .. parsed-literal::
 
-    
-    	RESUME_FROM:  -> evaluate_gradient
-    
-    
-    	STOP_AFTER: initialize -> compute_direction
-    
+    RESUME_FROM:  -> evaluate_gradient
+    STOP_AFTER: initialize -> compute_direction
 
 
 .. code:: ipython3
@@ -1772,60 +1567,78 @@ functions again:
 
 .. parsed-literal::
 
-    2022-03-10 14:53:23 | 
+    2022-04-29 12:41:21 | copying par/log file to: /home/bchow/Work/work/sf3_specfem2d_example/logs/output_sf3_002.txt
+    2022-04-29 12:41:21 | copying par/log file to: /home/bchow/Work/work/sf3_specfem2d_example/logs/parameters_002.yaml
+    2022-04-29 12:41:21 | exporting current working environment to disk
+    2022-04-29 12:41:21 | 
+    ////////////////////////////////////////////////////////////////////////////////
+                  WORKFLOW WILL RESUME FROM FUNC: 'evaluate_gradient'               
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:41:21 | 
+    ////////////////////////////////////////////////////////////////////////////////
+                   WORKFLOW WILL STOP AFTER FUNC: 'compute_direction'               
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:41:21 | 
     ================================================================================
-                 RESUME ITERATION 1 FROM FUNCTION: 'evaluate_gradient'              
+                              STARTING INVERSION WORKFLOW                           
     ================================================================================
-    
-    2022-03-10 14:53:23 | 
-    --------------------------------------------------------------------------------
+    2022-04-29 12:41:21 | 
+    ////////////////////////////////////////////////////////////////////////////////
                                     ITERATION 1 / 1                                 
-    --------------------------------------------------------------------------------
-    
-    2022-03-10 14:53:23 | 
-    --------------------------------------------------------------------------------
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:41:21 | 
+    ////////////////////////////////////////////////////////////////////////////////
                                   EVALUATING GRADIENT                               
-    --------------------------------------------------------------------------------
-    
-    2022-03-10 14:53:23 | evaluating gradient 1 times
-    2022-03-10 14:53:24 | checkpointing working environment to disk
-    2022-03-10 14:53:26 | running adjoint simulations
-    2022-03-10 14:53:40 | exporting kernels to /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalgrad
-    2022-03-10 14:53:42 | 
-    --------------------------------------------------------------------------------
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:41:21 | evaluating gradient 1 times on system...
+    2022-04-29 12:41:21 | checkpointing working environment to disk
+    2022-04-29 12:41:22 | exporting current working environment to disk
+    2022-04-29 12:41:23 | running task solver.eval_grad 1 times
+    2022-04-29 12:41:23 | running adjoint simulations
+    2022-04-29 12:41:38 | exporting kernels to:
+    /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalgrad
+    2022-04-29 12:41:38 | 
+    ////////////////////////////////////////////////////////////////////////////////
                                  POSTPROCESSING KERNELS                             
-    --------------------------------------------------------------------------------
-    
-    2022-03-10 14:53:42 | checkpointing working environment to disk
-    2022-03-10 14:53:44 | saving summed kernels to /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalgrad/kernels/sum
-    2022-03-10 14:53:46 | 
-    --------------------------------------------------------------------------------
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:41:38 | processing kernels into gradient on system...
+    2022-04-29 12:41:38 | checkpointing working environment to disk
+    2022-04-29 12:41:39 | exporting current working environment to disk
+    2022-04-29 12:41:39 | running task postprocess.process_kernels 1 times
+    2022-04-29 12:41:39 | saving summed kernels to:
+    /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalgrad/kernels/sum
+    2022-04-29 12:41:41 | 
+    ////////////////////////////////////////////////////////////////////////////////
                                COMPUTING SEARCH DIRECTION                           
-    --------------------------------------------------------------------------------
-    
-    2022-03-10 14:53:46 | computing search direction w/ L-BFGS plugin
-    2022-03-10 14:53:46 | 
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:41:41 | computing search direction with L-BFGS
+    2022-04-29 12:41:41 | first L-BFGS iteration, setting search direction as inverse gradient
+    2022-04-29 12:41:41 | 
     ================================================================================
-                   STOP ITERATION 1 AT FUNCTION: 'compute_direction'                
+                                FINISHED FLOW EXECUTION                             
     ================================================================================
-    
+    2022-04-29 12:41:41 | 
+    ================================================================================
+                              FINISHED INVERSION WORKFLOW                           
+    ================================================================================
 
 
 --------------
 
 The functions **evaluate_gradient()** through **compute_direction()**
 have run adjoint simulations to generate event kernels and sum the
-kernels into the misfit kernel. Because we only have one event, our
-misfit kernel is just exactly our event kernel. Because we did not
-specify any smoothing lenghts (PAR.SMOOTH_H and PAR.SMOOTH_V), no
-smoothing of the gradient has occurred.
+kernels into the misfit kernel.
+
+   **NOTE**: Because we only have one event, our misfit kernel is just
+   exactly our event kernel. And since we did not specify any smoothing
+   lenghts (PAR.SMOOTH_H and PAR.SMOOTH_V), no smoothing of the gradient
+   has occurred.
 
 Using the L-BFGS optimization algorithm, SeisFlows3 has computed a
 search direction that will be used in the line search to search for a
-best fitting model which optimally reduces the objective function.
-
-We can take a look at where SeisFlows3 has stored the information
-relating to kernel generation and the optimization computation.
+best fitting model which optimally reduces the objective function. We
+can take a look at where SeisFlows3 has stored the information relating
+to kernel generation and the optimization computation.
 
 .. code:: ipython3
 
@@ -1872,25 +1685,25 @@ relating to kernel generation and the optimization computation.
 
 .. parsed-literal::
 
-    f_new  g_new  LBFGS  m_new  p_new
+    f_new.txt  g_new.npy  LBFGS  m_new.npy	p_new.npy
 
 
 .. code:: ipython3
 
-    p_new = np.load("scratch/optimize/p_new")
+    p_new = np.load("scratch/optimize/p_new.npy")
     print(p_new)
 
 
 .. parsed-literal::
 
-    [-0.00000000e+00 -0.00000000e+00 -0.00000000e+00 ... -4.31527557e-11
-     -3.65300012e-11 -5.90630062e-12]
+    [-0.00000000e+00 -0.00000000e+00 -0.00000000e+00 ... -3.96447909e-11
+     -2.00156454e-11 -2.61676726e-12]
 
 
 --------------
 
-3d. Line search and model update
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3c. Line search and model update
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Let’s finish off the inversion by running through the line search, which
 will generate new models using the gradient, evaluate the objective
@@ -1911,12 +1724,8 @@ line search
 
 .. parsed-literal::
 
-    
-    	RESUME_FROM: evaluate_gradient -> line_search
-    
-    
-    	STOP_AFTER: compute_direction -> finalize
-    
+    RESUME_FROM: evaluate_gradient -> line_search
+    STOP_AFTER: compute_direction -> finalize
 
 
 .. code:: ipython3
@@ -1926,148 +1735,139 @@ line search
 
 .. parsed-literal::
 
-    2022-03-10 14:54:56 | 
+    2022-04-29 12:42:40 | copying par/log file to: /home/bchow/Work/work/sf3_specfem2d_example/logs/output_sf3_003.txt
+    2022-04-29 12:42:40 | copying par/log file to: /home/bchow/Work/work/sf3_specfem2d_example/logs/parameters_003.yaml
+    2022-04-29 12:42:40 | exporting current working environment to disk
+    2022-04-29 12:42:42 | 
+    ////////////////////////////////////////////////////////////////////////////////
+                     WORKFLOW WILL RESUME FROM FUNC: 'line_search'                  
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:42:42 | 
+    ////////////////////////////////////////////////////////////////////////////////
+                       WORKFLOW WILL STOP AFTER FUNC: 'finalize'                    
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:42:42 | 
     ================================================================================
-                    RESUME ITERATION 1 FROM FUNCTION: 'line_search'                 
+                              STARTING INVERSION WORKFLOW                           
     ================================================================================
-    
-    2022-03-10 14:54:56 | 
-    --------------------------------------------------------------------------------
+    2022-04-29 12:42:42 | 
+    ////////////////////////////////////////////////////////////////////////////////
                                     ITERATION 1 / 1                                 
-    --------------------------------------------------------------------------------
-    
-    2022-03-10 14:54:56 | 
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:42:42 | 
     ================================================================================
                             CONDUCTING LINE SEARCH (i01s00)                         
     ================================================================================
-    
-    2022-03-10 14:54:56 | evaluating bracketing line search
-    2022-03-10 14:54:56 | step length(s) = 0.00E+00
-    2022-03-10 14:54:56 | misfit val(s)  = 1.75E-03
-    2022-03-10 14:54:56 | first iteration, guessing trial step
-    2022-03-10 14:54:56 | initial step length safegaurd, setting manual step length
-    2022-03-10 14:54:56 | step length override due to PAR.STEPLENINIT=0.05
-    2022-03-10 14:54:56 | model parameters (m_try i01s00):
-    2022-03-10 14:54:56 | 5800.00 <= vp <= 5800.00
-    2022-03-10 14:54:56 | 3269.01 <= vs <= 3790.00
-    2022-03-10 14:54:56 | 0.13 <= pr <= 0.27
-    2022-03-10 14:54:56 | 
+    2022-04-29 12:42:42 | max step length safeguard is: 5.26E+10
+    2022-04-29 12:42:42 | 
+    EVALUATE BRACKETING LINE SEARCH
     --------------------------------------------------------------------------------
+    2022-04-29 12:42:42 | step length(s) = 0.00E+00
+    2022-04-29 12:42:42 | misfit val(s)  = 1.75E-03
+    2022-04-29 12:42:42 | first iteration, guessing trial step
+    2022-04-29 12:42:42 | initial step length safegaurd, setting manual step length
+    2022-04-29 12:42:42 | manually set initial step length: 5.26E+09
+    2022-04-29 12:42:42 | checking poissons ratio for: 'm_try.npy'
+    2022-04-29 12:42:42 | model parameters (m_try.npy i01s00):
+    2022-04-29 12:42:42 | 5800.00 <= vp <= 5800.00
+    2022-04-29 12:42:42 | 3278.69 <= vs <= 3790.00
+    2022-04-29 12:42:42 | 0.13 <= pr <= 0.27
+    2022-04-29 12:42:42 | 
+    ////////////////////////////////////////////////////////////////////////////////
                                 TRIAL STEP COUNT: i01s01                            
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:42:42 | 
+    EVALUATE OBJECTIVE FUNCTION
     --------------------------------------------------------------------------------
-    
-    2022-03-10 14:54:56 | 
-    ................................................................................
-    EVALUATE OBJECTIVE FUNCTION                                                     
-    ................................................................................
-    
-    2022-03-10 14:54:56 | saving model 'm_try' to: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalfunc/model
-    2022-03-10 14:54:56 | results saved to with suffix 'try' to path: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalfunc
-    2022-03-10 14:54:56 | evaluating objective function 1 times
-    2022-03-10 14:54:57 | checkpointing working environment to disk
-    2022-03-10 14:54:57 | running forward simulations
-    2022-03-10 14:55:03 | calling preprocess.prepare_eval_grad()
-    2022-03-10 14:55:03 | preparing files for gradient evaluation
-    2022-03-10 14:55:03 | exporting residuals to: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalfunc
-    2022-03-10 14:55:04 | summing residuals with preprocess module
-    2022-03-10 14:55:04 | saving misfit 3.089E-04 to: 'f_try'
-    2022-03-10 14:55:04 | evaluating bracketing line search
-    2022-03-10 14:55:04 | step length(s) = 0.00E+00, 4.02E+09
-    2022-03-10 14:55:04 | misfit val(s)  = 1.75E-03, 3.09E-04
-    2022-03-10 14:55:04 | misfit not bracketed, increasing step length
-    2022-03-10 14:55:04 | model parameters (m_try i01s01):
-    2022-03-10 14:55:04 | 5800.00 <= vp <= 5800.00
-    2022-03-10 14:55:04 | 3126.25 <= vs <= 3969.23
-    2022-03-10 14:55:04 | 0.06 <= pr <= 0.30
-    2022-03-10 14:55:04 | 
-    ................................................................................
-    retrying with new trial step                                                    
-    ................................................................................
-    
-    2022-03-10 14:55:04 | 
+    2022-04-29 12:42:42 | saving model 'm_try.npy' to:
+    /home/bchow/Work/work/sf3_specfem2d_example/scratch/scratch/model
+    2022-04-29 12:42:42 | evaluating objective function 1 times on system...
+    2022-04-29 12:42:42 | checkpointing working environment to disk
+    2022-04-29 12:42:44 | exporting current working environment to disk
+    2022-04-29 12:42:44 | running task solver.eval_func 1 times
+    2022-04-29 12:42:44 | running forward simulations
+    2022-04-29 12:42:49 | calling preprocess.prepare_eval_grad()
+    2022-04-29 12:42:49 | preparing files for gradient evaluation
+    2022-04-29 12:42:50 | exporting residuals to:
+    /home/bchow/Work/work/sf3_specfem2d_example/scratch/scratch
+    2022-04-29 12:42:50 | summing residuals with preprocess module
+    2022-04-29 12:42:50 | saving misfit 9.850E-04 to tag 'f_try.txt'
+    2022-04-29 12:42:50 | 
+    EVALUATE BRACKETING LINE SEARCH
     --------------------------------------------------------------------------------
+    2022-04-29 12:42:50 | step length(s) = 0.00E+00, 5.26E+09
+    2022-04-29 12:42:50 | misfit val(s)  = 1.75E-03, 9.85E-04
+    2022-04-29 12:42:50 | misfit not bracketed, increasing step length
+    2022-04-29 12:42:50 | checking poissons ratio for: 'm_try.npy'
+    2022-04-29 12:42:50 | model parameters (m_try.npy i01s01):
+    2022-04-29 12:42:50 | 5800.00 <= vp <= 5800.00
+    2022-04-29 12:42:50 | 3141.92 <= vs <= 3969.23
+    2022-04-29 12:42:50 | 0.06 <= pr <= 0.29
+    2022-04-29 12:42:50 | retrying with new trial step
+    2022-04-29 12:42:50 | 
+    ////////////////////////////////////////////////////////////////////////////////
                                 TRIAL STEP COUNT: i01s02                            
+    ////////////////////////////////////////////////////////////////////////////////
+    2022-04-29 12:42:50 | 
+    EVALUATE OBJECTIVE FUNCTION
     --------------------------------------------------------------------------------
-    
-    2022-03-10 14:55:04 | 
-    ................................................................................
-    EVALUATE OBJECTIVE FUNCTION                                                     
-    ................................................................................
-    
-    2022-03-10 14:55:04 | saving model 'm_try' to: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalfunc/model
-    2022-03-10 14:55:05 | results saved to with suffix 'try' to path: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalfunc
-    2022-03-10 14:55:05 | evaluating objective function 1 times
-    2022-03-10 14:55:06 | checkpointing working environment to disk
-    2022-03-10 14:55:09 | running forward simulations
-    2022-03-10 14:55:15 | calling preprocess.prepare_eval_grad()
-    2022-03-10 14:55:15 | preparing files for gradient evaluation
-    2022-03-10 14:55:15 | exporting residuals to: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalfunc
-    2022-03-10 14:55:16 | summing residuals with preprocess module
-    2022-03-10 14:55:16 | saving misfit 2.705E-04 to: 'f_try'
-    2022-03-10 14:55:16 | evaluating bracketing line search
-    2022-03-10 14:55:16 | step length(s) = 0.00E+00, 4.02E+09, 6.51E+09
-    2022-03-10 14:55:16 | misfit val(s)  = 1.75E-03, 3.09E-04, 2.70E-04
-    2022-03-10 14:55:16 | misfit not bracketed, increasing step length
-    2022-03-10 14:55:16 | model parameters (m_try i01s02):
-    2022-03-10 14:55:16 | 5800.00 <= vp <= 5800.00
-    2022-03-10 14:55:16 | 2895.26 <= vs <= 4259.23
-    2022-03-10 14:55:16 | -0.09 <= pr <= 0.33
-    2022-03-10 14:55:16 | 
-    ................................................................................
-    retrying with new trial step                                                    
-    ................................................................................
-    
-    2022-03-10 14:55:16 | 
+    2022-04-29 12:42:50 | saving model 'm_try.npy' to:
+    /home/bchow/Work/work/sf3_specfem2d_example/scratch/scratch/model
+    2022-04-29 12:42:51 | evaluating objective function 1 times on system...
+    2022-04-29 12:42:51 | checkpointing working environment to disk
+    2022-04-29 12:42:52 | exporting current working environment to disk
+    2022-04-29 12:42:53 | running task solver.eval_func 1 times
+    2022-04-29 12:42:53 | running forward simulations
+    2022-04-29 12:42:59 | calling preprocess.prepare_eval_grad()
+    2022-04-29 12:42:59 | preparing files for gradient evaluation
+    2022-04-29 12:42:59 | exporting residuals to:
+    /home/bchow/Work/work/sf3_specfem2d_example/scratch/scratch
+    2022-04-29 12:43:00 | summing residuals with preprocess module
+    2022-04-29 12:43:00 | saving misfit 1.227E-03 to tag 'f_try.txt'
+    2022-04-29 12:43:00 | 
+    EVALUATE BRACKETING LINE SEARCH
     --------------------------------------------------------------------------------
-                                TRIAL STEP COUNT: i01s03                            
+    2022-04-29 12:43:00 | step length(s) = 0.00E+00, 5.26E+09, 8.51E+09
+    2022-04-29 12:43:00 | misfit val(s)  = 1.75E-03, 9.85E-04, 1.23E-03
+    2022-04-29 12:43:00 | bracket okay, step length reasonable, pass
+    2022-04-29 12:43:00 | checking poissons ratio for: 'm_try.npy'
+    2022-04-29 12:43:00 | model parameters (m_try.npy i01s02):
+    2022-04-29 12:43:00 | 5800.00 <= vp <= 5800.00
+    2022-04-29 12:43:00 | 3278.69 <= vs <= 3790.00
+    2022-04-29 12:43:00 | 0.13 <= pr <= 0.27
+    2022-04-29 12:43:00 | trial step successful
+    2022-04-29 12:43:00 | 
+    FINALIZING LINE SEARCH
     --------------------------------------------------------------------------------
-    
-    2022-03-10 14:55:16 | 
-    ................................................................................
-    EVALUATE OBJECTIVE FUNCTION                                                     
-    ................................................................................
-    
-    2022-03-10 14:55:16 | saving model 'm_try' to: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalfunc/model
-    2022-03-10 14:55:18 | results saved to with suffix 'try' to path: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalfunc
-    2022-03-10 14:55:18 | evaluating objective function 1 times
-    2022-03-10 14:55:18 | checkpointing working environment to disk
-    2022-03-10 14:55:20 | running forward simulations
-    2022-03-10 14:55:26 | calling preprocess.prepare_eval_grad()
-    2022-03-10 14:55:26 | preparing files for gradient evaluation
-    2022-03-10 14:55:26 | exporting residuals to: /home/bchow/Work/work/sf3_specfem2d_example/scratch/evalfunc
-    2022-03-10 14:55:27 | summing residuals with preprocess module
-    2022-03-10 14:55:27 | saving misfit 1.182E-03 to: 'f_try'
-    2022-03-10 14:55:27 | evaluating bracketing line search
-    2022-03-10 14:55:27 | step length(s) = 0.00E+00, 4.02E+09, 6.51E+09, 1.05E+10
-    2022-03-10 14:55:27 | misfit val(s)  = 1.75E-03, 3.09E-04, 2.70E-04, 1.18E-03
-    2022-03-10 14:55:27 | bracket okay, step length reasonable, pass
-    2022-03-10 14:55:27 | model parameters (m_try i01s03):
-    2022-03-10 14:55:27 | 5800.00 <= vp <= 5800.00
-    2022-03-10 14:55:27 | 3126.25 <= vs <= 3969.23
-    2022-03-10 14:55:27 | 0.06 <= pr <= 0.30
-    2022-03-10 14:55:27 | 
-    ................................................................................
-    trial step successful. finalizing...                                            
-    ................................................................................
-    
-    2022-03-10 14:55:27 | 
-    --------------------------------------------------------------------------------
-                                  FINALIZING WORKFLOW                               
-    --------------------------------------------------------------------------------
-    
-    2022-03-10 14:55:29 | 
+    2022-04-29 12:43:00 | shifting current model (new) to previous model (old)
+    2022-04-29 12:43:00 | setting accepted line search model as current model
+    2022-04-29 12:43:00 | current misfit is f_new.txt=9.850E-04
+    2022-04-29 12:43:00 | writing optimization stats to: stats
+    2022-04-29 12:43:00 | resetting line search step count to 0
+    2022-04-29 12:43:00 | 
     ================================================================================
-                        STOP ITERATION 1 AT FUNCTION: 'finalize'                    
+                                 FINALIZING ITERATION 1                             
     ================================================================================
-    
+    2022-04-29 12:43:00 | exporting current working environment to disk
+    2022-04-29 12:43:01 | saving model 'm_new.npy' to path:
+    /home/bchow/Work/work/sf3_specfem2d_example/output/model_0001
+    2022-04-29 12:43:02 | saving gradient to path:
+    /home/bchow/Work/work/sf3_specfem2d_example/output/gradient_0001
+    2022-04-29 12:43:02 | 
+    ================================================================================
+                                FINISHED FLOW EXECUTION                             
+    ================================================================================
+    2022-04-29 12:43:02 | 
+    ================================================================================
+                              FINISHED INVERSION WORKFLOW                           
+    ================================================================================
 
 
 From the log statements above, we can see that the SeisFlows3 line
-search required three trial steps, where it modified values of Vs until
+search required 2 trial steps, where it modified values of Vs until
 satisfactory reduction in the objective function was met. This was the
-final step in the iteration, and so the finalization step was also run,
-which ran any last-minute functions to prepare for a subsequent
-iteration.
+final step in the iteration, and so the finalization step made
+last-minute preparations for a subsequent iteration.
 
 .. code:: ipython3
 
@@ -2078,7 +1878,8 @@ iteration.
 
 .. parsed-literal::
 
-    alpha  f_new  f_old  f_try  g_old  LBFGS  m_new  m_old	p_old
+    alpha.npy  f_old.txt  g_old.npy  m_new.npy  p_old.npy
+    f_new.txt  f_try.txt  LBFGS	 m_old.npy
 
 
 .. code:: ipython3
@@ -2089,23 +1890,28 @@ iteration.
 
 .. parsed-literal::
 
-    factor		  gradient_norm_L2  output.optim  slope       step_length
-    gradient_norm_L1  misfit	    restarted	  step_count  theta
+    factor.txt	      line_search.txt  slope.txt	theta.txt
+    gradient_norm_L1.txt  misfit.txt       step_count.txt
+    gradient_norm_L2.txt  restarted.txt    step_length.txt
 
 
 .. code:: ipython3
 
     # For example we can look at the step length chosen for the accepted trial step in the line search
-    ! cat stats/step_length
+    ! cat stats/line_search.txt
 
 
 .. parsed-literal::
 
-    6.509678e+09
+          ITER     STEPLEN      MISFIT
+    ==========  ==========  ==========
+             1   0.000e+00   1.748e-03
+                 5.261e+09   9.850e-04
+                 8.512e+09   1.227e-03
 
 
 4. Conclusions
---------------
+~~~~~~~~~~~~~~
 
 We’ve now seen how SeisFlows3 runs an **Inversion** workflow using the
 **Specfem2D** solver on a **serial** system (local workstation). More or
@@ -2117,3 +1923,4 @@ Specmfe3D_Cartesian as your solver, you would only need to run
 (you will also need to setup your Specfem3D models, similar to what we
 did for Specfem2D here). To run on a slurm system like Chinook, you can
 run ``seisflows par system chinook``.
+

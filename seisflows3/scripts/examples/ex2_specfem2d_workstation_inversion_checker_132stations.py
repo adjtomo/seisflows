@@ -101,10 +101,12 @@ def main(run_example=False):
     sys.argv = [sys.argv[0]]  # Ensure that no arguments are given to the CLI
     sf3_cli_tool = SeisFlows()
     cwd = os.getcwd()
-    specfem2d_repo = input("REQUEST: If you have already downloaded SPECMFE2D, "
-                           "please write the path here. Otherwise, this example "
-                           "will pull the latest version from GitHub and "
-                           "attempt to configure and make the binaries:\n")
+    specfem2d_repo = input(
+        msg.cli("If you have already downloaded SPECMFE2D, please input its "
+                "path here. If blank, this example will pull the latest version "
+                "from GitHub and attempt to configure and make the "
+                "binaries:\n> ")
+    )
 
     # Step 0: Initialize path structure and the SeisFlows command line tool
     print(msg.cli("EXAMPLE SETUP", border="="))
@@ -161,6 +163,7 @@ def main(run_example=False):
     # Step 3b: last minute Par_file edits
     cd(workdir_paths.data)
     sf3_cli_tool.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
+    print("> setup complete")
 
     if run_example == "run":
         # Step 4: Run the inversion!
@@ -179,7 +182,7 @@ if __name__ == "__main__":
                   f"between a homogeneous halfspace model and a checkerboard "
                   f"model using {NTASK} sources and 132 stations."
                   "The tasks involved include: ",
-                  items=["1. Download, configure and compile SPECFEM2D",
+                  items=["1. (optional) Download, configure, compile SPECFEM2D",
                          "2. Set up a SPECFEM2D working directory",
                          "3. Generate starting model from Tape2007 example",
                          "4. Generate target checkerboard model",

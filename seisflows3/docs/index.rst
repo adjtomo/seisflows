@@ -3,9 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. image:: images/sf3_globe_banner_alpha.png
+    :align: center
 
-SeisFlows3
-===========
+------------------
 
 `SeisFlows3 <https://github.com/bch0w/seisflows3>`__  is a hard fork of 
 `SeisFlows <https://github.com/rmodrak/seisflows>`__, a Python-based
@@ -24,11 +25,16 @@ optimization problems.
    SeisFlows\ **3** is written in Python\ **3**. Major backwards-incompatible
    changes from the original SeisFlows codebase include:
 
-      * complete shift to Python3.7 source code, abandoning Python2 support
-      * richer source code emphasizing readability and standards
-      * a new command line tool for improved package control
-      * redesigned, dynamically-generated parameter file
-      * native integration with the waveform misfit quantification tool: `Pyatoa <https://github.com/bch0w/pyatoa>`__
+       * complete shift to Python3.7 source code, abandoning Python2 support
+
+       * richer source code emphasizing readability and standards
+
+       * a new command line tool for improved package control
+
+       * redesigned, dynamically-generated parameter file
+
+       * native integration with the waveform misfit quantification tool: `Pyatoa <https://github.com/bch0w/pyatoa>`__
+
 
    See the `change log <changelog.html>`__ for point-by-point changes from the
    original codebase.
@@ -101,18 +107,17 @@ install instructions.
    :caption: Introduction
 
    overview
-   background
+   start_here
    citeme
 
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: How To
+   :caption: Structure
 
    command_line_tool
-   structure
-   standards
-   tips_and_tricks
+   parameter_file
+   working_directory
 
 .. toctree::
    :maxdepth: 1
@@ -120,14 +125,20 @@ install instructions.
    :caption: Examples
 
    specfem2d_example
-    
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: How To
+
+   extending
+
 .. toctree::
    :maxdepth: 1
    :hidden:
    :caption: Development
 
+   background
    changelog
-   development
    code_dev_plan
-#   seisflows_api
 

@@ -1,6 +1,6 @@
 """
 SeisFlows3 messages tool. For providing a uniform look to SeisFlows3 print
-and log statements.
+and log statements that end up in stdout or in log files.
 """
 from textwrap import wrap
 
@@ -85,19 +85,16 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
 
 
     $ seisflows cmd
-
         =======================
                 HEADER
                 //////
 
         text
-
         item1
         item2
         ...
         itemN
         =======================
-
     $ ls -l
 
     .. rubric::
@@ -132,7 +129,8 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
     :return output_str: formatted string to print out
     """
     # Start with a newline to space from command line arg
-    output_str = "\n"
+    # output_str = "\n"
+    output_str = ""
     # Add top border
     if border is not None:
         output_str += f"{border * wraplen}\n"
@@ -154,7 +152,7 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
     if border is not None:
         output_str += f"\n{border * wraplen}"
     # Final newline to space from next cli
-    output_str += "\n"
+    # output_str += "\n"
     return output_str
 
 

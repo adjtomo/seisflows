@@ -994,7 +994,7 @@ class SeisFlows:
         with open(self._args.parameter_file, "r") as f:
             lines = f.readlines()
             for check in [sf.default_par, sf.default_path]:
-                print(f"\n{check}")
+                print(f"{check}\n{'='*len(check)}")
                 for line in lines:
                     if check in line:
                         print(f"\t{line.split(':')[0].strip()}")
