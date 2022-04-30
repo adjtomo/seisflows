@@ -69,7 +69,7 @@ class Inversion(custom_import("workflow", "base")):
 
         # Define the Paths required by this module
         sf.path("FUNC", required=False,
-                default=os.path.join(PATH.SCRATCH, CFGPATHS.SCRATCHDIR),
+                default=os.path.join(PATH.SCRATCH, "evalfunc"),
                 docstr="scratch path to store data related to function "
                        "evaluations")
 
@@ -148,8 +148,11 @@ class Inversion(custom_import("workflow", "base")):
             # Reset flow for subsequent iterations
             start, stop = None, None
 
-            if optimize.iter > PAR.END:
+            if optimize.iter >= PAR.END:
                 break
+
+            optimize.iter += 1
+            self.logger.info(msg.sub(f"INCREMENT ITERATION TO {optimize.iter}"))
 
         self.logger.info(msg.mjr("FINISHED INVERSION WORKFLOW"))
 
@@ -292,9 +295,6 @@ class Inversion(custom_import("workflow", "base")):
 
         if PAR.SAVERESIDUALS:
             self.save_residuals()
-
-        optimize.iter += 1
-        self.logger.info(msg.sub(f"INCREMENT ITERATION TO {optimize.iter}"))
 
     def clean(self):
         """
