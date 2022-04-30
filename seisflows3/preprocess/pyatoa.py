@@ -61,10 +61,15 @@ class Pyatoa(custom_import("preprocess", "base")):
                       "solver. Available: ['DISP': displacement, "
                       "'VEL': velocity, 'ACC': acceleration]")
 
-        sf.par("MIN_PERIOD", required=True, par_type=float,
+        # TODO make this automatically set
+        sf.par("END_PAD", required=True, par_type=float,
+               docstr="For data gathering; time after origin time to gather. "
+                      "END_PAD >= NT * DT (of Par_file). Positive values only")
+
+        sf.par("MIN_PERIOD", required=False, default="", par_type=float,
                docstr="Minimum filter corner in seconds")
 
-        sf.par("MAX_PERIOD", required=True, par_type=float,
+        sf.par("MAX_PERIOD", required=False, default="", par_type=float,
                docstr="Maximum filter corner in seconds")
 
         sf.par("CORNERS", required=False, default=4, par_type=int,
@@ -78,19 +83,16 @@ class Pyatoa(custom_import("preprocess", "base")):
                       "START_PAD >= T_0 in SPECFEM constants.h.in. "
                       "Positive values only")
 
-        sf.par("END_PAD", required=True, par_type=float,
-               docstr="For data gathering; time after origin time to gather. "
-                      "END_PAD >= NT * DT (of Par_file). Positive values only")
-
         sf.par("ROTATE", required=False, default=False, par_type=bool,
                docstr="Rotate waveform components NEZ -> RTZ")
 
-        sf.par("ADJ_SRC_TYPE", required=True, par_type=str,
+        sf.par("ADJ_SRC_TYPE", required=False, default="cc",  par_type=str,
                docstr="Adjoint source type to use. Available: "
                       "['cc': cross-correlation, 'mt': multitaper, "
                       "wav: waveform']")
 
-        sf.par("PYFLEX_PRESET", required=True, par_type=str,
+        sf.par("PYFLEX_PRESET", required=False, default="default", 
+               par_type=str,
                docstr="Parameter map for Pyflex config. For available choices, "
                       "see Pyatoa docs page (pyatoa.rtfd.io)")
 
@@ -219,7 +221,12 @@ class Pyatoa(custom_import("preprocess", "base")):
         optimize = sys.modules["seisflows_optimize"]
 
         iteration = optimize.iter
-        step_count = optimize.line_search.step_count
+
+        # Deal with the migration case where no step count given
+        try:
+            step_count = optimize.line_search.step_count
+        except AttributeError:
+            step_count = None
         fix_windows = self.check_fix_windows(iteration, step_count)
 
         pyaflowa = self.pyaflowa.copy()

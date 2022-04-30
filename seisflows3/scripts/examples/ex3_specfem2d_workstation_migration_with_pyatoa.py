@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-                SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE 2
+                SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE 3
 
-This example will run two iterations of an inversion to assess
-misfit between a homogenous halfspace model, and a checkerboard model, using
-3 sources and 132 stations. It is very similar to Example 1 but with a
-different TRUE model, and an increased number of stations.
+This example will run a migration between two slightly different homogeneous
+halfspace models using 3 sources and 132 stations. It uses the Pyatoa
+preprocessing module (which calls the Pyatoa package) to assess misfit and
+generate misfit figures.
 
 .. note::
     You can change the number of events (NTASK) and iterations (NITER) by
@@ -82,6 +82,45 @@ def setup_specfem2d_for_seisflows3_inversion(sf):
     # Assign STATIONS_checker file which has 132 stations
     rm("STATIONS")
     ln("STATIONS_checker", "STATIONS")
+
+
+def setup_seisflows_working_directory(sf, workdir_paths, ntask=3, niter=2):
+    """
+    Create and set the SeisFlows3 parameter file, making sure all required
+    parameters are set correctly for this example problem
+
+    :type sf: seisflows3.seisflows.SeisFlows
+    :param sf: the SeisFlows3 command line tool
+    :type workdir_paths: Dict
+    :param workdir_paths: path dictionary for the SPECFEM2D working directory
+    :type ntask: int
+    :param ntask: Number of sources to include in the inversion
+    :type niter: int
+    :param ninter: number of iterations to perform within the inversion
+    """
+    sf.setup(force=True)  # Force will delete any existing parameter file
+    sf.par("workflow", "migration")
+    sf.par("preprocess", "pyatoa")
+    sf.configure()
+
+    sf.par("ntask", ntask)  # we will be using 3 sources for this example
+    sf.par("materials", "elastic")  # how the velocity model is parameterized
+    sf.par("density", "constant")  # update density or keep constant
+    sf.par("nt", 5000)  # set by SPECFEM2D Par_file
+    sf.par("dt", .06)  # set by SPECFEM2D Par_file
+    sf.par("f0", 0.084)  # set by SOURCE file
+    sf.par("format", "ascii")  # how to output synthetic seismograms
+    sf.par("case", "synthetic")  # synthetic-synthetic inversion
+    sf.par("attenuation", False)
+
+    # Pyatoa parameters
+    sf.par("unit_output", "VEL")
+    sf.par("end_pad", 5000 * .06)  # nt * dt
+
+    sf.par("specfem_bin", workdir_paths.bin)
+    sf.par("specfem_data", workdir_paths.data)
+    sf.par("model_init", workdir_paths.model_init)
+    sf.par("model_true", workdir_paths.model_true)
 
 
 def main(run_example=False):

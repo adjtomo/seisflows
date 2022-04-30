@@ -129,11 +129,10 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
     :return output_str: formatted string to print out
     """
     # Start with a newline to space from command line arg
-    # output_str = "\n"
     output_str = ""
     # Add top border
     if border is not None:
-        output_str += f"{border * wraplen}\n"
+        output_str += f"\n{border * wraplen}\n"
     # Add header below top border and a line below that
     if header is not None:
         output_str += f"{header.upper():^{wraplen}}\n"

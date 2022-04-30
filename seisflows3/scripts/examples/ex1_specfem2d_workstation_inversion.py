@@ -25,10 +25,6 @@ model using 3 events and 1 receiver.
     6. Run two iterations of an inversion workflow
 
 .. rubric::
-    $ python ex1_specfem2d_workstation_inversion.py
-
-    OR
-
     $ seisflows examples run 1
 """
 import os
