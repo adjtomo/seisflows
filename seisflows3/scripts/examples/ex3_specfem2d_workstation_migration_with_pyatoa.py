@@ -99,10 +99,10 @@ def setup_seisflows_working_directory(sf, workdir_paths, ntask=3, niter=2):
     :param ninter: number of iterations to perform within the inversion
     """
     sf.setup(force=True)  # Force will delete any existing parameter file
-    sf.par("workflow", "migration")
     sf.par("preprocess", "pyatoa")
     sf.configure()
 
+    sf.par("end", 1)  # only 1 iteration
     sf.par("ntask", ntask)  # we will be using 3 sources for this example
     sf.par("materials", "elastic")  # how the velocity model is parameterized
     sf.par("density", "constant")  # update density or keep constant
@@ -112,6 +112,7 @@ def setup_seisflows_working_directory(sf, workdir_paths, ntask=3, niter=2):
     sf.par("format", "ascii")  # how to output synthetic seismograms
     sf.par("case", "synthetic")  # synthetic-synthetic inversion
     sf.par("attenuation", False)
+    sf.par("components", "Y")
 
     # Pyatoa parameters
     sf.par("unit_output", "VEL")
