@@ -32,329 +32,347 @@ import sys
 import glob
 import shutil
 import subprocess
+import numpy as np
 
 from seisflows3.tools import msg
 from seisflows3.config import Dict
 from seisflows3.seisflows import SeisFlows
 from seisflows3.tools.unix import cd, cp, rm, ln, mv, mkdir
 
-# You are free to change the number of events (NTASK) and iterations (NITER).
-# 1 <= NTASK <= 25
-# 1 <= NITER <= inf
-NTASK = 3
-NITER = 2
 
-
-def define_dir_structures(cwd, specfem2d_repo, ex="Tape2007"):
+class SF3Example2D:
     """
-    Define the example directory structure, which will contain abridged
-    versions of the SPECFEM2D working directory
-
-    :type cwd: str
-    :param cwd: current working directory
-    :type specfem2d_repo: str
-    :param specfem2d_repo: location of the SPECFEM2D repository
-    :type ex: str
-    :type ex: The name of the example problem inside SPECFEM2D/EXAMPLES
+    A class for running SeisFlows3 examples. Simplifies calls structure so that
+    multiple example runs can benefit from the code written here
     """
-    if not specfem2d_repo:
-        print(f"No existing SPECFEM2D repo given, default to: {cwd}/specfem2d")
-        specfem2d_repo = os.path.join(cwd, "specfem2d")
-    else:
-        assert(os.path.exists(specfem2d_repo)), (
-            f"User supplied SPECFEM2D directory '{specfem2d_repo}' "
-            f"does not exist, please check your path and try again."
+    def __init__(self, ntask=3, niter=2):
+        """
+        Set path structure which is used to navigate around SPECFEM repositories
+        and the example working directory
+
+        :type self.sem2d_paths: Dict
+        :param self.sem2d_paths: path dictionary for the SPECFEM2D repository
+        :type self.workdir_paths: Dict
+        :param self.workdir_paths: path dictionary for the SPECFEM2D working
+            directory
+        """
+        specfem2d_repo = input(
+            msg.cli("If you have already downloaded SPECMFE2D, please input "
+                    "the full path to the repo. If left blank, this example "
+                    "will pull the latest version from GitHub and attempt "
+                    "to configure and make the binaries:\n> ")
         )
 
-    # This defines required structures from the SPECFEM2D repository
-    sem2d = {
-        "repo": specfem2d_repo,
-        "bin": os.path.join(specfem2d_repo, "bin"),
-        "data": os.path.join(specfem2d_repo, "DATA"),
-        "example": os.path.join(specfem2d_repo, "EXAMPLES", ex),
-        "example_data": os.path.join(specfem2d_repo, "EXAMPLES", ex, "DATA")
-    }
-    # This defines a working directory structure which we will create
-    working_directory = os.path.join(cwd, "specfem2d_workdir")
-    workdir = {
-        "workdir": os.path.join(working_directory),
-        "bin": os.path.join(working_directory, "bin"),
-        "data": os.path.join(working_directory, "DATA"),
-        "output": os.path.join(working_directory, "OUTPUT_FILES"),
-        "model_init": os.path.join(working_directory, "OUTPUT_FILES_INIT"),
-        "model_true": os.path.join(working_directory, "OUTPUT_FILES_TRUE"),
-    }
-    return Dict(sem2d), Dict(workdir)
+        self.cwd = os.getcwd()
+        self.sem2d_paths, self.workdir_paths = self.define_dir_structures(
+            cwd=self.cwd, specfem2d_repo=specfem2d_repo
+        )
+        self.ntask = ntask
+        assert(1 <= self.ntask <= 25), \
+            f"number of tasks/events must be between 1 and 25, not {self.ntask}"
+        self.niter = niter
+        assert(1 <= self.niter <= np.inf), \
+            f"number of iterations must be between 1 and inf, not {self.niter}"
 
+        # This bool information is provided by the User running 'setup' or 'run'
+        self.run_example = bool(sys.argv[1] == "run")
 
-def download_specfem2d():
-    """
-    Download the latest version of SPECFEM2D from GitHub, devel branch.
-    Last successfully tested 4/28/22
-    """
-    cmd = ("git clone --recursive --branch devel " 
-           "https://github.com/geodynamics/specfem2d.git")
+        # Command line tool to use $ seisflows <cmd> from inside Python
+        # Zero out sys.argv to ensure that no arguments are given to the CLI
+        sys.argv = [sys.argv[0]]
+        self.sf = SeisFlows()
 
-    print(f"Downloading SPECFEM2D with command: {cmd}")
-    subprocess.run(cmd, shell=True, check=True)
+    @staticmethod
+    def define_dir_structures(cwd, specfem2d_repo, ex="Tape2007"):
+        """
+        Define the example directory structure, which will contain abridged
+        versions of the SPECFEM2D working directory
 
+        :type cwd: str
+        :param cwd: current working directory
+        :type specfem2d_repo: str
+        :param specfem2d_repo: location of the SPECFEM2D repository
+        :type ex: str
+        :type ex: The name of the example problem inside SPECFEM2D/EXAMPLES
+        """
+        if not specfem2d_repo:
+            print(f"No existing SPECFEM2D repo given, default to: "
+                  f"{cwd}/specfem2d")
+            specfem2d_repo = os.path.join(cwd, "specfem2d")
+        else:
+            assert(os.path.exists(specfem2d_repo)), (
+                f"User supplied SPECFEM2D directory '{specfem2d_repo}' "
+                f"does not exist, please check your path and try again."
+            )
 
-def configure_specfem2d_and_make_binaries():
-    """
-    Run ./configure within the SPECFEM2D repo directory.
-    This function assumes it is being run from inside the repo. Should guess
-    all the configuration options. Probably the least stable part of the example
-    """
-    if not os.path.exists("./config.log"):
-        cmd = "./configure"
-        print(f"Configuring SPECFEM2D with command: {cmd}")
-        subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL)
-    else:
-        print("SPECFEM2D already configured, skipping 'configure'")
+        # This defines required structures from the SPECFEM2D repository
+        sem2d = {
+            "repo": specfem2d_repo,
+            "bin": os.path.join(specfem2d_repo, "bin"),
+            "data": os.path.join(specfem2d_repo, "DATA"),
+            "example": os.path.join(specfem2d_repo, "EXAMPLES", ex),
+            "example_data": os.path.join(specfem2d_repo, "EXAMPLES", ex, "DATA")
+        }
+        # This defines a working directory structure which we will create
+        working_directory = os.path.join(cwd, "specfem2d_workdir")
+        workdir = {
+            "workdir": os.path.join(working_directory),
+            "bin": os.path.join(working_directory, "bin"),
+            "data": os.path.join(working_directory, "DATA"),
+            "output": os.path.join(working_directory, "OUTPUT_FILES"),
+            "model_init": os.path.join(working_directory, "OUTPUT_FILES_INIT"),
+            "model_true": os.path.join(working_directory, "OUTPUT_FILES_TRUE"),
+        }
+        return Dict(sem2d), Dict(workdir)
 
-    if not glob.glob("./bin/x*"):
-        cmd = "make all"
-        print(f"Making SPECFEM2D binaries with command: {cmd}")
-        subprocess.run(cmd, shell=True, check=True,  stdout=subprocess.DEVNULL)
-    else:
-        print("executables found in SPECFEM2D/bin directory, skipping 'make'")
+    def download_specfem2d(self):
+        """
+        Download the latest version of SPECFEM2D from GitHub, devel branch.
+        Last successfully tested 4/28/22
+        """
+        if not os.path.exists(self.sem2d_paths.repo):
+            cmd = ("git clone --recursive --branch devel " 
+                   "https://github.com/geodynamics/specfem2d.git")
 
+            print(f"Downloading SPECFEM2D with command: {cmd}")
+            subprocess.run(cmd, shell=True, check=True)
 
-def create_specfem2d_working_directory(sem2d_paths, workdir_paths):
-    """
-    Create the working directory where we will generate our initial and
-    final models using one of the SPECFEM2D examples
+    def configure_specfem2d_and_make_binaries(self):
+        """
+        Run ./configure within the SPECFEM2D repo directory.
+        This function assumes it is being run from inside the repo. Should guess
+        all the configuration options. Probably the least stable part of the
+        example
+        """
+        cd(self.sem2d_paths.repo)
+        try:
+            if not os.path.exists("./config.log"):
+                cmd = "./configure"
+                print(f"Configuring SPECFEM2D with command: {cmd}")
+                # Ignore the configure outputs from SPECFEM
+                subprocess.run(cmd, shell=True, check=True,
+                               stdout=subprocess.DEVNULL)
+            else:
+                print("SPECFEM2D already configured, skipping 'configure'")
+        except subprocess.CalledProcessError as e:
+            print(f"SPECFEM `configure` step has failed, please check and "
+                  f"retry. If this command repeatedly fails, you may need "
+                  f"to configure SPECFEM2D manually.\n{e}")
+            sys.exit(-1)
 
-    :type sem2d_paths: Dict
-    :param sem2d_paths: path dictionary for the SPECFEM2D repository
-    :type workdir_paths: Dict
-    :param workdir_paths: path dictionary for the SPECFEM2D working directory
-    """
-    assert(os.path.exists(sem2d_paths["example"])), (
-        f"SPECFEM2D/EXAMPLE directory: '{sem2d['example']}' "
-        f"does not exist, please check this path and try again."
-    )
+        try:
+            if not glob.glob("./bin/x*"):
+                cmd = "make all"
+                print(f"Making SPECFEM2D binaries with command: {cmd}")
+                # Ignore the make outputs from SPECFEM
+                subprocess.run(cmd, shell=True, check=True,
+                               stdout=subprocess.DEVNULL)
+            else:
+                print("executables found in SPECFEM2D/bin directory, "
+                      "skipping 'make'")
+        except subprocess.CalledProcessError as e:
+            print(f"SPECFEM 'make' step has failed, please check and "
+                  f"retry. If this command repeatedly fails, you may need "
+                  f"to compile SPECFEM2D manually.\n{e}")
+            sys.exit(-1)
 
-    # Incase this example has written before, remove dir. that were created
-    rm(workdir_paths.workdir)
-    mkdir(workdir_paths.workdir)
+        # Symlink the finished repo into the working directory so that any
+        # subsequent runs won't need to have the user re-type repo location
+        if not os.path.exists(os.path.join(self.cwd, "specfem2d")):
+            print("symlinking existing specfem2D repository to cwd")
+            ln(self.sem2d_paths.repo, os.path.join(self.cwd, "specfem2d"))
 
-    # Copy the binary executables and DATA from the SPECFEM2D example
-    cp(sem2d_paths.bin, workdir_paths.bin)
-    cp(sem2d_paths.example_data, workdir_paths.data)
+    def create_specfem2d_working_directory(self):
+        """
+        Create the working directory where we will generate our initial and
+        final models using one of the SPECFEM2D examples
+        """
+        assert(os.path.exists(self.sem2d_paths["example"])), (
+            f"SPECFEM2D/EXAMPLE directory: '{self.sem2d['example']}' "
+            f"does not exist, please check this path and try again."
+        )
 
-    # Make sure that SPECFEM2D can find the expected files in the DATA/ dir
-    cd(workdir_paths.data)
-    rm("SOURCE")
-    ln("SOURCE_001", "SOURCE")
-    rm("Par_file")
-    ln("Par_file_Tape2007_onerec", "Par_file")
+        # Incase this example has written before, remove dir. that were created
+        rm(self.workdir_paths.workdir)
+        mkdir(self.workdir_paths.workdir)
 
+        # Copy the binary executables and DATA from the SPECFEM2D example
+        cp(self.sem2d_paths.bin, self.workdir_paths.bin)
+        cp(self.sem2d_paths.example_data, self.workdir_paths.data)
 
-def setup_specfem2d_for_model_init(sf):
-    """
-    Make some adjustments to the original parameter file to.
-    This function assumes it is running from inside the SPECFEM2D/DATA directory
+        # Make sure that SPECFEM2D can find the expected files in the DATA/ dir
+        cd(self.workdir_paths.data)
+        rm("SOURCE")
+        ln("SOURCE_001", "SOURCE")
+        rm("Par_file")
+        ln("Par_file_Tape2007_onerec", "Par_file")
 
-    :type sf: seisflows3.seisflows.SeisFlows
-    :param sf: the SeisFlows3 command line tool
-    """
-    assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
+    def setup_specfem2d_for_model_init(self):
+        """
+        Make some adjustments to the original parameter file to.
+        This function assumes it is running from inside the SPECFEM2D/DATA dir
 
-    print("> Setting the SPECFEM2D Par_file for SeisFlows3 compatiblility")
+        """
+        cd(self.workdir_paths.data)
+        assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
 
-    sf.sempar("setup_with_binary_database", 1)  # allow creation of .bin files
-    sf.sempar("save_model", "binary")  # output model in .bin database format
-    sf.sempar("save_ASCII_kernels", ".false.")  # output kernels in .bin format
+        print("> Setting the SPECFEM2D Par_file for SeisFlows3 compatiblility")
 
+        self.sf.sempar("setup_with_binary_database", 1)  # create .bin files
+        self.sf.sempar("save_model", "binary")  # output model in .bin format
+        self.sf.sempar("save_ASCII_kernels", ".false.")  # kernels also .bin
 
-def setup_specfem2d_for_model_true(sf):
-    """
-    Make some adjustments to the  parameter file to create the final velocity
-    model. This function assumes it is running from inside the SPECFEM2D/DATA
-    directory
+        rm(self.workdir_paths.output)
+        mkdir(self.workdir_paths.output)
 
-    :type sf: seisflows3.seisflows.SeisFlows
-    :param sf: the SeisFlows3 command line tool
-    """
-    assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
+    def setup_specfem2d_for_model_true(self):
+        """
+        Make some adjustments to the parameter file to create the final velocity
+        model. This function assumes it is running from inside the
+        SPECFEM2D/DATA directory
+        """
+        cd(self.workdir_paths.data)
+        assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
 
-    print("> Updating initial homogeneous velocity model values")
+        print("> Updating initial homogeneous velocity model values")
+        new_model = "1 1 2600.d0 5900.d0 3550.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0"
+        self.sf.sempar("velocity_model", new_model)
 
-    new_model = "1 1 2600.d0 5900.d0 3550.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0"
+    def run_xspecfem2d_binaries(self):
+        """
+        Runs the xmeshfem2d and then xspecfem2d binaries using subprocess and then
+        do some cleanup to get files in the correct locations. Assumes that we
+        can run the binaries directly with './'
+        """
+        cd(self.workdir_paths.workdir)
 
-    sf.sempar("velocity_model", new_model)
+        cmd_mesh = f"./bin/xmeshfem2D > OUTPUT_FILES/mesher.log.txt"
+        cmd_spec = f"./bin/xspecfem2D > OUTPUT_FILES/solver.log.txt"
 
+        for cmd in [cmd_mesh, cmd_spec]:
+            print(f"Running SPECFEM2D with command: {cmd}")
+            subprocess.run(cmd, shell=True, check=True,
+                           stdout=subprocess.DEVNULL)
 
-def run_xspecfem2d_binaries():
-    """
-    Runs the xmeshfem2d and then xspecfem2d binaries using subprocess and then
-    do some cleanup to get files in the correct locations. Assumes that we
-    can run the binaries directly with './'
-    """
-    cmd_mesh = f"./bin/xmeshfem2D > OUTPUT_FILES/mesher.log.txt"
-    cmd_spec = f"./bin/xspecfem2D > OUTPUT_FILES/solver.log.txt"
+    def cleanup_xspecfem2d_run(self, choice=None):
+        """
+        Do some cleanup after running the SPECFEM2D binaries to make sure files
+        are in the correct locations, and rename the OUTPUT_FILES directory so
+        that it does not get overwritten by subsequent runs
 
-    for cmd in [cmd_mesh, cmd_spec]:
-        print(f"Running SPECFEM2D with command: {cmd}")
-        subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL)
+        :type choice: str
+        :param choice: Rename the OUTPUT_FILES directory with a suffix tag
+            msut be 'INIT' or 'TRUE'. If None, will not rename but the
+        """
+        cd(self.workdir_paths.workdir)
+        print("> Cleaning up after xspecfem2d, setting up for new run")
 
+        # SPECFEM2D outputs its models in the DATA/ directory by default,
+        # while SeisFlows3 expects this in the OUTPUT_FILES/ directory (which is
+        # the default in SPECFEM3D)
+        mv(glob.glob("DATA/*bin"), self.workdir_paths.output)
 
-def cleanup_xspecfem2d_run(workdir_paths, new_name=None):
-    """
-    Do some cleanup after running the SPECFEM2D binaries to make sure files are
-    in the correct locations, and rename the OUTPUT_FILES directory so that it
-    does not get overwritten by subsequent runs
+        if choice == "INIT":
+            mv(self.workdir_paths.output, self.workdir_paths.model_init)
+            # Create a new OUTPUT_FILES/ directory for TRUE run
+            rm(self.workdir_paths.output)
+            mkdir(self.workdir_paths.output)
+        elif choice == "TRUE":
+            mv(self.workdir_paths.output, self.workdir_paths.model_true)
 
-    :type workdir_paths: Dict
-    :param workdir_paths: path dictionary for the SPECFEM2D working directory
-    :type new_name: str
-    :param new_name: if we want to rename OUTPUT_FILES to something else,
-        so that it does not get overwritten by subsequent simulations
-    """
-    print("> Cleaning up after xspecfem2d, moving files to correct locations")
-    cd(workdir_paths.workdir)
-    mv(glob.glob("DATA/*bin"), workdir_paths.output)
+    def setup_seisflows_working_directory(self):
+        """
+        Create and set the SeisFlows3 parameter file, making sure all required
+        parameters are set correctly for this example problem
+        """
+        cd(self.cwd)
 
-    if new_name is not None:
-        mv(workdir_paths.output, new_name)
+        self.sf.setup(force=True)  # Force will delete existing parameter file
+        self.sf.configure()
 
+        self.sf.par("ntask", self.ntask)  # default 3 sources for this example
+        self.sf.par("materials", "elastic")  # how velocity model parameterized
+        self.sf.par("density", "constant")  # update density or keep constant
+        self.sf.par("nt", 5000)  # set by SPECFEM2D Par_file
+        self.sf.par("dt", .06)  # set by SPECFEM2D Par_file
+        self.sf.par("f0", 0.084)  # set by SOURCE file
+        self.sf.par("format", "ascii")  # how to output synthetic seismograms
+        self.sf.par("begin", 1)  # first iteration
+        self.sf.par("end", self.niter)  # final iteration -- we will run 2
+        self.sf.par("case", "synthetic")  # synthetic-synthetic inversion
+        self.sf.par("attenuation", False)
 
-def setup_seisflows_working_directory(sf, workdir_paths, ntask=3, niter=2):
-    """
-    Create and set the SeisFlows3 parameter file, making sure all required
-    parameters are set correctly for this example problem
+        self.sf.par("specfem_bin", self.workdir_paths.bin)
+        self.sf.par("specfem_data", self.workdir_paths.data)
+        self.sf.par("model_init", self.workdir_paths.model_init)
+        self.sf.par("model_true", self.workdir_paths.model_true)
 
-    :type sf: seisflows3.seisflows.SeisFlows
-    :param sf: the SeisFlows3 command line tool
-    :type workdir_paths: Dict
-    :param workdir_paths: path dictionary for the SPECFEM2D working directory
-    :type ntask: int
-    :param ntask: Number of sources to include in the inversion
-    :type niter: int
-    :param ninter: number of iterations to perform within the inversion
-    """
-    sf.setup(force=True)  # Force will delete any existing parameter file
-    sf.configure()
+    def finalize_specfem2d_par_file(self):
+        """
+        Last minute changes to get the SPECFEM2D Par_file in the correct format
+        for running SeisFlows3. Setting model type to read from .bin GLL files
+        change number of stations etc.
+        """
+        cd(self.workdir_paths.data)
+        self.sf.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
 
-    sf.par("ntask", ntask)  # we will be using 3 sources for this example
-    sf.par("materials", "elastic")  # how the velocity model is parameterized
-    sf.par("density", "constant")  # update density or keep constant
-    sf.par("nt", 5000)  # set by SPECFEM2D Par_file
-    sf.par("dt", .06)  # set by SPECFEM2D Par_file
-    sf.par("f0", 0.084)  # set by SOURCE file
-    sf.par("format", "ascii")  # how to output synthetic seismograms
-    sf.par("begin", 1)  # first iteration
-    sf.par("end", niter)  # final iteration -- we will run 2
-    sf.par("case", "synthetic")  # synthetic-synthetic inversion
-    sf.par("attenuation", False)
-
-    sf.par("specfem_bin", workdir_paths.bin)
-    sf.par("specfem_data", workdir_paths.data)
-    sf.par("model_init", workdir_paths.model_init)
-    sf.par("model_true", workdir_paths.model_true)
-
-
-def main(run_example=False):
-    """
-    Setup the example and then optionally run the actual seisflows workflow
-
-    :type run_example: bool
-    :param run_example: Directly run the seisflows workflow after the setup
-    """
-    sys.argv = [sys.argv[0]]  # Ensure that no arguments are given to the CLI
-    sf3_cli_tool = SeisFlows()
-    cwd = os.getcwd()
-    specfem2d_repo = input(
-        msg.cli("If you have already downloaded SPECMFE2D, please input its "
-                "path here. If blank, this example will pull the latest version "
-                "from GitHub and attempt to configure and make the "
-                "binaries:\n> ")
-    )
-
-    # Step 0: Initialize path structure and the SeisFlows command line tool
-    print(msg.cli("EXAMPLE SETUP", border="="))
-    sem2d_paths, workdir_paths = define_dir_structures(cwd, specfem2d_repo)
-
-    # Step 1: Download and configure SPECFEM2D, make binaries. Or check if done
-    if not os.path.exists(sem2d_paths.repo):
-        download_specfem2d()
-
-    cd(sem2d_paths.repo)
-    try:
-        configure_specfem2d_and_make_binaries()
-    except subprocess.CalledProcessError as e:
-        print(f"configure and make step has failed, please check and retry. "
-              f"If this command repeatedly fails, you may need to "
-              f"configure and compile SPECFEM2D manually.\n{e}")
-        sys.exit(-1)
-
-    # Step 2: Create a working directory and generate the initial/final models
-    print(msg.cli("SETTING UP SPECFEM2D WORKING DIRECTORY", border="="))
-    create_specfem2d_working_directory(sem2d_paths, workdir_paths)
-
-    # Step 2a: Par_file manipulations and prepare directory structure
-    cd(workdir_paths.data)
-    setup_specfem2d_for_model_init(sf3_cli_tool)
-    rm(workdir_paths.output)
-    mkdir(workdir_paths.output)
-
-    # Step 2b: Generate MODEL_INIT, rearrange consequent directory structure
-    cd(workdir_paths.workdir)
-    print(msg.cli("GENERATING INITIAL MODEL", border="="))
-    run_xspecfem2d_binaries()
-    cleanup_xspecfem2d_run(workdir_paths, new_name=workdir_paths.model_init)
-
-    # Step 3b: Prepare Par_file and directory for MODEL_TRUE generation
-    cd(workdir_paths.data)
-    setup_specfem2d_for_model_true(sf3_cli_tool)
-    rm(workdir_paths.output)
-    mkdir(workdir_paths.output)
-
-    # Step 3d: Generate MODEL_TRUE, rearrange consequent directory structure
-    print(msg.cli("GENERATING TRUE MODEL", border="="))
-    cd(workdir_paths.workdir)
-    run_xspecfem2d_binaries()
-    cleanup_xspecfem2d_run(workdir_paths, new_name=workdir_paths.model_true)
-
-    # Step 3: Setup and run SeisFlows3 to perform 2 iterations of an inversion
-    #   Using the velocity models we just generated
-    print(msg.cli("SETTING UP SEISFLOWS3", border="="))
-    cd(cwd)
-    setup_seisflows_working_directory(sf3_cli_tool, workdir_paths, ntask=NTASK,
-                                      niter=NITER)
-
-    # Step 3b: last minute Par_file edits
-    cd(workdir_paths.data)
-    sf3_cli_tool.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
-    print("> setup complete")
-
-    if run_example == "run":
-        # Step 4: Run the inversion!
-        print(msg.cli("RUNNING SEISFLOWS3 INVERSION WORKFLOW", border="="))
-        # Run SeisFlows3 Inversion as an external process so that it doesn't get
-        # affected by our current environment
-        cd(cwd)
+    def run_sf3_example(self):
+        """
+        Use subprocess to run the SeisFlows3 example we just set up
+        """
+        cd(self.cwd)
         subprocess.run("seisflows submit -f", check=False, shell=True)
+
+    def main(self):
+        """
+        Setup the example and then optionally run the actual seisflows workflow
+        """
+        print(msg.cli("EXAMPLE SETUP", border="="))
+        # Step 1: Download and configure SPECFEM2D, make binaries. Optional
+        self.download_specfem2d()
+        self.configure_specfem2d_and_make_binaries()
+        # Step 2: Create a working directory and generate initial/final models
+        self.create_specfem2d_working_directory()
+        # Step 2a: Generate MODEL_INIT, rearrange consequent directory structure
+        print(msg.cli("GENERATING INITIAL MODEL", border="="))
+        self.setup_specfem2d_for_model_init()
+        self.run_xspecfem2d_binaries()
+        self.cleanup_xspecfem2d_run(choice="INIT")
+        # Step 2b: Generate MODEL_INIT, rearrange consequent directory structure
+        print(msg.cli("GENERATING TRUE/TARGET MODEL", border="="))
+        self.setup_specfem2d_for_model_true()
+        self.run_xspecfem2d_binaries()
+        self.cleanup_xspecfem2d_run(choice="TRUE")
+        # Step 3: Prepare Par_file and directory for MODEL_TRUE generation
+        self.setup_seisflows_working_directory()
+        self.finalize_specfem2d_par_file()
+        print(msg.cli("COMPLETE EXAMPLE SETUP", border="="))
+        # Step 4: Run the workflwo
+        if self.run_example:
+            print(msg.cli("RUNNING SEISFLOWS3 INVERSION WORKFLOW", border="="))
+            self.run_sf3_example()
 
 
 if __name__ == "__main__":
-    # Some header information before starting to inform the user of goings ons
     print(msg.ascii_logo_small)
-    print(msg.cli(f"This is a [SPECFEM2D] [WORKSTATION] example, which will "
-                  f"run {NITER} iterations of an inversion to assess misfit "
-                  f"between two homogeneous halfspace models with slightly "
-                  f"different velocities, {NTASK} sources and 1 receiver. "
-                  f"The tasks involved include: ",
-                  items=["1. (optional) Download, configure, compile SPECFEM2D",
-                         "2. Set up a SPECFEM2D working directory",
-                         "3. Generate starting model from Tape2007 example",
-                         "4. Generate target model w/ perturbed starting model",
-                         "5. Set up a SeisFlows3 working directory",
-                         f"6. Run {NITER} iterations of an inversion workflow"],
-                  header="seisflows3 example 1",
-                  border="="))
+    print(msg.cli(
+        f"This is a [SPECFEM2D] [WORKSTATION] example, which will "
+        f"run an inversion to assess misfit between two homogeneous halfspace "
+        f"models with slightly different velocities. [3 events, 1 station, 2 "
+        f"iterations]. The tasks involved include: ",
+        items=["1. (optional) Download, configure, compile SPECFEM2D",
+               "2. Set up a SPECFEM2D working directory",
+               "3. Generate starting model from Tape2007 example",
+               "4. Generate target model w/ perturbed starting model",
+               "5. Set up a SeisFlows3 working directory",
+               f"6. Run an inversion workflow"],
+        header="seisflows3 example 1",
+        border="=")
+    )
 
+    # Dynamically traverse sys.argv to get user-input command line. Cannot
+    # use argparser here because we're being called by SeisFlows CLI tool which
+    # is occupying argparser
     if len(sys.argv) > 1:
-        main(run_example=sys.argv[1])
-
+        sf3ex2d = SF3Example2D()
+        sf3ex2d.main()

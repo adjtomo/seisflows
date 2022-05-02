@@ -26,15 +26,10 @@ optimization problems.
    changes from the original SeisFlows codebase include:
 
        * complete shift to Python3.7 source code, abandoning Python2 support
-
        * richer source code emphasizing readability and standards
-
        * a new command line tool for improved package control
-
        * redesigned, dynamically-generated parameter file
-
        * native integration with the waveform misfit quantification tool: `Pyatoa <https://github.com/bch0w/pyatoa>`__
-
 
    See the `change log <changelog.html>`__ for point-by-point changes from the
    original codebase.

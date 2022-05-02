@@ -157,13 +157,6 @@ class Base:
         if validate:
             self.required.validate()
 
-        if PAR.OPTIMIZE == "base":
-            print(msg.cli("Base optimization cannot be used standalone, and "
-                          "must be over-loaded by a subclass. You can run"
-                          "'seisflows print module' to find available "
-                          "subclasses", header="error", border="="))
-            sys.exit(-1)
-
         if PAR.LINESEARCH:
             assert PAR.LINESEARCH in dir(line_search), \
                 f"LINESEARCH parameter must be in {dir(line_search)}"

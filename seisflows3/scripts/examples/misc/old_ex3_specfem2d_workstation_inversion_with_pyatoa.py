@@ -61,7 +61,7 @@ def setup_specfem2d_for_model_true(sf):
     """
     assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
 
-    print("> EX2: Updating SPECFEM2D to set checkerboard model as MODEL_TRUE")
+    print("> EX3: Updating SPECFEM2D to set checkerboard model as MODEL_TRUE")
 
     sf.sempar("model", "legacy")  # To read the model_velocity.dat_checker
     rm("proc000000_model_velocity.dat_input")
@@ -76,7 +76,7 @@ def setup_specfem2d_for_seisflows3_inversion(sf):
     rather than create them from the Par_file
     rather than create them from the Par_file
     """
-    print("> EX2: Finalizing SPECFEM2D Par_file for SeisFlows3 inversion")
+    print("> EX3: Finalizing SPECFEM2D Par_file for SeisFlows3 inversion")
     sf.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
     sf.sempar("use_existing_stations", ".true.")  # Use STATIONS file
     # Assign STATIONS_checker file which has 132 stations
@@ -121,7 +121,6 @@ def setup_seisflows_working_directory(sf, workdir_paths, ntask=3, niter=2):
     # sf.par("min_period", 1/8)  # slight pre-filter but otherwise data is same
     # sf.par("max_period", 500)
 
-    sf.par("pyflex_preset", "")
 
     sf.par("start_pad", 48)  # T0 set in Par_file
     sf.par("end_pad", 5000 * .06)  # nt * dt defined by Par_file
@@ -206,7 +205,7 @@ def main(run_example=False):
 
     # Step 3b: last minute Par_file edits
     cd(workdir_paths.data)
-    sf3_cli_tool.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
+    setup_specfem2d_for_seisflows3_inversion(sf3_cli_tool)
     print("> setup complete")
 
     if run_example == "run":
