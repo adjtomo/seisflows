@@ -74,10 +74,6 @@ def define_dir_structures(cwd, specfem2d_repo, ex="Tape2007"):
         "example": os.path.join(specfem2d_repo, "EXAMPLES", ex),
         "example_data": os.path.join(specfem2d_repo, "EXAMPLES", ex, "DATA")
     }
-    assert(os.path.exists(sem2d["example"])), (
-        f"SPECFEM2D/EXAMPLE directory: '{sem2d['example']}' "
-        f"does not exist, please check this path and try again."
-    )
     # This defines a working directory structure which we will create
     working_directory = os.path.join(cwd, "specfem2d_workdir")
     workdir = {
@@ -134,6 +130,11 @@ def create_specfem2d_working_directory(sem2d_paths, workdir_paths):
     :type workdir_paths: Dict
     :param workdir_paths: path dictionary for the SPECFEM2D working directory
     """
+    assert(os.path.exists(sem2d_paths["example"])), (
+        f"SPECFEM2D/EXAMPLE directory: '{sem2d['example']}' "
+        f"does not exist, please check this path and try again."
+    )
+
     # Incase this example has written before, remove dir. that were created
     rm(workdir_paths.workdir)
     mkdir(workdir_paths.workdir)

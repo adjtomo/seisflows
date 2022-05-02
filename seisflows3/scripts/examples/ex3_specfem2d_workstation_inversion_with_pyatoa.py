@@ -2,7 +2,7 @@
 """
                 SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE 3
 
-This example will run a migration between two slightly different homogeneous
+This example will run an inversion between two slightly different homogeneous
 halfspace models using 3 sources and 132 stations. It uses the Pyatoa
 preprocessing module (which calls the Pyatoa package) to assess misfit and
 generate misfit figures.
@@ -115,8 +115,16 @@ def setup_seisflows_working_directory(sf, workdir_paths, ntask=3, niter=2):
     sf.par("components", "Y")
 
     # Pyatoa parameters
-    sf.par("unit_output", "VEL")
-    sf.par("end_pad", 5000 * .06)  # nt * dt
+    sf.par("unit_output", "DISP")
+
+    # The pre-filter here messes with how Pyflex selects windows
+    # sf.par("min_period", 1/8)  # slight pre-filter but otherwise data is same
+    # sf.par("max_period", 500)
+
+    sf.par("pyflex_preset", "")
+
+    sf.par("start_pad", 48)  # T0 set in Par_file
+    sf.par("end_pad", 5000 * .06)  # nt * dt defined by Par_file
 
     sf.par("specfem_bin", workdir_paths.bin)
     sf.par("specfem_data", workdir_paths.data)
