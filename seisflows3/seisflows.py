@@ -1306,16 +1306,30 @@ class SeisFlows:
 
     def _reset_line_search(self, **kwargs):
         """
-        Reset the machinery of the line search
+        Reset the machinery of the line search. This is useful for if a line
+        search fails or stagnates but the User does not want to re-run the
+        entire iteration. They can reset the line search and resume the workflow
+        from the line search step
+
+        The following rubric details how you might use this from command line:
+
+        .. rubric::
+            $ seisflows reset line_search
+            $ seisflows par resume_from line_search
+            $ seisflows resume_from -f
         """
         optimize = sys.modules["seisflows_optimize"]
         workflow = sys.modules["seisflows_workflow"]
         
         current_step = optimize.line_search.step_count
         optimize.line_search.reset()
-        new_step = optimize.line_search.step_count
-    
-        print(msg.cli(f"Step Count: {current_step} -> {new_step}"))
+
+        # Manually set step count back to 0, this usually happens in
+        # optimize.finalize_search()
+        optimize.line_search.step_count = 0
+
+        print(msg.cli(f"resetting line search machinery. step count: "
+                      f"{current_step} -> {optimize.line_search.step_count }"))
         workflow.checkpoint()
 
     def _print_modules(self, name=None, package=None, **kwargs):

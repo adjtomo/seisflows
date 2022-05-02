@@ -63,8 +63,8 @@ class SF3PyatoaEx2D(SF3Example2D):
         self.sf.configure()
 
         self.sf.par("end", 1)  # only 1 iteration
-        self.sf.par("ntask", self.ntask)  # we will be using 3 sources for this example
-        self.sf.par("materials", "elastic")  # how the velocity model is parameterized
+        self.sf.par("ntask", self.ntask)  # 3 sources for this example
+        self.sf.par("materials", "elastic")  # how velocity model parameterized
         self.sf.par("density", "constant")  # update density or keep constant
         self.sf.par("nt", 5000)  # set by SPECFEM2D Par_file
         self.sf.par("dt", .06)  # set by SPECFEM2D Par_file
@@ -73,6 +73,7 @@ class SF3PyatoaEx2D(SF3Example2D):
         self.sf.par("case", "synthetic")  # synthetic-synthetic inversion
         self.sf.par("attenuation", False)
         self.sf.par("components", "Y")
+        self.sf.par("stepcountmax", 1)  # stop after i01s02
 
         # PYATOA preprocessing parameters
         self.sf.par("unit_output", "DISP")
@@ -117,7 +118,8 @@ if __name__ == "__main__":
                "3. Generate starting model from Tape2007 example",
                "4. Generate target model w/ perturbed starting model",
                "5. Set up a SeisFlows3 working directory",
-               f"6. Run an inversion workflow"],
+               f"6. Run an inversion workflow which is expected to FAIL "
+               f"during the line search"],
         header="seisflows3 example 2",
         border="=")
     )

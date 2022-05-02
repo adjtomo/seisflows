@@ -96,17 +96,18 @@ class Bracket(Base):
             status = -1
 
         # Apply optional step length safeguard
-        if alpha > self.step_len_max and step_count == 0:
-            alpha = 0.618034 * self.step_len_max
-            self.logger.info(f"initial step length safegaurd, setting manual "
-                             f"step length")
-            status = 0
-        # Stop because safeguard prevents us from going further
-        elif alpha > self.step_len_max:
-            self.logger.info(f"step_len_max={self.step_len_max} exceeded, manual "
-                             f"set alpha")
-            alpha = self.step_len_max
-            status = 1
+        if alpha is not None:
+            if alpha > self.step_len_max and step_count == 0:
+                alpha = 0.618034 * self.step_len_max
+                self.logger.info(f"initial step length safegaurd, setting "
+                                 f"manual step length")
+                status = 0
+            # Stop because safeguard prevents us from going further
+            elif alpha > self.step_len_max:
+                self.logger.info(f"step_len_max={self.step_len_max} exceeded, "
+                                 f"manual set alpha")
+                alpha = self.step_len_max
+                status = 1
 
         return alpha, status
 
