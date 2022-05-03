@@ -8,11 +8,13 @@
 
 ---
 
+SeisFlows3 is a fork of [SeisFlows](https://github.com/rmodrak/seisflows/) and the [current main development branch](https://github.com/rmodrak/seisflows/issues/111) for this codebase. 
+
 SeisFlows is a Python-based waveform inversion package used to tackle the problems of full waveform inversion, seismic migration, and adjoint tomography.  
                                                                                  
 With a growing user base in academia and industry, this package has been used for production scale inversions, some with over a billion model parameters, for research problems related to oil and gas exploration, earthquake seismology, and general nonlinear optimization problems.                                         
                                                                                  
-SeisFlows3 is a fork of SeisFlows and the current main development branch. Changes to the package include migration to Python3, updates to source-code readability through improved doc strings and comments, stronger adherance to PEP-8 standards, and additional functionalities not present in the original package.                                                                       
+Changes made in the SeisFlows3 package include code refactor to Python3, improvements in source-code implementation and readability, stronger adherance to coding standards (PEP-8), and additional functionalities not present in the original package.                                                                       
 
 References
 ----------
