@@ -3,8 +3,8 @@
                 SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE 2
 
 This example will run two iterations of an inversion to assess misfit between
-a homogeneous halfspace model and a checkerboard model using 3 events and
-132 receivers.
+a homogeneous halfspace model and a checkerboard model using 2 events and
+5 receivers.
 
 .. note::
     See Example 1 docstring for more information
@@ -23,8 +23,7 @@ from seisflows3.tools import msg
 from seisflows3.config import Dict
 from seisflows3.seisflows import SeisFlows
 from seisflows3.tools.unix import cd, cp, rm, ln, mv, mkdir
-from seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion import \
-    SF3Example2D
+from seisflows3.scripts.examples.sf3example2d import SF3Example2D
 
 
 class SF3PyatoaEx2D(SF3Example2D):
@@ -33,6 +32,37 @@ class SF3PyatoaEx2D(SF3Example2D):
     advantage of the default SPECFEM2D stuff, onyl changes the generation of
     MODEL TRUE, the number of stations, and the setup of the parameter file.
     """
+    def __init__(self, ntask=2, niter=1, nsta=5):
+        """
+        Overload init and attempt to import Pyatoa before running example,
+        overload the default number of tasks to 2, and add a new init parameter
+        `nsta` which chooses the number of stations, between 1 and 132
+
+        :type ntask: int
+        :param ntask: number of events to use in inversion, between 1 and 25.
+            defaults to 3
+        :type niter: int
+        :param niter: number of iterations to run. defaults to 2
+        :type nsta: int
+        :param nsta: number of stations to include in inversion, between 1 and
+            131
+        """
+        super().__init__(ntask=ntask, niter=niter)
+        self.nsta = nsta
+        # -1 because it represents index but we need to talk in terms of count
+        assert(1 <= self.nsta <= 131), \
+            f"number of stations must be between 1 and 131, not {self.nsta}"
+        # Make sure that Pyatoa has been installed before running
+        try:
+            import pyatoa
+        except ModuleNotFoundError:
+            print(msg.cli("Module Pyatoa not found but is required for this "
+                          "example. Please install Pyatoa and rerun this "
+                          "example.", header="module not found error",
+                          border="=")
+                  )
+            sys.exit(-1)
+
     def setup_specfem2d_for_model_true(self):
         """
         Overwrites MODEL TRUE creation from EX1
@@ -73,7 +103,6 @@ class SF3PyatoaEx2D(SF3Example2D):
         self.sf.par("case", "synthetic")  # synthetic-synthetic inversion
         self.sf.par("attenuation", False)
         self.sf.par("components", "Y")
-        self.sf.par("stepcountmax", 1)  # stop after i01s02
 
         # PYATOA preprocessing parameters
         self.sf.par("unit_output", "DISP")
@@ -90,11 +119,10 @@ class SF3PyatoaEx2D(SF3Example2D):
 
     def finalize_specfem2d_par_file(self):
         """
-        Final changes to the SPECFEM2D Par_file before running SeisFlows. Par_file
-        will be used to control all the child specfem2d directories. Need to tell
-        them to read models from .bin files, and to use existing station files
-        rather than create them from the Par_file
-        rather than create them from the Par_file
+        Final changes to the SPECFEM2D Par_file before running SeisFlows.
+        Par_file will be used to control all the child specfem2d directories.
+        Need to tell them to read models from .bin files, and to use existing
+        station files rather than create them from the Par_file
         """
         print("> EX2: Finalizing SPECFEM2D Par_file for SeisFlows3 inversion")
 
@@ -103,7 +131,14 @@ class SF3PyatoaEx2D(SF3Example2D):
         self.sf.sempar("use_existing_stations", ".true.")  # Use STATIONS file
         # Assign STATIONS_checker file which has 132 stations
         rm("STATIONS")
-        ln("STATIONS_checker", "STATIONS")
+
+        # Only write the first 10 lines to get 10 stations in inversion
+        with open("STATIONS_checker", "r") as f:
+            lines = f.readlines()
+
+        print(f"> EX2: Using {self.nsta} stations in this inversion workflow")
+        with open("STATIONS", "w") as f:
+            f.writelines(lines[:self.nsta])
 
 
 if __name__ == "__main__":
@@ -112,14 +147,14 @@ if __name__ == "__main__":
         f"This is a [SPECFEM2D] [WORKSTATION] example, which will "
         f"run an inversion to assess misfit between a homogeneous halfspace  "
         f"and checkerboard model using Pyatoa for misfit quantification "
-        f"[3 events, 132 station, 1 iterations]. The tasks involved include: ",
+        f"[2 events, 5 stations, 1 iterations]. The tasks involved include: ",
         items=["1. (optional) Download, configure, compile SPECFEM2D",
                "2. Set up a SPECFEM2D working directory",
                "3. Generate starting model from Tape2007 example",
                "4. Generate target model w/ perturbed starting model",
                "5. Set up a SeisFlows3 working directory",
-               f"6. Run an inversion workflow which is expected to FAIL "
-               f"during the line search"],
+               f"6. Run an inversion workflow. The line search is expected to "
+               f"attempt 4 evaluations (i01s04)"],
         header="seisflows3 example 2",
         border="=")
     )
