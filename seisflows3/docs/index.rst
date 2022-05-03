@@ -25,15 +25,15 @@ optimization problems.
    SeisFlows\ **3** is written in Python\ **3**. Major backwards-incompatible
    changes from the original SeisFlows codebase include:
 
-       * complete shift to Python3.7 source code, abandoning Python2 support
-       * richer source code emphasizing readability and standards
-       * a new command line tool for improved package control
-       * redesigned, dynamically-generated parameter file
-       * native integration with the waveform misfit quantification tool: `Pyatoa <https://github.com/bch0w/pyatoa>`__
+      -  complete shift to Python3.7 source code, abandoning Python2 support
+      -  richer source code emphasizing readability and standards
+      -  a new command line tool for improved package control
+      -  redesigned, dynamically-generated parameter file
+      -  native integration with the waveform misfit quantification tool:
+         `Pyatoa <https://github.com/bch0w/pyatoa>`__
 
    See the `change log <changelog.html>`__ for point-by-point changes from the
    original codebase.
-
 
 Throughout the documentation we use the names
 `seisflows`, `SeisFlows`, `SeisFlows3` etc. interchangeably to refer to
@@ -41,7 +41,9 @@ this package (SeisFlows3). Any reference to the original SeisFlows will be
 noted explicitely.
 
 .. warning::
-    This docs page is currently under active development and may have missing information or unfinished pages. We are doing our best to complete it in a timely manner.
+    This docs page is currently under active development and may have missing
+    information or unfinished pages. We are doing our best to complete it in a
+    timely manner.
 
 ---------------------------------
 
