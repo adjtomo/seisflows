@@ -4,8 +4,10 @@
 </p>
 
 ---
-`Documentation` can be found on Read the Docs: https://seisflows3.rtfd.io (in development)
+`Documentation` can be found on Read the Docs: https://seisflows3.readthedocs.io (in development)
 
+
+[![Documentation Status](https://readthedocs.org/projects/seisflows3/badge/?version=latest)](https://seisflows3.readthedocs.io/en/latest/?badge=latest)
 ---
 
 SeisFlows3 is a fork of [SeisFlows](https://github.com/rmodrak/seisflows/) and the [current main development branch](https://github.com/rmodrak/seisflows/issues/111) for this codebase. 
