@@ -1,3 +1,9 @@
+> # :warning: **THIS REPOSITORY WILL BE MERGED AND DELETED** :warning:
+> 
+> # :warning: Please see the following issue for more information: https://github.com/adjtomo/seisflows3/issues/2 :warning:
+
+
+
 ---
 <p align="center">
   <img src="seisflows3/docs/images/sf3_globe_banner_alpha.png" />
