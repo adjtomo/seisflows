@@ -1,6 +1,7 @@
-> # :warning: **THIS REPOSITORY WILL BE MERGED AND DELETED** :warning:
-> 
-> # :warning: Please see the following issue for more information: https://github.com/adjtomo/seisflows3/issues/2 :warning:
+> # :warning: :warning: :warning: 
+> ##  **THIS REPOSITORY WILL BE MERGED AND DELETED** 
+> ##  Please see the following issue for more information: https://github.com/adjtomo/seisflows3/issues/2 
+> # :warning: :warning: :warning: 
 
 
 
