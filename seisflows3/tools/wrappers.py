@@ -50,7 +50,7 @@ def divides(i, j):
     :type i: int
     :type j :int
     """
-    if j is 0:
+    if j == 0:
         return False
     elif i % j:
         return False

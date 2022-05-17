@@ -220,7 +220,7 @@ class Pyatoa(custom_import("preprocess", "base")):
 
         # Process all the stations for a given event using Pyaflowa
         pyaflowa = self.setup_event_pyaflowa(source_name)
-        scaled_misfit = pyaflowa.process()
+        scaled_misfit = pyaflowa.process(nproc=PAR.NPROC)
 
         if scaled_misfit is None:
             print(msg.cli(f"Event {source_name} returned no misfit, you may "

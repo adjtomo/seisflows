@@ -276,7 +276,10 @@ class Dict(object):
 
     def __getattr__(self, key):
         """Attribute-like access of the internal dictionary attributes"""
-        return self.__dict__[key]
+        try:
+            return self.__dict__[key]
+        except KeyError:
+            raise AttributeError(key)
 
     def __getitem__(self, key):
         """.get() like access of the internal dictionary attributes """
