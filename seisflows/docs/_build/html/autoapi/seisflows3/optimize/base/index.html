@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.optimize.base &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.optimize.base</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3/optimize/base/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.optimize.base">
+<span id="seisflows3-optimize-base"></span><h1><a class="reference internal" href="#module-seisflows3.optimize.base" title="seisflows3.optimize.base"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.optimize.base</span></code></a><a class="headerlink" href="#module-seisflows3.optimize.base" title="Permalink to this headline"></a></h1>
+<p>The Optimization library contains classes and methods used to solve nonlinear
+optimization problems, i.e., misfit minimization. Various subclasses implement
+different optimization algorithms.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>By default the base class implements a steepest descent optimization</p>
+</div>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.optimize.base.Base" title="seisflows3.optimize.base.Base"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Base</span></code></a></p></td>
+<td><p>Nonlinear optimization abstract base class.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.optimize.base.PAR" title="seisflows3.optimize.base.PAR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PAR</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.optimize.base.PATH" title="seisflows3.optimize.base.PATH"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PATH</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.optimize.base.solver" title="seisflows3.optimize.base.solver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">solver</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.PAR">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.optimize.base.</span></span><span class="sig-name descname"><span class="pre">PAR</span></span><a class="headerlink" href="#seisflows3.optimize.base.PAR" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.PATH">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.optimize.base.</span></span><span class="sig-name descname"><span class="pre">PATH</span></span><a class="headerlink" href="#seisflows3.optimize.base.PATH" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.solver">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.optimize.base.</span></span><span class="sig-name descname"><span class="pre">solver</span></span><a class="headerlink" href="#seisflows3.optimize.base.solver" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.optimize.base.</span></span><span class="sig-name descname"><span class="pre">Base</span></span><a class="headerlink" href="#seisflows3.optimize.base.Base" title="Permalink to this definition"></a></dt>
+<dd><p>Nonlinear optimization abstract base class.</p>
+<p>This base class provides a steepest descent optimization algorithm.</p>
+<p>Nonlinear conjugate, quasi-Newton and Newton methods can be implemented on
+top of this base class.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>To reduce memory overhead, vectors are read from disk rather than passed
+from calling routines. For example, at the beginning of
+compute_direction the current gradient is  read from  ‘g_new’ and the
+resulting search direction is written to ‘p_new’. As the inversion
+progresses, other information is stored as well.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The default numerical parameters defined below should work well for a
+range of applications without manual tuning. If the nonlinear
+optimization procedure stagnates, it may be due to issues involving
+data quality or the choice of data misfit, data processing, or
+regularization parameters.  Problems in any of these areas usually
+manifest themselves through stagnation of the nonlinear optimization
+algorithm.</p>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.logger">
+<span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#seisflows3.optimize.base.Base.logger" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.required">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">required</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.required" title="Permalink to this definition"></a></dt>
+<dd><p>A hard definition of paths and parameters required by this class,
+alongside their necessity for the class and their string explanations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.check">
+<span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.check" title="Permalink to this definition"></a></dt>
+<dd><p>Checks parameters, paths, and dependencies</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.setup">
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.setup" title="Permalink to this definition"></a></dt>
+<dd><p>Sets up nonlinear optimization machinery</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.eval_str">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">eval_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.eval_str" title="Permalink to this definition"></a></dt>
+<dd><p>Print out the evaluation string, which states what iteration and line
+search step count we are at. Useful for log statements</p>
+<p>For example, an inversion at iteration 1 and step count 2 will return
+‘i01s02’</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.compute_direction">
+<span class="sig-name descname"><span class="pre">compute_direction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.compute_direction" title="Permalink to this definition"></a></dt>
+<dd><p>Computes a steepest descent search direction (inverse gradient)
+with an optional user-defined preconditioner.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Other optimization algorithms must overload this method</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.initialize_search">
+<span class="sig-name descname"><span class="pre">initialize_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.initialize_search" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize the plugin line search machinery. Should only be run at
+the beginning of line search, by the main workflow module.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.update_search">
+<span class="sig-name descname"><span class="pre">update_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.update_search" title="Permalink to this definition"></a></dt>
+<dd><p>Updates line search status and step length and checks if the line search
+has been completed.</p>
+<dl class="simple">
+<dt>Available status codes from line_search.update():</dt><dd><p>status == 1  : finished
+status == 0 : not finished
+status == -1  : failed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.finalize_search">
+<span class="sig-name descname"><span class="pre">finalize_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.finalize_search" title="Permalink to this definition"></a></dt>
+<dd><p>Prepares algorithm machinery and scratch directory for next model update</p>
+<p>Removes old model/search parameters, moves current parameters to old,
+sets up new current parameters and writes statistic outputs</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.retry_status">
+<span class="sig-name descname"><span class="pre">retry_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.retry_status" title="Permalink to this definition"></a></dt>
+<dd><p>After a failed line search, this determines if restart is worthwhile
+by checking, in effect, if the search direction was the same as gradient
+direction</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.restart">
+<span class="sig-name descname"><span class="pre">restart</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.restart" title="Permalink to this definition"></a></dt>
+<dd><p>Restarts nonlinear optimization algorithm for any schema that is NOT
+steepest descent (default base class).</p>
+<p>Keeps current position in model space, but discards history of
+nonlinear optimization algorithm in an attempt to recover from
+numerical stagnation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.write_stats">
+<span class="sig-name descname"><span class="pre">write_stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'18.6E'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.write_stats" title="Permalink to this definition"></a></dt>
+<dd><p>Simplified write function to append values to text files in the
+STATSDIR. Used because stats line search information can be overwritten
+by subsequent iterations so we need to append values to text files
+if they should be retained.</p>
+<p>Log files will look something like:</p>
+<p>ITER  FACTOR
+====  ======</p>
+<blockquote>
+<div><p>1     0.0</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>log</strong> (<em>str</em>) – name of the file to write to. Will append .txt to it</p></li>
+<li><p><strong>value</strong> (<em>float</em>) – value to write to file</p></li>
+<li><p><strong>format</strong> (<em>str</em>) – string formatter for value</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.check_model">
+<span class="sig-name descname"><span class="pre">check_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.check_model" title="Permalink to this definition"></a></dt>
+<dd><p>Check to ensure that the model parameters fall within the guidelines
+of the solver. Print off min/max model parameters for the User.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>m</strong> (<em>np.array</em>) – model to check parameters of</p></li>
+<li><p><strong>tag</strong> (<em>str</em>) – tag of the model to be used for more specific error msgs</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.load">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.load" title="Permalink to this definition"></a></dt>
+<dd><p>Convenience function to reads vectors from disk as Numpy files,
+reads directly from PATH.OPTIMIZE. Works around Numpy’s behavior of
+appending ‘.npy’ to files that it saves.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – filename to read from</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>np.array</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>vector read from disk</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.save">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">array</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.save" title="Permalink to this definition"></a></dt>
+<dd><p>Convenience function to write vectors to disk as numpy files.
+Reads directly from PATH.OPTIMIZE</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<em>str</em>) – filename to read from</p></li>
+<li><p><strong>array</strong> (<em>np.array</em>) – array to be saved</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.loadtxt">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">loadtxt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.loadtxt" title="Permalink to this definition"></a></dt>
+<dd><p>Reads scalars from optimize directory on disk,
+accounts for savetxt() appending file extension</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – filename to read from</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>scalar read from disk</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.base.Base.savetxt">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">savetxt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scalar</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.base.Base.savetxt" title="Permalink to this definition"></a></dt>
+<dd><p>Writes scalars to disk with a specific format, appends .txt to the
+filename to make it clear that these are text files.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<em>str</em>) – filename to read from</p></li>
+<li><p><strong>scalar</strong> (<em>float</em>) – value to write to disk</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

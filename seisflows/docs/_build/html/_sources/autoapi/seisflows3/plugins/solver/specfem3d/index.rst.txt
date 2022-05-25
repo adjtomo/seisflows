@@ -1,0 +1,45 @@
+:py:mod:`seisflows3.plugins.solver.specfem3d`
+=============================================
+
+.. py:module:: seisflows3.plugins.solver.specfem3d
+
+.. autoapi-nested-parse::
+
+   Plugins used for the numerical solver SPECFEM3D_CARTESIAN
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.plugins.solver.specfem3d.write_sources
+   seisflows3.plugins.solver.specfem3d.write_receivers
+
+
+
+.. py:function:: write_sources(par, h, path='.')
+
+   Writes FORCESOLUTION source information to text file
+
+   :type par: dict
+   :param par: seisflows.PAR
+   :type h:
+   :param h:
+   :type path: str
+   :param path: path to write sources to
+
+
+.. py:function:: write_receivers(h)
+
+   Writes receiver information to text file
+
+   :type h:
+   :param h:
+
+

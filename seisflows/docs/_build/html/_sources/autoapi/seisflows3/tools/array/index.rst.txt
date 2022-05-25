@@ -1,0 +1,107 @@
+:py:mod:`seisflows3.tools.array`
+================================
+
+.. py:module:: seisflows3.tools.array
+
+.. autoapi-nested-parse::
+
+   Tools useful for array manipulation in Seisflows
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tools.array.count_zeros
+   seisflows3.tools.array.sortrows
+   seisflows3.tools.array.uniquerows
+   seisflows3.tools.array.stack
+   seisflows3.tools.array.gridsmooth
+   seisflows3.tools.array.meshsmooth
+   seisflows3.tools.array.mesh2grid
+   seisflows3.tools.array.grid2mesh
+
+
+
+.. py:function:: count_zeros(a)
+
+   Counts number of zeros in a list or array
+
+   :type a: list or np.array
+   :param a: list to count the number of zeros in
+   :rtype: int
+   :return: number of zeros in a
+
+
+.. py:function:: sortrows(a, return_index=False, return_inverse=False)
+
+   Sorts the rows of a numpy array. By default returns only the sorted array
+
+   :type a: np.array
+   :param a: array to sort
+   :type return_index: bool
+   :param return_index: return the indices and the sorted array
+   :type return_inverse: bool
+   :param return_inverse: returns the inverse sorted array as well
+
+
+.. py:function:: uniquerows(a, sort_array=False, return_index=False)
+
+   Finds unique rows of numpy array
+
+   :type a: np.array
+   :param a: array to find rows of
+   :type sort_array: bool
+   :param sort_array: sort the rows before findingunique rows
+   :type return_index: bool
+   :param return_index: return indices as well as the unique rows
+
+
+.. py:function:: stack(*args)
+
+   Column-wise stack arrays
+
+
+.. py:function:: gridsmooth(Z, span)
+
+   Smooths values on 2D rectangular grid
+
+   Note:
+       'grid': set of structured coordinates,
+       'mesh': set of unstructured coordinates
+
+   :type Z: np.array
+   :param Z: array to smooth
+   :type span: float
+   :param span: span to smooth along
+   :rtype: np.array
+   :return: smoothed array
+
+
+.. py:function:: meshsmooth(v, mesh, span)
+
+   Smooths values on 2D unstructured mesh
+
+   Note:
+       'grid': set of structured coordinates,
+       'mesh': set of unstructured coordinates
+
+
+.. py:function:: mesh2grid(v, mesh)
+
+   Interpolates from an unstructured coordinates (mesh) to a structured
+   coordinates (grid)
+
+
+.. py:function:: grid2mesh(V, grid, mesh)
+
+   Interpolates from structured coordinates (grid) to unstructured
+   coordinates (mesh)
+
+

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../../" id="documentation_options" src="../../../../../_static/documentation_options.js"></script>
+        <script src="../../../../../_static/jquery.js"></script>
+        <script src="../../../../../_static/underscore.js"></script>
+        <script src="../../../../../_static/doctools.js"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../../_sources/autoapi/seisflows3/scripts/examples/ex1_specfem2d_workstation_inversion/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion">
+<span id="seisflows3-scripts-examples-ex1-specfem2d-workstation-inversion"></span><h1><a class="reference internal" href="#module-seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion" title="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion</span></code></a><a class="headerlink" href="#module-seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion" title="Permalink to this headline"></a></h1>
+<blockquote>
+<div><p>SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE 1</p>
+</div></blockquote>
+<p>This example will run two iterations of an inversion to assess misfit between
+a homogeneous halfspace model and a slightly perturbed homogeneous halfspace
+model using 3 events and 1 receiver.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You can change the number of events (NTASK) and iterations (NITER) by
+changing the constants below the import statements</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Because we are using 3 events and only 1 receiver, the results of this
+inversion will be of questionable quality. This example is only meant
+to highlight how SeisFlows3 operates during an inversion workflow.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The tasks involved include:
+1. Download, configure and compile SPECFEM2D
+2. Set up a SPECFEM2D working directory
+3. Generate starting model from Tape2007 example
+4. Generate target model w/ perturbed starting model
+5. Set up a SeisFlows3 working directory
+6. Run two iterations of an inversion workflow</p>
+</div>
+<p class="rubric">$ seisflows examples run 1</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D" title="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SF3Example2D</span></code></a></p></td>
+<td><p>A class for running SeisFlows3 examples. Simplifies calls structure so that</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.sf3ex2d" title="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.sf3ex2d"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sf3ex2d</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.</span></span><span class="sig-name descname"><span class="pre">SF3Example2D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ntask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">niter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D" title="Permalink to this definition"></a></dt>
+<dd><p>A class for running SeisFlows3 examples. Simplifies calls structure so that
+multiple example runs can benefit from the code written here</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.define_dir_structures">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">define_dir_structures</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cwd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">specfem2d_repo</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ex</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Tape2007'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.define_dir_structures" title="Permalink to this definition"></a></dt>
+<dd><p>Define the example directory structure, which will contain abridged
+versions of the SPECFEM2D working directory</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cwd</strong> (<em>str</em>) – current working directory</p></li>
+<li><p><strong>specfem2d_repo</strong> (<em>str</em>) – location of the SPECFEM2D repository</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.download_specfem2d">
+<span class="sig-name descname"><span class="pre">download_specfem2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.download_specfem2d" title="Permalink to this definition"></a></dt>
+<dd><p>Download the latest version of SPECFEM2D from GitHub, devel branch.
+Last successfully tested 4/28/22</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.configure_specfem2d_and_make_binaries">
+<span class="sig-name descname"><span class="pre">configure_specfem2d_and_make_binaries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.configure_specfem2d_and_make_binaries" title="Permalink to this definition"></a></dt>
+<dd><p>Run ./configure within the SPECFEM2D repo directory.
+This function assumes it is being run from inside the repo. Should guess
+all the configuration options. Probably the least stable part of the
+example</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.create_specfem2d_working_directory">
+<span class="sig-name descname"><span class="pre">create_specfem2d_working_directory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.create_specfem2d_working_directory" title="Permalink to this definition"></a></dt>
+<dd><p>Create the working directory where we will generate our initial and
+final models using one of the SPECFEM2D examples</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.setup_specfem2d_for_model_init">
+<span class="sig-name descname"><span class="pre">setup_specfem2d_for_model_init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.setup_specfem2d_for_model_init" title="Permalink to this definition"></a></dt>
+<dd><p>Make some adjustments to the original parameter file to.
+This function assumes it is running from inside the SPECFEM2D/DATA dir</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.setup_specfem2d_for_model_true">
+<span class="sig-name descname"><span class="pre">setup_specfem2d_for_model_true</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.setup_specfem2d_for_model_true" title="Permalink to this definition"></a></dt>
+<dd><p>Make some adjustments to the parameter file to create the final velocity
+model. This function assumes it is running from inside the
+SPECFEM2D/DATA directory</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.run_xspecfem2d_binaries">
+<span class="sig-name descname"><span class="pre">run_xspecfem2d_binaries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.run_xspecfem2d_binaries" title="Permalink to this definition"></a></dt>
+<dd><p>Runs the xmeshfem2d and then xspecfem2d binaries using subprocess and then
+do some cleanup to get files in the correct locations. Assumes that we
+can run the binaries directly with ‘./’</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.cleanup_xspecfem2d_run">
+<span class="sig-name descname"><span class="pre">cleanup_xspecfem2d_run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">choice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.cleanup_xspecfem2d_run" title="Permalink to this definition"></a></dt>
+<dd><p>Do some cleanup after running the SPECFEM2D binaries to make sure files
+are in the correct locations, and rename the OUTPUT_FILES directory so
+that it does not get overwritten by subsequent runs</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>choice</strong> (<em>str</em>) – Rename the OUTPUT_FILES directory with a suffix tag
+msut be ‘INIT’ or ‘TRUE’. If None, will not rename but the</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.setup_seisflows_working_directory">
+<span class="sig-name descname"><span class="pre">setup_seisflows_working_directory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.setup_seisflows_working_directory" title="Permalink to this definition"></a></dt>
+<dd><p>Create and set the SeisFlows3 parameter file, making sure all required
+parameters are set correctly for this example problem</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.finalize_specfem2d_par_file">
+<span class="sig-name descname"><span class="pre">finalize_specfem2d_par_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.finalize_specfem2d_par_file" title="Permalink to this definition"></a></dt>
+<dd><p>Last minute changes to get the SPECFEM2D Par_file in the correct format
+for running SeisFlows3. Setting model type to read from .bin GLL files
+change number of stations etc.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.run_sf3_example">
+<span class="sig-name descname"><span class="pre">run_sf3_example</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.run_sf3_example" title="Permalink to this definition"></a></dt>
+<dd><p>Use subprocess to run the SeisFlows3 example we just set up</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.main">
+<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D.main" title="Permalink to this definition"></a></dt>
+<dd><p>Setup the example and then optionally run the actual seisflows workflow</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.sf3ex2d">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.</span></span><span class="sig-name descname"><span class="pre">sf3ex2d</span></span><a class="headerlink" href="#seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.sf3ex2d" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

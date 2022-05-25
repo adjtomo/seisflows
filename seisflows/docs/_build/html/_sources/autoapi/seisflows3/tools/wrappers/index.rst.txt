@@ -1,0 +1,216 @@
+:py:mod:`seisflows3.tools.wrappers`
+===================================
+
+.. py:module:: seisflows3.tools.wrappers
+
+.. autoapi-nested-parse::
+
+   Wrappers of commonly used functions to reduce line count and provide an
+   aesthetically similar look in SeisFlows3. Mostly concerend with file
+   manipulation, but also math and calling functions as well.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tools.wrappers.Struct
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tools.wrappers.diff
+   seisflows3.tools.wrappers.divides
+   seisflows3.tools.wrappers.exists
+   seisflows3.tools.wrappers.findpath
+   seisflows3.tools.wrappers.iterable
+   seisflows3.tools.wrappers.module_exists
+   seisflows3.tools.wrappers.package_exists
+   seisflows3.tools.wrappers.pkgpath
+   seisflows3.tools.wrappers.timestamp
+   seisflows3.tools.wrappers.loadyaml
+   seisflows3.tools.wrappers.getset
+   seisflows3.tools.wrappers.parse_null
+   seisflows3.tools.wrappers.loadtxt
+   seisflows3.tools.wrappers.savetxt
+   seisflows3.tools.wrappers.number_fid
+   seisflows3.tools.wrappers.nproc
+   seisflows3.tools.wrappers._nproc_method1
+   seisflows3.tools.wrappers._nproc_method2
+
+
+
+.. py:class:: Struct(*args, **kwargs)
+
+   Bases: :py:obj:`dict`
+
+   Revised dictionary structure
+
+
+.. py:function:: diff(list1, list2)
+
+   Difference between unique elements of lists
+
+   :type list1: list
+   :param list1: first list
+   :type list2: list
+   :param list2: second list
+
+
+.. py:function:: divides(i, j)
+
+   Return True if `j` divides `i`.
+
+   Bryant: I don't think this works in python3?
+
+   :type i: int
+   :type j :int
+
+
+.. py:function:: exists(names)
+
+   Wrapper for os.path.exists that also works on lists
+
+   :type names: list or str
+   :param names: list of names to check existnce
+
+
+.. py:function:: findpath(name)
+
+   Resolves absolute path of module
+
+   :type name: str
+   :param name: absolute path of str
+
+
+.. py:function:: iterable(arg)
+
+   Make an argument iterable
+
+   :param arg: an argument to make iterable
+   :type: list
+   :return: iterable argument
+
+
+.. py:function:: module_exists(name)
+
+   Determine if a module loader exists
+
+   :type name: str
+   :param name: name of module
+
+
+.. py:function:: package_exists(name)
+
+   Determine if a package exists
+
+   :type name: str
+   :param name: name of package
+
+
+.. py:function:: pkgpath(name)
+
+   Path to Seisflows package
+
+   :type name: str
+   :param name: name of package
+
+
+.. py:function:: timestamp()
+
+   Return a timestamp for current time
+
+
+.. py:function:: loadyaml(filename)
+
+   Define how the PyYaml yaml loading function behaves. 
+   Replaces None and inf strings with NoneType and numpy.inf respectively
+
+   :type filename: str
+   :param filename: .yaml file to load in
+
+
+.. py:function:: getset(arg)
+
+   Return a set object
+
+   :type arg: None, str or list
+   :param arg: argument to turn into a set
+   :rtype: set
+   :return: a set of the given argument
+
+
+.. py:function:: parse_null(dictionary)
+
+   Remove null, None or '' values from a dictionary
+
+   :type dictionary: dict
+   :param dictionary: dict of parameters to parse
+   :rtype: dict
+   :return: dictionary that has been sanitized of all null values
+
+
+.. py:function:: loadtxt(filename)
+
+   Load scalar from text file
+
+
+.. py:function:: savetxt(filename, v)
+
+   Save scalar to text file
+
+
+.. py:function:: number_fid(fid, i=0)
+
+   Number a filename. Used to store old log files without overwriting them.
+   Premise is, if you have a file e.g., called: output.txt
+   This function would return incrementing filenames:
+   output_000.txt, output_001.txt, output_002.txt, ouput_003.txt ...
+
+   .. note::
+       Replace statement is catch all so we assume that there is only one         instance of the file extension in the entire path.
+
+   :type fid: str
+   :param fid: path to the file that you want to increment
+   :type i: int
+   :param i: number to append to file id
+   :rtype: str
+   :return: filename with appended number. filename ONLY, will strip away
+       the original path location
+
+
+.. py:function:: nproc()
+
+   Get the number of processors available
+
+   :rtype: int
+   :return: number of processors
+
+
+.. py:function:: _nproc_method1()
+
+   Used subprocess to determine the number of processeors available
+
+   :rtype: int
+   :return: number of processors
+
+
+.. py:function:: _nproc_method2()
+
+   Get number of processors using /proc/cpuinfo
+
+   Bryant: This doesnt work?
+
+   :rtype: int
+   :return: number of processors
+
+

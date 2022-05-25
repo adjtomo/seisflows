@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.solver.specfem3d &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.solver.specfem3d</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3/solver/specfem3d/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.solver.specfem3d">
+<span id="seisflows3-solver-specfem3d"></span><h1><a class="reference internal" href="#module-seisflows3.solver.specfem3d" title="seisflows3.solver.specfem3d"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.solver.specfem3d</span></code></a><a class="headerlink" href="#module-seisflows3.solver.specfem3d" title="Permalink to this headline"></a></h1>
+<p>This is the subclass seisflows.solver.Specfem3D
+This class provides utilities for the Seisflows solver interactions with
+Specfem3D Cartesian. It inherits all attributes from seisflows3.solver.Base,
+and overwrites these functions to provide specified interaction with Specfem3D</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.solver.specfem3d.Specfem3D" title="seisflows3.solver.specfem3d.Specfem3D"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Specfem3D</span></code></a></p></td>
+<td><p>Python interface to Specfem3D Cartesian. This subclass inherits functions</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.solver.specfem3d.PAR" title="seisflows3.solver.specfem3d.PAR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PAR</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.solver.specfem3d.PATH" title="seisflows3.solver.specfem3d.PATH"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PATH</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.solver.specfem3d.system" title="seisflows3.solver.specfem3d.system"><code class="xref py py-obj docutils literal notranslate"><span class="pre">system</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.solver.specfem3d.preprocess" title="seisflows3.solver.specfem3d.preprocess"><code class="xref py py-obj docutils literal notranslate"><span class="pre">preprocess</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.PAR">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.solver.specfem3d.</span></span><span class="sig-name descname"><span class="pre">PAR</span></span><a class="headerlink" href="#seisflows3.solver.specfem3d.PAR" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.PATH">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.solver.specfem3d.</span></span><span class="sig-name descname"><span class="pre">PATH</span></span><a class="headerlink" href="#seisflows3.solver.specfem3d.PATH" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.system">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.solver.specfem3d.</span></span><span class="sig-name descname"><span class="pre">system</span></span><a class="headerlink" href="#seisflows3.solver.specfem3d.system" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.preprocess">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.solver.specfem3d.</span></span><span class="sig-name descname"><span class="pre">preprocess</span></span><a class="headerlink" href="#seisflows3.solver.specfem3d.preprocess" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.solver.specfem3d.</span></span><span class="sig-name descname"><span class="pre">Specfem3D</span></span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">custom_import</span></code>(<code class="xref py py-obj docutils literal notranslate"><span class="pre">'solver'</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">'base'</span></code>)</p>
+<p>Python interface to Specfem3D Cartesian. This subclass inherits functions
+from seisflows3.solver.Base</p>
+<p>!!! See base class for method descriptions !!!</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.logger">
+<span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.logger" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.required">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">required</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.required" title="Permalink to this definition"></a></dt>
+<dd><p>A hard definition of paths and parameters required by this class,
+alongside their necessity for the class and their string explanations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.check">
+<span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.check" title="Permalink to this definition"></a></dt>
+<dd><p>Checks parameters and paths</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.generate_data">
+<span class="sig-name descname"><span class="pre">generate_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">model_kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.generate_data" title="Permalink to this definition"></a></dt>
+<dd><p>Generates data using the True model, exports traces to <cite>traces/obs</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model_kwargs</strong> – keyword arguments to pass to <cite>generate_mesh</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.generate_mesh">
+<span class="sig-name descname"><span class="pre">generate_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.generate_mesh" title="Permalink to this definition"></a></dt>
+<dd><p>Performs meshing with internal mesher Meshfem3D and database generation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_path</strong> (<em>str</em>) – path to the model to be used for mesh generation</p></li>
+<li><p><strong>model_name</strong> (<em>str</em>) – name of the model to be used as identification</p></li>
+<li><p><strong>model_type</strong> (<em>str</em>) – available model types to be passed to the Specfem3D
+Par_file. See Specfem3D Par_file for available options.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.eval_func">
+<span class="sig-name descname"><span class="pre">eval_func</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.eval_func" title="Permalink to this definition"></a></dt>
+<dd><p>Call eval_func from Base class</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'traces/syn'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.forward" title="Permalink to this definition"></a></dt>
+<dd><p>Calls SPECFEM3D forward solver, exports solver outputs to traces dir</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – path to export traces to after completion of simulation</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.adjoint">
+<span class="sig-name descname"><span class="pre">adjoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.adjoint" title="Permalink to this definition"></a></dt>
+<dd><p>Calls SPECFEM3D adjoint solver, creates the <cite>SEM</cite> folder with adjoint
+traces which is required by the adjoint solver</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.check_solver_parameter_files">
+<span class="sig-name descname"><span class="pre">check_solver_parameter_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.check_solver_parameter_files" title="Permalink to this definition"></a></dt>
+<dd><p>Checks solver parameters</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.initialize_adjoint_traces">
+<span class="sig-name descname"><span class="pre">initialize_adjoint_traces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.initialize_adjoint_traces" title="Permalink to this definition"></a></dt>
+<dd><p>Setup utility: Creates the “adjoint traces” expected by SPECFEM</p>
+<dl class="simple">
+<dt>Note:</dt><dd><p>Adjoint traces are initialized by writing zeros for all channels.
+Channels actually in use during an inversion or migration will be
+overwritten with nonzero values later on.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.rename_data">
+<span class="sig-name descname"><span class="pre">rename_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.rename_data" title="Permalink to this definition"></a></dt>
+<dd><p>Works around conflicting data filename conventions</p>
+<p>Specfem3D’s uses different name conventions for regular traces
+and ‘adjoint’ traces</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.write_parameters">
+<span class="sig-name descname"><span class="pre">write_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.write_parameters" title="Permalink to this definition"></a></dt>
+<dd><p>Write a set of parameters</p>
+<dl class="simple">
+<dt>!!! This calls on plugins.solver.specfem3d.write_parameters()</dt><dd><p>but that function doesn’t exist !!!</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.write_receivers">
+<span class="sig-name descname"><span class="pre">write_receivers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.write_receivers" title="Permalink to this definition"></a></dt>
+<dd><p>Write a list of receivers into a text file</p>
+<dl class="simple">
+<dt>!!! This calls on plugins.solver.specfem3d.write_receivers()</dt><dd><p>but incorrect number of parameters is forwarded !!!</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.write_sources">
+<span class="sig-name descname"><span class="pre">write_sources</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.write_sources" title="Permalink to this definition"></a></dt>
+<dd><p>Write sources to text file</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.data_wildcard">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">data_wildcard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.data_wildcard" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a wildcard identifier for synthetic data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>wildcard identifier for channels</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.data_filenames">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">data_filenames</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.data_filenames" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the filenames of all data, either by the requested components
+or by all available files in the directory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>list of data filenames</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.kernel_databases">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">kernel_databases</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.kernel_databases" title="Permalink to this definition"></a></dt>
+<dd><p>The location of databases for kernel outputs, relative to the current
+working directory.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.model_databases">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">model_databases</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.model_databases" title="Permalink to this definition"></a></dt>
+<dd><p>The location of databases for model outputs</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.solver.specfem3d.Specfem3D.source_prefix">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">source_prefix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.solver.specfem3d.Specfem3D.source_prefix" title="Permalink to this definition"></a></dt>
+<dd><p>Specfem3D’s preferred source prefix</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>source prefix</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

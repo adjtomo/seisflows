@@ -1,0 +1,157 @@
+:py:mod:`seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion`
+=========================================================================
+
+.. py:module:: seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion
+
+.. autoapi-nested-parse::
+
+                   SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE 1
+
+   This example will run two iterations of an inversion to assess misfit between
+   a homogeneous halfspace model and a slightly perturbed homogeneous halfspace
+   model using 3 events and 1 receiver.
+
+   .. note::
+       You can change the number of events (NTASK) and iterations (NITER) by
+       changing the constants below the import statements
+
+   .. warning::
+       Because we are using 3 events and only 1 receiver, the results of this
+       inversion will be of questionable quality. This example is only meant
+       to highlight how SeisFlows3 operates during an inversion workflow.
+
+   .. note::
+       The tasks involved include:
+       1. Download, configure and compile SPECFEM2D
+       2. Set up a SPECFEM2D working directory
+       3. Generate starting model from Tape2007 example
+       4. Generate target model w/ perturbed starting model
+       5. Set up a SeisFlows3 working directory
+       6. Run two iterations of an inversion workflow
+
+   .. rubric::
+       $ seisflows examples run 1
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.SF3Example2D
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.scripts.examples.ex1_specfem2d_workstation_inversion.sf3ex2d
+
+
+.. py:class:: SF3Example2D(ntask=3, niter=2)
+
+   A class for running SeisFlows3 examples. Simplifies calls structure so that
+   multiple example runs can benefit from the code written here
+
+   .. py:method:: define_dir_structures(cwd, specfem2d_repo, ex='Tape2007')
+      :staticmethod:
+
+      Define the example directory structure, which will contain abridged
+      versions of the SPECFEM2D working directory
+
+      :type cwd: str
+      :param cwd: current working directory
+      :type specfem2d_repo: str
+      :param specfem2d_repo: location of the SPECFEM2D repository
+      :type ex: str
+      :type ex: The name of the example problem inside SPECFEM2D/EXAMPLES
+
+
+   .. py:method:: download_specfem2d(self)
+
+      Download the latest version of SPECFEM2D from GitHub, devel branch.
+      Last successfully tested 4/28/22
+
+
+   .. py:method:: configure_specfem2d_and_make_binaries(self)
+
+      Run ./configure within the SPECFEM2D repo directory.
+      This function assumes it is being run from inside the repo. Should guess
+      all the configuration options. Probably the least stable part of the
+      example
+
+
+   .. py:method:: create_specfem2d_working_directory(self)
+
+      Create the working directory where we will generate our initial and
+      final models using one of the SPECFEM2D examples
+
+
+   .. py:method:: setup_specfem2d_for_model_init(self)
+
+      Make some adjustments to the original parameter file to.
+      This function assumes it is running from inside the SPECFEM2D/DATA dir
+
+
+
+   .. py:method:: setup_specfem2d_for_model_true(self)
+
+      Make some adjustments to the parameter file to create the final velocity
+      model. This function assumes it is running from inside the
+      SPECFEM2D/DATA directory
+
+
+   .. py:method:: run_xspecfem2d_binaries(self)
+
+      Runs the xmeshfem2d and then xspecfem2d binaries using subprocess and then
+      do some cleanup to get files in the correct locations. Assumes that we
+      can run the binaries directly with './'
+
+
+   .. py:method:: cleanup_xspecfem2d_run(self, choice=None)
+
+      Do some cleanup after running the SPECFEM2D binaries to make sure files
+      are in the correct locations, and rename the OUTPUT_FILES directory so
+      that it does not get overwritten by subsequent runs
+
+      :type choice: str
+      :param choice: Rename the OUTPUT_FILES directory with a suffix tag
+          msut be 'INIT' or 'TRUE'. If None, will not rename but the
+
+
+   .. py:method:: setup_seisflows_working_directory(self)
+
+      Create and set the SeisFlows3 parameter file, making sure all required
+      parameters are set correctly for this example problem
+
+
+   .. py:method:: finalize_specfem2d_par_file(self)
+
+      Last minute changes to get the SPECFEM2D Par_file in the correct format
+      for running SeisFlows3. Setting model type to read from .bin GLL files
+      change number of stations etc.
+
+
+   .. py:method:: run_sf3_example(self)
+
+      Use subprocess to run the SeisFlows3 example we just set up
+
+
+   .. py:method:: main(self)
+
+      Setup the example and then optionally run the actual seisflows workflow
+
+
+
+.. py:data:: sf3ex2d
+   
+
+   
+

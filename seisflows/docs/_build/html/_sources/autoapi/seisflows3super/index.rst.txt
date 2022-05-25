@@ -1,0 +1,20 @@
+:py:mod:`seisflows3-super`
+==========================
+
+.. py:module:: seisflows3-super
+
+
+Subpackages
+-----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 3
+
+   optimize/index.rst
+   postprocess/index.rst
+   preprocess/index.rst
+   solver/index.rst
+   system/index.rst
+   workflow/index.rst
+
+

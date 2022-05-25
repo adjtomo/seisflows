@@ -1,0 +1,206 @@
+:py:mod:`seisflows3.tools.specfem`
+==================================
+
+.. py:module:: seisflows3.tools.specfem
+
+.. autoapi-nested-parse::
+
+   Utilities to interact with, manipulate or call on the external solver, 
+   i.e., SPECFEM2D/3D/3D_GLOBE
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tools.specfem.Minmax
+   seisflows3.tools.specfem.Container
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tools.specfem.call_solver
+   seisflows3.tools.specfem.getpar
+   seisflows3.tools.specfem.setpar
+   seisflows3.tools.specfem.getpar_vel_model
+   seisflows3.tools.specfem.setpar_vel_model
+   seisflows3.tools.specfem.check_poissons_ratio
+   seisflows3.tools.specfem._split
+   seisflows3.tools.specfem._merge
+   seisflows3.tools.specfem._zip
+
+
+
+.. py:class:: Minmax
+
+   Bases: :py:obj:`collections.defaultdict`
+
+   Keeps track of min, max values of model or kernel
+
+   .. py:method:: update(self, keys, vals)
+
+      D.update([E, ]**F) -> None.  Update D from dict/iterable E and F.
+      If E is present and has a .keys() method, then does:  for k in E: D[k] = E[k]
+      If E is present and lacks a .keys() method, then does:  for k, v in E: D[k] = v
+      In either case, this is followed by: for k in F:  D[k] = F[k]
+
+
+   .. py:method:: __call__(self, key)
+
+
+
+.. py:class:: Container
+
+   Bases: :py:obj:`collections.defaultdict`
+
+   Dictionary-like object for holding models or kernels
+
+
+.. py:function:: call_solver(mpiexec, executable, output='solver.log')
+
+   Calls MPI solver executable to run solver binaries, used by individual
+   processes to run the solver on system. If the external solver returns a 
+   non-zero exit code (failure), this function will return a negative boolean.
+
+   :type mpiexec: str
+   :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
+   :type executable: str
+   :param executable: executable function to call
+   :type output: str
+   :param output: where to redirect stdout
+
+
+.. py:function:: getpar(key, file, delim='=', match_partial=False)
+
+   Reads and returns parameters from a SPECFEM or SeisFlows3 parameter file
+   Assumes the parameter file is formatted in the following way:
+
+   # comment comment comment
+   {key}      {delim} VAL
+
+   :type key: str
+   :param key: case-insensitive key to match in par_file. must be EXACT match
+   :type file: str
+   :param file: The SPECFEM Par_file to match against
+   :type delim: str
+   :param delim: delimiter between parameters and values within the file.
+       default is '=', which matches for SPECFEM2D and SPECFEM3D_Cartesian
+   :type match_partial: bool
+   :param match_partial: allow partial key matches, e.g., allow key='tit' to
+       return value for 'title'. Defaults to False as this can have
+       unintended consequences
+   :rtype: tuple (str, str, int)
+   :return: a tuple of the key, value and line number (indexed from 0).
+       The key will match exactly how it looks in the Par_file
+       The value will be returned as a string, regardless of its expected type
+       IF no matches found, returns (None, None, None)
+
+
+.. py:function:: setpar(key, val, file, delim='=', match_partial=False)
+
+   Overwrites parameter value to a SPECFEM Par_file.
+
+   :type key: str
+   :param key: case-insensitive key to match in par_file. must be EXACT match
+   :type val: str
+   :param val: value to OVERWRITE to the given key
+   :type file: str
+   :param file: The SPECFEM Par_file to match against
+   :type delim: str
+   :param delim: delimiter between parameters and values within the file.
+       default is '=', which matches for SPECFEM2D and SPECFEM3D_Cartesian
+   :type match_partial: bool
+   :param match_partial: allow partial key matches, e.g., allow key='tit' to
+       return value for 'title'. Defaults to False as this can have
+       unintended consequences
+
+
+.. py:function:: getpar_vel_model(file)
+
+   SPECFEM2D doesn't follow standard formatting when defining its internal
+   velocity models so we need a special function to address this specifically.
+   Velocity models are ASSUMED to be formatted in the following way in the
+   SPECFEM2D Par_file (with any number of comment lines in between)
+
+   nbmodels                        = 4
+   1 1 2700.d0 3000.d0 1732.051d0 0 0 9999 9999 0 0 0 0 0 0
+   2 1 2500.d0 2700.d0 0 0 0 9999 9999 0 0 0 0 0 0
+   3 1 2200.d0 2500.d0 1443.375d0 0 0 9999 9999 0 0 0 0 0 0
+   4 1 2200.d0 2200.d0 1343.375d0 0 0 9999 9999 0 0 0 0 0 0
+   TOMOGRAPHY_FILE                 = ./DATA/tomo_file.xyz
+
+   :type file: str
+   :param file: The SPECFEM Par_file to match against
+   :rtype: list of str
+   :return: list of all the layers of the velocity model as strings
+
+
+.. py:function:: setpar_vel_model(file, model)
+
+   Set velocity model values in a SPECFEM2D Par_file, see getpar_vel_model
+   for more information.
+
+   Deletes the old model from the Par_file, writes the new model in the same
+   place, and then changes the value of 'nbmodels'
+
+   :type file: str
+   :param file: The SPECFEM Par_file to match against
+   :type model: list of str
+   :param model: input model
+   :rtype: list of str
+   :return: list of all the layers of the velocity model as strings, e.g.:
+       model = ["1 1 2700.d0 3000.d0 1732.051d0 0 0 9999 9999 0 0 0 0 0 0",
+                "2 1 2500.d0 2700.d0 0 0 0 9999 9999 0 0 0 0 0 0"]
+
+
+.. py:function:: check_poissons_ratio(vp, vs, min_val=-1.0, max_val=0.5)
+
+   Check Poisson's ratio based on Vp and Vs model vectors. Exit SeisFlows3 if
+   Poisson's ratio is outside `min_val` or `max_val` which by default are
+   set internally by SPECFEM. Otherwise return the value
+
+   :type vp: np.array
+   :param vp: P-wave velocity model vector
+   :type vs: np.array
+   :param vp: S-wave velocity model vector
+   :type min_val: float
+   :param min_val: minimum model-wide acceptable value for poissons ratio
+   :type max_val: float
+   :param max_val: maximum model-wide acceptable value for poissons ratio
+   :return:
+
+
+.. py:function:: _split(string, sep)
+
+   Utility function to split a string by a given separation character or str
+
+   :type string: str
+   :param string: string to split
+   :type sep: str
+   :param sep: substring to split by
+
+
+.. py:function:: _merge(*parts)
+
+   Utility function to merge various strings together with no breaks
+
+
+.. py:function:: _zip(keys, vals)
+
+   Zip together keys and vals
+
+   :type keys: dict_keys
+   :param keys: keys
+   :type vals: dict_values
+   :param vals: values
+
+

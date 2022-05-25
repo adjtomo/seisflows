@@ -1,0 +1,110 @@
+:py:mod:`seisflows3.templates.sub_class`
+========================================
+
+.. py:module:: seisflows3.templates.sub_class
+
+.. autoapi-nested-parse::
+
+   This is a SeisFlows subclass which inherits attributes from a parent class
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.templates.sub_class.Subclass
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.templates.sub_class.PAR
+   seisflows3.templates.sub_class.PATH
+   seisflows3.templates.sub_class.system
+   seisflows3.templates.sub_class.solver
+   seisflows3.templates.sub_class.optimize
+   seisflows3.templates.sub_class.preprocess
+   seisflows3.templates.sub_class.postprocess
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:data:: system
+   
+
+   
+
+.. py:data:: solver
+   
+
+   
+
+.. py:data:: optimize
+   
+
+   
+
+.. py:data:: preprocess
+   
+
+   
+
+.. py:data:: postprocess
+   
+
+   
+
+.. py:class:: Subclass(*args, **kwargs)
+
+   Bases: :py:obj:`custom_import`\ (\ :py:obj:`'MODULE NAME HERE'`\ , :py:obj:`'PARENT CLASS NAME HERE'`\ )
+
+   This is a template subclass
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: required(self)
+      :property:
+
+      A hard definition of paths and parameters required by this class,
+      alongside their necessity for the class and their string explanations.
+
+      :rtype: seisflows.config.SeisFlowsPathsParameters
+      :return: Paths and parameters that define the given class
+
+
+
+   .. py:method:: check(self, validate=True)
+
+      Checks parameters and paths. The validate function ensures that all
+      required paths and parameters are accounted for, and that all
+      optional paths and parameters are set to user-defined or default values.
+
+
+   .. py:method:: test(self, *args, **kwargs)
+
+      This is an example OVERWRITE of the base_class.test() function.
+      If a super() statement is used, all the code within the base class
+      will be run.
+
+
+

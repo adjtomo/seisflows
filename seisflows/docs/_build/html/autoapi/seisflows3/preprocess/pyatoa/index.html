@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.preprocess.pyatoa &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.preprocess.pyatoa</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3/preprocess/pyatoa/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.preprocess.pyatoa">
+<span id="seisflows3-preprocess-pyatoa"></span><h1><a class="reference internal" href="#module-seisflows3.preprocess.pyatoa" title="seisflows3.preprocess.pyatoa"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.preprocess.pyatoa</span></code></a><a class="headerlink" href="#module-seisflows3.preprocess.pyatoa" title="Permalink to this headline"></a></h1>
+<p>The Pyatoa preprocessing module abstracts all preprocessing functionality
+onto Pyatoa (<a class="reference external" href="https://github.com/bch0w/pyatoa/">https://github.com/bch0w/pyatoa/</a>). The module defined below is
+meant to set up and execute Pyatoa within a running SeisFlows3 workflow.</p>
+<p>Pyatoa itself aggregates all of its connection with SeisFlows3 in the Pyaflowa
+class, a purpose built object used to simplify calling Pyatoa from within
+a SeisFlows3 workflow.</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.preprocess.pyatoa.Pyatoa" title="seisflows3.preprocess.pyatoa.Pyatoa"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Pyatoa</span></code></a></p></td>
+<td><p>Data preprocessing class using the Pyaflowa class within the Pyatoa package.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.preprocess.pyatoa.PAR" title="seisflows3.preprocess.pyatoa.PAR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PAR</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.preprocess.pyatoa.PATH" title="seisflows3.preprocess.pyatoa.PATH"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PATH</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.PAR">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.preprocess.pyatoa.</span></span><span class="sig-name descname"><span class="pre">PAR</span></span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.PAR" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.PATH">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.preprocess.pyatoa.</span></span><span class="sig-name descname"><span class="pre">PATH</span></span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.PATH" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.Pyatoa">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.preprocess.pyatoa.</span></span><span class="sig-name descname"><span class="pre">Pyatoa</span></span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.Pyatoa" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">custom_import</span></code>(<code class="xref py py-obj docutils literal notranslate"><span class="pre">'preprocess'</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">'base'</span></code>)</p>
+<p>Data preprocessing class using the Pyaflowa class within the Pyatoa package.
+In charge of data discovery, preprocessing, filtering, misfiti
+quantification and data storage. The User does not need to implement Pyatoa,
+but rather interacts with it via the parameters and paths of SeisFlows3.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.Pyatoa.logger">
+<span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.Pyatoa.logger" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.Pyatoa.required">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">required</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.Pyatoa.required" title="Permalink to this definition"></a></dt>
+<dd><p>A hard definition of paths and parameters required by this class,
+alongside their necessity for the class and their string explanations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.Pyatoa.check">
+<span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.Pyatoa.check" title="Permalink to this definition"></a></dt>
+<dd><p>Checks Parameter and Path files, will be run at the start of a Seisflows
+workflow to ensure that things are set appropriately.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.Pyatoa.setup">
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.Pyatoa.setup" title="Permalink to this definition"></a></dt>
+<dd><p>Sets up data preprocessing machinery by establishing an internally
+defined directory structure that will be used to store the outputs
+of the preprocessing workflow</p>
+<p>Akin to an __init__ class, but to be called externally by the workflow.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.Pyatoa.prepare_eval_grad">
+<span class="sig-name descname"><span class="pre">prepare_eval_grad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cwd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">taskid</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.Pyatoa.prepare_eval_grad" title="Permalink to this definition"></a></dt>
+<dd><p>Prepare the gradient evaluation by gathering, preprocessing waveforms,
+and measuring misfit between observations and synthetics using Pyatoa.</p>
+<p>Reads in observed and synthetic waveforms, applies optional
+preprocessing, assesses misfit, and writes out adjoint sources and
+STATIONS_ADJOINT file.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Meant to be called by solver.eval_func(), may have unused arguments
+to keep functions general across preprocessing subclasses.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cwd</strong> (<em>str</em>) – current specfem working directory containing observed and
+synthetic seismic data to be read and processed. Should be defined
+by solver.cwd</p></li>
+<li><p><strong>source_name</strong> (<em>str</em>) – the event id to be used for tagging and data lookup.
+Should be defined by solver.source_name</p></li>
+<li><p><strong>taskid</strong> (<em>int</em>) – identifier of the currently running solver instance.
+Should be defined by solver.taskid</p></li>
+<li><p><strong>filenames</strong> (<em>list of str</em>) – [not used] list of filenames defining the files in
+traces</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.Pyatoa.setup_event_pyaflowa">
+<span class="sig-name descname"><span class="pre">setup_event_pyaflowa</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.Pyatoa.setup_event_pyaflowa" title="Permalink to this definition"></a></dt>
+<dd><p>A convenience function to set up a Pyaflowa processing instance for
+a specific event.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is meant to be called by preprocess.prepare_eval_grad() but its
+also useful for debugging and manual processing where you can simply
+return a formatted Pyaflowa object and debug it directly.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>source_name</strong> (<em>str</em>) – solver source name to evaluate setup for. Must
+match from list defined by: solver.source_names</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.Pyatoa.finalize">
+<span class="sig-name descname"><span class="pre">finalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.Pyatoa.finalize" title="Permalink to this definition"></a></dt>
+<dd><p>Run some serial finalization tasks specific to Pyatoa, which will help
+aggregate the collection of output information.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This finalize function performs the following tasks:
+* Generate .csv files using the Inspector
+* Aggregate event-specific PDFs into a single evaluation PDF
+* Save scratch/ data into output/ if requested</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.Pyatoa._save_quantity">
+<span class="sig-name descname"><span class="pre">_save_quantity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepaths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.Pyatoa._save_quantity" title="Permalink to this definition"></a></dt>
+<dd><p>Repeatable convenience function to save quantities from the scratch/
+directory to the output/ directory</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepaths</strong> (<em>list</em>) – full path to files that should be saved to output/</p></li>
+<li><p><strong>tag</strong> (<em>str</em>) – tag for saving the files in PATH.OUTPUT. If not given, will
+save directly into the output/ directory</p></li>
+<li><p><strong>path_out</strong> (<em>str</em>) – overwrite the default output path file naming</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.Pyatoa.write_residuals">
+<span class="sig-name descname"><span class="pre">write_residuals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scaled_misfit</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.Pyatoa.write_residuals" title="Permalink to this definition"></a></dt>
+<dd><p>Computes residuals and saves them to a text file in the appropriate path</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – scratch directory path, e.g. PATH.GRAD or PATH.FUNC</p></li>
+<li><p><strong>scaled_misfit</strong> (<em>float</em>) – the summation of misfit from each
+source-receiver pair calculated by prepare_eval_grad()</p></li>
+<li><p><strong>source_name</strong> (<em>str</em>) – name of the source related to the misfit, used
+for file naming</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.preprocess.pyatoa.Pyatoa.sum_residuals">
+<span class="sig-name descname"><span class="pre">sum_residuals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">files</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.preprocess.pyatoa.Pyatoa.sum_residuals" title="Permalink to this definition"></a></dt>
+<dd><p>Averages the event misfits and returns the total misfit.
+Total misfit defined by Tape et al. (2010)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>files</strong> (<em>str</em>) – list of single-column text files containing residuals
+that will have been generated using prepare_eval_grad()</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>average misfit</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

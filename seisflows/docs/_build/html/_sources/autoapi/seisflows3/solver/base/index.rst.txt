@@ -1,0 +1,548 @@
+:py:mod:`seisflows3.solver.base`
+================================
+
+.. py:module:: seisflows3.solver.base
+
+.. autoapi-nested-parse::
+
+   This Solver module is in charge of interacting with external numerical solvers
+   such as SPECFEM (2D/3D/3D_GLOBE). The Base class provides general functions
+   that work with SPECFEM, while subclasses provide details to differentiate the
+   various types of SPECFEM.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.solver.base.Base
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.solver.base.PAR
+   seisflows3.solver.base.PATH
+   seisflows3.solver.base.system
+   seisflows3.solver.base.preprocess
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:data:: system
+   
+
+   
+
+.. py:data:: preprocess
+   
+
+   
+
+.. py:class:: Base
+
+   This base class provides an interface through which solver simulations can
+   be set up and run and a parent class for the following subclasses:
+
+   SPECFEM2D
+   SPECFEM3D
+   SPECFEM3D_GLOBE
+
+   .. note:::
+       This class supports only acoustic and isotropic elastic inversions.
+
+   Function descriptors:
+
+   eval_func, eval_grad, apply_hess
+
+       These methods deal with evaluation of the misfit function or its
+       derivatives.  Together, they provide the primary interface through which
+       SeisFlows interacts with SPECFEM2D/3D
+
+   forward, adjoint
+
+       These methods allow direct access to low-level SPECFEM2D/3D components,
+       providing an alternative interface through which to interact with the
+       solver
+
+   steup, generate_data, generate_model
+
+       One-time operations performed at the beginning of inversion or migration
+
+   initialize_solver_directories, initialize_adjoint_traces
+
+       SPECFEM2D/3D requires a particular directory structure in which to run
+       and particular file formats for models, data, and parameter files. These
+       methods help put in place all these prerequisites
+
+   load, save
+
+       For reading and writing SPECFEM2D/3D models and kernels. On the disk,
+       models and kernels are stored as binary files, and in memory, as
+       dictionaries with different keys corresponding to different material
+       parameters
+
+   split, merge
+
+       Within the solver routines, it is natural to store models as
+       dictionaries. Within the optimization routines, it is natural to store
+       models as vectors. Two methods, 'split' and 'merge', are used to convert
+       back and forth between these two representations
+
+   combine, smooth
+
+       Utilities for combining and smoothing kernels
+
+   generate_data, generate_mesh, eval_fwd, forward, adjoint,
+   data_filenames, model_databases, kernel_databases, source_prefix
+
+       !!! Required functions which must be implemented by subclass !!!
+
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: required(self)
+      :property:
+
+      A hard definition of paths and parameters required by this class,
+      alongside their necessity for the class and their string explanations.
+
+
+   .. py:method:: check(self, validate=True)
+
+      Checks parameters and paths
+
+
+   .. py:method:: setup(self)
+
+      Prepares solver for inversion or migration.
+      Sets up directory structure expected by SPECFEM and copies or generates
+      seismic data to be inverted or migrated
+
+      .. note:;
+          As input for an inversion or migration, users can choose between
+          providing data, or providing a target model from which data are
+          generated on the fly.
+          In the former case, a value for PATH.DATA must be supplied;
+          in the latter case, a value for PATH.MODEL_TRUE must be provided.
+
+
+   .. py:method:: clean(self)
+
+      Clean up solver-dependent run directory by removing the OUTPUT_FILES/
+      directory
+
+
+   .. py:method:: generate_data(self, *args, **kwargs)
+      :abstractmethod:
+
+      Generates data based on a given model
+
+      !!! Must be implemented by subclass !!!
+
+
+   .. py:method:: generate_mesh(self, *args, **kwargs)
+      :abstractmethod:
+
+      Performs meshing and database generation
+
+      !!! Must be implemented by subclass !!!
+
+
+   .. py:method:: eval_func(self, path, write_residuals=True)
+
+      High level solver interface
+
+      Performs forward simulations and evaluates the misfit function
+
+      :type path: str
+      :param path: directory from which model is imported and where residuals
+          will be exported
+      :type write_residuals: bool
+      :param write_residuals: calculate and export residuals
+
+
+   .. py:method:: eval_grad(self, path, export_traces=False)
+
+      High level solver interface that evaluates gradient by carrying out
+      adjoint simulations. A function evaluation must already have been
+      carried out.
+
+      :type path: str
+      :param path: directory from which model is imported
+      :type export_traces: bool
+      :param export_traces: if True, save traces to OUTPUT.
+          if False, discard traces
+
+
+   .. py:method:: apply_hess(self, path)
+      :abstractmethod:
+
+      High level solver interface that computes action of Hessian on a given
+      model vector. A gradient evaluation must have already been carried out.
+
+      TODO preprocess has no function prepare_apply_hess()
+
+      :type path: str
+      :param path: directory to which output files are exported
+
+
+   .. py:method:: forward(self)
+      :abstractmethod:
+
+      Low level solver interface
+
+      Calls forward solver
+
+      !!! Must be implemented by subclass !!!
+
+
+   .. py:method:: adjoint(self)
+      :abstractmethod:
+
+      Low level solver interface
+
+      Calls adjoint solver
+
+      !!! Must be implemented by subclass !!!
+
+
+   .. py:method:: io(self)
+      :property:
+
+      Solver IO module set by User.
+
+      Located in seisflows.plugins.solver_io
+
+
+   .. py:method:: load(self, path, prefix='', suffix='', parameters=None)
+
+      Solver I/O: Loads SPECFEM2D/3D models or kernels
+
+      :type path: str
+      :param path: directory from which model is read
+      :type prefix: str
+      :param prefix: optional filename prefix
+      :type suffix: str
+      :param suffix: optional filename suffix, eg '_kernel'
+      :type parameters: list
+      :param parameters: material parameters to be read
+          (if empty, defaults to self.parameters)
+      :rtype: dict
+      :return: model or kernels indexed by material parameter and
+          processor rank, ie dict[parameter][iproc]
+
+
+   .. py:method:: save(self, save_dict, path, parameters=None, prefix='', suffix='')
+
+      Solver I/O: Saves SPECFEM2D/3D models or kernels
+
+      :type save_dict: dict or Container
+      :param save_dict: model stored as a dictionary or Container
+      :type path: str
+      :param path: directory from which model is read
+      :type parameters: list
+      :param parameters: list of material parameters to be read
+      :type prefix: str
+      :param prefix: optional filename prefix
+      :type suffix: str
+      :param suffix: optional filename suffix, eg '_kernel'
+
+
+   .. py:method:: merge(self, model, parameters=None)
+
+      Convert dictionary representation `model` to vector representation `m`
+
+      :type model: dict
+      :param model: model to be converted
+      :type parameters: list
+      :param parameters: optional list of parameters,
+          defaults to `self.parameters`
+      :rtype: np.ndarray
+      :return: model as a vector
+
+
+   .. py:method:: split(self, m, parameters=None)
+
+      Converts vector representation `m` to dictionary representation `model`
+
+      :type m: np.ndarray
+      :param m: model to be converted
+      :type parameters: list
+      :param parameters: optional list of parameters,
+          defaults to `self.parameters`
+      :rtype: dict
+      :return: model as a dictionary
+
+
+   .. py:method:: combine(self, input_path, output_path, parameters=None)
+
+      Postprocessing wrapper: xcombine_sem 
+      Sums kernels from individual source contributions to create gradient.
+
+      .. note::
+          The binary xcombine_sem simply sums matching databases (.bin) 
+
+      .. note::
+          It is ASSUMED that this function is being called by
+          system.run(single=True) so that we can use the main solver
+          directory to perform the kernel summation task
+
+      :type input_path: str
+      :param input_path: path to data
+      :type output_path: str
+      :param output_path: path to export the outputs of xcombine_sem
+      :type parameters: list
+      :param parameters: optional list of parameters,
+          defaults to `self.parameters`
+
+
+   .. py:method:: smooth(self, input_path, output_path, parameters=None, span_h=0.0, span_v=0.0, output='solver.log')
+
+      Postprocessing wrapper: xsmooth_sem
+      Smooths kernels by convolving them with a Gaussian.
+
+      .. note::
+          paths require a trailing `/` character when calling xsmooth_sem
+
+      .. note::
+          It is ASSUMED that this function is being called by
+          system.run(single=True) so that we can use the main solver
+          directory to perform the kernel smooth task
+
+      :type input_path: str
+      :param input_path: path to data
+      :type output_path: str
+      :param output_path: path to export the outputs of xcombine_sem
+      :type parameters: list
+      :param parameters: optional list of parameters,
+          defaults to `self.parameters`
+      :type span_h: float
+      :param span_h: horizontal smoothing length in meters
+      :type span_v: float
+      :param span_v: vertical smoothing length in meters
+      :type output: str
+      :param output: file to output stdout to
+
+
+   .. py:method:: combine_vol_data_vtk(self)
+
+      Postprocessing wrapper for xcombine_vol_data_vtk
+
+      !!! must be implemented by subclass !!!
+
+
+   .. py:method:: import_model(self, path)
+
+      File transfer utility. Import the model into the workflow.
+
+      :type path: str
+      :param path: path to model
+
+
+   .. py:method:: import_traces(self, path)
+
+      File transfer utility. Import traces into the workflow.
+
+      :type path: str
+      :param path: path to traces
+
+
+   .. py:method:: export_model(self, path, parameters=None)
+
+      File transfer utility. Export the model to disk.
+
+      Performed by master solver.
+
+      :type path: str
+      :param path: path to save model
+      :type parameters: list
+      :param parameters: list of parameters that define the model
+
+
+   .. py:method:: export_kernels(self, path)
+
+      File transfer utility. Export kernels to disk
+
+      :type path: str
+      :param path: path to save kernels
+
+
+   .. py:method:: export_residuals(self, path)
+
+      File transfer utility. Export residuals to disk.
+
+      :type path: str
+      :param path: path to save residuals
+
+
+   .. py:method:: export_traces(self, path, prefix='traces/obs')
+
+      File transfer utility. Export traces to disk.
+
+      :type path: str
+      :param path: path to save traces
+      :type prefix: str
+      :param prefix: location of traces w.r.t self.cwd
+
+
+   .. py:method:: rename_kernels(self)
+
+      Works around conflicting kernel filename conventions by renaming
+      `alpha` to `vp` and `beta` to `vs`
+
+
+   .. py:method:: rename_data(self, path)
+
+      Optional method to rename data to work around conflicting naming schemes
+      for data outputted by the solver
+
+      !!! Can be implemented by subclass !!!
+
+
+   .. py:method:: initialize_solver_directories(self)
+
+      Creates directory structure expected by SPECFEM3D (bin/, DATA/) copies
+      executables, and prepares input files. Executables must be supplied
+      by user as there is no mechanism for automatically compiling from source
+
+      Directories will act as completely independent Specfem run directories.
+      This allows for embarrassing parallelization while avoiding the need
+      for intra-directory communications, at the cost of redundancy and
+      extra files.
+
+
+   .. py:method:: initialize_adjoint_traces(self)
+
+      Setup utility: Creates the "adjoint traces" expected by SPECFEM.
+      This is only done for the 'base' the Preprocess class.
+
+      .. note::
+          Adjoint traces are initialized by writing zeros for all channels.
+          Channels actually in use during an inversion or migration will be
+          overwritten with nonzero values later on.
+
+
+   .. py:method:: check_mesh_properties(self, path=None)
+
+      Determine if Mesh properties are okay for workflow
+
+      :type path: str
+      :param path: path to the mesh file
+
+
+   .. py:method:: check_source_names(self)
+
+      Determines names of sources by applying wildcard rule to
+      user-supplied input files
+
+      .. note::
+          Source list is sorted and collected from start up to PAR.NTASK
+
+
+   .. py:method:: check_solver_parameter_files(self)
+
+      Optional method
+
+      !!! Can be implemented by subclass !!!
+
+
+   .. py:method:: taskid(self)
+      :property:
+
+      Returns the currently running process for embarassingly parallelized
+      tasks.
+
+      :rtype: int
+      :return: task id for given solver
+
+
+   .. py:method:: source_name(self)
+      :property:
+
+      Returns name of source currently under consideration
+
+      :rtype: str
+      :return: given source name for given task id
+
+
+   .. py:method:: cwd(self)
+      :property:
+
+      Returns working directory currently in use
+
+      :rtype: str
+      :return: current solver working directory
+
+
+   .. py:method:: source_names(self)
+      :property:
+
+      Returns list of source names
+
+      :rtype: list
+      :return: list of source names
+
+
+   .. py:method:: mesh_properties(self)
+      :property:
+
+      Returns mesh properties
+
+      :rtype: Struct
+      :return: Structure of mesh properties
+
+
+   .. py:method:: data_filenames(self)
+      :property:
+
+      Template filenames for accessing data
+
+      !!! Must be implemented by subclass !!!
+
+
+   .. py:method:: model_databases(self)
+      :property:
+
+      Template filenames for accessing models
+
+      !!! Must be implemented by subclass !!!
+
+
+   .. py:method:: kernel_databases(self)
+      :property:
+
+      Template filenames for accessing kernels
+
+      !!! Must be implemented by subclass !!!
+
+
+   .. py:method:: source_prefix(self)
+      :property:
+
+      Template filenames for accessing sources
+
+      !!! Must be implemented by subclass !!!
+
+
+

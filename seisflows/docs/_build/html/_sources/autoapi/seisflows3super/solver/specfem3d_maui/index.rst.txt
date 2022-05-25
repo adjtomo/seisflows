@@ -1,0 +1,181 @@
+:py:mod:`seisflows3-super.solver.specfem3d_maui`
+================================================
+
+.. py:module:: seisflows3-super.solver.specfem3d_maui
+
+.. autoapi-nested-parse::
+
+   This is the subclass seisflows.solver.Specfem3DMaui
+
+   This class is almost the same as Specfem3D, except the setup step is run as
+   a serial task. This is useful as HPC job queues are long on Maui, so it saves
+   on job queue time by replacing it with a long-winded serial task.
+
+   Additionally, misfit quantification is split off from the forward simulation,
+   because Anaconda is not available on the main cluster, so jobs need to be
+   submitted to an auxiliary cluster. This is paired with a new evaluate_function()
+   function defined by the InversionMaui workflow class.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3-super.solver.specfem3d_maui.Specfem3DMaui
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3-super.solver.specfem3d_maui.PAR
+   seisflows3-super.solver.specfem3d_maui.PATH
+   seisflows3-super.solver.specfem3d_maui.system
+   seisflows3-super.solver.specfem3d_maui.preprocess
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:data:: system
+   
+
+   
+
+.. py:data:: preprocess
+   
+
+   
+
+.. py:class:: Specfem3DMaui(*args, **kwargs)
+
+   Bases: :py:obj:`custom_import`\ (\ :py:obj:`'solver'`\ , :py:obj:`'specfem3d'`\ )
+
+   Python interface to Specfem3D Cartesian. This subclass inherits functions
+   from seisflows3.solver.specfem3d
+
+   !!! See base class for method descriptions !!!
+
+   .. py:method:: required(self)
+      :property:
+
+      A hard definition of paths and parameters required by this class,
+      alongside their necessity for the class and their string explanations.
+
+
+   .. py:method:: check(self, validate=True)
+
+      Checks parameters and paths
+
+
+   .. py:method:: setup(self, model)
+
+      Overload of solver.base.setup(), should be run as a single instance
+
+      :type model: str
+      :param model: "init", "true", generates the mesh to be used for workflow
+          "true" used for synthetic-synthetic cases
+          "init" for initial model, default
+      :type model: str
+      :param model: model to setup, either 'true' or 'init'
+
+
+   .. py:method:: generate_data(self)
+
+      Overload seisflows.solver.base.generate_data. To be run in parallel
+
+      Not used if PAR.CASE == "Data"
+
+      Generates data in the synthetic-synthetic comparison case.
+      Automatically calls generate mesh for the true model, rather than
+      passing them in as kwargs.
+
+      Also turns on attenuation for the forward model
+      !!! attenuation could be moved into parameters.yaml? !!!
+
+
+   .. py:method:: generate_mesh(self, model_path, model_name, model_type='gll')
+
+      Performs meshing and database generation as a serial task. Differs
+      slightly from specfem3d class as it only creates database files for
+      the main solver, which are then copied in serial by the function
+      distribute_databases()
+
+      :type model_path: str
+      :param model_path: path to the model to be used for mesh generation
+      :type model_name: str
+      :param model_name: name of the model to be used as identification
+      :type model_type: str
+      :param model_type: available model types to be passed to the Specfem3D
+          Par_file. See Specfem3D Par_file for available options.
+
+
+   .. py:method:: eval_misfit(self, path='', export_traces=False)
+
+      Performs function evaluation only, that is, the misfit quantification.
+      Forward simulations are performed in a separate function
+
+      :type path: str
+      :param path: path in the scratch directory to use for I/O
+      :type export_traces: bool
+      :param export_traces: option to save the observation traces to disk
+      :return:
+
+
+   .. py:method:: eval_fwd(self, path='')
+
+      High level solver interface
+
+      Performans forward simulations only, function evaluation is split off
+      into its own function
+
+      :type path: str
+      :param path: path in the scratch directory to use for I/O
+
+
+   .. py:method:: distribute_databases(self)
+
+      A serial task to distrubute the database files outputted by 
+      xgenerate_databases from main solver to all other solver directories
+
+
+   .. py:method:: initialize_solver_directories(self)
+
+      Creates solver directories in serial using a single node.
+      Should only be run by master job.
+
+      Differs from Base initialize_solver_directories() as this serial task
+      will create directory structures for each source, rather than having
+      each source create its own. However the internal dir structure is the
+      same.
+
+
+   .. py:method:: check_solver_parameter_files(self)
+
+      Checks solver parameters. Only slightly different to Specfem3D as it
+      is run by the main task, not be an array process, so no need to check
+      task_id
+
+
+   .. py:method:: mainsolver(self)
+      :property:
+
+      Ensure that the main solver has a consistent reference inside Solver
+
+
+

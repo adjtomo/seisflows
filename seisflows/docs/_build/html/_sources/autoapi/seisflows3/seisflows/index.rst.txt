@@ -1,0 +1,592 @@
+:py:mod:`seisflows3.seisflows`
+==============================
+
+.. py:module:: seisflows3.seisflows
+
+.. autoapi-nested-parse::
+
+   A command line tool for using and manipulating SeisFlows3.
+   The main entry point to the SeisFlows3 package, this command line tool
+   facilitates interface with the underlying SeisFlows3 package.
+
+   .. rubric::
+       $ seisflows -h  # runs the help command to investigate package features
+
+   .. note::
+       To add new functions to the seisflows command line tool, you must:
+       - Write a new function within the SeisFlows class
+       - Add a new subparser with optional arguments to sfparser()
+       - Add subparser to subparser dict at the end of sfparser()
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.seisflows.SeisFlows
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.seisflows.sfparser
+   seisflows3.seisflows.return_modules
+   seisflows3.seisflows.main
+
+
+
+.. py:function:: sfparser()
+
+   An command-line argument parser which allows for intuitive exploration of
+   the available functions.
+
+   Gets User defined arguments or assign defaults. Makes use of subparsers to
+   get individual help statements for each of the main functions.
+
+   .. rubric::
+       $ seisflows {main arg} {optional sub arg}
+
+   :rtype: argparse.ArgumentParser()
+   :return: User defined or default arguments
+
+
+.. py:class:: SeisFlows
+
+   The main entry point to the SeisFlows3 package, to be interacted with
+   through the command line. This class is responsible for:
+       1) setting up or re-creating a SeisFlows3 working enviornment,
+       2) (re-)submitting workflows to the system,
+       3) inspecting, manipulating or viewing a live working environment via
+           command line arguments.
+
+   .. rubric::
+       $ seisflows -h
+
+   .. note::
+       Almost every modules requires loading of other modules, i.e. to run
+       any checks we must load the entire SeisFlows environment, which is slow
+       but provides the most flexibility when accessing internal information
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: __call__(self, command=None, **kwargs)
+
+      When called, SeisFlows will execute one of its internal functions
+
+      .. rubric::
+          # From the command line
+          $ seisflows {command} {optional subcommand}
+
+          # From inside a Python environment
+          > from seisflows3.scripts.seisflows import SeisFlows
+          > sf = SeisFlows()
+          > sf("{command}", {optional subcommand}={value})
+
+          # Example
+          $ seisflows par linesearch
+
+      :type command: str
+      :param command: If not None, allows controlling this class from inside
+          a Python environment. If sub-commands are required, these are
+          inserted using the kwargs.
+          Usually not required unless writing tests or scripting SF3 in Python
+      :type return_self: bool
+      :param return_self: if True, do not execute a command, which init
+          usually does, but return the SeisFlows class itself. This is used
+          just for testing purposes
+      :return:
+
+
+   .. py:method:: _public_methods(self)
+      :property:
+
+      Return a list of all public methods within this class.
+
+      .. warning::
+          Only methods that can be called via the command line should be
+          public, all other methods and attributes should be private.
+
+
+   .. py:method:: _register(self, force=True)
+
+      Load the paths and parameters from file into sys.modules, set the
+      default parameters if they are missing from the file, and expand all
+      paths to absolute pathnames. Also configure the logger.
+
+      .. note::
+          This is ideally the FIRST thing that happens everytime SeisFlows3
+          is initiated. The package cannot do anything without the resulting
+          PATH and PARAMETER variables.
+
+      :type force: bool
+      :param force: if False, print out a few key parameters and require
+          user-input before allowing workflow to be submitted. This is
+          usually run before submit and resume, to prevent job submission
+          without user evaluation.
+
+
+   .. py:method:: _load_modules(self)
+
+      A function to load and check each of the SeisFlows modules,
+      re-initiating the SeisFlows environment. All modules are reliant on one
+      another so any access to SeisFlows requires loading everything
+      simultaneously and in correct order
+
+
+   .. py:method:: setup(self, symlink=False, force=False, **kwargs)
+
+      Initiate a SeisFlows working directory from scratch; establish a
+      template parameter file and symlink the source code for easy access
+
+      :type symlink: bool
+      :param symlink: flag to turn on source code symlinking
+      :type force: bool
+      :param force: flag to force parameter file overwriting
+
+
+   .. py:method:: configure(self, relative_paths=False, **kwargs)
+
+      Dynamically generate the parameter file by writing out docstrings and
+      default values for each of the SeisFlows3 module parameters.
+      This function writes files manually, consistent with the .yaml format.
+
+      :type relative_paths: bool
+      :param relative_paths: if True, expand pathnames to absolute paths,
+          else if False, use path names relative to the working directory.
+
+
+   .. py:method:: init(self, **kwargs)
+
+      Establish a SeisFlows3 working environment on disk. Instantiates a
+      working state in memory (sys.modules) and then writes this state as         pickle files to the OUTPUT directory for User inspection and debug
+      purposes.
+
+
+   .. py:method:: submit(self, stop_after=None, force=False, **kwargs)
+
+      Main SeisFlows3 execution command. Submit the SeisFlows3 workflow to
+      the chosen system, and execute seisflows.workflow.main(). Will create
+      the working directory and any required paths and ensure that all
+      required paths exist.
+
+      :type stop_after: str
+      :param stop_after: allow the function to overwrite the 'STOP_AFTER'
+          parameter in the parameter file, which dictates how far the workflow
+          will proceed until stopping. Must match flow function names in
+          workflow.main()
+      :type force: bool
+      :param force: if True, turns off the parameter precheck and
+          simply submits the workflow
+
+
+   .. py:method:: clean(self, force=False, **kwargs)
+
+      Clean the SeisFlows3 working directory except for the parameter file.
+
+      :type force: bool
+      :param force: ignore the warning check that precedes the clean() 
+          function, useful if you don't want any input messages popping up
+
+
+   .. py:method:: resume(self, stop_after=None, resume_from=None, force=False, **kwargs)
+
+      Resume a previously started workflow by loading the module pickle files
+      and submitting the workflow from where it left off.
+      :type stop_after: str
+      :param stop_after: allow the function to overwrite the 'STOP_AFTER'
+          parameter in the parameter file, which dictates how far the workflow
+          will proceed until stopping. Must match flow function names in
+          workflow.main()
+      :type resume_from: str
+      :param resume_from: allow the function to overwrite the 'RESUME_FROM'
+          parameter in the parameter file, which dictates which function the
+          workflow starts from, must match the flow functions given in
+          workflow.main()
+      :type force: bool
+      :param force: if True, turns off the parameter precheck and
+          simply submits the workflow
+
+
+   .. py:method:: restart(self, force=False, **kwargs)
+
+      Restart simply means clean the workding dir and submit a new workflow.
+
+      :type force: bool
+      :param force: ignore the warning check that precedes the clean() 
+          function, useful if you don't want any input messages popping up
+
+
+   .. py:method:: debug(self, **kwargs)
+
+      Initiate an IPython debugging environment to explore the currently
+      active SeisFlows3 environment. Reloads the system modules in an
+      interactive environment allowing exploration of the package space.
+      Does not allow stepping through of code (not a breakpoint).
+
+
+   .. py:method:: sempar(self, parameter, value=None, skip_print=False, par_file='Par_file', **kwargs)
+
+      check or set parameters in the SPECFEM parameter file.
+      By default assumes the SPECFEM parameter file is called 'Par_file'
+      But this can be overwritten by using the '-p' flag.
+
+      usage
+
+          seisflows sempar [parameter] [value]
+
+          to check the parameter 'nproc' from the command line:
+
+              seisflows sempar nstep
+
+          to set the parameter 'model' to 'GLL':
+
+              seisflows sempar model GLL
+
+          to check the values of a velocity model (SPECFEM2D)
+
+              seisflows sempar velocity_model
+
+          to edit the values of a velocity model (SPECFEM2D)
+              
+              seisflows sempar velocity_model                     "1 1 2600.d0 5800.d0 3500.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0"
+
+              OR for a two-layered model
+
+              seisflows sempar velocity_model                 "1 1 2600.d0 5800.d0 3500.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0 +                  1 1 2600.d0 5800.d0 3500.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0"
+
+              .. note::
+                  For multi-layered models, the delimiter " + " is important,
+                  you must have the whitespace on either side else the
+                  function won't recognize these are separate layers.
+
+      :type parameter: str
+      :param parameter: parameter to check in parameter file. case insensitive
+      :type value: str
+      :param value: value to set for parameter. if none, will simply print out
+          the current parameter value. to set as nonetype, set to 'null'
+          SPECFEM2D: if set to 'velocity_model' allows the user to set and 
+          edit the velocity model defined in the SPECMFE2D Par_file. Not a 
+          very smart capability, likely easier to do this manually.
+      :type par_file: str
+      :param par_file: name of the SPECFEM parameter file, defaults: Par_file
+      :type skip_print: bool
+      :param skip_print: skip the print statement which is typically sent
+          to stdout after changing parameters.
+
+
+   .. py:method:: par(self, parameter, value=None, skip_print=False, required=False, **kwargs)
+
+      Check or set parameters in the seisflows3 parameter file.
+
+      USAGE
+
+          seisflows par [parameter] [value]
+
+          to check the parameter 'NPROC' from the command line:
+
+              seisflows par nproc
+
+          to set the parameter 'BEGIN' to 2:
+
+              seisflows par begin 2
+
+          to change the scratch path to the current working directory, don't
+          print to stdout:
+
+              seisflows par scratch ./ -p
+
+      :type parameter: str
+      :param parameter: parameter to check in parameter file. case insensitive
+      :type value: str
+      :param value: value to set for parameter. if None, will simply print out
+          the current parameter value. to set as nonetype, set to 'null'
+      :type skip_print: bool
+      :param skip_print: skip the print statement which is typically sent
+          to stdout after changing parameters.
+      :type required: bool
+      :param required: Only list parameters which have not been set as a
+          default value, 'parameter' and 'value' will be ignored.
+
+
+   .. py:method:: _par_required(self)
+
+      Only list parameters which have not been set as a default value.
+      Filled in with default values defined in SeisFlowsPathParameters
+
+
+   .. py:method:: edit(self, name, module, editor=None, **kwargs)
+
+      Directly edit the SeisFlows3 source code matching the given name
+      and module using the chosen text editor.
+
+      USAGE
+
+          seisflows edit [name] [module] [editor]
+
+          To edit the base Solver class using vim, one would run:
+
+              seisflows edit solver base vim
+
+          To simply find the location of the inversion workflow source code:
+
+              seisflows edit workflow inversion q
+
+      :type name: str
+      :param name: name of module, must match seisflows.config.NAMES
+      :type module: str
+      :param module: the module name contained under the SeisFlows3 namespace
+      :type editor: str
+      :param editor: optional chosen text editor to open the file.
+          * If NoneType: defaults to system environment $EDITOR
+          * If 'q': For quit, does not open an editor, simply prints fid
+
+
+   .. py:method:: examples(self, run=None, choice=None, **kwargs)
+
+      List or run a SeisFlows3 example problem
+
+      USAGE
+
+          seisflows examples [run] [choice]
+
+          To list available examples:
+
+              seisflows examples
+
+          To run a specific example (this is the same as 'python example.py')
+
+              seisflows examples run 1
+
+      :type run: bool
+      :param run: if True, run an example of choice `choice`
+      :type choice: str
+      :param choice: The choice of example, must match the given tag or file
+          name that is assigned to it
+
+
+   .. py:method:: check(self, choice=None, **kwargs)
+
+      Check parameters, state or values  of an active SeisFlows3 environment.
+      Type 'seisflows check --help' for a detailed help message.
+
+      :type choice: str
+      :param choice: underlying sub-function to choose
+
+
+   .. py:method:: print(self, choice=None, **kwargs)
+
+      Print information relating to an active SeisFlows3 environment.
+      Type 'seisflows check --help' for a detailed help message.
+
+      :type choice: str
+      :param choice: underlying sub-function to choose
+
+
+   .. py:method:: reset(self, choice=None, **kwargs)
+
+      Mid-level function to wrap lower level reset functions
+
+
+   .. py:method:: convert(self, name, path=None, **kwargs)
+
+      Convert a model in the OUTPUT directory between vector to binary
+      representation. Kwargs are passed through to solver.save()
+
+      USAGE
+
+          seisflows convert [name] [path] [**kwargs]
+
+          To convert the vector model 'm_try' to binary representation in the
+          output directory
+
+              seisflows convert m_try
+
+      :type name: str
+      :param name: name of the model to convert, e.g. 'm_try'
+      :type path: str
+      :param path: path and file id to save the output model. if None, will
+          default to saving in the output directory under the name of the
+          model
+
+
+   .. py:method:: validate(self, module=None, name=None)
+      :abstractmethod:
+
+      Ensure that all the modules (and their respective subclasses) meet some
+      necessary requirements such as having specific functions and parameters.
+      Not a full replacement for running the test suite, but useful for
+      checking newly written subclasses.
+
+      USAGE
+
+          To validate a specific subclass:
+
+              seisflows validate workflow inversion
+
+          To validate the entire codebase
+
+              seisflows validate
+
+
+   .. py:method:: _inspect_class_that_defined_method(name, func, **kwargs)
+      :staticmethod:
+
+      Given a function name and generalized module (e.g. solver), inspect
+      which of the subclasses actually defined the function. Makes it easier
+      to debug/edit source code as the user can quickly determine where
+      in the source code they need to look to find the corresponding function.
+
+      https://stackoverflow.com/questions/961048/get-class-that-defined-method
+
+      :type name: str
+      :param name: SeisFlows3 module name
+      :type func: str
+      :param func: Corresponding method/function name for the given module
+
+
+   .. py:method:: _inspect_module_hierarchy(name=None, **kwargs)
+      :staticmethod:
+
+      Determine the order of class hierarchy for a given SeisFlows3 module.
+
+      https://stackoverflow.com/questions/1401661/
+                          list-all-base-classes-in-a-hierarchy-of-given-class
+
+      .. rubric::
+          $ seisflows print inherit
+
+      :type name: str
+      :param name: choice of module, if None, will print hierarchies for all
+          modules.
+
+
+   .. py:method:: _reset_line_search(self, **kwargs)
+
+      Reset the machinery of the line search. This is useful for if a line
+      search fails or stagnates but the User does not want to re-run the
+      entire iteration. They can reset the line search and resume the workflow
+      from the line search step
+
+      The following rubric details how you might use this from command line:
+
+      .. rubric::
+          $ seisflows reset line_search
+          $ seisflows par resume_from line_search
+          $ seisflows resume_from -f
+
+
+   .. py:method:: _print_modules(self, name=None, package=None, **kwargs)
+
+      Print out available modules in the SeisFlows name space for all
+      available packages and modules.
+
+      .. rubric::
+          $ seisflows print module
+
+      :type name: str
+      :param name: specify an specific module name to list
+      :type package: str
+      :param package: specify an indivdual package to search
+
+
+   .. py:method:: _print_flow(self, **kwargs)
+
+      Simply print out the seisflows3.workflow.main() flow variable which
+      describes what order workflow functions will be run. Useful for
+      filling out the RESUME_FROM and STOP_AFTER parameters.
+
+      .. rubric::
+          $ seisflows print flow
+
+
+   .. py:method:: _print_inheritance(self, name=None, func=None, **kwargs)
+
+      Inspect inheritance hierarchy of classes, methods defined by SeisFlows.
+      Useful when developing or debugging, facilitates identification of
+      the package top-level.
+
+      USAGE
+
+          seisflows inspect [name] [method]
+
+          To view overall hierarchy for all names in the SeisFlows3 namespace
+
+              seisflows inspect
+
+          To check the inheritance hierarchy of the 'workflow' module
+
+              seisflows inspect workflow
+
+          To check which class defined a given method, e.g. the 'eval_func'
+          method attributed to the solver module
+
+              seisflows inspect solver eval_func
+
+
+
+   .. py:method:: _check_model_parameters(self, src=None, **kwargs)
+
+      Print out the min/max values from one or all of the currently available
+      models. Useful for checking what models are associated with what part of
+      the workflow, e.g. evaluate function, evaluate gradient.
+
+      :type src: str
+      :param src: the name of a specific model to check, e.g. 'm_try', 
+          otherwise will check parameters for all models
+
+
+   .. py:method:: _check_current_iteration(self, **kwargs)
+
+      Display the current point in the workflow in terms of the iteration
+      and step count number. Args are not used by allow for a more general
+      check() function.
+
+
+   .. py:method:: _check_source_names(self, source_name=None, **kwargs)
+
+      Sources are tagged by name but also by index in the source names which
+      can be confusing and usually requires doubling checking. This check
+      just prints out source names next to their respective index, or if a
+      source name is requested, provides the index for that
+
+      :type source_name: str
+      :param source_name: name of source to check index, if None will simply
+          print out all sources
+
+
+   .. py:method:: _check_source_index(self, idx=None, **kwargs)
+
+      Look up source name by index
+
+      :type idx: int
+      :param idx: index of source to look up
+
+
+
+.. py:function:: return_modules()
+
+   Search for the names of available modules in SeisFlows name space.
+   This simple function checks for files with a '.py' extension inside
+   each of the sub-directories, ignoring private files like __init__.py.
+
+   :rtype: dict of dict of lists
+   :return: a dict with keys matching names and values as dicts for each
+       package. nested list contains all the avaialble modules
+
+
+.. py:function:: main()
+
+   Main entry point into the SeisFlows3 package is via the SeisFlows3 class
+
+

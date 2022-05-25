@@ -1,0 +1,74 @@
+:py:mod:`seisflows3.scripts.run_function`
+=========================================
+
+.. py:module:: seisflows3.scripts.run_function
+
+.. autoapi-nested-parse::
+
+   Only required when system==cluster (or any subclass of cluster)
+
+   This script is a wrapper for running tasks on systems during an active workflow.
+   Acts as a Python script to submit certain SeisFlows3 functions or tasks to a
+   compute system.
+
+   .. note::
+       Not to be called by the user, this script is to be called by system.run()
+
+   .. rubric::
+       >> python run --output ./OUTPUT --classname solver         --funcname eval_func
+       OR
+       >> sbatch run --output ./OUTPUT --classname solver --funcname eval_func
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.scripts.run_function.parse_args
+   seisflows3.scripts.run_function.export
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.scripts.run_function.args
+
+
+.. py:function:: parse_args()
+
+   Get command line arguments
+
+
+.. py:function:: export(myenv)
+
+   Exports comma delimited list of environment variables also allows deleting 
+   environment variables by providing VARNAME with no corresponding value 
+
+   e.g. VARNAME1=value1,VARNAME2=value2,VARNAME3
+   will add VARNAME1 and VARNAME2 to the environment with corresponding values, 
+   and remove VARNAME3 from the environment
+
+   .. note::
+       The ability to delete environment variables came from the Maui upgrade
+       to Slurm 21.08, which enforced mutually exclusivity of --mem-per-cpu 
+       and --mem-per-node, which are both defined on cross-cluster submissions.
+       We needed a mechanism to remove one of these
+
+   :type myenv: str
+   :param myenv: the system environment to take variables from
+
+
+.. py:data:: args
+   
+
+   
+

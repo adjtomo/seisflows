@@ -1,0 +1,20 @@
+:py:mod:`seisflows3.tests`
+==========================
+
+.. py:module:: seisflows3.tests
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   test_config/index.rst
+   test_modules/index.rst
+   test_preprocess/index.rst
+   test_seisflows/index.rst
+   test_solver/index.rst
+   test_system/index.rst
+
+

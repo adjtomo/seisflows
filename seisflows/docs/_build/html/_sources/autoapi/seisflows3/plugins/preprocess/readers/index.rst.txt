@@ -1,0 +1,49 @@
+:py:mod:`seisflows3.plugins.preprocess.readers`
+===============================================
+
+.. py:module:: seisflows3.plugins.preprocess.readers
+
+.. autoapi-nested-parse::
+
+   SeisFlows uses obspy stream objects for holding and processing seismic data.
+   In some cases, obspy.read doesn't provide the desired behavior, so we
+   introduce an additonal level of indirection
+
+   Used by the PREPROCESS class and specified by the READER parameter
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.plugins.preprocess.readers.su
+   seisflows3.plugins.preprocess.readers.ascii
+
+
+
+.. py:function:: su(path, filename)
+
+   Reads seismic unix files outputted by Specfem, using Obspy
+
+   :type path: str
+   :param path: path to datasets
+   :type filename: str
+   :param filename: file to read
+
+
+.. py:function:: ascii(path, filename)
+
+   Reads SPECFEM3D-style ASCII data
+
+   :type path: str
+   :param path: path to datasets
+   :type filenames: list
+   :param filenames: files to read
+
+

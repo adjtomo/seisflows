@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Commmand Line Tool &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Parameter File" href="parameter_file.html" />
+    <link rel="prev" title="Cite" href="citeme.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> SeisFlows3
+            <img src="_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Commmand Line Tool</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#setting-up-a-parameter-file">Setting up a parameter file</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#seisflows-setup">seisflows setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#seisflows-configure">seisflows configure</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#filling-out-the-parameter-file">Filling out the parameter file</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#seisflows-par">seisflows par</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#seisflows-sempar">seisflows sempar</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#setting-up-an-active-working-state">Setting up an active working state</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#seisflows-init">seisflows init</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Commmand Line Tool</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/command_line_tool.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="commmand-line-tool">
+<h1>Commmand Line Tool<a class="headerlink" href="#commmand-line-tool" title="Permalink to this headline"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">SeisFlows3</span></code> is primarily interacted with via command line calls and a
+parameter file. In this page we explain how to use this command line
+tool to create a SeisFlows3 parameters file, edit and configure it, and
+establish a SeisFlows3 working directory. We also provide explanation
+for other command line options which act as helper utilities for
+improved package control.</p>
+<p>After installing SeisFlows3 into a Conda environment, the <code class="docutils literal notranslate"><span class="pre">seisflows</span></code>
+command will be available directly from the command line. To access the
+help dialogue, you can type <code class="docutils literal notranslate"><span class="pre">seisflows</span></code> or <code class="docutils literal notranslate"><span class="pre">seisflows</span> <span class="pre">-h</span></code></p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> seisflows
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">seisflows</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">w</span> <span class="p">[</span><span class="n">WORKDIR</span><span class="p">]]</span> <span class="p">[</span><span class="o">-</span><span class="n">p</span> <span class="p">[</span><span class="n">PARAMETER_FILE</span><span class="p">]]</span>
+                 <span class="p">{</span><span class="n">setup</span><span class="p">,</span><span class="n">configure</span><span class="p">,</span><span class="n">init</span><span class="p">,</span><span class="n">submit</span><span class="p">,</span><span class="n">resume</span><span class="p">,</span><span class="n">restart</span><span class="p">,</span><span class="n">clean</span><span class="p">,</span><span class="n">par</span><span class="p">,</span><span class="n">sempar</span><span class="p">,</span><span class="n">check</span><span class="p">,</span><span class="nb">print</span><span class="p">,</span><span class="n">convert</span><span class="p">,</span><span class="n">reset</span><span class="p">,</span><span class="n">debug</span><span class="p">,</span><span class="n">edit</span><span class="p">,</span><span class="n">examples</span><span class="p">}</span>
+                 <span class="o">...</span>
+
+<span class="o">================================================================================</span>
+
+                     <span class="n">SeisFlows3</span><span class="p">:</span> <span class="n">Waveform</span> <span class="n">Inversion</span> <span class="n">Package</span>
+
+<span class="o">================================================================================</span>
+
+<span class="n">optional</span> <span class="n">arguments</span><span class="p">:</span>
+  <span class="o">-</span><span class="n">h</span><span class="p">,</span> <span class="o">--</span><span class="n">help</span>            <span class="n">show</span> <span class="n">this</span> <span class="n">help</span> <span class="n">message</span> <span class="ow">and</span> <span class="n">exit</span>
+  <span class="o">-</span><span class="n">w</span> <span class="p">[</span><span class="n">WORKDIR</span><span class="p">],</span> <span class="o">--</span><span class="n">workdir</span> <span class="p">[</span><span class="n">WORKDIR</span><span class="p">]</span>
+                        <span class="n">The</span> <span class="n">SeisFlows</span> <span class="n">working</span> <span class="n">directory</span><span class="p">,</span> <span class="n">default</span><span class="p">:</span> <span class="n">cwd</span>
+  <span class="o">-</span><span class="n">p</span> <span class="p">[</span><span class="n">PARAMETER_FILE</span><span class="p">],</span> <span class="o">--</span><span class="n">parameter_file</span> <span class="p">[</span><span class="n">PARAMETER_FILE</span><span class="p">]</span>
+                        <span class="n">Parameters</span> <span class="n">file</span><span class="p">,</span> <span class="n">default</span><span class="p">:</span> <span class="s1">&#39;parameters.yaml&#39;</span>
+
+<span class="n">command</span><span class="p">:</span>
+  <span class="n">Available</span> <span class="n">SeisFlows</span> <span class="n">arguments</span> <span class="ow">and</span> <span class="n">their</span> <span class="n">intended</span> <span class="n">usages</span>
+
+    <span class="n">setup</span>               <span class="n">Setup</span> <span class="n">working</span> <span class="n">directory</span> <span class="kn">from</span> <span class="nn">scratch</span>
+    <span class="n">configure</span>           <span class="n">Fill</span> <span class="n">parameter</span> <span class="n">file</span> <span class="k">with</span> <span class="n">defaults</span>
+    <span class="n">init</span>                <span class="n">Initiate</span> <span class="n">working</span> <span class="n">environment</span>
+    <span class="n">submit</span>              <span class="n">Submit</span> <span class="n">initial</span> <span class="n">workflow</span> <span class="n">to</span> <span class="n">system</span>
+    <span class="n">resume</span>              <span class="n">Re</span><span class="o">-</span><span class="n">submit</span> <span class="n">previous</span> <span class="n">workflow</span> <span class="n">to</span> <span class="n">system</span>
+    <span class="n">restart</span>             <span class="n">Remove</span> <span class="n">current</span> <span class="n">environment</span> <span class="ow">and</span> <span class="n">submit</span> <span class="n">new</span> <span class="n">workflow</span>
+    <span class="n">clean</span>               <span class="n">Remove</span> <span class="n">files</span> <span class="n">relating</span> <span class="n">to</span> <span class="n">an</span> <span class="n">active</span> <span class="n">working</span> <span class="n">environment</span>
+    <span class="n">par</span>                 <span class="n">View</span> <span class="ow">and</span> <span class="n">edit</span> <span class="n">SeisFlows3</span> <span class="n">parameter</span> <span class="n">file</span>
+    <span class="n">sempar</span>              <span class="n">View</span> <span class="ow">and</span> <span class="n">edit</span> <span class="n">SPECFEM</span> <span class="n">parameter</span> <span class="n">file</span>
+    <span class="n">check</span>               <span class="n">Check</span> <span class="n">state</span> <span class="n">of</span> <span class="n">an</span> <span class="n">active</span> <span class="n">environment</span>
+    <span class="nb">print</span>               <span class="n">Print</span> <span class="n">information</span> <span class="n">related</span> <span class="n">to</span> <span class="n">an</span> <span class="n">active</span> <span class="n">environment</span>
+    <span class="n">convert</span>             <span class="n">Convert</span> <span class="n">model</span> <span class="n">file</span> <span class="nb">format</span>
+    <span class="n">reset</span>               <span class="n">Reset</span> <span class="n">modules</span> <span class="n">within</span> <span class="n">an</span> <span class="n">active</span> <span class="n">state</span>
+    <span class="n">debug</span>               <span class="n">Start</span> <span class="n">interactive</span> <span class="n">debug</span> <span class="n">environment</span>
+    <span class="n">edit</span>                <span class="n">Open</span> <span class="n">source</span> <span class="n">code</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">text</span> <span class="n">editor</span>
+    <span class="n">examples</span>            <span class="n">Look</span> <span class="n">at</span> <span class="ow">and</span> <span class="n">run</span> <span class="n">pre</span><span class="o">-</span><span class="n">configured</span> <span class="n">example</span> <span class="n">problems</span>
+
+<span class="s1">&#39;seisflows [command] -h&#39;</span> <span class="k">for</span> <span class="n">more</span> <span class="n">detailed</span> <span class="n">descriptions</span> <span class="n">of</span> <span class="n">each</span> <span class="n">command</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="section" id="setting-up-a-parameter-file">
+<h2>Setting up a parameter file<a class="headerlink" href="#setting-up-a-parameter-file" title="Permalink to this headline"></a></h2>
+<div class="section" id="seisflows-setup">
+<h3>seisflows setup<a class="headerlink" href="#seisflows-setup" title="Permalink to this headline"></a></h3>
+<p>The first step of any SeisFlows3 workflow is to set up a working
+directory, which begins by establishing a blank parameter file. The
+<code class="docutils literal notranslate"><span class="pre">seisflows</span> <span class="pre">setup</span></code> command copies in a template parameter file. Ideally
+your working directory will be empty to avoid file conflicts.</p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">cd</span> ~/Work/scratch
+<span class="o">!</span> ls
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">/</span><span class="n">home</span><span class="o">/</span><span class="n">bchow</span><span class="o">/</span><span class="n">Work</span><span class="o">/</span><span class="n">scratch</span>
+</pre></div>
+</div>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> seisflows setup -h
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">seisflows</span> <span class="n">setup</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">s</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">f</span><span class="p">]</span>
+
+<span class="n">In</span> <span class="n">the</span> <span class="n">specified</span> <span class="n">working</span> <span class="n">directory</span><span class="p">,</span> <span class="n">copy</span> <span class="n">template</span> <span class="n">parameter</span> <span class="n">file</span> <span class="n">containing</span>
+<span class="n">only</span> <span class="n">module</span> <span class="n">choices</span><span class="p">,</span> <span class="ow">and</span> <span class="n">symlink</span> <span class="n">source</span> <span class="n">code</span> <span class="k">for</span> <span class="n">both</span> <span class="n">the</span> <span class="n">base</span> <span class="ow">and</span> <span class="nb">super</span>
+<span class="n">repositories</span> <span class="k">for</span> <span class="n">easy</span> <span class="n">edit</span> <span class="n">access</span><span class="o">.</span> <span class="n">If</span> <span class="n">a</span> <span class="n">parameter</span> <span class="n">file</span> <span class="n">matching</span> <span class="n">the</span> <span class="n">provided</span>
+<span class="n">name</span> <span class="n">exists</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">working</span> <span class="n">directory</span><span class="p">,</span> <span class="n">a</span> <span class="n">prompt</span> <span class="n">will</span> <span class="n">appear</span> <span class="n">asking</span> <span class="n">the</span> <span class="n">user</span> <span class="k">if</span>
+<span class="n">they</span> <span class="n">want</span> <span class="n">to</span> <span class="n">overwrite</span><span class="o">.</span>
+
+<span class="n">optional</span> <span class="n">arguments</span><span class="p">:</span>
+  <span class="o">-</span><span class="n">h</span><span class="p">,</span> <span class="o">--</span><span class="n">help</span>     <span class="n">show</span> <span class="n">this</span> <span class="n">help</span> <span class="n">message</span> <span class="ow">and</span> <span class="n">exit</span>
+  <span class="o">-</span><span class="n">s</span><span class="p">,</span> <span class="o">--</span><span class="n">symlink</span>  <span class="n">symlink</span> <span class="n">source</span> <span class="n">code</span> <span class="n">into</span> <span class="n">the</span> <span class="n">working</span> <span class="n">directory</span>
+  <span class="o">-</span><span class="n">f</span><span class="p">,</span> <span class="o">--</span><span class="n">force</span>    <span class="n">automatically</span> <span class="n">overwrites</span> <span class="n">existing</span> <span class="n">parameter</span> <span class="n">file</span>
+</pre></div>
+</div>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># The &#39;-f&#39; flag (force) will overwrite any existing parameter file</span>
+<span class="o">!</span> seisflows setup -f
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">creating</span> <span class="n">parameter</span> <span class="n">file</span><span class="p">:</span> <span class="n">parameters</span><span class="o">.</span><span class="n">yaml</span>
+</pre></div>
+</div>
+<p>Having a look at the template parameters.yaml file that was just
+generated, we can see that it contains some pre-defined default values
+for the core SeisFlows3 modules. Each of these modules defines it’s own
+set of unique parameters which make up a workflow.</p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> ls
+<span class="o">!</span> wc -l parameters.yaml  # List the number of lines <span class="k">in</span> the file
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">parameters</span><span class="o">.</span><span class="n">yaml</span>
+<span class="mi">32</span> <span class="n">parameters</span><span class="o">.</span><span class="n">yaml</span>
+</pre></div>
+</div>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> cat parameters.yaml
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># //////////////////////////////////////////////////////////////////////////////</span>
+<span class="c1">#</span>
+<span class="c1">#                        SeisFlows3 YAML Parameter File</span>
+<span class="c1">#</span>
+<span class="c1"># //////////////////////////////////////////////////////////////////////////////</span>
+<span class="c1">#</span>
+<span class="c1"># Modules correspond to the structure of the source code, and determine</span>
+<span class="c1"># SeisFlows3&#39; behavior at runtime. Each module requires its own sub-parameters.</span>
+<span class="c1">#</span>
+<span class="c1"># .. rubric::</span>
+<span class="c1">#   - To determine available options for modules listed below, run:</span>
+<span class="c1">#       &gt; seisflows print modules</span>
+<span class="c1">#   - To auto-fill with docstrings and default values (recommended), run:</span>
+<span class="c1">#       &gt; seisflows configure</span>
+<span class="c1">#   - To set values as NoneType, use: null</span>
+<span class="c1">#   - To set values as infinity, use: inf</span>
+<span class="c1">#</span>
+<span class="c1">#                                    MODULES</span>
+<span class="c1">#                                    ///////</span>
+<span class="c1"># WORKFLOW (str):    The method for running SeisFlows3; equivalent to main()</span>
+<span class="c1"># SOLVER (str):      External numerical solver to use for waveform simulations</span>
+<span class="c1"># SYSTEM (str):      Computer architecture of the system being used</span>
+<span class="c1"># OPTIMIZE (str):    Optimization algorithm for the inverse problem</span>
+<span class="c1"># PREPROCESS (str):  Preprocessing schema for waveform data</span>
+<span class="c1"># POSTPROCESS (str): Postprocessing schema for kernels and gradients</span>
+<span class="c1"># ==============================================================================</span>
+<span class="n">WORKFLOW</span><span class="p">:</span> <span class="n">inversion</span>
+<span class="n">SOLVER</span><span class="p">:</span> <span class="n">specfem2d</span>
+<span class="n">SYSTEM</span><span class="p">:</span> <span class="n">workstation</span>
+<span class="n">OPTIMIZE</span><span class="p">:</span> <span class="n">LBFGS</span>
+<span class="n">PREPROCESS</span><span class="p">:</span> <span class="n">base</span>
+<span class="n">POSTPROCESS</span><span class="p">:</span> <span class="n">base</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="seisflows-configure">
+<h3>seisflows configure<a class="headerlink" href="#seisflows-configure" title="Permalink to this headline"></a></h3>
+<p>We can now run the <code class="docutils literal notranslate"><span class="pre">seisflows</span> <span class="pre">configure</span></code> command which will build out
+our parameter file based on the module choices provided in the parameter
+file.</p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> seisflows configure -h
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">seisflows</span> <span class="n">configure</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">r</span><span class="p">]</span>
+
+<span class="n">SeisFlows</span> <span class="n">parameter</span> <span class="n">files</span> <span class="n">will</span> <span class="n">vary</span> <span class="n">depending</span> <span class="n">on</span> <span class="n">chosen</span> <span class="n">modules</span> <span class="ow">and</span> <span class="n">their</span>
+<span class="n">respective</span> <span class="n">required</span> <span class="n">parameters</span><span class="o">.</span> <span class="n">This</span> <span class="n">function</span> <span class="n">will</span> <span class="n">dynamically</span> <span class="n">traverse</span> <span class="n">the</span>
+<span class="n">source</span> <span class="n">code</span> <span class="ow">and</span> <span class="n">generate</span> <span class="n">a</span> <span class="n">template</span> <span class="n">parameter</span> <span class="n">file</span> <span class="n">based</span> <span class="n">on</span> <span class="n">module</span> <span class="n">choices</span><span class="o">.</span>
+<span class="n">The</span> <span class="n">resulting</span> <span class="n">file</span> <span class="n">incldues</span> <span class="n">docstrings</span> <span class="ow">and</span> <span class="nb">type</span> <span class="n">hints</span> <span class="k">for</span> <span class="n">each</span> <span class="n">parameter</span><span class="o">.</span>
+<span class="n">Optional</span> <span class="n">parameters</span> <span class="n">will</span> <span class="n">be</span> <span class="nb">set</span> <span class="k">with</span> <span class="n">default</span> <span class="n">values</span> <span class="ow">and</span> <span class="n">required</span> <span class="n">parameters</span>
+<span class="ow">and</span> <span class="n">paths</span> <span class="n">will</span> <span class="n">be</span> <span class="n">marked</span> <span class="n">appropriately</span><span class="o">.</span> <span class="n">Required</span> <span class="n">parameters</span> <span class="n">must</span> <span class="n">be</span> <span class="nb">set</span> <span class="n">before</span>
+<span class="n">a</span> <span class="n">workflow</span> <span class="n">can</span> <span class="n">be</span> <span class="n">submitted</span><span class="o">.</span>
+
+<span class="n">optional</span> <span class="n">arguments</span><span class="p">:</span>
+  <span class="o">-</span><span class="n">h</span><span class="p">,</span> <span class="o">--</span><span class="n">help</span>            <span class="n">show</span> <span class="n">this</span> <span class="n">help</span> <span class="n">message</span> <span class="ow">and</span> <span class="n">exit</span>
+  <span class="o">-</span><span class="n">r</span><span class="p">,</span> <span class="o">--</span><span class="n">relative_paths</span>  <span class="n">Set</span> <span class="n">default</span> <span class="n">paths</span> <span class="n">relative</span> <span class="n">to</span> <span class="n">cwd</span>
+</pre></div>
+</div>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> seisflows configure
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">filling</span> <span class="n">parameters</span><span class="o">.</span><span class="n">yaml</span> <span class="n">w</span><span class="o">/</span> <span class="n">default</span> <span class="n">values</span>
+</pre></div>
+</div>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> head -200 parameters.yaml <span class="p">|</span> tail -n <span class="m">82</span>  # have a look at the middle of the file
+<span class="o">!</span> echo
+<span class="o">!</span> wc -l parameters.yaml
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span># =============================================================================
+#                                    SOLVER
+#                                    //////
+# MATERIALS (str):
+#   Material parameters used to define model. Available: [&#39;ELASTIC&#39;: Vp, Vs,
+#   &#39;ACOUSTIC&#39;: Vp, &#39;ISOTROPIC&#39;, &#39;ANISOTROPIC&#39;]
+# DENSITY (str):
+#   How to treat density during inversion. Available: [&#39;CONSTANT&#39;: Do not
+#   update density, &#39;VARIABLE&#39;: Update density]
+# ATTENUATION (str):
+#   If True, turn on attenuation during forward simulations, otherwise set
+#   attenuation off. Attenuation is always off for adjoint simulations.
+# COMPONENTS (str):
+#   Components used to generate data, formatted as a single string, e.g. ZNE
+#   or NZ or E
+# SOLVERIO (int):
+#   The format external solver files. Available: [&#39;fortran_binary&#39;, &#39;adios&#39;]
+# NT (float):
+#   Number of time steps set in the SPECFEM Par_file
+# DT (float):
+#   Time step or delta set in the SPECFEM Par_file
+# F0 (float):
+#   Dominant source frequency
+# FORMAT (float):
+#   Format of synthetic waveforms used during workflow, available options:
+#   [&#39;ascii&#39;, &#39;su&#39;]
+# SOURCE_PREFIX (str):
+#   Prefix of SOURCE files in path SPECFEM_DATA. By default, &#39;SOURCE&#39; for
+#   SPECFEM2D
+# =============================================================================
+MATERIALS: !!! REQUIRED PARAMETER !!!
+DENSITY: !!! REQUIRED PARAMETER !!!
+ATTENUATION: !!! REQUIRED PARAMETER !!!
+COMPONENTS: ZNE
+SOLVERIO: fortran_binary
+NT: !!! REQUIRED PARAMETER !!!
+DT: !!! REQUIRED PARAMETER !!!
+F0: !!! REQUIRED PARAMETER !!!
+FORMAT: !!! REQUIRED PARAMETER !!!
+SOURCE_PREFIX: SOURCE
+
+# =============================================================================
+#                                  POSTPROCESS
+#                                  ///////////
+# SMOOTH_H (float):
+#   Gaussian half-width for horizontal smoothing in units of meters. If 0.,
+#   no smoothing applied
+# SMOOTH_V (float):
+#   Gaussian half-width for vertical smoothing in units of meters
+# TASKTIME_SMOOTH (int):
+#   Large radii smoothing may take longer than normal tasks. Allocate
+#   additional smoothing task time as a multiple of TASKTIME
+# =============================================================================
+SMOOTH_H: 0.0
+SMOOTH_V: 0.0
+TASKTIME_SMOOTH: 1
+
+# =============================================================================
+#                                   OPTIMIZE
+#                                   ////////
+# LINESEARCH (str):
+#   Algorithm to use for line search, see seisflows.plugins.line_search for
+#   available choices
+# PRECOND (str):
+#   Algorithm to use for preconditioning gradients, see
+#   seisflows3.plugins.preconds for available choices
+# STEPCOUNTMAX (int):
+#   Max number of trial steps in line search before a change in line search
+#   behavior
+# STEPLENINIT (float):
+#   Initial line search step length, as a fraction of current model
+#   parameters
+# STEPLENMAX (float):
+#   Max allowable step length, as a fraction of current model parameters
+# LBFGSMEM (int):
+#   Max number of previous gradients to retain in local memory
+# LBFGSMAX (int):
+#   LBFGS periodic restart interval, between 1 and &#39;inf&#39;
+# LBFGSTHRESH (float):
+#   LBFGS angle restart threshold
+# =============================================================================
+LINESEARCH: Backtrack
+
+306 parameters.yaml
+</pre></div>
+</div>
+<p>We can see that our parameter file is over 300 lines now, too cumbersome
+to print on the page. The length of the file mostly arises from the
+header, as each parameter gets it’s own entry with the parameter’s type,
+docstring, and any available options.</p>
+<p>Parameters that are required by the workflow but do not come with
+pre-set default values will be labelled with
+<code class="docutils literal notranslate"><span class="pre">!!!</span> <span class="pre">REQUIRED</span> <span class="pre">PARAMETER</span> <span class="pre">!!!</span></code>. Similarly required path definitions,
+which come at the end of the file, are labelled with the
+<code class="docutils literal notranslate"><span class="pre">!!!</span> <span class="pre">REQUIRED</span> <span class="pre">PATH</span> <span class="pre">!!!</span></code> value.</p>
+</div>
+</div>
+<div class="section" id="filling-out-the-parameter-file">
+<h2>Filling out the parameter file<a class="headerlink" href="#filling-out-the-parameter-file" title="Permalink to this headline"></a></h2>
+<div class="section" id="seisflows-par">
+<h3>seisflows par<a class="headerlink" href="#seisflows-par" title="Permalink to this headline"></a></h3>
+<p>It’s easy enough to open your favorite text editor to make adjustments
+to the parameter file, however the <code class="docutils literal notranslate"><span class="pre">seisflows</span> <span class="pre">par</span></code> command makes
+things easier by allowing you to view and edit values from the command
+line. This makes it convenient to change parameters, and also allows you
+to script your workflow setup for improved reproducibility.</p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> seisflows par -h
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">seisflows</span> <span class="n">par</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">p</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">r</span><span class="p">]</span> <span class="p">[</span><span class="n">parameter</span><span class="p">]</span> <span class="p">[</span><span class="n">value</span><span class="p">]</span>
+
+<span class="n">Directly</span> <span class="n">edit</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">parameter</span> <span class="n">file</span> <span class="n">by</span> <span class="n">providing</span> <span class="n">the</span> <span class="n">parameter</span> <span class="ow">and</span>
+<span class="n">corresponding</span> <span class="n">value</span><span class="o">.</span> <span class="n">If</span> <span class="n">no</span> <span class="n">value</span> <span class="ow">is</span> <span class="n">provided</span><span class="p">,</span> <span class="n">will</span> <span class="n">simply</span> <span class="nb">print</span> <span class="n">out</span> <span class="n">the</span>
+<span class="n">current</span> <span class="n">value</span> <span class="n">of</span> <span class="n">the</span> <span class="n">given</span> <span class="n">parameter</span><span class="o">.</span> <span class="n">Works</span> <span class="n">also</span> <span class="k">with</span> <span class="n">path</span> <span class="n">names</span><span class="o">.</span>
+
+<span class="n">positional</span> <span class="n">arguments</span><span class="p">:</span>
+  <span class="n">parameter</span>         <span class="n">Parameter</span> <span class="n">to</span> <span class="n">edit</span> <span class="ow">or</span> <span class="n">view</span><span class="p">,</span> <span class="p">(</span><span class="n">case</span> <span class="n">independent</span><span class="p">)</span><span class="o">.</span>
+  <span class="n">value</span>             <span class="n">Optional</span> <span class="n">value</span> <span class="n">to</span> <span class="nb">set</span> <span class="n">parameter</span> <span class="n">to</span><span class="o">.</span> <span class="n">If</span> <span class="ow">not</span> <span class="n">given</span><span class="p">,</span> <span class="n">will</span>
+                    <span class="nb">print</span> <span class="n">out</span> <span class="n">current</span> <span class="n">parameter</span><span class="o">.</span> <span class="n">If</span> <span class="n">given</span><span class="p">,</span> <span class="n">will</span> <span class="n">replace</span>
+                    <span class="n">current</span> <span class="n">parameter</span> <span class="k">with</span> <span class="n">new</span> <span class="n">value</span><span class="o">.</span> <span class="n">Set</span> <span class="k">as</span> <span class="s1">&#39;null&#39;</span> <span class="k">for</span>
+                    <span class="n">NoneType</span> <span class="ow">and</span> <span class="nb">set</span> <span class="s1">&#39;&#39;</span> <span class="k">for</span> <span class="n">empty</span> <span class="n">string</span>
+
+<span class="n">optional</span> <span class="n">arguments</span><span class="p">:</span>
+  <span class="o">-</span><span class="n">h</span><span class="p">,</span> <span class="o">--</span><span class="n">help</span>        <span class="n">show</span> <span class="n">this</span> <span class="n">help</span> <span class="n">message</span> <span class="ow">and</span> <span class="n">exit</span>
+  <span class="o">-</span><span class="n">p</span><span class="p">,</span> <span class="o">--</span><span class="n">skip_print</span>  <span class="n">Skip</span> <span class="n">the</span> <span class="nb">print</span> <span class="n">statement</span> <span class="n">which</span> <span class="ow">is</span> <span class="n">typically</span> <span class="n">sent</span> <span class="n">to</span> <span class="n">stdout</span>
+                    <span class="n">after</span> <span class="n">changing</span> <span class="n">parameters</span><span class="o">.</span>
+  <span class="o">-</span><span class="n">r</span><span class="p">,</span> <span class="o">--</span><span class="n">required</span>    <span class="n">Only</span> <span class="nb">list</span> <span class="n">parameters</span> <span class="n">which</span> <span class="n">have</span> <span class="ow">not</span> <span class="n">been</span> <span class="nb">set</span> <span class="k">as</span> <span class="n">a</span> <span class="n">default</span>
+                    <span class="n">value</span><span class="p">,</span> <span class="n">typically</span> <span class="nb">set</span> <span class="k">with</span> <span class="n">some</span> <span class="n">attention</span> <span class="n">catching</span>
+                    <span class="n">argument</span><span class="o">.</span> <span class="s1">&#39;parameter&#39;</span> <span class="ow">and</span> <span class="s1">&#39;value&#39;</span> <span class="n">will</span> <span class="n">be</span> <span class="n">ignored</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>The -r (–required) flag tells us which parameters need to be set by the
+user</p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> seisflows par -r
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>!!! REQUIRED PARAMETER !!!
+==========================
+    MATERIALS
+    DENSITY
+    ATTENUATION
+    NT
+    DT
+    F0
+    FORMAT
+    CASE
+    END
+!!! REQUIRED PATH !!!
+=====================
+    SPECFEM_BIN
+    SPECFEM_DATA
+    MODEL_INIT
+</pre></div>
+</div>
+<p>We can view (but not modify) parameters by giving a single argument to
+the par command</p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> seisflows par end
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>END: !!! REQUIRED PARAMETER !!!
+</pre></div>
+</div>
+<p>and we can edit the given parameter by providing a second argument to
+the par command</p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> seisflows par end <span class="m">1</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>END: !!! REQUIRED PARAMETER !!! -&gt; 1
+</pre></div>
+</div>
+</div>
+<div class="section" id="seisflows-sempar">
+<h3>seisflows sempar<a class="headerlink" href="#seisflows-sempar" title="Permalink to this headline"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">seisflows</span> <span class="pre">sempar</span></code> command behaves the same as the <code class="docutils literal notranslate"><span class="pre">par</span></code>
+command, except is used to edit a SPECFEM2D/3D/3D_GLOBE Par_file. It has
+the same call structure as <code class="docutils literal notranslate"><span class="pre">par</span></code>.</p>
+</div>
+</div>
+<div class="section" id="setting-up-an-active-working-state">
+<h2>Setting up an active working state<a class="headerlink" href="#setting-up-an-active-working-state" title="Permalink to this headline"></a></h2>
+<p>An active SeisFlows3 working state is simply a Python environment with
+the SeisFlows3 library defined based on the given parameter file. In
+order to establish a working state, we need to set all required paths
+and parameters. We can look at the parameter file header to determine
+valid options for each parameter.</p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> head -130 parameters.yaml <span class="p">|</span> tail -n <span class="m">10</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">#                                    //////</span>
+<span class="c1"># MATERIALS (str):</span>
+<span class="c1">#   Material parameters used to define model. Available: [&#39;ELASTIC&#39;: Vp, Vs,</span>
+<span class="c1">#   &#39;ACOUSTIC&#39;: Vp, &#39;ISOTROPIC&#39;, &#39;ANISOTROPIC&#39;]</span>
+<span class="c1"># DENSITY (str):</span>
+<span class="c1">#   How to treat density during inversion. Available: [&#39;CONSTANT&#39;: Do not</span>
+<span class="c1">#   update density, &#39;VARIABLE&#39;: Update density]</span>
+<span class="c1"># ATTENUATION (str):</span>
+<span class="c1">#   If True, turn on attenuation during forward simulations, otherwise set</span>
+<span class="c1">#   attenuation off. Attenuation is always off for adjoint simulations.</span>
+</pre></div>
+</div>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># We use the `-p` flag to turn off stdout printing</span>
+<span class="o">!</span> seisflows par materials elastic -p
+<span class="o">!</span> seisflows par density constant -p
+<span class="o">!</span> seisflows par attenuation False -p
+<span class="o">!</span> seisflows par nt <span class="m">100</span> -p
+<span class="o">!</span> seisflows par dt .01 -p
+<span class="o">!</span> seisflows par f0 .5 -p
+<span class="o">!</span> seisflows par format ascii -p
+<span class="o">!</span> seisflows par <span class="k">case</span> synthetic -p
+
+<span class="c1"># Required paths can similarly be set the `par` command</span>
+<span class="o">!</span> seisflows par specfem_bin ./ -p
+<span class="o">!</span> seisflows par specfem_data ./ -p
+<span class="o">!</span> seisflows par model_init ./ -p
+</pre></div>
+</div>
+<div class="section" id="seisflows-init">
+<h3>seisflows init<a class="headerlink" href="#seisflows-init" title="Permalink to this headline"></a></h3>
+<p>To initiate a working state, we run <code class="docutils literal notranslate"><span class="pre">seisflows</span> <span class="pre">init</span></code>. This registers
+the parameter file into Python’s sys.modules. It runs parameter check
+functions to ensure that parameters have been set correctly, and then
+saves the active working state as a set of pickle (.p) files which can
+be used to resume active workflows.</p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> seisflows init
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">================================================================================</span>
+                               <span class="n">MODULE</span> <span class="n">CHECK</span> <span class="n">ERROR</span>
+                               <span class="o">//////////////////</span>
+<span class="n">seisflows</span><span class="o">.</span><span class="n">config</span> <span class="n">module</span> <span class="n">check</span> <span class="n">failed</span> <span class="k">with</span><span class="p">:</span>
+
+<span class="n">workflow</span><span class="p">:</span> <span class="n">CASE</span> <span class="o">==</span> <span class="n">SYNTHETIC</span> <span class="n">requires</span> <span class="n">PATH</span><span class="o">.</span><span class="n">MODEL_TRUE</span>
+<span class="o">================================================================================</span>
+</pre></div>
+</div>
+<p>Oops, as we can see the parameter check has caught that a given
+parameter requires a certain path to be set which is currently blank.
+Let’s amend and try again</p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> seisflows par model_true ./ -p
+<span class="o">!</span> seisflows init
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">instantiating</span> <span class="n">SeisFlows3</span> <span class="n">working</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">directory</span><span class="p">:</span> <span class="n">output</span>
+</pre></div>
+</div>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> ls
+<span class="o">!</span> echo
+<span class="o">!</span> ls output
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">output</span>      <span class="n">parameters</span><span class="o">.</span><span class="n">yaml</span>
+
+<span class="n">seisflows_optimize</span><span class="o">.</span><span class="n">p</span>           <span class="n">seisflows_postprocess</span><span class="o">.</span><span class="n">p</span>  <span class="n">seisflows_system</span><span class="o">.</span><span class="n">p</span>
+<span class="n">seisflows_parameters</span><span class="o">.</span><span class="n">json</span>  <span class="n">seisflows_preprocess</span><span class="o">.</span><span class="n">p</span>   <span class="n">seisflows_workflow</span><span class="o">.</span><span class="n">p</span>
+<span class="n">seisflows_paths</span><span class="o">.</span><span class="n">json</span>           <span class="n">seisflows_solver</span><span class="o">.</span><span class="n">p</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="citeme.html" class="btn btn-neutral float-left" title="Cite" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="parameter_file.html" class="btn btn-neutral float-right" title="Parameter File" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

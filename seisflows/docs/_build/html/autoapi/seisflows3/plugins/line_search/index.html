@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.plugins.line_search &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.plugins.line_search</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3/plugins/line_search/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.plugins.line_search">
+<span id="seisflows3-plugins-line-search"></span><h1><a class="reference internal" href="#module-seisflows3.plugins.line_search" title="seisflows3.plugins.line_search"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.plugins.line_search</span></code></a><a class="headerlink" href="#module-seisflows3.plugins.line_search" title="Permalink to this headline"></a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="backtrack/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.plugins.line_search.backtrack</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="base/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.plugins.line_search.base</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="bracket/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.plugins.line_search.bracket</span></code></a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="package-contents">
+<h2>Package Contents<a class="headerlink" href="#package-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.plugins.line_search.Base" title="seisflows3.plugins.line_search.Base"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Base</span></code></a></p></td>
+<td><p>Abstract base class for line search</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.plugins.line_search.Bracket" title="seisflows3.plugins.line_search.Bracket"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Bracket</span></code></a></p></td>
+<td><p>Implements bracketing line search, which attempts to find a step length</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.plugins.line_search.Backtrack" title="seisflows3.plugins.line_search.Backtrack"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Backtrack</span></code></a></p></td>
+<td><p>Overwrites seisflows.plugins.line_search.Bracket</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Base">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.plugins.line_search.</span></span><span class="sig-name descname"><span class="pre">Base</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">step_count_max</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_len_max</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Base" title="Permalink to this definition"></a></dt>
+<dd><p>Abstract base class for line search</p>
+<dl class="simple">
+<dt>Variables Descriptions:</dt><dd><p>x: list of step lenths from current line search
+f: correpsonding list of function values
+m: number of step lengths in current line search
+n: number of model updates in optimization problem
+gtg: dot product of gradient with itself
+gtp: dot product of gradient and search direction</p>
+</dd>
+<dt>Status codes</dt><dd><p>status &gt; 0  : finished
+status == 0 : not finished
+status &lt; 0  : failed</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Base.logger">
+<span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#seisflows3.plugins.line_search.Base.logger" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Base.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_len</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func_val</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gtg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gtp</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Base.initialize" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize a new search from step count 0 and calculate the step
+direction and length</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>iter</strong> (<em>int</em>) – current iteration defined by OPTIMIZE.iter</p></li>
+<li><p><strong>step_len</strong> (<em>float</em>) – initial step length determined by optimization</p></li>
+<li><p><strong>func_val</strong> (<em>float</em>) – current evaluation of the objective function</p></li>
+<li><p><strong>gtg</strong> (<em>float</em>) – dot product of the gradient with itself</p></li>
+<li><p><strong>gtp</strong> (<em>float</em>) – dot product of gradient <cite>g</cite> with search direction <cite>p</cite></p></li>
+</ul>
+</dd>
+<dt class="field-even">Rtype alpha</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Return alpha</dt>
+<dd class="field-odd"><p>the calculated trial step length</p>
+</dd>
+<dt class="field-even">Rtype status</dt>
+<dd class="field-even"><p>int</p>
+</dd>
+<dt class="field-odd">Return status</dt>
+<dd class="field-odd"><p>current status of the line search</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Base.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_len</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func_val</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Base.update" title="Permalink to this definition"></a></dt>
+<dd><p>Update search history by appending internal attributes, writing the
+current list of step lengths and function evaluations, and calculating a
+new step length</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>iter</strong> (<em>int</em>) – current iteration defined by OPTIMIZE.iter</p></li>
+<li><p><strong>step_len</strong> (<em>float</em>) – step length determined by optimization</p></li>
+<li><p><strong>func_val</strong> (<em>float</em>) – current evaluation of the objective function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Rtype alpha</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Return alpha</dt>
+<dd class="field-odd"><p>the calculated rial step length</p>
+</dd>
+<dt class="field-even">Rtype status</dt>
+<dd class="field-even"><p>int</p>
+</dd>
+<dt class="field-odd">Return status</dt>
+<dd class="field-odd"><p>current status of the line search</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Base.clear_history">
+<span class="sig-name descname"><span class="pre">clear_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Base.clear_history" title="Permalink to this definition"></a></dt>
+<dd><p>Clears internal line search history</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Base.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Base.reset" title="Permalink to this definition"></a></dt>
+<dd><p>If a line search fails mid-search, and the User wants to resume from
+the line search function. Initialize will be called again. This function
+undos the progress made by the previous line search so that a new line
+search can be called without problem.</p>
+<p>output.optim needs to have its lines cleared manually</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Base.write_log">
+<span class="sig-name descname"><span class="pre">write_log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_len</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func_val</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Base.write_log" title="Permalink to this definition"></a></dt>
+<dd><p>Write the line search history into a formatted text file (self.log)
+that looks something like this:</p>
+<blockquote>
+<div><p>ITER     STEPLEN     MISFIT</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Base.search_history">
+<span class="sig-name descname"><span class="pre">search_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Base.search_history" title="Permalink to this definition"></a></dt>
+<dd><p>A convenience function, collects information based on the current
+evaluation of the line search, needed to determine search status and
+calculate step length. From the full collection of the search history,
+only returns values relevant to the current line search.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>sort</strong> (<em>bool</em>) – sort the search history by step length</p>
+</dd>
+<dt class="field-even">Rtype x</dt>
+<dd class="field-even"><p>np.array</p>
+</dd>
+<dt class="field-odd">Return x</dt>
+<dd class="field-odd"><p>list of step lenths from current line search</p>
+</dd>
+<dt class="field-even">Rtype f</dt>
+<dd class="field-even"><p>np.array</p>
+</dd>
+<dt class="field-odd">Return f</dt>
+<dd class="field-odd"><p>correpsonding list of function values</p>
+</dd>
+<dt class="field-even">Rtype gtg</dt>
+<dd class="field-even"><p>list</p>
+</dd>
+<dt class="field-odd">Return gtg</dt>
+<dd class="field-odd"><p>dot product dot product of gradient with itself</p>
+</dd>
+<dt class="field-even">Rtype gtp</dt>
+<dd class="field-even"><p>list</p>
+</dd>
+<dt class="field-odd">Return gtp</dt>
+<dd class="field-odd"><p>dot product of gradient and search direction</p>
+</dd>
+<dt class="field-even">Rtype i</dt>
+<dd class="field-even"><p>int</p>
+</dd>
+<dt class="field-odd">Return i</dt>
+<dd class="field-odd"><p>step_count</p>
+</dd>
+<dt class="field-even">Rtype j</dt>
+<dd class="field-even"><p>int</p>
+</dd>
+<dt class="field-odd">Return j</dt>
+<dd class="field-odd"><p>number of iterations corresponding to 0 step length</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Base.calculate_step">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">calculate_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Base.calculate_step" title="Permalink to this definition"></a></dt>
+<dd><p>Determines step length and search status</p>
+<p>!!! Must be implemented by subclass !!!</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Bracket">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.plugins.line_search.</span></span><span class="sig-name descname"><span class="pre">Bracket</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Bracket" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="base/index.html#seisflows3.plugins.line_search.base.Base" title="seisflows3.plugins.line_search.base.Base"><code class="xref py py-obj docutils literal notranslate"><span class="pre">seisflows3.plugins.line_search.base.Base</span></code></a></p>
+<p>Implements bracketing line search, which attempts to find a step length
+corresponding to misfit reduction, and a misfit corresponding to misfit
+increase, so that the optimization procedure can scale the step length
+in future iterations.</p>
+<dl class="simple">
+<dt>Variables Descriptions:</dt><dd><p>x: list of step lenths from current line search
+f: correpsonding list of function values
+gtg: dot product of gradient with itself
+gtp: dot product of gradient and search direction</p>
+</dd>
+<dt>Status codes</dt><dd><p>status &gt; 0  : finished
+status == 0 : not finished
+status &lt; 0  : failed</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Bracket.logger">
+<span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#seisflows3.plugins.line_search.Bracket.logger" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Bracket.calculate_step">
+<span class="sig-name descname"><span class="pre">calculate_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Bracket.calculate_step" title="Permalink to this definition"></a></dt>
+<dd><p>Determines step length (alpha) and search status (status)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Bracket._check_bracket">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_check_bracket</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">step_lens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func_vals</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Bracket._check_bracket" title="Permalink to this definition"></a></dt>
+<dd><p>Checks if minimum has been bracketed</p>
+<p>Looks at the minimum of the misfit values calculated through eval func
+to see if the misfit has been reduced w.r.t the initial misfit</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>step_lens</strong> (<em>numpy.array</em>) – an array of the step lengths taken during iteration</p></li>
+<li><p><strong>func_vals</strong> (<em>numpy.array</em>) – array of misfit values from eval func function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>status of function as a bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Bracket._good_enough">
+<span class="sig-name descname"><span class="pre">_good_enough</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_lens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func_vals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">np.log10(1.2)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Bracket._good_enough" title="Permalink to this definition"></a></dt>
+<dd><p>Checks if step length is reasonably close to quadratic estimate</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>step_lens</strong> (<em>np.array</em>) – an array of the step lengths taken during iteration</p></li>
+<li><p><strong>func_vals</strong> (<em>np.array</em>) – array of misfit values from eval func function</p></li>
+<li><p><strong>thresh</strong> (<em>numpy.float64</em>) – threshold value for comparison against quadratic estimate</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>status of function as a bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Backtrack">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.plugins.line_search.</span></span><span class="sig-name descname"><span class="pre">Backtrack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Backtrack" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="bracket/index.html#seisflows3.plugins.line_search.bracket.Bracket" title="seisflows3.plugins.line_search.bracket.Bracket"><code class="xref py py-obj docutils literal notranslate"><span class="pre">seisflows3.plugins.line_search.bracket.Bracket</span></code></a></p>
+<p>Overwrites seisflows.plugins.line_search.Bracket</p>
+<p>Implements backtracking linesearch. A backtracking line search is used
+for L-BFGS optimization, where a unit step length is attempted, if this
+does not satisfy the misfit reduction criteria, the step length is
+<cite>backtracked</cite> to a smaller value. If the backtracked value becomes too small
+the backtracking line search defaults to a Bracketing line search.</p>
+<dl class="simple">
+<dt>Variables Descriptions:</dt><dd><p>x: list of step lenths from current line search
+f: correpsonding list of function values
+m: number of step lengths in current line search
+n: number of model updates in optimization problem
+gtg: dot product of gradient with itself
+gtp: dot product of gradient and search direction</p>
+</dd>
+<dt>Status codes</dt><dd><p>status &gt; 0  : finished
+status == 0 : not finished
+status &lt; 0  : failed</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Backtrack.logger">
+<span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#seisflows3.plugins.line_search.Backtrack.logger" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Backtrack.calculate_step">
+<span class="sig-name descname"><span class="pre">calculate_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Backtrack.calculate_step" title="Permalink to this definition"></a></dt>
+<dd><p>Determines step length and search status</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.plugins.line_search.Backtrack._check_decrease">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_check_decrease</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">step_lens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func_vals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0001</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.plugins.line_search.Backtrack._check_decrease" title="Permalink to this definition"></a></dt>
+<dd><p>Checks for sufficient decrease by comparing the current functional value
+with the smallest functional value in the list.</p>
+<p>!!! What’s with the unused value of ‘c’?, also ‘x’ isn’t used</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

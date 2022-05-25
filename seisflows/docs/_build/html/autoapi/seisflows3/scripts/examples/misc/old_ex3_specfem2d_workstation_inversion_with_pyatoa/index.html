@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../../../" id="documentation_options" src="../../../../../../_static/documentation_options.js"></script>
+        <script src="../../../../../../_static/jquery.js"></script>
+        <script src="../../../../../../_static/underscore.js"></script>
+        <script src="../../../../../../_static/doctools.js"></script>
+    <script src="../../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../../../_sources/autoapi/seisflows3/scripts/examples/misc/old_ex3_specfem2d_workstation_inversion_with_pyatoa/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa">
+<span id="seisflows3-scripts-examples-misc-old-ex3-specfem2d-workstation-inversion-with-pyatoa"></span><h1><a class="reference internal" href="#module-seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa" title="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa</span></code></a><a class="headerlink" href="#module-seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa" title="Permalink to this headline"></a></h1>
+<blockquote>
+<div><p>SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE 3</p>
+</div></blockquote>
+<p>This example will run an inversion between two slightly different homogeneous
+halfspace models using 3 sources and 132 stations. It uses the Pyatoa
+preprocessing module (which calls the Pyatoa package) to assess misfit and
+generate misfit figures.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You can change the number of events (NTASK) and iterations (NITER) by
+changing the constants below the import statements</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The tasks involved include:
+1. Download, configure and compile SPECFEM2D
+2. Set up a SPECFEM2D working directory
+3. Generate starting model from Tape2007 example
+4. Generate target model w/ perturbed starting model
+5. Set up a SeisFlows3 working directory
+6. Run two iterations of an inversion workflow</p>
+</div>
+<p class="rubric">$ seisflows examples run 2</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_specfem2d_for_model_true" title="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_specfem2d_for_model_true"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setup_specfem2d_for_model_true</span></code></a>(sf)</p></td>
+<td><p>Make some adjustments to the  parameter file to create the final velocity</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_specfem2d_for_seisflows3_inversion" title="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_specfem2d_for_seisflows3_inversion"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setup_specfem2d_for_seisflows3_inversion</span></code></a>(sf)</p></td>
+<td><p>Final changes to the SPECFEM2D Par_file before running SeisFlows. Par_file</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_seisflows_working_directory" title="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_seisflows_working_directory"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setup_seisflows_working_directory</span></code></a>(sf, workdir_paths, ntask=3, niter=2)</p></td>
+<td><p>Create and set the SeisFlows3 parameter file, making sure all required</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.main" title="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.main"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code></a>(run_example=False)</p></td>
+<td><p>Setup the example and then optionally run the actual seisflows workflow</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.NTASK" title="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.NTASK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NTASK</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.NITER" title="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.NITER"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NITER</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.NTASK">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.</span></span><span class="sig-name descname"><span class="pre">NTASK</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">3</span></em><a class="headerlink" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.NTASK" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.NITER">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.</span></span><span class="sig-name descname"><span class="pre">NITER</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.NITER" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_specfem2d_for_model_true">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.</span></span><span class="sig-name descname"><span class="pre">setup_specfem2d_for_model_true</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sf</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_specfem2d_for_model_true" title="Permalink to this definition"></a></dt>
+<dd><p>Make some adjustments to the  parameter file to create the final velocity
+model. This function assumes it is running from inside the SPECFEM2D/DATA
+directory. Also assumes that setup_specfem2d_for_model_init() has been
+run, which set up how the model is output</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>sf</strong> (<a class="reference internal" href="../../../../seisflows/index.html#seisflows3.seisflows.SeisFlows" title="seisflows3.seisflows.SeisFlows"><em>seisflows3.seisflows.SeisFlows</em></a>) – the SeisFlows3 command line tool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_specfem2d_for_seisflows3_inversion">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.</span></span><span class="sig-name descname"><span class="pre">setup_specfem2d_for_seisflows3_inversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sf</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_specfem2d_for_seisflows3_inversion" title="Permalink to this definition"></a></dt>
+<dd><p>Final changes to the SPECFEM2D Par_file before running SeisFlows. Par_file
+will be used to control all the child specfem2d directories. Need to tell
+them to read models from .bin files, and to use existing station files
+rather than create them from the Par_file
+rather than create them from the Par_file</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_seisflows_working_directory">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.</span></span><span class="sig-name descname"><span class="pre">setup_seisflows_working_directory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workdir_paths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ntask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">niter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_seisflows_working_directory" title="Permalink to this definition"></a></dt>
+<dd><p>Create and set the SeisFlows3 parameter file, making sure all required
+parameters are set correctly for this example problem</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sf</strong> (<a class="reference internal" href="../../../../seisflows/index.html#seisflows3.seisflows.SeisFlows" title="seisflows3.seisflows.SeisFlows"><em>seisflows3.seisflows.SeisFlows</em></a>) – the SeisFlows3 command line tool</p></li>
+<li><p><strong>workdir_paths</strong> (<a class="reference internal" href="../../../../config/index.html#seisflows3.config.Dict" title="seisflows3.config.Dict"><em>Dict</em></a>) – path dictionary for the SPECFEM2D working directory</p></li>
+<li><p><strong>ntask</strong> (<em>int</em>) – Number of sources to include in the inversion</p></li>
+<li><p><strong>ninter</strong> – number of iterations to perform within the inversion</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.main">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_example</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.main" title="Permalink to this definition"></a></dt>
+<dd><p>Setup the example and then optionally run the actual seisflows workflow</p>
+<p>TODO Figure out how to not have to repeat this code block, which is
+TODO an exact copy of example 1</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>run_example</strong> (<em>bool</em>) – Directly run the seisflows workflow after the setup</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

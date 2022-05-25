@@ -1,0 +1,23 @@
+:py:mod:`seisflows3.tools`
+==========================
+
+.. py:module:: seisflows3.tools
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   array/index.rst
+   err/index.rst
+   graphics/index.rst
+   math/index.rst
+   msg/index.rst
+   signal/index.rst
+   specfem/index.rst
+   unix/index.rst
+   wrappers/index.rst
+
+

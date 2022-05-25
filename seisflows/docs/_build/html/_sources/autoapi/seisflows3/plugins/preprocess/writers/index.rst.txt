@@ -1,0 +1,52 @@
+:py:mod:`seisflows3.plugins.preprocess.writers`
+===============================================
+
+.. py:module:: seisflows3.plugins.preprocess.writers
+
+.. autoapi-nested-parse::
+
+   SeisFlows uses obspy stream objects for holding and processing seismic data.
+   In some cases, obspy.read doesn't provide the desired behavior,
+   so we introduce an additonal level of indirection
+
+   Used by the PREPROCESS class and specified by the WRITER parameter
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.plugins.preprocess.writers.su
+   seisflows3.plugins.preprocess.writers.ascii
+
+
+
+.. py:function:: su(st, path, filename)
+
+   Writes seismic unix files outputted by Specfem, using Obspy
+
+   :type st: obspy.core.stream.Stream
+   :param st: stream to write
+   :type path: str
+   :param path: path to datasets
+   :type filename: str
+   :param filename: file to read
+
+
+.. py:function:: ascii(st, path, filename=None)
+
+   Writes seismic traces as ascii files. Kwargs are left to keep structure of 
+   inputs compatible with other input formats.
+
+   :type st: obspy.core.stream.Stream
+   :param st: stream to write
+   :type path: str
+   :param path: path to datasets
+
+

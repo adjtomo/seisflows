@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.tools.msg &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.tools.msg</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3/tools/msg/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.tools.msg">
+<span id="seisflows3-tools-msg"></span><h1><a class="reference internal" href="#module-seisflows3.tools.msg" title="seisflows3.tools.msg"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.tools.msg</span></code></a><a class="headerlink" href="#module-seisflows3.tools.msg" title="Permalink to this headline"></a></h1>
+<p>SeisFlows3 messages tool. For providing a uniform look to SeisFlows3 print
+and log statements that end up in stdout or in log files.</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.msg.mjr" title="seisflows3.tools.msg.mjr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mjr</span></code></a>(val, char='=')</p></td>
+<td><p>Message formatter used to block off sections in log files with visually</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.msg.mnr" title="seisflows3.tools.msg.mnr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mnr</span></code></a>(val, char='/')</p></td>
+<td><p>Message formatter used to block off sections in log files with visually</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.msg.sub" title="seisflows3.tools.msg.sub"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sub</span></code></a>(val, char='-')</p></td>
+<td><p>Message formatter used to block off sections in log files with visually</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.msg.cli" title="seisflows3.tools.msg.cli"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cli</span></code></a>(text='', items=None, wraplen=80, header=None, border=None, hchar='/')</p></td>
+<td><p>Provide a standardized look to the SeisFlows command line interface messages</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.msg.write_par_file_header" title="seisflows3.tools.msg.write_par_file_header"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_par_file_header</span></code></a>(f, paths_or_parameters, name='', tabsize=4, border='=', uline='/')</p></td>
+<td><p>Re-usable function to write docstring comments inside the SeisFlows3</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.msg.write_par_file_paths_pars" title="seisflows3.tools.msg.write_par_file_paths_pars"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_par_file_paths_pars</span></code></a>(f, paths_or_parameters, indent=0, tabsize=4)</p></td>
+<td><p>Re-usable function to write paths or parameters in yaml format to the</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.msg.DEG" title="seisflows3.tools.msg.DEG"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEG</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.msg.ascii_logo" title="seisflows3.tools.msg.ascii_logo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ascii_logo</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.msg.ascii_logo_small" title="seisflows3.tools.msg.ascii_logo_small"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ascii_logo_small</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.tools.msg.DEG">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.msg.</span></span><span class="sig-name descname"><span class="pre">DEG</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">°</span></em><a class="headerlink" href="#seisflows3.tools.msg.DEG" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.msg.mjr">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.msg.</span></span><span class="sig-name descname"><span class="pre">mjr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">char</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'='</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.msg.mjr" title="Permalink to this definition"></a></dt>
+<dd><p>Message formatter used to block off sections in log files with visually
+distinctive separators. Defined as individual functions to reduce call
+length.</p>
+<p>Major: For important or workflow.main() messages like starting workflow</p>
+<p class="rubric">&gt;&gt;&gt; print(msg.mjr(“Important message here”))
+or
+&gt;&gt;&gt; logger.info.(msg.mjr(“Important message here”))</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>val</strong> (<em>str</em>) – formatted message to return</p></li>
+<li><p><strong>char</strong> (<em>str</em>) – border character to separate the message from remainder of logs</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>formatted string message to be printed to std out</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.msg.mnr">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.msg.</span></span><span class="sig-name descname"><span class="pre">mnr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">char</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.msg.mnr" title="Permalink to this definition"></a></dt>
+<dd><p>Message formatter used to block off sections in log files with visually
+distinctive separators. Defined as individual functions to reduce call
+length.</p>
+<p>Minor: For key messages, describing things like what iteration were at</p>
+<p class="rubric">&gt;&gt;&gt; print(msg.mnr(“Semi important message here”))
+OR
+&gt;&gt;&gt; logger.info.(msg.mnr(“Semi important message here”))</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>val</strong> (<em>str</em>) – formatted message to return</p></li>
+<li><p><strong>char</strong> (<em>str</em>) – border character to separate the message from remainder of logs</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>formatted string message to be printed to std out</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.msg.sub">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.msg.</span></span><span class="sig-name descname"><span class="pre">sub</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">char</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'-'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.msg.sub" title="Permalink to this definition"></a></dt>
+<dd><p>Message formatter used to block off sections in log files with visually
+distinctive separators. Defined as individual functions to reduce call
+length.</p>
+<p>Sub: For sub-critical messages, describing things like notes and warnings</p>
+<p class="rubric">&gt;&gt;&gt; print(msg.mnr(“Sub-critical message here”))
+OR
+&gt;&gt;&gt; logger.info.(msg.sub(“Sub-critical message here”))</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>val</strong> (<em>str</em>) – formatted message to return</p></li>
+<li><p><strong>char</strong> (<em>str</em>) – border character to separate the message from remainder of logs</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>formatted string message to be printed to std out</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.msg.cli">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.msg.</span></span><span class="sig-name descname"><span class="pre">cli</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">items</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wraplen</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">80</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">border</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hchar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.msg.cli" title="Permalink to this definition"></a></dt>
+<dd><p>Provide a standardized look to the SeisFlows command line interface messages
+The look we are after is something like:</p>
+<dl>
+<dt>$ seisflows cmd</dt><dd><blockquote>
+<div></div></blockquote>
+<p>text
+item1
+item2
+…
+itemN
+=======================</p>
+</dd>
+</dl>
+<p>$ ls -l</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>text</strong> (<em>str</em>) – text to format into the cli look</p></li>
+<li><p><strong>items</strong> (<em>list</em>) – optional list of items that will be displayed on new lines
+after the text. Useful for listing parameters or paths. The items here
+are NOT wrapped.</p></li>
+<li><p><strong>wraplen</strong> (<em>int</em>) – desired line length to wrap messages.</p></li>
+<li><p><strong>header</strong> (<em>str</em>) – optional header line that will be centered (wraplen/2) and
+capitalized. Useful for things like ‘WARNING’ and ‘ERROR’</p></li>
+<li><p><strong>border</strong> (<em>str</em>) – a character to use to block off</p></li>
+<li><p><strong>hchar</strong> (<em>str</em>) – character to underline the header with</p></li>
+</ul>
+</dd>
+<dt class="field-even">Rtype output_str</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Return output_str</dt>
+<dd class="field-odd"><p>formatted string to print out</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.msg.write_par_file_header">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.msg.</span></span><span class="sig-name descname"><span class="pre">write_par_file_header</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paths_or_parameters</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tabsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">border</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'='</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.msg.write_par_file_header" title="Permalink to this definition"></a></dt>
+<dd><p>Re-usable function to write docstring comments inside the SeisFlows3
+parameter file. Used by seisflows.SeisFlows.configure()</p>
+<p>Headers look something like this</p>
+<p># ===========================
+#       MODULE NAME
+#       ///////////
+# PAR (type):
+#     description of par
+# ===========================
+PAR: val</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f</strong> (<em>_io.TextIO</em>) – open text file to write to</p></li>
+<li><p><strong>paths_or_parameters</strong> (<em>dict</em>) – the paths or parameters that should be written
+to the header</p></li>
+<li><p><strong>name</strong> (<em>str</em>) – the name of the module that is being written, will be used as
+the header of the docstring</p></li>
+<li><p><strong>tabsize</strong> (<em>int</em>) – how large to expand tab character ‘ ‘ as spaces</p></li>
+<li><p><strong>border</strong> (<em>str</em>) – character to use as the header and footer border</p></li>
+<li><p><strong>uline</strong> (<em>str</em>) – how to underline the header</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.msg.write_par_file_paths_pars">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.msg.</span></span><span class="sig-name descname"><span class="pre">write_par_file_paths_pars</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paths_or_parameters</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tabsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.msg.write_par_file_paths_pars" title="Permalink to this definition"></a></dt>
+<dd><p>Re-usable function to write paths or parameters in yaml format to the
+SeisFlows3 parameter file. Used by seisflows.SeisFlows.configure()</p>
+<p>Parameters are written something like:</p>
+<p>PAR1: val1
+PAR2: val2
+Par3:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>val3a</p></li>
+<li><p>val3b</p></li>
+<li><p>val3c</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f</strong> (<em>_io.TextIO</em>) – open text file to write to</p></li>
+<li><p><strong>paths_or_parameters</strong> (<em>dict</em>) – the paths or parameters that should be written
+to the header</p></li>
+<li><p><strong>indent</strong> (<em>int</em>) – level of indentation to match yaml style. passed to
+str.expandtabs(tabsize=`indent`)</p></li>
+<li><p><strong>tabsize</strong> (<em>int</em>) – how large to expand tab character ‘ ‘ as spaces</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.tools.msg.ascii_logo">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.msg.</span></span><span class="sig-name descname"><span class="pre">ascii_logo</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">Multiline-String</span></em><a class="headerlink" href="#seisflows3.tools.msg.ascii_logo" title="Permalink to this definition"></a></dt>
+<dd><blockquote>
+<div><details><summary>Show Value</summary><div class="highlight-text notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span>                             @@@@@@@@@@@@@@@@@@@@@@@
+<span class="linenos"> 2</span>                       @@@@@@@@@.         .(%@&amp;#(     %@@@.
+<span class="linenos"> 3</span>                  /@@@@@@@&amp;      *@@@@@@@@@&amp;         ,@@@@  @@(
+<span class="linenos"> 4</span>               @@@@@@@@      @@@@@@@@       &amp;@@@@@@@@@@@@@  .@% @@
+<span class="linenos"> 5</span>            *@@@@@@@      @@@@@@@      (@@@@@@               @@ @@ @*
+<span class="linenos"> 6</span>          @@@@@@@      @@@@@@@,     /@@@@@                       @ @ @@
+<span class="linenos"> 7</span>        &amp;@@@@@@      @@@@@@@.     @@@@@@                           @ @ @&amp;
+<span class="linenos"> 8</span>       @@@@@@@      @@@@@@@      @@@@@@                             @@ @ @
+<span class="linenos"> 9</span>     %@@@@@@      @@@@@@@@      @@@@@@                               @@ @ @&amp;
+<span class="linenos">10</span>    @@@@@@@      @@@@@@@@      @@@@@@                                 @* @ (@
+<span class="linenos">11</span>   @@@@@@@       @@@@@@@       @@@@@@                                 @@ @@ @@
+<span class="linenos">12</span>   @@@@@@&amp;      @@@@@@@@      ,@@@@@@/                               .@@ .@&amp; @
+<span class="linenos">13</span>  @@@@@@@       @@@@@@@@       @@@@@@@                               @@@  @@ ,@
+<span class="linenos">14</span>  @@@@@@@       @@@@@@@@       @@@@@@@@                             @@@  (@@  @
+<span class="linenos">15</span> @@@@@@@@       @@@@@@@@.       @@@@@@@@@                         @@@@   @@@  @@
+<span class="linenos">16</span> @@@@@@@@       @@@@@@@@@        @@@@@@@@@@@                   @@@@@@   @@@@  @@
+<span class="linenos">17</span> @@@@@@@@       ,@@@@@@@@@         @@@@@@@@@@@@@%         %@@@@@@@@.   @@@@   @@
+<span class="linenos">18</span>  @@@@@@@        @@@@@@@@@@*         #@@@@@@@@@@@@@@@@@@@@@@@@@@@     @@@@   @@
+<span class="linenos">19</span>  @@@@@@@@        @@@@@@@@@@@            @@@@@@@@@@@@@@@@@@@@&amp;      @@@@@    @@
+<span class="linenos">20</span>   @@@@@@@@        *@@@@@@@@@@@*               .@@@@@@&amp;           @@@@@@    @@
+<span class="linenos">21</span>   &amp;@@@@@@@@         @@@@@@@@@@@@@&amp;                            @@@@@@@(    @@@
+<span class="linenos">22</span>    @@@@@@@@@          @@@@@@@@@@@@@@@@                   %@@@@@@@@@%    #@@@
+<span class="linenos">23</span>     (@@@@@@@@@          *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@#
+<span class="linenos">24</span>       @@@@@@@@@#            @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       @@@@
+<span class="linenos">25</span>        (@@@@@@@@@@              @@@@@@@@@@@@@@@@@@@@@@@@@%         @@@@#
+<span class="linenos">26</span>          &amp;@@@@@@@@@@%                   #@@@@@@@@(              @@@@@&amp;
+<span class="linenos">27</span>             @@@@@@@@@@@@                                    %@@@@@@.
+<span class="linenos">28</span>               &amp;@@@@@@@@@@@@@@                          *@@@@@@@@@
+<span class="linenos">29</span>                   @@@@@@@@@@@@@@@@@@@@&amp;/.   ,%@@@@@@@@@@@@@@@
+<span class="linenos">30</span>                       @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+<span class="linenos">31</span>                             &amp;@@@@@@@@@@@@@@@@@@@@@&amp;
+</pre></div>
+</div>
+</details></div></blockquote>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.tools.msg.ascii_logo_small">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.msg.</span></span><span class="sig-name descname"><span class="pre">ascii_logo_small</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">Multiline-String</span></em><a class="headerlink" href="#seisflows3.tools.msg.ascii_logo_small" title="Permalink to this definition"></a></dt>
+<dd><blockquote>
+<div><details><summary>Show Value</summary><div class="highlight-text notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span>                                    @@@@@@@@@@
+<span class="linenos"> 2</span>                               .@@@@.    .%&amp;(  %@.
+<span class="linenos"> 3</span>                            @@@@   @@@@   &amp;@@@@@@ ,%@
+<span class="linenos"> 4</span>                         @@@@   @@@,  /@@              @
+<span class="linenos"> 5</span>                        @@@   @@@@   @@@              @
+<span class="linenos"> 6</span>                      @@@@   @@@@   @@@                @  @
+<span class="linenos"> 7</span>                      @@@   @@@@   ,@@@                @ @
+<span class="linenos"> 8</span>                     @@@@   @@@@    @@@@              @@ @ @
+<span class="linenos"> 9</span>                     @@@@   @@@@@    @@@@@          @@@ @@ @
+<span class="linenos">10</span>                     @@@@    @@@@@     @@@@@@@@@@@@@@  @@  @
+<span class="linenos">11</span>                      @@@@    @@@@@@        @@@&amp;     @@@  @
+<span class="linenos">12</span>                      @@@@@     @@@@@@@@         %@@@@#  @@
+<span class="linenos">13</span>                        @@@@#      @@@@@@@@@@@@@@@@@   @@
+<span class="linenos">14</span>                         &amp;@@@@@          @@@@(       @@&amp;
+<span class="linenos">15</span>                            @@@@@@@             /@@@@
+<span class="linenos">16</span>                                @@@@@@@@@@@@@@@@@
+<span class="linenos">17</span>                                    @@@@@@@@@@
+</pre></div>
+</div>
+</details></div></blockquote>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

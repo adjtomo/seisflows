@@ -1,0 +1,170 @@
+:py:mod:`seisflows3.tests.test_seisflows`
+=========================================
+
+.. py:module:: seisflows3.tests.test_seisflows
+
+.. autoapi-nested-parse::
+
+   Test suite for the SeisFlows command line interface tool and the underlying
+   parser class, ensures that the command line tool works as expected
+
+   !!! TO DO: Finish tests from 'edit' onwards
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tests.test_seisflows.filled_par_file
+   seisflows3.tests.test_seisflows.conf_par_file
+   seisflows3.tests.test_seisflows.setup_par_file
+   seisflows3.tests.test_seisflows.copy_par_file
+   seisflows3.tests.test_seisflows.par_file_dict
+   seisflows3.tests.test_seisflows.test_call_seisflows
+   seisflows3.tests.test_seisflows.test_edited_parameter_file_name
+   seisflows3.tests.test_seisflows.test_register
+   seisflows3.tests.test_seisflows.test_cmd_setup
+   seisflows3.tests.test_seisflows.test_cmd_init
+   seisflows3.tests.test_seisflows.test_cmd_submit
+   seisflows3.tests.test_seisflows.test_cmd_clean
+   seisflows3.tests.test_seisflows.test_config_logging
+   seisflows3.tests.test_seisflows.test_load_modules
+   seisflows3.tests.test_seisflows.test_cmd_configure
+   seisflows3.tests.test_seisflows.test_cmd_par
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tests.test_seisflows.TEST_DIR
+
+
+.. py:data:: TEST_DIR
+   
+
+   
+
+.. py:function:: filled_par_file()
+
+   A parameter file that is completely filled out and can be read in
+
+
+.. py:function:: conf_par_file()
+
+   A par file that has been configured but requires user-defined values
+
+
+.. py:function:: setup_par_file()
+
+   A barebones par file that only contains module names
+
+
+.. py:function:: copy_par_file(tmpdir, filled_par_file)
+
+   Copy the template parameter file into the temporary test directory
+   :rtype: str
+   :return: location of the parameter file
+
+
+.. py:function:: par_file_dict(filled_par_file)
+
+   Return the test parameter file as a dictionary object
+   :rtype: seisflows.config.Dict
+   :return: dictionary of parameters
+
+
+.. py:function:: test_call_seisflows(tmpdir, par_file_dict, copy_par_file)
+
+   Test calling the 'par' command from command line and inside a python
+   environemnt. Check that case-insensitivity is also honored
+   Check against the actual value coming from the parameter file
+   Also tests the seisflows 'par' command
+
+
+.. py:function:: test_edited_parameter_file_name(tmpdir, par_file_dict, filled_par_file)
+
+   Similar test as call_seisflows but just make sure that arbitrary naming
+   of the parameter file still works
+
+
+.. py:function:: test_register(tmpdir, par_file_dict, copy_par_file)
+
+   Test that the register function, which reads in PATHS and PARAMETERS
+   works as expected, returning paths and parameters that we can read
+
+
+.. py:function:: test_cmd_setup(tmpdir)
+
+   Test setting up the SeisFlows3 working directory
+
+
+.. py:function:: test_cmd_init(tmpdir, copy_par_file)
+
+   Test 'seisflows init' command which instantiates a working directory and
+   saves the active working state as pickle files
+   :return:
+
+
+.. py:function:: test_cmd_submit(tmpdir)
+
+   Test submit, also test the functionality of resume and restart which
+   are essentially wrappers for this call
+   :param tmpdir:
+   :return:
+
+
+.. py:function:: test_cmd_clean(tmpdir)
+
+   :param tmpdir:
+   :return:
+
+
+.. py:function:: test_config_logging(tmpdir, copy_par_file)
+
+   Test logging configuration to make sure we can print to file
+   :param tmpdir:
+   :return:
+
+
+.. py:function:: test_load_modules(tmpdir, copy_par_file)
+
+   Test if module loading from sys.modules works
+
+   :param tmpdir:
+   :return:
+
+
+.. py:function:: test_cmd_configure(tmpdir, setup_par_file, conf_par_file)
+
+   Test configuring a parameter file from a template par file
+
+   .. note::
+       I don't know exactly why, but this test needs to be run AFTER any other
+       test which runs seisflows.init(), otherwise the parameters are not
+       instantiated properly (you will hit a KeyError when trying to access
+       PAR). I think this is because of how seisflows.configure() registers
+       a relatively empty parameter file (only modules are defined), and this
+       gets saved into sys modules, affecting subsequent tests which end up
+       accessing sys.modules. I tried flushing sys.modules but it didn't work.
+       This behavior shouldn't get encountered in a real run because we
+       won't need to run init() and configure() in the same python
+       runtime environment, but I leave this warning here
+       wondering if I'll have to fix it at some point... -B
+
+
+.. py:function:: test_cmd_par(tmpdir, copy_par_file)
+
+   Make sure the 'par' command can print and edit the parameter file
+   :param tmpdir:
+   :return:
+
+

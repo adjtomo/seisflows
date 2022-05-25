@@ -1,0 +1,48 @@
+:py:mod:`seisflows3.plugins.solver.specfem2d`
+=============================================
+
+.. py:module:: seisflows3.plugins.solver.specfem2d
+
+.. autoapi-nested-parse::
+
+   Plugins used for the numerical solver SPECFEM2D
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.plugins.solver.specfem2d.write_sources
+   seisflows3.plugins.solver.specfem2d.write_receivers
+   seisflows3.plugins.solver.specfem2d.smooth_legacy
+
+
+
+.. py:function:: write_sources(coords, path='.', ws=1.0, suffix='')
+
+   Writes source information to text file
+       TODO this has to be adapted for new versions of specfem because the
+            source file format has changed
+
+
+.. py:function:: write_receivers(coords, path='.')
+
+   Writes receiver information to text file
+       
+
+
+.. py:function:: smooth_legacy(input_path='', output_path='', parameters=[], span=0.0)
+
+   :param input_path: 
+   :param output_path: 
+   :param parameters: 
+   :param span: 
+   :return: 
+
+

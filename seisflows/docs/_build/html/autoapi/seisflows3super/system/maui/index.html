@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3-super.system.maui &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3-super.system.maui</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3super/system/maui/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3-super.system.maui">
+<span id="seisflows3-super-system-maui"></span><h1><a class="reference internal" href="#module-seisflows3-super.system.maui" title="seisflows3-super.system.maui"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3-super.system.maui</span></code></a><a class="headerlink" href="#module-seisflows3-super.system.maui" title="Permalink to this headline"></a></h1>
+<p>Maui is a New Zealand eScience Infrastructure (NeSI) high performance computer.
+Maui operates on a SLURM workload manager and therefore overloads the SLURM
+System module. Maui-specific parameters and functions are defined here.</p>
+<p>Information on Maui can be found here:
+<a class="reference external" href="https://support.nesi.org.nz/hc/en-gb/articles/360000163695-M%C4%81ui">https://support.nesi.org.nz/hc/en-gb/articles/360000163695-M%C4%81ui</a></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Python and conda capabilities are NOT accessible from Maui, these
+capabilities have been shifted onto a separate cluster: Maui ancil
+This subclass therefore moves all Python dependent capabilities
+(i.e., SeisFlows3, Pyatoa) onto the ancilary cluster.</p>
+<p>See also: <a class="reference external" href="https://support.nesi.org.nz/hc/en-gb/articles/">https://support.nesi.org.nz/hc/en-gb/articles/</a>                                          360000203776-M%C4%81ui-Ancillary-Nodes</p>
+</div>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3-super.system.maui.Maui" title="seisflows3-super.system.maui.Maui"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Maui</span></code></a></p></td>
+<td><p>System interface for Maui, which operates on a SLURM system</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3-super.system.maui.PAR" title="seisflows3-super.system.maui.PAR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PAR</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3-super.system.maui.PATH" title="seisflows3-super.system.maui.PATH"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PATH</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3-super.system.maui.PAR">
+<span class="sig-prename descclassname"><span class="pre">seisflows3-super.system.maui.</span></span><span class="sig-name descname"><span class="pre">PAR</span></span><a class="headerlink" href="#seisflows3-super.system.maui.PAR" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3-super.system.maui.PATH">
+<span class="sig-prename descclassname"><span class="pre">seisflows3-super.system.maui.</span></span><span class="sig-name descname"><span class="pre">PATH</span></span><a class="headerlink" href="#seisflows3-super.system.maui.PATH" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3-super.system.maui.Maui">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3-super.system.maui.</span></span><span class="sig-name descname"><span class="pre">Maui</span></span><a class="headerlink" href="#seisflows3-super.system.maui.Maui" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">custom_import</span></code>(<code class="xref py py-obj docutils literal notranslate"><span class="pre">'system'</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">'slurm'</span></code>)</p>
+<p>System interface for Maui, which operates on a SLURM system</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seisflows3-super.system.maui.Maui.logger">
+<span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#seisflows3-super.system.maui.Maui.logger" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3-super.system.maui.Maui.required">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">required</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3-super.system.maui.Maui.required" title="Permalink to this definition"></a></dt>
+<dd><p>A hard definition of paths and parameters required by this class,
+alongside their necessity for the class and their string explanations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3-super.system.maui.Maui.check">
+<span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3-super.system.maui.Maui.check" title="Permalink to this definition"></a></dt>
+<dd><p>Checks parameters and paths</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3-super.system.maui.Maui.submit">
+<span class="sig-name descname"><span class="pre">submit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3-super.system.maui.Maui.submit" title="Permalink to this definition"></a></dt>
+<dd><p>Submits master job workflow to maui_ancil cluster as a single-core
+process</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The master job must be run on maui_ancil because Maui does
+not have the ability to run the command “sacct”</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We do not place SLURMARGS into the sbatch command to avoid the
+export=None which will not propagate the conda environment</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3-super.system.maui.Maui.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">classname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">single</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3-super.system.maui.Maui.run" title="Permalink to this definition"></a></dt>
+<dd><p>Runs task multiple times in embarrassingly parallel fasion on a SLURM
+cluster. Executes classname.method(<a href="#id1"><span class="problematic" id="id2">*</span></a>args, <a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs) <cite>NTASK</cite> times,
+each time on <cite>NPROC</cite> CPU cores</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>classname</strong> (<em>str</em>) – the class to run</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – the method from the given <cite>classname</cite> to run</p></li>
+<li><p><strong>scale_tasktime</strong> (<em>int</em>) – a way to get over the hard-set tasktime, because
+some tasks take longer (e.g. smoothing), but you don’t want these
+to set the tasktimes for all other tasks. This lets you scale the
+time of specific tasks by PAR.TASKTIME * scale_tasktime</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3-super.system.maui.Maui.run_ancil">
+<span class="sig-name descname"><span class="pre">run_ancil</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">classname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3-super.system.maui.Maui.run_ancil" title="Permalink to this definition"></a></dt>
+<dd><p>Runs prepost jobs on Maui ancil, the ancilary cluster which contains
+the conda and Python capabilities for Maui.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>classname</strong> (<em>str</em>) – the class to run</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – the method from the given <cite>classname</cite> to run</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Code Development Plan &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Change Log" href="changelog.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> SeisFlows3
+            <img src="_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Change Log</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Code Development Plan</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#cdp-v2-0">CDP v2.0</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#short-term-priorities-1-2-months">Short-Term Priorities [1–2 months]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#medium-term-objectives-3-6-months">Medium-Term Objectives [3–6 months]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#long-term-goals-6-months">Long-Term Goals [&gt; 6 months]</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#cdp-v1-0">CDP v1.0</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Code Development Plan</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/code_dev_plan.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="code-development-plan">
+<h1>Code Development Plan<a class="headerlink" href="#code-development-plan" title="Permalink to this headline"></a></h1>
+<p>Based on the <a class="reference external" href="https://geodynamics.org/">Computational Infrastructure for Geodynamics</a> (CIG) <a class="reference external" href="https://github.com/geodynamics/best_practices/blob/master/SoftwareDevelopmentBestPractices.md">Software Development Best Practices</a> we propose the following (yearly updated)
+Code Development Plan (CDP) which lays out prioritization of new features and
+estimated timetables for their implementation.</p>
+<p>A short- and long-term to-do list for SeisFlows3 development. This is a
+community document meant to highlight what the SeisFlows3 developers deem as
+priorities for the package, allowing community members to target their
+contributions more effectively.</p>
+<hr class="docutils" />
+<div class="section" id="cdp-v2-0">
+<h2>CDP v2.0<a class="headerlink" href="#cdp-v2-0" title="Permalink to this headline"></a></h2>
+<p>[Last updated Apr. 18, 2022] This CDP outlined the goals for 4/2022–1/2023</p>
+<div class="section" id="short-term-priorities-1-2-months">
+<h3>Short-Term Priorities [1–2 months]<a class="headerlink" href="#short-term-priorities-1-2-months" title="Permalink to this headline"></a></h3>
+<ul class="simple">
+<li><p>Implement package-wide unit testing using PyTest</p></li>
+<li><p>Comprehensive docs page with examples and tutorials</p></li>
+<li><p>Pre-commit framework (Flake8, Black, pre-commit, codecoverage)</p></li>
+<li><p>Travis Continuous Integration</p></li>
+<li><p>Code version citation (Zenodo)</p></li>
+<li><p>FAQs and user knowledge base</p></li>
+<li><p>Package manager install using Pip</p></li>
+</ul>
+</div>
+<div class="section" id="medium-term-objectives-3-6-months">
+<h3>Medium-Term Objectives [3–6 months]<a class="headerlink" href="#medium-term-objectives-3-6-months" title="Permalink to this headline"></a></h3>
+<ul class="simple">
+<li><p>Migrate stable release to org page github.com/seisflows</p></li>
+<li><dl class="simple">
+<dt>Seisflows-super system class for:</dt><dd><ul>
+<li><p>Oakforest-PACS (JCAHPC)</p></li>
+<li><p>TACC Frontera</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Various SPECFEM2D and SPECFEM3D example problems following legacy example
+problems</p></li>
+</ul>
+</div>
+<div class="section" id="long-term-goals-6-months">
+<h3>Long-Term Goals [&gt; 6 months]<a class="headerlink" href="#long-term-goals-6-months" title="Permalink to this headline"></a></h3>
+<ul class="simple">
+<li><p>Tested system classes for PBS and LSF HPC workload managers</p></li>
+<li><p>Guided tutorials for running inversions on HPC systems</p></li>
+<li><p>Community discussion forum (e.g., Gitter, Google groups)</p></li>
+<li><p>Visualization capabilities (internal or external) for models, kernels,
+gradients</p></li>
+</ul>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="cdp-v1-0">
+<h2>CDP v1.0<a class="headerlink" href="#cdp-v1-0" title="Permalink to this headline"></a></h2>
+<p>[Last updated Nov. 18, 2021] This CDP outlined the goals for 11/2021–11/2022</p>
+<p>The following plan sets the roadmap for the one year mark (11/22). The main
+objective for this dev plan is a stable release of SeisFlows3, featuring a
+comprehensive documentation page, extensive unit and integration testing, and
+usable working examples for new users.</p>
+<p>Expected difficulty (i.e., easy, medium, hard) of each problem is provided
+in bracketed terms, e.g., [easy]. This difficulty is subjective and based on
+required Python/coding experience, package familiarity, and time required.
+Tasks are also categorized, e.g., (general), when possible.</p>
+<ul>
+<li><p>(bookkeeping) [medium]: Migrate a stable release (v1.0) of SeisFlows 3 to github.com/seisflows</p></li>
+<li><p>(stable) [hard]: Implement package-wide unit testing using pytest</p></li>
+<li><p>(stable) [hard]: Implement integration testing using 2D example problems</p></li>
+<li><p>(stable) [medium]: Outline and complete documentation.</p></li>
+<li><p>(stable) [medium]: Complete package install using Conda.</p></li>
+<li><p>(stable) [hard]: Complete and test Preprocess sub-module for:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Default</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>(stable) [hard]: Complete and test Solver sub-modules for:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>SPECFEM2D</p></li>
+<li><p>SPECFEM3D_GLOBE</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>(stable) [hard]: Complete and test System sub-modules for:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Chinook (UAF)</p></li>
+<li><p>Local</p></li>
+<li><p>Oakforest-PACS (JCAHPC)</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>(example) [hard]: SPECFEM2D examples following legacy SeisFlows example problems, on Local and HPC</p></li>
+<li><p>(example) [hard]: SPECFEM3D examples following legacy SeisFlows example problem, HPC</p></li>
+<li><p>(example) [easy]: Convert NZNorth example problem README to a .rst doc file.</p></li>
+<li><p>(updates): Parameter File and parameter system</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>[easy]: Add a T0 parameter to the solver.base class to define when the SOLVER thinks time 0 is.</p></li>
+<li><p>[easy-medium] Increased verbosity throughout the entire package, make it sing.</p></li>
+<li><p>[hard]: Auto-fill available functions from Workflow module in the RESUME_FROM and STOP_AFTER docstrings</p></li>
+<li><p>[easy]: PAR.SLURMARGS and PAR.ENVIRONS need to be set as empty strings, cannot be NoneType</p></li>
+<li><p>[easy]: Attenuation needs to be set-able in parameter file, currently hard-coded on</p></li>
+<li><p>[hard]: Add a SAVE_PREPROCESS option to save all files within the scratch/preprocess dir.</p></li>
+<li><p>[medium] Add an ‘advanced’ flag to all parameters and a flag in the seisflows.configure() command to</p></li>
+<li><p>[easy]: seisflows.setup() should stamp git version in the parameter file</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>(feature) [medium]: Copy SPECFEM output logs somewhere after each call to the solver, e.g., output_generate_databases.txt. Currently these are overwritten each time.</p></li>
+<li><p>(blue-sky) [uber-hard]: Based on the modules, generate a flowchart showing each class and function that is called throughout the workflow, in order.</p></li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="changelog.html" class="btn btn-neutral float-left" title="Change Log" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.optimize.NLCG &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.optimize.NLCG</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3/optimize/NLCG/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.optimize.NLCG">
+<span id="seisflows3-optimize-nlcg"></span><h1><a class="reference internal" href="#module-seisflows3.optimize.NLCG" title="seisflows3.optimize.NLCG"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.optimize.NLCG</span></code></a><a class="headerlink" href="#module-seisflows3.optimize.NLCG" title="Permalink to this headline"></a></h1>
+<p>This is the custom class for an NLCG optimization schema.
+It supercedes the <cite>seisflows.optimize.base</cite> class</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.optimize.NLCG.NLCG" title="seisflows3.optimize.NLCG.NLCG"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NLCG</span></code></a></p></td>
+<td><p>Nonlinear conjugate gradient method</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.optimize.NLCG.fletcher_reeves" title="seisflows3.optimize.NLCG.fletcher_reeves"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fletcher_reeves</span></code></a>(g_new, g_old, precond=lambda x: x)</p></td>
+<td><p>One method for calculating beta in the NLCG Algorithm from</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.optimize.NLCG.pollak_ribere" title="seisflows3.optimize.NLCG.pollak_ribere"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pollak_ribere</span></code></a>(g_new, g_old, precond=lambda x: x)</p></td>
+<td><p>One method for calculating beta in the NLCG Algorithm from</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.optimize.NLCG.check_conjugacy" title="seisflows3.optimize.NLCG.check_conjugacy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_conjugacy</span></code></a>(g_new, g_old)</p></td>
+<td><p>Check for conjugacy between two vectors</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.optimize.NLCG.check_descent" title="seisflows3.optimize.NLCG.check_descent"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_descent</span></code></a>(p_new, g_new)</p></td>
+<td><p>Ensure that the search direction is descending</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.optimize.NLCG.PAR" title="seisflows3.optimize.NLCG.PAR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PAR</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.optimize.NLCG.PATH" title="seisflows3.optimize.NLCG.PATH"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PATH</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.PAR">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.optimize.NLCG.</span></span><span class="sig-name descname"><span class="pre">PAR</span></span><a class="headerlink" href="#seisflows3.optimize.NLCG.PAR" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.PATH">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.optimize.NLCG.</span></span><span class="sig-name descname"><span class="pre">PATH</span></span><a class="headerlink" href="#seisflows3.optimize.NLCG.PATH" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.NLCG">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.optimize.NLCG.</span></span><span class="sig-name descname"><span class="pre">NLCG</span></span><a class="headerlink" href="#seisflows3.optimize.NLCG.NLCG" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">custom_import</span></code>(<code class="xref py py-obj docutils literal notranslate"><span class="pre">'optimize'</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">'base'</span></code>)</p>
+<p>Nonlinear conjugate gradient method</p>
+<dl class="simple">
+<dt>Optimization Variables:</dt><dd><p>m: model
+f: objective function value
+g: gradient direction
+p: search direction</p>
+</dd>
+<dt>Line Search Variables:</dt><dd><p>x: list of step lenths from current line search
+f: correpsonding list of function values
+m: number of step lengths in current line search
+n: number of model updates in optimization problem
+gtg: dot product of gradient with itself
+gtp: dot product of gradient and search direction</p>
+</dd>
+<dt>Status codes</dt><dd><p>status &gt; 0  : finished
+status == 0 : not finished
+status &lt; 0  : failed</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.NLCG.logger">
+<span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#seisflows3.optimize.NLCG.NLCG.logger" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.NLCG.required">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">required</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.NLCG.NLCG.required" title="Permalink to this definition"></a></dt>
+<dd><p>A hard definition of paths and parameters required by this class,
+alongside their necessity for the class and their string explanations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.NLCG.check">
+<span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.NLCG.NLCG.check" title="Permalink to this definition"></a></dt>
+<dd><p>Checks parameters, paths, and dependencies</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.NLCG.compute_direction">
+<span class="sig-name descname"><span class="pre">compute_direction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.NLCG.NLCG.compute_direction" title="Permalink to this definition"></a></dt>
+<dd><p>Compute search direction using the Nonlinear Conjugate Gradient method
+The potential outcomes when computing direction with NLCG</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt>First iteration of an NLCG optimization, search direction is</dt><dd><p>the inverse gradient</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>NLCG internal iteration ticks over the maximum allowable number of</dt><dd><p>iterations, force a restart condition, search direction is the
+inverse gradient</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>New NLCG search direction does not have conjugacy with previous</dt><dd><p>search direction, force restart, inverse gradient search direction</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>New NLCG search direction is not a descent direction,</dt><dd><p>force restart, inverse gradient search direction</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>New NLCG search direction has conjugacy and is a descent direction</dt><dd><p>and is set as the new search direction.</p>
+</dd>
+</dl>
+</li>
+</ol>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.NLCG.restart">
+<span class="sig-name descname"><span class="pre">restart</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.NLCG.NLCG.restart" title="Permalink to this definition"></a></dt>
+<dd><p>Overwrite the Base restart class and include a restart of the NLCG</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.fletcher_reeves">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.optimize.NLCG.</span></span><span class="sig-name descname"><span class="pre">fletcher_reeves</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">g_new</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_old</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">lambda</span> <span class="pre">x:</span> <span class="pre">...</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.NLCG.fletcher_reeves" title="Permalink to this definition"></a></dt>
+<dd><p>One method for calculating beta in the NLCG Algorithm from
+Fletcher &amp; Reeves, 1964</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>g_new</strong> (<em>np.array</em>) – new search direction</p></li>
+<li><p><strong>g_old</strong> (<em>np.array</em>) – old search direction</p></li>
+<li><p><strong>precond</strong> (<em>function</em>) – preconditioner, defaults to simple return</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>beta, the scale factor to apply to the old search direction to
+determine the new search direction</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.pollak_ribere">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.optimize.NLCG.</span></span><span class="sig-name descname"><span class="pre">pollak_ribere</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">g_new</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_old</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">lambda</span> <span class="pre">x:</span> <span class="pre">...</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.NLCG.pollak_ribere" title="Permalink to this definition"></a></dt>
+<dd><p>One method for calculating beta in the NLCG Algorithm from
+Polak &amp; Ribiere, 1969</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>g_new</strong> (<em>np.array</em>) – new search direction</p></li>
+<li><p><strong>g_old</strong> (<em>np.array</em>) – old search direction</p></li>
+<li><p><strong>precond</strong> (<em>function</em>) – preconditioner, defaults to simple return</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>beta, the scale factor to apply to the old search direction to
+determine the new search direction</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.check_conjugacy">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.optimize.NLCG.</span></span><span class="sig-name descname"><span class="pre">check_conjugacy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">g_new</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_old</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.NLCG.check_conjugacy" title="Permalink to this definition"></a></dt>
+<dd><p>Check for conjugacy between two vectors</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>g_new</strong> (<em>np.array</em>) – new search direction</p></li>
+<li><p><strong>g_old</strong> (<em>np.array</em>) – old search direction</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>an element that proves conjugacy</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.optimize.NLCG.check_descent">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.optimize.NLCG.</span></span><span class="sig-name descname"><span class="pre">check_descent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p_new</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_new</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.optimize.NLCG.check_descent" title="Permalink to this definition"></a></dt>
+<dd><p>Ensure that the search direction is descending</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p_new</strong> (<em>np.array</em>) – search direction</p></li>
+<li><p><strong>g_new</strong> (<em>np.array</em>) – gradient direction</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>the angle between search direction and gradient direction, should
+be negative to ensure descent</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

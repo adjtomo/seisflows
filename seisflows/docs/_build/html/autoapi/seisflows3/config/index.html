@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.config &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.config</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/autoapi/seisflows3/config/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.config">
+<span id="seisflows3-config"></span><h1><a class="reference internal" href="#module-seisflows3.config" title="seisflows3.config"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.config</span></code></a><a class="headerlink" href="#module-seisflows3.config" title="Permalink to this headline"></a></h1>
+<p>This is the Seisflows Config script, it contains utilities that are called upon
+throughout the Seisflows workflow. It also (re)defines some important functions
+that are used extensively by the machinery of Seisflows.</p>
+<p>SeisFlows consists of interacting objects:
+‘system’, ‘preprocess’, ‘solver’, ‘postprocess’, ‘optimize’, ‘workflow’</p>
+<p>Each corresponds simultaneously to a module in the SeisFlows source code,
+a class that is instantiated and made accessible via sys.modules, and a
+parameter in a global dictionary. Once in memory, these objects can be thought
+of as comprising the complete ‘state’ of a SeisFlows session</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.config.Dict" title="seisflows3.config.Dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Dict</span></code></a></p></td>
+<td><p>A barebones dictionary-like object for holding parameters or paths.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.config.Null" title="seisflows3.config.Null"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Null</span></code></a></p></td>
+<td><p>A null object that always and reliably does nothing</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.config.SeisFlowsPathsParameters" title="seisflows3.config.SeisFlowsPathsParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SeisFlowsPathsParameters</span></code></a></p></td>
+<td><p>A class used to simplify defining required or optional paths and parameters</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.config.init_seisflows" title="seisflows3.config.init_seisflows"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_seisflows</span></code></a>(check=True)</p></td>
+<td><p>Instantiates SeisFlows3 objects and makes them globally accessible by</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.config.save" title="seisflows3.config.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>()</p></td>
+<td><p>Export the current session to disk</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.config.load" title="seisflows3.config.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(path)</p></td>
+<td><p>Imports a previously saved session from disk</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.config.flush" title="seisflows3.config.flush"><code class="xref py py-obj docutils literal notranslate"><span class="pre">flush</span></code></a>()</p></td>
+<td><p>It is sometimes necessary to flush the currently active working state to</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.config.config_logger" title="seisflows3.config.config_logger"><code class="xref py py-obj docutils literal notranslate"><span class="pre">config_logger</span></code></a>(level='DEBUG', filename=None, filemode='a', verbose=True)</p></td>
+<td><p>Explicitely configure the logging module with some parameters defined</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.config.custom_import" title="seisflows3.config.custom_import"><code class="xref py py-obj docutils literal notranslate"><span class="pre">custom_import</span></code></a>(name=None, module=None, classname=None)</p></td>
+<td><p>Imports SeisFlows module and extracts class that is the camelcase version</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.config.format_paths" title="seisflows3.config.format_paths"><code class="xref py py-obj docutils literal notranslate"><span class="pre">format_paths</span></code></a>(mydict)</p></td>
+<td><p>Ensure that paths have a standardized format before being allowed into</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.config._pickle_method" title="seisflows3.config._pickle_method"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_pickle_method</span></code></a>(method)</p></td>
+<td><p>The following code changes how instance methods are handled by pickle.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.config._unpickle_method" title="seisflows3.config._unpickle_method"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_unpickle_method</span></code></a>(func_name, obj, cls)</p></td>
+<td><p>The unpickling counterpart to the above function</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.config.NAMES" title="seisflows3.config.NAMES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NAMES</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.config.PACKAGES" title="seisflows3.config.PACKAGES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PACKAGES</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.config.PAR" title="seisflows3.config.PAR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PAR</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.config.PATH" title="seisflows3.config.PATH"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PATH</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.config.ROOT_DIR" title="seisflows3.config.ROOT_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ROOT_DIR</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#id0" title="seisflows3.config.CFGPATHS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CFGPATHS</span></code></a></p></td>
+<td><p>!!! ^^^ WARNING ^^^ !!!</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id0" title="seisflows3.config.CFGPATHS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CFGPATHS</span></code></a></p></td>
+<td><p>!!! ^^^ WARNING ^^^ !!!</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.config.NAMES">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">NAMES</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">['system',</span> <span class="pre">'preprocess',</span> <span class="pre">'solver',</span> <span class="pre">'postprocess',</span> <span class="pre">'optimize',</span> <span class="pre">'workflow']</span></em><a class="headerlink" href="#seisflows3.config.NAMES" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.config.PACKAGES">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">PACKAGES</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">['seisflows3',</span> <span class="pre">'seisflows3-super']</span></em><a class="headerlink" href="#seisflows3.config.PACKAGES" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.config.PAR">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">PAR</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">seisflows_parameters</span></em><a class="headerlink" href="#seisflows3.config.PAR" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.config.PATH">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">PATH</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">seisflows_paths</span></em><a class="headerlink" href="#seisflows3.config.PATH" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.config.ROOT_DIR">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">ROOT_DIR</span></span><a class="headerlink" href="#seisflows3.config.ROOT_DIR" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.config.CFGPATHS">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">CFGPATHS</span></span><a class="headerlink" href="#seisflows3.config.CFGPATHS" title="Permalink to this definition"></a></dt>
+<dd><p>!!! ^^^ WARNING ^^^ !!!</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.config.init_seisflows">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">init_seisflows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">check</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.init_seisflows" title="Permalink to this definition"></a></dt>
+<dd><p>Instantiates SeisFlows3 objects and makes them globally accessible by
+registering them in sys.modules</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>check</strong> (<em>bool</em>) – Run parameter and path checking, defined in the module.check()
+functions. By default should be True, to ensure that paths and
+parameters are set correctly. It should only be set False for debug
+and testing purposes when we need to force our way past this safeguard.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.config.save">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.save" title="Permalink to this definition"></a></dt>
+<dd><p>Export the current session to disk</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.config.load">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.load" title="Permalink to this definition"></a></dt>
+<dd><p>Imports a previously saved session from disk</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – path to the previously saved session</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.config.flush">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">flush</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.flush" title="Permalink to this definition"></a></dt>
+<dd><p>It is sometimes necessary to flush the currently active working state to
+avoid affecting subsequent working states (e.g., running tests back to back)
+This command will flush sys.modules of all <cite>seisflows_{}</cite> modules that are
+typically instantiated using load(), or init_seisflows()</p>
+<p><a class="reference external" href="https://stackoverflow.com/questions/1668223/how-to-de-import-a-python-module">https://stackoverflow.com/questions/1668223/how-to-de-import-a-python-module</a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.config.config_logger">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">config_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'DEBUG'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filemode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'a'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.config_logger" title="Permalink to this definition"></a></dt>
+<dd><p>Explicitely configure the logging module with some parameters defined
+by the user in the System module. Instantiates a stream logger to write
+to stdout, and a file logger which writes to <cite>filename</cite>. Two levels of
+verbosity and three levels of log messages allow the user to determine
+how much output they want to see.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>level</strong> (<em>str</em>) – log level to be passed to logger, available are
+‘CRITICAL’, ‘WARNING’, ‘INFO’, ‘DEBUG’</p></li>
+<li><p><strong>filename</strong> (<em>str</em><em> or </em><em>None</em>) – name of the log file to write log statements to. If None,
+logs will be written to STDOUT ONLY, and <cite>filemode</cite> will not be used.</p></li>
+<li><p><strong>filemode</strong> (<em>str</em>) – method for opening the log file. defaults to append ‘a’</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – if True, writes a more detailed log message stating the
+type of log (warning, info, debug), and the class and method which
+called the logger (e.g., seisflows3.solver.specfem2d.save()). This
+is much more useful for debugging but clutters up the log file.
+if False, only write the time and message in the log statement.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.config.Dict">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">Dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">newdict</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Dict" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A barebones dictionary-like object for holding parameters or paths.</p>
+<p>Allows for easier access of dictionary items, does not allow resets of
+attributes once defined, nor does it allow deleting attributes once defined.
+This helps keep a workflow on rails by preventing the User from editing
+paths and parameters during a workflow.</p>
+<p>TODO | Does it make sense to have this inherit dict() rather than defining
+TODO | an entirely new object?</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Dict.__str__">
+<span class="sig-name descname"><span class="pre">__str__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Dict.__str__" title="Permalink to this definition"></a></dt>
+<dd><p>Pretty print dictionaries and first level nested dictionaries</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Dict.__repr__">
+<span class="sig-name descname"><span class="pre">__repr__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Dict.__repr__" title="Permalink to this definition"></a></dt>
+<dd><p>Pretty print when calling an instance of this object</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Dict.__iter__">
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Dict.__iter__" title="Permalink to this definition"></a></dt>
+<dd><p>Return an iterable list of sorted keys</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Dict.__getattr__">
+<span class="sig-name descname"><span class="pre">__getattr__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Dict.__getattr__" title="Permalink to this definition"></a></dt>
+<dd><p>Attribute-like access of the internal dictionary attributes</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Dict.__getitem__">
+<span class="sig-name descname"><span class="pre">__getitem__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Dict.__getitem__" title="Permalink to this definition"></a></dt>
+<dd><p>.get() like access of the internal dictionary attributes</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Dict.__setattr__">
+<span class="sig-name descname"><span class="pre">__setattr__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Dict.__setattr__" title="Permalink to this definition"></a></dt>
+<dd><p>Setting attributes can only be performed one time</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Dict.__delattr__">
+<span class="sig-name descname"><span class="pre">__delattr__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Dict.__delattr__" title="Permalink to this definition"></a></dt>
+<dd><p>Attributes cannot be deleted once set to avoid editing a parameter
+set during an active workflow</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Dict.force_set">
+<span class="sig-name descname"><span class="pre">force_set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Dict.force_set" title="Permalink to this definition"></a></dt>
+<dd><p>Force-set variables even though the intended behavior of this class
+is to not allow deleting or replacing already set variables.
+This should be used for check() functions and testing purposes only</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Dict.values">
+<span class="sig-name descname"><span class="pre">values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Dict.values" title="Permalink to this definition"></a></dt>
+<dd><p>Return values from the internal dictionary</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.config.Null">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">Null</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Null" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A null object that always and reliably does nothing</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Null.__call__">
+<span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Null.__call__" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Null.__nonzero__">
+<span class="sig-name descname"><span class="pre">__nonzero__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Null.__nonzero__" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Null.__getattr__">
+<span class="sig-name descname"><span class="pre">__getattr__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Null.__getattr__" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Null.__setattr__">
+<span class="sig-name descname"><span class="pre">__setattr__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Null.__setattr__" title="Permalink to this definition"></a></dt>
+<dd><p>Implement setattr(self, name, value).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.Null.__delattr__">
+<span class="sig-name descname"><span class="pre">__delattr__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.Null.__delattr__" title="Permalink to this definition"></a></dt>
+<dd><p>Implement delattr(self, name).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.config.SeisFlowsPathsParameters">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">SeisFlowsPathsParameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.SeisFlowsPathsParameters" title="Permalink to this definition"></a></dt>
+<dd><p>A class used to simplify defining required or optional paths and parameters
+by enforcing a specific structure to their entry into the environment.
+Replaces the functionalities of the old check() functions.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>if a path or parameter is optional it requires a default value.</p>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seisflows3.config.SeisFlowsPathsParameters.default_par">
+<span class="sig-name descname"><span class="pre">default_par</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">!!!</span> <span class="pre">REQUIRED</span> <span class="pre">PARAMETER</span> <span class="pre">!!!</span></em><a class="headerlink" href="#seisflows3.config.SeisFlowsPathsParameters.default_par" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seisflows3.config.SeisFlowsPathsParameters.default_path">
+<span class="sig-name descname"><span class="pre">default_path</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">!!!</span> <span class="pre">REQUIRED</span> <span class="pre">PATH</span> <span class="pre">!!!</span></em><a class="headerlink" href="#seisflows3.config.SeisFlowsPathsParameters.default_path" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.SeisFlowsPathsParameters.par">
+<span class="sig-name descname"><span class="pre">par</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">required</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">docstr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">par_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.SeisFlowsPathsParameters.par" title="Permalink to this definition"></a></dt>
+<dd><p>Add a parameter to the internal list of parameters</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>parameter</strong> (<em>str</em>) – name of the parameter</p></li>
+<li><p><strong>required</strong> (<em>bool</em>) – whether or not the parameter is required. If it is not
+required, then a default value should be given</p></li>
+<li><p><strong>docstr</strong> (<em>str</em>) – Short explanatory doc string that defines what the
+parameter is used for.</p></li>
+<li><p><strong>par_type</strong> (<em>class</em><em> or </em><em>str</em>) – the parameter type, used for doc strings and also
+parameter validation</p></li>
+<li><p><strong>default</strong> – default value for the parameter, can be any type</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.SeisFlowsPathsParameters.path">
+<span class="sig-name descname"><span class="pre">path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">required</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">docstr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.SeisFlowsPathsParameters.path" title="Permalink to this definition"></a></dt>
+<dd><p>Add a path to the internal list of paths</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – name of the parameter</p></li>
+<li><p><strong>required</strong> (<em>bool</em>) – whether or not the path is required. If it is not
+required, then a default value should be given</p></li>
+<li><p><strong>docstr</strong> (<em>str</em>) – Short explanatory doc string that defines what the
+path is used for.</p></li>
+<li><p><strong>default</strong> (<em>str</em>) – default value for the path</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.config.SeisFlowsPathsParameters.validate">
+<span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paths</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.SeisFlowsPathsParameters.validate" title="Permalink to this definition"></a></dt>
+<dd><p>Set internal paths and parameter values into sys.modules. Should be
+called by each modules check() function.</p>
+<p>Ensures that required paths and parameters are set by the User in the
+parameter file and that default values are stored for any optional
+paths and parameters which are not explicitely set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>paths</strong> (<em>bool</em>) – validate the internal path values</p></li>
+<li><p><strong>parameters</strong> (<em>bool</em>) – validate the internal parameter values</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="../tools/err/index.html#seisflows3.tools.err.ParameterError" title="seisflows3.tools.err.ParameterError"><strong>ParameterError</strong></a> – if a required path or parameter is not set by
+the user.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.config.custom_import">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">custom_import</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">classname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.custom_import" title="Permalink to this definition"></a></dt>
+<dd><p>Imports SeisFlows module and extracts class that is the camelcase version
+of the module name</p>
+<dl>
+<dt>For example:</dt><dd><p>custom_import(‘workflow’, ‘inversion’)</p>
+<p>imports ‘seisflows.workflow.inversion’ and, from this module, extracts
+class ‘Inversion’.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str</em>) – <p>component of the workflow to import, defined by <cite>names</cite>,
+available: “system”, “preprocess”, “solver”,</p>
+<blockquote>
+<div><p>”postprocess”, “optimize”, “workflow”</p>
+</div></blockquote>
+</p></li>
+<li><p><strong>classname</strong> (<em>str</em>) – the class to be called from the module. Usually this is
+just the CamelCase version of the module, which will be defaulted to if
+this parameter is set <cite>None</cite>, however allows for custom class naming.
+Note: CamelCase class names following PEP-8 convention.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.config.format_paths">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">format_paths</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mydict</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config.format_paths" title="Permalink to this definition"></a></dt>
+<dd><p>Ensure that paths have a standardized format before being allowed into
+an active working environment.
+Expands tilde character (~) in path strings and expands absolute paths</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>mydict</strong> (<em>dict</em>) – dictionary of paths to be expanded</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>formatted path dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.config._pickle_method">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">_pickle_method</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config._pickle_method" title="Permalink to this definition"></a></dt>
+<dd><p>The following code changes how instance methods are handled by pickle.
+Placing it in this module ensures that pickle changes will be in
+effect for all SeisFlows workflows</p>
+<p>Note: For relevant discussion, see stackoverflow thread:
+“Can’t pickle &lt;type ‘instancemethod’&gt; when using python’s
+multiprocessing Pool.map()”</p>
+<dl>
+<dt>Relevant Links (last accessed 01.20.2020):</dt><dd><p><a class="reference external" href="https://stackoverflow.com/questions/7016567/">https://stackoverflow.com/questions/7016567/</a>
+picklingerror-when-using-multiprocessing</p>
+<p><a class="reference external" href="https://bytes.com/topic/python/answers/">https://bytes.com/topic/python/answers/</a>
+552476-why-cant-you-pickle-instancemethods</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.config._unpickle_method">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">_unpickle_method</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cls</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.config._unpickle_method" title="Permalink to this definition"></a></dt>
+<dd><p>The unpickling counterpart to the above function</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="id0">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.config.</span></span><span class="sig-name descname"><span class="pre">CFGPATHS</span></span><a class="headerlink" href="#id0" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

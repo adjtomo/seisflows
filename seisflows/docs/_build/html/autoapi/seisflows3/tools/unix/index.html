@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.tools.unix &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.tools.unix</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3/tools/unix/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.tools.unix">
+<span id="seisflows3-tools-unix"></span><h1><a class="reference internal" href="#module-seisflows3.tools.unix" title="seisflows3.tools.unix"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.tools.unix</span></code></a><a class="headerlink" href="#module-seisflows3.tools.unix" title="Permalink to this headline"></a></h1>
+<p>Unix functions wrapped in Python3. Used to simplify function calling and
+provide a uniform look to SeisFlows3 source code. These Python functions
+are meant to mimic commonly-used shell commands.</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.unix.cat" title="seisflows3.tools.unix.cat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cat</span></code></a>(src, dst=None)</p></td>
+<td><p>Concatenate files and print to standard output or write to file</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.unix.cd" title="seisflows3.tools.unix.cd"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cd</span></code></a>(path)</p></td>
+<td><p>Change directory to <cite>path</cite></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.unix.cp" title="seisflows3.tools.unix.cp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cp</span></code></a>(src='', dst='')</p></td>
+<td><p>Copy files</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.unix.hostname" title="seisflows3.tools.unix.hostname"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hostname</span></code></a>()</p></td>
+<td><p>Check the system's hostname</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.unix.ln" title="seisflows3.tools.unix.ln"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ln</span></code></a>(src, dst)</p></td>
+<td><p>Make a symbolic link between files</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.unix.ls" title="seisflows3.tools.unix.ls"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ls</span></code></a>(path=os.getcwd(), show_all=False)</p></td>
+<td><p>List directory contents, option to show hidden files</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.unix.mkdir" title="seisflows3.tools.unix.mkdir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mkdir</span></code></a>(dirs)</p></td>
+<td><p>Make directory or directories</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.unix.mv" title="seisflows3.tools.unix.mv"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mv</span></code></a>(src, dst)</p></td>
+<td><p>Move contents from <cite>src</cite> to <cite>dst</cite></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.unix.rename" title="seisflows3.tools.unix.rename"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rename</span></code></a>(old, new, names)</p></td>
+<td><p>Rename multiple files</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.unix.rm" title="seisflows3.tools.unix.rm"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rm</span></code></a>(path)</p></td>
+<td><p>Remove files or directories</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.unix.select" title="seisflows3.tools.unix.select"><code class="xref py py-obj docutils literal notranslate"><span class="pre">select</span></code></a>(items, prompt='')</p></td>
+<td><p>Monitor file descriptors, waiting for one or more descriptor to be &quot;ready&quot;</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.unix.touch" title="seisflows3.tools.unix.touch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">touch</span></code></a>(filename, times=None)</p></td>
+<td><p>Update timestamps on files</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.unix.which" title="seisflows3.tools.unix.which"><code class="xref py py-obj docutils literal notranslate"><span class="pre">which</span></code></a>(name)</p></td>
+<td><p>Shows the full path of shell commands</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.cat">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">cat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.cat" title="Permalink to this definition"></a></dt>
+<dd><p>Concatenate files and print to standard output or write to file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src</strong> (<em>str</em>) – file to read</p></li>
+<li><p><strong>dst</strong> (<em>str</em>) – file to write contents to</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.cd">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">cd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.cd" title="Permalink to this definition"></a></dt>
+<dd><p>Change directory to <cite>path</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – path to change directory to</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.cp">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">cp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.cp" title="Permalink to this definition"></a></dt>
+<dd><p>Copy files</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src</strong> (<em>str</em><em> or </em><em>list</em><em> or </em><em>tuple</em>) – source to copy from</p></li>
+<li><p><strong>dst</strong> (<em>str</em>) – destination to copy to</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.hostname">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">hostname</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.hostname" title="Permalink to this definition"></a></dt>
+<dd><p>Check the system’s hostname</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>system hostname</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.ln">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">ln</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.ln" title="Permalink to this definition"></a></dt>
+<dd><p>Make a symbolic link between files</p>
+<p class="rubric">&gt;&gt;&gt; from seisflows3.tools.unix import ln
+&gt;&gt;&gt; ln(“example_file”, “path/to/sylink/new_filename”)
+&gt;&gt;&gt; # OR
+&gt;&gt;&gt; sln(“example_file”, “path/to/sylink/”)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src</strong> (<em>str</em>) – path to file or directory to symlink</p></li>
+<li><p><strong>dst</strong> (<em>str</em>) – path or file to symlink <cite>src</cite> to</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.ls">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">ls</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">os.getcwd()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_all</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.ls" title="Permalink to this definition"></a></dt>
+<dd><p>List directory contents, option to show hidden files</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – path to list directory contents</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>if True, shows hidden files (starting with ‘.’), same as the
+-a or –all in shell ls command</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.mkdir">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">mkdir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dirs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.mkdir" title="Permalink to this definition"></a></dt>
+<dd><p>Make directory or directories</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Random wait times to prevent overloading disk when multiple subprocesses
+are running mkdir</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dirs</strong> (<em>str</em><em> or </em><em>list</em>) – pathnames to make</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.mv">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">mv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.mv" title="Permalink to this definition"></a></dt>
+<dd><p>Move contents from <cite>src</cite> to <cite>dst</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src</strong> (<em>str</em><em> or </em><em>list</em><em> or </em><em>tuple</em>) – input file(s) to move</p></li>
+<li><p><strong>dst</strong> (<em>str</em>) – location to move path to</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.rename">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">rename</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">old</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.rename" title="Permalink to this definition"></a></dt>
+<dd><p>Rename multiple files</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>old</strong> (<em>str</em>) – expression to replace</p></li>
+<li><p><strong>new</strong> (<em>str</em>) – replacement expression</p></li>
+<li><p><strong>names</strong> (<em>list</em>) – files to replace expressions in</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.rm">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">rm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.rm" title="Permalink to this definition"></a></dt>
+<dd><p>Remove files or directories</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.select">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">select</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">items</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.select" title="Permalink to this definition"></a></dt>
+<dd><p>Monitor file descriptors, waiting for one or more descriptor to be “ready”</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.touch">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">touch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.touch" title="Permalink to this definition"></a></dt>
+<dd><p>Update timestamps on files</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<em>str</em>) – file to touch</p></li>
+<li><p><strong>times</strong> (<em>None</em><em> or </em><em>(</em><em>atime</em><em>, </em><em>mtime</em><em>)</em>) – if None, set time to current time, otherwise
+(accesstime, modifiedtime) need to be set</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.unix.which">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.unix.</span></span><span class="sig-name descname"><span class="pre">which</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.unix.which" title="Permalink to this definition"></a></dt>
+<dd><p>Shows the full path of shell commands</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – name of shell command to check</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

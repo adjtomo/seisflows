@@ -1,0 +1,51 @@
+:py:mod:`seisflows3.plugins.preconds`
+=====================================
+
+.. py:module:: seisflows3.plugins.preconds
+
+.. autoapi-nested-parse::
+
+   used by the OPTIMIZE class and specified by the PRECOND parameter
+
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   diagonal/index.rst
+
+
+Package Contents
+----------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.plugins.preconds.Diagonal
+
+
+
+
+.. py:class:: Diagonal
+
+   Bases: :py:obj:`object`
+
+   User supplied diagonal preconditioner
+   Rescales model parameters based on user supplied weights
+
+   .. py:method:: __call__(self, q)
+
+      Applies preconditioner to given vector
+
+      :type q: np.array
+      :param q: search direction
+      :rtype: np.array
+      :return: preconditioned search direction
+
+
+

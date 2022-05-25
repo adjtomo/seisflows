@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Overview &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting started" href="start_here.html" />
+    <link rel="prev" title="Installation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> SeisFlows3
+            <img src="_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#how-does-it-work">How does it work?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#what-does-seisflows3-not-do">What does SeisFlows3 NOT do?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Overview</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/overview.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">SeisFlows3</span></code> is a Python-based package for automating waveform inversion.
+It is used in industry and academic applications for deriving improved
+Earth models from local to global scales, in 2D and 3D.</p>
+<p>Seismic imaging techniques, which commonly include full waveform inversion
+and adjoint tomography, take advantage of seismic signals generated by
+active and passive seismic sources to provide constraints on Earth structure,
+typically defined in terms of seismic velocities, density, and anisotropy.</p>
+<p>Seismic inversions typically involve large scale models (millions to billions
+of individual model parameters) and large waveform datasets
+(thousands of measurements from tens to hundreds of sources and receivers),
+requiring very-similar processing and analysis.</p>
+<p>SeisFlows3 is an <strong>automation</strong> and <strong>parallelization</strong> package, meant to
+reduce the “human-time” cost of performing a seismic inversion.</p>
+<hr class="docutils" />
+<div class="section" id="how-does-it-work">
+<h2>How does it work?<a class="headerlink" href="#how-does-it-work" title="Permalink to this headline"></a></h2>
+<p>SeisFlows was developed as a modular tool. By “hiding” case-by-base details
+behind a generalized namespace, a SeisFlows3 workflow can remain consistent
+whether applied to a 2D acoustic problem on a Linux workstation, or to a
+continental-scale adjoint tomography problem run on a high performance computer.</p>
+<dl class="simple">
+<dt>SeisFlows Modules:</dt><dd><ul class="simple">
+<li><p><strong>Workflow</strong>: The equivalent of main(); controls the collection and order
+of steps taken (Examples: Inversion, Migration)</p></li>
+<li><p><strong>System</strong>: Compute system interface used to run SeisFlows3. A consistent
+internal structure makes it relatively seamless to switch between
+workstation problems, and HPC jobs (Examples: workstation, Slurm)</p></li>
+<li><p><strong>Solver</strong>: External numerical solver used to generate models, synthetics,
+and kernels (Examples: SPECFEM2D, SPECFEM3D Cartesian, SPECFEM3D Globe)</p></li>
+<li><p><strong>Preprocessing</strong>: Signal processing operations performed on time series,
+including downsampling, detrending, filtering, etc.</p></li>
+<li><p><strong>Postprocessing</strong>: Regularization and image processing operations
+carried out on the gradient computations. Typical tasks involve
+smoothing, preconditioning and masking</p></li>
+<li><p><strong>Optimization</strong>: Nonlinear optimization algorithms used to find
+the minimum of a waveform-based objective function (Examples: L-BFGS,
+NLCG, steepest descent)</p></li>
+</ul>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">SeisFlows</span></code> is built upon the object-oriented programming concept of
+<a class="reference external" href="https://en.wikipedia.org/wiki/Inheritance_(object-oriented_programming)">inheritance</a>.
+This means that if desired functionality is missing in the main package, users
+can overload default classes without having to rewrite entire portions of the
+code base. This allows SeisFlows to maintain a rigid structure while still being
+incredibly flexible in its application to various scales and problems.</p>
+</div>
+<div class="section" id="what-does-seisflows3-not-do">
+<h2>What does SeisFlows3 NOT do?<a class="headerlink" href="#what-does-seisflows3-not-do" title="Permalink to this headline"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">SeisFlows3</span></code> is <strong>not</strong> a numerical solver, <strong>not</strong> a waveform processing tool,
+and <strong>not</strong> a visualization tool. SeisFlows3 is a workflow management and
+optimization tool,
+Knowledge of interfacing with external numerical solvers, as well as waveform
+preprocessing tools, is paramount to successful application of SeisFlows3.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="start_here.html" class="btn btn-neutral float-right" title="Getting started" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.tools.wrappers &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.tools.wrappers</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3/tools/wrappers/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.tools.wrappers">
+<span id="seisflows3-tools-wrappers"></span><h1><a class="reference internal" href="#module-seisflows3.tools.wrappers" title="seisflows3.tools.wrappers"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.tools.wrappers</span></code></a><a class="headerlink" href="#module-seisflows3.tools.wrappers" title="Permalink to this headline"></a></h1>
+<p>Wrappers of commonly used functions to reduce line count and provide an
+aesthetically similar look in SeisFlows3. Mostly concerend with file
+manipulation, but also math and calling functions as well.</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.Struct" title="seisflows3.tools.wrappers.Struct"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Struct</span></code></a></p></td>
+<td><p>Revised dictionary structure</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.diff" title="seisflows3.tools.wrappers.diff"><code class="xref py py-obj docutils literal notranslate"><span class="pre">diff</span></code></a>(list1, list2)</p></td>
+<td><p>Difference between unique elements of lists</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.divides" title="seisflows3.tools.wrappers.divides"><code class="xref py py-obj docutils literal notranslate"><span class="pre">divides</span></code></a>(i, j)</p></td>
+<td><p>Return True if <cite>j</cite> divides <cite>i</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.exists" title="seisflows3.tools.wrappers.exists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">exists</span></code></a>(names)</p></td>
+<td><p>Wrapper for os.path.exists that also works on lists</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.findpath" title="seisflows3.tools.wrappers.findpath"><code class="xref py py-obj docutils literal notranslate"><span class="pre">findpath</span></code></a>(name)</p></td>
+<td><p>Resolves absolute path of module</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.iterable" title="seisflows3.tools.wrappers.iterable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">iterable</span></code></a>(arg)</p></td>
+<td><p>Make an argument iterable</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.module_exists" title="seisflows3.tools.wrappers.module_exists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">module_exists</span></code></a>(name)</p></td>
+<td><p>Determine if a module loader exists</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.package_exists" title="seisflows3.tools.wrappers.package_exists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">package_exists</span></code></a>(name)</p></td>
+<td><p>Determine if a package exists</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.pkgpath" title="seisflows3.tools.wrappers.pkgpath"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pkgpath</span></code></a>(name)</p></td>
+<td><p>Path to Seisflows package</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.timestamp" title="seisflows3.tools.wrappers.timestamp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">timestamp</span></code></a>()</p></td>
+<td><p>Return a timestamp for current time</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.loadyaml" title="seisflows3.tools.wrappers.loadyaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">loadyaml</span></code></a>(filename)</p></td>
+<td><p>Define how the PyYaml yaml loading function behaves.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.getset" title="seisflows3.tools.wrappers.getset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getset</span></code></a>(arg)</p></td>
+<td><p>Return a set object</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.parse_null" title="seisflows3.tools.wrappers.parse_null"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_null</span></code></a>(dictionary)</p></td>
+<td><p>Remove null, None or '' values from a dictionary</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.loadtxt" title="seisflows3.tools.wrappers.loadtxt"><code class="xref py py-obj docutils literal notranslate"><span class="pre">loadtxt</span></code></a>(filename)</p></td>
+<td><p>Load scalar from text file</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.savetxt" title="seisflows3.tools.wrappers.savetxt"><code class="xref py py-obj docutils literal notranslate"><span class="pre">savetxt</span></code></a>(filename, v)</p></td>
+<td><p>Save scalar to text file</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.number_fid" title="seisflows3.tools.wrappers.number_fid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_fid</span></code></a>(fid, i=0)</p></td>
+<td><p>Number a filename. Used to store old log files without overwriting them.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers.nproc" title="seisflows3.tools.wrappers.nproc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nproc</span></code></a>()</p></td>
+<td><p>Get the number of processors available</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers._nproc_method1" title="seisflows3.tools.wrappers._nproc_method1"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_nproc_method1</span></code></a>()</p></td>
+<td><p>Used subprocess to determine the number of processeors available</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.wrappers._nproc_method2" title="seisflows3.tools.wrappers._nproc_method2"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_nproc_method2</span></code></a>()</p></td>
+<td><p>Get number of processors using /proc/cpuinfo</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.Struct">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">Struct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.Struct" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></p>
+<p>Revised dictionary structure</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.diff">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">diff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">list2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.diff" title="Permalink to this definition"></a></dt>
+<dd><p>Difference between unique elements of lists</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>list1</strong> (<em>list</em>) – first list</p></li>
+<li><p><strong>list2</strong> (<em>list</em>) – second list</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.divides">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">divides</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">j</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.divides" title="Permalink to this definition"></a></dt>
+<dd><p>Return True if <cite>j</cite> divides <cite>i</cite>.</p>
+<p>Bryant: I don’t think this works in python3?</p>
+<dl class="field-list simple">
+</dl>
+<p>:type j :int</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.exists">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">exists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">names</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.exists" title="Permalink to this definition"></a></dt>
+<dd><p>Wrapper for os.path.exists that also works on lists</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>names</strong> (<em>list</em><em> or </em><em>str</em>) – list of names to check existnce</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.findpath">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">findpath</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.findpath" title="Permalink to this definition"></a></dt>
+<dd><p>Resolves absolute path of module</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – absolute path of str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.iterable">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">iterable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.iterable" title="Permalink to this definition"></a></dt>
+<dd><p>Make an argument iterable</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>arg</strong> – an argument to make iterable</p>
+</dd>
+<dt class="field-even">Type</dt>
+<dd class="field-even"><p>list</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>iterable argument</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.module_exists">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">module_exists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.module_exists" title="Permalink to this definition"></a></dt>
+<dd><p>Determine if a module loader exists</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – name of module</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.package_exists">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">package_exists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.package_exists" title="Permalink to this definition"></a></dt>
+<dd><p>Determine if a package exists</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – name of package</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.pkgpath">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">pkgpath</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.pkgpath" title="Permalink to this definition"></a></dt>
+<dd><p>Path to Seisflows package</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – name of package</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.timestamp">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">timestamp</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.timestamp" title="Permalink to this definition"></a></dt>
+<dd><p>Return a timestamp for current time</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.loadyaml">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">loadyaml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.loadyaml" title="Permalink to this definition"></a></dt>
+<dd><p>Define how the PyYaml yaml loading function behaves.
+Replaces None and inf strings with NoneType and numpy.inf respectively</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – .yaml file to load in</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.getset">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">getset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.getset" title="Permalink to this definition"></a></dt>
+<dd><p>Return a set object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>arg</strong> (<em>None</em><em>, </em><em>str</em><em> or </em><em>list</em>) – argument to turn into a set</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>set</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>a set of the given argument</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.parse_null">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">parse_null</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dictionary</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.parse_null" title="Permalink to this definition"></a></dt>
+<dd><p>Remove null, None or ‘’ values from a dictionary</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dictionary</strong> (<em>dict</em>) – dict of parameters to parse</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>dictionary that has been sanitized of all null values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.loadtxt">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">loadtxt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.loadtxt" title="Permalink to this definition"></a></dt>
+<dd><p>Load scalar from text file</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.savetxt">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">savetxt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.savetxt" title="Permalink to this definition"></a></dt>
+<dd><p>Save scalar to text file</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.number_fid">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">number_fid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">i</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.number_fid" title="Permalink to this definition"></a></dt>
+<dd><p>Number a filename. Used to store old log files without overwriting them.
+Premise is, if you have a file e.g., called: output.txt
+This function would return incrementing filenames:
+output_000.txt, output_001.txt, output_002.txt, ouput_003.txt …</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Replace statement is catch all so we assume that there is only one         instance of the file extension in the entire path.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fid</strong> (<em>str</em>) – path to the file that you want to increment</p></li>
+<li><p><strong>i</strong> (<em>int</em>) – number to append to file id</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>filename with appended number. filename ONLY, will strip away
+the original path location</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers.nproc">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">nproc</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers.nproc" title="Permalink to this definition"></a></dt>
+<dd><p>Get the number of processors available</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>number of processors</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers._nproc_method1">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">_nproc_method1</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers._nproc_method1" title="Permalink to this definition"></a></dt>
+<dd><p>Used subprocess to determine the number of processeors available</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>number of processors</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.wrappers._nproc_method2">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.wrappers.</span></span><span class="sig-name descname"><span class="pre">_nproc_method2</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.wrappers._nproc_method2" title="Permalink to this definition"></a></dt>
+<dd><p>Get number of processors using /proc/cpuinfo</p>
+<p>Bryant: This doesnt work?</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>number of processors</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,182 @@
+:py:mod:`seisflows3.plugins.preprocess.misfit`
+==============================================
+
+.. py:module:: seisflows3.plugins.preprocess.misfit
+
+.. autoapi-nested-parse::
+
+   Misfit functions used by the 'default' preprocess class use to quantify 
+   differences between data and synthetics. 
+
+   All functions defined have four required positional arguments
+
+       :type syn: np.array
+       :param syn: synthetic data array
+       :type obs: np.array
+       :param obs: observed data array
+       :type nt: int
+       :param nt: number of time steps in the data array
+       :type dt: float
+       :param dt: time step in sec
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.plugins.preprocess.misfit.waveform
+   seisflows3.plugins.preprocess.misfit.envelope
+   seisflows3.plugins.preprocess.misfit.instantaneous_phase
+   seisflows3.plugins.preprocess.misfit.traveltime
+   seisflows3.plugins.preprocess.misfit.traveltime_inexact
+   seisflows3.plugins.preprocess.misfit.amplitude
+   seisflows3.plugins.preprocess.misfit.envelope2
+   seisflows3.plugins.preprocess.misfit.envelope3
+   seisflows3.plugins.preprocess.misfit.instantaneous_phase2
+   seisflows3.plugins.preprocess.misfit.displacement
+   seisflows3.plugins.preprocess.misfit.velocity
+   seisflows3.plugins.preprocess.misfit.acceleration
+
+
+
+.. py:function:: waveform(syn, obs, nt, dt, *args, **kwargs)
+
+   Direct waveform differencing
+
+   :type syn: np.array
+   :param syn: synthetic data array
+   :type obs: np.array
+   :param obs: observed data array
+   :type nt: int
+   :param nt: number of time steps in the data array
+   :type dt: float
+   :param dt: time step in sec
+
+
+.. py:function:: envelope(syn, obs, nt, dt, *args, **kwargs)
+
+   Waveform envelope difference from Yuan et al. 2015 Eq. 9
+
+   :type syn: np.array
+   :param syn: synthetic data array
+   :type obs: np.array
+   :param obs: observed data array
+   :type nt: int
+   :param nt: number of time steps in the data array
+   :type dt: float
+   :param dt: time step in sec
+
+
+.. py:function:: instantaneous_phase(syn, obs, nt, dt, *args, **kwargs)
+
+   Instantaneous phase difference from Bozdag et al. 2011
+
+   :type syn: np.array
+   :param syn: synthetic data array
+   :type obs: np.array
+   :param obs: observed data array
+   :type nt: int
+   :param nt: number of time steps in the data array
+   :type dt: float
+   :param dt: time step in sec
+
+
+.. py:function:: traveltime(syn, obs, nt, dt, *args, **kwargs)
+
+   Cross-correlation traveltime 
+
+   :type syn: np.array
+   :param syn: synthetic data array
+   :type obs: np.array
+   :param obs: observed data array
+   :type nt: int
+   :param nt: number of time steps in the data array
+   :type dt: float
+   :param dt: time step in sec
+
+
+.. py:function:: traveltime_inexact(syn, obs, nt, dt, *args, **kwargs)
+
+   A faster cc traveltime function but possibly innacurate
+
+   :type syn: np.array
+   :param syn: synthetic data array
+   :type obs: np.array
+   :param obs: observed data array
+   :type nt: int
+   :param nt: number of time steps in the data array
+   :type dt: float
+   :param dt: time step in sec
+
+
+.. py:function:: amplitude(syn, obs, nt, dt, *args, **kwargs)
+
+   Cross-correlation amplitude difference
+
+   :type syn: np.array
+   :param syn: synthetic data array
+   :type obs: np.array
+   :param obs: observed data array
+   :type nt: int
+   :param nt: number of time steps in the data array
+   :type dt: float
+   :param dt: time step in sec
+
+
+.. py:function:: envelope2(syn, obs, nt, dt, *args, **kwargs)
+
+   Envelope amplitude ratio from Yuan et al. 2015 Eq. B-1
+
+   :type syn: np.array
+   :param syn: synthetic data array
+   :type obs: np.array
+   :param obs: observed data array
+   :type nt: int
+   :param nt: number of time steps in the data array
+   :type dt: float
+   :param dt: time step in sec
+
+
+.. py:function:: envelope3(syn, obs, nt, dt, eps=0.0, *args, **kwargs)
+
+   Envelope cross-correlation lag from Yuan et al. 2015, Eq. B-4
+
+   :type syn: np.array
+   :param syn: synthetic data array
+   :type obs: np.array
+   :param obs: observed data array
+   :type nt: int
+   :param nt: number of time steps in the data array
+   :type dt: float
+   :param dt: time step in sec
+
+
+.. py:function:: instantaneous_phase2(syn, obs, nt, dt, eps=0.0, *args, **kwargs)
+
+   Alterative instantaneous phase function
+
+   :type syn: np.array
+   :param syn: synthetic data array
+   :type obs: np.array
+   :param obs: observed data array
+   :type nt: int
+   :param nt: number of time steps in the data array
+   :type dt: float
+   :param dt: time step in sec
+
+
+.. py:function:: displacement(*args, **kwargs)
+
+
+.. py:function:: velocity(*args, **kwargs)
+
+
+.. py:function:: acceleration(*args, **kwargs)
+
+

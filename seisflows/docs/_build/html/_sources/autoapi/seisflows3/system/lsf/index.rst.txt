@@ -1,0 +1,151 @@
+:py:mod:`seisflows3.system.lsf`
+===============================
+
+.. py:module:: seisflows3.system.lsf
+
+.. autoapi-nested-parse::
+
+   This is the subclass seisflows.system.lsf_lg
+
+   This class provides the core utilities interaction with HPC systems which run
+   using the Platform Load Sharing Facility (LSF) workload management platform.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.system.lsf.Lsf
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.system.lsf.PAR
+   seisflows3.system.lsf.PATH
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:class:: Lsf
+
+   Bases: :py:obj:`custom_import`\ (\ :py:obj:`'system'`\ , :py:obj:`'cluster'`\ )
+
+   An interface through which to submit workflows, run tasks in serial or
+   parallel, and perform other system functions.
+
+   By hiding environment details behind a python interface layer, these
+   classes provide a consistent command set across different computing
+   environments.
+
+   Intermediate files are written to a global scratch path PATH.SCRATCH,
+   which must be accessible to all compute nodes.
+
+   Optionally, users can provide a local scratch path PATH.LOCAL if each
+   compute node has its own local filesystem.
+
+   For important additional information, please see
+   http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: required(self)
+      :property:
+
+      Checks parameters and paths
+
+
+   .. py:method:: submit(self, workflow)
+
+      Submits workflow
+
+
+   .. py:method:: run(self, classname, method, *args, **kwargs)
+
+      Runs task multiple times in embarrassingly parallel fasion on the
+      maui cluster
+
+      Executes classname.method(*args, **kwargs) NTASK times,
+      each time on NPROC CPU cores
+
+      :type classname: str
+      :param classname: the class to run
+      :type method: str
+      :param method: the method from the given `classname` to run
+
+
+   .. py:method:: run_single(self, classname, method, *args, **kwargs)
+
+      Runs task multiple times in embarrassingly parallel fasion
+
+      Executes classname.method(*args, **kwargs) NTASK times, each time on
+      NPROC cpu cores
+
+
+   .. py:method:: job_id_list(self, stdout, ntask)
+
+      Parses job id list from sbatch standard output
+
+      :type stdout: str
+      :param stdout: the output of subprocess.check_output()
+      :type ntask: int
+      :param ntask: number of tasks currently running
+
+
+   .. py:method:: job_status(self, classname, method, jobs)
+
+      Queries completion status of a single job
+
+      :type job: str
+      :param job: job id to query
+
+
+   .. py:method:: _query(self, jobid)
+
+      Retrives job state from LSF database
+
+      :type jobid: str
+      :param jobid: job id to query LSF system about
+
+
+   .. py:method:: taskid(self)
+
+      Provides a unique identifier for each running task
+
+
+   .. py:method:: timestamp(self)
+
+      Timestamp the current running job
+
+
+   .. py:method:: save_kwargs(self, classname, method, kwargs)
+
+      Save key word arguments as a pickle object.
+
+      :type classname: str
+      :param classname: the class to run
+      :type method: str
+      :param method: the method from the given `classname` to run
+
+
+

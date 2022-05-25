@@ -1,0 +1,31 @@
+:py:mod:`seisflows3.workflow`
+=============================
+
+.. py:module:: seisflows3.workflow
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   base/index.rst
+   inversion/index.rst
+   migration/index.rst
+   test/index.rst
+
+
+Package Contents
+----------------
+
+.. py:data:: __path__
+   
+
+   
+
+.. py:data:: logger
+   
+
+   
+

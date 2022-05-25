@@ -1,0 +1,16 @@
+API Reference
+=============
+
+This page contains auto-generated API reference documentation [#f1]_.
+
+.. toctree::
+   :titlesonly:
+
+   /autoapi/seisflows3/index
+   /autoapi/setup_specfem2d_example/index
+   /autoapi/setup_specfem3d_example/index
+   /autoapi/convert/index
+   /autoapi/make_test_directory_structure/index
+   /autoapi/seisflows3super/index
+
+.. [#f1] Created with `sphinx-autoapi <https://github.com/readthedocs/sphinx-autoapi>`_

@@ -1,0 +1,381 @@
+:py:mod:`seisflows3.config`
+===========================
+
+.. py:module:: seisflows3.config
+
+.. autoapi-nested-parse::
+
+   This is the Seisflows Config script, it contains utilities that are called upon
+   throughout the Seisflows workflow. It also (re)defines some important functions
+   that are used extensively by the machinery of Seisflows.
+
+   SeisFlows consists of interacting objects:
+   'system', 'preprocess', 'solver', 'postprocess', 'optimize', 'workflow'
+
+   Each corresponds simultaneously to a module in the SeisFlows source code,
+   a class that is instantiated and made accessible via sys.modules, and a
+   parameter in a global dictionary. Once in memory, these objects can be thought
+   of as comprising the complete 'state' of a SeisFlows session
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.config.Dict
+   seisflows3.config.Null
+   seisflows3.config.SeisFlowsPathsParameters
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.config.init_seisflows
+   seisflows3.config.save
+   seisflows3.config.load
+   seisflows3.config.flush
+   seisflows3.config.config_logger
+   seisflows3.config.custom_import
+   seisflows3.config.format_paths
+   seisflows3.config._pickle_method
+   seisflows3.config._unpickle_method
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.config.NAMES
+   seisflows3.config.PACKAGES
+   seisflows3.config.PAR
+   seisflows3.config.PATH
+   seisflows3.config.ROOT_DIR
+   seisflows3.config.CFGPATHS
+   seisflows3.config.CFGPATHS
+
+
+.. py:data:: NAMES
+   :annotation: = ['system', 'preprocess', 'solver', 'postprocess', 'optimize', 'workflow']
+
+   
+
+.. py:data:: PACKAGES
+   :annotation: = ['seisflows3', 'seisflows3-super']
+
+   
+
+.. py:data:: PAR
+   :annotation: = seisflows_parameters
+
+   
+
+.. py:data:: PATH
+   :annotation: = seisflows_paths
+
+   
+
+.. py:data:: ROOT_DIR
+   
+
+   
+
+.. py:data:: CFGPATHS
+   
+
+   !!! ^^^ WARNING ^^^ !!!
+
+
+.. py:function:: init_seisflows(check=True)
+
+   Instantiates SeisFlows3 objects and makes them globally accessible by
+   registering them in sys.modules
+
+   :type check: bool
+   :param check: Run parameter and path checking, defined in the module.check()
+       functions. By default should be True, to ensure that paths and
+       parameters are set correctly. It should only be set False for debug
+       and testing purposes when we need to force our way past this safeguard.
+
+
+.. py:function:: save()
+
+   Export the current session to disk
+
+
+.. py:function:: load(path)
+
+   Imports a previously saved session from disk
+
+   :type path: str
+   :param path: path to the previously saved session
+
+
+.. py:function:: flush()
+
+   It is sometimes necessary to flush the currently active working state to
+   avoid affecting subsequent working states (e.g., running tests back to back)
+   This command will flush sys.modules of all `seisflows_{}` modules that are
+   typically instantiated using load(), or init_seisflows()
+
+   https://stackoverflow.com/questions/1668223/how-to-de-import-a-python-module
+
+
+.. py:function:: config_logger(level='DEBUG', filename=None, filemode='a', verbose=True)
+
+   Explicitely configure the logging module with some parameters defined
+   by the user in the System module. Instantiates a stream logger to write
+   to stdout, and a file logger which writes to `filename`. Two levels of
+   verbosity and three levels of log messages allow the user to determine
+   how much output they want to see.
+
+   :type level: str
+   :param level: log level to be passed to logger, available are
+       'CRITICAL', 'WARNING', 'INFO', 'DEBUG'
+   :type filename: str or None
+   :param filename: name of the log file to write log statements to. If None,
+       logs will be written to STDOUT ONLY, and `filemode` will not be used.
+   :type filemode: str
+   :param filemode: method for opening the log file. defaults to append 'a'
+   :type verbose: bool
+   :param verbose: if True, writes a more detailed log message stating the
+       type of log (warning, info, debug), and the class and method which
+       called the logger (e.g., seisflows3.solver.specfem2d.save()). This
+       is much more useful for debugging but clutters up the log file.
+       if False, only write the time and message in the log statement.
+
+
+.. py:class:: Dict(newdict)
+
+   Bases: :py:obj:`object`
+
+   A barebones dictionary-like object for holding parameters or paths.
+
+   Allows for easier access of dictionary items, does not allow resets of
+   attributes once defined, nor does it allow deleting attributes once defined.
+   This helps keep a workflow on rails by preventing the User from editing
+   paths and parameters during a workflow.
+
+   TODO | Does it make sense to have this inherit dict() rather than defining
+   TODO | an entirely new object?
+
+   .. py:method:: __str__(self)
+
+      Pretty print dictionaries and first level nested dictionaries
+
+
+   .. py:method:: __repr__(self)
+
+      Pretty print when calling an instance of this object
+
+
+   .. py:method:: __iter__(self)
+
+      Return an iterable list of sorted keys
+
+
+   .. py:method:: __getattr__(self, key)
+
+      Attribute-like access of the internal dictionary attributes
+
+
+   .. py:method:: __getitem__(self, key)
+
+      .get() like access of the internal dictionary attributes 
+
+
+   .. py:method:: __setattr__(self, key, val)
+
+      Setting attributes can only be performed one time
+
+
+   .. py:method:: __delattr__(self, key)
+
+      Attributes cannot be deleted once set to avoid editing a parameter
+      set during an active workflow
+
+
+   .. py:method:: force_set(self, key, val)
+
+      Force-set variables even though the intended behavior of this class
+      is to not allow deleting or replacing already set variables.
+      This should be used for check() functions and testing purposes only
+
+
+   .. py:method:: values(self)
+
+      Return values from the internal dictionary
+
+
+
+.. py:class:: Null(*args, **kwargs)
+
+   Bases: :py:obj:`object`
+
+   A null object that always and reliably does nothing
+
+   .. py:method:: __call__(self, *args, **kwargs)
+
+
+   .. py:method:: __nonzero__(self)
+
+
+   .. py:method:: __getattr__(self, key)
+
+
+   .. py:method:: __setattr__(self, key, val)
+
+      Implement setattr(self, name, value).
+
+
+   .. py:method:: __delattr__(self, key)
+
+      Implement delattr(self, name).
+
+
+
+.. py:class:: SeisFlowsPathsParameters(base=None)
+
+   A class used to simplify defining required or optional paths and parameters
+   by enforcing a specific structure to their entry into the environment.
+   Replaces the functionalities of the old check() functions.
+
+   .. note::
+       if a path or parameter is optional it requires a default value.
+
+   .. py:attribute:: default_par
+      :annotation: = !!! REQUIRED PARAMETER !!!
+
+      
+
+   .. py:attribute:: default_path
+      :annotation: = !!! REQUIRED PATH !!!
+
+      
+
+   .. py:method:: par(self, parameter, required, docstr, par_type, default=None)
+
+      Add a parameter to the internal list of parameters
+
+      :type parameter: str
+      :param parameter: name of the parameter
+      :type required: bool
+      :param required: whether or not the parameter is required. If it is not
+          required, then a default value should be given
+      :type docstr: str
+      :param docstr: Short explanatory doc string that defines what the
+          parameter is used for.
+      :type par_type: class or str
+      :param par_type: the parameter type, used for doc strings and also
+          parameter validation
+      :param default: default value for the parameter, can be any type
+
+
+   .. py:method:: path(self, path, required, docstr, default=None)
+
+      Add a path to the internal list of paths
+
+      :type path: str
+      :param path: name of the parameter
+      :type required: bool
+      :param required: whether or not the path is required. If it is not
+          required, then a default value should be given
+      :type docstr: str
+      :param docstr: Short explanatory doc string that defines what the
+          path is used for.
+      :type default: str
+      :param default: default value for the path
+
+
+
+   .. py:method:: validate(self, paths=True, parameters=True)
+
+      Set internal paths and parameter values into sys.modules. Should be
+      called by each modules check() function.
+
+      Ensures that required paths and parameters are set by the User in the
+      parameter file and that default values are stored for any optional
+      paths and parameters which are not explicitely set.
+
+      :type paths: bool
+      :param paths: validate the internal path values
+      :type parameters: bool
+      :param parameters: validate the internal parameter values
+      :raises ParameterError: if a required path or parameter is not set by
+          the user.
+
+
+
+.. py:function:: custom_import(name=None, module=None, classname=None)
+
+   Imports SeisFlows module and extracts class that is the camelcase version
+   of the module name
+
+   For example:
+       custom_import('workflow', 'inversion')
+
+       imports 'seisflows.workflow.inversion' and, from this module, extracts
+       class 'Inversion'.
+
+   :type name: str
+   :param name: component of the workflow to import, defined by `names`,
+       available: "system", "preprocess", "solver",
+                  "postprocess", "optimize", "workflow"
+   :type module: module within the workflow component to call upon, e.g.
+       seisflows.workflow.inversion, where `inversion` is the module
+   :type classname: str
+   :param classname: the class to be called from the module. Usually this is
+       just the CamelCase version of the module, which will be defaulted to if
+       this parameter is set `None`, however allows for custom class naming.
+       Note: CamelCase class names following PEP-8 convention.
+
+
+.. py:function:: format_paths(mydict)
+
+   Ensure that paths have a standardized format before being allowed into
+   an active working environment.
+   Expands tilde character (~) in path strings and expands absolute paths
+
+   :type mydict: dict
+   :param mydict: dictionary of paths to be expanded
+   :rtype: dict
+   :return: formatted path dictionary
+
+
+.. py:function:: _pickle_method(method)
+
+   The following code changes how instance methods are handled by pickle.
+   Placing it in this module ensures that pickle changes will be in
+   effect for all SeisFlows workflows
+
+   Note: For relevant discussion, see stackoverflow thread:
+   "Can't pickle <type 'instancemethod'> when using python's
+   multiprocessing Pool.map()"
+
+   Relevant Links (last accessed 01.20.2020):
+       https://stackoverflow.com/questions/7016567/
+       picklingerror-when-using-multiprocessing
+
+       https://bytes.com/topic/python/answers/
+       552476-why-cant-you-pickle-instancemethods
+
+
+.. py:function:: _unpickle_method(func_name, obj, cls)
+
+   The unpickling counterpart to the above function
+
+
+.. py:data:: CFGPATHS
+   
+
+   
+

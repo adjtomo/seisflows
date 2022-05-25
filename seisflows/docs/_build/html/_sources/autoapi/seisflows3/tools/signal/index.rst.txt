@@ -1,0 +1,124 @@
+:py:mod:`seisflows3.tools.signal`
+=================================
+
+.. py:module:: seisflows3.tools.signal
+
+.. autoapi-nested-parse::
+
+   Signal processing functions which are used to manipulate time series, or
+   interact with ObsPy trace and stream objects
+
+   .. note::
+       These functions have been refactored from the original SeisFlows but have
+       note been tested and frankly I am not sure what the intended use is
+       for the mute function is as it has not been documented or employed in
+       the SeisFlows example problems.
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tools.signal.mask
+   seisflows3.tools.signal.mute_arrivals
+   seisflows3.tools.signal.mute_offsets
+   seisflows3.tools.signal.get_receiver_coords
+   seisflows3.tools.signal.get_source_coords
+
+
+
+.. py:function:: mask(slope, const, offset, nt, dt, length=400)
+
+   Constructs a tapered mask that can be applied to trace to mute early or
+   late arrivals. Called by the Default preprocessing module.
+
+   .. note::
+       t_mask = slope * offset + const
+       itmin = t_mask - length/2
+       itmax = t_mask + length/2
+       t_array = [itmin, itmax]
+
+       offset = || s - r || is distance between source and receiver [m]
+       const has units of time [s]
+       slope has units of time/dist (or velocity**-1) [s/m]
+
+   :type slope: float
+   :param slope: slope applied to source receiver distance to mute arrivals
+   :type const: float
+   :param const: a constant time offset used to shift the mask in time
+   :type offset: float
+   :param offset: source-receiver distance in units of distance
+   :type nt: int
+   :param nt: number of samples in the waveform to be masked
+   :type dt: float
+   :param dt: sampling rate of the waveform to be masked
+   :type length: int
+   :param length: length, in time of the output mask function
+   :rtype: np.array
+   :return: A mask array that can be directly multipled with a waveform
+
+
+.. py:function:: mute_arrivals(st, slope, const, choice)
+
+   Apply a tapered mask to a record section to mute early or late arrivals
+
+   :type st: obspy.stream
+   :param st: Stream object containing waveforms to mute
+   :type slope: float
+   :param slope: slope applied to source receiver distance to mute arrivals
+   :type const: float
+   :param const: a constant time offset used to shift the mask in time
+   :type choice: str
+   :param choice: "early" to mute early arrivals, "late" to mute late arrivals
+   :rtype: obspy.stream
+   :return: muted stream object
+
+
+.. py:function:: mute_offsets(st, dist, choice)
+
+   Mute traces based on a given distance (`dist`)
+   short: ||s-r|| < `dist`
+   long:  ||s-r|| > `dist`
+
+   :type st: obspy.stream
+   :param st: Stream object containing waveforms to mute
+   :type dist: float
+   :param dist: cutoff distance
+   :type choice: str
+   :param choice: "short" to mute short src-rcv distances,
+       "long" to mute long src-rcv distances
+   :rtype: obspy.stream
+   :return: muted stream object
+
+
+.. py:function:: get_receiver_coords(st)
+
+   Retrieve the coordinates from a Stream object.
+   Only works for SU format currently
+
+   :type st: obspy.core.stream.Stream
+   :param st: a stream to query for coordinates
+   :rtype r_coords: list
+   :return r_coords: list of receiver coordinates, matching the order in `st`
+       ([rx], [ry], [rz])
+
+
+.. py:function:: get_source_coords(st)
+
+   Get the coordinates of the source object.
+   Only works for SU format currently
+
+
+   :type st: obspy.core.stream.Stream
+   :param st: a stream to query for coordinates
+   :rtype s_coords: tuple of lists
+   :return s_coords: list of source coordinates, matching the order in `st`
+       ([sx], [sy], [sz])
+
+

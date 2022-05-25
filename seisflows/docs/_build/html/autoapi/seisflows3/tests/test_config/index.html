@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.tests.test_config &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.tests.test_config</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3/tests/test_config/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.tests.test_config">
+<span id="seisflows3-tests-test-config"></span><h1><a class="reference internal" href="#module-seisflows3.tests.test_config" title="seisflows3.tests.test_config"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.tests.test_config</span></code></a><a class="headerlink" href="#module-seisflows3.tests.test_config" title="Permalink to this headline"></a></h1>
+<p>Test the SeisFlows3 configuration script, which configures the compute
+system and the working environment required for SF3 to run properly</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tests.test_config.copy_par_file" title="seisflows3.tests.test_config.copy_par_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_par_file</span></code></a>(tmpdir)</p></td>
+<td><p>Copy the template parameter file into the temporary test directory</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tests.test_config.sfinit" title="seisflows3.tests.test_config.sfinit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sfinit</span></code></a>(tmpdir, copy_par_file)</p></td>
+<td><p>Re-used function that will initate a SeisFlows3 working environment in</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tests.test_config.test_seisflows_constants" title="seisflows3.tests.test_config.test_seisflows_constants"><code class="xref py py-obj docutils literal notranslate"><span class="pre">test_seisflows_constants</span></code></a>()</p></td>
+<td><p>Ensure that the constants set in the Config file have not changed</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tests.test_config.test_init_seisflows" title="seisflows3.tests.test_config.test_init_seisflows"><code class="xref py py-obj docutils literal notranslate"><span class="pre">test_init_seisflows</span></code></a>(sfinit)</p></td>
+<td><p>Make sure that initiation of the modular approach of seisflows works</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tests.test_config.test_save_and_load" title="seisflows3.tests.test_config.test_save_and_load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">test_save_and_load</span></code></a>(sfinit)</p></td>
+<td><p>Test saving the current session to disk</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tests.test_config.test_seisflows_paths_parameters" title="seisflows3.tests.test_config.test_seisflows_paths_parameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">test_seisflows_paths_parameters</span></code></a>(sfinit)</p></td>
+<td><p>Test the class that makes inputting and checking paths and parameters easier</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tests.test_config.test_custom_import" title="seisflows3.tests.test_config.test_custom_import"><code class="xref py py-obj docutils literal notranslate"><span class="pre">test_custom_import</span></code></a>(sfinit)</p></td>
+<td><p>Test that importing based on internal modules works for various inputs</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tests.test_config.TEST_DIR" title="seisflows3.tests.test_config.TEST_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TEST_DIR</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.tests.test_config.TEST_DIR">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tests.test_config.</span></span><span class="sig-name descname"><span class="pre">TEST_DIR</span></span><a class="headerlink" href="#seisflows3.tests.test_config.TEST_DIR" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tests.test_config.copy_par_file">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tests.test_config.</span></span><span class="sig-name descname"><span class="pre">copy_par_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tmpdir</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tests.test_config.copy_par_file" title="Permalink to this definition"></a></dt>
+<dd><p>Copy the template parameter file into the temporary test directory
+:rtype: str
+:return: location of the parameter file</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tests.test_config.sfinit">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tests.test_config.</span></span><span class="sig-name descname"><span class="pre">sfinit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tmpdir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy_par_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tests.test_config.sfinit" title="Permalink to this definition"></a></dt>
+<dd><p>Re-used function that will initate a SeisFlows3 working environment in
+sys modules
+:return:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tests.test_config.test_seisflows_constants">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tests.test_config.</span></span><span class="sig-name descname"><span class="pre">test_seisflows_constants</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tests.test_config.test_seisflows_constants" title="Permalink to this definition"></a></dt>
+<dd><p>Ensure that the constants set in the Config file have not changed
+Essentially a double check to make sure these things haven’t been edited
+because the rest of the package depends on these being accesible and
+the same</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tests.test_config.test_init_seisflows">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tests.test_config.</span></span><span class="sig-name descname"><span class="pre">test_init_seisflows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sfinit</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tests.test_config.test_init_seisflows" title="Permalink to this definition"></a></dt>
+<dd><p>Make sure that initiation of the modular approach of seisflows works
+as expected. That is, that system-wide accessible modules are
+instantiated with the accepted naming schema</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This assumes that the parameter file is set up correctly, which it
+should be if it’s coming from the test data directory</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tests.test_config.test_save_and_load">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tests.test_config.</span></span><span class="sig-name descname"><span class="pre">test_save_and_load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sfinit</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tests.test_config.test_save_and_load" title="Permalink to this definition"></a></dt>
+<dd><p>Test saving the current session to disk
+:return:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tests.test_config.test_seisflows_paths_parameters">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tests.test_config.</span></span><span class="sig-name descname"><span class="pre">test_seisflows_paths_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sfinit</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tests.test_config.test_seisflows_paths_parameters" title="Permalink to this definition"></a></dt>
+<dd><p>Test the class that makes inputting and checking paths and parameters easier
+Recreates the required() function at the top of each class.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tests.test_config.test_custom_import">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tests.test_config.</span></span><span class="sig-name descname"><span class="pre">test_custom_import</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sfinit</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tests.test_config.test_custom_import" title="Permalink to this definition"></a></dt>
+<dd><p>Test that importing based on internal modules works for various inputs
+:return:</p>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

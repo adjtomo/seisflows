@@ -1,0 +1,209 @@
+:py:mod:`seisflows3.solver.specfem3d`
+=====================================
+
+.. py:module:: seisflows3.solver.specfem3d
+
+.. autoapi-nested-parse::
+
+   This is the subclass seisflows.solver.Specfem3D
+   This class provides utilities for the Seisflows solver interactions with
+   Specfem3D Cartesian. It inherits all attributes from seisflows3.solver.Base,
+   and overwrites these functions to provide specified interaction with Specfem3D
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.solver.specfem3d.Specfem3D
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.solver.specfem3d.PAR
+   seisflows3.solver.specfem3d.PATH
+   seisflows3.solver.specfem3d.system
+   seisflows3.solver.specfem3d.preprocess
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:data:: system
+   
+
+   
+
+.. py:data:: preprocess
+   
+
+   
+
+.. py:class:: Specfem3D
+
+   Bases: :py:obj:`custom_import`\ (\ :py:obj:`'solver'`\ , :py:obj:`'base'`\ )
+
+   Python interface to Specfem3D Cartesian. This subclass inherits functions
+   from seisflows3.solver.Base
+
+   !!! See base class for method descriptions !!!
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: required(self)
+      :property:
+
+      A hard definition of paths and parameters required by this class,
+      alongside their necessity for the class and their string explanations.
+
+
+   .. py:method:: check(self, validate=True)
+
+      Checks parameters and paths
+
+
+   .. py:method:: generate_data(self, **model_kwargs)
+
+      Generates data using the True model, exports traces to `traces/obs`
+
+      :param model_kwargs: keyword arguments to pass to `generate_mesh`
+
+
+   .. py:method:: generate_mesh(self, model_path, model_name, model_type=None)
+
+      Performs meshing with internal mesher Meshfem3D and database generation
+
+      :type model_path: str
+      :param model_path: path to the model to be used for mesh generation
+      :type model_name: str
+      :param model_name: name of the model to be used as identification
+      :type model_type: str
+      :param model_type: available model types to be passed to the Specfem3D
+          Par_file. See Specfem3D Par_file for available options.
+
+
+   .. py:method:: eval_func(self, *args, **kwargs)
+
+      Call eval_func from Base class
+
+
+   .. py:method:: forward(self, path='traces/syn')
+
+      Calls SPECFEM3D forward solver, exports solver outputs to traces dir
+
+      :type path: str
+      :param path: path to export traces to after completion of simulation
+
+
+   .. py:method:: adjoint(self)
+
+      Calls SPECFEM3D adjoint solver, creates the `SEM` folder with adjoint
+      traces which is required by the adjoint solver
+
+
+   .. py:method:: check_solver_parameter_files(self)
+
+      Checks solver parameters 
+
+
+   .. py:method:: initialize_adjoint_traces(self)
+
+      Setup utility: Creates the "adjoint traces" expected by SPECFEM
+
+      Note:
+          Adjoint traces are initialized by writing zeros for all channels.
+          Channels actually in use during an inversion or migration will be
+          overwritten with nonzero values later on.
+
+
+   .. py:method:: rename_data(self)
+
+      Works around conflicting data filename conventions
+
+      Specfem3D's uses different name conventions for regular traces
+      and 'adjoint' traces
+
+
+   .. py:method:: write_parameters(self)
+
+      Write a set of parameters
+
+      !!! This calls on plugins.solver.specfem3d.write_parameters()
+          but that function doesn't exist !!!
+
+
+   .. py:method:: write_receivers(self)
+
+      Write a list of receivers into a text file
+
+      !!! This calls on plugins.solver.specfem3d.write_receivers()
+          but incorrect number of parameters is forwarded !!!
+
+
+   .. py:method:: write_sources(self)
+
+      Write sources to text file
+
+
+   .. py:method:: data_wildcard(self)
+      :property:
+
+      Returns a wildcard identifier for synthetic data
+
+      :rtype: str
+      :return: wildcard identifier for channels
+
+
+   .. py:method:: data_filenames(self)
+      :property:
+
+      Returns the filenames of all data, either by the requested components
+      or by all available files in the directory.
+
+      :rtype: list
+      :return: list of data filenames
+
+
+   .. py:method:: kernel_databases(self)
+      :property:
+
+      The location of databases for kernel outputs, relative to the current
+      working directory. 
+
+
+   .. py:method:: model_databases(self)
+      :property:
+
+      The location of databases for model outputs
+
+
+   .. py:method:: source_prefix(self)
+      :property:
+
+      Specfem3D's preferred source prefix
+
+      :rtype: str
+      :return: source prefix
+
+
+

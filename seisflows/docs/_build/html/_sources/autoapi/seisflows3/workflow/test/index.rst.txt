@@ -1,0 +1,125 @@
+:py:mod:`seisflows3.workflow.test`
+==================================
+
+.. py:module:: seisflows3.workflow.test
+
+.. autoapi-nested-parse::
+
+   This is a SeisFlows3 Test class which is used to test out the underlying
+   machinery before running an actual workflow. Contains simple functions used to
+   make sure that all parts of the package are working as expected.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.workflow.test.Test
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.workflow.test.PAR
+   seisflows3.workflow.test.PATH
+   seisflows3.workflow.test.system
+   seisflows3.workflow.test.solver
+   seisflows3.workflow.test.optimize
+   seisflows3.workflow.test.preprocess
+   seisflows3.workflow.test.postprocess
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:data:: system
+   
+
+   
+
+.. py:data:: solver
+   
+
+   
+
+.. py:data:: optimize
+   
+
+   
+
+.. py:data:: preprocess
+   
+
+   
+
+.. py:data:: postprocess
+   
+
+   
+
+.. py:class:: Test(*args, **kwargs)
+
+   Bases: :py:obj:`custom_import`\ (\ :py:obj:`'workflow'`\ , :py:obj:`'base'`\ )
+
+   This is a template Base class
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: required(self)
+      :property:
+
+      A hard definition of paths and parameters required by this class,
+      alongside their necessity for the class and their string explanations.
+
+      :rtype: seisflows.config.SeisFlowsPathsParameters
+      :return: Paths and parameters that define the given class
+
+
+
+   .. py:method:: check(self, validate=True)
+
+      Checks parameters and paths. The validate function ensures that all
+      required paths and parameters are accounted for, and that all
+      optional paths and parameters are set to user-defined or default values.
+
+      :type validate: bool
+      :param validate: set required paths and parameters into sys.modules
+
+
+   .. py:method:: main(self, return_flow=False)
+
+      This controls the main testing workflow
+
+
+   .. py:method:: test_function(self)
+
+      A simple function that can be called by system.run()
+
+
+   .. py:method:: test_system(self)
+
+      This is an example test function which can take any number of args
+      or kwargs. The base class is responsible for setting all of the
+      necessary functions
+
+
+

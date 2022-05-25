@@ -1,0 +1,119 @@
+:py:mod:`seisflows3.postprocess.base`
+=====================================
+
+.. py:module:: seisflows3.postprocess.base
+
+.. autoapi-nested-parse::
+
+   This class provides the core utilities for the SeisFlows3 postprocessing
+   functionalities, including kernel/gradient smoothing and masking as well as
+   kernel summation
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.postprocess.base.Base
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.postprocess.base.PAR
+   seisflows3.postprocess.base.PATH
+   seisflows3.postprocess.base.system
+   seisflows3.postprocess.base.solver
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:data:: system
+   
+
+   
+
+.. py:data:: solver
+   
+
+   
+
+.. py:class:: Base
+
+   Postprocessing in a Seisflows workflow includes tasks such as
+   regularization, smoothing, sharpening, masking and related operations
+   on models or gradients
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: required(self)
+      :property:
+
+      A hard definition of paths and parameters required by this class,
+      alongside their necessity for the class and their string explanations.
+
+
+   .. py:method:: check(self, validate=True)
+
+      Checks parameters and paths
+
+
+   .. py:method:: setup(self)
+
+      A placeholder function for initialization or setup tasks. Base 
+      postprocessing does not require any setup
+
+
+   .. py:method:: write_gradient(self, path)
+
+      Combines contributions from individual sources and material parameters
+      to get the gradient, and optionally applies user-supplied scaling
+
+      .. note::
+          Because processing operations can be quite expensive, they must be
+          run through the HPC system interface; processing does not involve
+          embarassingly parallel tasks, we use run(single=True)
+
+      :type path: str
+      :param path: directory from which kernels are read and to which
+          gradient is written
+
+
+   .. py:method:: process_kernels(path, logger)
+      :staticmethod:
+
+      Sums kernels from individual sources, with optional smoothing
+
+      .. note::
+          This function needs to be run on system, i.e., called by
+          system.run(single=True)
+
+      :type path: str
+      :param path: directory containing sensitivity kernels in the scratch
+          directory
+      :type logger: Logger
+      :param logger: Class-specific logging module, log statements pushed
+          from this logger will be tagged by its specific module/classname
+
+
+

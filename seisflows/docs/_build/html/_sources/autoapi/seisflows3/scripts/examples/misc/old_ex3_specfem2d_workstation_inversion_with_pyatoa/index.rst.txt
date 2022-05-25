@@ -1,0 +1,113 @@
+:py:mod:`seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa`
+==============================================================================================
+
+.. py:module:: seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa
+
+.. autoapi-nested-parse::
+
+                   SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE 3
+
+   This example will run an inversion between two slightly different homogeneous
+   halfspace models using 3 sources and 132 stations. It uses the Pyatoa
+   preprocessing module (which calls the Pyatoa package) to assess misfit and
+   generate misfit figures.
+
+   .. note::
+       You can change the number of events (NTASK) and iterations (NITER) by
+       changing the constants below the import statements
+
+   .. note::
+       The tasks involved include:
+       1. Download, configure and compile SPECFEM2D
+       2. Set up a SPECFEM2D working directory
+       3. Generate starting model from Tape2007 example
+       4. Generate target model w/ perturbed starting model
+       5. Set up a SeisFlows3 working directory
+       6. Run two iterations of an inversion workflow
+
+   .. rubric::
+       $ seisflows examples run 2
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_specfem2d_for_model_true
+   seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_specfem2d_for_seisflows3_inversion
+   seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.setup_seisflows_working_directory
+   seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.main
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.NTASK
+   seisflows3.scripts.examples.misc.old_ex3_specfem2d_workstation_inversion_with_pyatoa.NITER
+
+
+.. py:data:: NTASK
+   :annotation: = 3
+
+   
+
+.. py:data:: NITER
+   :annotation: = 2
+
+   
+
+.. py:function:: setup_specfem2d_for_model_true(sf)
+
+   Make some adjustments to the  parameter file to create the final velocity
+   model. This function assumes it is running from inside the SPECFEM2D/DATA
+   directory. Also assumes that setup_specfem2d_for_model_init() has been
+   run, which set up how the model is output
+
+   :type sf: seisflows3.seisflows.SeisFlows
+   :param sf: the SeisFlows3 command line tool
+
+
+.. py:function:: setup_specfem2d_for_seisflows3_inversion(sf)
+
+   Final changes to the SPECFEM2D Par_file before running SeisFlows. Par_file
+   will be used to control all the child specfem2d directories. Need to tell
+   them to read models from .bin files, and to use existing station files
+   rather than create them from the Par_file
+   rather than create them from the Par_file
+
+
+.. py:function:: setup_seisflows_working_directory(sf, workdir_paths, ntask=3, niter=2)
+
+   Create and set the SeisFlows3 parameter file, making sure all required
+   parameters are set correctly for this example problem
+
+   :type sf: seisflows3.seisflows.SeisFlows
+   :param sf: the SeisFlows3 command line tool
+   :type workdir_paths: Dict
+   :param workdir_paths: path dictionary for the SPECFEM2D working directory
+   :type ntask: int
+   :param ntask: Number of sources to include in the inversion
+   :type niter: int
+   :param ninter: number of iterations to perform within the inversion
+
+
+.. py:function:: main(run_example=False)
+
+   Setup the example and then optionally run the actual seisflows workflow
+
+   TODO Figure out how to not have to repeat this code block, which is
+   TODO an exact copy of example 1
+
+   :type run_example: bool
+   :param run_example: Directly run the seisflows workflow after the setup
+
+

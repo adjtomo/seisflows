@@ -1,0 +1,181 @@
+:py:mod:`seisflows3.preprocess.pyatoa`
+======================================
+
+.. py:module:: seisflows3.preprocess.pyatoa
+
+.. autoapi-nested-parse::
+
+   The Pyatoa preprocessing module abstracts all preprocessing functionality
+   onto Pyatoa (https://github.com/bch0w/pyatoa/). The module defined below is
+   meant to set up and execute Pyatoa within a running SeisFlows3 workflow.
+
+   Pyatoa itself aggregates all of its connection with SeisFlows3 in the Pyaflowa
+   class, a purpose built object used to simplify calling Pyatoa from within
+   a SeisFlows3 workflow.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.preprocess.pyatoa.Pyatoa
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.preprocess.pyatoa.PAR
+   seisflows3.preprocess.pyatoa.PATH
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:class:: Pyatoa
+
+   Bases: :py:obj:`custom_import`\ (\ :py:obj:`'preprocess'`\ , :py:obj:`'base'`\ )
+
+   Data preprocessing class using the Pyaflowa class within the Pyatoa package.
+   In charge of data discovery, preprocessing, filtering, misfiti
+   quantification and data storage. The User does not need to implement Pyatoa,
+   but rather interacts with it via the parameters and paths of SeisFlows3.
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: required(self)
+      :property:
+
+      A hard definition of paths and parameters required by this class,
+      alongside their necessity for the class and their string explanations.
+
+
+   .. py:method:: check(self, validate=True)
+
+      Checks Parameter and Path files, will be run at the start of a Seisflows
+      workflow to ensure that things are set appropriately.
+
+
+   .. py:method:: setup(self)
+
+      Sets up data preprocessing machinery by establishing an internally
+      defined directory structure that will be used to store the outputs 
+      of the preprocessing workflow
+
+      Akin to an __init__ class, but to be called externally by the workflow.
+
+
+   .. py:method:: prepare_eval_grad(self, cwd, source_name, taskid, **kwargs)
+
+      Prepare the gradient evaluation by gathering, preprocessing waveforms, 
+      and measuring misfit between observations and synthetics using Pyatoa.
+
+      Reads in observed and synthetic waveforms, applies optional
+      preprocessing, assesses misfit, and writes out adjoint sources and
+      STATIONS_ADJOINT file.
+
+      .. note::
+          Meant to be called by solver.eval_func(), may have unused arguments
+          to keep functions general across preprocessing subclasses.
+
+      :type cwd: str
+      :param cwd: current specfem working directory containing observed and
+          synthetic seismic data to be read and processed. Should be defined
+          by solver.cwd
+      :type source_name: str
+      :param source_name: the event id to be used for tagging and data lookup.
+          Should be defined by solver.source_name
+      :type taskid: int
+      :param taskid: identifier of the currently running solver instance.
+          Should be defined by solver.taskid
+      :type filenames: list of str
+      :param filenames: [not used] list of filenames defining the files in
+          traces
+
+
+   .. py:method:: setup_event_pyaflowa(self, source_name=None)
+
+      A convenience function to set up a Pyaflowa processing instance for
+      a specific event. 
+
+      .. note::
+          This is meant to be called by preprocess.prepare_eval_grad() but its
+          also useful for debugging and manual processing where you can simply
+          return a formatted Pyaflowa object and debug it directly.
+
+      :type source_name: str
+      :param source_name: solver source name to evaluate setup for. Must 
+          match from list defined by: solver.source_names
+
+
+   .. py:method:: finalize(self)
+
+      Run some serial finalization tasks specific to Pyatoa, which will help
+      aggregate the collection of output information.
+
+      .. note::
+          This finalize function performs the following tasks:
+          * Generate .csv files using the Inspector
+          * Aggregate event-specific PDFs into a single evaluation PDF
+          * Save scratch/ data into output/ if requested
+
+
+   .. py:method:: _save_quantity(self, filepaths, tag='', path_out='')
+
+      Repeatable convenience function to save quantities from the scratch/
+      directory to the output/ directory
+
+      :type filepaths: list
+      :param filepaths: full path to files that should be saved to output/
+      :type tag: str  
+      :param tag: tag for saving the files in PATH.OUTPUT. If not given, will
+          save directly into the output/ directory
+      :type path_out: str
+      :param path_out: overwrite the default output path file naming
+
+
+   .. py:method:: write_residuals(self, path, scaled_misfit)
+
+      Computes residuals and saves them to a text file in the appropriate path
+
+      :type path: str        
+      :param path: scratch directory path, e.g. PATH.GRAD or PATH.FUNC
+      :type scaled_misfit: float
+      :param scaled_misfit: the summation of misfit from each 
+          source-receiver pair calculated by prepare_eval_grad()
+      :type source_name: str
+      :param source_name: name of the source related to the misfit, used
+          for file naming
+
+
+   .. py:method:: sum_residuals(self, files)
+
+      Averages the event misfits and returns the total misfit.
+      Total misfit defined by Tape et al. (2010)
+
+      :type files: str
+      :param files: list of single-column text files containing residuals
+          that will have been generated using prepare_eval_grad()
+      :rtype: float
+      :return: average misfit
+
+
+

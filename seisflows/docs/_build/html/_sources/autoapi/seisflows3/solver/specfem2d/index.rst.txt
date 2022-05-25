@@ -1,0 +1,221 @@
+:py:mod:`seisflows3.solver.specfem2d`
+=====================================
+
+.. py:module:: seisflows3.solver.specfem2d
+
+.. autoapi-nested-parse::
+
+   This is the subclass seisflows.solver.specfem2d
+
+   This class provides utilities for the Seisflows solver interactions with
+   Specfem2D. It inherits all attributes from seisflows3.solver.Base,
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.solver.specfem2d.Specfem2D
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.solver.specfem2d.PAR
+   seisflows3.solver.specfem2d.PATH
+   seisflows3.solver.specfem2d.system
+   seisflows3.solver.specfem2d.preprocess
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:data:: system
+   
+
+   
+
+.. py:data:: preprocess
+   
+
+   
+
+.. py:class:: Specfem2D
+
+   Bases: :py:obj:`custom_import`\ (\ :py:obj:`'solver'`\ , :py:obj:`'base'`\ )
+
+   Python interface to Specfem2D. This subclass inherits functions from
+   seisflows.solver.Base
+
+   !!! See base class for method descriptions !!!
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: required(self)
+      :property:
+
+      A hard definition of paths and parameters required by this class,
+      alongside their necessity for the class and their string explanations.
+
+
+   .. py:method:: check(self, validate=True)
+
+      Checks parameters and paths
+
+
+   .. py:method:: check_solver_parameter_files(self)
+
+      Checks SPECFEM2D Par_file for acceptable parameters and matches with
+      the internally set parameters
+
+
+   .. py:method:: generate_data(self, **model_kwargs)
+
+      Generates data using the True model, exports traces to `traces/obs`
+
+      :param model_kwargs: keyword arguments to pass to `generate_mesh`
+
+
+   .. py:method:: initialize_adjoint_traces(self)
+
+      Setup utility: Creates the "adjoint traces" expected by SPECFEM.
+      This is only done for the 'base' the Preprocess class.
+
+      Note:
+          Adjoint traces are initialized by writing zeros for all channels.
+          Channels actually in use during an inversion or migration will be
+          overwritten with nonzero values later on.
+
+
+   .. py:method:: generate_mesh(self, model_path, model_name, model_type='gll')
+
+      Performs meshing with internal mesher Meshfem2D and database generation
+
+      :type model_path: str
+      :param model_path: path to the model to be used for mesh generation
+      :type model_name: str
+      :param model_name: name of the model to be used as identification
+      :type model_type: str
+      :param model_type: available model types to be passed to the Specfem3D
+          Par_file. See Specfem3D Par_file for available options.
+
+
+   .. py:method:: forward(self, path='traces/syn')
+
+      Calls SPECFEM2D forward solver, exports solver outputs to traces dir
+
+      :type path: str
+      :param path: path to export traces to after completion of simulation
+
+
+   .. py:method:: adjoint(self)
+
+      Calls SPECFEM2D adjoint solver, creates the `SEM` folder with adjoint
+      traces which is required by the adjoint solver
+
+
+   .. py:method:: smooth(self, input_path, **kwargs)
+
+      Specfem2D requires additional model parameters in directory to perform
+      the xsmooth_sem task. This function will copy these files into the 
+      directory before performing the base smooth operations. 
+
+      Kwargs should match arguments of solver.base.smooth()
+
+      .. note::
+          This operation is usually run with run(single=True) so only one
+          task will be performing these operations.
+
+      :type input_path: str
+      :param input_path: path to data
+
+
+   .. py:method:: import_model(self, path)
+
+      File transfer utility to move a SPEFEM2D model into the correct location
+      for a workflow.
+
+      :type path: str
+      :param path: path to the SPECFEM2D model
+      :return:
+
+
+   .. py:method:: export_model(self, path)
+
+      File transfer utility to move a SPEFEM2D model from the DATA directory
+      to an external path location
+
+      :type path: str
+      :param path: path to export the SPECFEM2D model
+      :return:
+
+
+   .. py:method:: data_filenames(self)
+      :property:
+
+      Returns the filenames of all data, either by the requested components
+      or by all available files in the directory.
+
+      .. note:: 
+          If the glob returns an  empty list, this function exits the 
+          workflow because filenames should  not be empty is they're being 
+          queried
+
+      :rtype: list
+      :return: list of data filenames
+
+
+   .. py:method:: model_databases(self)
+      :property:
+
+      The location of model inputs and outputs as defined by SPECFEM2D
+
+
+   .. py:method:: kernel_databases(self)
+      :property:
+
+      The location of kernel inputs and outputs as defined by SPECFEM2D
+
+
+   .. py:method:: data_wildcard(self, comp='?')
+      :property:
+
+      Returns a wildcard identifier for synthetic data based on SPECFEM2D
+      file naming schema. Allows formatting dcomponent e.g., 
+      when called by solver.data_filenames
+
+      :type comp: str
+      :param comp: component formatter, defaults to wildcard '?'
+      :rtype: str
+      :return: wildcard identifier for channels
+
+
+   .. py:method:: source_prefix(self)
+      :property:
+
+      Specfem2D's preferred source prefix
+
+      :rtype: str
+      :return: source prefix
+
+
+

@@ -1,0 +1,15 @@
+:py:mod:`seisflows3.docs`
+=========================
+
+.. py:module:: seisflows3.docs
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   conf/index.rst
+
+

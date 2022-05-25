@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.workflow.inversion &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.workflow.inversion</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3/workflow/inversion/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.workflow.inversion">
+<span id="seisflows3-workflow-inversion"></span><h1><a class="reference internal" href="#module-seisflows3.workflow.inversion" title="seisflows3.workflow.inversion"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.workflow.inversion</span></code></a><a class="headerlink" href="#module-seisflows3.workflow.inversion" title="Permalink to this headline"></a></h1>
+<p>This is the base class seisflows.workflow.Inversion</p>
+<p>This is a main Seisflows class, it controls the main workflow.</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.workflow.inversion.Inversion" title="seisflows3.workflow.inversion.Inversion"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Inversion</span></code></a></p></td>
+<td><p>Waveform inversion base class</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.workflow.inversion.PAR" title="seisflows3.workflow.inversion.PAR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PAR</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.workflow.inversion.PATH" title="seisflows3.workflow.inversion.PATH"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PATH</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.workflow.inversion.system" title="seisflows3.workflow.inversion.system"><code class="xref py py-obj docutils literal notranslate"><span class="pre">system</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.workflow.inversion.solver" title="seisflows3.workflow.inversion.solver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">solver</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.workflow.inversion.optimize" title="seisflows3.workflow.inversion.optimize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">optimize</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.workflow.inversion.preprocess" title="seisflows3.workflow.inversion.preprocess"><code class="xref py py-obj docutils literal notranslate"><span class="pre">preprocess</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.workflow.inversion.postprocess" title="seisflows3.workflow.inversion.postprocess"><code class="xref py py-obj docutils literal notranslate"><span class="pre">postprocess</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.PAR">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.workflow.inversion.</span></span><span class="sig-name descname"><span class="pre">PAR</span></span><a class="headerlink" href="#seisflows3.workflow.inversion.PAR" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.PATH">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.workflow.inversion.</span></span><span class="sig-name descname"><span class="pre">PATH</span></span><a class="headerlink" href="#seisflows3.workflow.inversion.PATH" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.system">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.workflow.inversion.</span></span><span class="sig-name descname"><span class="pre">system</span></span><a class="headerlink" href="#seisflows3.workflow.inversion.system" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.solver">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.workflow.inversion.</span></span><span class="sig-name descname"><span class="pre">solver</span></span><a class="headerlink" href="#seisflows3.workflow.inversion.solver" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.optimize">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.workflow.inversion.</span></span><span class="sig-name descname"><span class="pre">optimize</span></span><a class="headerlink" href="#seisflows3.workflow.inversion.optimize" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.preprocess">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.workflow.inversion.</span></span><span class="sig-name descname"><span class="pre">preprocess</span></span><a class="headerlink" href="#seisflows3.workflow.inversion.preprocess" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.postprocess">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.workflow.inversion.</span></span><span class="sig-name descname"><span class="pre">postprocess</span></span><a class="headerlink" href="#seisflows3.workflow.inversion.postprocess" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seisflows3.workflow.inversion.</span></span><span class="sig-name descname"><span class="pre">Inversion</span></span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">custom_import</span></code>(<code class="xref py py-obj docutils literal notranslate"><span class="pre">'workflow'</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">'base'</span></code>)</p>
+<p>Waveform inversion base class</p>
+<p>Peforms iterative nonlinear inversion and provides a base class on top
+of which specialized strategies can be implemented.</p>
+<p>To allow customization, the inversion workflow is divided into generic
+methods such as “initialize”, “finalize”, “evaluate_function”,
+“evaluate_gradient”, which can be easily overloaded.</p>
+<p>Calls to forward and adjoint solvers are abstracted through the “solver”
+interface so that various forward modeling packages canf be used
+interchangeably.</p>
+<p>Commands for running in serial or parallel on a workstation or cluster
+are abstracted through the “system” interface.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.logger">
+<span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.logger" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.required">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">required</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.required" title="Permalink to this definition"></a></dt>
+<dd><p>A hard definition of paths and parameters required by this class,
+alongside their necessity for the class and their string explanations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.check">
+<span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.check" title="Permalink to this definition"></a></dt>
+<dd><p>Checks parameters and paths</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.main">
+<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_flow</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.main" title="Permalink to this definition"></a></dt>
+<dd><p>This function controls the main SeisFlows3 workflow, and is submitted
+to system by the call <cite>seisflows submit</cite> or <cite>seisflows resume</cite>. It
+proceeds to evaluate a list of functions in order until a User defined
+stop criteria is met.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>return_flow</strong> (<em>bool</em>) – for CLI tool, simply returns the flow function
+rather than running the workflow. Used for print statements etc.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.setup">
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.setup" title="Permalink to this definition"></a></dt>
+<dd><p>Lays groundwork for inversion by running setup() functions for the
+involved sub-modules, generating True model synthetic data if necessary,
+and generating the pre-requisite database files.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function should only be run one time, at the start of iter 1</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.initialize" title="Permalink to this definition"></a></dt>
+<dd><p>Generates synthetics via a forward simulation, calculates misfits
+for the forward simulation. Writes misfit for use in optimization.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.compute_direction">
+<span class="sig-name descname"><span class="pre">compute_direction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.compute_direction" title="Permalink to this definition"></a></dt>
+<dd><p>Computes search direction</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.line_search">
+<span class="sig-name descname"><span class="pre">line_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.line_search" title="Permalink to this definition"></a></dt>
+<dd><p>Conducts line search in given search direction</p>
+<dl class="simple">
+<dt>Status codes:</dt><dd><p>status &gt; 0  : finished
+status == 0 : not finished
+status &lt; 0  : failed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.evaluate_function">
+<span class="sig-name descname"><span class="pre">evaluate_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suffix</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.evaluate_function" title="Permalink to this definition"></a></dt>
+<dd><p>Performs forward simulation, and evaluates the objective function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – path in the scratch directory to use for I/O</p></li>
+<li><p><strong>suffix</strong> (<em>str</em>) – suffix to use for I/O</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.evaluate_gradient">
+<span class="sig-name descname"><span class="pre">evaluate_gradient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.evaluate_gradient" title="Permalink to this definition"></a></dt>
+<dd><p>Performs adjoint simulation to retrieve the gradient of the objective</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.finalize">
+<span class="sig-name descname"><span class="pre">finalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.finalize" title="Permalink to this definition"></a></dt>
+<dd><p>Saves results from current model update iteration and increment the
+iteration number to set up for the next iteration. Finalization is
+expected to the be LAST function in workflow.main()’s  flow list.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.clean">
+<span class="sig-name descname"><span class="pre">clean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.clean" title="Permalink to this definition"></a></dt>
+<dd><p>Cleans directories in which function and gradient evaluations were
+carried out</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.checkpoint">
+<span class="sig-name descname"><span class="pre">checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.checkpoint" title="Permalink to this definition"></a></dt>
+<dd><p>Writes information to disk so workflow can be resumed following a break</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.write_model">
+<span class="sig-name descname"><span class="pre">write_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.write_model" title="Permalink to this definition"></a></dt>
+<dd><p>Writes model in format expected by solver</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – path to write the model to</p></li>
+<li><p><strong>src</strong> (<em>str</em>) – name of the model to be saved, usually tagged as ‘m’ with
+a suffix depending on where in the inversion we are. e.g., ‘m_try’.
+Expected that these tags are defined in OPTIMIZE module</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.write_gradient">
+<span class="sig-name descname"><span class="pre">write_gradient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.write_gradient" title="Permalink to this definition"></a></dt>
+<dd><p>Writes gradient in format expected by non-linear optimization library.
+Calls the postprocess module, which will smooth/precondition gradient.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.write_misfit">
+<span class="sig-name descname"><span class="pre">write_misfit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.write_misfit" title="Permalink to this definition"></a></dt>
+<dd><p>Writes misfit in format expected by nonlinear optimization library.
+Collects all misfit values within the given residuals directory and sums
+them in a manner chosen by the preprocess class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – path to write the misfit to</p></li>
+<li><p><strong>tag</strong> (<em>str</em>) – name of the model to be saved, usually tagged as ‘f’ with
+a suffix depending on where in the inversion we are. e.g., ‘f_try’.
+Expected that these tags are defined in OPTIMIZE module</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.save_gradient">
+<span class="sig-name descname"><span class="pre">save_gradient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.save_gradient" title="Permalink to this definition"></a></dt>
+<dd><p>Save the gradient vector. Allows saving numpy array or standard
+Fortran .bin files</p>
+<p>Saving as a vector saves on file count, but requires numpy and seisflows
+functions to read</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.save_model">
+<span class="sig-name descname"><span class="pre">save_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.save_model" title="Permalink to this definition"></a></dt>
+<dd><p>Save the model vector. Allows saving numpy array or standard
+Fortran .bin files</p>
+<p>Saving as a vector saves on file count, but requires numpy and seisflows
+functions to read</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.save_kernels">
+<span class="sig-name descname"><span class="pre">save_kernels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.save_kernels" title="Permalink to this definition"></a></dt>
+<dd><p>Save the kernel vector as a Fortran binary file on disk</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.save_traces">
+<span class="sig-name descname"><span class="pre">save_traces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.save_traces" title="Permalink to this definition"></a></dt>
+<dd><p>Save the waveform traces to disk.</p>
+<p>!!! This doesn’t work? Traces are not saved to PATH.GRAD so src does
+!!! not exist</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seisflows3.workflow.inversion.Inversion.save_residuals">
+<span class="sig-name descname"><span class="pre">save_residuals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.workflow.inversion.Inversion.save_residuals" title="Permalink to this definition"></a></dt>
+<dd><p>Save the residuals to disk</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

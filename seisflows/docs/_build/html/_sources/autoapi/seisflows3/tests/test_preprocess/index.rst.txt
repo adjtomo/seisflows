@@ -1,0 +1,99 @@
+:py:mod:`seisflows3.tests.test_preprocess`
+==========================================
+
+.. py:module:: seisflows3.tests.test_preprocess
+
+.. autoapi-nested-parse::
+
+   Test suite for the SeisFlows3 system module, which controls interaction with
+   various compute systems
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tests.test_preprocess.copy_par_file
+   seisflows3.tests.test_preprocess.modules
+   seisflows3.tests.test_preprocess.sfinit
+   seisflows3.tests.test_preprocess.test_default_check
+   seisflows3.tests.test_preprocess.test_default_setup
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tests.test_preprocess.MODULE
+   seisflows3.tests.test_preprocess.REQUIRED_PARAMETERS
+   seisflows3.tests.test_preprocess.REQUIRED_FUNCTIONS
+   seisflows3.tests.test_preprocess.TEST_DIR
+   seisflows3.tests.test_preprocess.REPO_DIR
+
+
+.. py:data:: MODULE
+   :annotation: = preprocess
+
+   
+
+.. py:data:: REQUIRED_PARAMETERS
+   :annotation: = []
+
+   
+
+.. py:data:: REQUIRED_FUNCTIONS
+   :annotation: = ['required', 'check', 'setup', 'prepare_eval_grad', 'sum_residuals', 'finalize']
+
+   
+
+.. py:data:: TEST_DIR
+   
+
+   
+
+.. py:data:: REPO_DIR
+   
+
+   
+
+.. py:function:: copy_par_file(tmpdir)
+
+   Copy the template parameter file into the temporary test directory
+   :rtype: str
+   :return: location of the parameter file
+
+
+.. py:function:: modules()
+
+   Return a list of subclasses that falls under the System module
+
+
+.. py:function:: sfinit(tmpdir, copy_par_file)
+
+   Re-used function that will initate a SeisFlows3 working environment in
+   sys modules
+   :return:
+
+
+.. py:function:: test_default_check(sfinit)
+
+   Test seisflows3.preprocess.default.check()
+
+   :param sfinit:
+   :param modules:
+   :return:
+
+
+.. py:function:: test_default_setup(sfinit)
+
+   Ensure that default setup correctly sets up the preprocessing machinery
+
+

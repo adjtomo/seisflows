@@ -1,0 +1,111 @@
+:py:mod:`seisflows3.templates.base_class`
+=========================================
+
+.. py:module:: seisflows3.templates.base_class
+
+.. autoapi-nested-parse::
+
+   This is a SeisFlows Base class
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.templates.base_class.Base
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.templates.base_class.PAR
+   seisflows3.templates.base_class.PATH
+   seisflows3.templates.base_class.system
+   seisflows3.templates.base_class.solver
+   seisflows3.templates.base_class.optimize
+   seisflows3.templates.base_class.preprocess
+   seisflows3.templates.base_class.postprocess
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:data:: system
+   
+
+   
+
+.. py:data:: solver
+   
+
+   
+
+.. py:data:: optimize
+   
+
+   
+
+.. py:data:: preprocess
+   
+
+   
+
+.. py:data:: postprocess
+   
+
+   
+
+.. py:class:: Base
+
+   This is a template Base class
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: required(self)
+      :property:
+
+      A hard definition of paths and parameters required by this class,
+      alongside their necessity for the class and their string explanations.
+
+      :rtype: seisflows.config.SeisFlowsPathsParameters
+      :return: Paths and parameters that define the given class
+
+
+
+   .. py:method:: check(self, validate=True)
+
+      Checks parameters and paths. The validate function ensures that all
+      required paths and parameters are accounted for, and that all
+      optional paths and parameters are set to user-defined or default values.
+
+      :type validate: bool
+      :param validate: set required paths and parameters into sys.modules
+
+
+   .. py:method:: test(self, *args, **kwargs)
+
+      This is an example test function which can take any number of args
+      or kwargs. The base class is responsible for setting all of the
+      necessary functions
+
+
+

@@ -1,0 +1,15 @@
+:py:mod:`seisflows3-super.solver`
+=================================
+
+.. py:module:: seisflows3-super.solver
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   specfem3d_maui/index.rst
+
+

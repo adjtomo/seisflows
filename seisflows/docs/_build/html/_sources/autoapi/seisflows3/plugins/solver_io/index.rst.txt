@@ -1,0 +1,26 @@
+:py:mod:`seisflows3.plugins.solver_io`
+======================================
+
+.. py:module:: seisflows3.plugins.solver_io
+
+.. autoapi-nested-parse::
+
+   Used by the SOLVER class and specified by the SOLVERIO parameter
+
+   Note:
+       ADIOS IO format is currently implemented in SPECFEM3D, but not SeisFlows
+       import adios
+
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   adios/index.rst
+   ascii/index.rst
+   fortran_binary/index.rst
+
+

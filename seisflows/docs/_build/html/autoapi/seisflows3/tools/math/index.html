@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seisflows3.tools.math &mdash; SeisFlows3  documentation</title>
+      <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../../_static/sf3_globe_alpha.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../../index.html" class="icon icon-home"> SeisFlows3
+            <img src="../../../../_static/sf3_globe_alpha_wide.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../start_here.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citeme.html">Cite</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Structure</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../command_line_tool.html">Commmand Line Tool</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../parameter_file.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../working_directory.html">Working Directory Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../specfem2d_example.html">Specfem2D workstation example</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How To</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../extending.html">Extending SeisFlows3</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../code_dev_plan.html">Code Development Plan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">SeisFlows3</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.tools.math</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/seisflows3/tools/math/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-seisflows3.tools.math">
+<span id="seisflows3-tools-math"></span><h1><a class="reference internal" href="#module-seisflows3.tools.math" title="seisflows3.tools.math"><code class="xref py py-mod docutils literal notranslate"><span class="pre">seisflows3.tools.math</span></code></a><a class="headerlink" href="#module-seisflows3.tools.math" title="Permalink to this headline"></a></h1>
+<p>Mathematical tools for Seisflows</p>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline"></a></h2>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.math.angle" title="seisflows3.tools.math.angle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">angle</span></code></a>(x, y)</p></td>
+<td><p>Determine the angle between two vectors using dot products</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.math.dot" title="seisflows3.tools.math.dot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dot</span></code></a>(x, y)</p></td>
+<td><p>Calculate the dot product between two vectors</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.math.hilbert" title="seisflows3.tools.math.hilbert"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hilbert</span></code></a>(w)</p></td>
+<td><p>Take the Hilbert transform of some function to get the analytic signal</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.math.poissons_ratio" title="seisflows3.tools.math.poissons_ratio"><code class="xref py py-obj docutils literal notranslate"><span class="pre">poissons_ratio</span></code></a>(vp, vs)</p></td>
+<td><p>Calculate Poisson's Ratio based on the definition given in the Specfem3D</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.math.parabolic_backtrack" title="seisflows3.tools.math.parabolic_backtrack"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parabolic_backtrack</span></code></a>(f0, g0, x1, f1, b1=0.1, b2=0.5)</p></td>
+<td><p>Safeguarded parabolic backtracking function</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.math.gaussian" title="seisflows3.tools.math.gaussian"><code class="xref py py-obj docutils literal notranslate"><span class="pre">gaussian</span></code></a>(x, y, mu, sigma, normalize=True)</p></td>
+<td><p>Evaluates Gaussian over points of X, Y</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.math.polynomial_fit" title="seisflows3.tools.math.polynomial_fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">polynomial_fit</span></code></a>(x, f)</p></td>
+<td><p>Least squares (polynomial) line fitting used to fit a line to the</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.math.lsq2" title="seisflows3.tools.math.lsq2"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lsq2</span></code></a>(x, f)</p></td>
+<td><p>Parabolic least squares fit</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.math.nabla" title="seisflows3.tools.math.nabla"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nabla</span></code></a>(V, h=[])</p></td>
+<td><p>Finite Differences</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.math.nabla2" title="seisflows3.tools.math.nabla2"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nabla2</span></code></a>(V, h=[])</p></td>
+<td><p>Finite Differences</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#seisflows3.tools.math.grad" title="seisflows3.tools.math.grad"><code class="xref py py-obj docutils literal notranslate"><span class="pre">grad</span></code></a>(V, h=[])</p></td>
+<td><p>Finite Differences</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#seisflows3.tools.math.tv" title="seisflows3.tools.math.tv"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tv</span></code></a>(Z, h=[], epsilon=1e-06)</p></td>
+<td><p>Finite Differences</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.angle">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">angle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.angle" title="Permalink to this definition"></a></dt>
+<dd><p>Determine the angle between two vectors using dot products</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.array</em>) – vector 1</p></li>
+<li><p><strong>y</strong> (<em>np.array</em>) – vector 2</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>the angle in degrees between <cite>x</cite> and <cite>y</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.dot">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">dot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.dot" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the dot product between two vectors</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.array</em>) – vector 1</p></li>
+<li><p><strong>y</strong> (<em>np.array</em>) – vector 2</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The dot product between <cite>x</cite> and <cite>y</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.hilbert">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">hilbert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">w</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.hilbert" title="Permalink to this definition"></a></dt>
+<dd><p>Take the Hilbert transform of some function to get the analytic signal</p>
+<p>TODO Change the naming here, it seems confusing to rename a scipy function
+TODO and then overwrite its name with this function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>w</strong> (<em>np.array</em>) – signal data, must be real</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>imaginary part of the analytic signal</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.poissons_ratio">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">poissons_ratio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.poissons_ratio" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate Poisson’s Ratio based on the definition given in the Specfem3D
+source code</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vp</strong> (<em>float</em><em> or </em><em>np.array</em>) – P-wave velocity</p></li>
+<li><p><strong>vs</strong> (<em>float</em><em> or </em><em>np.array</em>) – S-wave velocity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float or np.array</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Poissons ratio</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.parabolic_backtrack">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">parabolic_backtrack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.parabolic_backtrack" title="Permalink to this definition"></a></dt>
+<dd><p>Safeguarded parabolic backtracking function
+Equation provided in Nocedal &amp; Wright, 2006 ??</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f0</strong> (<em>float</em>) – initial misfit function value</p></li>
+<li><p><strong>g0</strong> (<em>float</em>) – slope</p></li>
+<li><p><strong>x1</strong> (<em>float</em>) – step length value</p></li>
+<li><p><strong>f1</strong> (<em>float</em>) – current misfit function value (?)</p></li>
+<li><p><strong>b1</strong> (<em>float</em>) – constant for safeguard</p></li>
+<li><p><strong>b2</strong> (<em>float</em>) – constant for safeguard</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>trial step length (alpha)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.gaussian">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">gaussian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.gaussian" title="Permalink to this definition"></a></dt>
+<dd><p>Evaluates Gaussian over points of X, Y</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray</em>) – x-axis to evaluate gaussian over</p></li>
+<li><p><strong>y</strong> (<em>np.ndarray</em>) – y-axis to evaluate gaussian over</p></li>
+<li><p><strong>mu</strong> – expected value</p></li>
+<li><p><strong>sigma</strong> – standard deviation</p></li>
+<li><p><strong>normalize</strong> (<em>bool</em>) – normalize the results</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.polynomial_fit">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">polynomial_fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.polynomial_fit" title="Permalink to this definition"></a></dt>
+<dd><p>Least squares (polynomial) line fitting used to fit a line to the
+objective function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.array</em>) – trial step lengths</p></li>
+<li><p><strong>f</strong> (<em>np.array</em>) – misfit values</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>trial step length (alpha)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.lsq2">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">lsq2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.lsq2" title="Permalink to this definition"></a></dt>
+<dd><p>Parabolic least squares fit</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.array</em>) – x coordinates</p></li>
+<li><p><strong>f</strong> (<em>np.array</em>) – y coordinates</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.nabla">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">nabla</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.nabla" title="Permalink to this definition"></a></dt>
+<dd><p>Finite Differences</p>
+<p>Returns sum of first-order spatial derivatives of a function defined on
+a 2D rectangular grid; generalizes Laplacian</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.nabla2">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">nabla2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.nabla2" title="Permalink to this definition"></a></dt>
+<dd><p>Finite Differences</p>
+<p>Returns sum of second-order spatial derivatives of a function defined on
+a 2D rectangular grid; generalizes Laplacian</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.grad">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">grad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.grad" title="Permalink to this definition"></a></dt>
+<dd><p>Finite Differences</p>
+<p>Evaluates derivatives on a 2D rectangular grid</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seisflows3.tools.math.tv">
+<span class="sig-prename descclassname"><span class="pre">seisflows3.tools.math.</span></span><span class="sig-name descname"><span class="pre">tv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seisflows3.tools.math.tv" title="Permalink to this definition"></a></dt>
+<dd><p>Finite Differences</p>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, SeisFlows3 Development Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

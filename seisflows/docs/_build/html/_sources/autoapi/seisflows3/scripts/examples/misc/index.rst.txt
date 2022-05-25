@@ -1,0 +1,18 @@
+:py:mod:`seisflows3.scripts.examples.misc`
+==========================================
+
+.. py:module:: seisflows3.scripts.examples.misc
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   old_ex2_specfem2d_workstation_inversion_checker_132stations/index.rst
+   old_ex3_specfem2d_workstation_inversion_with_pyatoa/index.rst
+   setup_specfem2d_example/index.rst
+   setup_specfem3d_example/index.rst
+
+

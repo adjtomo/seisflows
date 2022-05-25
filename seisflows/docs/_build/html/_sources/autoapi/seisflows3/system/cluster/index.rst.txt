@@ -1,0 +1,116 @@
+:py:mod:`seisflows3.system.cluster`
+===================================
+
+.. py:module:: seisflows3.system.cluster
+
+.. autoapi-nested-parse::
+
+   The Cluster class provides the core utilities interaction with HPC systems
+   which must be overloaded by subclasses for specific workload managers, or
+   specific clusters.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.system.cluster.Cluster
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.system.cluster.PAR
+   seisflows3.system.cluster.PATH
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:class:: Cluster(*args, **kwargs)
+
+   Bases: :py:obj:`custom_import`\ (\ :py:obj:`'system'`\ , :py:obj:`'base'`\ )
+
+   Abstract base class for the Systems module which controls interaction with
+   compute systems such as HPC clusters.
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: required(self)
+      :property:
+
+      A hard definition of paths and parameters required by this class,
+      alongside their necessity for the class and their string explanations.
+
+
+   .. py:method:: check(self, validate=True)
+
+      Checks parameters and paths
+
+
+   .. py:method:: submit(self, submit_call)
+
+      Main insertion point of SeisFlows3 onto the compute system.
+
+      .. rubric::
+          $ seisflows submit
+
+      .. note::
+          The expected behavior of the submit() function is to:
+          1) run system setup, creating directory structure,
+          2) execute workflow by submitting workflow.main()
+
+      :type workflow: seisflows3.workflow
+      :param workflow: an active seisflows3 workflow instance
+      :type submit_call: str
+      :param submit_call: the command line workload manager call to be run by
+          subprocess. These need to be passed in by specific workload manager
+          subclasses.
+
+
+   .. py:method:: run(self, classname, method, **kwargs)
+      :abstractmethod:
+
+      Runs a task multiple times in parallel
+
+      .. note::
+          The expected behavior of the run() function is to: submit N jobs to
+          the system in parallel. For example, in a simulation step, run()
+          submits N jobs to the compute system where N is the number of
+          events requiring an adjoint simulation.
+
+      :rtype: None
+      :return: This function is not expected to return anything
+
+
+   .. py:method:: taskid(self)
+      :abstractmethod:
+
+      Provides a unique identifier for each running task. This is
+      compute system specific.
+
+      :rtype: int
+      :return: this function is expected to return a unique numerical
+          identifier.
+
+
+

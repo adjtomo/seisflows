@@ -1,0 +1,156 @@
+:py:mod:`seisflows3.solver.specfem3d_globe`
+===========================================
+
+.. py:module:: seisflows3.solver.specfem3d_globe
+
+.. autoapi-nested-parse::
+
+   This is the subclass seisflows.solver.specfem3d_globe
+   This class provides utilities for the Seisflows solver interactions with
+   Specfem3D Globe. It inherits all attributes from seisflows3.solver.specfem3d,
+   and overwrites these functions to provide specified interaction with Specfem3D.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.solver.specfem3d_globe.Specfem3DGlobe
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.solver.specfem3d_globe.PAR
+   seisflows3.solver.specfem3d_globe.PATH
+   seisflows3.solver.specfem3d_globe.system
+
+
+.. py:data:: PAR
+   
+
+   
+
+.. py:data:: PATH
+   
+
+   
+
+.. py:data:: system
+   
+
+   
+
+.. py:class:: Specfem3DGlobe
+
+   Bases: :py:obj:`custom_import`\ (\ :py:obj:`'solver'`\ , :py:obj:`'specfem3d'`\ )
+
+   Python interface to Specfem3D Globe. This subclass inherits functions
+   from seisflows3.solver.specfem3d.Specfem3D
+
+   !!! See base class for method descriptions !!!
+
+   .. py:attribute:: logger
+      
+
+      
+
+   .. py:method:: required(self)
+      :property:
+
+      A hard definition of paths and parameters required by this class,
+      alongside their necessity for the class and their string explanations.
+
+
+   .. py:method:: load(self, path, prefix='reg1_', suffix='', parameters=None)
+
+      Reads SPECFEM model or kernel
+
+      Models are stored in Fortran binary format and separated into
+      multiple files according to material parameter and processor rank.
+
+      :type path: str
+      :param path: directory from which model is read
+      :type prefix: str
+      :param prefix: optional filename prefix
+      :type suffix: str
+      :param suffix: optional filename suffix, eg '_kernel'
+      :type parameters: list
+      :param parameters: material parameters to be read
+          (if empty, defaults to self.parameters)
+      :rtype: dict
+      :return: model or kernels indexed by material parameter and
+          processor rank, ie dict[parameter][iproc]
+
+
+   .. py:method:: save(self, path, model, prefix='reg1_', suffix='')
+
+      Writes SPECFEM3D_GLOBE transerverly isotropic model
+
+      :type path: str
+      :param path:
+      :type model
+      :param model:
+      :type prefix: str
+      :param prefix: prefix that begins the name of the model parameters
+      :type suffix: str
+      :param suffix: that follow the name of model parameters
+
+
+   .. py:method:: check_mesh_properties(self, path=None, parameters=None)
+
+      Determine if Mesh properties are okay for workflow
+
+      :type path: str
+      :param path: path to the mesh file
+
+
+   .. py:method:: rename_data(self)
+
+      Works around conflicting data filename conventions
+
+      Specfem3D's uses different name conventions for regular traces
+      and 'adjoint' traces
+
+
+   .. py:method:: initialize_adjoint_traces(self)
+
+      Setup utility: Creates the "adjoint traces" expected by SPECFEM
+
+      !!! This probably doesnt work
+
+      Note:
+          Adjoint traces are initialized by writing zeros for all channels.
+          Channels actually in use during an inversion or migration will be
+          overwritten with nonzero values later on.
+
+
+   .. py:method:: data_wildcard(self)
+      :property:
+
+      Returns a wildcard identifier for synthetic data
+
+      :rtype: str
+      :return: wildcard identifier for channels
+
+
+   .. py:method:: data_filenames(self)
+      :property:
+
+      Returns the filenames of all data, either by the requested components
+      or by all available files in the directory.
+
+      :rtype: list
+      :return: list of data filenames
+
+
+

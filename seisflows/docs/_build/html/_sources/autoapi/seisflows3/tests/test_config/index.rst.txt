@@ -1,0 +1,96 @@
+:py:mod:`seisflows3.tests.test_config`
+======================================
+
+.. py:module:: seisflows3.tests.test_config
+
+.. autoapi-nested-parse::
+
+   Test the SeisFlows3 configuration script, which configures the compute
+   system and the working environment required for SF3 to run properly
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tests.test_config.copy_par_file
+   seisflows3.tests.test_config.sfinit
+   seisflows3.tests.test_config.test_seisflows_constants
+   seisflows3.tests.test_config.test_init_seisflows
+   seisflows3.tests.test_config.test_save_and_load
+   seisflows3.tests.test_config.test_seisflows_paths_parameters
+   seisflows3.tests.test_config.test_custom_import
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.tests.test_config.TEST_DIR
+
+
+.. py:data:: TEST_DIR
+   
+
+   
+
+.. py:function:: copy_par_file(tmpdir)
+
+   Copy the template parameter file into the temporary test directory
+   :rtype: str
+   :return: location of the parameter file
+
+
+.. py:function:: sfinit(tmpdir, copy_par_file)
+
+   Re-used function that will initate a SeisFlows3 working environment in
+   sys modules
+   :return:
+
+
+.. py:function:: test_seisflows_constants()
+
+   Ensure that the constants set in the Config file have not changed
+   Essentially a double check to make sure these things haven't been edited
+   because the rest of the package depends on these being accesible and
+   the same
+
+
+.. py:function:: test_init_seisflows(sfinit)
+
+   Make sure that initiation of the modular approach of seisflows works
+   as expected. That is, that system-wide accessible modules are
+   instantiated with the accepted naming schema
+
+   .. note::
+       This assumes that the parameter file is set up correctly, which it
+       should be if it's coming from the test data directory
+   :return:
+
+
+.. py:function:: test_save_and_load(sfinit)
+
+   Test saving the current session to disk
+   :return:
+
+
+.. py:function:: test_seisflows_paths_parameters(sfinit)
+
+   Test the class that makes inputting and checking paths and parameters easier
+   Recreates the required() function at the top of each class.
+
+
+.. py:function:: test_custom_import(sfinit)
+
+   Test that importing based on internal modules works for various inputs
+   :return:
+
+

@@ -1,0 +1,53 @@
+:py:mod:`seisflows3.plugins.preprocess.wavelets`
+================================================
+
+.. py:module:: seisflows3.plugins.preprocess.wavelets
+
+.. autoapi-nested-parse::
+
+   Please do not remove this module
+   It may be used in a future version of Seisflows
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.plugins.preprocess.wavelets._gauss
+   seisflows3.plugins.preprocess.wavelets.ricker
+   seisflows3.plugins.preprocess.wavelets._gabor
+   seisflows3.plugins.preprocess.wavelets.gabor
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   seisflows3.plugins.preprocess.wavelets.warning
+
+
+.. py:data:: warning
+   :annotation: = Warning!
+
+   
+
+.. py:function:: _gauss(nt, dt, sigma)
+
+
+.. py:function:: ricker(nt, dt, fp)
+
+
+.. py:function:: _gabor(nt, dt, a, b)
+
+
+.. py:function:: gabor(nt, dt, fp)
+
+

@@ -1,0 +1,30 @@
+:py:mod:`seisflows3.tools.err`
+==============================
+
+.. py:module:: seisflows3.tools.err
+
+.. autoapi-nested-parse::
+
+   Custom errors for Seisflows
+
+
+
+Module Contents
+---------------
+
+.. py:exception:: ParameterError(*args)
+
+   Bases: :py:obj:`ValueError`
+
+   A new ValueError class which explains the Parameter's that threw the error
+
+
+.. py:exception:: CheckError(cls, par)
+
+   Bases: :py:obj:`ValueError`
+
+   An error called by the Check functions within each module, that returns the
+   name of the class that raised the error, as well as the parameter in
+   question.
+
+
