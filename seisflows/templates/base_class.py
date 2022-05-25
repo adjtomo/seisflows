@@ -5,8 +5,8 @@ This is a SeisFlows Base class
 import os
 import sys
 import logging
-from seisflows3.tools import msg
-from seisflows3.config import SeisFlowsPathsParameters
+from seisflows.tools import msg
+from seisflows.config import SeisFlowsPathsParameters
 
 # Required SeisFlows configuration
 PAR = sys.modules['seisflows_parameters']

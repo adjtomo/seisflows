@@ -11,11 +11,11 @@ import obspy
 import logging
 import numpy as np
 
-from seisflows3.tools import msg
-from seisflows3.tools import signal, unix
-from seisflows3.tools.wrappers import exists
-from seisflows3.plugins.preprocess import adjoint, misfit, readers, writers
-from seisflows3.config import SeisFlowsPathsParameters
+from seisflows.tools import msg
+from seisflows.tools import signal, unix
+from seisflows.tools.wrappers import exists
+from seisflows.plugins.preprocess import adjoint, misfit, readers, writers
+from seisflows.config import SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

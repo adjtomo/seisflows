@@ -11,9 +11,9 @@ import time
 import logging
 import subprocess
 
-from seisflows3.tools import msg, unix
-from seisflows3.tools.wrappers import findpath
-from seisflows3.config import custom_import, SeisFlowsPathsParameters
+from seisflows.tools import msg, unix
+from seisflows.tools.wrappers import findpath
+from seisflows.config import custom_import, SeisFlowsPathsParameters
 
 
 PAR = sys.modules['seisflows_parameters']

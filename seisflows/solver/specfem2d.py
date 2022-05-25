@@ -3,17 +3,17 @@
 This is the subclass seisflows.solver.specfem2d
 
 This class provides utilities for the Seisflows solver interactions with
-Specfem2D. It inherits all attributes from seisflows3.solver.Base,
+Specfem2D. It inherits all attributes from seisflows.solver.Base,
 """
 import os
 import sys
 import logging
 from glob import glob
 
-from seisflows3.tools import unix, msg
-from seisflows3.tools.wrappers import exists
-from seisflows3.config import custom_import, SeisFlowsPathsParameters
-from seisflows3.tools.specfem import call_solver, getpar, setpar
+from seisflows.tools import unix, msg
+from seisflows.tools.wrappers import exists
+from seisflows.config import custom_import, SeisFlowsPathsParameters
+from seisflows.tools.specfem import call_solver, getpar, setpar
 
 
 PAR = sys.modules['seisflows_parameters']

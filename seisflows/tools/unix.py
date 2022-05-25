@@ -9,7 +9,7 @@ import random
 import shutil
 import socket
 
-from seisflows3.tools.wrappers import iterable
+from seisflows.tools.wrappers import iterable
 
 
 def cat(src, dst=None):
@@ -86,7 +86,7 @@ def ln(src, dst):
     Make a symbolic link between files
 
     .. rubric::
-        >>> from seisflows3.tools.unix import ln
+        >>> from seisflows.tools.unix import ln
         >>> ln("example_file", "path/to/sylink/new_filename")
         >>> # OR
         >>> sln("example_file", "path/to/sylink/")

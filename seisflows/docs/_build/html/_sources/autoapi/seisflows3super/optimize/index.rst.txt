@@ -1,6 +1,0 @@
-:py:mod:`seisflows3-super.optimize`
-===================================
-
-.. py:module:: seisflows3-super.optimize
-
-

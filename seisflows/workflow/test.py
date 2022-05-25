@@ -8,8 +8,8 @@ import os
 import sys
 import time
 import logging
-from seisflows3.tools import msg
-from seisflows3.config import SeisFlowsPathsParameters, custom_import
+from seisflows.tools import msg
+from seisflows.config import SeisFlowsPathsParameters, custom_import
 
 # Required SeisFlows configuration
 PAR = sys.modules['seisflows_parameters']

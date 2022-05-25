@@ -2,7 +2,7 @@
 """
 This is the subclass seisflows.solver.Specfem3D
 This class provides utilities for the Seisflows solver interactions with
-Specfem3D Cartesian. It inherits all attributes from seisflows3.solver.Base,
+Specfem3D Cartesian. It inherits all attributes from seisflows.solver.Base,
 and overwrites these functions to provide specified interaction with Specfem3D
 """
 import os
@@ -10,11 +10,11 @@ import sys
 import logging
 from glob import glob
 
-import seisflows3.plugins.solver.specfem3d as solvertools
-from seisflows3.tools import unix, msg
-from seisflows3.tools.wrappers import exists
-from seisflows3.config import custom_import, SeisFlowsPathsParameters
-from seisflows3.tools.specfem import call_solver, getpar, setpar
+import seisflows.plugins.solver.specfem3d as solvertools
+from seisflows.tools import unix, msg
+from seisflows.tools.wrappers import exists
+from seisflows.config import custom_import, SeisFlowsPathsParameters
+from seisflows.tools.specfem import call_solver, getpar, setpar
 
 
 # Seisflows configuration
@@ -28,7 +28,7 @@ preprocess = sys.modules["seisflows_preprocess"]
 class Specfem3D(custom_import("solver", "base")):
     """
     Python interface to Specfem3D Cartesian. This subclass inherits functions
-    from seisflows3.solver.Base
+    from seisflows.solver.Base
 
     !!! See base class for method descriptions !!!
     """

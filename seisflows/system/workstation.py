@@ -7,8 +7,8 @@ import os
 import sys
 import logging
 
-from seisflows3.tools import unix, msg
-from seisflows3.config import custom_import, SeisFlowsPathsParameters
+from seisflows.tools import unix, msg
+from seisflows.config import custom_import, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -81,7 +81,7 @@ class Workstation(custom_import("system", "base")):
         self.checkpoint(PATH.OUTPUT, classname, method, kwargs)
 
         # Allows dynamic retrieval of any function from within package, e.g.,
-        # <bound method Base.eval_func of <seisflows3.solver.specfem2d...
+        # <bound method Base.eval_func of <seisflows.solver.specfem2d...
         class_module = sys.modules[f"seisflows_{classname}"]
         function = getattr(class_module, method)
 

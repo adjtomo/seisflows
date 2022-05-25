@@ -7,8 +7,8 @@ import sys
 import shutil
 import pytest
 from unittest.mock import patch
-from seisflows3 import config
-from seisflows3.seisflows import SeisFlows, return_modules
+from seisflows import config
+from seisflows.seisflows import SeisFlows, return_modules
 
 
 # The module that we're testing, allows for copy-pasting these test suites
@@ -66,7 +66,7 @@ def sfinit(tmpdir, copy_par_file):
 
 def test_default_check(sfinit):
     """
-    Test seisflows3.preprocess.default.check()
+    Test seisflows.preprocess.default.check()
 
     :param sfinit:
     :param modules:

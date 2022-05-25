@@ -20,8 +20,8 @@ import time
 import logging
 import subprocess
 
-from seisflows3.tools import msg
-from seisflows3.config import ROOT_DIR, custom_import, SeisFlowsPathsParameters
+from seisflows.tools import msg
+from seisflows.config import ROOT_DIR, custom_import, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

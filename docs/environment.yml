@@ -1,0 +1,11 @@
+# Bullet points not rendering in lists after adding sphinx-autoapi as a dep.
+# Needed to hard require docutils version 
+# https://stackoverflow.com/questions/67542699/readthedocs-sphinx-not-rendering-bullet-list-from-rst-file
+name: seisflows
+channels:
+    - conda-forge
+dependencies:
+    - obspy=1.2.2
+    - pyyaml=5.3.1
+    - sphinx-autoapi
+    - sphinx_rtd_theme>=1.0.0

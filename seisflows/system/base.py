@@ -9,9 +9,9 @@ import sys
 import pickle
 import logging
 
-from seisflows3.tools import unix, msg
-from seisflows3.tools.wrappers import number_fid
-from seisflows3.config import save, SeisFlowsPathsParameters, CFGPATHS
+from seisflows.tools import unix, msg
+from seisflows.tools.wrappers import number_fid
+from seisflows.config import save, SeisFlowsPathsParameters, CFGPATHS
 
 
 

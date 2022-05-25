@@ -20,7 +20,7 @@ import sys
 import pickle
 import argparse
 
-from seisflows3.config import load, config_logger
+from seisflows.config import load, config_logger
 
 
 
@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument("-c", "--classname", type=str, nargs="?", required=True,
                         help="the SeisFlows3 class from within which the "
                              "desired function is defined. Available options "
-                             "are defined in seisflows3.config.NAMES"
+                             "are defined in seisflows.config.NAMES"
                         )
     parser.add_argument("-f", "--funcname", type=str, nargs="?", required=True,
                         help="the function name from the chosen `classname`. "

@@ -22,10 +22,10 @@ import logging
 import traceback
 from importlib import import_module
 
-from seisflows3 import logger
-from seisflows3.tools import msg, unix
-from seisflows3.tools.wrappers import module_exists
-from seisflows3.tools.err import ParameterError
+from seisflows import logger
+from seisflows.tools import msg, unix
+from seisflows.tools.wrappers import module_exists
+from seisflows.tools.err import ParameterError
 
 
 """
@@ -43,7 +43,7 @@ NAMES = ["system", "preprocess", "solver",
          "postprocess", "optimize", "workflow"]
 
 # Packages that define the source code, used to search for base- and subclasses
-PACKAGES = ["seisflows3", "seisflows3-super"]
+PACKAGES = ["seisflows", "seisflows-super"]
 
 # These define the sys.modules names where parameter values and paths are stored
 PAR = "seisflows_parameters"
@@ -204,7 +204,7 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
     :type verbose: bool
     :param verbose: if True, writes a more detailed log message stating the
         type of log (warning, info, debug), and the class and method which
-        called the logger (e.g., seisflows3.solver.specfem2d.save()). This
+        called the logger (e.g., seisflows.solver.specfem2d.save()). This
         is much more useful for debugging but clutters up the log file.
         if False, only write the time and message in the log statement.
     """
@@ -466,7 +466,7 @@ def custom_import(name=None, module=None, classname=None):
         print(msg.cli(
             "Please check that 'custom_import' utility is being used as "
             "follows: custom_import(name, module). The resulting full dotted "
-            "name 'seisflows3.name.module' must correspond to a module "
+            "name 'seisflows.name.module' must correspond to a module "
             "within this package.", header="custom import error", border="="))
         sys.exit(-1)
     # Invalid `system` call
@@ -504,7 +504,7 @@ def custom_import(name=None, module=None, classname=None):
             break
     if not _exists:
         print(msg.cli(f"The following module was not found within the package: "
-                      f"seisflows3.{name}.{module}",
+                      f"seisflows.{name}.{module}",
                       header="custom import error", border="=")
               )
         sys.exit(-1)
@@ -524,7 +524,7 @@ def custom_import(name=None, module=None, classname=None):
         return getattr(module, classname)
     except AttributeError:
         print(msg.cli(f"The following method was not found in the imported "
-                      f"class: seisflows3.{name}.{module}.{classname}"))
+                      f"class: seisflows.{name}.{module}.{classname}"))
         sys.exit(-1)
 
 

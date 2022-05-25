@@ -11,7 +11,7 @@ import os
 import logging
 import numpy as np
 
-from seisflows3.tools.array import count_zeros
+from seisflows.tools.array import count_zeros
 
 
 class Base:

@@ -34,10 +34,10 @@ import shutil
 import subprocess
 import numpy as np
 
-from seisflows3.tools import msg
-from seisflows3.config import Dict
-from seisflows3.seisflows import SeisFlows
-from seisflows3.tools.unix import cd, cp, rm, ln, mv, mkdir
+from seisflows.tools import msg
+from seisflows.config import Dict
+from seisflows.seisflows import SeisFlows
+from seisflows.tools.unix import cd, cp, rm, ln, mv, mkdir
 
 
 class SF3Example2D:
@@ -366,7 +366,7 @@ if __name__ == "__main__":
                "4. Generate target model w/ perturbed starting model",
                "5. Set up a SeisFlows3 working directory",
                f"6. Run an inversion workflow"],
-        header="seisflows3 example 1",
+        header="seisflows example 1",
         border="=")
     )
 

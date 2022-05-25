@@ -4,8 +4,8 @@ This is a subclass seisflows.workflow.InversionMaui
 """
 import sys
 
-from seisflows3.config import custom_import
-from seisflows3.tools.err import ParameterError
+from seisflows.config import custom_import
+from seisflows.tools.err import ParameterError
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

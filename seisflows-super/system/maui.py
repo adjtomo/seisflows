@@ -21,7 +21,7 @@ import os
 import sys
 import math
 import logging
-from seisflows3.config import custom_import, SeisFlowsPathsParameters, ROOT_DIR
+from seisflows.config import custom_import, SeisFlowsPathsParameters, ROOT_DIR
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

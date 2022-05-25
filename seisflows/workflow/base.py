@@ -6,9 +6,9 @@ It contains mandatory functions that must be called by subclasses
 import sys
 import logging
 
-from seisflows3.tools import msg
-from seisflows3.tools.wrappers import exists
-from seisflows3.config import save, SeisFlowsPathsParameters
+from seisflows.tools import msg
+from seisflows.tools.wrappers import exists
+from seisflows.config import save, SeisFlowsPathsParameters
 
 
 PAR = sys.modules["seisflows_parameters"]

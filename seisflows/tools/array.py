@@ -8,7 +8,7 @@ import numpy as np
 import scipy.signal as _signal
 import scipy.interpolate as _interp
 
-from seisflows3.tools.math import gaussian
+from seisflows.tools.math import gaussian
 
 
 def count_zeros(a):

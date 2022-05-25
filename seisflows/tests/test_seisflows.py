@@ -13,10 +13,10 @@ import contextlib
 import subprocess
 from unittest.mock import patch
 
-from seisflows3 import logger
-from seisflows3.seisflows import sfparser, SeisFlows
-from seisflows3.config import save, Dict, ROOT_DIR, NAMES, CFGPATHS
-from seisflows3.tools.wrappers import loadyaml
+from seisflows import logger
+from seisflows.seisflows import sfparser, SeisFlows
+from seisflows.config import save, Dict, ROOT_DIR, NAMES, CFGPATHS
+from seisflows.tools.wrappers import loadyaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
 
@@ -156,7 +156,7 @@ def test_cmd_setup(tmpdir):
         sf.setup(symlink=True, overwrite=False)
         assert(os.path.exists(par_file))
         assert(os.path.exists(
-            os.path.join(tmpdir, "source_code", "seisflows3"))
+            os.path.join(tmpdir, "source_code", "seisflows"))
         )
         # Edit the current par file in a noticeable way so we can check
         # if overwriting works in the next step
@@ -331,7 +331,7 @@ def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
     assert (len(lines_conf) == len(lines_fill))
 
     # My attempt to flush sys.modules which did NOT work
-    # from seisflows3.config import NAMES, PAR, PATH
+    # from seisflows.config import NAMES, PAR, PATH
     # for name in NAMES:
     #     del sys.modules[f"seisflows_{name}"]
     # del sys.modules[PAR]

@@ -7,9 +7,9 @@ import sys
 import shutil
 import pytest
 from unittest.mock import patch
-from seisflows3 import config
-from seisflows3.seisflows import SeisFlows
-from seisflows3.tools.err import ParameterError
+from seisflows import config
+from seisflows.seisflows import SeisFlows
+from seisflows.tools.err import ParameterError
 
 
 TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
@@ -54,7 +54,7 @@ def test_seisflows_constants():
     names_check = ["system", "preprocess", "solver",
                    "postprocess", "optimize", "workflow"]
 
-    packages_check = ["seisflows3", "seisflows3-super"]
+    packages_check = ["seisflows", "seisflows-super"]
 
     root_dir_check = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), ".."
@@ -135,11 +135,11 @@ def test_custom_import(sfinit):
 
     module = config.custom_import(name="optimize", module="LBFGS")
     assert(module.__name__ == "LBFGS")
-    assert(module.__module__ == "seisflows3.optimize.LBFGS")
+    assert(module.__module__ == "seisflows.optimize.LBFGS")
 
     # Check one more to be safe
     module = config.custom_import(name="optimize", module="base")
     assert(module.__name__ == "Base")
-    assert(module.__module__ == "seisflows3.optimize.base")
+    assert(module.__module__ == "seisflows.optimize.base")
 
 

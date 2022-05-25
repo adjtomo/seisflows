@@ -14,7 +14,7 @@ import numpy as np
 from importlib import import_module
 from pkgutil import find_loader
 
-from seisflows3.tools import msg
+from seisflows.tools import msg
 
 
 class Struct(dict):

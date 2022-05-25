@@ -9,8 +9,8 @@ import sys
 import shutil
 import pytest
 from unittest.mock import patch
-from seisflows3 import config
-from seisflows3.seisflows import SeisFlows, return_modules
+from seisflows import config
+from seisflows.seisflows import SeisFlows, return_modules
 
 
 # Define dictionary dictating the bare-minimum SeisFlows3 structure.

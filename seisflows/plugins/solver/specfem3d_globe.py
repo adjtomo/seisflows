@@ -4,8 +4,8 @@ Plugins used for the numerical solver SPECFEM3D_GLOBE
 """
 
 # Local imports
-from seisflows3.tools.wrappers import findpath
-from seisflows3.tools.specfem import setpar
+from seisflows.tools.wrappers import findpath
+from seisflows.tools.specfem import setpar
 
 
 def write_sources(PAR, h, path='.'):

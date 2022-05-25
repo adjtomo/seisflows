@@ -1,20 +1,20 @@
 > # :warning: :warning: :warning: 
 > ##  **THIS REPOSITORY WILL BE MERGED AND DELETED** 
-> ##  Please see the following issue for more information: https://github.com/adjtomo/seisflows3/issues/2 
+> ##  Please see the following issue for more information: https://github.com/adjtomo/seisflows/issues/2 
 > # :warning: :warning: :warning: 
 
 
 
 ---
 <p align="center">
-  <img src="seisflows3/docs/images/sf3_globe_banner_alpha.png" />
+  <img src="seisflows/docs/images/sf3_globe_banner_alpha.png" />
 </p>
 
 ---
-`Documentation` can be found on Read the Docs: https://seisflows3.readthedocs.io (in development)
+`Documentation` can be found on Read the Docs: https://seisflows.readthedocs.io (in development)
 
 
-[![Documentation Status](https://readthedocs.org/projects/seisflows3/badge/?version=latest)](https://seisflows3.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/seisflows/badge/?version=latest)](https://seisflows.readthedocs.io/en/latest/?badge=latest)
 ---
 
 SeisFlows3 is a fork of [SeisFlows](https://github.com/rmodrak/seisflows/) and the [current main development branch](https://github.com/rmodrak/seisflows/issues/111) for this codebase. 

@@ -3,9 +3,9 @@
 Plugins used for the numerical solver SPECFEM2D
 """
 import sys
-from seisflows3.tools import array, unix
-from seisflows3.tools.wrappers import exists, findpath
-from seisflows3.tools.specfem import getpar, setpar
+from seisflows.tools import array, unix
+from seisflows.tools.wrappers import exists, findpath
+from seisflows.tools.specfem import getpar, setpar
 
 
 def write_sources(coords, path='.', ws=1., suffix=''):

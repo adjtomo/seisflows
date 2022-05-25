@@ -2,7 +2,7 @@
 """
 This is the subclass seisflows.solver.specfem3d_globe
 This class provides utilities for the Seisflows solver interactions with
-Specfem3D Globe. It inherits all attributes from seisflows3.solver.specfem3d,
+Specfem3D Globe. It inherits all attributes from seisflows.solver.specfem3d,
 and overwrites these functions to provide specified interaction with Specfem3D.
 """
 import os
@@ -10,12 +10,12 @@ import sys
 import logging
 from glob import glob
 
-import seisflows3.plugins.solver.specfem3d_globe as solvertools
-from seisflows3.tools.specfem import Minmax  # Model, Minmax,
-# from seisflows3.plugins.io import loadbypar, copybin, loadbin, savebin
-from seisflows3.tools import unix, msg
-from seisflows3.tools.wrappers import Struct, exists
-from seisflows3.config import custom_import, SeisFlowsPathsParameters
+import seisflows.plugins.solver.specfem3d_globe as solvertools
+from seisflows.tools.specfem import Minmax  # Model, Minmax,
+# from seisflows.plugins.io import loadbypar, copybin, loadbin, savebin
+from seisflows.tools import unix, msg
+from seisflows.tools.wrappers import Struct, exists
+from seisflows.config import custom_import, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -25,7 +25,7 @@ system = sys.modules["seisflows_system"]
 class Specfem3DGlobe(custom_import("solver", "specfem3d")):
     """
     Python interface to Specfem3D Globe. This subclass inherits functions
-    from seisflows3.solver.specfem3d.Specfem3D
+    from seisflows.solver.specfem3d.Specfem3D
 
     !!! See base class for method descriptions !!!
     """

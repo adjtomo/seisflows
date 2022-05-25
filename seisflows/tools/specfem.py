@@ -8,9 +8,9 @@ import numpy as np
 import subprocess
 
 from collections import defaultdict
-from seisflows3.tools import msg
-from seisflows3.tools.math import poissons_ratio
-from seisflows3.tools.wrappers import iterable
+from seisflows.tools import msg
+from seisflows.tools.math import poissons_ratio
+from seisflows.tools.wrappers import iterable
 
 
 class Minmax(defaultdict):

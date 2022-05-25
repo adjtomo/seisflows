@@ -10,9 +10,9 @@ import logging
 import numpy as np
 from glob import glob
 
-from seisflows3.config import custom_import, CFGPATHS
-from seisflows3.tools import msg, unix
-from seisflows3.config import save, SeisFlowsPathsParameters
+from seisflows.config import custom_import, CFGPATHS
+from seisflows.tools import msg, unix
+from seisflows.config import save, SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

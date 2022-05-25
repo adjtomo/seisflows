@@ -26,12 +26,12 @@ from glob import glob
 from copy import copy
 from IPython import embed
 
-from seisflows3 import logger
-from seisflows3.tools import unix, msg
-from seisflows3.tools.specfem import (getpar, setpar, getpar_vel_model,
+from seisflows import logger
+from seisflows.tools import unix, msg
+from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                       setpar_vel_model)
-from seisflows3.tools.wrappers import loadyaml
-from seisflows3.config import (init_seisflows, format_paths, config_logger,
+from seisflows.tools.wrappers import loadyaml
+from seisflows.config import (init_seisflows, format_paths, config_logger,
                                Dict, custom_import, SeisFlowsPathsParameters,
                                NAMES, PACKAGES, ROOT_DIR, CFGPATHS)
 
@@ -361,7 +361,7 @@ class SeisFlows:
             $ seisflows {command} {optional subcommand}
 
             # From inside a Python environment
-            > from seisflows3.scripts.seisflows import SeisFlows
+            > from seisflows.scripts.seisflows import SeisFlows
             > sf = SeisFlows()
             > sf("{command}", {optional subcommand}={value})
 
@@ -471,7 +471,7 @@ class SeisFlows:
             print(msg.cli("Please ensure that the parameters listed below "
                           "are set correctly. You can edit this list with "
                           "the PRECHECK parameter.", items=items,
-                          header="seisflows3 precheck", border="="))
+                          header="seisflows precheck", border="="))
             check = input("Continue? (y/[n])\n")
             if check != "y":
                 sys.exit(-1)
@@ -916,7 +916,7 @@ class SeisFlows:
     def par(self, parameter, value=None, skip_print=False, required=False,
             **kwargs):
         """
-        Check or set parameters in the seisflows3 parameter file.
+        Check or set parameters in the seisflows parameter file.
 
         USAGE
 
@@ -1120,7 +1120,7 @@ class SeisFlows:
             "don't run workflow",
             "'seisflows examples run <name_or_idx>': setup and run example"
         ],
-            header="seisflows3 examples"
+            header="seisflows examples"
         ))
         print(msg.cli(items=items))
 
@@ -1302,7 +1302,7 @@ class SeisFlows:
             for i, cls in enumerate(inspect.getmro(type(module))[::-1]):
                 item_str += f"> {cls.__name__:<10}"
             items.append(item_str)
-        print(msg.cli(items=items, header="seisflows3 inheritance"))
+        print(msg.cli(items=items, header="seisflows inheritance"))
 
     def _reset_line_search(self, **kwargs):
         """
@@ -1358,11 +1358,11 @@ class SeisFlows:
                 for module_ in module_list:
                     items.append(f"\t\t* {module_}".expandtabs(tabsize=4))
         print(msg.cli("'+': package, '-': module, '*': class", items=items,
-                      header="seisflows3 modules"))
+                      header="seisflows modules"))
 
     def _print_flow(self, **kwargs):
         """
-        Simply print out the seisflows3.workflow.main() flow variable which
+        Simply print out the seisflows.workflow.main() flow variable which
         describes what order workflow functions will be run. Useful for
         filling out the RESUME_FROM and STOP_AFTER parameters.
 
@@ -1376,7 +1376,7 @@ class SeisFlows:
         flow = workflow.main(return_flow=True)
         items = [f"{a+1}: {b.__name__}" for a, b in enumerate(flow)]
         print(msg.cli(f"Flow arguments for {type(workflow)}", items=items,
-                      header="seisflows3 workflow main"))
+                      header="seisflows workflow main"))
 
     def _print_inheritance(self, name=None, func=None, **kwargs):
         """

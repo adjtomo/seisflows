@@ -8,9 +8,9 @@ import os
 import sys
 import logging
 
-from seisflows3.tools import unix, msg
-from seisflows3.tools.wrappers import exists
-from seisflows3.config import custom_import, SeisFlowsPathsParameters
+from seisflows.tools import unix, msg
+from seisflows.tools.wrappers import exists
+from seisflows.config import custom_import, SeisFlowsPathsParameters
 
 
 PAR = sys.modules["seisflows_parameters"]

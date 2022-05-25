@@ -19,11 +19,11 @@ import shutil
 import subprocess
 import numpy as np
 
-from seisflows3.tools import msg
-from seisflows3.config import Dict
-from seisflows3.seisflows import SeisFlows
-from seisflows3.tools.unix import cd, cp, rm, ln, mv, mkdir
-from seisflows3.scripts.examples.sf3example2d import SF3Example2D
+from seisflows.tools import msg
+from seisflows.config import Dict
+from seisflows.seisflows import SeisFlows
+from seisflows.tools.unix import cd, cp, rm, ln, mv, mkdir
+from seisflows.scripts.examples.sf3example2d import SF3Example2D
 
 
 class SF3PyatoaEx2D(SF3Example2D):
@@ -155,7 +155,7 @@ if __name__ == "__main__":
                "5. Set up a SeisFlows3 working directory",
                f"6. Run an inversion workflow. The line search is expected to "
                f"attempt 4 evaluations (i01s04)"],
-        header="seisflows3 example 2",
+        header="seisflows example 2",
         border="=")
     )
 

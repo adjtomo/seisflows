@@ -9,8 +9,8 @@ the previous iteration's line search can be used in the current one.
 import sys
 import logging
 
-from seisflows3.tools import unix, msg
-from seisflows3.config import custom_import
+from seisflows.tools import unix, msg
+from seisflows.config import custom_import
 
 
 PAR = sys.modules["seisflows_parameters"]

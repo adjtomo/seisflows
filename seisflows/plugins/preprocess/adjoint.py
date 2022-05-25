@@ -16,8 +16,8 @@ All functions defined have four required positional arguments
 import numpy as np
 from scipy.signal import hilbert as analytic
 
-from seisflows3.tools.math import hilbert
-from seisflows3.plugins.preprocess import misfit
+from seisflows.tools.math import hilbert
+from seisflows.plugins.preprocess import misfit
 
 
 def waveform(syn, obs, *args, **kwargs):

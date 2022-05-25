@@ -16,8 +16,8 @@ from glob import glob
 
 from pyatoa import Pyaflowa, Inspector
 
-from seisflows3.tools import unix, msg
-from seisflows3.config import custom_import, SeisFlowsPathsParameters, CFGPATHS
+from seisflows.tools import unix, msg
+from seisflows.config import custom_import, SeisFlowsPathsParameters, CFGPATHS
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

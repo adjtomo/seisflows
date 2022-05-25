@@ -5,9 +5,9 @@ This is the subclass class for seisflows.plugins.line_search.bracket
 import logging
 import numpy as np
 
-from seisflows3.tools import msg
-from seisflows3.plugins.line_search.base import Base
-from seisflows3.tools.math import parabolic_backtrack, polynomial_fit
+from seisflows.tools import msg
+from seisflows.plugins.line_search.base import Base
+from seisflows.tools.math import parabolic_backtrack, polynomial_fit
 
 
 class Bracket(Base):

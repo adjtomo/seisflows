@@ -18,8 +18,8 @@ This script is executes a MASTER job through job scheduler
 import sys
 import argparse
 
-from seisflows3.tools import unix
-from seisflows3.config import load, config_logger
+from seisflows.tools import unix
+from seisflows.config import load, config_logger
 
 
 def parse_args():

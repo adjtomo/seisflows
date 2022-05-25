@@ -12,11 +12,11 @@ import sys
 import logging
 import numpy as np
 
-from seisflows3.tools import msg, unix
-from seisflows3.tools.math import angle, dot
-from seisflows3.plugins import line_search, preconds
-from seisflows3.tools.specfem import check_poissons_ratio
-from seisflows3.config import SeisFlowsPathsParameters, CFGPATHS
+from seisflows.tools import msg, unix
+from seisflows.tools.math import angle, dot
+from seisflows.plugins import line_search, preconds
+from seisflows.tools.specfem import check_poissons_ratio
+from seisflows.config import SeisFlowsPathsParameters, CFGPATHS
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -125,11 +125,11 @@ class Base:
         # Define the Parameters required by this module
         sf.par("LINESEARCH", required=False, default="Bracket", par_type=str,
                docstr="Algorithm to use for line search, see "
-                      "seisflows3.plugins.line_search for available choices")
+                      "seisflows.plugins.line_search for available choices")
 
         sf.par("PRECOND", required=False, par_type=str,
                docstr="Algorithm to use for preconditioning gradients, see "
-                      "seisflows3.plugins.preconds for available choices")
+                      "seisflows.plugins.preconds for available choices")
 
         sf.par("STEPCOUNTMAX", required=False, default=10, par_type=int,
                docstr="Max number of trial steps in line search before a "

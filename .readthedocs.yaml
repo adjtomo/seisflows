@@ -2,15 +2,15 @@ version: 2
 
 sphinx:
     builder: html
-    configuration: seisflows3/docs/conf.py
+    configuration: seisflows/docs/conf.py
 
 python:
     version: 3.7
     install:
-        - requirements: seisflows3/docs/requirements.txt
+        - requirements: seisflows/docs/requirements.txt
         - requirements: requirements.txt
         - method: setuptools
           path: .
 
 conda:
-    environment: seisflows3/docs/environment.yml
+    environment: seisflows/docs/environment.yml

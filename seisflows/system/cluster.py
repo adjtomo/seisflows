@@ -8,8 +8,8 @@ import sys
 import logging
 import subprocess
 
-from seisflows3.tools import msg
-from seisflows3.config import custom_import, save, SeisFlowsPathsParameters
+from seisflows.tools import msg
+from seisflows.config import custom_import, save, SeisFlowsPathsParameters
 
 
 PAR = sys.modules["seisflows_parameters"]
@@ -74,8 +74,8 @@ class Cluster(custom_import("system", "base")):
             1) run system setup, creating directory structure,
             2) execute workflow by submitting workflow.main()
 
-        :type workflow: seisflows3.workflow
-        :param workflow: an active seisflows3 workflow instance
+        :type workflow: seisflows.workflow
+        :param workflow: an active seisflows workflow instance
         :type submit_call: str
         :param submit_call: the command line workload manager call to be run by
             subprocess. These need to be passed in by specific workload manager
