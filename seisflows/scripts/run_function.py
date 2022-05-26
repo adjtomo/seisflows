@@ -3,7 +3,7 @@
 Only required when system==cluster (or any subclass of cluster)
 
 This script is a wrapper for running tasks on systems during an active workflow.
-Acts as a Python script to submit certain SeisFlows3 functions or tasks to a
+Acts as a Python script to submit certain SeisFlows functions or tasks to a
 compute system.
 
 .. note::
@@ -30,11 +30,11 @@ def parse_args():
     """
     parser = argparse.ArgumentParser("Run arguments for system submitted tasks")
     parser.add_argument("-o", "--output", type=str, nargs="?", required=True,
-                        help="the SeisFlows3 output directory used to load the "
+                        help="the SeisFlows output directory used to load the "
                              "active working state from inside the compute node"
                         )
     parser.add_argument("-c", "--classname", type=str, nargs="?", required=True,
-                        help="the SeisFlows3 class from within which the "
+                        help="the SeisFlows class from within which the "
                              "desired function is defined. Available options "
                              "are defined in seisflows.config.NAMES"
                         )

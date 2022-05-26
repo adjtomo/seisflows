@@ -107,7 +107,7 @@ class Inversion(custom_import("workflow", "base")):
 
     def main(self, return_flow=False):
         """
-        This function controls the main SeisFlows3 workflow, and is submitted
+        This function controls the main SeisFlows workflow, and is submitted
         to system by the call `seisflows submit` or `seisflows resume`. It
         proceeds to evaluate a list of functions in order until a User defined
         stop criteria is met.

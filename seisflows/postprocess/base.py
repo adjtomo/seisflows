@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-This class provides the core utilities for the SeisFlows3 postprocessing
+This class provides the core utilities for the SeisFlows postprocessing
 functionalities, including kernel/gradient smoothing and masking as well as
 kernel summation
 """

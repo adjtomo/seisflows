@@ -1,5 +1,5 @@
 """
-SeisFlows3 messages tool. For providing a uniform look to SeisFlows3 print
+SeisFlows messages tool. For providing a uniform look to SeisFlows print
 and log statements that end up in stdout or in log files.
 """
 from textwrap import wrap
@@ -158,7 +158,7 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
 def write_par_file_header(f, paths_or_parameters, name="", tabsize=4,
                           border="=", uline="/"):
     """
-    Re-usable function to write docstring comments inside the SeisFlows3
+    Re-usable function to write docstring comments inside the SeisFlows
     parameter file. Used by seisflows.SeisFlows.configure()
 
     Headers look something like this
@@ -213,7 +213,7 @@ def write_par_file_header(f, paths_or_parameters, name="", tabsize=4,
 def write_par_file_paths_pars(f, paths_or_parameters, indent=0, tabsize=4):
     """
     Re-usable function to write paths or parameters in yaml format to the
-    SeisFlows3 parameter file. Used by seisflows.SeisFlows.configure()
+    SeisFlows parameter file. Used by seisflows.SeisFlows.configure()
 
     Parameters are written something like:
 

@@ -2,11 +2,11 @@
 """
 The Pyatoa preprocessing module abstracts all preprocessing functionality
 onto Pyatoa (https://github.com/bch0w/pyatoa/). The module defined below is
-meant to set up and execute Pyatoa within a running SeisFlows3 workflow.
+meant to set up and execute Pyatoa within a running SeisFlows workflow.
 
-Pyatoa itself aggregates all of its connection with SeisFlows3 in the Pyaflowa
+Pyatoa itself aggregates all of its connection with SeisFlows in the Pyaflowa
 class, a purpose built object used to simplify calling Pyatoa from within
-a SeisFlows3 workflow.
+a SeisFlows workflow.
 """
 import os
 import sys
@@ -28,7 +28,7 @@ class Pyatoa(custom_import("preprocess", "base")):
     Data preprocessing class using the Pyaflowa class within the Pyatoa package.
     In charge of data discovery, preprocessing, filtering, misfiti
     quantification and data storage. The User does not need to implement Pyatoa,
-    but rather interacts with it via the parameters and paths of SeisFlows3.
+    but rather interacts with it via the parameters and paths of SeisFlows.
     """
     logger = logging.getLogger(__name__).getChild(__qualname__)
 

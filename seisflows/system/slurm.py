@@ -8,7 +8,7 @@ Useful commands for figuring out system-specific required parameters
     $ sinfo --Node --long  # Determine the cores-per-node for partitions
 
 .. note::
-    The main development system for SeisFlows3 used SLURM. Therefore the other
+    The main development system for SeisFlows used SLURM. Therefore the other
     system supers will not be up to date until access to those systems are
     granted. This rosetta stone, for converting from SLURM to other workload
     management tools will be useful: https://slurm.schedmd.com/rosetta.pdf

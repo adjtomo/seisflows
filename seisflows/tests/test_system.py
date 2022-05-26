@@ -1,5 +1,5 @@
 """
-Test suite for the SeisFlows3 SYSTEM module, which controls interaction with
+Test suite for the SeisFlows SYSTEM module, which controls interaction with
 various compute systems
 """
 import os
@@ -31,7 +31,7 @@ def copy_par_file(tmpdir):
 @pytest.fixture
 def sfinit(tmpdir, copy_par_file):
     """
-    Re-used function that will initate a SeisFlows3 working environment in
+    Re-used function that will initate a SeisFlows working environment in
     sys modules
     :return:
     """

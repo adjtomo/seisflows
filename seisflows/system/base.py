@@ -55,7 +55,7 @@ class Base:
                       "system submission")
 
         sf.par("LOG_LEVEL", required=False, par_type=str, default="DEBUG",
-               docstr="Verbosity output of SF3 logger. Available from least to "
+               docstr="Verbosity output of SF logger. Available from least to "
                       "most verbosity: 'CRITICAL', 'WARNING', 'INFO', 'DEBUG'; "
                       "defaults to 'DEBUG'")
 
@@ -102,8 +102,8 @@ class Base:
 
     def setup(self):
         """
-        Create the SeisFlows3 directory structure in preparation for a
-        SeisFlows3 workflow. Ensure that if any config information is left over
+        Create the SeisFlows directory structure in preparation for a
+        SeisFlows workflow. Ensure that if any config information is left over
         from a previous workflow, that these files are not overwritten by
         the new workflow. Should be called by submit()
 
@@ -141,7 +141,7 @@ class Base:
 
     def submit(self):
         """
-        Main insertion point of SeisFlows3 onto the compute system.
+        Main insertion point of SeisFlows onto the compute system.
 
         .. rubric::
             $ seisflows submit
@@ -191,7 +191,7 @@ class Base:
 
     def checkpoint(self, path, classname, method, kwargs):
         """
-        Writes the SeisFlows3 working environment to disk so that new tasks can
+        Writes the SeisFlows working environment to disk so that new tasks can
         be executed in a separate/new/restarted working environment.
 
         :type path: str

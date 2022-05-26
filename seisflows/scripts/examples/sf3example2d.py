@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-                SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE 1
+                SEISFLOWS SPECFEM2D WORKSTATION EXAMPLE 1
 
 This example will run two iterations of an inversion to assess misfit between
 a homogeneous halfspace model and a slightly perturbed homogeneous halfspace
@@ -13,7 +13,7 @@ model using 3 events and 1 receiver.
 .. warning::
     Because we are using 3 events and only 1 receiver, the results of this
     inversion will be of questionable quality. This example is only meant
-    to highlight how SeisFlows3 operates during an inversion workflow.
+    to highlight how SeisFlows operates during an inversion workflow.
 
 .. note::
     The tasks involved include:
@@ -21,7 +21,7 @@ model using 3 events and 1 receiver.
     2. Set up a SPECFEM2D working directory
     3. Generate starting model from Tape2007 example
     4. Generate target model w/ perturbed starting model
-    5. Set up a SeisFlows3 working directory
+    5. Set up a SeisFlows working directory
     6. Run two iterations of an inversion workflow
 
 .. rubric::
@@ -40,9 +40,9 @@ from seisflows.seisflows import SeisFlows
 from seisflows.tools.unix import cd, cp, rm, ln, mv, mkdir
 
 
-class SF3Example2D:
+class SFExample2D:
     """
-    A class for running SeisFlows3 examples. Simplifies calls structure so that
+    A class for running SeisFlows examples. Simplifies calls structure so that
     multiple example runs can benefit from the code written here
     """
     def __init__(self, ntask=3, niter=2):
@@ -216,7 +216,7 @@ class SF3Example2D:
         cd(self.workdir_paths.data)
         assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
 
-        print("> Setting the SPECFEM2D Par_file for SeisFlows3 compatiblility")
+        print("> Setting the SPECFEM2D Par_file for SeisFlows compatiblility")
 
         self.sf.sempar("setup_with_binary_database", 1)  # create .bin files
         self.sf.sempar("save_model", "binary")  # output model in .bin format
@@ -268,7 +268,7 @@ class SF3Example2D:
         print("> Cleaning up after xspecfem2d, setting up for new run")
 
         # SPECFEM2D outputs its models in the DATA/ directory by default,
-        # while SeisFlows3 expects this in the OUTPUT_FILES/ directory (which is
+        # while SeisFlows expects this in the OUTPUT_FILES/ directory (which is
         # the default in SPECFEM3D)
         mv(glob.glob("DATA/*bin"), self.workdir_paths.output)
 
@@ -282,7 +282,7 @@ class SF3Example2D:
 
     def setup_seisflows_working_directory(self):
         """
-        Create and set the SeisFlows3 parameter file, making sure all required
+        Create and set the SeisFlows parameter file, making sure all required
         parameters are set correctly for this example problem
         """
         cd(self.cwd)
@@ -310,15 +310,15 @@ class SF3Example2D:
     def finalize_specfem2d_par_file(self):
         """
         Last minute changes to get the SPECFEM2D Par_file in the correct format
-        for running SeisFlows3. Setting model type to read from .bin GLL files
+        for running SeisFlows. Setting model type to read from .bin GLL files
         change number of stations etc.
         """
         cd(self.workdir_paths.data)
         self.sf.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
 
-    def run_sf3_example(self):
+    def run_sf_example(self):
         """
-        Use subprocess to run the SeisFlows3 example we just set up
+        Use subprocess to run the SeisFlows example we just set up
         """
         cd(self.cwd)
         subprocess.run("seisflows submit -f", check=False, shell=True)
@@ -349,8 +349,8 @@ class SF3Example2D:
         print(msg.cli("COMPLETE EXAMPLE SETUP", border="="))
         # Step 4: Run the workflwo
         if self.run_example:
-            print(msg.cli("RUNNING SEISFLOWS3 INVERSION WORKFLOW", border="="))
-            self.run_sf3_example()
+            print(msg.cli("RUNNING SEISFLOWS INVERSION WORKFLOW", border="="))
+            self.run_sf_example()
 
 
 if __name__ == "__main__":
@@ -364,7 +364,7 @@ if __name__ == "__main__":
                "2. Set up a SPECFEM2D working directory",
                "3. Generate starting model from Tape2007 example",
                "4. Generate target model w/ perturbed starting model",
-               "5. Set up a SeisFlows3 working directory",
+               "5. Set up a SeisFlows working directory",
                f"6. Run an inversion workflow"],
         header="seisflows example 1",
         border="=")
@@ -374,5 +374,5 @@ if __name__ == "__main__":
     # use argparser here because we're being called by SeisFlows CLI tool which
     # is occupying argparser
     if len(sys.argv) > 1:
-        sf3ex2d = SF3Example2D()
-        sf3ex2d.main()
+        sfex2d = SFExample2D()
+        sfex2d.main()

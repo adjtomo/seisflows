@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-                SEISFLOWS3 SPECFEM2D WORKSTATION EXAMPLE 2
+                SEISFLOWS SPECFEM2D WORKSTATION EXAMPLE 2
 
 This example will run two iterations of an inversion to assess misfit between
 a homogeneous halfspace model and a checkerboard model using 2 events and
@@ -23,12 +23,12 @@ from seisflows.tools import msg
 from seisflows.config import Dict
 from seisflows.seisflows import SeisFlows
 from seisflows.tools.unix import cd, cp, rm, ln, mv, mkdir
-from seisflows.scripts.examples.sf3example2d import SF3Example2D
+from seisflows.scripts.examples.sfexample2d import SFExample2D
 
 
-class SF3PyatoaEx2D(SF3Example2D):
+class SFPyatoaEx2D(SFExample2D):
     """
-    A class for running SeisFlows3 examples. Overloads Example 1 to take
+    A class for running SeisFlows examples. Overloads Example 1 to take
     advantage of the default SPECFEM2D stuff, onyl changes the generation of
     MODEL TRUE, the number of stations, and the setup of the parameter file.
     """
@@ -82,12 +82,12 @@ class SF3PyatoaEx2D(SF3Example2D):
 
     def setup_seisflows_working_directory(self):
         """
-        Create and set the SeisFlows3 parameter file, making sure all required
+        Create and set the SeisFlows parameter file, making sure all required
         parameters are set correctly for this example problem
         """
         cd(self.cwd)
 
-        print("> EX2: Setting SeisFlows3 parameters for Pyatao preprocessing")
+        print("> EX2: Setting SeisFlows parameters for Pyatao preprocessing")
         self.sf.setup(force=True)  # Force will delete existing parameter file
         self.sf.par("preprocess", "pyatoa")
         self.sf.configure()
@@ -124,7 +124,7 @@ class SF3PyatoaEx2D(SF3Example2D):
         Need to tell them to read models from .bin files, and to use existing
         station files rather than create them from the Par_file
         """
-        print("> EX2: Finalizing SPECFEM2D Par_file for SeisFlows3 inversion")
+        print("> EX2: Finalizing SPECFEM2D Par_file for SeisFlows inversion")
 
         cd(self.workdir_paths.data)
         self.sf.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
@@ -152,7 +152,7 @@ if __name__ == "__main__":
                "2. Set up a SPECFEM2D working directory",
                "3. Generate starting model from Tape2007 example",
                "4. Generate target model w/ perturbed starting model",
-               "5. Set up a SeisFlows3 working directory",
+               "5. Set up a SeisFlows working directory",
                f"6. Run an inversion workflow. The line search is expected to "
                f"attempt 4 evaluations (i01s04)"],
         header="seisflows example 2",
@@ -163,5 +163,5 @@ if __name__ == "__main__":
     # use argparser here because we're being called by SeisFlows CLI tool which
     # is occupying argparser
     if len(sys.argv) > 1:
-        sf3ex2d = SF3PyatoaEx2D()
-        sf3ex2d.main()
+        sfex2d = SFPyatoaEx2D()
+        sfex2d.main()

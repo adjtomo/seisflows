@@ -8,5 +8,5 @@ from pkgutil import extend_path
 __path__ = extend_path(__path__, __name__)
 
 
-# Set up the SeisFlows3 Logging environment
+# Set up the SeisFlows Logging environment
 logger = logging.getLogger(__name__)

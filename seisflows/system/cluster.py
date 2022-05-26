@@ -34,10 +34,10 @@ class Cluster(custom_import("system", "base")):
 
         # Define the Parameters required by this module
         sf.par("WALLTIME", required=True, par_type=float,
-               docstr="Maximum job time in minutes for main SeisFlows3 job")
+               docstr="Maximum job time in minutes for main SeisFlows job")
 
         sf.par("TASKTIME", required=True, par_type=float,
-               docstr="Maximum job time in minutes for each SeisFlows3 task")
+               docstr="Maximum job time in minutes for each SeisFlows task")
 
         sf.par("NTASK", required=True, par_type=int,
                docstr="Number of separate, individual tasks. Also equal to "
@@ -64,7 +64,7 @@ class Cluster(custom_import("system", "base")):
 
     def submit(self, submit_call):
         """
-        Main insertion point of SeisFlows3 onto the compute system.
+        Main insertion point of SeisFlows onto the compute system.
 
         .. rubric::
             $ seisflows submit

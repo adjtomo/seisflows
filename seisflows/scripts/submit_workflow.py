@@ -28,7 +28,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser("Run arguments for system submitted tasks")
     parser.add_argument("-o", "--output", type=str, nargs="?", required=True,
-                        help="the SeisFlows3 output directory used to load the "
+                        help="the SeisFlows output directory used to load the "
                              "active working state from inside the compute node"
                         )
 

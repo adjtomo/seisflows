@@ -1,11 +1,11 @@
 # //////////////////////////////////////////////////////////////////////////////
 #
-#                        SeisFlows3 YAML Parameter File
+#                        SeisFlows YAML Parameter File
 #
 # //////////////////////////////////////////////////////////////////////////////
 #
 # Modules correspond to the structure of the source code, and determine
-# SeisFlows3' behavior at runtime. Each module requires its own sub-parameters.
+# SeisFlows' behavior at runtime. Each module requires its own sub-parameters.
 #
 # .. rubric::
 #   - To determine available options for modules listed below, run:
@@ -17,7 +17,7 @@
 #
 #                                    MODULES
 #                                    ///////
-# WORKFLOW (str):    The method for running SeisFlows3; equivalent to main()
+# WORKFLOW (str):    The method for running SeisFlows; equivalent to main()
 # SOLVER (str):      External numerical solver to use for waveform simulations
 # SYSTEM (str):      Computer architecture of the system being used
 # OPTIMIZE (str):    Optimization algorithm for the inverse problem
@@ -42,7 +42,7 @@ POSTPROCESS: base
 #   'resume' is run. Useful for manually reviewing important parameters prior
 #   to system submission
 # LOG_LEVEL (str):
-#   Verbosity output of SF3 logger. Available from least to most verbosity:
+#   Verbosity output of SF logger. Available from least to most verbosity:
 #   'CRITICAL', 'WARNING', 'INFO', 'DEBUG'; defaults to 'DEBUG'
 # VERBOSE (bool):
 #   Level of verbosity provided to the output log. If True, log statements
@@ -289,7 +289,7 @@ PATHS:
     OUTPUT: output
     SYSTEM: scratch/system
     LOCAL:
-    LOGFILE: output_sf3.txt
+    LOGFILE: output_sf.txt
     SOLVER: scratch/solver
     SPECFEM_BIN: ./bin
     SPECFEM_DATA: ./DATA

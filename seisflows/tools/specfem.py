@@ -82,7 +82,7 @@ def call_solver(mpiexec, executable, output="solver.log"):
 
 def getpar(key, file, delim="=", match_partial=False):
     """
-    Reads and returns parameters from a SPECFEM or SeisFlows3 parameter file
+    Reads and returns parameters from a SPECFEM or SeisFlows parameter file
     Assumes the parameter file is formatted in the following way:
 
     # comment comment comment
@@ -271,7 +271,7 @@ def setpar_vel_model(file, model):
 
 def check_poissons_ratio(vp, vs, min_val=-1., max_val=0.5):
     """
-    Check Poisson's ratio based on Vp and Vs model vectors. Exit SeisFlows3 if
+    Check Poisson's ratio based on Vp and Vs model vectors. Exit SeisFlows if
     Poisson's ratio is outside `min_val` or `max_val` which by default are
     set internally by SPECFEM. Otherwise return the value
 

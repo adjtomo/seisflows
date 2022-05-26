@@ -1,5 +1,5 @@
 """
-General test suite for all SeisFlows3 modules. Defines required parameters and
+General test suite for all SeisFlows modules. Defines required parameters and
 functions for each of the modules, tests importing each of the modules and that
 each of the required parameters and functions exist. A sort of first-pass test
 which makes sure the package is set up correctly.
@@ -13,7 +13,7 @@ from seisflows import config
 from seisflows.seisflows import SeisFlows, return_modules
 
 
-# Define dictionary dictating the bare-minimum SeisFlows3 structure.
+# Define dictionary dictating the bare-minimum SeisFlows structure.
 # Each subclass will be checked to see if it meets these requirements which
 # ensure that the package will work as intended. The required functions are
 # determined by whether or not other submodules call for these functions, e.g.,
@@ -75,7 +75,7 @@ def copy_par_file(tmpdir):
 @pytest.fixture
 def sfinit(tmpdir, copy_par_file):
     """
-    Re-used function that will initate a SeisFlows3 working environment in
+    Re-used function that will initate a SeisFlows working environment in
     sys modules
     :return:
     """

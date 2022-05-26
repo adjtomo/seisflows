@@ -1,4 +1,4 @@
-# Run a few SeisFlows3 commands to generate test data. Useful if the parameter
+# Run a few SeisFlows commands to generate test data. Useful if the parameter
 # file ever changes, at which point we will need to generate new files.
 cd ..
 rm *yaml

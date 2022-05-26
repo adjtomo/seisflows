@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-A command line tool for using and manipulating SeisFlows3.
-The main entry point to the SeisFlows3 package, this command line tool
-facilitates interface with the underlying SeisFlows3 package.
+A command line tool for using and manipulating SeisFlows.
+The main entry point to the SeisFlows package, this command line tool
+facilitates interface with the underlying SeisFlows package.
 
 .. rubric::
     $ seisflows -h  # runs the help command to investigate package features
@@ -68,7 +68,7 @@ def sfparser():
     parser = argparse.ArgumentParser(
         formatter_class=SubcommandHelpFormatter,
         description=f"{'='*80}\n\n"
-                    f"{'SeisFlows3: Waveform Inversion Package':^80}\n\n"
+                    f"{'SeisFlows: Waveform Inversion Package':^80}\n\n"
                     f"{'='*80}",
         epilog="'seisflows [command] -h' for more detailed descriptions "
                "of each command.",
@@ -87,7 +87,7 @@ def sfparser():
         description="Available SeisFlows arguments and their intended usages",
         dest="command",
     )
-    # The following subparsers constitute the available SeisFlows3 commands
+    # The following subparsers constitute the available SeisFlows commands
     # and each refers to a function within the SeisFlows class.
     # =========================================================================
     setup = subparser.add_parser(
@@ -176,7 +176,7 @@ def sfparser():
                        "function")
     # =========================================================================
     par = subparser.add_parser(
-        "par", help="View and edit SeisFlows3 parameter file",
+        "par", help="View and edit SeisFlows parameter file",
         description="""Directly edit values in the parameter file by providing
         the parameter and corresponding value. If no value is provided, will 
         simply print out the current value of the given parameter. Works also
@@ -324,9 +324,9 @@ working state before the workflow can be resumed
 
 class SeisFlows:
     """
-    The main entry point to the SeisFlows3 package, to be interacted with
+    The main entry point to the SeisFlows package, to be interacted with
     through the command line. This class is responsible for:
-        1) setting up or re-creating a SeisFlows3 working enviornment,
+        1) setting up or re-creating a SeisFlows working enviornment,
         2) (re-)submitting workflows to the system,
         3) inspecting, manipulating or viewing a live working environment via
             command line arguments.
@@ -372,7 +372,7 @@ class SeisFlows:
         :param command: If not None, allows controlling this class from inside
             a Python environment. If sub-commands are required, these are
             inserted using the kwargs.
-            Usually not required unless writing tests or scripting SF3 in Python
+            Usually not required unless writing tests or scripting SF in Python
         :type return_self: bool
         :param return_self: if True, do not execute a command, which init
             usually does, but return the SeisFlows class itself. This is used
@@ -413,7 +413,7 @@ class SeisFlows:
         paths to absolute pathnames. Also configure the logger.
 
         .. note::
-            This is ideally the FIRST thing that happens everytime SeisFlows3
+            This is ideally the FIRST thing that happens everytime SeisFlows
             is initiated. The package cannot do anything without the resulting
             PATH and PARAMETER variables.
 
@@ -425,7 +425,7 @@ class SeisFlows:
         """
         # Check if the filepaths exist
         if not os.path.exists(self._args.parameter_file):
-            print(msg.cli(f"SeisFlows3 parameter file not found: "
+            print(msg.cli(f"SeisFlows parameter file not found: "
                           f"'{self._args.parameter_file}'. Run 'seisflows "
                           f"setup' to create a new parameter file.")
                   )
@@ -501,7 +501,7 @@ class SeisFlows:
                                     f"seisflows_{NAME}.p")
 
             if not os.path.exists(fullfile):
-                print(msg.cli("Not a SeisFlows3 working directory (no state "
+                print(msg.cli("Not a SeisFlows working directory (no state "
                               "files found). Run 'seisflows init' or "
                               "'seisflows submit' to instantiate a working "
                               "directory.")
@@ -555,7 +555,7 @@ class SeisFlows:
     def configure(self, relative_paths=False, **kwargs):
         """
         Dynamically generate the parameter file by writing out docstrings and
-        default values for each of the SeisFlows3 module parameters.
+        default values for each of the SeisFlows module parameters.
         This function writes files manually, consistent with the .yaml format.
 
         :type relative_paths: bool
@@ -620,7 +620,7 @@ class SeisFlows:
 
     def init(self, **kwargs):
         """
-        Establish a SeisFlows3 working environment on disk. Instantiates a
+        Establish a SeisFlows working environment on disk. Instantiates a
         working state in memory (sys.modules) and then writes this state as \
         pickle files to the OUTPUT directory for User inspection and debug
         purposes.
@@ -640,12 +640,12 @@ class SeisFlows:
         for NAME in NAMES:
             sys.modules[f"seisflows_{NAME}"].required.validate()
 
-        print(msg.cli(f"instantiating SeisFlows3 working state in directory: "
+        print(msg.cli(f"instantiating SeisFlows working state in directory: "
                       f"{CFGPATHS.OUTPUTDIR}"))
 
     def submit(self, stop_after=None, force=False, **kwargs):
         """
-        Main SeisFlows3 execution command. Submit the SeisFlows3 workflow to
+        Main SeisFlows execution command. Submit the SeisFlows workflow to
         the chosen system, and execute seisflows.workflow.main(). Will create
         the working directory and any required paths and ensure that all
         required paths exist.
@@ -702,7 +702,7 @@ class SeisFlows:
 
     def clean(self, force=False, **kwargs):
         """
-        Clean the SeisFlows3 working directory except for the parameter file.
+        Clean the SeisFlows working directory except for the parameter file.
 
         :type force: bool
         :param force: ignore the warning check that precedes the clean() 
@@ -710,7 +710,7 @@ class SeisFlows:
         """
         # Check if the filepaths exist
         if not os.path.exists(self._args.parameter_file):
-            print(msg.cli(f"SeisFlows3 parameter file not found: "
+            print(msg.cli(f"SeisFlows parameter file not found: "
                           f"'{self._args.parameter_file}'. Run 'seisflows "
                           f"setup' to create a new parameter file.")
                   )
@@ -725,7 +725,7 @@ class SeisFlows:
                                   "(y/[n])", header="clean", border="="))
 
         if check == "y":
-            # CFGPATHS defines the outermost directory structure of SeisFlows3
+            # CFGPATHS defines the outermost directory structure of SeisFlows
             # We safeguard below against deleting the parameter file
             items = []
             for fid_ in CFGPATHS.values():
@@ -792,7 +792,7 @@ class SeisFlows:
     def debug(self, **kwargs):
         """
         Initiate an IPython debugging environment to explore the currently
-        active SeisFlows3 environment. Reloads the system modules in an
+        active SeisFlows environment. Reloads the system modules in an
         interactive environment allowing exploration of the package space.
         Does not allow stepping through of code (not a breakpoint).
         """
@@ -809,7 +809,7 @@ class SeisFlows:
         optimize = sys.modules["seisflows_optimize"]
         workflow = sys.modules["seisflows_workflow"]
 
-        print(msg.cli("SeisFlows3's debug mode is an embedded IPython "
+        print(msg.cli("SeisFlows's debug mode is an embedded IPython "
                       "environment. All modules are loaded by default. "
                       "Any changes made here will not be saved unless "
                       "you explicitely run: 'workflow.checkpoint()'",
@@ -958,7 +958,7 @@ class SeisFlows:
             self._par_required()
             sys.exit(0)
 
-        # SeisFlows3 parameter file dictates upper-case parameters
+        # SeisFlows parameter file dictates upper-case parameters
         parameter = parameter.upper()
         if isinstance(value, str) and value.lower() == "none":
             warnings.warn("to set values to nonetype, use 'null' not 'none'",
@@ -1001,7 +1001,7 @@ class SeisFlows:
 
     def edit(self, name, module, editor=None, **kwargs):
         """
-        Directly edit the SeisFlows3 source code matching the given name
+        Directly edit the SeisFlows source code matching the given name
         and module using the chosen text editor.
 
         USAGE
@@ -1019,7 +1019,7 @@ class SeisFlows:
         :type name: str
         :param name: name of module, must match seisflows.config.NAMES
         :type module: str
-        :param module: the module name contained under the SeisFlows3 namespace
+        :param module: the module name contained under the SeisFlows namespace
         :type editor: str
         :param editor: optional chosen text editor to open the file.
             * If NoneType: defaults to system environment $EDITOR
@@ -1038,7 +1038,7 @@ class SeisFlows:
 
         REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
         if name not in NAMES:
-            print(msg.cli(f"{name} not in SeisFlows3 names: {NAMES}"))
+            print(msg.cli(f"{name} not in SeisFlows names: {NAMES}"))
             sys.exit(-1)
 
         for package in PACKAGES:
@@ -1057,7 +1057,7 @@ class SeisFlows:
 
     def examples(self, run=None, choice=None, **kwargs):
         """
-        List or run a SeisFlows3 example problem
+        List or run a SeisFlows example problem
 
         USAGE
 
@@ -1126,7 +1126,7 @@ class SeisFlows:
 
     def check(self, choice=None, **kwargs):
         """
-        Check parameters, state or values  of an active SeisFlows3 environment.
+        Check parameters, state or values  of an active SeisFlows environment.
         Type 'seisflows check --help' for a detailed help message.
 
         :type choice: str
@@ -1148,7 +1148,7 @@ class SeisFlows:
 
     def print(self, choice=None, **kwargs):
         """
-        Print information relating to an active SeisFlows3 environment.
+        Print information relating to an active SeisFlows environment.
         Type 'seisflows check --help' for a detailed help message.
 
         :type choice: str
@@ -1246,7 +1246,7 @@ class SeisFlows:
         https://stackoverflow.com/questions/961048/get-class-that-defined-method
 
         :type name: str
-        :param name: SeisFlows3 module name
+        :param name: SeisFlows module name
         :type func: str
         :param func: Corresponding method/function name for the given module
         """
@@ -1254,12 +1254,12 @@ class SeisFlows:
         try:
             module = sys.modules[f"seisflows_{name}"]
         except KeyError:
-            print(msg.cli(f"SeisFlows3 has no module: {name}"))
+            print(msg.cli(f"SeisFlows has no module: {name}"))
             sys.exit(-1)
         try:
             method = getattr(module, func)
         except AttributeError:
-            print(msg.cli(f"SeisFlows3.{name} has no function: {func}"))
+            print(msg.cli(f"SeisFlows.{name} has no function: {func}"))
             sys.exit(-1)
 
         method_name = method.__name__
@@ -1275,13 +1275,13 @@ class SeisFlows:
                 return
             else:
                 classes = list(c.__bases__) + classes
-        print(msg.cli(f"Error matching class for SeisFlows3.{name}.{func}"))
+        print(msg.cli(f"Error matching class for SeisFlows.{name}.{func}"))
         sys.exit(-1)
 
     @staticmethod
     def _inspect_module_hierarchy(name=None, **kwargs):
         """
-        Determine the order of class hierarchy for a given SeisFlows3 module.
+        Determine the order of class hierarchy for a given SeisFlows module.
 
         https://stackoverflow.com/questions/1401661/
                             list-all-base-classes-in-a-hierarchy-of-given-class
@@ -1388,7 +1388,7 @@ class SeisFlows:
 
             seisflows inspect [name] [method]
 
-            To view overall hierarchy for all names in the SeisFlows3 namespace
+            To view overall hierarchy for all names in the SeisFlows namespace
 
                 seisflows inspect
 
@@ -1522,7 +1522,7 @@ def return_modules():
 
 def main():
     """
-    Main entry point into the SeisFlows3 package is via the SeisFlows3 class
+    Main entry point into the SeisFlows package is via the SeisFlows class
     """
     sf = SeisFlows()
     sf()

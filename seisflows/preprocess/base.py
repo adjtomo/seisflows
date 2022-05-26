@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-The SeisFlows3 Preprocessing module is in charge of interacting with seismic
+The SeisFlows Preprocessing module is in charge of interacting with seismic
 data (observed and synthetic). It should contain functionality to read and write
 seismic data, apply preprocessing such as filtering, quantify misfit,
 and write adjoint sources that are expected by the solver.

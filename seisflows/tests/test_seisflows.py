@@ -139,7 +139,7 @@ def test_register(tmpdir, par_file_dict, copy_par_file):
 
 def test_cmd_setup(tmpdir):
     """
-    Test setting up the SeisFlows3 working directory
+    Test setting up the SeisFlows working directory
     """
     os.chdir(tmpdir)
     par_file = os.path.join(tmpdir, "parameters.yaml")

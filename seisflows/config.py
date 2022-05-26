@@ -37,7 +37,7 @@ important, and any changes to these will more-than-likely break the underlying
 mechanics of the package. Do not touch unless you know what you're doing!
 """
 
-# List of module names required by SeisFlows3 for imports. Order-sensitive
+# List of module names required by SeisFlows for imports. Order-sensitive
 # In sys.modules these will be prepended by 'seisflows_', e.g., seisflows_system
 NAMES = ["system", "preprocess", "solver",
          "postprocess", "optimize", "workflow"]
@@ -56,12 +56,12 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 # be returned as a Dict() object, defined below. All of these files and
 # directories will be created relative to the user-defined working directory
 CFGPATHS = dict(
-    PAR_FILE="parameters.yaml",  # Default SeisFlows3 parameter file
-    SCRATCHDIR="scratch",        # SeisFlows3 internal working directory
+    PAR_FILE="parameters.yaml",  # Default SeisFlows parameter file
+    SCRATCHDIR="scratch",        # SeisFlows internal working directory
     STATSDIR="stats",            # Optimization module log file output
     OUTPUTDIR="output",          # Permanent disk storage for state and outputs
-    LOGFILE="output_sf3.txt",    # Log files for all system log
-    ERRLOGFILE="error_sf3.txt",  # StdErr dump site for crash messages
+    LOGFILE="output_sf.txt",    # Log files for all system log
+    ERRLOGFILE="error_sf.txt",  # StdErr dump site for crash messages
     LOGDIR="logs",               # Dump site for previously created log files
 )
 """
@@ -71,7 +71,7 @@ CFGPATHS = dict(
 
 def init_seisflows(check=True):
     """
-    Instantiates SeisFlows3 objects and makes them globally accessible by
+    Instantiates SeisFlows objects and makes them globally accessible by
     registering them in sys.modules
 
     :type check: bool
@@ -80,7 +80,7 @@ def init_seisflows(check=True):
         parameters are set correctly. It should only be set False for debug
         and testing purposes when we need to force our way past this safeguard.
     """
-    logger.info("initializing SeisFlows3 in sys.modules")
+    logger.info("initializing SeisFlows in sys.modules")
 
     # Parameters and paths must already be loaded (normally done by submit)
     assert(PAR in sys.modules)
@@ -116,11 +116,11 @@ def init_seisflows(check=True):
                           border="="))
             sys.exit(-1)
 
-    # Bare minimum module requirements for SeisFlows3
+    # Bare minimum module requirements for SeisFlows
     req_modules = ["WORKFLOW", "SYSTEM"]
     for req in req_modules:
         if not hasattr(sys.modules[PAR], req):
-            print(msg.cli(f"SeisFlows3 requires defining: {req_modules}."
+            print(msg.cli(f"SeisFlows requires defining: {req_modules}."
                           "Please specify these in the parameter file. Use "
                           "'seisflows print module' to determine suitable "
                           "choices.", header="error", border="="))

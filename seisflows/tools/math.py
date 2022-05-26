@@ -156,7 +156,7 @@ def polynomial_fit(x, f):
 
 
 # The below functions were included in the original SeisFlows package but
-# currently serve no purpose in SeisFlows3. They are retained for legacy.
+# currently serve no purpose in SeisFlows. They are retained for legacy.
 def lsq2(x, f):
     """
     Parabolic least squares fit

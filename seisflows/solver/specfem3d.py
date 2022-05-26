@@ -203,7 +203,7 @@ class Specfem3D(custom_import("solver", "base")):
         if int(nt) != PAR.NT:
             if self.taskid == 0:
                 print(msg.cli(f"SPECFEM3D {nt_str}=={nt} is not equal "
-                              f"SeisFlows3 PAR.NT=={PAR.NT}. Please ensure "
+                              f"SeisFlows PAR.NT=={PAR.NT}. Please ensure "
                               f"that these values match in both files.",
                               header="parameter match error", border="=")
                       )
@@ -213,7 +213,7 @@ class Specfem3D(custom_import("solver", "base")):
         if float(dt) != PAR.DT:
             if self.taskid == 0:
                 print(msg.cli(f"SPECFEM3D {dt_str}=={dt} is not equal "
-                              f"SeisFlows3 PAR.DT=={PAR.DT}. Please ensure "
+                              f"SeisFlows PAR.DT=={PAR.DT}. Please ensure "
                               f"that these values match in both files.",
                               header="parameter match error", border="=")
                       )
@@ -224,7 +224,7 @@ class Specfem3D(custom_import("solver", "base")):
         if nproc != PAR.NPROC:
             if self.taskid == 0:
                 print(msg.cli(f"SPECFEM3D mesh NPROC=={nproc} is not equal "
-                              f"SeisFlows3 PAR.NPROC=={PAR.NPROC}. "
+                              f"SeisFlows PAR.NPROC=={PAR.NPROC}. "
                               f"Please check that your mesh matches this val.",
                               header="parameter match error", border="=")
                       )

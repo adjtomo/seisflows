@@ -78,7 +78,7 @@ class Migration(custom_import("workflow", "base")):
 
     def setup(self):
         """
-        Sets up the SeisFlows3 modules for the Migration
+        Sets up the SeisFlows modules for the Migration
         """
         # Set up all the requisite modules from the master job
         self.logger.info(msg.mnr("PERFORMING MODULE SETUP"))

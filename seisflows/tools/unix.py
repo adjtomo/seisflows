@@ -1,6 +1,6 @@
 """
 Unix functions wrapped in Python3. Used to simplify function calling and
-provide a uniform look to SeisFlows3 source code. These Python functions
+provide a uniform look to SeisFlows source code. These Python functions
 are meant to mimic commonly-used shell commands.
 """
 import os
