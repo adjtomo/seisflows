@@ -18,8 +18,8 @@ import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
 
-project = 'SeisFlows3'
-copyright = '2022, SeisFlows3 Development Team'
+project = 'SeisFlows'
+copyright = '2022, SeisFlows Development Team'
 author = 'Ryan Modrak, Bryant Chow'
 
 
@@ -49,8 +49,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 #
 html_theme = 'sphinx_rtd_theme'
 
-html_favicon = "images/sf3_globe_alpha.png"
-html_logo = "images/sf3_globe_alpha_wide.png"
+html_favicon = "images/sf_globe_alpha.png"
+html_logo = "images/sf_globe_alpha_wide.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -59,5 +59,5 @@ html_static_path = ['_static']
 
 # AutoAPI variables
 autoapi_type = "python"
-autoapi_dirs = ["..", "../../seisflows-super"]
+autoapi_dirs = ["../seisflows", "../seisflows-super"]
 autoapi_add_toctree_entry = True

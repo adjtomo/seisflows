@@ -1,4 +1,4 @@
-Extending SeisFlows3
+Extending SeisFlows
 ==================================
 The design philosophy of SeisFlows is such that being a user of the codebase
 more-than-likely requires also becoming a developer, as custom-made subclasses

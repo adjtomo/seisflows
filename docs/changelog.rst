@@ -1,7 +1,7 @@
 Change Log
 ===============
 
-The following list documents changes made from the original ``SeisFlows``
+The following list documents changes made from ``SeisFlows Legacy``
 codebase (Last updated April 18, 2022).
 
 Major
