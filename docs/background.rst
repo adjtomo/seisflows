@@ -7,10 +7,10 @@ we provide links and references to further, more in-depth material.
 
 .. include:: inheritance.rst
 
-Inheritance in SeisFlows3
+Inheritance in SeisFlows
 ----------------------------
 
-SeisFlows3 employs inheritance almost exactly like the example above. Take the
+SeisFlows employs inheritance almost exactly like the example above. Take the
 ``System`` module for example. The Base class defines required paths (such as
 the location of the OUTPUT directory on disk. The definition of this path is
 system-independent (it's just a path). The setup() function is similarly
@@ -34,11 +34,11 @@ reducing the amount of code repitition, keeping required structure consistent
 for all of the Parent classes, while still providing the maximum amount of
 flexibility of working on a specific compute system.
 
-SeisFlows3 abstracts all of this behavior behind a generalized ``System``
+SeisFlows abstracts all of this behavior behind a generalized ``System``
 module. Therefore, calling something ``system.submit()`` will bring in all
 of the inherited properites of the above mentioned system superclasses.
 
-All SeisFlows3 modules are similarly structured, with ``Base`` classes defining
+All SeisFlows modules are similarly structured, with ``Base`` classes defining
 standard behavior, and Child classes extending and modifying these behavior.
 
 

@@ -1,6 +1,6 @@
 Overview
 =================
-``SeisFlows3`` is a Python-based package for automating waveform inversion.
+``SeisFlows`` is a Python-based package for automating waveform inversion.
 It is used in industry and academic applications for deriving improved
 Earth models from local to global scales, in 2D and 3D.
 
@@ -17,7 +17,7 @@ of individual model parameters) and large waveform datasets
 (thousands of measurements from tens to hundreds of sources and receivers),
 requiring very-similar processing and analysis.
 
-SeisFlows3 is an **automation** and **parallelization** package, meant to
+SeisFlows is an **automation** and **parallelization** package, meant to
 reduce the "human-time" cost of performing a seismic inversion.
 
 -------------------------
@@ -25,7 +25,7 @@ reduce the "human-time" cost of performing a seismic inversion.
 How does it work?
 -----------------
 SeisFlows was developed as a modular tool. By "hiding" case-by-base details
-behind a generalized namespace, a SeisFlows3 workflow can remain consistent
+behind a generalized namespace, a SeisFlows workflow can remain consistent
 whether applied to a 2D acoustic problem on a Linux workstation, or to a
 continental-scale adjoint tomography problem run on a high performance computer.
 
@@ -33,7 +33,7 @@ continental-scale adjoint tomography problem run on a high performance computer.
 SeisFlows Modules:
     * **Workflow**: The equivalent of main(); controls the collection and order
       of steps taken (Examples: Inversion, Migration)
-    * **System**: Compute system interface used to run SeisFlows3. A consistent
+    * **System**: Compute system interface used to run SeisFlows. A consistent
       internal structure makes it relatively seamless to switch between
       workstation problems, and HPC jobs (Examples: workstation, Slurm)
     * **Solver**: External numerical solver used to generate models, synthetics,
@@ -55,11 +55,11 @@ code base. This allows SeisFlows to maintain a rigid structure while still being
 incredibly flexible in its application to various scales and problems.
 
 
-What does SeisFlows3 NOT do?
+What does SeisFlows NOT do?
 ------------------------------
-``SeisFlows3`` is **not** a numerical solver, **not** a waveform processing tool,
-and **not** a visualization tool. SeisFlows3 is a workflow management and
+``SeisFlows`` is **not** a numerical solver, **not** a waveform processing tool,
+and **not** a visualization tool. SeisFlows is a workflow management and
 optimization tool,
 Knowledge of interfacing with external numerical solvers, as well as waveform
-preprocessing tools, is paramount to successful application of SeisFlows3.
+preprocessing tools, is paramount to successful application of SeisFlows.
 

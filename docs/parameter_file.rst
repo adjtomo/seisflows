@@ -1,9 +1,9 @@
 Parameter File
 ==============
 
-The parameter file is the central control object for a SeisFlows3
+The parameter file is the central control object for a SeisFlows
 workflow. Here we take a look at the anatomy of a parameter file.
-Parameter files in SeisFlows3 are formatted in the `YAML format (YAML
+Parameter files in SeisFlows are formatted in the `YAML format (YAML
 Ain’t Markup Language) <https://pyyaml.org/wiki/PyYAMLDocumentation>`__.
 
 Template
@@ -32,12 +32,12 @@ defines the core modules which make up the package. Running
 
     # //////////////////////////////////////////////////////////////////////////////
     #
-    #                        SeisFlows3 YAML Parameter File
+    #                        SeisFlows YAML Parameter File
     #
     # //////////////////////////////////////////////////////////////////////////////
     #
     # Modules correspond to the structure of the source code, and determine
-    # SeisFlows3' behavior at runtime. Each module requires its own sub-parameters.
+    # SeisFlows' behavior at runtime. Each module requires its own sub-parameters.
     #
     # .. rubric::
     #   - To determine available options for modules listed below, run:
@@ -49,7 +49,7 @@ defines the core modules which make up the package. Running
     #
     #                                    MODULES
     #                                    ///////
-    # WORKFLOW (str):    The method for running SeisFlows3; equivalent to main()
+    # WORKFLOW (str):    The method for running SeisFlows; equivalent to main()
     # SOLVER (str):      External numerical solver to use for waveform simulations
     # SYSTEM (str):      Computer architecture of the system being used
     # OPTIMIZE (str):    Optimization algorithm for the inverse problem
@@ -71,7 +71,7 @@ As seen above, each of the modules comes with a default value. But you
 may want to run a migration, not an inversion. Or run with SPECFEM3D not
 2D. As stated in the comments at the top of the file, the
 ``seisflows print modules`` command lists out all available options.
-Don’t see an option that works for you? Learn to extend the SeisFlows3
+Don’t see an option that works for you? Learn to extend the SeisFlows
 package here: **!!! docs page link here !!!**
 
 .. code:: ipython3
@@ -207,12 +207,12 @@ required by the workflow. Section headers will look something:
 
     # //////////////////////////////////////////////////////////////////////////////
     #
-    #                        SeisFlows3 YAML Parameter File
+    #                        SeisFlows YAML Parameter File
     #
     # //////////////////////////////////////////////////////////////////////////////
     #
     # Modules correspond to the structure of the source code, and determine
-    # SeisFlows3' behavior at runtime. Each module requires its own sub-parameters.
+    # SeisFlows' behavior at runtime. Each module requires its own sub-parameters.
     #
     # .. rubric::
     #   - To determine available options for modules listed below, run:
@@ -224,7 +224,7 @@ required by the workflow. Section headers will look something:
     #
     #                                    MODULES
     #                                    ///////
-    # WORKFLOW (str):    The method for running SeisFlows3; equivalent to main()
+    # WORKFLOW (str):    The method for running SeisFlows; equivalent to main()
     # SOLVER (str):      External numerical solver to use for waveform simulations
     # SYSTEM (str):      Computer architecture of the system being used
     # OPTIMIZE (str):    Optimization algorithm for the inverse problem
@@ -388,7 +388,7 @@ Checking parameter validity
 ---------------------------
 
 You might be asking, how do I know if my parameters are set correctly?
-SeisFlows3 modules feature check() functions which dictate correct
+SeisFlows modules feature check() functions which dictate correct
 parameter values. You can run ``seisflows init`` to run these check()
 functions. Because we have required parameters still left unset in our
 parameter file, we expect the ``seisflows init`` function to throw an
@@ -454,7 +454,7 @@ Let’s set some random variables for the required parameters with the
 
 .. parsed-literal::
 
-    instantiating SeisFlows3 working state in directory: output
+    instantiating SeisFlows working state in directory: output
 
 
 Of course we knew that the above parameters were acceptable. But what if

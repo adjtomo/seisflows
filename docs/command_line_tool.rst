@@ -1,14 +1,14 @@
 Commmand Line Tool
 ==================
 
-``SeisFlows3`` is primarily interacted with via command line calls and a
+``SeisFlows`` is primarily interacted with via command line calls and a
 parameter file. In this page we explain how to use this command line
-tool to create a SeisFlows3 parameters file, edit and configure it, and
-establish a SeisFlows3 working directory. We also provide explanation
+tool to create a SeisFlows parameters file, edit and configure it, and
+establish a SeisFlows working directory. We also provide explanation
 for other command line options which act as helper utilities for
 improved package control.
 
-After installing SeisFlows3 into a Conda environment, the ``seisflows``
+After installing SeisFlows into a Conda environment, the ``seisflows``
 command will be available directly from the command line. To access the
 help dialogue, you can type ``seisflows`` or ``seisflows -h``
 
@@ -25,7 +25,7 @@ help dialogue, you can type ``seisflows`` or ``seisflows -h``
     
     ================================================================================
     
-                         SeisFlows3: Waveform Inversion Package                     
+                         SeisFlows: Waveform Inversion Package                     
     
     ================================================================================
     
@@ -46,7 +46,7 @@ help dialogue, you can type ``seisflows`` or ``seisflows -h``
         resume              Re-submit previous workflow to system
         restart             Remove current environment and submit new workflow
         clean               Remove files relating to an active working environment
-        par                 View and edit SeisFlows3 parameter file
+        par                 View and edit SeisFlows parameter file
         sempar              View and edit SPECFEM parameter file
         check               Check state of an active environment
         print               Print information related to an active environment
@@ -65,7 +65,7 @@ Setting up a parameter file
 seisflows setup
 ^^^^^^^^^^^^^^^
 
-The first step of any SeisFlows3 workflow is to set up a working
+The first step of any SeisFlows workflow is to set up a working
 directory, which begins by establishing a blank parameter file. The
 ``seisflows setup`` command copies in a template parameter file. Ideally
 your working directory will be empty to avoid file conflicts.
@@ -115,7 +115,7 @@ your working directory will be empty to avoid file conflicts.
 
 Having a look at the template parameters.yaml file that was just
 generated, we can see that it contains some pre-defined default values
-for the core SeisFlows3 modules. Each of these modules defines it’s own
+for the core SeisFlows modules. Each of these modules defines it’s own
 set of unique parameters which make up a workflow.
 
 .. code:: ipython3
@@ -139,12 +139,12 @@ set of unique parameters which make up a workflow.
 
     # //////////////////////////////////////////////////////////////////////////////
     #
-    #                        SeisFlows3 YAML Parameter File
+    #                        SeisFlows YAML Parameter File
     #
     # //////////////////////////////////////////////////////////////////////////////
     #
     # Modules correspond to the structure of the source code, and determine
-    # SeisFlows3' behavior at runtime. Each module requires its own sub-parameters.
+    # SeisFlows' behavior at runtime. Each module requires its own sub-parameters.
     #
     # .. rubric::
     #   - To determine available options for modules listed below, run:
@@ -156,7 +156,7 @@ set of unique parameters which make up a workflow.
     #
     #                                    MODULES
     #                                    ///////
-    # WORKFLOW (str):    The method for running SeisFlows3; equivalent to main()
+    # WORKFLOW (str):    The method for running SeisFlows; equivalent to main()
     # SOLVER (str):      External numerical solver to use for waveform simulations
     # SYSTEM (str):      Computer architecture of the system being used
     # OPTIMIZE (str):    Optimization algorithm for the inverse problem
@@ -421,8 +421,8 @@ the same call structure as ``par``.
 Setting up an active working state
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-An active SeisFlows3 working state is simply a Python environment with
-the SeisFlows3 library defined based on the given parameter file. In
+An active SeisFlows working state is simply a Python environment with
+the SeisFlows library defined based on the given parameter file. In
 order to establish a working state, we need to set all required paths
 and parameters. We can look at the parameter file header to determine
 valid options for each parameter.
@@ -501,7 +501,7 @@ Let’s amend and try again
 
 .. parsed-literal::
 
-    instantiating SeisFlows3 working state in directory: output
+    instantiating SeisFlows working state in directory: output
 
 
 .. code:: ipython3

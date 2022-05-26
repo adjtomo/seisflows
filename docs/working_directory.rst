@@ -1,23 +1,23 @@
 Working Directory Structure
 ===========================
 
-SeisFlows3 hardcodes it’s own working directory when executing a
+SeisFlows hardcodes it’s own working directory when executing a
 workflow. Below we explore the working directory set up by the
 SPECFEM2D-workstation example. Working directories may change slightly
 depending on the chosen workflow, but will more or less follow the
 following structure. The two specfem2d directories listed below are not
-part of the SeisFlows3 working directory.
+part of the SeisFlows working directory.
 
 .. code:: ipython3
 
-    %cd ~/Work/official/workshop_pyatoa_sf3/ex1_specfem2d_workstation
+    %cd ~/Work/official/workshop_pyatoa_sf/ex1_specfem2d_workstation
     ! ls
 
 
 .. parsed-literal::
 
-    /home/bchow/Work/official/workshop_pyatoa_sf3/ex1_specfem2d_workstation
-    logs	output_sf3.txt	 scratch	    stats
+    /home/bchow/Work/official/workshop_pyatoa_sf/ex1_specfem2d_workstation
+    logs	output_sf.txt	 scratch	    stats
     output	parameters.yaml  specfem2d_workdir
 
 
@@ -26,8 +26,8 @@ part of the SeisFlows3 working directory.
 scratch/
 --------
 
-The active working directory of SeisFlows3 where all of the heavy
-lifting takes place. Each module in the SeisFlows3 package may have it’s
+The active working directory of SeisFlows where all of the heavy
+lifting takes place. Each module in the SeisFlows package may have it’s
 own sub-directory where it stores temporary work data. Additionally, we
 have two eval*/ directories where objective function evaluation
 (evalfunc) and gradient evaluation (evalgrad) files are stored.
@@ -251,7 +251,7 @@ system & preprocess
 
 These two directories are empty in our example problem, but are
 catch-all directories where module-specific files can be output. If you
-are extending SeisFlows3 with other base or subclasses, it is preferable
+are extending SeisFlows with other base or subclasses, it is preferable
 to adhere to this structure where each module only interacts with it’s
 own directory
 
@@ -265,7 +265,7 @@ own directory
 output/
 -------
 
-The current active state of SeisFlows3, containing pickle (.p) and JSON
+The current active state of SeisFlows, containing pickle (.p) and JSON
 files which describe a Python environment of a current workflow.
 Additionally files to be permanently saved (e.g., models, graidents,
 traces) can be located here. These are tagged in ascending order, e.g.,
@@ -323,7 +323,7 @@ other directory) copies are saved to this directory.
 
 .. parsed-literal::
 
-    output_sf3_001.txt  parameters_001.yaml
+    output_sf_001.txt  parameters_001.yaml
 
 
 --------------
@@ -362,22 +362,22 @@ inversion workflow.
 
 --------------
 
-output_sf3.txt
+output_sf.txt
 --------------
 
-The main log file for SeisFlows3, where all log statements written to
+The main log file for SeisFlows, where all log statements written to
 stdout are recorded during a workflow.
 
 .. code:: ipython3
 
-    ! head -50 output_sf3.txt
+    ! head -50 output_sf.txt
 
 
 .. parsed-literal::
 
-    2022-04-29 16:45:35 | initializing SeisFlows3 in sys.modules
-    2022-04-29 16:45:39 | copying par/log file to: /home/bchow/Work/official/workshop_pyatoa_sf3/ex1_specfem2d_workstation/logs/output_sf3_001.txt
-    2022-04-29 16:45:39 | copying par/log file to: /home/bchow/Work/official/workshop_pyatoa_sf3/ex1_specfem2d_workstation/logs/parameters_001.yaml
+    2022-04-29 16:45:35 | initializing SeisFlows in sys.modules
+    2022-04-29 16:45:39 | copying par/log file to: /home/bchow/Work/official/workshop_pyatoa_sf/ex1_specfem2d_workstation/logs/output_sf_001.txt
+    2022-04-29 16:45:39 | copying par/log file to: /home/bchow/Work/official/workshop_pyatoa_sf/ex1_specfem2d_workstation/logs/parameters_001.yaml
     2022-04-29 16:45:39 | exporting current working environment to disk
     2022-04-29 16:45:39 | 
     ////////////////////////////////////////////////////////////////////////////////
@@ -397,7 +397,7 @@ stdout are recorded during a workflow.
     ////////////////////////////////////////////////////////////////////////////////
     2022-04-29 16:45:39 | misfit function is: 'waveform'
     2022-04-29 16:45:40 | writing line search history file:
-    /home/bchow/Work/official/workshop_pyatoa_sf3/ex1_specfem2d_workstation/stats/line_search.txt
+    /home/bchow/Work/official/workshop_pyatoa_sf/ex1_specfem2d_workstation/stats/line_search.txt
     2022-04-29 16:45:40 | checking poissons ratio for: 'm_new.npy'
     2022-04-29 16:45:40 | model parameters (m_new.npy i01s00):
     2022-04-29 16:45:40 | 5800.00 <= vp <= 5800.00
@@ -419,7 +419,7 @@ stdout are recorded during a workflow.
     EVALUATE OBJECTIVE FUNCTION
     --------------------------------------------------------------------------------
     2022-04-29 16:46:27 | saving model 'm_new.npy' to:
-    /home/bchow/Work/official/workshop_pyatoa_sf3/ex1_specfem2d_workstation/scratch/evalgrad/model
+    /home/bchow/Work/official/workshop_pyatoa_sf/ex1_specfem2d_workstation/scratch/evalgrad/model
     2022-04-29 16:46:28 | evaluating objective function 3 times on system...
     2022-04-29 16:46:28 | checkpointing working environment to disk
     2022-04-29 16:46:29 | exporting current working environment to disk

@@ -1,5 +1,7 @@
-`Documentation` can be found on Read the Docs: https://seisflows.readthedocs.io (in development)
+SeisFlows
+==========
 
+`Documentation` can be found on Read the Docs: https://seisflows.readthedocs.io (in development)
 
 [![Documentation Status](https://readthedocs.org/projects/seisflows/badge/?version=latest)](https://seisflows.readthedocs.io/en/latest/?badge=latest)
 ---

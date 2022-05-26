@@ -3,7 +3,7 @@ Inheritance in Python
 
 ``SeisFlows`` is built upon the object-oriented programming concept of
 **inheritance**. This documentation page is a simple introduction to
-this concept to help new users and developers understand how SeisFlows3
+this concept to help new users and developers understand how SeisFlows
 is built and expected to operate.
 
 **Inheritance** is the ability of one class to derive attributes from
@@ -25,7 +25,7 @@ which has some internal attributes and functions.
 
     class Base:
         """
-        A Baseclass example. All SeisFlows3 modules contain a Base class which 
+        A Baseclass example. All SeisFlows modules contain a Base class which 
         defines the foundational structure that all inherited classes will adopt
         """
         def __init__(self, example_integer=5, example_float=1.2):
