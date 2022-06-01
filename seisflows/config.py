@@ -210,7 +210,7 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
     """
     # Make sure that we don't already have handlers described, which may happen
     # if this function gets run multiple times, and leads to duplicate logs
-    while logger.hasHandlers():
+    while logger.hasHandlers() and logger.handlers:
         logger.removeHandler(logger.handlers[0])
 
     # Two levels of verbosity on log level, triggered with PAR.VERBOSE

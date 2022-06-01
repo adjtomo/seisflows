@@ -15,7 +15,8 @@ from unittest.mock import patch
 
 from seisflows import logger
 from seisflows.seisflows import sfparser, SeisFlows
-from seisflows.config import save, Dict, ROOT_DIR, NAMES, CFGPATHS
+from seisflows.config import (save, Dict, ROOT_DIR, NAMES, CFGPATHS,
+                              config_logger)
 from seisflows.tools.wrappers import loadyaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
@@ -239,6 +240,8 @@ def test_cmd_clean(tmpdir):
 def test_config_logging(tmpdir, copy_par_file):
     """
     Test logging configuration to make sure we can print to file
+
+    TODO move this to test_config.py?
     :param tmpdir:
     :return:
     """
@@ -250,7 +253,7 @@ def test_config_logging(tmpdir, copy_par_file):
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows()
         sf._register(force=True)
-        sf._config_logging()
+        config_logger(filename=CFGPATHS.LOGFILE)
         logger.debug(msg)
 
     # Check that we created the log file and wrote the message in
