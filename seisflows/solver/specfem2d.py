@@ -187,7 +187,31 @@ class Specfem2D(custom_import("solver", "base")):
                     if not exists(fid_check):
                         unix.cp(fid, fid_check)
 
-    def generate_mesh(self, model_path, model_name, model_type='gll'):
+    def generate_data(self):
+        """
+        Generates observation data to be compared to synthetics. This must
+        only be run once. If `PAR.CASE`=='data', then real data will be copied
+        over. If `PAR.CASE`=='synthetic' then the external solver will use the
+        True model to generate 'observed' synthetics. Finally exports traces to
+        'cwd/traces/obs'
+        """
+        # If synthetic inversion, generate 'data' with solver
+        if PAR.CASE.upper() == "SYNTHETIC":
+            if PATH.MODEL_TRUE is not None:
+                if self.taskid == 0:
+                    self.logger.info("generating 'data' with MODEL_TRUE")
+                # Generate synthetic data on the fly using the true model
+                self.generate_mesh(model_name="true", model_type="gll")
+                self.forward(path=os.path.join("traces", "obs"))
+        # If Data provided by user, copy directly into the solver directory
+        elif PATH.DATA is not None and os.path.exists(PATH.DATA):
+            unix.cp(src=glob(os.path.join(PATH.DATA, self.source_name, "*")),
+                    dst=os.path.join("traces", "obs")
+                    )
+        if PAR.SAVETRACES:
+            self.export_traces(path=os.path.join(PATH.OUTPUT, "traces", "obs"))
+
+    def generate_mesh(self, model_name, model_type="gll"):
         """
         Performs meshing with internal mesher Meshfem2D and database generation
 
@@ -199,7 +223,17 @@ class Specfem2D(custom_import("solver", "base")):
         :param model_type: available model types to be passed to the Specfem3D
             Par_file. See Specfem3D Par_file for available options.
         """
+        if model_name.upper() == "INIT":
+            model_path = PATH.MODEL_INIT
+        elif model_name.upper() == "TRUE":
+            model_path = PATH.MODEL_TRUE
+        else:
+            raise ValueError(f"model name must be 'INIT' or 'TRUE'")
         assert(exists(model_path)), f"model {model_path} does not exist"
+
+        if self.taskid == 0:
+            self.logger.info(f"running mesh generation for "
+                             f"MODEL_{model_name.upper()}")
 
         available_model_types = ["gll"]
         assert(model_type in available_model_types), \

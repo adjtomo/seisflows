@@ -123,7 +123,6 @@ class Specfem3D(custom_import("solver", "base")):
             Par_file. See Specfem3D Par_file for available options.
         """
         available_model_types = ["gll"]
-
         assert(exists(model_path)), f"model {model_path} does not exist"
 
         model_type = model_type or getpar(key="MODEL", file="DATA/Par_file")

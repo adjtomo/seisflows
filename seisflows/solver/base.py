@@ -225,31 +225,8 @@ class Base:
         unix.rm(self.cwd)
         self.initialize_solver_directories()
         self.check_solver_parameter_files()
-
-        # Determine where observation data will come from
-        if PAR.CASE.upper() == "SYNTHETIC" and PATH.MODEL_TRUE is not None:
-            if self.taskid == 0:
-                self.logger.info("generating 'data' with MODEL_TRUE synthetics")
-            # Generate synthetic data on the fly using the true model
-            self.generate_mesh(model_path=PATH.MODEL_TRUE,
-                               model_name="model_true",
-                               model_type="gll")
-            self.forward(path=os.path.join("traces", "obs"))
-            if PAR.SAVETRACES:
-                self.export_traces(os.path.join(PATH.OUTPUT, "traces", "obs"))
-
-        elif PATH.DATA is not None and os.path.exists(PATH.DATA):
-            # If Data provided by user, copy directly into the solver directory
-            unix.cp(src=glob(os.path.join(PATH.DATA, self.source_name, "*")),
-                    dst=os.path.join("traces", "obs")
-                    )
-
-        # Prepare initial model
-        if self.taskid == 0:
-            self.logger.info("running mesh generation for MODEL_INIT")
-        self.generate_mesh(model_path=PATH.MODEL_INIT,
-                           model_name="model_init",
-                           model_type="gll")
+        self.generate_data()
+        self.generate_mesh(model_name="init", model_type="gll")
 
         # Create blank adjoint traces to be overwritten
         self.initialize_adjoint_traces()
@@ -822,6 +799,8 @@ class Base:
     def check_mesh_properties(self, path=None):
         """
         Determine if Mesh properties are okay for workflow
+
+        TODO fix or rewrite this function
 
         :type path: str
         :param path: path to the mesh file
