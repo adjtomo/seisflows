@@ -140,33 +140,6 @@ class Specfem2D(custom_import("solver", "base")):
             else:
                 setpar(key="absorbtop", val=".true.", file="DATA/Par_file")
 
-    def generate_data(self, **model_kwargs):
-        """
-        Generates data using the True model, exports traces to `traces/obs`
-
-        :param model_kwargs: keyword arguments to pass to `generate_mesh`
-        """
-        self.generate_mesh(**model_kwargs)
-
-        unix.cd(self.cwd)
-        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
-        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
-
-        call_solver(PAR.MPIEXEC, "bin/xmeshfem2D", output="mesher.log")
-        call_solver(PAR.MPIEXEC, "bin/xspecfem2D", output="solver.log")
-
-        if PAR.FORMAT.upper() == "SU":
-            # Work around SPECFEM2D's version dependent file names
-            for tag in ["d", "v", "a", "p"]:
-                unix.rename(old=f"single_{tag}.su", new="single.su",
-                            names=glob(os.path.join("OUTPUT_FILES", "*.su")))
-
-        unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
-                dst=os.path.join("traces", "obs"))
-
-        if PAR.SAVETRACES:
-            self.export_traces(os.path.join(PATH.OUTPUT, "traces", "obs"))
-
     def initialize_adjoint_traces(self):
         """
         Setup utility: Creates the "adjoint traces" expected by SPECFEM.
@@ -247,18 +220,23 @@ class Specfem2D(custom_import("solver", "base")):
         if self.taskid == 0:
             self.export_model(os.path.join(PATH.OUTPUT, model_name))
 
-    def forward(self, path='traces/syn'):
+    def forward(self, path="traces/syn"):
         """
         Calls SPECFEM2D forward solver, exports solver outputs to traces dir
 
         :type path: str
         :param path: path to export traces to after completion of simulation
+            relatiev to the solver cwd
         """
+        unix.cd(self.cwd)
+
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
 
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D")
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D",
+                    output="mesher.log")
+        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D",
+                    output="solver.log")
 
         if PAR.FORMAT.upper() == "SU":
             # Work around SPECFEM2D's version dependent file names

@@ -172,10 +172,6 @@ class Base:
             assert (required_parameter in PAR), \
                 f"Solver requires {required_parameter}"
 
-        # Important to reset parameters to a blank list and let the check
-        # statements fill it. If not, each time workflow is resumed, parameters
-        # list will append redundant parameters and things stop working
-
         available_materials = ["ELASTIC", "ACOUSTIC",  # specfem2d, specfem3d
                                "ISOTROPIC", "ANISOTROPIC"]  # specfem3d_globe
         assert(PAR.MATERIALS.upper() in available_materials), \
@@ -186,6 +182,9 @@ class Base:
             f"DENSITY must be in {acceptable_densities}"
 
         # Internal parameter list based on user-input material choices
+        # Important to reset parameters to a blank list and let the check
+        # statements fill it. If not, each time workflow is resumed, parameters
+        # list will append redundant parameters and things stop working
         self.parameters = []
         if PAR.MATERIALS.upper() == "ELASTIC":
             assert(PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
@@ -225,15 +224,20 @@ class Base:
         # Clean up for new inversion
         unix.rm(self.cwd)
         self.initialize_solver_directories()
+        self.check_solver_parameter_files()
 
         # Determine where observation data will come from
         if PAR.CASE.upper() == "SYNTHETIC" and PATH.MODEL_TRUE is not None:
             if self.taskid == 0:
                 self.logger.info("generating 'data' with MODEL_TRUE synthetics")
             # Generate synthetic data on the fly using the true model
-            self.generate_data(model_path=PATH.MODEL_TRUE,
+            self.generate_mesh(model_path=PATH.MODEL_TRUE,
                                model_name="model_true",
                                model_type="gll")
+            self.forward(path=os.path.join("traces", "obs"))
+            if PAR.SAVETRACES:
+                self.export_traces(os.path.join(PATH.OUTPUT, "traces", "obs"))
+
         elif PATH.DATA is not None and os.path.exists(PATH.DATA):
             # If Data provided by user, copy directly into the solver directory
             unix.cp(src=glob(os.path.join(PATH.DATA, self.source_name, "*")),
@@ -259,26 +263,18 @@ class Base:
         unix.rm("OUTPUT_FILES")
         unix.mkdir("OUTPUT_FILES")
 
-    def generate_data(self, *args, **kwargs):
+    def generate_mesh(self, model_path, model_name, model_type):
         """
-        Generates data based on a given model
+        Performs meshing and database generation.
 
-        !!! Must be implemented by subclass !!!
+        This function is Solver specific and is responsible for generating
+        the mesh using the external numerical solver.
         """
-        raise NotImplementedError
-
-    def generate_mesh(self, *args, **kwargs):
-        """
-        Performs meshing and database generation
-
-        !!! Must be implemented by subclass !!!
-        """
-        raise NotImplementedError
+        raise NotImplementedError("function 'solver.generate_mesh()' must be"
+                                  "implemented by a Solver sub class")
 
     def eval_func(self, path, write_residuals=True):
         """
-        High level solver interface
-
         Performs forward simulations and evaluates the misfit function
 
         :type path: str
@@ -359,7 +355,7 @@ class Base:
         self.adjoint()
         self.export_kernels(path)
 
-    def forward(self):
+    def forward(self, path):
         """
         Low level solver interface
 
@@ -793,8 +789,6 @@ class Base:
                                "DATABASES_MPI")
             dst = os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
             unix.cp(src, dst)
-
-        self.check_solver_parameter_files()
 
     def initialize_adjoint_traces(self):
         """

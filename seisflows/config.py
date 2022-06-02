@@ -32,7 +32,7 @@ from seisflows.tools.err import ParameterError
 !!! WARNING !!!
 
 The following constants are (some of the only) hardwired components
-of the pacakge. The naming, order, case, etc., of each constant may be 
+of the package. The naming, order, case, etc., of each constant may be 
 important, and any changes to these will more-than-likely break the underlying 
 mechanics of the package. Do not touch unless you know what you're doing!
 """
