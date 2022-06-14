@@ -433,13 +433,4 @@ class Specfem2D(custom_import("solver", "base")):
         elif PAR.FORMAT.upper() == "ASCII":
             return f"*.?X{comp}.sem?"
 
-    @property
-    def source_prefix(self):
-        """
-        Specfem2D's preferred source prefix
-
-        :rtype: str
-        :return: source prefix
-        """
-        return PAR.SOURCE_PREFIX.upper()
 

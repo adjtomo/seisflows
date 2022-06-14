@@ -221,14 +221,11 @@ class Base:
             In the former case, a value for PATH.DATA must be supplied;
             in the latter case, a value for PATH.MODEL_TRUE must be provided.
         """
-        # Clean up for new inversion
         unix.rm(self.cwd)
         self.initialize_solver_directories()
         self.check_solver_parameter_files()
         self.generate_data()
         self.generate_mesh(model_name="init", model_type="gll")
-
-        # Create blank adjoint traces to be overwritten
         self.initialize_adjoint_traces()
 
     def clean(self):
@@ -247,8 +244,13 @@ class Base:
         This function is Solver specific and is responsible for generating
         the mesh using the external numerical solver.
         """
-        raise NotImplementedError("function 'solver.generate_mesh()' must be"
-                                  "implemented by a Solver sub class")
+        raise NotImplementedError("must be implemented by solver subclass")
+
+    def generate_data(self):
+        """
+        Performs meshing and data generation for "true" data.
+        """
+        raise NotImplementedError("must be implemented by solver subclass")
 
     def eval_func(self, path, write_residuals=True):
         """
@@ -321,7 +323,7 @@ class Base:
         :type path: str
         :param path: directory to which output files are exported
         """
-        raise NotImplementedError
+        raise NotImplementedError("must be implemented by solver subclass")
 
         unix.cd(self.cwd)
         self.import_model(path)
@@ -340,7 +342,7 @@ class Base:
 
         !!! Must be implemented by subclass !!!
         """
-        raise NotImplementedError
+        raise NotImplementedError("must be implemented by solver subclass")
 
     def adjoint(self):
         """
@@ -350,7 +352,7 @@ class Base:
 
         !!! Must be implemented by subclass !!!
         """
-        raise NotImplementedError
+        raise NotImplementedError("must be implemented by solver subclass")
 
     @property
     def io(self):
@@ -574,14 +576,6 @@ class Base:
         files = glob(os.path.join(output_path, "*"))
         unix.rename(old="_smooth", new="", names=files)
 
-    def combine_vol_data_vtk(self):
-        """
-        Postprocessing wrapper for xcombine_vol_data_vtk
-
-        !!! must be implemented by subclass !!!
-        """
-        pass
-
     def import_model(self, path):
         """
         File transfer utility. Import the model into the workflow.
@@ -709,7 +703,7 @@ class Base:
 
         !!! Can be implemented by subclass !!!
         """
-        pass
+        raise NotImplementedError("must be implemented by solver subclass")
 
     def initialize_solver_directories(self):
         """
@@ -962,10 +956,11 @@ class Base:
     @property
     def source_prefix(self):
         """
-        Template filenames for accessing sources
+        Preferred source prefix
 
-        !!! Must be implemented by subclass !!!
+        :rtype: str
+        :return: source prefix
         """
-        return NotImplementedError
+        return PAR.SOURCE_PREFIX.upper()
 
 

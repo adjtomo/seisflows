@@ -11,14 +11,6 @@ from seisflows import config
 from seisflows.seisflows import SeisFlows, return_modules
 
 
-# The module that we're testing, allows for copy-pasting these test suites
-MODULE = "preprocess"
-
-# Ensures that these parameters are always defined, even when using subclasses
-REQUIRED_PARAMETERS = []
-REQUIRED_FUNCTIONS = ["required", "check", "setup", "prepare_eval_grad",
-                      "sum_residuals", "finalize"]
-
 # Define some re-used paths
 TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
 REPO_DIR = os.path.abspath(os.path.join(config.ROOT_DIR, ".."))
@@ -34,14 +26,6 @@ def copy_par_file(tmpdir):
     src = os.path.join(TEST_DIR, "test_data", "test_filled_parameters.yaml")
     dst = os.path.join(tmpdir, "parameters.yaml")
     shutil.copy(src, dst)
-
-
-@pytest.fixture
-def modules():
-    """
-    Return a list of subclasses that falls under the System module
-    """
-    return return_modules()[MODULE]
 
 
 @pytest.fixture
@@ -138,16 +122,18 @@ def test_default_setup(sfinit):
     assert(preprocess.writer.__name__ == io_name)
 
 
-# def test_default_prepare_eval_grad(tmpdir, sfinit):
-#     """
-#     Ensure that prepare_eval_grad writes out adjoint traces and auxiliary files
-#     """
-#     sfinit
-#     PAR = sys.modules["seisflows_parameters"]
-#     preprocess = sys.modules["seisflows_preprocess"]
-#
-#     cwd = tmpdir
-#     taskid = 0
-#     filenames = []
-#     preprocess.prepare_eval_grad(cwd=cwd, taskid=taskid, filenames=filenames)
-#     pytest.set_trace()
+def test_default_prepare_eval_grad(tmpdir, sfinit):
+    """
+    Ensure that prepare_eval_grad writes out adjoint traces and auxiliary files
+    """
+    sfinit
+    PAR = sys.modules["seisflows_parameters"]
+    preprocess = sys.modules["seisflows_preprocess"]
+
+    cwd = tmpdir
+    taskid = 0
+    filenames = []
+    preprocess.prepare_eval_grad(cwd=cwd, taskid=taskid, filenames=filenames)
+    pytest.set_trace()
+
+

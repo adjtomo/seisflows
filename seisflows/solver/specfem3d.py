@@ -236,7 +236,7 @@ class Specfem3D(custom_import("solver", "base")):
         """
         Setup utility: Creates the "adjoint traces" expected by SPECFEM
 
-        Note:
+        .. note::
             Adjoint traces are initialized by writing zeros for all channels.
             Channels actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
@@ -270,37 +270,6 @@ class Specfem3D(custom_import("solver", "base")):
         if PAR.FORMAT.upper() == "SU":
             files = glob(os.path.join(self.cwd, "traces", "adj", "*SU"))
             unix.rename(old='_SU', new='_SU.adj', names=files)
-
-    def write_parameters(self):
-        """
-        Write a set of parameters
-
-        !!! This calls on plugins.solver.specfem3d.write_parameters()
-            but that function doesn't exist !!!
-        """
-        unix.cd(self.cwd)
-        solvertools.write_parameters(vars(PAR))
-
-    def write_receivers(self):
-        """
-        Write a list of receivers into a text file
-
-        !!! This calls on plugins.solver.specfem3d.write_receivers()
-            but incorrect number of parameters is forwarded !!!
-        """
-        unix.cd(self.cwd)
-        setpar(key="use_existing_STATIONS", val=".true", file="DATA/Par_file")
-
-        _, h = preprocess.load("traces/obs")
-        solvertools.write_receivers(h.nr, h.rx, h.rz)
-
-    def write_sources(self):
-        """
-        Write sources to text file
-        """
-        unix.cd(self.cwd)
-        _, h = preprocess.load(dir="traces/obs")
-        solvertools.write_sources(PAR=vars(PAR), h=h)
 
     @property
     def data_wildcard(self):

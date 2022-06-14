@@ -447,4 +447,5 @@ class Base:
                 w = np.linalg.norm(tr.data, ord=2)
                 if w > 0:
                     tr.data /= w
+
         return st_out

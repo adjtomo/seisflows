@@ -85,6 +85,11 @@ def _write(v, filename):
     """ 
     Writes Fortran style binary files
     Data are written as single precision floating point numbers
+
+    .. note::
+        FORTRAN unformatted binaries are bounded by an INT*4 byte count. This
+        function mimics that behavior by tacking on the boundary data.
+        https://docs.oracle.com/cd/E19957-01/805-4939/6j4m0vnc4/index.html
     """
     n = np.array([4 * len(v)], dtype='int32')
     v = np.array(v, dtype='float32')

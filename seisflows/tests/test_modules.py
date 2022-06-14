@@ -140,9 +140,10 @@ def test_required_functions_exist(sfinit):
                         f"{name}.{module}"
 
 
-def test_setup(sfinit, modules):
+@pytest.mark.skip("test not working as expected")
+def test_setup(sfinit):
     """
-    Test the expected behavior of each of the rqeuired functions.
+    Test the expected behavior of each of the required functions.
 
     Setup: make sure that setup creates the necessary directory structure
 
@@ -150,28 +151,29 @@ def test_setup(sfinit, modules):
     :param modules:
     :return:
     """
-    return
-    sf = sfinit
+    sfinit
     PATH = sys.modules["seisflows_paths"]
     SETUP_CREATES = [PATH.SCRATCH, PATH.SYSTEM, PATH.OUTPUT]
 
-    for package, module_list in modules.items():
-        for module in module_list:
-            loaded_module = config.custom_import(MODULE, module)()
+    for name in config.NAMES:
+        for package, module_list in return_modules()[name].items():
+            for module in module_list:
+                loaded_module = config.custom_import(name, module)()
 
-            # Make sure these don't already exist
-            for path_ in SETUP_CREATES:
-                assert(not os.path.exists(path_))
+                # Make sure these don't already exist
+                for path_ in SETUP_CREATES:
+                    assert(not os.path.exists(path_))
 
-            loaded_module.setup()
+                loaded_module.setup()
 
-            # Check that the minimum required directories were created
-            for path_ in SETUP_CREATES:
-                assert(os.path.exists(path_))
+                # Check that the minimum required directories were created
+                for path_ in SETUP_CREATES:
+                    pytest.set_trace()
+                    assert(os.path.exists(path_))
 
-            # Remove created paths so we can check the next module
-            for path_ in SETUP_CREATES:
-                if os.path.isdir(path_):
-                    shutil.rmtree(path_)
-                else:
-                    os.remove(path_)
+                # Remove created paths so we can check the next module
+                for path_ in SETUP_CREATES:
+                    if os.path.isdir(path_):
+                        shutil.rmtree(path_)
+                    else:
+                        os.remove(path_)
