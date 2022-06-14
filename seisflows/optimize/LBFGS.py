@@ -10,7 +10,6 @@ import numpy as np
 
 from seisflows.tools import unix
 from seisflows.tools.msg import DEG
-from seisflows.tools.wrappers import exists
 from seisflows.tools.math import angle
 from seisflows.config import custom_import, SeisFlowsPathsParameters
 

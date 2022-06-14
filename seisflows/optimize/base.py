@@ -54,8 +54,7 @@ class Base:
 
     def __init__(self):
         """
-        These parameters should not be set by __init__!
-        Attributes are just initialized as NoneTypes for clarity and docstrings
+        Initialize internally used variables for optimization workflow
 
         :type iter: int
         :param iter: the current iteration of the workflow
@@ -174,7 +173,7 @@ class Base:
         """
         Sets up nonlinear optimization machinery
         """
-        # All ptimization statistics text files will be written to path_stats
+        # All optimization statistics text files will be written to path_stats
         path_stats = os.path.join(PATH.WORKDIR, CFGPATHS.STATSDIR)
         unix.mkdir(path_stats)
 

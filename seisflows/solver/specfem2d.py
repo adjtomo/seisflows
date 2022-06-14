@@ -223,6 +223,8 @@ class Specfem2D(custom_import("solver", "base")):
         :param model_type: available model types to be passed to the Specfem3D
             Par_file. See Specfem3D Par_file for available options.
         """
+        unix.cd(self.cwd)
+
         if model_name.upper() == "INIT":
             model_path = PATH.MODEL_INIT
         elif model_name.upper() == "TRUE":
@@ -238,8 +240,6 @@ class Specfem2D(custom_import("solver", "base")):
         available_model_types = ["gll"]
         assert(model_type in available_model_types), \
             f"{model_type} not in available types {available_model_types}"
-
-        unix.cd(self.cwd)
 
         # Run mesh generation
         if model_type == "gll":

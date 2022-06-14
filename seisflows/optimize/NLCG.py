@@ -7,6 +7,7 @@ import sys
 import logging
 
 from seisflows.config import custom_import, SeisFlowsPathsParameters
+from seisflows.tools import unix
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
@@ -113,8 +114,9 @@ class NLCG(custom_import("optimize", "base")):
         # CASE 2: Force restart if the iterations have surpassed the maximum
         # number of allowable iter
         elif self.NLCG_iter > PAR.NLCGMAX:
-            logger.info("restarting NLCG due to periodic restart condition. "
-                        "setting search direction as inverse gradient")
+            self.logger.info("restarting NLCG due to periodic restart "
+                             "condition. setting search direction as inverse "
+                             "gradient")
             self.restart()
             p_new = -g_new
             restarted = 1
