@@ -9,7 +9,8 @@ import sys
 import time
 import logging
 from seisflows.tools import msg
-from seisflows.config import SeisFlowsPathsParameters, custom_import
+from seisflows.config import SeisFlowsPathsParameters, custom_import, ROOT_DIR
+from seisflows.tools.specfem import call_solver
 
 # Required SeisFlows configuration
 PAR = sys.modules['seisflows_parameters']
@@ -45,6 +46,12 @@ class Test(custom_import("workflow", "base")):
         """
         sf = SeisFlowsPathsParameters(super().required)
 
+        sf.path("TEST_DATA", required=False,
+                default=os.path.join(ROOT_DIR, "tests", "test_data",
+                                     "work"),
+                docstr="Example data for test system"
+                )
+
         return sf
 
     def check(self, validate=True):
@@ -56,9 +63,6 @@ class Test(custom_import("workflow", "base")):
         :type validate: bool
         :param validate: set required paths and parameters into sys.modules
         """
-        # The validate statement is used internally to set required paths
-        # and parameters into sys.modules. Default values are stored for
-        # optional terms
         if validate:
             self.required.validate()
 
@@ -66,7 +70,9 @@ class Test(custom_import("workflow", "base")):
         """
         This controls the main testing workflow
         """
-        FLOW = [self.test_system]
+        FLOW = [self.test_system,
+                self.test_preprocess
+                ]
         if return_flow:
             return FLOW
 
@@ -77,17 +83,52 @@ class Test(custom_import("workflow", "base")):
         """
         A simple function that can be called by system.run()
         """
-        print(f"Hello world, from taskid {system.taskid()}")
+        check_value = 1234.5
+        print(f"Hello world, from taskid {system.taskid()}. "
+              f"Check: {check_value}")
 
     def test_system(self):
         """
-        This is an example test function which can take any number of args
-        or kwargs. The base class is responsible for setting all of the
-        necessary functions
+        Test the system by submitting a simple print statement using the
+        run() and run(single) functions.
         """
         system.run(classname="workflow", method="test_function")
-        # Wait a bit for system to catch up
-        time.sleep(3)
+        time.sleep(3)  # wait a bit for system to catch up
         system.run(classname="workflow", method="test_function", single=True)
 
+    def test_preprocess(self):
+        """
+        Test the exposed 'prepare_eval_grad()' preprocessing function
+        """
+        cwd = PATH.TEST_DATA
+        taskid = 0
+        filenames = ["AA.S0001.BXY.semd"]
+        source_name = "001"
+        preprocess.prepare_eval_grad(cwd=cwd, taskid=taskid,
+                                     filenames=filenames,
+                                     source_name=source_name
+                                     )
+
+    def test_solver(self):
+        """
+        Simply test that the solver binaries can be called, which is what the
+        solver directory is responsible for
+        """
+        assert(os.path.exists(PATH.SPECFEM_BIN)), (
+            f"SPECFEM_BIN {PATH.SPECFEM_BIN} directory does not exist"
+        )
+
+
+
+    def test_postprocess(self):
+        """
+
+        """
+        pass
+
+    def test_workflow(self):
+        """
+
+        """
+        pass
 

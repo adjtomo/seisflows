@@ -150,26 +150,15 @@ class Slurm(custom_import("system", "cluster")):
         if single:
             self.logger.info("replacing parts of sbatch run call for single "
                              "process job")
-            for part in run_call.split(" "):
-                if "--array" in part:
-                    run_call.replace(part, "--array=0-0")
-                elif "--ntasks" in part:
-                    run_call.replace(part, "--ntasks=1")
-            # Append taskid to environment variable, deal with the case where
-            # PAR.ENVIRONS is an empty string
-            task_id_str = "SEISFLOWS_TASKID=0"
-            if not run_call.strip().endswith("--environment"):
-                task_id_str = f",{task_id_str}"  # appending to the list of vars
-            run_call += task_id_str
-            self.logger.debug(run_call)
+            run_call = _modify_run_call_single_proc(run_call)
 
         # The standard response from SLURM when submitting jobs
         # is something like 'Submitted batch job 441636', we want job number
         stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
                                 text=True, shell=True).stdout
-        job_ids = job_id_list(stdout, single)
 
-        # Contiously check for job completion on ALL running array jobs
+        # Continuously check for job completion on ALL running array jobs
+        job_ids = job_id_list(stdout, single)
         is_done = False
         count = 0
         bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY",
@@ -191,8 +180,8 @@ class Slurm(custom_import("system", "cluster")):
                                              f"LOG:     logs/{job_ids[i]}",
                                              f"SBATCH:  {run_call}"],
                                       header="slurm run error", border="="))
-                        sys.exit(-1)    
-            # WAIT CONDITION: if sacct is not working, we'll get stuck in a loop
+                        sys.exit(-1)
+                        # WAIT CONDITION: if sacct is not working, we'll get stuck in a loop
             if "UNDEFINED" in states:
                 count += 1
                 # Every 10 counts, warn the user this is unexpected behavior
@@ -321,7 +310,6 @@ def check_job_state(job_id):
 
     # Undefined status will be retured if we cannot match the job id with
     # the sacct output
-    # TODO should undefined state throw an error?
     state = "UNDEFINED"
     lines = stdout.strip().split("\n")
     for line in lines:
@@ -337,4 +325,29 @@ def check_job_state(job_id):
 
     return state
 
+
+def _modify_run_call_single_proc(run_call):
+    """
+    Modifies a SLURM SBATCH command to use only 1 processor as a single run
+
+    :type run_call: str
+    :param run_call: The SBATCH command to modify
+    :rtype: str
+    :return: a modified SBATCH command that should only run on 1 processor
+    """
+    for part in run_call.split(" "):
+        if "--array" in part:
+            run_call.replace(part, "--array=0-0")
+        elif "--ntasks" in part:
+            run_call.replace(part, "--ntasks=1")
+
+    # Append taskid to environment variable, deal with the case where
+    # PAR.ENVIRONS is an empty string
+    task_id_str = "SEISFLOWS_TASKID=0"
+    if not run_call.strip().endswith("--environment"):
+        task_id_str = f",{task_id_str}"  # appending to the list of vars
+
+    run_call += task_id_str
+
+    return run_call
 

@@ -269,7 +269,7 @@ class Base:
                 raise NotImplementedError
 
             self._write_adjoint_traces(path=os.path.join(cwd, "traces", "adj"),
-                                      syn=syn, obs=obs, filename=filename_out)
+                                       syn=syn, obs=obs, filename=filename_out)
 
         # Copy over the STATIONS file to STATIONS_ADJOINT required by Specfem
         # ASSUMING that all stations are used in adjoint simulation

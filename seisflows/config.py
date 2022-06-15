@@ -60,8 +60,8 @@ CFGPATHS = dict(
     SCRATCHDIR="scratch",        # SeisFlows internal working directory
     STATSDIR="stats",            # Optimization module log file output
     OUTPUTDIR="output",          # Permanent disk storage for state and outputs
-    LOGFILE="output_sf.txt",    # Log files for all system log
-    ERRLOGFILE="error_sf.txt",  # StdErr dump site for crash messages
+    LOGFILE="sfoutput.txt",    # Log files for all system log
+    ERRLOGFILE="sferror.txt",  # StdErr dump site for crash messages
     LOGDIR="logs",               # Dump site for previously created log files
 )
 """
@@ -279,7 +279,7 @@ class Dict(object):
         try:
             return self.__dict__[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(f"{key} not found in Dict")
 
     def __getitem__(self, key):
         """.get() like access of the internal dictionary attributes """
