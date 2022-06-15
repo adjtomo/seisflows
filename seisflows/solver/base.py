@@ -129,7 +129,7 @@ class Base:
                       "['CONSTANT': Do not update density, "
                       "'VARIABLE': Update density]")
 
-        sf.par("ATTENUATION", required=True, par_type=str,
+        sf.par("ATTENUATION", required=True, par_type=bool,
                docstr="If True, turn on attenuation during forward "
                       "simulations, otherwise set attenuation off. Attenuation "
                       "is always off for adjoint simulations.")
@@ -368,6 +368,11 @@ class Base:
         :type output: str
         :param output: where to redirect stdout
         """
+        if not os.path.exists(executable):
+            print(msg.cli(f"solver executable {executable} does not exist",
+                          header="external solver error", border="="))
+            sys.exit(-1)
+
         # mpiexec is None when running in serial mode, so e.g., ./xmeshfem2D
         if PAR.SYSTEM in ["workstation"]:
             exc_cmd = f"./{executable}"

@@ -182,8 +182,10 @@ class Base:
         # Assert that readers and writers available
         # TODO | This is a bit vague as dir contains imported modules and hidden
         # TODO | variables (e.g., np, __name__)
-        assert(PAR.FORMAT in dir(readers)), f"Reader {PAR.FORMAT} not found"
-        assert(PAR.FORMAT in dir(writers)), f"Writer {PAR.FORMAT} not found"
+        assert(PAR.FORMAT.lower() in dir(readers)), (
+            f"Reader {PAR.FORMAT} not found")
+        assert(PAR.FORMAT.lower() in dir(writers)), (
+            f"Writer {PAR.FORMAT} not found")
 
         # Assert that either misfit or backproject exists 
         if PAR.WORKFLOW.upper() == "INVERSION":
@@ -207,8 +209,8 @@ class Base:
             self.adjoint = getattr(adjoint, PAR.BACKPROJECT.lower())
 
         # Define seismic data reader and writer
-        self.reader = getattr(readers, PAR.FORMAT)
-        self.writer = getattr(writers, PAR.FORMAT)
+        self.reader = getattr(readers, PAR.FORMAT.lower())
+        self.writer = getattr(writers, PAR.FORMAT.lower())
 
     def prepare_eval_grad(self, cwd, taskid, filenames, **kwargs):
         """

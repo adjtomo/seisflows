@@ -131,7 +131,6 @@ def save():
     """
     Export the current session to disk
     """
-    logger.info("exporting current working environment to disk")
     output = sys.modules[PATH]["OUTPUT"]
     unix.mkdir(output)
 

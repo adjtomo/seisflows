@@ -8,15 +8,14 @@ import os
 import sys
 import time
 import logging
+from glob import glob
 from seisflows.tools import msg
-from seisflows.config import SeisFlowsPathsParameters, custom_import, ROOT_DIR
-from seisflows.tools.specfem import call_solver
+from seisflows.config import (SeisFlowsPathsParameters, custom_import, ROOT_DIR,
+                              CFGPATHS)
 
-# Required SeisFlows configuration
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
+PAR = sys.modules["seisflows_parameters"]
+PATH = sys.modules["seisflows_paths"]
 
-# The number of loaded modules depends on the module this Base class belongs to
 system = sys.modules["seisflows_system"]
 solver = sys.modules["seisflows_solver"]
 optimize = sys.modules["seisflows_optimize"]
@@ -70,8 +69,9 @@ class Test(custom_import("workflow", "base")):
         """
         This controls the main testing workflow
         """
-        FLOW = [self.test_system,
-                self.test_preprocess
+        FLOW = [#self.test_system,
+                # self.test_preprocess,
+                self.test_solver,
                 ]
         if return_flow:
             return FLOW
@@ -79,11 +79,10 @@ class Test(custom_import("workflow", "base")):
         for func in FLOW:
             func()
 
-    def test_function(self):
+    def test_function(self, check_value):
         """
         A simple function that can be called by system.run()
         """
-        check_value = 1234.5
         print(f"Hello world, from taskid {system.taskid()}. "
               f"Check: {check_value}")
 
@@ -91,10 +90,27 @@ class Test(custom_import("workflow", "base")):
         """
         Test the system by submitting a simple print statement using the
         run() and run(single) functions.
+
+        Check that these functions perform as expected by passing in a random
+        value and checking that this value gets logged back
         """
-        system.run(classname="workflow", method="test_function")
+        check_value_1 = 1234.5
+        system.run(classname="workflow", method="test_function",
+                   check_value=check_value_1)
+
         time.sleep(3)  # wait a bit for system to catch up
-        system.run(classname="workflow", method="test_function", single=True)
+
+        check_value_2 = 5432.1
+        system.run(classname="workflow", method="test_function", single=True,
+                   check_value=check_value_2)
+
+        for fid, check in zip(
+                sorted(glob(os.path.join(CFGPATHS.LOGDIR, "*.log"))),
+                [check_value_1, check_value_2]
+        ):
+            with open(fid, "r") as f:
+                line = f.readlines()[0]
+                assert(float(line.strip().split(" ")[-1]) == check)
 
     def test_preprocess(self):
         """
@@ -112,21 +128,24 @@ class Test(custom_import("workflow", "base")):
     def test_solver(self):
         """
         Simply test that the solver binaries can be called, which is what the
-        solver directory is responsible for
+        solver module is ultimately responsible for
         """
-        assert(os.path.exists(PATH.SPECFEM_BIN)), (
+        assert(PATH.SPECFEM_BIN is not None and
+               os.path.exists(PATH.SPECFEM_BIN)), (
             f"SPECFEM_BIN {PATH.SPECFEM_BIN} directory does not exist"
         )
-
+        # SPECFEM2D won't have this executable
+        try:
+            solver.call_solver(
+                executable=f"{PATH.SPECFEM_BIN}/xcombine_sem",
+                output=os.path.join(PATH.TEST_DATA, "test_solver.log")
+            )
+        # We expect this to throw a system exit because
+        except SystemExit:
+            pass
 
 
     def test_postprocess(self):
-        """
-
-        """
-        pass
-
-    def test_workflow(self):
         """
 
         """

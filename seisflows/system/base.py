@@ -203,8 +203,6 @@ class Base:
         :type kwargs: dict
         :param kwargs: dictionary to pass to object saving
         """
-        self.logger.debug("checkpointing working environment to disk")
-
         argspath = os.path.join(path, "kwargs")
         argsfile = os.path.join(argspath, f"{classname}_{method}.p")
         unix.mkdir(argspath)

@@ -6,9 +6,10 @@ Provides utilities for submitting jobs in serial on a single machine
 import os
 import sys
 import logging
+from contextlib import redirect_stdout
 
 from seisflows.tools import unix, msg
-from seisflows.config import custom_import, SeisFlowsPathsParameters
+from seisflows.config import custom_import, SeisFlowsPathsParameters, CFGPATHS
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -84,6 +85,7 @@ class Workstation(custom_import("system", "base")):
         # <bound method Base.eval_func of <seisflows.solver.specfem2d...
         class_module = sys.modules[f"seisflows_{classname}"]
         function = getattr(class_module, method)
+        log_path = os.path.join(PATH.WORKDIR, CFGPATHS.LOGDIR)
 
         if single:
             ntasks = 1
@@ -94,10 +96,23 @@ class Workstation(custom_import("system", "base")):
             # os environment variables can only be strings, these need to be
             # converted back to integers by system.taskid()
             os.environ["SEISFLOWS_TASKID"] = str(taskid)
+
+            # Make sure that we're creating new log files EACH time we run()
+            idx = 0
+            while True:
+                log_file = os.path.join(log_path, f"{idx:0>4}_{taskid:0>2}.log")
+                if os.path.exists(log_file):
+                    idx += 1
+                else:
+                    break
+
             if taskid == 0:
                 self.logger.info(f"running task {classname}.{method} "
                                  f"{PAR.NTASK} times")
-            function(**kwargs)
+            # Redirect output to a log file to mimic cluster runs
+            with open(log_file, "w") as f:
+                with redirect_stdout(f):
+                    function(**kwargs)
 
     def taskid(self):
         """
