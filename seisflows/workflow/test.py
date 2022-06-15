@@ -70,8 +70,8 @@ class Test(custom_import("workflow", "base")):
         This controls the main testing workflow
         """
         FLOW = [#self.test_system,
-                # self.test_preprocess,
-                self.test_solver,
+                self.test_preprocess,
+                # self.test_solver,
                 ]
         if return_flow:
             return FLOW
@@ -120,6 +120,7 @@ class Test(custom_import("workflow", "base")):
         taskid = 0
         filenames = ["AA.S0001.BXY.semd"]
         source_name = "001"
+        import pdb;pdb.set_trace()
         preprocess.prepare_eval_grad(cwd=cwd, taskid=taskid,
                                      filenames=filenames,
                                      source_name=source_name
@@ -143,11 +144,4 @@ class Test(custom_import("workflow", "base")):
         # We expect this to throw a system exit because
         except SystemExit:
             pass
-
-
-    def test_postprocess(self):
-        """
-
-        """
-        pass
 

@@ -21,7 +21,7 @@ class Minmax(defaultdict):
         super(Minmax, self).__init__(lambda: [+np.inf, -np.inf])
 
     def update(self, keys, vals):
-        for key, val in _zip(keys, vals):
+        for key, val in zip(iterable(keys), iterable(vals)):
             if min(val) < self.dict[key][0]:
                 self.dict[key][0] = min(val)
             if max(val) > self.dict[key][1]:
@@ -258,38 +258,3 @@ def check_poissons_ratio(vp, vs, min_val=-1., max_val=0.5):
               )
         sys.exit(-1)
     return poissons
-
-
-def _split(string, sep):
-    """
-    Utility function to split a string by a given separation character or str
-
-    :type string: str
-    :param string: string to split
-    :type sep: str
-    :param sep: substring to split by
-    """
-    n = string.find(sep)
-    if n >= 0:
-        return string[:n], string[n + len(sep):]
-    else:
-        return string, ''
-
-
-def _merge(*parts):
-    """
-    Utility function to merge various strings together with no breaks
-    """
-    return ' '.join(parts)
-
-
-def _zip(keys, vals):
-    """
-    Zip together keys and vals
-
-    :type keys: dict_keys
-    :param keys: keys
-    :type vals: dict_values
-    :param vals: values
-    """
-    return zip(iterable(keys), iterable(vals))
