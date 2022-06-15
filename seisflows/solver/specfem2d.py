@@ -13,7 +13,7 @@ from glob import glob
 from seisflows.tools import unix, msg
 from seisflows.tools.wrappers import exists
 from seisflows.config import custom_import, SeisFlowsPathsParameters
-from seisflows.tools.specfem import call_solver, getpar, setpar
+from seisflows.tools.specfem import getpar, setpar
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -62,7 +62,7 @@ class Specfem2D(custom_import("solver", "base")):
         sf.par("F0", required=True, par_type=float,
                docstr="Dominant source frequency")
 
-        sf.par("FORMAT", required=True, par_type=float,
+        sf.par("FORMAT", required=False, par_type=float, default="ASCII",
                docstr="Format of synthetic waveforms used during workflow, "
                       "available options: ['ascii', 'su']")
 
@@ -267,10 +267,10 @@ class Specfem2D(custom_import("solver", "base")):
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
 
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D",
-                    output="mesher.log")
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D",
-                    output="solver.log")
+        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D",
+                         output="mesher.log")
+        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D",
+                         output="solver.log")
 
         if PAR.FORMAT.upper() == "SU":
             # Work around SPECFEM2D's version dependent file names
@@ -298,8 +298,8 @@ class Specfem2D(custom_import("solver", "base")):
             unix.rename(old=".su", new=".su.adj",
                         names=glob(os.path.join("traces", "adj", "*.su")))
 
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D")
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D")
+        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D")
+        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D")
 
     def smooth(self, input_path, **kwargs):
         """

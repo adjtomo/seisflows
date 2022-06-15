@@ -14,7 +14,7 @@ import seisflows.plugins.solver.specfem3d as solvertools
 from seisflows.tools import unix, msg
 from seisflows.tools.wrappers import exists
 from seisflows.config import custom_import, SeisFlowsPathsParameters
-from seisflows.tools.specfem import call_solver, getpar, setpar
+from seisflows.tools.specfem import getpar, setpar
 
 
 # Seisflows configuration
@@ -101,7 +101,7 @@ class Specfem3D(custom_import("solver", "base")):
         else:
             setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
+        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
 
         unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
                 dst=os.path.join("traces", "obs"))
@@ -139,9 +139,9 @@ class Specfem3D(custom_import("solver", "base")):
             dst = self.model_databases
             unix.cp(src, dst)
 
-            call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem3D")
-            call_solver(mpiexec=PAR.MPIEXEC, 
-                        executable="bin/xgenerate_databases")
+            self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem3D")
+            self.call_solver(mpiexec=PAR.MPIEXEC, 
+                             executable="bin/xgenerate_databases")
 
         # Export the model for future use in the workflow
         if self.taskid == 0:
@@ -171,9 +171,9 @@ class Specfem3D(custom_import("solver", "base")):
         else:
             setpar(key="ATTENUATION", val=".false`.", file="DATA/Par_file")
 
-        call_solver(mpiexec=PAR.MPIEXEC,
-                    executable="bin/xgenerate_databases")
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
+        self.call_solver(mpiexec=PAR.MPIEXEC,
+                         executable="bin/xgenerate_databases")
+        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
 
         # Find and move output traces, by default to synthetic traces dir
         unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
@@ -191,7 +191,7 @@ class Specfem3D(custom_import("solver", "base")):
         unix.rm("SEM")
         unix.ln("traces/adj", "SEM")
 
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
+        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
 
     def check_solver_parameter_files(self):
         """

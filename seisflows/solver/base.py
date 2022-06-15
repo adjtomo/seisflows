@@ -8,13 +8,14 @@ various types of SPECFEM.
 import os
 import sys
 import logging
+import subprocess
 import numpy as np
 from glob import glob
 from functools import partial
 
 from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
-from seisflows.tools.specfem import Container, call_solver
+from seisflows.tools.specfem import Container
 from seisflows.tools.wrappers import Struct, diff, exists
 from seisflows.config import SeisFlowsPathsParameters
 
@@ -354,6 +355,45 @@ class Base:
         """
         raise NotImplementedError("must be implemented by solver subclass")
 
+    def call_solver(self, executable, output="solver.log"):
+        """
+        Calls MPI solver executable to run solver binaries, used by individual
+        processes to run the solver on system. If the external solver returns a
+        non-zero exit code (failure), this function will return a negative boolean.
+
+        :type mpiexec: str
+        :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
+        :type executable: str
+        :param executable: executable function to call
+        :type output: str
+        :param output: where to redirect stdout
+        """
+        # mpiexec is None when running in serial mode, so e.g., ./xmeshfem2D
+        if PAR.SYSTEM in ["workstation"]:
+            exc_cmd = f"./{executable}"
+        # Otherwise mpiexec is system dependent (e.g., srun, mpirun)
+        else:
+            exc_cmd = f"{PAR.MPIEXEC} {executable}"
+
+        try:
+            # Write solver stdout (log files) to text file
+            f = open(output, "w")
+            subprocess.run(exc_cmd, shell=True, check=True, stdout=f)
+        except (subprocess.CalledProcessError, OSError) as e:
+            print(msg.cli("The external numerical solver has returned a nonzero "
+                          "exit code (failure). Consider stopping any currently "
+                          "running jobs to avoid wasted computational resources. "
+                          f"Check 'scratch/solver/mainsolver/{output}' for the "
+                          f"solvers stdout log message. "
+                          f"The failing command and error message are: ",
+                          items=[f"exc: {exc_cmd}", f"err: {e}"],
+                          header="external solver error",
+                          border="=")
+                  )
+            sys.exit(-1)
+        finally:
+            f.close()
+
     @property
     def io(self):
         """
@@ -517,10 +557,11 @@ class Base:
         # Call on xcombine_sem to combine kernels into a single file
         for name in self.parameters:
             # e.g.: mpiexec ./bin/xcombine_sem alpha_kernel kernel_paths output
-            call_solver(mpiexec=PAR.MPIEXEC,
-                        executable=" ".join([f"bin/xcombine_sem",
-                                             f"{name}_kernel", "kernel_paths",
-                                             output_path])
+            self.call_solver(mpiexec=PAR.MPIEXEC,
+                             executable=" ".join([
+                                 f"bin/xcombine_sem", f"{name}_kernel",
+                                 "kernel_paths", output_path]
+                             )
                         )
 
     def smooth(self, input_path, output_path, parameters=None, span_h=0.,
@@ -562,14 +603,14 @@ class Base:
 
         # mpiexec ./bin/xsmooth_sem SMOOTH_H SMOOTH_V name input output use_gpu
         for name in parameters:
-            call_solver(mpiexec=PAR.MPIEXEC,
-                        executable=" ".join(["bin/xsmooth_sem",
-                                             str(span_h), str(span_v),
-                                             f"{name}_kernel",
-                                             os.path.join(input_path, ""),
-                                             os.path.join(output_path, ""),
-                                             ".false"]),
-                        output=output
+            self.call_solver(mpiexec=PAR.MPIEXEC,
+                             executable=" ".join(["bin/xsmooth_sem",
+                                                  str(span_h), str(span_v),
+                                                  f"{name}_kernel",
+                                                  os.path.join(input_path, ""),
+                                                  os.path.join(output_path, ""),
+                                                  ".false"]),
+                             output=output
                         )
 
         # Rename output files

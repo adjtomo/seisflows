@@ -40,46 +40,6 @@ class Container(defaultdict):
         self.minmax = Minmax()
 
 
-def call_solver(mpiexec, executable, output="solver.log"):
-    """
-    Calls MPI solver executable to run solver binaries, used by individual
-    processes to run the solver on system. If the external solver returns a 
-    non-zero exit code (failure), this function will return a negative boolean.
-
-    :type mpiexec: str
-    :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
-    :type executable: str
-    :param executable: executable function to call
-    :type output: str
-    :param output: where to redirect stdout
-    """
-    # mpiexec is None when running in serial mode, so e.g., ./xmeshfem2D
-    if mpiexec is None:
-        exc_cmd = f"./{executable}"
-    # Otherwise mpiexec is system dependent (e.g., srun, mpirun)
-    else:
-        exc_cmd = f"{mpiexec} {executable}"
-
-    try:
-        # Write solver stdout (log files) to text file
-        f = open(output, "w")
-        subprocess.run(exc_cmd, shell=True, check=True, stdout=f)
-    except (subprocess.CalledProcessError, OSError) as e:
-        print(msg.cli("The external numerical solver has returned a nonzero "
-                      "exit code (failure). Consider stopping any currently "
-                      "running jobs to avoid wasted computational resources. "
-                      f"Check 'scratch/solver/mainsolver/{output}' for the "
-                      f"solvers stdout log message. "
-                      f"The failing command and error message are: ",
-                      items=[f"exc: {exc_cmd}", f"err: {e}"],
-                      header="external solver error",
-                      border="=")
-              )
-        sys.exit(-1)
-    finally:
-        f.close()
-
-
 def getpar(key, file, delim="=", match_partial=False):
     """
     Reads and returns parameters from a SPECFEM or SeisFlows parameter file
