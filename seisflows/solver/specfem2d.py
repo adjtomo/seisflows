@@ -267,10 +267,8 @@ class Specfem2D(custom_import("solver", "base")):
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
 
-        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D",
-                         output="mesher.log")
-        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D",
-                         output="solver.log")
+        self.call_solver(executable="bin/xmeshfem2D", output="fwd_mesher.log")
+        self.call_solver(executable="bin/xspecfem2D", output="fwd_solver.log")
 
         if PAR.FORMAT.upper() == "SU":
             # Work around SPECFEM2D's version dependent file names
@@ -298,8 +296,7 @@ class Specfem2D(custom_import("solver", "base")):
             unix.rename(old=".su", new=".su.adj",
                         names=glob(os.path.join("traces", "adj", "*.su")))
 
-        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D")
-        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D")
+        self.call_solver(executable="bin/xspecfem2D", output="adj_solver.log")
 
     def smooth(self, input_path, **kwargs):
         """

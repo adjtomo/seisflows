@@ -101,7 +101,7 @@ class Specfem3D(custom_import("solver", "base")):
         else:
             setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
-        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
+        self.call_solver(executable="bin/xspecfem3D", output="true_solver.log")
 
         unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
                 dst=os.path.join("traces", "obs"))
@@ -139,9 +139,10 @@ class Specfem3D(custom_import("solver", "base")):
             dst = self.model_databases
             unix.cp(src, dst)
 
-            self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem3D")
-            self.call_solver(mpiexec=PAR.MPIEXEC, 
-                             executable="bin/xgenerate_databases")
+            self.call_solver(executable="bin/xmeshfem3D",
+                             output="true_mesher.log")
+            self.call_solver(executable="bin/xgenerate_databases",
+                             output="true_solver.log")
 
         # Export the model for future use in the workflow
         if self.taskid == 0:
@@ -171,9 +172,10 @@ class Specfem3D(custom_import("solver", "base")):
         else:
             setpar(key="ATTENUATION", val=".false`.", file="DATA/Par_file")
 
-        self.call_solver(mpiexec=PAR.MPIEXEC,
-                         executable="bin/xgenerate_databases")
-        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
+        self.call_solver(executable="bin/xgenerate_databases",
+                         output="fwd_mesher.log")
+        self.call_solver(executable="bin/xmeshfem3D", output="fwd_solver.log")
+
 
         # Find and move output traces, by default to synthetic traces dir
         unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
@@ -191,7 +193,7 @@ class Specfem3D(custom_import("solver", "base")):
         unix.rm("SEM")
         unix.ln("traces/adj", "SEM")
 
-        self.call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
+        self.call_solver(executable="bin/xmeshfem3D", output="adj_solver.log")
 
     def check_solver_parameter_files(self):
         """

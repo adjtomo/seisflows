@@ -159,13 +159,37 @@ class Slurm(custom_import("system", "cluster")):
 
         # Continuously check for job completion on ALL running array jobs
         job_ids = job_id_list(stdout, single)
+        job_id, status = self.check_job_status(job_ids)
+        if status is not "OKAY":
+            print(msg.cli((f"Stopping workflow for {status} job. "
+                           f"Please check log file for details."),
+                          items=[f"TASK:    {classname}.{method}",
+                                 f"TASK ID: {job_id}",
+                                 f"LOG:     logs/{job_id}",
+                                 f"SBATCH:  {run_call}"],
+                          header="slurm run error", border="="))
+            sys.exit(-1)
+
+        self.logger.info(f"Task {classname}.{method} finished successfully")
+
+    def check_job_status(self, job_ids):
+        """
+        Repeatedly check the status of a currently running job using 'sacct'.
+        If the job goes into a bad state like 'FAILED', return the failing
+        job's id and the state. If all jobs complete nominally,
+        return state=="OKAY"
+
+        :type job_ids: list
+        :param job_ids: list of running jobs to check using SACCT
+        :rtype: tuple (int, str)
+        :return: (job_id, state) state=="OKAY" if all jobs complete, else it
+            will be a bad state.
+        """
         is_done = False
         count = 0
         bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY",
                       "CANCELLED"]
         while not is_done:
-            # Wait a bit to avoid rapidly querying sacct
-            time.sleep(5)
             is_done, states = job_array_status(job_ids)
             # EXIT CONDITION: if any of the jobs provide job failure codes
             if not is_done:
@@ -173,15 +197,8 @@ class Slurm(custom_import("system", "cluster")):
                     # Sometimes states can be something like 'CANCELLED+', so
                     # we can't do exact string matching, check partial matches
                     if any([check in state for check in bad_states]):
-                        print(msg.cli((f"Stopping workflow for {state} job. "
-                                       f"Please check log file for details."),
-                                      items=[f"TASK:    {classname}.{method}",
-                                             f"TASK ID: {job_ids[i]}",
-                                             f"LOG:     logs/{job_ids[i]}",
-                                             f"SBATCH:  {run_call}"],
-                                      header="slurm run error", border="="))
-                        sys.exit(-1)
-                        # WAIT CONDITION: if sacct is not working, we'll get stuck in a loop
+                        return job_id, state
+            # WAIT CONDITION: if sacct is not working, we'll get stuck in a loop
             if "UNDEFINED" in states:
                 count += 1
                 # Every 10 counts, warn the user this is unexpected behavior
@@ -192,8 +209,10 @@ class Slurm(custom_import("system", "cluster")):
                                         f"times. This job may have failed "
                                         f"unexpectedly. Consider checking "
                                         f"manually")
+            # Wait a bit to avoid rapidly querying sacct
+            time.sleep(5)
 
-        self.logger.info(f"Task {classname}.{method} finished successfully")
+        return None, "OKAY"
 
     def taskid(self):
         """

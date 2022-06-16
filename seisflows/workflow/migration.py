@@ -9,7 +9,6 @@ import sys
 import logging
 
 from seisflows.tools import unix, msg
-from seisflows.tools.wrappers import exists
 from seisflows.config import custom_import, SeisFlowsPathsParameters
 
 

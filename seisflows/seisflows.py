@@ -26,7 +26,6 @@ from glob import glob
 from copy import copy
 from IPython import embed
 
-from seisflows import logger
 from seisflows.tools import unix, msg
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                       setpar_vel_model)
@@ -1272,17 +1271,14 @@ class SeisFlows:
         :param package: specify an indivdual package to search
         """
         items = []
-        module_list = return_modules()
-        for name_, package_dict in module_list.items():
-            if name is not None and name != name_:
+        module_dict = return_modules()
+
+        for module_, module_list in module_dict.items():
+            if package is not None and module_ != package:
                 continue
-            items.append(f"+ {name_.upper()}")
-            for package_, module_list in package_dict.items():
-                if package is not None and package_ != package:
-                    continue
-                items.append(f"\t- {package_}".expandtabs(tabsize=4))
-                for module_ in module_list:
-                    items.append(f"\t\t* {module_}".expandtabs(tabsize=4))
+            items.append(f"- {module_}".expandtabs(tabsize=4))
+            for module_ in module_list:
+                items.append(f"\t* {module_}".expandtabs(tabsize=4))
         print(msg.cli("'+': package, '-': module, '*': class", items=items,
                       header="seisflows modules"))
 
@@ -1429,19 +1425,15 @@ def return_modules():
     :return: a dict with keys matching names and values as dicts for each
         package. nested list contains all the avaialble modules
     """
-    REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
-
     module_dict = {}
     for NAME in NAMES:
-        module_dict[NAME] = {}
-        for PACKAGE in PACKAGES:
-            module_dict[NAME][PACKAGE] = []
-            mod_dir = os.path.join(REPO_DIR, PACKAGE, NAME)
-            for pyfile in sorted(glob(os.path.join(mod_dir, "*.py"))):
-                stripped_pyfile = os.path.basename(pyfile)
-                stripped_pyfile = os.path.splitext(stripped_pyfile)[0]
-                if not stripped_pyfile.startswith("_"):
-                    module_dict[NAME][PACKAGE].append(stripped_pyfile)
+        module_dict[NAME] = []
+        mod_dir = os.path.join(ROOT_DIR, NAME)
+        for pyfile in sorted(glob(os.path.join(mod_dir, "*.py"))):
+            stripped_pyfile = os.path.basename(pyfile)
+            stripped_pyfile = os.path.splitext(stripped_pyfile)[0]
+            if not stripped_pyfile.startswith("_"):
+                module_dict[NAME].append(stripped_pyfile)
 
     return module_dict
 

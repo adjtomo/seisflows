@@ -229,15 +229,6 @@ class Base:
         self.generate_mesh(model_name="init", model_type="gll")
         self.initialize_adjoint_traces()
 
-    def clean(self):
-        """
-        Clean up solver-dependent run directory by removing the OUTPUT_FILES/
-        directory
-        """
-        unix.cd(self.cwd)
-        unix.rm("OUTPUT_FILES")
-        unix.mkdir("OUTPUT_FILES")
-
     def generate_mesh(self, model_path, model_name, model_type):
         """
         Performs meshing and database generation.
@@ -380,10 +371,10 @@ class Base:
         else:
             exc_cmd = f"{PAR.MPIEXEC} {executable}"
 
+        # Run solver. Write solver stdout (log files) to text file
         try:
-            # Write solver stdout (log files) to text file
-            f = open(output, "w")
-            subprocess.run(exc_cmd, shell=True, check=True, stdout=f)
+            with open(output, "w") as f:
+                subprocess.run(exc_cmd, shell=True, check=True, stdout=f)
         except (subprocess.CalledProcessError, OSError) as e:
             print(msg.cli("The external numerical solver has returned a nonzero "
                           "exit code (failure). Consider stopping any currently "
@@ -396,8 +387,7 @@ class Base:
                           border="=")
                   )
             sys.exit(-1)
-        finally:
-            f.close()
+
 
     @property
     def io(self):
@@ -560,14 +550,14 @@ class Base:
             )
 
         # Call on xcombine_sem to combine kernels into a single file
-        for name in self.parameters:
+        for name in parameters:
             # e.g.: mpiexec ./bin/xcombine_sem alpha_kernel kernel_paths output
-            self.call_solver(mpiexec=PAR.MPIEXEC,
-                             executable=" ".join([
-                                 f"bin/xcombine_sem", f"{name}_kernel",
-                                 "kernel_paths", output_path]
+            self.call_solver(executable=" ".join([f"bin/xcombine_sem",
+                                                  f"{name}_kernel",
+                                                  "kernel_paths",
+                                                  output_path]
+                                                 )
                              )
-                        )
 
     def smooth(self, input_path, output_path, parameters=None, span_h=0.,
                span_v=0., output="solver.log"):

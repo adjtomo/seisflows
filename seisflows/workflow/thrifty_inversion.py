@@ -100,6 +100,3 @@ class ThriftyInversion(custom_import("workflow", "inversion")):
 
         self.thrifty = thrifty
 
-
-
-
