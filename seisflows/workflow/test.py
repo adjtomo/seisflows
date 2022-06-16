@@ -145,3 +145,8 @@ class Test(custom_import("workflow", "base")):
         except SystemExit:
             pass
 
+    def test_optimize(self):
+        """
+        Test optimization module with a simple rosenbrock function
+        """
+        optimize.setup()
