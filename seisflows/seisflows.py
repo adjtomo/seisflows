@@ -33,7 +33,7 @@ from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
 from seisflows.tools.wrappers import loadyaml
 from seisflows.config import (init_seisflows, format_paths, config_logger,
                                Dict, custom_import, SeisFlowsPathsParameters,
-                               NAMES, PACKAGES, ROOT_DIR, CFGPATHS)
+                               NAMES, ROOT_DIR, CFGPATHS)
 
 
 def sfparser():
@@ -280,24 +280,6 @@ working state before the workflow can be resumed
         made during debugging.
         """)
     # =========================================================================
-    edit = subparser.add_parser(
-        "edit", help="Open source code file in text editor",
-        description="""Directly edit source code files in your favorite 
-        terminal text editor. Simply a shortcut to avoid having to root around
-        in the repository. Any saved edits will directly affect the SeisFlows
-        source code and any code errors may lead to failure of the package;
-        e.g. 'seisflows edit solver base'"""
-    )
-    edit.add_argument("name", type=str,  nargs="?", default=None,
-                      help="Name of module to search for source file in")
-    edit.add_argument("module", type=str,  nargs="?", default=None,
-                      help="Name of specific module file to open, extension "
-                           "not required")
-    edit.add_argument("-e", "--editor", type=str,  nargs="?", default=None,
-                      help="Chosen text editor, defaults to $EDITOR env var")
-    edit.add_argument("-d", "--dont_open", action="store_true",
-                      help="Dont open the text editor, just list full pathname")
-    # =========================================================================
     examples = subparser.add_parser(
         "examples", help="Look at and run pre-configured example problems",
         description="""Lists out available example problems and allows the
@@ -313,7 +295,7 @@ working state before the workflow can be resumed
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
-                      "edit": edit, "sempar": sempar, "clean": clean, 
+                      "sempar": sempar, "clean": clean,
                       "restart": restart, "print": print_, "reset": reset,
                       "examples": examples}
     if parser.parse_args().command in subparser_dict:
@@ -998,62 +980,6 @@ class SeisFlows:
                 for line in lines:
                     if check in line:
                         print(f"\t{line.split(':')[0].strip()}")
-
-    def edit(self, name, module, editor=None, **kwargs):
-        """
-        Directly edit the SeisFlows source code matching the given name
-        and module using the chosen text editor.
-
-        USAGE
-
-            seisflows edit [name] [module] [editor]
-
-            To edit the base Solver class using vim, one would run:
-
-                seisflows edit solver base vim
-
-            To simply find the location of the inversion workflow source code:
-
-                seisflows edit workflow inversion q
-
-        :type name: str
-        :param name: name of module, must match seisflows.config.NAMES
-        :type module: str
-        :param module: the module name contained under the SeisFlows namespace
-        :type editor: str
-        :param editor: optional chosen text editor to open the file.
-            * If NoneType: defaults to system environment $EDITOR
-            * If 'q': For quit, does not open an editor, simply prints fid
-        """
-        if name is None:
-            self._subparser.print_help()
-            sys.exit(0)
-
-        editor = editor or os.environ.get("EDITOR")
-        if editor is None:
-            print(msg.cli("$EDITOR environment variable is not set, please "
-                          "set manually with the following call structure: "
-                          "seisflows edit [name] [module] [editor]"))
-            sys.exit(-1)
-
-        REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
-        if name not in NAMES:
-            print(msg.cli(f"{name} not in SeisFlows names: {NAMES}"))
-            sys.exit(-1)
-
-        for package in PACKAGES:
-            fid_try = os.path.join(REPO_DIR, package, name, f"{module}.py")
-            if os.path.exists(fid_try):
-                if self._args.dont_open:
-                    print(msg.cli(text=fid_try))
-                    sys.exit(0)
-                else:
-                    subprocess.call([editor, fid_try])
-                    print(msg.cli(f"Edited file: {fid_try}"))
-                    sys.exit(0)
-        else:
-            print(msg.cli(f"seisflows.{name}.{module} not found"))
-            sys.exit(-1)
 
     def examples(self, run=None, choice=None, **kwargs):
         """

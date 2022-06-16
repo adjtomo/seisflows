@@ -42,9 +42,6 @@ mechanics of the package. Do not touch unless you know what you're doing!
 NAMES = ["system", "preprocess", "solver",
          "postprocess", "optimize", "workflow"]
 
-# Packages that define the source code, used to search for base- and subclasses
-PACKAGES = ["seisflows", "seisflows-super"]
-
 # These define the sys.modules names where parameter values and paths are stored
 PAR = "seisflows_parameters"
 PATH = "seisflows_paths"
@@ -72,7 +69,7 @@ CFGPATHS = dict(
 def init_seisflows(check=True):
     """
     Instantiates SeisFlows objects and makes them globally accessible by
-    registering them in sys.modules
+    registering them in sys.modules. This must be run anytime seisflows is run.
 
     :type check: bool
     :param check: Run parameter and path checking, defined in the module.check()
@@ -496,12 +493,8 @@ def custom_import(name=None, module=None, classname=None):
 
     # Check if modules exist, otherwise raise custom exception
     _exists = False
-    for package in PACKAGES:
-        full_dotted_name = ".".join([package, name, module])
-        if module_exists(full_dotted_name):
-            _exists = True
-            break
-    if not _exists:
+    full_dotted_name = ".".join(["seisflows", name, module])
+    if not module_exists(full_dotted_name):
         print(msg.cli(f"The following module was not found within the package: "
                       f"seisflows.{name}.{module}",
                       header="custom import error", border="=")
