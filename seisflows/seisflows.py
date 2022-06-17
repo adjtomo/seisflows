@@ -29,8 +29,8 @@ from IPython import embed
 from seisflows.tools import unix, msg
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)
-from seisflows.tools.wrappers import loadyaml, format_paths
-from seisflows.config import (config_logger, Dict, custom_import,
+from seisflows.tools.wrappers import loadyaml
+from seisflows.config import (config_logger, Dict, custom_import, load,
                               SeisFlowsPathsParameters, NAMES, ROOT_DIR,
                               CFGPATHS)
 
@@ -445,7 +445,10 @@ class SeisFlows:
 
         # Expand all paths to be absolute on the filesystem
         for key, val in paths.items():
-            paths[key] = os.path.expanduser(os.path.abspath(val))
+            try:
+                paths[key] = os.path.expanduser(os.path.abspath(val))
+            except TypeError:
+                continue
 
         # Register parameters to sys and internally
         sys.modules["seisflows_parameters"] = Dict(parameters)
@@ -541,24 +544,25 @@ class SeisFlows:
         A function to load and check each of the SeisFlows modules,
         re-initiating the SeisFlows environment. All modules are reliant on one
         another so any access to SeisFlows requires loading everything
-        simultaneously and in correct order
+        simultaneously and in correct order.
+
+        .. note::
+            This is similar to config.load() except it doesn't load paths
+            and parameters. This allows the User to OVERLOAD the currently
+            defined paths and parameters anytime they call 'seisflows resume'
         """
-        # Working directory should already have been created by submit()
-        unix.cd(self._args.workdir)
-
-        # Reload objects from Pickle files
         for NAME in NAMES:
-            fullfile = os.path.join(self._args.workdir, CFGPATHS.OUTPUTDIR,
-                                    f"seisflows_{NAME}.p")
+            fid = os.path.join(self._paths.OUTPUT, f"seisflows_{NAME}.p")
 
-            if not os.path.exists(fullfile):
+            if not os.path.exists(fid):
                 print(msg.cli("Not a SeisFlows working directory (no state "
                               "files found). Run 'seisflows init' or "
                               "'seisflows submit' to instantiate a working "
                               "directory.")
                       )
                 sys.exit(-1)
-            with open(fullfile, "rb") as f:
+
+            with open(fid, "rb") as f:
                 sys.modules[f"seisflows_{NAME}"] = pickle.load(f)
 
         # Check parameters so that default values are present
@@ -794,6 +798,7 @@ class SeisFlows:
         """
         Resume a previously started workflow by loading the module pickle files
         and submitting the workflow from where it left off.
+
         :type stop_after: str
         :param stop_after: allow the function to overwrite the 'STOP_AFTER'
             parameter in the parameter file, which dictates how far the workflow
@@ -818,10 +823,9 @@ class SeisFlows:
         self._load_modules()
 
         # Set logger to print to stdout and write to a file
-        PATH = sys.modules["seisflows_paths"]
-        PAR = sys.modules["seisflows_parameters"]
-        config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE, 
-                      filename=PATH.LOGFILE) 
+        config_logger(level=self._parameters.LOG_LEVEL,
+                      verbose=self._parameters.VERBOSE,
+                      filename=self._paths.LOGFILE)
 
         system = sys.modules["seisflows_system"]
         system.submit()
@@ -1009,7 +1013,7 @@ class SeisFlows:
         # SeisFlows parameter file dictates upper-case parameters
         parameter = parameter.upper()
         if isinstance(value, str) and value.lower() == "none":
-            warnings.warn("to set values to nonetype, use 'null' not 'none'",
+            warnings.warn("to set values to NoneType, use 'null' not 'none'",
                           UserWarning)
 
         # Use the specfem tool to grab related information
@@ -1207,25 +1211,6 @@ class SeisFlows:
             sys.exit(-1)
 
         solver.save(solver.split(optimize.load(name)), path=path, **kwargs )
-
-    def validate(self, module=None, name=None):
-        """
-        Ensure that all the modules (and their respective subclasses) meet some
-        necessary requirements such as having specific functions and parameters.
-        Not a full replacement for running the test suite, but useful for
-        checking newly written subclasses.
-
-        USAGE
-
-            To validate a specific subclass:
-
-                seisflows validate workflow inversion
-
-            To validate the entire codebase
-
-                seisflows validate
-        """
-        raise NotImplementedError
 
     @staticmethod
     def _inspect_class_that_defined_method(name, func, **kwargs):

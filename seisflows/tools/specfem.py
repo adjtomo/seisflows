@@ -2,10 +2,8 @@
 Utilities to interact with, manipulate or call on the external solver, 
 i.e., SPECFEM2D/3D/3D_GLOBE
 """
-import os
 import sys
 import numpy as np
-import subprocess
 
 from collections import defaultdict
 from seisflows.tools import msg

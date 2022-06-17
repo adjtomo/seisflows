@@ -203,6 +203,7 @@ class Specfem2D(custom_import("solver", "base")):
                 # Generate synthetic data on the fly using the true model
                 self.generate_mesh(model_name="true", model_type="gll")
                 self.forward(path=os.path.join("traces", "obs"))
+
         # If Data provided by user, copy directly into the solver directory
         elif PATH.DATA is not None and os.path.exists(PATH.DATA):
             unix.cp(src=glob(os.path.join(PATH.DATA, self.source_name, "*")),

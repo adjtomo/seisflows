@@ -10,6 +10,7 @@ in one place)
 import logging
 import numpy as np
 
+from seisflows.tools import msg
 from seisflows.tools.array import count_zeros
 from seisflows.tools.math import parabolic_backtrack, polynomial_fit
 
@@ -34,8 +35,9 @@ class Bracket:
     # Class-specific logger accessed using self.logger
     logger = logging.getLogger(__name__).getChild(__qualname__)
 
-    def __init__(self):
+    def __init__(self, step_count_max, step_len_max):
         """
+        Initiate the line search machinery
 
         :type step_count_max: int
         :param step_count_max: maximum number of step counts before changing
@@ -43,10 +45,9 @@ class Bracket:
         :type step_len_max: int
         :param step_len_max: maximum length of the step, defaults to infinity,
             that is unbounded step length. set by PAR.STEP_LEN_MAX
-        :type log_file: str
-        :param log_file: path to write line search stats to. set by optimize.setup()
         """
-        # Prepare lists for line search history
+        self.step_count_max = step_count_max
+        self.step_len_max = step_len_max
         self.func_vals = []
         self.step_lens = []
         self.gtg = []
@@ -79,11 +80,6 @@ class Bracket:
         self.gtg += [gtg]
         self.gtp += [gtp]
 
-        # Call calculate step, must be implemented by subclass
-        alpha, status = self.calculate_step()
-
-        return alpha, status
-
     def update(self, step_len, func_val):
         """
         Update search history by appending internal attributes, writing the
@@ -101,15 +97,8 @@ class Bracket:
         :rtype status: int
         :return status: current status of the line search
         """
-        # This has been moved into workflow.line_search()
-        # self.step_count += 1
         self.step_lens += [step_len]
         self.func_vals += [func_val]
-
-        # Call calcuate step, must be implemented by subclass
-        alpha, status = self.calculate_step()
-
-        return alpha, status
 
     def clear_history(self):
         """

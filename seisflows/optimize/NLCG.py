@@ -5,15 +5,17 @@ It supercedes the `seisflows.optimize.base` class
 """
 import sys
 import logging
+import numpy as np
 
 from seisflows.config import custom_import, SeisFlowsPathsParameters
 from seisflows.tools import unix
+from seisflows.tools.math import dot
 
 PAR = sys.modules['seisflows_parameters']
 PATH = sys.modules['seisflows_paths']
 
 
-class NLCG(custom_import("optimize", "base")):
+class NLCG(custom_import("optimize", "gradient")):
     """
     Nonlinear conjugate gradient method
 
@@ -103,7 +105,7 @@ class NLCG(custom_import("optimize", "base")):
         unix.cd(PATH.OPTIMIZE)
 
         # Load the current gradient direction
-        g_new = self.load(self.g_new)
+        g_new = np.load(self.g_new)
 
         # CASE 1: If first iteration, search direction is the current gradient
         if self.NLCG_iter == 1:
@@ -123,8 +125,8 @@ class NLCG(custom_import("optimize", "base")):
         # Normal NLCG direction compuitation
         else:
             # Compute search direction
-            g_old = self.load(self.g_old)
-            p_old = self.load(self.p_old)
+            g_old = np.load(self.g_old)
+            p_old = np.load(self.p_old)
 
             # Apply preconditioner and calc. scale factor for search dir. (beta)
             if self.precond:
@@ -150,7 +152,7 @@ class NLCG(custom_import("optimize", "base")):
                 restarted = 0
 
         # Save values to disk and memory
-        self.save(self.p_new, p_new)
+        np.save(self.p_new, p_new)
         self.restarted = restarted
 
     def restart(self):

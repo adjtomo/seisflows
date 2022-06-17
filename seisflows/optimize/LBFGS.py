@@ -17,7 +17,7 @@ PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
 
 
-class LBFGS(custom_import("optimize", "base")):
+class LBFGS(custom_import("optimize", "gradient")):
     """
     The Limited memory BFGS algorithm
     Calls upon seisflows.plugin.optimize.LBFGS to accomplish LBFGS algorithm
@@ -80,6 +80,7 @@ class LBFGS(custom_import("optimize", "base")):
             i.e., `m_new - m_old`
         """
         super().__init__()
+        
         self.LBFGS_iter = 0
         self.memory_used = 0
         self.LBFGS_dir = "LBFGS"
@@ -155,7 +156,7 @@ class LBFGS(custom_import("optimize", "base")):
 
         # Load the current gradient direction, which is the L-BFGS search
         # direction if this is the first iteration
-        g = self.load(self.g_new)
+        g = np.load(self.g_new)
         if self.LBFGS_iter == 1:
             self.logger.info("first L-BFGS iteration, setting search direction "
                              "as inverse gradient")
@@ -192,7 +193,7 @@ class LBFGS(custom_import("optimize", "base")):
                 restarted = 1
 
         # Save values to disk and memory
-        self.save(self.p_new, p_new)
+        np.save(self.p_new, p_new)
         self.restarted = restarted
 
     def restart(self):
@@ -235,8 +236,8 @@ class LBFGS(custom_import("optimize", "base")):
         unix.cd(PATH.OPTIMIZE)
 
         # Determine the iterates for model m and gradient g
-        s_k = self.load(self.m_new) - self.load(self.m_old)
-        y_k = self.load(self.g_new) - self.load(self.g_old)
+        s_k = np.load(self.m_new) - np.load(self.m_old)
+        y_k = np.load(self.g_new) - np.load(self.g_old)
 
         # Determine the shape of the memory map (length of model, length of mem)
         m = len(s_k)

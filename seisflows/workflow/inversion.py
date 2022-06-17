@@ -308,12 +308,6 @@ class Inversion(custom_import("workflow", "base")):
         unix.mkdir(PATH.GRAD)
         unix.mkdir(PATH.FUNC)
 
-    def checkpoint(self):
-        """
-        Writes information to disk so workflow can be resumed following a break
-        """
-        save()
-
     def write_model(self, path, tag):
         """
         Writes model in format expected by solver
@@ -328,7 +322,7 @@ class Inversion(custom_import("workflow", "base")):
         src = tag
         dst = os.path.join(path, "model")
         self.logger.debug(f"saving model '{src}' to:\n{dst}")
-        solver.save(solver.split(optimize.load(src)), dst)
+        solver.save(solver.split(np.load(src)), dst)
 
     def write_gradient(self):
         """
@@ -337,12 +331,12 @@ class Inversion(custom_import("workflow", "base")):
         """
         self.logger.info(msg.mnr("POSTPROCESSING KERNELS"))
         src = os.path.join(PATH.GRAD, "gradient")
-        dst = f"g_new"
+        dst = optimize.g_new
 
         postprocess.write_gradient(PATH.GRAD)
         parts = solver.load(src, suffix="_kernel")
 
-        optimize.save(dst, solver.merge(parts))
+        np.save(dst, solver.merge(parts))
 
     def write_misfit(self, path, tag):
         """
@@ -363,7 +357,7 @@ class Inversion(custom_import("workflow", "base")):
         total_misfit = preprocess.sum_residuals(src)
 
         self.logger.debug(f"saving misfit {total_misfit:.3E} to tag '{dst}'")
-        optimize.savetxt(dst, total_misfit)
+        np.save(dst, total_misfit)
 
     def save_gradient(self):
         """
@@ -398,9 +392,9 @@ class Inversion(custom_import("workflow", "base")):
         self.logger.debug(f"saving model '{src}' to path:\n{dst}")
 
         if PAR.SAVEAS in ["binary", "both"]:
-            solver.save(solver.split(optimize.load(src)), dst)
+            solver.save(solver.split(np.load(src)), dst)
         if PAR.SAVEAS in ["vector", "both"]:
-            np.save(file=dst, arr=optimize.load(src))
+            np.save(file=dst, arr=np.load(src))
 
     def save_kernels(self):
         """

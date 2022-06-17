@@ -16,18 +16,17 @@ from seisflows.tools import msg, unix
 from seisflows.tools.math import angle, dot
 from seisflows.plugins import line_search, preconds
 from seisflows.tools.specfem import check_poissons_ratio
-from seisflows.config import SeisFlowsPathsParameters, CFGPATHS
+from seisflows.config import SeisFlowsPathsParameters, CFGPATHS, Dict
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
 solver = sys.modules["seisflows_solver"]
 
 
-class Base:
+class Gradient:
     """
-    Nonlinear optimization abstract base class.
-
-    This base class provides a steepest descent optimization algorithm.
+    Nonlinear optimization abstract base class poviding a gradient/steepest
+    descent optimization algorithm.
 
     Nonlinear conjugate, quasi-Newton and Newton methods can be implemented on
     top of this base class.
@@ -35,7 +34,7 @@ class Base:
     .. note::
         To reduce memory overhead, vectors are read from disk rather than passed
         from calling routines. For example, at the beginning of
-        compute_direction the current gradient is  read from  'g_new' and the
+        compute_direction the current gradient is read from  'g_new' and the
         resulting search direction is written to 'p_new'. As the inversion
         progresses, other information is stored as well.
 
@@ -84,34 +83,29 @@ class Base:
         self.precond = None
         self.restarted = False
 
-        # Define the names of output stats logs to keep all paths in one place
-        # Line search log is named differently so that optimize doesn't
-        # overwrite this log file when intiating the stats directory
-        self.line_search_log = "line_search"
-        self.log_factor = "factor"
-        self.log_gradient_norm_L1 = "gradient_norm_L1"
-        self.log_gradient_norm_L2 = "gradient_norm_L2"
-        self.log_misfit = "misfit"
-        self.log_restarted = "restarted"
-        self.log_slope = "slope"
-        self.log_step_count = "step_count"
-        self.log_step_length = "step_length"
-        self.log_theta = "theta"
+        # Models
+        self.m_new = os.path.join(PATH.OPTIMIZE, "m_new.npy")
+        self.m_old = os.path.join(PATH.OPTIMIZE, "m_old.npy")
+        self.m_try = os.path.join(PATH.OPTIMIZE, "m_try.npy")
 
-        # Define the names of variables used to keep track of models etc. so
-        # that we don't have multiple strings floating around defining the same
-        # thing
-        self.m_new = "m_new.npy"
-        self.m_old = "m_old.npy"
-        self.m_try = "m_try.npy"
-        self.f_new = "f_new.txt"
-        self.f_old = "f_old.txt"
-        self.f_try = "f_try.txt"
-        self.g_new = "g_new.npy"
-        self.g_old = "g_old.npy"
-        self.p_new = "p_new.npy"
-        self.p_old = "p_old.npy"
-        self.alpha = "alpha.npy"
+        # Gradients
+        self.g_new = os.path.join(PATH.OPTIMIZE, "g_new.npy")
+        self.g_old = os.path.join(PATH.OPTIMIZE, "g_old.npy")
+        self.g_try = os.path.join(PATH.OPTIMIZE, "g_try.npy")
+
+        # Search directions
+        self.p_new = os.path.join(PATH.OPTIMIZE, "p_new.npy")
+        self.p_old = os.path.join(PATH.OPTIMIZE, "p_old.npy")
+        self.p_try = os.path.join(PATH.OPTIMIZE, "p_try.npy")
+
+        # Misfits
+        self.f_new = os.path.join(PATH.OPTIMIZE, "f_new.npy")
+        self.f_old = os.path.join(PATH.OPTIMIZE, "f_old.npy")
+        self.f_try = os.path.join(PATH.OPTIMIZE, "f_try.npy")
+
+        # Current search direction
+        self.alpha = os.path.join(PATH.OPTIMIZE, "alpha.npy")
+
 
     @property
     def required(self):
@@ -177,13 +171,17 @@ class Base:
 
         # Line search machinery is defined externally as a plugin class
         if PAR.LINESEARCH:
-            self.line_search = getattr(line_search, PAR.LINESEARCH)()
+            self.line_search = getattr(line_search, PAR.LINESEARCH)(
+                step_count_max=PAR.STEPCOUNTMAX,
+                step_len_max=PAR.STEPLENMAX,
+            )
         if PAR.PRECOND:
             self.precond = getattr(preconds, PAR.PRECOND)()
 
+        # Read in initial model as a vector and ensure it is a valid model
         m_new = solver.merge(solver.load(PATH.MODEL_INIT))
-        self.save(self.m_new, m_new)
-        self.check_model(m_new, self.m_new)
+        np.save(self.m_new, m_new)
+        self.check_model(m_new)
 
     @property
     def eval_str(self):
@@ -208,24 +206,26 @@ class Base:
         """
         self.logger.info(f"computing search direction with {PAR.OPTIMIZE}")
 
-        g_new = self.load(self.g_new)
+        g_new = np.load(self.g_new)
         if self.precond is not None:
             p_new = -1 * self.precond(g_new)
         else:
             p_new = -1 * g_new
-        self.save(self.p_new, p_new)
+        np.save(self.p_new, p_new)
 
     def initialize_search(self):
         """
         Initialize the plugin line search machinery. Should only be run at
         the beginning of line search, by the main workflow module.
         """
-        m = self.load(self.m_new)
-        g = self.load(self.g_new)
-        p = self.load(self.p_new)
-        f = self.loadtxt(self.f_new)
+        m = np.load(self.m_new)
+        g = np.load(self.g_new)
+        p = np.load(self.p_new)
+        f = np.load(self.f_new)
+
         norm_m = max(abs(m))
         norm_p = max(abs(p))
+
         gtg = dot(g, g)
         gtp = dot(g, p)
 
@@ -239,23 +239,21 @@ class Base:
             self.logger.debug(f"max step length safeguard is: "
                               f"{self.line_search.step_len_max:.2E}")
 
-        # Alpha defines the trial step length
-        alpha, _ = self.line_search.initialize(iter=self.iter, step_len=0.,
-                                               func_val=f, gtg=gtg, gtp=gtp
-                                               )
+        self.line_search.initialize(step_len=0., func_val=f, gtg=gtg, gtp=gtp)
+        alpha, _ = self.line_search.calculate_step()
 
-        # Optional initial step length override
+        # Alpha defines the trial step length. Optional step length override
         if PAR.STEPLENINIT and len(self.line_search.step_lens) <= 1:
             alpha = PAR.STEPLENINIT * norm_m / norm_p
-            self.logger.debug(f"manually set initial step length: {alpha:.2E}")
+            self.logger.debug(f"overwrite initial step length: {alpha:.2E}")
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
         m_try = m + alpha * p
 
-        self.save(self.m_try, m_try)
-        self.savetxt(self.alpha, alpha)
-        self.check_model(m_try, self.m_try)
+        np.save(self.m_try, m_try)
+        np.save(self.alpha, alpha)
+        self.check_model(m_try)
 
     def update_search(self):
         """
@@ -267,19 +265,19 @@ class Base:
             status == 0 : not finished
             status == -1  : failed
         """
-        alpha, status = self.line_search.update(
-            iter=self.iter, step_len=self.loadtxt(self.alpha),
-            func_val=self.loadtxt(self.f_try)
-        )
+        self.line_search.update(step_len=np.load(self.alpha),
+                                func_val=np.load(self.f_try))
+        alpha, status = self.line_search.calculate_step()
 
         # New search direction needs to be searchable on disk
         if status in [0, 1]:
-            m = self.load(self.m_new)
-            p = self.load(self.p_new)
-            self.savetxt(self.alpha, alpha)
+            m = np.load(self.m_new)
+            p = np.load(self.p_new)
+            np.save(self.alpha, alpha)
+
             m_try = m + alpha * p
-            self.save(self.m_try, m_try)
-            self.check_model(m_try, self.m_try)
+            np.save(self.m_try, m_try)
+            self.check_model(m_try)
 
         return status
 
@@ -290,15 +288,8 @@ class Base:
         Removes old model/search parameters, moves current parameters to old,
         sets up new current parameters and writes statistic outputs
         """
-        self.logger.info(msg.sub("FINALIZING LINE SEARCH"))
-
-        g = self.load(self.g_new)
-        p = self.load(self.p_new)
-        x = self.line_search.search_history()[0]
-        f = self.line_search.search_history()[1]
-
-        # Clean scratch directory
         unix.cd(PATH.OPTIMIZE)
+        self.logger.info(msg.sub("FINALIZING LINE SEARCH"))
 
         # Remove the old model parameters
         if self.iter > 1:
@@ -314,23 +305,12 @@ class Base:
 
         self.logger.info("setting accepted line search model as current model")
         unix.mv(self.m_try, self.m_new)
-        self.savetxt(self.f_new, f.min())
+
+        f = self.line_search.search_history()[1]
+        np.save(self.f_new, f.min())
         self.logger.info(f"current misfit is {self.f_new}={f.min():.3E}")
 
-        # !!! TODO Describe what stats are being written here
-        self.logger.info(f"writing optimization stats to: {CFGPATHS.STATSDIR}")
-        self.write_stats(self.log_factor, value=
-                         -dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
-                         )
-        self.write_stats(self.log_gradient_norm_L1, value=np.linalg.norm(g, 1))
-        self.write_stats(self.log_gradient_norm_L2, value=np.linalg.norm(g, 2))
-        self.write_stats(self.log_misfit, value=f[0])
-        self.write_stats(self.log_restarted, value=self.restarted)
-        self.write_stats(self.log_slope, value=(f[1] - f[0]) / (x[1] - x[0]))
-        self.write_stats(self.log_step_count, value=self.line_search.step_count)
-        self.write_stats(self.log_step_length, value=x[f.argmin()])
-        self.write_stats(self.log_theta,
-                         value=180. * np.pi ** -1 * angle(p, -g))
+        self.write_stats()
 
         self.logger.info("resetting line search step count to 0")
         self.line_search.step_count = 0
@@ -341,8 +321,8 @@ class Base:
         by checking, in effect, if the search direction was the same as gradient
         direction
         """
-        g = self.load(self.g_new)
-        p = self.load(self.p_new)
+        g = np.load(self.g_new)
+        p = np.load(self.p_new)
         theta = angle(p, -g)
 
         self.logger.debug(f"theta: {theta:6.3f}")
@@ -363,24 +343,19 @@ class Base:
         numerical stagnation.
         """
         # Steepest descent (base) does not need to be restarted
-        if PAR.OPTIMIZE != "base":
-            g = self.load(self.g_new)
-            self.save(self.p_new, -g)
+        if PAR.OPTIMIZE.capitalize() != "Gradient":
+            g = np.load(self.g_new)
+            np.save(self.p_new, -g)
+
             self.line_search.clear_history()
             self.restarted = 1
 
-    def write_stats(self, log, value=None, format="18.6E"):
+    def write_stats(self):
         """
-        Simplified write function to append values to text files in the
-        STATSDIR. Used because stats line search information can be overwritten
+        Simplified write function to append values to text files.
+        Used because stats line search information can be overwritten
         by subsequent iterations so we need to append values to text files
         if they should be retained.
-
-        Log files will look something like:
-
-        ITER  FACTOR
-        ====  ======
-           1     0.0
 
         :type log: str
         :param log: name of the file to write to. Will append .txt to it
@@ -389,20 +364,42 @@ class Base:
         :type format: str
         :param format: string formatter for value
         """
-        fid = os.path.join(PATH.WORKDIR, CFGPATHS.STATSDIR, f"{log}.txt")
+        self.logger.info(f"writing optimization stats")
+        fid = os.path.join(PATH.OUTPUT,  f"optim_stats.txt")
 
-        # If no value is given, assuming we are being run from setup() and
-        # writing to new files. Will OVERWRITE any existing files
-        if value is None:
+        # First time, write header information
+        if not os.path.exists(fid):
             with open(fid, "w") as f:
-                f.write(f"{'ITER':>4}  {log.upper():>18}\n")
-                f.write(f"{'='*4}  {'='*18}\n")
+                f.write(f"{'ITER':>4}")
+                for log in ["FACTOR", "GRAD_NORM_L1", "GRAD_NORM_L2",
+                            "MISFIT", "RESTART", "SLOPE", "STEP", "LENGTH",
+                            "THETA"]:
+                    f.write(f"{log.upper()},")
+                f.write("\n")
 
-        else:
-            with open(fid, "a") as f:
-                f.write(f"{self.iter:>4}  {value:{format}}\n")
+        g = np.load(self.g_new)
+        p = np.load(self.p_new)
+        x = self.line_search.search_history()[0]
+        f = self.line_search.search_history()[1]
 
-    def check_model(self, m, tag):
+        # Calculated stats factors
+        factor = (g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
+        grad_norm_L1 = np.linalg.norm(g, 1)
+        grad_norm_L2 = np.linalg.norm(g, 2)
+        misfit = f[0]
+        restarted = self.restarted
+        slope = (f[1] - f[0]) / (x[1] - x[0])
+        step_count = self.line_search.step_count
+        step_length = x[f.argmin()]
+        theta = 180. * np.pi ** -1 * angle(p, -g)
+
+        with open(fid, "a") as f:
+            f.write(f"{self.iter},{factor},{grad_norm_L1},{grad_norm_L2},"
+                    f"{misfit},{restarted},{slope},{step_count},{step_length},"
+                    f"{theta}\n")
+
+
+    def check_model(self, m):
         """
         Check to ensure that the model parameters fall within the guidelines
         of the solver. Print off min/max model parameters for the User.
@@ -419,77 +416,21 @@ class Base:
 
         # Check Poisson's ratio, which will error our SPECFEM if outside limits
         if (pars["vp"] is not None) and (pars["vs"] is not None):
-            self.logger.debug(f"checking poissons ratio for: '{tag}'")
+            self.logger.debug(f"checking poissons ratio")
             pars["pr"] = check_poissons_ratio(vp=pars["vp"], vs=pars["vs"])
             if pars["pr"].min() < 0:
                 self.logger.warning("minimum poisson's ratio is negative")
 
         # Tell the User min and max values of the updated model
-        self.logger.info(f"model parameters ({tag} {self.eval_str}):")
+        self.logger.info(f"model parameters")
         parts = "{minval:.2f} <= {key} <= {maxval:.2f}"
         for key, vals in pars.items():
             self.logger.info(parts.format(minval=vals.min(), key=key,
                                           maxval=vals.max())
                              )
 
-    @staticmethod
-    def load(filename):
-        """
-        Convenience function to reads vectors from disk as Numpy files,
-        reads directly from PATH.OPTIMIZE. Works around Numpy's behavior of
-        appending '.npy' to files that it saves.
 
-        :type filename: str
-        :param filename: filename to read from
-        :rtype: np.array
-        :return: vector read from disk
-        """
-        fid = os.path.join(PATH.OPTIMIZE, filename)
-        if not os.path.exists(fid):
-            fid += ".npy"
-        return np.load(fid)
 
-    @staticmethod
-    def save(filename, array):
-        """
-        Convenience function to write vectors to disk as numpy files.
-        Reads directly from PATH.OPTIMIZE
 
-        :type filename: str
-        :param filename: filename to read from
-        :type array: np.array
-        :param array: array to be saved
-        """
-        np.save(os.path.join(PATH.OPTIMIZE, filename), array)
-
-    @staticmethod
-    def loadtxt(filename):
-        """
-        Reads scalars from optimize directory on disk,
-        accounts for savetxt() appending file extension
-
-        :type filename: str
-        :param filename: filename to read from
-        :rtype: float
-        :return: scalar read from disk
-        """
-        if not os.path.splitext(filename)[1]:
-            filename += ".txt"
-        return float(np.loadtxt(os.path.join(PATH.OPTIMIZE, filename)))
-
-    @staticmethod
-    def savetxt(filename, scalar):
-        """
-        Writes scalars to disk with a specific format, appends .txt to the
-        filename to make it clear that these are text files.
-
-        :type filename: str
-        :param filename: filename to read from
-        :type scalar: float
-        :param scalar: value to write to disk
-        """
-        if not os.path.splitext(filename)[1]:
-            filename += ".txt"
-        np.savetxt(os.path.join(PATH.OPTIMIZE, filename), [scalar], "%11.6e")
 
 

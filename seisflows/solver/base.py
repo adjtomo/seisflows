@@ -350,7 +350,8 @@ class Base:
         """
         Calls MPI solver executable to run solver binaries, used by individual
         processes to run the solver on system. If the external solver returns a
-        non-zero exit code (failure), this function will return a negative boolean.
+        non-zero exit code (failure), this function will return a negative
+        boolean.
 
         :type mpiexec: str
         :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
@@ -359,7 +360,9 @@ class Base:
         :type output: str
         :param output: where to redirect stdout
         """
-        if not os.path.exists(executable):
+        # Executable may come with additional sub arguments, we only need to
+        # check that the actually executable exists
+        if not os.path.exists(executable.split(" ")[0]):
             print(msg.cli(f"solver executable {executable} does not exist",
                           header="external solver error", border="="))
             sys.exit(-1)
@@ -534,13 +537,13 @@ class Base:
         :param parameters: optional list of parameters,
             defaults to `self.parameters`
         """
+        unix.cd(self.cwd)
+
         if parameters is None:
             parameters = self.parameters
 
         if not exists(output_path):
             unix.mkdir(output_path)
-
-        unix.cd(self.cwd)
 
         # Write the source names into the kernel paths file for SEM/ directory
         with open("kernel_paths", "w") as f:
@@ -587,19 +590,17 @@ class Base:
         :type output: str
         :param output: file to output stdout to
         """
+        unix.cd(self.cwd)
+
         if parameters is None:
             parameters = self.parameters
 
         if not exists(output_path):
             unix.mkdir(output_path)
 
-        # Apply smoothing operator inside scratch/solver/*
-        unix.cd(self.cwd)
-
         # mpiexec ./bin/xsmooth_sem SMOOTH_H SMOOTH_V name input output use_gpu
         for name in parameters:
-            self.call_solver(mpiexec=PAR.MPIEXEC,
-                             executable=" ".join(["bin/xsmooth_sem",
+            self.call_solver(executable=" ".join(["bin/xsmooth_sem",
                                                   str(span_h), str(span_v),
                                                   f"{name}_kernel",
                                                   os.path.join(input_path, ""),

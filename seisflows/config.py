@@ -55,7 +55,6 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 CFGPATHS = dict(
     PAR_FILE="parameters.yaml",  # Default SeisFlows parameter file
     SCRATCHDIR="scratch",        # SeisFlows internal working directory
-    STATSDIR="stats",            # Optimization module log file output
     OUTPUTDIR="output",          # Permanent disk storage for state and outputs
     LOGFILE="sfoutput.txt",    # Log files for all system log
     ERRLOGFILE="sferror.txt",  # StdErr dump site for crash messages
@@ -64,7 +63,6 @@ CFGPATHS = dict(
 """
 !!! ^^^ WARNING ^^^ !!!
 """
-
 
 
 def save(path):
@@ -83,7 +81,7 @@ def save(path):
     for name in [PAR, PATH]:
         fullfile = os.path.join(path, f"{name}.json")
         with open(fullfile, "w") as f:
-            json.dump(sys.modules[name].__dict__, f, sort_keys=True, indent=4)
+            json.dump(sys.modules[name], f, sort_keys=True, indent=4)
 
     # Save the current workflow as pickle objects
     for name in NAMES:
@@ -100,8 +98,6 @@ def load(path):
     :type path: str
     :param path: path to the previously saved session
     """
-    logger.info("loading current working environment from disk")
-
     # Load parameters and paths from a JSON file
     for name in [PAR, PATH]:
         fullfile = os.path.join(os.path.abspath(path), f"{name}.json")
@@ -184,6 +180,7 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
+
 class Dict(dict):
     """
     A dictionary replacement which allows for easier parameter access through
@@ -193,9 +190,12 @@ class Dict(dict):
     def __str__(self):
         """Pretty print dictionaries and first level nested dictionaries"""
         str_ = ""
-        longest_key = max([len(_) for _ in self.keys()])
-        for key, val in self.items():
-            str_ += f"{key:<{longest_key}}: {val}\n"
+        try:
+            longest_key = max([len(_) for _ in self.keys()])
+            for key, val in self.items():
+                str_ += f"{key:<{longest_key}}: {val}\n"
+        except ValueError:
+            pass
         return str_
 
     def __repr__(self):
@@ -214,7 +214,7 @@ class Dict(dict):
         self.__dict__[key] = val
 
 
-class Null(object):
+class Null:
     """
     A null object that always and reliably does nothing
     """

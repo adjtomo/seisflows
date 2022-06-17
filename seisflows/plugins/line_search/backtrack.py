@@ -70,6 +70,7 @@ class Backtrack(Bracket):
                 status = 1
             # If misfit continually increases, decrease step length
             elif step_count <= self.step_count_max:
+                import pdb;pdb.set_trace()
                 self.logger.info("misfit increase, decreasing step length")
                 slope = gtp[-1] / gtg[-1]
                 alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],

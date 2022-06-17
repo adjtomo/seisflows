@@ -10,7 +10,6 @@ import sys
 import logging
 from glob import glob
 
-import seisflows.plugins.solver.specfem3d as solvertools
 from seisflows.tools import unix, msg
 from seisflows.tools.wrappers import exists
 from seisflows.config import custom_import, SeisFlowsPathsParameters

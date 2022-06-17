@@ -222,6 +222,6 @@ class Base:
         """
         Writes information to disk so workflow can be resumed following a break
         """
-        save()
+        save(path=PATH.OUTPUT)
 
 
