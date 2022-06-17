@@ -66,87 +66,36 @@ CFGPATHS = dict(
 """
 
 
-def init_seisflows(check=True):
+
+def save(path):
     """
-    Instantiates SeisFlows objects and makes them globally accessible by
-    registering them in sys.modules. This must be run anytime seisflows is run.
+    Export the current Python environment to disk as Pickle and JSON files,
+    which allows us to checkpoint a current workflow and resume without
+    loss of information.
 
-    :type check: bool
-    :param check: Run parameter and path checking, defined in the module.check()
-        functions. By default should be True, to ensure that paths and
-        parameters are set correctly. It should only be set False for debug
-        and testing purposes when we need to force our way past this safeguard.
+    :type path: str
+    :param path: path to save the current session
     """
-    logger.info("initializing SeisFlows in sys.modules")
-
-    # Parameters and paths must already be loaded (normally done by submit)
-    assert(PAR in sys.modules)
-    assert(PATH in sys.modules)
-
-    # Check if objects already exist on disk, exit so as to not overwrite
-    if "OUTPUT" in sys.modules[PATH] and \
-            os.path.exists(sys.modules[PATH]["OUTPUT"]):
-        print(msg.cli("Data from previous workflow found in working directory.",
-                      items=["> seisflows restart: delete data and start new "
-                             "workflow",
-                             "> seisflows resume: resume existing workflow"],
-                      header="warning", border="=")
-              )
-        sys.exit(-1)
-
-    # Instantiate and register objects
-    for name in NAMES:
-        sys.modules[f"seisflows_{name}"] = custom_import(name)()
-
-    # Parameter import error checking, missing or improperly set parameters will
-    # throw assertion errors
-    if check:
-        errors = []
-        for name in NAMES:
-            try:
-                sys.modules[f"seisflows_{name}"].check()
-            except AssertionError as e:
-                errors.append(f"{name}: {e}")
-        if errors:
-            print(msg.cli("seisflows.config module check failed with:",
-                          items=errors, header="module check error",
-                          border="="))
-            sys.exit(-1)
-
-    # Bare minimum module requirements for SeisFlows
-    req_modules = ["WORKFLOW", "SYSTEM"]
-    for req in req_modules:
-        if not hasattr(sys.modules[PAR], req):
-            print(msg.cli(f"SeisFlows requires defining: {req_modules}."
-                          "Please specify these in the parameter file. Use "
-                          "'seisflows print module' to determine suitable "
-                          "choices.", header="error", border="="))
-            sys.exit(-1)
-
-
-def save():
-    """
-    Export the current session to disk
-    """
-    output = sys.modules[PATH]["OUTPUT"]
-    unix.mkdir(output)
+    if not os.path.exists(path):
+        unix.mkdir(path)
 
     # Save the paths and parameters into a JSON file
     for name in [PAR, PATH]:
-        fullfile = os.path.join(output, f"{name}.json")
+        fullfile = os.path.join(path, f"{name}.json")
         with open(fullfile, "w") as f:
             json.dump(sys.modules[name].__dict__, f, sort_keys=True, indent=4)
 
     # Save the current workflow as pickle objects
     for name in NAMES:
-        fullfile = os.path.join(output, f"seisflows_{name}.p")
+        fullfile = os.path.join(path, f"seisflows_{name}.p")
         with open(fullfile, "wb") as f:
             pickle.dump(sys.modules[f"seisflows_{name}"], f)
 
 
 def load(path):
     """
-    Imports a previously saved session from disk
+    Imports a previously saved session from disk by reading in JSON and
+    Pickle files which define a saved Python environment
 
     :type path: str
     :param path: path to the previously saved session
@@ -235,30 +184,17 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
-
-class Dict(object):
+class Dict(dict):
     """
-    A barebones dictionary-like object for holding parameters or paths.
-
-    Allows for easier access of dictionary items, does not allow resets of
-    attributes once defined, nor does it allow deleting attributes once defined.
-    This helps keep a workflow on rails by preventing the User from editing
-    paths and parameters during a workflow.
-
-    TODO | Does it make sense to have this inherit dict() rather than defining
-    TODO | an entirely new object?
+    A dictionary replacement which allows for easier parameter access through
+    getting and setting attributes. Also has some functionality to make string
+    printing prettier
     """
-    def __init__(self, newdict):
-        """Internal dictionary can ONLY be updated by updating the ENTIRE set
-        at once, usually done by reading in a new parameter file at the start
-        of a workflow"""
-        super(Dict, self).__setattr__('__dict__', newdict)
-
     def __str__(self):
         """Pretty print dictionaries and first level nested dictionaries"""
         str_ = ""
-        longest_key = max([len(_) for _ in self.__dict__.keys()])
-        for key, val in self.__dict__.items():
+        longest_key = max([len(_) for _ in self.keys()])
+        for key, val in self.items():
             str_ += f"{key:<{longest_key}}: {val}\n"
         return str_
 
@@ -266,43 +202,16 @@ class Dict(object):
         """Pretty print when calling an instance of this object"""
         return(self.__str__())
 
-    def __iter__(self):
-        """Return an iterable list of sorted keys"""
-        return iter(sorted(self.__dict__.keys()))
-
     def __getattr__(self, key):
         """Attribute-like access of the internal dictionary attributes"""
         try:
-            return self.__dict__[key]
+            return self[key]
         except KeyError:
             raise AttributeError(f"{key} not found in Dict")
 
-    def __getitem__(self, key):
-        """.get() like access of the internal dictionary attributes """
-        return self.__dict__[key]
-
     def __setattr__(self, key, val):
         """Setting attributes can only be performed one time"""
-        if key in self.__dict__:
-            raise TypeError("Once defined, parameters cannot be changed.")
         self.__dict__[key] = val
-
-    def __delattr__(self, key):
-        """Attributes cannot be deleted once set to avoid editing a parameter
-        set during an active workflow"""
-        if key in self.__dict__:
-            raise TypeError("Once defined, parameters cannot be deleted.")
-        raise KeyError
-
-    def force_set(self, key, val):
-        """Force-set variables even though the intended behavior of this class
-        is to not allow deleting or replacing already set variables.
-        This should be used for check() functions and testing purposes only"""
-        self.__dict__[key] = val
-
-    def values(self):
-        """Return values from the internal dictionary"""
-        return self.__dict__.values()
 
 
 class Null(object):
@@ -502,7 +411,7 @@ def custom_import(name=None, module=None, classname=None):
         sys.exit(-1)
 
     # If importing the module doesn't work, throw an error. Usually this happens
-    # when am external dependency isn't available, e.g., Pyatoa
+    # when an external dependency isn't available, e.g., Pyatoa
     try:
         module = import_module(full_dotted_name)
     except Exception as e:
@@ -518,25 +427,6 @@ def custom_import(name=None, module=None, classname=None):
         print(msg.cli(f"The following method was not found in the imported "
                       f"class: seisflows.{name}.{module}.{classname}"))
         sys.exit(-1)
-
-
-def format_paths(mydict):
-    """
-    Ensure that paths have a standardized format before being allowed into
-    an active working environment.
-    Expands tilde character (~) in path strings and expands absolute paths
-
-    :type mydict: dict
-    :param mydict: dictionary of paths to be expanded
-    :rtype: dict
-    :return: formatted path dictionary
-    """
-    for key, val in mydict.items():
-        try:
-            mydict[key] = os.path.expanduser(os.path.abspath(val))
-        except TypeError:
-            continue
-    return mydict
 
 
 def _pickle_method(method):

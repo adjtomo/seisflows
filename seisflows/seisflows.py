@@ -28,11 +28,11 @@ from IPython import embed
 
 from seisflows.tools import unix, msg
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
-                                      setpar_vel_model)
-from seisflows.tools.wrappers import loadyaml
-from seisflows.config import (init_seisflows, format_paths, config_logger,
-                               Dict, custom_import, SeisFlowsPathsParameters,
-                               NAMES, ROOT_DIR, CFGPATHS)
+                                     setpar_vel_model)
+from seisflows.tools.wrappers import loadyaml, format_paths
+from seisflows.config import (config_logger, Dict, custom_import,
+                              SeisFlowsPathsParameters, NAMES, ROOT_DIR,
+                              CFGPATHS)
 
 
 def sfparser():
@@ -98,8 +98,6 @@ def sfparser():
         directory, a prompt will appear asking the user if they want to 
         overwrite."""
     )
-    setup.add_argument("-s", "--symlink", action="store_true",
-                       help="symlink source code into the working directory")
     setup.add_argument("-f", "--force", action="store_true",
                        help="automatically overwrites existing parameter file")
     # =========================================================================
@@ -387,7 +385,7 @@ class SeisFlows:
         """
         return [_ for _ in dir(self) if not _.startswith("_")]
 
-    def _register(self, force=True):
+    def _register_parameters(self, force=True):
         """
         Load the paths and parameters from file into sys.modules, set the
         default parameters if they are missing from the file, and expand all
@@ -443,28 +441,100 @@ class SeisFlows:
         # For submit() and resume(), provide a dialogue to stdout requiring a
         # visual pre-check of parameters before submitting workflow
         if not force and parameters["PRECHECK"]:
-            items = []
-            for p in parameters["PRECHECK"]:
-                try:
-                    items.append(f"{p.upper()}: {parameters[p.upper()]}")
-                except KeyError:
-                    items.append(f"{p.upper()}: !!! PARAMETER NOT FOUND !!!")
-            print(msg.cli("Please ensure that the parameters listed below "
-                          "are set correctly. You can edit this list with "
-                          "the PRECHECK parameter.", items=items,
-                          header="seisflows precheck", border="="))
-            check = input("Continue? (y/[n])\n")
-            if check != "y":
-                sys.exit(-1)
+            self._precheck_parameters(parameters)
 
         # Expand all paths to be absolute on the filesystem
-        paths = format_paths(paths)
+        for key, val in paths.items():
+            paths[key] = os.path.expanduser(os.path.abspath(val))
 
-        # Register parameters to sys, ensure they meet standards of the package
+        # Register parameters to sys and internally
         sys.modules["seisflows_parameters"] = Dict(parameters)
         sys.modules["seisflows_paths"] = Dict(paths)
-        self._paths = paths
-        self._parameters = parameters
+        self._paths = Dict(paths)
+        self._parameters = Dict(parameters)
+
+    def _precheck_parameters(self, parameters):
+        """
+        Visually display a list of user-chosen parameters to the User before
+        proceeding with the _register_parameters command. Allows the User to quickly
+        determine if workflow parameters have been set correctly
+
+        :type parameters: dict
+        :param parameters: parameters read in from the YAML parameter file
+        """
+        items = []
+        for p in parameters["PRECHECK"]:
+            try:
+                items.append(f"{p.upper()}: {parameters[p.upper()]}")
+            except KeyError:
+                items.append(f"{p.upper()}: !!! PARAMETER NOT FOUND !!!")
+        print(msg.cli("Please ensure that the parameters listed below "
+                      "are set correctly. You can edit this list with "
+                      "the PRECHECK parameter.", items=items,
+                      header="seisflows precheck", border="="))
+        check = input("Continue? (y/[n])\n")
+        if check != "y":
+            sys.exit(-1)
+
+    def _register_modules(self, check=True):
+        """
+        First time setup procedure which loads in the user-chosen modules
+        and registers them into sys.modules so that they are globally accessible
+        to the program.
+
+        :type check: bool
+        :param check: run the check() function for each of the instantiated
+            modules, which essentially checks the validity of all the
+            user-defined parameters. This is typically wanted, but sometimes
+            you don't want to check, e.g., during testing when you know
+            some parameters are set incorrectly
+        """
+        assert(self._paths is not None), (
+            f"seisflows._register_parameters() must be run before "
+            f"_register_modules()"
+        )
+        assert(self._parameters is not None), (
+            f"seisflows._register_parameters() must be run before "
+            f"_register_modules()"
+        )
+        # Check if current workflow exists on disk, exit so as to not overwrite
+        if "OUTPUT" in self._paths and os.path.exists(self._paths.OUTPUT):
+            print(msg.cli(
+                "Data from previous workflow found in working directory.",
+                items=["> seisflows restart: delete data, start new workflow",
+                       "> seisflows resume: resume existing workflow"],
+                header="warning", border="=")
+            )
+            sys.exit(-1)
+
+        # Instantiate and register objects
+        for name in NAMES:
+            sys.modules[f"seisflows_{name}"] = custom_import(name)()
+
+        # Parameter import error checking, missing or improperly set parameters
+        # will throw assertion errors
+        if check:
+            errors = []
+            for name in NAMES:
+                try:
+                    sys.modules[f"seisflows_{name}"].check()
+                except AssertionError as e:
+                    errors.append(f"{name}: {e}")
+            if errors:
+                print(msg.cli("seisflows.config module check failed with:",
+                              items=errors, header="module check error",
+                              border="="))
+                sys.exit(-1)
+
+        # Bare minimum Module requirements for SeisFlows
+        req_modules = ["WORKFLOW", "SYSTEM"]
+        for req in req_modules:
+            if not hasattr(self._parameters, req):
+                print(msg.cli(f"SeisFlows requires modules: {req_modules}."
+                              "Please specify these in the parameter file. Use "
+                              "'seisflows print module' to determine suitable "
+                              "choices.", header="error", border="="))
+                sys.exit(-1)
 
     def _load_modules(self):
         """
@@ -495,10 +565,13 @@ class SeisFlows:
         for NAME in NAMES:
             sys.modules[f"seisflows_{NAME}"].check()
 
-    def setup(self, symlink=False, force=False, **kwargs):
+    def setup(self, force=False, **kwargs):
         """
-        Initiate a SeisFlows working directory from scratch; establish a
-        template parameter file and symlink the source code for easy access
+        Initiate a SeisFlows working directory from scratch by establishing a
+        template parameter file.
+
+        .. note::
+            Future working directory setup functions can be placed here
 
         :type symlink: bool
         :param symlink: flag to turn on source code symlinking
@@ -506,7 +579,6 @@ class SeisFlows:
         :param force: flag to force parameter file overwriting
         """
         PAR_FILE = os.path.join(ROOT_DIR, "templates", "parameters.yaml")
-        REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
 
         if os.path.exists(self._args.parameter_file):
             if force:
@@ -517,7 +589,6 @@ class SeisFlows:
                             f"({self._args.parameter_file}) found. Do you "
                             f"wish to overwrite with a blank file? (y/[n])"
                             ))
-
             if check == "y":
                 unix.rm(self._args.parameter_file)
             else:
@@ -525,13 +596,6 @@ class SeisFlows:
 
         unix.cp(PAR_FILE, self._args.workdir)
         print(msg.cli(f"creating parameter file: {self._args.parameter_file}"))
-        # Symlink the source code for easy access to repo
-        if symlink:
-            src_code = os.path.join(self._args.workdir, "source_code")
-            if not os.path.exists(src_code):
-                unix.mkdir(src_code)
-                for package in PACKAGES:
-                    unix.ln(os.path.join(REPO_DIR, package), src_code)
 
     def configure(self, relative_paths=False, **kwargs):
         """
@@ -544,7 +608,7 @@ class SeisFlows:
             else if False, use path names relative to the working directory.
         """
         print(msg.cli(f"filling {self._args.parameter_file} w/ default values"))
-        self._register(force=True)
+        self._register_parameters(force=True)
 
         # Check if the User set turn off any modules (if None, dont instantiate)
         names = copy(NAMES)
@@ -606,12 +670,11 @@ class SeisFlows:
         pickle files to the OUTPUT directory for User inspection and debug
         purposes.
         """
-        self._register(force=True)
-
         unix.mkdir(self._args.workdir)
         unix.cd(self._args.workdir)
 
-        init_seisflows()
+        self._register_parameters(force=True)
+        self._register_modules(check=True)
 
         workflow = sys.modules["seisflows_workflow"]
         workflow.checkpoint()
@@ -640,17 +703,35 @@ class SeisFlows:
         :param force: if True, turns off the parameter precheck and
             simply submits the workflow
         """
-        # Ensure that the 'RESUME_FROM' parameter is not set, incase of restart
-        self.par(parameter="resume_from", value="", skip_print=True)
+        unix.mkdir(self._args.workdir)
+        unix.cd(self._args.workdir)
 
+        # Ensure that the 'RESUME_FROM' parameter is not set, in case of restart
+        self.par(parameter="resume_from", value="", skip_print=True)
         if stop_after is not None:
             self.par(parameter="stop_after", value=stop_after, skip_print=True)
 
-        self._register(force=force)
+        # Read in the Parameter file and set parameters into sys.modules.
+        self._register_parameters(force=force)
+        self._check_required_paths()
+        self._register_modules(check=True)
 
+        # Set logger to print to stdout and write to a file
+        config_logger(level=self._parameters.LOG_LEVEL,
+                      verbose=self._parameters.VERBOSE,
+                      filename=self._paths.LOGFILE)
+
+        # Submit workflow.main() to the system
+        system = sys.modules["seisflows_system"]
+        system.submit()
+
+    def _check_required_paths(self):
+        """
+        If the User provides certain paths to the program, they MUST exist.
+        This function simply checks these required paths and throws a sys exit
+        if any of them does not exist
+        """
         # A list of paths that need to exist if provided by user
-        # !!! TODO Move this required paths somewhere more visible? config?
-        # !!! TODO or is it even necessary?
         REQ_PATHS = ["SPECFEM_BIN", "SPECFEM_DATA", "MODEL_INIT", "MODEL_TRUE",
                      "DATA", "LOCAL", "MASK"]
 
@@ -666,20 +747,6 @@ class SeisFlows:
                           items=paths_dont_exist, header="path error",
                           border="="))
             sys.exit(-1)
-
-        unix.mkdir(self._args.workdir)
-        unix.cd(self._args.workdir)
-
-        # Set logger to print to stdout and write to a file
-        PATH = sys.modules["seisflows_paths"]
-        PAR = sys.modules["seisflows_parameters"]
-        config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE, 
-                      filename=PATH.LOGFILE) 
-
-        # Submit workflow.main() to the system
-        init_seisflows()
-        system = sys.modules["seisflows_system"]
-        system.submit()
 
     def clean(self, force=False, **kwargs):
         """
@@ -747,7 +814,7 @@ class SeisFlows:
             self.par(parameter="RESUME_FROM", value=resume_from,
                      skip_print=True)
 
-        self._register(force=force)
+        self._register_parameters(force=force)
         self._load_modules()
 
         # Set logger to print to stdout and write to a file
@@ -777,7 +844,7 @@ class SeisFlows:
         interactive environment allowing exploration of the package space.
         Does not allow stepping through of code (not a breakpoint).
         """
-        self._register(force=True)
+        self._register_parameters(force=True)
         self._load_modules()
 
         # Distribute modules to common names for easy access during debug mode
@@ -1067,7 +1134,7 @@ class SeisFlows:
             self._subparser.print_help()
             sys.exit(0)
 
-        self._register(force=True)
+        self._register_parameters(force=True)
         self._load_modules()
         acceptable_args[choice](*self._args.args, **kwargs)
 
@@ -1101,7 +1168,7 @@ class SeisFlows:
             self._subparser.print_help()
             sys.exit(0)
 
-        self._register(force=True)
+        self._register_parameters(force=True)
         self._load_modules()
         acceptable_args[choice](*self._args.args, **kwargs)
 
@@ -1291,7 +1358,7 @@ class SeisFlows:
         .. rubric::
             $ seisflows print flow
         """
-        self._register(force=True)
+        self._register_parameters(force=True)
         self._load_modules()
 
         workflow = custom_import("workflow")()
@@ -1324,7 +1391,7 @@ class SeisFlows:
                 seisflows inspect solver eval_func
 
         """
-        self._register(force=True)
+        self._register_parameters(force=True)
         self._load_modules()
         if func is None:
             self._inspect_module_hierarchy(name, **kwargs)
