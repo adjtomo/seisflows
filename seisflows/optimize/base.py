@@ -173,35 +173,17 @@ class Base:
         """
         Sets up nonlinear optimization machinery
         """
-        # All optimization statistics text files will be written to path_stats
-        path_stats = os.path.join(PATH.WORKDIR, CFGPATHS.STATSDIR)
-        unix.mkdir(path_stats)
+        unix.mkdir(PATH.OPTIMIZE)
 
         # Line search machinery is defined externally as a plugin class
-        self.line_search = getattr(line_search, PAR.LINESEARCH)(
-            step_count_max=PAR.STEPCOUNTMAX, step_len_max=PAR.STEPLENMAX,
-            log_file=os.path.join(path_stats, f"{self.line_search_log}.txt"),
-        )
-
+        if PAR.LINESEARCH:
+            self.line_search = getattr(line_search, PAR.LINESEARCH)()
         if PAR.PRECOND:
             self.precond = getattr(preconds, PAR.PRECOND)()
-        else:
-            self.precond = None
 
-        # Instantiate all log files in stats/ directory as empty text files
-        # OVERWRITES any existing stats/ log files that may already be there
-        for key, val in vars(self).items():
-            if "log_" in key:
-                self.write_stats(val)
-
-        # Ensure that line search step count starts at 0 (workflow.intialize)
-        self.write_stats(self.log_step_count, 0)
-
-        unix.mkdir(PATH.OPTIMIZE)
-        if "MODEL_INIT" in PATH:
-            m_new = solver.merge(solver.load(PATH.MODEL_INIT))
-            self.save(self.m_new, m_new)
-            self.check_model(m_new, self.m_new)
+        m_new = solver.merge(solver.load(PATH.MODEL_INIT))
+        self.save(self.m_new, m_new)
+        self.check_model(m_new, self.m_new)
 
     @property
     def eval_str(self):
