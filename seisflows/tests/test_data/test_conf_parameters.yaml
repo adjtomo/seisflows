@@ -9,7 +9,7 @@
 #
 # .. rubric::
 #   - To determine available options for modules listed below, run:
-#       > seisflows print module
+#       > seisflows print modules
 #   - To auto-fill with docstrings and default values (recommended), run:
 #       > seisflows configure
 #   - To set values as NoneType, use: null
@@ -78,10 +78,10 @@ NPROC: 1
 #   seisflows.plugins.adjoint
 # NORMALIZE (list):
 #   Data normalization parameters used to normalize the amplitudes of
-#   waveforms. Choose from two sets:ENORML1: normalize per event by L1 of
-#   traces; ORENORML2: normalize per event by L2 of traces; ANDTNORML1:
-#   normalize per trace by L1 of itself; ORTNORML2: normalize per trace by L2
-#   of itself
+#   waveforms. Choose from two sets: ENORML1: normalize per event by L1 of
+#   traces; OR ENORML2: normalize per event by L2 of traces; AND TNORML1:
+#   normalize per trace by L1 of itself; OR TNORML2: normalize per trace by
+#   L2 of itself
 # FILTER (str):
 #   Data filtering type, available options are:BANDPASS (req. MIN/MAX
 #   PERIOD/FREQ);LOWPASS (req. MAX_FREQ or MIN_PERIOD); HIGHPASS (req.
@@ -260,6 +260,8 @@ END: !!! REQUIRED PARAMETER !!!
 #   path to local data to be used during workflow
 # LOGFILE:
 #   the main output log file where all processes will track their status
+# PREPROCESS:
+#   scratch path to store any preprocessing outputs
 # SOLVER:
 #   scratch path to hold solver working directories
 # SPECFEM_BIN:
@@ -290,6 +292,7 @@ PATHS:
     SYSTEM: scratch/system
     LOCAL:
     LOGFILE: output_sf.txt
+    PREPROCESS: scratch/preprocess
     SOLVER: scratch/solver
     SPECFEM_BIN: !!! REQUIRED PATH !!!
     SPECFEM_DATA: !!! REQUIRED PATH !!!
@@ -298,6 +301,6 @@ PATHS:
     OPTIMIZE: scratch/optimize
     MODEL_INIT: !!! REQUIRED PATH !!!
     MODEL_TRUE:
-    FUNC: scratch/scratch
+    FUNC: scratch/evalfunc
     GRAD: scratch/evalgrad
     HESS: scratch/evalhess

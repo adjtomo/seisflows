@@ -187,7 +187,7 @@ class Pyatoa(custom_import("preprocess", "base")):
         """
         unix.mkdir(PATH.PREPROCESS)
 
-    def prepare_eval_grad(self, cwd, source_name, taskid, **kwargs):
+    def prepare_eval_grad(self, cwd, taskid, source_name, **kwargs):
         """
         Prepare the gradient evaluation by gathering, preprocessing waveforms, 
         and measuring misfit between observations and synthetics using Pyatoa.

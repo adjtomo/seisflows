@@ -8,15 +8,15 @@ various types of SPECFEM.
 import os
 import sys
 import logging
+import subprocess
 import numpy as np
 from glob import glob
-from functools import partial
 
 from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
-from seisflows.tools.specfem import Container, call_solver
-from seisflows.tools.wrappers import Struct, diff, exists
-from seisflows.config import SeisFlowsPathsParameters
+from seisflows.tools.specfem import Container
+from seisflows.tools.wrappers import diff, exists
+from seisflows.config import SeisFlowsPathsParameters, Dict
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -96,7 +96,7 @@ class Base:
         :type parameters: list of str
         :param parameters: a list detailing the parameters to be used to
             define the model, available: ['vp', 'vs', 'rho']
-        :type _mesh_properties: seisflows.tools.wrappers.Struct
+        :type _mesh_properties: Dict
         :param _mesh_properties: hidden attribute, a dictionary of mesh
             properties, including the ngll points, nprocs, and mesh coordinates
         :type _source_names: hidden attribute,
@@ -128,7 +128,7 @@ class Base:
                       "['CONSTANT': Do not update density, "
                       "'VARIABLE': Update density]")
 
-        sf.par("ATTENUATION", required=True, par_type=str,
+        sf.par("ATTENUATION", required=True, par_type=bool,
                docstr="If True, turn on attenuation during forward "
                       "simulations, otherwise set attenuation off. Attenuation "
                       "is always off for adjoint simulations.")
@@ -172,10 +172,6 @@ class Base:
             assert (required_parameter in PAR), \
                 f"Solver requires {required_parameter}"
 
-        # Important to reset parameters to a blank list and let the check
-        # statements fill it. If not, each time workflow is resumed, parameters
-        # list will append redundant parameters and things stop working
-
         available_materials = ["ELASTIC", "ACOUSTIC",  # specfem2d, specfem3d
                                "ISOTROPIC", "ANISOTROPIC"]  # specfem3d_globe
         assert(PAR.MATERIALS.upper() in available_materials), \
@@ -186,6 +182,9 @@ class Base:
             f"DENSITY must be in {acceptable_densities}"
 
         # Internal parameter list based on user-input material choices
+        # Important to reset parameters to a blank list and let the check
+        # statements fill it. If not, each time workflow is resumed, parameters
+        # list will append redundant parameters and things stop working
         self.parameters = []
         if PAR.MATERIALS.upper() == "ELASTIC":
             assert(PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
@@ -222,63 +221,30 @@ class Base:
             In the former case, a value for PATH.DATA must be supplied;
             in the latter case, a value for PATH.MODEL_TRUE must be provided.
         """
-        # Clean up for new inversion
         unix.rm(self.cwd)
         self.initialize_solver_directories()
-
-        # Determine where observation data will come from
-        if PAR.CASE.upper() == "SYNTHETIC" and PATH.MODEL_TRUE is not None:
-            if self.taskid == 0:
-                self.logger.info("generating 'data' with MODEL_TRUE synthetics")
-            # Generate synthetic data on the fly using the true model
-            self.generate_data(model_path=PATH.MODEL_TRUE,
-                               model_name="model_true",
-                               model_type="gll")
-        elif PATH.DATA is not None and os.path.exists(PATH.DATA):
-            # If Data provided by user, copy directly into the solver directory
-            unix.cp(src=glob(os.path.join(PATH.DATA, self.source_name, "*")),
-                    dst=os.path.join("traces", "obs")
-                    )
-
-        # Prepare initial model
-        if self.taskid == 0:
-            self.logger.info("running mesh generation for MODEL_INIT")
-        self.generate_mesh(model_path=PATH.MODEL_INIT,
-                           model_name="model_init",
-                           model_type="gll")
-
-        # Create blank adjoint traces to be overwritten
+        self.check_solver_parameter_files()
+        self.generate_data()
+        self.generate_mesh(model_name="init", model_type="gll")
         self.initialize_adjoint_traces()
 
-    def clean(self):
+    def generate_mesh(self, model_path, model_name, model_type):
         """
-        Clean up solver-dependent run directory by removing the OUTPUT_FILES/
-        directory
-        """
-        unix.cd(self.cwd)
-        unix.rm("OUTPUT_FILES")
-        unix.mkdir("OUTPUT_FILES")
+        Performs meshing and database generation.
 
-    def generate_data(self, *args, **kwargs):
+        This function is Solver specific and is responsible for generating
+        the mesh using the external numerical solver.
         """
-        Generates data based on a given model
+        raise NotImplementedError("must be implemented by solver subclass")
 
-        !!! Must be implemented by subclass !!!
+    def generate_data(self):
         """
-        raise NotImplementedError
-
-    def generate_mesh(self, *args, **kwargs):
+        Performs meshing and data generation for "true" data.
         """
-        Performs meshing and database generation
-
-        !!! Must be implemented by subclass !!!
-        """
-        raise NotImplementedError
+        raise NotImplementedError("must be implemented by solver subclass")
 
     def eval_func(self, path, write_residuals=True):
         """
-        High level solver interface
-
         Performs forward simulations and evaluates the misfit function
 
         :type path: str
@@ -348,7 +314,7 @@ class Base:
         :type path: str
         :param path: directory to which output files are exported
         """
-        raise NotImplementedError
+        raise NotImplementedError("must be implemented by solver subclass")
 
         unix.cd(self.cwd)
         self.import_model(path)
@@ -359,7 +325,7 @@ class Base:
         self.adjoint()
         self.export_kernels(path)
 
-    def forward(self):
+    def forward(self, path):
         """
         Low level solver interface
 
@@ -367,7 +333,7 @@ class Base:
 
         !!! Must be implemented by subclass !!!
         """
-        raise NotImplementedError
+        raise NotImplementedError("must be implemented by solver subclass")
 
     def adjoint(self):
         """
@@ -377,7 +343,53 @@ class Base:
 
         !!! Must be implemented by subclass !!!
         """
-        raise NotImplementedError
+        raise NotImplementedError("must be implemented by solver subclass")
+
+    def call_solver(self, executable, output="solver.log"):
+        """
+        Calls MPI solver executable to run solver binaries, used by individual
+        processes to run the solver on system. If the external solver returns a
+        non-zero exit code (failure), this function will return a negative
+        boolean.
+
+        :type mpiexec: str
+        :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
+        :type executable: str
+        :param executable: executable function to call
+        :type output: str
+        :param output: where to redirect stdout
+        """
+        # Executable may come with additional sub arguments, we only need to
+        # check that the actually executable exists
+        if not os.path.exists(executable.split(" ")[0]):
+            print(msg.cli(f"solver executable {executable} does not exist",
+                          header="external solver error", border="="))
+            sys.exit(-1)
+
+        # mpiexec is None when running in serial mode, so e.g., ./xmeshfem2D
+        if PAR.SYSTEM in ["workstation"]:
+            exc_cmd = f"./{executable}"
+        # Otherwise mpiexec is system dependent (e.g., srun, mpirun)
+        else:
+            exc_cmd = f"{PAR.MPIEXEC} {executable}"
+
+        # Run solver. Write solver stdout (log files) to text file
+        try:
+            with open(output, "w") as f:
+                subprocess.run(exc_cmd, shell=True, check=True, stdout=f)
+        except (subprocess.CalledProcessError, OSError) as e:
+            print(msg.cli("The external numerical solver has returned a nonzero "
+                          "exit code (failure). Consider stopping any currently "
+                          "running jobs to avoid wasted computational resources. "
+                          f"Check 'scratch/solver/mainsolver/{output}' for the "
+                          f"solvers stdout log message. "
+                          f"The failing command and error message are: ",
+                          items=[f"exc: {exc_cmd}", f"err: {e}"],
+                          header="external solver error",
+                          border="=")
+                  )
+            sys.exit(-1)
+
 
     @property
     def io(self):
@@ -524,13 +536,13 @@ class Base:
         :param parameters: optional list of parameters,
             defaults to `self.parameters`
         """
+        unix.cd(self.cwd)
+
         if parameters is None:
             parameters = self.parameters
 
         if not exists(output_path):
             unix.mkdir(output_path)
-
-        unix.cd(self.cwd)
 
         # Write the source names into the kernel paths file for SEM/ directory
         with open("kernel_paths", "w") as f:
@@ -540,13 +552,14 @@ class Base:
             )
 
         # Call on xcombine_sem to combine kernels into a single file
-        for name in self.parameters:
+        for name in parameters:
             # e.g.: mpiexec ./bin/xcombine_sem alpha_kernel kernel_paths output
-            call_solver(mpiexec=PAR.MPIEXEC,
-                        executable=" ".join([f"bin/xcombine_sem",
-                                             f"{name}_kernel", "kernel_paths",
-                                             output_path])
-                        )
+            self.call_solver(executable=" ".join([f"bin/xcombine_sem",
+                                                  f"{name}_kernel",
+                                                  "kernel_paths",
+                                                  output_path]
+                                                 )
+                             )
 
     def smooth(self, input_path, output_path, parameters=None, span_h=0.,
                span_v=0., output="solver.log"):
@@ -576,38 +589,28 @@ class Base:
         :type output: str
         :param output: file to output stdout to
         """
+        unix.cd(self.cwd)
+
         if parameters is None:
             parameters = self.parameters
 
         if not exists(output_path):
             unix.mkdir(output_path)
 
-        # Apply smoothing operator inside scratch/solver/*
-        unix.cd(self.cwd)
-
         # mpiexec ./bin/xsmooth_sem SMOOTH_H SMOOTH_V name input output use_gpu
         for name in parameters:
-            call_solver(mpiexec=PAR.MPIEXEC,
-                        executable=" ".join(["bin/xsmooth_sem",
-                                             str(span_h), str(span_v),
-                                             f"{name}_kernel",
-                                             os.path.join(input_path, ""),
-                                             os.path.join(output_path, ""),
-                                             ".false"]),
-                        output=output
+            self.call_solver(executable=" ".join(["bin/xsmooth_sem",
+                                                  str(span_h), str(span_v),
+                                                  f"{name}_kernel",
+                                                  os.path.join(input_path, ""),
+                                                  os.path.join(output_path, ""),
+                                                  ".false"]),
+                             output=output
                         )
 
         # Rename output files
         files = glob(os.path.join(output_path, "*"))
         unix.rename(old="_smooth", new="", names=files)
-
-    def combine_vol_data_vtk(self):
-        """
-        Postprocessing wrapper for xcombine_vol_data_vtk
-
-        !!! must be implemented by subclass !!!
-        """
-        pass
 
     def import_model(self, path):
         """
@@ -736,7 +739,7 @@ class Base:
 
         !!! Can be implemented by subclass !!!
         """
-        pass
+        raise NotImplementedError("must be implemented by solver subclass")
 
     def initialize_solver_directories(self):
         """
@@ -794,8 +797,6 @@ class Base:
             dst = os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
             unix.cp(src, dst)
 
-        self.check_solver_parameter_files()
-
     def initialize_adjoint_traces(self):
         """
         Setup utility: Creates the "adjoint traces" expected by SPECFEM.
@@ -827,7 +828,7 @@ class Base:
 
     def check_mesh_properties(self, path=None):
         """
-        Determine if Mesh properties are okay for workflow
+        Determine if Mesh properties are okay for workflow.
 
         :type path: str
         :param path: path to the mesh file
@@ -841,33 +842,18 @@ class Base:
                           items=[path], header="solver error", border="="))
             sys.exit(-1)
 
-        # Count slices and grid points
+        # Count the number of .bin files and the number of grid points
         key = self.parameters[0]
-        iproc = 0
+        bin_files = glob(os.path.join(path, f"proc*_{key}.bin"))
+        nproc = len(bin_files)
         ngll = []
-        while True:
-            dummy = self.io.read_slice(path=path, parameters=key, 
-                                       iproc=iproc)[0]
-            ngll += [len(dummy)]
-            iproc += 1
-            if not exists(os.path.join(path,
-                                       f"proc{int(iproc):06d}_{key}.bin")):
-                break
-        nproc = iproc
-
-        # Create coordinate pointers
-        # !!! This partial is incorrectly defined and does not execute when 
-        # !!! called. What is the point of that?
-        coords = Struct()
-        for key in ['x', 'y', 'z']:
-            coords[key] = partial(self.io.read_slice, self, path, key)
+        for i in range(0, len(bin_files)):
+            ngll.append(
+                len(self.io.read_slice(path=path, parameters=key, iproc=i)[0])
+            )
 
         # Define internal mesh properties
-        self._mesh_properties = Struct([["nproc", nproc],
-                                        ["ngll", ngll],
-                                        ["path", path],
-                                        ["coords", coords]]
-                                       )
+        self._mesh_properties = Dict(nproc=nproc, ngll=ngll, path=path)
 
     def check_source_names(self):
         """
@@ -989,10 +975,11 @@ class Base:
     @property
     def source_prefix(self):
         """
-        Template filenames for accessing sources
+        Preferred source prefix
 
-        !!! Must be implemented by subclass !!!
+        :rtype: str
+        :return: source prefix
         """
-        return NotImplementedError
+        return PAR.SOURCE_PREFIX.upper()
 
 

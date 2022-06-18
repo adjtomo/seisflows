@@ -14,7 +14,6 @@ from seisflows.tools.wrappers import number_fid
 from seisflows.config import save, SeisFlowsPathsParameters, CFGPATHS
 
 
-
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
 
@@ -203,12 +202,11 @@ class Base:
         :type kwargs: dict
         :param kwargs: dictionary to pass to object saving
         """
-        self.logger.debug("checkpointing working environment to disk")
-
         argspath = os.path.join(path, "kwargs")
         argsfile = os.path.join(argspath, f"{classname}_{method}.p")
+
         unix.mkdir(argspath)
         with open(argsfile, "wb") as f:
             pickle.dump(kwargs, f)
-        save()
+        save(path=PATH.OUTPUT)
 

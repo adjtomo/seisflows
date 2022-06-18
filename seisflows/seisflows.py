@@ -26,14 +26,13 @@ from glob import glob
 from copy import copy
 from IPython import embed
 
-from seisflows import logger
 from seisflows.tools import unix, msg
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
-                                      setpar_vel_model)
+                                     setpar_vel_model)
 from seisflows.tools.wrappers import loadyaml
-from seisflows.config import (init_seisflows, format_paths, config_logger,
-                               Dict, custom_import, SeisFlowsPathsParameters,
-                               NAMES, PACKAGES, ROOT_DIR, CFGPATHS)
+from seisflows.config import (config_logger, Dict, custom_import, save,
+                              SeisFlowsPathsParameters, NAMES, ROOT_DIR,
+                              CFGPATHS)
 
 
 def sfparser():
@@ -99,8 +98,6 @@ def sfparser():
         directory, a prompt will appear asking the user if they want to 
         overwrite."""
     )
-    setup.add_argument("-s", "--symlink", action="store_true",
-                       help="symlink source code into the working directory")
     setup.add_argument("-f", "--force", action="store_true",
                        help="automatically overwrites existing parameter file")
     # =========================================================================
@@ -280,24 +277,6 @@ working state before the workflow can be resumed
         made during debugging.
         """)
     # =========================================================================
-    edit = subparser.add_parser(
-        "edit", help="Open source code file in text editor",
-        description="""Directly edit source code files in your favorite 
-        terminal text editor. Simply a shortcut to avoid having to root around
-        in the repository. Any saved edits will directly affect the SeisFlows
-        source code and any code errors may lead to failure of the package;
-        e.g. 'seisflows edit solver base'"""
-    )
-    edit.add_argument("name", type=str,  nargs="?", default=None,
-                      help="Name of module to search for source file in")
-    edit.add_argument("module", type=str,  nargs="?", default=None,
-                      help="Name of specific module file to open, extension "
-                           "not required")
-    edit.add_argument("-e", "--editor", type=str,  nargs="?", default=None,
-                      help="Chosen text editor, defaults to $EDITOR env var")
-    edit.add_argument("-d", "--dont_open", action="store_true",
-                      help="Dont open the text editor, just list full pathname")
-    # =========================================================================
     examples = subparser.add_parser(
         "examples", help="Look at and run pre-configured example problems",
         description="""Lists out available example problems and allows the
@@ -313,7 +292,7 @@ working state before the workflow can be resumed
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
-                      "edit": edit, "sempar": sempar, "clean": clean, 
+                      "sempar": sempar, "clean": clean,
                       "restart": restart, "print": print_, "reset": reset,
                       "examples": examples}
     if parser.parse_args().command in subparser_dict:
@@ -406,7 +385,7 @@ class SeisFlows:
         """
         return [_ for _ in dir(self) if not _.startswith("_")]
 
-    def _register(self, force=True):
+    def _register_parameters(self, force=True):
         """
         Load the paths and parameters from file into sys.modules, set the
         default parameters if they are missing from the file, and expand all
@@ -462,62 +441,141 @@ class SeisFlows:
         # For submit() and resume(), provide a dialogue to stdout requiring a
         # visual pre-check of parameters before submitting workflow
         if not force and parameters["PRECHECK"]:
-            items = []
-            for p in parameters["PRECHECK"]:
-                try:
-                    items.append(f"{p.upper()}: {parameters[p.upper()]}")
-                except KeyError:
-                    items.append(f"{p.upper()}: !!! PARAMETER NOT FOUND !!!")
-            print(msg.cli("Please ensure that the parameters listed below "
-                          "are set correctly. You can edit this list with "
-                          "the PRECHECK parameter.", items=items,
-                          header="seisflows precheck", border="="))
-            check = input("Continue? (y/[n])\n")
-            if check != "y":
-                sys.exit(-1)
+            self._precheck_parameters(parameters)
 
         # Expand all paths to be absolute on the filesystem
-        paths = format_paths(paths)
+        for key, val in paths.items():
+            try:
+                paths[key] = os.path.expanduser(os.path.abspath(val))
+            except TypeError:
+                continue
 
-        # Register parameters to sys, ensure they meet standards of the package
+        # Register parameters to sys and internally
         sys.modules["seisflows_parameters"] = Dict(parameters)
         sys.modules["seisflows_paths"] = Dict(paths)
-        self._paths = paths
-        self._parameters = parameters
+        self._paths = Dict(paths)
+        self._parameters = Dict(parameters)
+
+    def _precheck_parameters(self, parameters):
+        """
+        Visually display a list of user-chosen parameters to the User before
+        proceeding with the _register_parameters command. Allows the User to quickly
+        determine if workflow parameters have been set correctly
+
+        :type parameters: dict
+        :param parameters: parameters read in from the YAML parameter file
+        """
+        items = []
+        for p in parameters["PRECHECK"]:
+            try:
+                items.append(f"{p.upper()}: {parameters[p.upper()]}")
+            except KeyError:
+                items.append(f"{p.upper()}: !!! PARAMETER NOT FOUND !!!")
+        print(msg.cli("Please ensure that the parameters listed below "
+                      "are set correctly. You can edit this list with "
+                      "the PRECHECK parameter.", items=items,
+                      header="seisflows precheck", border="="))
+        check = input("Continue? (y/[n])\n")
+        if check != "y":
+            sys.exit(-1)
+
+    def _register_modules(self, check=True):
+        """
+        First time setup procedure which loads in the user-chosen modules
+        and registers them into sys.modules so that they are globally accessible
+        to the program.
+
+        :type check: bool
+        :param check: run the check() function for each of the instantiated
+            modules, which essentially checks the validity of all the
+            user-defined parameters. This is typically wanted, but sometimes
+            you don't want to check, e.g., during testing when you know
+            some parameters are set incorrectly
+        """
+        assert(self._paths is not None), (
+            f"seisflows._register_parameters() must be run before "
+            f"_register_modules()"
+        )
+        assert(self._parameters is not None), (
+            f"seisflows._register_parameters() must be run before "
+            f"_register_modules()"
+        )
+        # Check if current workflow exists on disk, exit so as to not overwrite
+        if "OUTPUT" in self._paths and os.path.exists(self._paths.OUTPUT):
+            print(msg.cli(
+                "Data from previous workflow found in working directory.",
+                items=["> seisflows restart: delete data, start new workflow",
+                       "> seisflows resume: resume existing workflow"],
+                header="warning", border="=")
+            )
+            sys.exit(-1)
+
+        # Instantiate and register objects
+        for name in NAMES:
+            sys.modules[f"seisflows_{name}"] = custom_import(name)()
+
+        # Parameter import error checking, missing or improperly set parameters
+        # will throw assertion errors
+        if check:
+            errors = []
+            for name in NAMES:
+                try:
+                    sys.modules[f"seisflows_{name}"].check()
+                except AssertionError as e:
+                    errors.append(f"{name}: {e}")
+            if errors:
+                print(msg.cli("seisflows.config module check failed with:",
+                              items=errors, header="module check error",
+                              border="="))
+                sys.exit(-1)
+
+        # Bare minimum Module requirements for SeisFlows
+        req_modules = ["WORKFLOW", "SYSTEM"]
+        for req in req_modules:
+            if not hasattr(self._parameters, req):
+                print(msg.cli(f"SeisFlows requires modules: {req_modules}."
+                              "Please specify these in the parameter file. Use "
+                              "'seisflows print module' to determine suitable "
+                              "choices.", header="error", border="="))
+                sys.exit(-1)
 
     def _load_modules(self):
         """
         A function to load and check each of the SeisFlows modules,
         re-initiating the SeisFlows environment. All modules are reliant on one
         another so any access to SeisFlows requires loading everything
-        simultaneously and in correct order
+        simultaneously and in correct order.
+
+        .. note::
+            This is similar to config.load() except it doesn't load paths
+            and parameters. This allows the User to OVERLOAD the currently
+            defined paths and parameters anytime they call 'seisflows resume'
         """
-        # Working directory should already have been created by submit()
-        unix.cd(self._args.workdir)
-
-        # Reload objects from Pickle files
         for NAME in NAMES:
-            fullfile = os.path.join(self._args.workdir, CFGPATHS.OUTPUTDIR,
-                                    f"seisflows_{NAME}.p")
+            fid = os.path.join(self._paths.OUTPUT, f"seisflows_{NAME}.p")
 
-            if not os.path.exists(fullfile):
+            if not os.path.exists(fid):
                 print(msg.cli("Not a SeisFlows working directory (no state "
                               "files found). Run 'seisflows init' or "
                               "'seisflows submit' to instantiate a working "
                               "directory.")
                       )
                 sys.exit(-1)
-            with open(fullfile, "rb") as f:
+
+            with open(fid, "rb") as f:
                 sys.modules[f"seisflows_{NAME}"] = pickle.load(f)
 
         # Check parameters so that default values are present
         for NAME in NAMES:
             sys.modules[f"seisflows_{NAME}"].check()
 
-    def setup(self, symlink=False, force=False, **kwargs):
+    def setup(self, force=False, **kwargs):
         """
-        Initiate a SeisFlows working directory from scratch; establish a
-        template parameter file and symlink the source code for easy access
+        Initiate a SeisFlows working directory from scratch by establishing a
+        template parameter file.
+
+        .. note::
+            Future working directory setup functions can be placed here
 
         :type symlink: bool
         :param symlink: flag to turn on source code symlinking
@@ -525,7 +583,6 @@ class SeisFlows:
         :param force: flag to force parameter file overwriting
         """
         PAR_FILE = os.path.join(ROOT_DIR, "templates", "parameters.yaml")
-        REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
 
         if os.path.exists(self._args.parameter_file):
             if force:
@@ -536,7 +593,6 @@ class SeisFlows:
                             f"({self._args.parameter_file}) found. Do you "
                             f"wish to overwrite with a blank file? (y/[n])"
                             ))
-
             if check == "y":
                 unix.rm(self._args.parameter_file)
             else:
@@ -544,13 +600,6 @@ class SeisFlows:
 
         unix.cp(PAR_FILE, self._args.workdir)
         print(msg.cli(f"creating parameter file: {self._args.parameter_file}"))
-        # Symlink the source code for easy access to repo
-        if symlink:
-            src_code = os.path.join(self._args.workdir, "source_code")
-            if not os.path.exists(src_code):
-                unix.mkdir(src_code)
-                for package in PACKAGES:
-                    unix.ln(os.path.join(REPO_DIR, package), src_code)
 
     def configure(self, relative_paths=False, **kwargs):
         """
@@ -563,7 +612,7 @@ class SeisFlows:
             else if False, use path names relative to the working directory.
         """
         print(msg.cli(f"filling {self._args.parameter_file} w/ default values"))
-        self._register(force=True)
+        self._register_parameters(force=True)
 
         # Check if the User set turn off any modules (if None, dont instantiate)
         names = copy(NAMES)
@@ -625,15 +674,13 @@ class SeisFlows:
         pickle files to the OUTPUT directory for User inspection and debug
         purposes.
         """
-        self._register(force=True)
-
         unix.mkdir(self._args.workdir)
         unix.cd(self._args.workdir)
 
-        init_seisflows()
+        self._register_parameters(force=True)
+        self._register_modules(check=True)
 
-        workflow = sys.modules["seisflows_workflow"]
-        workflow.checkpoint()
+        save(path=self._paths.OUTPUT)
 
         # Ensure that all parameters and paths that need to be instantiated
         # are present in sys modules
@@ -659,17 +706,35 @@ class SeisFlows:
         :param force: if True, turns off the parameter precheck and
             simply submits the workflow
         """
-        # Ensure that the 'RESUME_FROM' parameter is not set, incase of restart
-        self.par(parameter="resume_from", value="", skip_print=True)
+        unix.mkdir(self._args.workdir)
+        unix.cd(self._args.workdir)
 
+        # Ensure that the 'RESUME_FROM' parameter is not set, in case of restart
+        self.par(parameter="resume_from", value="", skip_print=True)
         if stop_after is not None:
             self.par(parameter="stop_after", value=stop_after, skip_print=True)
 
-        self._register(force=force)
+        # Read in the Parameter file and set parameters into sys.modules.
+        self._register_parameters(force=force)
+        self._check_required_paths()
+        self._register_modules(check=True)
 
+        # Set logger to print to stdout and write to a file
+        config_logger(level=self._parameters.LOG_LEVEL,
+                      verbose=self._parameters.VERBOSE,
+                      filename=self._paths.LOGFILE)
+
+        # Submit workflow.main() to the system
+        system = sys.modules["seisflows_system"]
+        system.submit()
+
+    def _check_required_paths(self):
+        """
+        If the User provides certain paths to the program, they MUST exist.
+        This function simply checks these required paths and throws a sys exit
+        if any of them does not exist
+        """
         # A list of paths that need to exist if provided by user
-        # !!! TODO Move this required paths somewhere more visible? config?
-        # !!! TODO or is it even necessary?
         REQ_PATHS = ["SPECFEM_BIN", "SPECFEM_DATA", "MODEL_INIT", "MODEL_TRUE",
                      "DATA", "LOCAL", "MASK"]
 
@@ -685,20 +750,6 @@ class SeisFlows:
                           items=paths_dont_exist, header="path error",
                           border="="))
             sys.exit(-1)
-
-        unix.mkdir(self._args.workdir)
-        unix.cd(self._args.workdir)
-
-        # Set logger to print to stdout and write to a file
-        PATH = sys.modules["seisflows_paths"]
-        PAR = sys.modules["seisflows_parameters"]
-        config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE, 
-                      filename=PATH.LOGFILE) 
-
-        # Submit workflow.main() to the system
-        init_seisflows()
-        system = sys.modules["seisflows_system"]
-        system.submit()
 
     def clean(self, force=False, **kwargs):
         """
@@ -746,6 +797,7 @@ class SeisFlows:
         """
         Resume a previously started workflow by loading the module pickle files
         and submitting the workflow from where it left off.
+
         :type stop_after: str
         :param stop_after: allow the function to overwrite the 'STOP_AFTER'
             parameter in the parameter file, which dictates how far the workflow
@@ -766,14 +818,13 @@ class SeisFlows:
             self.par(parameter="RESUME_FROM", value=resume_from,
                      skip_print=True)
 
-        self._register(force=force)
+        self._register_parameters(force=force)
         self._load_modules()
 
         # Set logger to print to stdout and write to a file
-        PATH = sys.modules["seisflows_paths"]
-        PAR = sys.modules["seisflows_parameters"]
-        config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE, 
-                      filename=PATH.LOGFILE) 
+        config_logger(level=self._parameters.LOG_LEVEL,
+                      verbose=self._parameters.VERBOSE,
+                      filename=self._paths.LOGFILE)
 
         system = sys.modules["seisflows_system"]
         system.submit()
@@ -796,7 +847,7 @@ class SeisFlows:
         interactive environment allowing exploration of the package space.
         Does not allow stepping through of code (not a breakpoint).
         """
-        self._register(force=True)
+        self._register_parameters(force=True)
         self._load_modules()
 
         # Distribute modules to common names for easy access during debug mode
@@ -961,7 +1012,7 @@ class SeisFlows:
         # SeisFlows parameter file dictates upper-case parameters
         parameter = parameter.upper()
         if isinstance(value, str) and value.lower() == "none":
-            warnings.warn("to set values to nonetype, use 'null' not 'none'",
+            warnings.warn("to set values to NoneType, use 'null' not 'none'",
                           UserWarning)
 
         # Use the specfem tool to grab related information
@@ -998,62 +1049,6 @@ class SeisFlows:
                 for line in lines:
                     if check in line:
                         print(f"\t{line.split(':')[0].strip()}")
-
-    def edit(self, name, module, editor=None, **kwargs):
-        """
-        Directly edit the SeisFlows source code matching the given name
-        and module using the chosen text editor.
-
-        USAGE
-
-            seisflows edit [name] [module] [editor]
-
-            To edit the base Solver class using vim, one would run:
-
-                seisflows edit solver base vim
-
-            To simply find the location of the inversion workflow source code:
-
-                seisflows edit workflow inversion q
-
-        :type name: str
-        :param name: name of module, must match seisflows.config.NAMES
-        :type module: str
-        :param module: the module name contained under the SeisFlows namespace
-        :type editor: str
-        :param editor: optional chosen text editor to open the file.
-            * If NoneType: defaults to system environment $EDITOR
-            * If 'q': For quit, does not open an editor, simply prints fid
-        """
-        if name is None:
-            self._subparser.print_help()
-            sys.exit(0)
-
-        editor = editor or os.environ.get("EDITOR")
-        if editor is None:
-            print(msg.cli("$EDITOR environment variable is not set, please "
-                          "set manually with the following call structure: "
-                          "seisflows edit [name] [module] [editor]"))
-            sys.exit(-1)
-
-        REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
-        if name not in NAMES:
-            print(msg.cli(f"{name} not in SeisFlows names: {NAMES}"))
-            sys.exit(-1)
-
-        for package in PACKAGES:
-            fid_try = os.path.join(REPO_DIR, package, name, f"{module}.py")
-            if os.path.exists(fid_try):
-                if self._args.dont_open:
-                    print(msg.cli(text=fid_try))
-                    sys.exit(0)
-                else:
-                    subprocess.call([editor, fid_try])
-                    print(msg.cli(f"Edited file: {fid_try}"))
-                    sys.exit(0)
-        else:
-            print(msg.cli(f"seisflows.{name}.{module} not found"))
-            sys.exit(-1)
 
     def examples(self, run=None, choice=None, **kwargs):
         """
@@ -1142,7 +1137,7 @@ class SeisFlows:
             self._subparser.print_help()
             sys.exit(0)
 
-        self._register(force=True)
+        self._register_parameters(force=True)
         self._load_modules()
         acceptable_args[choice](*self._args.args, **kwargs)
 
@@ -1176,7 +1171,7 @@ class SeisFlows:
             self._subparser.print_help()
             sys.exit(0)
 
-        self._register(force=True)
+        self._register_parameters(force=True)
         self._load_modules()
         acceptable_args[choice](*self._args.args, **kwargs)
 
@@ -1215,25 +1210,6 @@ class SeisFlows:
             sys.exit(-1)
 
         solver.save(solver.split(optimize.load(name)), path=path, **kwargs )
-
-    def validate(self, module=None, name=None):
-        """
-        Ensure that all the modules (and their respective subclasses) meet some
-        necessary requirements such as having specific functions and parameters.
-        Not a full replacement for running the test suite, but useful for
-        checking newly written subclasses.
-
-        USAGE
-
-            To validate a specific subclass:
-
-                seisflows validate workflow inversion
-
-            To validate the entire codebase
-
-                seisflows validate
-        """
-        raise NotImplementedError
 
     @staticmethod
     def _inspect_class_that_defined_method(name, func, **kwargs):
@@ -1346,17 +1322,14 @@ class SeisFlows:
         :param package: specify an indivdual package to search
         """
         items = []
-        module_list = return_modules()
-        for name_, package_dict in module_list.items():
-            if name is not None and name != name_:
+        module_dict = return_modules()
+
+        for module_, module_list in module_dict.items():
+            if package is not None and module_ != package:
                 continue
-            items.append(f"+ {name_.upper()}")
-            for package_, module_list in package_dict.items():
-                if package is not None and package_ != package:
-                    continue
-                items.append(f"\t- {package_}".expandtabs(tabsize=4))
-                for module_ in module_list:
-                    items.append(f"\t\t* {module_}".expandtabs(tabsize=4))
+            items.append(f"- {module_}".expandtabs(tabsize=4))
+            for module_ in module_list:
+                items.append(f"\t* {module_}".expandtabs(tabsize=4))
         print(msg.cli("'+': package, '-': module, '*': class", items=items,
                       header="seisflows modules"))
 
@@ -1369,7 +1342,7 @@ class SeisFlows:
         .. rubric::
             $ seisflows print flow
         """
-        self._register(force=True)
+        self._register_parameters(force=True)
         self._load_modules()
 
         workflow = custom_import("workflow")()
@@ -1402,7 +1375,7 @@ class SeisFlows:
                 seisflows inspect solver eval_func
 
         """
-        self._register(force=True)
+        self._register_parameters(force=True)
         self._load_modules()
         if func is None:
             self._inspect_module_hierarchy(name, **kwargs)
@@ -1503,19 +1476,15 @@ def return_modules():
     :return: a dict with keys matching names and values as dicts for each
         package. nested list contains all the avaialble modules
     """
-    REPO_DIR = os.path.abspath(os.path.join(ROOT_DIR, ".."))
-
     module_dict = {}
     for NAME in NAMES:
-        module_dict[NAME] = {}
-        for PACKAGE in PACKAGES:
-            module_dict[NAME][PACKAGE] = []
-            mod_dir = os.path.join(REPO_DIR, PACKAGE, NAME)
-            for pyfile in sorted(glob(os.path.join(mod_dir, "*.py"))):
-                stripped_pyfile = os.path.basename(pyfile)
-                stripped_pyfile = os.path.splitext(stripped_pyfile)[0]
-                if not stripped_pyfile.startswith("_"):
-                    module_dict[NAME][PACKAGE].append(stripped_pyfile)
+        module_dict[NAME] = []
+        mod_dir = os.path.join(ROOT_DIR, NAME)
+        for pyfile in sorted(glob(os.path.join(mod_dir, "*.py"))):
+            stripped_pyfile = os.path.basename(pyfile)
+            stripped_pyfile = os.path.splitext(stripped_pyfile)[0]
+            if not stripped_pyfile.startswith("_"):
+                module_dict[NAME].append(stripped_pyfile)
 
     return module_dict
 

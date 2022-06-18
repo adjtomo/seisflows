@@ -9,7 +9,7 @@
 #
 # .. rubric::
 #   - To determine available options for modules listed below, run:
-#       > seisflows print module
+#       > seisflows print modules
 #   - To auto-fill with docstrings and default values (recommended), run:
 #       > seisflows configure
 #   - To set values as NoneType, use: null

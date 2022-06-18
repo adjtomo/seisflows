@@ -2,10 +2,8 @@
 Utilities to interact with, manipulate or call on the external solver, 
 i.e., SPECFEM2D/3D/3D_GLOBE
 """
-import os
 import sys
 import numpy as np
-import subprocess
 
 from collections import defaultdict
 from seisflows.tools import msg
@@ -21,7 +19,7 @@ class Minmax(defaultdict):
         super(Minmax, self).__init__(lambda: [+np.inf, -np.inf])
 
     def update(self, keys, vals):
-        for key, val in _zip(keys, vals):
+        for key, val in zip(iterable(keys), iterable(vals)):
             if min(val) < self.dict[key][0]:
                 self.dict[key][0] = min(val)
             if max(val) > self.dict[key][1]:
@@ -38,46 +36,6 @@ class Container(defaultdict):
     def __init__(self):
         super(Container, self).__init__(lambda: [])
         self.minmax = Minmax()
-
-
-def call_solver(mpiexec, executable, output="solver.log"):
-    """
-    Calls MPI solver executable to run solver binaries, used by individual
-    processes to run the solver on system. If the external solver returns a 
-    non-zero exit code (failure), this function will return a negative boolean.
-
-    :type mpiexec: str
-    :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
-    :type executable: str
-    :param executable: executable function to call
-    :type output: str
-    :param output: where to redirect stdout
-    """
-    # mpiexec is None when running in serial mode, so e.g., ./xmeshfem2D
-    if mpiexec is None:
-        exc_cmd = f"./{executable}"
-    # Otherwise mpiexec is system dependent (e.g., srun, mpirun)
-    else:
-        exc_cmd = f"{mpiexec} {executable}"
-
-    try:
-        # Write solver stdout (log files) to text file
-        f = open(output, "w")
-        subprocess.run(exc_cmd, shell=True, check=True, stdout=f)
-    except (subprocess.CalledProcessError, OSError) as e:
-        print(msg.cli("The external numerical solver has returned a nonzero "
-                      "exit code (failure). Consider stopping any currently "
-                      "running jobs to avoid wasted computational resources. "
-                      f"Check 'scratch/solver/mainsolver/{output}' for the "
-                      f"solvers stdout log message. "
-                      f"The failing command and error message are: ",
-                      items=[f"exc: {exc_cmd}", f"err: {e}"],
-                      header="external solver error",
-                      border="=")
-              )
-        sys.exit(-1)
-    finally:
-        f.close()
 
 
 def getpar(key, file, delim="=", match_partial=False):
@@ -298,38 +256,3 @@ def check_poissons_ratio(vp, vs, min_val=-1., max_val=0.5):
               )
         sys.exit(-1)
     return poissons
-
-
-def _split(string, sep):
-    """
-    Utility function to split a string by a given separation character or str
-
-    :type string: str
-    :param string: string to split
-    :type sep: str
-    :param sep: substring to split by
-    """
-    n = string.find(sep)
-    if n >= 0:
-        return string[:n], string[n + len(sep):]
-    else:
-        return string, ''
-
-
-def _merge(*parts):
-    """
-    Utility function to merge various strings together with no breaks
-    """
-    return ' '.join(parts)
-
-
-def _zip(keys, vals):
-    """
-    Zip together keys and vals
-
-    :type keys: dict_keys
-    :param keys: keys
-    :type vals: dict_values
-    :param vals: values
-    """
-    return zip(iterable(keys), iterable(vals))

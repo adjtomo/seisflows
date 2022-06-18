@@ -152,14 +152,14 @@ class Base:
 
             # Set the min/max frequencies and periods, frequency takes priority
             if PAR.MIN_FREQ is not None:
-                PAR.force_set("MAX_PERIOD", 1 / PAR.MIN_FREQ)
+                PAR.MAX_PERIOD = 1 / PAR.MIN_FREQ
             elif PAR.MAX_PERIOD is not None:
-                PAR.force_set("MIN_FREQ", 1 / PAR.MAX_PERIOD)
+                PAR.MIN_FREQ = 1 / PAR.MAX_PERIOD
 
             if PAR.MAX_FREQ is not None:
-                PAR.force_set("MIN_PERIOD", 1 / PAR.MAX_FREQ)
+                PAR.MIN_PERIOD = 1 / PAR.MAX_FREQ
             elif PAR.MIN_PERIOD is not None:
-                PAR.force_set("MAX_FREQ", 1 / PAR.MIN_PERIOD)
+                PAR.MAX_FREQ =  1 / PAR.MIN_PERIOD
 
             # Check that the correct filter bounds have been set
             if PAR.FILTER.upper() == "BANDPASS":
@@ -182,8 +182,10 @@ class Base:
         # Assert that readers and writers available
         # TODO | This is a bit vague as dir contains imported modules and hidden
         # TODO | variables (e.g., np, __name__)
-        assert(PAR.FORMAT in dir(readers)), f"Reader {PAR.FORMAT} not found"
-        assert(PAR.FORMAT in dir(writers)), f"Writer {PAR.FORMAT} not found"
+        assert(PAR.FORMAT.lower() in dir(readers)), (
+            f"Reader {PAR.FORMAT} not found")
+        assert(PAR.FORMAT.lower() in dir(writers)), (
+            f"Writer {PAR.FORMAT} not found")
 
         # Assert that either misfit or backproject exists 
         if PAR.WORKFLOW.upper() == "INVERSION":
@@ -207,8 +209,8 @@ class Base:
             self.adjoint = getattr(adjoint, PAR.BACKPROJECT.lower())
 
         # Define seismic data reader and writer
-        self.reader = getattr(readers, PAR.FORMAT)
-        self.writer = getattr(writers, PAR.FORMAT)
+        self.reader = getattr(readers, PAR.FORMAT.lower())
+        self.writer = getattr(writers, PAR.FORMAT.lower())
 
     def prepare_eval_grad(self, cwd, taskid, filenames, **kwargs):
         """
@@ -269,7 +271,7 @@ class Base:
                 raise NotImplementedError
 
             self._write_adjoint_traces(path=os.path.join(cwd, "traces", "adj"),
-                                      syn=syn, obs=obs, filename=filename_out)
+                                       syn=syn, obs=obs, filename=filename_out)
 
         # Copy over the STATIONS file to STATIONS_ADJOINT required by Specfem
         # ASSUMING that all stations are used in adjoint simulation
@@ -447,4 +449,5 @@ class Base:
                 w = np.linalg.norm(tr.data, ord=2)
                 if w > 0:
                     tr.data /= w
+
         return st_out

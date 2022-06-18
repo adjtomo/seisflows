@@ -10,11 +10,10 @@ import sys
 import logging
 from glob import glob
 
-import seisflows.plugins.solver.specfem3d as solvertools
 from seisflows.tools import unix, msg
 from seisflows.tools.wrappers import exists
 from seisflows.config import custom_import, SeisFlowsPathsParameters
-from seisflows.tools.specfem import call_solver, getpar, setpar
+from seisflows.tools.specfem import getpar, setpar
 
 
 # Seisflows configuration
@@ -101,7 +100,7 @@ class Specfem3D(custom_import("solver", "base")):
         else:
             setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
+        self.call_solver(executable="bin/xspecfem3D", output="true_solver.log")
 
         unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
                 dst=os.path.join("traces", "obs"))
@@ -123,7 +122,6 @@ class Specfem3D(custom_import("solver", "base")):
             Par_file. See Specfem3D Par_file for available options.
         """
         available_model_types = ["gll"]
-
         assert(exists(model_path)), f"model {model_path} does not exist"
 
         model_type = model_type or getpar(key="MODEL", file="DATA/Par_file")
@@ -140,9 +138,10 @@ class Specfem3D(custom_import("solver", "base")):
             dst = self.model_databases
             unix.cp(src, dst)
 
-            call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem3D")
-            call_solver(mpiexec=PAR.MPIEXEC, 
-                        executable="bin/xgenerate_databases")
+            self.call_solver(executable="bin/xmeshfem3D",
+                             output="true_mesher.log")
+            self.call_solver(executable="bin/xgenerate_databases",
+                             output="true_solver.log")
 
         # Export the model for future use in the workflow
         if self.taskid == 0:
@@ -172,9 +171,10 @@ class Specfem3D(custom_import("solver", "base")):
         else:
             setpar(key="ATTENUATION", val=".false`.", file="DATA/Par_file")
 
-        call_solver(mpiexec=PAR.MPIEXEC,
-                    executable="bin/xgenerate_databases")
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
+        self.call_solver(executable="bin/xgenerate_databases",
+                         output="fwd_mesher.log")
+        self.call_solver(executable="bin/xmeshfem3D", output="fwd_solver.log")
+
 
         # Find and move output traces, by default to synthetic traces dir
         unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
@@ -192,7 +192,7 @@ class Specfem3D(custom_import("solver", "base")):
         unix.rm("SEM")
         unix.ln("traces/adj", "SEM")
 
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem3D")
+        self.call_solver(executable="bin/xmeshfem3D", output="adj_solver.log")
 
     def check_solver_parameter_files(self):
         """
@@ -237,7 +237,7 @@ class Specfem3D(custom_import("solver", "base")):
         """
         Setup utility: Creates the "adjoint traces" expected by SPECFEM
 
-        Note:
+        .. note::
             Adjoint traces are initialized by writing zeros for all channels.
             Channels actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
@@ -271,37 +271,6 @@ class Specfem3D(custom_import("solver", "base")):
         if PAR.FORMAT.upper() == "SU":
             files = glob(os.path.join(self.cwd, "traces", "adj", "*SU"))
             unix.rename(old='_SU', new='_SU.adj', names=files)
-
-    def write_parameters(self):
-        """
-        Write a set of parameters
-
-        !!! This calls on plugins.solver.specfem3d.write_parameters()
-            but that function doesn't exist !!!
-        """
-        unix.cd(self.cwd)
-        solvertools.write_parameters(vars(PAR))
-
-    def write_receivers(self):
-        """
-        Write a list of receivers into a text file
-
-        !!! This calls on plugins.solver.specfem3d.write_receivers()
-            but incorrect number of parameters is forwarded !!!
-        """
-        unix.cd(self.cwd)
-        setpar(key="use_existing_STATIONS", val=".true", file="DATA/Par_file")
-
-        _, h = preprocess.load("traces/obs")
-        solvertools.write_receivers(h.nr, h.rx, h.rz)
-
-    def write_sources(self):
-        """
-        Write sources to text file
-        """
-        unix.cd(self.cwd)
-        _, h = preprocess.load(dir="traces/obs")
-        solvertools.write_sources(PAR=vars(PAR), h=h)
 
     @property
     def data_wildcard(self):

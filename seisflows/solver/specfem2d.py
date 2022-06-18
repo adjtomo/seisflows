@@ -13,7 +13,7 @@ from glob import glob
 from seisflows.tools import unix, msg
 from seisflows.tools.wrappers import exists
 from seisflows.config import custom_import, SeisFlowsPathsParameters
-from seisflows.tools.specfem import call_solver, getpar, setpar
+from seisflows.tools.specfem import getpar, setpar
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -62,7 +62,7 @@ class Specfem2D(custom_import("solver", "base")):
         sf.par("F0", required=True, par_type=float,
                docstr="Dominant source frequency")
 
-        sf.par("FORMAT", required=True, par_type=float,
+        sf.par("FORMAT", required=False, par_type=float, default="ASCII",
                docstr="Format of synthetic waveforms used during workflow, "
                       "available options: ['ascii', 'su']")
 
@@ -140,33 +140,6 @@ class Specfem2D(custom_import("solver", "base")):
             else:
                 setpar(key="absorbtop", val=".true.", file="DATA/Par_file")
 
-    def generate_data(self, **model_kwargs):
-        """
-        Generates data using the True model, exports traces to `traces/obs`
-
-        :param model_kwargs: keyword arguments to pass to `generate_mesh`
-        """
-        self.generate_mesh(**model_kwargs)
-
-        unix.cd(self.cwd)
-        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
-        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
-
-        call_solver(PAR.MPIEXEC, "bin/xmeshfem2D", output="mesher.log")
-        call_solver(PAR.MPIEXEC, "bin/xspecfem2D", output="solver.log")
-
-        if PAR.FORMAT.upper() == "SU":
-            # Work around SPECFEM2D's version dependent file names
-            for tag in ["d", "v", "a", "p"]:
-                unix.rename(old=f"single_{tag}.su", new="single.su",
-                            names=glob(os.path.join("OUTPUT_FILES", "*.su")))
-
-        unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
-                dst=os.path.join("traces", "obs"))
-
-        if PAR.SAVETRACES:
-            self.export_traces(os.path.join(PATH.OUTPUT, "traces", "obs"))
-
     def initialize_adjoint_traces(self):
         """
         Setup utility: Creates the "adjoint traces" expected by SPECFEM.
@@ -214,7 +187,32 @@ class Specfem2D(custom_import("solver", "base")):
                     if not exists(fid_check):
                         unix.cp(fid, fid_check)
 
-    def generate_mesh(self, model_path, model_name, model_type='gll'):
+    def generate_data(self):
+        """
+        Generates observation data to be compared to synthetics. This must
+        only be run once. If `PAR.CASE`=='data', then real data will be copied
+        over. If `PAR.CASE`=='synthetic' then the external solver will use the
+        True model to generate 'observed' synthetics. Finally exports traces to
+        'cwd/traces/obs'
+        """
+        # If synthetic inversion, generate 'data' with solver
+        if PAR.CASE.upper() == "SYNTHETIC":
+            if PATH.MODEL_TRUE is not None:
+                if self.taskid == 0:
+                    self.logger.info("generating 'data' with MODEL_TRUE")
+                # Generate synthetic data on the fly using the true model
+                self.generate_mesh(model_name="true", model_type="gll")
+                self.forward(path=os.path.join("traces", "obs"))
+
+        # If Data provided by user, copy directly into the solver directory
+        elif PATH.DATA is not None and os.path.exists(PATH.DATA):
+            unix.cp(src=glob(os.path.join(PATH.DATA, self.source_name, "*")),
+                    dst=os.path.join("traces", "obs")
+                    )
+        if PAR.SAVETRACES:
+            self.export_traces(path=os.path.join(PATH.OUTPUT, "traces", "obs"))
+
+    def generate_mesh(self, model_name, model_type="gll"):
         """
         Performs meshing with internal mesher Meshfem2D and database generation
 
@@ -226,13 +224,23 @@ class Specfem2D(custom_import("solver", "base")):
         :param model_type: available model types to be passed to the Specfem3D
             Par_file. See Specfem3D Par_file for available options.
         """
+        unix.cd(self.cwd)
+
+        if model_name.upper() == "INIT":
+            model_path = PATH.MODEL_INIT
+        elif model_name.upper() == "TRUE":
+            model_path = PATH.MODEL_TRUE
+        else:
+            raise ValueError(f"model name must be 'INIT' or 'TRUE'")
         assert(exists(model_path)), f"model {model_path} does not exist"
+
+        if self.taskid == 0:
+            self.logger.info(f"running mesh generation for "
+                             f"MODEL_{model_name.upper()}")
 
         available_model_types = ["gll"]
         assert(model_type in available_model_types), \
             f"{model_type} not in available types {available_model_types}"
-
-        unix.cd(self.cwd)
 
         # Run mesh generation
         if model_type == "gll":
@@ -247,18 +255,21 @@ class Specfem2D(custom_import("solver", "base")):
         if self.taskid == 0:
             self.export_model(os.path.join(PATH.OUTPUT, model_name))
 
-    def forward(self, path='traces/syn'):
+    def forward(self, path="traces/syn"):
         """
         Calls SPECFEM2D forward solver, exports solver outputs to traces dir
 
         :type path: str
         :param path: path to export traces to after completion of simulation
+            relatiev to the solver cwd
         """
+        unix.cd(self.cwd)
+
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
 
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D")
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D")
+        self.call_solver(executable="bin/xmeshfem2D", output="fwd_mesher.log")
+        self.call_solver(executable="bin/xspecfem2D", output="fwd_solver.log")
 
         if PAR.FORMAT.upper() == "SU":
             # Work around SPECFEM2D's version dependent file names
@@ -286,8 +297,7 @@ class Specfem2D(custom_import("solver", "base")):
             unix.rename(old=".su", new=".su.adj",
                         names=glob(os.path.join("traces", "adj", "*.su")))
 
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xmeshfem2D")
-        call_solver(mpiexec=PAR.MPIEXEC, executable="bin/xspecfem2D")
+        self.call_solver(executable="bin/xspecfem2D", output="adj_solver.log")
 
     def smooth(self, input_path, **kwargs):
         """
@@ -421,13 +431,4 @@ class Specfem2D(custom_import("solver", "base")):
         elif PAR.FORMAT.upper() == "ASCII":
             return f"*.?X{comp}.sem?"
 
-    @property
-    def source_prefix(self):
-        """
-        Specfem2D's preferred source prefix
-
-        :rtype: str
-        :return: source prefix
-        """
-        return PAR.SOURCE_PREFIX.upper()
 

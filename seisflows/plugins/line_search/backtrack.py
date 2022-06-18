@@ -35,16 +35,11 @@ class Backtrack(Bracket):
     # Class-specific logger accessed using self.logger
     logger = logging.getLogger(__name__).getChild(__qualname__)
 
-    def __init__(self, **kwargs):
-        """
-        These parameters should not be set by the user.
-        Attributes are initialized as NoneTypes for clarity and docstrings.
-        """
-        super().__init__(**kwargs)
 
     def calculate_step(self):
         """
-        Determines step length and search status
+        Determines step length and search status. Overloads the bracketing
+        line search
         """
         # Determine the line search history
         x, f, gtg, gtp, step_count, update_count = self.search_history()
@@ -69,12 +64,13 @@ class Backtrack(Bracket):
                 alpha = min(1., self.step_len_max)
                 status = 0
             # Pass if misfit is reduced
-            elif self._check_decrease(x, f):
+            elif f.min() < f[0]:
                 self.logger.info("misfit decrease, pass")
                 alpha = x[f.argmin()]
                 status = 1
             # If misfit continually increases, decrease step length
             elif step_count <= self.step_count_max:
+                import pdb;pdb.set_trace()
                 self.logger.info("misfit increase, decreasing step length")
                 slope = gtp[-1] / gtg[-1]
                 alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
@@ -87,18 +83,4 @@ class Backtrack(Bracket):
                 status = -1
 
         return alpha, status
-
-    @staticmethod
-    def _check_decrease(step_lens, func_vals, c=1.e-4):
-        """
-        Checks for sufficient decrease by comparing the current functional value
-        with the smallest functional value in the list.
-
-        !!! What's with the unused value of 'c'?, also 'x' isn't used
-        """
-        x, f = step_lens, func_vals
-        if f.min() < f[0]:
-            return 1
-        else:
-            return 0
 

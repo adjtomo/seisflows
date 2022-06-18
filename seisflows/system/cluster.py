@@ -22,7 +22,7 @@ class Cluster(custom_import("system", "base")):
     compute systems such as HPC clusters.
     """
     # Class-specific logger accessed using self.logger
-    logger = logging.getLogger(__name__).getChild(_nrpo_qualname__)
+    logger = logging.getLogger(__name__).getChild(__qualname__)
 
     @property
     def required(self):

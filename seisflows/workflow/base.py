@@ -37,7 +37,7 @@ class Base:
         """
         sf = SeisFlowsPathsParameters()
 
-        sf.par("CASE", required=True, par_type=str,
+        sf.par("CASE", required=False, default="data", par_type=str,
                docstr="Type of inversion, available: "
                       "['data': real data inversion, "
                       "'synthetic': synthetic-synthetic inversion]")
@@ -222,6 +222,6 @@ class Base:
         """
         Writes information to disk so workflow can be resumed following a break
         """
-        save()
+        save(path=PATH.OUTPUT)
 
 
