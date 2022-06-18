@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+Gradient descent nonlinear optimization algorithm. Acts as the Base class for
+optimization.
+
 The Optimization library contains classes and methods used to solve nonlinear
 optimization problems, i.e., misfit minimization. Various subclasses implement
 different optimization algorithms.
@@ -297,6 +300,9 @@ class Gradient:
             for fid in [self.m_old, self.f_old, self.g_old, self.p_old]:
                 unix.rm(fid)
 
+        # Needs to be run before shifting model in next step
+        self.write_stats()
+
         self.logger.info("shifting current model (new) to previous model (old)")
         unix.mv(self.m_new, self.m_old)
         unix.mv(self.f_new, self.f_old)
@@ -309,8 +315,6 @@ class Gradient:
         f = self.line_search.search_history()[1]
         np.save(self.f_new, f.min())
         self.logger.info(f"current misfit is {self.f_new}={f.min():.3E}")
-
-        self.write_stats()
 
         self.logger.info("resetting line search step count to 0")
         self.line_search.step_count = 0
@@ -370,11 +374,10 @@ class Gradient:
         # First time, write header information
         if not os.path.exists(fid):
             with open(fid, "w") as f:
-                f.write(f"{'ITER':>4}")
-                for log in ["FACTOR", "GRAD_NORM_L1", "GRAD_NORM_L2",
-                            "MISFIT", "RESTART", "SLOPE", "STEP", "LENGTH",
-                            "THETA"]:
-                    f.write(f"{log.upper()},")
+                for header in ["ITER", "FACTOR", "GRAD_NORM_L1", "GRAD_NORM_L2",
+                              "MISFIT", "RESTART", "SLOPE", "STEP", "LENGTH",
+                              "THETA"]:
+                    f.write(f"{header.upper()},")
                 f.write("\n")
 
         g = np.load(self.g_new)
@@ -383,7 +386,7 @@ class Gradient:
         f = self.line_search.search_history()[1]
 
         # Calculated stats factors
-        factor = (g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
+        factor = -dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
         grad_norm_L1 = np.linalg.norm(g, 1)
         grad_norm_L2 = np.linalg.norm(g, 2)
         misfit = f[0]
@@ -394,10 +397,17 @@ class Gradient:
         theta = 180. * np.pi ** -1 * angle(p, -g)
 
         with open(fid, "a") as f:
-            f.write(f"{self.iter},{factor},{grad_norm_L1},{grad_norm_L2},"
-                    f"{misfit},{restarted},{slope},{step_count},{step_length},"
-                    f"{theta}\n")
-
+            f.write(f"{self.iter:0>2},"
+                    f"{factor:6.3E},"
+                    f"{grad_norm_L1:6.3E},"
+                    f"{grad_norm_L2:6.3E},"
+                    f"{misfit:6.3E},"
+                    f"{restarted:6.3E},"
+                    f"{slope:6.3E},"
+                    f"{step_count:0>2},"
+                    f"{step_length:6.3E},"
+                    f"{theta:6.3E}\n"
+                    )
 
     def check_model(self, m):
         """

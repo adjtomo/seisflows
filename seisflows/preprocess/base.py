@@ -152,14 +152,14 @@ class Base:
 
             # Set the min/max frequencies and periods, frequency takes priority
             if PAR.MIN_FREQ is not None:
-                PAR.force_set("MAX_PERIOD", 1 / PAR.MIN_FREQ)
+                PAR.MAX_PERIOD = 1 / PAR.MIN_FREQ
             elif PAR.MAX_PERIOD is not None:
-                PAR.force_set("MIN_FREQ", 1 / PAR.MAX_PERIOD)
+                PAR.MIN_FREQ = 1 / PAR.MAX_PERIOD
 
             if PAR.MAX_FREQ is not None:
-                PAR.force_set("MIN_PERIOD", 1 / PAR.MAX_FREQ)
+                PAR.MIN_PERIOD = 1 / PAR.MAX_FREQ
             elif PAR.MIN_PERIOD is not None:
-                PAR.force_set("MAX_FREQ", 1 / PAR.MIN_PERIOD)
+                PAR.MAX_FREQ =  1 / PAR.MIN_PERIOD
 
             # Check that the correct filter bounds have been set
             if PAR.FILTER.upper() == "BANDPASS":

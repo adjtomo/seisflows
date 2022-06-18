@@ -75,10 +75,10 @@ class Bracket:
         :return status: current status of the line search
         """
         self.step_count = 0
-        self.step_lens += [step_len]
-        self.func_vals += [func_val]
-        self.gtg += [gtg]
-        self.gtp += [gtp]
+        self.step_lens.append(step_len)
+        self.func_vals.append(func_val)
+        self.gtg.append(gtg)
+        self.gtp.append(gtp)
 
     def update(self, step_len, func_val):
         """
@@ -97,12 +97,12 @@ class Bracket:
         :rtype status: int
         :return status: current status of the line search
         """
-        self.step_lens += [step_len]
-        self.func_vals += [func_val]
+        self.step_lens.append(step_len)
+        self.func_vals.append(func_val)
 
     def clear_history(self):
         """
-        Clears internal line search history
+        Clears internal line search history for a new line search attempt
         """
         self.func_vals = []
         self.step_lens = []

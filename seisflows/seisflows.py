@@ -30,7 +30,7 @@ from seisflows.tools import unix, msg
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)
 from seisflows.tools.wrappers import loadyaml
-from seisflows.config import (config_logger, Dict, custom_import, load,
+from seisflows.config import (config_logger, Dict, custom_import, save,
                               SeisFlowsPathsParameters, NAMES, ROOT_DIR,
                               CFGPATHS)
 
@@ -680,8 +680,7 @@ class SeisFlows:
         self._register_parameters(force=True)
         self._register_modules(check=True)
 
-        workflow = sys.modules["seisflows_workflow"]
-        workflow.checkpoint()
+        save(path=self._paths.OUTPUT)
 
         # Ensure that all parameters and paths that need to be instantiated
         # are present in sys modules

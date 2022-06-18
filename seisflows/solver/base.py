@@ -11,13 +11,12 @@ import logging
 import subprocess
 import numpy as np
 from glob import glob
-from functools import partial
 
 from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
 from seisflows.tools.specfem import Container
-from seisflows.tools.wrappers import Struct, diff, exists
-from seisflows.config import SeisFlowsPathsParameters
+from seisflows.tools.wrappers import diff, exists
+from seisflows.config import SeisFlowsPathsParameters, Dict
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -97,7 +96,7 @@ class Base:
         :type parameters: list of str
         :param parameters: a list detailing the parameters to be used to
             define the model, available: ['vp', 'vs', 'rho']
-        :type _mesh_properties: seisflows.tools.wrappers.Struct
+        :type _mesh_properties: Dict
         :param _mesh_properties: hidden attribute, a dictionary of mesh
             properties, including the ngll points, nprocs, and mesh coordinates
         :type _source_names: hidden attribute,
@@ -829,9 +828,7 @@ class Base:
 
     def check_mesh_properties(self, path=None):
         """
-        Determine if Mesh properties are okay for workflow
-
-        TODO fix or rewrite this function
+        Determine if Mesh properties are okay for workflow.
 
         :type path: str
         :param path: path to the mesh file
@@ -845,33 +842,18 @@ class Base:
                           items=[path], header="solver error", border="="))
             sys.exit(-1)
 
-        # Count slices and grid points
+        # Count the number of .bin files and the number of grid points
         key = self.parameters[0]
-        iproc = 0
+        bin_files = glob(os.path.join(path, f"proc*_{key}.bin"))
+        nproc = len(bin_files)
         ngll = []
-        while True:
-            dummy = self.io.read_slice(path=path, parameters=key, 
-                                       iproc=iproc)[0]
-            ngll += [len(dummy)]
-            iproc += 1
-            if not exists(os.path.join(path,
-                                       f"proc{int(iproc):06d}_{key}.bin")):
-                break
-        nproc = iproc
-
-        # Create coordinate pointers
-        # !!! This partial is incorrectly defined and does not execute when 
-        # !!! called. What is the point of that?
-        coords = Struct()
-        for key in ['x', 'y', 'z']:
-            coords[key] = partial(self.io.read_slice, self, path, key)
+        for i in range(0, len(bin_files)):
+            ngll.append(
+                len(self.io.read_slice(path=path, parameters=key, iproc=i)[0])
+            )
 
         # Define internal mesh properties
-        self._mesh_properties = Struct([["nproc", nproc],
-                                        ["ngll", ngll],
-                                        ["path", path],
-                                        ["coords", coords]]
-                                       )
+        self._mesh_properties = Dict(nproc=nproc, ngll=ngll, path=path)
 
     def check_source_names(self):
         """

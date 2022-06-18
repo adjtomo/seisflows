@@ -38,8 +38,8 @@ def sfinit(tmpdir, copy_par_file):
     os.chdir(tmpdir)
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows()
-        sf._register(force=True)
-    config.init_seisflows()
+        sf._register_parameters(force=True)
+        sf._register_modules(check=True)
 
     return sf
 
@@ -54,18 +54,15 @@ def test_seisflows_constants():
     names_check = ["system", "preprocess", "solver",
                    "postprocess", "optimize", "workflow"]
 
-    packages_check = ["seisflows", "seisflows-super"]
-
     root_dir_check = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), ".."
     )
 
     assert(config.NAMES == names_check)
-    assert(config.PACKAGES == packages_check)
     assert(os.path.samefile(config.ROOT_DIR, root_dir_check))
 
 
-def test_init_seisflows(sfinit):
+def test_register_modules(sfinit):
     """
     Make sure that initiation of the modular approach of seisflows works
     as expected. That is, that system-wide accessible modules are
@@ -88,8 +85,8 @@ def test_save_and_load(sfinit):
     :return:
     """
     # Instantiate sys modules and save to disk
-    sf = sfinit
-    config.save()
+    sfinit
+    config.save(path="./output")
     # Now remove seisflows sys modules so we can try load them back
     for name in config.NAMES:
         sys.modules.pop(f"seisflows_{name}")
@@ -103,7 +100,7 @@ def test_seisflows_paths_parameters(sfinit):
     Test the class that makes inputting and checking paths and parameters easier
     Recreates the required() function at the top of each class.
     """
-    sf = sfinit
+    sfinit
     sfpp = config.SeisFlowsPathsParameters()
 
     # All of these parameters are defined in the test parameter file
@@ -138,8 +135,8 @@ def test_custom_import(sfinit):
     assert(module.__module__ == "seisflows.optimize.LBFGS")
 
     # Check one more to be safe
-    module = config.custom_import(name="optimize", module="base")
-    assert(module.__name__ == "Base")
-    assert(module.__module__ == "seisflows.optimize.base")
+    module = config.custom_import(name="preprocess", module="pyatoa")
+    assert(module.__name__ == "Pyatoa")
+    assert(module.__module__ == "seisflows.preprocess.pyatoa")
 
 

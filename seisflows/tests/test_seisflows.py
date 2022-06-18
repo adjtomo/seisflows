@@ -14,9 +14,9 @@ import subprocess
 from unittest.mock import patch
 
 from seisflows import logger
-from seisflows.seisflows import sfparser, SeisFlows
-from seisflows.config import (save, Dict, ROOT_DIR, NAMES, CFGPATHS,
-                              config_logger)
+from seisflows.seisflows import SeisFlows
+from seisflows.config import (Dict, ROOT_DIR, NAMES, CFGPATHS,
+                              config_logger, flush)
 from seisflows.tools.wrappers import loadyaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
@@ -126,7 +126,7 @@ def test_register(tmpdir, par_file_dict, copy_par_file):
         sf = SeisFlows()
         assert(sf._paths is None)
         assert(sf._parameters is None)
-        sf._register(force=True)
+        sf._register_parameters(force=True)
 
     # Check that paths and parameters have been set in sys.modules
     paths = sys.modules["seisflows_paths"]
@@ -156,9 +156,7 @@ def test_cmd_setup(tmpdir):
         # With symlinking
         sf.setup(symlink=True, overwrite=False)
         assert(os.path.exists(par_file))
-        assert(os.path.exists(
-            os.path.join(tmpdir, "source_code", "seisflows"))
-        )
+
         # Edit the current par file in a noticeable way so we can check
         # if overwriting works in the next step
         test_phrase = "well this is rather unexpected...\n"
@@ -252,7 +250,7 @@ def test_config_logging(tmpdir, copy_par_file):
     msg = "This is an example log that will be checked for test purposes"
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows()
-        sf._register(force=True)
+        sf._register_parameters(force=True)
         config_logger(filename=CFGPATHS.LOGFILE)
         logger.debug(msg)
 
@@ -393,46 +391,3 @@ def test_cmd_par(tmpdir, copy_par_file):
     assert(par.upper() == parameter.upper())
     assert(int(val) == int(new_val))
 
-# def test_cmd_sempar(tmpdir):
-#     """
-#
-#     :param tmpdir:
-#     :return:
-#     """
-#     pass
-#
-#
-# def test_cmd_check(tmpdir):
-#     """
-#     Very simple
-#     :param tmpdir:
-#     :return:
-#     """
-#     pass
-#
-#
-# def test_cmd_print(tmpdir):
-#     """
-#
-#     :param tmpdir:
-#     :return:
-#     """
-#     pass
-#
-#
-# def test_cmd_convert(tmpdir):
-#     """
-#
-#     :param tmpdir:
-#     :return:
-#     """
-#     pass
-#
-#
-# def test_cmd_validate(tmpdir):
-#     """
-#
-#     :param tmpdir:
-#     :return:
-#     """
-#     pass
