@@ -247,9 +247,8 @@ class Inversion(custom_import("workflow", "base")):
         """
         self.logger.info(msg.sub("EVALUATE OBJECTIVE FUNCTION"))
 
-        # Ensure that we are referencing the same tags as defined in OPTIMIZE
-        model_tag = getattr(optimize, f"m_{suffix}")
-        misfit_tag = getattr(optimize, f"f_{suffix}")
+        model_tag = optimize.vectors(f"m_{suffix}")
+        misfit_tag = optimize.vectors(f"f_{suffix}")
 
         self.write_model(path=path, tag=model_tag)
 
@@ -331,7 +330,7 @@ class Inversion(custom_import("workflow", "base")):
         """
         self.logger.info(msg.mnr("POSTPROCESSING KERNELS"))
         src = os.path.join(PATH.GRAD, "gradient")
-        dst = optimize.g_new
+        dst = optimize.vectors("g_new")
 
         postprocess.write_gradient(PATH.GRAD)
         parts = solver.load(src, suffix="_kernel")
@@ -373,7 +372,7 @@ class Inversion(custom_import("workflow", "base")):
             src = os.path.join(PATH.GRAD, "gradient")
             unix.mv(src, dst)
         if PAR.SAVEAS in ["vector", "both"]:
-            src = os.path.join(PATH.OPTIMIZE, optimize.g_old)
+            src = optimize.vectors("g_old")
             unix.cp(src, dst + ".npy")
 
         self.logger.debug(f"saving gradient to path:\n{dst}")
@@ -386,7 +385,7 @@ class Inversion(custom_import("workflow", "base")):
         Saving as a vector saves on file count, but requires numpy and seisflows
         functions to read
         """
-        src = optimize.m_new
+        src = optimize.vectors("m_new")
         dst = os.path.join(PATH.OUTPUT, f"model_{optimize.iter:04d}")
 
         self.logger.debug(f"saving model '{src}' to path:\n{dst}")

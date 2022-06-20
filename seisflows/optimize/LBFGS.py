@@ -156,7 +156,7 @@ class LBFGS(custom_import("optimize", "gradient")):
 
         # Load the current gradient direction, which is the L-BFGS search
         # direction if this is the first iteration
-        g = np.load(self.g_new)
+        g = np.load(self.vectors("g_new"))
         if self.LBFGS_iter == 1:
             self.logger.info("first L-BFGS iteration, setting search direction "
                              "as inverse gradient")
@@ -236,8 +236,8 @@ class LBFGS(custom_import("optimize", "gradient")):
         unix.cd(PATH.OPTIMIZE)
 
         # Determine the iterates for model m and gradient g
-        s_k = np.load(self.m_new) - np.load(self.m_old)
-        y_k = np.load(self.g_new) - np.load(self.g_old)
+        s_k = np.load(self.vectors("m_new")) - np.load(self.vectors("m_old"))
+        y_k = np.load(self.vectors("g_new")) - np.load(self.vectors("g_old"))
 
         # Determine the shape of the memory map (length of model, length of mem)
         m = len(s_k)

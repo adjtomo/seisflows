@@ -70,45 +70,11 @@ class Gradient:
         :param restarted: a flag signalling if the optimization algorithm has
             been restarted recently
 
-        :param m_new: current model
-        :param m_old: previous model
-        :param m_try: line search model
-        :param f_new: current objective function value
-        :param f_old: previous objective function value
-        :param f_try: line search function value
-        :param g_new: current gradient direction
-        :param g_old: previous gradient direction
-        :param p_new: current search direction
-        :param p_old: previous search direction
         """
         self.iter = 1
         self.line_search = None
         self.precond = None
         self.restarted = False
-
-        # Models
-        self.m_new = os.path.join(PATH.OPTIMIZE, "m_new.npy")
-        self.m_old = os.path.join(PATH.OPTIMIZE, "m_old.npy")
-        self.m_try = os.path.join(PATH.OPTIMIZE, "m_try.npy")
-
-        # Gradients
-        self.g_new = os.path.join(PATH.OPTIMIZE, "g_new.npy")
-        self.g_old = os.path.join(PATH.OPTIMIZE, "g_old.npy")
-        self.g_try = os.path.join(PATH.OPTIMIZE, "g_try.npy")
-
-        # Search directions
-        self.p_new = os.path.join(PATH.OPTIMIZE, "p_new.npy")
-        self.p_old = os.path.join(PATH.OPTIMIZE, "p_old.npy")
-        self.p_try = os.path.join(PATH.OPTIMIZE, "p_try.npy")
-
-        # Misfits
-        self.f_new = os.path.join(PATH.OPTIMIZE, "f_new.npy")
-        self.f_old = os.path.join(PATH.OPTIMIZE, "f_old.npy")
-        self.f_try = os.path.join(PATH.OPTIMIZE, "f_try.npy")
-
-        # Current search direction
-        self.alpha = os.path.join(PATH.OPTIMIZE, "alpha.npy")
-
 
     @property
     def required(self):
@@ -145,6 +111,38 @@ class Gradient:
                 docstr="scratch path for nonlinear optimization data")
 
         return sf
+
+
+    def vectors(self, name):
+        """
+        Convenience function to access the full paths of model and gradient
+        vectors that are saved to disk
+
+        .. note:: the available options that can be created
+            m_new: current model
+            m_old: previous model
+            m_try: line search model
+            f_new: current objective function value
+            f_old: previous objective function value
+            f_try: line search function value
+            g_new: current gradient direction
+            g_old: previous gradient direction
+            p_new: current search direction
+            p_old: previous search direction
+            alpha: trial search direction (aka p_try)
+
+        :type name: str
+        :param name: name of the vector, acceptable: m, g, p, f, alpha
+
+        """
+        # Set model and gradient filenames as attributes
+        acceptable_names = ["m_new", "m_old", "m_try",
+                            "g_new", "g_old", "g_try",
+                            "p_new", "p_old", "alpha",
+                            "f_new", "f_old", "f_try"]
+        assert(name in acceptable_names)
+        return os.path.join(PATH.OPTIMIZE, f"{name}.npy")
+
 
     def check(self, validate=True):
         """
@@ -183,7 +181,7 @@ class Gradient:
 
         # Read in initial model as a vector and ensure it is a valid model
         m_new = solver.merge(solver.load(PATH.MODEL_INIT))
-        np.save(self.m_new, m_new)
+        np.save(self.vectors("m_new"), m_new)
         self.check_model(m_new)
 
     @property
@@ -209,22 +207,22 @@ class Gradient:
         """
         self.logger.info(f"computing search direction with {PAR.OPTIMIZE}")
 
-        g_new = np.load(self.g_new)
+        g_new = np.load(self.vectors("g_new"))
         if self.precond is not None:
             p_new = -1 * self.precond(g_new)
         else:
             p_new = -1 * g_new
-        np.save(self.p_new, p_new)
+        np.save(self.vectors("p_new"), p_new)
 
     def initialize_search(self):
         """
         Initialize the plugin line search machinery. Should only be run at
         the beginning of line search, by the main workflow module.
         """
-        m = np.load(self.m_new)
-        g = np.load(self.g_new)
-        p = np.load(self.p_new)
-        f = np.load(self.f_new)
+        m = np.load(self.vectors("m_new"))
+        g = np.load(self.vectors("g_new"))
+        p = np.load(self.vectors("p_new"))
+        f = np.load(self.vectors("f_new"))
 
         norm_m = max(abs(m))
         norm_p = max(abs(p))
@@ -254,8 +252,8 @@ class Gradient:
         # gradient threshold to remove any outlier values
         m_try = m + alpha * p
 
-        np.save(self.m_try, m_try)
-        np.save(self.alpha, alpha)
+        np.save(self.vectors("m_try"), m_try)
+        np.save(self.vectors("alpha"), alpha)
         self.check_model(m_try)
 
     def update_search(self):
@@ -268,18 +266,18 @@ class Gradient:
             status == 0 : not finished
             status == -1  : failed
         """
-        self.line_search.update(step_len=np.load(self.alpha),
-                                func_val=np.load(self.f_try))
+        self.line_search.update(step_len=np.load(self.vectors("alpha")),
+                                func_val=np.load(self.vectors("f_try")))
         alpha, status = self.line_search.calculate_step()
 
         # New search direction needs to be searchable on disk
         if status in [0, 1]:
-            m = np.load(self.m_new)
-            p = np.load(self.p_new)
-            np.save(self.alpha, alpha)
+            m = np.load(self.vectors("m_new"))
+            p = np.load(self.vectors("p_new"))
+            np.save(self.vectors("alpha"), alpha)
 
             m_try = m + alpha * p
-            np.save(self.m_try, m_try)
+            np.save(self.vectors("m_try"), m_try)
             self.check_model(m_try)
 
         return status
@@ -297,24 +295,25 @@ class Gradient:
         # Remove the old model parameters
         if self.iter > 1:
             self.logger.info("removing previously accepted model files (old)")
-            for fid in [self.m_old, self.f_old, self.g_old, self.p_old]:
+            for fid in [self.vectors("m_old"), self.vectors("f_old"),
+                        self.vectors("g_old"), self.vectors("p_old")]:
                 unix.rm(fid)
 
         # Needs to be run before shifting model in next step
         self.write_stats()
 
         self.logger.info("shifting current model (new) to previous model (old)")
-        unix.mv(self.m_new, self.m_old)
-        unix.mv(self.f_new, self.f_old)
-        unix.mv(self.g_new, self.g_old)
-        unix.mv(self.p_new, self.p_old)
+        unix.mv(self.vectors("m_new"), self.vectors("m_old"))
+        unix.mv(self.vectors("f_new"), self.vectors("f_old"))
+        unix.mv(self.vectors("g_new"), self.vectors("g_old"))
+        unix.mv(self.vectors("p_new"), self.vectors("p_old"))
 
         self.logger.info("setting accepted line search model as current model")
-        unix.mv(self.m_try, self.m_new)
+        unix.mv(self.vectors("m_try"), self.vectors("m_new"))
 
         f = self.line_search.search_history()[1]
-        np.save(self.f_new, f.min())
-        self.logger.info(f"current misfit is {self.f_new}={f.min():.3E}")
+        np.save(self.vectors("f_new"), f.min())
+        self.logger.info(f"current misfit is {f.min():.3E}")
 
         self.logger.info("resetting line search step count to 0")
         self.line_search.step_count = 0
@@ -325,8 +324,8 @@ class Gradient:
         by checking, in effect, if the search direction was the same as gradient
         direction
         """
-        g = np.load(self.g_new)
-        p = np.load(self.p_new)
+        g = np.load(self.vectors("g_new"))
+        p = np.load(self.vectors("p_new"))
         theta = angle(p, -g)
 
         self.logger.debug(f"theta: {theta:6.3f}")
@@ -348,8 +347,8 @@ class Gradient:
         """
         # Steepest descent (base) does not need to be restarted
         if PAR.OPTIMIZE.capitalize() != "Gradient":
-            g = np.load(self.g_new)
-            np.save(self.p_new, -g)
+            g = np.load(self.vectors("g_new"))
+            np.save(self.vectors("p_new"), -g)
 
             self.line_search.clear_history()
             self.restarted = 1
@@ -380,8 +379,8 @@ class Gradient:
                     f.write(f"{header.upper()},")
                 f.write("\n")
 
-        g = np.load(self.g_new)
-        p = np.load(self.p_new)
+        g = np.load(self.vectors("g_new"))
+        p = np.load(self.vectors("p_new"))
         x = self.line_search.search_history()[0]
         f = self.line_search.search_history()[1]
 
