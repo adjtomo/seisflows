@@ -73,8 +73,9 @@ class Test(custom_import("workflow", "base")):
         This controls the main testing workflow
         """
         FLOW = [#self.test_system,
-                self.test_preprocess,
+                # self.test_preprocess,
                 # self.test_solver,
+                self.test_optimize
                 ]
         if return_flow:
             return FLOW
@@ -130,7 +131,6 @@ class Test(custom_import("workflow", "base")):
         taskid = 0
         filenames = ["AA.S0001.BXY.semd"]
         source_name = "001"
-        import pdb;pdb.set_trace()
         preprocess.prepare_eval_grad(cwd=cwd, taskid=taskid,
                                      filenames=filenames,
                                      source_name=source_name
@@ -161,33 +161,77 @@ class Test(custom_import("workflow", "base")):
         """
         optimize.setup()
 
-    def rosenbrock(self, n=1E8):
+        m_new, objective_function, gradient = rosenbrock()
+
+        def evaluate_function():
+            """
+            Evalaute the misfit function of a given model
+            """
+            m_new = np.load(optimize.vectors("m_new"))
+            f_try = objective_function(m_new)
+            np.save(optimize.vectors("f_try"), f_try)
+
+        def evaluate_gradient():
+            """
+            Evaluate the gradient of a given model
+            """
+            m_new = np.load(optimize.vectors("m_new"))
+            f_new = objective_function(m_new)
+            g_new = gradient(m_new)
+            np.save(optimize.vectors("f_new"), f_new)
+            np.save(optimize.vectors("g_new"), g_new)
+
+
+        # Set up the initial model on disk
+        np.save(optimize.vectors("m_new"), m_new)
+
+        import pdb;pdb.set_trace()
+        for iteration in range(1, 200):
+            evaluate_gradient()
+            optimize.compute_direction()
+            # Perform line search
+            while True:
+                optimize.initialize_search()
+                evaluate_function()
+                status = optimize.update_search()
+                if status > 0:
+                    optimize.finalize_search()
+                    break
+                elif status == 0:
+                    continue
+                elif status < 0:
+                    if optimize.retry_status():
+                        optimize.restart()
+                    else:
+                        sys.exit()
+
+
+def rosenbrock(n=1E8):
+    """
+    Rosenbrock test for optimization library testing
+    """
+    model_init = 0.1 * np.ones(int(n))
+
+    def objective_function(x):
         """
-        Rosenbrock test for optimization library
+        Rosenbrock function
         """
-        model_init = 0.1 * np.ones(n)
-        model_true = np.ones(n)
+        return sum(100 * (x[:-1]**2. - x[1:])**2. + (x[:-1] - 1.)**2)
 
-        def func(x):
-            """
-            Rosenbrock function
-            """
-            return sum(100 * (x[:-1]**2. - x[1:])**2. + (x[:-1] - 1.)**2)
+    def gradient(x):
+        """
+        Gradient for Rosenbrock function
+        """
+        g = np.zeros(int(n))
+        g[1:-1] = -200 * (x[:-2] ** 2. - x[1:-1]) + \
+                  400. * x[1:-1] * (x[1:-1] ** 2. - x[2:]) + \
+                  2. * (x[1:-1] - 1.)
 
-        def grad(x):
-            """
-            Gradient for Rosenbrock function
-            """
-            g = np.zeros(n)
-            g[1:-1] = -200 * (x[:-2] ** 2. - x[1:-1]) + \
-                      400. * x[1:-1] * (x[1:-1] ** 2. - x[2:]) + \
-                      2. * (x[1:-1] - 1.)
+        g[0] = 400. * x[0] * (x[0] ** 2. - x[1]) + \
+               2. * (x[0] - 1)
 
-            g[0] = 400. * x[0] * (x[0] ** 2. - x[1]) + \
-                   2. * (x[0] - 1)
+        g[-1] = -200. * (x[-2] ** 2. - x[-1])
 
-            g[-1] = -200. * (x[-2] ** 2. - x[-1])
+        return g
 
-            return g
-
-        return model_init, model_true, func, grad
+    return model_init, objective_function, gradient

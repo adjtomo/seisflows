@@ -112,38 +112,6 @@ class Gradient:
 
         return sf
 
-
-    def vectors(self, name):
-        """
-        Convenience function to access the full paths of model and gradient
-        vectors that are saved to disk
-
-        .. note:: the available options that can be created
-            m_new: current model
-            m_old: previous model
-            m_try: line search model
-            f_new: current objective function value
-            f_old: previous objective function value
-            f_try: line search function value
-            g_new: current gradient direction
-            g_old: previous gradient direction
-            p_new: current search direction
-            p_old: previous search direction
-            alpha: trial search direction (aka p_try)
-
-        :type name: str
-        :param name: name of the vector, acceptable: m, g, p, f, alpha
-
-        """
-        # Set model and gradient filenames as attributes
-        acceptable_names = ["m_new", "m_old", "m_try",
-                            "g_new", "g_old", "g_try",
-                            "p_new", "p_old", "alpha",
-                            "f_new", "f_old", "f_try"]
-        assert(name in acceptable_names)
-        return os.path.join(PATH.OPTIMIZE, f"{name}.npy")
-
-
     def check(self, validate=True):
         """
         Checks parameters, paths, and dependencies
@@ -180,9 +148,14 @@ class Gradient:
             self.precond = getattr(preconds, PAR.PRECOND)()
 
         # Read in initial model as a vector and ensure it is a valid model
-        m_new = solver.merge(solver.load(PATH.MODEL_INIT))
-        np.save(self.vectors("m_new"), m_new)
-        self.check_model(m_new)
+        if PATH.MODEL_INIT is not None:
+            m_new = solver.merge(solver.load(PATH.MODEL_INIT))
+            np.save(self.vectors("m_new"), m_new)
+            self.check_model(m_new)
+        else:
+            self.logger.warning("PATH.MODEL_INIT not found. Optimization "
+                                "library expects a model vector "
+                                f"{self.vectors('m_new')}")
 
     @property
     def eval_str(self):
@@ -196,6 +169,36 @@ class Gradient:
         iter_ = self.iter
         step = self.line_search.step_count
         return f"i{iter_:0>2}s{step:0>2}"
+
+    def vectors(self, name):
+        """
+        Convenience function to access the full paths of model and gradient
+        vectors that are saved to disk
+
+        .. note:: the available options that can be created
+            m_new: current model
+            m_old: previous model
+            m_try: line search model
+            f_new: current objective function value
+            f_old: previous objective function value
+            f_try: line search function value
+            g_new: current gradient direction
+            g_old: previous gradient direction
+            p_new: current search direction
+            p_old: previous search direction
+            alpha: trial search direction (aka p_try)
+
+        :type name: str
+        :param name: name of the vector, acceptable: m, g, p, f, alpha
+
+        """
+        # Set model and gradient filenames as attributes
+        acceptable_names = ["m_new", "m_old", "m_try",
+                            "g_new", "g_old", "g_try",
+                            "p_new", "p_old", "alpha",
+                            "f_new", "f_old", "f_try"]
+        assert(name in acceptable_names)
+        return os.path.join(PATH.OPTIMIZE, f"{name}.npy")
 
     def compute_direction(self):
         """
