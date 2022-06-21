@@ -19,6 +19,41 @@ Each sub-argument has it's own help message to further explain what it does.
 For more information on the SeisFlows command line tool, see the
 `command line tool <command_line_tool.html>`__ docs page.
 
+Running tests
+~~~~~~~~~~~~~
+
+SeisFlows has some unit tests that ensure the capabilities of the command line
+tool and package organization are working as intended. To run the tests:
+
+.. parsed-literal::
+
+    cd seisflows
+    cd tests
+    pytest
+
+If developing SeisFlows, please ensure that you run these tests before and after
+any changes are made to ensure that your changes do not break intended package
+functionality.
+
+Running the test problem
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SeisFlows comes with a small test problem that is intended to not only test
+the workflow capabilities of the package, but also for users to rapidly develop
+new modules without needing to run large, potentially expensive, workflows.
+
+In order to set up the test problem:
+
+.. parsed-literal::
+
+    cd path/to/working/directory  # ideally this directory is empty
+    seisflows setup  # this will create a template parameters.yaml file
+    seisflows par workflow test
+    seisflows configure
+
+At this stage, you will have a full SeisFlows parameter file. Certain system or
+module specific
+
 Running an example problem
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

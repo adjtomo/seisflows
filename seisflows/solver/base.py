@@ -118,17 +118,17 @@ class Base:
         """
         sf = SeisFlowsPathsParameters()
 
-        sf.par("MATERIALS", required=True, par_type=str,
+        sf.par("MATERIALS", required=False, par_type=str, default="ELASTIC",
                docstr="Material parameters used to define model. Available: "
                       "['ELASTIC': Vp, Vs, 'ACOUSTIC': Vp, 'ISOTROPIC', "
                       "'ANISOTROPIC']")
 
-        sf.par("DENSITY", required=True, par_type=str,
+        sf.par("DENSITY", required=False, par_type=str, default="CONSTANT",
                docstr="How to treat density during inversion. Available: "
                       "['CONSTANT': Do not update density, "
                       "'VARIABLE': Update density]")
 
-        sf.par("ATTENUATION", required=True, par_type=bool,
+        sf.par("ATTENUATION", required=False, par_type=bool, default=False,
                docstr="If True, turn on attenuation during forward "
                       "simulations, otherwise set attenuation off. Attenuation "
                       "is always off for adjoint simulations.")

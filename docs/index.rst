@@ -51,7 +51,7 @@ installed in development mode, allowing source code changes to be immediately
 acccessible to Python.
 
 The `devel` branch houses the most up-to-date codebase. We recommend installing
-SeisFlows within a virtual environment (e.g., Conda) to preserve your root
+SeisFlows within a virtual environment (e.g., Conda) to not affect your root
 environment.
 
 .. code:: bash
@@ -70,8 +70,7 @@ Requirements
 
 In most production-scale workflows, SeisFlows must be run on a cluster, or
 high performance computing system. However, serially run example problems
-making use of 2D solvers like SPECFEM2D are available for small problems and
-workflow tutorials.
+making use of 2D solvers like SPECFEM2D are available.
 
 SeisFlows + Pyatoa
 --------------------

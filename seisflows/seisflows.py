@@ -601,7 +601,7 @@ class SeisFlows:
         unix.cp(PAR_FILE, self._args.workdir)
         print(msg.cli(f"creating parameter file: {self._args.parameter_file}"))
 
-    def configure(self, relative_paths=False, **kwargs):
+    def configure(self, relative_paths=True, **kwargs):
         """
         Dynamically generate the parameter file by writing out docstrings and
         default values for each of the SeisFlows module parameters.
