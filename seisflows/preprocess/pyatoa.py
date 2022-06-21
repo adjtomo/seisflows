@@ -171,11 +171,11 @@ class Pyatoa(custom_import("preprocess", "base")):
         assert(PAR.FORMAT.upper() == "ASCII"), \
             "Pyatoa preprocess requires PAR.FORMAT=='ASCII'"
 
-        assert((PAR.DT * PAR.NT) <= (PAR.START_PAD + PAR.END_PAD)), \
-            ("Pyatoa preprocess must have (PAR.START_PAD + PAR.END_PAD) >= "
-             "(PAR.DT * PAR.NT), current values will not provide sufficiently "
-             f"long data traces (DT*NT={PAR.DT * PAR.NT}; "
-             f"START+END={PAR.START_PAD + PAR.END_PAD}")
+        # assert((PAR.DT * PAR.NT) <= (PAR.START_PAD + PAR.END_PAD)), \
+        #     ("Pyatoa preprocess must have (PAR.START_PAD + PAR.END_PAD) >= "
+        #      "(PAR.DT * PAR.NT), current values will not provide sufficiently "
+        #      f"long data traces (DT*NT={PAR.DT * PAR.NT}; "
+        #      f"START+END={PAR.START_PAD + PAR.END_PAD}")
 
     def setup(self):
         """
@@ -219,7 +219,7 @@ class Pyatoa(custom_import("preprocess", "base")):
                               "Pyaflowa")
 
         # Process all the stations for a given event using Pyaflowa
-        pyaflowa = self.setup_event_pyaflowa(source_name)
+        pyaflowa = self._setup_event_pyaflowa(source_name)
         scaled_misfit = pyaflowa.process(nproc=PAR.NPROC)
 
         if scaled_misfit is None:
@@ -234,7 +234,7 @@ class Pyatoa(custom_import("preprocess", "base")):
         # Event misfit defined by Tape et al. (2010) written to solver dir.
         self.write_residuals(path=cwd, scaled_misfit=scaled_misfit)
 
-    def setup_event_pyaflowa(self, source_name=None):
+    def _setup_event_pyaflowa(self, source_name=None):
         """
         A convenience function to set up a Pyaflowa processing instance for
         a specific event. 

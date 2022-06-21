@@ -13,7 +13,6 @@ import numpy as np
 
 from seisflows.tools import msg
 from seisflows.tools import signal, unix
-from seisflows.tools.wrappers import exists
 from seisflows.plugins.preprocess import adjoint, misfit, readers, writers
 from seisflows.config import SeisFlowsPathsParameters
 
@@ -320,11 +319,15 @@ class Base:
         :param syn: observed data
         """
         residuals = []
-        for obs_, syn_ in zip(obs, syn):
-            residuals.append(self.misfit(syn_.data, obs_.data, PAR.NT, PAR.DT))
+        for tr_obs, tr_syn in zip(obs, syn):
+            residual = self.misfit(syn=tr_syn.data, obs=tr_obs.data,
+                                   nt=tr_syn.stats.npts,
+                                   dt=tr_syn.stats.delta
+                                   )
+            residuals.append(residual)
 
         filename = os.path.join(path, "residuals")
-        if exists(filename):
+        if os.path.exists(filename):
             residuals = np.append(residuals, np.loadtxt(filename))
 
         np.savetxt(filename, residuals)
@@ -344,8 +347,11 @@ class Base:
         """
         # Use the synthetics as a template for the adjoint sources
         adj = syn.copy()
-        for adj_, obs_, syn_ in zip(adj, obs, syn):
-            adj.data = self.adjoint(syn_.data, obs_.data, PAR.NT, PAR.DT)
+        for tr_adj, tr_obs, tr_syn in zip(adj, obs, syn):
+            tr_adj.data = self.adjoint(syn=tr_syn.data, obs=tr_obs.data,
+                                       nt=tr_syn.stats.npts,
+                                       dt=tr_syn.stats.delta
+                                       )
 
         self.writer(adj, path, filename)
 

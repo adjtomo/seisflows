@@ -37,12 +37,10 @@ class Specfem2D(custom_import("solver", "base")):
         """
         These parameters should not be set by the user.
         Attributes are initialized as NoneTypes for clarity and docstrings.
-
-        :type logger: Logger
-        :param logger: Class-specific logging module, log statements pushed
-            from this logger will be tagged by its specific module/classname
         """
         super().__init__()
+
+        self.f0 = None
 
     @property
     def required(self):
@@ -51,20 +49,6 @@ class Specfem2D(custom_import("solver", "base")):
         alongside their necessity for the class and their string explanations.
         """
         sf = SeisFlowsPathsParameters(super().required)
-
-        # Define the Parameters required by this module
-        sf.par("NT", required=True, par_type=float,
-               docstr="Number of time steps set in the SPECFEM Par_file")
-
-        sf.par("DT", required=True, par_type=float,
-               docstr="Time step or delta set in the SPECFEM Par_file")
-
-        sf.par("F0", required=True, par_type=float,
-               docstr="Dominant source frequency")
-
-        sf.par("FORMAT", required=False, par_type=float, default="ASCII",
-               docstr="Format of synthetic waveforms used during workflow, "
-                      "available options: ['ascii', 'su']")
 
         sf.par("SOURCE_PREFIX", required=False, default="SOURCE",
                par_type=str,
@@ -82,57 +66,13 @@ class Specfem2D(custom_import("solver", "base")):
 
         super().check(validate=False)
 
-        acceptable_formats = ["SU", "ASCII"]
-        assert(PAR.FORMAT.upper() in acceptable_formats), \
-            f"FORMAT must be {acceptable_formats}"
-
-    def check_solver_parameter_files(self):
+    def setup(self):
         """
-        Checks SPECFEM2D Par_file for acceptable parameters and matches with
-        the internally set parameters
+        Additional SPECFEM2D setup steps
         """
-        # Check the number of steps in the SPECFEM2D Par_file
-        nt_str, nt, nt_i = getpar(key="NSTEP", file="DATA/Par_file")
-        if int(nt) != PAR.NT:
-            if self.taskid == 0:
-                print(msg.cli(f"SPECFEM2D {nt_str}=={nt} is not equal "
-                              f"SeisFlows PAR.NT=={PAR.NT}. Please ensure "
-                              f"that these values match in both files.",
-                              header="parameter match error", border="=")
-                      )
-                sys.exit(-1)
-
-        dt_str, dt, dt_i = getpar(key="DT", file="DATA/Par_file")
-        if float(dt) != PAR.DT:
-            if self.taskid == 0:
-                print(msg.cli(f"SPECFEM2D {dt_str}=={dt} is not equal "
-                              f"SeisFlows PAR.DT=={PAR.DT}. Please ensure "
-                              f"that these values match in both files.",
-                              header="parameter match error", border="=")
-                      )
-                sys.exit(-1)
-
-        # Check the central frequency in the SPECFEM2D SOURCE file
-        f0_str, f0, f0_i = getpar(key="f0", file="DATA/SOURCE")
-        if float(f0) != PAR.F0:
-            if self.taskid == 0:
-                print(msg.cli(f"SPECFEM2D {f0_str}=={f0} is not equal "
-                              f"SeisFlows PAR.F0=={PAR.F0}. Please ensure "
-                              f"that these values match the DATA/SOURCE file.",
-                              header="parameter match error", border="=")
-                      )
-                sys.exit(-1)
-
-        # Ensure that NPROC matches the MESH values
-        nproc = self.mesh_properties.nproc
-        if nproc != PAR.NPROC:
-            if self.taskid == 0:
-                print(msg.cli(f"SPECFEM2D mesh NPROC=={nproc} is not equal"
-                              f"SeisFlows PAR.NPROC=={PAR.NPROC}. "
-                              f"Please check that your mesh matches this val.",
-                              header="parameter match error", border="=")
-                      )
-                sys.exit(-1)
+        super().setup()
+        self.f0 = getpar(key="f0", file=os.path.join(self.cwd,
+                                                     "DATA/SOURCE"))[1]
 
         if "MULTIPLES" in PAR:
             if PAR.MULTIPLES:
@@ -285,6 +225,8 @@ class Specfem2D(custom_import("solver", "base")):
         Calls SPECFEM2D adjoint solver, creates the `SEM` folder with adjoint
         traces which is required by the adjoint solver
         """
+        unix.cd(self.cwd)
+
         setpar(key="SIMULATION_TYPE", val="3", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".false.", file="DATA/Par_file")
 

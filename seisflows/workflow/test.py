@@ -159,14 +159,14 @@ class Test(custom_import("workflow", "base")):
         """
         Test optimization module with a simple rosenbrock function
         """
-        optimize.setup()
-
         m_new, objective_function, gradient = rosenbrock()
+        optimize.setup(m_new=m_new)
 
         def evaluate_function():
             """
             Evalaute the misfit function of a given model
             """
+            self.logger.info("evaluating objective function")
             m_new = np.load(optimize.vectors("m_new"))
             f_try = objective_function(m_new)
             np.save(optimize.vectors("f_try"), f_try)
@@ -175,52 +175,64 @@ class Test(custom_import("workflow", "base")):
             """
             Evaluate the gradient of a given model
             """
+            self.logger.info("evaluating gradient")
             m_new = np.load(optimize.vectors("m_new"))
             f_new = objective_function(m_new)
             g_new = gradient(m_new)
             np.save(optimize.vectors("f_new"), f_new)
             np.save(optimize.vectors("g_new"), g_new)
 
-
-        # Set up the initial model on disk
-        np.save(optimize.vectors("m_new"), m_new)
-
-        import pdb;pdb.set_trace()
-        for iteration in range(1, 200):
-            evaluate_gradient()
-            optimize.compute_direction()
-            # Perform line search
+        def line_search():
+            """
+            Run a line search until a suitable model has been found
+            """
             while True:
-                optimize.initialize_search()
                 evaluate_function()
                 status = optimize.update_search()
-                if status > 0:
+                if status == 1:
+                    self.logger.info("finalizing line search")
                     optimize.finalize_search()
-                    break
+                    return
                 elif status == 0:
+                    self.logger.info("continuing line search")
                     continue
-                elif status < 0:
+                elif status == -1:
                     if optimize.retry_status():
+                        self.logger.info("restarting line search")
                         optimize.restart()
+                        # Recursively run the line search after restart
+                        line_search()
                     else:
-                        sys.exit()
+                        sys.exit(-1)
 
 
-def rosenbrock(n=1E8):
+        self.logger.info("testing optimization library with Rosenbrock problem")
+        for iteration in range(1, 200):
+            self.logger.info("iteration {iteration}")
+            evaluate_gradient()
+            optimize.compute_direction()
+            optimize.initialize_search()
+            line_search()
+            optimize.iter += 1
+
+
+def rosenbrock(n=1E5):
     """
-    Rosenbrock test for optimization library testing
+    Rosenbrock test problem for optimization library testing
+
+    https://en.wikipedia.org/wiki/Rosenbrock_function
     """
     model_init = 0.1 * np.ones(int(n))
 
     def objective_function(x):
         """
-        Rosenbrock function
+        Rosenbrock objective function
         """
         return sum(100 * (x[:-1]**2. - x[1:])**2. + (x[:-1] - 1.)**2)
 
     def gradient(x):
         """
-        Gradient for Rosenbrock function
+        Gradient of the objective function for Rosenbrock test
         """
         g = np.zeros(int(n))
         g[1:-1] = -200 * (x[:-2] ** 2. - x[1:-1]) + \

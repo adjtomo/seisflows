@@ -112,7 +112,7 @@ def sfparser():
         marked appropriately. Required parameters must be set before a workflow
         can be submitted."""
     )
-    configure.add_argument("-r", "--relative_paths", action="store_true",
+    configure.add_argument("-a", "--absolute_paths", action="store_true",
                            help="Set default paths relative to cwd")
     # =========================================================================
     init = subparser.add_parser(
@@ -440,8 +440,8 @@ class SeisFlows:
 
         # For submit() and resume(), provide a dialogue to stdout requiring a
         # visual pre-check of parameters before submitting workflow
-        if not force and parameters["PRECHECK"]:
-            self._precheck_parameters(parameters)
+        # if not force and parameters["PRECHECK"]:
+        #     self._precheck_parameters(parameters)
 
         # Expand all paths to be absolute on the filesystem
         for key, val in paths.items():
@@ -456,28 +456,28 @@ class SeisFlows:
         self._paths = Dict(paths)
         self._parameters = Dict(parameters)
 
-    def _precheck_parameters(self, parameters):
-        """
-        Visually display a list of user-chosen parameters to the User before
-        proceeding with the _register_parameters command. Allows the User to quickly
-        determine if workflow parameters have been set correctly
-
-        :type parameters: dict
-        :param parameters: parameters read in from the YAML parameter file
-        """
-        items = []
-        for p in parameters["PRECHECK"]:
-            try:
-                items.append(f"{p.upper()}: {parameters[p.upper()]}")
-            except KeyError:
-                items.append(f"{p.upper()}: !!! PARAMETER NOT FOUND !!!")
-        print(msg.cli("Please ensure that the parameters listed below "
-                      "are set correctly. You can edit this list with "
-                      "the PRECHECK parameter.", items=items,
-                      header="seisflows precheck", border="="))
-        check = input("Continue? (y/[n])\n")
-        if check != "y":
-            sys.exit(-1)
+    # def _precheck_parameters(self, parameters):
+    #     """
+    #     Visually display a list of user-chosen parameters to the User before
+    #     proceeding with the _register_parameters command. Allows the User to quickly
+    #     determine if workflow parameters have been set correctly
+    #
+    #     :type parameters: dict
+    #     :param parameters: parameters read in from the YAML parameter file
+    #     """
+    #     items = []
+    #     for p in parameters["PRECHECK"]:
+    #         try:
+    #             items.append(f"{p.upper()}: {parameters[p.upper()]}")
+    #         except KeyError:
+    #             items.append(f"{p.upper()}: !!! PARAMETER NOT FOUND !!!")
+    #     print(msg.cli("Please ensure that the parameters listed below "
+    #                   "are set correctly. You can edit this list with "
+    #                   "the PRECHECK parameter.", items=items,
+    #                   header="seisflows precheck", border="="))
+    #     check = input("Continue? (y/[n])\n")
+    #     if check != "y":
+    #         sys.exit(-1)
 
     def _register_modules(self, check=True):
         """
@@ -514,20 +514,8 @@ class SeisFlows:
         for name in NAMES:
             sys.modules[f"seisflows_{name}"] = custom_import(name)()
 
-        # Parameter import error checking, missing or improperly set parameters
-        # will throw assertion errors
         if check:
-            errors = []
-            for name in NAMES:
-                try:
-                    sys.modules[f"seisflows_{name}"].check()
-                except AssertionError as e:
-                    errors.append(f"{name}: {e}")
-            if errors:
-                print(msg.cli("seisflows.config module check failed with:",
-                              items=errors, header="module check error",
-                              border="="))
-                sys.exit(-1)
+            self._check_modules()
 
         # Bare minimum Module requirements for SeisFlows
         req_modules = ["WORKFLOW", "SYSTEM"]
@@ -538,6 +526,24 @@ class SeisFlows:
                               "'seisflows print module' to determine suitable "
                               "choices.", header="error", border="="))
                 sys.exit(-1)
+
+    def _check_modules(self):
+        """
+        Runs the .check() function on each of the modules, which validates the
+        given parameters in a parameter file to ensure that a workflow will not
+        break unexpectedly
+        """
+        errors = []
+        for name in NAMES:
+            try:
+                sys.modules[f"seisflows_{name}"].check()
+            except AssertionError as e:
+                errors.append(f"{name}: {e}")
+        if errors:
+            print(msg.cli("seisflows.config module check failed with:",
+                          items=errors, header="module check error",
+                          border="="))
+            sys.exit(-1)
 
     def _load_modules(self):
         """
@@ -564,10 +570,7 @@ class SeisFlows:
 
             with open(fid, "rb") as f:
                 sys.modules[f"seisflows_{NAME}"] = pickle.load(f)
-
-        # Check parameters so that default values are present
-        for NAME in NAMES:
-            sys.modules[f"seisflows_{NAME}"].check()
+        self._check_modules()
 
     def setup(self, force=False, **kwargs):
         """
@@ -601,15 +604,16 @@ class SeisFlows:
         unix.cp(PAR_FILE, self._args.workdir)
         print(msg.cli(f"creating parameter file: {self._args.parameter_file}"))
 
-    def configure(self, relative_paths=True, **kwargs):
+    def configure(self, absolute_paths=False, **kwargs):
         """
         Dynamically generate the parameter file by writing out docstrings and
         default values for each of the SeisFlows module parameters.
         This function writes files manually, consistent with the .yaml format.
 
-        :type relative_paths: bool
-        :param relative_paths: if True, expand pathnames to absolute paths,
+        :type absolute_paths: bool
+        :param absolute_paths: if True, expand pathnames to absolute paths,
             else if False, use path names relative to the working directory.
+            Defaults to False, uses relative paths.
         """
         print(msg.cli(f"filling {self._args.parameter_file} w/ default values"))
         self._register_parameters(force=True)
@@ -650,8 +654,8 @@ class SeisFlows:
                 msg.write_par_file_header(f, seisflows_paths, name="PATHS")
                 f.write("PATHS:\n")
 
-                if relative_paths:
-                    # If requested, set the paths relative to the current dir
+                # If requested, set the paths relative to the current dir
+                if not absolute_paths:
                     for key, attrs in seisflows_paths.items():
                         if attrs["default"] is not None:
                             seisflows_paths[key]["default"] = os.path.relpath(
@@ -716,7 +720,7 @@ class SeisFlows:
 
         # Read in the Parameter file and set parameters into sys.modules.
         self._register_parameters(force=force)
-        self._check_required_paths()
+        # self._check_required_paths()
         self._register_modules(check=True)
 
         # Set logger to print to stdout and write to a file
@@ -728,28 +732,28 @@ class SeisFlows:
         system = sys.modules["seisflows_system"]
         system.submit()
 
-    def _check_required_paths(self):
-        """
-        If the User provides certain paths to the program, they MUST exist.
-        This function simply checks these required paths and throws a sys exit
-        if any of them does not exist
-        """
-        # A list of paths that need to exist if provided by user
-        REQ_PATHS = ["SPECFEM_BIN", "SPECFEM_DATA", "MODEL_INIT", "MODEL_TRUE",
-                     "DATA", "LOCAL", "MASK"]
-
-        # Check that all required paths exist before submitting workflow
-        paths_dont_exist = []
-        for key in REQ_PATHS:
-            if key in self._paths:
-                # If a required path is given (not None) and doesnt exist, exit
-                if self._paths[key] and not os.path.exists(self._paths[key]):
-                    paths_dont_exist.append(f"{key}: {self._paths[key]}")
-        if paths_dont_exist:
-            print(msg.cli("The following paths do not exist but need to:",
-                          items=paths_dont_exist, header="path error",
-                          border="="))
-            sys.exit(-1)
+    # def _check_required_paths(self):
+    #     """
+    #     If the User provides certain paths to the program, they MUST exist.
+    #     This function simply checks these required paths and throws a sys exit
+    #     if any of them does not exist
+    #     """
+    #     # A list of paths that need to exist if provided by user
+    #     REQ_PATHS = ["SPECFEM_BIN", "SPECFEM_DATA", "MODEL_INIT", "MODEL_TRUE",
+    #                  "DATA", "LOCAL", "MASK"]
+    #
+    #     # Check that all required paths exist before submitting workflow
+    #     paths_dont_exist = []
+    #     for key in REQ_PATHS:
+    #         if key in self._paths:
+    #             # If a required path is given (not None) and doesnt exist, exit
+    #             if self._paths[key] and not os.path.exists(self._paths[key]):
+    #                 paths_dont_exist.append(f"{key}: {self._paths[key]}")
+    #     if paths_dont_exist:
+    #         print(msg.cli("The following paths do not exist but need to:",
+    #                       items=paths_dont_exist, header="path error",
+    #                       border="="))
+    #         sys.exit(-1)
 
     def clean(self, force=False, **kwargs):
         """

@@ -52,17 +52,6 @@ class Specfem3D(custom_import("solver", "base")):
         """
         sf = SeisFlowsPathsParameters(super().required)
 
-        # Define the Parameters required by this module
-        sf.par("NT", required=True, par_type=float,
-               docstr="Number of time steps set in the SPECFEM Par_file")
-
-        sf.par("DT", required=True, par_type=float,
-               docstr="Time step or delta set in the SPECFEM Par_file")
-
-        sf.par("FORMAT", required=True, par_type=float,
-               docstr="Format of synthetic waveforms used during workflow, "
-                      "available options: ['ascii', 'su']")
-
         sf.par("SOURCE_PREFIX", required=False, default="CMTSOLUTION",
                par_type=str,
                docstr="Prefix of SOURCE files in path SPECFEM_DATA. Available "
@@ -76,11 +65,8 @@ class Specfem3D(custom_import("solver", "base")):
         """
         if validate:
             self.required.validate()
-        super().check(validate=False)
 
-        acceptable_formats = ["SU", "ASCII"]
-        if PAR.FORMAT.upper() not in acceptable_formats:
-            raise Exception(f"'FORMAT' must be {acceptable_formats}")
+        super().check(validate=False)
 
     def generate_data(self, **model_kwargs):
         """
@@ -175,7 +161,6 @@ class Specfem3D(custom_import("solver", "base")):
                          output="fwd_mesher.log")
         self.call_solver(executable="bin/xmeshfem3D", output="fwd_solver.log")
 
-
         # Find and move output traces, by default to synthetic traces dir
         unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
                 dst=path)
@@ -193,45 +178,6 @@ class Specfem3D(custom_import("solver", "base")):
         unix.ln("traces/adj", "SEM")
 
         self.call_solver(executable="bin/xmeshfem3D", output="adj_solver.log")
-
-    def check_solver_parameter_files(self):
-        """
-        Checks solver parameters 
-        """
-        # Check the number of steps in the SPECFEM2D Par_file
-        nt_str, nt, nt_i = getpar(key="NSTEP", file="DATA/Par_file")
-        if int(nt) != PAR.NT:
-            if self.taskid == 0:
-                print(msg.cli(f"SPECFEM3D {nt_str}=={nt} is not equal "
-                              f"SeisFlows PAR.NT=={PAR.NT}. Please ensure "
-                              f"that these values match in both files.",
-                              header="parameter match error", border="=")
-                      )
-                sys.exit(-1)
-
-        dt_str, dt, dt_i = getpar(key="DT", file="DATA/Par_file")
-        if float(dt) != PAR.DT:
-            if self.taskid == 0:
-                print(msg.cli(f"SPECFEM3D {dt_str}=={dt} is not equal "
-                              f"SeisFlows PAR.DT=={PAR.DT}. Please ensure "
-                              f"that these values match in both files.",
-                              header="parameter match error", border="=")
-                      )
-                sys.exit(-1)
-
-        # Ensure that NPROC matches the MESH values
-        nproc = self.mesh_properties.nproc
-        if nproc != PAR.NPROC:
-            if self.taskid == 0:
-                print(msg.cli(f"SPECFEM3D mesh NPROC=={nproc} is not equal "
-                              f"SeisFlows PAR.NPROC=={PAR.NPROC}. "
-                              f"Please check that your mesh matches this val.",
-                              header="parameter match error", border="=")
-                      )
-                sys.exit(-1)
-
-        if "MULTIPLES" in PAR:
-            raise NotImplementedError
 
     def initialize_adjoint_traces(self):
         """

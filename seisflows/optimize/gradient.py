@@ -18,8 +18,8 @@ import numpy as np
 from seisflows.tools import msg, unix
 from seisflows.tools.math import angle, dot
 from seisflows.plugins import line_search, preconds
-from seisflows.tools.specfem import check_poissons_ratio
-from seisflows.config import SeisFlowsPathsParameters, CFGPATHS, Dict
+from seisflows.tools.math import poissons_ratio
+from seisflows.config import SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -69,7 +69,6 @@ class Gradient:
         :type restarted: bool
         :param restarted: a flag signalling if the optimization algorithm has
             been restarted recently
-
         """
         self.iter = 1
         self.line_search = None
@@ -132,9 +131,13 @@ class Gradient:
         assert PAR.STEPLENINIT < PAR.STEPLENMAX, \
             f"STEPLENINIT must be < STEPLENMAX"
 
-    def setup(self):
+    def setup(self, m_new=None):
         """
         Sets up nonlinear optimization machinery
+
+        :type m_new: np.array
+        :param m_new: Initial model vector which can be user-provided. Otherwise
+            the initial model will be read from PATH.MODEL_INIT
         """
         unix.mkdir(PATH.OPTIMIZE)
 
@@ -148,14 +151,14 @@ class Gradient:
             self.precond = getattr(preconds, PAR.PRECOND)()
 
         # Read in initial model as a vector and ensure it is a valid model
-        if PATH.MODEL_INIT is not None:
+        if m_new is None:
+            assert(os.path.exists(PATH.MODEL_INIT)), (
+                "optimization library requires that PATH.MODEL_INIT exists"
+            )
             m_new = solver.merge(solver.load(PATH.MODEL_INIT))
-            np.save(self.vectors("m_new"), m_new)
-            self.check_model(m_new)
-        else:
-            self.logger.warning("PATH.MODEL_INIT not found. Optimization "
-                                "library expects a model vector "
-                                f"{self.vectors('m_new')}")
+
+        np.save(self.vectors("m_new"), m_new)
+        self.check_model(m_new)
 
     @property
     def eval_str(self):
@@ -411,15 +414,19 @@ class Gradient:
                     f"{theta:6.3E}\n"
                     )
 
-    def check_model(self, m):
+    def check_model(self, m, min_pr=-1., max_pr=0.5):
         """
         Check to ensure that the model parameters fall within the guidelines
         of the solver. Print off min/max model parameters for the User.
 
         :type m: np.array
         :param m: model to check parameters of
-        :type tag: str
-        :param tag: tag of the model to be used for more specific error msgs
+        :type min_pr: float
+        :param min_pr: minimum allowable Poisson's ratio value dictated by
+            SPECFEM
+        :type max_pr: float
+        :param max_pr: maximum allowable Poisson's ratio value dictated by
+            SPECFEM
         """
         # Dynamic way to split up the model based on number of params
         pars = {}
@@ -429,9 +436,15 @@ class Gradient:
         # Check Poisson's ratio, which will error our SPECFEM if outside limits
         if (pars["vp"] is not None) and (pars["vs"] is not None):
             self.logger.debug(f"checking poissons ratio")
-            pars["pr"] = check_poissons_ratio(vp=pars["vp"], vs=pars["vs"])
+            pars["pr"] = poissons_ratio(vp=pars["vp"], vs=pars["vs"])
             if pars["pr"].min() < 0:
                 self.logger.warning("minimum poisson's ratio is negative")
+            if pars["pr"].min() < min_pr:
+                self.logger.warning(f"minimum poisson's ratio out of bounds: "
+                                    f"{pars['pr'].max()} > {max_pr}")
+            if pars["pr"].max() > max_pr:
+                self.logger.warning(f"maximum poisson's ratio out of bounds: " 
+                                    f"{pars['pr'].min()} < {min_pr}")
 
         # Tell the User min and max values of the updated model
         self.logger.info(f"model parameters")

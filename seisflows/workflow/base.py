@@ -3,6 +3,7 @@
 This is the Base class for seisflows.workflow.
 It contains mandatory functions that must be called by subclasses
 """
+import os
 import sys
 import logging
 
@@ -70,14 +71,16 @@ class Base:
                       "'vector': save files as NumPy .npy files, "
                       "'both': save as both binary and vectors]")
 
-        sf.path("MODEL_INIT", required=True,
+        sf.path("DATA", required=False, default=None,
+                docstr="path to data available to workflow")
+
+        sf.path("MODEL_INIT", required=False,
+                default=os.path.join(PATH.WORKDIR, "specfem", "MODEL_INIT"),
                 docstr="location of the initial model to be used for workflow")
 
         sf.path("MODEL_TRUE", required=False,
+                default=os.path.join(PATH.WORKDIR, "specfem", "MODEL_TRUE"),
                 docstr="Target model to be used for PAR.CASE == 'synthetic'")
-
-        sf.path("DATA", required=False, default=None,
-                docstr="path to data available to workflow")
 
         return sf
 

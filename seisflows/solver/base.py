@@ -14,8 +14,8 @@ from glob import glob
 
 from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
-from seisflows.tools.specfem import Container
-from seisflows.tools.wrappers import diff, exists
+from seisflows.tools.specfem import Container, getpar
+from seisflows.tools.wrappers import diff
 from seisflows.config import SeisFlowsPathsParameters, Dict
 
 
@@ -107,6 +107,8 @@ class Base:
             from this logger will be tagged by its specific module/classname
         """
         self.parameters = []
+        self.nt = None
+        self.dt = None
         self._mesh_properties = None
         self._source_names = None
 
@@ -133,6 +135,10 @@ class Base:
                       "simulations, otherwise set attenuation off. Attenuation "
                       "is always off for adjoint simulations.")
 
+        sf.par("FORMAT", required=False, par_type=float, default="ASCII",
+               docstr="Format of synthetic waveforms used during workflow, "
+                      "available options: ['ascii', 'su']")
+
         sf.par("COMPONENTS", required=False, default="ZNE", par_type=str,
                docstr="Components used to generate data, formatted as a single "
                       "string, e.g. ZNE or NZ or E")
@@ -146,17 +152,19 @@ class Base:
                 default=os.path.join(PATH.SCRATCH, "solver"),
                 docstr="scratch path to hold solver working directories")
 
-        sf.path("SPECFEM_BIN", required=True,
-                docstr="path to the SPECFEM binary executables")
-
-        sf.path("SPECFEM_DATA", required=True,
-                docstr="path to the SPECFEM DATA/ directory containing the "
-                       "'Par_file', 'STATIONS' file and 'CMTSOLUTION' files")
-
-        sf.path("DATA", required=False, 
+        sf.path("DATA", required=False,
                 docstr="path to a directory containing any external data "
                        "required by the workflow. Catch all directory that "
                        "can be accessed by all modules")
+
+        sf.path("SPECFEM_BIN", required=False,
+                default=os.path.join(PATH.WORKDIR, "specfem", "bin"),
+                docstr="path to the SPECFEM binary executables")
+
+        sf.path("SPECFEM_DATA", required=False,
+                default=os.path.join(PATH.WORKDIR, "specfem", "DATA"),
+                docstr="path to the SPECFEM DATA/ directory containing the "
+                       "'Par_file', 'STATIONS' file and 'CMTSOLUTION' files")
 
         return sf
 
@@ -180,6 +188,10 @@ class Base:
         acceptable_densities = ["CONSTANT", "VARIABLE"]
         assert(PAR.DENSITY.upper() in acceptable_densities), \
             f"DENSITY must be in {acceptable_densities}"
+
+        acceptable_formats = ["SU", "ASCII"]
+        if PAR.FORMAT.upper() not in acceptable_formats:
+            raise Exception(f"'FORMAT' must be {acceptable_formats}")
 
         # Internal parameter list based on user-input material choices
         # Important to reset parameters to a blank list and let the check
@@ -221,12 +233,15 @@ class Base:
             In the former case, a value for PATH.DATA must be supplied;
             in the latter case, a value for PATH.MODEL_TRUE must be provided.
         """
-        unix.rm(self.cwd)
         self.initialize_solver_directories()
-        self.check_solver_parameter_files()
         self.generate_data()
         self.generate_mesh(model_name="init", model_type="gll")
         self.initialize_adjoint_traces()
+
+        # Assuming that NT and DT are set correctly in the Par_file
+        unix.cd(self.cwd)
+        self.nt = getpar(key="NSTEP", file="DATA/Par_file")[1]
+        self.dt = getpar(key="DT", file="DATA/Par_file")[1]
 
     def generate_mesh(self, model_path, model_name, model_type):
         """
@@ -390,7 +405,6 @@ class Base:
                   )
             sys.exit(-1)
 
-
     @property
     def io(self):
         """
@@ -541,7 +555,7 @@ class Base:
         if parameters is None:
             parameters = self.parameters
 
-        if not exists(output_path):
+        if not os.path.exists(output_path):
             unix.mkdir(output_path)
 
         # Write the source names into the kernel paths file for SEM/ directory
@@ -755,6 +769,7 @@ class Base:
         if self.taskid == 0:
             self.logger.info(f"initializing {PAR.NTASK} solver directories")
 
+        unix.rm(self.cwd)
         unix.mkdir(self.cwd)
         unix.cd(self.cwd)
 
@@ -837,23 +852,23 @@ class Base:
         if path is None:
             path = PATH.MODEL_INIT
 
-        if not exists(path):
-            print(msg.cli(f"The following mesh path does not exist but should",
-                          items=[path], header="solver error", border="="))
-            sys.exit(-1)
+        if os.path.exists(path):
+            # Count the number of .bin files and the number of grid points
+            key = self.parameters[0]
+            bin_files = glob(os.path.join(path, f"proc*_{key}.bin"))
+            nproc = len(bin_files)
+            ngll = []
+            for i in range(0, len(bin_files)):
+                ngll.append(
+                    len(self.io.read_slice(path=path,
+                                           parameters=key, iproc=i)[0])
+                )
 
-        # Count the number of .bin files and the number of grid points
-        key = self.parameters[0]
-        bin_files = glob(os.path.join(path, f"proc*_{key}.bin"))
-        nproc = len(bin_files)
-        ngll = []
-        for i in range(0, len(bin_files)):
-            ngll.append(
-                len(self.io.read_slice(path=path, parameters=key, iproc=i)[0])
-            )
-
-        # Define internal mesh properties
-        self._mesh_properties = Dict(nproc=nproc, ngll=ngll, path=path)
+            # Define internal mesh properties
+            self._mesh_properties = Dict(nproc=nproc, ngll=ngll, path=path)
+        else:
+            self.logger.warning("solver cannot find mesh and will not have "
+                                "access to mesh properties")
 
     def check_source_names(self):
         """

@@ -226,33 +226,3 @@ def setpar_vel_model(file, model):
     # Set nbmodels to the correct value
     setpar(key="nbmodels", val=len(model), file=file)
 
-
-def check_poissons_ratio(vp, vs, min_val=-1., max_val=0.5):
-    """
-    Check Poisson's ratio based on Vp and Vs model vectors. Exit SeisFlows if
-    Poisson's ratio is outside `min_val` or `max_val` which by default are
-    set internally by SPECFEM. Otherwise return the value
-
-    :type vp: np.array
-    :param vp: P-wave velocity model vector
-    :type vs: np.array
-    :param vp: S-wave velocity model vector
-    :type min_val: float
-    :param min_val: minimum model-wide acceptable value for poissons ratio
-    :type max_val: float
-    :param max_val: maximum model-wide acceptable value for poissons ratio
-    :return:
-    """
-    poissons = poissons_ratio(vp=vp, vs=vs)
-    pmin = poissons.min()
-    pmax = poissons.max()
-    if (pmin < min_val) or (pmax > max_val):
-        print(msg.cli(f"The Poisson's ratio of the given model is out of "
-                      f"bounds with respect to the defined range "
-                      f"({min_val}, {max_val}). "
-                      f"The model bounds were found to be:",
-                      items=[f"{pmin:.2f} < PR < {pmax:.2f}"], border="=",
-                      header="Poisson's Ratio Error")
-              )
-        sys.exit(-1)
-    return poissons

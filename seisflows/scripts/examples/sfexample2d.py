@@ -293,9 +293,6 @@ class SFExample2D:
         self.sf.par("ntask", self.ntask)  # default 3 sources for this example
         self.sf.par("materials", "elastic")  # how velocity model parameterized
         self.sf.par("density", "constant")  # update density or keep constant
-        self.sf.par("nt", 5000)  # set by SPECFEM2D Par_file
-        self.sf.par("dt", .06)  # set by SPECFEM2D Par_file
-        self.sf.par("f0", 0.084)  # set by SOURCE file
         self.sf.par("format", "ascii")  # how to output synthetic seismograms
         self.sf.par("begin", 1)  # first iteration
         self.sf.par("end", self.niter)  # final iteration -- we will run 2
