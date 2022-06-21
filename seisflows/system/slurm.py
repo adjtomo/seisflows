@@ -160,7 +160,7 @@ class Slurm(custom_import("system", "cluster")):
         # Continuously check for job completion on ALL running array jobs
         job_ids = job_id_list(stdout, single)
         job_id, status = self.check_job_status(job_ids)
-        if status is not "OKAY":
+        if status != "OKAY":
             print(msg.cli((f"Stopping workflow for {status} job. "
                            f"Please check log file for details."),
                           items=[f"TASK:    {classname}.{method}",
