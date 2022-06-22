@@ -246,8 +246,8 @@ class SeisFlowsPathsParameters:
     .. note::
         if a path or parameter is optional it requires a default value.
     """
-    default_par = "!!! REQUIRED PARAMETER !!!"
-    default_path = "!!! REQUIRED PATH !!!"
+    default_par = "REQUIRED PARAMETER"
+    default_path = "REQUIRED PATH"
 
     def __init__(self, base=None):
         """

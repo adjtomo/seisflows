@@ -105,7 +105,7 @@ class NLCG(custom_import("optimize", "gradient")):
         unix.cd(PATH.OPTIMIZE)
 
         # Load the current gradient direction
-        g_new = np.load(self.vectors("g_new"))
+        g_new = self.load("g_new")
 
         # CASE 1: If first iteration, search direction is the current gradient
         if self.NLCG_iter == 1:
@@ -125,8 +125,8 @@ class NLCG(custom_import("optimize", "gradient")):
         # Normal NLCG direction compuitation
         else:
             # Compute search direction
-            g_old = np.load(self.vectors("g_old"))
-            p_old = np.load(self.vectors("p_old"))
+            g_old = self.load("g_old")
+            p_old = self.load("p_old")
 
             # Apply preconditioner and calc. scale factor for search dir. (beta)
             if self.precond:
@@ -152,7 +152,7 @@ class NLCG(custom_import("optimize", "gradient")):
                 restarted = 0
 
         # Save values to disk and memory
-        np.save(self.p_new, p_new)
+        self.save("p_new", p_new)
         self.restarted = restarted
 
     def restart(self):

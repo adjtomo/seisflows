@@ -74,6 +74,10 @@ class Gradient:
         self.line_search = None
         self.precond = None
         self.restarted = False
+        self.acceptable_vectors = ["m_new", "m_old", "m_try",
+                                   "g_new", "g_old", "g_try",
+                                   "p_new", "p_old", "alpha",
+                                   "f_new", "f_old", "f_try"]
 
     @property
     def required(self):
@@ -157,7 +161,7 @@ class Gradient:
             )
             m_new = solver.merge(solver.load(PATH.MODEL_INIT))
 
-        np.save(self.vectors("m_new"), m_new)
+        self.save("m_new", m_new)
         self.check_model(m_new)
 
     @property
@@ -173,12 +177,12 @@ class Gradient:
         step = self.line_search.step_count
         return f"i{iter_:0>2}s{step:0>2}"
 
-    def vectors(self, name):
+    def load(self, name):
         """
         Convenience function to access the full paths of model and gradient
         vectors that are saved to disk
 
-        .. note:: the available options that can be created
+        .. note:: the available options that can be loaded
             m_new: current model
             m_old: previous model
             m_try: line search model
@@ -193,15 +197,26 @@ class Gradient:
 
         :type name: str
         :param name: name of the vector, acceptable: m, g, p, f, alpha
-
         """
-        # Set model and gradient filenames as attributes
-        acceptable_names = ["m_new", "m_old", "m_try",
-                            "g_new", "g_old", "g_try",
-                            "p_new", "p_old", "alpha",
-                            "f_new", "f_old", "f_try"]
-        assert(name in acceptable_names)
-        return os.path.join(PATH.OPTIMIZE, f"{name}.npy")
+        assert(name in self.acceptable_vectors)
+        vector = np.load(os.path.join(PATH.OPTIMIZE, f"{name}.npy"))
+        # Allow single length vectors, which alpha and misfit (f) are
+        if vector.size == 1:
+            vector = float(vector)
+        return vector
+
+    def save(self, name, vector):
+        """
+        Convenience function to save/overwrite vectors on disk
+
+        :type name: str
+        :param name: name of the vector to overwrite
+        :type vector: np.array
+        :param vector: vector to save to name
+        """
+        assert(name in self.acceptable_vectors)
+        vector_path = os.path.join(PATH.OPTIMIZE, f"{name}.npy")
+        np.save(vector_path, vector)
 
     def compute_direction(self):
         """
@@ -213,22 +228,22 @@ class Gradient:
         """
         self.logger.info(f"computing search direction with {PAR.OPTIMIZE}")
 
-        g_new = np.load(self.vectors("g_new"))
+        g_new = self.load("g_new")
         if self.precond is not None:
             p_new = -1 * self.precond(g_new)
         else:
             p_new = -1 * g_new
-        np.save(self.vectors("p_new"), p_new)
+        self.save("p_new", p_new)
 
     def initialize_search(self):
         """
         Initialize the plugin line search machinery. Should only be run at
         the beginning of line search, by the main workflow module.
         """
-        m = np.load(self.vectors("m_new"))
-        g = np.load(self.vectors("g_new"))
-        p = np.load(self.vectors("p_new"))
-        f = np.load(self.vectors("f_new"))
+        m = self.load("m_new")
+        g = self.load("g_new")
+        p = self.load("p_new")
+        f = self.load("f_new")
 
         norm_m = max(abs(m))
         norm_p = max(abs(p))
@@ -258,8 +273,8 @@ class Gradient:
         # gradient threshold to remove any outlier values
         m_try = m + alpha * p
 
-        np.save(self.vectors("m_try"), m_try)
-        np.save(self.vectors("alpha"), alpha)
+        self.save("m_try", m_try)
+        self.save("alpha", alpha)
         self.check_model(m_try)
 
     def update_search(self):
@@ -272,18 +287,18 @@ class Gradient:
             status == 0 : not finished
             status == -1  : failed
         """
-        self.line_search.update(step_len=np.load(self.vectors("alpha")),
-                                func_val=np.load(self.vectors("f_try")))
+        self.line_search.update(step_len=self.load("alpha"),
+                                func_val=self.load("f_try"))
         alpha, status = self.line_search.calculate_step()
 
         # New search direction needs to be searchable on disk
         if status in [0, 1]:
-            m = np.load(self.vectors("m_new"))
-            p = np.load(self.vectors("p_new"))
-            np.save(self.vectors("alpha"), alpha)
+            m = self.load("m_new")
+            p = self.load("p_new")
+            self.save("alpha", alpha)
 
             m_try = m + alpha * p
-            np.save(self.vectors("m_try"), m_try)
+            self.save("m_try", m_try)
             self.check_model(m_try)
 
         return status
@@ -301,24 +316,23 @@ class Gradient:
         # Remove the old model parameters
         if self.iter > 1:
             self.logger.info("removing previously accepted model files (old)")
-            for fid in [self.vectors("m_old"), self.vectors("f_old"),
-                        self.vectors("g_old"), self.vectors("p_old")]:
+            for fid in ["m_old", "f_old", "g_old", "p_old"]:
                 unix.rm(fid)
 
         # Needs to be run before shifting model in next step
         self.write_stats()
 
         self.logger.info("shifting current model (new) to previous model (old)")
-        unix.mv(self.vectors("m_new"), self.vectors("m_old"))
-        unix.mv(self.vectors("f_new"), self.vectors("f_old"))
-        unix.mv(self.vectors("g_new"), self.vectors("g_old"))
-        unix.mv(self.vectors("p_new"), self.vectors("p_old"))
+        unix.mv("m_new.npy", "m_old.npy")
+        unix.mv("f_new.npy", "f_old.npy")
+        unix.mv("g_new.npy", "g_old.npy")
+        unix.mv("p_new.npy", "p_old.npy")
 
         self.logger.info("setting accepted line search model as current model")
-        unix.mv(self.vectors("m_try"), self.vectors("m_new"))
+        unix.mv("m_try.npy", "m_new.npy")
 
         f = self.line_search.search_history()[1]
-        np.save(self.vectors("f_new"), f.min())
+        self.save("f_new", f.min())
         self.logger.info(f"current misfit is {f.min():.3E}")
 
         self.logger.info("resetting line search step count to 0")
@@ -330,8 +344,8 @@ class Gradient:
         by checking, in effect, if the search direction was the same as gradient
         direction
         """
-        g = np.load(self.vectors("g_new"))
-        p = np.load(self.vectors("p_new"))
+        g = self.load("g_new")
+        p = self.load("p_new")
         theta = angle(p, -g)
 
         self.logger.debug(f"theta: {theta:6.3f}")
@@ -353,8 +367,8 @@ class Gradient:
         """
         # Steepest descent (base) does not need to be restarted
         if PAR.OPTIMIZE.capitalize() != "Gradient":
-            g = np.load(self.vectors("g_new"))
-            np.save(self.vectors("p_new"), -g)
+            g = self.load("g_new")
+            self.save("p_new", -g)
 
             self.line_search.clear_history()
             self.restarted = 1
@@ -385,8 +399,8 @@ class Gradient:
                     f.write(f"{header.upper()},")
                 f.write("\n")
 
-        g = np.load(self.vectors("g_new"))
-        p = np.load(self.vectors("p_new"))
+        g = self.load("g_new")
+        p = self.load("p_new")
         x = self.line_search.search_history()[0]
         f = self.line_search.search_history()[1]
 
@@ -435,16 +449,15 @@ class Gradient:
 
         # Check Poisson's ratio, which will error our SPECFEM if outside limits
         if (pars["vp"] is not None) and (pars["vs"] is not None):
-            self.logger.debug(f"checking poissons ratio")
             pars["pr"] = poissons_ratio(vp=pars["vp"], vs=pars["vs"])
             if pars["pr"].min() < 0:
                 self.logger.warning("minimum poisson's ratio is negative")
-            if pars["pr"].min() < min_pr:
-                self.logger.warning(f"minimum poisson's ratio out of bounds: "
-                                    f"{pars['pr'].max()} > {max_pr}")
-            if pars["pr"].max() > max_pr:
-                self.logger.warning(f"maximum poisson's ratio out of bounds: " 
-                                    f"{pars['pr'].min()} < {min_pr}")
+            if pars["pr"].max() < min_pr:
+                self.logger.warning(f"maximum poisson's ratio out of bounds: "
+                                    f"{pars['pr'].max():.2f} > {max_pr}")
+            if pars["pr"].min() > max_pr:
+                self.logger.warning(f"minimum poisson's ratio out of bounds: " 
+                                    f"{pars['pr'].min():.2f} < {min_pr}")
 
         # Tell the User min and max values of the updated model
         self.logger.info(f"model parameters")

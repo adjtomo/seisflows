@@ -52,7 +52,8 @@ class Backtrack(Bracket):
         # Assumed well scaled search direction, attempt backtracking line search 
         # with unit step length
         else:
-            self.logger.info(msg.sub("EVALUATE BACKTRACKING LINE SEARCH"))
+            self.logger.debug(msg.sub(f"BACKTRACKING LINE SEARCH STEP"
+                                      f"{self.step_count:0>2}"))
             x_str = ", ".join([f"{_:.2E}" for _ in x])
             f_str = ", ".join([f"{_:.2E}" for _ in f])
             self.logger.debug(f"step length(s) = {x_str}")

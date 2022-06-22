@@ -157,9 +157,9 @@ class Test(custom_import("workflow", "base")):
 
     def test_optimize(self):
         """
-        Test optimization module with a simple rosenbrock function
+        Test optimization module with a simple Rosenbrock function
         """
-        m_new, objective_function, gradient = rosenbrock()
+        m_new, m_true, objective_function, gradient = rosenbrock()
         optimize.setup(m_new=m_new)
 
         def evaluate_function():
@@ -167,27 +167,30 @@ class Test(custom_import("workflow", "base")):
             Evalaute the misfit function of a given model
             """
             self.logger.info("evaluating objective function")
-            m_new = np.load(optimize.vectors("m_new"))
-            f_try = objective_function(m_new)
-            np.save(optimize.vectors("f_try"), f_try)
+            m_try = optimize.load("m_try")
+            f_try = objective_function(m_try)
+            optimize.save("f_try", f_try)
 
         def evaluate_gradient():
             """
             Evaluate the gradient of a given model
             """
             self.logger.info("evaluating gradient")
-            m_new = np.load(optimize.vectors("m_new"))
+            m_new = optimize.load("m_new")
             f_new = objective_function(m_new)
             g_new = gradient(m_new)
-            np.save(optimize.vectors("f_new"), f_new)
-            np.save(optimize.vectors("g_new"), g_new)
+            optimize.save("f_new", f_new)
+            optimize.save("g_new", g_new)
 
         def line_search():
             """
             Run a line search until a suitable model has been found
+            Note this is almost the same as workflow.inversion.line_search
             """
+            optimize.initialize_search()
             while True:
                 evaluate_function()
+                optimize.line_search.step_count += 1
                 status = optimize.update_search()
                 if status == 1:
                     self.logger.info("finalizing line search")
@@ -205,24 +208,69 @@ class Test(custom_import("workflow", "base")):
                     else:
                         sys.exit(-1)
 
+        def finalize(thresh=5e-3):
+            """
+            Finish off one iteration, check the distance between old and new
+            vectors to see if model stops changing
+            """
+            m_new = optimize.load("m_new")
+            m_diff = np.linalg.norm(m_new - m_true) / np.linalg.norm(m_new)
+            if m_diff < thresh:
+                self.logger.info(f"successful inversion after {optimize.iter} "
+                                 f"iterations")
+                sys.exit(0)
+            else:
+                self.logger.info(f"model difference: {m_diff:.2E}")
+                return
 
         self.logger.info("testing optimization library with Rosenbrock problem")
         for iteration in range(1, 200):
-            self.logger.info("iteration {iteration}")
+            self.logger.info(f"iteration {iteration}")
             evaluate_gradient()
             optimize.compute_direction()
-            optimize.initialize_search()
             line_search()
             optimize.iter += 1
+            finalize()
 
 
-def rosenbrock(n=1E5):
+def rosenbrock():
     """
     Rosenbrock test problem for optimization library testing
 
     https://en.wikipedia.org/wiki/Rosenbrock_function
     """
-    model_init = 0.1 * np.ones(int(n))
+    model_init = np.array([-1.2, 1])  # This is the guess for the global min
+    model_true = np.array([1, 1])  # This is the actual minimum
+
+    def objective_function(x):
+        """
+        Rosenbrock objective function which is defined mathematically as:
+
+        f(x,y) = (a-x)^2 + b(y-x^2)^2
+
+        where the global minimum is at (x,y) == (a, a^2)
+        and typical constant values are: a==1, b==100
+        """
+        return np.array([((1 - x[0]) ** 2 + 100 * (-x[0] ** 2 + x[1]) ** 2)])
+
+    def gradient(x):
+        """
+        Gradient of the objective function for Rosenbrock test
+        """
+        return np.array([-2*(1-x[0]) - 400*x[0]*(-x[0]**2+x[1]),
+                         200*(- x[0]**2+x[1])])
+
+    return model_init, model_true, objective_function, gradient
+
+
+def rosenbrock_n(n=1E5):
+    """
+    N dimensional Rosenbrock test problem for optimization library testing
+
+    https://en.wikipedia.org/wiki/Rosenbrock_function
+    """
+    model_init = 0.1 * np.ones(int(n))  # This is a guess for the global min
+    model_true = np.ones(int(n))
 
     def objective_function(x):
         """
@@ -246,4 +294,5 @@ def rosenbrock(n=1E5):
 
         return g
 
-    return model_init, objective_function, gradient
+    return model_init, model_true, objective_function, gradient
+

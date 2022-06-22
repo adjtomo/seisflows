@@ -175,7 +175,8 @@ class Bracket:
         x, f, gtg, gtp, step_count, update_count = self.search_history()
 
         # Print out the current line search parameters for convenience
-        self.logger.debug(msg.sub("EVALUATE BRACKETING LINE SEARCH"))
+        self.logger.debug(msg.sub(f"BRACKETING LINE SEARCH STEP "
+                                  f"{self.step_count:0>2}"))
         x_str = ", ".join([f"{_:.2E}" for _ in x])
         f_str = ", ".join([f"{_:.2E}" for _ in f])
         self.logger.debug(f"step length(s) = {x_str}")
@@ -233,8 +234,8 @@ class Bracket:
                 status = 0
             # Stop because safeguard prevents us from going further
             elif alpha > self.step_len_max:
-                self.logger.info(f"step_len_max={self.step_len_max} exceeded, "
-                                 f"manual set alpha")
+                self.logger.info(f"step_len_max={self.step_len_max:.2f} "
+                                 f"exceeded, manual set alpha")
                 alpha = self.step_len_max
                 status = 1
 

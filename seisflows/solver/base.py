@@ -608,7 +608,7 @@ class Base:
         if parameters is None:
             parameters = self.parameters
 
-        if not exists(output_path):
+        if not os.path.exists(output_path):
             unix.mkdir(output_path)
 
         # mpiexec ./bin/xsmooth_sem SMOOTH_H SMOOTH_V name input output use_gpu
