@@ -28,5 +28,5 @@ WORKFLOW: inversion
 SOLVER: specfem2d
 SYSTEM: workstation
 OPTIMIZE: gradient
-PREPROCESS: base
-POSTPROCESS: base
+PREPROCESS: default
+POSTPROCESS: default

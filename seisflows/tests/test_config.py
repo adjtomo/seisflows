@@ -9,7 +9,6 @@ import pytest
 from unittest.mock import patch
 from seisflows import config
 from seisflows.seisflows import SeisFlows
-from seisflows.tools.err import ParameterError
 
 
 TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
@@ -115,7 +114,7 @@ def test_seisflows_paths_parameters(sfinit):
     # These parameters are not defined and are expected to throw parameter error
     sfpp.path("UNDEFINED", required=True,
               docstr="This path is not in the test parameter file")
-    with pytest.raises(ParameterError):
+    with pytest.raises(ValueError):
         sfpp.validate()
 
 

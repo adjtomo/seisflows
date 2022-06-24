@@ -20,7 +20,7 @@ PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
 
 
-class Base:
+class Default:
     """
     Default SeisFlows preprocessing class
 

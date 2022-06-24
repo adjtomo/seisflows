@@ -159,6 +159,8 @@ class Test(custom_import("workflow", "base")):
         """
         Test optimization module with a simple Rosenbrock function
         """
+        PAR.log_level = "CRITICAL"
+
         m_new, m_true, objective_function, gradient = rosenbrock()
         optimize.setup(m_new=m_new)
 

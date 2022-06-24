@@ -23,9 +23,9 @@ import traceback
 from importlib import import_module
 
 from seisflows import logger
+from seisflows.core import Dict, Null
 from seisflows.tools import msg, unix
 from seisflows.tools.wrappers import module_exists
-from seisflows.tools.err import ParameterError
 
 
 """
@@ -52,7 +52,7 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 # Define a package-wide default directory and file naming schema. This will
 # be returned as a Dict() object, defined below. All of these files and
 # directories will be created relative to the user-defined working directory
-CFGPATHS = dict(
+CFGPATHS = Dict(
     PAR_FILE="parameters.yaml",  # Default SeisFlows parameter file
     SCRATCHDIR="scratch",        # SeisFlows internal working directory
     OUTPUTDIR="output",          # Permanent disk storage for state and outputs
@@ -181,167 +181,6 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
         logger.addHandler(file_handler)
 
 
-class Dict(dict):
-    """
-    A dictionary replacement which allows for easier parameter access through
-    getting and setting attributes. Also has some functionality to make string
-    printing prettier
-    """
-    def __str__(self):
-        """Pretty print dictionaries and first level nested dictionaries"""
-        str_ = ""
-        try:
-            longest_key = max([len(_) for _ in self.keys()])
-            for key, val in self.items():
-                str_ += f"{key:<{longest_key}}: {val}\n"
-        except ValueError:
-            pass
-        return str_
-
-    def __repr__(self):
-        """Pretty print when calling an instance of this object"""
-        return(self.__str__())
-
-    def __getattr__(self, key):
-        """Attribute-like access of the internal dictionary attributes"""
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(f"{key} not found in Dict")
-
-    def __setattr__(self, key, val):
-        """Setting attributes can only be performed one time"""
-        self.__dict__[key] = val
-
-
-class Null:
-    """
-    A null object that always and reliably does nothing
-    """
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __call__(self, *args, **kwargs):
-        return self
-
-    def __nonzero__(self):
-        return False
-
-    def __getattr__(self, key):
-        return self
-
-    def __setattr__(self, key, val):
-        return self
-
-    def __delattr__(self, key):
-        return self
-
-
-class SeisFlowsPathsParameters:
-    """
-    A class used to simplify defining required or optional paths and parameters
-    by enforcing a specific structure to their entry into the environment.
-    Replaces the functionalities of the old check() functions.
-
-    .. note::
-        if a path or parameter is optional it requires a default value.
-    """
-    default_par = "REQUIRED PARAMETER"
-    default_path = "REQUIRED PATH"
-
-    def __init__(self, base=None):
-        """
-        We simply store paths and parameters as nested dictioanries. Due to the
-        use of inheritance, the class can be passed to itself on initialization
-        which means paths and parameters can be adopted from base class
-
-        :type base: seisflows.config.DefinePathsParameters
-        :param base: paths and parameters from abstract Base class that need to
-            be inherited by the current child class.
-        """
-        self.parameters, self.paths = {}, {}
-        if base:
-            self.parameters.update(base.parameters)
-            self.paths.update(base.paths)
-
-    def par(self, parameter, required, docstr, par_type, default=None):
-        """
-        Add a parameter to the internal list of parameters
-
-        :type parameter: str
-        :param parameter: name of the parameter
-        :type required: bool
-        :param required: whether or not the parameter is required. If it is not
-            required, then a default value should be given
-        :type docstr: str
-        :param docstr: Short explanatory doc string that defines what the
-            parameter is used for.
-        :type par_type: class or str
-        :param par_type: the parameter type, used for doc strings and also
-            parameter validation
-        :param default: default value for the parameter, can be any type
-        """
-        if required:
-            default = self.default_par
-        if type(par_type) == type:
-            par_type = par_type.__name__
-        self.parameters[parameter] = {"docstr": docstr, "required": required,
-                                      "default": default, "type": par_type}
-
-    def path(self, path, required, docstr, default=None):
-        """
-        Add a path to the internal list of paths
-
-        :type path: str
-        :param path: name of the parameter
-        :type required: bool
-        :param required: whether or not the path is required. If it is not
-            required, then a default value should be given
-        :type docstr: str
-        :param docstr: Short explanatory doc string that defines what the
-            path is used for.
-        :type default: str
-        :param default: default value for the path
-
-        """
-        if required:
-            default = self.default_path
-        self.paths[path] = {"docstr": docstr, "required": required,
-                            "default": default}
-
-    def validate(self, paths=True, parameters=True):
-        """
-        Set internal paths and parameter values into sys.modules. Should be
-        called by each modules check() function.
-
-        Ensures that required paths and parameters are set by the User in the
-        parameter file and that default values are stored for any optional
-        paths and parameters which are not explicitely set.
-
-        :type paths: bool
-        :param paths: validate the internal path values
-        :type parameters: bool
-        :param parameters: validate the internal parameter values
-        :raises ParameterError: if a required path or parameter is not set by
-            the user.
-        """
-        if paths:
-            sys_path = sys.modules[PATH]
-            for key, attrs in self.paths.items():
-                if attrs["required"] and (key not in sys_path):
-                    raise ParameterError(sys_path, key)
-                elif key not in sys_path:
-                    setattr(sys_path, key, attrs["default"])
-
-        if parameters:
-            sys_par = sys.modules[PAR]
-            for key, attrs in self.parameters.items():
-                if attrs["required"] and (key not in sys_par):
-                    raise ParameterError(sys_par, key)
-                elif key not in sys_par:
-                    setattr(sys_par, key, attrs["default"])
-
-
 def custom_import(name=None, module=None, classname=None):
     """
     Imports SeisFlows module and extracts class that is the camelcase version
@@ -468,7 +307,3 @@ def _unpickle_method(func_name, obj, cls):
 
 copyreg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
-# Because we defined Dict inside this file, we need to convert our CFGPATHS
-# to a Dict at the end of the file to allow direct variable access
-# !!! TODO I don't really like this implementation, can it be changed?
-CFGPATHS = Dict(CFGPATHS)

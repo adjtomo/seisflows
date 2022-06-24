@@ -10,9 +10,7 @@ import sys
 import logging
 from glob import glob
 
-import seisflows.plugins.solver.specfem3d_globe as solvertools
-from seisflows.tools.specfem import Minmax  # Model, Minmax,
-# from seisflows.plugins.io import loadbypar, copybin, loadbin, savebin
+from seisflows.tools.specfem import Minmax
 from seisflows.tools import unix, msg
 from seisflows.tools.wrappers import Struct, exists
 from seisflows.config import custom_import, SeisFlowsPathsParameters
@@ -29,7 +27,6 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
 
     !!! See base class for method descriptions !!!
     """
-    # Class-specific logger accessed using self.logger
     logger = logging.getLogger(__name__).getChild(__qualname__)
 
     def __init__(self):

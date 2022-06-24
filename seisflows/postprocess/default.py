@@ -6,79 +6,70 @@ kernel summation
 """
 import os
 import sys
-import logging
 
+from seisflows.core import Base
 from seisflows.tools import msg
-from seisflows.config import SeisFlowsPathsParameters
-
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
-
-system = sys.modules['seisflows_system']
-solver = sys.modules['seisflows_solver']
 
 
-class Base:
+class Default(Base):
     """
     Postprocessing in a Seisflows workflow includes tasks such as
     regularization, smoothing, sharpening, masking and related operations
     on models or gradients
     """
-    # Class-specific logger accessed using self.logger
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
     def __init__(self):
         """
         These parameters should not be set by __init__!
         Attributes are just initialized as NoneTypes for clarity and docstrings
         """
-        pass
+        super().__init__()
 
-    @property
-    def required(self):
-        """
-        A hard definition of paths and parameters required by this class,
-        alongside their necessity for the class and their string explanations.
-        """
-        sf = SeisFlowsPathsParameters()
+        self.required.par(
+            "SMOOTH_H", required=False, default=0., par_type=float,
+            docstr="Gaussian half-width for horizontal smoothing in units of "
+                   "meters. If 0., no smoothing applied"
+        )
 
-        # Define the Parameters required by this module
-        sf.par("SMOOTH_H", required=False, default=0., par_type=float,
-               docstr="Gaussian half-width for horizontal smoothing in units "
-                      "of meters. If 0., no smoothing applied")
+        self.required.par(
+            "SMOOTH_V", required=False, default=0., par_type=float,
+            docstr="Gaussian half-width for vertical smoothing in units of "
+                   "meters"
+        )
 
-        sf.par("SMOOTH_V", required=False, default=0., par_type=float,
-               docstr="Gaussian half-width for vertical smoothing in units "
-                      "of meters")
-
-        sf.par("TASKTIME_SMOOTH", required=False, default=1, par_type=int,
-               docstr="Large radii smoothing may take longer than normal "
-                      "tasks. Allocate additional smoothing task time "
-                      "as a multiple of TASKTIME")
+        self.required.par(
+            "TASKTIME_SMOOTH", required=False, default=1, par_type=int,
+            docstr="Large radii smoothing may take longer than normal tasks. "
+                   "Allocate additional smoothing task time as a multiple of "
+                   "TASKTIME"
+        )
 
         # Define the Paths required by this module
-        sf.path("MASK", required=False, 
-                docstr="Directory to mask files for gradient masking")
-
-        return sf
+        self.required.path(
+            "MASK", required=False, docstr="Directory to mask files for "
+                                           "gradient masking"
+        )
 
     def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        if validate:
-            self.required.validate()
+        super().check(validate=validate)
         
-        if PATH.MASK:
-            assert os.path.exists(PATH.MASK), \
+        if self.path.MASK:
+            assert os.path.exists(self.path.MASK), \
                 f"PATH.MASK provided but does not exist"
 
     def setup(self):
         """
-        A placeholder function for initialization or setup tasks. Base 
-        postprocessing does not require any setup
+        Setup tasks
         """
-        pass
+        super().setup()
+
+    def finalize(self):
+        """
+        Finalization tasks
+        """
+        super().finalize()
 
     def write_gradient(self, path):
         """
@@ -94,6 +85,9 @@ class Base:
         :param path: directory from which kernels are read and to which
             gradient is written
         """
+        system = self.module("system")
+        solver = self.module("solver")
+
         if not os.path.exists(path):
             print(msg.cli("Gradient path does in postprocess.write_gradient "
                           "does not exist but should",
@@ -109,7 +103,7 @@ class Base:
 
         # Run postprocessing as job on system as it's computationally intensive
         self.logger.info("processing kernels into gradient on system...")
-        system.run("postprocess", "process_kernels", single=True,
+        system.run("postprocess", "_process_kernels", single=True,
                    path=path_kernels, logger=self.logger)
 
         # Access the gradient information stored in the kernel summation
@@ -122,11 +116,11 @@ class Base:
         # log dm --> dm (see Eq.13 Tromp et al 2005)
         gradient *= solver.merge(solver.load(path_model))
 
-        if PATH.MASK:
+        if self.path.MASK:
             self.logger.info(f"masking gradient")
             # to scale the gradient, users can supply "masks" by exactly
             # mimicking the file format in which models are stored
-            mask = solver.merge(solver.load(PATH.MASK))
+            mask = solver.merge(solver.load(self.path.MASK))
 
             # While both masking and preconditioning involve scaling the
             # gradient, they are fundamentally different operations:
@@ -141,8 +135,7 @@ class Base:
             solver.save(solver.split(gradient), path=path_grad,
                         suffix="_kernel")
 
-    @staticmethod
-    def process_kernels(path, logger):
+    def _process_kernels(self, path, logger):
         """
         Sums kernels from individual sources, with optional smoothing
 
@@ -157,6 +150,8 @@ class Base:
         :param logger: Class-specific logging module, log statements pushed
             from this logger will be tagged by its specific module/classname
         """
+        solver = self.module("solver")
+
         if not os.path.exists(path):
             print(msg.cli("Gradient path in postprocess.process_kernels "
                           "does not exist but should",
@@ -167,16 +162,16 @@ class Base:
         path_sum_nosmooth = os.path.join(path, "sum_nosmooth")
         path_sum = os.path.join(path, "sum")
 
-        if (PAR.SMOOTH_H > 0) or (PAR.SMOOTH_V > 0):
-            logger.debug(f"saving unsmoothed and summed kernels to:\n"
+        if (self.par.SMOOTH_H > 0) or (self.par.SMOOTH_V > 0):
+            logger.debug(f"saving un-smoothed and summed kernels to:\n"
                          f"{path_sum_nosmooth}")
             solver.combine(input_path=path, output_path=path_sum_nosmooth)
 
-            logger.info(f"smoothing gradient: H={PAR.SMOOTH_H}m, "
-                        f"V={PAR.SMOOTH_V}m")
+            logger.info(f"smoothing gradient: H={self.par.SMOOTH_H}m, "
+                        f"V={self.par.SMOOTH_V}m")
             logger.debug(f"saving smoothed kernels to:\n{path_sum}")
             solver.smooth(input_path=path_sum_nosmooth, output_path=path_sum, 
-                          span_h=PAR.SMOOTH_H, span_v=PAR.SMOOTH_V)
+                          span_h=self.par.SMOOTH_H, span_v=self.par.SMOOTH_V)
 
         # Combine all the input kernels, generating the unscaled gradient
         else:
