@@ -13,20 +13,22 @@ class Base(object):
     inherit from the Base object to work properly. This Base class essentially
     dictates the required structure of a SeisFlows class.
     """
-    # Class-specific logger accessed using self.logger. We instantiate loggers
-    # like this because then inheritance information gets imprinted into the
-    # logger, making it easier to debug functions which may be multiply
-    # inherited
-
     def __init__(self):
         """
-        Sets the required paths and parameters
+        SeisFlows instantiates its required parameters through the
+        SeisFlowsPathsParameters class, which scaffolds a rigid framework of
+        how parameters and paths should be defined by the program. This is
+        then used to build the parameter file dynamically.
         """
         self.required = SeisFlowsPathsParameters()
 
     def module(self, name):
         """
         Access globally stored SeisFlows modules located in sys.modules
+
+        :rtype: Class or Dict or None
+        :return: Returns a SeisFlows module or Dictionary containing paths or
+            parameters. Else None if the chosen module has not been instantiated
         """
         try:
             mod = sys.modules[f"seisflows_{name}"]
@@ -48,14 +50,24 @@ class Base(object):
     @property
     def par(self):
         """
-        Access SeisFlows parameters from sys.modules
+        Quick access SeisFlows parameters from sys.modules. Throws a warning
+        if parameters have not been instantiated
+
+        :rtype: Dict or None
+        :return: Returns a Dictionary with instantiated parameters, or None if
+            parameters have not been instantiated
         """
         return self.module("parameters")
 
     @property
     def path(self):
         """
-        Access SeisFlows paths from sys.modules
+        Quick access SeisFlows paths from sys.modules. Throws a warning
+        if paths have not been instantiated
+
+        :rtype: Dict or None
+        :return: Returns a Dictionary with instantiated paths, or None if
+            parameters have not been instantiated
         """
         return self.module("paths")
 
@@ -67,17 +79,20 @@ class Base(object):
         if validate:
             self.required.validate()
 
+        # Example of a check statement
+        # assert(self.par.PARAMETER == example_value), f"Parameter != example"
+
     def setup(self):
         """
         A placeholder function for any initialization or setup tasks that
-        need to be run once at the beginning of any workflow
+        need to be run once at the beginning of any workflow.
         """
         return
 
     def finalize(self):
         """
         A placeholder function for any finalization or tear-down tasks that
-        need to be run at the end of any iteration or workflow
+        need to be run at the end of any iteration or workflow.
         """
         return
 
