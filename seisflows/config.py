@@ -42,10 +42,6 @@ mechanics of the package. Do not touch unless you know what you're doing!
 NAMES = ["system", "preprocess", "solver",
          "postprocess", "optimize", "workflow"]
 
-# These define the sys.modules names where parameter values and paths are stored
-PAR = "seisflows_parameters"
-PATH = "seisflows_paths"
-
 # The location of this config file, which is the main repository
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
@@ -78,7 +74,7 @@ def save(path):
         unix.mkdir(path)
 
     # Save the paths and parameters into a JSON file
-    for name in [PAR, PATH]:
+    for name in ["seisflows_parameters", "seisflows_paths"]:
         fullfile = os.path.join(path, f"{name}.json")
         with open(fullfile, "w") as f:
             json.dump(sys.modules[name], f, sort_keys=True, indent=4)
@@ -99,7 +95,7 @@ def load(path):
     :param path: path to the previously saved session
     """
     # Load parameters and paths from a JSON file
-    for name in [PAR, PATH]:
+    for name in ["seisflows_parameters", "seisflows_paths"]:
         fullfile = os.path.join(os.path.abspath(path), f"{name}.json")
         with open(fullfile, "r") as f:
             sys.modules[name] = Dict(json.load(f))
@@ -223,7 +219,7 @@ def custom_import(name=None, module=None, classname=None):
     # Attempt to retrieve currently assigned classname from parameters
     if module is None:
         try:
-            module = sys.modules[PAR][name.upper()]
+            module = sys.modules["seisflows_parameters"][name.upper()]
         except KeyError:
             return Null
         # If this still returns nothing, then no module has been assigned
