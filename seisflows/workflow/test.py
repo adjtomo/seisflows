@@ -12,9 +12,8 @@ import subprocess
 import numpy as np
 
 from glob import glob
-from seisflows.tools import msg
-from seisflows.config import (SeisFlowsPathsParameters, custom_import, ROOT_DIR,
-                              CFGPATHS)
+from seisflows.core import SeisFlowsPathsParameters
+from seisflows.config import (custom_import, ROOT_DIR, CFGPATHS)
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

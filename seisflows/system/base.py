@@ -11,7 +11,8 @@ import logging
 
 from seisflows.tools import unix, msg
 from seisflows.tools.wrappers import number_fid
-from seisflows.config import save, SeisFlowsPathsParameters, CFGPATHS
+from seisflows.core import SeisFlowsPathsParameters
+from seisflows.config import save, CFGPATHS
 
 
 PAR = sys.modules["seisflows_parameters"]

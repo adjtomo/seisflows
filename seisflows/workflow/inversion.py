@@ -203,14 +203,17 @@ class Inversion(custom_import("workflow", "base")):
         """
         # Calculate the initial step length based on optimization algorithm
         if optimize.line_search.step_count == 0:
-            self.logger.info(msg.mjr(f"CONDUCTING LINE SEARCH "
-                                     f"({optimize.eval_str})")
+            self.logger.info(msg.mjr(f"CONDUCTING LINE SEARCH: "
+                                     f"i{optimize.iter:0>2}"
+                                     f"s{optimize.line_search.step_count:0>2}")
                              )
             optimize.initialize_search()
 
         # Attempt a new trial step with the given step length
         optimize.line_search.step_count += 1
-        self.logger.info(msg.mnr(f"TRIAL STEP COUNT: {optimize.eval_str}"))
+        self.logger.info(msg.mnr(f"TRIAL STEP COUNT: "
+                                 f"i{optimize.iter:0>2}"
+                                 f"s{optimize.line_search.step_count:0>2}"))
         self.evaluate_function(path=PATH.FUNC, suffix="try")
 
         # Check the function evaluation against line search history

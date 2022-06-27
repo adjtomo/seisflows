@@ -26,13 +26,13 @@ from glob import glob
 from copy import copy
 from IPython import embed
 
+from seisflows.core import Dict, SeisFlowsPathsParameters
+from seisflows.config import (config_logger, custom_import, save,
+                              NAMES, ROOT_DIR, CFGPATHS)
 from seisflows.tools import unix, msg
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)
 from seisflows.tools.wrappers import loadyaml
-from seisflows.config import (config_logger, Dict, custom_import, save,
-                              SeisFlowsPathsParameters, NAMES, ROOT_DIR,
-                              CFGPATHS)
 
 
 def sfparser():

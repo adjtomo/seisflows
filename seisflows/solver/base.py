@@ -16,7 +16,7 @@ from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
 from seisflows.tools.specfem import Container, getpar
 from seisflows.tools.wrappers import diff
-from seisflows.config import SeisFlowsPathsParameters, Dict
+from seisflows.core import SeisFlowsPathsParameters, Dict
 
 
 PAR = sys.modules['seisflows_parameters']
@@ -149,7 +149,7 @@ class Base:
                       "['fortran_binary', 'adios']")
 
         sf.path("SOLVER", required=False,
-                default=os.path.join(PATH.SCRATCH, "solver"),
+                default=os.path.join(PATH.WORKDIR, "scratch", "solver"),
                 docstr="scratch path to hold solver working directories")
 
         sf.path("DATA", required=False,

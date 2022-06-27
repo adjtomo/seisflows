@@ -9,7 +9,8 @@ import logging
 
 from seisflows.tools import msg
 from seisflows.tools.wrappers import exists
-from seisflows.config import save, SeisFlowsPathsParameters
+from seisflows.core import SeisFlowsPathsParameters
+from seisflows.config import save
 
 
 PAR = sys.modules["seisflows_parameters"]

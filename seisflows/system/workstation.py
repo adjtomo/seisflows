@@ -8,8 +8,9 @@ import sys
 import logging
 from contextlib import redirect_stdout
 
-from seisflows.tools import unix, msg
-from seisflows.config import custom_import, SeisFlowsPathsParameters, CFGPATHS
+from seisflows.tools import msg
+from seisflows.core import SeisFlowsPathsParameters
+from seisflows.config import custom_import, CFGPATHS
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]

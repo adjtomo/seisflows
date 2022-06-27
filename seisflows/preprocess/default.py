@@ -14,7 +14,7 @@ import numpy as np
 from seisflows.tools import msg
 from seisflows.tools import signal, unix
 from seisflows.plugins.preprocess import adjoint, misfit, readers, writers
-from seisflows.config import SeisFlowsPathsParameters
+from seisflows.core import SeisFlowsPathsParameters
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
@@ -105,7 +105,7 @@ class Default:
 
         # Define the Paths required by this module
         sf.path("PREPROCESS", required=False,
-                default=os.path.join(PATH.SCRATCH, "preprocess"),
+                default=os.path.join(PATH.WORKDIR, "scratch", "preprocess"),
                 docstr="scratch path to store any preprocessing outputs")
 
         return sf

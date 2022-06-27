@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
 """
 This is the custom class for an NLCG optimization schema.
-It supercedes the `seisflows.optimize.base` class
+It inherits from the `seisflows.optimize.gradient.Gradient` class
 """
-import sys
-import logging
-import numpy as np
-
-from seisflows.config import custom_import, SeisFlowsPathsParameters
+from seisflows.optimize.gradient import Gradient
 from seisflows.tools import unix
 from seisflows.tools.math import dot
 
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
 
-
-class NLCG(custom_import("optimize", "gradient")):
+class NLCG(Gradient):
     """
     Nonlinear conjugate gradient method
 
@@ -38,9 +31,6 @@ class NLCG(custom_import("optimize", "gradient")):
         status == 0 : not finished
         status < 0  : failed
     """
-    # Class-specific logger accessed using self.logger                           
-    logger = logging.getLogger(__name__).getChild(__qualname__)       
-
     def __init__(self):
         """
         These parameters should not be set by the user.
@@ -51,36 +41,42 @@ class NLCG(custom_import("optimize", "gradient")):
             optimization iter. Keeps track of internal NLCG memory.
         """
         super().__init__()
+
+        self.required.par(
+            "NLCGMAX", required=False, default="null", par_type=float,
+            docstr="NLCG periodic restart interval, between 1 and inf"
+        )
+        self.required.par(
+            "NLCGTHRESH", required=False, default="null", par_type=float,
+            docstr="NLCG conjugacy restart threshold, between 1 and inf"
+        )
         self.NLCG_iter = 0
         self.calc_beta = pollak_ribere  # !!! Allow the user to choose this fx?
-
-    @property
-    def required(self):
-        """
-        A hard definition of paths and parameters required by this class,
-        alongside their necessity for the class and their string explanations.
-        """
-        sf = SeisFlowsPathsParameters(super().required)
-
-        # Define the Parameters required by this module
-        sf.par("NLCGMAX", required=False, default="null", par_type=float,
-               docstr="NLCG periodic restart interval, between 1 and inf")
-
-        sf.par("NLCGTHRESH", required=False, default="null", par_type=float,
-               docstr="NLCG conjugacy restart threshold, between 1 and inf")
-
-        return sf
 
     def check(self, validate=True):
         """
         Checks parameters, paths, and dependencies
         """
-        if validate:
-            self.required.validate()
-        super().check(validate=False)
+        super().check(validate=validate)
 
-        assert(PAR.LINESEARCH.upper() == "BRACKET"), \
+        assert(self.par.LINESEARCH.upper() == "BRACKET"), \
             f"NLCG requires a bracketing line search algorithm"
+
+    def setup(self):
+        """Inherit from optimize.gradient.Gradient"""
+        self.setup()
+
+    def finalize(self):
+        """Inherit from optimize.gradient.Gradient"""
+        self.finalize()
+
+    def load(self, name):
+        """Inherit from optimize.gradient.Gradient"""
+        return self.load(name=name)
+
+    def save(self, name, vector):
+        """Inherit from optimize.gradient.Gradient"""
+        self.save(name=name, vector=vector)
 
     def compute_direction(self):
         """
@@ -102,7 +98,7 @@ class NLCG(custom_import("optimize", "gradient")):
         self.logger.debug(f"computing search direction with NLCG")
         self.NLCG_iter += 1
 
-        unix.cd(PATH.OPTIMIZE)
+        unix.cd(self.path.OPTIMIZE)
 
         # Load the current gradient direction
         g_new = self.load("g_new")
@@ -115,7 +111,7 @@ class NLCG(custom_import("optimize", "gradient")):
             restarted = 0
         # CASE 2: Force restart if the iterations have surpassed the maximum
         # number of allowable iter
-        elif self.NLCG_iter > PAR.NLCGMAX:
+        elif self.NLCG_iter > self.par.NLCGMAX:
             self.logger.info("restarting NLCG due to periodic restart "
                              "condition. setting search direction as inverse "
                              "gradient")
@@ -137,7 +133,7 @@ class NLCG(custom_import("optimize", "gradient")):
                 p_new = -g_new + beta * p_old
 
             # Check restart conditions, return search direction and status
-            if check_conjugacy(g_new, g_old) > PAR.NLCGTHRESH:
+            if check_conjugacy(g_new, g_old) > self.par.NLCGTHRESH:
                 self.logger.info("restarting NLCG due to loss of conjugacy")
                 self.restart()
                 p_new = -g_new
@@ -161,6 +157,14 @@ class NLCG(custom_import("optimize", "gradient")):
         """
         super().restart()
         self.NLCG_iter = 1
+
+    def write_stats(self):
+        """Inherit from optimize.gradient.Gradient"""
+        self.write_stats()
+
+    def check_model(self, m, min_pr=-1, max_pr=0.5):
+        """Inherit from optimize.gradient.Gradient"""
+        self.check_model(m=m, min_pr=min_pr, max_pr=max_pr)
 
 
 def fletcher_reeves(g_new, g_old, precond=lambda x: x):
