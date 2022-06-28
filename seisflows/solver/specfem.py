@@ -1,34 +1,29 @@
 #!/usr/bin/env python3
 """
 This Solver module is in charge of interacting with external numerical solvers
-such as SPECFEM (2D/3D/3D_GLOBE). The Base class provides general functions
-that work with SPECFEM, while subclasses provide details to differentiate the
-various types of SPECFEM.
+such as SPECFEM (2D/3D/3D_GLOBE). This SPECFEM base class provides general
+functions that work with all versions of SPECFEM. Subclasses will provide
+additional capabilities unique to each version of SPECFEM.
 """
 import os
 import sys
-import logging
 import subprocess
 import numpy as np
 from glob import glob
 
+from seisflows.core import Base
 from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
 from seisflows.tools.specfem import Container, getpar
 from seisflows.tools.wrappers import diff
-from seisflows.core import SeisFlowsPathsParameters, Dict
+from seisflows.core import Dict
 
 
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
-system = sys.modules['seisflows_system']
-preprocess = sys.modules['seisflows_preprocess']
-
-
-class Base:
+class Specfem(Base):
     """
     This base class provides an interface through which solver simulations can
-    be set up and run and a parent class for the following subclasses:
+    be set up and run. It should not be used by itself, but rather it is meant
+    to provide the foundation for the following child classes:
 
     SPECFEM2D
     SPECFEM3D
@@ -85,9 +80,6 @@ class Base:
         !!! Required functions which must be implemented by subclass !!!
 
     """
-    # Class-specific logger accessed using self.logger
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
     def __init__(self):
         """
         These parameters should not be set by the User_!
@@ -106,91 +98,92 @@ class Base:
         :param logger: Class-specific logging module, log statements pushed
             from this logger will be tagged by its specific module/classname
         """
+        super().__init__()
+
+        self.required.par(
+            "MATERIALS", required=False, par_type=str, default="ELASTIC",
+            docstr="Material parameters used to define model. Available: "
+                   "['ELASTIC': Vp, Vs, 'ACOUSTIC': Vp, 'ISOTROPIC', "
+                   "'ANISOTROPIC']"
+        )
+        self.required.par(
+            "DENSITY", required=False, par_type=str, default="CONSTANT",
+            docstr="How to treat density during inversion. Available: "
+                   "['CONSTANT': Do not update density, "
+                   "'VARIABLE': Update density]"
+        )
+        self.required.par(
+            "ATTENUATION", required=False, par_type=bool, default=False,
+            docstr="If True, turn on attenuation during forward "
+                   "simulations, otherwise set attenuation off. Attenuation "
+                   "is always off for adjoint simulations."
+        )
+        self.required.par(
+            "FORMAT", required=False, par_type=float, default="ASCII",
+            docstr="Format of synthetic waveforms used during workflow, "
+                   "available options: ['ASCII', 'SU']"
+        )
+        self.required.par(
+            "COMPONENTS", required=False, default="ZNE", par_type=str,
+            docstr="Components used to generate data, formatted as a single "
+                   "string, e.g. ZNE or NZ or E"
+        )
+        self.required.par(
+            "SOLVERIO", required=False, default="fortran_binary", par_type=str,
+            docstr="The format external solver files. Available: "
+                   "['fortran_binary']"
+        )
+        self.required.path(
+            "SOLVER", required=False,
+            default=os.path.join(self.path.WORKDIR, "scratch", "solver"),
+            docstr="scratch path to hold solver working directories"
+        )
+        self.required.path(
+            "DATA", required=False,
+            docstr="path to a directory containing any external data "
+                   "required by the workflow. Catch all directory that "
+                   "can be accessed by all modules"
+        )
+        self.required.path(
+            "SPECFEM_BIN", required=False,
+            default=os.path.join(self.path.WORKDIR, "specfem", "bin"),
+            docstr="path to the SPECFEM binary executables"
+        )
+        self.required.path(
+            "SPECFEM_DATA", required=False,
+            default=os.path.join(self.path.WORKDIR, "specfem", "DATA"),
+            docstr="path to the SPECFEM DATA/ directory containing the "
+                   "'Par_file', 'STATIONS' file and 'CMTSOLUTION' files"
+        )
+
         self.parameters = []
         self.nt = None
         self.dt = None
         self._mesh_properties = None
         self._source_names = None
 
-    @property
-    def required(self):
-        """
-        A hard definition of paths and parameters required by this class,
-        alongside their necessity for the class and their string explanations.
-        """
-        sf = SeisFlowsPathsParameters()
-
-        sf.par("MATERIALS", required=False, par_type=str, default="ELASTIC",
-               docstr="Material parameters used to define model. Available: "
-                      "['ELASTIC': Vp, Vs, 'ACOUSTIC': Vp, 'ISOTROPIC', "
-                      "'ANISOTROPIC']")
-
-        sf.par("DENSITY", required=False, par_type=str, default="CONSTANT",
-               docstr="How to treat density during inversion. Available: "
-                      "['CONSTANT': Do not update density, "
-                      "'VARIABLE': Update density]")
-
-        sf.par("ATTENUATION", required=False, par_type=bool, default=False,
-               docstr="If True, turn on attenuation during forward "
-                      "simulations, otherwise set attenuation off. Attenuation "
-                      "is always off for adjoint simulations.")
-
-        sf.par("FORMAT", required=False, par_type=float, default="ASCII",
-               docstr="Format of synthetic waveforms used during workflow, "
-                      "available options: ['ascii', 'su']")
-
-        sf.par("COMPONENTS", required=False, default="ZNE", par_type=str,
-               docstr="Components used to generate data, formatted as a single "
-                      "string, e.g. ZNE or NZ or E")
-
-        sf.par("SOLVERIO", required=False, default="fortran_binary",
-               par_type=int,
-               docstr="The format external solver files. Available: "
-                      "['fortran_binary', 'adios']")
-
-        sf.path("SOLVER", required=False,
-                default=os.path.join(PATH.WORKDIR, "scratch", "solver"),
-                docstr="scratch path to hold solver working directories")
-
-        sf.path("DATA", required=False,
-                docstr="path to a directory containing any external data "
-                       "required by the workflow. Catch all directory that "
-                       "can be accessed by all modules")
-
-        sf.path("SPECFEM_BIN", required=False,
-                default=os.path.join(PATH.WORKDIR, "specfem", "bin"),
-                docstr="path to the SPECFEM binary executables")
-
-        sf.path("SPECFEM_DATA", required=False,
-                default=os.path.join(PATH.WORKDIR, "specfem", "DATA"),
-                docstr="path to the SPECFEM DATA/ directory containing the "
-                       "'Par_file', 'STATIONS' file and 'CMTSOLUTION' files")
-
-        return sf
-
     def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        if validate:
-            self.required.validate()
+        super().check(validate=validate)
 
         # Check that other modules have set parameters that will be used here
         for required_parameter in ["NPROC"]:
-            assert (required_parameter in PAR), \
+            assert (required_parameter in self.par), \
                 f"Solver requires {required_parameter}"
 
         available_materials = ["ELASTIC", "ACOUSTIC",  # specfem2d, specfem3d
                                "ISOTROPIC", "ANISOTROPIC"]  # specfem3d_globe
-        assert(PAR.MATERIALS.upper() in available_materials), \
+        assert(self.par.MATERIALS.upper() in available_materials), \
             f"MATERIALS must be in {available_materials}"
 
         acceptable_densities = ["CONSTANT", "VARIABLE"]
-        assert(PAR.DENSITY.upper() in acceptable_densities), \
+        assert(self.par.DENSITY.upper() in acceptable_densities), \
             f"DENSITY must be in {acceptable_densities}"
 
         acceptable_formats = ["SU", "ASCII"]
-        if PAR.FORMAT.upper() not in acceptable_formats:
+        if self.par.FORMAT.upper() not in acceptable_formats:
             raise Exception(f"'FORMAT' must be {acceptable_formats}")
 
         # Internal parameter list based on user-input material choices
@@ -198,30 +191,30 @@ class Base:
         # statements fill it. If not, each time workflow is resumed, parameters
         # list will append redundant parameters and things stop working
         self.parameters = []
-        if PAR.MATERIALS.upper() == "ELASTIC":
-            assert(PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
+        if self.par.MATERIALS.upper() == "ELASTIC":
+            assert(self.par.SOLVER.lower() in ["specfem2d", "specfem3d"])
             self.parameters += ["vp", "vs"]
-        elif PAR.MATERIALS.upper() == "ACOUSTIC":
-            assert(PAR.SOLVER.lower() in ["specfem2d", "specfem3d"])
+        elif self.par.MATERIALS.upper() == "ACOUSTIC":
+            assert(self.par.SOLVER.lower() in ["specfem2d", "specfem3d"])
             self.parameters += ["vp"]
-        elif PAR.MATERIALS.upper() == "ISOTROPIC":
-            assert(PAR.SOLVER.lower() in ["specfem3d_globe"])
+        elif self.par.MATERIALS.upper() == "ISOTROPIC":
+            assert(self.par.SOLVER.lower() in ["specfem3d_globe"])
             self.parameters += ["vp", "vs"]
-        elif PAR.MATERIALS.upper() == "ANISOTROPIC":
-            assert(PAR.SOLVER.lower() in ["specfem3d_globe"])
+        elif self.par.MATERIALS.upper() == "ANISOTROPIC":
+            assert(self.par.SOLVER.lower() in ["specfem3d_globe"])
             self.parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
 
-        if PAR.DENSITY.upper() == "VARIABLE":
+        if self.par.DENSITY.upper() == "VARIABLE":
             self.parameters.append("rho")
 
-        assert hasattr(solver_io, PAR.SOLVERIO)
+        assert hasattr(solver_io, self.par.SOLVERIO)
         assert hasattr(self.io, "read_slice"), \
             "IO method has no attribute 'read_slice'"
         assert hasattr(self.io, "write_slice"), \
             "IO method has no attribute 'write_slice'"
 
     def setup(self):
-        """ 
+        """
         Prepares solver for inversion or migration.
         Sets up directory structure expected by SPECFEM and copies or generates
         seismic data to be inverted or migrated
@@ -268,6 +261,8 @@ class Base:
         :type write_residuals: bool
         :param write_residuals: calculate and export residuals
         """
+        preprocess = self.module("preprocess")
+
         if self.taskid == 0:
             self.logger.info("running forward simulations")
 
@@ -367,8 +362,6 @@ class Base:
         non-zero exit code (failure), this function will return a negative
         boolean.
 
-        :type mpiexec: str
-        :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
         :type executable: str
         :param executable: executable function to call
         :type output: str
@@ -382,11 +375,11 @@ class Base:
             sys.exit(-1)
 
         # mpiexec is None when running in serial mode, so e.g., ./xmeshfem2D
-        if PAR.SYSTEM in ["workstation"]:
+        if self.par.SYSTEM in ["workstation"]:
             exc_cmd = f"./{executable}"
         # Otherwise mpiexec is system dependent (e.g., srun, mpirun)
         else:
-            exc_cmd = f"{PAR.MPIEXEC} {executable}"
+            exc_cmd = f"{self.par.MPIEXEC} {executable}"
 
         # Run solver. Write solver stdout (log files) to text file
         try:
@@ -405,17 +398,8 @@ class Base:
                   )
             sys.exit(-1)
 
-    @property
-    def io(self):
-        """
-        Solver IO module set by User.
-
-        Located in seisflows.plugins.solver_io
-        """
-        return getattr(solver_io, PAR.SOLVERIO)
-
     def load(self, path, prefix="", suffix="", parameters=None,):
-        """ 
+        """
         Solver I/O: Loads SPECFEM2D/3D models or kernels
 
         :type path: str
@@ -444,7 +428,7 @@ class Base:
         return load_dict
 
     def save(self, save_dict, path, parameters=None, prefix="", suffix=""):
-        """ 
+        """
         Solver I/O: Saves SPECFEM2D/3D models or kernels
 
         :type save_dict: dict or Container
@@ -468,7 +452,7 @@ class Base:
         for iproc in range(self.mesh_properties.nproc):
             for key in missing_keys:
                 save_dict[key] += self.io.read_slice(
-                    path=PATH.MODEL_INIT, parameters=f"{prefix}{key}{suffix}",
+                    path=self.path.MODEL_INIT, parameters=f"{prefix}{key}{suffix}",
                     iproc=iproc
                 )
 
@@ -531,11 +515,11 @@ class Base:
 
     def combine(self, input_path, output_path, parameters=None):
         """
-        Postprocessing wrapper: xcombine_sem 
+        Postprocessing wrapper: xcombine_sem
         Sums kernels from individual source contributions to create gradient.
 
         .. note::
-            The binary xcombine_sem simply sums matching databases (.bin) 
+            The binary xcombine_sem simply sums matching databases (.bin)
 
         .. note::
             It is ASSUMED that this function is being called by
@@ -731,7 +715,8 @@ class Base:
         dst = os.path.join(path, self.source_name)
         unix.cp(src, dst)
 
-    def rename_kernels(self):
+    @staticmethod
+    def rename_kernels():
         """
         Works around conflicting kernel filename conventions by renaming
         `alpha` to `vp` and `beta` to `vs`
@@ -767,7 +752,7 @@ class Base:
         extra files.
         """
         if self.taskid == 0:
-            self.logger.info(f"initializing {PAR.NTASK} solver directories")
+            self.logger.info(f"initializing {self.par.NTASK} solver directories")
 
         unix.rm(self.cwd)
         unix.mkdir(self.cwd)
@@ -780,25 +765,25 @@ class Base:
             unix.mkdir(cwd_dir)
 
         # Copy exectuables into the bin/ directory
-        src = glob(os.path.join(PATH.SPECFEM_BIN, "*"))
+        src = glob(os.path.join(self.path.SPECFEM_BIN, "*"))
         dst = os.path.join("bin", "")
         unix.cp(src, dst)
 
         # Copy all input files except source files
-        src = glob(os.path.join(PATH.SPECFEM_DATA, "*"))
+        src = glob(os.path.join(self.path.SPECFEM_DATA, "*"))
         src = [_ for _ in src if self.source_prefix not in _]
         dst = os.path.join("DATA", "")
         unix.cp(src, dst)
 
         # Symlink event source specifically, strip the source name as SPECFEM
         # just expects `source_name`
-        src = os.path.join(PATH.SPECFEM_DATA, 
+        src = os.path.join(self.path.SPECFEM_DATA,
                            f"{self.source_prefix}_{self.source_name}")
         dst = os.path.join("DATA", self.source_prefix)
         unix.ln(src, dst)
 
-        if self.taskid == 0: 
-            mainsolver = os.path.join(PATH.SOLVER, "mainsolver")
+        if self.taskid == 0:
+            mainsolver = os.path.join(self.path.SOLVER, "mainsolver")
             # Symlink taskid_0 as mainsolver in solver directory for convenience
             if not os.path.exists(mainsolver):
                 unix.ln(self.cwd, mainsolver)
@@ -807,7 +792,7 @@ class Base:
         else:
             # Copy the initial model from mainsolver into current directory
             # Avoids the need to run multiple instances of xgenerate_databases
-            src = os.path.join(PATH.SOLVER, "mainsolver", "OUTPUT_FILES", 
+            src = os.path.join(self.path.SOLVER, "mainsolver", "OUTPUT_FILES",
                                "DATABASES_MPI")
             dst = os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
             unix.cp(src, dst)
@@ -822,7 +807,9 @@ class Base:
             Channels actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
         """
-        if PAR.PREPROCESS.lower() == "default":
+        preprocess = self.module("preprocess")
+
+        if self.par.PREPROCESS.upper() == "DEFAULT":
             if self.taskid == 0:
                 self.logger.debug(f"intializing {len(self.data_filenames)} "
                                   f"empty adjoint traces per event")
@@ -850,7 +837,7 @@ class Base:
         """
         # Check the given model path or the initial model
         if path is None:
-            path = PATH.MODEL_INIT
+            path = self.path.MODEL_INIT
 
         if os.path.exists(path):
             # Count the number of .bin files and the number of grid points
@@ -881,11 +868,11 @@ class Base:
         # Apply wildcard rule and check for available sources, exit if no
         # sources found because then we can't proceed
         wildcard = f"{self.source_prefix}_*"
-        fids = sorted(glob(os.path.join(PATH.SPECFEM_DATA, wildcard)))
+        fids = sorted(glob(os.path.join(self.path.SPECFEM_DATA, wildcard)))
         if not fids:
             print(msg.cli("No matching source files when searching PATH for"
                           "the given WILDCARD",
-                          items=[f"PATH: {PATH.SPECFEM_DATA}",
+                          items=[f"PATH: {self.path.SPECFEM_DATA}",
                                  f"WILDCARD: {wildcard}"], header="error"
                           )
                   )
@@ -893,7 +880,7 @@ class Base:
 
         # Create internal definition of sources names by stripping prefixes
         names = [os.path.basename(fid).split("_")[-1] for fid in fids]
-        self._source_names = names[:PAR.NTASK]
+        self._source_names = names[:self.par.NTASK]
 
     def check_solver_parameter_files(self):
         """
@@ -904,6 +891,15 @@ class Base:
         pass
 
     @property
+    def io(self):
+        """
+        Solver IO module set by User.
+
+        Located in seisflows.plugins.solver_io
+        """
+        return getattr(solver_io, self.par.SOLVERIO)
+
+    @property
     def taskid(self):
         """
         Returns the currently running process for embarassingly parallelized
@@ -912,7 +908,7 @@ class Base:
         :rtype: int
         :return: task id for given solver
         """
-        return system.taskid()
+        return self.module("system").taskid()
 
     @property
     def source_name(self):
@@ -932,7 +928,7 @@ class Base:
         :rtype: str
         :return: current solver working directory
         """
-        return os.path.join(PATH.SOLVER, self.source_name)
+        return os.path.join(self.path.SOLVER, self.source_name)
 
     @property
     def source_names(self):
@@ -995,6 +991,6 @@ class Base:
         :rtype: str
         :return: source prefix
         """
-        return PAR.SOURCE_PREFIX.upper()
+        return self.par.SOURCE_PREFIX.upper()
 
 
