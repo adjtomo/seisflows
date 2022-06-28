@@ -5,60 +5,157 @@ Provides utilities for submitting jobs in serial on a single machine
 """
 import os
 import sys
-import logging
+import pickle
 from contextlib import redirect_stdout
 
-from seisflows.tools import msg
-from seisflows.core import SeisFlowsPathsParameters
-from seisflows.config import custom_import, CFGPATHS
-
-PAR = sys.modules["seisflows_parameters"]
-PATH = sys.modules["seisflows_paths"]
+from seisflows.core import Base
+from seisflows.config import CFGPATHS, save
+from seisflows.tools import msg, unix
+from seisflows.tools.wrappers import number_fid
 
 
-class Workstation(custom_import("system", "base")):
+class Workstation(Base):
     """
-    Run tasks in a serial fashion on a single local machine
+    Run tasks in a serial fashion on a single local machine. Also serves as the
+    Base System module, upon which all other System classes should be built.
     """
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
-    @property
-    def required(self):
+    def __init__(self):
         """
-        A hard definition of paths and parameters required by this class,
-        alongside their necessity for the class and their string explanations.
+        Instantiate the Workstation base class
         """
-        sf = SeisFlowsPathsParameters(super().required)
+        super().__init__()
 
-        sf.par("MPIEXEC", required=False, default=None, par_type=str,
-               docstr="Function used to invoke executables on the system. "
-                      "For example 'srun' on SLURM systems, or './' on a "
-                      "workstation. If left blank, will guess based on the "
-                      "system.")
+        self.output_log = os.path.join(self.path.WORKDIR, CFGPATHS.LOGFILE)
+        self.error_log = os.path.join(self.path.WORKDIR, CFGPATHS.ERRLOGFILE)
 
-        sf.par("NTASK", required=False, default=1, par_type=int,
-               docstr="Number of separate, individual tasks. Also equal to "
-                      "the number of desired sources in workflow")
-
-        sf.par("NPROC", required=False, default=1, par_type=int,
-               docstr="Number of processor to use for each simulation")
-
-        return sf
+        self.required.par(
+            "TITLE", required=False,
+            default=os.path.basename(os.path.abspath(".")), par_type=str,
+            docstr="The name used to submit jobs to the system, defaults "
+                   "to the name of the working directory"
+        )
+        self.required.par(
+            "MPIEXEC", required=False, default=None, par_type=str,
+            docstr="Function used to invoke executables on the system. "
+                   "For example 'srun' on SLURM systems, or './' on a "
+                   "workstation. If left blank, will guess based on the "
+                   "system."
+        )
+        self.required.par(
+            "NTASK", required=False, default=1, par_type=int,
+            docstr="Number of separate, individual tasks. Also equal to "
+                   "the number of desired sources in workflow"
+        )
+        self.required.par(
+            "NPROC", required=False, default=1, par_type=int,
+            docstr="Number of processor to use for each simulation"
+        )
+        self.required.par(
+            "PRECHECK", required=False, par_type=list, default=["TITLE"],
+            docstr="A list of parameters that will be displayed to stdout "
+                   "before 'submit' or 'resume' is run. Useful for "
+                   "manually reviewing important parameters prior to "
+                   "system submission"
+        )
+        self.required.par(
+            "LOG_LEVEL", required=False, par_type=str, default="DEBUG",
+            docstr="Verbosity output of SF logger. Available from least to "
+                   "most verbosity: 'CRITICAL', 'WARNING', 'INFO', 'DEBUG'; "
+                   "defaults to 'DEBUG'"
+        )
+        self.required.par(
+            "VERBOSE", required=False, default=False, par_type=bool,
+            docstr="Level of verbosity provided to the output log. If True, "
+                   "log statements will declare what module/class/function "
+                   "they are being called from. Useful for debugging but "
+                   "also very noisy."
+        )
+        # note: self.path.WORKDIR has been set by the entry point seisflows.setup()
+        self.required.path(
+            "SCRATCH", required=False,
+            default=os.path.join(self.path.WORKDIR, "scratch"),
+            docstr="scratch path to hold temporary data during workflow"
+        )
+        self.required.path(
+            "OUTPUT", required=False,
+            default=os.path.join(self.path.WORKDIR, "output"),
+            docstr="directory to save workflow outputs to disk"
+        )
+        self.required.path(
+            "SYSTEM", required=False,
+            default=os.path.join(self.required.SCRATCH, "system"),
+            docstr="scratch path to hold any system related data"
+        )
+        self.required.path(
+            "LOGFILE", required=False, default=self.output_log,
+            docstr="the main output log file where all processes will track "
+                   "their status"
+        )
 
     def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        super().check(validate=False)
-        if validate:
-            self.required.validate()
+        super().check(validate=validate)
 
-    def submit(self):
+        if self.output_log != self.path.LOGFILE:
+            self.output_log = self.path.LOGFILE
+
+    def setup(self):
         """
-        Submits the main workflow job
+        Create the SeisFlows directory structure in preparation for a
+        SeisFlows workflow. Ensure that if any config information is left over
+        from a previous workflow, that these files are not overwritten by
+        the new workflow. Should be called by submit()
+
+        .. note::
+            This function is expected to create dirs: SCRATCH, SYSTEM, OUTPUT
+            and the following log files: output, error
+
+        .. note::
+            Logger is configured here as all workflows, independent of system,
+            will be calling setup()
+
+        :rtype: tuple of str
+        :return: (path to output log, path to error log)
+        """
+        # Create scratch directories
+        unix.mkdir(self.path.SCRATCH)
+        unix.mkdir(self.path.SYSTEM)
+
+        # Create output directories
+        unix.mkdir(self.path.OUTPUT)
+        log_files = os.path.join(self.path.WORKDIR, CFGPATHS.LOGDIR)
+        unix.mkdir(log_files)
+
+        # If resuming, move old log files to keep them out of the way. Number
+        # in ascending order, so we don't end up overwriting things
+        for src in [self.output_log, self.error_log, self.path.PAR_FILE]:
+            i = 1
+            if os.path.exists(src):
+                dst = os.path.join(log_files, number_fid(src, i))
+                while os.path.exists(dst):
+                    i += 1
+                    dst = os.path.join(log_files, number_fid(src, i))
+                self.logger.debug(f"copying par/log file to: {dst}")
+                unix.cp(src=src, dst=dst)
+
+    def finalize(self):
+        """Inherits from seisflows.core.Base"""
+        super().finalize()
+
+    def submit(self, submit_call=None):
+        """
+        Submits the main workflow job as a serial job submitted directly to
+        the compute node that is running the master job
+
+        :type submit_call: str or None
+        :param submit_call: the command line workload manager call to be run by
+            subprocess. This is only needed for overriding classes, it has no
+            effect on the Workstation class
         """
         self.setup()
-        workflow = sys.modules["seisflows_workflow"]
+        workflow = self.module("workflow")
         workflow.checkpoint()
         workflow.main()
 
@@ -80,18 +177,18 @@ class Workstation(custom_import("system", "base")):
             defined, such that the job is submitted as a single-core job to
             the system.
         """
-        self.checkpoint(PATH.OUTPUT, classname, method, kwargs)
+        self.checkpoint(self.path.OUTPUT, classname, method, kwargs)
 
         # Allows dynamic retrieval of any function from within package, e.g.,
         # <bound method Base.eval_func of <seisflows.solver.specfem2d...
-        class_module = sys.modules[f"seisflows_{classname}"]
+        class_module = self.module(classname)
         function = getattr(class_module, method)
-        log_path = os.path.join(PATH.WORKDIR, CFGPATHS.LOGDIR)
+        log_path = os.path.join(self.path.WORKDIR, CFGPATHS.LOGDIR)
 
         if single:
             ntasks = 1
         else:
-            ntasks = PAR.NTASK
+            ntasks = self.par.NTASK
 
         for taskid in range(ntasks):
             # os environment variables can only be strings, these need to be
@@ -109,7 +206,7 @@ class Workstation(custom_import("system", "base")):
 
             if taskid == 0:
                 self.logger.info(f"running task {classname}.{method} "
-                                 f"{PAR.NTASK} times")
+                                 f"{self.par.NTASK} times")
             # Redirect output to a log file to mimic cluster runs
             with open(log_file, "w") as f:
                 with redirect_stdout(f):
@@ -133,3 +230,25 @@ class Workstation(custom_import("system", "base")):
                           header="warning", border="="))
             sftaskid = 0
         return int(sftaskid)
+
+    def checkpoint(self, path, classname, method, kwargs):
+        """
+        Writes the SeisFlows working environment to disk so that new tasks can
+        be executed in a separate/new/restarted working environment.
+
+        :type path: str
+        :param path: path to save the checkpointed pickle files to
+        :type classname: str
+        :param classname: name of the class to save
+        :type method: str
+        :param method: the specific function to be checkpointed
+        :type kwargs: dict
+        :param kwargs: dictionary to pass to object saving
+        """
+        argspath = os.path.join(path, "kwargs")
+        argsfile = os.path.join(argspath, f"{classname}_{method}.p")
+
+        unix.mkdir(argspath)
+        with open(argsfile, "wb") as f:
+            pickle.dump(kwargs, f)
+        save(path=self.path.OUTPUT)

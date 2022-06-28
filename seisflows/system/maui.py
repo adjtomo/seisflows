@@ -21,19 +21,18 @@ import os
 import sys
 import math
 import logging
+
+from seisflows.system.slurm import Slurm
 from seisflows.config import custom_import, SeisFlowsPathsParameters, ROOT_DIR
 
 PAR = sys.modules["seisflows_parameters"]
 PATH = sys.modules["seisflows_paths"]
 
 
-class Maui(custom_import("system", "slurm")):
+class Maui(Slurm):
     """
     System interface for Maui, which operates on a SLURM system
     """
-    # Class-specific logger accessed using self.logger
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
     def __init__(self):
         """
         These parameters should not be set by the user.
@@ -44,97 +43,109 @@ class Maui(custom_import("system", "slurm")):
             own number of cores per compute node, defined here
         """
         super().__init__()
+
+        self.required.par(
+            "ACCOUNT", required=True, par_type=str,
+            docstr="Maui account name to submit jobs under"
+        )
+        self.required.par(
+            "NODESIZE", required=False, default=40, par_type=int,
+            docstr="The number of cores per node defined by the Maui cluster. "
+                   "Assumed to be 40 cores per node."
+        )
+        self.required.par(
+            "MPIEXEC", required=False, default="srun", par_type=str,
+            docstr="MPI call function used to invoke parallel executables, "
+                   "defaults to 'srun'"
+        )
+        self.required.par(
+            "CPUS_PER_TASK", required=False, default=1, par_type=int,
+            docstr="Multiple CPUS per task allows for multithreading jobs"
+        )
+        self.required.par(
+            "CLUSTER", required=False, default="maui", par_type=str,
+            docstr="Name of main cluster for job submission. Available options: "
+                   "'maui', 'maui_ancil', 'mahuika'. Note Mahuika untested"
+        )
+        self.required.par(
+            "PARTITION", required=False, default="nesi_research",
+            par_type=str, docstr="Name of cluster partition to submit job to"
+        )
+        self.required.par(
+            "ANCIL_CLUSTER", required=False, default="maui_ancil", par_type=str,
+            docstr="Ancillary cluster for pre- and post-processing tasks."
+                   "Defaults to 'maui_ancil'")
+
+        self.required.par(
+            "ANCIL_PARTITION", required=False, default="nesi_prepost",
+            par_type=str,
+            docstr="Name of ancillary partition for prepost tasks. Defaults to"
+                   "'nesi_prepost'"
+        )
+        self.required.par(
+            "ANCIL_TASKTIME", required=False, default="null", par_type=float,
+            docstr="Tasktime for prepost jobs submitted to ancillary nodes "
+                   "matching 'ANCIL_CLUSTER' and 'ANCIL_PARTITION'"
+        )
+
         self.partitions = {"nesi_research": 40}
-
-    @property
-    def required(self):
-        """
-        A hard definition of paths and parameters required by this class,
-        alongside their necessity for the class and their string explanations.
-        """
-        sf = SeisFlowsPathsParameters(super().required)
-
-        sf.par("ACCOUNT", required=True, par_type=str,
-               docstr="The account name to submit jobs under")
-
-        sf.par("CPUS_PER_TASK", required=False, default=1, par_type=int,
-               docstr="Multiple CPUS per task allows for multithreading jobs")
-
-        sf.par("CLUSTER", required=False, default="maui", par_type=str,
-               docstr="Name of main cluster for parallel job submission")
-
-        sf.par("PARTITION", required=False, default="nesi_research",
-               par_type=str, docstr="Name of partition on main cluster")
-
-        sf.par("ANCIL_CLUSTER", required=False, default="maui_ancil",
-               par_type=str,
-               docstr="Name of ancillary cluster for prepost tasks")
-
-        sf.par("ANCIL_PARTITION", required=False, default="nesi_prepost",
-               par_type=str,
-               docstr="Name of ancillary partition for prepost tasks")
-
-        sf.par("ANCIL_TASKTIME", required=False, default="null", par_type=float,
-               docstr="Tasktime for prepost jobs on ancillary nodes")
-
-        sf.par("NODESIZE", required=False, default=40, par_type=int,
-               docstr="The number of cores per node defined by the system")
-
-        sf.par("MPIEXEC", required=False, default="srun", par_type=str,
-               docstr="Function used to invoke parallel executables")
-
-        return sf
 
     def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        if validate:
-            self.required.validate()
-        super().check(validate=False)
+        super().check(validate=validate)
 
-        assert(PAR.NODESIZE == self.partitions[PAR.PARTITION]), \
-            (f"PARTITION {PAR.PARTITION} is expected to have NODESIZE=" 
-             f"{self.partitions[PAR.PARTITION]}, not current {PAR.NODESIZE}")
+        assert(self.par.NODESIZE == self.partitions[self.par.PARTITION]), \
+            (f"PARTITION {self.par.PARTITION} is expected to have NODESIZE=" 
+             f"{self.partitions[self.par.PARTITION]}, not current "
+             f"{self.par.NODESIZE}")
 
-        assert("SLURM_MEM_PER_CPU" in (PAR.ENVIRONS or "")), \
+        assert("SLURM_MEM_PER_CPU" in (self.par.ENVIRONS or "")), \
             ("Maui runs Slurm>=21 which enforces mutually exclusivity of Slurm "
              "memory environment variables SLURM_MEM_PER_CPU and "
              "SLURM_MEM_PER_NODE. Due to the cross-cluster nature of "
              "running SeisFlows3 on Maui, we must remove one env. variable. "
-             "Please add 'SLURM_MEM_PER_CPU' to PAR.ENVIRONS.")
+             "Please add 'SLURM_MEM_PER_CPU' to self.par.ENVIRONS.")
 
-    def submit(self):
+    def setup(self):
+        """Inherits from workflow.system.workstation.Workstation"""
+        self.setup()
+
+    def submit(self, submit_call=None):
         """
         Submits master job workflow to maui_ancil cluster as a single-core
         process
 
         .. note::
             The master job must be run on maui_ancil because Maui does
-            not have the ability to run the command "sacct"
+            not have the ability to run the command "sacct", nor can it
+            use the Conda environment that has been set by Ancil
 
         .. note::
             We do not place SLURMARGS into the sbatch command to avoid the
             export=None which will not propagate the conda environment
         """
-        maui_submit_call = " ".join([
-            f"sbatch",
-            f"--account={PAR.ACCOUNT}",
-            f"--cluster={PAR.ANCIL_CLUSTER}",
-            f"--partition={PAR.ANCIL_PARTITION}",
-            f"--job-name={PAR.TITLE}",
-            f"--output={self.output_log}",
-            f"--error={self.error_log}",
-            f"--ntasks=1",
-            f"--cpus-per-task=1",
-            f"--time={PAR.WALLTIME:d}",
-            f"{os.path.join(ROOT_DIR, 'scripts', 'submit')}",
-            f"--output {PATH.OUTPUT}"
-        ])
-        self.logger.debug(maui_submit_call)
-        super().submit(maui_submit_call)
+        if submit_call is None:
+            submit_call = " ".join([
+                f"sbatch",
+                f"--account={self.par.ACCOUNT}",
+                f"--cluster={self.par.ANCIL_CLUSTER}",
+                f"--partition={self.par.ANCIL_PARTITION}",
+                f"--job-name={self.par.TITLE}",
+                f"--output={self.output_log}",
+                f"--error={self.error_log}",
+                f"--ntasks=1",
+                f"--cpus-per-task=1",
+                f"--time={self.par.WALLTIME:d}",
+                f"{os.path.join(ROOT_DIR, 'scripts', 'submit')}",
+                f"--output {self.path.OUTPUT}"
+            ])
+        self.logger.debug(submit_call)
 
-    def run(self, classname, method, single=False, **kwargs):
+        super().submit(submit_call=submit_call)
+
+    def run(self, classname, method, single=False, run_call=None, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on a SLURM
         cluster. Executes classname.method(*args, **kwargs) `NTASK` times,
@@ -144,33 +155,38 @@ class Maui(custom_import("system", "slurm")):
         :param classname: the class to run
         :type method: str
         :param method: the method from the given `classname` to run
-        :type scale_tasktime: int
-        :param scale_tasktime: a way to get over the hard-set tasktime, because
-            some tasks take longer (e.g. smoothing), but you don't want these
-            to set the tasktimes for all other tasks. This lets you scale the
-            time of specific tasks by PAR.TASKTIME * scale_tasktime
+        :type single: bool
+        :param single: run a single-process, non-parallel task, such as
+            smoothing the gradient, which only needs to be run by once.
+            This will change how the job array and the number of tasks is
+            defined, such that the job is submitted as a single-core job to
+            the system.
         """
-        maui_run_call = " ".join([
-            "sbatch",
-            f"{PAR.SLURMARGS or ''}",
-            f"--account={PAR.ACCOUNT}",
-            f"--job-name={PAR.TITLE}",
-            f"--clusters={PAR.CLUSTER}",
-            f"--partition={PAR.PARTITION}",
-            f"--cpus-per-task={PAR.CPUS_PER_TASK}",
-            f"--nodes={math.ceil(PAR.NPROC / float(PAR.NODESIZE)):d}",
-            f"--ntasks={PAR.NPROC:d}",
-            f"--time={PAR.TASKTIME:d}",
-            f"--output={os.path.join(PATH.WORKDIR, 'logs', '%A_%a')}",
-            f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
-            f"{os.path.join(ROOT_DIR, 'scripts', 'run')}",
-            f"--output {PATH.OUTPUT}",
-            f"--classname {classname}",
-            f"--funcname {method}",
-            f"--environment {PAR.ENVIRONS or ''}"
-        ])
-        self.logger.debug(maui_run_call)
-        super().run(classname, method, single, run_call=maui_run_call, **kwargs)
+        if run_call is None:
+            _nodes = math.ceil(self.par.NPROC / float(self.par.NODESIZE))
+
+            run_call = " ".join([
+                "sbatch",
+                f"{self.par.SLURMARGS or ''}",
+                f"--account={self.par.ACCOUNT}",
+                f"--job-name={self.par.TITLE}",
+                f"--clusters={self.par.CLUSTER}",
+                f"--partition={self.par.PARTITION}",
+                f"--cpus-per-task={self.par.CPUS_PER_TASK}",
+                f"--nodes={_nodes:d}",
+                f"--ntasks={self.par.NPROC:d}",
+                f"--time={self.par.TASKTIME:d}",
+                f"--output={os.path.join(self.path.WORKDIR, 'logs', '%A_%a')}",
+                f"--array=0-{self.par.NTASK-1 % self.par.NTASKMAX}",
+                f"{os.path.join(ROOT_DIR, 'scripts', 'run')}",
+                f"--output {self.path.OUTPUT}",
+                f"--classname {classname}",
+                f"--funcname {method}",
+                f"--environment {self.par.ENVIRONS or ''}"
+            ])
+        self.logger.debug(run_call)
+
+        super().run(classname, method, single, run_call=run_call, **kwargs)
 
     def run_ancil(self, classname, method, **kwargs):
         """
@@ -184,26 +200,33 @@ class Maui(custom_import("system", "slurm")):
         """
         ancil_run_call = " ".join([
             "sbatch",
-            f"{PAR.SLURMARGS or ''}",
-            f"--account={PAR.ACCOUNT}",
-            f"--job-name={PAR.TITLE}",
-            f"--clusters={PAR.ANCIL_CLUSTER}",
-            f"--partition={PAR.ANCIL_PARTITION}",
-            f"--cpus-per-task={PAR.CPUS_PER_TASK}",
-            f"--time={PAR.ANCIL_TASKTIME:d}",
-            f"--output={os.path.join(PATH.WORKDIR, 'logs', '%A_%a')}",
-            f"--array=0-{PAR.NTASK-1 % PAR.NTASKMAX}",
+            f"{self.par.SLURMARGS or ''}",
+            f"--account={self.par.ACCOUNT}",
+            f"--job-name={self.par.TITLE}",
+            f"--clusters={self.par.ANCIL_CLUSTER}",
+            f"--partition={self.par.ANCIL_PARTITION}",
+            f"--cpus-per-task={self.par.CPUS_PER_TASK}",
+            f"--time={self.par.ANCIL_TASKTIME:d}",
+            f"--output={os.path.join(self.path.WORKDIR, 'logs', '%A_%a')}",
+            f"--array=0-{self.par.NTASK-1 % self.par.NTASKMAX}",
             f"{os.path.join(ROOT_DIR, 'scripts', 'run')}",
-            f"--output {PATH.OUTPUT}",
+            f"--output {self.path.OUTPUT}",
             f"--classname {classname}",
             f"--funcname {method}",
-            f"--environment {PAR.ENVIRONS or ''}"
+            f"--environment {self.par.ENVIRONS or ''}"
         ])
         self.logger.debug(ancil_run_call)
         super().run(classname, method, single=False, run_call=ancil_run_call,
                     **kwargs)
 
+    def taskid(self):
+        """Inherits from seisflows.system.slurm.Slurm"""
+        return self.taskid()
 
+    def checkpoint(self, path, classname, method, kwargs):
+        """Inherits from workflow.system.workstation.Workstation"""
+        self.checkpoint(path=path, classname=classname, method=method,
+                        kwargs=kwargs)
 
     
 

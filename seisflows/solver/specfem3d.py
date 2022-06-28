@@ -11,7 +11,7 @@ from glob import glob
 from seisflows.solver.specfem import Specfem
 from seisflows.tools import unix
 from seisflows.tools.wrappers import exists
-from seisflows.tools.specfem import getpar, setpar
+from seisflows.tools.specfem import setpar, getpar
 
 
 class Specfem3D(Specfem):
@@ -31,9 +31,9 @@ class Specfem3D(Specfem):
                    "['CMTSOLUTION', FORCESOLUTION']")
 
     @property
-    def io(self):
+    def _io(self):
         """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.io
+        return self._io
 
     @property
     def taskid(self):
@@ -65,7 +65,6 @@ class Specfem3D(Specfem):
         """Inherits from seisflows.solver.specfem.Specfem"""
         return self.mesh_properties
 
-    @property
     def data_wildcard(self, comp="?"):
         """
         Returns a wildcard identifier for synthetic data
@@ -90,29 +89,26 @@ class Specfem3D(Specfem):
         unix.cd(os.path.join(self.cwd, "traces", "obs"))
 
         if self.par.COMPONENTS:
-            components = self.par.COMPONENTS
-
-            if self.par.FORMAT.upper() == "SU":
-                return sorted(glob(f"*_d[{components.lower()}]_SU"))
-            elif self.par.FORMAT.upper() == "ASCII":
-                return sorted(glob(f"*.?X[{components.upper()}].sem?"))
+            files = glob(self.data_wildcard(comp=self.par.COMPONENTS.lower()))
         else:
-            if self.par.FORMAT.upper() == "SU":
-                return sorted(glob("*_d?_SU"))
-            elif self.par.FORMAT.upper() == "ASCII":
-                return sorted(glob("*.???.sem?"))
+            files = glob(self.data_wildcard(comp="?"))
+        return sorted(files)
 
     @property
     def model_databases(self):
         """
-        The location of databases for model outputs
+        The location of databases for model outputs, usually
+        OUTPUT_FILES/DATABASES_MPI. Value is grabbed from the Par_file
         """
-        return os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
+        local_path = getpar(key="LOCAL_PATH",
+                            file=os.path.join(self.cwd, "DATA", "Par_file"))[1]
+        return os.path.join(self.cwd, local_path)
 
     @property
     def kernel_databases(self):
         """
-        The location of databases for kernel outputs
+        The location of databases for kernel outputs, usually the same as
+        'model_databases'
         """
         return self.model_databases
 
@@ -122,51 +118,49 @@ class Specfem3D(Specfem):
         """
         super().check(validate=validate)
 
-    def set_model(self, model_name, model_type="gll"):
+    def setup(self):
         """Inherits from seisflows.solver.specfem.Specfem"""
-        self.set_model(model_name=model_name, model_type=model_type)
+        self.setup()
 
-    def generate_data(self, model_name, model_type="gll"):
+    def _set_model(self, model_name, model_type="gll"):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        self._set_model(model_name=model_name, model_type=model_type)
+
+    def generate_data(self):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        self.generate_data()
+
+    def eval_func(self, path, write_residuals=True):
         """
-        Generates data using the True model, exports traces to `traces/obs`
+        Performs forward simulations and evaluates the misfit function using
+        the preprocess module. Overrides to add a data renaming call
 
-        :param model_kwargs: keyword arguments to pass to `generate_mesh`
-        """
-        # Create the mesh
+        .. note::
+            This task should be run in parallel by system.run()
 
-        # Run the Forward simulation
-        unix.cd(self.cwd)
-        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
-        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
-        if self.par.ATTENUATION:
-            setpar(key="ATTENUATION", val=".true.", file="DATA/Par_file")
-        else:
-            setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
-
-        self.call_solver(executable="bin/xspecfem3D", output="true_solver.log")
-
-        unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
-                dst=os.path.join("traces", "obs"))
-
-        # Export traces to disk for permanent storage
-        if self.par.SAVETRACES:
-            self.export_traces(os.path.join(self.path.OUTPUT, "traces", "obs"))
-
-    def eval_func(self, *args, **kwargs):
-        """
-        Call eval_func from Base class
-        """
-        super().eval_func(*args, **kwargs)
+        :type path: str
+        :param path: directory from which model is imported and where residuals
+            will be exported
+        :type write_residuals: bool
+        :param write_residuals: calculate and export residuals        """
+        super().eval_func(path=path, write_residuals=write_residuals)
 
         # Work around SPECFEM3D conflicting name conventions of SU data
         self._rename_data()
 
-    def forward(self, path="traces/syn"):
+    def eval_grad(self, path, export_traces=False):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        self.eval_grad(path=path, export_traces=export_traces)
+
+    def _forward(self, output_path):
         """
         Calls SPECFEM3D forward solver, exports solver outputs to traces dir
 
-        :type path: str
-        :param path: path to export traces to after completion of simulation
+        :type output_path: str
+        :param output_path: path to export traces to after completion of
+            simulation expected values are either 'traces/obs' for 'observation'
+            data (i.e., synthetics generated by the TRUE model), or
+            'traces/syn', for synthetics generated during function evaluations
         """
         # Set parameters and run forward simulation
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
@@ -176,29 +170,98 @@ class Specfem3D(Specfem):
         else:
             setpar(key="ATTENUATION", val=".false`.", file="DATA/Par_file")
 
-        self.call_solver(executable="bin/xgenerate_databases",
-                         output="fwd_mesher.log")
-        self.call_solver(executable="bin/xmeshfem3D", output="fwd_solver.log")
+        self._call_solver(executable="bin/xgenerate_databases",
+                          output="fwd_mesher.log")
+        self._call_solver(executable="bin/xmeshfem3D", output="fwd_solver.log")
 
         # Find and move output traces, by default to synthetic traces dir
         unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
-                dst=path)
+                dst=output_path)
 
-    def adjoint(self):
+    def _adjoint(self):
         """
         Calls SPECFEM3D adjoint solver, creates the `SEM` folder with adjoint
         traces which is required by the adjoint solver
         """
         setpar(key="SIMULATION_TYPE", val="3", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".false.", file="DATA/Par_file")
+
+        # Attenuation should always be OFF during adjoint simulations, else
+        # you will get a floating point error
         setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
         unix.rm("SEM")
         unix.ln("traces/adj", "SEM")
 
-        self.call_solver(executable="bin/xmeshfem3D", output="adj_solver.log")
+        self._call_solver(executable="bin/xspecfem3D", output="adj_solver.log")
 
-    def initialize_adjoint_traces(self):
+    def _call_solver(self, executable, output="solver.log"):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        self._call_solver(executable=executable, output=output)
+
+    def load(self, path, prefix="", suffix="", parameters=None):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.load(path=path, prefix=prefix, suffix=suffix,
+                         parameters=parameters)
+
+    def save(self, save_dict,  path, parameters=None, prefix="", suffix=""):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        self.save(save_dict=save_dict, path=path, parameters=parameters,
+                  prefix=prefix, suffix=suffix)
+
+    def merge(self, model, parameters=None):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.merge(model=model, parameters=parameters)
+
+    def split(self, m, parameters=None):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.split(m=m, parameters=parameters)
+
+    def combine(self, input_path, output_path, parameters=None):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.combine(input_path=input_path, output_path=output_path,
+                            parameters=parameters)
+
+    def smooth(self, input_path, output_path, parameters=None, span_h=0.,
+               span_v=0., output="smooth.log"):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.smooth(input_path=input_path, output_path=output_path,
+                           parameters=parameters, span_h=span_h,
+                           span_v=span_v, output=output)
+
+    def _import_model(self, path):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self._import_model(path=path)
+
+    def _import_traces(self, path):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self._import_traces(path=path)
+
+    def _export_model(self, path, parameters=None):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self._export_model(path=path, parameters=parameters)
+
+    def _export_kernels(self, path):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self._export_kernels(path=path)
+
+    def _export_residuals(self, path):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self._export_residuals(path=path)
+
+    def _export_traces(self, path, prefix="traces/obs"):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        self._export_traces(path=path, prefix=prefix)
+
+    def _rename_kernels(self):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        self._rename_kernels()
+
+    def _initialize_solver_directories(self):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        self._initialize_solver_directories()
+
+    def _initialize_adjoint_traces(self):
         """
         Setup utility: Creates the "adjoint traces" expected by SPECFEM
 
@@ -209,10 +272,10 @@ class Specfem3D(Specfem):
         """
         # Initialize adjoint traces as zeroes for all data_filenames
         # write to `traces/adj`
-        super().initialize_adjoint_traces()
+        super()._initialize_adjoint_traces()
 
         # Rename data to work around Specfem naming convetions
-        self.rename_data()
+        self._rename_data()
 
         # Workaround for Specfem3D's requirement that all components exist,
         # even ones not in use as adjoint traces
@@ -225,6 +288,14 @@ class Specfem3D(Specfem):
                     if not exists(dst):
                         src = f"{iproc:d}_d{self.par.COMPONENTS[0]}_SU.adj"
                         unix.cp(src, dst)
+
+    def _check_mesh_properties(self, path=None):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        self._check_mesh_properties(path=path)
+
+    def _check_source_names(self):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        self._check_source_names()
 
     def _rename_data(self):
         """
