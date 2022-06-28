@@ -29,20 +29,17 @@ class Default(Base):
             docstr="Gaussian half-width for horizontal smoothing in units of "
                    "meters. If 0., no smoothing applied"
         )
-
         self.required.par(
             "SMOOTH_V", required=False, default=0., par_type=float,
             docstr="Gaussian half-width for vertical smoothing in units of "
                    "meters"
         )
-
         self.required.par(
             "TASKTIME_SMOOTH", required=False, default=1, par_type=int,
             docstr="Large radii smoothing may take longer than normal tasks. "
                    "Allocate additional smoothing task time as a multiple of "
                    "TASKTIME"
         )
-
         # Define the Paths required by this module
         self.required.path(
             "MASK", required=False, docstr="Directory to mask files for "
