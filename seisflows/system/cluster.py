@@ -4,7 +4,6 @@ The Cluster class provides the core utilities interaction with HPC systems
 which must be overloaded by subclasses for specific workload managers, or
 specific clusters.
 """
-import sys
 import subprocess
 from seisflows.system.workstation import Workstation
 

@@ -5,32 +5,18 @@ This is the base class seisflows.workflow.migration
 This is a main Seisflows class, it controls the main workflow.
 """
 import os
-import sys
-import logging
 
+from seisflows.workflow.forward import Forward
 from seisflows.tools import unix, msg
-from seisflows.config import custom_import, SeisFlowsPathsParameters
 
 
-PAR = sys.modules["seisflows_parameters"]
-PATH = sys.modules["seisflows_paths"]
-
-system = sys.modules["seisflows_system"]
-solver = sys.modules["seisflows_solver"]
-preprocess = sys.modules["seisflows_preprocess"]
-postprocess = sys.modules["seisflows_postprocess"]
-
-
-class Migration(custom_import("workflow", "base")):
+class Migration(Forward):
     """
     Migration base class.
 
     Performs the workflow of an inversion up to the postprocessing. In the
     terminology of seismic exploration, implements a 'reverse time migration'.
     """
-    # Class-specific logger accessed using self.logger
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
     def __init__(self):
         """
         These parameters should not be set by the user.
@@ -39,87 +25,62 @@ class Migration(custom_import("workflow", "base")):
         """
         super().__init__()
 
-    @property
-    def required(self):
+    def check(self, validate=True):
         """
-        A hard definition of paths and parameters required by this class,
-        alongside their necessity for the class and their string explanations.
+        Checks parameters and paths. Must be implemented by sub-class
         """
-        sf = SeisFlowsPathsParameters(super().required)
+        super().check(validate=validate)
 
-        return sf
-
-    def main(self, return_flow=False):
-        """s
-        Migrates seismic data to generate sensitivity kernels
-
-        :type return_flow: bool
-        :param return_flow: for CLI tool, simply returns the flow function
-            rather than running the workflow. Used for print statements etc.
+    def setup(self, flow=None, return_flow=False):
         """
-        flow = (self.setup,
-                self.generate_synthetics,
-                self.backproject,
-                self.process_kernels,
-                self.finalize,
-                )
-        if return_flow:
-            return flow
-
-        # Allow workflow resume from and stop after given flow functions
-        start, stop = self.check_stop_resume_cond(flow)
-
-        # Run each argument in flow
-        self.logger.info(msg.mjr("STARTING MIGRATION WORKFLOW"))
-        for func in flow[start:stop]:
-            func()
-        self.logger.info(msg.mjr("FINISHED MIGRATION WORKFLOW"))
-
-    def setup(self):
+        Override the Forward.setup() method to include new flow functions
+        AND run setup for a the Postprocess module which will be used to deal
+        with the gradient
         """
-        Sets up the SeisFlows modules for the Migration
-        """
-        # Set up all the requisite modules from the master job
-        self.logger.info(msg.mnr("PERFORMING MODULE SETUP"))
-        preprocess.setup()
+        if flow is None:
+            flow = (self.evaluate_initial_misfit,
+                    self.evaluate_gradient)
+
+        super().setup(flow=flow, return_flow=return_flow)
+
+        postprocess = self.module("postprocess")
         postprocess.setup()
-        system.run("solver", "setup")
 
-    def generate_synthetics(self):
-        """
-        Performs forward simulation, and evaluates the objective function
-        """
-        self.logger.info(msg.sub("PREPARING VELOCITY MODEL"))
-        src = os.path.join(PATH.OUTPUT, "model_init")
-        dst = os.path.join(PATH.SCRATCH, "model")
+    def main(self, flow=None, return_flow=False):
+        """Inherits from seisflows.workflow.forward.Forward"""
+        self.main(flow=flow, return_flow=return_flow)
 
-        assert os.path.exists(src)
-        unix.cp(src, dst)
+    def evaluate_initial_misfit(self):
+        """Inherits from seisflows.workflow.forward.Forward"""
+        self.evaluate_initial_misfit()
 
-        self.logger.info(msg.sub("EVALUATE OBJECTIVE FUNCTION"))
-        system.run("solver", "eval_func", path=PATH.SCRATCH,
-                   write_residuals=True)
+    def evaluate_gradient(self, path=None):
+        """
+        Performs adjoint simulation to retrieve the gradient of the objective
+        """
+        system = self.module("system")
+        
+        self.logger.info(msg.mnr("EVALUATING GRADIENT"))
 
-    def backproject(self):
-        """
-        Backproject or create kernels by running adjoint simulations
-        """
-        self.logger.info(msg.sub("BACKPROJECT / EVALUATE GRADIENT"))
-        system.run("solver", "eval_grad", path=PATH.SCRATCH,
-                   export_traces=PAR.SAVETRACES)
+        self.logger.debug(f"evaluating gradient {self.par.NTASK} times on system...")
+        system.run("solver", "eval_grad", path=path or self.path.GRAD,
+                   export_traces=self.par.SAVETRACES)
 
     def process_kernels(self):
         """
         Backproject to create kernels from synthetics
         """
+        system = self.module("system")
+        solver = self.module("solver")
+
         system.run("postprocess", "process_kernels", single=True,
-                   path=os.path.join(PATH.SCRATCH, "kernels"),
+                   path=os.path.join(self.path.SCRATCH, "kernels"),
                    parameters=solver.parameters)
 
         try:
             # TODO Figure out a better method for running this try except
             system.run("postprocess", "process_kernels", single=True,
-                       path=os.path.join(PATH.SCRATCH, "kernels"),
+                       path=os.path.join(self.path.SCRATCH, "kernels"),
                        parameters=["rhop"])
         except:
             pass
@@ -130,9 +91,9 @@ class Migration(custom_import("workflow", "base")):
         """
         self.logger.info(msg.mnr("FINALIZING MIGRATION WORKFLOW"))
 
-        if PAR.SAVETRACES:
+        if self.par.SAVETRACES:
             self.save_traces()
-        if PAR.SAVEKERNELS:
+        if self.par.SAVEKERNELS:
             self.save_kernels()
         else:
             self.save_kernels_sum()
@@ -141,8 +102,8 @@ class Migration(custom_import("workflow", "base")):
         """
         Same summed kernels into the output directory
         """
-        src = os.path.join(PATH.SCRATCH, "kernels", "sum")
-        dst = os.path.join(PATH.OUTPUT, "kernels")
+        src = os.path.join(self.path.SCRATCH, "kernels", "sum")
+        dst = os.path.join(self.path.OUTPUT, "kernels")
         unix.mkdir(dst)
         unix.cp(src, dst)
 
@@ -150,8 +111,8 @@ class Migration(custom_import("workflow", "base")):
         """
         Save individual kernels into the output directory
         """
-        src = os.path.join(PATH.SCRATCH, "kernels")
-        dst = PATH.OUTPUT
+        src = os.path.join(self.path.SCRATCH, "kernels")
+        dst = self.path.OUTPUT
         unix.mkdir(dst)
         unix.cp(src, dst)
 
@@ -159,7 +120,7 @@ class Migration(custom_import("workflow", "base")):
         """
         Save waveform traces into the output directory
         """
-        src = os.path.join(PATH.SCRATCH, "traces")
-        dst = PATH.OUTPUT
+        src = os.path.join(self.path.SCRATCH, "traces")
+        dst = self.path.OUTPUT
         unix.cp(src, dst)
 

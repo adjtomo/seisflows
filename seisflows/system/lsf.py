@@ -10,7 +10,6 @@ import time
 import subprocess
 
 from seisflows.system.cluster import Cluster
-from seisflows.tools import unix
 from seisflows.config import ROOT_DIR
 
 

@@ -10,7 +10,8 @@ import logging
 import numpy as np
 from glob import glob
 
-from seisflows.config import custom_import, CFGPATHS
+from seisflows.core import Base
+from seisflows.config import custom_import
 from seisflows.tools import msg, unix
 from seisflows.config import save, SeisFlowsPathsParameters
 
@@ -24,7 +25,7 @@ preprocess = sys.modules["seisflows_preprocess"]
 postprocess = sys.modules["seisflows_postprocess"]
 
 
-class Inversion(custom_import("workflow", "base")):
+class Inversion(Base):
     """
     Waveform inversion base class
 
@@ -52,6 +53,36 @@ class Inversion(custom_import("workflow", "base")):
         """
         super().__init__()
 
+        self.required.par("SAVEMODEL", required=False, default=True, par_type=bool,
+               docstr="Save final model files after each iteration")
+
+        self.required.par("SAVEGRADIENT", required=False, default=True, par_type=bool,
+               docstr="Save gradient files after each iteration")
+
+        self.required.par("SAVEKERNELS", required=False, default=False, par_type=bool,
+               docstr="Save event kernel files after each iteration")
+
+        self.required.par("RESUME_FROM", required=False, par_type=str,
+               docstr="Name of task to resume inversion from")
+
+        self.required.par("STOP_AFTER", required=False, par_type=str,
+               docstr="Name of task to stop inversion after finishing")
+
+        self.required.par("CASE", required=False, default="data", par_type=str,
+               docstr="Type of inversion, available: "
+                      "['data': real data inversion, "
+                      "'synthetic': synthetic-synthetic inversion]")
+
+    self.required.par("SAVEAS", required=False, default="binary", par_type=str,
+                      docstr="Format to save models, gradients, kernels. "
+                             "Available: "
+                             "['binary': save files in native SPECFEM .bin format, "
+                             "'vector': save files as NumPy .npy files, "
+                             "'both': save as both binary and vectors]")
+
+    self.required.path("MODEL_TRUE", required=False,
+                       default=os.path.join(PATH.WORKDIR, "specfem", "MODEL_TRUE"),
+                       docstr="Target model to be used for PAR.CASE == 'synthetic'")
     @property
     def required(self):
         """
@@ -97,6 +128,13 @@ class Inversion(custom_import("workflow", "base")):
         super().check(validate=False)
         if validate:
             self.required.validate()
+
+        if PAR.CASE.upper() == "SYNTHETIC":
+            assert os.path.exists(PATH.MODEL_TRUE), \
+                "CASE == SYNTHETIC requires PATH.MODEL_TRUE"
+
+        if not os.path.exists(PATH.DATA):
+            assert "MODEL_TRUE" in PATH, f"DATA or MODEL_TRUE must exist"
 
         for required_path in ["SCRATCH", "OUTPUT", "LOCAL"]:
             assert(required_path in PATH), \
