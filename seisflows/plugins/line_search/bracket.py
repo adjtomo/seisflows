@@ -10,12 +10,13 @@ in one place)
 import logging
 import numpy as np
 
+from seisflows.core import Base
 from seisflows.tools import msg
 from seisflows.tools.array import count_zeros
 from seisflows.tools.math import parabolic_backtrack, polynomial_fit
 
 
-class Bracket:
+class Bracket(Base):
     """
     Abstract base class for line search
 
@@ -32,9 +33,6 @@ class Bracket:
         status == 0 : not finished
         status < 0  : failed
     """
-    # Class-specific logger accessed using self.logger
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
     def __init__(self, step_count_max, step_len_max):
         """
         Initiate the line search machinery
@@ -46,6 +44,8 @@ class Bracket:
         :param step_len_max: maximum length of the step, defaults to infinity,
             that is unbounded step length. set by PAR.STEP_LEN_MAX
         """
+        super().__init__()
+
         self.step_count_max = step_count_max
         self.step_len_max = step_len_max
         self.func_vals = []
@@ -263,6 +263,7 @@ def _check_bracket(step_lens, func_vals):
     else:
         okay = False
     return okay
+
 
 def _good_enough(step_lens, func_vals, thresh=np.log10(1.2)):
     """

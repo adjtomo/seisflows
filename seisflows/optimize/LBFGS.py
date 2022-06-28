@@ -4,7 +4,6 @@ This is the custom class for an LBFGS optimization schema.
 It supercedes the `seisflows.optimize.base` class
 """
 import os
-import logging
 import numpy as np
 
 from seisflows.optimize.gradient import Gradient
@@ -80,17 +79,14 @@ class LBFGS(Gradient):
             docstr="Algorithm to use for line search, see "
                    "seisflows.plugins.line_search for available choices"
         )
-
         self.required.par(
             "LBFGSMEM", required=False, default=3, par_type=int,
             docstr="Max number of previous gradients to retain in local memory"
         )
-
         self.required.par(
             "LBFGSMAX", required=False, par_type=int, default="inf",
             docstr="LBFGS periodic restart interval, between 1 and 'inf'"
         )
-
         self.required.par(
             "LBFGSTHRESH", required=False, default=0., par_type=float,
             docstr="LBFGS angle restart threshold"
@@ -138,6 +134,8 @@ class LBFGS(Gradient):
         Call on the L-BFGS optimization machinery to compute a search
         direction using internally stored memory of previous gradients.
         The potential outcomes when computing direction with L-BFGS
+
+        TODO do we need to precondition L-BFGS?
 
         1. First iteration of L-BFGS optimization, search direction is defined
             as the inverse gradient

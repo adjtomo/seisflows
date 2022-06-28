@@ -36,6 +36,8 @@ class NLCG(Gradient):
         These parameters should not be set by the user.
         Attributes are initialized as NoneTypes for clarity and docstrings.
 
+        TODO allow user to choose the calc_beta function
+
         :type NLCG_iter: Class
         :param NLCG_iter: an internally used iteration that differs from
             optimization iter. Keeps track of internal NLCG memory.
@@ -51,7 +53,7 @@ class NLCG(Gradient):
             docstr="NLCG conjugacy restart threshold, between 1 and inf"
         )
         self.NLCG_iter = 0
-        self.calc_beta = pollak_ribere  # !!! Allow the user to choose this fx?
+        self.calc_beta = self._pollak_ribere
 
     def check(self, validate=True):
         """
@@ -77,6 +79,10 @@ class NLCG(Gradient):
     def save(self, name, vector):
         """Inherit from optimize.gradient.Gradient"""
         self.save(name=name, vector=vector)
+
+    def _precondition(self, q):
+        """Inherit from optimize.gradient.Gradient"""
+        return self._precondition(q=q)
 
     def compute_direction(self):
         """
@@ -125,9 +131,9 @@ class NLCG(Gradient):
             p_old = self.load("p_old")
 
             # Apply preconditioner and calc. scale factor for search dir. (beta)
-            if self.precond:
-                beta = self.calc_beta(g_new, g_old, self.precond)
-                p_new = -self.precond(g_new) + beta * p_old
+            if self.precond is not None:
+                beta = self.calc_beta(g_new, g_old)
+                p_new = -1 * self._precondition(g_new) + beta * p_old
             else:
                 beta = self.calc_beta(g_new, g_old)
                 p_new = -g_new + beta * p_old
@@ -166,48 +172,41 @@ class NLCG(Gradient):
         """Inherit from optimize.gradient.Gradient"""
         self.check_model(m=m, min_pr=min_pr, max_pr=max_pr)
 
+    def _fletcher_reeves(self, g_new, g_old):
+        """
+        One method for calculating beta in the NLCG Algorithm from
+        Fletcher & Reeves, 1964
 
-def fletcher_reeves(g_new, g_old, precond=lambda x: x):
-    """
-    One method for calculating beta in the NLCG Algorithm from
-    Fletcher & Reeves, 1964
+        :type g_new: np.array
+        :param g_new: new search direction
+        :type g_old: np.array
+        :param g_old: old search direction
+        :rtype: float
+        :return: beta, the scale factor to apply to the old search direction to
+            determine the new search direction
+        """
+        num = dot(self._precondition(g_new), g_new)
+        den = dot(g_old, g_old)
+        beta = num / den
+        return beta
 
-    :type g_new: np.array
-    :param g_new: new search direction
-    :type g_old: np.array
-    :param g_old: old search direction
-    :type precond: function
-    :param precond: preconditioner, defaults to simple return
-    :rtype: float
-    :return: beta, the scale factor to apply to the old search direction to
-        determine the new search direction
-    """
-    num = dot(precond(g_new), g_new)
-    den = dot(g_old, g_old)
-    beta = num / den
+    def _pollak_ribere(self, g_new, g_old):
+        """
+        One method for calculating beta in the NLCG Algorithm from
+        Polak & Ribiere, 1969
 
-    return beta
-
-
-def pollak_ribere(g_new, g_old, precond=lambda x: x):
-    """
-    One method for calculating beta in the NLCG Algorithm from
-    Polak & Ribiere, 1969
-
-    :type g_new: np.array
-    :param g_new: new search direction
-    :type g_old: np.array
-    :param g_old: old search direction
-    :type precond: function
-    :param precond: preconditioner, defaults to simple return
-    :rtype: float
-    :return: beta, the scale factor to apply to the old search direction to
-        determine the new search direction
-    """
-    num = dot(precond(g_new), g_new - g_old)
-    den = dot(g_old, g_old)
-    beta = num / den
-    return beta
+        :type g_new: np.array
+        :param g_new: new search direction
+        :type g_old: np.array
+        :param g_old: old search direction
+        :rtype: float
+        :return: beta, the scale factor to apply to the old search direction to
+            determine the new search direction
+        """
+        num = dot(self._precondition(g_new), g_new - g_old)
+        den = dot(g_old, g_old)
+        beta = num / den
+        return beta
 
 
 def check_conjugacy(g_new, g_old):

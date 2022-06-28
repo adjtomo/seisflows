@@ -16,7 +16,7 @@ import numpy as np
 from seisflows.core import Base
 from seisflows.tools import msg, unix
 from seisflows.tools.math import angle, dot
-from seisflows.plugins import line_search, preconds
+from seisflows.plugins import line_search
 from seisflows.tools.math import poissons_ratio
 
 
@@ -54,9 +54,6 @@ class Gradient(Base):
         :type line_search: Class
         :param line_search: a class controlling the line search functionality
             for determining step length
-        :type precond: Class
-        :param precond: a class controlling the preconditioner functionality
-            for preconditiong gradient information
         :type restarted: bool
         :param restarted: a flag signalling if the optimization algorithm has
             been restarted recently
@@ -71,8 +68,8 @@ class Gradient(Base):
         )
         self.required.par(
             "PRECOND", required=False, par_type=str,
-               docstr="Algorithm to use for preconditioning gradients, see "
-                      "seisflows.plugins.preconds for available choices"
+            docstr="Algorithm to use for preconditioning gradients, see "
+                   "seisflows.plugins.preconds for available choices"
         )
         self.required.par(
             "STEPCOUNTMAX", required=False, default=10, par_type=int,
@@ -116,8 +113,14 @@ class Gradient(Base):
                 f"LINESEARCH parameter must be in {dir(line_search)}"
 
         if self.par.PRECOND:
-            assert self.par.PRECOND in dir(preconds), \
-                f"PRECOND must be in {dir(preconds)}"
+            # This list should match the logic in self.precondition()
+            acceptable_preconditioners = ["diagonal"]
+            assert self.par.PRECOND in acceptable_preconditioners, \
+                f"PRECOND must be in {acceptable_preconditioners}"
+            assert(os.path.exists(self.path.PRECOND)), (
+                f"preconditioner requires PATH.PRECOND pointing to a array-like" 
+                f"weight file"
+            )
 
         assert 0. < self.par.STEPLENINIT, f"STEPLENINIT must be >= 0."
         assert 0. < self.par.STEPLENMAX, f"STEPLENMAX must be >= 0."
@@ -138,9 +141,6 @@ class Gradient(Base):
                 step_count_max=self.par.STEPCOUNTMAX,
                 step_len_max=self.par.STEPLENMAX,
             )
-        if self.par.PRECOND:
-            self.precond = getattr(preconds, self.par.PRECOND)()
-
         # Read in initial model as a vector and ensure it is a valid model
         if os.path.exists(self.path.MODEL_INIT):
             m_new = solver.merge(solver.load(self.path.MODEL_INIT))
@@ -200,6 +200,25 @@ class Gradient(Base):
         vector_path = os.path.join(self.path.OPTIMIZE, f"{name}.npy")
         np.save(vector_path, vector)
 
+    def _precondition(self, q):
+        """
+        Apply available preconditioner to a given gradient
+
+        :type q: np.array
+        :param q: Vector to precondition, typically gradient contained in: g_new
+        :rtype: np.array
+        :return: preconditioned vector
+        """
+        solver = self.module("solver")
+
+        if self.par.PRECOND is not None:
+            p = solver.merge(solver.load(self.path.PRECOND))
+            if self.par.PRECOND == "DIAGONAL":
+                self.logger.info("applying diagonal preconditioner")
+                return p * q
+        else:
+            return q
+
     def compute_direction(self):
         """
         Computes a steepest descent search direction (inverse gradient)
@@ -211,10 +230,7 @@ class Gradient(Base):
         self.logger.info(f"computing search direction with {self.par.OPTIMIZE}")
 
         g_new = self.load("g_new")
-        if self.precond is not None:
-            p_new = -1 * self.precond(g_new)
-        else:
-            p_new = -1 * g_new
+        p_new = -1 * self._precondition(g_new)
         self.save("p_new", p_new)
 
     def initialize_search(self):
@@ -303,7 +319,7 @@ class Gradient(Base):
                 unix.rm(fid)
 
         # Needs to be run before shifting model in next step
-        self.write_stats()
+        self._write_stats()
 
         self.logger.info("shifting current model (new) to previous model (old)")
         unix.mv("m_new.npy", "m_old.npy")
@@ -358,7 +374,7 @@ class Gradient(Base):
         self.line_search.clear_history()
         self.restarted = 1
 
-    def write_stats(self):
+    def _write_stats(self):
         """
         Simplified write function to append values to text files.
         Used because stats line search information can be overwritten
@@ -446,9 +462,3 @@ class Gradient(Base):
             self.logger.info(parts.format(minval=vals.min(), key=key,
                                           maxval=vals.max())
                              )
-
-
-
-
-
-
