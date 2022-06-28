@@ -6,82 +6,139 @@ Specfem3D Cartesian. It inherits all attributes from seisflows.solver.Base,
 and overwrites these functions to provide specified interaction with Specfem3D
 """
 import os
-import sys
-import logging
 from glob import glob
 
-from seisflows.tools import unix, msg
+from seisflows.solver.specfem import Specfem
+from seisflows.tools import unix
 from seisflows.tools.wrappers import exists
-from seisflows.config import custom_import, SeisFlowsPathsParameters
 from seisflows.tools.specfem import getpar, setpar
 
 
-# Seisflows configuration
-PAR = sys.modules["seisflows_parameters"]
-PATH = sys.modules["seisflows_paths"]
-
-system = sys.modules["seisflows_system"]
-preprocess = sys.modules["seisflows_preprocess"]
-
-
-class Specfem3D(custom_import("solver", "base")):
+class Specfem3D(Specfem):
     """
-    Python interface to Specfem3D Cartesian. This subclass inherits functions
-    from seisflows.solver.Base
-
-    !!! See base class for method descriptions !!!
+    Python interface to Specfem3D Cartesian.
     """
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
     def __init__(self):
         """
-        These parameters should not be set by the user.
-        Attributes are initialized as NoneTypes for clarity and docstrings.
-
-        :type logger: Logger
-        :param logger: Class-specific logging module, log statements pushed
-            from this logger will be tagged by its specific module/classname
+        Initiate parameters required for Specfem3D Cartesian
         """
         super().__init__()
 
+        self.required.par(
+            "SOURCE_PREFIX", required=False, default="CMTSOLUTION",
+            par_type=str,
+            docstr="Prefix of SOURCE files in path SPECFEM_DATA. Available "
+                   "['CMTSOLUTION', FORCESOLUTION']")
+
     @property
-    def required(self):
-        """
-        A hard definition of paths and parameters required by this class,
-        alongside their necessity for the class and their string explanations.
-        """
-        sf = SeisFlowsPathsParameters(super().required)
+    def io(self):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.io
 
-        sf.par("SOURCE_PREFIX", required=False, default="CMTSOLUTION",
-               par_type=str,
-               docstr="Prefix of SOURCE files in path SPECFEM_DATA. Available "
-                      "['CMTSOLUTION', FORCESOLUTION']")
+    @property
+    def taskid(self):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.taskid
 
-        return sf
+    @property
+    def source_names(self):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.source_names
+
+    @property
+    def source_name(self):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.source_name
+
+    @property
+    def source_prefix(self):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.source_prefix
+
+    @property
+    def cwd(self):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.cwd
+
+    @property
+    def mesh_properties(self):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        return self.mesh_properties
+
+    @property
+    def data_wildcard(self, comp="?"):
+        """
+        Returns a wildcard identifier for synthetic data
+
+        :rtype: str
+        :return: wildcard identifier for channels
+        """
+        if self.par.FORMAT.upper() == "SU":
+            return f"*_d?_SU"
+        elif self.par.FORMAT.upper() == "ASCII":
+            return f"*.?X{comp}.sem?"
+
+    @property
+    def data_filenames(self):
+        """
+        Returns the filenames of all data, either by the requested components
+        or by all available files in the directory.
+
+        :rtype: list
+        :return: list of data filenames
+        """
+        unix.cd(os.path.join(self.cwd, "traces", "obs"))
+
+        if self.par.COMPONENTS:
+            components = self.par.COMPONENTS
+
+            if self.par.FORMAT.upper() == "SU":
+                return sorted(glob(f"*_d[{components.lower()}]_SU"))
+            elif self.par.FORMAT.upper() == "ASCII":
+                return sorted(glob(f"*.?X[{components.upper()}].sem?"))
+        else:
+            if self.par.FORMAT.upper() == "SU":
+                return sorted(glob("*_d?_SU"))
+            elif self.par.FORMAT.upper() == "ASCII":
+                return sorted(glob("*.???.sem?"))
+
+    @property
+    def model_databases(self):
+        """
+        The location of databases for model outputs
+        """
+        return os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
+
+    @property
+    def kernel_databases(self):
+        """
+        The location of databases for kernel outputs
+        """
+        return self.model_databases
 
     def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        if validate:
-            self.required.validate()
+        super().check(validate=validate)
 
-        super().check(validate=False)
+    def set_model(self, model_name, model_type="gll"):
+        """Inherits from seisflows.solver.specfem.Specfem"""
+        self.set_model(model_name=model_name, model_type=model_type)
 
-    def generate_data(self, **model_kwargs):
+    def generate_data(self, model_name, model_type="gll"):
         """
         Generates data using the True model, exports traces to `traces/obs`
 
         :param model_kwargs: keyword arguments to pass to `generate_mesh`
         """
         # Create the mesh
-        self.generate_mesh(**model_kwargs)
 
         # Run the Forward simulation
         unix.cd(self.cwd)
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
-        if PAR.ATTENUATION:
+        if self.par.ATTENUATION:
             setpar(key="ATTENUATION", val=".true.", file="DATA/Par_file")
         else:
             setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
@@ -92,46 +149,8 @@ class Specfem3D(custom_import("solver", "base")):
                 dst=os.path.join("traces", "obs"))
 
         # Export traces to disk for permanent storage
-        if PAR.SAVETRACES:
-            self.export_traces(os.path.join(PATH.OUTPUT, "traces", "obs"))
-
-    def generate_mesh(self, model_path, model_name, model_type=None):
-        """
-        Performs meshing with internal mesher Meshfem3D and database generation
-
-        :type model_path: str
-        :param model_path: path to the model to be used for mesh generation
-        :type model_name: str
-        :param model_name: name of the model to be used as identification
-        :type model_type: str
-        :param model_type: available model types to be passed to the Specfem3D
-            Par_file. See Specfem3D Par_file for available options.
-        """
-        available_model_types = ["gll"]
-        assert(exists(model_path)), f"model {model_path} does not exist"
-
-        model_type = model_type or getpar(key="MODEL", file="DATA/Par_file")
-        assert(model_type in available_model_types), \
-            f"{model_type} not in available types {available_model_types}"
-
-        unix.cd(self.cwd)
-
-        # Run mesh generation
-        if model_type == "gll":
-            self.check_mesh_properties(model_path)
-
-            src = glob(os.path.join(model_path, "*"))
-            dst = self.model_databases
-            unix.cp(src, dst)
-
-            self.call_solver(executable="bin/xmeshfem3D",
-                             output="true_mesher.log")
-            self.call_solver(executable="bin/xgenerate_databases",
-                             output="true_solver.log")
-
-        # Export the model for future use in the workflow
-        if self.taskid == 0:
-            self.export_model(os.path.join(PATH.OUTPUT, model_name))
+        if self.par.SAVETRACES:
+            self.export_traces(os.path.join(self.path.OUTPUT, "traces", "obs"))
 
     def eval_func(self, *args, **kwargs):
         """
@@ -140,7 +159,7 @@ class Specfem3D(custom_import("solver", "base")):
         super().eval_func(*args, **kwargs)
 
         # Work around SPECFEM3D conflicting name conventions of SU data
-        self.rename_data()
+        self._rename_data()
 
     def forward(self, path="traces/syn"):
         """
@@ -152,7 +171,7 @@ class Specfem3D(custom_import("solver", "base")):
         # Set parameters and run forward simulation
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
-        if PAR.ATTENUATION:
+        if self.par.ATTENUATION:
             setpar(key="ATTENUATION", val=".true.", file="DATA/Par_file")
         else:
             setpar(key="ATTENUATION", val=".false`.", file="DATA/Par_file")
@@ -197,86 +216,25 @@ class Specfem3D(custom_import("solver", "base")):
 
         # Workaround for Specfem3D's requirement that all components exist,
         # even ones not in use as adjoint traces
-        if PAR.FORMAT.upper() == "SU":
+        if self.par.FORMAT.upper() == "SU":
             unix.cd(os.path.join(self.cwd, "traces", "adj"))
 
-            for iproc in range(PAR.NPROC):
+            for iproc in range(self.par.NPROC):
                 for channel in ["x", "y", "z"]:
                     dst = f"{iproc:d}_d{channel}_SU.adj"
                     if not exists(dst):
-                        src = f"{iproc:d}_d{PAR.COMPONENTS[0]}_SU.adj"
+                        src = f"{iproc:d}_d{self.par.COMPONENTS[0]}_SU.adj"
                         unix.cp(src, dst)
 
-    def rename_data(self):
+    def _rename_data(self):
         """
         Works around conflicting data filename conventions
 
         Specfem3D's uses different name conventions for regular traces
         and 'adjoint' traces
         """
-        if PAR.FORMAT.upper() == "SU":
+        if self.par.FORMAT.upper() == "SU":
             files = glob(os.path.join(self.cwd, "traces", "adj", "*SU"))
             unix.rename(old='_SU', new='_SU.adj', names=files)
 
-    @property
-    def data_wildcard(self):
-        """
-        Returns a wildcard identifier for synthetic data
-
-        :rtype: str
-        :return: wildcard identifier for channels
-        """
-        if PAR.FORMAT.upper() == "SU":
-            return f"*_d?_SU"
-        elif PAR.FORMAT.upper() == "ASCII":
-            return f"*.?X?.sem?"
-
-    @property
-    def data_filenames(self):
-        """
-        Returns the filenames of all data, either by the requested components
-        or by all available files in the directory.
-
-        :rtype: list
-        :return: list of data filenames
-        """
-        unix.cd(os.path.join(self.cwd, "traces", "obs"))
-
-        if PAR.COMPONENTS:
-            components = PAR.COMPONENTS
-
-            if PAR.FORMAT.upper() == "SU":
-                return sorted(glob(f"*_d[{components.lower()}]_SU"))
-            elif PAR.FORMAT.upper() == "ASCII":
-                return sorted(glob(f"*.?X[{components.upper()}].sem?"))
-        else:
-            if PAR.FORMAT.upper() == "SU":
-                return sorted(glob("*_d?_SU"))
-            elif PAR.FORMAT.upper() == "ASCII":
-                return sorted(glob("*.???.sem?"))
-
-    @property
-    def kernel_databases(self):
-        """
-        The location of databases for kernel outputs, relative to the current
-        working directory. 
-        """
-        return os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
-
-    @property
-    def model_databases(self):
-        """
-        The location of databases for model outputs
-        """
-        return os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
-
-    @property
-    def source_prefix(self):
-        """
-        Specfem3D's preferred source prefix
-
-        :rtype: str
-        :return: source prefix
-        """
-        return PAR.SOURCE_PREFIX.upper()
 

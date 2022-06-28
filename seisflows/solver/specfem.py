@@ -162,6 +162,124 @@ class Specfem(Base):
         self._mesh_properties = None
         self._source_names = None
 
+    @property
+    def io(self):
+        """
+        Solver IO module set by User. Located in seisflows.plugins.solver_io
+
+        :rtype: module
+        :return: module containing solver input/output options
+        """
+        return getattr(solver_io, self.par.SOLVERIO)
+
+    @property
+    def taskid(self):
+        """
+        Returns the currently running process for embarassingly parallelized
+        tasks.
+
+        :rtype: int
+        :return: task id for given solver
+        """
+        return self.module("system").taskid()
+
+    @property
+    def source_names(self):
+        """
+        Returns list of source names
+
+        :rtype: list
+        :return: list of source names
+        """
+        if self._source_names is None:
+            self.check_source_names()
+
+        return self._source_names
+
+    @property
+    def source_name(self):
+        """
+        Returns name of source currently under consideration
+
+        :rtype: str
+        :return: given source name for given task id
+        """
+        return self.source_names[self.taskid]
+
+    @property
+    def source_prefix(self):
+        """
+        Preferred source prefix
+
+        TODO remove this and replace all instances with the self.par parameter
+
+        :rtype: str
+        :return: source prefix
+        """
+        return self.par.SOURCE_PREFIX.upper()
+
+    @property
+    def cwd(self):
+        """
+        Returns working directory currently in use
+
+        :rtype: str
+        :return: current solver working directory
+        """
+        return os.path.join(self.path.SOLVER, self.source_name)
+
+    @property
+    def mesh_properties(self):
+        """
+        Returns mesh properties
+
+        :rtype: Struct
+        :return: Structure of mesh properties
+        """
+        if self._mesh_properties is None:
+            self.check_mesh_properties()
+
+        return self._mesh_properties
+
+    @property
+    def data_wildcard(self, comp="?"):
+        """
+        Provide a wildcard string that will match the name of the output
+        synthetic seismograms
+
+        :type comp: str
+        :param comp: single letter defining the component that can be inserted
+            into the wildcard. Defaults to '?'
+        """
+        return NotImplementedError
+
+    @property
+    def data_filenames(self):
+        """
+        Template filenames for accessing data
+
+        !!! Must be implemented by subclass !!!
+        """
+        return NotImplementedError
+
+    @property
+    def model_databases(self):
+        """
+        Template filenames for accessing models
+
+        !!! Must be implemented by subclass !!!
+        """
+        return NotImplementedError
+
+    @property
+    def kernel_databases(self):
+        """
+        Template filenames for accessing kernels
+
+        !!! Must be implemented by subclass !!!
+        """
+        return NotImplementedError
+
     def check(self, validate=True):
         """
         Checks parameters and paths
@@ -219,6 +337,8 @@ class Specfem(Base):
         Sets up directory structure expected by SPECFEM and copies or generates
         seismic data to be inverted or migrated
 
+        TODO !!! what are the arguments of generate data?
+
         .. note:;
             As input for an inversion or migration, users can choose between
             providing data, or providing a target model from which data are
@@ -227,8 +347,10 @@ class Specfem(Base):
             in the latter case, a value for PATH.MODEL_TRUE must be provided.
         """
         self.initialize_solver_directories()
+        self.set_model(model_name="true", model_type="gll")
         self.generate_data()
-        self.generate_mesh(model_name="init", model_type="gll")
+
+        self.set_model(model_name="init", model_type="gll")
         self.initialize_adjoint_traces()
 
         # Assuming that NT and DT are set correctly in the Par_file
@@ -236,14 +358,45 @@ class Specfem(Base):
         self.nt = getpar(key="NSTEP", file="DATA/Par_file")[1]
         self.dt = getpar(key="DT", file="DATA/Par_file")[1]
 
-    def generate_mesh(self, model_path, model_name, model_type):
+    def set_model(self, model_name, model_type=None):
         """
-        Performs meshing and database generation.
+        Mesh and database files should have been created during the manual set
+        up phase. This function simply checks the mesh properties of that mesh
+        and ensures that it is locatable by future SeisFlows processes.
 
-        This function is Solver specific and is responsible for generating
-        the mesh using the external numerical solver.
+        :type model_name: str
+        :param model_name: name of the model to be used as identification
+        :type model_type: str
+        :param model_type: available model types to be passed to the Specfem3D
+            Par_file. See Specfem3D Par_file for available options.
         """
-        raise NotImplementedError("must be implemented by solver subclass")
+        unix.cd(self.cwd)
+
+        # Check the type of model. So far SeisFlows only accepts GLL models
+        available_model_types = ["gll"]
+        model_type = model_type or getpar(key="MODEL", file="DATA/Par_file")
+        assert(model_type in available_model_types), \
+            f"{model_type} not in available types {available_model_types}"
+
+        # Determine which model will be set as the starting model
+        if model_name.upper() == "INIT":
+            model_path = self.path.MODEL_INIT
+        elif model_name.upper() == "TRUE":
+            model_path = self.path.MODEL_TRUE
+        else:
+            raise ValueError(f"model name must be 'INIT' or 'TRUE'")
+        assert(os.path.exists(model_path)), f"model {model_path} does not exist"
+
+        if model_type == "gll":
+            self.check_mesh_properties(model_path)
+            # Copy the model files (ex: proc000023_vp.bin ...) into database dir
+            src = glob(os.path.join(model_path, "*"))
+            dst = self.model_databases
+            unix.cp(src, dst)
+
+        # Export the model into output folder, ready to be used by SeisFlows
+        if self.taskid == 0:
+            self.export_model(os.path.join(self.path.OUTPUT, model_name))
 
     def generate_data(self):
         """
@@ -314,26 +467,26 @@ class Specfem(Base):
             self.export_traces(path=os.path.join(path, "traces", "adj"),
                                prefix="traces/adj")
 
-    def apply_hess(self, path):
-        """
-        High level solver interface that computes action of Hessian on a given
-        model vector. A gradient evaluation must have already been carried out.
-
-        TODO preprocess has no function prepare_apply_hess()
-
-        :type path: str
-        :param path: directory to which output files are exported
-        """
-        raise NotImplementedError("must be implemented by solver subclass")
-
-        unix.cd(self.cwd)
-        self.import_model(path)
-        unix.mkdir("traces/lcg")
-
-        self.forward("traces/lcg")
-        preprocess.prepare_apply_hess(self.cwd)
-        self.adjoint()
-        self.export_kernels(path)
+    # def apply_hess(self, path):
+    #     """
+    #     High level solver interface that computes action of Hessian on a given
+    #     model vector. A gradient evaluation must have already been carried out.
+    #
+    #     TODO preprocess has no function prepare_apply_hess()
+    #
+    #     :type path: str
+    #     :param path: directory to which output files are exported
+    #     """
+    #     raise NotImplementedError("must be implemented by solver subclass")
+    #
+    #     unix.cd(self.cwd)
+    #     self.import_model(path)
+    #     unix.mkdir("traces/lcg")
+    #
+    #     self.forward("traces/lcg")
+    #     preprocess.prepare_apply_hess(self.cwd)
+    #     self.adjoint()
+    #     self.export_kernels(path)
 
     def forward(self, path):
         """
@@ -398,7 +551,7 @@ class Specfem(Base):
                   )
             sys.exit(-1)
 
-    def load(self, path, prefix="", suffix="", parameters=None,):
+    def load(self, path, prefix="", suffix="", parameters=None):
         """
         Solver I/O: Loads SPECFEM2D/3D models or kernels
 
@@ -560,7 +713,7 @@ class Specfem(Base):
                              )
 
     def smooth(self, input_path, output_path, parameters=None, span_h=0.,
-               span_v=0., output="solver.log"):
+               span_v=0., output="smooth.log"):
         """
         Postprocessing wrapper: xsmooth_sem
         Smooths kernels by convolving them with a Gaussian.
@@ -715,8 +868,7 @@ class Specfem(Base):
         dst = os.path.join(path, self.source_name)
         unix.cp(src, dst)
 
-    @staticmethod
-    def rename_kernels():
+    def rename_kernels(self):
         """
         Works around conflicting kernel filename conventions by renaming
         `alpha` to `vp` and `beta` to `vs`
@@ -730,15 +882,6 @@ class Specfem(Base):
         for tag in ["beta", "beta[hv]", "reg1_beta", "reg1_beta[hv]"]:
             names = glob(f"*proc??????_{tag}_kernel.bin")
             unix.rename(old="beta", new="vs", names=names)
-
-    def rename_data(self, path):
-        """
-        Optional method to rename data to work around conflicting naming schemes
-        for data outputted by the solver
-
-        !!! Can be implemented by subclass !!!
-        """
-        raise NotImplementedError("must be implemented by solver subclass")
 
     def initialize_solver_directories(self):
         """
@@ -882,115 +1025,5 @@ class Specfem(Base):
         names = [os.path.basename(fid).split("_")[-1] for fid in fids]
         self._source_names = names[:self.par.NTASK]
 
-    def check_solver_parameter_files(self):
-        """
-        Optional method
-
-        !!! Can be implemented by subclass !!!
-        """
-        pass
-
-    @property
-    def io(self):
-        """
-        Solver IO module set by User.
-
-        Located in seisflows.plugins.solver_io
-        """
-        return getattr(solver_io, self.par.SOLVERIO)
-
-    @property
-    def taskid(self):
-        """
-        Returns the currently running process for embarassingly parallelized
-        tasks.
-
-        :rtype: int
-        :return: task id for given solver
-        """
-        return self.module("system").taskid()
-
-    @property
-    def source_name(self):
-        """
-        Returns name of source currently under consideration
-
-        :rtype: str
-        :return: given source name for given task id
-        """
-        return self.source_names[self.taskid]
-
-    @property
-    def cwd(self):
-        """
-        Returns working directory currently in use
-
-        :rtype: str
-        :return: current solver working directory
-        """
-        return os.path.join(self.path.SOLVER, self.source_name)
-
-    @property
-    def source_names(self):
-        """
-        Returns list of source names
-
-        :rtype: list
-        :return: list of source names
-        """
-        if self._source_names is None:
-            self.check_source_names()
-
-        return self._source_names
-
-    @property
-    def mesh_properties(self):
-        """
-        Returns mesh properties
-
-        :rtype: Struct
-        :return: Structure of mesh properties
-        """
-        if self._mesh_properties is None:
-            self.check_mesh_properties()
-
-        return self._mesh_properties
-
-    @property
-    def data_filenames(self):
-        """
-        Template filenames for accessing data
-
-        !!! Must be implemented by subclass !!!
-        """
-        return NotImplementedError
-
-    @property
-    def model_databases(self):
-        """
-        Template filenames for accessing models
-
-        !!! Must be implemented by subclass !!!
-        """
-        return NotImplementedError
-
-    @property
-    def kernel_databases(self):
-        """
-        Template filenames for accessing kernels
-
-        !!! Must be implemented by subclass !!!
-        """
-        return NotImplementedError
-
-    @property
-    def source_prefix(self):
-        """
-        Preferred source prefix
-
-        :rtype: str
-        :return: source prefix
-        """
-        return self.par.SOURCE_PREFIX.upper()
 
 
