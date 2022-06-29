@@ -18,15 +18,9 @@ https://support.nesi.org.nz/hc/en-gb/articles/360000163695-M%C4%81ui
 
 """
 import os
-import sys
-import math
-import logging
-
+import numpy as np
 from seisflows.system.slurm import Slurm
-from seisflows.config import custom_import, SeisFlowsPathsParameters, ROOT_DIR
-
-PAR = sys.modules["seisflows_parameters"]
-PATH = sys.modules["seisflows_paths"]
+from seisflows.config import ROOT_DIR
 
 
 class Maui(Slurm):
@@ -125,6 +119,11 @@ class Maui(Slurm):
         .. note::
             We do not place SLURMARGS into the sbatch command to avoid the
             export=None which will not propagate the conda environment
+
+        :type submit_call: str
+        :param submit_call: SBATCH command line call to submit workflow.main()
+            to the system. If None, will generate one on the fly with
+            user-defined parameters
         """
         if submit_call is None:
             submit_call = " ".join([
@@ -141,7 +140,6 @@ class Maui(Slurm):
                 f"{os.path.join(ROOT_DIR, 'scripts', 'submit')}",
                 f"--output {self.path.OUTPUT}"
             ])
-        self.logger.debug(submit_call)
 
         super().submit(submit_call=submit_call)
 
@@ -161,9 +159,13 @@ class Maui(Slurm):
             This will change how the job array and the number of tasks is
             defined, such that the job is submitted as a single-core job to
             the system.
+        :type run_call: str
+        :param run_call: SBATCH command line run call to be submitted to the
+            system. If None, will generate one on the fly with user-defined
+            parameters
         """
         if run_call is None:
-            _nodes = math.ceil(self.par.NPROC / float(self.par.NODESIZE))
+            _nodes = np.ceil(self.par.NPROC / float(self.par.NODESIZE))
 
             run_call = " ".join([
                 "sbatch",
@@ -184,7 +186,6 @@ class Maui(Slurm):
                 f"--funcname {method}",
                 f"--environment {self.par.ENVIRONS or ''}"
             ])
-        self.logger.debug(run_call)
 
         super().run(classname, method, single, run_call=run_call, **kwargs)
 
@@ -228,5 +229,5 @@ class Maui(Slurm):
         self.checkpoint(path=path, classname=classname, method=method,
                         kwargs=kwargs)
 
-    
+
 

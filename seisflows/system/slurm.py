@@ -90,8 +90,8 @@ class Slurm(Cluster):
                 f"{os.path.join(ROOT_DIR, 'scripts', 'submit')}",
                 f"--output {self.path.OUTPUT}"
             ])
-            self.logger.debug(submit_call)
 
+        self.logger.debug(submit_call)
         super().submit(submit_call=submit_call)
 
     def run(self, classname, method, single=False, run_call=None, **kwargs):
@@ -140,7 +140,8 @@ class Slurm(Cluster):
                 f"--funcname {method}",
                 f"--environment {self.par.ENVIRONS or ''}"
             ])
-            self.logger.debug(run_call)
+
+        self.logger.debug(run_call)
 
         # Single-process jobs simply need to replace a few sbatch arguments.
         # Do it AFTER `run_call` has been defined so that subclasses submitting
