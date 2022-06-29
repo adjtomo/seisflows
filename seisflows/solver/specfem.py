@@ -790,8 +790,7 @@ class Specfem(Base):
                                                    os.path.join(input_path, ""),
                                                    os.path.join(output_path, ""),
                                                    ".false"]),
-                              output=output
-                         )
+                              output=output)
 
         # Rename output files
         files = glob(os.path.join(output_path, "*"))

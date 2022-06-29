@@ -17,7 +17,8 @@ from seisflows.config import save
 
 class Forward(Base):
     """
-    Workflow abstract base class
+    Workflow abstract base class representing an en-masse forward solver and
+    misfit calculator.
     """
     def __init__(self):
         """
@@ -67,10 +68,6 @@ class Forward(Base):
         Setup workflow by intaking functions to be run and checking start and
         stop criteria
         """
-        # The FLOW function defines a list of functions to execute IN ORDER
-        if flow is None:
-            flow = (self.evaluate_initial_misfit)
-
         # REQUIRED: CLI command `seisflows print flow` needs this for output
         if return_flow:
             return flow
@@ -86,12 +83,11 @@ class Forward(Base):
         )
 
         # Required modules that need to be set up
-        system = self.module("system")
-        preprocess = self.module("preprocess")
-
-        system.setup()
-        preprocess.setup()
-        system.run("solver", "setup")
+        self.logger.info(msg.mnr("PERFORMING MODULE SETUP"))
+        self.module("system").setup()
+        self.module("preprocess").setup()
+        self.logger.info("setting up solver on system...")
+        self.module("system").run("solver", "setup")
 
     def finalize(self):
         """
@@ -118,6 +114,10 @@ class Forward(Base):
         :param return_flow: for CLI tool, simply returns the flow function
             rather than running the workflow. Used for print statements etc.
         """
+        # The FLOW function defines a list of functions to execute IN ORDER
+        if flow is None:
+            flow = (self.evaluate_initial_misfit)
+
         self.setup(flow, return_flow)
         # Iterate through the `FLOW` to step through workflow.main()
         for func in flow[self.start: self.stop]:
@@ -126,9 +126,11 @@ class Forward(Base):
 
     def evaluate_initial_misfit(self):
         """
-        Wrapper for evaluate_function that sends residuals to PATH.GRAD and
+        Wrapper for evaluate_function that generates synthetics via forward
+        simulations, calculates misfits and sends residuals to PATH.GRAD and
         sets up the 'm_new' model for future evaluations
         """
+        self.logger.info(msg.mjr("EVALUATING INITIAL MISFIT"))
         self._evaluate_function(path=self.path.GRAD, suffix="new")
 
     def _evaluate_function(self, path, suffix):
