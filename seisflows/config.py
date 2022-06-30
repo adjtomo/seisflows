@@ -48,7 +48,7 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 # Define a package-wide default directory and file naming schema. This will
 # be returned as a Dict() object, defined below. All of these files and
 # directories will be created relative to the user-defined working directory
-DIR = Dict(
+CFGPATHS = Dict(
     PAR_FILE="parameters.yaml",  # Default SeisFlows parameter file
     SCRATCHDIR="scratch",        # SeisFlows internal working directory
     OUTPUTDIR="output",          # Permanent disk storage for state and outputs
@@ -120,61 +120,6 @@ def flush():
         mod_name = f"seisflows_{name}"
         if mod_name in sys.modules:
             del sys.modules[mod_name]
-
-
-def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
-    """
-    Explicitely configure the logging module with some parameters defined
-    by the user in the System module. Instantiates a stream logger to write
-    to stdout, and a file logger which writes to `filename`. Two levels of
-    verbosity and three levels of log messages allow the user to determine
-    how much output they want to see.
-
-    :type level: str
-    :param level: log level to be passed to logger, available are
-        'CRITICAL', 'WARNING', 'INFO', 'DEBUG'
-    :type filename: str or None
-    :param filename: name of the log file to write log statements to. If None,
-        logs will be written to STDOUT ONLY, and `filemode` will not be used.
-    :type filemode: str
-    :param filemode: method for opening the log file. defaults to append 'a'
-    :type verbose: bool
-    :param verbose: if True, writes a more detailed log message stating the
-        type of log (warning, info, debug), and the class and method which
-        called the logger (e.g., seisflows.solver.specfem2d.save()). This
-        is much more useful for debugging but clutters up the log file.
-        if False, only write the time and message in the log statement.
-    """
-    # Make sure that we don't already have handlers described, which may happen
-    # if this function gets run multiple times, and leads to duplicate logs
-    while logger.hasHandlers() and logger.handlers:
-        logger.removeHandler(logger.handlers[0])
-
-    # Two levels of verbosity on log level, triggered with PAR.VERBOSE
-    if verbose:
-        # More verbose logging statement with levelname and func name
-        fmt_str = (
-            "%(asctime)s | %(levelname)-5s | %(name)s.%(funcName)s()\n"
-            "> %(message)s"
-        )
-    else:
-        # Clean logging statement with only time and message
-        fmt_str = "%(asctime)s | %(message)s"
-
-    # Instantiate logger during _register() as we now have user-defined pars
-    logger.setLevel(level)
-    formatter = logging.Formatter(fmt_str, datefmt="%Y-%m-%d %H:%M:%S")
-
-    # Stream handler to print log statements to stdout
-    st_handler = logging.StreamHandler(sys.stdout)
-    st_handler.setFormatter(formatter)
-    logger.addHandler(st_handler)
-
-    # File handler to print log statements to text file `filename`
-    if filename is not None:
-        file_handler = logging.FileHandler(filename, filemode)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
 
 
 def custom_import(name=None, module=None, classname=None):

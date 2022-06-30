@@ -111,7 +111,7 @@ class Inversion(Migration):
         Checks parameters and paths
         """
         super().check(validate=validate)
-        import pdb;pdb.set_trace()
+
         assert(1 <= self.par.BEGIN <= self.par.END), \
             f"Incorrect BEGIN or END parameter. Values must be in order: " \
             f"1 <= {self.par.BEGIN} <= {self.par.END}"

@@ -803,7 +803,7 @@ class Specfem(Base):
         :param path: path to model
         """
         model = self.load(path=os.path.join(path, "model"))
-        self.save(model, self._model_databases)
+        self.save(model, self.model_databases)
 
     def _import_traces(self, path):
         """
@@ -833,7 +833,7 @@ class Specfem(Base):
         if self.taskid == 0:
             unix.mkdir(path)
             for key in parameters:
-                files = glob(os.path.join(self._model_databases, f"*{key}.bin"))
+                files = glob(os.path.join(self.model_databases, f"*{key}.bin"))
                 unix.cp(files, path)
 
     def _export_kernels(self, path):
@@ -846,7 +846,7 @@ class Specfem(Base):
         if self.taskid == 0:
             self.logger.debug(f"exporting kernels to:\n{path}")
 
-        unix.cd(self._kernel_databases)
+        unix.cd(self.kernel_databases)
 
         # Work around conflicting name conventions
         self._rename_kernels()
