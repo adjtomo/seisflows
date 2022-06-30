@@ -1,8 +1,6 @@
 """
 Test suite for the SeisFlows command line interface tool and the underlying
 parser class, ensures that the command line tool works as expected
-
-!!! TO DO: Finish tests from 'edit' onwards
 """
 import os
 import io
@@ -14,9 +12,9 @@ import subprocess
 from unittest.mock import patch
 
 from seisflows import logger
+from seisflows.core import Dict
 from seisflows.seisflows import SeisFlows
-from seisflows.config import (Dict, ROOT_DIR, NAMES, CFGPATHS,
-                              config_logger, flush)
+from seisflows.config import ROOT_DIR, NAMES, CFGPATHS, flush
 from seisflows.tools.wrappers import loadyaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
@@ -126,14 +124,19 @@ def test_register(tmpdir, par_file_dict, copy_par_file):
         sf = SeisFlows()
         assert(sf._paths is None)
         assert(sf._parameters is None)
-        sf._register_parameters(force=True)
+        sf._register_parameters()
 
     # Check that paths and parameters have been set in sys.modules
     paths = sys.modules["seisflows_paths"]
     parameters = sys.modules["seisflows_parameters"]
 
     # Check one or two parameters have been set correctly
-    assert(par_file_dict.LBFGSMAX == parameters.LBFGSMAX)
+    assert("PATHS" not in parameters)
+    for key, val in par_file_dict.items():
+        if key == "PATHS":
+            continue
+        assert(parameters[key] == val)
+
     path_check_full = os.path.abspath(par_file_dict.PATHS["SCRATCH"])
     assert(path_check_full == paths.SCRATCH)
 
@@ -233,34 +236,6 @@ def test_cmd_clean(tmpdir):
 
     for fid in [path, "parameters.yaml"]:
         assert(os.path.exists(fid))
-
-
-def test_config_logging(tmpdir, copy_par_file):
-    """
-    Test logging configuration to make sure we can print to file
-
-    TODO move this to test_config.py?
-    :param tmpdir:
-    :return:
-    """
-    # Run init first to create a working state
-    os.chdir(tmpdir)
-    copy_par_file
-
-    msg = "This is an example log that will be checked for test purposes"
-    with patch.object(sys, "argv", ["seisflows"]):
-        sf = SeisFlows()
-        sf._register_parameters(force=True)
-        config_logger(filename=CFGPATHS.LOGFILE)
-        logger.debug(msg)
-
-    # Check that we created the log file and wrote the message in
-    assert(os.path.exists(CFGPATHS.LOGFILE))
-    with open(CFGPATHS.LOGFILE, "r") as f:
-        lines = f.read()
-    assert(msg in lines)
-    assert("DEBUG" in lines)  # levelname
-    assert("test_config_logging()" in lines)  # funcName
 
 
 def test_load_modules(tmpdir, copy_par_file):

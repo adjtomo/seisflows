@@ -21,34 +21,30 @@ from seisflows.seisflows import SeisFlows, return_modules
 required_structure = {
     "system": {
         "parameters": [],
-        "functions": ["required", "check", "setup", "submit", "run",
-                      "taskid", "checkpoint"]
+        "functions": ["submit", "run", "taskid", "checkpoint"]
     },
     "preprocess": {
         "parameters": [],
-        "functions": ["required", "check", "setup", "prepare_eval_grad",
-                      "sum_residuals", "finalize"]
+        "functions": ["prepare_eval_grad", "sum_residuals", "finalize"]
     },
     "solver": {
         "parameters": ["MATERIALS", "DENSITY", "ATTENUATION"],
-        "functions": ["required", "check", "setup", "generate_data",
-                      "generate_mesh", "eval_func", "eval_grad", "load",
-                      "save", "merge", "split", "source_names", "parameters"]
+        "functions": ["generate_data", "eval_func", 
+                      "eval_grad", "load", "save", "merge", "split", 
+                      "source_names", "parameters"]
     },
     "postprocess": {
         "parameters": [],
-        "functions": ["check", "setup", "write_gradient"]
+        "functions": ["sum_smooth_kernels", "scale_gradient"]
     },
     "optimize": {
         "parameters": [],
-        "functions": ["setup", "check", "compute_direction",
-                      "initialize_search", "update_search",
-                      "finalize_search", "retry_status",
-                      "restart"]
+        "functions": ["compute_direction", "initialize_search", "update_search",
+                      "finalize_search", "retry_status", "restart"]
     },
     "workflow": {
-        "parameters": ["CASE"],
-        "functions": ["check", "main", "checkpoint"]
+        "parameters": [],
+        "functions": ["main", "checkpoint"]
     },
 }
 
@@ -83,8 +79,9 @@ def sfinit(tmpdir, copy_par_file):
     os.chdir(tmpdir)
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows()
-        sf._register_parameters(force=True)
-        sf._register_modules(check=True)
+        sf._register_parameters()
+        sf._register_modules()
+        sf._check_parameters()
 
     return sf
 
