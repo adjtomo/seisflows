@@ -114,6 +114,18 @@ def sfparser():
     configure.add_argument("-a", "--absolute_paths", action="store_true",
                            help="Set default paths relative to cwd")
     # =========================================================================
+    swap = subparser.add_parser(
+        "swap", help="Swap module parameters in an existing parameter file",
+        description="""During workflow development, it may be necessary to swap
+        between different sub-modules (e.g., system.workstation -> 
+        system.cluster). However this would typically involving re-generating
+        and re-filling a parameter file. The 'swap' function makes it easier
+        to swap parameters between modules.
+        """
+    )
+    swap.add_argument("module", nargs="?", help="Module name to swap")
+    swap.add_argument("classname", nargs="?", help="Classname to swap to")
+    # =========================================================================
     init = subparser.add_parser(
         "init", help="Initiate working environment",
         description="""Establish a SeisFlows working environment but don't 
@@ -289,7 +301,7 @@ working state before the workflow can be resumed
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
                       "sempar": sempar, "clean": clean,
                       "restart": restart, "print": print_, "reset": reset,
-                      "examples": examples}
+                      "examples": examples, "swap": swap}
     if parser.parse_args().command in subparser_dict:
         return parser, subparser_dict[parser.parse_args().command]
     else:
@@ -570,7 +582,6 @@ class SeisFlows:
             else if False, use path names relative to the working directory.
             Defaults to False, uses relative paths.
         """
-        print(msg.cli(f"filling {self._args.parameter_file} w/ default values"))
         self._register_parameters()
 
         # Check if the User set turn off any modules (if None, dont instantiate)
@@ -625,6 +636,53 @@ class SeisFlows:
             sys.exit(-1)
         else:
             unix.rm(temp_par_file)
+
+    def swap(self, module, classname, **kwargs):
+        """
+        Swap the parameters of an existing parameter file with a new module.
+        Useful for changing out parameters without having to re-make a
+        parameter file from scratch. e.g., to swap systems from a workstation
+        to a cluster
+
+        .. rubric::
+            $ seisflows swap system slurm
+        """
+        PAR_FILE = os.path.join(ROOT_DIR, "examples", "parameters.yaml")
+
+        if module not in NAMES:
+            print(msg.cli(text=f"{module} does not match {NAMES}",
+                          header="error"))
+            sys.exit(-1)
+
+        # Load in old parameter file and then move it to a hidden file
+        ogpars = loadyaml(self._args.parameter_file)
+        ogpaths = Dict(ogpars.pop("PATHS"))
+        unix.mv(self._args.parameter_file, f"_{self._args.parameter_file}")
+
+        # Create a new parameter file with updated module
+        unix.cp(PAR_FILE, self._args.workdir)
+        for name in NAMES:
+            setpar(key=name, val=ogpars[name.upper()],
+                   file=self._args.parameter_file, delim=":")
+
+        # Overwrite with new parameters
+        setpar(key=module, val=classname, file=self._args.parameter_file,
+               delim=":")
+        self.configure()
+        for key, val in ogpars.items():
+            try:
+                setpar(key=key, val=val, file=self._args.parameter_file,
+                       delim=":")
+            except KeyError:
+                continue
+        for key, val in ogpaths.items():
+            try:
+                setpar(key=key, val=val, file=self._args.parameter_file,
+                       delim=":", _reverse=True)
+            except KeyError:
+                continue
+
+        unix.rm(f"_{self._args.parameter_file}")
 
     def init(self, **kwargs):
         """

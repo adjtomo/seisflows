@@ -7,7 +7,6 @@ of the scaffolding defined by the Forward class.
 """
 import os
 import sys
-import numpy as np
 from glob import glob
 
 from seisflows.core import Base

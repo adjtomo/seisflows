@@ -38,7 +38,7 @@ class Container(defaultdict):
         self.minmax = Minmax()
 
 
-def getpar(key, file, delim="=", match_partial=False):
+def getpar(key, file, delim="=", match_partial=False, _reverse=False):
     """
     Reads and returns parameters from a SPECFEM or SeisFlows parameter file
     Assumes the parameter file is formatted in the following way:
@@ -57,6 +57,9 @@ def getpar(key, file, delim="=", match_partial=False):
     :param match_partial: allow partial key matches, e.g., allow key='tit' to
         return value for 'title'. Defaults to False as this can have
         unintended consequences
+    :type _reverse: bool
+    :param _reverse: reverse search for parameters incase there are multiple
+        matching entries.
     :rtype: tuple (str, str, int)
     :return: a tuple of the key, value and line number (indexed from 0).
         The key will match exactly how it looks in the Par_file
@@ -64,6 +67,8 @@ def getpar(key, file, delim="=", match_partial=False):
         IF no matches found, returns (None, None, None)
     """
     lines = open(file, "r").readlines()
+    if _reverse:
+        lines = lines[::-1]
 
     for i, line in enumerate(lines):
         # Find the first occurence, CASE-INSENSITIVE search, strip whitespace
@@ -103,7 +108,7 @@ def getpar(key, file, delim="=", match_partial=False):
     return key_out, val, i
 
 
-def setpar(key, val, file, delim="=", match_partial=False):
+def setpar(key, val, file, delim="=", match_partial=False, _reverse=False):
     """
     Overwrites parameter value to a SPECFEM Par_file.
 
@@ -120,8 +125,11 @@ def setpar(key, val, file, delim="=", match_partial=False):
     :param match_partial: allow partial key matches, e.g., allow key='tit' to
         return value for 'title'. Defaults to False as this can have
         unintended consequences
+    :type _reverse: bool
+    :param _reverse: reverse search for parameters incase there are multiple
+        matching entries.
     """
-    key_out, val_out, i = getpar(key, file, delim, match_partial)
+    key_out, val_out, i = getpar(key, file, delim, match_partial, _reverse)
     if key_out is None:
         return
 
