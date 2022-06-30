@@ -18,11 +18,9 @@ import json
 import types
 import pickle
 import copyreg
-import logging
 import traceback
 from importlib import import_module
 
-from seisflows import logger
 from seisflows.core import Dict, Null
 from seisflows.tools import msg, unix
 from seisflows.tools.wrappers import module_exists
@@ -36,7 +34,6 @@ of the package. The naming, order, case, etc., of each constant may be
 important, and any changes to these will more-than-likely break the underlying 
 mechanics of the package. Do not touch unless you know what you're doing!
 """
-
 # List of module names required by SeisFlows for imports. Order-sensitive
 # In sys.modules these will be prepended by 'seisflows_', e.g., seisflows_system
 NAMES = ["system", "preprocess", "solver",
@@ -50,11 +47,9 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 # directories will be created relative to the user-defined working directory
 CFGPATHS = Dict(
     PAR_FILE="parameters.yaml",  # Default SeisFlows parameter file
-    SCRATCHDIR="scratch",        # SeisFlows internal working directory
-    OUTPUTDIR="output",          # Permanent disk storage for state and outputs
     LOGFILE="sfoutput.txt",    # Log files for all system log
     ERRLOGFILE="sferror.txt",  # StdErr dump site for crash messages
-    LOGDIR="logs",               # Dump site for previously created log files
+    LOGDIR="logs",             # Dump site for previously created log files
 )
 """
 !!! ^^^ WARNING ^^^ !!!

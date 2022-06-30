@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Core class definitions for SeisFlows. Defines some unique class objects that
-are used heavily during a Seisflows workflow.
+define how SeisFlows works internally, or are used heavily during a Seisflows
+workflow.
 """
 import sys
 import logging
@@ -160,7 +161,7 @@ class Dict(dict):
 
     def __repr__(self):
         """Pretty print when calling an instance of this object"""
-        return(self.__str__())
+        return self.__str__()
 
     def __getattr__(self, key):
         """Attribute-like access of the internal dictionary attributes"""
@@ -200,10 +201,12 @@ class Null:
 class SeisFlowsPathsParameters:
     """
     A class used to simplify defining required or optional paths and parameters
-    by enforcing a specific structure to their entry into the environment.
+    that will be globally accesible through sys.modules. This class enforces a
+    specific path/parameter structure, and entry point into the environment.
 
     .. note::
-        if a path or parameter is optional it requires a default value.
+        if a path or parameter is optional it requires a default value, which is
+        set at the header of this class
     """
     default_par = "REQUIRED PARAMETER"
     default_path = "REQUIRED PATH"

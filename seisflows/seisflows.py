@@ -647,8 +647,8 @@ class SeisFlows:
         for NAME in NAMES:
             sys.modules[f"seisflows_{NAME}"].required.validate()
 
-        print(msg.cli(f"instantiating SeisFlows working state in directory: "
-                      f"{CFGPATHS.OUTPUTDIR}"))
+        print(msg.cli(f"instantiating SeisFlows working state in: "
+                      f"{self._paths.OUTPUT}"))
 
     def submit(self, **kwargs):
         """
@@ -659,6 +659,13 @@ class SeisFlows:
         """
         unix.mkdir(self._args.workdir)
         unix.cd(self._args.workdir)
+
+        # If parameter `RESUME_FROM` is set, unset it because submit and restart
+        # should start from a fresh workflow
+        try:
+            self.par(parameter="RESUME_FROM", value="", skip_print=True)
+        except SystemExit as e:
+            pass
 
         # Read in the Parameter file and set parameters into sys.modules.
         self._register_parameters()
