@@ -157,33 +157,33 @@ class Forward(Base):
         model_tag = f"m_{suffix}"
         misfit_tag = f"f_{suffix}"
 
-        self._write_model(path=path, tag=model_tag)
+        self._write_model(path=path, model_tag=model_tag)
 
-        self.logger.debug(f"evaluating objective function {self.par.NTASK} times "
-                          f"on system...")
+        self.logger.debug(f"evaluating objective function {self.par.NTASK} "
+                          f"times on system...")
         system.run("solver", "eval_func", path=path)
 
-        self._write_misfit(path=path, tag=misfit_tag)
+        self._write_misfit(path=path, misfit_tag=misfit_tag)
 
-    def _write_model(self, path, tag):
+    def _write_model(self, path, model_tag):
         """
         Writes model in format expected by solver
 
         :type path: str
         :param path: path to write the model to
-        :type tag: str
-        :param tag: name of the model to be saved, usually tagged as 'm' with
+        :type model_tag: str
+        :param model_tag: name of the model to be saved, usually tagged as 'm' with
             a suffix depending on where in the inversion we are. e.g., 'm_try'.
             Expected that these tags are defined in OPTIMIZE module
         """
         solver = self.module("solver")
+        optimize = self.module("optimize")
 
-        src = tag
         dst = os.path.join(path, "model")
-        self.logger.debug(f"saving model '{src}' to:\n{dst}")
-        solver.save(solver.split(np.load(src)), dst)
+        self.logger.debug(f"saving model '{model_tag}' to:\n{dst}")
+        solver.save(solver.split(optimize.load(model_tag)), dst)
 
-    def _write_misfit(self, path, tag):
+    def _write_misfit(self, path, misfit_tag):
         """
         Writes misfit in format expected by nonlinear optimization library.
         Collects all misfit values within the given residuals directory and sums
@@ -191,20 +191,21 @@ class Forward(Base):
 
         :type path: str
         :param path: path to write the misfit to
-        :type tag: str
-        :param tag: name of the model to be saved, usually tagged as 'f' with
-            a suffix depending on where in the inversion we are. e.g., 'f_try'.
-            Expected that these tags are defined in OPTIMIZE module
+        :type misfit_tag: str
+        :param misfit_tag: name of the model to be saved, usually tagged as
+            'f' with a suffix depending on where in the inversion we are.
+            e.g., 'f_try'. Expected that these tags are defined in OPTIMIZE
+            module
         """
         preprocess = self.module("preprocess")
+        optimize = self.module("optimize")
 
         self.logger.info("summing residuals with preprocess module")
         src = glob(os.path.join(path, "residuals", "*"))
-        dst = tag
         total_misfit = preprocess.sum_residuals(src)
 
-        self.logger.debug(f"saving misfit {total_misfit:.3E} to tag '{dst}'")
-        np.save(dst, total_misfit)
+        self.logger.debug(f"saving misfit {total_misfit:.3E} to '{misfit_tag}'")
+        optimize.save(misfit_tag, total_misfit)
 
     def _check_stop_resume_cond(self, flow):
         """

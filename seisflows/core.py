@@ -59,8 +59,9 @@ class Base(object):
         stdout. PAR.VERBOSE and PAR.LOG_LEVEL both control the amount of
         information that gets printed to the log file.
         """
-        logger = logging.getLogger(
-            self.__class__.__name__).getChild(self.__class__.__qualname__)
+        # logger = logging.getLogger(
+        #     self.__class__.__name__).getChild(self.__class__.__qualname__)
+        logger = logging.getLogger(self.__class__.__name__)
 
         # Two levels of verbosity on log level, triggered with PAR.VERBOSE
         if self.par.VERBOSE:

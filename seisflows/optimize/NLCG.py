@@ -64,26 +64,6 @@ class NLCG(Gradient):
         assert(self.par.LINESEARCH.upper() == "BRACKET"), \
             f"NLCG requires a bracketing line search algorithm"
 
-    def setup(self):
-        """Inherit from optimize.gradient.Gradient"""
-        self.setup()
-
-    def finalize(self):
-        """Inherit from optimize.gradient.Gradient"""
-        self.finalize()
-
-    def load(self, name):
-        """Inherit from optimize.gradient.Gradient"""
-        return self.load(name=name)
-
-    def save(self, name, vector):
-        """Inherit from optimize.gradient.Gradient"""
-        self.save(name=name, vector=vector)
-
-    def _precondition(self, q):
-        """Inherit from optimize.gradient.Gradient"""
-        return self._precondition(q=q)
-
     def compute_direction(self):
         """
         Compute search direction using the Nonlinear Conjugate Gradient method
@@ -163,14 +143,6 @@ class NLCG(Gradient):
         """
         super().restart()
         self.NLCG_iter = 1
-
-    def write_stats(self):
-        """Inherit from optimize.gradient.Gradient"""
-        self.write_stats()
-
-    def check_model(self, m, min_pr=-1, max_pr=0.5):
-        """Inherit from optimize.gradient.Gradient"""
-        self.check_model(m=m, min_pr=min_pr, max_pr=max_pr)
 
     def _fletcher_reeves(self, g_new, g_old):
         """

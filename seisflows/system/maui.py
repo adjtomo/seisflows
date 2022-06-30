@@ -102,10 +102,6 @@ class Maui(Slurm):
              "running SeisFlows3 on Maui, we must remove one env. variable. "
              "Please add 'SLURM_MEM_PER_CPU' to self.par.ENVIRONS.")
 
-    def setup(self):
-        """Inherits from workflow.system.workstation.Workstation"""
-        self.setup()
-
     def submit(self, submit_call=None):
         """
         Submits master job workflow to maui_ancil cluster as a single-core
@@ -219,15 +215,3 @@ class Maui(Slurm):
         self.logger.debug(ancil_run_call)
         super().run(classname, method, single=False, run_call=ancil_run_call,
                     **kwargs)
-
-    def taskid(self):
-        """Inherits from seisflows.system.slurm.Slurm"""
-        return self.taskid()
-
-    def checkpoint(self, path, classname, method, kwargs):
-        """Inherits from workflow.system.workstation.Workstation"""
-        self.checkpoint(path=path, classname=classname, method=method,
-                        kwargs=kwargs)
-
-
-

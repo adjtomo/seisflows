@@ -607,7 +607,7 @@ class Specfem(Base):
         load_dict = Container()
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters:
-                load_dict[key] += self.io.read_slice(
+                load_dict[key] += self._io.read_slice(
                     path=path, parameters=f"{prefix}{key}{suffix}", iproc=iproc
                 )
 
@@ -637,17 +637,18 @@ class Specfem(Base):
         missing_keys = diff(parameters, save_dict.keys())
         for iproc in range(self.mesh_properties.nproc):
             for key in missing_keys:
-                save_dict[key] += self.io.read_slice(
-                    path=self.path.MODEL_INIT, parameters=f"{prefix}{key}{suffix}",
+                save_dict[key] += self._io.read_slice(
+                    path=self.path.MODEL_INIT,
+                    parameters=f"{prefix}{key}{suffix}",
                     iproc=iproc
                 )
 
         # Write slices to disk
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters:
-                self.io.write_slice(data=save_dict[key][iproc], path=path,
-                                    parameters=f"{prefix}{key}{suffix}",
-                                    iproc=iproc)
+                self._io.write_slice(data=save_dict[key][iproc], path=path,
+                                     parameters=f"{prefix}{key}{suffix}",
+                                     iproc=iproc)
 
     def merge(self, model, parameters=None):
         """

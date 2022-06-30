@@ -30,41 +30,6 @@ class Specfem3D(Specfem):
             docstr="Prefix of SOURCE files in path SPECFEM_DATA. Available "
                    "['CMTSOLUTION', FORCESOLUTION']")
 
-    @property
-    def _io(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self._io
-
-    @property
-    def taskid(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.taskid
-
-    @property
-    def source_names(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.source_names
-
-    @property
-    def source_name(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.source_name
-
-    @property
-    def source_prefix(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.source_prefix
-
-    @property
-    def cwd(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.cwd
-
-    @property
-    def mesh_properties(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.mesh_properties
-
     def data_wildcard(self, comp="?"):
         """
         Returns a wildcard identifier for synthetic data
@@ -112,24 +77,6 @@ class Specfem3D(Specfem):
         """
         return self.model_databases
 
-    def check(self, validate=True):
-        """
-        Checks parameters and paths
-        """
-        super().check(validate=validate)
-
-    def setup(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        self.setup()
-
-    def _set_model(self, model_name, model_type="gll"):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        self._set_model(model_name=model_name, model_type=model_type)
-
-    def generate_data(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        self.generate_data()
-
     def eval_func(self, path, write_residuals=True):
         """
         Performs forward simulations and evaluates the misfit function using
@@ -147,10 +94,6 @@ class Specfem3D(Specfem):
 
         # Work around SPECFEM3D conflicting name conventions of SU data
         self._rename_data()
-
-    def eval_grad(self, path, export_traces=False):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        self.eval_grad(path=path, export_traces=export_traces)
 
     def _forward(self, output_path):
         """
@@ -175,7 +118,7 @@ class Specfem3D(Specfem):
         self._call_solver(executable="bin/xmeshfem3D", output="fwd_solver.log")
 
         # Find and move output traces, by default to synthetic traces dir
-        unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard)),
+        unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
                 dst=output_path)
 
     def _adjoint(self):
@@ -194,72 +137,6 @@ class Specfem3D(Specfem):
         unix.ln("traces/adj", "SEM")
 
         self._call_solver(executable="bin/xspecfem3D", output="adj_solver.log")
-
-    def _call_solver(self, executable, output="solver.log"):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        self._call_solver(executable=executable, output=output)
-
-    def load(self, path, prefix="", suffix="", parameters=None):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.load(path=path, prefix=prefix, suffix=suffix,
-                         parameters=parameters)
-
-    def save(self, save_dict,  path, parameters=None, prefix="", suffix=""):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        self.save(save_dict=save_dict, path=path, parameters=parameters,
-                  prefix=prefix, suffix=suffix)
-
-    def merge(self, model, parameters=None):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.merge(model=model, parameters=parameters)
-
-    def split(self, m, parameters=None):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.split(m=m, parameters=parameters)
-
-    def combine(self, input_path, output_path, parameters=None):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.combine(input_path=input_path, output_path=output_path,
-                            parameters=parameters)
-
-    def smooth(self, input_path, output_path, parameters=None, span_h=0.,
-               span_v=0., output="smooth.log"):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self.smooth(input_path=input_path, output_path=output_path,
-                           parameters=parameters, span_h=span_h,
-                           span_v=span_v, output=output)
-
-    def _import_model(self, path):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self._import_model(path=path)
-
-    def _import_traces(self, path):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self._import_traces(path=path)
-
-    def _export_model(self, path, parameters=None):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self._export_model(path=path, parameters=parameters)
-
-    def _export_kernels(self, path):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self._export_kernels(path=path)
-
-    def _export_residuals(self, path):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self._export_residuals(path=path)
-
-    def _export_traces(self, path, prefix="traces/obs"):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        self._export_traces(path=path, prefix=prefix)
-
-    def _rename_kernels(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        self._rename_kernels()
-
-    def _initialize_solver_directories(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        self._initialize_solver_directories()
 
     def _initialize_adjoint_traces(self):
         """
@@ -288,14 +165,6 @@ class Specfem3D(Specfem):
                     if not exists(dst):
                         src = f"{iproc:d}_d{self.par.COMPONENTS[0]}_SU.adj"
                         unix.cp(src, dst)
-
-    def _check_mesh_properties(self, path=None):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        self._check_mesh_properties(path=path)
-
-    def _check_source_names(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        self._check_source_names()
 
     def _rename_data(self):
         """

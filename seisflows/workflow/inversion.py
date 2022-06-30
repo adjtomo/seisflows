@@ -191,7 +191,7 @@ class Inversion(Migration):
 
     def evaluate_initial_misfit(self):
         """Inherits from seisflows.workflow.forward.Forward"""
-        self.evaluate_initial_misfit()
+        super().evaluate_initial_misfit()
 
     def compute_direction(self):
         """
@@ -288,8 +288,8 @@ class Inversion(Migration):
             self.logger.debug(f"saving kernels to path:\n{dst}")
             unix.mv(src, dst)
 
-        if self.par.SAVETRACES:
-            self.save_traces()
+        # if self.par.SAVETRACES:
+        #     do some stuff
 
         if self.par.SAVERESIDUALS:
             src = os.path.join(self.path.GRAD, "residuals")

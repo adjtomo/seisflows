@@ -64,10 +64,6 @@ class Slurm(Cluster):
         """
         super().check(validate=validate)
 
-    def setup(self):
-        """Inherits from workflow.system.workstation.Workstation"""
-        self.setup()
-
     def submit(self, submit_call=None):
         """
         Submits workflow as a single process master job on a SLURM system

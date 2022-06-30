@@ -4,7 +4,6 @@ This is a subclass seisflows.system.workstation
 Provides utilities for submitting jobs in serial on a single machine
 """
 import os
-import sys
 import pickle
 from contextlib import redirect_stdout
 
@@ -133,10 +132,6 @@ class Workstation(Base):
                 self.logger.debug(f"copying par/log file to: {dst}")
                 unix.cp(src=src, dst=dst)
 
-    def finalize(self):
-        """Inherits from seisflows.core.Base"""
-        super().finalize()
-
     def submit(self, submit_call=None):
         """
         Submits the main workflow job as a serial job submitted directly to
@@ -200,10 +195,12 @@ class Workstation(Base):
             if taskid == 0:
                 self.logger.info(f"running task {classname}.{method} "
                                  f"{self.par.NTASK} times")
+            function(**kwargs)
+
             # Redirect output to a log file to mimic cluster runs
-            with open(log_file, "w") as f:
-                with redirect_stdout(f):
-                    function(**kwargs)
+            # with open(log_file, "w") as f:
+            #     with redirect_stdout(f):
+            #         function(**kwargs)
 
     def taskid(self):
         """

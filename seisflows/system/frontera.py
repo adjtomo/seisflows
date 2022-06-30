@@ -132,12 +132,3 @@ class Frontera(Slurm):
             ])
 
         super().run(classname, method, single, run_call=run_call, **kwargs)
-
-    def taskid(self):
-        """Inherits from seisflows.system.slurm.Slurm"""
-        return self.taskid()
-
-    def checkpoint(self, path, classname, method, kwargs):
-        """Inherits from workflow.system.workstation.Workstation"""
-        self.checkpoint(path=path, classname=classname, method=method,
-                        kwargs=kwargs)

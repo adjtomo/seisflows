@@ -115,7 +115,7 @@ class Default(Base):
 
         return gradient
 
-    def sum_smooth_kernels(self, kernel_path):
+    def sum_smooth_kernels(self, path_grad):
         """
         Sums kernels from individual sources, with optional smoothing
 
@@ -123,8 +123,8 @@ class Default(Base):
             This function needs to be run on system, i.e., called by
             system.run(single=True)
 
-        :type kernel_path: str
-        :param kernel_path: directory containing sensitivity kernels in the
+        :type path_grad: str
+        :param path_grad: directory containing sensitivity kernels in the
             scratch directory to be summed and smoothed. Output summed and
             summed + smoothed kernels will be saved here as well.
         """
@@ -132,6 +132,8 @@ class Default(Base):
 
         # If specified, smooth the kernels in the vertical and horizontal and
         # save both (summed, summed+smoothed) to separate output directories
+        kernel_path = os.path.join(path_grad, "kernels")
+
         path_sum_nosmooth = os.path.join(kernel_path, "sum_nosmooth")
         path_sum = os.path.join(kernel_path, "sum")
 

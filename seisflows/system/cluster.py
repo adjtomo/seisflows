@@ -51,10 +51,6 @@ class Cluster(Workstation):
         """
         super().check(validate=validate)
 
-    def setup(self):
-        """Inherits from workflow.system.workstation.Workstation"""
-        self.setup()
-
     def submit(self, submit_call=None):
         """
         Main insertion point of SeisFlows onto the compute system.

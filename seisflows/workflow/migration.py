@@ -103,7 +103,7 @@ class Migration(Forward):
 
     def evaluate_initial_misfit(self):
         """Inherits from seisflows.workflow.forward.Forward"""
-        self.evaluate_initial_misfit()
+        super().evaluate_initial_misfit()
 
     def evaluate_gradient(self, path=None):
         """
@@ -131,7 +131,7 @@ class Migration(Forward):
 
         # Runs kernel processing as a single parallel process
         system.run("postprocess", "sum_smooth_kernels", single=True,
-                   input_path=self.path.GRAD)
+                   path_grad=self.path.GRAD)
 
     def write_gradient(self):
         """

@@ -117,18 +117,6 @@ class LBFGS(Gradient):
         unix.cd(self.path.OPTIMIZE)
         unix.mkdir(self.LBFGS_dir)
 
-    def finalize(self):
-        """Inherit from optimize.gradient.Gradient"""
-        self.finalize()
-
-    def load(self, name):
-        """Inherit from optimize.gradient.Gradient"""
-        return self.load(name=name)
-
-    def save(self, name, vector):
-        """Inherit from optimize.gradient.Gradient"""
-        self.save(name=name, vector=vector)
-
     def compute_direction(self):
         """
         Call on the L-BFGS optimization machinery to compute a search
@@ -210,14 +198,6 @@ class LBFGS(Gradient):
         y = np.memmap(filename=self.y_file, mode="r+")
         s[:] = 0.
         y[:] = 0.
-
-    def write_stats(self):
-        """Inherit from optimize.gradient.Gradient"""
-        self.write_stats()
-
-    def check_model(self, m, min_pr=-1, max_pr=0.5):
-        """Inherit from optimize.gradient.Gradient"""
-        self.check_model(m=m, min_pr=min_pr, max_pr=max_pr)
 
     def _update(self):
         """
