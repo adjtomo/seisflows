@@ -58,7 +58,7 @@ class Inversion(Migration):
         )
 
         self.required.par(
-            "END", required=True, par_type=int,
+            "END", required=False, default=1, par_type=int,
             docstr="Last iteration of the inverison workflow,"
                    "BEGIN <= END <= inf"
         )
@@ -81,7 +81,6 @@ class Inversion(Migration):
             "SAVEMODEL", required=False, default=True, par_type=bool,
             docstr="Save updated model files after each iteration"
         )
-
         # Define the Paths required by this module
         self.required.path(
             "FUNC", required=False,
@@ -112,6 +111,7 @@ class Inversion(Migration):
         Checks parameters and paths
         """
         super().check(validate=validate)
+        import pdb;pdb.set_trace()
         assert(1 <= self.par.BEGIN <= self.par.END), \
             f"Incorrect BEGIN or END parameter. Values must be in order: " \
             f"1 <= {self.par.BEGIN} <= {self.par.END}"
@@ -139,22 +139,6 @@ class Inversion(Migration):
 
         self.checkpoint()
         preprocess.finalize()
-
-        # Save files from scratch before discarding
-        if self.par.SAVEMODEL:
-            self.save_model()
-
-        if self.par.SAVEGRADIENT:
-            self.save_gradient()
-
-        if self.par.SAVEKERNELS:
-            self.save_kernels()
-
-        if self.par.SAVETRACES:
-            self.save_traces()
-
-        if self.par.SAVERESIDUALS:
-            self.save_residuals()
 
     def main(self, flow=None, return_flow=False):
         """

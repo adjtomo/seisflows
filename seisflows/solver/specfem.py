@@ -11,12 +11,11 @@ import subprocess
 import numpy as np
 from glob import glob
 
-from seisflows.core import Base
+from seisflows.core import Base, Dict
 from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
 from seisflows.tools.specfem import Container, getpar
 from seisflows.tools.wrappers import diff
-from seisflows.core import Dict
 
 
 class Specfem(Base):
@@ -332,9 +331,9 @@ class Specfem(Base):
             self.parameters.append("rho")
 
         assert hasattr(solver_io, self.par.SOLVERIO)
-        assert hasattr(self.io, "read_slice"), \
+        assert hasattr(self._io, "read_slice"), \
             "IO method has no attribute 'read_slice'"
-        assert hasattr(self.io, "write_slice"), \
+        assert hasattr(self._io, "write_slice"), \
             "IO method has no attribute 'write_slice'"
 
     def setup(self):

@@ -231,7 +231,7 @@ def test_cmd_clean(tmpdir):
         sf = SeisFlows()
         sf.clean(force=True)
 
-    for fid in [path, CFGPATHS.PAR_FILE]:
+    for fid in [path, "parameters.yaml"]:
         assert(os.path.exists(fid))
 
 

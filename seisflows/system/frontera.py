@@ -85,7 +85,7 @@ class Frontera(Slurm):
                 f"-N 1",  # total number of nodes requested
                 f"-n 1",  # number of mpi tasks
                 f"-t {self.par.WALLTIME}",  # job walltime
-                f"{os.path.join(ROOT_DIR, 'scripts', 'submit')}",
+                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",
                 f"--output {self.path.OUTPUT}"
             ])
         super().submit(submit_call=submit_call)
@@ -124,7 +124,7 @@ class Frontera(Slurm):
                 f"-N {_nodes}",  # total number of nodes requested
                 f"-n {self.par.NPROC}",  # number of mpi tasks
                 f"-t {self.par.WALLTIME}",  # job walltime
-                f"{os.path.join(ROOT_DIR, 'scripts', 'run')}",
+                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
                 f"--output {self.path.OUTPUT}"
                 f"--classname {classname}",
                 f"--funcname {method}",

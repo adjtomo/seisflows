@@ -30,7 +30,6 @@ model using 3 events and 1 receiver.
 import os
 import sys
 import glob
-import shutil
 import subprocess
 import numpy as np
 

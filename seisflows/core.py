@@ -240,19 +240,23 @@ class SeisFlowsPathsParameters:
         :raises ParameterError: if a required path or parameter is not set by
             the user.
         """
-        if paths:
+        if parameters:
             sys_path = sys.modules["seisflows_parameters"]
-            for key, attrs in self.paths.items():
+            for key, attrs in self.parameters.items():
                 if attrs["required"] and (key not in sys_path):
-                    raise KeyError(f"{sys_path} has no key {key}")
+                    raise KeyError(
+                        f"Required parameter '{key}' not found in parameter file"
+                    )
                 elif key not in sys_path:
                     setattr(sys_path, key, attrs["default"])
 
-        if parameters:
+        if paths:
             sys_par = sys.modules["seisflows_paths"]
-            for key, attrs in self.parameters.items():
+            for key, attrs in self.paths.items():
                 if attrs["required"] and (key not in sys_par):
-                    raise ValueError(sys_par, key)
+                    raise KeyError(
+                        f"Required path '{key}' not found in parameter file"
+                    )
                 elif key not in sys_par:
                     setattr(sys_par, key, attrs["default"])
 

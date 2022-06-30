@@ -137,7 +137,7 @@ class Maui(Slurm):
                 f"--ntasks=1",
                 f"--cpus-per-task=1",
                 f"--time={self.par.WALLTIME:d}",
-                f"{os.path.join(ROOT_DIR, 'scripts', 'submit')}",
+                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",
                 f"--output {self.path.OUTPUT}"
             ])
 
@@ -180,7 +180,7 @@ class Maui(Slurm):
                 f"--time={self.par.TASKTIME:d}",
                 f"--output={os.path.join(self.path.WORKDIR, 'logs', '%A_%a')}",
                 f"--array=0-{self.par.NTASK-1 % self.par.NTASKMAX}",
-                f"{os.path.join(ROOT_DIR, 'scripts', 'run')}",
+                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
                 f"--output {self.path.OUTPUT}",
                 f"--classname {classname}",
                 f"--funcname {method}",
@@ -210,7 +210,7 @@ class Maui(Slurm):
             f"--time={self.par.ANCIL_TASKTIME:d}",
             f"--output={os.path.join(self.path.WORKDIR, 'logs', '%A_%a')}",
             f"--array=0-{self.par.NTASK-1 % self.par.NTASKMAX}",
-            f"{os.path.join(ROOT_DIR, 'scripts', 'run')}",
+            f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
             f"--output {self.path.OUTPUT}",
             f"--classname {classname}",
             f"--funcname {method}",

@@ -99,6 +99,14 @@ class Forward(Base):
             msg.mjr(f"FINISHED {self.__class__.__name__} WORKFLOW")
         )
 
+    def checkpoint(self):
+        """
+        Saves active SeisFlows working state to disk as Pickle files such that
+        the workflow can be resumed following a crash, pause or termination of
+        workflow.
+        """
+        save(path=self.path.OUTPUT)
+
     def main(self, flow=None, return_flow=False):
         """
         Execution of a workflow is equal to stsepping through workflow.main()
@@ -277,11 +285,4 @@ class Forward(Base):
                 sys.exit(-1)
 
         return start_idx, stop_idx
-
-    def checkpoint(self):
-        """
-        Writes information to disk so workflow can be resumed following a break
-        """
-        save(path=self.PATH.OUTPUT)
-
 

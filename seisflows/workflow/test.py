@@ -1,59 +1,39 @@
 #!/usr/bin/env python3
 """
-This is a SeisFlows Test class which is used to test out the underlying
+This is the SeisFlows Test class which is used to test out the underlying
 machinery before running an actual workflow. Contains simple functions used to
-make sure that all parts of the package are working as expected.
+make sure that all parts of the package are working as expected. Creates
+its own directory structure and acts as a standalone workflow tool
 """
 import os
 import sys
 import time
-import logging
 import subprocess
 import numpy as np
-
 from glob import glob
-from seisflows.core import SeisFlowsPathsParameters
-from seisflows.config import (custom_import, ROOT_DIR, CFGPATHS)
 
-PAR = sys.modules["seisflows_parameters"]
-PATH = sys.modules["seisflows_paths"]
-
-system = sys.modules["seisflows_system"]
-solver = sys.modules["seisflows_solver"]
-optimize = sys.modules["seisflows_optimize"]
-preprocess = sys.modules["seisflows_preprocess"]
-postprocess = sys.modules["seisflows_postprocess"]
+from seisflows.core import Base
+from seisflows.config import ROOT_DIR, CFGPATHS, save
 
 
-class Test(custom_import("workflow", "base")):
+class Test(Base):
     """
-    This is a template Base class
+    The Test workflow class provides a base parameter and directory structure
+    as well as test functions which can be run to ensure that the chosen
+    modules are working as expected
     """
-    # Class-specific logger accessed using self.logger
-    # When this logger is called, e.g., self.logger.info("text"), the logging
-    # package will know exactly which module, class and function the log
-    # statement has been sent from, extraordinarily helpful for debugging.
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
-    @property
-    def required(self):
+    def __init__(self):
         """
-        A hard definition of paths and parameters required by this class,
-        alongside their necessity for the class and their string explanations.
-
-        :rtype: seisflows.config.SeisFlowsPathsParameters
-        :return: Paths and parameters that define the given class
-
+        Initiate the TEST workflow
         """
-        sf = SeisFlowsPathsParameters(super().required)
+        super().__init__()
 
-        sf.path("TEST_DATA", required=False,
-                default=os.path.join(ROOT_DIR, "tests", "test_data",
-                                     "work"),
-                docstr="Example data for test system"
-                )
-
-        return sf
+        self.required.path(
+            "TEST_DATA", required=False,
+            default=os.path.join(ROOT_DIR, "tests", "test_data"),
+            docstr="Example data for test system which is shipped with the "
+                   "SeisFlows repository"
+        )
 
     def check(self, validate=True):
         """
@@ -64,8 +44,15 @@ class Test(custom_import("workflow", "base")):
         :type validate: bool
         :param validate: set required paths and parameters into sys.modules
         """
-        if validate:
-            self.required.validate()
+        self.required.validate()
+
+    def checkpoint(self):
+        """
+        Saves active SeisFlows working state to disk as Pickle files such that
+        the workflow can be resumed following a crash, pause or termination of
+        workflow.
+        """
+        save(path=self.path.OUTPUT)
 
     def main(self, return_flow=False):
         """
@@ -82,10 +69,12 @@ class Test(custom_import("workflow", "base")):
         for func in FLOW:
             func()
 
-    def test_function(self, check_value):
+    def _test_function_print(self, check_value):
         """
         A simple function that can be called by system.run()
         """
+        system = self.module("system")
+
         print(f"Hello world, from taskid {system.taskid()}. "
               f"Check: {check_value}")
 
@@ -97,6 +86,9 @@ class Test(custom_import("workflow", "base")):
         Check that these functions perform as expected by passing in a random
         value and checking that this value gets logged back
         """
+        system = self.module("system")
+        system.setup()
+
         # Run a very simple test function using system.run()
         check_value_1 = 1234.5
         system.run(classname="workflow", method="test_function",
@@ -118,15 +110,18 @@ class Test(custom_import("workflow", "base")):
                 assert(float(line.strip().split(" ")[-1]) == check)
 
         # Check that MPI Exec works
-        assert("MPIEXEC" in PAR), f"MPIEXEC is not defined for this system"
-        stdout = subprocess.run(PAR.MPIEXEC, shell=True, check=True,
+        assert("MPIEXEC" in self.par), f"MPIEXEC is not defined for this system"
+        stdout = subprocess.run(self.par.MPIEXEC, shell=True, check=True,
                                 stdout=subprocess.PIPE)
 
     def test_preprocess(self):
         """
         Test the exposed 'prepare_eval_grad()' preprocessing function
         """
-        cwd = PATH.TEST_DATA
+        preprocess = self.module("preprocess")
+        preprocess.setup()
+
+        cwd = os.path.join(self.path.TEST_DATA, "test_solver")
         taskid = 0
         filenames = ["AA.S0001.BXY.semd"]
         source_name = "001"
@@ -140,14 +135,16 @@ class Test(custom_import("workflow", "base")):
         Simply test that the solver binaries can be called, which is what the
         solver module is ultimately responsible for
         """
-        assert(PATH.SPECFEM_BIN is not None and
-               os.path.exists(PATH.SPECFEM_BIN)), (
-            f"SPECFEM_BIN {PATH.SPECFEM_BIN} directory does not exist"
+        solver = self.module("solver")
+
+        assert(self.path.SPECFEM_BIN is not None and
+               os.path.exists(self.path.SPECFEM_BIN)), (
+            f"SPECFEM_BIN {self.path.SPECFEM_BIN} directory does not exist"
         )
         try:
             solver.call_solver(
-                executable=f"{PATH.SPECFEM_BIN}/xcombine_sem",
-                output=os.path.join(PATH.TEST_DATA, "test_solver.log")
+                executable=f"{self.path.SPECFEM_BIN}/xcombine_sem",
+                output=os.path.join(self.path.TEST_DATA, "test_solver.log")
             )
         # We expect this to throw a system exit because we are not running with
         # MPI
@@ -158,10 +155,13 @@ class Test(custom_import("workflow", "base")):
         """
         Test optimization module with a simple Rosenbrock function
         """
-        PAR.log_level = "CRITICAL"
+        optimize = self.module("optimize")
 
+        self.par.log_level = "CRITICAL"
         m_new, m_true, objective_function, gradient = rosenbrock()
-        optimize.setup(m_new=m_new)
+
+        optimize.setup()
+        optimize.save("m_new", m_new)
 
         def evaluate_function():
             """

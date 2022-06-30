@@ -51,13 +51,6 @@ class Workstation(Base):
             docstr="Number of processor to use for each simulation"
         )
         self.required.par(
-            "PRECHECK", required=False, par_type=list, default=["TITLE"],
-            docstr="A list of parameters that will be displayed to stdout "
-                   "before 'submit' or 'resume' is run. Useful for "
-                   "manually reviewing important parameters prior to "
-                   "system submission"
-        )
-        self.required.par(
             "LOG_LEVEL", required=False, par_type=str, default="DEBUG",
             docstr="Verbosity output of SF logger. Available from least to "
                    "most verbosity: 'CRITICAL', 'WARNING', 'INFO', 'DEBUG'; "
@@ -83,7 +76,7 @@ class Workstation(Base):
         )
         self.required.path(
             "SYSTEM", required=False,
-            default=os.path.join(self.required.SCRATCH, "system"),
+            default=os.path.join(self.path.WORKDIR, "scratch", "system"),
             docstr="scratch path to hold any system related data"
         )
         self.required.path(

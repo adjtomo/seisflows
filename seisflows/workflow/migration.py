@@ -77,7 +77,7 @@ class Migration(Forward):
             assert os.path.exists(self.path.MODEL_TRUE), \
                 "CASE == SYNTHETIC requires PATH.MODEL_TRUE"
 
-        if not os.path.exists(self.path.DATA):
+        if not self.path.DATA or not os.path.exists(self.path.DATA):
             assert "MODEL_TRUE" in self.path, f"DATA or MODEL_TRUE must exist"
 
     def setup(self, flow=None, return_flow=False):
@@ -115,7 +115,9 @@ class Migration(Forward):
         system = self.module("system")
 
         self.logger.info(msg.mnr("EVALUATING GRADIENT"))
-        self.logger.debug(f"evaluating gradient {self.par.NTASK} times on system...")
+        self.logger.debug(
+            f"evaluating gradient {self.par.NTASK} times on system..."
+        )
         system.run("solver", "eval_grad", path=path or self.path.GRAD,
                    export_traces=self.par.SAVETRACES)
 

@@ -33,10 +33,10 @@ class Specfem2D(Specfem):
 
         self.f0 = None
 
-    @property
-    def _io(self):
-        """Inherits from seisflows.solver.specfem.Specfem"""
-        return self._io
+    # @property
+    # def _io(self):
+    #     """Inherits from seisflows.solver.specfem.Specfem"""
+    #     return self._io
 
     @property
     def taskid(self):

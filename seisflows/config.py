@@ -48,7 +48,7 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 # Define a package-wide default directory and file naming schema. This will
 # be returned as a Dict() object, defined below. All of these files and
 # directories will be created relative to the user-defined working directory
-CFGPATHS = Dict(
+DIR = Dict(
     PAR_FILE="parameters.yaml",  # Default SeisFlows parameter file
     SCRATCHDIR="scratch",        # SeisFlows internal working directory
     OUTPUTDIR="output",          # Permanent disk storage for state and outputs
