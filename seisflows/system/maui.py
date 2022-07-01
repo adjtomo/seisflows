@@ -161,7 +161,9 @@ class Maui(Slurm):
             parameters
         """
         if run_call is None:
+            # Calculate requested number of nodes based on requested proc count
             _nodes = np.ceil(self.par.NPROC / float(self.par.NODESIZE))
+            _nodes = _nodes.astype(int)
 
             run_call = " ".join([
                 "sbatch",

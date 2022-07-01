@@ -20,7 +20,7 @@ import sys
 import pickle
 import argparse
 
-from seisflows.config import load, config_logger
+from seisflows.config import load
 
 
 

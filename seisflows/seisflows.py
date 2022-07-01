@@ -644,6 +644,8 @@ class SeisFlows:
         parameter file from scratch. e.g., to swap systems from a workstation
         to a cluster
 
+        TODO figure out how to match paths too
+
         .. rubric::
             $ seisflows swap system slurm
         """
@@ -678,7 +680,7 @@ class SeisFlows:
         for key, val in ogpaths.items():
             try:
                 setpar(key=key, val=val, file=self._args.parameter_file,
-                       delim=":", _reverse=True)
+                       delim=":")
             except KeyError:
                 continue
 

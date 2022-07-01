@@ -46,6 +46,8 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 # be returned as a Dict() object, defined below. All of these files and
 # directories will be created relative to the user-defined working directory
 CFGPATHS = Dict(
+    SCRATCHDIR="scratch",
+    OUTPUTDIR="output",
     PAR_FILE="parameters.yaml",  # Default SeisFlows parameter file
     LOGFILE="sfoutput.txt",    # Log files for all system log
     ERRLOGFILE="sferror.txt",  # StdErr dump site for crash messages
