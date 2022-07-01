@@ -675,10 +675,11 @@ class SeisFlows:
                        delim=":")
             except KeyError:
                 continue
+        import pdb;pdb.set_trace()
         for key, val in ogpaths.items():
             try:
                 setpar(key=key, val=val, file=self._args.parameter_file,
-                       delim=":", _reverse=True)
+                       delim=":", match_partial=True, _reverse=True)
             except KeyError:
                 continue
 

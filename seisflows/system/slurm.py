@@ -188,11 +188,6 @@ class Slurm(Cluster):
 
         return int(sftaskid)
 
-    def checkpoint(self, path, classname, method, kwargs):
-        """Inherits from workflow.system.workstation.Workstation"""
-        self.checkpoint(path=path, classname=classname, method=method,
-                        kwargs=kwargs)
-
     def _check_job_status(self, job_ids):
         """
         Repeatedly check the status of a currently running job using 'sacct'.
