@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-The Simmple Linux Utility for Resource Management (SLURM) is a commonly used
+The Simple Linux Utility for Resource Management (SLURM) is a commonly used
 workload manager on many high performance computers / clusters. The Slurm
 system class provides generalized utilites for interacting with Slurm systems.
 
@@ -187,11 +187,6 @@ class Slurm(Cluster):
                 sftaskid = 0
 
         return int(sftaskid)
-
-    def checkpoint(self, path, classname, method, kwargs):
-        """Inherits from workflow.system.workstation.Workstation"""
-        self.checkpoint(path=path, classname=classname, method=method,
-                        kwargs=kwargs)
 
     def _check_job_status(self, job_ids):
         """
