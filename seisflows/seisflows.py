@@ -27,7 +27,8 @@ from copy import copy
 from IPython import embed
 
 from seisflows.core import Dict, SeisFlowsPathsParameters
-from seisflows.config import custom_import, save, NAMES, ROOT_DIR, CFGPATHS
+from seisflows.config import (custom_import, save, NAMES, ROOT_DIR, CFGPATHS,
+                              config_logger)
 from seisflows.tools import unix, msg
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)
@@ -732,6 +733,10 @@ class SeisFlows:
         self._register_modules()
         self._check_parameters()
 
+        config_logger(level=self._parameters.LOG_LEVEL,
+                      verbose=self._parameters.VERBOSE,
+                      filename=self._paths.LOGFILE)
+
         # Submit workflow.main() to the system
         system = sys.modules["seisflows_system"]
         system.submit()
@@ -784,6 +789,11 @@ class SeisFlows:
         """
         self._register_parameters()
         self._load_modules()
+
+        config_logger(level=self._parameters.LOG_LEVEL,
+                      verbose=self._parameters.VERBOSE,
+                      filename=self._paths.LOGFILE)
+
         system = sys.modules["seisflows_system"]
         system.submit()
 

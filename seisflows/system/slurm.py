@@ -213,7 +213,7 @@ class Slurm(Cluster):
                     # Sometimes states can be something like 'CANCELLED+', so
                     # we can't do exact string matching, check partial matches
                     if any([check in state for check in bad_states]):
-                        return job_id, state
+                        return job_ids[i], state
             # WAIT CONDITION: if sacct is not working, we'll get stuck in a loop
             if "UNDEFINED" in states:
                 count += 1

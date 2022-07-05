@@ -108,8 +108,3 @@ class Cluster(Workstation):
         """
         raise NotImplementedError('Must be implemented by subclass.')
 
-    def checkpoint(self, path, classname, method, kwargs):
-        """Inherits from workflow.system.workstation.Workstation"""
-        self.checkpoint(path=path, classname=classname, method=method,
-                        kwargs=kwargs)
-
