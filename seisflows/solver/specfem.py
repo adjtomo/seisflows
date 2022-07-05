@@ -620,8 +620,8 @@ class Specfem(Base):
         """
         Solver I/O: Saves SPECFEM2D/3D models or kernels
 
-        :type save_dict: dict or Container
-        :param save_dict: model stored as a dictionary or Container
+        :type save_dict: Dict
+        :param save_dict: model stored by parameter key
         :type path: str
         :param path: directory from which model is read
         :type parameters: list
@@ -692,14 +692,14 @@ class Specfem(Base):
 
         nproc = self.mesh_properties.nproc
         ngll = self.mesh_properties.ngll
-        model = Container()
+        model = Dict()
 
         for idim, key in enumerate(parameters):
             model[key] = []
             for iproc in range(nproc):
                 imin = sum(ngll) * idim + sum(ngll[:iproc])
                 imax = sum(ngll) * idim + sum(ngll[:iproc + 1])
-                model[key] += [m[imin:imax]]
+                model[key].extend([m[imin:imax]])
 
         return model
 

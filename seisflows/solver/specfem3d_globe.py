@@ -4,6 +4,9 @@ This is the subclass seisflows.solver.specfem3d_globe
 This class provides utilities for the Seisflows solver interactions with
 Specfem3D Globe. It inherits all attributes from seisflows.solver.specfem3d,
 and overwrites these functions to provide specified interaction with Specfem3D.
+
+SPECFEM3D_Globe specfic notes:
+    - does not allow SU seismogram outputs, only ASCII, SAC, ASDF, 3D_Array
 """
 import os
 from glob import glob
@@ -44,8 +47,16 @@ class Specfem3DGlobe(Specfem3D):
         """
         Reads SPECFEM model or kernel
 
-        Models are stored in Fortran binary format and separated into
-        multiple files according to material parameter and processor rank.
+        .. note::
+            SPECFEM3D_Globe meshes are broken into 3 regions. 
+            Region 1 == Crust + Mantle
+            Region 2 == Outer core
+            Region 3 == Inner core
+
+        .. warning::
+            Currently SeisFlows only considers the crust + mantle in Globe
+            simulations
+        
 
         :type path: str
         :param path: directory from which model is read
