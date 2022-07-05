@@ -195,12 +195,12 @@ class Workstation(Base):
             if taskid == 0:
                 self.logger.info(f"running task {classname}.{method} "
                                  f"{self.par.NTASK} times")
-            function(**kwargs)
 
-            # Redirect output to a log file to mimic cluster runs
-            # with open(log_file, "w") as f:
-            #     with redirect_stdout(f):
-            #         function(**kwargs)
+            # Redirect output to a log file to mimic cluster runs where 'run'
+            # task output logs are sent to different files
+            with open(log_file, "w") as f:
+                with redirect_stdout(f):
+                    function(**kwargs)
 
     def taskid(self):
         """

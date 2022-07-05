@@ -14,7 +14,7 @@ from glob import glob
 from seisflows.core import Base, Dict
 from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
-from seisflows.tools.specfem import Container, getpar
+from seisflows.tools.specfem import getpar
 from seisflows.tools.wrappers import diff
 
 
@@ -604,7 +604,7 @@ class Specfem(Base):
         if parameters is None:
             parameters = self.parameters
 
-        load_dict = Container()
+        load_dict = Dict()
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters:
                 load_dict[key] += self._io.read_slice(
@@ -704,6 +704,7 @@ class Specfem(Base):
         """
         Postprocessing wrapper: xcombine_sem
         Sums kernels from individual source contributions to create gradient.
+
 
         .. note::
             The binary xcombine_sem simply sums matching databases (.bin)

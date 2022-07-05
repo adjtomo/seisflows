@@ -2,40 +2,6 @@
 Utilities to interact with, manipulate or call on the external solver, 
 i.e., SPECFEM2D/3D/3D_GLOBE
 """
-import sys
-import numpy as np
-
-from collections import defaultdict
-from seisflows.tools import msg
-from seisflows.tools.math import poissons_ratio
-from seisflows.tools.wrappers import iterable
-
-
-class Minmax(defaultdict):
-    """
-    Keeps track of min, max values of model or kernel
-    """
-    def __init__(self):
-        super(Minmax, self).__init__(lambda: [+np.inf, -np.inf])
-
-    def update(self, keys, vals):
-        for key, val in zip(iterable(keys), iterable(vals)):
-            if min(val) < self.dict[key][0]:
-                self.dict[key][0] = min(val)
-            if max(val) > self.dict[key][1]:
-                self.dict[key][1] = max(val)
-
-    def __call__(self, key):
-        return self.dict[key]
-
-
-class Container(defaultdict):
-    """
-    Dictionary-like object for holding models or kernels
-    """
-    def __init__(self):
-        super(Container, self).__init__(lambda: [])
-        self.minmax = Minmax()
 
 
 def getpar(key, file, delim="=", match_partial=False):
@@ -225,4 +191,3 @@ def setpar_vel_model(file, model):
 
     # Set nbmodels to the correct value
     setpar(key="nbmodels", val=len(model), file=file)
-

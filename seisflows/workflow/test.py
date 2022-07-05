@@ -89,7 +89,6 @@ class Test(Base):
         system.logger.warning(f"Hello world, from taskid {system.taskid()}. "
                               f"Logger 'warning' message. Check: {check_value}")
 
-
         config_logger(level="DEBUG", filemode="a", verbose=True)
 
         system.logger.info(f"Hello world, from taskid {system.taskid()}. "
@@ -122,7 +121,6 @@ class Test(Base):
         check_value_2 = 5432.1
         system.run(classname="workflow", method="_test_function_print", 
                    single=True, check_value=check_value_2)
-                   
 
         # Check the output log files to match the check values
         for fid, check in zip(
@@ -135,8 +133,9 @@ class Test(Base):
 
         # Check that MPI Exec works
         assert("MPIEXEC" in self.par), f"MPIEXEC is not defined for this system"
-        stdout = subprocess.run(self.par.MPIEXEC, shell=True, check=True,
-                                stdout=subprocess.PIPE)
+        if self.par.MPIEXEC:
+            stdout = subprocess.run(self.par.MPIEXEC, shell=True, check=True,
+                                    stdout=subprocess.PIPE)
 
     def test_preprocess(self):
         """
