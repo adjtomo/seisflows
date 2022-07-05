@@ -12,9 +12,7 @@ import os
 from glob import glob
 
 from seisflows.solver.specfem3d import Specfem3D
-from seisflows.tools.specfem import Minmax
 from seisflows.tools import unix
-from seisflows.tools.wrappers import Struct, exists
 
 
 class Specfem3DGlobe(Specfem3D):
@@ -142,7 +140,7 @@ class Specfem3DGlobe(Specfem3D):
                 dummy = loadbin(path, nproc, 'reg1_' + parameters[0])
                 ngll += [len(dummy)]
                 nproc += 1
-                if not exists(
+                if not os.path.exists(
                         os.path.join(path,
                                      f"proc{nrpoc}_reg1_{parameters[0]}.bin")):
                     break
