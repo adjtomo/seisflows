@@ -165,7 +165,7 @@ class Slurm(Cluster):
                           header="slurm run error", border="="))
             sys.exit(-1)
 
-        self.logger.info(f"Task {classname}.{method} finished successfully")
+        self.logger.info(f"task {classname}.{method} finished successfully")
 
     def taskid(self):
         """

@@ -604,14 +604,17 @@ class Specfem(Base):
         if parameters is None:
             parameters = self.parameters
 
-        load_dict = Dict()
+        # Initiate empty dictionary to hold model values
+        model_dict = Dict({key: [] for key in self.parameters})
+
         for iproc in range(self.mesh_properties.nproc):
             for key in parameters:
-                load_dict[key] += self._io.read_slice(
+                _model_slice_values = self._io.read_slice(
                     path=path, parameters=f"{prefix}{key}{suffix}", iproc=iproc
-                )
+                    )
+                model_dict[key].extend(_model_slice_values)
 
-        return load_dict
+        return model_dict
 
     def save(self, save_dict, path, parameters=None, prefix="", suffix=""):
         """
