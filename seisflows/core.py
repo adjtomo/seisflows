@@ -24,7 +24,6 @@ class Base(object):
         then used to build the parameter file dynamically.
         """
         self.required = SeisFlowsPathsParameters()
-        # self._logger = None
 
     def module(self, name):
         """
@@ -40,59 +39,6 @@ class Base(object):
             self.logger.warning(f"seisflows_{name} has not been instantiated")
             mod = None
         return mod
-
-    # @property
-    # def logger(self):
-    #     """
-    #     An instance specific logger which imprints inheritance information into
-    #     the log statements, making it easier to debug functions with
-    #     multiple inheritance
-    #     """
-    #     if self._logger is None:
-    #         self._logger = self._get_logger()
-    #     return self._logger
-
-    # def _get_logger(self):
-    #     """
-    #     Define an instance specific logger at run time which will imprint
-    #     inheritance information onto log statements, making it easier to debug
-    #     functions that might have multiple points of inheritance.
-
-    #     All loggers will write to the same main log file and also print to
-    #     stdout. PAR.VERBOSE and PAR.LOG_LEVEL both control the amount of
-    #     information that gets printed to the log file.
-    #     """
-    #     # logger = logging.getLogger(
-    #     #     self.__class__.__name__).getChild(self.__class__.__qualname__)
-    #     logger = logging.getLogger(self.__class__.__name__)
-
-    #     # Two levels of verbosity on log level, triggered with PAR.VERBOSE
-    #     if self.par.VERBOSE:
-    #         # More verbose logging statement with levelname and func name
-    #         fmt_str = (
-    #             "%(asctime)s | %(levelname)-5s | %(name)s.%(funcName)s()\n"
-    #             "> %(message)s"
-    #         )
-    #     else:
-    #         # Clean logging statement with only time and message
-    #         fmt_str = "%(asctime)s | %(message)s"
-
-    #     # Instantiate logger during _register() as we now have user-defined pars
-    #     logger.setLevel(self.par.LOG_LEVEL)
-    #     formatter = logging.Formatter(fmt_str, datefmt="%Y-%m-%d %H:%M:%S")
-
-    #     # Stream handler to print log statements to stdout
-    #     st_handler = logging.StreamHandler(sys.stdout)
-    #     st_handler.setFormatter(formatter)
-    #     logger.addHandler(st_handler)
-
-    #     # File handler to print log statements to text file `filename`
-    #     if self.path.LOGFILE is not None:
-    #         file_handler = logging.FileHandler(self.path.LOGFILE, "a")
-    #         file_handler.setFormatter(formatter)
-    #         logger.addHandler(file_handler)
-
-    #     return logger
 
     @property
     def par(self):

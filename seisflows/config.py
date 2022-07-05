@@ -150,9 +150,10 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
 
     # Two levels of verbosity on log level, triggered with PAR.VERBOSE
     if verbose:
-        # More verbose logging statement with levelname and func name
+        # More verbose logging statement for debugging
         fmt_str = (
-            "%(asctime)s | %(levelname)-5s | %(name)s.%(funcName)s()\n"
+            "%(asctime)s | %(levelname)-5s | "
+            "%(filename)s -> %(funcName)s():L%(lineno)s\n"
             "> %(message)s"
         )
     else:

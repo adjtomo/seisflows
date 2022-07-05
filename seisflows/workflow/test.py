@@ -13,7 +13,7 @@ import numpy as np
 from glob import glob
 
 from seisflows.core import Base
-from seisflows.config import ROOT_DIR, CFGPATHS, save
+from seisflows.config import ROOT_DIR, CFGPATHS, save, config_logger
 
 
 class Test(Base):
@@ -58,10 +58,10 @@ class Test(Base):
         """
         This controls the main testing workflow
         """
-        FLOW = [#self.test_system,
+        FLOW = [self.test_system,
                 # self.test_preprocess,
                 # self.test_solver,
-                self.test_optimize
+                # self.test_optimize
                 ]
         if return_flow:
             return FLOW
@@ -78,6 +78,29 @@ class Test(Base):
         print(f"Hello world, from taskid {system.taskid()}. "
               f"Check: {check_value}")
 
+        config_logger(level="DEBUG", filemode="a", verbose=False)
+
+        system.logger.info(f"Hello world, from taskid {system.taskid()}. "
+                           f"Logger 'info' message. Check: {check_value}")
+
+        system.logger.debug(f"Hello world, from taskid {system.taskid()}. "
+                            f"Logger 'debug' message. Check: {check_value}")
+
+        system.logger.warning(f"Hello world, from taskid {system.taskid()}. "
+                              f"Logger 'warning' message. Check: {check_value}")
+
+
+        config_logger(level="DEBUG", filemode="a", verbose=True)
+
+        system.logger.info(f"Hello world, from taskid {system.taskid()}. "
+                           f"Logger 'info' message. Check: {check_value}")
+
+        system.logger.debug(f"Hello world, from taskid {system.taskid()}. "
+                            f"Logger 'debug' message. Check: {check_value}")
+
+        system.logger.warning(f"Hello world, from taskid {system.taskid()}. "
+                              f"Logger 'warning' message. Check: {check_value}")
+
     def test_system(self):
         """
         Test the system by submitting a simple print statement using the
@@ -91,14 +114,15 @@ class Test(Base):
 
         # Run a very simple test function using system.run()
         check_value_1 = 1234.5
-        system.run(classname="workflow", method="test_function",
+        system.run(classname="workflow", method="_test_function_print",
                    check_value=check_value_1)
 
         time.sleep(3)  # wait a bit for system to catch up
 
         check_value_2 = 5432.1
-        system.run(classname="workflow", method="test_function", single=True,
-                   check_value=check_value_2)
+        system.run(classname="workflow", method="_test_function_print", 
+                   single=True, check_value=check_value_2)
+                   
 
         # Check the output log files to match the check values
         for fid, check in zip(
