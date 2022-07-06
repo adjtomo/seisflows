@@ -8,8 +8,8 @@ import shutil
 import pytest
 from unittest.mock import patch
 from seisflows import config
+from seisflows.core import SeisFlowsPathsParameters
 from seisflows.seisflows import SeisFlows
-from seisflows.tools.err import ParameterError
 
 
 TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
@@ -38,8 +38,9 @@ def sfinit(tmpdir, copy_par_file):
     os.chdir(tmpdir)
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows()
-        sf._register_parameters(force=True)
-        sf._register_modules(check=True)
+        sf._register_parameters()
+        sf._register_modules()
+        sf._check_parameters()
 
     return sf
 
@@ -101,7 +102,7 @@ def test_seisflows_paths_parameters(sfinit):
     Recreates the required() function at the top of each class.
     """
     sfinit
-    sfpp = config.SeisFlowsPathsParameters()
+    sfpp = SeisFlowsPathsParameters()
 
     # All of these parameters are defined in the test parameter file
     sfpp.par("SOLVER", required=True, par_type=str,
@@ -115,7 +116,7 @@ def test_seisflows_paths_parameters(sfinit):
     # These parameters are not defined and are expected to throw parameter error
     sfpp.path("UNDEFINED", required=True,
               docstr="This path is not in the test parameter file")
-    with pytest.raises(ParameterError):
+    with pytest.raises(KeyError):
         sfpp.validate()
 
 

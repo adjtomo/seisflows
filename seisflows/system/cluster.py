@@ -4,65 +4,54 @@ The Cluster class provides the core utilities interaction with HPC systems
 which must be overloaded by subclasses for specific workload managers, or
 specific clusters.
 """
-import sys
-import logging
 import subprocess
-
-from seisflows.tools import msg
-from seisflows.config import custom_import, save, SeisFlowsPathsParameters
+from seisflows.system.workstation import Workstation
 
 
-PAR = sys.modules["seisflows_parameters"]
-PATH = sys.modules["seisflows_paths"]
-
-
-class Cluster(custom_import("system", "base")):
+class Cluster(Workstation):
     """
     Abstract base class for the Systems module which controls interaction with
     compute systems such as HPC clusters.
     """
-    # Class-specific logger accessed using self.logger
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
-    @property
-    def required(self):
+    def __init__(self):
         """
-        A hard definition of paths and parameters required by this class,
-        alongside their necessity for the class and their string explanations.
+        Instantiate the Cluster System class
         """
-        sf = SeisFlowsPathsParameters(super().required)
+        super().__init__()
 
-        # Define the Parameters required by this module
-        sf.par("WALLTIME", required=True, par_type=float,
-               docstr="Maximum job time in minutes for main SeisFlows job")
-
-        sf.par("TASKTIME", required=True, par_type=float,
-               docstr="Maximum job time in minutes for each SeisFlows task")
-
-        sf.par("NTASK", required=True, par_type=int,
-               docstr="Number of separate, individual tasks. Also equal to "
-                      "the number of desired sources in workflow")
-
-        sf.par("NPROC", required=True, par_type=int,
-               docstr="Number of processor to use for each simulation")
-
-        sf.par("ENVIRONS", required=False, default="", par_type=str,
-               docstr="Optional environment variables to be provided in the"
-                      "following format VAR1=var1,VAR2=var2... Will be set"
-                      "using os.environs")
-
-        return sf
+        self.required.par(
+            "WALLTIME", required=True, par_type=float,
+            docstr="Maximum job time in minutes for main SeisFlows job"
+        )
+        self.required.par(
+            "TASKTIME", required=True, par_type=float,
+            docstr="Maximum job time in minutes for each SeisFlows task"
+        )
+        # note: OVERLOADS the Workstation `NTASK` parameter
+        self.required.par(
+            "NTASK", required=True, par_type=int,
+            docstr="Number of separate, individual tasks. Also equal to "
+                   "the number of desired sources in workflow"
+        )
+        # note: OVERLOADS the Workstation `NPROC` parameter
+        self.required.par(
+            "NPROC", required=True, par_type=int,
+            docstr="Number of processor to use for each simulation"
+        )
+        self.required.par(
+            "ENVIRONS", required=False, default="", par_type=str,
+            docstr="Optional environment variables to be provided in the"
+                   "following format VAR1=var1,VAR2=var2... Will be set"
+                   "using os.environs"
+        )
 
     def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        if validate:
-            self.required.validate()
+        super().check(validate=validate)
 
-        super().check(validate=False)
-
-    def submit(self, submit_call):
+    def submit(self, submit_call=None):
         """
         Main insertion point of SeisFlows onto the compute system.
 
@@ -74,21 +63,18 @@ class Cluster(custom_import("system", "base")):
             1) run system setup, creating directory structure,
             2) execute workflow by submitting workflow.main()
 
-        :type workflow: seisflows.workflow
-        :param workflow: an active seisflows workflow instance
         :type submit_call: str
         :param submit_call: the command line workload manager call to be run by
             subprocess. These need to be passed in by specific workload manager
             subclasses.
         """
         self.setup()
-        workflow = sys.modules["seisflows_workflow"]
+        workflow = self.module("workflow")
         workflow.checkpoint()
-
         # check==True: subprocess will wait for workflow.main() to finish
         subprocess.run(submit_call, shell=True, check=True)
 
-    def run(self, classname, method, **kwargs):
+    def run(self, classname, method, single=False, **kwargs):
         """
         Runs a task multiple times in parallel
 
@@ -98,8 +84,16 @@ class Cluster(custom_import("system", "base")):
             submits N jobs to the compute system where N is the number of
             events requiring an adjoint simulation.
 
-        :rtype: None
-        :return: This function is not expected to return anything
+        :type classname: str
+        :param classname: the class to run
+        :type method: str
+        :param method: the method from the given `classname` to run
+        :type single: bool
+        :param single: run a single-process, non-parallel task, such as
+            smoothing the gradient, which only needs to be run by once.
+            This will change how the job array and the number of tasks is
+            defined, such that the job is submitted as a single-core job to
+            the system.
         """
         raise NotImplementedError('Must be implemented by subclass.')
 
@@ -113,3 +107,4 @@ class Cluster(custom_import("system", "base")):
             identifier.
         """
         raise NotImplementedError('Must be implemented by subclass.')
+

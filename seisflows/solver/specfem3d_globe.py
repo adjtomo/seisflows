@@ -4,61 +4,57 @@ This is the subclass seisflows.solver.specfem3d_globe
 This class provides utilities for the Seisflows solver interactions with
 Specfem3D Globe. It inherits all attributes from seisflows.solver.specfem3d,
 and overwrites these functions to provide specified interaction with Specfem3D.
+
+SPECFEM3D_Globe specfic notes:
+    - does not allow SU seismogram outputs, only ASCII, SAC, ASDF, 3D_Array
 """
 import os
-import sys
-import logging
 from glob import glob
 
-import seisflows.plugins.solver.specfem3d_globe as solvertools
-from seisflows.tools.specfem import Minmax  # Model, Minmax,
-# from seisflows.plugins.io import loadbypar, copybin, loadbin, savebin
-from seisflows.tools import unix, msg
-from seisflows.tools.wrappers import Struct, exists
-from seisflows.config import custom_import, SeisFlowsPathsParameters
-
-PAR = sys.modules["seisflows_parameters"]
-PATH = sys.modules["seisflows_paths"]
-system = sys.modules["seisflows_system"]
+from seisflows.solver.specfem3d import Specfem3D
+from seisflows.tools import unix
 
 
-class Specfem3DGlobe(custom_import("solver", "specfem3d")):
+class Specfem3DGlobe(Specfem3D):
     """
-    Python interface to Specfem3D Globe. This subclass inherits functions
-    from seisflows.solver.specfem3d.Specfem3D
+    Python interface to Specfem3D Globe. A very simple overload of Specfem3D
 
-    !!! See base class for method descriptions !!!
+    See class `seisflows.solver.specfem3d.Specfem3D` for a more detailed
+    explanation of methods and attributes of this class
     """
-    # Class-specific logger accessed using self.logger
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
     def __init__(self):
         """
         These parameters should not be set by the user.
         Attributes are initialized as NoneTypes for clarity and docstrings.
-
-        :type logger: Logger
-        :param logger: Class-specific logging module, log statements pushed
-            from this logger will be tagged by its specific module/classname
         """
         super().__init__()
 
-    @property
-    def required(self):
+    def data_wildcard(self, comp="?"):
         """
-        A hard definition of paths and parameters required by this class,
-        alongside their necessity for the class and their string explanations.
-        """
-        sf = SeisFlowsPathsParameters(super().required)
+        Returns a wildcard identifier for synthetic data
 
-        return sf
+        :rtype: str
+        :return: wildcard identifier for channels
+        """
+        if self.par.FORMAT.upper() == "SU":
+            raise NotImplementedError("SU file access is still a WIP")
+        elif self.par.FORMAT.upper() == "ASCII":
+            return f"*.?X{comp}.sem.ascii"
 
     def load(self, path, prefix="reg1_", suffix="",  parameters=None):
         """
         Reads SPECFEM model or kernel
 
-        Models are stored in Fortran binary format and separated into
-        multiple files according to material parameter and processor rank.
+        .. note::
+            SPECFEM3D_Globe meshes are broken into 3 regions. 
+            Region 1 == Crust + Mantle
+            Region 2 == Outer core
+            Region 3 == Inner core
+
+        .. warning::
+            Currently SeisFlows only considers the crust + mantle in Globe
+            simulations
+        
 
         :type path: str
         :param path: directory from which model is read
@@ -111,7 +107,7 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
                 elif 'kernel' in suffix:
                     pass
                 else:
-                    src = PATH.OUTPUT + '/' + 'model_init'
+                    src = self.path.OUTPUT + '/' + 'model_init'
                     dst = path
                     copybin(src, dst, iproc, prefix+key+suffix)
 
@@ -120,7 +116,7 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
             elif 'kernel' in suffix:
                 pass
             else:
-                src = PATH.OUTPUT + '/' + 'model_init'
+                src = self.path.OUTPUT + '/' + 'model_init'
                 dst = path
                 copybin(src, dst, iproc, prefix+'rho'+suffix)
 
@@ -133,7 +129,7 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
         """
         if not hasattr(self, '_mesh_properties'):
             if path is None:
-                path = PATH.MODEL_INIT
+                path = self.path.MODEL_INIT
 
             if parameters is None:
                 parameters = self.parameters
@@ -144,7 +140,7 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
                 dummy = loadbin(path, nproc, 'reg1_' + parameters[0])
                 ngll += [len(dummy)]
                 nproc += 1
-                if not exists(
+                if not os.path.exists(
                         os.path.join(path,
                                      f"proc{nrpoc}_reg1_{parameters[0]}.bin")):
                     break
@@ -169,7 +165,7 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
 
         !!! This probably doesnt work
 
-        Note:
+        .. note::
             Adjoint traces are initialized by writing zeros for all channels.
             Channels actually in use during an inversion or migration will be
             overwritten with nonzero values later on.
@@ -178,34 +174,10 @@ class Specfem3DGlobe(custom_import("solver", "specfem3d")):
 
         # workaround for  SPECFEM's use of different name conventions for
         # regular traces and 'adjoint' traces
-        if PAR.FORMAT.upper() in ['ASCII', 'ascii']:
+        if self.par.FORMAT.upper() in ['ASCII', 'ascii']:
             files = glob(os.path.join(self.cwd, "traces", "adj", "*sem.ascii"))
             unix.rename("sem.ascii", "adj", files)
 
-    @property
-    def data_wildcard(self):
-        """
-        Returns a wildcard identifier for synthetic data
-
-        :rtype: str
-        :return: wildcard identifier for channels
-        """
-        if PAR.FORMAT.upper() == "ASCII":
-            return f"*.?X?.sem.ascii"
-
-    @property
-    def data_filenames(self):
-        """
-        Returns the filenames of all data, either by the requested components
-        or by all available files in the directory.
-
-        :rtype: list
-        :return: list of data filenames
-        """
-        unix.cd(os.path.join(self.cwd, "traces", "obs"))
-
-        if PAR.FORMAT.upper() == "ASCII":
-            return sorted(glob("*.???.sem.ascii"))
 
 
 

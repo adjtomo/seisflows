@@ -4,28 +4,21 @@ Thrifty: using resources carefully and not wastefully
 
 A thrifty inversion skips the costly intialization step (i.e., forward
 simulations and misfit quantification) if the final forward simulations from
-the previous iteration's line search can be used in the current one.
+the previous iteration's line search can be used in the current one. Otherwise
+it performs the same as the Inversion workflow
 """
 import sys
 import logging
 
+from seisflows.workflow.inversion import Inversion
 from seisflows.tools import unix, msg
-from seisflows.config import custom_import
 
 
-PAR = sys.modules["seisflows_parameters"]
-PATH = sys.modules["seisflows_paths"]
-optimize = sys.modules["seisflows_optimize"]
-
-
-class ThriftyInversion(custom_import("workflow", "inversion")):
+class ThriftyInversion(Inversion):
     """
     Thrifty inversion which attempts to save resources by re-using previous
     line search results for the current iteration.
     """
-    # Class-specific logger accessed using self.logger
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
     def __init__(self):
         """
         :type thrifty: bool
@@ -38,28 +31,30 @@ class ThriftyInversion(custom_import("workflow", "inversion")):
             previous iteration
         """
         super().__init__()
+
         self.thrifty = False
 
     def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        super().check(validate=False)
-        if validate:
-            self.required.validate()
+        super().check(validate=validate)
 
-        assert PAR.LINESEARCH == "Backtrack", \
-            "Thrifty inversion requires backtracking line search"
+        assert self.par.LINESEARCH.upper() == "BACKTRACK", (
+            "Thrifty inversion requires PAR.LINESEARCH == 'backtrack'"
+        )
 
-    def initialize(self):
+    def evaluate_initial_misfit(self):
         """
         If line search can be carried over, skip initialization step
         Or if manually starting a new run, start with normal inversion init
         """
-        if not self.thrifty or optimize.iter == PAR.BEGIN:
-            super().initialize()
+        optimize = self.module("optimize")
+
+        if not self.thrifty or optimize.iter == self.par.BEGIN:
+            super().evaluate_initial_misfit()
         else:
-            self.logger.info(msg.mjr("INITIALIZING THRIFTY INVERSION"))
+            self.logger.info(msg.mjr("SKIPPING INITIAL MISFIT EVALUATION"))
 
     def clean(self):
         """
@@ -67,31 +62,35 @@ class ThriftyInversion(custom_import("workflow", "inversion")):
         We assume clean() is the final flow() argument so that we can update
         the thrifty status here.
         """
-        self.update_status()
+        self._update_status()
 
         if self.thrifty:
-            self.logger.info(msg.mnr("THRIFTY CLEANING  WORKDIR FOR NEXT "
-                                     "ITERATION"))
-            unix.rm(PATH.GRAD)
-            unix.mv(PATH.FUNC, PATH.GRAD)
-            unix.mkdir(PATH.FUNC)
+            self.logger.info(
+                msg.mnr("THRIFTY CLEANING  WORKDIR FOR NEXT ITERATION")
+            )
+            unix.rm(self.path.GRAD)
+            # Last line search evaluation becomes the new gradient evaluation
+            unix.mv(self.path.FUNC, self.path.GRAD)
+            unix.mkdir(self.path.FUNC)
         else:
             super().clean()
 
-    def update_status(self):
+    def _update_status(self):
         """
         Determine if line search forward simulation can be carried over based
-        on a number of criteria
+        on a variety of criteria relating to location in the inversion.
         """
+        optimize = self.module("optimize")
+        
         self.logger.info("updating thrifty inversion status")
-        if optimize.iter == PAR.BEGIN:
+        if optimize.iter == self.par.BEGIN:
             self.logger.info("1st iteration, defaulting to inversion workflow")
             thrifty = False
         elif optimize.restarted:
             self.logger.info("optimization has been restarted, defaulting to "
                              "inversion workflow")
             thrifty = False
-        elif optimize.iter == PAR.END:
+        elif optimize.iter == self.par.END:
             self.logger.info("final iteration, defaulting to inversion workflow")
             thrifty = False
         else:

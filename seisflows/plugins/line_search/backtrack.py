@@ -2,17 +2,13 @@
 """
 This is the subclass class for seisflows.plugins.line_search.backtrack
 """
-import logging
-
-from seisflows.tools import msg
 from seisflows.plugins.line_search.bracket import Bracket
+from seisflows.tools import msg
 from seisflows.tools.math import parabolic_backtrack
 
 
 class Backtrack(Bracket):
     """
-    Overwrites seisflows.plugins.line_search.Bracket
-
     Implements backtracking linesearch. A backtracking line search is used
     for L-BFGS optimization, where a unit step length is attempted, if this
     does not satisfy the misfit reduction criteria, the step length is
@@ -32,14 +28,34 @@ class Backtrack(Bracket):
         status == 0 : not finished
         status < 0  : failed
     """
-    # Class-specific logger accessed using self.logger
-    logger = logging.getLogger(__name__).getChild(__qualname__)
+    def __init__(self):
+        """Inherits from seisflows.plugins.line_search.bracket.Bracket"""
+        super().__init__()
 
+    def initialize(self, step_len, func_val, gtg, gtp):
+        """Inherits from seisflows.plugins.line_search.bracket.Bracket"""
+        self.initialize(step_len, func_val, gtg, gtp)
+
+    def update(self, step_len, func_val):
+        """Inherits from seisflows.plugins.line_search.bracket.Bracket"""
+        self.update(step_len, func_val)
+
+    def clear_history(self):
+        """Inherits from seisflows.plugins.line_search.bracket.Bracket"""
+        self.clear_history()
+
+    def reset(self):
+        """Inherits from seisflows.plugins.line_search.bracket.Bracket"""
+        self.reset()
+
+    def search_history(self, sort=True):
+        """Inherits from seisflows.plugins.line_search.bracket.Bracket"""
+        return self.search_history(sort=sort)
 
     def calculate_step(self):
         """
-        Determines step length and search status. Overloads the bracketing
-        line search
+        Determines step length and search status. Overwrites the Bracketing
+        line search step calculation
         """
         # Determine the line search history
         x, f, gtg, gtp, step_count, update_count = self.search_history()
@@ -52,7 +68,8 @@ class Backtrack(Bracket):
         # Assumed well scaled search direction, attempt backtracking line search 
         # with unit step length
         else:
-            self.logger.info(msg.sub("EVALUATE BACKTRACKING LINE SEARCH"))
+            self.logger.debug(msg.sub(f"BACKTRACKING LINE SEARCH STEP"
+                                      f"{self.step_count:0>2}"))
             x_str = ", ".join([f"{_:.2E}" for _ in x])
             f_str = ", ".join([f"{_:.2E}" for _ in f])
             self.logger.debug(f"step length(s) = {x_str}")

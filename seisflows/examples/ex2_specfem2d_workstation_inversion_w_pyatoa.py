@@ -14,16 +14,10 @@ a homogeneous halfspace model and a checkerboard model using 2 events and
 """
 import os
 import sys
-import glob
-import shutil
-import subprocess
-import numpy as np
 
 from seisflows.tools import msg
-from seisflows.config import Dict
-from seisflows.seisflows import SeisFlows
-from seisflows.tools.unix import cd, cp, rm, ln, mv, mkdir
-from seisflows.scripts.examples.sfexample2d import SFExample2D
+from seisflows.tools.unix import cd, rm, ln
+from seisflows.examples.sfexample2d import SFExample2D
 
 
 class SFPyatoaEx2D(SFExample2D):
@@ -96,9 +90,6 @@ class SFPyatoaEx2D(SFExample2D):
         self.sf.par("ntask", self.ntask)  # 3 sources for this example
         self.sf.par("materials", "elastic")  # how velocity model parameterized
         self.sf.par("density", "constant")  # update density or keep constant
-        self.sf.par("nt", 5000)  # set by SPECFEM2D Par_file
-        self.sf.par("dt", .06)  # set by SPECFEM2D Par_file
-        self.sf.par("f0", 0.084)  # set by SOURCE file
         self.sf.par("format", "ascii")  # how to output synthetic seismograms
         self.sf.par("case", "synthetic")  # synthetic-synthetic inversion
         self.sf.par("attenuation", False)

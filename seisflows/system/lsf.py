@@ -1,26 +1,19 @@
 #!/usr/bin/env python3
 """
-This is the subclass seisflows.system.lsf_lg
+This is the subclass seisflows.system.lsf.Lsf
 
 This class provides the core utilities interaction with HPC systems which run
 using the Platform Load Sharing Facility (LSF) workload management platform.
 """
 import os
-import sys
 import time
-import logging
 import subprocess
 
-from seisflows.tools import msg, unix
-from seisflows.tools.wrappers import findpath
-from seisflows.config import custom_import, SeisFlowsPathsParameters
+from seisflows.system.cluster import Cluster
+from seisflows.config import ROOT_DIR
 
 
-PAR = sys.modules['seisflows_parameters']
-PATH = sys.modules['seisflows_paths']
-
-
-class Lsf(custom_import("system", "cluster")):
+class Lsf(Cluster):
     """
     An interface through which to submit workflows, run tasks in serial or
     parallel, and perform other system functions.
@@ -29,17 +22,16 @@ class Lsf(custom_import("system", "cluster")):
     classes provide a consistent command set across different computing
     environments.
 
-    Intermediate files are written to a global scratch path PATH.SCRATCH,
+    Intermediate files are written to a global scratch path self.path.SCRATCH,
     which must be accessible to all compute nodes.
 
-    Optionally, users can provide a local scratch path PATH.LOCAL if each
+    Optionally, users can provide a local scratch path self.path.LOCAL if each
     compute node has its own local filesystem.
 
     For important additional information, please see
-    http://seisflows.readthedocs.org/en/latest/manual/manual.html#system-configuration
+    http://seisflows.readthedocs.org/en/latest/manual/
+                                                manual.html#system-configuration
     """
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
     def __init__(self):
         """
         These parameters should not be set by the user.
@@ -47,51 +39,57 @@ class Lsf(custom_import("system", "cluster")):
         """
         super().__init__()
 
-    @property
-    def required(self):
-        """
-        Checks parameters and paths
-        """
-        sf = SeisFlowsPathsParameters(super().required)
+        self.logger.warning("system.LSF is underdeveloped and "
+                            "will likely not work without significant testing "
+                            "and source code edits")
 
-        sf.par("MPIEXEC", required=False, default="mpiexec", par_type=str,
-               docstr="Function used to invoke executables on the system. "
-                      "For example 'srun' on SLURM systems, or './' on a "
-                      "workstation. If left blank, will guess based on the "
-                      "system.")
-
+        self.required.par(
+            "MPIEXEC", required=False, default="mpiexec", par_type=str,
+            docstr="Function used to invoke executables on the system. "
+                   "For example 'srun' on SLURM systems, or './' on a "
+                   "workstation. If left blank, will guess based on the "
+                   "system."
+        )
         # Define the Parameters required by this module
-        sf.par("NTASKMAX", required=False, default=100, par_type=int,
-               docstr="Limit on the number of concurrent tasks in array")
+        self.required.par(
+            "NTASKMAX", required=False, default=100, par_type=int,
+            docstr="Limit on the number of concurrent tasks in array"
+        )
+        self.required.par(
+            "NODESIZE", required=True, par_type=int,
+            docstr="The number of cores per node defined by the system"
+        )
+        self.required.par(
+            "LSFARGS", required=False, default="", par_type=str,
+            docstr="Any optional, additional LSG arguments that will be "
+                   "passed to the LSF submit scripts"
+        )
+        self.required.path(
+            "LOCAL", required=False,
+            docstr="path to local data to be used during workflow"
+        )
 
-        sf.par("NODESIZE", required=True, par_type=int,
-               docstr="The number of cores per node defined by the system")
-
-        sf.par("LSFARGS", required=False, default="", par_type=str,
-               docstr="Any optional, additional LSG arguments that will be "
-                      "passed to the LSF submit scripts")
-
-    def submit(self, workflow):
+    def submit(self, submit_call=None):
         """
-        Submits workflow
+        Submits workflow using 'bsub' arguments
         """
-        # Prepare 'bsub' arguments
-        submit_call = " ".join([
-            f"bsub",
-            f"{PAR.LSFARGS}",
-            f"-J {PAR.TITLE}",
-            f"-o {self.output_log}.log",
-            f"-e {self.error_log}.log",
-            f"-n {PAR.NODESIZE}",
-            f'-R "span[ptile={PAR.NODESIZE}"',
-            f"-W {PAR.WALLTIME:d}:00",
-            os.path.join(findpath("seisflows.system"), "wrappers", "submit"),
-            PATH.OUTPUT
-        ])
+        if submit_call is None:
+            submit_call = " ".join([
+                f"bsub",
+                f"{self.par.LSFARGS}",
+                f"-J {self.par.TITLE}",
+                f"-o {self.output_log}.log",
+                f"-e {self.error_log}.log",
+                f"-n {self.par.NODESIZE}",
+                f'-R "span[ptile={self.par.NODESIZE}"',
+                f"-W {self.par.WALLTIME:d}:00",
+                f"{os.path.join(ROOT_DIR, 'scripts', 'submit')}",
+                f"--output {self.path.OUTPUT}"
+            ])
 
-        super().submit(workflow, submit_call)
+        super().submit(submit_call=submit_call)
 
-    def run(self, classname, method, *args, **kwargs):
+    def run(self, classname, method, single=False, run_call=None, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on the
         maui cluster
@@ -105,117 +103,103 @@ class Lsf(custom_import("system", "cluster")):
         :param method: the method from the given `classname` to run
         """
         # Checkpoint this individual method before proceeding
-        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
+        self.checkpoint(self.path.OUTPUT, classname, method, kwargs)
 
         # Submit job array
         run_call = " ".join([
             f"bsub",
-            f"{PAR.LSFARGS}",
-            f"-J {PAR.TITLE}",
-            f"-n {PAR.NPROC}",
-            f'-R "span[ptile={PAR.NODESIZE}"',
-            f"-W {PAR.TASKTIME:d}:00",
-            f"-o {os.path.join(PATH.WORKDIR, 'output.logs', '%J_%I')}",
-            f"[1-{PAR.NTASK}] % {PAR.NTASKMAX}",
-            f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
-            f"{PATH.OUTPUT}",
-            f"{classname}",
-            f"{method}",
-            f"{PAR.ENVIRONS}"
+            f"{self.par.LSFARGS}",
+            f"-J {self.par.TITLE}",
+            f"-n {self.par.NPROC}",
+            f'-R "span[ptile={self.par.NODESIZE}"',
+            f"-W {self.par.TASKTIME:d}:00",
+            f"-o {os.path.join(self.path.WORKDIR, 'output.logs', '%J_%I')}",
+            f"[1-{self.par.NTASK}] % {self.par.NTASKMAX}",
+            f"{os.path.join(ROOT_DIR, 'scripts', 'run')}",
+            f"--output {self.path.OUTPUT}"
+            f"--classname {classname}",
+            f"--funcname {method}",
+            f"--environment {self.par.ENVIRONS or ''}"
         ])
+        self.logger.debug(run_call)
 
-        stdout = subprocess.check_output(run_call, shell=True)
+        # Single-process jobs simply need to replace a few sbatch arguments.
+        # Do it AFTER `run_call` has been defined so that subclasses submitting
+        # custom run calls can still benefit from this
+        if single:
+            self.logger.info("replacing parts of sbatch run call for single "
+                             "process job")
+            run_call = _modify_run_call_single_proc(run_call)
+
+        # The standard response from SLURM when submitting jobs
+        # is something like 'Submitted batch job 441636', we want job number
+        stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
+                                text=True, shell=True).stdout
 
         # keep track of job ids
-        jobs = self.job_id_list(stdout, PAR.NTASK)
+        jobs = self._job_id_list(stdout, single)
 
         while True:
             # Wait seconds before checking status again
-            time.sleep(30)
-            self.timestamp()
-            isdone, jobs = self.job_status(classname, method, jobs)
+            time.sleep(5)
+            isdone, jobs = self._job_status(classname, method, jobs)
             if isdone:
                 return
 
-    def run_single(self, classname, method, *args, **kwargs):
-        """ Runs task multiple times in embarrassingly parallel fasion
-
-          Executes classname.method(*args, **kwargs) NTASK times, each time on
-          NPROC cpu cores
+    def taskid(self):
         """
-        # Checkpoint this individual method before proceeding
-        self.checkpoint(PATH.OUTPUT, classname, method, args, kwargs)
-
-        # Submit job array
-        run_call = " ".join([
-            f"bsub",
-            f"{PAR.LSFARGS}",
-            f"-J {PAR.TITLE}",
-            f"-n {PAR.NPROC}",
-            f'-R "span[ptile={PAR.NODESIZE}"',
-            f"-W {PAR.TASKTIME:d}:00",
-            f"-o {os.path.join(PATH.WORKDIR, 'output.logs', '%J')}",
-            f"[1-1]",
-            f"{os.path.join(findpath('seisflows.system'), 'wrappers', 'run')}",
-            f"{PATH.OUTPUT}",
-            f"{classname}",
-            f"{method}",
-            f"{PAR.ENVIRONS}"
-        ])
-
-        stdout = check_output(run_call, shell=True)
-
-        # keep track of job ids
-        jobs = self.job_id_list(stdout, ntask=1)
-
-        while True:
-            # Wait seconds before checking status again
-            time.sleep(30)
-            self.timestamp()
-            isdone, jobs = self.job_status(classname, method, jobs)
-            if isdone:
-                return
-
-    def job_id_list(self, stdout, ntask):
+        Provides a unique identifier for each running task
         """
-        Parses job id list from sbatch standard output
+        return int(os.getenv('LSB_JOBINDEX')) - 1
 
-        :type stdout: str
-        :param stdout: the output of subprocess.check_output()
-        :type ntask: int
-        :param ntask: number of tasks currently running
-        """
-        job = stdout.split()[1].strip()[1:-1]
-        if ntask == 1:
-            return [job]
-        else:
-            number_jobs = range(1, PAR.NSRC + 1)
-            return ["{job}[{}]".format(_) for _ in number_jobs]
+    def checkpoint(self, path, classname, method, kwargs):
+        """Inherits from workflow.system.workstation.Workstation"""
+        self.checkpoint(path=path, classname=classname, method=method,
+                        kwargs=kwargs)
 
-    def job_status(self, classname, method, jobs):
+    def _check_job_status(self, job_ids):
         """
         Queries completion status of a single job
+
+        TODO this function is mangled, needs to be rewritten
 
         :type job: str
         :param job: job id to query
         """
         job_finished = []
-        for job in jobs:
-            state = self._query(job)
+        for job_id in job_ids:
+            state = self._query(job_id)
             if state == "DONE":
                 job_finished.append(True)
             else:
                 job_finished.append(False)
 
             if state == "EXIT":
-                print(msg.cli(f"LSF job {job} failed to execute "
-                              f"{classname}.{method}.", header="error",
-                              border="="))
-                sys.exit(-1)
+                return job_id, "FAILED"
 
         isdone = all(job_finished)
 
-        return isdone, jobs
+        return None, "OKAY"
+
+    def _job_id_list(self, stdout, single):
+        """
+        Parses job id list from LSF standard output
+
+        :type stdout: str
+        :param stdout: the output of subprocess.check_output()
+        :type single: bool
+        :param single: if running a single process job, returns a list of length
+            1 with a single job id, else returns a list of length self.par.NTASK
+            for all arrayed jobs
+        :rtype: list
+        :return: a list of array jobs that should be currently running
+        """
+        job = stdout.split()[1].strip()[1:-1]
+        if single:
+            return [job]
+        else:
+            number_jobs = range(1, self.par.NSRC + 1)
+            return ["{job}[{}]".format(_) for _ in number_jobs]
 
     def _query(self, jobid):
         """
@@ -225,41 +209,34 @@ class Lsf(custom_import("system", "cluster")):
         :param jobid: job id to query LSF system about
         """
         # Write the job status output to a temporary file
-        with open(os.path.join(PATH.SYSTEM, "job_status", "w")) as f:
-            call('bjobs -a -d "{jobid}"', stdout=f)
+        with open(os.path.join(self.path.SYSTEM, "job_status", "w")) as f:
+            subprocess.call('bjobs -a -d "{jobid}"', stdout=f)
 
         # Read the job status back from the text file
-        with open(os.path.join(PATH.SYSTEM, "job_status", "r")) as f:
+        with open(os.path.join(self.path.SYSTEM, "job_status", "r")) as f:
             lines = f.readlines()
             state = lines[1].split()[2].strip()
 
         return state
 
-    def taskid(self):
-        """
-        Provides a unique identifier for each running task
-        """
-        return int(os.getenv('LSB_JOBINDEX')) - 1
+    # def save_kwargs(self, classname, method, kwargs):
+    #     """
+    #     Save key word arguments as a pickle object.
+    #
+    #     :type classname: str
+    #     :param classname: the class to run
+    #     :type method: str
+    #     :param method: the method from the given `classname` to run
+    #     """
+    #     kwargspath = os.path.join(self.path.OUTPUT, "kwargs")
+    #     kwargsfile = os.path.join(kwargspath, f"{classname}_{method}.p")
+    #
+    #     unix.mkdir(kwargspath)
+    #     saveobj(kwargsfile, kwargs)
 
-    def timestamp(self):
-        """
-        Timestamp the current running job
-        """
-        with open(os.path.join(PATH.SYSTEM, "timestamps", "a")) as f:
-            f.write(time.strftime("%H:%M:%S"))
-            f.write("\n")
 
-    def save_kwargs(self, classname, method, kwargs):
-        """
-        Save key word arguments as a pickle object.
+def _modify_run_call_single_proc(run_call):
+    """
 
-        :type classname: str
-        :param classname: the class to run
-        :type method: str
-        :param method: the method from the given `classname` to run
-        """
-        kwargspath = os.path.join(PATH.OUTPUT, "kwargs")
-        kwargsfile = os.path.join(kwargspath, f"{classname}_{method}.p")
-
-        unix.mkdir(kwargspath)
-        saveobj(kwargsfile, kwargs)
+    """
+    raise NotImplementedError("This function needs to be written")

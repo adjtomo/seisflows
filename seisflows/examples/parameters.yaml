@@ -24,9 +24,9 @@
 # PREPROCESS (str):  Preprocessing schema for waveform data
 # POSTPROCESS (str): Postprocessing schema for kernels and gradients
 # ==============================================================================
+SYSTEM: workstation
 WORKFLOW: inversion
 SOLVER: specfem2d
-SYSTEM: workstation
 OPTIMIZE: gradient
-PREPROCESS: base
-POSTPROCESS: base
+PREPROCESS: default
+POSTPROCESS: default

@@ -27,9 +27,9 @@
 WORKFLOW: inversion
 SOLVER: specfem2d
 SYSTEM: workstation
-OPTIMIZE: LBFGS 
-PREPROCESS: base
-POSTPROCESS: base
+OPTIMIZE: gradient
+PREPROCESS: default
+POSTPROCESS: default
 
 # =============================================================================
 #                                    SYSTEM                                    
@@ -37,17 +37,6 @@ POSTPROCESS: base
 # TITLE (str):
 #   The name used to submit jobs to the system, defaults to the name of the
 #   working directory
-# PRECHECK (list):
-#   A list of parameters that will be displayed to stdout before 'submit' or
-#   'resume' is run. Useful for manually reviewing important parameters prior
-#   to system submission
-# LOG_LEVEL (str):
-#   Verbosity output of SF logger. Available from least to most verbosity:
-#   'CRITICAL', 'WARNING', 'INFO', 'DEBUG'; defaults to 'DEBUG'
-# VERBOSE (bool):
-#   Level of verbosity provided to the output log. If True, log statements
-#   will declare what module/class/function they are being called from.
-#   Useful for debugging but also very noisy.
 # MPIEXEC (str):
 #   Function used to invoke executables on the system. For example 'srun' on
 #   SLURM systems, or './' on a workstation. If left blank, will guess based
@@ -57,15 +46,20 @@ POSTPROCESS: base
 #   sources in workflow
 # NPROC (int):
 #   Number of processor to use for each simulation
+# LOG_LEVEL (str):
+#   Verbosity output of SF logger. Available from least to most verbosity:
+#   'CRITICAL', 'WARNING', 'INFO', 'DEBUG'; defaults to 'DEBUG'
+# VERBOSE (bool):
+#   Level of verbosity provided to the output log. If True, log statements
+#   will declare what module/class/function they are being called from.
+#   Useful for debugging but also very noisy.
 # =============================================================================
 TITLE: test_data
-PRECHECK:
-    - TITLE
-LOG_LEVEL: DEBUG
-VERBOSE: False
 MPIEXEC:
 NTASK: 1
 NPROC: 1
+LOG_LEVEL: DEBUG
+VERBOSE: False
 
 # =============================================================================
 #                                  PREPROCESS                                  
@@ -125,23 +119,17 @@ MUTE: []
 # DENSITY (str):
 #   How to treat density during inversion. Available: ['CONSTANT': Do not
 #   update density, 'VARIABLE': Update density]
-# ATTENUATION (str):
+# ATTENUATION (bool):
 #   If True, turn on attenuation during forward simulations, otherwise set
 #   attenuation off. Attenuation is always off for adjoint simulations.
+# FORMAT (float):
+#   Format of synthetic waveforms used during workflow, available options:
+#   ['ASCII', 'SU']
 # COMPONENTS (str):
 #   Components used to generate data, formatted as a single string, e.g. ZNE
 #   or NZ or E
-# SOLVERIO (int):
-#   The format external solver files. Available: ['fortran_binary', 'adios']
-# NT (float):
-#   Number of time steps set in the SPECFEM Par_file
-# DT (float):
-#   Time step or delta set in the SPECFEM Par_file
-# F0 (float):
-#   Dominant source frequency
-# FORMAT (float):
-#   Format of synthetic waveforms used during workflow, available options:
-#   ['ascii', 'su']
+# SOLVERIO (str):
+#   The format external solver files. Available: ['fortran_binary']
 # SOURCE_PREFIX (str):
 #   Prefix of SOURCE files in path SPECFEM_DATA. By default, 'SOURCE' for
 #   SPECFEM2D
@@ -149,12 +137,9 @@ MUTE: []
 MATERIALS: elastic
 DENSITY: constant
 ATTENUATION: False
+FORMAT: ascii
 COMPONENTS: ZNE
 SOLVERIO: fortran_binary
-NT: 1000
-DT: .01
-F0: .084
-FORMAT: ascii
 SOURCE_PREFIX: SOURCE
 
 # =============================================================================
@@ -190,62 +175,64 @@ TASKTIME_SMOOTH: 1
 #   parameters
 # STEPLENMAX (float):
 #   Max allowable step length, as a fraction of current model parameters
-# LBFGSMEM (int):
-#   Max number of previous gradients to retain in local memory
-# LBFGSMAX (int):
-#   LBFGS periodic restart interval, between 1 and 'inf'
-# LBFGSTHRESH (float):
-#   LBFGS angle restart threshold
 # =============================================================================
-LINESEARCH: Backtrack
+LINESEARCH: Bracket
 PRECOND:
 STEPCOUNTMAX: 10
 STEPLENINIT: 0.05
 STEPLENMAX: 0.5
-LBFGSMEM: 3
-LBFGSMAX: inf
-LBFGSTHRESH: 0.0
 
 # =============================================================================
 #                                   WORKFLOW                                   
 #                                   ////////                                   
-# CASE (str):
-#   Type of inversion, available: ['data': real data inversion, 'synthetic':
-#   synthetic-synthetic inversion]
-# RESUME_FROM (str):
-#   Name of task to resume inversion from
-# STOP_AFTER (str):
-#   Name of task to stop inversion after finishing
-# SAVEMODEL (bool):
-#   Save final model files after each iteration
-# SAVEGRADIENT (bool):
-#   Save gradient files after each iteration
-# SAVEKERNELS (bool):
-#   Save event kernel files after each iteration
 # SAVETRACES (bool):
-#   Save waveform traces after each iteration
+#   Save waveform traces to disk after they have been generated by the
+#   external solver
 # SAVERESIDUALS (bool):
-#   Save waveform residuals after each iteration
+#   Save data-synthetic residuals each time they are caluclated
+# CASE (str):
+#   How to address 'data' in your workflow, available options: 1) 'data':
+#   Real data inversion. Observed waveforms must be provided by the user in
+#   PATH.DATA/{SOURCE_NAME}. OR if PAR.PREPROCESS=='pyatoa' data should be
+#   discoverable via IRIS webservices based on event ID and station codes2)
+#   'synthetic': A synthetic-synthetic workflow. 'Data' will be generated as
+#   synthetics using PATH.MODEL_TRUE.
+# SAVEGRADIENT (bool):
+#   Save gradient files each time the gradient is evaluated
+# SAVEKERNELS (bool):
+#   Save event kernel files each time they are evaluated
 # SAVEAS (str):
 #   Format to save models, gradients, kernels. Available: ['binary': save
 #   files in native SPECFEM .bin format, 'vector': save files as NumPy .npy
 #   files, 'both': save as both binary and vectors]
 # BEGIN (int):
-#   First iteration of workflow, 1 <= BEGIN <= inf
+#   First iteration of an inversion workflow, 1 <= BEGIN <= inf
 # END (int):
-#   Last iteration of workflow, BEGIN <= END <= inf
+#   Last iteration of the inverison workflow,BEGIN <= END <= inf
+# RESUME_FROM (str):
+#   Name of flow task to resume workflow from. Useful for restarting failed
+#   workflows or re-trying sections of workflows with new parameters. To
+#   determine available options for your given workflow: > seisflows print
+#   flow
+# STOP_AFTER (str):
+#   Name of flow task to stop workflow after. Useful for stopping mid-
+#   workflow to look at results before proceeding (e.g., to look at waveform
+#   misfits before evaluating the gradient). To determine available options
+#   for your given workflow: > seisflows print flow
+# SAVEMODEL (bool):
+#   Save updated model files after each iteration
 # =============================================================================
-CASE: data
-RESUME_FROM:
-STOP_AFTER:
-SAVEMODEL: True
-SAVEGRADIENT: True
-SAVEKERNELS: False
 SAVETRACES: False
 SAVERESIDUALS: False
+CASE: data
+SAVEGRADIENT: True
+SAVEKERNELS: False
 SAVEAS: binary
 BEGIN: 1
 END: 1
+RESUME_FROM:
+STOP_AFTER:
+SAVEMODEL: True
 
 # =============================================================================
 #                                     PATHS                                    
@@ -256,33 +243,42 @@ END: 1
 #   directory to save workflow outputs to disk
 # SYSTEM:
 #   scratch path to hold any system related data
-# LOCAL:
-#   path to local data to be used during workflow
 # LOGFILE:
 #   the main output log file where all processes will track their status
 # PREPROCESS:
 #   scratch path to store any preprocessing outputs
 # SOLVER:
 #   scratch path to hold solver working directories
+# DATA:
+#   path to observed waveform data available to workflow
 # SPECFEM_BIN:
 #   path to the SPECFEM binary executables
 # SPECFEM_DATA:
 #   path to the SPECFEM DATA/ directory containing the 'Par_file', 'STATIONS'
 #   file and 'CMTSOLUTION' files
-# DATA:
-#   path to data available to workflow
 # MASK:
 #   Directory to mask files for gradient masking
 # OPTIMIZE:
-#   scratch path to store data related to nonlinear optimization
+#   scratch path to store data related to nonlinear optimization library.
+#   Data stored here include model, gradient, and search direction vectors
+#   (numpy arrays), andadditional arrays related to specific optimization
+#   algorithms
 # MODEL_INIT:
-#   location of the initial model to be used for workflow
-# MODEL_TRUE:
-#   Target model to be used for PAR.CASE == 'synthetic'
-# FUNC:
-#   scratch path to store data related to function evaluations
+#   Path location of the initial model to be used to generate the the first
+#   evaluation of synthetic seismograms.
 # GRAD:
-#   scratch path to store data related to gradient evaluations
+#   scratch path to store any models or kernels related to gradient
+#   evaluations. Sub-directories will be generated inside PATH.GRAD to save
+#   various stages of gradient manipulation
+# MODEL_TRUE:
+#   Target model to be used for PAR.CASE == 'synthetic'. The TRUE model will
+#   be used to evaluate forward simulations ONCE at the beginning of the
+#   workflow, to generate 'data'.
+# FUNC:
+#   scratch path to store data related to misfit function evaluations that
+#   take place during the line search. Data stored here include residuals
+#   from data-synthetic misfit, and a given 'try' model being used to
+#   generate synthetics.
 # HESS:
 #   scratch path to store data related to Hessian evaluations
 # =============================================================================
@@ -290,17 +286,16 @@ PATHS:
     SCRATCH: scratch
     OUTPUT: output
     SYSTEM: scratch/system
-    LOCAL:
-    LOGFILE: output_sf.txt
+    LOGFILE: sfoutput.txt
     PREPROCESS: scratch/preprocess
     SOLVER: scratch/solver
+    DATA:
     SPECFEM_BIN: ./bin
     SPECFEM_DATA: ./DATA
-    DATA:
     MASK:
     OPTIMIZE: scratch/optimize
     MODEL_INIT: ./MODEL_INIT
+    GRAD: scratch/evalgrad
     MODEL_TRUE: ./MODEL_TRUE
     FUNC: scratch/evalfunc
-    GRAD: scratch/evalgrad
     HESS: scratch/evalhess

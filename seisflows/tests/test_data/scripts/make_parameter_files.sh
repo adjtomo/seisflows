@@ -6,14 +6,11 @@ rm *yaml
 seisflows setup
 cp parameters.yaml test_setup_parameters.yaml
 
-seisflows configure -r
+seisflows configure 
 cp parameters.yaml test_conf_parameters.yaml
 
 seisflows par -p materials elastic
 seisflows par -p density constant
-seisflows par -p nt 1000
-seisflows par -p dt .01
-seisflows par -p f0 .084
 seisflows par -p format ascii
 seisflows par -p begin 1
 seisflows par -p end 1
