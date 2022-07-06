@@ -19,7 +19,7 @@ class Forward(Base):
     Workflow abstract base class representing an en-masse forward solver and
     misfit calculator.
     """
-    def __init__(self):
+    def __init__(self, path_data):
         """
         These parameters should not be set by the user.
         Attributes are initialized as NoneTypes for clarity and docstrings.
