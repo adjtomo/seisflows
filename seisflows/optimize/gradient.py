@@ -421,44 +421,44 @@ class Gradient(Base):
                     f"{step_length:6.3E},"
                     f"{theta:6.3E}\n"
                     )
-
-    def check_model(self, m, min_pr=-1., max_pr=0.5):
-        """
-        Check to ensure that the model parameters fall within the guidelines
-        of the solver. Print off min/max model parameters for the User.
-
-        :type m: np.array
-        :param m: model to check parameters of
-        :type min_pr: float
-        :param min_pr: minimum allowable Poisson's ratio value dictated by
-            SPECFEM
-        :type max_pr: float
-        :param max_pr: maximum allowable Poisson's ratio value dictated by
-            SPECFEM
-        """
-        solver = self.module("solver")
-
-        # Dynamic way to split up the model based on number of params
-        pars = {}
-        for i, par in enumerate(solver.parameters):
-            pars[par] = np.split(m, len(solver.parameters))[i]
-
-        # Check Poisson's ratio, which will error our SPECFEM if outside limits
-        if (pars["vp"] is not None) and (pars["vs"] is not None):
-            pars["pr"] = poissons_ratio(vp=pars["vp"], vs=pars["vs"])
-            if pars["pr"].min() < 0:
-                self.logger.warning("minimum poisson's ratio is negative")
-            if pars["pr"].max() < min_pr:
-                self.logger.warning(f"maximum poisson's ratio out of bounds: "
-                                    f"{pars['pr'].max():.2f} > {max_pr}")
-            if pars["pr"].min() > max_pr:
-                self.logger.warning(f"minimum poisson's ratio out of bounds: " 
-                                    f"{pars['pr'].min():.2f} < {min_pr}")
-
-        # Tell the User min and max values of the updated model
-        self.logger.info(f"model parameters")
-        parts = "{minval:.2f} <= {key} <= {maxval:.2f}"
-        for key, vals in pars.items():
-            self.logger.info(parts.format(minval=vals.min(), key=key,
-                                          maxval=vals.max())
-                             )
+    #
+    # def check_model(self, m, min_pr=-1., max_pr=0.5):
+    #     """
+    #     Check to ensure that the model parameters fall within the guidelines
+    #     of the solver. Print off min/max model parameters for the User.
+    #
+    #     :type m: np.array
+    #     :param m: model to check parameters of
+    #     :type min_pr: float
+    #     :param min_pr: minimum allowable Poisson's ratio value dictated by
+    #         SPECFEM
+    #     :type max_pr: float
+    #     :param max_pr: maximum allowable Poisson's ratio value dictated by
+    #         SPECFEM
+    #     """
+    #     solver = self.module("solver")
+    #
+    #     # Dynamic way to split up the model based on number of params
+    #     pars = {}
+    #     for i, par in enumerate(solver.parameters):
+    #         pars[par] = np.split(m, len(solver.parameters))[i]
+    #
+    #     # Check Poisson's ratio, which will error our SPECFEM if outside limits
+    #     if (pars["vp"] is not None) and (pars["vs"] is not None):
+    #         pars["pr"] = poissons_ratio(vp=pars["vp"], vs=pars["vs"])
+    #         if pars["pr"].min() < 0:
+    #             self.logger.warning("minimum poisson's ratio is negative")
+    #         if pars["pr"].max() < min_pr:
+    #             self.logger.warning(f"maximum poisson's ratio out of bounds: "
+    #                                 f"{pars['pr'].max():.2f} > {max_pr}")
+    #         if pars["pr"].min() > max_pr:
+    #             self.logger.warning(f"minimum poisson's ratio out of bounds: "
+    #                                 f"{pars['pr'].min():.2f} < {min_pr}")
+    #
+    #     # Tell the User min and max values of the updated model
+    #     self.logger.info(f"model parameters")
+    #     parts = "{minval:.2f} <= {key} <= {maxval:.2f}"
+    #     for key, vals in pars.items():
+    #         self.logger.info(parts.format(minval=vals.min(), key=key,
+    #                                       maxval=vals.max())
+    #                          )

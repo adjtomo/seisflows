@@ -11,10 +11,9 @@ import contextlib
 import subprocess
 from unittest.mock import patch
 
-from seisflows import logger
 from seisflows.core import Dict
 from seisflows.seisflows import SeisFlows
-from seisflows.config import ROOT_DIR, NAMES, CFGPATHS, flush
+from seisflows.config import ROOT_DIR, NAMES, CFGPATHS
 from seisflows.tools.wrappers import loadyaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")

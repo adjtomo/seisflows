@@ -2,6 +2,385 @@
 Utilities to interact with, manipulate or call on the external solver, 
 i.e., SPECFEM2D/3D/3D_GLOBE
 """
+import os
+import numpy as np
+from glob import glob
+from seisflows import logger
+from seisflows.core import Dict
+from seisflows.tools import unix
+from seisflows.tools.math import poissons_ratio
+
+
+class Model:
+    """
+    A container for reading, storing and manipulating model/gradient/kernel
+    parameters from SPECFEM2D/3D/3D_GLOBE.
+    Stores metadata information alongside model data allowing models to be
+    converted to back and forth between vector representations required by the
+    optimization library.
+    Also contains utility functions to read/write itself so that models can be
+    saved alongside their metadata.
+    """
+    def __init__(self, path, fmt=None, read=True, load=False):
+        """
+        Model only needs path to model to determine model parameters. Format
+        `fmt` can be provided by the user or guessed based on available file
+        formats
+
+        :type path: str
+        :param path: path to SPECFEM model/kernel/gradient files
+        :type fmt: str
+        :param fmt: expected format of the files (e.g., '.bin'), if None, will
+            attempt to guess based on the file extensions found in `path`
+            Available formats are: .bin, .dat
+        :type load: bool
+        :param load: load the model into disk as dictionary and vector
+            representations. If False, will only collect some metadata as a
+            non-cpu intensive operation
+        """
+        assert os.path.exists(path), f"specfem model path {path} does not exist"
+        self.path = path
+
+        if read:
+            if fmt is None:
+                self.fmt = self._guess_file_format()
+            else:
+                self.fmt = fmt
+            self.nproc, self.available_parameters = self._get_nproc_parameters()
+            self.model, self.ngll = self.read()
+        elif load:
+            self.model, self.ngll = self.load(file=self.path)
+            _first_key = list(self.model.keys())[0]
+            self.nproc = len(self.model[_first_key])
+
+        self.parameters = self.model.keys()
+        self.vector = self.merge()
+        self.check()
+
+    @staticmethod
+    def fnfmt(i="*", val="*", ext="*"):
+        """
+        Expected SPECFEM filename format with some checks to ensure that wildcards
+        and numbers are accepted. An example filename is: 'proc000001_vs.bin'
+
+        :type i: int or str
+        :param i: processor number or wildcard. If given as an integer, will be
+            converted to a 6 digit zero-leading value to match SPECFEM format
+        :type val: str
+        :param val: parameter value (e.g., 'vs') or wildcard
+        :type ext: str
+        :param ext: the file format (e.g., '.bin'). If NOT preceded by a leading '.'
+            will have one prepended
+        :rtype: str
+        :return: filename formatter for use in model manipulation
+        """
+        if not ext.startswith("."):
+            ext = f".{ext}"
+        if isinstance(i, int):
+            filename_format = f"proc{i:0>6}_{val}{ext}"
+        else:
+            filename_format = f"proc{i}_{val}{ext}"
+        return filename_format
+
+    def read(self, parameters=None):
+        """
+        Utility function to load in SPECFEM models/kernels/gradients saved in
+        various formats. Will try to guess format of model. Assumes that models are
+        saved using the following filename format:
+
+        proc{num}_{val}.{format} where `num` is usually a 6 digit number
+        representing the processor number (e.g., 000000), `val` is the parameter
+        value of the model/kernel/gradient and `format` is the format of the file
+        (e.g., bin)
+
+        :type parameters: list of str
+        :param parameters: unique parameters to load model for, if None will load
+            all available parameters found in `path`
+        :rtype: Dict of np arrays
+        :return: Dictionary where keys correspond to model parameters and values
+            are vectors (np.arrays) representing the model
+        """
+        if parameters is None:
+            parameters = self.available_parameters
+        else:
+            assert(set(parameters).union(set(self.available_parameters))), (
+                f"user-chosen parameters not in available: "
+                f"{self.available_parameters}"
+            )
+
+        # Pick the correct read function based on the file format
+        load_fx = {".bin": self._read_model_fortran_binary,
+                   ".dat": self._read_model_ascii,
+                   ".adios": self._read_model_adios   # TODO Check if this is right
+                   }[self.fmt]
+
+        # Create a dictionary object containing all parameters and respective
+        # models, save to internal attribute
+        parameter_dict = Dict({key: [] for key in parameters})
+        for parameter in parameters:
+            parameter_dict[parameter] = load_fx(parameter=parameter)
+
+        # Save some metadata to be able to manipulate model slices freely
+        ngll = []
+        for array in parameter_dict[parameters[0]]:
+            ngll.append(len(array))
+
+        return parameter_dict, ngll
+
+    def merge(self, parameter=None):
+        """
+        Convert dictionary representation `model` to vector representation `m`
+        where all parameters and processors are stored as a single 1D vector.
+        This vector representation is used by the optimization library.
+
+        :type parameter: str
+        :param parameter: single parameter to retrieve model vector from,
+            otherwise returns all parameters merged into single vector
+        :rtype: np.array
+        :return: vector representation of the model
+        """
+        m = np.array([])
+        if parameter is None:
+            parameters = self.parameters
+        else:
+            parameters = [parameter]
+
+        for parameter in parameters:
+            for iproc in range(self.nproc):
+                m = np.append(m, self.model[parameter][iproc])
+
+        return m
+
+    def write(self, path, fmt=None):
+        """
+        Save a SPECFEM model/gradient/kernel vector loaded into memory back to
+        disk in the appropriate format expected by SPECFEM
+        """
+        unix.mkdir(path)
+        if fmt is None:
+            assert(self.fmt is not None), f"must specifiy model format: `fmt`"
+            fmt = self.fmt
+
+        # Pick the correct read function based on the file format
+        save_fx = {".bin": self._write_model_fortran_binary,
+                   # ".dat": _write_model_ascii,
+                   # ".adios": _write_model_adios   # TODO Check if  right
+                   }[fmt]
+
+        save_fx(path=path)
+
+    def split(self):
+        """
+        Converts internal vector representation `m` to dictionary representation
+        `model`. Does this by separating the vector based on how it was
+        constructed, parameter-wise and processor-wise
+
+        :rtype: Dict of np.array
+        :return: dictionary of model parameters split up by number of processors
+        """
+        model = Dict({key: [] for key in self.parameters})
+        for idim, key in enumerate(self.parameters):
+            for iproc in range(self.nproc):
+                imin = sum(self.ngll) * idim + sum(self.ngll[:iproc])
+                imax = sum(self.ngll) * idim + sum(self.ngll[:iproc + 1])
+                model[key].extend([self.vector[imin:imax]])
+
+            model[key] = np.array(model[key])
+        return model
+
+    def check(self, min_pr=-1., max_pr=0.5):
+        """
+        Checks parameters in the model. If Vs and Vp present, checks poissons
+        ratio. Checks for negative velocity values. And prints out model
+        min/max values
+        """
+        if "vs" in self.parameters and "vp" in self.parameters:
+            pr = poissons_ratio(vp=self.merge(parameter="vp"),
+                                vs=self.merge(parameter="vs"))
+            if pr.min() < 0:
+                logger.warning("minimum poisson's ratio is negative")
+            if pr.max() < min_pr:
+                logger.warning(f"maximum poisson's ratio out of bounds: "
+                               f"{pr.max():.2f} > {max_pr}")
+            if pr.min() > max_pr:
+                logger.warning(f"minimum poisson's ratio out of bounds: " 
+                               f"{pr.min():.2f} < {min_pr}")
+
+        if "vs" in self.model and self.model.vs.min() < 0:
+            logger.warning(f"Vs minimum is negative {self.model.vs.min()}")
+
+        if "vp" in self.model and self.model.vp.min() < 0:
+            logger.warning(f"Vp minimum is negative {self.model.vp.min()}")
+
+        # Tell the User min and max values of the updated model
+        logger.info(f"model parameters")
+        parts = "{minval:.2f} <= {key} <= {maxval:.2f}"
+        for key, vals in self.model.items():
+            logger.info(parts.format(minval=vals.min(), key=key,
+                                     maxval=vals.max()))
+
+    def save(self, file):
+        """
+        Save instance attributes (model, vector, metadata) to disk as an
+        .npz array so that it can be loaded in at a later time for future use
+        """
+        model = self.split()
+        np.savez(file=file, **model)
+
+    def load(self, file):
+        """
+        Load in a previously saved .npz file containing model information
+        """
+        model = Dict()
+        ngll = []
+        data = np.load(file=file)
+        for i, key in enumerate(data.files):
+            model[key] = data[key]
+            if i == 0:
+                for array in model[key]:
+                    ngll.append(len(array))
+
+        return model, ngll
+
+    def _get_nproc_parameters(self):
+        """
+        Get the number of processors and the available parameters from a list of
+        output SPECFEM model files.
+        """
+        fids = glob(os.path.join(self.path, self.fnfmt(val="*", ext=self.fmt)))
+        fids = [os.path.basename(_) for _ in fids]  # drop full path
+        fids = [os.path.splitext(_)[0] for _ in fids]  # drop extension
+
+        if self.fmt == ".bin":
+            avail_par = list(set([_.split("_")[-1] for _ in fids]))
+            nproc = len(glob(os.path.join(
+                self.path, self.fnfmt(val=avail_par[0], ext=self.fmt)))
+                        )
+        elif self.fmt == ".dat":
+            # e.g., 'proc000000_rho_vp_vs'
+            _, *avail_par = fids[0].split("_")
+            nproc = len(fids) + 1
+        else:
+            raise NotImplementedError(f"{self.fmt} is not yet supported by "
+                                      f"SeisFlows")
+
+        return nproc, avail_par
+
+    def _guess_file_format(self):
+        """
+        Guess the file format of model/kernel/gradient files if none provided by
+        the user. Does so by checking file formats against formats expected from
+        SPECFEM2D/3D/3D_GLOBE
+        """
+        acceptable_formats = {".bin", ".dat"}
+
+        files = glob(os.path.join(self.path, "*"))
+        suffixes = set([os.path.splitext(_)[1] for _ in files])
+        fmt = acceptable_formats.intersection(suffixes)
+        assert (len(fmt) == 1), (
+            f"cannot guess model format, multiple matching acceptable formats "
+            f"found: {list(suffixes)}"
+        )
+        return list(fmt)[0]  # pulling single entry from set
+
+    def _read_model_fortran_binary(self, parameter):
+        """
+        Load Fortran binary models into disk. This is the preferred model format
+        for SeisFlows <-> SPECFEM interaction
+
+        :type parameter: str
+        :param parameter: chosen parameter to load model for
+        :rtype: np.array
+        :return: vector of model values for given `parameter`
+        """
+        def _read(filename):
+            """Read a single slice (e.g., proc000000_vs.bin) binary file"""
+            nbytes = os.path.getsize(filename)
+            with open(filename, 'rb') as file:
+                # read size of record
+                file.seek(0)
+                n = np.fromfile(file, dtype='int32', count=1)[0]
+
+                if n == nbytes-8:
+                    file.seek(4)
+                    data = np.fromfile(file, dtype='float32')
+                    return data[:-1]
+                else:
+                    file.seek(0)
+                    data = np.fromfile(file, dtype='float32')
+                    return data
+
+        array = []
+        fids = glob(os.path.join(
+            self.path, self.fnfmt(val=parameter, ext=".bin"))
+        )
+        for fid in sorted(fids):  # make sure were going in numerical order
+            array.append(_read(fid))
+
+        array = np.array(array)
+
+        return array
+
+    def _read_model_adios(self, parameter):
+        """
+        Load ADIOS models into disk
+
+        :type parameter: str
+        :param parameter: chosen parameter to load model for
+        :rtype: np.array
+        :return: vector of model values for given `parameter`
+        """
+        raise NotImplementedError("ADIOS file formats are not currently "
+                                  "implemented into SeisFlows")
+
+    def _read_model_ascii(self, parameter):
+        """
+        Load ASCII SPECFEM2D models into disk. ASCII models are generally saved
+        all in a single file with all parameters together as a N column ASCII file
+        where columns 1 and 2 are the coordinates of the mesh, and the remainder
+        columns are data corresponding to the filenames
+        e.g., proc000000_rho_vp_vs.dat, rho is column 3, vp is 4 etc.
+
+        :type parameter: str
+        :param parameter: chosen parameter to load model for
+        :rtype: np.array
+        :return: vector of model values for given `parameter`
+        """
+        fids = glob(os.path.join(self.path, self.fnfmt(val="*", ext=".dat")))
+        _, *available_parameters = fids[0].split("_")
+        assert(parameter in available_parameters), (
+            f"{parameter} not available for ASCII model"
+        )
+        # +2 because first 2 columns are the X and Z coordinates in the mesh
+        array = []
+        column_idx = available_parameters.index(parameter) + 2
+        for fid in sorted(fids):
+            array.append(np.loadtxt(fid).T[:, column_idx])
+
+        return np.array(array)
+
+    def _write_model_fortran_binary(self, path):
+        """
+        Save a SPECFEM model back to Fortran binary format.
+        Data are written as single precision floating point numbers
+
+        .. note::
+            FORTRAN unformatted binaries are bounded by an INT*4 byte count.
+            This function mimics that behavior by tacking on the boundary data
+            as 'int32' at the top and bottom of the data array.
+            https://docs.oracle.com/cd/E19957-01/805-4939/6j4m0vnc4/index.html
+        """
+        for parameter in self.parameters:
+            for i, data in enumerate(self.model[parameter]):
+                filename = self.fnfmt(i=i, val=parameter, ext=".bin")
+                filepath = os.path.join(path, filename)
+                buffer = np.array([4 * len(data)], dtype="int32")
+                data = data.astype("float32")
+
+                with open(filepath, 'wb') as f:
+                    buffer.tofile(f)
+                    data.tofile(f)
+                    buffer.tofile(f)
 
 
 def getpar(key, file, delim="=", match_partial=False):
@@ -191,3 +570,48 @@ def setpar_vel_model(file, model):
 
     # Set nbmodels to the correct value
     setpar(key="nbmodels", val=len(model), file=file)
+
+
+def _read(filename):
+    """
+    Legacy code: Reads Fortran style binary data into numpy array.
+
+    .. note::
+        Has been rewritten into the Model class but left here if useful
+    """
+    nbytes = os.path.getsize(filename)
+    with open(filename, 'rb') as file:
+        # read size of record
+        file.seek(0)
+        n = np.fromfile(file, dtype='int32', count=1)[0]
+
+        if n == nbytes-8:
+            file.seek(4)
+            data = np.fromfile(file, dtype='float32')
+            return data[:-1]
+        else:
+            file.seek(0)
+            data = np.fromfile(file, dtype='float32')
+            return data
+
+
+def _write(v, filename):
+    """
+    Legacy code: Writes Fortran style binary files
+    Data are written as single precision floating point numbers
+
+    .. note::
+        Has been rewritten into the Model class but left here if useful
+
+    .. note::
+        FORTRAN unformatted binaries are bounded by an INT*4 byte count. This
+        function mimics that behavior by tacking on the boundary data.
+        https://docs.oracle.com/cd/E19957-01/805-4939/6j4m0vnc4/index.html
+    """
+    n = np.array([4 * len(v)], dtype='int32')
+    v = np.array(v, dtype='float32')
+
+    with open(filename, 'wb') as file:
+        n.tofile(file)
+        v.tofile(file)
+        n.tofile(file)

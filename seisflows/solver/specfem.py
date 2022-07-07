@@ -331,8 +331,8 @@ class Specfem(Base):
             self.parameters.append("rho")
 
         assert hasattr(solver_io, self.par.SOLVERIO)
-        assert hasattr(self._io, "read"), "IO method has no attribute 'read'"
-        assert hasattr(self._io, "write"), "IO method has no attribute 'write'"
+        assert hasattr(self._io, "read_slice"), "IO method has no attribute 'read'"
+        assert hasattr(self._io, "write_slice"), "IO method has no attribute 'write'"
 
     def setup(self):
         """
@@ -582,38 +582,37 @@ class Specfem(Base):
                   )
             sys.exit(-1)
 
+    def load(self, path, prefix="", suffix="", parameters=None):
+        """
+        Solver I/O: Loads SPECFEM2D/3D models or kernels
 
-    # def load(self, path, prefix="", suffix="", parameters=None):
-    #     """
-    #     Solver I/O: Loads SPECFEM2D/3D models or kernels
-    #
-    #     :type path: str
-    #     :param path: directory from which model is read
-    #     :type prefix: str
-    #     :param prefix: optional filename prefix
-    #     :type suffix: str
-    #     :param suffix: optional filename suffix, eg '_kernel'
-    #     :type parameters: list
-    #     :param parameters: material parameters to be read
-    #         (if empty, defaults to self.parameters)
-    #     :rtype: dict
-    #     :return: model or kernels indexed by material parameter and
-    #         processor rank, ie dict[parameter][iproc]
-    #     """
-    #     if parameters is None:
-    #         parameters = self.parameters
-    #
-    #     # Initiate empty dictionary to hold model values
-    #     model_dict = Dict({key: [] for key in self.parameters})
-    #
-    #     for iproc in range(self.mesh_properties.nproc):
-    #         for key in parameters:
-    #             _model_slice_values = self._io.read_slice(
-    #                 path=path, parameters=f"{prefix}{key}{suffix}", iproc=iproc
-    #                 )
-    #             model_dict[key].extend(_model_slice_values)
-    #
-    #     return model_dict
+        :type path: str
+        :param path: directory from which model is read
+        :type prefix: str
+        :param prefix: optional filename prefix
+        :type suffix: str
+        :param suffix: optional filename suffix, eg '_kernel'
+        :type parameters: list
+        :param parameters: material parameters to be read
+            (if empty, defaults to self.parameters)
+        :rtype: dict
+        :return: model or kernels indexed by material parameter and
+            processor rank, ie dict[parameter][iproc]
+        """
+        if parameters is None:
+            parameters = self.parameters
+
+        # Initiate empty dictionary to hold model values
+        model_dict = Dict({key: [] for key in self.parameters})
+
+        for iproc in range(self.mesh_properties.nproc):
+            for key in parameters:
+                _model_slice_values = self._io.read_slice(
+                    path=path, parameters=f"{prefix}{key}{suffix}", iproc=iproc
+                    )
+                model_dict[key].extend(_model_slice_values)
+
+        return model_dict
 
     def save(self, save_dict, path, parameters=None, prefix="", suffix=""):
         """

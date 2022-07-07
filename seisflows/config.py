@@ -106,21 +106,6 @@ def load(path):
             sys.modules[f"seisflows_{name}"] = pickle.load(f)
 
 
-def flush():
-    """
-    It is sometimes necessary to flush the currently active working state to
-    avoid affecting subsequent working states (e.g., running tests back to back)
-    This command will flush sys.modules of all `seisflows_{}` modules that are
-    typically instantiated using load(), or init_seisflows()
-
-    https://stackoverflow.com/questions/1668223/how-to-de-import-a-python-module
-    """
-    for name in NAMES:
-        mod_name = f"seisflows_{name}"
-        if mod_name in sys.modules:
-            del sys.modules[mod_name]
-
-
 def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
     """
     Explicitely configure the logging module with some parameters defined
