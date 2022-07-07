@@ -49,7 +49,7 @@ class Model:
             self.nproc, self.available_parameters = self._get_nproc_parameters()
             self.model, self.ngll = self.read()
         elif load:
-            self.model, self.ngll = self.load(file=self.path)
+            self.model, self.ngll, self.fmt = self.load(file=self.path)
             _first_key = list(self.model.keys())[0]
             self.nproc = len(self.model[_first_key])
 
@@ -236,13 +236,14 @@ class Model:
         ngll = []
         data = np.load(file=file)
         for i, key in enumerate(data.files):
+            if key == "fmt":
+                continue
             model[key] = data[key]
             if not ngll:
                 for array in model[key]:
                     ngll.append(len(array))
-        model.fmt = str(model.fmt)
 
-        return model, ngll
+        return model, ngll, str(data["fmt"])
 
     def _get_nproc_parameters(self):
         """
