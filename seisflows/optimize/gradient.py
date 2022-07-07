@@ -16,8 +16,8 @@ import numpy as np
 from seisflows.core import Base
 from seisflows.tools import msg, unix
 from seisflows.tools.math import angle, dot
+from seisflows.tools.specfem import Model
 from seisflows.plugins import line_search
-from seisflows.tools.math import poissons_ratio
 
 
 class Gradient(Base):
@@ -59,7 +59,7 @@ class Gradient(Base):
             been restarted recently
         """
         super().__init__()
-        
+
         # Define the Parameters required by this module
         self.required.par(
             "LINESEARCH", required=False, default="Bracket", par_type=str,
@@ -132,7 +132,6 @@ class Gradient(Base):
         Sets up nonlinear optimization machinery
         """
         super().setup()
-        solver = self.module("solver")
         unix.mkdir(self.path.OPTIMIZE)
 
         # Line search machinery is defined externally as a plugin class
@@ -143,9 +142,8 @@ class Gradient(Base):
             )
         # Read in initial model as a vector and ensure it is a valid model
         if os.path.exists(self.path.MODEL_INIT):
-            m_new = solver.merge(solver.load(self.path.MODEL_INIT))
-            self.save("m_new", m_new)
-            self.check_model(m_new)
+            m_new = Model(path=self.path.MODEL_INIT)
+            m_new.save(path=os.path.join(self.path.OPTIMIZE, "m_new"))
         else:
             self.logger.warning(
                 "PATH.MODEL_INIT not found, cannot save 'm_new'. Either ensure "
@@ -181,11 +179,9 @@ class Gradient(Base):
         :param name: name of the vector, acceptable: m, g, p, f, alpha
         """
         assert(name in self.acceptable_vectors)
-        vector = np.load(os.path.join(self.path.OPTIMIZE, f"{name}.npy"))
-        # Allow single length vectors, which alpha and misfit (f) are
-        if vector.size == 1:
-            vector = float(vector)
-        return vector
+        model = Model(os.path.join(self.path.OPTIMIZE, f"{name}.npz"),
+                      load=True)
+        return model
 
     def save(self, name, vector):
         """
@@ -209,13 +205,11 @@ class Gradient(Base):
         :rtype: np.array
         :return: preconditioned vector
         """
-        solver = self.module("solver")
-
         if self.par.PRECOND is not None:
-            p = solver.merge(solver.load(self.path.PRECOND))
+            p = Model(path=self.path.PRECOND)
             if self.par.PRECOND == "DIAGONAL":
                 self.logger.info("applying diagonal preconditioner")
-                return p * q
+                return p.vector * q
         else:
             return q
 
@@ -273,7 +267,7 @@ class Gradient(Base):
         m_try = m + alpha * p
 
         self.save("m_try", m_try)
-        self.save("alpha", alpha)
+        np.savetxt("alpha", alpha)
         self.check_model(m_try)
 
     def update_search(self):
@@ -286,7 +280,7 @@ class Gradient(Base):
             status == 0 : not finished
             status == -1  : failed
         """
-        self.line_search.update(step_len=self.load("alpha"),
+        self.line_search.update(step_len=np.loadtxt("alpha"),
                                 func_val=self.load("f_try"))
         alpha, status = self.line_search.calculate_step()
 
@@ -294,7 +288,7 @@ class Gradient(Base):
         if status in [0, 1]:
             m = self.load("m_new")
             p = self.load("p_new")
-            self.save("alpha", alpha)
+            np.savetxt("alpha", alpha)
 
             m_try = m + alpha * p
             self.save("m_try", m_try)
@@ -410,55 +404,15 @@ class Gradient(Base):
         theta = 180. * np.pi ** -1 * angle(p, -g)
 
         with open(fid, "a") as f:
-            f.write(f"{self.iter:0>2},"
-                    f"{factor:6.3E},"
-                    f"{grad_norm_L1:6.3E},"
-                    f"{grad_norm_L2:6.3E},"
-                    f"{misfit:6.3E},"
-                    f"{restarted:6.3E},"
-                    f"{slope:6.3E},"
-                    f"{step_count:0>2},"
-                    f"{step_length:6.3E},"
-                    f"{theta:6.3E}\n"
-                    )
-    #
-    # def check_model(self, m, min_pr=-1., max_pr=0.5):
-    #     """
-    #     Check to ensure that the model parameters fall within the guidelines
-    #     of the solver. Print off min/max model parameters for the User.
-    #
-    #     :type m: np.array
-    #     :param m: model to check parameters of
-    #     :type min_pr: float
-    #     :param min_pr: minimum allowable Poisson's ratio value dictated by
-    #         SPECFEM
-    #     :type max_pr: float
-    #     :param max_pr: maximum allowable Poisson's ratio value dictated by
-    #         SPECFEM
-    #     """
-    #     solver = self.module("solver")
-    #
-    #     # Dynamic way to split up the model based on number of params
-    #     pars = {}
-    #     for i, par in enumerate(solver.parameters):
-    #         pars[par] = np.split(m, len(solver.parameters))[i]
-    #
-    #     # Check Poisson's ratio, which will error our SPECFEM if outside limits
-    #     if (pars["vp"] is not None) and (pars["vs"] is not None):
-    #         pars["pr"] = poissons_ratio(vp=pars["vp"], vs=pars["vs"])
-    #         if pars["pr"].min() < 0:
-    #             self.logger.warning("minimum poisson's ratio is negative")
-    #         if pars["pr"].max() < min_pr:
-    #             self.logger.warning(f"maximum poisson's ratio out of bounds: "
-    #                                 f"{pars['pr'].max():.2f} > {max_pr}")
-    #         if pars["pr"].min() > max_pr:
-    #             self.logger.warning(f"minimum poisson's ratio out of bounds: "
-    #                                 f"{pars['pr'].min():.2f} < {min_pr}")
-    #
-    #     # Tell the User min and max values of the updated model
-    #     self.logger.info(f"model parameters")
-    #     parts = "{minval:.2f} <= {key} <= {maxval:.2f}"
-    #     for key, vals in pars.items():
-    #         self.logger.info(parts.format(minval=vals.min(), key=key,
-    #                                       maxval=vals.max())
-    #                          )
+            pass
+        f.write(f"{self.iter:0>2},"
+                f"{factor:6.3E},"
+                f"{grad_norm_L1:6.3E},"
+                f"{grad_norm_L2:6.3E},"
+                f"{misfit:6.3E},"
+                f"{restarted:6.3E},"
+                f"{slope:6.3E},"
+                f"{step_count:0>2},"
+                f"{step_length:6.3E},"
+                f"{theta:6.3E}\n"
+                )

@@ -211,18 +211,7 @@ class Specfem2D(Specfem):
                        parameters=parameters, span_h=span_h, span_v=span_v,
                        output=output)
 
-    def _import_model(self, path):
-        """
-        File transfer utility to move a SPEFEM2D model into the correct location
-        for a workflow.
 
-        :type path: str
-        :param path: path to the SPECFEM2D model
-        :return:
-        """
-        unix.cp(src=glob(os.path.join(path, "model", "*")),
-                dst=os.path.join(self.cwd, "DATA")
-                )
 
     def _initialize_adjoint_traces(self):
         """

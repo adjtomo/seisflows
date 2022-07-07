@@ -12,6 +12,7 @@ from glob import glob
 from seisflows.core import Base
 from seisflows.tools import msg
 from seisflows.config import save
+from seisflows.tools.specfem import Model
 
 
 class Forward(Base):
@@ -175,12 +176,9 @@ class Forward(Base):
             a suffix depending on where in the inversion we are. e.g., 'm_try'.
             Expected that these tags are defined in OPTIMIZE module
         """
-        solver = self.module("solver")
-        optimize = self.module("optimize")
-
-        dst = os.path.join(path, "model")
-        self.logger.debug(f"saving model '{model_tag}' to:\n{dst}")
-        solver.save(solver.split(optimize.load(model_tag)), dst)
+        m = Model(path=os.path.join(self.path.OPTIMIZE, model_tag))
+        m.save(path=os.path.join(path, "model"))
+        self.logger.debug(f"saving model '{model_tag}'")
 
     def _write_misfit(self, path, misfit_tag):
         """

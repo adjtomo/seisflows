@@ -5,10 +5,9 @@ functionalities, including kernel/gradient smoothing and masking as well as
 kernel summation
 """
 import os
-import sys
 
 from seisflows.core import Base
-from seisflows.tools import msg
+from seisflows.tools.specfem import Model
 
 
 class Default(Base):
@@ -84,34 +83,31 @@ class Default(Base):
         :rtype: np.array
         :return: scaled gradient as a vector
         """
-        solver = self.module("solver")
-
         # Postprocess file structure defined here once-and-for-all
         path_grad_nomask = os.path.join(input_path, "gradient_nomask")
         path_model = os.path.join(input_path, "model")
         path_kernels_sum = os.path.join(input_path, "kernels", "sum")
 
         # Access the gradient information stored in as kernel files
-        gradient = solver.load(path_kernels_sum, suffix="_kernel")
-
+        gradient = Model(path=path_kernels_sum)
+        model = Model(path=path_model)
         # Merge to vector and convert to absolute perturbations:
         # log dm --> dm (see Eq.13 Tromp et al 2005)
-        gradient = solver.merge(gradient)
-        gradient *= solver.merge(solver.load(path_model))
+        gradient.vector *= model.vector
 
         if self.path.MASK:
             self.logger.info(f"masking gradient")
             # to scale the gradient, users can supply "masks" by exactly
             # mimicking the file format in which models are stored
-            mask = solver.merge(solver.load(self.path.MASK))
+            mask = Model(self.path.MASK)
 
             # While both masking and preconditioning involve scaling the
             # gradient, they are fundamentally different operations:
             # masking is ad hoc, preconditioning is a change of variables;
             # For more info, see Modrak & Tromp 2016 GJI
-            solver.save(solver.split(gradient), path=path_grad_nomask,
-                        suffix="_kernel")
-            gradient *= mask
+            gradient.write(path=path_grad_nomask)
+
+            gradient.vector *= mask.vector
 
         return gradient
 

@@ -259,8 +259,6 @@ Print information related to an active environment
     print_.add_argument("args", type=str, nargs="*",
                         help="Generic arguments passed to check functions")
     # =========================================================================
-    subparser.add_parser("convert", help="Convert model file format", )
-    # =========================================================================
     reset = subparser.add_parser(
         "reset", formatter_class=argparse.RawDescriptionHelpFormatter,
         help="Reset modules within an active state", description="""
@@ -272,7 +270,7 @@ working state before the workflow can be resumed
     reset.add_argument("choice", type=str, nargs="?", default=None,
                        help="Choice of module/component to reset")
     reset.add_argument("args", type=str, nargs="*",
-                        help="Generic arguments passed to reset functions")
+                       help="Generic arguments passed to reset functions")
     # =========================================================================
     subparser.add_parser(
         "debug", help="Start interactive debug environment",
@@ -1138,42 +1136,6 @@ class SeisFlows:
         self._register_parameters()
         self._load_modules()
         acceptable_args[choice](*self._args.args, **kwargs)
-
-    def convert(self, name, path=None, **kwargs):
-        """
-        Convert a model in the OUTPUT directory between vector to binary
-        representation. Kwargs are passed through to solver.save()
-
-        USAGE
-
-            seisflows convert [name] [path] [**kwargs]
-
-            To convert the vector model 'm_try' to binary representation in the
-            output directory
-
-                seisflows convert m_try
-
-        :type name: str
-        :param name: name of the model to convert, e.g. 'm_try'
-        :type path: str
-        :param path: path and file id to save the output model. if None, will
-            default to saving in the output directory under the name of the
-            model
-        """
-        self._load_modules()
-
-        solver = sys.modules["seisflows_solver"]
-        optimize = sys.modules["seisflows_optimize"]
-        PATH = sys.modules["seisflows_paths"]
-
-        if path is None:
-            path = os.path.join(PATH.OUTPUT, name)
-        if os.path.exists(path):
-            print(msg.cli("The following file exists and will be overwritten. "
-                          "Please rename or move this file and re-try: {path}"))
-            sys.exit(-1)
-
-        solver.save(solver.split(optimize.load(name)), path=path, **kwargs )
 
     @staticmethod
     def _inspect_class_that_defined_method(name, func, **kwargs):

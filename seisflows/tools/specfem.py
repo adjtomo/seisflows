@@ -21,7 +21,7 @@ class Model:
     Also contains utility functions to read/write itself so that models can be
     saved alongside their metadata.
     """
-    def __init__(self, path, fmt=None, read=True, load=False):
+    def __init__(self, path, fmt=None, read=False, load=False):
         """
         Model only needs path to model to determine model parameters. Format
         `fmt` can be provided by the user or guessed based on available file
@@ -53,9 +53,10 @@ class Model:
             _first_key = list(self.model.keys())[0]
             self.nproc = len(self.model[_first_key])
 
-        self.parameters = self.model.keys()
-        self.vector = self.merge()
-        self.check()
+        if read or load:
+            self.parameters = self.model.keys()
+            self.vector = self.merge()
+            self.check()
 
     @staticmethod
     def fnfmt(i="*", val="*", ext="*"):
@@ -219,13 +220,13 @@ class Model:
             logger.info(parts.format(minval=vals.min(), key=key,
                                      maxval=vals.max()))
 
-    def save(self, file):
+    def save(self, path):
         """
         Save instance attributes (model, vector, metadata) to disk as an
         .npz array so that it can be loaded in at a later time for future use
         """
         model = self.split()
-        np.savez(file=file, **model)
+        np.savez(file=path, fmt=self.fmt, **model)
 
     def load(self, file):
         """
@@ -236,9 +237,10 @@ class Model:
         data = np.load(file=file)
         for i, key in enumerate(data.files):
             model[key] = data[key]
-            if i == 0:
+            if not ngll:
                 for array in model[key]:
                     ngll.append(len(array))
+        model.fmt = str(model.fmt)
 
         return model, ngll
 

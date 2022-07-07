@@ -8,14 +8,12 @@ additional capabilities unique to each version of SPECFEM.
 import os
 import sys
 import subprocess
-import numpy as np
 from glob import glob
 
-from seisflows.core import Base, Dict
+from seisflows.core import Base
 from seisflows.plugins import solver_io
 from seisflows.tools import msg, unix
-from seisflows.tools.specfem import getpar
-from seisflows.tools.wrappers import diff
+from seisflows.tools.specfem import getpar, Model
 
 
 class Specfem(Base):
@@ -55,20 +53,6 @@ class Specfem(Base):
         and particular file formats for models, data, and parameter files. These
         methods help put in place all these prerequisites
 
-    load, save
-
-        For reading and writing SPECFEM2D/3D models and kernels. On the disk,
-        models and kernels are stored as binary files, and in memory, as
-        dictionaries with different keys corresponding to different material
-        parameters
-
-    split, merge
-
-        Within the solver routines, it is natural to store models as
-        dictionaries. Within the optimization routines, it is natural to store
-        models as vectors. Two methods, 'split' and 'merge', are used to convert
-        back and forth between these two representations
-
     combine, smooth
 
         Utilities for combining and smoothing kernels
@@ -87,9 +71,6 @@ class Specfem(Base):
         :type parameters: list of str
         :param parameters: a list detailing the parameters to be used to
             define the model, available: ['vp', 'vs', 'rho']
-        :type _mesh_properties: Dict
-        :param _mesh_properties: hidden attribute, a dictionary of mesh
-            properties, including the ngll points, nprocs, and mesh coordinates
         :type _source_names: hidden attribute,
         :param _source_names: the names of all the sources that are being used
             by the solver
@@ -156,7 +137,6 @@ class Specfem(Base):
         )
 
         self.parameters = []
-        self._mesh_properties = None
         self._source_names = None
 
     @property
@@ -225,25 +205,6 @@ class Specfem(Base):
         :return: current solver working directory
         """
         return os.path.join(self.path.SOLVER, self.source_name)
-
-    @property
-    def mesh_properties(self):
-        """
-        Returns mesh properties including number of GLL points and number of
-        processors (NPROC).
-
-        .. note::
-            We assume that there are only two available models MODEL_INIT and
-            MODEL_TRUE, and that both models have the SAME underlying mesh
-            structure. That way we can only check MODEL_INIT and be sure that
-            MODEL_TRUE has the same structure.
-
-        :rtype: Dict
-        :return: Dictionary containing information on mesh properties
-        """
-        if self._mesh_properties is None:
-            self._check_mesh_properties(model_path=self.path.MODEL_INIT)
-        return self._mesh_properties
 
     def data_wildcard(self, comp="?"):
         """
@@ -382,7 +343,6 @@ class Specfem(Base):
         assert(os.path.exists(model_path)), f"model {model_path} does not exist"
 
         if model_type == "gll":
-            self._check_mesh_properties(model_path=model_path)
             # Copy the model files (ex: proc000023_vp.bin ...) into database dir
             src = glob(os.path.join(model_path, "*"))
             dst = self.model_databases
@@ -582,125 +542,6 @@ class Specfem(Base):
                   )
             sys.exit(-1)
 
-    def load(self, path, prefix="", suffix="", parameters=None):
-        """
-        Solver I/O: Loads SPECFEM2D/3D models or kernels
-
-        :type path: str
-        :param path: directory from which model is read
-        :type prefix: str
-        :param prefix: optional filename prefix
-        :type suffix: str
-        :param suffix: optional filename suffix, eg '_kernel'
-        :type parameters: list
-        :param parameters: material parameters to be read
-            (if empty, defaults to self.parameters)
-        :rtype: dict
-        :return: model or kernels indexed by material parameter and
-            processor rank, ie dict[parameter][iproc]
-        """
-        if parameters is None:
-            parameters = self.parameters
-
-        # Initiate empty dictionary to hold model values
-        model_dict = Dict({key: [] for key in self.parameters})
-
-        for iproc in range(self.mesh_properties.nproc):
-            for key in parameters:
-                _model_slice_values = self._io.read_slice(
-                    path=path, parameters=f"{prefix}{key}{suffix}", iproc=iproc
-                    )
-                model_dict[key].extend(_model_slice_values)
-
-        return model_dict
-
-    def save(self, save_dict, path, parameters=None, prefix="", suffix=""):
-        """
-        Solver I/O: Saves SPECFEM2D/3D models or kernels
-
-        :type save_dict: Dict
-        :param save_dict: model stored by parameter key
-        :type path: str
-        :param path: directory from which model is read
-        :type parameters: list
-        :param parameters: list of material parameters to be read
-        :type prefix: str
-        :param prefix: optional filename prefix
-        :type suffix: str
-        :param suffix: optional filename suffix, eg '_kernel'
-        """
-        unix.mkdir(path)
-
-        if parameters is None:
-            parameters = self.parameters
-
-        # Fill in any missing parameters
-        missing_keys = diff(parameters, save_dict.keys())
-        for iproc in range(self.mesh_properties.nproc):
-            for key in missing_keys:
-                save_dict[key] += self._io.read_slice(
-                    path=self.path.MODEL_INIT,
-                    parameters=f"{prefix}{key}{suffix}",
-                    iproc=iproc
-                )
-
-        # Write slices to disk
-        for iproc in range(self.mesh_properties.nproc):
-            for key in parameters:
-                self._io.write_slice(data=save_dict[key][iproc], path=path,
-                                     parameters=f"{prefix}{key}{suffix}",
-                                     iproc=iproc)
-
-    def merge(self, model, parameters=None):
-        """
-        Convert dictionary representation `model` to vector representation `m`
-
-        :type model: dict
-        :param model: model to be converted
-        :type parameters: list
-        :param parameters: optional list of parameters,
-            defaults to `self.parameters`
-        :rtype: np.ndarray
-        :return: model as a vector
-        """
-        if parameters is None:
-            parameters = self.parameters
-
-        m = np.array([])
-        for key in parameters:
-            for iproc in range(self.mesh_properties.nproc):
-                m = np.append(m, model[key][iproc])
-
-        return m
-
-    def split(self, m, parameters=None):
-        """
-        Converts vector representation `m` to dictionary representation `model`
-
-        :type m: np.ndarray
-        :param m: model to be converted
-        :type parameters: list
-        :param parameters: optional list of parameters,
-            defaults to `self.parameters`
-        :rtype: dict
-        :return: model as a dictionary
-        """
-        if parameters is None:
-            parameters = self.parameters
-
-        nproc = self.mesh_properties.nproc
-        ngll = self.mesh_properties.ngll
-        model = Dict()
-
-        for idim, key in enumerate(parameters):
-            model[key] = []
-            for iproc in range(nproc):
-                imin = sum(ngll) * idim + sum(ngll[:iproc])
-                imax = sum(ngll) * idim + sum(ngll[:iproc + 1])
-                model[key].extend([m[imin:imax]])
-
-        return model
-
     def combine(self, input_path, output_path, parameters=None):
         """
         Postprocessing wrapper: xcombine_sem
@@ -800,13 +641,16 @@ class Specfem(Base):
 
     def _import_model(self, path):
         """
-        File transfer utility. Import the model into the workflow.
+        File transfer utility to move a SPEFEM2D model into the correct location
+        for a workflow.
 
         :type path: str
-        :param path: path to model
+        :param path: path to the SPECFEM2D model
+        :return:
         """
-        model = self.load(path=os.path.join(path, "model"))
-        self.save(model, self.model_databases)
+        unix.cp(src=glob(os.path.join(path, "model", "*")),
+                dst=os.path.join(self.cwd, "DATA")
+                )
 
     def _import_traces(self, path):
         """
@@ -1005,32 +849,6 @@ class Specfem(Base):
                 preprocess.writer(st=st, filename=filename,
                                   path=os.path.join(self.cwd, "traces", "adj")
                                   )
-
-    def _check_mesh_properties(self, model_path):
-        """
-        Determine if Mesh properties are okay for workflow.
-
-        :type model_path: str
-        :param model_path: path to the mesh file
-        """
-        if os.path.exists(model_path):
-            # Count the number of .bin files and the number of grid points
-            key = self.parameters[0]
-            bin_files = glob(os.path.join(model_path, f"proc*_{key}.bin"))
-            nproc = len(bin_files)
-            ngll = []
-            for i in range(0, len(bin_files)):
-                ngll.append(
-                    len(self._io.read_slice(path=model_path,
-                                            parameters=key, iproc=i)[0])
-                )
-
-            # Define internal mesh properties
-            self._mesh_properties = Dict(nproc=nproc, ngll=ngll,
-                                         path=model_path)
-        else:
-            self.logger.warning("solver cannot find mesh and will not have "
-                                "access to mesh properties")
 
     def _check_source_names(self):
         """

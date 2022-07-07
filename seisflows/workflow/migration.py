@@ -138,21 +138,12 @@ class Migration(Forward):
         Uses the optimization and postprocess modules to scale the gradient
         to the given model, write the gradient in vector form and model form,
         and apply an optional mask to the gradient
-
-        .. note::
-
         """
         postprocess = self.module("postprocess")
-        optimize = self.module("optimize")
-        solver = self.module("solver")
 
         # Scale the gradient by a mask and by the model
         gradient = postprocess.scale_gradient(input_path=self.path.GRAD)
-        # Save the new gradient as a vector in PATH.OPTIMIZE
-        optimize.save("g_new", gradient)
-        # Save the new gradient as a set of model files (i.e., proc*_kernel.bin)
-        solver.save(solver.split(gradient),
-                    path=os.path.join(self.path.GRAD, "gradient"),
-                    suffix="_kernel")
+        gradient.write(path=os.path.join(self.path.GRAD, "gradient"))
+        gradient.save(path=os.path.join(self.path.OPTIMIZE, "g_new"))
 
 
