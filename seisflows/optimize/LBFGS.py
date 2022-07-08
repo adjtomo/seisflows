@@ -89,7 +89,8 @@ class LBFGS(Gradient):
                            f"search. Overwritng {self._line_search}")
             self._line_search = "Backtrack"
             self.line_search = getattr(line_search_dir, self._line_search)(
-                step_count_max=self.step_count_max, step_len_max=self.step_len_max
+                step_count_max=self.step_count_max,
+                step_len_max=self.step_len_max
             )
 
         self.LBFGS_mem = lbfgs_mem
