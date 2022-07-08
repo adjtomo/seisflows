@@ -13,14 +13,14 @@ different optimization algorithms.
 import os
 import numpy as np
 
-from seisflows.core import Base
+from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.math import angle, dot
 from seisflows.tools.specfem import Model
-from seisflows.plugins import line_search
+from seisflows.plugins import line_search as line_search_dir
 
 
-class Gradient(Base):
+class Gradient:
     """
     Nonlinear optimization abstract base class poviding a gradient/steepest
     descent optimization algorithm.
@@ -45,117 +45,102 @@ class Gradient(Base):
         algorithm.
 
     """
-    def __init__(self):
+    def __init__(self, begin=1, line_search="bracket", preconditioner=False,
+                 step_count_max=10, step_len_init=0.05, step_len_max=0.5,
+                 path_optimize=None, path_output=None, path_preconditioner=None,
+                 **kwargs):
         """
-        Initialize internally used variables for optimization workflow
+        Optimization algorithm variables
 
-        :type iter: int
-        :param iter: the current iteration of the workflow
-        :type line_search: Class
-        :param line_search: a class controlling the line search functionality
-            for determining step length
-        :type restarted: bool
-        :param restarted: a flag signalling if the optimization algorithm has
-            been restarted recently
+        :type line_search: str
+        :param line_search: chosen line_search algorithm. Currently available
+            are 'bracket' and 'backtrack'. See seisflows.plugins.line_search
+            for all available options
+        :type preconditioner: str
+        :param preconditioner: algorithm for preconditioning gradients
+        :type step_count_max: int
+        :param step_count_max: maximum number of trial steps to perform during
+            the line search before a change in line search behavior is
+            considered
+        :type step_len_init: float
+        :param step_len_init: initial line search step length as a fraction of
+            current model parameters.
+        :type step_len_max: float
+        :param step_len_max: maximum allowable step length during the line
+            search. Set as a fraction of the current model parameters
+        :type path: str
+        :param path: scratch path for all optimization related procedures.
+            if None, defaults to $PWD/scratch/optimize
         """
         super().__init__()
 
-        # Define the Parameters required by this module
-        self.required.par(
-            "LINESEARCH", required=False, default="Bracket", par_type=str,
-            docstr="Algorithm to use for line search, see "
-                   "seisflows.plugins.line_search for available choices"
-        )
-        self.required.par(
-            "PRECOND", required=False, par_type=str,
-            docstr="Algorithm to use for preconditioning gradients, see "
-                   "seisflows.plugins.preconds for available choices"
-        )
-        self.required.par(
-            "STEPCOUNTMAX", required=False, default=10, par_type=int,
-            docstr="Max number of trial steps in line search before a "
-                   "change in line search behavior"
-        )
-        self.required.par(
-            "STEPLENINIT", required=False, default=0.05, par_type=float,
-            docstr="Initial line search step length, as a fraction of current "
-                   "model parameters"
-        )
-        self.required.par(
-            "STEPLENMAX", required=False, default=0.5, par_type=float,
-            docstr="Max allowable step length, as a fraction of current model "
-                   "parameters"
-        )
-        self.required.path(
-            "OPTIMIZE", required=False,
-            default=os.path.join(self.path.WORKDIR, "scratch", "optimize"),
-            docstr="scratch path for nonlinear optimization data"
+        self.iteration = begin  # to match PAR.BEGIN
+        self.preconditioner = preconditioner
+
+        self.step_count_max = step_count_max
+        self.step_len_init = step_len_init
+        self.step_len_max = step_len_max
+
+        # Internal check to see if the chosen line search algorithm exists
+        if not hasattr(line_search_dir, line_search):
+            logger.warning(f"{line_search} is not a valid line search "
+                           f"algorithm, defaulting to 'bracket'")
+            line_search = "bracket"
+
+        self._line_search = line_search.title()
+        self.line_search = getattr(line_search_dir, self._line_search)(
+            step_count_max=step_count_max, step_len_max=step_len_max
         )
 
-        # Internally used parameters
-        self.iter = 1
-        self.line_search = None
-        self.precond = None
-        self.restarted = False
-        self.acceptable_vectors = ["m_new", "m_old", "m_try",
-                                   "g_new", "g_old", "g_try",
-                                   "p_new", "p_old", "alpha",
-                                   "f_new", "f_old", "f_try"]
+        # Set required path structure
+        self.path = path_optimize or \
+                    os.path.join(os.getcwd(), "scratch", "optimize")
+        self.path_output = path_output or os.path.join(os.getcwd(), "output")
+        self.path_preconditioner = path_preconditioner
 
-    def check(self, validate=True):
+        # Internally used parameters for checking validity
+        self._acceptable_vectors = ["m_new", "m_old", "m_try",
+                                    "g_new", "g_old", "g_try",
+                                    "p_new", "p_old", "alpha",
+                                    "f_new", "f_old", "f_try"]
+        self._acceptable_preconditioners = ["diagonal"]
+
+    def check(self):
         """
         Checks parameters, paths, and dependencies
         """
-        super().check(validate=validate)
-
-        if self.par.LINESEARCH:
-            assert self.par.LINESEARCH in dir(line_search), \
-                f"LINESEARCH parameter must be in {dir(line_search)}"
-
-        if self.par.PRECOND:
+        if self.preconditioner:
             # This list should match the logic in self.precondition()
-            acceptable_preconditioners = ["diagonal"]
-            assert self.par.PRECOND in acceptable_preconditioners, \
-                f"PRECOND must be in {acceptable_preconditioners}"
-            assert(os.path.exists(self.path.PRECOND)), (
+
+            assert self.preconditioner in self._acceptable_preconditioners, \
+                f"PRECOND must be in {self._acceptable_preconditioners}"
+
+            assert(os.path.exists(self.path_preconditioner)), (
                 f"preconditioner requires PATH.PRECOND pointing to a array-like" 
                 f"weight file"
             )
 
-        assert 0. < self.par.STEPLENINIT, f"STEPLENINIT must be >= 0."
-        assert 0. < self.par.STEPLENMAX, f"STEPLENMAX must be >= 0."
-        assert self.par.STEPLENINIT < self.par.STEPLENMAX, \
-            f"STEPLENINIT must be < STEPLENMAX"
+        assert 0. < self.step_len_init, f"optimize.step_len_init must be >= 0."
+        assert 0. < self.step_len_max, f"optimize.step_len_max must be >= 0."
+        assert self.step_len_init < self.step_len_max, \
+            f"optimize.step_len_init must be < optimize.step_len_max"
 
     def setup(self):
         """
         Sets up nonlinear optimization machinery
         """
-        super().setup()
-        unix.mkdir(self.path.OPTIMIZE)
+        unix.mkdir(self.path)
 
-        # Line search machinery is defined externally as a plugin class
-        if self.par.LINESEARCH:
-            self.line_search = getattr(line_search, self.par.LINESEARCH)(
-                step_count_max=self.par.STEPCOUNTMAX,
-                step_len_max=self.par.STEPLENMAX,
-            )
-        # Read in initial model as a vector and ensure it is a valid model
-        if os.path.exists(self.path.MODEL_INIT):
-            m_new = Model(path=self.path.MODEL_INIT)
-            m_new.save(path=os.path.join(self.path.OPTIMIZE, "m_new"))
-        else:
-            self.logger.warning(
-                "PATH.MODEL_INIT not found, cannot save 'm_new'. Either ensure "
-                "that 'm_new' is present in PATH.OPTIMIZE or restart with a "
-                "valid PATH.MODEL_INIT"
-            )
-
-    def finalize(self):
-        """
-        Finalization tasks
-        """
-        super().finalize()
+        # # Read in initial model as a vector and ensure it is a valid model
+        # if os.path.exists(self.path.MODEL_INIT):
+        #     m_new = Model(path=self.path.MODEL_INIT)
+        #     m_new.save(path=os.path.join(self.path.OPTIMIZE, "m_new"))
+        # else:
+        #     logger.warning(
+        #         "PATH.MODEL_INIT not found, cannot save 'm_new'. Either ensure "
+        #         "that 'm_new' is present in PATH.OPTIMIZE or restart with a "
+        #         "valid PATH.MODEL_INIT"
+        #     )
 
     def load(self, name):
         """
@@ -178,9 +163,8 @@ class Gradient(Base):
         :type name: str
         :param name: name of the vector, acceptable: m, g, p, f, alpha
         """
-        assert(name in self.acceptable_vectors)
-        model = Model(path=os.path.join(self.path.OPTIMIZE, f"{name}.npz"),
-                      load=True)
+        assert(name in self._acceptable_vectors)
+        model = Model(path=os.path.join(self.path, f"{name}.npz"), load=True)
         return model
 
     def save(self, name, m):
@@ -192,13 +176,14 @@ class Gradient(Base):
         :type m: seisflows.tools.cspefem.Model or float
         :param m: Model to save to disk as npz array
         """
-        assert(name in self.acceptable_vectors)
+        assert(name in self._acceptable_vectors)
+
         if isinstance(m, Model):
-            path = os.path.join(self.path.OPTIMIZE, f"{name}.npz")
+            path = os.path.join(self.path, f"{name}.npz")
             m.model = m.split()  # overwrite m representation
             m.save(path=path)
         elif isinstance(m, (float, int)):
-            path = os.path.join(self.path.OPTIMIZE, f"{name}.txt")
+            path = os.path.join(self.path, f"{name}.txt")
             np.savetxt(path, [m])
 
     def _precondition(self, q):
@@ -210,26 +195,31 @@ class Gradient(Base):
         :rtype: np.array
         :return: preconditioned vector
         """
-        if self.par.PRECOND is not None:
-            p = Model(path=self.path.PRECOND)
-            if self.par.PRECOND == "DIAGONAL":
-                self.logger.info("applying diagonal preconditioner")
+        if self.preconditioner is not None:
+            p = Model(path=self.path_preconditioner)
+            if self.preconditioner.upper() == "DIAGONAL":
+                logger.info("applying diagonal preconditioner")
                 return p.vector * q
+            else:
+                raise NotImplementedError(
+                    f"preconditioner {self.preconditioner} not supported"
+                )
         else:
             return q
 
-    def compute_direction(self, save_to):
+    def compute_direction(self):
         """
-        Computes a steepest descent search direction (inverse gradient)
+        Computes steepest descent search direction (inverse gradient)
         with an optional user-defined preconditioner.
 
         .. note::
             Other optimization algorithms must overload this method
         """
-        self.logger.info(f"computing search direction with {self.par.OPTIMIZE}")
+        logger.info(f"computing search direction")
 
         g_new = self.load("g_new")
         p_new = -1 * self._precondition(g_new.vector)
+
         self.save("p_new", p_new)
 
     def initialize_search(self):
@@ -237,6 +227,7 @@ class Gradient(Base):
         Initialize the plugin line search machinery. Should only be run at
         the beginning of line search, by the main workflow module.
         """
+        # Vectors required to initialize a line search
         m = self.load("m_new")
         g = self.load("g_new")
         p = self.load("p_new")
@@ -253,19 +244,18 @@ class Gradient(Base):
             self.line_search.clear_history()
 
         # Optional safeguard to prevent step length from getting too large
-        if self.par.STEPLENMAX:
-            self.line_search.step_len_max = \
-                self.par.STEPLENMAX * norm_m / norm_p
-            self.logger.debug(f"max step length safeguard is: "
-                              f"{self.line_search.step_len_max:.2E}")
+        if self.step_len_max:
+            new_step_len_max = self.step_len_max * norm_m / norm_p
+            self.line_search.step_len_max = new_step_len_max
+            logger.debug(f"max step length safeguard = {new_step_len_max:.2E}")
 
         self.line_search.initialize(step_len=0., func_val=f, gtg=gtg, gtp=gtp)
         alpha, _ = self.line_search.calculate_step()
 
         # Alpha defines the trial step length. Optional step length override
-        if self.par.STEPLENINIT and len(self.line_search.step_lens) <= 1:
-            alpha = self.par.STEPLENINIT * norm_m / norm_p
-            self.logger.debug(f"overwrite initial step length: {alpha:.2E}")
+        if self.step_len_init and len(self.line_search.step_lens) <= 1:
+            alpha = self.step_len_init * norm_m / norm_p
+            logger.debug(f"overwrite initial step length: {alpha:.2E}")
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
@@ -306,33 +296,34 @@ class Gradient(Base):
         Removes old model/search parameters, moves current parameters to old,
         sets up new current parameters and writes statistic outputs
         """
-        unix.cd(self.path.OPTIMIZE)
-        self.logger.info(msg.sub("FINALIZING LINE SEARCH"))
+        unix.cd(self.path)
+
+        logger.info(msg.sub("FINALIZING LINE SEARCH"))
 
         # Remove the old model parameters
-        if self.iter > 1:
-            self.logger.info("removing previously accepted model files (old)")
+        if self.iteration > 1:
+            logger.info("removing previously accepted model files (old)")
             for fid in ["m_old", "f_old", "g_old", "p_old"]:
                 unix.rm(fid)
 
         # Needs to be run before shifting model in next step
         self._write_stats()
 
-        self.logger.info("shifting current model (new) to previous model (old)")
+        logger.info("shifting current model (new) to previous model (old)")
         unix.mv("m_new.npz", "m_old.npz")
         unix.mv("f_new.npz", "f_old.npz")
         unix.mv("g_new.npz", "g_old.npz")
         unix.mv("p_new.npz", "p_old.npz")
 
-        self.logger.info("setting accepted line search model as current model")
+        logger.info("setting accepted line search model as current model")
         unix.mv("m_try.npz", "m_new.npz")
 
         # Choose minimum misfit value as final misfit/model
         f = self.line_search.search_history()[1]
         self.save("f_new", f.min())
-        self.logger.info(f"current misfit is {f.min():.3E}")
+        logger.info(f"current misfit is {f.min():.3E}")
 
-        self.logger.info("resetting line search step count to 0")
+        logger.info("resetting line search step count to 0")
         self.line_search.step_count = 0
 
     def retry_status(self):
@@ -345,7 +336,7 @@ class Gradient(Base):
         p = self.load("p_new")
         theta = angle(p.vector, -1 * g.vector)
 
-        self.logger.debug(f"theta: {theta:6.3f}")
+        logger.debug(f"theta: {theta:6.3f}")
 
         thresh = 1.e-3
         if abs(theta) < thresh:
@@ -363,8 +354,9 @@ class Gradient(Base):
         numerical stagnation.
         """
         # Steepest descent (base) does not need to be restarted
-        if self.par.OPTIMIZE.capitalize() == "Gradient":
-            return
+        # TODO figure out how to deal with this noting inheritance from others
+        # if self.par.OPTIMIZE.capitalize() == "Gradient":
+        #     return
 
         g = self.load("g_new")
         self.save("p_new", -1 * g.vector)
@@ -379,8 +371,8 @@ class Gradient(Base):
         by subsequent iterations so we need to append values to text files
         if they should be retained.
         """
-        self.logger.info(f"writing optimization stats")
-        fid = os.path.join(self.path.OUTPUT,  f"optim_stats.txt")
+        logger.info(f"writing optimization stats")
+        fid = os.path.join(self.path_output,  f"optim_stats.txt")
 
         # First time, write header information
         if not os.path.exists(fid):
@@ -397,7 +389,7 @@ class Gradient(Base):
         f = self.line_search.search_history()[1]
 
         # Calculated stats factors
-        factor = -dot(g.vector, g.vector)
+        factor = -1 * dot(g.vector, g.vector)
         factor = factor ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
 
         grad_norm_L1 = np.linalg.norm(g.vector, 1)
@@ -408,18 +400,17 @@ class Gradient(Base):
         slope = (f[1] - f[0]) / (x[1] - x[0])
         step_count = self.line_search.step_count
         step_length = x[f.argmin()]
-        theta = 180. * np.pi ** -1 * angle(p, -g)
+        theta = 180. * np.pi ** -1 * angle(p, -1 * g.vector)
 
         with open(fid, "a") as f:
-            pass
-        f.write(f"{self.iter:0>2},"
-                f"{factor:6.3E},"
-                f"{grad_norm_L1:6.3E},"
-                f"{grad_norm_L2:6.3E},"
-                f"{misfit:6.3E},"
-                f"{restarted:6.3E},"
-                f"{slope:6.3E},"
-                f"{step_count:0>2},"
-                f"{step_length:6.3E},"
-                f"{theta:6.3E}\n"
-                )
+            f.write(f"{self.iteration:0>2},"
+                    f"{factor:6.3E},"
+                    f"{grad_norm_L1:6.3E},"
+                    f"{grad_norm_L2:6.3E},"
+                    f"{misfit:6.3E},"
+                    f"{restarted:6.3E},"
+                    f"{slope:6.3E},"
+                    f"{step_count:0>2},"
+                    f"{step_length:6.3E},"
+                    f"{theta:6.3E}\n"
+                    )

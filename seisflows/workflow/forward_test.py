@@ -8,22 +8,13 @@ from seisflows.tools.wrappers import load_yaml
 from seisflows.tools.specfem import Model
 
 
-def setup(instances):
-    """
-    Run the .setup() function for each of the instances, which
-    """
-
-
-
-
 
 if __name__ == "__main__":
     # Standard SeisFlows Workflow setup block
     # ==========================================================================
     cwd = os.getcwd()
     pars = load_yaml("parameters.yaml")
-    paths = Dict(pars.pop("paths"))
-    logger = config_logger(level=pars.log_level, filename=paths.log_file,
+    logger = config_logger(level=pars.log_level, filename=pars.path_log_file,
                            verbose=pars.verbose)
 
     # Dynamically create module instances, instantiated with parameters
@@ -40,11 +31,10 @@ if __name__ == "__main__":
 
     # Begin workflow
     logger.info("Starting forward simulation workflow")
-    for module in modules:
-        module.setup()
 
-    m = Model(paths.model_init)
-    m.write(path=os.path.join(paths.eval_fun, "model"))
+
+    m = Model(pars.path_model_init)
+    m.write(path=os.path.join(paths.eval_func, "model"))
 
     system.run(solver.eval_func)
 
