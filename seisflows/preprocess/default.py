@@ -9,186 +9,176 @@ import os
 import obspy
 import numpy as np
 
-from seisflows.core import Base
+from seisflows import logger
 from seisflows.tools import signal, unix
 from seisflows.plugins.preprocess import adjoint, misfit, readers, writers
 
 
-class Default(Base):
+class Default:
     """
     Default SeisFlows preprocessing class
 
     Provides data processing functions for seismic traces, with options for
     data misfit, filtering, normalization and muting
     """
-    def __init__(self):
+    def __init__(self, data_format="ascii", misfit="waveform", backproject=None,
+                 normalize=None, filter=None, min_period=None, max_period=None,
+                 min_freq=None, max_freq=None, mute=None, path_preprocess=None):
         """
-        These parameters should not be set by __init__!
-        Attributes are just initialized as NoneTypes for clarity and docstrings
-        """
-        super().__init__()
+        Preprocessing module parameters
 
-        # Define the Parameters required by this module
-        self.required.par(
-            "MISFIT", required=False, default="waveform", par_type=str,
-            docstr="Misfit function for waveform comparisons, for available "
-                   "see seisflows.plugins.misfit"
-        )
-        self.required.par(
-            "BACKPROJECT", required=False, default="null", par_type=str,
-            docstr="Backprojection function for migration, for available see "
-                   "seisflows.plugins.adjoint"
-        )
-        self.required.par(
-            "NORMALIZE", required=False, default="null", par_type=str,
-            docstr="Data normalization option"
-        )
-        self.required.par(
-            "FILTER", required=False, default="null", par_type=str,
-            docstr="Data filtering type, available options are:"
-                   "BANDPASS (req. MIN/MAX PERIOD/FREQ);"
-                   "LOWPASS (req. MAX_FREQ or MIN_PERIOD); "
-                   "HIGHPASS (req. MIN_FREQ or MAX_PERIOD) "
-        )
-        self.required.par(
-            "MIN_PERIOD", required=False, par_type=float,
-            docstr="Minimum filter period applied to time series."
-                   "See also MIN_FREQ, MAX_FREQ, if User defines FREQ "
-                   "parameters, they will overwrite PERIOD parameters."
-        )
-        self.required.par(
-            "MAX_PERIOD", required=False, par_type=float,
-            docstr="Maximum filter period applied to time series."
-                   "See also MIN_FREQ, MAX_FREQ, if User defines FREQ "
-                   "parameters, they will overwrite PERIOD parameters."
-        )
-        self.required.par(
-            "MIN_FREQ", required=False, par_type=float,
-            docstr="Maximum filter frequency applied to time series."
-                   "See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ "
-                   "parameters, they will overwrite PERIOD parameters."
-        )
-        self.required.par(
-            "MAX_FREQ", required=False, par_type=float,
-            docstr="Maximum filter frequency applied to time series,"
-                   "See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ "
-                   "parameters, they will overwrite PERIOD parameters."
-        )
-        self.required.par(
-            "MUTE", required=False, par_type=list, default=[],
-            docstr="Data mute parameters used to zero out early / late "
-                   "arrivals or offsets. Choose any number of: "
-                   "EARLY: mute early arrivals; "
-                   "LATE: mute late arrivals; "
-                   "SHORT: mute short source-receiver distances; "
-                   "LONG: mute long source-receiver distances"
-        )
-        self.required.par(
-            "NORMALIZE", required=False, par_type=list, default=[],
-            docstr="Data normalization parameters used to normalize the "
-                   "amplitudes of waveforms. Choose from two sets: "
-                   "ENORML1: normalize per event by L1 of traces; OR "
-                   "ENORML2: normalize per event by L2 of traces; AND "
-                   "TNORML1: normalize per trace by L1 of itself; OR "
-                   "TNORML2: normalize per trace by L2 of itself"
-        )
+        :type data_format: str
+        :param data_format: data format for reading traces into memory. For
+            available see: seisflows.plugins.preprocess.readers
+        :type misfit: str
+        :param misfit: misfit function for waveform comparisons. For available
+            see seisflows.plugins.preprocess.misfit
+        :type backproject: str
+        :param backproject: backprojection function for migration, or the
+            objective function in FWI. For available see
+            seisflows.plugins.preprocess.adjoint
+        :type normalize: str
+        :param normalize: Data normalization parameters used to normalize the
+            amplitudes of waveforms. Choose from two sets:
+            ENORML1: normalize per event by L1 of traces; OR
+            ENORML2: normalize per event by L2 of traces;
+            &
+            TNORML1: normalize per trace by L1 of itself; OR
+            TNORML2: normalize per trace by L2 of itself
+        :type filter: str
+        :param filter: Data filtering type, available options are:
+            BANDPASS (req. MIN/MAX PERIOD/FREQ);
+            LOWPASS (req. MAX_FREQ or MIN_PERIOD);
+            HIGHPASS (req. MIN_FREQ or MAX_PERIOD)
+        :type min_period: float
+        :param min_period: Minimum filter period applied to time series.
+            See also MIN_FREQ, MAX_FREQ, if User defines FREQ parameters, they
+            will overwrite PERIOD parameters.
+        :type max_period: float
+        :param max_period: Maximum filter period applied to time series. See
+            also MIN_FREQ, MAX_FREQ, if User defines FREQ parameters, they will
+            overwrite PERIOD parameters.
+        :type min_freq: float
+        :param min_freq: Maximum filter frequency applied to time series,
+            See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ parameters,
+            they will overwrite PERIOD parameters.
+        :type max_freq: float
+        :param max_freq: Maximum filter frequency applied to time series,
+            See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ parameters,
+            they will overwrite PERIOD parameters.
+        :type mute: list
+        :param mute: Data mute parameters used to zero out early / late
+            arrivals or offsets. Choose any number of:
+            EARLY: mute early arrivals;
+            LATE: mute late arrivals;
+            SHORT: mute short source-receiver distances;
+            LONG: mute long source-receiver distances
+        :type path_preprocess: str
+        :param path_preprocess: scratch path for all preprocessing processes,
+            including saving files
+        """
+        self.data_format = data_format.title()
+        self.misfit = misfit
+        self.backproject = backproject,
+        self.normalize = normalize
+        self.filter = filter
+        self.min_period = min_period
+        self.max_period = max_period
+        self.min_freq = min_freq
+        self.max_freq = max_freq
+        self.mute = mute or []
+        self.normalize = normalize or []
+        self.path = path_preprocess or \
+                    os.path.join(os.getcwd(), "scratch", "preprocess")
+
         # TODO: Add the mute parameters here, const, slope and dist
 
-        # Define the Paths required by this module
-        self.required.path(
-            "PREPROCESS", required=False,
-            default=os.path.join(self.path.WORKDIR, "scratch", "preprocess"),
-            docstr="scratch path to store any preprocessing outputs"
-        )
-
-        self.misfit = None
-        self.adjoint = None
-        self.reader = None
-        self.writer = None
+        self._misfit = None
+        self._adjoint = None
+        self._reader = None
+        self._writer = None
 
     def check(self, validate=True):
         """ 
         Checks parameters and paths
         """
-        super().check(validate=validate)
-
         # Data normalization option
-        if self.par.NORMALIZE:
+        if self.normalize:
             acceptable_norms = {"TNORML1", "TNORML2", "ENORML1", "ENORML2"}
-            chosen_norms = [_.upper() for _ in self.par.NORMALIZE]
+            chosen_norms = [_.upper() for _ in self.normalize]
             assert(set(chosen_norms).issubset(acceptable_norms))
 
         # Data muting options
-        if self.par.MUTE:
+        if self.mute:
             acceptable_mutes = {"EARLY", "LATE", "LONG", "SHORT"}
-            chosen_mutes = [_.upper() for _ in self.par.MUTE]
+            chosen_mutes = [_.upper() for _ in self.mute]
             assert(set(chosen_mutes).issubset(acceptable_mutes))
             if "EARLY" in chosen_mutes:
-                assert(self.par.EARLY_SLOPE is not None)
-                assert(self.par.EARLY_SLOPE >= 0.)
-                assert(self.par.EARLY_CONST is not None)
+                assert(self.early_slope is not None)
+                assert(self.early_slope >= 0.)
+                assert(self.early_const is not None)
             if "LATE" in chosen_mutes:
-                assert(self.par.LATE_SLOPE is not None)
-                assert(self.par.LATE_SLOPE >= 0.)
-                assert(self.par.LATE_CONST is not None)
+                assert(self.late_slope is not None)
+                assert(self.late_slope >= 0.)
+                assert(self.late_const is not None)
             if "SHORT" in chosen_mutes:
-                assert(self.par.SHORT_DIST is not None)
-                assert (self.par.SHORT_DIST > 0)
+                assert(self.short_dist is not None)
+                assert (self.short_dist > 0)
             if "LONG" in chosen_mutes:
-                assert(self.par.LONG_DIST is not None)
-                assert (self.par.LONG_DIST > 0)
+                assert(self.long_dist is not None)
+                assert (self.long_dist > 0)
 
         # Data filtering options that will be passed to ObsPy filters
-        if self.par.FILTER:
+        if self.filter:
             acceptable_filters = ["BANDPASS", "LOWPASS", "HIGHPASS"]
-            assert self.par.FILTER.upper() in acceptable_filters, \
-                f"self.par.FILTER must be in {acceptable_filters}"
+            assert self.filter.upper() in acceptable_filters, \
+                f"self.filter must be in {acceptable_filters}"
 
             # Set the min/max frequencies and periods, frequency takes priority
-            if self.par.MIN_FREQ is not None:
-                self.par.MAX_PERIOD = 1 / self.par.MIN_FREQ
-            elif self.par.MAX_PERIOD is not None:
-                self.par.MIN_FREQ = 1 / self.par.MAX_PERIOD
+            if self.min_freq is not None:
+                self.max_period = 1 / self.min_freq
+            elif self.max_period is not None:
+                self.min_freq = 1 / self.max_period
 
-            if self.par.MAX_FREQ is not None:
-                self.par.MIN_PERIOD = 1 / self.par.MAX_FREQ
-            elif self.par.MIN_PERIOD is not None:
-                self.par.MAX_FREQ =  1 / self.par.MIN_PERIOD
+            if self.max_freq is not None:
+                self.min_period = 1 / self.max_freq
+            elif self.min_period is not None:
+                self.max_freq =  1 / self.min_period
 
             # Check that the correct filter bounds have been set
-            if self.par.FILTER.upper() == "BANDPASS":
-                assert(self.par.MIN_FREQ is not None and
-                       self.par.MAX_FREQ is not None), \
+            if self.filter.upper() == "BANDPASS":
+                assert(self.min_freq is not None and
+                       self.max_freq is not None), \
                     ("BANDPASS filter PAR.MIN_PERIOD and PAR.MAX_PERIOD or " 
                      "PAR.MIN_FREQ and PAR.MAX_FREQ")
-            elif self.par.FILTER.upper() == "LOWPASS":
-                assert(self.par.MAX_FREQ is not None or
-                       self.par.MIN_PERIOD is not None),\
+            elif self.filter.upper() == "LOWPASS":
+                assert(self.max_freq is not None or
+                       self.min_period is not None),\
                     "LOWPASS requires PAR.MAX_FREQ or PAR.MIN_PERIOD"
-            elif self.par.FILTER.upper() == "HIGHPASS":
-                assert(self.par.MIN_FREQ is not None or
-                       self.par.MAX_PERIOD is not None),\
+            elif self.filter.upper() == "HIGHPASS":
+                assert(self.min_freq is not None or
+                       self.max_period is not None),\
                     "HIGHPASS requires PAR.MIN_FREQ or PAR.MAX_PERIOD"
 
             # Check that filter bounds make sense, by this point, MIN and MAX
             # FREQ and PERIOD should be set, so we just check the FREQ
-            assert(0 < self.par.MIN_FREQ < np.inf), "0 < PAR.MIN_FREQ < inf"
-            assert(0 < self.par.MAX_FREQ < np.inf), "0 < PAR.MAX_FREQ < inf"
-            assert(self.par.MIN_FREQ < self.par.MAX_FREQ), (
+            assert(0 < self.min_freq < np.inf), "0 < PAR.MIN_FREQ < inf"
+            assert(0 < self.max_freq < np.inf), "0 < PAR.MAX_FREQ < inf"
+            assert(self.min_freq < self.max_freq), (
                 "PAR.MIN_FREQ < PAR.MAX_FREQ"
             )
 
         # Assert that readers and writers available
         # TODO | This is a bit vague as dir contains imported modules and hidden
         # TODO | variables (e.g., np, __name__)
-        assert(self.par.FORMAT.lower() in dir(readers)), (
-            f"Reader {self.par.FORMAT} not found")
-        assert(self.par.FORMAT.lower() in dir(writers)), (
-            f"Writer {self.par.FORMAT} not found")
+        assert(self.data_format.lower() in dir(readers)), (
+            f"Reader {self.data_format} not found")
+        assert(self.data_format.lower() in dir(writers)), (
+            f"Writer {self.data_format} not found")
 
         # Assert that either misfit or backproject exists
         if self.par.WORKFLOW.upper() == "INVERSION":
-            assert(self.par.MISFIT is not None)
+            assert(self.misfit is not None)
 
     def setup(self):
         """
@@ -196,29 +186,29 @@ class Default(Base):
         misfit, adjoint source type, and specifying the expected file type
         for input and output seismic data.
         """
-        unix.mkdir(self.path.PREPROCESS)
+        unix.mkdir(self.path)
 
         # Define misfit function and adjoint trace generator
-        if self.par.MISFIT:
-            self.logger.debug(f"misfit function is: '{self.par.MISFIT}'")
-            self.misfit = getattr(misfit, self.par.MISFIT.lower())
-            self.adjoint = getattr(adjoint, self.par.MISFIT.lower())
-        elif self.par.BACKPROJECT:
-            self.logger.debug(
-                f"backproject function is: '{self.par.BACKPROJECT}'"
+        if self.misfit:
+            logger.debug(f"misfit function is: '{self.misfit}'")
+            self._misfit = getattr(misfit, self.misfit.lower())
+            self._adjoint = getattr(adjoint, self.misfit.lower())
+        elif self.backproject:
+            logger.debug(
+                f"backproject function is: '{self.backproject}'"
             )
-            self.adjoint = getattr(adjoint, self.par.BACKPROJECT.lower())
+            self._adjoint = getattr(adjoint, self.backproject.lower())
 
         # Define seismic data reader and writer
-        self.reader = getattr(readers, self.par.FORMAT.lower())
-        self.writer = getattr(writers, self.par.FORMAT.lower())
+        self._reader = getattr(readers, self.data_format.lower())
+        self._writer = getattr(writers, self.data_format.lower())
 
     def finalize(self):
         """
         Any finalization processes that need to take place at the end of an
         iteration
         """
-        super().finalize()
+        pass
 
     def prepare_eval_grad(self, cwd, taskid, filenames, **kwargs):
         """
@@ -241,42 +231,42 @@ class Default(Base):
         :param filenames: list of filenames defining the files in traces
         """
         if taskid == 0:
-            self.logger.debug("preparing files for gradient evaluation")
+            logger.debug("preparing files for gradient evaluation")
 
         for filename in filenames:
-            obs = self.reader(path=os.path.join(cwd, "traces", "obs"),
+            obs = self._reader(path=os.path.join(cwd, "traces", "obs"),
                               filename=filename)
-            syn = self.reader(path=os.path.join(cwd, "traces", "syn"),
+            syn = self._reader(path=os.path.join(cwd, "traces", "syn"),
                               filename=filename)
 
             # Process observations and synthetics identically
-            if self.par.FILTER:
+            if self.filter:
                 if taskid == 0:
-                    self.logger.debug(f"applying {self.par.FILTER} filter to data")
+                    logger.debug(f"applying {self.filter} filter to data")
                 obs = self._apply_filter(obs)
                 syn = self._apply_filter(syn)
-            if self.par.MUTE:
+            if self.mute:
                 if taskid == 0:
-                    self.logger.debug(f"applying {self.par.MUTE} mutes to data")
+                    logger.debug(f"applying {self.mute} mutes to data")
                 obs = self._apply_mute(obs)
                 syn = self._apply_mute(syn)
-            if self.par.NORMALIZE:
+            if self.normalize:
                 if taskid == 0:
-                    self.logger.debug(
-                        f"normalizing data with: {self.par.NORMALIZE}"
+                    logger.debug(
+                        f"normalizing data with: {self.normalize}"
                     )
                 obs = self._apply_normalize(obs)
                 syn = self._apply_normalize(syn)
 
-            if self.par.MISFIT is not None:
+            if self.misfit is not None:
                 self._write_residuals(cwd, syn, obs)
 
             # Write the adjoint traces. Rename file extension for Specfem
-            if self.par.FORMAT.upper() == "ASCII":
+            if self.data_format.upper() == "ASCII":
                 # Change the extension to '.adj' from whatever it is
                 ext = os.path.splitext(filename)[-1]
                 filename_out = filename.replace(ext, ".adj")
-            elif self.par.FORMAT.upper() == "SU":
+            elif self.data_format.upper() == "SU":
                 # TODO implement this
                 raise NotImplementedError
 
@@ -285,6 +275,7 @@ class Default(Base):
 
         # Copy over the STATIONS file to STATIONS_ADJOINT required by Specfem
         # ASSUMING that all stations are used in adjoint simulation
+        # TODO !!! This is SPECFEM dependent? Belongs in solver.specfem?
         src = os.path.join(cwd, "DATA", "STATIONS")
         dst = os.path.join(cwd, "DATA", "STATIONS_ADJOINT")
         unix.cp(src, dst)
@@ -307,7 +298,7 @@ class Default(Base):
     def _write_residuals(self, path, syn, obs):
         """
         Computes residuals between observed and synthetic seismogram based on
-        the misfit function self.par.MISFIT. Saves the residuals for each
+        the misfit function self.misfit. Saves the residuals for each
         data-synthetic pair into a text file located at:
 
         ./scratch/solver/*/residuals
@@ -324,9 +315,9 @@ class Default(Base):
         """
         residuals = []
         for tr_obs, tr_syn in zip(obs, syn):
-            residual = self.misfit(syn=tr_syn.data, obs=tr_obs.data,
-                                   nt=tr_syn.stats.npts,
-                                   dt=tr_syn.stats.delta
+            residual = self._misfit(syn=tr_syn.data, obs=tr_obs.data,
+                                    nt=tr_syn.stats.npts,
+                                    dt=tr_syn.stats.delta
                                    )
             residuals.append(residual)
 
@@ -352,12 +343,12 @@ class Default(Base):
         # Use the synthetics as a template for the adjoint sources
         adj = syn.copy()
         for tr_adj, tr_obs, tr_syn in zip(adj, obs, syn):
-            tr_adj.data = self.adjoint(syn=tr_syn.data, obs=tr_obs.data,
-                                       nt=tr_syn.stats.npts,
-                                       dt=tr_syn.stats.delta
-                                       )
+            tr_adj.data = self._adjoint(syn=tr_syn.data, obs=tr_obs.data,
+                                        nt=tr_syn.stats.npts,
+                                        dt=tr_syn.stats.delta
+                                        )
 
-        self.writer(adj, path, filename)
+        self._writer(adj, path, filename)
 
     def _apply_filter(self, st):
         """
@@ -373,13 +364,13 @@ class Default(Base):
         st.detrend("linear")
         st.taper(0.05, type="hann")
 
-        if self.par.FILTER.upper() == "BANDPASS":
-            st.filter("bandpass", zerophase=True, freqmin=self.par.MIN_FREQ,
-                      freqmax=self.par.FREQMAX)
-        elif self.par.FILTER.upper() == "LOWPASS":
-            st.filter("lowpass", zerophase=True, freq=self.par.MAX_FREQ)
-        elif self.par.FILTER.upper() == "HIGHPASS":
-            st.filter("highpass", zerophase=True, freq=self.par.MIN_FREQ)
+        if self.filter.upper() == "BANDPASS":
+            st.filter("bandpass", zerophase=True, freqmin=self.min_freq,
+                      freqmax=self.max_freq)
+        elif self.filter.upper() == "LOWPASS":
+            st.filter("lowpass", zerophase=True, freq=self.max_freq)
+        elif self.filter.upper() == "HIGHPASS":
+            st.filter("highpass", zerophase=True, freq=self.min_freq)
 
         return st
 
@@ -398,20 +389,20 @@ class Default(Base):
         :rtype: obspy.core.stream.Stream
         :return: muted stream object
         """
-        mute_choices = [_.upper() for _ in self.par.MUTE]
+        mute_choices = [_.upper() for _ in self.mute]
         if "EARLY" in mute_choices:
-            st = signal.mute_arrivals(st, slope=self.par.EARLY_SLOPE,
-                                      const=self.par.EARLY_CONST,
+            st = signal.mute_arrivals(st, slope=self.early_slope,
+                                      const=self.early_const,
                                       choice="EARLY")
         if "LATE" in mute_choices:
-            st = signal.mute_arrivals(st, slope=self.par.LATE_SLOPE,
-                                      const=self.par.LATE_CONST,
+            st = signal.mute_arrivals(st, slope=self.late_slope,
+                                      const=self.late_const,
                                       choice="LATE")
         if "SHORT" in mute_choices:
-            st = signal.mute_offsets(st, dist=self.par.SHORT_DIST,
+            st = signal.mute_offsets(st, dist=self.short_dist,
                                      choice="SHORT")
         if "LONG" in mute_choices:
-            st = signal.mute_arrivals(st, dist=self.par.LONG_DIST,
+            st = signal.mute_arrivals(st, dist=self.long_dist,
                                       choice="LONG")
 
         return st
@@ -431,7 +422,7 @@ class Default(Base):
         :return: stream with normalized traces
         """
         st_out = st.copy()
-        norm_choices = [_.upper() for _ in self.par.NORMALIZE]
+        norm_choices = [_.upper() for _ in self.normalize]
 
         # Normalize an event by the L1 norm of all traces
         if 'ENORML1' in norm_choices:
