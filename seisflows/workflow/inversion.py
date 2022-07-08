@@ -156,7 +156,7 @@ class Inversion(Migration):
             flow = (self.evaluate_initial_misfit,
                     self.evaluate_gradient,
                     self.process_kernels,
-                    self.write_gradient,
+                    self.scale_gradient,
                     self.compute_direction,
                     self.line_search,
                     self.export,

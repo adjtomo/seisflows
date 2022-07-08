@@ -113,6 +113,22 @@ class Specfem(Base):
             docstr="The format external solver files. Available: "
                    "['fortran_binary']"
         )
+        self.required.par(
+            "SMOOTH_H", required=False, default=0., par_type=float,
+            docstr="Gaussian half-width for horizontal smoothing in units of "
+                   "meters. If 0., no smoothing applied"
+        )
+        self.required.par(
+            "SMOOTH_V", required=False, default=0., par_type=float,
+            docstr="Gaussian half-width for vertical smoothing in units of "
+                   "meters"
+        )
+        self.required.par(
+            "TASKTIME_SMOOTH", required=False, default=1, par_type=int,
+            docstr="Large radii smoothing may take longer than normal tasks. "
+                   "Allocate additional smoothing task time as a multiple of "
+                   "TASKTIME"
+        )
         self.required.path(
             "SOLVER", required=False,
             default=os.path.join(self.path.WORKDIR, "scratch", "solver"),
@@ -134,6 +150,11 @@ class Specfem(Base):
             default=os.path.join(self.path.WORKDIR, "specfem", "DATA"),
             docstr="path to the SPECFEM DATA/ directory containing the "
                    "'Par_file', 'STATIONS' file and 'CMTSOLUTION' files"
+        )
+        # Define the Paths required by this module
+        self.required.path(
+            "MASK", required=False, docstr="Directory to mask files for "
+                                           "gradient masking"
         )
 
         self.parameters = []
@@ -456,6 +477,43 @@ class Specfem(Base):
                                 prefix="traces/syn")
             self._export_traces(path=os.path.join(path, "traces", "adj"),
                                 prefix="traces/adj")
+
+    def postprocess_kernels(self, path_grad):
+        """
+        Sums kernels from individual sources, with optional smoothing
+
+        .. note::
+            This function needs to be run on system, i.e., called by
+            system.run(single=True)
+
+        :type path_grad: str
+        :param path_grad: directory containing sensitivity kernels in the
+            scratch directory to be summed and smoothed. Output summed and
+            summed + smoothed kernels will be saved here as well.
+        """
+        # If specified, smooth the kernels in the vertical and horizontal and
+        # save both (summed, summed+smoothed) to separate output directories
+        kernel_path = os.path.join(path_grad, "kernels")
+
+        path_sum_nosmooth = os.path.join(kernel_path, "sum_nosmooth")
+        path_sum = os.path.join(kernel_path, "sum")
+
+        if (self.par.SMOOTH_H > 0) or (self.par.SMOOTH_V > 0):
+            self.logger.debug(f"saving un-smoothed and summed kernels to:\n"
+                              f"{path_sum_nosmooth}")
+            self.combine(input_path=kernel_path, output_path=path_sum_nosmooth)
+
+            self.logger.info(f"smoothing gradient: H={self.par.SMOOTH_H}m, "
+                             f"V={self.par.SMOOTH_V}m")
+            self.logger.debug(f"saving smoothed kernels to:\n{path_sum}")
+            self.smooth(input_path=path_sum_nosmooth, output_path=path_sum,
+                          span_h=self.par.SMOOTH_H, span_v=self.par.SMOOTH_V)
+
+        # Combine all the input kernels, generating the unscaled gradient
+        else:
+            self.logger.debug(f"saving summed kernels to:\n{path_sum}")
+            self.combine(input_path=kernel_path, output_path=path_sum)
+
 
     # def apply_hess(self, path):
     #     """

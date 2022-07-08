@@ -10,6 +10,7 @@ import os
 
 from seisflows.workflow.forward import Forward
 from seisflows.tools import msg
+from seisflows.tools.specfem import Model
 
 
 class Migration(Forward):
@@ -96,7 +97,7 @@ class Migration(Forward):
         flow = (self.evaluate_initial_misfit,
                 self.evaluate_gradient,
                 self.process_kernels,
-                self.write_gradient
+                self.scale_gradient
                 )
 
         self.main(flow=flow, return_flow=return_flow)
@@ -130,19 +131,38 @@ class Migration(Forward):
         self.logger.info(msg.mnr("PROCESSING KERNELS"))
 
         # Runs kernel processing as a single parallel process
-        system.run("postprocess", "sum_smooth_kernels", single=True,
+        system.run("solver", "postprocess_kernels", single=True,
                    path_grad=self.path.GRAD)
 
-    def write_gradient(self):
+    def scale_gradient(self):
         """
-        Uses the optimization and postprocess modules to scale the gradient
-        to the given model, write the gradient in vector form and model form,
-        and apply an optional mask to the gradient
-        """
-        postprocess = self.module("postprocess")
+        Scale the gradient magnitude by the given model, write the gradient in
+        vector form and model form, and apply an optional mask to the gradient
 
-        # Scale the gradient by a mask and by the model
-        gradient = postprocess.scale_gradient(input_path=self.path.GRAD)
+        .. note::
+            While both masking and preconditioning involve scaling the
+            gradient, they are fundamentally different operations:
+            masking is ad hoc, preconditioning is a change of variables;
+            For more info, see Modrak & Tromp 2016 GJI
+        """
+        model = Model(path=os.path.join(self.path.GRAD))
+        gradient = Model(path=os.path.join(self.path.GRAD, "kernels", "sum"))
+
+        # Merge to vector and convert to absolute perturbations:
+        # log dm --> dm (see Eq.13 Tromp et al 2005)
+        gradient.vector *= model.vector
+
+        if self.path.MASK:
+            mask = Model(os.path.join(self.path.MASK))
+            # Write out a non-masked gradient incase masking is not wanted
+            gradient.write(path=os.path.join(self.path.GRAD, "gradient_nomask"))
+
+            gradient.vector *= mask.vector
+
+        # Update the model values based on the vector manipulation
+        gradient.model = gradient.split()
+
+        # Write the gradient out
         gradient.write(path=os.path.join(self.path.GRAD, "gradient"))
         gradient.save(path=os.path.join(self.path.OPTIMIZE, "g_new"))
 
