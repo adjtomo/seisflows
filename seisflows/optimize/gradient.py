@@ -142,6 +142,12 @@ class Gradient:
         #         "valid PATH.MODEL_INIT"
         #     )
 
+    def finalize(self):
+        """
+        Finalization tasks
+        """
+        pass
+
     def load(self, name):
         """
         Convenience function to access the full paths of model and gradient

@@ -6,68 +6,68 @@ kernel summation
 """
 import os
 
-from seisflows.core import Base
+from seisflows import logger
 from seisflows.tools.specfem import Model
 
 
-class Default(Base):
+class Default:
     """
     Postprocessing in a Seisflows workflow includes tasks such as
     regularization, smoothing, sharpening, masking and related operations
     on models or gradients
     """
-    def __init__(self):
+    def __init__(self, smooth_h=0., smooth_v=0., tasktime_smooth=1,
+                 path_postprocess=None, path_mask=None):
         """
-        These parameters should not be set by __init__!
-        Attributes are just initialized as NoneTypes for clarity and docstrings
+        Establish Postprocessing parameters
+
+        :type smooth_h: float
+        :param smooth_h: Gaussian half-width for horizontal smoothing in units
+            of meters. If 0., no smoothing applied
+        :type smooth_h: float
+        :param smooth_v: Gaussian half-width for vertical smoothing in units
+            of meters.
+        :type tasktime_smooth: float
+        :param tasktime_smooth: Large radii smoothing may take longer than
+            normal tasks. Allocate additional smoothing task time as a multiple
+            of system.tasktime
+        :type path_postprocess: str
+        :param path_postprocess: scratch path to perform all postprocessing
+            tasks such as smoothing, kernel combination etc.
+        :type path_mask: str
+        :param path_mask: Directory to mask files for gradient masking. Format
+            of the mask files MUST match the format of the input model.
         """
         super().__init__()
 
-        self.required.par(
-            "SMOOTH_H", required=False, default=0., par_type=float,
-            docstr="Gaussian half-width for horizontal smoothing in units of "
-                   "meters. If 0., no smoothing applied"
-        )
-        self.required.par(
-            "SMOOTH_V", required=False, default=0., par_type=float,
-            docstr="Gaussian half-width for vertical smoothing in units of "
-                   "meters"
-        )
-        self.required.par(
-            "TASKTIME_SMOOTH", required=False, default=1, par_type=int,
-            docstr="Large radii smoothing may take longer than normal tasks. "
-                   "Allocate additional smoothing task time as a multiple of "
-                   "TASKTIME"
-        )
-        # Define the Paths required by this module
-        self.required.path(
-            "MASK", required=False, docstr="Directory to mask files for "
-                                           "gradient masking"
-        )
+        self.smooth_h = smooth_h
+        self.smooth_v = smooth_v
+        self.tasktime_smooth = tasktime_smooth
+        self.path = path_postprocess or \
+                    os.path.join(os.getcwd(), "scratch", "evalgrad")
+        self.path_mask = path_mask
 
-    def check(self, validate=True):
+    def check(self):
         """
         Checks parameters and paths
         """
-        super().check(validate=validate)
-        
-        if self.path.MASK:
-            assert os.path.exists(self.path.MASK), \
-                f"PATH.MASK provided but does not exist"
+        if self.path_mask:
+            assert os.path.exists(self.path_mask), \
+                "`postprocess.path_mask` provided but does not exist"
 
     def setup(self):
         """
         Setup tasks
         """
-        super().setup()
+        pass
 
     def finalize(self):
         """
         Finalization tasks
         """
-        super().finalize()
+        pass
 
-    def scale_gradient(self, input_path):
+    def scale_gradient(self):
         """
         Combines contributions from individual sources and material parameters
         to get the gradient, and optionally applies user-supplied scaling
@@ -83,36 +83,31 @@ class Default(Base):
         :rtype: np.array
         :return: scaled gradient as a vector
         """
-        # Postprocess file structure defined here once-and-for-all
-        path_grad_nomask = os.path.join(input_path, "gradient_nomask")
-        path_model = os.path.join(input_path, "model")
-        path_kernels_sum = os.path.join(input_path, "kernels", "sum")
-
         # Access the gradient information stored in as kernel files
-        gradient = Model(path=path_kernels_sum)
-        model = Model(path=path_model)
+        gradient = Model(path=os.path.join(self.path, "model"))
+        model = Model(path=os.path.join(self.path, "kernels", "sum"))
 
         # Merge to vector and convert to absolute perturbations:
         # log dm --> dm (see Eq.13 Tromp et al 2005)
         gradient.vector *= model.vector
 
-        if self.path.MASK:
-            self.logger.info(f"masking gradient")
+        if self.path_mask:
+            logger.info(f"masking gradient")
             # to scale the gradient, users can supply "masks" by exactly
             # mimicking the file format in which models are stored
-            mask = Model(self.path.MASK)
+            mask = Model(self.path_mask)
 
             # While both masking and preconditioning involve scaling the
             # gradient, they are fundamentally different operations:
             # masking is ad hoc, preconditioning is a change of variables;
             # For more info, see Modrak & Tromp 2016 GJI
-            gradient.write(path=path_grad_nomask)
+            gradient.write(path=os.path.join(self.path, "gradient_nomask"))
 
             gradient.vector *= mask.vector
 
         return gradient
 
-    def sum_smooth_kernels(self, path_grad):
+    def sum_smooth_kernels(self, solver):
         """
         Sums kernels from individual sources, with optional smoothing
 
@@ -120,33 +115,28 @@ class Default(Base):
             This function needs to be run on system, i.e., called by
             system.run(single=True)
 
-        :type path_grad: str
-        :param path_grad: directory containing sensitivity kernels in the
-            scratch directory to be summed and smoothed. Output summed and
-            summed + smoothed kernels will be saved here as well.
+        :type solver: solver instance
+        :param solver: SeisFlows solver which will be used for its combine and
+            smooth functions
         """
-        solver = self.module("solver")
-
         # If specified, smooth the kernels in the vertical and horizontal and
         # save both (summed, summed+smoothed) to separate output directories
-        kernel_path = os.path.join(path_grad, "kernels")
+        path_kernel = os.path.join(self.path, "kernels")
+        path_sum_nosmooth = os.path.join(path_kernel, "sum_nosmooth")
+        path_sum = os.path.join(path_kernel, "sum")
 
-        path_sum_nosmooth = os.path.join(kernel_path, "sum_nosmooth")
-        path_sum = os.path.join(kernel_path, "sum")
+        if (self.smooth_h > 0) or (self.smooth_v > 0):
+            logger.debug(f"saving un-smoothed and summed kernels to:\n"
+                         f"{path_sum_nosmooth}")
+            solver.combine(input_path=path_kernel, output_path=path_sum_nosmooth)
 
-        if (self.par.SMOOTH_H > 0) or (self.par.SMOOTH_V > 0):
-            self.logger.debug(f"saving un-smoothed and summed kernels to:\n"
-                              f"{path_sum_nosmooth}")
-            solver.combine(input_path=kernel_path,
-                           output_path=path_sum_nosmooth)
-
-            self.logger.info(f"smoothing gradient: H={self.par.SMOOTH_H}m, "
-                             f"V={self.par.SMOOTH_V}m")
-            self.logger.debug(f"saving smoothed kernels to:\n{path_sum}")
+            logger.info(f"smoothing gradient: "
+                        f"H={self.smooth_h}m; V={self.smooth_v}m")
+            logger.debug(f"saving smoothed kernels to:\n{path_sum}")
             solver.smooth(input_path=path_sum_nosmooth, output_path=path_sum, 
-                          span_h=self.par.SMOOTH_H, span_v=self.par.SMOOTH_V)
+                          span_h=self.smooth_h, span_v=self.smooth_v)
 
         # Combine all the input kernels, generating the unscaled gradient
         else:
-            self.logger.debug(f"saving summed kernels to:\n{path_sum}")
-            solver.combine(input_path=kernel_path, output_path=path_sum)
+            logger.debug(f"saving summed kernels to:\n{path_sum}")
+            solver.combine(input_path=path_kernel, output_path=path_sum)
