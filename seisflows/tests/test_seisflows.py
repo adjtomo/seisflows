@@ -14,7 +14,7 @@ from unittest.mock import patch
 from seisflows.core import Dict
 from seisflows.seisflows import SeisFlows
 from seisflows.config import ROOT_DIR, NAMES, CFGPATHS
-from seisflows.tools.wrappers import loadyaml
+from seisflows.tools.wrappers import load_yaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
 
@@ -56,7 +56,7 @@ def par_file_dict(filled_par_file):
     :rtype: seisflows.config.Dict
     :return: dictionary of parameters
     """
-    return Dict(loadyaml(filled_par_file))
+    return Dict(load_yaml(filled_par_file))
 
 
 def test_call_seisflows(tmpdir, par_file_dict, copy_par_file):
@@ -185,7 +185,7 @@ def test_cmd_init(tmpdir, copy_par_file):
     copy_par_file
 
     # Create necessary paths to get past some assertion errors
-    parameters = loadyaml("parameters.yaml")
+    parameters = load_yaml("parameters.yaml")
     paths = parameters.pop("PATHS")
 
     for key in ["MODEL_INIT", "MODEL_TRUE"]:
@@ -249,7 +249,7 @@ def test_load_modules(tmpdir, copy_par_file):
     copy_par_file
 
     # Create necessary paths to get past some assertion errors
-    parameters = loadyaml("parameters.yaml")
+    parameters = load_yaml("parameters.yaml")
     paths = parameters.pop("PATHS")
 
     for key in ["MODEL_INIT", "MODEL_TRUE"]:

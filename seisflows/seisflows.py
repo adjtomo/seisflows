@@ -32,7 +32,7 @@ from seisflows.config import (custom_import, save, NAMES, ROOT_DIR, CFGPATHS,
 from seisflows.tools import unix, msg
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)
-from seisflows.tools.wrappers import loadyaml
+from seisflows.tools.wrappers import load_yaml
 
 
 def sfparser():
@@ -412,7 +412,7 @@ class SeisFlows:
 
         # Register parameters from the parameter file
         try:
-            parameters = loadyaml(self._args.parameter_file)
+            parameters = load_yaml(self._args.parameter_file)
         except Exception as e:
             print(msg.cli(f"Please check that your parameter file is properly "
                           f"formatted in the YAML format. The read error is:",
@@ -656,7 +656,7 @@ class SeisFlows:
             sys.exit(-1)
 
         # Load in old parameter file and then move it to a hidden file
-        ogpars = loadyaml(self._args.parameter_file)
+        ogpars = load_yaml(self._args.parameter_file)
         ogpaths = Dict(ogpars.pop("PATHS"))
         unix.mv(self._args.parameter_file, f"_{self._args.parameter_file}")
 

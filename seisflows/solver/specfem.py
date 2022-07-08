@@ -494,7 +494,6 @@ class Specfem(Base):
         # If specified, smooth the kernels in the vertical and horizontal and
         # save both (summed, summed+smoothed) to separate output directories
         kernel_path = os.path.join(path_grad, "kernels")
-
         path_sum_nosmooth = os.path.join(kernel_path, "sum_nosmooth")
         path_sum = os.path.join(kernel_path, "sum")
 

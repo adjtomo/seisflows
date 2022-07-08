@@ -11,15 +11,45 @@ import subprocess
 import numpy as np
 from importlib import import_module
 from pkgutil import find_loader
+from seisflows.core import Dict
 
 
-class Struct(dict):
+def load_yaml(filename):
     """
-    Revised dictionary structure
+    Define how the PyYaml yaml loading function behaves.
+    Replaces None and inf strings with NoneType and numpy.inf respectively
+
+    :type filename: str
+    :param filename: .yaml file to load in
+    :rtype: Dict
+    :return: Dictionary containing all parameters in a YAML file
     """
-    def __init__(self, *args, **kwargs):
-        super(Struct, self).__init__(*args, **kwargs)
-        self.__dict__ = self
+    # work around PyYAML bugs
+    yaml.SafeLoader.add_implicit_resolver(
+        u'tag:yaml.org,2002:float',
+        re.compile(u'''^(?:
+         [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+        |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+        |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+        |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+        |[-+]?\\.(?:inf|Inf|INF)
+        |\\.(?:nan|NaN|NAN))$''', re.X),
+        list(u'-+0123456789.'))
+
+    with open(filename, 'r') as f:
+        mydict = Dict(yaml.safe_load(f))
+
+    if mydict is None:
+        mydict = Dict()
+
+    # Replace 'None' and 'inf' values to match expectations
+    for key, val in mydict.items():
+        if val == "None":
+            mydict[key] = None
+        if val == "inf":
+            mydict[key] = np.inf
+
+    return mydict
 
 
 def diff(list1, list2):
@@ -141,42 +171,6 @@ def timestamp():
     Return a timestamp for current time
     """
     return time.strftime('%H:%M:%S')
-
-
-def loadyaml(filename):
-    """
-    Define how the PyYaml yaml loading function behaves. 
-    Replaces None and inf strings with NoneType and numpy.inf respectively
-    
-    :type filename: str
-    :param filename: .yaml file to load in
-    """
-    # work around PyYAML bugs
-    yaml.SafeLoader.add_implicit_resolver(
-        u'tag:yaml.org,2002:float',
-        re.compile(u'''^(?:
-         [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
-        |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
-        |\\.[0-9_]+(?:[eE][-+][0-9]+)?
-        |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
-        |[-+]?\\.(?:inf|Inf|INF)
-        |\\.(?:nan|NaN|NAN))$''', re.X),
-        list(u'-+0123456789.'))
-
-    with open(filename, 'r') as f:
-        mydict = yaml.safe_load(f)
-
-    if mydict is None:
-        mydict = dict()
-
-    # Replace 'None' and 'inf' values to match expectations
-    for key, val in mydict.items():
-        if val == "None":
-            mydict[key] = None
-        if val == "inf":
-            mydict[key] = np.inf
-
-    return mydict
 
 
 def getset(arg):
