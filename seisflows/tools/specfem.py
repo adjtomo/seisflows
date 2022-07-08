@@ -21,7 +21,13 @@ class Model:
     Also contains utility functions to read/write itself so that models can be
     saved alongside their metadata.
     """
-    def __init__(self, path, fmt=None, read=False, load=False):
+    # Dictate the parameters that Model can handle, which does not cover all
+    # files created by SPECFEM, which includes things like 'ibool', 'info' etc.
+    acceptable_parameters = ["vp", "vs", "rho", 
+                             "vpv", "vph", "vsv", "vsh", "eta"]
+    acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
+
+    def __init__(self, path, fmt=None, parameters=None, load=False):
         """
         Model only needs path to model to determine model parameters. Format
         `fmt` can be provided by the user or guessed based on available file
@@ -35,34 +41,37 @@ class Model:
             Available formats are: .bin, .dat
         :type load: bool
         :param load: load the model into disk as dictionary and vector
-            representations. If False, will only collect some metadata as a
-            non-cpu intensive operation
+            representations. If False, will guess how to import data based on
+            file extensions or lack thereof
         """
         assert os.path.exists(path), f"specfem model path {path} does not exist"
         self.path = path
+        self.parameters = parameters
 
-        if read:
+        # Load an existing model
+        if os.path.splitext(path)[-1] == ".npz" or load:
+            self.model, self.ngll, self.fmt = self.load(file=self.path)
+            _first_key = list(self.model.keys())[0]
+            self.nproc = len(self.model[_first_key])
+        # Read a model from files
+        else:
             if fmt is None:
                 self.fmt = self._guess_file_format()
             else:
                 self.fmt = fmt
             self.nproc, self.available_parameters = self._get_nproc_parameters()
-            self.model, self.ngll = self.read()
-        elif load:
-            self.model, self.ngll, self.fmt = self.load(file=self.path)
-            _first_key = list(self.model.keys())[0]
-            self.nproc = len(self.model[_first_key])
+            self.model, self.ngll = self.read(parameters=parameters)
 
-        if read or load:
-            self.parameters = self.model.keys()
-            self.vector = self.merge()
-            self.check()
+        self.parameters = self.model.keys()
+        self.vector = self.merge()
+        self.check()
 
     @staticmethod
     def fnfmt(i="*", val="*", ext="*"):
         """
-        Expected SPECFEM filename format with some checks to ensure that wildcards
-        and numbers are accepted. An example filename is: 'proc000001_vs.bin'
+        Expected SPECFEM filename format with some checks to ensure that 
+        wildcards and numbers are accepted. An example filename is: 
+        'proc000001_vs.bin'
 
         :type i: int or str
         :param i: processor number or wildcard. If given as an integer, will be
@@ -70,7 +79,7 @@ class Model:
         :type val: str
         :param val: parameter value (e.g., 'vs') or wildcard
         :type ext: str
-        :param ext: the file format (e.g., '.bin'). If NOT preceded by a leading '.'
+        :param ext: the file format (e.g., '.bin'). If NOT preceded by a '.'
             will have one prepended
         :rtype: str
         :return: filename formatter for use in model manipulation
@@ -86,13 +95,13 @@ class Model:
     def read(self, parameters=None):
         """
         Utility function to load in SPECFEM models/kernels/gradients saved in
-        various formats. Will try to guess format of model. Assumes that models are
-        saved using the following filename format:
+        various formats. Will try to guess format of model. Assumes that models 
+        are saved using the following filename format:
 
         proc{num}_{val}.{format} where `num` is usually a 6 digit number
         representing the processor number (e.g., 000000), `val` is the parameter
-        value of the model/kernel/gradient and `format` is the format of the file
-        (e.g., bin)
+        value of the model/kernel/gradient and `format` is the format of the 
+        file (e.g., bin)
 
         :type parameters: list of str
         :param parameters: unique parameters to load model for, if None will load
@@ -112,11 +121,10 @@ class Model:
         # Pick the correct read function based on the file format
         load_fx = {".bin": self._read_model_fortran_binary,
                    ".dat": self._read_model_ascii,
-                   ".adios": self._read_model_adios   # TODO Check if this is right
+                   ".adios": self._read_model_adios   # TODO Check if this okay
                    }[self.fmt]
 
-        # Create a dictionary object containing all parameters and respective
-        # models, save to internal attribute
+        # Create a dictionary object containing all parameters and their models
         parameter_dict = Dict({key: [] for key in parameters})
         for parameter in parameters:
             parameter_dict[parameter] = load_fx(parameter=parameter)
@@ -132,7 +140,8 @@ class Model:
         """
         Convert dictionary representation `model` to vector representation `m`
         where all parameters and processors are stored as a single 1D vector.
-        This vector representation is used by the optimization library.
+        This vector representation is used by the optimization library during
+        model perturbation.
 
         :type parameter: str
         :param parameter: single parameter to retrieve model vector from,
@@ -215,7 +224,7 @@ class Model:
 
         # Tell the User min and max values of the updated model
         logger.info(f"model parameters")
-        parts = "{minval:.2f} <= {key} <= {maxval:.2f}"
+        parts = "{minval:.2E} <= {key} <= {maxval:.2E}"
         for key, vals in self.model.items():
             logger.info(parts.format(minval=vals.min(), key=key,
                                      maxval=vals.max()))
@@ -231,6 +240,13 @@ class Model:
     def load(self, file):
         """
         Load in a previously saved .npz file containing model information
+        and re-create a Model instance matching the one that was `save`d
+
+        :type file: str
+        :param file: .npz file to load data from. Must have been created by
+            Model.save()
+        :rtype: tuple (Dict, list, str)
+        :return: (Model Dictionary, ngll points for each slice, file format)
         """
         model = Dict()
         ngll = []
@@ -249,13 +265,16 @@ class Model:
         """
         Get the number of processors and the available parameters from a list of
         output SPECFEM model files.
+
+        :rtype: tuple (int, list)
+        :return: (number of processors, list of available parameters in dir)
         """
         fids = glob(os.path.join(self.path, self.fnfmt(val="*", ext=self.fmt)))
         fids = [os.path.basename(_) for _ in fids]  # drop full path
         fids = [os.path.splitext(_)[0] for _ in fids]  # drop extension
-
+        
         if self.fmt == ".bin":
-            avail_par = list(set([_.split("_")[-1] for _ in fids]))
+            avail_par = list(set(["_".join(_.split("_")[1:]) for _ in fids]))
             nproc = len(glob(os.path.join(
                 self.path, self.fnfmt(val=avail_par[0], ext=self.fmt)))
                         )
@@ -267,13 +286,19 @@ class Model:
             raise NotImplementedError(f"{self.fmt} is not yet supported by "
                                       f"SeisFlows")
 
-        return nproc, avail_par
+        # Remove any parameters not accepted by Model
+        avail_par = set(avail_par).intersection(set(self.acceptable_parameters))
+
+        return nproc, list(avail_par)
 
     def _guess_file_format(self):
         """
         Guess the file format of model/kernel/gradient files if none provided by
         the user. Does so by checking file formats against formats expected from
         SPECFEM2D/3D/3D_GLOBE
+
+        :rtype: str
+        :return: file format suffix with a leading '.' e.g., '.bin'
         """
         acceptable_formats = {".bin", ".dat"}
 

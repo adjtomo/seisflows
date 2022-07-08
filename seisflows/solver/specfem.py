@@ -453,9 +453,9 @@ class Specfem(Base):
 
         if export_traces:
             self._export_traces(path=os.path.join(path, "traces", "syn"),
-                               prefix="traces/syn")
+                                prefix="traces/syn")
             self._export_traces(path=os.path.join(path, "traces", "adj"),
-                               prefix="traces/adj")
+                                prefix="traces/adj")
 
     # def apply_hess(self, path):
     #     """

@@ -179,22 +179,27 @@ class Gradient(Base):
         :param name: name of the vector, acceptable: m, g, p, f, alpha
         """
         assert(name in self.acceptable_vectors)
-        model = Model(os.path.join(self.path.OPTIMIZE, f"{name}.npz"),
+        model = Model(path=os.path.join(self.path.OPTIMIZE, f"{name}.npz"),
                       load=True)
         return model
 
-    def save(self, name, vector):
+    def save(self, name, m):
         """
         Convenience function to save/overwrite vectors on disk
 
         :type name: str
         :param name: name of the vector to overwrite
-        :type vector: np.array
-        :param vector: vector to save to name
+        :type m: seisflows.tools.cspefem.Model or float
+        :param m: Model to save to disk as npz array
         """
         assert(name in self.acceptable_vectors)
-        vector_path = os.path.join(self.path.OPTIMIZE, f"{name}.npy")
-        np.save(vector_path, vector)
+        if isinstance(m, Model):
+            path = os.path.join(self.path.OPTIMIZE, f"{name}.npz")
+            m.model = m.split()  # overwrite m representation
+            m.save(path=path)
+        elif isinstance(m, (float, int)):
+            path = os.path.join(self.path.OPTIMIZE, f"{name}.txt")
+            np.savetxt(path, [m])
 
     def _precondition(self, q):
         """
@@ -213,7 +218,7 @@ class Gradient(Base):
         else:
             return q
 
-    def compute_direction(self):
+    def compute_direction(self, save_to):
         """
         Computes a steepest descent search direction (inverse gradient)
         with an optional user-defined preconditioner.
@@ -224,7 +229,7 @@ class Gradient(Base):
         self.logger.info(f"computing search direction with {self.par.OPTIMIZE}")
 
         g_new = self.load("g_new")
-        p_new = -1 * self._precondition(g_new)
+        p_new = -1 * self._precondition(g_new.vector)
         self.save("p_new", p_new)
 
     def initialize_search(self):
@@ -237,11 +242,11 @@ class Gradient(Base):
         p = self.load("p_new")
         f = self.load("f_new")
 
-        norm_m = max(abs(m))
-        norm_p = max(abs(p))
+        norm_m = max(abs(m.vector))
+        norm_p = max(abs(p.vector))
 
-        gtg = dot(g, g)
-        gtp = dot(g, p)
+        gtg = dot(g.vector, g.vector)
+        gtp = dot(g.vector, p.vector)
 
         # Restart plugin line search if the optimization library restarts
         if self.restarted:
@@ -264,11 +269,10 @@ class Gradient(Base):
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
-        m_try = m + alpha * p
+        m_try = m.vector + alpha * p.vector
 
         self.save("m_try", m_try)
-        np.savetxt("alpha", alpha)
-        self.check_model(m_try)
+        self.save("alpha", alpha)
 
     def update_search(self):
         """
@@ -288,11 +292,10 @@ class Gradient(Base):
         if status in [0, 1]:
             m = self.load("m_new")
             p = self.load("p_new")
-            np.savetxt("alpha", alpha)
+            self.save("alpha", alpha)
 
-            m_try = m + alpha * p
+            m_try = m.vector + alpha * p.vector
             self.save("m_try", m_try)
-            self.check_model(m_try)
 
         return status
 
@@ -316,14 +319,15 @@ class Gradient(Base):
         self._write_stats()
 
         self.logger.info("shifting current model (new) to previous model (old)")
-        unix.mv("m_new.npy", "m_old.npy")
-        unix.mv("f_new.npy", "f_old.npy")
-        unix.mv("g_new.npy", "g_old.npy")
-        unix.mv("p_new.npy", "p_old.npy")
+        unix.mv("m_new.npz", "m_old.npz")
+        unix.mv("f_new.npz", "f_old.npz")
+        unix.mv("g_new.npz", "g_old.npz")
+        unix.mv("p_new.npz", "p_old.npz")
 
         self.logger.info("setting accepted line search model as current model")
-        unix.mv("m_try.npy", "m_new.npy")
+        unix.mv("m_try.npz", "m_new.npz")
 
+        # Choose minimum misfit value as final misfit/model
         f = self.line_search.search_history()[1]
         self.save("f_new", f.min())
         self.logger.info(f"current misfit is {f.min():.3E}")
@@ -339,7 +343,7 @@ class Gradient(Base):
         """
         g = self.load("g_new")
         p = self.load("p_new")
-        theta = angle(p, -g)
+        theta = angle(p.vector, -1 * g.vector)
 
         self.logger.debug(f"theta: {theta:6.3f}")
 
@@ -363,7 +367,7 @@ class Gradient(Base):
             return
 
         g = self.load("g_new")
-        self.save("p_new", -g)
+        self.save("p_new", -1 * g.vector)
 
         self.line_search.clear_history()
         self.restarted = 1
@@ -393,9 +397,12 @@ class Gradient(Base):
         f = self.line_search.search_history()[1]
 
         # Calculated stats factors
-        factor = -dot(g, g) ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
-        grad_norm_L1 = np.linalg.norm(g, 1)
-        grad_norm_L2 = np.linalg.norm(g, 2)
+        factor = -dot(g.vector, g.vector)
+        factor = factor ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
+
+        grad_norm_L1 = np.linalg.norm(g.vector, 1)
+        grad_norm_L2 = np.linalg.norm(g.vector, 2)
+
         misfit = f[0]
         restarted = self.restarted
         slope = (f[1] - f[0]) / (x[1] - x[0])

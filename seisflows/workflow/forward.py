@@ -20,7 +20,7 @@ class Forward(Base):
     Workflow abstract base class representing an en-masse forward solver and
     misfit calculator.
     """
-    def __init__(self, path_data):
+    def __init__(self):
         """
         These parameters should not be set by the user.
         Attributes are initialized as NoneTypes for clarity and docstrings.
@@ -176,8 +176,9 @@ class Forward(Base):
             a suffix depending on where in the inversion we are. e.g., 'm_try'.
             Expected that these tags are defined in OPTIMIZE module
         """
-        m = Model(path=os.path.join(self.path.OPTIMIZE, model_tag))
-        m.save(path=os.path.join(path, "model"))
+        m = Model(path=os.path.join(self.path.OPTIMIZE, f"{model_tag}.npz"))
+        m.write(path=os.path.join(path, "model"))
+
         self.logger.debug(f"saving model '{model_tag}'")
 
     def _write_misfit(self, path, misfit_tag):

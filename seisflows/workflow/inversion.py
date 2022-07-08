@@ -272,15 +272,15 @@ class Inversion(Migration):
         optimize = self.module("optimize")
 
         if self.par.SAVEMODEL:
-            src = optimize.load("m_new")
+            src = os.path.join(self.path.OPTIMIZE, "m_new")
             dst = os.path.join(self.path.OUTPUT, f"model_{optimize.iter:04d}")
             self.logger.debug(f"exporting model 'm_new' to disk")
-            self._write_vector(src, dst)
+            unix.cp(src, dst)
 
         if self.par.SAVEGRADIENT:
-            src = optimize.load("g_old")
+            src = os.path.join(self.path.OPTIMIZE, "g_old")
             dst = os.path.join(self.path.OUTPUT, f"grad_{optimize.iter:04d}")
-            self._write_vector(src, dst)
+            unix.cp(src, dst)
 
         if self.par.SAVEKERNELS:
             src = os.path.join(self.path.GRAD, "kernels")
@@ -288,23 +288,9 @@ class Inversion(Migration):
             self.logger.debug(f"saving kernels to path:\n{dst}")
             unix.mv(src, dst)
 
-        # if self.par.SAVETRACES:
-        #     do some stuff
-
         if self.par.SAVERESIDUALS:
             src = os.path.join(self.path.GRAD, "residuals")
             dst = os.path.join(self.path.OUTPUT,
                                f"residuals_{optimize.iter:04d}")
             unix.mv(src, dst)
 
-    def _write_vector(self, vector, path):
-        """
-        Convenience function to write vectors as numpy arrays or as model files
-        to a given path
-        """
-        solver = self.module("solver")
-
-        if self.par.SAVEAS in ["binary", "both"]:
-            solver.save(solver.split(vector), path)
-        if self.par.SAVEAS in ["vector", "both"]:
-            np.save(file=path, arr=vector)

@@ -1330,7 +1330,7 @@ class SeisFlows:
             srcs = [src]
         for tag in srcs:
             m = optimize.load(tag)
-            optimize.check_model(m, tag)
+            m.check()
 
     def _check_current_iteration(self, **kwargs):
         """

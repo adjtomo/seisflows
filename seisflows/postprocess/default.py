@@ -91,6 +91,7 @@ class Default(Base):
         # Access the gradient information stored in as kernel files
         gradient = Model(path=path_kernels_sum)
         model = Model(path=path_model)
+
         # Merge to vector and convert to absolute perturbations:
         # log dm --> dm (see Eq.13 Tromp et al 2005)
         gradient.vector *= model.vector

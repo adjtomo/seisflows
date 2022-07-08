@@ -30,8 +30,7 @@ required_structure = {
     "solver": {
         "parameters": ["MATERIALS", "DENSITY", "ATTENUATION"],
         "functions": ["generate_data", "eval_func", 
-                      "eval_grad", "load", "save", "merge", "split", 
-                      "source_names", "parameters"]
+                      "eval_grad", "source_names", "parameters"]
     },
     "postprocess": {
         "parameters": [],
