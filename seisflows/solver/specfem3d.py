@@ -18,17 +18,35 @@ class Specfem3D(Specfem):
     """
     Python interface to Specfem3D Cartesian.
     """
-    def __init__(self):
+    def __init__(self, source_prefix="CMTSOLUTION", **kwargs):
         """
-        Initiate parameters required for Specfem3D Cartesian
-        """
-        super().__init__()
+        SPECFEM2D specific parameters
 
-        self.required.par(
-            "SOURCE_PREFIX", required=False, default="CMTSOLUTION",
-            par_type=str,
-            docstr="Prefix of SOURCE files in path SPECFEM_DATA. Available "
-                   "['CMTSOLUTION', FORCESOLUTION']")
+        :type source_prefix: str
+        :param source_prefix: Prefix of SOURCE files in path SPECFEM_DATA.
+        :type multiples: bool
+        :param multiples: set an absorbing top-boundary condition
+        """
+        super().__init__(**kwargs)
+
+        self.source_prefix = source_prefix
+        self._f0 = None
+
+        # Define parameters based on material type
+        if self.materials.upper() == "ACOUSTIC":
+            self._parameters.append("vp")
+        elif self.materials.upper() == "ELASTIC":
+            self._parameters.append("vp")
+            self._parameters.append("vs")
+
+        self._acceptable_source_prefix = ["CMTSOLUTION", "FORCESOLUTION"]
+
+    def check(self):
+        """
+        Check parameter validitiy
+        """
+        super().check()
+        assert(self.source_prefix in self._acceptable_source_prefix)
 
     def data_wildcard(self, comp="?"):
         """
@@ -53,8 +71,8 @@ class Specfem3D(Specfem):
         """
         unix.cd(os.path.join(self.cwd, "traces", "obs"))
 
-        if self.par.COMPONENTS:
-            files = glob(self.data_wildcard(comp=self.par.COMPONENTS.lower()))
+        if self.components:
+            files = glob(self.data_wildcard(comp=self.components.lower()))
         else:
             files = glob(self.data_wildcard(comp="?"))
         return sorted(files)
@@ -77,7 +95,7 @@ class Specfem3D(Specfem):
         """
         return self.model_databases
 
-    def eval_func(self, path, write_residuals=True):
+    def eval_func(self, path, preprocess=None):
         """
         Performs forward simulations and evaluates the misfit function using
         the preprocess module. Overrides to add a data renaming call
@@ -90,7 +108,7 @@ class Specfem3D(Specfem):
             will be exported
         :type write_residuals: bool
         :param write_residuals: calculate and export residuals        """
-        super().eval_func(path=path, write_residuals=write_residuals)
+        super().eval_func(path=path, preprocess=preprocess)
 
         # Work around SPECFEM3D conflicting name conventions of SU data
         self._rename_data()
@@ -108,7 +126,7 @@ class Specfem3D(Specfem):
         # Set parameters and run forward simulation
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
-        if self.par.ATTENUATION:
+        if self.attenuation:
             setpar(key="ATTENUATION", val=".true.", file="DATA/Par_file")
         else:
             setpar(key="ATTENUATION", val=".false`.", file="DATA/Par_file")
@@ -156,14 +174,14 @@ class Specfem3D(Specfem):
 
         # Workaround for Specfem3D's requirement that all components exist,
         # even ones not in use as adjoint traces
-        if self.par.FORMAT.upper() == "SU":
+        if self.data_format.upper() == "SU":
             unix.cd(os.path.join(self.cwd, "traces", "adj"))
 
-            for iproc in range(self.par.NPROC):
+            for iproc in range(self.nproc):
                 for channel in ["x", "y", "z"]:
                     dst = f"{iproc:d}_d{channel}_SU.adj"
                     if not exists(dst):
-                        src = f"{iproc:d}_d{self.par.COMPONENTS[0]}_SU.adj"
+                        src = f"{iproc:d}_d{self.components[0]}_SU.adj"
                         unix.cp(src, dst)
 
     def _rename_data(self):
@@ -173,7 +191,7 @@ class Specfem3D(Specfem):
         Specfem3D's uses different name conventions for regular traces
         and 'adjoint' traces
         """
-        if self.par.FORMAT.upper() == "SU":
+        if self.data_format.upper() == "SU":
             files = glob(os.path.join(self.cwd, "traces", "adj", "*SU"))
             unix.rename(old='_SU', new='_SU.adj', names=files)
 

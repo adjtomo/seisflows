@@ -23,7 +23,8 @@ class Default:
     """
     def __init__(self, data_format="ascii", misfit="waveform", backproject=None,
                  normalize=None, filter=None, min_period=None, max_period=None,
-                 min_freq=None, max_freq=None, mute=None, path_preprocess=None):
+                 min_freq=None, max_freq=None, mute=None, path_preprocess=None,
+                 **kwargs):
         """
         Preprocessing module parameters
 

@@ -18,20 +18,31 @@ class Specfem2D(Specfem):
     """
     Python interface to Specfem2D.
     """
-    def __init__(self):
+    def __init__(self, source_prefix="SOURCE", multiples=False, **kwargs):
         """
-        These parameters should not be set by the user.
-        Attributes are initialized as NoneTypes for clarity and docstrings.
+        SPECFEM2D specific parameters
+
+        :type source_prefix: str
+        :param source_prefix: Prefix of SOURCE files in path SPECFEM_DATA.
+        :type multiples: bool
+        :param multiples: set an absorbing top-boundary condition
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
-        self.required.par(
-            "SOURCE_PREFIX", required=False, default="SOURCE", par_type=str,
-            docstr="Prefix of SOURCE files in path SPECFEM_DATA. By "
-                   "default, 'SOURCE' for SPECFEM2D"
-        )
+        self.source_prefix = source_prefix
+        self.multiples = multiples
+        self._f0 = None
 
-        self.f0 = None
+        # Define parameters based on material type
+        if self.materials.upper() == "ACOUSTIC":
+            self._parameters.append("vp")
+        elif self.materials.upper() == "ELASTIC":
+            self._parameters.append("vp")
+            self._parameters.append("vs")
+
+        self._acceptable_source_prefix = ["FORCE", "FORCESOLUTION"]
+
+
 
     def data_wildcard(self, comp="?"):
         """
@@ -44,10 +55,10 @@ class Specfem2D(Specfem):
         :rtype: str
         :return: wildcard identifier for channels
         """
-        if self.par.FORMAT.upper() == "SU":
+        if self.data_format.upper() == "SU":
             # return f"*.su"  # too vague but maybe for a reason? -bryant
             return f"U{comp}_file_single.su"
-        elif self.par.FORMAT.upper() == "ASCII":
+        elif self.data_format.upper() == "ASCII":
             return f"*.?X{comp}.sem?"
 
     @property
@@ -64,16 +75,15 @@ class Specfem2D(Specfem):
         :rtype: list
         :return: list of data filenames
         """
-        unix.cd(self.cwd)
-        unix.cd(os.path.join("traces", "obs"))
+        unix.cd(os.path.join(self.cwd, "traces", "obs"))
 
-        if self.par.COMPONENTS:
+        if self.components:
             filenames = []
-            if self.par.FORMAT.upper() == "SU":
-                for comp in self.par.COMPONENTS:
+            if self.data_format.upper() == "SU":
+                for comp in self.components:
                     filenames += [self.data_wildcard(comp=comp.lower())]
-            elif self.par.FORMAT.upper() == "ASCII":
-                for comp in self.par.COMPONENTS:
+            elif self.data_format.upper() == "ASCII":
+                for comp in self.components:
                     filenames += glob(self.data_wildcard(comp=comp.upper()))
         else:
             filenames = glob(self.data_wildcard())
@@ -112,11 +122,18 @@ class Specfem2D(Specfem):
         self.f0 = getpar(key="f0",
                          file=os.path.join(self.cwd, "DATA/SOURCE"))[1]
 
-        if "MULTIPLES" in self.par:
-            if self.par.MULTIPLES:
-                setpar(key="absorbtop", val=".false.", file="DATA/Par_file")
-            else:
-                setpar(key="absorbtop", val=".true.", file="DATA/Par_file")
+        if self.multiples:
+            setpar(key="absorbtop", val=".false.", file="DATA/Par_file")
+        else:
+            setpar(key="absorbtop", val=".true.", file="DATA/Par_file")
+
+    def check(self):
+        """
+
+        """
+        super().check()
+        assert(self.source_prefix in self._acceptable_source_prefix)
+
 
     def _forward(self, output_path):
         """
@@ -136,7 +153,7 @@ class Specfem2D(Specfem):
         self._call_solver(executable="bin/xmeshfem2D", output="fwd_mesher.log")
         self._call_solver(executable="bin/xspecfem2D", output="fwd_solver.log")
 
-        if self.par.FORMAT.upper() == "SU":
+        if self.data_format.upper() == "SU":
             # Work around SPECFEM2D's version dependent file names
             for tag in ["d", "v", "a", "p"]:
                 unix.rename(old=f"single_{tag}.su", new="single.su",
@@ -160,7 +177,7 @@ class Specfem2D(Specfem):
 
         # Deal with different SPECFEM2D name conventions for regular traces and
         # "adjoint" traces
-        if self.par.FORMAT.upper == "SU":
+        if self.data_format.upper == "SU":
             unix.rename(old=".su", new=".su.adj",
                         names=glob(os.path.join("traces", "adj", "*.su")))
 
@@ -225,15 +242,14 @@ class Specfem2D(Specfem):
         """
         super()._initialize_adjoint_traces()
     
-        unix.cd(self.cwd)
-        unix.cd(os.path.join("traces", "adj"))
+        unix.cd(os.path.join(self.cwd, "traces", "adj"))
 
         # work around SPECFEM2D's use of different name conventions for
         # regular traces and 'adjoint' traces
-        if self.par.FORMAT.upper() == "SU":
+        if self.data_format.upper() == "SU":
             files = glob("*SU")
             unix.rename(old="_SU", new="_SU.adj", names=files)
-        elif self.par.FORMAT.upper() == "ASCII":
+        elif self.data_format.upper() == "ASCII":
             files = glob("*sem?")
 
             # Get the available extensions, which are named based on unit
@@ -244,13 +260,13 @@ class Specfem2D(Specfem):
         # SPECFEM2D requires that all components exist even if ununsed
         components = ["x", "y", "z", "p"]
 
-        if self.par.FORMAT.upper() == "SU":
+        if self.data_format.upper() == "SU":
             for comp in components:
-                src = f"U{self.par.COMPONENTS[0]}_file_single.su.adj"
+                src = f"U{self.components[0]}_file_single.su.adj"
                 dst = f"U{comp.lower()}s_file_single.su.adj"
                 if not os.path.exists(dst):
                     unix.cp(src, dst)
-        elif self.par.FORMAT.upper() == "ASCII":
+        elif self.data_format.upper() == "ASCII":
             for fid in glob("*.adj"):
                 net, sta, cha, ext = fid.split(".")
                 for comp in components:

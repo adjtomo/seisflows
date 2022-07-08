@@ -28,6 +28,19 @@ class Specfem3DGlobe(Specfem3D):
         Attributes are initialized as NoneTypes for clarity and docstrings.
         """
         super().__init__()
+        if self.materials.upper() == "ELASTIC":
+            assert(self.par.SOLVER.lower() in ["specfem2d", "specfem3d"])
+            self.parameters += ["vp", "vs"]
+        elif self.materials.upper() == "ACOUSTIC":
+            assert(self.par.SOLVER.lower() in ["specfem2d", "specfem3d"])
+            self.parameters += ["vp"]
+        elif self.materials.upper() == "ISOTROPIC":
+            assert(self.par.SOLVER.lower() in ["specfem3d_globe"])
+            self.parameters += ["vp", "vs"]
+        elif self.materials.upper() == "ANISOTROPIC":
+            assert(self.par.SOLVER.lower() in ["specfem3d_globe"])
+            self.parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
+
 
     def data_wildcard(self, comp="?"):
         """

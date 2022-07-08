@@ -14,181 +14,149 @@ import numpy as np
 from glob import glob
 from pyatoa import Pyaflowa, Inspector
 
-from seisflows.core import Base
+from seisflows import logger
 from seisflows.tools import unix, msg
 from seisflows.config import CFGPATHS
 
 
-class Pyatoa(Base):
+class Pyatoa:
     """
     Data preprocessing class using the Pyaflowa class within the Pyatoa package.
     In charge of data discovery, preprocessing, filtering, misfiti
     quantification and data storage. The User does not need to implement Pyatoa,
     but rather interacts with it via the parameters and paths of SeisFlows.
     """
-    def __init__(self):
+    def __init__(self, data_format="ascii", components=None, ntask=1, nproc=1,
+                 min_period=None, max_period=None, filter_corners=4,
+                 client=None, rotate=False, pyflex_preset="default",
+                 fix_windows=False, adj_src_type="cc", plot=True,
+                 pyatoa_log_level="DEBUG", unit_output="VEL",
+                 start_pad_s=0., end_pad_s=None, path_preprocess=None,
+                 path_data=None, path_output=None, save_datasets=True,
+                 save_figures=True, save_log_files=True, **kwargs):
         """
-        These parameters should not be set by __init__!
-        Attributes are just initialized as NoneTypes for clarity and docstrings
+        Pyatoa preprocessing parameters that will be passed to Pyaflowa
 
-        :param logger: Class-specific logging module, log statements pushed
-            from this logger will be tagged by its specific module/classname
+        :type data_format: str
+        :param data_format: data format for reading traces into memory. Pyatoa
+            only works with 'ASCII' currently.
+        :type components: str
+        :param components: components to consider and tag data with. Should be
+            string of letters such as 'RTZ'
+        :type min_period: float
+        :param min_period: Minimum filter corner in unit seconds. Bandpass
+        filter if set with `max_period`, highpass filter if set without
+        `max_period`, no filtering if not set and `max_period also not set
+        :type max_period: float
+        :param max_period: Maximum filter corner in unit seconds. Bandpass
+            filter if set with `min_period`, lowpass filter if set without
+            `min_period`, no filtering if not set and `min_period also not set
+        :type filter_corners: int
+        :param filter_corners: number of filter corners applied to filtering
+        :type client: str
+        :param client: Client name for ObsPy FDSN data gathering. Pyatoa will
+            attempt to collect waveform and metadata based on network and
+            station codes provided in the SPECFEM STATIONS file. If set None,
+            no FDSN gathering will be attempted
+        :type rotate: bool
+        :param rotate: Attempt to rotate waveform components from NEZ -> RTZ
+        :type pyflex_preset: str
+        :param pyflex_preset: Parameter map for misfit window configuration
+            defined by Pyflex. IF None, misfit and adjoint sources will be
+            calculated on whole traces. For available choices, see Pyatoa docs
+            page (pyatoa.rtfd.io)
+        :type fix_windows: bool or str
+        :param fix_windows: How to address misfit window evaluation at each
+            evaluation. Options to re-use misfit windows collected during an
+            inversion, available options:
+            [True, False, 'ITER', 'ONCE']
+            True: Re-use windows after first evaluation (i01s00);
+            False: Calculate new windows each evaluation;
+            'ITER': Calculate new windows at first evaluation of
+            each iteration (e.g., i01s00... i02s00...
+            'ONCE': Calculate new windows at first evaluation of
+            the workflow, i.e., at self.par.BEGIN
+        :type adj_src_type: str
+        :param adj_src_type: Adjoint source type to evaluate misfit, defined by
+            Pyadjoint. Currently available options: ['cc': cross-correlation,
+            'mt': multitaper, 'wav': waveform']
+        :type plot: bool
+        :param plot: plot waveform figures and source receiver maps during
+            the preprocessing stage
+        :type pyatoa_log_level: str
+        :param pyatoa_log_level: Log level to set Pyatoa, Pyflex, Pyadjoint.
+            Available: ['null': no logging, 'warning': warnings only,
+            'info': task tracking, 'debug': log all small details (recommended)]
+        :type start_pad_s: int
+        :param start_pad_s: seconds BEFORE origin time to gather data. Must be
+            >= T_0 specificed in SPECFEM constants.h. Positive values only
+        :type end_pad_s: int
+        :param end_pad_s: seconds AFTER origin time to gather data. Must be
+            >= NT * DT (from SPECFEM Par_file) postive values only.
+        :type unit_output: str
+        :param unit_output: Data units. Must match the synthetic output of
+            external solver. Available: ['DISP': displacement, 'VEL': velocity,
+            'ACC': acceleration]
+        :type save_datasets: bool
+        :param save_datasets: periodically save the output ASDFDataSets which
+            contain data, metadata and results collected during the
+            preprocessing procedure
+        :type save_figures: bool
+        :param save_figures: periodically save the output basemaps and
+            data-synthetic waveform comparison figures
+        :type save_log_files: bool
+        :param save_log_files: periodically save log files created by Pyatoa
+        :type path_preprocess: str
+        :param path_preprocess: scratch path for preprocessing related steps
+        :type path_data: str
+        :param path_data: optional path for preprocessing module to discover
+            waveform and meta-data.
         """
-        super().__init__()
+        # Shared SeisFlows parameters
+        self.data_format = data_format
+        self.components = components
+        self.ntask = ntask
+        self.nproc = nproc
 
-        # Define the Parameters required by this module
-        self.required.par(
-            "UNIT_OUTPUT", required=True, par_type=str,
-            docstr="Data units. Must match the synthetic output of external "
-                   "solver. Available: ['DISP': displacement, "
-                   "'VEL': velocity, 'ACC': acceleration]"
-        )
-        # TODO Check this against T0 in check()
-        self.required.par(
-            "START_PAD", required=False, default=0, par_type=float,
-            docstr="For data gathering; time before origin time to gather. "
-                   "START_PAD >= T_0 in SPECFEM constants.h.in. "
-                   "Positive values only"
-        )
-        # TODO set this automatically by setting equal NT * DT
-        self.required.par(
-            "END_PAD", required=True, par_type=float,
-            docstr="For data gathering; time after origin time to gather. "
-                   "END_PAD >= NT * DT (of Par_file). Positive values only"
-        )
-        self.required.par(
-            "MIN_PERIOD", required=False, default="", par_type=float,
-            docstr="Minimum filter corner in unit seconds. Bandpass filter "
-                   "if set with `MAX_PERIOD`, highpass filter if set "
-                   "without `MAX_PERIOD`, no filtering if not set and "
-                   "`MAX_PERIOD also not set"
-        )
-        self.required.par(
-            "MAX_PERIOD", required=False, default="", par_type=float,
-            docstr="Maximum filter corner in unit seconds. Bandpass filter "
-                   "if set with `MIN_PERIOD`, lowpass filter if set "
-                   "without `MIN_PERIOD`, no filtering if not set and "
-                   "`MIN_PERIOD also not set"
-        )
-        self.required.par(
-            "CORNERS", required=False, default=4, par_type=int,
-            docstr="Number of filter corners applied to filtering"
-        )
-        self.required.par(
-            "CLIENT", required=False, par_type=str,
-            docstr="Client name for ObsPy FDSN data gathering. Pyatoa will "
-                   "attempt to collect waveform and metadata based on "
-                   "network and station codes provided in the SPECFEM "
-                   "STATIONS file. If set None, no FDSN gathering will be "
-                   "attempted"
-        )
-        self.required.par(
-            "ROTATE", required=False, default=False, par_type=bool,
-            docstr="Attempt to rotate waveform components from NEZ -> RTZ"
-        )
-        self.required.par(
-            "PYFLEX_PRESET", required=False, default="default", par_type=str,
-            docstr="Parameter map for misfit window configuration defined "
-                   "by Pyflex. IF None, misfit and adjoint sources will be "
-                   "calculated on whole traces. For available choices, "
-                   "see Pyatoa docs page (pyatoa.rtfd.io)"
-        )
-        self.required.par(
-            "FIX_WINDOWS", required=False, default=False, \
-            par_type="bool or str",
-            docstr="How to address misfit window evaluation at each "
-                   "evaluation. Options to re-use misfit windows collected "
-                   "during an inversion, available options: "
-                   "[True, False, 'ITER', 'ONCE'] "
-                   "True: Re-use windows after first evaluation (i01s00); "
-                   "False: Calculate new windows each evaluation; "
-                   "'ITER': Calculate new windows at first evaluation of "
-                   "each iteration (e.g., i01s00... i02s00..."
-                   "'ONCE': Calculate new windows at first evaluation of "
-                   "the workflow, i.e., at self.par.BEGIN"
-        )
-        self.required.par(
-            "ADJ_SRC_TYPE", required=False, default="cc",  par_type=str,
-            docstr="Adjoint source type to evaluate misfit, defined by "
-                   "Pyadjoint. Currently available options: "
-                   "['cc': cross-correlation, 'mt': multitaper, "
-                   "wav: waveform']"
-        )
-        self.required.par(
-            "PLOT", required=False, default=True, par_type=bool,
-            docstr="Attempt to plot waveforms and maps as PDF files at each "
-                   "function evaluation"
-        )
+        # Pyatoa specific parameters
+        self.min_period = min_period
+        self.max_period = max_period
+        self.filter_corners = filter_corners
+        self.client = client
+        self.rotate = rotate
+        self.pyflex_preset = pyflex_preset
+        self.fix_windows = fix_windows
+        self.adj_src_type = adj_src_type
+        self.plot = plot
+        self.pyatoa_log_level = pyatoa_log_level
+        self.unit_output = unit_output
+        self.start_pad_s = start_pad_s
+        self.end_pad_s = end_pad_s
 
-        self.required.par(
-            "PYATOA_LOG_LEVEL", required=False, default="DEBUG", par_type=str,
-            docstr="Log level to set Pyatoa, Pyflex, Pyadjoint. Available: "
-                   "['null': no logging, 'warning': warnings only, "
-                   "'info': task tracking, "
-                   "'debug': log all small details (recommended)]"
-        )
-        # Parameters to control saving scratch/preprocess files to work dir.
-        self.required.par(
-            "SAVE_DATASETS", required=False, default=True, par_type=bool,
-            docstr="Save PyASDF HDF5 datasets to disk. These datasets store "
-                   "waveform data, metadata, misfit windows, adjoint "
-                   "sources and configuration parameters"
-        )
-        self.required.par(
-            "SAVE_FIGURES", required=False, default=True, par_type=bool,
-            docstr="Save output waveform figures to disk as PDFs"
-        )
-        self.required.par(
-            "SAVE_LOGS", required=False, default=True, par_type=bool,
-            docstr="Save event-specific Pyatoa logs to disk as .txt files"
-        )
-        # Define the Paths required by this module
-        self.required.path(
-            "PREPROCESS", required=False,
-            default=os.path.join(self.path.WORKDIR, "scratch", "preprocess"),
-            docstr="scratch/ path to store waveform data and figures. "
-                   "Pyatoa will generate an internal directory structure "
-                   "here"
-        )
-        self.required.path(
-            "DATA", required=False,
-            docstr="Directory to locally stored data. Pyatoa looks for "
-                   "waveform and metadata in the 'self.path.DATA/mseed' and "
-                   "'self.path.DATA/seed', directories respectively."
-        )
+        self.path = path_preprocess or \
+                    os.path.join(os.getcwd(), "scratch", "preprocess")
+        self.path_output = path_output or os.path.join(os.getcwd(), "output")
+        self.path_data = path_data
 
-    def check(self, validate=True):
+        self.save_datasets = save_datasets
+        self.save_figures = save_figures
+        self.save_log_files = save_log_files
+
+    def check(self):
         """ 
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
         """
-        super().check(validate=validate)
-
-        # Check that other modules have set parameters that will be used here
-        for required_parameter in ["COMPONENTS", "FORMAT"]:
-            assert(required_parameter in self.par), \
-                f"Pyatoa requires {required_parameter}"
-
-        assert(self.par.FORMAT.upper() == "ASCII"), \
-            "Pyatoa preprocess requires self.par.FORMAT=='ASCII'"
-
-        # assert((self.par.DT * self.par.NT) <= (self.par.START_PAD + self.par.END_PAD)), \
-        #     ("Pyatoa preprocess must have (self.par.START_PAD + self.par.END_PAD) >= "
-        #      "(self.par.DT * self.par.NT), current values will not provide sufficiently "
-        #      f"long data traces (DT*NT={self.par.DT * self.par.NT}; "
-        #      f"START+END={self.par.START_PAD + self.par.END_PAD}")
+        assert(self.data_format.upper() == "ASCII"), \
+            "Pyatoa preprocess requires `data_format`=='ASCII'"
 
     def setup(self):
         """
         Sets up data preprocessing machinery by establishing an internally
         defined directory structure that will be used to store the outputs 
         of the preprocessing workflow
-
-        Akin to an __init__ class, but to be called externally by the workflow.
         """
-        super().setup()
-
-        unix.mkdir(self.path.PREPROCESS)
+        unix.mkdir(self.path)
 
     def finalize(self):
         """
@@ -201,8 +169,6 @@ class Pyatoa(Base):
             * Aggregate event-specific PDFs into a single evaluation PDF
             * Save scratch/ data into output/ if requested
         """
-        super().finalize()
-
         # Initiate Pyaflowa to get access to path structure
         pyaflowa = Pyaflowa(sfpar=self.par, sfpath=self.path)
         unix.cd(pyaflowa.paths.datasets)
@@ -210,29 +176,29 @@ class Pyatoa(Base):
         # Generate the Inspector from existing datasets and save to disk
         # Allow this is fail, which might happen if we don't have enough data
         # or the Dataset is not formatted as expected
-        insp = Inspector(self.par.TITLE, verbose=False)
+        insp = Inspector(self.par.TITLE, verbose=False)  # !!! TODO
         try:
             insp.discover()
             insp.save()
         except Exception as e:
-            self.logger.warning(f"Uncontrolled exception in Inspector creation "
+            logger.warning(f"Uncontrolled exception in Inspector creation "
                                 f"will not create inspector:\n{e}")
 
         # Make the final PDF for easier User ingestion of waveform/map figures
         pyaflowa.make_evaluation_composite_pdf()
 
         # Move scratch/ directory results into more permanent storage
-        if self.par.SAVE_DATASETS:
+        if self.save_datasets:
             datasets = glob(os.path.join(pyaflowa.paths.datasets, "*.h5"))
             self._save_quantity(datasets, tag="datasets")
 
-        if self.par.SAVE_FIGURES:
+        if self.save_figures:
             figures = glob(os.path.join(pyaflowa.paths.figures, "*.pdf"))
             self._save_quantity(figures, tag="figures")
 
-        if self.par.SAVE_LOGS:
+        if self.save_log_files:
             logs = glob(os.path.join(pyaflowa.paths.logs, "*.txt"))
-            path_out = os.path.join(self.path.WORKDIR, CFGPATHS.LOGDIR)
+            path_out = os.path.join(self.path_output, CFGPATHS.LOGDIR)
             self._save_quantity(logs, path_out=path_out)
 
     def prepare_eval_grad(self, cwd, taskid, source_name, **kwargs):
@@ -263,12 +229,12 @@ class Pyatoa(Base):
             traces
         """
         if taskid == 0:
-            self.logger.debug("preparing files for gradient evaluation with "
+            logger.debug("preparing files for gradient evaluation with "
                               "Pyaflowa")
 
         # Process all the stations for a given event using Pyaflowa
         pyaflowa = self._setup_event_pyaflowa(source_name)
-        scaled_misfit = pyaflowa.process(nproc=self.par.NPROC)
+        scaled_misfit = pyaflowa.process(nproc=self.nproc)
 
         if scaled_misfit is None:
             print(msg.cli(f"Event {source_name} returned no misfit, you may "
@@ -282,7 +248,7 @@ class Pyatoa(Base):
         # Event misfit defined by Tape et al. (2010) written to solver dir.
         self._write_residuals(path=cwd, scaled_misfit=scaled_misfit)
 
-    def _setup_event_pyaflowa(self, source_name=None):
+    def _setup_event_pyaflowa(self, source_name, iteration, step_count=""):
         """
         A convenience function to set up a Pyaflowa processing instance for
         a specific event. 
@@ -296,19 +262,6 @@ class Pyatoa(Base):
         :param source_name: solver source name to evaluate setup for. Must 
             match from list defined by: solver.source_names
         """
-        solver = self.module("solver")
-        optimize = self.module("optimize")
-
-        iteration = optimize.iter
-        if source_name is None:
-            source_name = solver.source_names[0]
-
-        # Deal with the migration case where no step count given
-        try:
-            step_count = optimize.line_search.step_count
-        except AttributeError:
-            step_count = ""
-
         # Outsource data processing to an event-specfic Pyaflowa instance
         pyaflowa = Pyaflowa(sfpar=self.par, sfpath=self.path)
         pyaflowa.setup(source_name=source_name, iteration=iteration, 
@@ -330,7 +283,7 @@ class Pyatoa(Base):
         :param path_out: overwrite the default output path file naming
         """       
         if not path_out:
-            path_out = os.path.join(self.path.OUTPUT, tag)
+            path_out = os.path.join(self.path_output, tag)
 
         if not os.path.exists(path_out):
             unix.mkdir(path_out)
@@ -367,10 +320,10 @@ class Pyatoa(Base):
         :rtype: float
         :return: average misfit
         """
-        if len(files) != self.par.NTASK:
+        if len(files) != self.ntask:
             print(msg.cli(f"Pyatoa preprocessing module did not recover the "
                           f"correct number of residual files "
-                          f"({len(files)}/{self.par.NTASK}). Please check that "
+                          f"({len(files)}/{self.ntask}). Please check that "
                           f"the preprocessing logs", header="error")
                   )
             sys.exit(-1)
@@ -379,7 +332,7 @@ class Pyatoa(Base):
         for filename in files:
             total_misfit += np.sum(np.loadtxt(filename))
 
-        total_misfit /= self.par.NTASK
+        total_misfit /= self.ntask
 
         return total_misfit
 
