@@ -19,6 +19,7 @@ import math
 import time
 import subprocess
 
+from seisflows import logger
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
 from seisflows.config import ROOT_DIR
@@ -29,40 +30,35 @@ class Slurm(Cluster):
     Generalized interface for submitting jobs to and interfacing with a SLURM
     workload management system.
     """
-    def __init__(self):
+    def __init__(self, ntask_max=100, slurm_args="", **kwargs):
         """
-        These parameters should not be set by the user.
-        Attributes are initialized as NoneTypes for clarity and docstrings.
-        """
-        super().__init__()
-        
-        self.required.par(
-            "MPIEXEC", required=False, default="srun -u", par_type=str,
-            docstr="Function used to invoke executables on the system. "
-                   "For example 'srun' on SLURM systems, or './' on a "
-                   "workstation. If left blank, will guess based on the "
-                   "system."
-        )
-        self.required.par(
-            "NTASKMAX", required=False, default=100, par_type=int,
-            docstr="Limit on the number of concurrent tasks in array"
-        )
-        self.required.par(
-            "NODESIZE", required=True, par_type=int,
-            docstr="The number of cores per node defined by the system"
-        )
+        Slurm-specific setup parameters
 
-        self.required.par(
-            "SLURMARGS", required=False, default="", par_type=str,
-            docstr="Any optional, additional SLURM arguments that will be "
-                   "passed to the SBATCH scripts"
-        )
+        :type ntask_max: int
+        :param ntask_max: limit the number of concurrent tasks in a given
+            array job
+        :type slurm_args: str
+        :param slurm_args: Any optional, additional SLURM arguments that will
+            be passed to the SBATCH scripts. Should be in the form:
+            '--key1=value1 --key2=value2"
+        """
+        super().__init__(**kwargs)
+
+        # Overwrite the existing 'mpiexec'
+        self.mpiexec = "srun -u"
+        self.ntask_max = ntask_max
+        self.slurm_args = slurm_args
+
+        # Must be overwritten by child class
+        self.node_size = None
 
     def check(self, validate=True):
         """
         Checks parameters and paths
         """
-        super().check(validate=validate)
+        assert(self.node_size is not None), (
+            f"Slurm system child classes require defining the `node_size` or "
+            f"the number of cores per node inherent to the compute system")
 
     def submit(self, submit_call=None):
         """
@@ -76,18 +72,18 @@ class Slurm(Cluster):
         if submit_call is None:
             submit_call = " ".join([
                 f"sbatch",
-                f"{self.par.SLURMARGS or ''}",
-                f"--job-name={self.par.TITLE}",
-                f"--output={self.output_log}",
-                f"--error={self.error_log}",
-                f"--ntasks-per-node={self.par.NODESIZE}",
+                f"{self.slurmargs or ''}",
+                f"--job-name={self.title}",
+                f"--output={self.path_output_log}",
+                f"--error={self.path_error_log}",
+                f"--ntasks-per-node={self.node_size}",
                 f"--nodes=1",
-                f"--time={self.par.WALLTIME:d}",
+                f"--time={self.walltime:d}",
                 f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",
-                f"--output {self.path.OUTPUT}"
+                f"--output {self.path_output}"
             ])
 
-        self.logger.debug(submit_call)
+        logger.debug(submit_call)
         super().submit(submit_call=submit_call)
 
     def run(self, classname, method, single=False, run_call=None, **kwargs):
@@ -115,35 +111,35 @@ class Slurm(Cluster):
             can overload the sbatch command line input by setting
             run_call. If set to None, default run_call will be set here.
         """
-        self.checkpoint(self.path.OUTPUT, classname, method, kwargs)
+        self.save_kwargs_to_disk(self.path_output, classname, method, kwargs)
 
         # Default sbatch command line input, can be overloaded by subclasses
         # Copy-paste this default run_call and adjust accordingly for subclass
         if run_call is None:
             run_call = " ".join([
                 "sbatch",
-                f"{self.par.SLURMARGS or ''}",
-                f"--job-name={self.par.TITLE}",
-                f"--nodes={math.ceil(self.par.NPROC/float(self.par.NODESIZE)):d}",
-                f"--ntasks-per-node={self.par.NODESIZE:d}",
-                f"--ntasks={self.par.NPROC:d}",
-                f"--time={self.par.TASKTIME:d}",
-                f"--output={os.path.join(self.path.WORKDIR, 'logs', '%A_%a')}",
-                f"--array=0-{self.par.NTASK-1 % self.par.NTASKMAX}",
+                f"{self.slurm_args or ''}",
+                f"--job-name={self.title}",
+                f"--nodes={math.ceil(self.nproc/float(self.node_size)):d}",
+                f"--ntasks-per-node={self.node_size:d}",
+                f"--ntasks={self.nproc:d}",
+                f"--time={self.tasktime:d}",
+                f"--output={os.path.join(self.path_log_files, '%A_%a')}",
+                f"--array=0-{self.natsk-1 % self.ntaskmax}",
                 f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
-                f"--output {self.path.OUTPUT}",
+                f"--output {self.path_output}",
                 f"--classname {classname}",
                 f"--funcname {method}",
-                f"--environment {self.par.ENVIRONS or ''}"
+                f"--environment {self.environs or ''}"
             ])
 
-        self.logger.debug(run_call)
+        logger.debug(run_call)
 
         # Single-process jobs simply need to replace a few sbatch arguments.
         # Do it AFTER `run_call` has been defined so that subclasses submitting
         # custom run calls can still benefit from this
         if single:
-            self.logger.info("replacing parts of sbatch run call for single "
+            logger.info("replacing parts of sbatch run call for single "
                              "process job")
             run_call = _modify_run_call_single_proc(run_call)
 
@@ -165,7 +161,7 @@ class Slurm(Cluster):
                           header="slurm run error", border="="))
             sys.exit(-1)
 
-        self.logger.info(f"task {classname}.{method} finished successfully")
+        logger.info(f"task {classname}.{method} finished successfully")
 
     def taskid(self):
         """
@@ -220,7 +216,7 @@ class Slurm(Cluster):
                 # Every 10 counts, warn the user this is unexpected behavior
                 if not count % 10:
                     job_id = job_ids[states.index("UNDEFINED")]
-                    self.logger.warning(f"SLURM command 'sacct {job_id}' has "
+                    logger.warning(f"SLURM command 'sacct {job_id}' has "
                                         f"returned unexpected response {count} "
                                         f"times. This job may have failed "
                                         f"unexpectedly. Consider checking "
@@ -260,7 +256,7 @@ class Slurm(Cluster):
         if single:
             ntask = 1
         else:
-            ntask = self.par.NTASK
+            ntask = self.ntask
 
         # Splitting e.g.,: 'Submitted batch job 441636\n'
         for part in stdout.strip().split():

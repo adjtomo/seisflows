@@ -5,6 +5,7 @@ which must be overloaded by subclasses for specific workload managers, or
 specific clusters.
 """
 import subprocess
+from seisflows.config import save
 from seisflows.system.workstation import Workstation
 
 
@@ -13,45 +14,29 @@ class Cluster(Workstation):
     Abstract base class for the Systems module which controls interaction with
     compute systems such as HPC clusters.
     """
-    def __init__(self):
+    def __init__(self, walltime=10, tasktime=1, environs="", **kwargs):
         """
         Instantiate the Cluster System class
-        """
-        super().__init__()
 
-        self.required.par(
-            "WALLTIME", required=True, par_type=float,
-            docstr="Maximum job time in minutes for main SeisFlows job"
-        )
-        self.required.par(
-            "TASKTIME", required=True, par_type=float,
-            docstr="Maximum job time in minutes for each SeisFlows task"
-        )
-        # note: OVERLOADS the Workstation `NTASK` parameter
-        self.required.par(
-            "NTASK", required=True, par_type=int,
-            docstr="Number of separate, individual tasks. Also equal to "
-                   "the number of desired sources in workflow"
-        )
-        # note: OVERLOADS the Workstation `NPROC` parameter
-        self.required.par(
-            "NPROC", required=True, par_type=int,
-            docstr="Number of processor to use for each simulation"
-        )
-        self.required.par(
-            "ENVIRONS", required=False, default="", par_type=str,
-            docstr="Optional environment variables to be provided in the"
-                   "following format VAR1=var1,VAR2=var2... Will be set"
-                   "using os.environs"
-        )
-
-    def check(self, validate=True):
+        :type walltime: int
+        :param walltime: maximum job time in minutes for the master SeisFlows
+            job submitted to cluster
+        :type tasktime: int
+        :param tasktime: maximum job time in minutes for each job spawned by
+            the SeisFlows master job during a workflow. These include, e.g.,
+            running the forward solver
+        :type environs: str
+        :param environs: Optional environment variables to be provided in the
+            following format VAR1=var1,VAR2=var2... Will be set using
+            os.environs
         """
-        Checks parameters and paths
-        """
-        super().check(validate=validate)
+        super().__init__(**kwargs)
 
-    def submit(self, submit_call=None):
+        self.walltime = walltime
+        self.tasktime = tasktime
+        self.environs = environs
+
+    def submit(self, workflow, submit_call=None):
         """
         Main insertion point of SeisFlows onto the compute system.
 
@@ -69,7 +54,6 @@ class Cluster(Workstation):
             subclasses.
         """
         self.setup()
-        workflow = self.module("workflow")
         workflow.checkpoint()
         # check==True: subprocess will wait for workflow.main() to finish
         subprocess.run(submit_call, shell=True, check=True)
