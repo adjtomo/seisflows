@@ -17,7 +17,7 @@ class Default:
     on models or gradients
     """
     def __init__(self, smooth_h=0., smooth_v=0., tasktime_smooth=1,
-                 path_postprocess=None, path_mask=None):
+                 path_postprocess=None, path_mask=None, **kwargs):
         """
         Establish Postprocessing parameters
 

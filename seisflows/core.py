@@ -14,8 +14,6 @@ class Base(object):
     inherit from the Base object to work properly. This Base class essentially
     dictates the required structure of a SeisFlows class.
     """
-    logger = logging.getLogger("seisflows")
-
     def __init__(self):
         """
         SeisFlows instantiates its required parameters through the

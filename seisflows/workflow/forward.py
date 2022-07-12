@@ -9,23 +9,24 @@ import os
 import sys
 from glob import glob
 
-from seisflows.core import Base
 from seisflows.tools import msg
-from seisflows.config import save
+from seisflows.config import save, import_seisflows
 from seisflows.tools.specfem import Model
 
 
-class Forward(Base):
+class Forward:
     """
     Workflow abstract base class representing an en-masse forward solver and
     misfit calculator.
     """
-    def __init__(self):
+    def __init__(self, save_traces=False, save_residuals=False,
+                 path_eval_grad=None):
         """
-        These parameters should not be set by the user.
-        Attributes are initialized as NoneTypes for clarity and docstrings.
+        En-masse forward simulation parameters
         """
-        super().__init__()
+        self.save_traces = save_traces
+        self.save_residuals = save_residuals
+        self.path_eval_grad = self.path_eval_grad
 
         self.required.par(
             "SAVETRACES", required=False, default=False, par_type=bool,

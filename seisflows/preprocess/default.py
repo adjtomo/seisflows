@@ -177,10 +177,6 @@ class Default:
         assert(self.data_format.lower() in dir(writers)), (
             f"Writer {self.data_format} not found")
 
-        # Assert that either misfit or backproject exists
-        if self.par.WORKFLOW.upper() == "INVERSION":
-            assert(self.misfit is not None)
-
     def setup(self):
         """
         Sets up data preprocessing machinery by dynamicalyl loading the
@@ -211,6 +207,66 @@ class Default:
         """
         pass
 
+    def quantify_misfit(self, observed, synthetic,
+                        write_residuals=False, write_adjsrcs=False, **kwargs):
+        """
+        Prepares solver for gradient evaluation by writing residuals and
+        adjoint traces. Meant to be called by solver.eval_func().
+
+        Reads in observed and synthetic waveforms, applies optional
+        preprocessing, assesses misfit, and writes out adjoint sources and
+        STATIONS_ADJOINT file.
+
+        .. note::
+            Meant to be called by solver.eval_func(), may have unused arguments
+            to keep functions general across subclasses.
+
+        :type cwd: str
+        :param cwd: current specfem working directory containing observed and
+            synthetic seismic data to be read and processed. Should be defined
+            by solver.cwd
+        :type filenames: list of str
+        :param filenames: list of filenames defining the files in traces
+        """
+        for obs_fid, syn_fid in zip(observed, synthetic):
+            obs = self._reader(filename=obs_fid)
+            syn = self._reader(filename=syn_fid)
+
+            # Process observations and synthetics identically
+            if self.filter:
+                obs = self._apply_filter(obs)
+                syn = self._apply_filter(syn)
+            if self.mute:
+                obs = self._apply_mute(obs)
+                syn = self._apply_mute(syn)
+            if self.normalize:
+                obs = self._apply_normalize(obs)
+                syn = self._apply_normalize(syn)
+
+            # Write the residuals/misfit and adjoint sources for each component
+            for tr_obs, tr_syn in zip(obs, syn):
+                if write_residuals:
+                    residual = self._misfit(obs=tr_obs.data, syn=tr_syn.data,
+                                            nt=tr_syn.stats.npts,
+                                            dt=tr_syn.stats.delta)
+                    with open(write_residuals, "a") as f:
+                        f.write(f"{residual:.2E}\n")
+                if write_adjsrcs:
+                    adjsrc = syn.copy()
+                    adjsrc.data = self._adjoint(obs=tr_obs.data, syn=tr_syn.data,
+                                                nt=tr_syn.stats.npts,
+                                                dt=tr_syn.stats.delta)
+                    if self.data_format.upper() == "ASCII":
+                        # Change the extension to '.adj' from whatever it is
+                        ext = os.path.splitext(os.path.basename(obs))[-1]
+                        filename = os.path.basename(obs).replace(ext, ".adj")
+                    elif self.data_format.upper() == "SU":
+                        # TODO implement this
+                        raise NotImplementedError
+                    self._writer(st=adjsrc,
+                                 filename=os.path.join(write_adjsrcs, filename)
+                                 )
+
     def prepare_eval_grad(self, cwd, taskid, filenames, **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
@@ -236,9 +292,9 @@ class Default:
 
         for filename in filenames:
             obs = self._reader(path=os.path.join(cwd, "traces", "obs"),
-                              filename=filename)
+                               filename=filename)
             syn = self._reader(path=os.path.join(cwd, "traces", "syn"),
-                              filename=filename)
+                               filename=filename)
 
             # Process observations and synthetics identically
             if self.filter:
@@ -296,7 +352,7 @@ class Default:
 
         return total_misfit
 
-    def _write_residuals(self, path, syn, obs):
+    def _write_residuals(self, obs, syn, output):
         """
         Computes residuals between observed and synthetic seismogram based on
         the misfit function self.misfit. Saves the residuals for each
@@ -319,10 +375,10 @@ class Default:
             residual = self._misfit(syn=tr_syn.data, obs=tr_obs.data,
                                     nt=tr_syn.stats.npts,
                                     dt=tr_syn.stats.delta
-                                   )
+                                    )
             residuals.append(residual)
 
-        filename = os.path.join(path, "residuals")
+        filename = os.path.join(output, "residuals")
         if os.path.exists(filename):
             residuals = np.append(residuals, np.loadtxt(filename))
 

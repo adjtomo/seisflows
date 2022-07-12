@@ -25,7 +25,7 @@ from importlib import import_module
 from seisflows import logger
 from seisflows.core import Dict, Null
 from seisflows.tools import msg, unix
-from seisflows.tools.wrappers import module_exists
+from seisflows.tools.wrappers import module_exists, load_yaml
 
 
 """
@@ -38,8 +38,7 @@ mechanics of the package. Do not touch unless you know what you're doing!
 """
 # List of module names required by SeisFlows for imports. Order-sensitive
 # In sys.modules these will be prepended by 'seisflows_', e.g., seisflows_system
-NAMES = ["system", "preprocess", "solver",
-         "postprocess", "optimize", "workflow"]
+NAMES = ["system", "preprocess", "solver", "postprocess", "optimize"]  #, "workflow"]
 
 # The location of this config file, which is the main repository
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
@@ -104,6 +103,43 @@ def load(path):
         fullfile = os.path.join(os.path.abspath(path), f"seisflows_{name}.p")
         with open(fullfile, "rb") as f:
             sys.modules[f"seisflows_{name}"] = pickle.load(f)
+
+
+def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
+    """
+    Standard SeisFlows workflow setup block which runs some standard setup
+    tasks including: setting the working directory, instantiating the logging
+    module and dynmically importing each of the SeisFlows modules by specific
+    class names.
+
+    .. note::
+        This should be called in the exact way each time:
+        > pars, modules = import_seisflows()
+        > system, preprocess, solver, postprocess, optimize = modules
+
+    :type workdir: str
+    :param workdir: the current working directory in which to perform a
+        SeisFlows workflow. Defaults to the current working directory
+    :type parameter_file: str
+    :param parameter_file: the YAML formatted parameter file that is used to
+        instantiate each of the SeisFlows modules and run the workflow. This
+        should be created by the command line argument 'seisflows configure'.
+        Defaults to 'parameters.yaml'
+    :rtype: list
+    :return: instantiated modules that are returned in the following order
+        'system', 'preprcess', 'solver', 'postprocess', 'optimize'
+    """
+    parameters = load_yaml(os.path.join(workdir, parameter_file))
+    config_logger(level=parameters.log_level, filename=parameters.path_log_file,
+                  verbose=parameters.verbose)
+
+    classes = [custom_import(name, parameters[name]) for name in NAMES]
+    modules = [cls(**parameters) for cls in classes]
+    # Check that parameters have been set correctly by running their check funcs
+    for module in modules:
+        module.check()
+
+    return parameters, modules
 
 
 def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):

@@ -9,16 +9,14 @@ import os
 import numpy as np
 
 
-def su(st, path, filename):
+def su(st, filename):
     """
     Writes seismic unix files outputted by Specfem, using Obspy
 
     :type st: obspy.core.stream.Stream
     :param st: stream to write
-    :type path: str
-    :param path: path to datasets
     :type filename: str
-    :param filename: file to read
+    :param filename: full path to filename to write data to
     """
     for tr in st:
         # Work around obspy data type conversion
@@ -32,29 +30,27 @@ def su(st, path, filename):
             tr.stats.delta = dummy_delta
 
     # Write data to file
-    st.write(os.path.join(path, filename), format='SU')
+    st.write(filename, format='SU')
 
 
-def ascii(st, path, filename=None):
+def ascii(st, filename=None):
     """
     Writes seismic traces as ascii files. Kwargs are left to keep structure of 
     inputs compatible with other input formats.
 
     :type st: obspy.core.stream.Stream
     :param st: stream to write
-    :type path: str
-    :param path: path to datasets
+    :type filename: str
+    :param filename: full path to filename to write data to
     """
     for tr in st:
         if filename is None:
             filename = tr.stats.filename
 
-        fid_out = os.path.join(path, filename)
-        
         # Float provides the time difference between starttime and default time
         time_offset = float(tr.stats.starttime)
 
         data_out = np.vstack((tr.times() + time_offset, tr.data)).T
 
-        np.savetxt(fid_out, data_out, ["%13.7f", "%17.7f"])
+        np.savetxt(filename, data_out, ["%13.7f", "%17.7f"])
 

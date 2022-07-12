@@ -2,39 +2,48 @@
 Test workflow to see if a new form of seisflows workflow can be used
 """
 import os
-from seisflows.core import Dict
-from seisflows.config import custom_import, config_logger, NAMES
-from seisflows.tools.wrappers import load_yaml
-from seisflows.tools.specfem import Model
+from seisflows import logger
+from seisflows.config import import_seisflows
+from seisflows.tools import msg
 
+# Standard SeisFlows setup, makes modules global variables to the workflow
+pars, modules = import_seisflows()
+system, preprocess, solver, postprocess, optimize = modules
+
+
+def evaluate_objective_function(path_model):
+    """
+    Performs forward simulation for a single given event. Also evaluates the
+    objective function and writes residuals and adjoint sources for later tasks.
+    """
+    if system.taskid == 0:
+        logger.info(msg.sub("EVALUATING OBJECTIVE FUNCTION"))
+
+    # Run the forward simulation with the given input model
+    solver.import_model(path=path_model)
+    solver.forward_simulation(
+        output_seismograms=os.path.join(solver.cwd, "traces", "syn")
+    )
+
+    # Perform data-synthetic misfit quantification
+    if preprocess is not None:
+        preprocess.quantify_misfit(
+            observed=solver.data_filenames(choice="obs"),
+            synthetics=solver.data_filenames(choice="syn"),
+            output=os.path.join(solver.cwd, "traces", "adj")
+        )
 
 
 if __name__ == "__main__":
-    # Standard SeisFlows Workflow setup block
-    # ==========================================================================
-    cwd = os.getcwd()
-    pars = load_yaml("parameters.yaml")
-    logger = config_logger(level=pars.log_level, filename=pars.path_log_file,
-                           verbose=pars.verbose)
+    # Begin the forward simulation workflow
+    logger.info(msg.mjr("Starting forward simulation workflow"))
 
-    # Dynamically create module instances, instantiated with parameters
-    classes = [custom_import(name, pars[name.upper()]) for name in NAMES]
-    instances = [cls(**pars) for cls in classes]
-    # Check that parameters have been set correctly
-    for instance in instances:
-        instance.check()
+    for module in modules:
+        module.setup()
 
-    # Distribute instances to their respective namesakes
-    system, preprocess, solver, postprocess, optimize, workflow = instances
-    # ==========================================================================
+    # Run objective function evaluation NTASK times
+    system.run(evaluate_objective_function, path_model=pars.path_model_init,
+               suffix="new", system=system)
 
-
-    # Begin workflow
-    logger.info("Starting forward simulation workflow")
-
-
-    m = Model(pars.path_model_init)
-    m.write(path=os.path.join(paths.eval_func, "model"))
-
-    system.run(solver.eval_func)
+    logger.info(msg.mjr("Finished forward simulation workflow"))
 

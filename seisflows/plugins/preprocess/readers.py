@@ -11,35 +11,31 @@ from obspy import read
 from obspy.core import Stream, Stats, Trace
 
 
-def su(path, filename):
+def su(filename):
     """
     Reads seismic unix files outputted by Specfem, using Obspy
 
-    :type path: str
-    :param path: path to datasets
     :type filename: str
-    :param filename: file to read
+    :param filename: full path to data file to read
     """
-    st = read(os.path.join(path, filename), format='SU', byteorder='<')
+    st = read(os.path.join(filename), format='SU', byteorder='<')
     
     return st
 
 
-def ascii(path, filename):
+def ascii(filename):
     """
     Reads SPECFEM3D-style ASCII data
 
-    :type path: str
-    :param path: path to datasets
-    :type filenames: list
-    :param filenames: files to read
+    :type filename: str
+    :param filename: full path to data file to read
     """
     st = Stream()
     stats = Stats()
 
-    time, data = loadtxt(os.path.join(path, filename)).T
+    time, data = loadtxt(filename).T
 
-    stats.filename = filename
+    stats.filename = os.path.basename(filename)
     stats.starttime = time[0]
     stats.delta = time[1] - time[0]
     stats.npts = len(data)

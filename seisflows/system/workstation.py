@@ -22,7 +22,7 @@ class Workstation:
     def __init__(self, title=None, mpiexec=None, ntask=1, nproc=1,
                  log_level="DEBUG", verbose=False, path_output=None,
                  path_system=None, path_output_log=None, path_error_log=None,
-                 path_log_files=None, path_par_file=None):
+                 path_log_files=None, path_par_file=None, **kwargs):
         """
         Instantiate the Workstation base class
 
