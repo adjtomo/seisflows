@@ -9,7 +9,7 @@ import random
 import shutil
 import socket
 
-from seisflows.tools.wrappers import iterable
+from seisflows.tools.utils import iterable
 
 
 def cat(src, dst=None):

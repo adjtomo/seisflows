@@ -17,6 +17,7 @@ from seisflows import logger
 from seisflows.core import Dict
 from seisflows.plugins import solver_io as solver_io_dir
 from seisflows.tools import msg, unix
+from seisflows.tools.utils import get_task_id
 from seisflows.tools.specfem import getpar, setpar
 
 
@@ -143,12 +144,7 @@ class Specfem:
         :rtype: int
         :return: task id for given solver
         """
-        _taskid = os.getenv("SEISFLOWS_TASKID")
-        if _taskid is None:
-            _taskid = 0
-            logger.warning("Environment variable 'SEISFLOWS_TASKID' not found. "
-                           "Assigning Task ID == 0")
-        return int(_taskid)
+        return get_task_id()
 
     @property
     def source_names(self):
@@ -231,7 +227,6 @@ class Specfem:
         :rtype: list
         :return: list of data filenames
         """
-
         assert(choice in ["obs", "syn", "adj"]), \
             f"choice must be: 'obs', 'syn' or 'adj'"
         unix.cd(os.path.join(self.cwd, "traces", choice))
@@ -751,6 +746,13 @@ class Specfem:
         src = glob(os.path.join(path_model, "*"))
         dst = os.path.join(self.cwd, self.model_databases, "")
         unix.cp(src, dst)
+
+    def export(self, model=False, kernels=False, traces=False, residuals=False):
+        """
+        Export scratch files to output path. Must be run by system as each
+        process is required to export its own traces and kernels.
+        """
+        if self.
 
     def _export_model(self):
         """

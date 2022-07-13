@@ -32,7 +32,7 @@ from seisflows.config import (custom_import, save, NAMES, ROOT_DIR, CFGPATHS,
 from seisflows.tools import unix, msg
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)
-from seisflows.tools.wrappers import load_yaml
+from seisflows.tools.utils import load_yaml
 
 
 def sfparser():

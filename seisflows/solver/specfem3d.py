@@ -10,7 +10,7 @@ from glob import glob
 
 from seisflows.solver.specfem import Specfem
 from seisflows.tools import unix
-from seisflows.tools.wrappers import exists
+from seisflows.tools.utils import exists
 from seisflows.tools.specfem import setpar, getpar
 
 
@@ -164,7 +164,7 @@ class Specfem3D(Specfem):
             for iproc in range(self.nproc):
                 for channel in ["x", "y", "z"]:
                     dst = f"{iproc:d}_d{channel}_SU.adj"
-                    if not exists(dst):
+                    if not os.path.exists(dst):
                         src = f"{iproc:d}_d{self.components[0]}_SU.adj"
                         unix.cp(src, dst)
 

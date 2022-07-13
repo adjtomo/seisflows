@@ -20,12 +20,14 @@ import pickle
 import logging
 import copyreg
 import traceback
+from pkgutil import find_loader
 from importlib import import_module
+
 
 from seisflows import logger
 from seisflows.core import Dict, Null
 from seisflows.tools import msg, unix
-from seisflows.tools.wrappers import module_exists, load_yaml
+from seisflows.tools.utils import load_yaml
 
 
 """
@@ -258,7 +260,8 @@ def custom_import(name=None, module=None, classname=None):
     # Check if modules exist, otherwise raise custom exception
     _exists = False
     full_dotted_name = ".".join(["seisflows", name, module])
-    if not module_exists(full_dotted_name):
+    # find_loader() checks if the module exists or not
+    if not find_loader(full_dotted_name):
         print(msg.cli(f"The following module was not found within the package: "
                       f"seisflows.{name}.{module}",
                       header="custom import error", border="=")

@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 from seisflows import logger
 from seisflows.config import CFGPATHS, save
 from seisflows.tools import msg, unix
-from seisflows.tools.wrappers import number_fid
+from seisflows.tools.utils import number_fid
 
 
 class Workstation:

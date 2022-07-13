@@ -14,7 +14,7 @@ from seisflows.solver.specfem3d import Specfem3D
 from seisflows.solver.specfem3d_globe import Specfem3DGlobe
 
 
-TEST_DATA = os.path.join(ROOT_DIR, "tests", "test_data")
+TEST_DATA = os.path.join(ROOT_DIR, "tests", "test_data", "test_solver")
 
 
 def test_taskid():
@@ -32,7 +32,7 @@ def test_source_names():
     Check that source names are established correctly
     """
     # Establish solver that looks for CMTSOLUTIONS with NTASK==1
-    sources = os.path.join(TEST_DATA, "test_solver", "sources")
+    sources = os.path.join(TEST_DATA, "sources")
     solver = Specfem(path_specfem_data=sources, source_prefix="CMTSOLUTION")
     assert(len(solver.source_names) == 1)
 
@@ -43,6 +43,7 @@ def test_source_names():
     source_names = [_.split("_")[-1] for _ in source_names]
 
     assert(source_names == solver.source_names)
+
 
 def test_data_filenames():
     """

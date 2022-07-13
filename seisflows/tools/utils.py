@@ -1,7 +1,6 @@
 """
-Wrappers of commonly used functions to reduce line count and provide an
-aesthetically similar look in SeisFlows. Mostly concerend with file
-manipulation, but also math and calling functions as well.
+General utility functions that are mostly concerend with file manipulation,
+but also math and calling functions as well.
 """
 import os
 import re
@@ -12,6 +11,25 @@ import numpy as np
 from importlib import import_module
 from pkgutil import find_loader
 from seisflows.core import Dict
+from seisflows import logger
+
+
+def get_task_id():
+    """
+    Task IDs are assigned to each child process spawned by the system module
+    during a SeisFlows workflow. SeisFlows modules use this Task ID to keep
+    track of embarassingly parallel process, e.g., solver uses the Task ID to
+    determine which source is being considered.
+
+    :rtype: int
+    :return: task id for given solver
+    """
+    _taskid = os.getenv("SEISFLOWS_TASKID")
+    if _taskid is None:
+        _taskid = 0
+        logger.warning("Environment variable 'SEISFLOWS_TASKID' not found. "
+                       "Assigning Task ID == 0")
+    return int(_taskid)
 
 
 def load_yaml(filename):
@@ -52,74 +70,6 @@ def load_yaml(filename):
     return mydict
 
 
-def diff(list1, list2):
-    """
-    Difference between unique elements of lists
-
-    :type list1: list
-    :param list1: first list
-    :type list2: list
-    :param list2: second list
-    """
-    c = set(list1).union(set(list2))
-    d = set(list1).intersection(set(list2))
-
-    return list(c - d)
-
-
-def divides(i, j):
-    """
-    Return True if `j` divides `i`.
-
-    Bryant: I don't think this works in python3?
-
-    :type i: int
-    :type j :int
-    """
-    if j == 0:
-        return False
-    elif i % j:
-        return False
-    else:
-        return True
-
-
-def exists(names):
-    """
-    Wrapper for os.path.exists that also works on lists
-
-    :type names: list or str
-    :param names: list of names to check existnce
-    """
-    for name in iterable(names):
-        if not name:
-            return False
-        elif not isinstance(name, str):
-            raise TypeError
-        elif not os.path.exists(name):
-            return False
-    else:
-        return True
-
-
-def findpath(name):
-    """
-    Resolves absolute path of module
-
-    :type name: str
-    :param name: absolute path of str
-    """
-    path = import_module(name).__file__
-
-    # Adjust file extension
-    path = re.sub('.pyc$', '.py', path)
-
-    # Strip trailing "__init__.py"
-    path = re.sub('__init__.py$', '', path)
-
-    return path
-
-
 def iterable(arg):
     """
     Make an argument iterable
@@ -132,95 +82,6 @@ def iterable(arg):
         return [arg]
     else:
         return arg
-
-
-def module_exists(name):
-    """
-    Determine if a module loader exists
-
-    :type name: str
-    :param name: name of module
-    """
-    return find_loader(name)
-
-
-def package_exists(name):
-    """
-    Determine if a package exists
-
-    :type name: str
-    :param name: name of package
-    """
-    return find_loader(name)
-
-
-def pkgpath(name):
-    """
-    Path to Seisflows package
-
-    :type name: str
-    :param name: name of package
-    """
-    for path in import_module('seisflows').__path__:
-        if os.path.join(name, 'seisflows') in path:
-            return path
-
-
-def timestamp():
-    """
-    Return a timestamp for current time
-    """
-    return time.strftime('%H:%M:%S')
-
-
-def getset(arg):
-    """
-    Return a set object
-
-    :type arg: None, str or list
-    :param arg: argument to turn into a set
-    :rtype: set
-    :return: a set of the given argument
-    """
-    if not arg:
-        return set()
-    elif isinstance(arg, str):
-        return set([arg])
-    else:
-        return set(arg)
-
-
-def parse_null(dictionary):
-    """
-    Remove null, None or '' values from a dictionary
-
-    :type dictionary: dict
-    :param dictionary: dict of parameters to parse
-    :rtype: dict
-    :return: dictionary that has been sanitized of all null values
-    """
-    # Copy the dictionary to get around deleting keys while iterating
-    parsed_dict = dict(dictionary)
-    for key, item in dictionary.items():
-        # Search for all None and "" items, ignore bools, 0's etc.
-        if not item and isinstance(item, (type(None), str)):
-            del parsed_dict[key]
-
-    return parsed_dict
-
-
-def loadtxt(filename):
-    """
-    Load scalar from text file
-    """
-    return float(np.loadtxt(filename))
-
-
-def savetxt(filename, v):
-    """
-    Save scalar to text file
-    """
-    np.savetxt(filename, [v], '%11.6e')
 
 
 def number_fid(fid, i=0):
