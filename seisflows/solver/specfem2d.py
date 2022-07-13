@@ -17,7 +17,7 @@ class Specfem2D(Specfem):
     """
     Python interface to Specfem2D.
     """
-    def __init__(self, source_prefix="SOURCE", multiples=False, **kwargs):
+    def __init__(self, source_prefix=None, multiples=False, **kwargs):
         """
         SPECFEM2D specific parameters
 
@@ -28,7 +28,7 @@ class Specfem2D(Specfem):
         """
         super().__init__(**kwargs)
 
-        self.source_prefix = source_prefix
+        self.source_prefix = source_prefix or "SOURCE"
         self.multiples = multiples
         self.f0 = None
 

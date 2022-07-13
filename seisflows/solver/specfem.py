@@ -38,8 +38,9 @@ class Specfem:
     """
     def __init__(self, case="data", data_format="ascii",  materials="elastic",
                  density=False, nproc=1, ntask=1, attenuation=False,
-                 components="ZNE", solver_io="fortran_binary", mpiexec=None,
-                 path_solver=None, path_data=None, path_specfem_bin=None,
+                 components="ZNE", solver_io="fortran_binary",
+                 source_prefix=None,mpiexec=None, path_solver=None,
+                 path_data=None, path_specfem_bin=None,
                  path_specfem_data=None, path_model_init=None,
                  path_model_true=None, path_output=None, **kwargs):
         """
@@ -124,7 +125,7 @@ class Specfem:
                                    "xsmooth_sem"]
 
         # These are parameters that need to be established by child classes
-        self.source_prefix = None
+        self.source_prefix = source_prefix
         self._acceptable_source_prefixes = []
 
     @property
@@ -193,7 +194,7 @@ class Specfem:
         :rtype: str
         :return: current solver working directory
         """
-        return os.path.join(self.path, self.source_name)
+        return os.path.join(self.path.scratch, self.source_name)
 
     def data_wildcard(self, comp="?"):
         """
@@ -230,6 +231,7 @@ class Specfem:
         :rtype: list
         :return: list of data filenames
         """
+
         assert(choice in ["obs", "syn", "adj"]), \
             f"choice must be: 'obs', 'syn' or 'adj'"
         unix.cd(os.path.join(self.cwd, "traces", choice))
@@ -434,7 +436,7 @@ class Specfem:
             export_traces=export_traces
         )
 
-    def import_data(self, path_data):
+    def import_data(self):
         """
         Import data from an existing directory into the current working
         directory, required if 'observed' waveform data will be provided by
@@ -951,6 +953,11 @@ class Specfem:
         :rtype: list
         :return: alphabetically ordered list of source names up to PAR.NTASK
         """
+        assert(self.path.specfem_data is not None), \
+            f"solver source names requires 'solver.path.specefm_data' to exist"
+        assert(os.path.exists(self.path.specfem_data)), \
+            f"solver source names requires 'solver.path.specfem_data' to exist"
+
         # Apply wildcard rule and check for available sources, exit if no
         # sources found because then we can't proceed
         wildcard = f"{self.source_prefix}_*"

@@ -18,7 +18,7 @@ class Specfem3D(Specfem):
     """
     Python interface to Specfem3D Cartesian.
     """
-    def __init__(self, source_prefix="CMTSOLUTION", **kwargs):
+    def __init__(self, source_prefix=None, **kwargs):
         """
         SPECFEM2D specific parameters
 
@@ -29,7 +29,7 @@ class Specfem3D(Specfem):
         """
         super().__init__(**kwargs)
 
-        self.source_prefix = source_prefix
+        self.source_prefix = source_prefix or "CMTSOLUTION"
 
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
