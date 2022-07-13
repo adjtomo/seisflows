@@ -4,6 +4,9 @@ This Solver module is in charge of interacting with external numerical solvers
 such as SPECFEM (2D/3D/3D_GLOBE). This SPECFEM base class provides general
 functions that work with all versions of SPECFEM. Subclasses will provide
 additional capabilities unique to each version of SPECFEM.
+
+TODO add in `apply_hess` functionality that was partially written in legacy code
+TODO move `_initialize_adjoint_traces` to workflow.migration
 """
 import os
 import sys
@@ -11,71 +14,34 @@ import subprocess
 from glob import glob
 
 from seisflows import logger
+from seisflows.core import Dict
 from seisflows.plugins import solver_io as solver_io_dir
 from seisflows.tools import msg, unix
-from seisflows.tools.specfem import getpar, Model
+from seisflows.tools.specfem import getpar, setpar
 
 
 class Specfem:
     """
     This base class provides an interface through which solver simulations can
     be set up and run. It should not be used by itself, but rather it is meant
-    to provide the foundation for the following child classes:
+    to provide the foundation for: SPECFEM2D/3D/3D_GLOBE
 
-    SPECFEM2D
-    SPECFEM3D
-    SPECFEM3D_GLOBE
+    .. note::
+        This Base class implementation is almost completely SPECFEM2D related.
+        However, SPECFEM2D requires a few unique parameters that 3D/3D_GLOBE
+        do not. Because of the inheritance architecture of SeisFlows, we do not
+        want the 3D and 3D_GLOBE versions to inherit 2D-specific parameters, so
+        we need this this more generalized SPECFEM base class.
 
     .. note:::
         This class supports only acoustic and isotropic elastic inversions.
-
-    Function descriptors:
-
-    eval_func, eval_grad, apply_hess
-
-        These methods deal with evaluation of the misfit function or its
-        derivatives.  Together, they provide the primary interface through which
-        SeisFlows interacts with SPECFEM2D/3D
-
-    forward, adjoint
-
-        These methods allow direct access to low-level SPECFEM2D/3D components,
-        providing an alternative interface through which to interact with the
-        solver
-
-    steup, generate_data, generate_model
-
-        One-time operations performed at the beginning of inversion or migration
-
-    initialize_solver_directories, initialize_adjoint_traces
-
-        SPECFEM2D/3D requires a particular directory structure in which to run
-        and particular file formats for models, data, and parameter files. These
-        methods help put in place all these prerequisites
-
-    combine, smooth
-
-        Utilities for combining and smoothing kernels
-
-    generate_data, generate_mesh, eval_fwd, forward, adjoint,
-    data_filenames, model_databases, kernel_databases, source_prefix
-
-        !!! Required functions which must be implemented by subclass !!!
-
     """
     def __init__(self, case="data", data_format="ascii",  materials="elastic",
                  density=False, nproc=1, ntask=1, attenuation=False,
                  components="ZNE", solver_io="fortran_binary", mpiexec=None,
-                 path_solver=os.path.join(os.getcwd(), "scratch", "solver"),
-                 path_data=os.path.join(os.getcwd(), "SFDATA"),
-                 path_specfem_bin=os.path.join(os.getcwd(), "specfem", "bin"),
-                 path_specfem_data=os.path.join(os.getcwd(), "specfem", "DATA"),
-                 path_model_init=os.path.join(os.getcwd(), "specfem",
-                                              "MODEL_INIT"),
-                 path_model_true=os.path.join(os.getcwd(), "specfem",
-                                              "MODEL_TRUE"),
-                 path_output=os.path.join(os.getcwd(), "output"),
-                 save_traces=False, **kwargs):
+                 path_solver=None, path_data=None, path_specfem_bin=None,
+                 path_specfem_data=None, path_model_init=None,
+                 path_model_true=None, path_output=None, **kwargs):
         """
         SPECFEM Solver parameters
 
@@ -97,11 +63,11 @@ class Specfem:
         :type components: str
         :param components: components to consider and tag data with. Should be
             string of letters such as 'RTZ'
-        :type path_specfem_bin: str
-        :param path_specfem_bin: path to SPECFEM bin/ directory which
+        :type path.specfem_bin: str
+        :param path.specfem_bin: path to SPECFEM bin/ directory which
             contains binary executables for running SPECFEM
-        :type path_specfem_data: str
-        :param path_specfem_data: path to SPECFEM DATA/ directory which must
+        :type path.specfem_data: str
+        :param path.specfem_data: path to SPECFEM DATA/ directory which must
             contain the CMTSOLUTION, STATIONS and Par_file files used for
             running SPECFEM
 
@@ -127,16 +93,17 @@ class Specfem:
         self.mpiexec = mpiexec
 
         # Define internally used directory structure
-        self.path = path_solver
-        self.path_data = path_data
-        self.path_specfem_bin = path_specfem_bin
-        self.path_specfem_data = path_specfem_data
-        self.path_model_init = path_model_init
-        self.path_model_true = path_model_true
-        self.path_output = path_output
-        self.path_mainsolver = os.path.join(self.path, "mainsolver")
-
-        self.save_traces = save_traces
+        _cwd = os.getcwd()
+        self.path = Dict(
+            scratch=path_solver or os.path.join(_cwd, "scratch", "solver"),
+            data=path_data or os.path.join(_cwd, "SFDATA"),
+            output=path_output or os.path.join(_cwd, "output"),
+            mainsolver=os.path.join(_cwd, "scratch", "mainsolver"),
+            specfem_bin=path_specfem_bin,
+            specfem_data=path_specfem_data,
+            model_init=path_model_init,
+            model_true=path_model_true,
+        )
 
         # Establish internally defined parameter system
         self._parameters = []
@@ -153,9 +120,12 @@ class Specfem:
             "ISOTROPIC", "ANISOTROPIC"  # specfem3d_globe
         ]
         self._available_data_formats = ["ASCII", "SU"]
+        self._required_binaries = ["xspecfem2d", "xmeshfem2d", "xcombine_sem",
+                                   "xsmooth_sem"]
 
-        # Parameters that NEED to be filled out by child classes
+        # These are parameters that need to be established by child classes
         self.source_prefix = None
+        self._acceptable_source_prefixes = []
 
     @property
     def taskid(self):
@@ -165,12 +135,18 @@ class Specfem:
         Task IDs are simply integer values from 0 to the number of
         simultaneously running tasks.
 
+        .. note::
+            Dependent on environment variable 'SEISFLOWS_TASKID' which is
+            assigned by system.run() to each individually running process.
+
         :rtype: int
         :return: task id for given solver
         """
         _taskid = os.getenv("SEISFLOWS_TASKID")
         if _taskid is None:
             _taskid = 0
+            logger.warning("Environment variable 'SEISFLOWS_TASKID' not found. "
+                           "Assigning Task ID == 0")
         return int(_taskid)
 
     @property
@@ -180,17 +156,25 @@ class Specfem:
         Source names are expected to match the following wildcard,
         'PREFIX_*' where PREFIX is something like 'CMTSOLUTION' or 'FORCE'
 
+        .. note::
+            Dependent on environment variable 'SEISFLOWS_TASKID' which is
+            assigned by system.run() to each individually running process.
+
         :rtype: list
         :return: list of source names
         """
         if self._source_names is None:
-            self._check_source_names()
+            self._source_names = self._check_source_names()
         return self._source_names
 
     @property
     def source_name(self):
         """
         Returns name of source currently under consideration
+
+        .. note::
+            Dependent on environment variable 'SEISFLOWS_TASKID' which is
+            assigned by system.run() to each individually running process.
 
         :rtype: str
         :return: given source name for given task id
@@ -202,6 +186,10 @@ class Specfem:
         """
         Returns working directory currently in use by a running solver instance
 
+        .. note::
+            Dependent on environment variable 'SEISFLOWS_TASKID' which is
+            assigned by system.run() to each individually running process.
+
         :rtype: str
         :return: current solver working directory
         """
@@ -209,48 +197,98 @@ class Specfem:
 
     def data_wildcard(self, comp="?"):
         """
-        Provide a wildcard string that will match the name of the output
-        synthetic seismograms
+        Returns a wildcard identifier for synthetic data based on SPECFEM2D
+        file naming schema. Allows formatting dcomponent e.g.,
+        when called by solver.data_filenames.
+
+        .. note::
+            SPECFEM3D/3D_GLOBE versions must overwrite this function
 
         :type comp: str
-        :param comp: single letter defining the component that can be inserted
-            into the wildcard. Defaults to '?'
+        :param comp: component formatter, defaults to wildcard '?'
         :rtype: str
-        :return: a wildcard string that can be used to search for data
+        :return: wildcard identifier for channels
         """
-        return NotImplementedError("must be implemented by child class")
+        if self.data_format.upper() == "SU":
+            return f"U{comp}_file_single.su"
+        elif self.data_format.upper() == "ASCII":
+            return f"*.?X{comp}.sem?"
 
-    @property
-    def data_filenames(self):
+    def data_filenames(self, choice="obs"):
         """
-        A list of waveform files matching the `data_wildcard` which is used
-        to keep track of data
+        Returns the filenames of SPECFEM2D data, either by the requested
+        components or by all available files in the directory.
+
+         .. note::
+            SPECFEM3D/3D_GLOBE versions must overwrite this function
+
+        .. note::
+            If the glob returns an  empty list, this function exits the
+            workflow because filenames should not be empty is they're being
+            queried
 
         :rtype: list
         :return: list of data filenames
         """
-        return NotImplementedError("must be implemented by child class")
+        assert(choice in ["obs", "syn", "adj"]), \
+            f"choice must be: 'obs', 'syn' or 'adj'"
+        unix.cd(os.path.join(self.cwd, "traces", choice))
+
+        filenames = []
+        if self.components:
+            for comp in self.components:
+                filenames = glob(self.data_wildcard(comp=comp.lower()))
+        else:
+            filenames = glob(self.data_wildcard(comp="?"))
+
+        if not filenames:
+            print(msg.cli("The property solver.data_filenames, used to search "
+                          "for traces in 'scratch/solver/*/traces' is empty "
+                          "and should not be. Please check solver parameters: ",
+                          items=[f"data_wildcard: {self.data_wildcard()}"],
+                          header="data filenames error", border="=")
+                  )
+            sys.exit(-1)
+
+        return filenames
 
     @property
     def model_databases(self):
         """
-        SPECFEM directory where model database files are saved. This directory
-        is SPECFEM version dep.
+        The location of model inputs and outputs as defined by SPECFEM2D.
+        This is RELATIVE to a SPECFEM2D working directory.
+
+         .. note::
+            This path is SPECFEM version dependent so SPECFEM3D/3D_GLOBE
+            versions must overwrite this function
+
+        :rtype: str
+        :return: path where SPECFEM2D database files are stored
         """
-        return NotImplementedError("must be implemented by child class")
+        return "DATA"
 
     @property
     def kernel_databases(self):
         """
-        SPECFEM directory where kernel database files are saved. This directory
-        is SPECFEM version dep.
+        The location of kernel inputs and outputs as defined by SPECFEM2D
+        This is RELATIVE to a SPECFEM2D working directory.
+
+         .. note::
+            This path is SPECFEM version dependent so SPECFEM3D/3D_GLOBE
+            versions must overwrite this function
+
+        :rtype: str
+        :return: path where SPECFEM2D database files are stored
         """
-        return NotImplementedError("must be implemented by child class")
+        return "OUTPUT_FILES"
 
     def check(self):
         """
-        Checks parameters and paths
+        Checks parameter validity for SPECFEM input files and model parameters
         """
+        assert(self.case.upper() in ["DATA", "SYNTHETIC"]), \
+            f"solver.case must be 'DATA' or 'SYNTHETIC'"
+
         assert(self.materials.upper() in self._available_materials), \
             f"solver.materials must be in {self._available_materials}"
 
@@ -259,36 +297,113 @@ class Specfem:
                 f"solver.data_format must be {self._available_data_formats}"
             )
 
+        # Make sure we can read in the model/kernel/gradient files
         assert hasattr(solver_io_dir, self.solver_io)
         assert hasattr(self._io, "read_slice"), \
             "IO method has no attribute 'read'"
         assert hasattr(self._io, "write_slice"), \
             "IO method has no attribute 'write'"
 
-        # TODO Check path data, model_true and case combination
-        # TODO Check SPECFEM_DATA available files
-        # TODO Check SPECFEM_BIN available executables
+        # Check that User has provided appropriate bin/ and DATA/ directories
+        for name, dir_ in zip(["bin/", "DATA/"],
+                              [self.path.specfem_bin, self.path.specfem_data]):
+            assert(dir_ is not None), f"SPECFEM path '{name}' cannot be None"
+            assert(os.path.exists(dir_)), f"SPECFEM path '{name}' must exist"
+
+        # Check that the required SPECFEM files are available
+        for fid in [self.source_prefix, "STATIONS", "Par_file"]:
+            assert(os.path.exists(os.path.join(self.path.specfem_data, fid))), (
+                f"DATA/{fid} does not exist but is required by SeisFlows solver"
+            )
+
+        # Check that required binary files exist which are called upon by solver
+        for fid in self._required_binaries:
+            assert(os.path.exists(os.path.join(self.path.specfem_bin, fid))), (
+                f"bin/{fid} does not exist but is required by SeisFlows solver"
+            )
+
+        # Check that the 'case' variable matches required models
+        if self.case.upper() == "SYNTHETIC":
+            assert(os.path.exists(self.path.model_true)), (
+                f"solver.case == 'synthetic' requires `path.model_true`"
+            )
+
+        # Make sure source files exist and are appropriately labeled
+        assert(self.source_prefix in self._acceptable_source_prefixes)
+        assert(glob(os.path.join(self.path.specfem_data,
+                                 f"{self.source_prefix}*"))), (
+            f"No source files with prefix {self.source_prefix} found in DATA/")
+
+        # Check that model type is set correctly in the Par_file
+        model_type = getpar(key="MODEL",
+                            file=os.path.join(self.path.specfem_data,
+                                              "Par_file"))[1]
+        assert(model_type in self._available_model_types), \
+            f"{model_type} not in available types {self._available_model_types}"
 
     def setup(self):
         """
-        Prepares solver for inversion or migration.
+        Prepares solver scratch directories for an impending workflow.
+
         Sets up directory structure expected by SPECFEM and copies or generates
         seismic data to be inverted or migrated
 
-        .. note:;
-            As input for an inversion or migration, users can choose between
-            providing data, or providing a target model from which data are
-            generated on the fly.
-            In the former case, a value for PATH.DATA must be supplied;
-            in the latter case, a value for PATH.MODEL_TRUE must be provided.
+        TODO the .bin during model export assumes GLL file format, more general?
         """
         self._initialize_working_directories()
-        self._import_starting_model(path_model=self.path_model_init,
-                                    model_type="gll")
-        self._export_model()
-        self._initialize_adjoint_traces()
 
-    def generate_data(self):
+        # Export the initial model to the SeisFlows output directory
+        unix.mkdir(self.path.output)
+        for key in self._parameters:
+            src = glob(os.path.join(self.path.model_init, f"*{key}.bin"))
+            dst = os.path.join(self.path.output, "MODEL_INIT", "")
+            unix.cp(src, dst)
+
+        # TODO move this into workflow.migration
+        # self._initialize_adjoint_traces()
+
+    # def generate_data(self, save_traces=False):
+    #     """
+    #     Generates observation data to be compared to synthetics. This must
+    #     only be run once. If `PAR.CASE`=='data', then real data will be copied
+    #     over.
+    #  TODO move this to workflow
+    #
+    #     If `PAR.CASE`=='synthetic' then the external solver will use the
+    #     True model to generate 'observed' synthetics. Finally exports traces to
+    #     'cwd/traces/obs'
+    #
+    #     Elif `PAR.CASE`=='DATA', will look in PATH.DATA for directories matching
+    #     the given source name and copy ANY files that exist there. e.g., if
+    #     source name is '001', you must store waveform data in PATH.DATA/001/*
+    #
+    #     Also exports observed data to OUTPUT if desired
+    #     """
+    #     # If synthetic inversion, generate 'data' with solver
+    #     if self.case.upper() == "SYNTHETIC":
+    #         if self.path.model_true is not None:
+    #             if self.taskid == 0:
+    #                 logger.info("generating 'data' with MODEL_TRUE")
+    #
+    #             # Generate synthetic data on the fly using the true model
+    #             self.import_model(path_model=self.path.model_true)
+    #             self.forward_simulation(
+    #                 save_traces=os.path.join("traces", "obs")
+    #             )
+    #     # If Data provided by user, copy directly into the solver directory
+    #     elif self.path.data is not None and os.path.exists(self.path.data):
+    #         unix.cp(
+    #             src=glob(os.path.join(self.path.data, self.source_name, "*")),
+    #             dst=os.path.join(self.cwd, "traces", "obs")
+    #         )
+    #
+    #     # Save observation data to disk
+    #     if save_traces:
+    #         self._export_traces(
+    #             path=os.path.join(self.path.output, "traces", "obs")
+    #         )
+
+    def generate_data(self, export_traces=False):
         """
         Generates observation data to be compared to synthetics. This must
         only be run once. If `PAR.CASE`=='data', then real data will be copied
@@ -302,29 +417,40 @@ class Specfem:
         the given source name and copy ANY files that exist there. e.g., if
         source name is '001', you must store waveform data in PATH.DATA/001/*
 
-        Also exports observed data to OUTPUT if desired
+        :type export_traces: str
+        :param export_traces: path to copy and save traces to a more permament
+            storage location as waveform stored in scratch/ are liable to be
+            deleted or overwritten
         """
-        # If synthetic inversion, generate 'data' with solver
-        if self.case.upper() == "SYNTHETIC":
-            if self.path_model_true is not None:
-                if self.taskid == 0:
-                    logger.info("generating 'data' with MODEL_TRUE")
-                # Generate synthetic data on the fly using the true model
-                self._import_starting_model(path_model=self.path_model_true,
-                                           model_type="gll")
-                self._forward(output_path=os.path.join("traces", "obs"))
-        # If Data provided by user, copy directly into the solver directory
-        elif self.path_data is not None and os.path.exists(self.path_data):
-            unix.cp(
-                src=glob(os.path.join(self.path_data, self.source_name, "*")),
-                dst=os.path.join("traces", "obs")
-            )
+        # Basic checks to make sure there are True model files to copy
+        assert(self.case.upper() == "SYNTHETIC")
+        assert(os.path.exists(self.path.model_true))
+        assert(glob(os.path.join(self.path.model_true, "*")))
 
-        # Save observation data to disk
-        if self.save_traces:
-            self._export_traces(
-                path=os.path.join(self.path_output, "traces", "obs")
-            )
+        # Generate synthetic data on the fly using the true model
+        self.import_model(path_model=self.path.model_true)
+        self.forward_simulation(
+            save_traces=os.path.join(self.cwd, "traces", "obs"),
+            export_traces=export_traces
+        )
+
+    def import_data(self, path_data):
+        """
+        Import data from an existing directory into the current working
+        directory, required if 'observed' waveform data will be provided by
+        the User rather than automatically collected (with Pyatoa) or generated
+        synthetically (with external solver)
+        """
+        # Simple checks to make sure we can actually import data
+        assert(self.case.upper() == "DATA")
+        assert(self.path.data is not None)
+        assert(os.path.exists(os.path.join(self.path.data, self.source_name)))
+        assert(glob(os.path.join(self.path.data, self.source_name, "*")))
+
+        src = os.path.join(self.path.data, self.source_name, "*")
+        dst = os.path.join(self.cwd, "traces", "obs")
+
+        unix.cp(src, dst)
 
     def eval_func(self, path, preprocess=None):
         """
@@ -400,48 +526,73 @@ class Specfem:
             self._export_traces(path=os.path.join(path, "traces", "adj"),
                                 prefix="traces/adj")
 
-    # def apply_hess(self, path):
-    #     """
-    #     High level solver interface that computes action of Hessian on a given
-    #     model vector. A gradient evaluation must have already been carried out.
-    #
-    #     TODO preprocess has no function prepare_apply_hess()
-    #
-    #     :type path: str
-    #     :param path: directory to which output files are exported
-    #     """
-    #     raise NotImplementedError("must be implemented by solver subclass")
-    #
-    #     unix.cd(self.cwd)
-    #     self.import_model(path)
-    #     unix.mkdir("traces/lcg")
-    #
-    #     self.forward("traces/lcg")
-    #     preprocess.prepare_apply_hess(self.cwd)
-    #     self.adjoint()
-    #     self.export_kernels(path)
-
-    def forward_simulation(self, output_path):
+    def forward_simulation(self, save_traces=False, export_traces=False):
         """
-        Calls forward solver with the appropriate parameters in the Par_file set
-        Also exports data to the correct output_path
+        Calls SPECFEM2D forward solver, exports solver outputs to traces dir
 
-        :type output_seismograms: str
-        :param output_seismograms: path to export traces to after completion of
-            simulation expected values are either 'traces/obs' for 'observation'
-            data (i.e., synthetics generated by the TRUE model), or
-            'traces/syn', for synthetics generated during function evaluations.
-            If False, will leave seismograms in OUTPUT_FILES/
+         .. note::
+            SPECFEM3D/3D_GLOBE versions must overwrite this function
+
+        :type save_traces: str
+        :param save_traces: move files from their native SPECFEM output location
+            to another directory. This is used to move output waveforms to
+            'traces/obs' or 'traces/syn' so that SeisFlows knows where to look
+            for them, and so that SPECFEM doesn't overwrite existing files
+            during subsequent forward simulations
+        :type export_traces: str
+        :param export_traces: export traces from the scratch directory to a more
+            permanent storage location. i.e., copy files from their original
+            location
         """
-        raise NotImplementedError("must be implemented by solver subclass")
+        unix.cd(self.cwd)
+
+        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
+
+        self._call_solver(executable="bin/xmeshfem2D", output="fwd_mesher.log")
+        self._call_solver(executable="bin/xspecfem2D", output="fwd_solver.log")
+
+        # Work around SPECFEM2D's version dependent file names
+        if self.data_format.upper() == "SU":
+            for tag in ["d", "v", "a", "p"]:
+                unix.rename(old=f"single_{tag}.su", new="single.su",
+                            names=glob(os.path.join("OUTPUT_FILES", "*.su")))
+
+        if export_traces:
+            unix.cp(
+                src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
+                dst=export_traces
+            )
+
+        if save_traces:
+            unix.mv(
+                src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
+                dst=save_traces
+            )
 
     def adjoint_simulation(self):
         """
-        Calls adjoint solver with the appropriate parameters in the Par_file set
-        Also takes care of setting up the SEM/ directory where SPECFEM expects
-        adjoint sources to be
+        Calls SPECFEM2D adjoint solver, creates the `SEM` folder with adjoint
+        traces which is required by the adjoint solver.
+
+         .. note::
+            SPECFEM3D/3D_GLOBE versions must overwrite this function
         """
-        raise NotImplementedError("must be implemented by solver subclass")
+        unix.cd(self.cwd)
+
+        setpar(key="SIMULATION_TYPE", val="3", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=".false.", file="DATA/Par_file")
+
+        unix.rm("SEM")
+        unix.ln("traces/adj", "SEM")
+
+        # Deal with different SPECFEM2D name conventions for regular traces and
+        # "adjoint" traces
+        if self.data_format.upper == "SU":
+            unix.rename(old=".su", new=".su.adj",
+                        names=glob(os.path.join("traces", "adj", "*.su")))
+
+        self._call_solver(executable="bin/xspecfem2D", output="adj_solver.log")
 
     def _call_solver(self, executable, output="solver.log"):
         """
@@ -525,22 +676,15 @@ class Specfem:
 
         # Call on xcombine_sem to combine kernels into a single file
         for name in parameters:
-            # e.g.: mpiexec ./bin/xcombine_sem alpha_kernel kernel_paths output
-            self._call_solver(executable=" ".join([f"bin/xcombine_sem",
-                                                   f"{name}_kernel",
-                                                   "kernel_paths",
-                                                   output_path]
-                                                  )
-                              )
+            # e.g.: mpiexec bin/xcombine_sem alpha_kernel kernel_paths output/
+            exc = f"bin/xcombine_sem {name}_kernel kernel_paths {output_path}"
+            self._call_solver(executable=exc)
 
     def smooth(self, input_path, output_path, parameters=None, span_h=0.,
-               span_v=0., output="smooth.log"):
+               span_v=0., use_gpu=False, output="smooth.log"):
         """
         Postprocessing wrapper: xsmooth_sem
         Smooths kernels by convolving them with a Gaussian.
-
-        .. note::
-            paths require a trailing `/` character when calling xsmooth_sem
 
         .. note::
             It is ASSUMED that this function is being called by
@@ -560,6 +704,9 @@ class Specfem:
         :param span_v: vertical smoothing length in meters
         :type output: str
         :param output: file to output stdout to
+        :type use_gpu: bool
+        :param use_gpu: whether to use GPU acceleration for smoothing. Requires
+            GPU compiled binaries and GPU compute node.
         """
         unix.cd(self.cwd)
 
@@ -569,77 +716,48 @@ class Specfem:
         if not os.path.exists(output_path):
             unix.mkdir(output_path)
 
+        # Ensure trailing '/' character, required by xsmooth_sem
+        input_path = os.path.join(input_path, "")
+        output_path = os.path.join(output_path, "")
+        if use_gpu:
+            use_gpu = ".true"
+        else:
+            use_gpu = ".false"
         # mpiexec ./bin/xsmooth_sem SMOOTH_H SMOOTH_V name input output use_gpu
         for name in parameters:
-            self._call_solver(executable=" ".join(["bin/xsmooth_sem",
-                                                   str(span_h), str(span_v),
-                                                   f"{name}_kernel",
-                                                   os.path.join(input_path, ""),
-                                                   os.path.join(output_path, ""),
-                                                   ".false"]),
-                              output=output)
+            exc = (f"bin/xsmooth_sem {str(span_h)} {str(span_v)} {name}_kernel "
+                   f"{input_path} {output_path} {use_gpu}")
+            self._call_solver(executable=exc, output=output)
 
-        # Rename output files
+        # Rename output files to remove the '_smooth' suffix which SeisFlows
+        # will not recognize
         files = glob(os.path.join(output_path, "*"))
         unix.rename(old="_smooth", new="", names=files)
 
-    def _import_model(self, path):
+    def import_model(self, path_model):
         """
-        File transfer utility to move a SPEFEM2D model into the correct location
-        for a workflow.
-
-        :type path: str
-        :param path: path to the SPECFEM2D model
-        :return:
-        """
-        unix.cp(src=glob(os.path.join(path, "model", "*")),
-                dst=os.path.join(self.cwd, "DATA")
-                )
-
-    def _import_starting_model(self, path_model, model_type=None, save_as=None):
-        """
-        Mesh and database files should have been created during the manual set
-        up phase. This function simply checks the mesh properties of that mesh
-        and ensures that it is locatable by future SeisFlows processes.
+        Copy files from given `path_model` into the current working directory
+        model database
 
         :type path_model: str
         :param path_model: path to an existing starting model
-        :type model_type: str
-        :param model_type: available model types to be passed to the Specfem3D
-            Par_file. See Specfem3D Par_file for available options.
         """
-        unix.cd(self.cwd)
-        # Check type/existence of model. SeisFlows only accepts GLL models
-        model_type = model_type or getpar(key="MODEL", file="DATA/Par_file")[1]
-        assert(model_type in self._available_model_types), \
-            f"{model_type} not in available types {self._available_model_types}"
         assert(os.path.exists(path_model)), f"model {path_model} does not exist"
+        unix.cd(self.cwd)
 
-        if model_type == "gll":
-            # Copy the model files (ex: proc000023_vp.bin ...) into database dir
-            src = glob(os.path.join(path_model, "*"))
-            dst = self.model_databases
-            unix.cp(src, dst)
-
-    def _import_traces(self, path):
-        """
-        File transfer utility. Import traces into the workflow.
-
-        :type path: str
-        :param path: path to traces
-        """
-        src = glob(os.path.join(path, 'traces', self.source_name, '*'))
-        dst = os.path.join(self.cwd, 'traces', 'obs')
+        # Copy the model files (ex: proc000023_vp.bin ...) into database dir
+        src = glob(os.path.join(path_model, "*"))
+        dst = os.path.join(self.cwd, self.model_databases, "")
         unix.cp(src, dst)
 
     def _export_model(self):
         """
         File transfer utility. Export the model to disk. Run from master solver.
         """
-        unix.mkdir(self.path_output)
+        unix.mkdir(self.path.output)
         for key in self._parameters:
             files = glob(os.path.join(self.model_databases, f"*{key}.bin"))
-            unix.cp(files, self.path_output)
+            unix.cp(files, self.path.output)
 
     def _export_kernels(self):
         """
@@ -651,7 +769,7 @@ class Specfem:
         self._rename_kernels()
 
         src = glob("*_kernel.bin")
-        dst = os.path.join(self.path_output, "kernels", self.source_name)
+        dst = os.path.join(self.path.output, "kernels", self.source_name)
         unix.mkdir(dst)
         unix.mv(src, dst)
 
@@ -699,7 +817,8 @@ class Specfem:
         dst = os.path.join(path, self.source_name)
         unix.cp(src, dst)
 
-    def _rename_kernels(self):
+    @staticmethod
+    def _rename_kernels():
         """
         Works around conflicting kernel filename conventions by renaming
         `alpha` to `vp` and `beta` to `vs`
@@ -716,60 +835,79 @@ class Specfem:
 
     def _initialize_working_directories(self):
         """
-        Creates directory structure expected by SPECFEM3D (bin/, DATA/) copies
-        executables, and prepares input files. Executables must be supplied
-        by user as there is no mechanism for automatically compiling from source
+        Serial task used to initialize working directories for each of the a
+        available sources
 
-        Directories will act as completely independent Specfem run directories.
-        This allows for embarrassing parallelization while avoiding the need
-        for intra-directory communications, at the cost of redundancy and
-        extra files.
+        TODO run this with concurrent futures for speedup?
         """
-        if self.taskid == 0:
+        logger.info(f"initializing {self.ntask} solver directories")
+        for source_name in self.source_names:
+            cwd = os.path.join(self.path, source_name)
+            self._initialize_working_directory(cwd=cwd)
+
+    def _initialize_working_directory(self, cwd=None):
+        """
+        Creates directory structure expected by SPECFEM
+        (i.e., bin/, DATA/, OUTPUT_FILES/). Copies executables and prepares
+        input files.
+
+        Each directory will act as completely independent Specfem working dir.
+        This allows for embarrassing parallelization while avoiding the need
+        for intra-directory communications, at the cost of temporary disk space.
+
+        .. note::
+            Path to binary executables must be supplied by user as SeisFlows has
+            no mechanism for automatically compiling from source code.
+
+        :type cwd: str
+        :param cwd: optional scratch working directory to intialize. If None,
+            will set based on current running seisflows task (self.taskid)
+        """
+        # Define a constant list of required SPECFEM dir structure, relative cwd
+        _required_structure = ["bin", "DATA",
+                               "traces/obs", "traces/syn", "traces/adj",
+                               self.model_databases, self.kernel_databases]
+
+        # Allow this function to be called on system or in serial
+        if cwd is None:
+            cwd = self.cwd
+            _source_name = os.path.basename(cwd)
+            taskid = self.source_names.index(_source_name)
+        else:
+            cwd = self.cwd
+            taskid = self.taskid
+
+        if taskid == 0:
             logger.info(f"initializing {self.ntask} solver directories")
 
-        unix.rm(self.cwd)
-        unix.mkdir(self.cwd)
-        unix.cd(self.cwd)
+        # Starting from a fresh working directory
+        unix.rm(cwd)
+        unix.mkdir(cwd)
+        for dir_ in _required_structure:
+            unix.mkdir(os.path.join(cwd, dir_))
 
-        # Create directory structure
-        for cwd_dir in ["bin", "DATA", "OUTPUT_FILES/DATABASES_MPI",
-                        "traces/obs", "traces/syn", "traces/adj",
-                        self.model_databases, self.kernel_databases]:
-            unix.mkdir(cwd_dir)
-
-        # Copy exectuables into the bin/ directory
-        src = glob(os.path.join(self.path_specfem_bin, "*"))
-        dst = os.path.join("bin", "")
+        # Copy existing SPECFEM exectuables into the bin/ directory
+        src = glob(os.path.join(self.path.specfem_bin, "*"))
+        dst = os.path.join(cwd, "bin", "")
         unix.cp(src, dst)
 
-        # Copy all input files except source files
-        src = glob(os.path.join(self.path_specfem_data, "*"))
+        # Copy all input DATA/ files except the source files
+        src = glob(os.path.join(self.path.specfem_data, "*"))
         src = [_ for _ in src if self.source_prefix not in _]
         dst = os.path.join("DATA", "")
         unix.cp(src, dst)
 
-        # Symlink event source specifically, strip the source name as SPECFEM
-        # just expects `source_name`
-        src = os.path.join(self.path_specfem_data,
+        # Symlink event source specifically, only retain source prefix
+        src = os.path.join(self.path.specfem_data,
                            f"{self.source_prefix}_{self.source_name}")
         dst = os.path.join("DATA", self.source_prefix)
         unix.ln(src, dst)
 
-        if self.taskid == 0:
-            # Symlink taskid_0 as mainsolver in solver directory for convenience
-            if not os.path.exists(self.path_mainsolver):
-                unix.ln(self.cwd, self.path_mainsolver)
+        # Symlink TaskID==0 as mainsolver in solver directory for convenience
+        if taskid == 0:
+            if not os.path.exists(self.path.mainsolver):
                 logger.debug(f"symlink {self.source_name} as 'mainsolver'")
-        else:
-            # Copy the initial model from mainsolver into current directory
-            # Avoids the need to run multiple instances of xgenerate_databases
-            # TODO race condition if things havent been written? Sleep?
-            src = os.path.join(
-                self.path_mainsolver, "OUTPUT_FILES", "DATABASES_MPI"
-            )
-            dst = os.path.join(self.cwd, "OUTPUT_FILES", "DATABASES_MPI")
-            unix.cp(src, dst)
+                unix.ln(cwd, self.path.mainsolver)
 
     def _initialize_adjoint_traces(self):
         """
@@ -806,20 +944,21 @@ class Specfem:
 
     def _check_source_names(self):
         """
-        Determines names of sources by applying wildcard rule to
-        user-supplied input files
+        Determines names of sources by applying wildcard rule to user-supplied
+        input files. Source names are only provided up to PAR.NTASK and are
+        returned in alphabetical order.
 
-        .. note::
-            Source list is sorted and collected from start up to PAR.NTASK
+        :rtype: list
+        :return: alphabetically ordered list of source names up to PAR.NTASK
         """
         # Apply wildcard rule and check for available sources, exit if no
         # sources found because then we can't proceed
         wildcard = f"{self.source_prefix}_*"
-        fids = sorted(glob(os.path.join(self.path_specfem_data, wildcard)))
+        fids = sorted(glob(os.path.join(self.path.specfem_data, wildcard)))
         if not fids:
             print(msg.cli("No matching source files when searching PATH for "
                           "the given WILDCARD",
-                          items=[f"PATH: {self.path_specfem_data}",
+                          items=[f"PATH: {self.path.specfem_data}",
                                  f"WILDCARD: {wildcard}"], header="error"
                           )
                   )
@@ -827,4 +966,5 @@ class Specfem:
 
         # Create internal definition of sources names by stripping prefixes
         names = [os.path.basename(fid).split("_")[-1] for fid in fids]
-        self._source_names = names[:self.ntask]
+
+        return names[:self.ntask]

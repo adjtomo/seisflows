@@ -207,6 +207,23 @@ class Default:
         """
         pass
 
+    def initialize_adjoint_traces(self, filenames=None):
+        """
+        TO DO
+        """
+        for filename in self.data_filenames:
+            st = self.preprocess.reader(path=os.path.join(self.cwd, "traces", "obs"),
+                        filename=filename
+                        )
+            # Zero out data just so we have empty adjoint traces as SPECFEM
+            # will expect all adjoint sources to have all components
+            st *= 0
+
+            # Write traces back to the adjoint trace directory
+            preprocess.writer(st=st, filename=filename,
+                              path=os.path.join(self.cwd, "traces", "adj")
+                              )
+
     def quantify_misfit(self, observed, synthetic,
                         write_residuals=False, write_adjsrcs=False, **kwargs):
         """
