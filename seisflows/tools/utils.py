@@ -4,14 +4,55 @@ but also math and calling functions as well.
 """
 import os
 import re
-import time
 import yaml
-import subprocess
 import numpy as np
-from importlib import import_module
-from pkgutil import find_loader
 from seisflows.core import Dict
 from seisflows import logger
+
+
+def log_status(func):
+    """
+    Decorator function that logs the completion status of a function to a
+    state file. This is used for checkpointing a workflow and resuming
+    failed workflows without repeating computational intense tasks
+    """
+    STATE_FILE = os.path.join(os.getcwd(), "sfstatefile")
+
+    def logged_func():
+        """Log the completion status of the function"""
+        try:
+            func()
+            with open(STATE_FILE, "a") as f:
+                f.write(f"{func.__name__}\tCOMPLETED")
+        except Exception as e:
+            f.write(f"{func.__name__}\tFAILED")
+            logger.error(e)
+            raise
+
+    lines = open(STATE_FILE, "r").readlines()
+    for line in lines:
+        function, status = line.split(" ")
+        if func.__name__ == function:
+            if status == "COMPLETE":
+                return
+            elif status == "FAILED":
+                return logged_func()
+        else:
+            return logged_func()
+
+
+def set_task_id(task_id):
+    """
+    Set the SEISFLOWS_TASKID in os environs
+
+    .. note::
+        Mostly used for debugging/testing purposes as a way of mimicing
+        system.run() assigning task ids to child processes
+
+    :type task_id: int
+    :param task_id: integer task id to assign to the current working environment
+    """
+    os.environ["SEISFLOWS_TASKID"] = str(task_id)
 
 
 def get_task_id():
@@ -108,52 +149,4 @@ def number_fid(fid, i=0):
     new_ext = f"_{i:0>3}{ext}"   # e.g., _000.txt
     new_fid = fid_only.replace(ext, new_ext)
     return new_fid
-
-
-def nproc():
-    """
-    Get the number of processors available
-
-    :rtype: int
-    :return: number of processors
-    """
-    try:
-        return _nproc_method1()
-    except EnvironmentError:
-        return _nproc_method2()
-
-
-def _nproc_method1():
-    """
-    Used subprocess to determine the number of processeors available
-
-    :rtype: int
-    :return: number of processors
-    """
-    # Check if the command `nproc` works
-    if not subprocess.getstatusoutput('nproc')[0] == 0:
-        raise EnvironmentError
-
-    num_proc = int(subprocess.getstatusoutput('nproc')[1])
-
-    return num_proc
-
-
-def _nproc_method2():
-    """
-    Get number of processors using /proc/cpuinfo
-
-    Bryant: This doesnt work?
-
-    :rtype: int
-    :return: number of processors
-    """
-    if not os.path.exists('/proc/cpuinfo'):
-        raise EnvironmentError
-
-    stdout = subprocess.check_output(
-        "cat /proc/cpuinfo | awk '/^processor/{print $3}'", shell=True)
-    num_proc = len(stdout.split('\n'))
-
-    return num_proc
 

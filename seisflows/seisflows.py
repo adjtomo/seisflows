@@ -28,7 +28,7 @@ from IPython import embed
 
 from seisflows.core import Dict, SeisFlowsPathsParameters
 from seisflows.config import (custom_import, save, NAMES, ROOT_DIR, CFGPATHS,
-                              config_logger)
+                              config_logger, import_seisflows)
 from seisflows.tools import unix, msg
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)
@@ -581,22 +581,11 @@ class SeisFlows:
             else if False, use path names relative to the working directory.
             Defaults to False, uses relative paths.
         """
-        self._register_parameters()
+        # Load in a barebones parameter file and instantiate specific classes
+        parameters = load_yaml(os.path.join(self._args.workdir,
+                                            self._args.parameter_file))
+        classes = [custom_import(name, parameters[name])() for name in NAMES]
 
-        # Check if the User set turn off any modules (if None, dont instantiate)
-        names = copy(NAMES)
-        for name, choice in self._parameters.items():
-            if choice is None:
-                names.remove(name.lower())
-
-        # Need to attempt importing all modules before we access their par/paths
-        for NAME in NAMES:
-            sys.modules[f"seisflows_{NAME}"] = custom_import(NAME)()
-
-        # System defines foundational directory structure required by other
-        # modules. Don't validate the parameters because they aren't yet set
-        sys.modules["seisflows_system"].required.validate(paths=True,
-                                                          parameters=False)
 
         # If writing to parameter file fails for any reason, the file will be
         # mangled, create a temporary copy that can be re-instated upon failure
@@ -604,29 +593,7 @@ class SeisFlows:
         unix.cp(self._args.parameter_file, temp_par_file)
 
         try:
-            # Paths are collected for each but written at the end
-            seisflows_paths = {}
-            with open(self._args.parameter_file, "a") as f:
-                for name in names:
-                    req = sys.modules[f"seisflows_{name}"].required
-                    seisflows_paths.update(req.paths)
-
-                    # Write the docstring header and then the parameters in YAML
-                    msg.write_par_file_header(f, req.parameters, name)
-                    msg.write_par_file_paths_pars(f, req.parameters)
-
-                # Write the paths in the same format as parameters
-                msg.write_par_file_header(f, seisflows_paths, name="PATHS")
-                f.write("PATHS:\n")
-
-                # If requested, set the paths relative to the current dir
-                if not absolute_paths:
-                    for key, attrs in seisflows_paths.items():
-                        if attrs["default"]:
-                            seisflows_paths[key]["default"] = os.path.relpath(
-                                                               attrs["default"])
-                msg.write_par_file_paths_pars(f, seisflows_paths, indent=4)
-        # General error catch as anything can happen here
+            import pdb;pdb.set_trace()
         except Exception as e:
             unix.rm(self._args.parameter_file)
             unix.cp(temp_par_file, self._args.parameter_file)
@@ -635,6 +602,72 @@ class SeisFlows:
             sys.exit(-1)
         else:
             unix.rm(temp_par_file)
+
+    # def configure(self, absolute_paths=False, **kwargs):
+    #     """
+    #     Dynamically generate the parameter file by writing out docstrings and
+    #     default values for each of the SeisFlows module parameters.
+    #     This function writes files manually, consistent with the .yaml format.
+    #
+    #     :type absolute_paths: bool
+    #     :param absolute_paths: if True, expand pathnames to absolute paths,
+    #         else if False, use path names relative to the working directory.
+    #         Defaults to False, uses relative paths.
+    #     """
+    #     self._register_parameters()
+    #
+    #     # Check if the User set turn off any modules (if None, dont instantiate)
+    #     names = copy(NAMES)
+    #     for name, choice in self._parameters.items():
+    #         if choice is None:
+    #             names.remove(name.lower())
+    #
+    #     # Need to attempt importing all modules before we access their par/paths
+    #     for NAME in NAMES:
+    #         sys.modules[f"seisflows_{NAME}"] = custom_import(NAME)()
+    #
+    #     # System defines foundational directory structure required by other
+    #     # modules. Don't validate the parameters because they aren't yet set
+    #     sys.modules["seisflows_system"].required.validate(paths=True,
+    #                                                       parameters=False)
+    #
+    #     # If writing to parameter file fails for any reason, the file will be
+    #     # mangled, create a temporary copy that can be re-instated upon failure
+    #     temp_par_file = f".{self._args.parameter_file}"
+    #     unix.cp(self._args.parameter_file, temp_par_file)
+    #
+    #     try:
+    #         # Paths are collected for each but written at the end
+    #         seisflows_paths = {}
+    #         with open(self._args.parameter_file, "a") as f:
+    #             for name in names:
+    #                 req = sys.modules[f"seisflows_{name}"].required
+    #                 seisflows_paths.update(req.paths)
+    #
+    #                 # Write the docstring header and then the parameters in YAML
+    #                 msg.write_par_file_header(f, req.parameters, name)
+    #                 msg.write_par_file_paths_pars(f, req.parameters)
+    #
+    #             # Write the paths in the same format as parameters
+    #             msg.write_par_file_header(f, seisflows_paths, name="PATHS")
+    #             f.write("PATHS:\n")
+    #
+    #             # If requested, set the paths relative to the current dir
+    #             if not absolute_paths:
+    #                 for key, attrs in seisflows_paths.items():
+    #                     if attrs["default"]:
+    #                         seisflows_paths[key]["default"] = os.path.relpath(
+    #                                                            attrs["default"])
+    #             msg.write_par_file_paths_pars(f, seisflows_paths, indent=4)
+    #     # General error catch as anything can happen here
+    #     except Exception as e:
+    #         unix.rm(self._args.parameter_file)
+    #         unix.cp(temp_par_file, self._args.parameter_file)
+    #         print(msg.cli(text="seisflows configure traceback", header="error"))
+    #         print(traceback.format_exc())
+    #         sys.exit(-1)
+    #     else:
+    #         unix.rm(temp_par_file)
 
     def swap(self, module, classname, **kwargs):
         """

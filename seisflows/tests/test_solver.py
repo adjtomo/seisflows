@@ -5,13 +5,9 @@ SPECFEM
 import os
 import pytest
 from glob import glob
-from seisflows.tools.specfem import Model
-from seisflows.config import ROOT_DIR, NAMES, CFGPATHS
-
+from seisflows.config import ROOT_DIR
+from seisflows.tools.utils import set_task_id
 from seisflows.solver.specfem import Specfem
-from seisflows.solver.specfem2d import Specfem2D
-from seisflows.solver.specfem3d import Specfem3D
-from seisflows.solver.specfem3d_globe import Specfem3DGlobe
 
 
 TEST_DATA = os.path.join(ROOT_DIR, "tests", "test_data", "test_solver")
@@ -20,6 +16,8 @@ TEST_DATA = os.path.join(ROOT_DIR, "tests", "test_data", "test_solver")
 def test_taskid():
     """
     Make sure that task id returns correctly
+
+    TODO move this into test_utils
     """
     solver = Specfem()
     assert(solver.taskid == 0)
@@ -45,10 +43,50 @@ def test_source_names():
     assert(source_names == solver.source_names)
 
 
-def test_data_filenames():
+def test_initialize_working_directory(tmpdir):
     """
     Test that data filenames are returned correctly
     """
-    sources = os.path.join(TEST_DATA, "test_solver", "sources")
-    solver = Specfem(path_specfem_data=sources, source_prefix="CMTSOLUTION")
-    pytest.set_trace()
+    specfem_data = os.path.join(TEST_DATA, "mainsolver", "DATA")
+    specfem_bin = os.path.join(TEST_DATA, "mainsolver", "bin")
+
+    solver = Specfem(path_specfem_data=specfem_data,
+                     path_specfem_bin=specfem_bin,
+                     source_prefix="CMTSOLUTION", workdir=tmpdir
+                     )
+
+    assert(not os.path.exists(solver.path.mainsolver))
+
+    # Set the environment task id so that the logger doesn't throw warnings
+    # about not finding the task id
+    set_task_id(0)
+
+    # Generate the required directory structure
+    solver._initialize_working_directory(cwd=tmpdir)
+
+    # Simple checks to make sure the directory structure was set up properly
+    assert(os.path.islink(solver.path.mainsolver))
+    assert(os.path.exists(solver.cwd))
+    assert(glob(os.path.join(solver.cwd, "*")))
+    event_fid = os.path.join(solver.cwd, "DATA", "CMTSOLUTION")
+    assert(os.path.islink(event_fid))
+    event_line = open(event_fid).readlines()[0].strip()
+    assert(event_line == "EVENT 1")
+
+
+def test_run_binary():
+    """
+    Just run a known and intentially incorrect binary with the run binary
+    function to check that we can, and that error catching is working
+    """
+    solver = Specfem()
+    solver._run_binary(executable="echo hello world")
+
+    # Executables that don't exist will not run
+    with pytest.raises(SystemExit):
+        solver._run_binary(executable="gobbledigook")
+
+    # Executables that do exist but error out (e.g., with invalid options) will
+    # also throw an error
+    with pytest.raises(SystemExit):
+        solver._run_binary(executable="ls -//daflkjeaf")

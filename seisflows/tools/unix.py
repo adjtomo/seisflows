@@ -8,7 +8,7 @@ import time
 import random
 import shutil
 import socket
-
+import subprocess
 from seisflows.tools.utils import iterable
 
 
@@ -224,7 +224,7 @@ def touch(filename, times=None):
 
 def which(name):
     """
-    Shows the full path of shell commands
+    Shows the full path of shell commands and executables
 
     :type name: str
     :param name: name of shell command to check
@@ -245,3 +245,30 @@ def which(name):
     else:
         return None
 
+
+def nproc():
+    """
+    Get the number of processors available. Same as calling 'nproc' from
+    Linux command line.
+
+    :rtype: int
+    :return: number of processors
+    :raises EnvironmentError: if nproc cannot be determined
+    """
+    # Method 1 calls 'nproc'. May fail and return '' if 'nproc' not avail.
+    _nproc = subprocess.run("nproc", shell=True, text=True,
+                            stdout=subprocess.PIPE).stdout.strip()
+    # Method 2 checks /proc/cpuinfo
+    if not _nproc:
+        if os.path.exists("/proc/cpuinfo"):
+            processors = 0
+            lines = open("/proc/cpuinfo", "r").readlines()
+            for line in lines:
+                if line.startswith("processor"):
+                    processors += 1
+            if processors:
+                _nproc = processors
+    if not _nproc:
+        raise EnvironmentError("Could not access 'nproc' information on system")
+
+    return int(_nproc)

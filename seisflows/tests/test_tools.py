@@ -18,13 +18,15 @@ def test_specfem_model(tmpdir):
     TODO eventually we want to split this into multiple tests that test each
     TODO of the IO formats (binary, adios etc.). Currently only testing binary.
     """
+    model_data = os.path.join(TEST_DIR, "test_data", "test_tools",
+                              "test_file_formats")
+
     # Make sure that multiple acceptable file extensions throw error
     with pytest.raises(AssertionError):
-        m = Model(path=os.path.join(TEST_DIR, "test_data", "test_file_formats"),
-                  read=True)
+        Model(path=model_data)
+
     # Check that model values are read in correctly
-    m = Model(path=os.path.join(TEST_DIR, "test_data", "test_file_formats"),
-              read=True, fmt=".bin")
+    m = Model(path=model_data, fmt=".bin")
     assert(m.ngll[0] == 40000)
     assert(m.nproc == 1)
     assert("vp" in m.model.keys())

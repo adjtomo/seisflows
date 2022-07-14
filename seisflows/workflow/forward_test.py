@@ -2,12 +2,16 @@
 Test workflow to see if a new form of seisflows workflow can be used
 """
 import os
+from glob import glob
 from seisflows import logger
 from seisflows.config import import_seisflows
 from seisflows.tools import msg
+from seisflows.tools.utils import log_status
+from seisflows.config import config_logger
 
 # Standard SeisFlows setup, makes modules global variables to the workflow
 pars, modules = import_seisflows()
+# config_logger(level=pars.log_level, filename=pars.path_log_
 system, preprocess, solver, postprocess, optimize = modules
 
 
@@ -40,6 +44,35 @@ def evaluate_objective_function(path_model):
             synthetics=solver.data_filenames(choice="syn"),
             output=os.path.join(solver.cwd, "traces", "adj")
         )
+
+
+@log_status
+def run_forward_simulation(path_model):
+    """
+
+    """
+    # Run the forward simulation with the given input model
+    solver.import_model(path_model=path_model)
+    solver.forward_simulation(
+        save_traces=os.path.join(solver.cwd, "traces", "syn"),
+        export_traces=os.path.join(pars.path_output, solver.source_name, "syn")
+    )
+
+
+@log_status
+def quantify_misfit():
+    """
+    Quantify the data-synthetic misfit, write residuals to scratch for use in
+    potential optimization, generate adjoint sources required for adjoint
+    simulations
+    """
+    preprocess.quantify_misfit(
+        observed=solver.data_filenames(choice="obs"),
+        synthetics=solver.data_filenames(choice="syn"),
+        write_adjsrcs=os.path.join(solver.cwd, "traces", "adj"),
+        write_residuals=os.path.join(pars.path_eval_grad, solver.source_name)
+    )
+    preprocess.sum_residuals(files=glob(os.path.join(pars.path_eval_grad, "*")))
 
 
 if __name__ == "__main__":

@@ -6,12 +6,16 @@ seismic data, apply preprocessing such as filtering, quantify misfit,
 and write adjoint sources that are expected by the solver.
 """
 import os
-import obspy
 import numpy as np
+from obspy import read as obspy_read
+from obspy import Stream, Trace, UTCDateTime
 
 from seisflows import logger
+from seisflows.core import Dict
 from seisflows.tools import signal, unix
-from seisflows.plugins.preprocess import adjoint, misfit, readers, writers
+
+from seisflows.plugins.preprocess import misfit as misfit_functions
+from seisflows.plugins.preprocess import adjoint as adjoint_sources
 
 
 class Default:
@@ -21,10 +25,12 @@ class Default:
     Provides data processing functions for seismic traces, with options for
     data misfit, filtering, normalization and muting
     """
-    def __init__(self, data_format="ascii", misfit="waveform", backproject=None,
-                 normalize=None, filter=None, min_period=None, max_period=None,
-                 min_freq=None, max_freq=None, mute=None, path_preprocess=None,
-                 **kwargs):
+    def __init__(self, data_format="ascii", misfit="waveform",
+                 adjoint="waveform", normalize=None, filter=None,
+                 min_period=None, max_period=None, min_freq=None, max_freq=None,
+                 mute=None, early_slope=None, early_const=None, late_slope=None,
+                 late_const=None, short_dist=None, long_dist=None,
+                 workdir=os.getcwd(), path_preprocess=None, **kwargs):
         """
         Preprocessing module parameters
 
@@ -78,10 +84,11 @@ class Default:
         :param path_preprocess: scratch path for all preprocessing processes,
             including saving files
         """
-        self.data_format = data_format.title()
+        self.data_format = data_format.upper()
         self.misfit = misfit
-        self.backproject = backproject,
+        self.adjoint = adjoint
         self.normalize = normalize
+
         self.filter = filter
         self.min_period = min_period
         self.max_period = max_period
@@ -89,20 +96,40 @@ class Default:
         self.max_freq = max_freq
         self.mute = mute or []
         self.normalize = normalize or []
-        self.path = path_preprocess or \
-                    os.path.join(os.getcwd(), "scratch", "preprocess")
 
-        # TODO: Add the mute parameters here, const, slope and dist
+        # Mute arrivals sub-parameters
+        self.early_slope = early_slope
+        self.early_const = early_const
+        self.late_slope = late_slope
+        self.late_const = late_const
+        self.short_dist = short_dist
+        self.long_dist = long_dist
 
-        self._misfit = None
-        self._adjoint = None
-        self._reader = None
-        self._writer = None
+        self.path = Dict(
+            scratch=path_preprocess or os.path.join(workdir, "scratch",
+                                                    "preprocess")
+        )
 
-    def check(self, validate=True):
+        self._acceptable_data_formats = ["SU", "ASCII"]
+
+        # Misfits and adjoint sources are defined by the available functions
+        # in each of these plugin files. Drop hidden variables from dir()
+        self._acceptable_misfits = [_ for _ in dir(misfit_functions)
+                                    if not _.startswith("_")]
+        self._acceptable_adjsrcs = [_ for _ in dir(adjoint_sources)
+                                    if not _.startswith("_")]
+
+    def check(self):
         """ 
         Checks parameters and paths
         """
+        if self.misfit:
+            assert(self.misfit in self._acceptable_misfits), \
+                f"preprocess.misfit must be in {self._acceptable_misfits}"
+        if self.adjoint:
+            assert(self.adjoint in self._acceptable_adjsrcs), \
+                f"preprocess.misfit must be in {self._acceptable_adjsrcs}"
+
         # Data normalization option
         if self.normalize:
             acceptable_norms = {"TNORML1", "TNORML2", "ENORML1", "ENORML2"}
@@ -169,13 +196,8 @@ class Default:
                 "PAR.MIN_FREQ < PAR.MAX_FREQ"
             )
 
-        # Assert that readers and writers available
-        # TODO | This is a bit vague as dir contains imported modules and hidden
-        # TODO | variables (e.g., np, __name__)
-        assert(self.data_format.lower() in dir(readers)), (
-            f"Reader {self.data_format} not found")
-        assert(self.data_format.lower() in dir(writers)), (
-            f"Writer {self.data_format} not found")
+        assert(self.data_format.upper() in self._acceptable_data_formats), \
+            f"data format must be in {self._acceptable_data_formats}"
 
     def setup(self):
         """
@@ -183,22 +205,7 @@ class Default:
         misfit, adjoint source type, and specifying the expected file type
         for input and output seismic data.
         """
-        unix.mkdir(self.path)
-
-        # Define misfit function and adjoint trace generator
-        if self.misfit:
-            logger.debug(f"misfit function is: '{self.misfit}'")
-            self._misfit = getattr(misfit, self.misfit.lower())
-            self._adjoint = getattr(adjoint, self.misfit.lower())
-        elif self.backproject:
-            logger.debug(
-                f"backproject function is: '{self.backproject}'"
-            )
-            self._adjoint = getattr(adjoint, self.backproject.lower())
-
-        # Define seismic data reader and writer
-        self._reader = getattr(readers, self.data_format.lower())
-        self._writer = getattr(writers, self.data_format.lower())
+        unix.mkdir(self.path.scratch)
 
     def finalize(self):
         """
@@ -207,25 +214,114 @@ class Default:
         """
         pass
 
-    def initialize_adjoint_traces(self, filenames=None):
+    def read(self, fid):
         """
-        TO DO
+        Waveform reading functionality. Imports waveforms as Obspy streams
+
+        :type fid: str
+        :param fid: path to file to read data from
+        :rtype: obspy.core.stream.Stream
+        :return: ObsPy stream containing data stored in `fid`
         """
-        for filename in self.data_filenames:
-            st = self.preprocess.reader(path=os.path.join(self.cwd, "traces", "obs"),
-                        filename=filename
-                        )
-            # Zero out data just so we have empty adjoint traces as SPECFEM
-            # will expect all adjoint sources to have all components
-            st *= 0
+        st = None
+        if self.data_format.upper() == "SU":
+            st = obspy_read(os.path.join(fid), format="SU", byteorder="<")
+        elif self.data_format.upper() == "ASCII":
+            st = self._read_ascii(fid)
+        return st
+
+    def write(self, st, fid):
+        """
+        Waveform writing functionality. Writes waveforms back to format that
+        SPECFEM recognizes
+
+        :type st: obspy.core.stream.Stream
+        :param st: stream to write
+        :type fid: str
+        :param fid: path to file to write stream to
+        """
+        if self.data_format.upper() == "SU":
+            for tr in st:
+                # Work around for ObsPy data type conversion
+                tr.data = tr.data.astype(np.float32)
+            max_delta = 0.065535
+            dummy_delta = max_delta
+
+            if st[0].stats.delta > max_delta:
+                for tr in st:
+                    tr.stats.delta = dummy_delta
+
+            # Write data to file
+            st.write(fid, format="SU")
+
+        elif self.data_format.upper() == "ASCII":
+            for tr in st:
+                # Float provides time difference between starttime and default
+                time_offset = float(tr.stats.starttime)
+                data_out = np.vstack((tr.times() + time_offset, tr.data)).T
+                np.savetxt(fid, data_out, ["%13.7f", "%17.7f"])
+
+    def _calculate_misfit(self, **kwargs):
+        """Wrapper for plugins.preprocess.misfit misfit/objective function"""
+        if self.misfit is not None:
+            return getattr(misfit_functions, self.misfit)(**kwargs)
+        else:
+            return None
+
+    def _generate_adjsrc(self, **kwargs):
+        """Wrapper for plugins.preprocess.adjoint source/backproject function"""
+        if self.adjoint is not None:
+            return getattr(adjoint_sources, self.adjoint)(**kwargs)
+        else:
+            return None
+
+    def initialize_adjoint_traces(self, data_filenames, output):
+        """
+        SPECFEM requires that adjoint traces be present for every matching
+        synthetic seismogram. If an adjoint source does not exist, it is
+        simply set as zeros. This function creates all adjoint traces as
+        zeros, to be filled out later
+
+        Appends '.adj. to the solver filenames as expected by SPECFEM (if they
+        don't already have that extension)
+
+        TODO there are some sem2d and 3d specific tasks that are not carried
+        TODO over here, were they required?
+
+        :type data_filenames: list of str
+        :param data_filenames: existing solver waveforms to read from.
+            These will be copied, zerod out, and saved to path `save`. Should
+            come from solver.data_filenames
+        :type output: str
+        :param output: path to save the new adjoint traces to.
+        """
+        for fid in data_filenames:
+            st = self.read(fid=fid).copy()
+            fid = os.path.basename(fid)  # drop any path before filename
+            for tr in st:
+                tr.data *= 0
+
+            adj_fid = self._rename_as_adjoint_source(fid)
 
             # Write traces back to the adjoint trace directory
-            preprocess.writer(st=st, filename=filename,
-                              path=os.path.join(self.cwd, "traces", "adj")
-                              )
+            self.write(st=st, fid=os.path.join(output, adj_fid))
+
+    def _rename_as_adjoint_source(self, fid):
+        """
+        Rename synthetic waveforms into filenames consistent with how SPECFEM
+        expects adjoint sources to be named. Usually this just means adding
+        a '.adj' to the end of the filename
+        """
+        if not fid.endswith(".adj"):
+            if self.data_format.upper() == "SU":
+                fid = f"{fid}.adj"
+            elif self.data_format.upper() == "ASCII":
+                og_extension = os.path.splitext(fid)[-1]  # e.g., .semd
+                fid = fid.replace(og_extension, ".adj")
+        return fid
 
     def quantify_misfit(self, observed, synthetic,
-                        write_residuals=False, write_adjsrcs=False, **kwargs):
+                        write_residuals=None, write_adjsrcs=None, **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
         adjoint traces. Meant to be called by solver.eval_func().
@@ -238,16 +334,18 @@ class Default:
             Meant to be called by solver.eval_func(), may have unused arguments
             to keep functions general across subclasses.
 
-        :type cwd: str
-        :param cwd: current specfem working directory containing observed and
-            synthetic seismic data to be read and processed. Should be defined
-            by solver.cwd
-        :type filenames: list of str
-        :param filenames: list of filenames defining the files in traces
+        :type observed: list
+        :param observed: list of observed waveforms
+        :type synthetic: list
+        :param synthetic: list of synthetic waveforms
+        :type write_residuals: str
+        :param write_residuals: if not None, path to write misfit/residuls to
+        :type write_adjsrcs: str
+        :param write_adjsrcs: if not None, path to write adjoint sources to
         """
         for obs_fid, syn_fid in zip(observed, synthetic):
-            obs = self._reader(filename=obs_fid)
-            syn = self._reader(filename=syn_fid)
+            obs = self.read(fid=obs_fid)
+            syn = self.read(fid=syn_fid)
 
             # Process observations and synthetics identically
             if self.filter:
@@ -262,97 +360,27 @@ class Default:
 
             # Write the residuals/misfit and adjoint sources for each component
             for tr_obs, tr_syn in zip(obs, syn):
-                if write_residuals:
-                    residual = self._misfit(obs=tr_obs.data, syn=tr_syn.data,
-                                            nt=tr_syn.stats.npts,
-                                            dt=tr_syn.stats.delta)
+                # Simple check to make sure zip retains ordering
+                assert(tr_obs.stats.component == tr_syn.stats.component)
+                # Calculate the misfit value and write to file
+                if write_residuals and self._calculate_misfit:
+                    residual = self._calculate_misfit(
+                        obs=tr_obs.data, syn=tr_syn.data,
+                        nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
+                    )
                     with open(write_residuals, "a") as f:
                         f.write(f"{residual:.2E}\n")
-                if write_adjsrcs:
+
+                # Generate an adjoint source trace, write to file
+                if write_adjsrcs and self._generate_adjsrc:
                     adjsrc = syn.copy()
-                    adjsrc.data = self._adjoint(obs=tr_obs.data, syn=tr_syn.data,
-                                                nt=tr_syn.stats.npts,
-                                                dt=tr_syn.stats.delta)
-                    if self.data_format.upper() == "ASCII":
-                        # Change the extension to '.adj' from whatever it is
-                        ext = os.path.splitext(os.path.basename(obs))[-1]
-                        filename = os.path.basename(obs).replace(ext, ".adj")
-                    elif self.data_format.upper() == "SU":
-                        # TODO implement this
-                        raise NotImplementedError
-                    self._writer(st=adjsrc,
-                                 filename=os.path.join(write_adjsrcs, filename)
-                                 )
-
-    def prepare_eval_grad(self, cwd, taskid, filenames, **kwargs):
-        """
-        Prepares solver for gradient evaluation by writing residuals and
-        adjoint traces. Meant to be called by solver.eval_func().
-
-        Reads in observed and synthetic waveforms, applies optional
-        preprocessing, assesses misfit, and writes out adjoint sources and
-        STATIONS_ADJOINT file.
-
-        .. note::
-            Meant to be called by solver.eval_func(), may have unused arguments
-            to keep functions general across subclasses.
-
-        :type cwd: str
-        :param cwd: current specfem working directory containing observed and
-            synthetic seismic data to be read and processed. Should be defined
-            by solver.cwd
-        :type filenames: list of str
-        :param filenames: list of filenames defining the files in traces
-        """
-        if taskid == 0:
-            logger.debug("preparing files for gradient evaluation")
-
-        for filename in filenames:
-            obs = self._reader(path=os.path.join(cwd, "traces", "obs"),
-                               filename=filename)
-            syn = self._reader(path=os.path.join(cwd, "traces", "syn"),
-                               filename=filename)
-
-            # Process observations and synthetics identically
-            if self.filter:
-                if taskid == 0:
-                    logger.debug(f"applying {self.filter} filter to data")
-                obs = self._apply_filter(obs)
-                syn = self._apply_filter(syn)
-            if self.mute:
-                if taskid == 0:
-                    logger.debug(f"applying {self.mute} mutes to data")
-                obs = self._apply_mute(obs)
-                syn = self._apply_mute(syn)
-            if self.normalize:
-                if taskid == 0:
-                    logger.debug(
-                        f"normalizing data with: {self.normalize}"
+                    adjsrc.data = self._generate_adjsrc(
+                        obs=tr_obs.data, syn=tr_syn.data,
+                        nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
                     )
-                obs = self._apply_normalize(obs)
-                syn = self._apply_normalize(syn)
-
-            if self.misfit is not None:
-                self._write_residuals(cwd, syn, obs)
-
-            # Write the adjoint traces. Rename file extension for Specfem
-            if self.data_format.upper() == "ASCII":
-                # Change the extension to '.adj' from whatever it is
-                ext = os.path.splitext(filename)[-1]
-                filename_out = filename.replace(ext, ".adj")
-            elif self.data_format.upper() == "SU":
-                # TODO implement this
-                raise NotImplementedError
-
-            self._write_adjoint_traces(path=os.path.join(cwd, "traces", "adj"),
-                                       syn=syn, obs=obs, filename=filename_out)
-
-        # Copy over the STATIONS file to STATIONS_ADJOINT required by Specfem
-        # ASSUMING that all stations are used in adjoint simulation
-        # TODO !!! This is SPECFEM dependent? Belongs in solver.specfem?
-        src = os.path.join(cwd, "DATA", "STATIONS")
-        dst = os.path.join(cwd, "DATA", "STATIONS_ADJOINT")
-        unix.cp(src, dst)
+                    fid = os.path.basename(syn_fid)
+                    fid = self._rename_as_adjoint_source(fid)
+                    self.write(st=adjsrc, fid=os.path.join(write_adjsrcs, fid))
 
     def sum_residuals(self, files):
         """
@@ -368,61 +396,6 @@ class Default:
             total_misfit += np.sum(np.loadtxt(filename) ** 2.)
 
         return total_misfit
-
-    def _write_residuals(self, obs, syn, output):
-        """
-        Computes residuals between observed and synthetic seismogram based on
-        the misfit function self.misfit. Saves the residuals for each
-        data-synthetic pair into a text file located at:
-
-        ./scratch/solver/*/residuals
-
-        The resulting file will be a single-column ASCII file that needs to be
-        summed before use by the solver
-
-        :type path: str
-        :param path: location "adjoint traces" will be written
-        :type syn: obspy.core.stream.Stream
-        :param syn: synthetic data
-        :type obs: obspy.core.stream.Stream
-        :param syn: observed data
-        """
-        residuals = []
-        for tr_obs, tr_syn in zip(obs, syn):
-            residual = self._misfit(syn=tr_syn.data, obs=tr_obs.data,
-                                    nt=tr_syn.stats.npts,
-                                    dt=tr_syn.stats.delta
-                                    )
-            residuals.append(residual)
-
-        filename = os.path.join(output, "residuals")
-        if os.path.exists(filename):
-            residuals = np.append(residuals, np.loadtxt(filename))
-
-        np.savetxt(filename, residuals)
-
-    def _write_adjoint_traces(self, path, syn, obs, filename):
-        """
-        Writes "adjoint traces" required for gradient computation
-
-        :type path: str
-        :param path: location "adjoint traces" will be written
-        :type syn: obspy.core.stream.Stream
-        :param syn: synthetic data
-        :type obs: obspy.core.stream.Stream
-        :param syn: observed data
-        :type filename: str
-        :param filename: filename to write adjoint traces to
-        """
-        # Use the synthetics as a template for the adjoint sources
-        adj = syn.copy()
-        for tr_adj, tr_obs, tr_syn in zip(adj, obs, syn):
-            tr_adj.data = self._adjoint(syn=tr_syn.data, obs=tr_obs.data,
-                                        nt=tr_syn.stats.npts,
-                                        dt=tr_syn.stats.delta
-                                        )
-
-        self._writer(adj, path, filename)
 
     def _apply_filter(self, st):
         """
@@ -466,18 +439,14 @@ class Default:
         mute_choices = [_.upper() for _ in self.mute]
         if "EARLY" in mute_choices:
             st = signal.mute_arrivals(st, slope=self.early_slope,
-                                      const=self.early_const,
-                                      choice="EARLY")
+                                      const=self.early_const, choice="EARLY")
         if "LATE" in mute_choices:
             st = signal.mute_arrivals(st, slope=self.late_slope,
-                                      const=self.late_const,
-                                      choice="LATE")
+                                      const=self.late_const, choice="LATE")
         if "SHORT" in mute_choices:
-            st = signal.mute_offsets(st, dist=self.short_dist,
-                                     choice="SHORT")
+            st = signal.mute_offsets(st, dist=self.short_dist, choice="SHORT")
         if "LONG" in mute_choices:
-            st = signal.mute_arrivals(st, dist=self.long_dist,
-                                      choice="LONG")
+            st = signal.mute_offsets(st, dist=self.long_dist, choice="LONG")
 
         return st
 
@@ -526,3 +495,56 @@ class Default:
                     tr.data /= w
 
         return st_out
+
+    @staticmethod
+    def _read_ascii(fid, origintime=None):
+        """
+        Read waveforms in two-column ASCII format. This is copied directly from
+        pyatoa.utils.read.read_sem()
+        """
+        try:
+            times = np.loadtxt(fname=fid, usecols=0)
+            data = np.loadtxt(fname=fid, usecols=1)
+
+        # At some point in 2018, the Specfem developers changed how the ascii files
+        # were formatted from two columns to comma separated values, and repeat
+        # values represented as 2*value_float where value_float represents the data
+        # value as a float
+        except ValueError:
+            times, data = [], []
+            with open(fid, 'r') as f:
+                lines = f.readlines()
+            for line in lines:
+                try:
+                    time_, data_ = line.strip().split(',')
+                except ValueError:
+                    if "*" in line:
+                        time_ = data_ = line.split('*')[-1]
+                    else:
+                        raise ValueError
+                times.append(float(time_))
+                data.append(float(data_))
+
+            times = np.array(times)
+            data = np.array(data)
+
+        if origintime is None:
+            print("No origintime given, setting to default 1970-01-01T00:00:00")
+            origintime = UTCDateTime("1970-01-01T00:00:00")
+
+        # We assume that dt is constant after 'precision' decimal points
+        delta = round(times[1] - times[0], 4)
+
+        # Honor that Specfem doesn't start exactly on 0
+        origintime += times[0]
+
+        # Write out the header information
+        net, sta, cha, fmt = os.path.basename(fid).split('.')
+        stats = {"network": net, "station": sta, "location": "",
+                 "channel": cha, "starttime": origintime, "npts": len(data),
+                 "delta": delta, "mseed": {"dataquality": 'D'},
+                 "time_offset": times[0], "format": fmt
+                 }
+        st = Stream([Trace(data=data, header=stats)])
+
+        return st

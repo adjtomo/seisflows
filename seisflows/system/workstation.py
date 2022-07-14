@@ -24,7 +24,7 @@ class Workstation:
                  path_system=None, path_output_log=None, path_error_log=None,
                  path_log_files=None, path_par_file=None, **kwargs):
         """
-        Instantiate the Workstation base class
+        Workstation System Class Parameters
 
         :type title: str
         :param title: The name used to submit jobs to the system, defaults
