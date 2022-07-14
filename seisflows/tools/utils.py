@@ -4,6 +4,7 @@ but also math and calling functions as well.
 """
 import os
 import re
+import time
 import yaml
 import numpy as np
 from seisflows.core import Dict
@@ -15,30 +16,46 @@ def log_status(func):
     Decorator function that logs the completion status of a function to a
     state file. This is used for checkpointing a workflow and resuming
     failed workflows without repeating computational intense tasks
+
+    :type func: function
     """
+    raise NotImplementedError("This is not working as expected")
+
     STATE_FILE = os.path.join(os.getcwd(), "sfstatefile")
+
+    if not os.path.exists(STATE_FILE):
+        with open(STATE_FILE, "w") as f:
+            f.write(f"# SeisFlows State File\n")
+            f.write(f"# {time.asctime()}\n")
+            f.write(f"# =========================\n")
 
     def logged_func():
         """Log the completion status of the function"""
         try:
-            func()
+            output = func()
             with open(STATE_FILE, "a") as f:
-                f.write(f"{func.__name__}\tCOMPLETED")
+                f.write(f"{func.__name__}\tCOMPLETED\n")
         except Exception as e:
-            f.write(f"{func.__name__}\tFAILED")
+            with open(STATE_FILE, "a") as f:
+                f.write(f"{func.__name__}\tFAILED\n")
             logger.error(e)
             raise
+        return output
 
     lines = open(STATE_FILE, "r").readlines()
     for line in lines:
-        function, status = line.split(" ")
+        if line.startswith("#"):
+            continue
+        function, status = line.strip().split("\t")
         if func.__name__ == function:
-            if status == "COMPLETE":
+            if status == "COMPLETED":
                 return
             elif status == "FAILED":
                 return logged_func()
         else:
             return logged_func()
+    else:
+        return logged_func()
 
 
 def set_task_id(task_id):

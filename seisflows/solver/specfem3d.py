@@ -14,7 +14,7 @@ from seisflows.solver.specfem import Specfem
 
 class Specfem3D(Specfem):
     """
-    SPECFEM3D_Cartesian specific parameters
+    [solver.specfem3d] SPECFEM3D-specific alterations to the base SPECFEM module
 
     :type source_prefix: str
     :param source_prefix: Prefix of source files in path SPECFEM_DATA. Defaults
@@ -31,10 +31,9 @@ class Specfem3D(Specfem):
 
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
-            self._parameters.append("vp")
+            self._parameters += ["vp"]
         elif self.materials.upper() == "ELASTIC":
-            self._parameters.append("vp")
-            self._parameters.append("vs")
+            self._parameters += ["vp", "vs"]
 
         # Overwriting the base class parameters
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]

@@ -140,7 +140,7 @@ class Slurm(Cluster):
         # custom run calls can still benefit from this
         if single:
             logger.info("replacing parts of sbatch run call for single "
-                             "process job")
+                        "process job")
             run_call = _modify_run_call_single_proc(run_call)
 
         # The standard response from SLURM when submitting jobs

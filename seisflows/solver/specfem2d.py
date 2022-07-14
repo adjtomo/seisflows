@@ -15,7 +15,7 @@ from seisflows.tools.specfem import getpar, setpar
 
 class Specfem2D(Specfem):
     """
-    SPECFEM2D-specific parameters
+    [solver.specfem2d] SPECFEM2D-specific alterations to the base SPECFEM module
 
     :type source_prefix: str
     :param source_prefix: Prefix of source files in path SPECFEM_DATA. Defaults
@@ -34,10 +34,9 @@ class Specfem2D(Specfem):
 
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
-            self._parameters.append("vp")
+            self._parameters += ["vp"]
         elif self.materials.upper() == "ELASTIC":
-            self._parameters.append("vp")
-            self._parameters.append("vs")
+            self._parameters += ["vp", "vs"]
 
     def setup(self):
         """Setup the SPECFEM2D solver interface in a SeisFlows workflow"""

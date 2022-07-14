@@ -20,10 +20,59 @@ from seisflows.plugins.preprocess import adjoint as adjoint_sources
 
 class Default:
     """
-    Default SeisFlows preprocessing class
+    [preprocess.default] SeisFlows preprocessing module provides data processing
+    functions for seismic traces, with options for data misfit, filtering,
+    normalization and muting.
 
-    Provides data processing functions for seismic traces, with options for
-    data misfit, filtering, normalization and muting
+    :type data_format: str
+    :param data_format: data format for reading traces into memory. For
+        available see: seisflows.plugins.preprocess.readers
+    :type misfit: str
+    :param misfit: misfit function for waveform comparisons. For available
+        see seisflows.plugins.preprocess.misfit
+    :type backproject: str
+    :param backproject: backprojection function for migration, or the
+        objective function in FWI. For available see
+        seisflows.plugins.preprocess.adjoint
+    :type normalize: str
+    :param normalize: Data normalization parameters used to normalize the
+        amplitudes of waveforms. Choose from two sets:
+        ENORML1: normalize per event by L1 of traces; OR
+        ENORML2: normalize per event by L2 of traces;
+        &
+        TNORML1: normalize per trace by L1 of itself; OR
+        TNORML2: normalize per trace by L2 of itself
+    :type filter: str
+    :param filter: Data filtering type, available options are:
+        BANDPASS (req. MIN/MAX PERIOD/FREQ);
+        LOWPASS (req. MAX_FREQ or MIN_PERIOD);
+        HIGHPASS (req. MIN_FREQ or MAX_PERIOD)
+    :type min_period: float
+    :param min_period: Minimum filter period applied to time series.
+        See also MIN_FREQ, MAX_FREQ, if User defines FREQ parameters, they
+        will overwrite PERIOD parameters.
+    :type max_period: float
+    :param max_period: Maximum filter period applied to time series. See
+        also MIN_FREQ, MAX_FREQ, if User defines FREQ parameters, they will
+        overwrite PERIOD parameters.
+    :type min_freq: float
+    :param min_freq: Maximum filter frequency applied to time series,
+        See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ parameters,
+        they will overwrite PERIOD parameters.
+    :type max_freq: float
+    :param max_freq: Maximum filter frequency applied to time series,
+        See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ parameters,
+        they will overwrite PERIOD parameters.
+    :type mute: list
+    :param mute: Data mute parameters used to zero out early / late
+        arrivals or offsets. Choose any number of:
+        EARLY: mute early arrivals;
+        LATE: mute late arrivals;
+        SHORT: mute short source-receiver distances;
+        LONG: mute long source-receiver distances
+    :type path_preprocess: str
+    :param path_preprocess: scratch path for all preprocessing processes,
+        including saving files
     """
     def __init__(self, data_format="ascii", misfit="waveform",
                  adjoint="waveform", normalize=None, filter=None,
@@ -34,55 +83,7 @@ class Default:
         """
         Preprocessing module parameters
 
-        :type data_format: str
-        :param data_format: data format for reading traces into memory. For
-            available see: seisflows.plugins.preprocess.readers
-        :type misfit: str
-        :param misfit: misfit function for waveform comparisons. For available
-            see seisflows.plugins.preprocess.misfit
-        :type backproject: str
-        :param backproject: backprojection function for migration, or the
-            objective function in FWI. For available see
-            seisflows.plugins.preprocess.adjoint
-        :type normalize: str
-        :param normalize: Data normalization parameters used to normalize the
-            amplitudes of waveforms. Choose from two sets:
-            ENORML1: normalize per event by L1 of traces; OR
-            ENORML2: normalize per event by L2 of traces;
-            &
-            TNORML1: normalize per trace by L1 of itself; OR
-            TNORML2: normalize per trace by L2 of itself
-        :type filter: str
-        :param filter: Data filtering type, available options are:
-            BANDPASS (req. MIN/MAX PERIOD/FREQ);
-            LOWPASS (req. MAX_FREQ or MIN_PERIOD);
-            HIGHPASS (req. MIN_FREQ or MAX_PERIOD)
-        :type min_period: float
-        :param min_period: Minimum filter period applied to time series.
-            See also MIN_FREQ, MAX_FREQ, if User defines FREQ parameters, they
-            will overwrite PERIOD parameters.
-        :type max_period: float
-        :param max_period: Maximum filter period applied to time series. See
-            also MIN_FREQ, MAX_FREQ, if User defines FREQ parameters, they will
-            overwrite PERIOD parameters.
-        :type min_freq: float
-        :param min_freq: Maximum filter frequency applied to time series,
-            See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ parameters,
-            they will overwrite PERIOD parameters.
-        :type max_freq: float
-        :param max_freq: Maximum filter frequency applied to time series,
-            See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ parameters,
-            they will overwrite PERIOD parameters.
-        :type mute: list
-        :param mute: Data mute parameters used to zero out early / late
-            arrivals or offsets. Choose any number of:
-            EARLY: mute early arrivals;
-            LATE: mute late arrivals;
-            SHORT: mute short source-receiver distances;
-            LONG: mute long source-receiver distances
-        :type path_preprocess: str
-        :param path_preprocess: scratch path for all preprocessing processes,
-            including saving files
+
         """
         self.data_format = data_format.upper()
         self.misfit = misfit
@@ -311,6 +312,9 @@ class Default:
         Rename synthetic waveforms into filenames consistent with how SPECFEM
         expects adjoint sources to be named. Usually this just means adding
         a '.adj' to the end of the filename
+
+        TODO how does SPECFEM3D_GLOBE expect this? filenames end with .sem.ascii
+            so the .ascii will get replaced. Is that okay?
         """
         if not fid.endswith(".adj"):
             if self.data_format.upper() == "SU":

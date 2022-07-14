@@ -9,9 +9,10 @@ import pickle
 from contextlib import redirect_stdout
 
 from seisflows import logger
+from seisflows.core import Dict
 from seisflows.config import CFGPATHS, save
 from seisflows.tools import msg, unix
-from seisflows.tools.utils import number_fid
+from seisflows.tools.utils import number_fid, get_task_id
 
 
 class Workstation:
@@ -20,7 +21,8 @@ class Workstation:
     Base System module, upon which all other System classes should be built.
     """
     def __init__(self, title=None, mpiexec=None, ntask=1, nproc=1,
-                 log_level="DEBUG", verbose=False, path_output=None,
+                 log_level="DEBUG", verbose=False, workdir=os.getcwd(),
+                 path_output=None,
                  path_system=None, path_output_log=None, path_error_log=None,
                  path_log_files=None, path_par_file=None, **kwargs):
         """
@@ -57,26 +59,34 @@ class Workstation:
         self.verbose = verbose
 
         # Define internal path system
-        self.path = path_system or \
-                    os.path.join(os.getcwd(), "scratch", "system")
-        self.path_par_file = path_par_file or \
-                             os.path.join(os.getcwd(), "parameters.yaml")
-        self.path_output = path_output
+        self.path = Dict(
+            scratch=path_system or os.path.join(workdir, "scratch", "system"),
+            par_file=path_par_file or os.path.join(workdir, "parameters.yaml"),
+            output=path_output or os.path.join(workdir, "output"),
+            log_files=path_log_files or os.path.join(workdir, "logs"),
+            output_log=path_output_log or os.path.join(workdir, "sfoutput.log"),
+            error_log=path_error_log or os.path.join(workdir, "sferror.log"),
 
-        # Define where to write logs
-        self.path_log_files = path_log_files or \
-                              os.path.join(os.getcwd(), "logs")
-        self.path_output_log = path_output_log or \
-                               os.path.join(os.getcwd(), "sfoutput.log")
-        self.path_error_log = path_error_log or \
-                              os.path.join(os.getcwd(), "sferror.log")
-
+        )
 
     def check(self):
         """
         Checks parameters and paths
         """
-        pass
+        assert(os.path.exists(self.path.par_file)), \
+            f"parameter file does not exist but should"
+
+    def taskid(self):
+        """
+        Provides a unique identifier for each running task, which should be set
+        by the 'run'' command.
+
+        :rtype: int
+        :return: returns the os environment variable SEISFLOWS_TASKID which is
+            set by run() to label each of the currently
+            running processes on the SYSTEM.
+        """
+        return get_task_id()
 
     def setup(self):
         """
@@ -96,19 +106,19 @@ class Workstation:
         :rtype: tuple of str
         :return: (path to output log, path to error log)
         """
-        for path in [self.path, self.path_output, self.path_log_files]:
+        for path in [self.path.scratch, self.path.output, self.path.log_files]:
             unix.mkdir(path)
 
         # If resuming, move old log files to keep them out of the way. Number
         # in ascending order, so we don't end up overwriting things
-        for src in [self.path_output_log, self.path_error_log,
-                    self.path_par_file]:
+        for src in [self.path.output_log, self.path.error_log,
+                    self.path.par_file]:
             i = 1
             if os.path.exists(src):
-                dst = os.path.join(self.path_log_files, number_fid(src, i))
+                dst = os.path.join(self.path.log_files, number_fid(src, i))
                 while os.path.exists(dst):
                     i += 1
-                    dst = os.path.join(self.path_log_files, number_fid(src, i))
+                    dst = os.path.join(self.path.log_files, number_fid(src, i))
                 logger.debug(f"copying par/log file to: {dst}")
                 unix.cp(src=src, dst=dst)
 
@@ -129,7 +139,7 @@ class Workstation:
         workflow.checkpoint()
         workflow.main()
 
-    def run(self, classname, method, single=False, **kwargs):
+    def run(self, func, single=False, **kwargs):
         """
         Executes task multiple times in serial.
 
@@ -147,13 +157,6 @@ class Workstation:
             defined, such that the job is submitted as a single-core job to
             the system.
         """
-        self.save_kwargs_to_disk(self.path_output, classname, method, kwargs)
-
-        # Allows dynamic retrieval of any function from within package, e.g.,
-        # <bound method Base.eval_func of <seisflows.solver.specfem2d...
-        class_module = sys.modules[f"seisflows_{classname}"]
-        function = getattr(class_module, method)
-
         if single:
             ntasks = 1
         else:
@@ -167,7 +170,7 @@ class Workstation:
             # Make sure that we're creating new log files EACH time we run()
             idx = 0
             while True:
-                log_file = os.path.join(self.path_log_files,
+                log_file = os.path.join(self.path.log_files,
                                         f"{idx:0>4}_{taskid:0>2}.log")
                 if os.path.exists(log_file):
                     idx += 1
@@ -175,33 +178,13 @@ class Workstation:
                     break
 
             if taskid == 0:
-                logger.info(f"running task {classname}.{method} "
-                            f"{self.ntask} times")
+                logger.info(f"running task {func.__name__} {self.ntask} times")
 
             # Redirect output to a log file to mimic cluster runs where 'run'
             # task output logs are sent to different files
             with open(log_file, "w") as f:
                 with redirect_stdout(f):
-                    function(**kwargs)
-
-    def taskid(self):
-        """
-        Provides a unique identifier for each running task, which should be set
-        by the 'run'' command.
-
-        :rtype: int
-        :return: returns the os environment variable SEISFLOWS_TASKID which is
-            set by run() to label each of the currently
-            running processes on the SYSTEM.
-        """
-        sftaskid = os.getenv("SEISFLOWS_TASKID")
-        if sftaskid is None:
-            print(msg.cli("system.taskid() environment variable not found. "
-                          "Assuming DEBUG mode and returning taskid==0. "
-                          "If not DEBUG mode, please check SYSTEM.run()",
-                          header="warning", border="="))
-            sftaskid = 0
-        return int(sftaskid)
+                    func(**kwargs)
 
     def save_kwargs_to_disk(self, path, classname, method, kwargs):
         """
@@ -223,4 +206,4 @@ class Workstation:
         with open(argsfile, "wb") as f:
             pickle.dump(kwargs, f)
 
-        save(path=self.path_output)
+        save(path=self.path.output)

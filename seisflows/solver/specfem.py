@@ -32,7 +32,10 @@ from seisflows.tools.specfem import getpar, setpar
 
 class Specfem:
     """
-    SPECFEM interface shared between 2D/3D/3D_GLOBE implementations.
+    [solver.specfem] SPECFEM interface shared between 2D/3D/3D_GLOBE
+    implementations providing generalized interface to establish SPECFEM
+    working directories, call SPECFEM binaries, and keep track of a number of
+    parallel processes.
 
     :type case: str
     :param case: determine the type of workflow we will attempt
@@ -87,13 +90,14 @@ class Specfem:
     :param path_output: shared output directory on disk for more permanent
         storage of solver related files such as traces, kernels, gradients.
     """
-    def __init__(self, case="data", data_format="ascii",  materials="elastic",
+    def __init__(self, case="data", data_format="ascii",  materials="acoustic",
                  density=False, nproc=1, ntask=1, attenuation=False,
                  components="ZNE", solver_io="fortran_binary",
                  source_prefix=None, mpiexec=None, workdir=os.getcwd(),
-                 path_solver=None, path_data=None, path_specfem_bin=None,
-                 path_specfem_data=None, path_model_init=None,
-                 path_model_true=None, path_output=None, **kwargs):
+                 path_solver=None, path_eval_grad=None, path_data=None,
+                 path_specfem_bin=None, path_specfem_data=None,
+                 path_model_init=None, path_model_true=None, path_output=None,
+                 **kwargs):
         """Set default SPECFEM interface parameters"""
         self.case = case
         self.data_format = data_format
@@ -110,6 +114,8 @@ class Specfem:
         # Define internally used directory structure
         self.path = Dict(
             scratch=path_solver or os.path.join(workdir, "scratch", "solver"),
+            eval_grad=path_eval_grad or
+                      os.path.join(workdir, "scratch", "evalgrad"),
             data=path_data or os.path.join(workdir, "SFDATA"),
             output=path_output or os.path.join(workdir, "output"),
             specfem_bin=path_specfem_bin,
@@ -136,7 +142,7 @@ class Specfem:
         self._available_data_formats = ["ASCII", "SU"]
         self._required_binaries = ["xspecfem2D", "xmeshfem2D", "xcombine_sem",
                                    "xsmooth_sem"]
-        self._acceptable_source_prefix = ["SOURCE", "FORCE", "FORCESOLUTION"]
+        self._acceptable_source_prefixes = ["SOURCE", "FORCE", "FORCESOLUTION"]
 
     def check(self):
         """
@@ -184,18 +190,22 @@ class Specfem:
                 f"bin/{fid} does not exist but is required by SeisFlows solver"
             )
 
-        # Check that the 'case' variable matches required models
-        if self.case.upper() == "SYNTHETIC":
-            assert(os.path.exists(self.path.model_true)), (
-                f"solver.case == 'synthetic' requires `path.model_true`"
-            )
-
         # Check that model type is set correctly in the Par_file
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
                                               "Par_file"))[1]
         assert(model_type in self._available_model_types), \
             f"{model_type} not in available types {self._available_model_types}"
+
+        # Check that the 'case' variable matches required models
+        if self.case.upper() == "SYNTHETIC":
+            assert(os.path.exists(self.path.model_true)), (
+                f"solver.case == 'synthetic' requires `path_model_true`"
+            )
+
+        assert(self.path.model_init is not None and
+               os.path.exists(self.path.model_init)), \
+            f"`path_model_init` is required for the solver, but does not exist"
 
         # Check that the number of tasks/events matches the number of events
         self._source_names = self._check_source_names()
@@ -365,11 +375,8 @@ class Specfem:
         unix.mkdir(self.path.output)
         for key in self._parameters:
             src = glob(os.path.join(self.path.model_init, f"*{key}.bin"))
-            dst = os.path.join(self.path.output, "MODEL_INIT", "")
+            dst = os.path.join(self.path.output, "MODEL_INIT")
             unix.cp(src, dst)
-
-        # TODO move this into workflow.migration
-        # self._initialize_adjoint_traces()
 
     # def generate_data(self, save_traces=False):
     #     """
@@ -460,80 +467,6 @@ class Specfem:
         dst = os.path.join(self.cwd, "traces", "obs")
 
         unix.cp(src, dst)
-    #
-    # def eval_func(self, path, preprocess=None):
-    #     """
-    #     Performs forward simulations and evaluates the misfit function using
-    #     the preprocess module. solver.eval_func is bundled with
-    #     preprocess.prepare_eval_grad because they are meant to be run serially
-    #     so it is better to lump them together into a single allocation.
-    #
-    #     .. note::
-    #         This task should be run in parallel by system.run()
-    #
-    #     :type path: str
-    #     :param path: directory from which model is imported and where residuals
-    #         will be exported
-    #     :type preprocess: instance
-    #     :param preprocess: SeisFlows preprocess module which can be used to
-    #         prepare gradient evaluation by comparing misfit and creating
-    #         adjoint sources. If None, only forward simulations will be
-    #         performed
-    #     """
-    #     unix.cd(self.cwd)
-    #
-    #     if self.taskid == 0:
-    #         logger.info("running forward simulations")
-    #
-    #     self._import_model(path)
-    #     self._forward(output_path=os.path.join("traces", "syn"))
-    #
-    #     if preprocess:
-    #         if self.taskid == 0:
-    #             logger.debug("call preprocess to prepare gradient evaluation")
-    #         preprocess.prepare_eval_grad(cwd=self.cwd, taskid=self.taskid,
-    #                                      source_name=self.source_name,
-    #                                      filenames=self.data_filenames
-    #                                      )
-    #         self._export_residuals(path)
-
-    # def eval_grad(self, path, export_traces=False):
-    #     """
-    #     Evaluates gradient by carrying out adjoint simulations.
-    #
-    #     .. note::
-    #         It is expected that eval_func() has already been run as this
-    #         function looks for adjoint sources in 'cwd/traces/adj'
-    #
-    #     :type path: str
-    #     :param path: directory from which model is imported
-    #     :type export_traces: bool
-    #     :param export_traces: if True, save traces to OUTPUT.
-    #         if False, discard traces
-    #     """
-    #     unix.cd(self.cwd)
-    #
-    #     if self.taskid == 0:
-    #         logger.debug("running adjoint simulations")
-    #
-    #     # Check to make sure that preprocessing module created adjoint traces
-    #     adjoint_traces_wildcard = os.path.join("traces", "adj", "*")
-    #     if not glob(adjoint_traces_wildcard):
-    #         print(msg.cli(f"Event {self.source_name} has no adjoint traces, "
-    #                       f"which will lead to an external solver error. "
-    #                       f"Please check that solver.eval_func() executed "
-    #                       f"properly", border="=", header="solver error")
-    #               )
-    #         sys.exit(-1)
-    #
-    #     self._adjoint()
-    #     self._export_kernels(path)
-    #
-    #     if export_traces:
-    #         self._export_traces(path=os.path.join(path, "traces", "syn"),
-    #                             prefix="traces/syn")
-    #         self._export_traces(path=os.path.join(path, "traces", "adj"),
-    #                             prefix="traces/adj")
 
     def forward_simulation(self, executables=None, save_traces=False,
                            export_traces=False):
@@ -886,11 +819,11 @@ class Specfem:
         # Allow this function to be called on system or in serial
         if cwd is None:
             cwd = self.cwd
-            _source_name = os.path.basename(cwd)
-            taskid = self.source_names.index(_source_name)
+            taskid = self.taskid
         else:
             cwd = self.cwd
-            taskid = self.taskid
+            _source_name = os.path.basename(cwd)
+            taskid = self.source_names.index(_source_name)
 
         if taskid == 0:
             logger.info(f"initializing {self.ntask} solver directories")

@@ -23,7 +23,6 @@ import argparse
 from seisflows.config import load, config_logger
 
 
-
 def parse_args():
     """
     Get command line arguments
