@@ -37,11 +37,6 @@ class Specfem:
     working directories, call SPECFEM binaries, and keep track of a number of
     parallel processes.
 
-    :type case: str
-    :param case: determine the type of workflow we will attempt
-        Available: ['DATA': data-synthetic comparisons. Data must be provided
-        by the user in `path_data`. 'SYNTHETIC': synthetic-synthetic
-        comparisons. `path_model_true` is required to generate target 'data']
     :type data_format: str
     :param data_format: data format for reading traces into memory.
         Available: ['SU' seismic unix format, 'ASCII' human-readable ascii]
@@ -56,6 +51,12 @@ class Specfem:
         if True, turns on attenuation during forward simulations only. If
         False, attenuation is always set to False. Requires underlying
         attenution (Q_mu, Q_kappa) model
+    :type smooth_h: float
+    :param smooth_h: Gaussian half-width for horizontal smoothing in units
+        of meters. If 0., no smoothing applied
+    :type smooth_h: float
+    :param smooth_v: Gaussian half-width for vertical smoothing in units
+        of meters.
     :type components: str
     :param components: components to consider and tag data with. Should be
         string of letters such as 'RTZ'
@@ -90,22 +91,23 @@ class Specfem:
     :param path_output: shared output directory on disk for more permanent
         storage of solver related files such as traces, kernels, gradients.
     """
-    def __init__(self, case="data", data_format="ascii",  materials="acoustic",
+    def __init__(self, data_format="ascii",  materials="acoustic",
                  density=False, nproc=1, ntask=1, attenuation=False,
-                 components="ZNE", solver_io="fortran_binary",
-                 source_prefix=None, mpiexec=None, workdir=os.getcwd(),
-                 path_solver=None, path_eval_grad=None, path_data=None,
-                 path_specfem_bin=None, path_specfem_data=None,
+                 smooth_h=0., smooth_v=0., components="ZNE",
+                 solver_io="fortran_binary", source_prefix=None, mpiexec=None,
+                 workdir=os.getcwd(), path_solver=None, path_eval_grad=None,
+                 path_data=None, path_specfem_bin=None, path_specfem_data=None,
                  path_model_init=None, path_model_true=None, path_output=None,
                  **kwargs):
         """Set default SPECFEM interface parameters"""
-        self.case = case
         self.data_format = data_format
         self.materials = materials
         self.nproc = nproc
         self.ntask = ntask
         self.density = density
         self.attenuation = attenuation
+        self.smooth_h = smooth_h
+        self.smooth_v = smooth_v
         self.components = components
         self.solver_io = solver_io
         self.mpiexec = mpiexec
@@ -148,9 +150,6 @@ class Specfem:
         """
         Checks parameter validity for SPECFEM input files and model parameters
         """
-        assert(self.case.upper() in ["DATA", "SYNTHETIC"]), \
-            f"solver.case must be 'DATA' or 'SYNTHETIC'"
-
         assert(self.materials.upper() in self._available_materials), \
             f"solver.materials must be in {self._available_materials}"
 
@@ -196,12 +195,6 @@ class Specfem:
                                               "Par_file"))[1]
         assert(model_type in self._available_model_types), \
             f"{model_type} not in available types {self._available_model_types}"
-
-        # Check that the 'case' variable matches required models
-        if self.case.upper() == "SYNTHETIC":
-            assert(os.path.exists(self.path.model_true)), (
-                f"solver.case == 'synthetic' requires `path_model_true`"
-            )
 
         assert(self.path.model_init is not None and
                os.path.exists(self.path.model_init)), \
@@ -419,55 +412,6 @@ class Specfem:
     #             path=os.path.join(self.path.output, "traces", "obs")
     #         )
 
-    def generate_data(self, export_traces=False):
-        """
-        Generates observation data to be compared to synthetics. This must
-        only be run once. If `PAR.CASE`=='data', then real data will be copied
-        over.
-
-        If `PAR.CASE`=='synthetic' then the external solver will use the
-        True model to generate 'observed' synthetics. Finally exports traces to
-        'cwd/traces/obs'
-
-        Elif `PAR.CASE`=='DATA', will look in PATH.DATA for directories matching
-        the given source name and copy ANY files that exist there. e.g., if
-        source name is '001', you must store waveform data in PATH.DATA/001/*
-
-        :type export_traces: str
-        :param export_traces: path to copy and save traces to a more permament
-            storage location as waveform stored in scratch/ are liable to be
-            deleted or overwritten
-        """
-        # Basic checks to make sure there are True model files to copy
-        assert(self.case.upper() == "SYNTHETIC")
-        assert(os.path.exists(self.path.model_true))
-        assert(glob(os.path.join(self.path.model_true, "*")))
-
-        # Generate synthetic data on the fly using the true model
-        self.import_model(path_model=self.path.model_true)
-        self.forward_simulation(
-            save_traces=os.path.join(self.cwd, "traces", "obs"),
-            export_traces=export_traces
-        )
-
-    def import_data(self):
-        """
-        Import data from an existing directory into the current working
-        directory, required if 'observed' waveform data will be provided by
-        the User rather than automatically collected (with Pyatoa) or generated
-        synthetically (with external solver)
-        """
-        # Simple checks to make sure we can actually import data
-        assert(self.case.upper() == "DATA")
-        assert(self.path.data is not None)
-        assert(os.path.exists(os.path.join(self.path.data, self.source_name)))
-        assert(glob(os.path.join(self.path.data, self.source_name, "*")))
-
-        src = os.path.join(self.path.data, self.source_name, "*")
-        dst = os.path.join(self.cwd, "traces", "obs")
-
-        unix.cp(src, dst)
-
     def forward_simulation(self, executables=None, save_traces=False,
                            export_traces=False):
         """
@@ -638,8 +582,8 @@ class Specfem:
             stdout = f"{self._exc2log(exc)}_{name}.log"
             self._run_binary(executable=exc, stdout=stdout)
 
-    def smooth(self, input_path, output_path, parameters=None, span_h=0.,
-               span_v=0., use_gpu=False):
+    def smooth(self, input_path, output_path, parameters=None, span_h=None,
+               span_v=None, use_gpu=False):
         """
         Wrapper for SPECFEM binary: xsmooth_sem
         Smooths kernels by convolving them with a 3D Gaussian
@@ -666,8 +610,16 @@ class Specfem:
         """
         unix.cd(self.cwd)
 
+        # Assign some default parameters from class attributes if not given
         if parameters is None:
             parameters = self._parameters
+        if span_h is None:
+            span_h = self.smooth_h
+        if span_v is None:
+            span_v = self.smooth_v
+
+        logger.info(f"smoothing {parameters} with horizontal Gaussian "
+                    f"{span_h}m and vertical Gaussian {span_v}m")
 
         if not os.path.exists(output_path):
             unix.mkdir(output_path)
@@ -785,26 +737,28 @@ class Specfem:
         """
         Serial task used to initialize working directories for each of the a
         available sources
-
-        TODO run this with concurrent futures for speedup?
         """
         logger.info(f"initializing {self.ntask} solver directories")
         for source_name in self.source_names:
             cwd = os.path.join(self.path.scratch, source_name)
+            if os.path.exists(cwd):
+                logger.warning(f"solver scratch path for source {source_name} "
+                               f"already exists")
+                continue
             self._initialize_working_directory(cwd=cwd)
 
     def _initialize_working_directory(self, cwd=None):
         """
-        Creates directory structure expected by SPECFEM
-        (i.e., bin/, DATA/, OUTPUT_FILES/). Copies executables and prepares
-        input files.
+        Creates scratch directory structure expected by SPECFEM
+        (i.e., bin, DATA, OUTPUT_FILES). Copies executables (bin) and
+        input data (DATA) directories, prepares simulation input files.
 
         Each directory will act as completely independent Specfem working dir.
         This allows for embarrassing parallelization while avoiding the need
         for intra-directory communications, at the cost of temporary disk space.
 
         .. note::
-            Path to binary executables must be supplied by user as SeisFlows has
+            path to binary executables must be supplied by user as SeisFlows has
             no mechanism for automatically compiling from source code.
 
         :type cwd: str
@@ -812,21 +766,20 @@ class Specfem:
             will set based on current running seisflows task (self.taskid)
         """
         # Define a constant list of required SPECFEM dir structure, relative cwd
-        _required_structure = ["bin", "DATA",
-                               "traces/obs", "traces/syn", "traces/adj",
-                               self.model_databases, self.kernel_databases]
+        _required_structure = {"bin", "DATA", "traces/obs", "traces/syn",
+                               "traces/adj", self.model_databases,
+                               self.kernel_databases}
 
         # Allow this function to be called on system or in serial
         if cwd is None:
             cwd = self.cwd
+            source_name = self.source_name
             taskid = self.taskid
         else:
-            cwd = self.cwd
-            _source_name = os.path.basename(cwd)
-            taskid = self.source_names.index(_source_name)
+            source_name = os.path.basename(cwd)
+            taskid = self.source_names.index(source_name)
 
-        if taskid == 0:
-            logger.info(f"initializing {self.ntask} solver directories")
+        logger.debug(f"initializing solver directory source: {source_name}")
 
         # Starting from a fresh working directory
         unix.rm(cwd)
@@ -847,48 +800,15 @@ class Specfem:
 
         # Symlink event source specifically, only retain source prefix
         src = os.path.join(self.path.specfem_data,
-                           f"{self.source_prefix}_{self.source_name}")
+                           f"{self.source_prefix}_{source_name}")
         dst = os.path.join(cwd, "DATA", self.source_prefix)
         unix.ln(src, dst)
 
         # Symlink TaskID==0 as mainsolver in solver directory for convenience
         if taskid == 0:
             if not os.path.exists(self.path.mainsolver):
-                logger.debug(f"symlink {self.source_name} as 'mainsolver'")
+                logger.debug(f"linking source '{source_name}' as 'mainsolver'")
                 unix.ln(cwd, self.path.mainsolver)
-
-    # def _initialize_adjoint_traces(self):
-    #     """
-    #     Setup utility: Creates the "adjoint traces" expected by SPECFEM.
-    #     This is only done for the 'base' the Preprocess class.
-    #
-    #     TODO move this into workflow setup
-    #
-    #     .. note::
-    #         Adjoint traces are initialized by writing zeros for all channels.
-    #         Channels actually in use during an inversion or migration will be
-    #         overwritten with nonzero values later on.
-    #     """
-    #     preprocess = self.module("preprocess")
-    #
-    #     if self.par.PREPROCESS.upper() == "DEFAULT":
-    #         if self.taskid == 0:
-    #             logger.debug(f"intializing {len(self.data_filenames)} "
-    #                          f"empty adjoint traces per event")
-    #
-    #         for filename in self.data_filenames:
-    #             st = preprocess.reader(
-    #                         path=os.path.join(self.cwd, "traces", "obs"),
-    #                         filename=filename
-    #                         )
-    #             # Zero out data just so we have empty adjoint traces as SPECFEM
-    #             # will expect all adjoint sources to have all components
-    #             st *= 0
-    #
-    #             # Write traces back to the adjoint trace directory
-    #             preprocess.writer(st=st, filename=filename,
-    #                               path=os.path.join(self.cwd, "traces", "adj")
-    #                               )
 
     def _check_source_names(self):
         """

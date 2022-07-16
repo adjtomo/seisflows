@@ -11,6 +11,56 @@ from seisflows.core import Dict
 from seisflows import logger
 
 
+class TaskIDError(Exception):
+    """
+    A specific error that gets called when tasks are not run on system,
+    i.e., when we can't find 'SEISFLOWS_TASKID' in the environment variables.
+    This means we are attempting to access child process variables inside
+    the parent process.
+    """
+    pass
+
+
+def set_task_id(task_id):
+    """
+    Set the SEISFLOWS_TASKID in os environs
+
+    .. note::
+        Mostly used for debugging/testing purposes as a way of mimicing
+        system.run() assigning task ids to child processes
+
+    :type task_id: int
+    :param task_id: integer task id to assign to the current working environment
+    """
+    os.environ["SEISFLOWS_TASKID"] = str(task_id)
+
+
+def get_task_id(force=False):
+    """
+    Task IDs are assigned to each child process spawned by the system module
+    during a SeisFlows workflow. SeisFlows modules use this Task ID to keep
+    track of embarassingly parallel process, e.g., solver uses the Task ID to
+    determine which source is being considered.
+
+    :type force: bool
+    :param force: If no task id is found, force set it to 0
+    :rtype: int
+    :return: task id for given solver
+    :raises TaskIDError: if no environment variable is found
+    """
+    _taskid = os.getenv("SEISFLOWS_TASKID")
+    if _taskid is None:
+        if force:
+            _taskid = 0
+            logger.warning("Environment variable 'SEISFLOWS_TASKID' not found. "
+                           "Assigning Task ID == 0")
+        else:
+            raise TaskIDError("Environment variable 'SEISFLOWS_TASKID' not "
+                              "found. Please make sure the process asking "
+                              "for task id is called by system.")
+    return int(_taskid)
+
+
 def log_status(func):
     """
     Decorator function that logs the completion status of a function to a
@@ -56,38 +106,6 @@ def log_status(func):
             return logged_func()
     else:
         return logged_func()
-
-
-def set_task_id(task_id):
-    """
-    Set the SEISFLOWS_TASKID in os environs
-
-    .. note::
-        Mostly used for debugging/testing purposes as a way of mimicing
-        system.run() assigning task ids to child processes
-
-    :type task_id: int
-    :param task_id: integer task id to assign to the current working environment
-    """
-    os.environ["SEISFLOWS_TASKID"] = str(task_id)
-
-
-def get_task_id():
-    """
-    Task IDs are assigned to each child process spawned by the system module
-    during a SeisFlows workflow. SeisFlows modules use this Task ID to keep
-    track of embarassingly parallel process, e.g., solver uses the Task ID to
-    determine which source is being considered.
-
-    :rtype: int
-    :return: task id for given solver
-    """
-    _taskid = os.getenv("SEISFLOWS_TASKID")
-    if _taskid is None:
-        _taskid = 0
-        logger.warning("Environment variable 'SEISFLOWS_TASKID' not found. "
-                       "Assigning Task ID == 0")
-    return int(_taskid)
 
 
 def load_yaml(filename):

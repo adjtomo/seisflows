@@ -41,7 +41,7 @@ def cd(path):
     os.chdir(path)
 
 
-def cp(src='', dst=''):
+def cp(src, dst):
     """
     Copy files
 
@@ -52,7 +52,7 @@ def cp(src='', dst=''):
     """
     if isinstance(src, (list, tuple)):
         if len(src) > 1:
-            assert os.path.isdir(dst), "unexpected type for unix.cp 'dst'"
+            assert os.path.isdir(dst), f"unix.cp 'dst' must be directory: {dst}"
         for sub in src:
             cp(sub, dst)
         return
@@ -89,7 +89,7 @@ def ln(src, dst):
         >>> from seisflows.tools.unix import ln
         >>> ln("example_file", "path/to/sylink/new_filename")
         >>> # OR
-        >>> sln("example_file", "path/to/sylink/")
+        >>> ln("example_file", "path/to/sylink/")
 
     :type src: str
     :param src: path to file or directory to symlink
@@ -251,10 +251,13 @@ def nproc():
     Get the number of processors available. Same as calling 'nproc' from
     Linux command line.
 
+    TODO probably replace this with multiprocessing.cpu_count()
+
     :rtype: int
     :return: number of processors
     :raises EnvironmentError: if nproc cannot be determined
     """
+
     # Method 1 calls 'nproc'. May fail and return '' if 'nproc' not avail.
     _nproc = subprocess.run("nproc", shell=True, text=True,
                             stdout=subprocess.PIPE).stdout.strip()

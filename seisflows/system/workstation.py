@@ -12,7 +12,7 @@ from seisflows import logger
 from seisflows.core import Dict
 from seisflows.config import CFGPATHS, save
 from seisflows.tools import msg, unix
-from seisflows.tools.utils import number_fid, get_task_id
+from seisflows.tools.utils import number_fid, get_task_id, set_task_id, iterable
 
 
 class Workstation:
@@ -139,7 +139,7 @@ class Workstation:
         workflow.checkpoint()
         workflow.main()
 
-    def run(self, func, single=False, **kwargs):
+    def run(self, funcs, single=False, **kwargs):
         """
         Executes task multiple times in serial.
 
@@ -163,9 +163,8 @@ class Workstation:
             ntasks = self.ntask
 
         for taskid in range(ntasks):
-            # os environment variables can only be strings, these need to be
-            # converted back to integers by system.taskid()
-            os.environ["SEISFLOWS_TASKID"] = str(taskid)
+            # Set Task ID for currently running process
+            set_task_id(taskid)
 
             # Make sure that we're creating new log files EACH time we run()
             idx = 0
@@ -177,14 +176,12 @@ class Workstation:
                 else:
                     break
 
-            if taskid == 0:
-                logger.info(f"running task {func.__name__} {self.ntask} times")
-
             # Redirect output to a log file to mimic cluster runs where 'run'
             # task output logs are sent to different files
             with open(log_file, "w") as f:
                 with redirect_stdout(f):
-                    func(**kwargs)
+                    for func in funcs:
+                        func(**kwargs)
 
     def save_kwargs_to_disk(self, path, classname, method, kwargs):
         """

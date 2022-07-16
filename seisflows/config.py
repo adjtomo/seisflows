@@ -40,7 +40,8 @@ mechanics of the package. Do not touch unless you know what you're doing!
 """
 # List of module names required by SeisFlows for imports. Order-sensitive
 # In sys.modules these will be prepended by 'seisflows_', e.g., seisflows_system
-NAMES = ["system", "preprocess", "solver", "postprocess", "optimize"]  #, "workflow"]
+NAMES = ["system", "preprocess", "solver",
+         "postprocess", "optimize", "workflow"]
 
 # The location of this config file, which is the main repository
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
@@ -49,8 +50,6 @@ ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 # be returned as a Dict() object, defined below. All of these files and
 # directories will be created relative to the user-defined working directory
 CFGPATHS = Dict(
-    SCRATCHDIR="scratch",
-    OUTPUTDIR="output",
     PAR_FILE="parameters.yaml",  # Default SeisFlows parameter file
     LOGFILE="sfoutput.txt",    # Log files for all system log
     ERRLOGFILE="sferror.txt",  # StdErr dump site for crash messages
@@ -135,11 +134,16 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
     config_logger(level=parameters.log_level, filename=parameters.path_log_file,
                   verbose=parameters.verbose)
 
-    classes = [custom_import(name, parameters[name]) for name in NAMES]
-    modules = [cls(**parameters) for cls in classes]
-    # Check that parameters have been set correctly by running their check funcs
-    for module in modules:
-        module.check()
+    # Instantiate SeisFlows modules dynamically based on choices and parameters
+    # provided in the input parameter file
+    modules = {name: custom_import(name, parameters[name])(**parameters) for
+               name in NAMES}
+    modules = Dict(modules)
+
+    # Drop NAMES from parameters, we don't need them anymore and they get
+    # muddled with the actual modules upon instantiation
+    for name in NAMES:
+        parameters.pop(name)
 
     return parameters, modules
 
@@ -181,7 +185,7 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
         )
     else:
         # Clean logging statement with only time and message
-        fmt_str = "%(asctime)s | %(message)s"
+        fmt_str = "%(asctime)s (%(levelname).1s) | %(message)s"
 
     # Instantiate logger during _register() as we now have user-defined pars
     logger.setLevel(level)
@@ -237,6 +241,7 @@ def custom_import(name=None, module=None, classname=None):
             "Please check that the use of custom_import(name, module, class) "
             "is implemented correctly, where name must be in the following:",
             items=NAMES, header="custom import error", border="="))
+        sys.exit(-1)
         sys.exit(-1)
     # Attempt to retrieve currently assigned classname from parameters
     if module is None:

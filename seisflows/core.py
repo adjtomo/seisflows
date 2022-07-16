@@ -131,6 +131,9 @@ class Null:
     def __call__(self, *args, **kwargs):
         return self
 
+    def __bool__(self):
+        return False
+
     def __nonzero__(self):
         return False
 

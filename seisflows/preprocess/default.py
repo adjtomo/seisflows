@@ -325,7 +325,7 @@ class Default:
         return fid
 
     def quantify_misfit(self, observed, synthetic,
-                        write_residuals=None, write_adjsrcs=None, **kwargs):
+                        save_residuals=None, save_adjsrcs=None, **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
         adjoint traces. Meant to be called by solver.eval_func().
@@ -342,10 +342,10 @@ class Default:
         :param observed: list of observed waveforms
         :type synthetic: list
         :param synthetic: list of synthetic waveforms
-        :type write_residuals: str
-        :param write_residuals: if not None, path to write misfit/residuls to
-        :type write_adjsrcs: str
-        :param write_adjsrcs: if not None, path to write adjoint sources to
+        :type save_residuals: str
+        :param save_residuals: if not None, path to write misfit/residuls to
+        :type save_adjsrcs: str
+        :param save_adjsrcs: if not None, path to write adjoint sources to
         """
         for obs_fid, syn_fid in zip(observed, synthetic):
             obs = self.read(fid=obs_fid)
@@ -367,16 +367,16 @@ class Default:
                 # Simple check to make sure zip retains ordering
                 assert(tr_obs.stats.component == tr_syn.stats.component)
                 # Calculate the misfit value and write to file
-                if write_residuals and self._calculate_misfit:
+                if save_residuals and self._calculate_misfit:
                     residual = self._calculate_misfit(
                         obs=tr_obs.data, syn=tr_syn.data,
                         nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
                     )
-                    with open(write_residuals, "a") as f:
+                    with open(save_residuals, "a") as f:
                         f.write(f"{residual:.2E}\n")
 
                 # Generate an adjoint source trace, write to file
-                if write_adjsrcs and self._generate_adjsrc:
+                if save_adjsrcs and self._generate_adjsrc:
                     adjsrc = syn.copy()
                     adjsrc.data = self._generate_adjsrc(
                         obs=tr_obs.data, syn=tr_syn.data,
@@ -384,7 +384,7 @@ class Default:
                     )
                     fid = os.path.basename(syn_fid)
                     fid = self._rename_as_adjoint_source(fid)
-                    self.write(st=adjsrc, fid=os.path.join(write_adjsrcs, fid))
+                    self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
 
     def sum_residuals(self, files):
         """
