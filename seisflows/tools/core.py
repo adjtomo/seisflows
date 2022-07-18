@@ -4,11 +4,68 @@ but also math and calling functions as well.
 """
 import os
 import re
-import time
 import yaml
 import numpy as np
-from seisflows.core import Dict
 from seisflows import logger
+
+
+class Dict(dict):
+    """
+    A dictionary replacement which allows for easier parameter access through
+    getting and setting attributes. Also has some functionality to make string
+    printing prettier
+    """
+    def __str__(self):
+        """Pretty print dictionaries and first level nested dictionaries"""
+        str_ = ""
+        try:
+            longest_key = max([len(_) for _ in self.keys()])
+            for key, val in self.items():
+                str_ += f"{key:<{longest_key}}: {val}\n"
+        except ValueError:
+            pass
+        return str_
+
+    def __repr__(self):
+        """Pretty print when calling an instance of this object"""
+        return self.__str__()
+
+    def __getattr__(self, key):
+        """Attribute-like access of the internal dictionary attributes"""
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(f"{key} not found in Dict")
+
+    def __setattr__(self, key, val):
+        """Setting attributes can only be performed one time"""
+        self.__dict__[key] = val
+
+
+class Null:
+    """
+    A null object that always and reliably does nothing
+    """
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return self
+
+    def __bool__(self):
+        return False
+
+    def __nonzero__(self):
+        return False
+
+    def __getattr__(self, key):
+        return self
+
+    def __setattr__(self, key, val):
+        return self
+
+    def __delattr__(self, key):
+        return self
 
 
 class TaskIDError(Exception):
@@ -59,53 +116,6 @@ def get_task_id(force=False):
                               "found. Please make sure the process asking "
                               "for task id is called by system.")
     return int(_taskid)
-
-
-def log_status(func):
-    """
-    Decorator function that logs the completion status of a function to a
-    state file. This is used for checkpointing a workflow and resuming
-    failed workflows without repeating computational intense tasks
-
-    :type func: function
-    """
-    raise NotImplementedError("This is not working as expected")
-
-    STATE_FILE = os.path.join(os.getcwd(), "sfstatefile")
-
-    if not os.path.exists(STATE_FILE):
-        with open(STATE_FILE, "w") as f:
-            f.write(f"# SeisFlows State File\n")
-            f.write(f"# {time.asctime()}\n")
-            f.write(f"# =========================\n")
-
-    def logged_func():
-        """Log the completion status of the function"""
-        try:
-            output = func()
-            with open(STATE_FILE, "a") as f:
-                f.write(f"{func.__name__}\tCOMPLETED\n")
-        except Exception as e:
-            with open(STATE_FILE, "a") as f:
-                f.write(f"{func.__name__}\tFAILED\n")
-            logger.error(e)
-            raise
-        return output
-
-    lines = open(STATE_FILE, "r").readlines()
-    for line in lines:
-        if line.startswith("#"):
-            continue
-        function, status = line.strip().split("\t")
-        if func.__name__ == function:
-            if status == "COMPLETED":
-                return
-            elif status == "FAILED":
-                return logged_func()
-        else:
-            return logged_func()
-    else:
-        return logged_func()
 
 
 def load_yaml(filename):

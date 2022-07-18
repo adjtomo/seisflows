@@ -20,188 +20,113 @@ exporting updated models, kernels and/or gradients to disk.
 """
 import os
 import sys
-import numpy as np
 
+from seisflows import logger
 from seisflows.workflow.migration import Migration
 from seisflows.tools import msg, unix
 
 
 class Inversion(Migration):
     """
-    Waveform inversion base class, built on top of the Migration child class,
-    which in-turn is built on top of the Forward child class.
+    [workflow.inversion] Peforms iterative nonlinear inversion using a built-in
+    optimization library which stores model vectors on disk.
 
-    Peforms iterative nonlinear inversion and provides a base class on top
-    of which specialized strategies can be implemented.
-
-    To allow customization, the inversion workflow is divided into generic
-    methods such as "initialize", "finalize", "evaluate_function",
-    "evaluate_gradient", which can be easily overloaded.
-
-    Calls to forward and adjoint solvers are abstracted through the "solver"
-    interface so that various forward modeling packages canf be used
-    interchangeably.
-
-    Commands for running in serial or parallel on a workstation or cluster
-    are abstracted through the "system" interface.
+    :type start: int
+    :param start: start inversion workflow at this iteration. 1 <= start <= inf
+    :type end: int
+    :param end: end inversion workflow at this iteration. start <= end <= inf
+    :type export_model: bool
+    :param export_model: export best-fitting model from the line search to disk.
+        If False, new models can be discarded from scratch at any time.
+    :type path_eval_func: str
+    :param path_eval_func: scratch path to store files for line search objective
+        function evaluations, including models, misfit and residuals
     """
-    def __init__(self):
+    __doc__ = Migration.__doc__ + __doc__
+
+    def __init__(self, _modules=None, start=1, end=1, export_model=True,
+                 path_eval_func=None, **kwargs):
+        """Instantiate Inversion-specific parameters"""
+
+        super().__init__(**kwargs)
+
+        self.start = start
+        self.end = end
+        self.export_model = export_model
+
+        self.path.eval_func = path_eval_func or \
+                              os.path.join(self.path.workdir, "scratch",
+                                           "eval_func")
+
+        # Overwriting base class required modules list
+        self._required_modules = ["system", "solver", "preprocess",
+                                  "postprocess", "optimize"]
+
+        # Empty module variables that should be filled in by setup
+        self.optimize = None
+
+    @property
+    def task_list(self):
         """
-        Init is used to instantiate global parameters defined by the input
-        parameter file.
+        USER-DEFINED TASK LIST. This property defines a list of class methods
+        that take NO INPUT and have NO RETURN STATEMENTS. This defines your
+        linear workflow, i.e., these tasks are to be run in order from start to
+        finish to complete a workflow.
+
+        This excludes 'check' (which is run during 'import_seisflows') and
+        'setup' which should be run separately
+
+        .. note::
+            For workflows that require an iterative approach (e.g. inversion),
+            this task list will be looped over, so ensure that any setup and
+            teardown tasks (run once per workflow, not once per iteration) are
+            not included.
+
+        :rtype: list
+        :return: list of methods to call in order during a workflow
         """
-        super().__init__()
+        return [self.evaluate_initial_misfit,
+                self.run_adjoint_simulations,
+                self.generate_misfit_kernel,
+                self.compute_search_direction,
+                self.evaluate_line_search,
+                self.clean_scratch_directory
+                ]
 
-        self.required.par(
-            "BEGIN", required=False, default=1, par_type=int,
-            docstr="First iteration of an inversion workflow, 1 <= BEGIN <= inf"
-        )
-
-        self.required.par(
-            "END", required=False, default=1, par_type=int,
-            docstr="Last iteration of the inverison workflow,"
-                   "BEGIN <= END <= inf"
-        )
-        self.required.par(
-            "RESUME_FROM", required=False, par_type=str,
-            docstr="Name of flow task to resume workflow from. Useful for "
-                   "restarting failed workflows or re-trying sections of "
-                   "workflows with new parameters. To determine available "
-                   "options for your given workflow: > seisflows print flow"
-        )
-        self.required.par(
-            "STOP_AFTER", required=False, par_type=str,
-            docstr="Name of flow task to stop workflow after. Useful for "
-                   "stopping mid-workflow to look at results before "
-                   "proceeding (e.g., to look at waveform misfits before "
-                   "evaluating the gradient). To determine available options "
-                   "for your given workflow: > seisflows print flow"
-        )
-        self.required.par(
-            "SAVEMODEL", required=False, default=True, par_type=bool,
-            docstr="Save updated model files after each iteration"
-        )
-        # Define the Paths required by this module
-        self.required.path(
-            "FUNC", required=False,
-            default=os.path.join(self.path.WORKDIR, "scratch", "evalfunc"),
-            docstr="scratch path to store data related to misfit function "
-                   "evaluations that take place during the line search. Data "
-                   "stored here include residuals from data-synthetic misfit, "
-                   "and a given 'try' model being used to generate synthetics."
-        )
-        # !!! Currently not used
-        self.required.path(
-            "HESS", required=False,
-            default=os.path.join(self.path.WORKDIR, "scratch", "evalhess"),
-            docstr="scratch path to store data related to Hessian evaluations"
-        )
-        self.required.path(
-            "OPTIMIZE", required=False,
-            default=os.path.join(self.path.WORKDIR, "scratch", "optimize"),
-            docstr="scratch path to store data related to nonlinear "
-                   "optimization library. Data stored here include model, "
-                   "gradient, and search direction vectors (numpy arrays), and"
-                   "additional arrays related to specific optimization "
-                   "algorithms"
-        )
-
-    def check(self, validate=True):
+    def check(self):
         """
-        Checks parameters and paths
+        Checks inversion-specific parameters
         """
-        super().check(validate=validate)
+        super().check()
 
-        assert(1 <= self.par.BEGIN <= self.par.END), \
-            f"Incorrect BEGIN or END parameter. Values must be in order: " \
-            f"1 <= {self.par.BEGIN} <= {self.par.END}"
+        assert(1 <= self.start <= self.end), \
+            f"Incorrect START or END parameter. Values must be in order: " \
+            f"1 <= {self.start} <= {self.end}"
 
-    def setup(self, flow=None, return_flow=False):
+    def setup(self):
         """
         Lays groundwork for inversion by running setup() functions for the
         involved sub-modules, generating True model synthetic data if necessary,
         and generating the pre-requisite database files.
-
-        .. note::
-            This function should only be run one time, at the start of iter 1
         """
-        super().setup(flow=flow, return_flow=return_flow)
+        super().setup()
+        self.optimize = self._modules.optimize
 
-        self.module("optimize").setup()
+    def run(self):
+        """Call the forward.run() function iteratively, from `start` to `end`"""
+        for i in range(self.start, self.end):
+            logger.info(msg.mjr(f"Running inversion iteration {i:0>2}"))
+            super().run()
+            logger.info(msg.mjr(f"Completed inversion iteration {i:0>2}"))
 
-    def finalize(self):
-        """
-        Saves results from current model update iteration and increment the
-        iteration number to set up for the next iteration. Finalization is
-        expected to the be LAST function in workflow.main()'s  flow list.
-        """
-        self.logger.info(msg.mjr(f"FINALIZING ITERATION {optimize.iter}"))
-
-        self.checkpoint()
-        preprocess.finalize()
-
-    def main(self, flow=None, return_flow=False):
-        """
-        Overwrites the forward() main function to provide the ability to run
-        multiple iterations in a single workflow.
-
-        :type flow: list or tuple
-        :param flow: list of Class methods that will be run in the order they
-            are provided.
-        :type return_flow: bool
-        :param return_flow: for CLI tool, simply returns the flow function
-            rather than running the workflow. Used for print statements etc.
-        """
-        if flow is None:
-            flow = (self.evaluate_initial_misfit,
-                    self.evaluate_gradient,
-                    self.process_kernels,
-                    self.scale_gradient,
-                    self.compute_direction,
-                    self.line_search,
-                    self.export,
-                    self.clean
-                    )
-
-        self.setup(flow, return_flow)
-        optimize = self.module("optimize")
-
-        # Run the workflow until from the current iteration until PAR.END
-        optimize.iter = self.par.BEGIN
-        self.logger.info(msg.mjr("STARTING INVERSION WORKFLOW"))
-        while True:
-            self.logger.info(
-                msg.mnr(f"ITERATION {optimize.iter} / {self.par.END}")
-            )
-
-            # Execute the functions within the flow
-            for func in flow[self.start:self.stop]:
-                func()
-            self.logger.info(msg.mjr(f"FINISHED FLOW EXECUTION"))
-
-            # Reset flow for subsequent iterations
-            self.start, self.stop = None, None
-            if optimize.iter >= self.par.END:
-                break
-            optimize.iter += 1
-
-            self.logger.info(msg.sub(f"INCREMENT ITERATION TO {optimize.iter}"))
-
-        self.logger.info(msg.mjr("FINISHED INVERSION WORKFLOW"))
-
-    def evaluate_initial_misfit(self):
-        """Inherits from seisflows.workflow.forward.Forward"""
-        super().evaluate_initial_misfit()
-
-    def compute_direction(self):
+    def compute_search_direction(self):
         """
         Computes search direction using the optimization library
         """
-        optimize = self.module("optimize")
-        self.logger.info(msg.mnr("COMPUTING SEARCH DIRECTION"))
-        optimize.compute_direction()
+        logger.info(msg.mnr("COMPUTING SEARCH DIRECTION"))
+        self.optimize.compute_direction()
 
-    def line_search(self):
+    def evaluate_line_search(self):
         """
         Conducts line search in given search direction
 
@@ -210,87 +135,88 @@ class Inversion(Migration):
             status == 0 : not finished
             status < 0  : failed
         """
-        optimize = self.module("optimize")
-
         # Calculate the initial step length based on optimization algorithm
-        if optimize.line_search.step_count == 0:
-            self.logger.info(msg.mjr(f"CONDUCTING LINE SEARCH: "
-                                     f"i{optimize.iter:0>2}"
-                                     f"s{optimize.line_search.step_count:0>2}")
-                             )
-            optimize.initialize_search()
+        if self.optimize.line_search.step_count == 0:
+            logger.info(msg.mjr(f"CONDUCTING LINE SEARCH: "
+                                f"i{self.optimize.iter:0>2}"
+                                f"s{self.optimize.line_search.step_count:0>2}")
+                        )
+            self.optimize.initialize_search()
 
         # Attempt a new trial step with the given step length
-        optimize.line_search.step_count += 1
-        self.logger.info(msg.mnr(f"TRIAL STEP COUNT: "
-                                 f"i{optimize.iter:0>2}"
-                                 f"s{optimize.line_search.step_count:0>2}"))
-        self._evaluate_function(path=self.path.FUNC, suffix="try")
+        self.optimize.line_search.step_count += 1
+        logger.info(msg.mnr(f"TRIAL STEP COUNT: "
+                            f"i{self.optimize.iter:0>2}"
+                            f"s{self.optimize.line_search.step_count:0>2}"))
+
+        self.system.run(self.evaluate_objective_function,
+                        path=self.path.eval_func, suffix="try")
 
         # Check the function evaluation against line search history
-        status = optimize.update_search()
+        status = self.optimize.update_search()
 
         # Proceed based on the outcome of the line search
         if status > 0:
-            self.logger.info("trial step successful")
+            logger.info("trial step successful")
             # Save outcome of line search to disk; reset step to 0 for next iter
-            optimize.finalize_search()
+            self.optimize.finalize_search()
             return
         elif status == 0:
-            self.logger.info("retrying with new trial step")
+            logger.info("retrying with new trial step")
             # Recursively call this function to attempt another trial step
-            self.line_search()
+            self.evaluate_line_search()
         elif status < 0:
-            if optimize.retry_status():
-                self.logger.info("line search failed. restarting line search")
+            if self.optimize.retry_status():
+                logger.info("line search failed. restarting line search")
                 # Reset the line search machinery; set step count to 0
-                optimize.restart()
-                self.line_search()
+                self.optimize.restart()
+                self.evaluate_line_search()
             else:
-                self.logger.info("line search failed. aborting inversion.")
+                logger.info("line search failed. aborting inversion.")
                 sys.exit(-1)
 
-    def clean(self):
+    def clean_scratch_directory(self):
         """
         Cleans directories in which function and gradient evaluations were
         carried out
         """
-        self.logger.info(msg.mnr("CLEANING WORKDIR FOR NEXT ITERATION"))
+        logger.info(msg.mnr("CLEANING WORKDIR FOR NEXT ITERATION"))
 
-        unix.rm(self.path.GRAD)
-        unix.rm(self.path.FUNC)
-        unix.mkdir(self.path.GRAD)
-        unix.mkdir(self.path.FUNC)
+        unix.rm(self.path.eval_grad)
+        unix.rm(self.path.eval_func)
 
-    def export(self):
-        """
-        Exports various quantities to PATH.OUTPUT (to disk) from the SCRATCH
-        directory as SCRATCH is liable to be overwritten at any point of the
-        workflow. This takes place at the end of each iteration, before
-        the clean() function is called.
-        """
-        optimize = self.module("optimize")
+        unix.mkdir(self.path.eval_grad)
+        unix.mkdir(self.path.eval_func)
 
-        if self.par.SAVEMODEL:
-            src = os.path.join(self.path.OPTIMIZE, "m_new")
-            dst = os.path.join(self.path.OUTPUT, f"model_{optimize.iter:04d}")
-            self.logger.debug(f"exporting model 'm_new' to disk")
-            unix.cp(src, dst)
-
-        if self.par.SAVEGRADIENT:
-            src = os.path.join(self.path.OPTIMIZE, "g_old")
-            dst = os.path.join(self.path.OUTPUT, f"grad_{optimize.iter:04d}")
-            unix.cp(src, dst)
-
-        if self.par.SAVEKERNELS:
-            src = os.path.join(self.path.GRAD, "kernels")
-            dst = os.path.join(self.path.OUTPUT, f"kernels_{optimize.iter:04d}")
-            self.logger.debug(f"saving kernels to path:\n{dst}")
-            unix.mv(src, dst)
-
-        if self.par.SAVERESIDUALS:
-            src = os.path.join(self.path.GRAD, "residuals")
-            dst = os.path.join(self.path.OUTPUT,
-                               f"residuals_{optimize.iter:04d}")
-            unix.mv(src, dst)
+    # def export(self):
+    #     """
+    #     Exports various quantities to PATH.OUTPUT (to disk) from the SCRATCH
+    #     directory as SCRATCH is liable to be overwritten at any point of the
+    #     workflow. This takes place at the end of each iteration, before
+    #     the clean() function is called.
+    #     """
+    #     optimize = self.module("optimize")
+    #
+    #     if self.par.SAVEMODEL:
+    #         src = os.path.join(self.path.OPTIMIZE, "m_new")
+    #         dst = os.path.join(self.path.OUTPUT, f"model_{optimize.iter:04d}")
+    #         logger.debug(f"exporting model 'm_new' to disk")
+    #         unix.cp(src, dst)
+    #
+    #     if self.par.SAVEGRADIENT:
+    #         src = os.path.join(self.path.OPTIMIZE, "g_old")
+    #         dst = os.path.join(self.path.OUTPUT, f"grad_{optimize.iter:04d}")
+    #         unix.cp(src, dst)
+    #
+    #     if self.par.SAVEKERNELS:
+    #         src = os.path.join(self.path.GRAD, "kernels")
+    #         dst = os.path.join(self.path.OUTPUT, f"kernels_{optimize.iter:04d}")
+    #         logger.debug(f"saving kernels to path:\n{dst}")
+    #         unix.mv(src, dst)
+    #
+    #     if self.par.SAVERESIDUALS:
+    #         src = os.path.join(self.path.GRAD, "residuals")
+    #         dst = os.path.join(self.path.OUTPUT,
+    #                            f"residuals_{optimize.iter:04d}")
+    #         unix.mv(src, dst)
 

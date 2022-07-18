@@ -9,9 +9,9 @@ model
 import os
 
 from seisflows import logger
+from seisflows.config import import_seisflows
 from seisflows.workflow.forward import Forward
 from seisflows.tools import msg, unix
-from seisflows.tools.specfem import Model
 
 
 class Migration(Forward):
@@ -38,10 +38,7 @@ class Migration(Forward):
 
     def __init__(self, _modules=None, export_gradient=False,
                  export_kernels=False, **kwargs):
-        """
-        Init is used to instantiate global parameters defined by the input
-        parameter file.
-        """
+        """Instantiate Migration-specific parameters"""
         super().__init__(**kwargs)
 
         self._modules = _modules
@@ -76,8 +73,8 @@ class Migration(Forward):
         :return: list of methods to call in order during a workflow
         """
         return [self.evaluate_initial_misfit,
-                self.generate_misfit_kernels,
-                self.postprocess_kernels
+                self.run_adjoint_simulations,
+                self.generate_misfit_kernel
                 ]
 
     def setup(self):
@@ -88,50 +85,69 @@ class Migration(Forward):
         super().setup()
         self.postprocess = self._modules.postprocess
 
-    def generate_misfit_kernels(self):
-        """System wrapper for running adjoint simulations"""
-        logger.msg.mnr("GENERATING MISFIT KERNELS")
-        self.system.run(self.generate_misfit_kernel)
-
-    def generate_misfit_kernel(self):
+    def run_adjoint_simulations(self):
         """
         Performs adjoint simulations for a single given event. File manipulation
         to ensure kernels are discoverable by other modules
         """
-        if self.export_kernels:
-            export_kernels = os.path.join(self.path.output, "kernels",
-                                          self.solver.source_name)
-        else:
-            export_kernels = False
+        def run_adjoint_simulation():
+            """Adjoint simulation function to be run by system.run()"""
+            if self.export_kernels:
+                export_kernels = os.path.join(self.path.output, "kernels",
+                                              self.solver.source_name)
+            else:
+                export_kernels = False
 
-        # Run adjoint simulations on system. Make kernels discoverable in
-        # path `eval_grad`. Optionally export those kernels
-        self.solver.adjoint_simulation(
-            save_kernels=os.path.join(self.path.eval_grad, "kernels",
-                                      self.solver.source_name),
-            export_kernels=export_kernels
-        )
+            # Run adjoint simulations on system. Make kernels discoverable in
+            # path `eval_grad`. Optionally export those kernels
+            self.solver.adjoint_simulation(
+                save_kernels=os.path.join(self.path.eval_grad, "kernels",
+                                          self.solver.source_name),
+                export_kernels=export_kernels
+            )
 
-    def postprocess_kernels(self):
-        """System wrapper for postprocess kernels. Run with single"""
-        self.system.run(self._postprocess_kernels, single=True)
+        logger.msg.mnr("running adjoint simulations to generate event kernels")
+        self.system.run(run_adjoint_simulation)
 
-    def _postprocess_kernels(self):
+    def generate_misfit_kernel(self):
         """
-        System-run wrapper for postprocess.process_kernels which is meant to
-        sum and smooth all individual event kernels
+        Combine/sum NTASK event kernels into a single volumetric kernel and
+        then (optionally) smooth the output misfit kernel by convolving with
+        a 3D Gaussian function with user-defined horizontal and vertical
+        half-widths.
         """
-        # Combine kernels into a single volumentric quantity
-        self.solver.combine(
-            input_path=os.path.join(self.path.eval_grad, "kernels"),
-            output_path=os.path.join(self.path.eval_grad, "sum")
-        )
-
-        if self.solver.smooth_h > 0. or self.solver.smooth_v > 0.:
-            # Make a distinction that we have a pre- and post-smoothed sum
-            unix.mv(src=os.path.join(self.path.eval_grad, "sum_nosmooth"))
-
-            self.solver.smooth(
-                input_path=os.path.join(self.path.eval_grad, "sum_nosmooth"),
+        def combine_event_kernels():
+            """Combine event kernels into a misfit kernel"""
+            self.solver.combine(
+                input_path=os.path.join(self.path.eval_grad, "kernels"),
                 output_path=os.path.join(self.path.eval_grad, "sum")
             )
+
+        def smooth_misfit_kernel():
+            """Smooth the output misfit kernel """
+            if self.solver.smooth_h > 0. or self.solver.smooth_v > 0.:
+                # Make a distinction that we have a pre- and post-smoothed sum
+                unix.mv(src=os.path.join(self.path.eval_grad, "sum_nosmooth"))
+
+                self.solver.smooth(
+                    input_path=os.path.join(self.path.eval_grad, "sum_nosmooth"),
+                    output_path=os.path.join(self.path.eval_grad, "sum")
+                )
+
+        logger.msg.mnr("postprocessing (summing/smoothing) event kernels")
+        self.system.run([combine_event_kernels, smooth_misfit_kernel],
+                        single=True)
+
+
+if __name__ == "__main__":
+    # Standard SeisFlows setup, makes modules global variables to the workflow
+    pars, modules = import_seisflows()
+
+    logger.info(msg.mjr("Starting migration workflow"))
+
+    workflow = Migration(modules, **pars)
+    workflow.check()
+    workflow.setup()
+    workflow.run()
+
+    logger.info(msg.mjr("Finished migration workflow"))

@@ -326,51 +326,8 @@ class Forward:
                 observed=self.solver.data_filenames(choice="obs"),
                 synthetics=self.solver.data_filenames(choice="syn"),
                 save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
-                save_residuals=os.path.join(self.path.evalgrad, "residuals")
+                save_residuals=os.path.join(self.path.eval_grad, "residuals")
             )
-
-    # def alsdkjfla:
-    #     self._write_misfit(path=path, misfit_tag=misfit_tag)
-    #
-    # def _write_model(self, path, model_tag):
-    #     """
-    #     Writes model in format expected by solver
-    #
-    #     :type path: str
-    #     :param path: path to write the model to
-    #     :type model_tag: str
-    #     :param model_tag: name of the model to be saved, usually tagged as 'm' with
-    #         a suffix depending on where in the inversion we are. e.g., 'm_try'.
-    #         Expected that these tags are defined in OPTIMIZE module
-    #     """
-    #     m = Model(path=os.path.join(self.path.OPTIMIZE, f"{model_tag}.npz"))
-    #     m.write(path=os.path.join(path, "model"))
-    #
-    #     self.logger.debug(f"saving model '{model_tag}'")
-    #
-    # def _write_misfit(self, path, misfit_tag):
-    #     """
-    #     Writes misfit in format expected by nonlinear optimization library.
-    #     Collects all misfit values within the given residuals directory and sums
-    #     them in a manner chosen by the preprocess class.
-    #
-    #     :type path: str
-    #     :param path: path to write the misfit to
-    #     :type misfit_tag: str
-    #     :param misfit_tag: name of the model to be saved, usually tagged as
-    #         'f' with a suffix depending on where in the inversion we are.
-    #         e.g., 'f_try'. Expected that these tags are defined in OPTIMIZE
-    #         module
-    #     """
-    #     preprocess = self.module("preprocess")
-    #     optimize = self.module("optimize")
-    #
-    #     self.logger.info("summing residuals with preprocess module")
-    #     src = glob(os.path.join(path, "residuals", "*"))
-    #     total_misfit = preprocess.sum_residuals(src)
-    #
-    #     self.logger.debug(f"saving misfit {total_misfit:.3E} to '{misfit_tag}'")
-    #     optimize.save(misfit_tag, total_misfit)
 
 
 if __name__ == "__main__":
