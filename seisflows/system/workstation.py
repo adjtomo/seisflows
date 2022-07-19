@@ -9,10 +9,10 @@ import pickle
 from contextlib import redirect_stdout
 
 from seisflows import logger
-from seisflows.core import Dict
-from seisflows.config import CFGPATHS, save
-from seisflows.tools import msg, unix
-from seisflows.tools.utils import number_fid, get_task_id, set_task_id, iterable
+from seisflows.tools.core import Dict
+from seisflows.config import save
+from seisflows.tools import unix
+from seisflows.tools.core import number_fid, get_task_id, set_task_id
 
 
 class Workstation:

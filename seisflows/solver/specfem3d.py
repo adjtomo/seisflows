@@ -31,9 +31,9 @@ class Specfem3D(Specfem):
 
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
-            self._parameters += ["vp"]
+            self.parameters += ["vp"]
         elif self.materials.upper() == "ELASTIC":
-            self._parameters += ["vp", "vs"]
+            self.parameters += ["vp", "vs"]
 
         # Overwriting the base class parameters
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]

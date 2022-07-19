@@ -7,11 +7,12 @@ sets up the machinery to derive a scaled, smoothed gradient from an initial
 model
 """
 import os
+from glob import glob
 
 from seisflows import logger
-from seisflows.config import import_seisflows
-from seisflows.workflow.forward import Forward
 from seisflows.tools import msg, unix
+from seisflows.tools.specfem import Model
+from seisflows.workflow.forward import Forward
 
 
 class Migration(Forward):
@@ -25,6 +26,16 @@ class Migration(Forward):
         Setting `export_kernel`==True when PAR.NTASK is large and model files
         are large may lead to large file overhead.
 
+    .. note::
+        Migration workflow includes an option to mask the gradient. While both
+        masking and preconditioning involve scaling the gradient, they are
+        fundamentally different operations: masking is ad hoc, preconditioning
+        is a change of variables; For more info, see Modrak & Tromp 2016 GJI
+
+    :type path_mask: str
+    :param path_mask: optional path to a masking function which is used to
+        mask out or scale parts of the gradient. The user-defined mask must
+        match the file format of the input model (e.g., .bin files).
     :type export_gradient: bool
     :param export_gradient: export the gradient after it has been generated
         in the scratch directory. If False, gradient can be discarded from
@@ -36,21 +47,19 @@ class Migration(Forward):
     """
     __doc__ = Forward.__doc__ + __doc__
 
-    def __init__(self, _modules=None, export_gradient=False,
+    def __init__(self, modules=None, path_mask=None, export_gradient=False,
                  export_kernels=False, **kwargs):
         """Instantiate Migration-specific parameters"""
         super().__init__(**kwargs)
 
-        self._modules = _modules
+        self._modules = modules
         self.export_gradient = export_gradient
         self.export_kernels = export_kernels
 
-        # Overwriting base class required modules list
-        self._required_modules = ["system", "solver", "preprocess",
-                                  "postprocess"]
+        self.path["mask"] = path_mask
 
-        # Empty module variables that should be filled in by setup
-        self.postprocess = None
+        # Overwriting base class required modules list
+        self._required_modules = ["system", "solver", "preprocess"]
 
     @property
     def task_list(self):
@@ -74,16 +83,9 @@ class Migration(Forward):
         """
         return [self.evaluate_initial_misfit,
                 self.run_adjoint_simulations,
-                self.generate_misfit_kernel
+                self.postprocess_event_kernels,
+                self.evaluate_gradient_from_kernels
                 ]
-
-    def setup(self):
-        """
-        Override the Forward.setup() method to include the postprocessing
-        module used for kernel/gradient manipulation
-        """
-        super().setup()
-        self.postprocess = self._modules.postprocess
 
     def run_adjoint_simulations(self):
         """
@@ -102,14 +104,14 @@ class Migration(Forward):
             # path `eval_grad`. Optionally export those kernels
             self.solver.adjoint_simulation(
                 save_kernels=os.path.join(self.path.eval_grad, "kernels",
-                                          self.solver.source_name),
+                                          self.solver.source_name, ""),
                 export_kernels=export_kernels
             )
 
-        logger.msg.mnr("running adjoint simulations to generate event kernels")
-        self.system.run(run_adjoint_simulation)
+        logger.info(msg.mnr("EVALUATING EVENT KERNELS W/ ADJOINT SIMULATIONS"))
+        self.system.run([run_adjoint_simulation])
 
-    def generate_misfit_kernel(self):
+    def postprocess_event_kernels(self):
         """
         Combine/sum NTASK event kernels into a single volumetric kernel and
         then (optionally) smooth the output misfit kernel by convolving with
@@ -118,36 +120,67 @@ class Migration(Forward):
         """
         def combine_event_kernels():
             """Combine event kernels into a misfit kernel"""
+            logger.info("combining event kernels into single misfit kernel")
             self.solver.combine(
                 input_path=os.path.join(self.path.eval_grad, "kernels"),
-                output_path=os.path.join(self.path.eval_grad, "sum")
+                output_path=os.path.join(self.path.eval_grad, "misfit_kernel")
             )
 
         def smooth_misfit_kernel():
-            """Smooth the output misfit kernel """
+            """Smooth the output misfit kernel"""
             if self.solver.smooth_h > 0. or self.solver.smooth_v > 0.:
-                # Make a distinction that we have a pre- and post-smoothed sum
-                unix.mv(src=os.path.join(self.path.eval_grad, "sum_nosmooth"))
-
+                logger.info(
+                    f"smoothing misfit kernel: "
+                    f"H={self.solver.smooth_h}; V={self.solver.smooth_v}"
+                )
+                # Make a distinction that we have a pre- and post-smoothed kern.
+                unix.mv(
+                    src=os.path.join(self.path.eval_grad, "misfit_kernel"),
+                    dst=os.path.join(self.path.eval_grad, "mk_nosmooth")
+                )
                 self.solver.smooth(
-                    input_path=os.path.join(self.path.eval_grad, "sum_nosmooth"),
-                    output_path=os.path.join(self.path.eval_grad, "sum")
+                    input_path=os.path.join(self.path.eval_grad, "mk_nosmooth"),
+                    output_path=os.path.join(self.path.eval_grad,
+                                             "misfit_kernel")
                 )
 
-        logger.msg.mnr("postprocessing (summing/smoothing) event kernels")
+        logger.info(msg.mnr("GENERATING/PROCESSING MISFIT KERNEL"))
         self.system.run([combine_event_kernels, smooth_misfit_kernel],
                         single=True)
 
+    def evaluate_gradient_from_kernels(self):
+        """
+        Generates the 'gradient' from the 'misfit kernel'. This involves
+        scaling the gradient by the model vector (log dm --> dm) and applying
+        an optional mask function to the gradient.
+        """
+        logger.info("scaling gradient to absolute model perturbations")
+        gradient = Model(path=os.path.join(self.path.eval_grad,
+                                           "misfit_kernel"))
 
-if __name__ == "__main__":
-    # Standard SeisFlows setup, makes modules global variables to the workflow
-    pars, modules = import_seisflows()
+        # Set model: we only need to access parameters which will be updated
+        # Assuming that the model in the solver also generated the kernels
+        dst = os.path.join(self.path.eval_grad, "model")
+        unix.rm(dst)
+        unix.mkdir(dst)
+        for src in self.solver.model_files:
+            unix.ln(src, dst=os.path.join(dst, os.path.basename(src)))
 
-    logger.info(msg.mjr("Starting migration workflow"))
+        # Read in new model that will have been generated by `setup` or by
+        # optimization library
+        model = Model(path=dst)
 
-    workflow = Migration(modules, **pars)
-    workflow.check()
-    workflow.setup()
-    workflow.run()
+        # Merge to vector and convert to absolute perturbations:
+        # log dm --> dm (see Eq.13 Tromp et al 2005)
+        gradient.update(vector=gradient.vector * model.vector)
+        gradient.write(path=os.path.join(self.path.eval_grad, "gradient"))
 
-    logger.info(msg.mjr("Finished migration workflow"))
+        # Apply an optional mask to the gradient
+        if self.path.mask:
+            logger.info("applying mask function to gradient")
+            mask = Model(path=self.path.mask)
+            unix.mv(src=os.path.join(self.path.eval_grad, "gradient"),
+                    dst=os.path.join(self.path.eval_grad, "gradient_nomask"))
+
+            gradient.update(vector=gradient.vector * mask.vector)
+            gradient.write(path=os.path.join(self.path.eval_grad, "gradient"))

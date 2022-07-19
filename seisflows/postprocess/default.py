@@ -84,8 +84,8 @@ class Default:
         :return: scaled gradient as a vector
         """
         # Access the gradient information stored in as kernel files
-        gradient = Model(path=os.path.join(self.path, "model"))
-        model = Model(path=os.path.join(self.path, "kernels", "sum"))
+        model = Model(path=os.path.join(self.path, "model"))
+        gradient = Model(path=os.path.join(self.path, "kernels", "sum"))
 
         # Merge to vector and convert to absolute perturbations:
         # log dm --> dm (see Eq.13 Tromp et al 2005)
@@ -97,10 +97,6 @@ class Default:
             # mimicking the file format in which models are stored
             mask = Model(self.path_mask)
 
-            # While both masking and preconditioning involve scaling the
-            # gradient, they are fundamentally different operations:
-            # masking is ad hoc, preconditioning is a change of variables;
-            # For more info, see Modrak & Tromp 2016 GJI
             gradient.write(path=os.path.join(self.path, "gradient_nomask"))
 
             gradient.vector *= mask.vector

@@ -12,7 +12,7 @@ import subprocess
 import numpy as np
 from glob import glob
 
-from seisflows.core import Base
+from seisflows.tools.core import Base
 from seisflows.config import ROOT_DIR, CFGPATHS, save, config_logger
 
 

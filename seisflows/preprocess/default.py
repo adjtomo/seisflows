@@ -11,8 +11,8 @@ from obspy import read as obspy_read
 from obspy import Stream, Trace, UTCDateTime
 
 from seisflows import logger
-from seisflows.core import Dict
 from seisflows.tools import signal, unix
+from seisflows.tools.core import Dict
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
 from seisflows.plugins.preprocess import adjoint as adjoint_sources
@@ -208,13 +208,6 @@ class Default:
         """
         unix.mkdir(self.path.scratch)
 
-    def finalize(self):
-        """
-        Any finalization processes that need to take place at the end of an
-        iteration
-        """
-        pass
-
     def read(self, fid):
         """
         Waveform reading functionality. Imports waveforms as Obspy streams
@@ -386,20 +379,18 @@ class Default:
                     fid = self._rename_as_adjoint_source(fid)
                     self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
 
-    def sum_residuals(self, files):
+    @staticmethod
+    def sum_residuals(residuals):
         """
-        Sums squares of residuals
+        Returns the summed square of residuals for each event. Following
+        Tape et al. 2007
 
-        :type files: str
-        :param files: list of single-column text files containing residuals
+        :type residuals: np.array
+        :param residuals: list of residuals from each NTASK event
         :rtype: float
         :return: sum of squares of residuals
         """
-        total_misfit = 0.
-        for filename in files:
-            total_misfit += np.sum(np.loadtxt(filename) ** 2.)
-
-        return total_misfit
+        return np.sum(residuals ** 2.)
 
     def _apply_filter(self, st):
         """

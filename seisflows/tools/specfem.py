@@ -6,7 +6,7 @@ import os
 import numpy as np
 from glob import glob
 from seisflows import logger
-from seisflows.core import Dict
+from seisflows.tools.core import Dict
 from seisflows.tools import unix
 from seisflows.tools.math import poissons_ratio
 
@@ -224,8 +224,12 @@ class Model:
 
         # Tell the User min and max values of the updated model
         logger.info(f"model parameters")
-        parts = "{minval:.2E} <= {key} <= {maxval:.2E}"
         for key, vals in self.model.items():
+            # Choose formatter based on the size of the value
+            if vals.min() < 1 or vals.max() > 1E4:
+                parts = "{minval:.2E} <= {key} <= {maxval:.2E}"
+            else:
+                parts = "{minval:.2f} <= {key} <= {maxval:.2f}"
             logger.info(parts.format(minval=vals.min(), key=key,
                                      maxval=vals.max()))
 
@@ -260,6 +264,21 @@ class Model:
                     ngll.append(len(array))
 
         return model, ngll, str(data["fmt"])
+
+    def update(self, model=None, vector=None):
+        """
+        Update internal model/vector defitions. Because these two quantities
+        are tied to one another, updating one will update the other. This
+        function simply makes that easier.
+        """
+        if model is not None:
+            self.model = model
+            self.vector = self.merge()
+        elif vector is not None:
+            self.vector = vector
+            self.model = self.split()
+
+        return self
 
     def _get_nproc_parameters(self):
         """

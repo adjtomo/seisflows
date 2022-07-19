@@ -23,10 +23,9 @@ import subprocess
 from glob import glob
 
 from seisflows import logger
-from seisflows.core import Dict
 from seisflows.plugins import solver_io as solver_io_dir
 from seisflows.tools import msg, unix
-from seisflows.tools.utils import get_task_id
+from seisflows.tools.core import get_task_id, Dict
 from seisflows.tools.specfem import getpar, setpar
 
 
@@ -303,22 +302,23 @@ class Specfem:
         """
         assert(choice in ["obs", "syn", "adj"]), \
             f"choice must be: 'obs', 'syn' or 'adj'"
-        unix.cd(os.path.join(self.cwd, "traces", choice))
 
-        filenames = []
         if self.components:
-            for comp in self.components:
-                filenames = glob(self.data_wildcard(comp=comp.lower()))
+            comp_glob = f"[{self.components}]"  # e.g., [NEZ]
         else:
-            filenames = glob(self.data_wildcard(comp="?"))
+            comp_glob = "?"
+        data_wildcard = self.data_wildcard(comp=comp_glob)
+        file_glob = os.path.join(self.cwd, "traces", choice, data_wildcard)
+        filenames = glob(file_glob)
 
         if not filenames:
-            print(msg.cli("The property solver.data_filenames, used to search "
-                          "for traces in 'scratch/solver/*/traces' is empty "
-                          "and should not be. Please check solver parameters: ",
-                          items=[f"data_wildcard: {self.data_wildcard()}"],
-                          header="data filenames error", border="=")
-                  )
+            logger.critical(
+                msg.cli("The property `solver.data_filenames`, used to search "
+                        "for waveform files, is empty and should not be. "
+                        "Please check solver parameters: ",
+                        items=[f"failed wildcard: {file_glob}"],
+                        header="data filenames error", border="=")
+            )
             sys.exit(-1)
 
         return filenames
@@ -337,6 +337,19 @@ class Specfem:
         :return: path where SPECFEM2D database files are stored
         """
         return "DATA"
+
+    @property
+    def model_files(self):
+        """
+        Return a list of paths to model files that match the internal parameter
+        list. Used to generate model vectors of the same length as gradients.
+        """
+        _model_files = []
+        for parameter in self._parameters:
+            _model_files += glob(os.path.join(self.path.mainsolver,
+                                              self.model_databases,
+                                              f"*{parameter}*.bin"))
+        return _model_files
 
     @property
     def kernel_databases(self):
@@ -371,49 +384,8 @@ class Specfem:
             dst = os.path.join(self.path.output, "MODEL_INIT")
             unix.cp(src, dst)
 
-    # def generate_data(self, save_traces=False):
-    #     """
-    #     Generates observation data to be compared to synthetics. This must
-    #     only be run once. If `PAR.CASE`=='data', then real data will be copied
-    #     over.
-    #  TODO move this to workflow
-    #
-    #     If `PAR.CASE`=='synthetic' then the external solver will use the
-    #     True model to generate 'observed' synthetics. Finally exports traces to
-    #     'cwd/traces/obs'
-    #
-    #     Elif `PAR.CASE`=='DATA', will look in PATH.DATA for directories matching
-    #     the given source name and copy ANY files that exist there. e.g., if
-    #     source name is '001', you must store waveform data in PATH.DATA/001/*
-    #
-    #     Also exports observed data to OUTPUT if desired
-    #     """
-    #     # If synthetic inversion, generate 'data' with solver
-    #     if self.case.upper() == "SYNTHETIC":
-    #         if self.path.model_true is not None:
-    #             if self.taskid == 0:
-    #                 logger.info("generating 'data' with MODEL_TRUE")
-    #
-    #             # Generate synthetic data on the fly using the true model
-    #             self.import_model(path_model=self.path.model_true)
-    #             self.forward_simulation(
-    #                 save_traces=os.path.join("traces", "obs")
-    #             )
-    #     # If Data provided by user, copy directly into the solver directory
-    #     elif self.path.data is not None and os.path.exists(self.path.data):
-    #         unix.cp(
-    #             src=glob(os.path.join(self.path.data, self.source_name, "*")),
-    #             dst=os.path.join(self.cwd, "traces", "obs")
-    #         )
-    #
-    #     # Save observation data to disk
-    #     if save_traces:
-    #         self._export_traces(
-    #             path=os.path.join(self.path.output, "traces", "obs")
-    #         )
-
     def forward_simulation(self, executables=None, save_traces=False,
-                           export_traces=False):
+                           export_traces=False, **kwargs):
         """
         Wrapper for SPECFEM binaries: 'xmeshfem?D' 'xgenerate_databases',
                                       'xspecfem?D'
@@ -533,9 +505,11 @@ class Specfem:
 
         # Save and export the kernels to user-defined locations
         if export_kernels:
+            unix.mkdir(export_kernels)
             unix.cp(src=glob("*_kernel.bin"), dst=export_kernels)
 
         if save_kernels:
+            unix.mkdir(save_kernels)
             unix.mv(src=glob("*_kernel.bin"), dst=save_kernels)
 
     def combine(self, input_path, output_path, parameters=None):
@@ -557,7 +531,7 @@ class Specfem:
         :param output_path: path to export the outputs of xcombine_sem
         :type parameters: list
         :param parameters: optional list of parameters,
-            defaults to `self.parameters`
+            defaults to `self._parameters`
         """
         unix.cd(self.cwd)
 
@@ -599,7 +573,7 @@ class Specfem:
         :param output_path: path to export the outputs of xcombine_sem
         :type parameters: list
         :param parameters: optional list of parameters,
-            defaults to `self.parameters`
+            defaults to `self._parameters`
         :type span_h: float
         :param span_h: horizontal smoothing length in meters
         :type span_v: float
@@ -671,8 +645,8 @@ class Specfem:
         # Executable may come with additional sub arguments, we only need to
         # check that the actually executable exists
         if not unix.which(executable.split(" ")[0]):
-            print(msg.cli(f"executable '{executable}' does not exist",
-                          header="external solver error", border="="))
+            logger.critical(msg.cli(f"executable '{executable}' does not exist",
+                            header="external solver error", border="="))
             sys.exit(-1)
 
         # Append with mpiexec if we are running with MPI
@@ -683,16 +657,17 @@ class Specfem:
             with open(stdout, "w") as f:
                 subprocess.run(executable, shell=True, check=True, stdout=f)
         except (subprocess.CalledProcessError, OSError) as e:
-            print(msg.cli("The external numerical solver has returned a "
-                          "nonzero exit code (failure). Consider stopping any "
-                          "currently running jobs to avoid wasted "
-                          "computational resources. Check 'scratch/solver/"
-                          "mainsolver/{stdout}' for the solvers stdout log "
-                          "message. The failing command and error message are:",
-                          items=[f"exc: {executable}", f"err: {e}"],
-                          header="external solver error",
-                          border="=")
-                  )
+            logger.critical(
+                msg.cli("The external numerical solver has returned a "
+                        "nonzero exit code (failure). Consider stopping any "
+                        "currently running jobs to avoid wasted "
+                        "computational resources. Check 'scratch/solver/"
+                        "mainsolver/{stdout}' for the solvers stdout log "
+                        "message. The failing command and error message are:",
+                        items=[f"exc: {executable}", f"err: {e}"],
+                        header="external solver error",
+                        border="=")
+            )
             sys.exit(-1)
 
     @staticmethod
@@ -701,6 +676,9 @@ class Specfem:
         Very simple conversion utility to get log file names based on binaries.
         e.g., binary 'xspecfem2D' will return 'solver'. Helps keep log file
         naming consistent and generalizable
+
+        TODO add a check here to see if the log file exists, and then use
+            `number_fid` to increment so that we keep all the output logs
 
         :type exc: str
         :param exc: specfem executable, e.g., xspecfem2D, xgenerate_databases

@@ -10,7 +10,7 @@ from time import asctime
 
 from seisflows import logger
 from seisflows.tools import msg, unix
-from seisflows.core import Dict
+from seisflows.tools.core import Dict
 from seisflows.config import import_seisflows
 
 
@@ -64,7 +64,7 @@ class Forward:
             workdir=workdir,
             scratch=os.path.join(workdir, "scratch"),
             eval_grad=path_eval_grad or
-                      os.path.join(workdir, "scratch", "evalgrad"),
+                      os.path.join(workdir, "scratch", "eval_grad"),
             output=path_output or os.path.join(workdir, "output"),
             state_file=path_state_file or
                        os.path.join(workdir, "statefile.txt"),
@@ -163,6 +163,9 @@ class Forward:
         Makes required path structure for the workflow, runs setup functions
         for all the required modules of this workflow.
         """
+        logger.info(msg.mjr(f"SETTING UP {self.__class__.__name__.upper()} "
+                            f"WORKFLOW"))
+
         # Create the desired directory structure
         for path in self.path.values():
             if path is not None and not os.path.splitext(path)[-1]:
@@ -171,24 +174,22 @@ class Forward:
         # Run setup() for each of the required modules
         for req_mod in self._required_modules:
             logger.info(
-                f"setup for module "
+                f"running setup for module "
                 f"'{req_mod}.{self._modules[req_mod].__class__.__name__}'"
             )
             self._modules[req_mod].setup()
 
         # Run setup() for each of the instantiated modules
         for opt_mod in self._optional_modules:
-            if self._modules[opt_mod]:
+            if self._modules[opt_mod] and opt_mod not in self._required_modules:
                 logger.info(
-                    f"setup for module "
+                    f"running setup for module "
                     f"'{opt_mod}.{self._modules[opt_mod].__class__.__name__}'"
                 )
                 self._modules[opt_mod].setup()
 
         # Generate the state file to keep track of task completion
         if not os.path.exists(self.path.state_file):
-            logger.info(f"generating SeisFlows state file")
-            logger.debug(self.path.state_file)
             with open(self.path.state_file, "w") as f:
                 f.write(f"# SeisFlows State File\n")
                 f.write(f"# {asctime()}\n")
@@ -225,6 +226,9 @@ class Forward:
         to keep track of completed tasks and avoids re-running tasks that have
         previously been completed (e.g., if you are restarting your workflow)
         """
+        logger.info(msg.mjr(f"RUNNING {self.__class__.__name__.upper()} "
+                            f"WORKFLOW"))
+
         for func in self.task_list:
             # Skip over functions which have already been completed
             if (func.__name__ in self._states.keys()) and (
@@ -246,13 +250,22 @@ class Forward:
 
     def evaluate_initial_misfit(self):
         """
-        System wrapper for 'evaluate_objective function' that passes in
+        Evaluate the initial model misfit. This requires setting up 'data'
+        before generating synthetics, which is either copied from user-supplied
+        directory or running forward simulations with a target model. Forward
+        simulations are then run and prepocessing compares data-synthetic misfit
+
+        .. note::
+            This is run altogether on system to save on queue time waits,
+            because we are potentially running two simulations back to back.
         """
         logger.info(msg.mnr("EVALUATING MISFIT FOR INITIAL MODEL"))
-        self.system.run([self.prepare_data_for_solver,
-                         self.evaluate_objective_function],
-                        path_model=self.path.model_init
-                        )
+        self.system.run(
+            [self.prepare_data_for_solver,
+             self.evaluate_objective_function],
+            path_model=self.path.model_init,
+            save_residuals=os.path.join(self.path.eval_grad, "residuals")
+        )
 
     def prepare_data_for_solver(self, **kwargs):
         """
@@ -264,7 +277,8 @@ class Forward:
             Must be run by system.run() so that solvers are assigned individual
             task ids and working directories
         """
-        logger.info(msg.sub("preparing data for solver"))
+        logger.info(f"PREPARING OBSERVATION DATA FOR SOURCE "
+                    f"{self.solver.source_name}")
 
         if self.data_case == "data":
             logger.info(f"copying data from `path_data`")
@@ -280,7 +294,7 @@ class Forward:
                 export_traces = False
 
             # Run the forward solver with target model and save traces the 'obs'
-            logger.info(f"running forward simulation for "
+            logger.info(f"running forward simulation w/ `MODEL_TRUE` for "
                         f"{self.solver.source_name}")
             self.solver.import_model(path_model=self.path.model_true)
             self.solver.forward_simulation(
@@ -288,7 +302,8 @@ class Forward:
                 export_traces=export_traces
             )
 
-    def evaluate_objective_function(self, path_model, **kwargs):
+    def evaluate_objective_function(self, path_model, save_residuals=False,
+                                    **kwargs):
         """
         Performs forward simulation for a single given event. Also evaluates the
         objective function and writes residuals and adjoint sources for later
@@ -301,8 +316,12 @@ class Forward:
             Must be run by system.run() so that solvers are assigned individual
             task ids/ working directories.
         """
-        logger.info(f"running forward simulation with "
-                    f"'{self.solver.__class__.__name__}'")
+        assert(os.path.exists(path_model)), \
+            f"Model path for objective function does not exist"
+
+        logger.info("EVALUATING OBJECTIVE FUNCTION")
+        logger.debug(f"running forward simulation with "
+                     f"'{self.solver.__class__.__name__}'")
 
         # Figure out where to export waveform files to, if requested
         if self.export_traces:
@@ -320,26 +339,11 @@ class Forward:
 
         # (optional) Perform data-synthetic misfit quantification
         if self.preprocess:
-            logger.info(f"quantifying misfit with "
-                        f"'{self.preprocess.__class__.__name__}'")
+            logger.debug(f"quantifying misfit with "
+                         f"'{self.preprocess.__class__.__name__}'")
             self.preprocess.quantify_misfit(
                 observed=self.solver.data_filenames(choice="obs"),
-                synthetics=self.solver.data_filenames(choice="syn"),
+                synthetic=self.solver.data_filenames(choice="syn"),
                 save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
-                save_residuals=os.path.join(self.path.eval_grad, "residuals")
+                save_residuals=save_residuals
             )
-
-
-if __name__ == "__main__":
-    # Standard SeisFlows setup, makes modules global variables to the workflow
-    pars, modules = import_seisflows()
-
-    logger.info(msg.mjr("Starting forward simulation workflow"))
-
-    workflow = Forward(modules, **pars)
-    workflow.check()
-    workflow.setup()
-    workflow.run()
-
-    logger.info(msg.mjr("Finished forward simulation workflow"))
-

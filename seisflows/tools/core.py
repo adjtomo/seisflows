@@ -1,6 +1,6 @@
 """
-General utility functions that are mostly concerend with file manipulation,
-but also math and calling functions as well.
+Core utility functions and classes which help define the working structure of
+SeisFlows pacakge.
 """
 import os
 import re
@@ -78,20 +78,6 @@ class TaskIDError(Exception):
     pass
 
 
-def set_task_id(task_id):
-    """
-    Set the SEISFLOWS_TASKID in os environs
-
-    .. note::
-        Mostly used for debugging/testing purposes as a way of mimicing
-        system.run() assigning task ids to child processes
-
-    :type task_id: int
-    :param task_id: integer task id to assign to the current working environment
-    """
-    os.environ["SEISFLOWS_TASKID"] = str(task_id)
-
-
 def get_task_id(force=False):
     """
     Task IDs are assigned to each child process spawned by the system module
@@ -107,15 +93,32 @@ def get_task_id(force=False):
     """
     _taskid = os.getenv("SEISFLOWS_TASKID")
     if _taskid is None:
-        if force:
-            _taskid = 0
-            logger.warning("Environment variable 'SEISFLOWS_TASKID' not found. "
-                           "Assigning Task ID == 0")
-        else:
-            raise TaskIDError("Environment variable 'SEISFLOWS_TASKID' not "
-                              "found. Please make sure the process asking "
-                              "for task id is called by system.")
+        logger.warning("Environment variable 'SEISFLOWS_TASKID' not found. "
+                       "Assigning Task ID == 0")
+        _taskid = 0
+        # if force:
+        #     _taskid = 0
+        #     logger.warning("Environment variable 'SEISFLOWS_TASKID' not found. "
+        #                    "Assigning Task ID == 0")
+        # else:
+        #     raise TaskIDError("Environment variable 'SEISFLOWS_TASKID' not "
+        #                       "found. Please make sure the process asking "
+        #                       "for task id is called by system.")
     return int(_taskid)
+
+
+def set_task_id(task_id):
+    """
+    Set the SEISFLOWS_TASKID in os environs
+
+    .. note::
+        Mostly used for debugging/testing purposes as a way of mimicing
+        system.run() assigning task ids to child processes
+
+    :type task_id: int
+    :param task_id: integer task id to assign to the current working environment
+    """
+    os.environ["SEISFLOWS_TASKID"] = str(task_id)
 
 
 def load_yaml(filename):

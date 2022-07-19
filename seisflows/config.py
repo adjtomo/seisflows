@@ -25,9 +25,9 @@ from importlib import import_module
 
 
 from seisflows import logger
-from seisflows.core import Dict, Null
+from seisflows.tools.core import Dict, Null
 from seisflows.tools import msg, unix
-from seisflows.tools.utils import load_yaml
+from seisflows.tools.core import load_yaml
 
 
 """
@@ -40,21 +40,10 @@ mechanics of the package. Do not touch unless you know what you're doing!
 """
 # List of module names required by SeisFlows for imports. Order-sensitive
 # In sys.modules these will be prepended by 'seisflows_', e.g., seisflows_system
-NAMES = ["system", "preprocess", "solver",
-         "postprocess", "optimize", "workflow"]
+NAMES = ["system", "preprocess", "solver", "optimize", "workflow"]
 
 # The location of this config file, which is the main repository
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-
-# Define a package-wide default directory and file naming schema. This will
-# be returned as a Dict() object, defined below. All of these files and
-# directories will be created relative to the user-defined working directory
-CFGPATHS = Dict(
-    PAR_FILE="parameters.yaml",  # Default SeisFlows parameter file
-    LOGFILE="sfoutput.txt",    # Log files for all system log
-    ERRLOGFILE="sferror.txt",  # StdErr dump site for crash messages
-    LOGDIR="logs",             # Dump site for previously created log files
-)
 """
 !!! ^^^ WARNING ^^^ !!!
 """
@@ -126,26 +115,31 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
         instantiate each of the SeisFlows modules and run the workflow. This
         should be created by the command line argument 'seisflows configure'.
         Defaults to 'parameters.yaml'
-    :rtype: list
-    :return: instantiated modules that are returned in the following order
+    :rtype: module
+    :return: instantiated workflow module which contains all instantiated
+        sub-modules containing set parameters
         'system', 'preprcess', 'solver', 'postprocess', 'optimize'
     """
+    # Read in parameters from file. Set up the logger
     parameters = load_yaml(os.path.join(workdir, parameter_file))
     config_logger(level=parameters.log_level, filename=parameters.path_log_file,
                   verbose=parameters.verbose)
 
     # Instantiate SeisFlows modules dynamically based on choices and parameters
     # provided in the input parameter file
-    modules = {name: custom_import(name, parameters[name])(**parameters) for
-               name in NAMES}
-    modules = Dict(modules)
+    modules = Dict()
+    for name in NAMES[:]:
+        # Workflow is instantiated differently
+        if name == "workflow":
+            continue
+        modules[name] = custom_import(name, parameters[name])(**parameters)
+        parameters.pop(name)  # drop name so workflow doesnt instantiate it
 
-    # Drop NAMES from parameters, we don't need them anymore and they get
-    # muddled with the actual modules upon instantiation
-    for name in NAMES:
-        parameters.pop(name)
+    # Import workflow separately by providing all the instantiated modules to it
+    workflow = \
+        custom_import("workflow", parameters["workflow"])(modules, **parameters)
 
-    return parameters, modules
+    return workflow
 
 
 def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):

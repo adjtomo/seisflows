@@ -68,7 +68,6 @@ class NLCG(Gradient):
                 step_len_max=self.step_len_max
             )
 
-
         self.NLCG_max = nlcg_max
         self.NLCG_thresh = nlcg_thresh
 
@@ -82,7 +81,6 @@ class NLCG(Gradient):
         # Internally used parameters
         self._NLCG_iter = 0
         self._calc_beta = getattr(self, f"_{calc_beta}")
-
 
     def compute_direction(self):
         """
@@ -100,9 +98,10 @@ class NLCG(Gradient):
             force restart, inverse gradient search direction
         5. New NLCG search direction has conjugacy and is a descent direction
             and is set as the new search direction.
+
+        :rtype: seisflows.tools.specfem.Model
+        :return: search direction as a Model instance
         """
-        unix.cd(self.path)
-        logger.debug(f"computing search direction with NLCG")
         self._NLCG_iter += 1
 
         # Load the current gradient direction
@@ -110,16 +109,16 @@ class NLCG(Gradient):
 
         # CASE 1: If first iteration, search direction is the current gradient
         if self._NLCG_iter == 1:
-            logger.info("first NLCG iteration, setting search direction"
-                             "as inverse gradient")
+            logger.info("first NLCG iteration, setting search direction "
+                        "as inverse gradient")
             p_new = -1 * g_new.vector
             restarted = 0
         # CASE 2: Force restart if the iterations have surpassed the maximum
         # number of allowable iter
         elif self._NLCG_iter > self.NLCG_max:
             logger.info("restarting NLCG due to periodic restart "
-                             "condition. setting search direction as inverse "
-                             "gradient")
+                        "condition. setting search direction as inverse "
+                        "gradient")
             self.restart()
             p_new = -1 * g_new.vector
             restarted = 1
@@ -153,14 +152,21 @@ class NLCG(Gradient):
                 restarted = 0
 
         # Save values to disk and memory
-        self.save("p_new", p_new)
         self.restarted = restarted
+
+        return p_new
 
     def restart(self):
         """
         Overwrite the Base restart class and include a restart of the NLCG
         """
-        super().restart()
+        logger.info("restarting NLCG optimization algorithm")
+
+        g = self.load("g_new")
+        self.save("p_new", -1 * g.vector)
+
+        self.line_search.clear_history()
+        self.restarted = 1
         self._NLCG_iter = 1
 
     def _fletcher_reeves(self, g_new, g_old):

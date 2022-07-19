@@ -7,16 +7,15 @@ have any agency (i.e. it should not be able to iterate its own step count etc.,
 this should be completely left to the optimization algorithm to keep everything
 in one place)
 """
-import logging
 import numpy as np
 
-from seisflows.core import Base
+from seisflows import logger
 from seisflows.tools import msg
 from seisflows.tools.array import count_zeros
 from seisflows.tools.math import parabolic_backtrack, polynomial_fit
 
 
-class Bracket(Base):
+class Bracket:
     """
     Abstract base class for line search
 
@@ -44,61 +43,14 @@ class Bracket(Base):
         :param step_len_max: maximum length of the step, defaults to infinity,
             that is unbounded step length. set by PAR.STEP_LEN_MAX
         """
-        super().__init__()
-
         self.step_count_max = step_count_max
         self.step_len_max = step_len_max
+
         self.func_vals = []
         self.step_lens = []
         self.gtg = []
         self.gtp = []
         self.step_count = 0
-
-    def initialize(self, step_len, func_val, gtg, gtp):
-        """
-        Initialize a new search from step count 0 and calculate the step
-        direction and length
-
-        :type iter: int
-        :param iter: current iteration defined by OPTIMIZE.iter
-        :type step_len: float
-        :param step_len: initial step length determined by optimization
-        :type func_val: float
-        :param func_val: current evaluation of the objective function
-        :type gtg: float
-        :param gtg: dot product of the gradient with itself
-        :type gtp: float
-        :param gtp: dot product of gradient `g` with search direction `p`
-        :rtype alpha: float
-        :return alpha: the calculated trial step length
-        :rtype status: int
-        :return status: current status of the line search
-        """
-        self.step_count = 0
-        self.step_lens.append(step_len)
-        self.func_vals.append(func_val)
-        self.gtg.append(gtg)
-        self.gtp.append(gtp)
-
-    def update(self, step_len, func_val):
-        """
-        Update search history by appending internal attributes, writing the
-        current list of step lengths and function evaluations, and calculating a
-        new step length
-
-        :type iter: int
-        :param iter: current iteration defined by OPTIMIZE.iter
-        :type step_len: float
-        :param step_len: step length determined by optimization
-        :type func_val: float
-        :param func_val: current evaluation of the objective function
-        :rtype alpha: float
-        :return alpha: the calculated rial step length
-        :rtype status: int
-        :return status: current status of the line search
-        """
-        self.step_lens.append(step_len)
-        self.func_vals.append(func_val)
 
     def clear_history(self):
         """
@@ -132,7 +84,7 @@ class Bracket(Base):
             self.step_lens = self.step_lens[:original_idx]
             self.func_vals = self.func_vals[:original_idx]
 
-    def search_history(self, sort=True):
+    def get_search_history(self, sort=True):
         """
         A convenience function, collects information based on the current
         evaluation of the line search, needed to determine search status and 
@@ -172,56 +124,55 @@ class Bracket(Base):
         Determines step length (alpha) and search status (status)
         """
         # Determine the line search history
-        x, f, gtg, gtp, step_count, update_count = self.search_history()
+        x, f, gtg, gtp, step_count, update_count = self.get_search_history()
 
         # Print out the current line search parameters for convenience
-        self.logger.debug(msg.sub(f"BRACKETING LINE SEARCH STEP "
-                                  f"{self.step_count:0>2}"))
+        logger.debug(msg.sub(f"BRACKETING LINE SEARCH STEP "
+                             f"{self.step_count:0>2}"))
         x_str = ", ".join([f"{_:.2E}" for _ in x])
         f_str = ", ".join([f"{_:.2E}" for _ in f])
-        self.logger.debug(f"step length(s) = {x_str}")
-        self.logger.debug(f"misfit val(s)  = {f_str}")
+        logger.debug(f"step length(s) = {x_str}")
+        logger.debug(f"misfit val(s)  = {f_str}")
 
         # For the first inversion and initial step, set alpha manually
         if step_count == 0 and update_count == 0:
             # Based on idea from Dennis and Schnabel
             alpha = gtg[-1] ** -1
-            self.logger.info(f"first iteration, guessing trial step")
+            logger.info(f"first iteration, guessing trial step")
             status = 0
         # For every i'th inversions initial step, set alpha manually
         elif step_count == 0:
             # Based on the first equation in sec 3.5 of Nocedal and Wright 2ed
             idx = np.argmin(self.func_vals[:-1])
             alpha = self.step_lens[idx] * gtp[-2] / gtp[-1]
-            self.logger.info(f"first step, setting scaled step length")
+            logger.info(f"first step, setting scaled step length")
             status = 0
         # If misfit is reduced and then increased, we've bracketed. Pass
         elif _check_bracket(x, f) and _good_enough(x, f):
             alpha = x[f.argmin()]
-            self.logger.info(f"bracket okay, step length reasonable, pass")
+            logger.info(f"bracket okay, step length reasonable, pass")
             status = 1
         # If misfit is reduced but not close, set to quadratic fit
         elif _check_bracket(x, f):
             alpha = polynomial_fit(x, f)
-            self.logger.info(f"bracket okay, step length unreasonable, "
-                             f"manual step")
+            logger.info(f"bracket okay, step length unreasonable, manual step")
             status = 0
         # If misfit continues to step down, increase step length
         elif step_count <= self.step_count_max and all(f <= f[0]):
             alpha = 1.618034 * x[-1]  # 1.618034 is the 'golden ratio'
-            self.logger.info(f"misfit not bracketed, increasing step length")
+            logger.info(f"misfit not bracketed, increasing step length")
             status = 0
         # If misfit increases, reduce step length by backtracking
         elif step_count <= self.step_count_max:
             slope = gtp[-1] / gtg[-1]
             alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
                                         f1=f[1], b1=0.1, b2=0.5)
-            self.logger.info(f"misfit increasing, reducing step length to")
+            logger.info(f"misfit increasing, reducing step length to")
             status = 0
         # step_count_max exceeded, fail
         else:
-            self.logger.info(f"bracketing failed, "
-                             f"step_count_max={self.step_count_max} exceeded")
+            logger.info(f"bracketing failed, step_count_max="
+                        f"{self.step_count_max} exceeded")
             alpha = None
             status = -1
 
@@ -229,13 +180,13 @@ class Bracket(Base):
         if alpha is not None:
             if alpha > self.step_len_max and step_count == 0:
                 alpha = 0.618034 * self.step_len_max
-                self.logger.info(f"initial step length safegaurd, setting "
-                                 f"manual step length")
+                logger.info(f"initial step length safegaurd, setting "
+                            f"manual step length")
                 status = 0
             # Stop because safeguard prevents us from going further
             elif alpha > self.step_len_max:
-                self.logger.info(f"step_len_max={self.step_len_max:.2f} "
-                                 f"exceeded, manual set alpha")
+                logger.info(f"step_len_max={self.step_len_max:.2f} "
+                            f"exceeded, manual set alpha")
                 alpha = self.step_len_max
                 status = 1
 

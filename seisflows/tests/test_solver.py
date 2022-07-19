@@ -6,7 +6,7 @@ import os
 import pytest
 from glob import glob
 from seisflows.config import ROOT_DIR
-from seisflows.tools.utils import set_task_id
+from seisflows.tools.core import set_task_id
 from seisflows.solver.specfem import Specfem
 
 

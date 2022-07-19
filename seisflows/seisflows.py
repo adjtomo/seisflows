@@ -23,16 +23,14 @@ import argparse
 import traceback
 import subprocess
 from glob import glob
-from copy import copy
 from IPython import embed
 
-from seisflows.core import Dict, SeisFlowsPathsParameters
-from seisflows.config import (custom_import, save, NAMES, ROOT_DIR, CFGPATHS,
-                              config_logger, import_seisflows)
+from seisflows.config import (custom_import, save, NAMES, ROOT_DIR,
+                              config_logger)
 from seisflows.tools import unix, msg
+from seisflows.tools.core import load_yaml, Dict
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)
-from seisflows.tools.utils import load_yaml
 
 
 def sfparser():
@@ -77,8 +75,8 @@ def sfparser():
     parser.add_argument("-w", "--workdir", nargs="?", default=os.getcwd(),
                         help="The SeisFlows working directory, default: cwd")
     parser.add_argument("-p", "--parameter_file", nargs="?",
-                        default=CFGPATHS.PAR_FILE,
-                        help=f"Parameters file, default: '{CFGPATHS.PAR_FILE}'")
+                        default="parameters.yaml",
+                        help=f"Parameters file, default: 'parameters.yaml'")
 
     # Initiate a sub parser to provide nested help functions and sub commands
     subparser = parser.add_subparsers(

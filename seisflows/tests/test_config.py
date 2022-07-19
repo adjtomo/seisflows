@@ -8,7 +8,7 @@ import shutil
 import pytest
 from unittest.mock import patch
 from seisflows import config
-from seisflows.core import SeisFlowsPathsParameters
+from seisflows.tools.core import SeisFlowsPathsParameters
 from seisflows.seisflows import SeisFlows
 
 

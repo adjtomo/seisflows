@@ -70,7 +70,7 @@ class Specfem2D(Specfem):
         :param output_path: path to export the outputs of xcombine_sem
         :type parameters: list
         :param parameters: optional list of parameters,
-            defaults to `self.parameters`
+            defaults to `self._parameters`
         :type span_h: float
         :param span_h: horizontal smoothing length in meters
         :type span_v: float

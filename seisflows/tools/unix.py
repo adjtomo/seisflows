@@ -9,7 +9,7 @@ import random
 import shutil
 import socket
 import subprocess
-from seisflows.tools.utils import iterable
+from seisflows.tools.core import iterable
 
 
 def cat(src, dst=None):

@@ -4,7 +4,7 @@ Functions to read and write FORTRAN binary files that are outputted by Specfem
 import os
 import numpy as np
 from shutil import copyfile
-from seisflows.tools.utils import iterable
+from seisflows.tools.core import iterable
 
 
 def read_slice(path, parameters, iproc):
