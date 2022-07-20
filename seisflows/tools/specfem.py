@@ -33,6 +33,11 @@ class Model:
         `fmt` can be provided by the user or guessed based on available file
         formats
 
+        .. note::
+            The `vector` representation is based completely on the `model`
+            attribute. In order to update the model based on vector manipulation
+            you must use the update() function.
+
         :type path: str
         :param path: path to SPECFEM model/kernel/gradient files
         :type fmt: str
@@ -63,8 +68,6 @@ class Model:
             self.model, self.ngll = self.read(parameters=parameters)
 
         self.parameters = self.model.keys()
-        self.vector = self.merge()
-        self.check()
 
     @staticmethod
     def fnfmt(i="*", val="*", ext="*"):
@@ -91,6 +94,12 @@ class Model:
         else:
             filename_format = f"proc{i}_{val}{ext}"
         return filename_format
+
+    @property
+    def vector(self):
+        """conveience property to access the merge() property which creates a
+        linear vector defining all model parameters"""
+        return self.merge()
 
     def read(self, parameters=None):
         """
@@ -179,21 +188,27 @@ class Model:
 
         save_fx(path=path)
 
-    def split(self):
+    def split(self, vector=None):
         """
         Converts internal vector representation `m` to dictionary representation
         `model`. Does this by separating the vector based on how it was
         constructed, parameter-wise and processor-wise
 
+        :type vector: np.array
+        :param vector: allow Model to split an input vector. If none given,
+            will split the internal vector representation
         :rtype: Dict of np.array
         :return: dictionary of model parameters split up by number of processors
         """
+        if vector is None:
+            vector = self.vector
+
         model = Dict({key: [] for key in self.parameters})
         for idim, key in enumerate(self.parameters):
             for iproc in range(self.nproc):
                 imin = sum(self.ngll) * idim + sum(self.ngll[:iproc])
                 imax = sum(self.ngll) * idim + sum(self.ngll[:iproc + 1])
-                model[key].extend([self.vector[imin:imax]])
+                model[key].extend([vector[imin:imax]])
 
             model[key] = np.array(model[key])
         return model
@@ -223,10 +238,9 @@ class Model:
             logger.warning(f"Vp minimum is negative {self.model.vp.min()}")
 
         # Tell the User min and max values of the updated model
-        logger.info(f"model parameters")
         for key, vals in self.model.items():
-            # Choose formatter based on the size of the value
-            if vals.min() < 1 or vals.max() > 1E4:
+            # Choose formatter based on the magnitude of the value
+            if vals.min() < 1 or (vals.max() > 1E4):
                 parts = "{minval:.2E} <= {key} <= {maxval:.2E}"
             else:
                 parts = "{minval:.2f} <= {key} <= {maxval:.2f}"
@@ -273,10 +287,8 @@ class Model:
         """
         if model is not None:
             self.model = model
-            self.vector = self.merge()
         elif vector is not None:
-            self.vector = vector
-            self.model = self.split()
+            self.model = self.split(vector=vector)
 
         return self
 

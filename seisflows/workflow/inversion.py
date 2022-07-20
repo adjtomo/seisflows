@@ -91,7 +91,7 @@ class Inversion(Migration):
                 self.run_adjoint_simulations,
                 self.postprocess_event_kernels,
                 self.evaluate_gradient_from_kernels,
-                self.compute_search_direction,
+                self.initialize_line_search,
                 self.perform_line_search,
                 self.clean_scratch_directory
                 ]
@@ -116,6 +116,14 @@ class Inversion(Migration):
 
         unix.mkdir(self.path.eval_func)
         self.optimize = self._modules.optimize
+
+    def checkpoint(self):
+        """
+        Override checkpoint and add the optimization iteration parameter
+        """
+        super().checkpoint()
+        with open(self.path.state_file, "a") as f:
+            f.write(f"iteration: {self.optimize.iteration}")
 
     def run(self):
         """Call the forward.run() function iteratively, from `start` to `end`"""
@@ -151,17 +159,22 @@ class Inversion(Migration):
         gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"))
         self.optimize.save(name="g_new", m=gradient)
 
-    def compute_search_direction(self):
+    def initialize_line_search(self):
         """
-        Computes search direction using the optimization library and performs
-        a sets up line search machinery to 'perform line search'
-        """
-        logger.info(f"computing search direction with "
-                    f"'{self.optimize.__class__.__name__}'")
-        p_new = self.optimize.compute_direction()
-        self.optimize.save(name="p_new", m=p_new)
+        Computes search direction using the optimization library and sets up
+        line search machinery to 'perform line search' by placing correct files
+        on disk for each of the modules to find.
 
-        # Check that our search direction will actually perturb the model
+        Optimization module perturbs the current model (m_new) by the search
+        direction (p_new) to recover the trial model (m_try). This model is
+        then exposed on disk to the solver.
+        """
+        logger.info(f"initializing "
+                    f"'{self.optimize.line_search.__class__.__name__}'ing "
+                    f"line search")
+
+        # 'p' is the search direction used to perturb the initial model
+        p_new = self.optimize.compute_direction()
         if sum(p_new.vector) == 0:
             logger.critical(msg.cli(
                 "Search direction vector 'p' is 0, meaning no model update can "
@@ -170,14 +183,13 @@ class Inversion(Migration):
                 header="line search error")
             )
             sys.exit(-1)
+        self.optimize.save(name="p_new", m=p_new)
 
-        logger.info(
-            msg.mnr(f"INITALIZING LINE SEARCH: i{self.optimize.iteration:0>2}"
-                    f"s{self.optimize.step_count:0>2}")
-                    )
+        # Scale search direction with step length alpha generate a model update
         m_try, alpha = self.optimize.initialize_search()
         self.optimize.save(name="m_try", m=m_try)
         self.optimize.save(name="alpha", m=alpha)
+        self.optimize.line_search.save_search_history()
 
         # Expose model `m_try` to the solver by placing it in eval_func dir.
         m_try.write(path=os.path.join(self.path.eval_func, "model"))
@@ -188,54 +200,65 @@ class Inversion(Migration):
         function is reduced acceptably, or the line search fails due to
         user-defined limit criteria.
 
+        .. note::
+            Starts on step_count == 1 because step_count == 0 will be the
+            misfit of the starting model
+
         Status codes:
             status > 0  : finished
             status == 0 : not finished
             status < 0  : failed
         """
-        while True:
-            # Attempt a new trial step with the given step length
-            self.optimize.line_search.step_count += 1
-            logger.info(
-                msg.sub(f"TRIAL STEP COUNT: i{self.optimize.iteration:0>2}"
-                        f"s{self.optimize.step_count:0>2}")
-            )
+        # self.optimize.line_search.load_search_history()
 
-            # Run the forward simulation on system and calculate misfit as f_try
-            self.system.run(
-                [self.evaluate_objective_function],
-                path_model=os.path.join(self.path.eval_func, "model"),
-                save_residuals=os.path.join(self.path.eval_func, "residuals")
-            )
-            residuals = np.loadtxt(os.path.join(self.path.eval_func,
-                                                "residuals"))
-            total_misfit = self.preprocess.sum_residuals(residuals)
-            self.optimize.save(name="f_try", m=total_misfit)
+        logger.info(msg.sub(f"LINE SEARCH STEP COUNT "
+                            f"{self.optimize.step_count + 1:0>2}"))
 
-            # Check the function evaluation against line search history
-            status = self.optimize.update_search()
+        # Run fwd solver with the model 'm_try'. Corresponding misfit is 'f_try'
+        self._evaluate_line_search_misfit()
 
-            # Proceed based on the outcome of the line search
-            if status > 0:
-                # Save outcome of line search to disk; reset step to 0 for next iter
-                logger.info("trial step successful. finalizing line search")
-                self.optimize.finalize_search()
-                return
-            elif status == 0:
-                logger.info("trial step unsuccessful. retrying with new trial "
-                            "step")
-                # Recursively call this function to attempt another trial step
-                continue
-            elif status < 0:
-                if self.optimize.retry_status():
-                    logger.info("line search has failed. restarting "
-                                "optimization algorithm and line search.")
-                    # Reset the line search machinery; set step count to 0
-                    self.optimize.restart()
-                    continue
-                else:
-                    logger.info("line search has failed. aborting inversion.")
-                    sys.exit(-1)
+        # Increment step count, calculate new step length/model, check misfit
+        status = self.optimize.update_line_search()
+        self.optimize.line_search.save_search_history()
+
+        # Proceed based on the outcome of the line search
+        if status == 1:
+            # Save outcome of line search to disk; reset step to 0 for next iter
+            logger.info("trial step successful. finalizing line search")
+            self.optimize.finalize_search()
+            self.optimize.line_search.save_search_history()
+            return
+        elif status == 0:
+            logger.info("trial step unsuccessful. re-attempting line search")
+            self.perform_line_search()  # RECURSIVE CALL
+        elif status == -1:
+            if self.optimize.attempt_line_search_restart():
+                logger.info("line search has failed. restarting "
+                            "optimization algorithm and line search.")
+                # Reset the line search machinery; set step count to 0
+                self.optimize.restart()
+                self.perform_line_search()  # RECURSIVE CALL
+            else:
+                logger.critical(
+                    msg.cli("Line search has failed to reduce the misfit and "
+                            "has run out of fallback options. Aborting "
+                            "inversion.", border="=",
+                            header="line search failed")
+                )
+                sys.exit(-1)
+
+    def _evaluate_line_search_misfit(self):
+        """Convenience fuinction to wrap forward solver and misfit calc"""
+        self.system.run(
+            [self.evaluate_objective_function],
+            path_model=os.path.join(self.path.eval_func, "model"),
+            save_residuals=os.path.join(self.path.eval_func, "residuals")
+        )
+        residuals = np.loadtxt(os.path.join(self.path.eval_func,
+                                            "residuals"))
+        total_misfit = self.preprocess.sum_residuals(residuals)
+        logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
+        self.optimize.save(name="f_try", m=total_misfit)
 
     def clean_scratch_directory(self):
         """
@@ -250,35 +273,4 @@ class Inversion(Migration):
         unix.mkdir(self.path.eval_grad)
         unix.mkdir(self.path.eval_func)
 
-    # def export(self):
-    #     """
-    #     Exports various quantities to PATH.OUTPUT (to disk) from the SCRATCH
-    #     directory as SCRATCH is liable to be overwritten at any point of the
-    #     workflow. This takes place at the end of each iteration, before
-    #     the clean() function is called.
-    #     """
-    #     optimize = self.module("optimize")
-    #
-    #     if self.par.SAVEMODEL:
-    #         src = os.path.join(self.path.OPTIMIZE, "m_new")
-    #         dst = os.path.join(self.path.OUTPUT, f"model_{optimize.iter:04d}")
-    #         logger.debug(f"exporting model 'm_new' to disk")
-    #         unix.cp(src, dst)
-    #
-    #     if self.par.SAVEGRADIENT:
-    #         src = os.path.join(self.path.OPTIMIZE, "g_old")
-    #         dst = os.path.join(self.path.OUTPUT, f"grad_{optimize.iter:04d}")
-    #         unix.cp(src, dst)
-    #
-    #     if self.par.SAVEKERNELS:
-    #         src = os.path.join(self.path.GRAD, "kernels")
-    #         dst = os.path.join(self.path.OUTPUT, f"kernels_{optimize.iter:04d}")
-    #         logger.debug(f"saving kernels to path:\n{dst}")
-    #         unix.mv(src, dst)
-    #
-    #     if self.par.SAVERESIDUALS:
-    #         src = os.path.join(self.path.GRAD, "residuals")
-    #         dst = os.path.join(self.path.OUTPUT,
-    #                            f"residuals_{optimize.iter:04d}")
-    #         unix.mv(src, dst)
 

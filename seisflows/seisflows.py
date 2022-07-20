@@ -1239,6 +1239,8 @@ class SeisFlows:
 
     def _reset_line_search(self, **kwargs):
         """
+        TODO Delete me
+
         Reset the machinery of the line search. This is useful for if a line
         search fails or stagnates but the User does not want to re-run the
         entire iteration. They can reset the line search and resume the workflow

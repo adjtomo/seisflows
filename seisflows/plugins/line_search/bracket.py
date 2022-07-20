@@ -1,50 +1,49 @@
 #!/usr/bin/env python3
 """
-This is the Bracketing line search class for seisflows
+A bracketing line search (a.k.a direct line search) attempts to find an
+appropriate step length by identifying two points between which the minimum
+misfit lies. Contains some functionality for saving line search history to disk
+so that a line search may be resumed in the case of a failure/reset.
 
-Line search is called on by the optimization procedure and should not really
-have any agency (i.e. it should not be able to iterate its own step count etc.,
-this should be completely left to the optimization algorithm to keep everything
-in one place)
+https://en.wikipedia.org/wiki/Line_search
+
+.. note::
+    Line search is called on by the optimization procedure and should not
+    really have any agency (i.e. it should not be able to iterate its own step
+    count etc., this should be completely left to the optimization algorithm to
+    keep everything in one place)
 """
+import os
 import numpy as np
 
 from seisflows import logger
-from seisflows.tools import msg
 from seisflows.tools.array import count_zeros
 from seisflows.tools.math import parabolic_backtrack, polynomial_fit
 
 
 class Bracket:
     """
-    Abstract base class for line search
+    [line_search.bracket] The bracketing line search identifies two points
+    between which the minimum misfit lies between.
 
-    Variables Descriptions:
-        x: list of step lenths from current line search
-        f: correpsonding list of function values
-        m: number of step lengths in current line search
-        n: number of model updates in optimization problem
-        gtg: dot product of gradient with itself
-        gtp: dot product of gradient and search direction
-
-    Status codes
-        status > 0  : finished
-        status == 0 : not finished
-        status < 0  : failed
+    :type step_count_max: int
+    :param step_count_max: maximum number of step counts before changing
+        line search behavior. set by PAR.STEP_COUNT_MAX
+    :type step_len_max: int
+    :param step_len_max: maximum length of the step, defaults to infinity,
+        that is unbounded step length. set by PAR.STEP_LEN_MAX
     """
-    def __init__(self, step_count_max, step_len_max):
+    def __init__(self, step_count_max, step_len_max, path=None):
         """
-        Initiate the line search machinery
-
-        :type step_count_max: int
-        :param step_count_max: maximum number of step counts before changing
-            line search behavior. set by PAR.STEP_COUNT_MAX
-        :type step_len_max: int
-        :param step_len_max: maximum length of the step, defaults to infinity,
-            that is unbounded step length. set by PAR.STEP_LEN_MAX
+        Instantiate max criteria for line search
         """
         self.step_count_max = step_count_max
         self.step_len_max = step_len_max
+
+        if path is None:
+            self.path = os.path.join(os.getcwd(), "line_search")
+        else:
+            self.path = path
 
         self.func_vals = []
         self.step_lens = []
@@ -52,7 +51,20 @@ class Bracket:
         self.gtp = []
         self.step_count = 0
 
-    def clear_history(self):
+    def update_search_history(self, func_val, step_len, gtg=None, gtp=None):
+        """
+        Update the internal list of search history attributes. Lists like
+        `func_vals` get appended to, while values like step_count are
+        overwritten. Allowed to increment func_val and step_len by themselves
+        """
+        self.func_vals.append(func_val)
+        self.step_lens.append(step_len)
+        if gtg:
+            self.gtg.append(gtg)
+        if gtp:
+            self.gtp.append(gtp)
+
+    def clear_search_history(self):
         """
         Clears internal line search history for a new line search attempt
         """
@@ -62,27 +74,51 @@ class Bracket:
         self.gtp = []
         self.step_count = 0
 
-    def reset(self):
+    def check_search_history(self, iteration):
         """
-        If a line search fails mid-search, and the User wants to resume from 
-        the line search function. Initialize will be called again. This function
-        undos the progress made by the previous line search so that a new line
-        search can be called without problem.
+        Since the line search is just a wrapper for list of numbers, check that
+        search history hasn't been muddled up by ensuring that internal lists
+        are the correct length for the given evaluation
 
-        output.optim needs to have its lines cleared manually
+        :type iteration: int
+        :param iteration: current iteration of the workflow
         """
-        # First step treated differently
-        if len(self.step_lens) <= 1:
-            self.clear_history()
-        else:
-            # Wind back dot products by one
-            self.gtg = self.gtg[:-1]
-            self.gtp = self.gtp[:-1]
-            
-            # Move step lens and function evaluations by number of step count
-            original_idx = -1 * self.step_count - 1
-            self.step_lens = self.step_lens[:original_idx]
-            self.func_vals = self.func_vals[:original_idx]
+        assert(len(self.gtg) == iteration), f"too many entries for 'gtg'"
+        assert(len(self.gtp) == iteration), f"too many entries for 'gtp'"
+        assert(len(self.func_vals) == len(self.step_lens)), \
+            f"number of function evaluations does not match step lengths"
+        assert(self.step_count + 1 == len(self.func_vals)), \
+            f"current step coutn doesn't match the number of function evals"
+
+    def save_search_history(self, file=None):
+        """
+        Save the current line search history to disk. Used to re-load a line
+        search from disk in the case of a failed search
+        """
+        if file is None:
+            file = self.path
+
+        dict_out = dict(func_vals=self.func_vals, step_lens=self.step_lens,
+                        gtg=self.gtg, gtp=self.gtp, step_count=self.step_count)
+        np.savez(file=file, **dict_out)
+
+    def load_search_history(self, file=None):
+        """
+        Load line search history from disk. Used to re-load line search in the
+        case of failed line searches.
+        """
+        if file is None:
+            file = self.path
+
+        # Numpy will append .npz to saved files, just ensure we honor that
+        if not file.endswith(".npz"):
+            file = f"{file}.npz"
+
+        dict_in = np.load(file=file)
+        self.step_count = int(dict_in["step_count"])  # only var thats not list
+        for key in ["func_vals", "step_lens", "gtg", "gtp"]:
+            assert(key in dict_in), f"line search .npz file has no key {key}"
+            setattr(self, key, list(dict_in[key]))
 
     def get_search_history(self, sort=True):
         """
@@ -104,13 +140,14 @@ class Bracket:
         :rtype i: int
         :return i: step_count
         :rtype j: int
-        :return j: number of iterations corresponding to 0 step length
+        :return j: number of iterations corresponding to 0 step length,
+            i.e., the update count
         """
         i = self.step_count
-        j = count_zeros(self.step_lens) - 1
         k = len(self.step_lens)
         x = np.array(self.step_lens[k - i - 1:k])
         f = np.array(self.func_vals[k - i - 1:k])
+        j = count_zeros(self.step_lens) - 1  # update count
 
         # Sort by step length
         if sort:
@@ -119,60 +156,70 @@ class Bracket:
 
         return x, f, self.gtg, self.gtp, i, j
 
-    def calculate_step(self):
-        """
-        Determines step length (alpha) and search status (status)
-        """
-        # Determine the line search history
-        x, f, gtg, gtp, step_count, update_count = self.get_search_history()
-
-        # Print out the current line search parameters for convenience
-        logger.debug(msg.sub(f"BRACKETING LINE SEARCH STEP "
-                             f"{self.step_count:0>2}"))
+    def _print_stats(self, x, f):
+        """Print out misfit values and step lengths to the logger"""
         x_str = ", ".join([f"{_:.2E}" for _ in x])
         f_str = ", ".join([f"{_:.2E}" for _ in f])
         logger.debug(f"step length(s) = {x_str}")
         logger.debug(f"misfit val(s)  = {f_str}")
 
+    def calculate_step_length(self):
+        """
+        Determines step length (alpha) and search status (status) using a
+        bracketing line search.
+        """
+        # Determine the line search history
+        x, f, gtg, gtp, step_count, update_count = self.get_search_history()
+        self._print_stats(x, f)
+
         # For the first inversion and initial step, set alpha manually
         if step_count == 0 and update_count == 0:
             # Based on idea from Dennis and Schnabel
             alpha = gtg[-1] ** -1
-            logger.info(f"first iteration, guessing trial step")
+            logger.info(f"try: first evaluation, attempt guess step length, "
+                        f"alpha={alpha:.2E}")
             status = 0
-        # For every i'th inversions initial step, set alpha manually
+        # For every iteration's initial step, set alpha manually
         elif step_count == 0:
             # Based on the first equation in sec 3.5 of Nocedal and Wright 2ed
             idx = np.argmin(self.func_vals[:-1])
             alpha = self.step_lens[idx] * gtp[-2] / gtp[-1]
-            logger.info(f"first step, setting scaled step length")
+            logger.info(f"try: first step count of iteration, "
+                        f"setting scaled step length, alpha={alpha:.2E}")
             status = 0
         # If misfit is reduced and then increased, we've bracketed. Pass
         elif _check_bracket(x, f) and _good_enough(x, f):
             alpha = x[f.argmin()]
-            logger.info(f"bracket okay, step length reasonable, pass")
+            logger.info(f"pass: bracket acceptable and step length "
+                        f"reasonable.")
             status = 1
         # If misfit is reduced but not close, set to quadratic fit
         elif _check_bracket(x, f):
             alpha = polynomial_fit(x, f)
-            logger.info(f"bracket okay, step length unreasonable, manual step")
+            logger.info(f"try: bracket acceptable but step length unreasonable "
+                        f"attempting to re-adjust step length "
+                        f"alpha={alpha:.2E}")
             status = 0
         # If misfit continues to step down, increase step length
         elif step_count <= self.step_count_max and all(f <= f[0]):
             alpha = 1.618034 * x[-1]  # 1.618034 is the 'golden ratio'
-            logger.info(f"misfit not bracketed, increasing step length")
+            logger.info(f"try: misfit not bracketed, increasing step length "
+                        f"using golden ratio, alpha={alpha:.2E}")
             status = 0
         # If misfit increases, reduce step length by backtracking
         elif step_count <= self.step_count_max:
             slope = gtp[-1] / gtg[-1]
             alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
                                         f1=f[1], b1=0.1, b2=0.5)
-            logger.info(f"misfit increasing, reducing step length to")
+            logger.info(f"try: misfit increasing, attempting "
+                        f"to reduce step length using parabloic backtrack, "
+                        f"alpha={alpha:.2E}")
             status = 0
         # step_count_max exceeded, fail
         else:
-            logger.info(f"bracketing failed, step_count_max="
-                        f"{self.step_count_max} exceeded")
+            logger.info(f"fail: bracketing line search has failed "
+                        f"to reduce the misfit before exceeding "
+                        f"`step_count_max`={self.step_count_max}")
             alpha = None
             status = -1
 
@@ -180,15 +227,17 @@ class Bracket:
         if alpha is not None:
             if alpha > self.step_len_max and step_count == 0:
                 alpha = 0.618034 * self.step_len_max
-                logger.info(f"initial step length safegaurd, setting "
-                            f"manual step length")
+                logger.info(f"try: applying initial step length "
+                            f"safegaurd as alpha has exceeded maximum step "
+                            f"length, alpha_new={alpha:.2E}")
                 status = 0
             # Stop because safeguard prevents us from going further
             elif alpha > self.step_len_max:
-                logger.info(f"step_len_max={self.step_len_max:.2f} "
-                            f"exceeded, manual set alpha")
                 alpha = self.step_len_max
-                status = 1
+                logger.info(f"try: applying initial step length "
+                            f"safegaurd as alpha has exceeded maximum step "
+                            f"length, alpha_new={alpha:.2E}")
+                status = 1  # TODO shouldn't this be 0 or -1?
 
         return alpha, status
 

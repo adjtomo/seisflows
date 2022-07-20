@@ -11,7 +11,7 @@ from time import asctime
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.core import Dict
-from seisflows.config import import_seisflows
+from seisflows.tools.specfem import Model
 
 
 class Forward:
@@ -67,7 +67,7 @@ class Forward:
                       os.path.join(workdir, "scratch", "eval_grad"),
             output=path_output or os.path.join(workdir, "output"),
             state_file=path_state_file or
-                       os.path.join(workdir, "statefile.txt"),
+                       os.path.join(workdir, ".statefile.txt"),
             data=path_data,
             model_init=path_model_init,
             model_true=path_model_true
@@ -173,7 +173,7 @@ class Forward:
 
         # Run setup() for each of the required modules
         for req_mod in self._required_modules:
-            logger.info(
+            logger.debug(
                 f"running setup for module "
                 f"'{req_mod}.{self._modules[req_mod].__class__.__name__}'"
             )
@@ -182,7 +182,7 @@ class Forward:
         # Run setup() for each of the instantiated modules
         for opt_mod in self._optional_modules:
             if self._modules[opt_mod] and opt_mod not in self._required_modules:
-                logger.info(
+                logger.debug(
                     f"running setup for module "
                     f"'{opt_mod}.{self._modules[opt_mod].__class__.__name__}'"
                 )
@@ -195,6 +195,16 @@ class Forward:
                 f.write(f"# {asctime()}\n")
                 f.write(f"# Acceptable states: 'completed', 'failed'\n")
                 f.write(f"# =======================================\n")
+
+        # Load in the initial model and check its poissons ratio
+        if self.path.model_init:
+            logger.info("checking initial model parameters")
+            _model = Model(os.path.join(self.path.model_init))
+            _model.check()
+        if self.path.model_true:
+            logger.info("checking true/target model parameters")
+            _model = Model(os.path.join(self.path.model_true))
+            _model.check()
 
         # Distribute modules to the class namespace. We don't do this at init
         # incase _modules was set as NoneType
@@ -277,7 +287,7 @@ class Forward:
             Must be run by system.run() so that solvers are assigned individual
             task ids and working directories
         """
-        logger.info(f"PREPARING OBSERVATION DATA FOR SOURCE "
+        logger.info(f"preparing observation data for source "
                     f"{self.solver.source_name}")
 
         if self.data_case == "data":
@@ -294,7 +304,7 @@ class Forward:
                 export_traces = False
 
             # Run the forward solver with target model and save traces the 'obs'
-            logger.info(f"running forward simulation w/ `MODEL_TRUE` for "
+            logger.info(f"running forward simulation w/ target model for "
                         f"{self.solver.source_name}")
             self.solver.import_model(path_model=self.path.model_true)
             self.solver.forward_simulation(
@@ -319,7 +329,8 @@ class Forward:
         assert(os.path.exists(path_model)), \
             f"Model path for objective function does not exist"
 
-        logger.info("EVALUATING OBJECTIVE FUNCTION")
+        logger.info(f"evaluating objective function for source "
+                    f"{self.solver.source_name}")
         logger.debug(f"running forward simulation with "
                      f"'{self.solver.__class__.__name__}'")
 

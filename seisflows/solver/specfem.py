@@ -494,7 +494,7 @@ class Specfem:
 
         # Rename kernels to work w/ conflicting name conventions
         unix.cd(self.kernel_databases)
-        logger.info(f"renaming event kernels for {self.source_name}")
+        logger.debug(f"renaming event kernels for {self.source_name}")
         for tag in ["alpha", "alpha[hv]", "reg1_alpha", "reg1_alpha[hv]"]:
             names = glob(f"*proc??????_{tag}_kernel.bin")
             unix.rename(old="alpha", new="vp", names=names)
