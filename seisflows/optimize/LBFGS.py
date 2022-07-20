@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
-This is the custom class for an LBFGS optimization schema.
-It supercedes the `seisflows.optimize.base` class
+L-BFGS (Limited memory Broyden–Fletcher–Goldfarb–Shanno) algorithm for solving
+nonlinear optimization problems.
+
+L-BFGS Variables:
+    s: memory of model differences
+    y: memory of gradient differences
+
+Optimization Variables:
+    m: model
+    f: objective function value
+    g: gradient direction
+    p: search direction
+
+Line Search Variables:
+    x: list of step lenths from current line search
+    f: correpsonding list of function values
+    m: number of step lengths in current line search
+    n: number of model updates in optimization problem
+    gtg: dot product of gradient with itself
+    gtp: dot product of gradient and search direction
+
+Status codes
+    status > 0  : finished
+    status == 0 : not finished
+    status < 0  : failed
 """
 import os
 import numpy as np
@@ -16,75 +39,26 @@ from seisflows.plugins import line_search as line_search_dir
 
 class LBFGS(Gradient):
     """
-    The Limited memory BFGS algorithm
-    Calls upon seisflows.plugin.optimize.LBFGS to accomplish LBFGS algorithm
+    [optimize.lbfgs] Limited memory BFGS nonlienar optimization algorithm
 
-    Includes optional safeguards: periodic restarting and descent conditions.
-
-    To conserve memory, most vectors are read from disk rather than passed
-    from a calling routine.
-
-    L-BFGS Variables:
-        s: memory of model differences
-        y: memory of gradient differences
-
-    Optimization Variables:
-        m: model
-        f: objective function value
-        g: gradient direction
-        p: search direction
-
-    Line Search Variables:
-        x: list of step lenths from current line search
-        f: correpsonding list of function values
-        m: number of step lengths in current line search
-        n: number of model updates in optimization problem
-        gtg: dot product of gradient with itself
-        gtp: dot product of gradient and search direction
-
-    Status codes
-        status > 0  : finished
-        status == 0 : not finished
-        status < 0  : failed
+    :type lbfgs_mem: int
+    :param lbfgs_mem: L-BFGS memory. Max number of previous gradients to
+        retain in local memory for approximating the objective function.
+    :type lbfgs_max: L-BFGS periodic restart interval. Must be
+        1 <= lbfgs_max <= infinity.
+    :type lbfgs_thresh: L-BFGS angle restart threshold. If the angle between
+        the current and previous search direction exceeds this value,
+        optimization algorithm will be restarted.
     """
+    __doc__ = Gradient.__doc__ + __doc__
+
     def __init__(self, lbfgs_mem=3, lbfgs_max=np.inf, lbfgs_thresh=0.,
                  **kwargs):
-        """
-        These parameters should not be set by the user.
-        Attributes are initialized as NoneTypes for clarity and docstrings.
-
-        :type lbfgs_mem: int
-        :param lbfgs_mem: L-BFGS memory. Max number of previous gradients to
-            retain in local memory for approximating the objective function.
-        :type lbfgs_max: L-BFGS periodic restart interval. Must be
-            1 <= lbfgs_max <= infinity.
-        :type lbfgs_thresh: L-BFGS angle restart threshold. If the angle between
-            the current and previous search direction exceeds this value,
-            optimization algorithm will be restarted.
-
-
-        :type LBFGS_iter: int
-        :param LBFGS_iter: an internally used iteration that differs from
-            optimization iter. Keeps track of internal LBFGS memory of previous
-            gradients. If LBFGS is restarted, the LBFGS_iter iteration is reset,
-            but the optization iteration.
-        :type memory_used: int
-        :param memory_used: bookkeeping to see how many previous
-            gradients have been stored to internal memory. Should not exceed
-            PAR.LBFGSMEM
-        :type LBFGS_dir: str
-        :param LBFGS_dir: location to store LBFGS internal memory
-        :type y_file: str
-        :param y_file: path to store memory of the gradient differences
-            i.e., `g_new - g_old`
-        :type s_file: str
-        :param s_file: path to store memory of the model differences
-            i.e., `m_new - m_old`
-        """
+        """Instantiate L-BFGS specific parameters"""
         super().__init__(**kwargs)
 
         # Overwrite user-chosen line search. L-BFGS requires 'Backtrack'ing LS
-        if self._line_search.title != "Backtrack":
+        if self._line_search.title() != "Backtrack":
             logger.warning(f"L-BFGS optimization requires 'backtrack'ing line "
                            f"search. Overwritng {self._line_search}")
             self._line_search = "Backtrack"

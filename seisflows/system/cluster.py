@@ -3,33 +3,36 @@
 The Cluster class provides the core utilities interaction with HPC systems
 which must be overloaded by subclasses for specific workload managers, or
 specific clusters.
+
+.. warning::
+    The Cluster class is an abstract base class for the Systems module which and
+    MUST be overwritten by system-specific child classes, it cannot be used to
+    run jobs by itself.
 """
 import subprocess
-from seisflows.config import save
 from seisflows.system.workstation import Workstation
 
 
 class Cluster(Workstation):
     """
-    Abstract base class for the Systems module which controls interaction with
-    compute systems such as HPC clusters.
-    """
-    def __init__(self, walltime=10, tasktime=1, environs="", **kwargs):
-        """
-        Instantiate the Cluster System class
+    [system.cluster] Generic or common HPC/cluster interfacing commands
 
-        :type walltime: int
-        :param walltime: maximum job time in minutes for the master SeisFlows
-            job submitted to cluster
-        :type tasktime: int
-        :param tasktime: maximum job time in minutes for each job spawned by
-            the SeisFlows master job during a workflow. These include, e.g.,
-            running the forward solver
-        :type environs: str
-        :param environs: Optional environment variables to be provided in the
-            following format VAR1=var1,VAR2=var2... Will be set using
-            os.environs
-        """
+    :type walltime: int
+    :param walltime: maximum job time in minutes for the master SeisFlows
+        job submitted to cluster
+    :type tasktime: int
+    :param tasktime: maximum job time in minutes for each job spawned by
+        the SeisFlows master job during a workflow. These include, e.g.,
+        running the forward solver
+    :type environs: str
+    :param environs: Optional environment variables to be provided in the
+        following format VAR1=var1,VAR2=var2... Will be set using
+        os.environs
+    """
+    __doc__ = Workstation.__doc__ + __doc__
+
+    def __init__(self, walltime=10, tasktime=1, environs="", **kwargs):
+        """Instantiate the Cluster System class"""
         super().__init__(**kwargs)
 
         self.walltime = walltime

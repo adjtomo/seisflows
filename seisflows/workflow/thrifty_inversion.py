@@ -7,41 +7,40 @@ simulations and misfit quantification) if the final forward simulations from
 the previous iteration's line search can be used in the current one. Otherwise
 it performs the same as the Inversion workflow
 """
-import sys
-import logging
-
+from seisflows import logger
 from seisflows.workflow.inversion import Inversion
 from seisflows.tools import unix, msg
 
 
 class ThriftyInversion(Inversion):
     """
-    Thrifty inversion which attempts to save resources by re-using previous
-    line search results for the current iteration.
+    [workflow.thrifty_inversion] an inversion that attempts to save resources
+    by re-using previous line search results for the current iteration.
+
+    :type line_search_method: str
+    :param line_search_method: chosen line_search algorithm. Currently available
+        are 'bracket' and 'backtrack'. See seisflows.plugins.line_search
+        for all available options
     """
-    def __init__(self):
-        """
-        :type thrifty: bool
-        :param thrifty: the current status of the inversion.
-            if False: assumed to be first iteration, a restart, or some other
-            condition has been met which means inversion is defaulting to normal
-            behavior
-            if True: A well-scaled inversion can skip the function evaluation
-            of the next iteration by using the line search results of the
-            previous iteration
+    __doc__ = Inversion.__doc__ + __doc__
+
+    def __init__(self, line_search_method):
+        """Thrifty does not require input parameters
+
         """
         super().__init__()
 
-        self.thrifty = False
+        self.line_search_method = line_search_method
+        self._thrifty_status = False
 
-    def check(self, validate=True):
+    def check(self):
         """
-        Checks parameters and paths
+        Checks that we have the correct line search
         """
-        super().check(validate=validate)
+        super().check()
 
-        assert self.par.LINESEARCH.upper() == "BACKTRACK", (
-            "Thrifty inversion requires PAR.LINESEARCH == 'backtrack'"
+        assert(self.line_search_method.title() == "Backtrack"), (
+            "Thrifty inversion requires `line_search_method` == 'backtrack'"
         )
 
     def evaluate_initial_misfit(self):
@@ -49,53 +48,50 @@ class ThriftyInversion(Inversion):
         If line search can be carried over, skip initialization step
         Or if manually starting a new run, start with normal inversion init
         """
-        optimize = self.module("optimize")
-
-        if not self.thrifty or optimize.iter == self.par.BEGIN:
+        if not self._thrifty_status or (self.optimize.iteration == self.start):
             super().evaluate_initial_misfit()
         else:
-            self.logger.info(msg.mjr("SKIPPING INITIAL MISFIT EVALUATION"))
+            logger.info(msg.mnr("THRIFTY INVERSION, SKIPPING INITIAL MISFIT "
+                                "EVALUATION"))
 
-    def clean(self):
+    def clean_scratch_directory(self):
         """
         Determine if forward simulation from line search can be carried over.
         We assume clean() is the final flow() argument so that we can update
         the thrifty status here.
         """
-        self._update_status()
+        self._thrifty_status = self._update_status()
 
-        if self.thrifty:
-            self.logger.info(
+        if self._thrifty_status:
+            logger.info(
                 msg.mnr("THRIFTY CLEANING  WORKDIR FOR NEXT ITERATION")
             )
-            unix.rm(self.path.GRAD)
+            unix.rm(self.path.eval_grad)
             # Last line search evaluation becomes the new gradient evaluation
-            unix.mv(self.path.FUNC, self.path.GRAD)
-            unix.mkdir(self.path.FUNC)
+            unix.mv(self.path.eval_func, self.path.eval_grad)
+            unix.mkdir(self.path.eval_func)
         else:
-            super().clean()
+            super().clean_scratch_directory()
 
     def _update_status(self):
         """
         Determine if line search forward simulation can be carried over based
         on a variety of criteria relating to location in the inversion.
         """
-        optimize = self.module("optimize")
-        
-        self.logger.info("updating thrifty inversion status")
-        if optimize.iter == self.par.BEGIN:
-            self.logger.info("1st iteration, defaulting to inversion workflow")
+        logger.info("updating thrifty inversion status")
+        if self.optimize.iter == self.start:
+            logger.info("1st iteration, defaulting to inversion workflow")
             thrifty = False
-        elif optimize.restarted:
-            self.logger.info("optimization has been restarted, defaulting to "
-                             "inversion workflow")
+        elif self.optimize.restarted:
+            logger.info("optimization has been restarted, defaulting to "
+                        "inversion workflow")
             thrifty = False
-        elif optimize.iter == self.par.END:
-            self.logger.info("final iteration, defaulting to inversion workflow")
+        elif self.optimize.iter == self.end:
+            logger.info("final iteration, defaulting to inversion workflow")
             thrifty = False
         else:
-            self.logger.info("continuing with thrifty inversion workflow")
+            logger.info("continuing with thrifty inversion workflow")
             thrifty = True
 
-        self.thrifty = thrifty
+        return thrifty
 

@@ -77,16 +77,16 @@ def test_quantify_misfit(tmpdir):
     data_filenames = glob(os.path.join(TEST_DATA, "*semd"))
     preprocess.quantify_misfit(
         observed=data_filenames, synthetic=data_filenames,
-        write_residuals=os.path.join(tmpdir, "residuals_ascii"),
-        write_adjsrcs=tmpdir
+        save_residuals=os.path.join(tmpdir, "residuals_ascii"),
+        save_adjsrcs=tmpdir
     )
 
     preprocess.data_format = "SU"
     data_filenames = glob(os.path.join(TEST_DATA, "*su"))
     preprocess.quantify_misfit(
         observed=data_filenames, synthetic=data_filenames,
-        write_residuals=os.path.join(tmpdir, "residuals_su"),
-        write_adjsrcs=tmpdir
+        save_residuals=os.path.join(tmpdir, "residuals_su"),
+        save_adjsrcs=tmpdir
     )
 
     assert(len(glob(os.path.join(tmpdir, "*"))) == 4)

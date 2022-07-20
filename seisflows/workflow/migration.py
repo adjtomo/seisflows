@@ -7,7 +7,6 @@ sets up the machinery to derive a scaled, smoothed gradient from an initial
 model
 """
 import os
-from glob import glob
 
 from seisflows import logger
 from seisflows.tools import msg, unix

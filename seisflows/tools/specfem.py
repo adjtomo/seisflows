@@ -67,7 +67,9 @@ class Model:
             self.nproc, self.available_parameters = self._get_nproc_parameters()
             self.model, self.ngll = self.read(parameters=parameters)
 
-        self.parameters = self.model.keys()
+        # .sorted() enforces parameter order every time, otherwise things can
+        # get screwy if keys returns different each time
+        self.parameters = sorted(self.model.keys())
 
     @staticmethod
     def fnfmt(i="*", val="*", ext="*"):

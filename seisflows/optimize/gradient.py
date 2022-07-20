@@ -168,10 +168,6 @@ class Gradient:
 
         :type name: str
         :param name: name of the vector, acceptable: m, g, p, f, alpha
-        :type check: bool
-        :param check: if the model is a vector, check poissons ratio and list
-            out min and max for all parameters. This is really only useful for
-            elastic models, and not for kernels, gradients etc.
         """
         assert(name in self._acceptable_vectors)
         model_npz = os.path.join(self.path.scratch, f"{name}.npz")

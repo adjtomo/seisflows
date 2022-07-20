@@ -655,7 +655,8 @@ class Specfem:
 
         try:
             with open(stdout, "w") as f:
-                subprocess.run(executable, shell=True, check=True, stdout=f)
+                subprocess.run(executable, shell=True, check=True, stdout=f,
+                               stderr=f)
         except (subprocess.CalledProcessError, OSError) as e:
             logger.critical(
                 msg.cli("The external numerical solver has returned a "

@@ -6,6 +6,7 @@ import os
 import pytest
 from glob import glob
 from seisflows.config import ROOT_DIR
+from seisflows.tools import unix
 from seisflows.tools.core import set_task_id
 from seisflows.solver.specfem import Specfem
 
@@ -54,7 +55,6 @@ def test_initialize_working_directory(tmpdir):
                      path_specfem_bin=specfem_bin,
                      source_prefix="CMTSOLUTION", workdir=tmpdir
                      )
-
     assert(not os.path.exists(solver.path.mainsolver))
 
     # Set the environment task id so that the logger doesn't throw warnings
@@ -62,7 +62,9 @@ def test_initialize_working_directory(tmpdir):
     set_task_id(0)
 
     # Generate the required directory structure
-    solver._initialize_working_directory(cwd=tmpdir)
+    solver._initialize_working_directory(
+        cwd=os.path.join(solver.path.scratch, "001")
+    )
 
     # Simple checks to make sure the directory structure was set up properly
     assert(os.path.islink(solver.path.mainsolver))
@@ -74,19 +76,22 @@ def test_initialize_working_directory(tmpdir):
     assert(event_line == "EVENT 1")
 
 
-def test_run_binary():
+def test_run_binary(tmpdir):
     """
     Just run a known and intentially incorrect binary with the run binary
     function to check that we can, and that error catching is working
     """
     solver = Specfem()
-    solver._run_binary(executable="echo hello world")
+    solver._run_binary(executable="echo hello world",
+                       stdout=os.path.join(tmpdir, "log.txt"))
 
     # Executables that don't exist will not run
     with pytest.raises(SystemExit):
-        solver._run_binary(executable="gobbledigook")
+        solver._run_binary(executable="gobbledigook",
+                           stdout=os.path.join(tmpdir, "log.txt"))
 
     # Executables that do exist but error out (e.g., with invalid options) will
     # also throw an error
     with pytest.raises(SystemExit):
-        solver._run_binary(executable="ls -//daflkjeaf")
+        solver._run_binary(executable="ls -//daflkjeaf",
+                           stdout=os.path.join(tmpdir, "log.txt"))

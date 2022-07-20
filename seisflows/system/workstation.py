@@ -17,40 +17,37 @@ from seisflows.tools.core import number_fid, get_task_id, set_task_id
 
 class Workstation:
     """
-    Run tasks in a serial fashion on a single local machine. Also serves as the
-    Base System module, upon which all other System classes should be built.
+    [system.workstation] runs tasks in serial on a local machine.
+
+    :type title: str
+    :param title: The name used to submit jobs to the system, defaults
+        to the name of the current working directory
+    :type mpiexec: str
+    :param mpiexec: Function used to invoke executables on the system.
+        For example 'srun' on SLURM systems. If None this will default to
+        './' for calling executables.
+    :type ntask: int
+    :param ntask: number of individual tasks/events to run during workflow
+    :type nproc: int
+    :param nproc: number of processors to use for each simulation
+    :type log_level: str
+    :param log_level: logger level to pass to logging module.
+        Available: 'debug', 'info', 'warning'
+    :type verbose: bool
+    :param verbose: if True, formats the log messages to include the file
+        name, line number and message type. Useful for debugging but
+        also very verbose
+    :type path_output: str
+    :param path_output: path to save files permanently to disk
+    :type path_system: str
+    :param path_system: scratch path to save any system related files
     """
     def __init__(self, title=None, mpiexec=None, ntask=1, nproc=1,
                  log_level="DEBUG", verbose=False, workdir=os.getcwd(),
-                 path_output=None,
-                 path_system=None, path_output_log=None, path_error_log=None,
-                 path_log_files=None, path_par_file=None, **kwargs):
-        """
-        Workstation System Class Parameters
-
-        :type title: str
-        :param title: The name used to submit jobs to the system, defaults
-            to the name of the current working directory
-        :type mpiexec: str
-        :param mpiexec: Function used to invoke executables on the system.
-            For example 'srun' on SLURM systems. If None this will default to
-            './' for calling executables.
-        :type ntask: int
-        :param ntask: number of individual tasks/events to run during workflow
-        :type nproc: int
-        :param nproc: number of processors to use for each simulation
-        :type log_level: str
-        :param log_level: logger level to pass to logging module.
-            Available: 'debug', 'info', 'warning'
-        :type verbose: bool
-        :param verbose: if True, formats the log messages to include the file
-            name, line number and message type. Useful for debugging but
-            also very verbose
-        :type path_output: str
-        :param path_output: path to save files permanently to disk
-        :type path_system: str
-        :param path_system: scratch path to save any system related files
-        """
+                 path_output=None, path_system=None, path_output_log=None,
+                 path_error_log=None, path_log_files=None, path_par_file=None,
+                 **kwargs):
+        """Workstation System Class Parameters"""
         self.title = title
         self.mpiexec = mpiexec
         self.ntask = ntask
@@ -66,7 +63,6 @@ class Workstation:
             log_files=path_log_files or os.path.join(workdir, "logs"),
             output_log=path_output_log or os.path.join(workdir, "sfoutput.log"),
             error_log=path_error_log or os.path.join(workdir, "sferror.log"),
-
         )
 
     def check(self):

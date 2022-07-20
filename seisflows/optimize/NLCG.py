@@ -1,61 +1,33 @@
 #!/usr/bin/env python3
 """
-This is the custom class for an NLCG optimization schema.
-It inherits from the `seisflows.optimize.gradient.Gradient` class
+Nonlinear conjugate gradient method for optimization
 """
 import numpy as np
 
 from seisflows import logger
 from seisflows.optimize.gradient import Gradient
-from seisflows.tools import unix
 from seisflows.tools.math import dot
 from seisflows.plugins import line_search as line_search_dir
 
 
 class NLCG(Gradient):
     """
-    Nonlinear conjugate gradient method
+    [optimize.NLCG] Nonlinear conjugate gradient method
 
-    Optimization Variables:
-        m: model
-        f: objective function value
-        g: gradient direction
-        p: search direction
-
-    Line Search Variables:
-        x: list of step lenths from current line search
-        f: correpsonding list of function values
-        m: number of step lengths in current line search
-        n: number of model updates in optimization problem
-        gtg: dot product of gradient with itself
-        gtp: dot product of gradient and search direction
-
-    Status codes
-        status > 0  : finished
-        status == 0 : not finished
-        status < 0  : failed
+    :type nlcg_max: int
+    :param nlcg_max: NLCG periodic restart interval, should be between 1
+        and infinity
+    :type nlcg_thresh: NLCG conjugacy restart threshold, should be
+        between 1 and infinity
+    :type calc_beta: str
+    :param calc_beta: method to calculate the parameter 'beta' in the
+        NLCG algorithm. Available: 'pollak_ribere', 'fletcher_reeves'
     """
+    __doc__ = Gradient.__doc__ + __doc__
+
     def __init__(self, nlcg_max=np.inf, nlcg_thresh=np.inf,
                  calc_beta="pollak_ribere", **kwargs):
-        """
-        These parameters should not be set by the user.
-        Attributes are initialized as NoneTypes for clarity and docstrings.
-
-
-        :type nlcg_max: int
-        :param nlcg_max: NLCG periodic restart interval, should be between 1
-            and infinity
-        :type nlcg_thresh: NLCG conjugacy restart threshold, should be
-            between 1 and infinity
-        :type calc_beta: str
-        :param calc_beta: method to calculate the parameter 'beta' in the
-            NLCG algorithm. Available: 'pollak_ribere', 'fletcher_reeves'
-
-
-        :type _NLCG_iter: Class
-        :param _NLCG_iter: an internally used iteration that differs from
-            optimization iter. Keeps track of internal NLCG memory.
-        """
+        """NLCG-specific input parameters"""
         super().__init__(**kwargs)
 
         # Overwrite user-chosen line search. L-BFGS requires 'Backtrack'ing LS

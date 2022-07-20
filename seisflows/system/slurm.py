@@ -27,21 +27,21 @@ from seisflows.config import ROOT_DIR
 
 class Slurm(Cluster):
     """
-    Generalized interface for submitting jobs to and interfacing with a SLURM
-    workload management system.
-    """
-    def __init__(self, ntask_max=100, slurm_args="", **kwargs):
-        """
-        Slurm-specific setup parameters
+    [system.slurm] Interface for submitting jobs to Simple Linux Utility for
+    Resource Management (SLURM) system.
 
-        :type ntask_max: int
-        :param ntask_max: limit the number of concurrent tasks in a given
-            array job
-        :type slurm_args: str
-        :param slurm_args: Any optional, additional SLURM arguments that will
-            be passed to the SBATCH scripts. Should be in the form:
-            '--key1=value1 --key2=value2"
-        """
+    :type ntask_max: int
+    :param ntask_max: limit the number of concurrent tasks in a given
+        array job
+    :type slurm_args: str
+    :param slurm_args: Any optional, additional SLURM arguments that will
+        be passed to the SBATCH scripts. Should be in the form:
+        '--key1=value1 --key2=value2"
+    """
+    __doc__ = Cluster.__doc__ + __doc__
+
+    def __init__(self, ntask_max=100, slurm_args="", **kwargs):
+        """Slurm-specific setup parameters"""
         super().__init__(**kwargs)
 
         # Overwrite the existing 'mpiexec'
