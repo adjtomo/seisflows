@@ -61,8 +61,8 @@ class LBFGS(Gradient):
         if self._line_search.title() != "Backtrack":
             logger.warning(f"L-BFGS optimization requires 'backtrack'ing line "
                            f"search. Overwritng {self._line_search}")
-            self._line_search = "Backtrack"
-            self.line_search = getattr(line_search_dir, self._line_search)(
+            self.line_search_method = "Backtrack"
+            self._line_search = getattr(line_search_dir, self._line_search)(
                 step_count_max=self.step_count_max,
                 step_len_max=self.step_len_max
             )
@@ -148,7 +148,7 @@ class LBFGS(Gradient):
                 restarted = True
 
         # Save values to disk and memory
-        self.restarted = restarted
+        self._restarted = restarted
 
         return p_new
 
@@ -164,8 +164,8 @@ class LBFGS(Gradient):
         self.save("p_new", -1 * g.vector)
 
         # Clear internal memory
-        self.line_search.clear_history()
-        self.restarted = True
+        self._line_search.clear_history()
+        self._restarted = True
         self._LBFGS_iter = 1
         self._memory_used = 0
 

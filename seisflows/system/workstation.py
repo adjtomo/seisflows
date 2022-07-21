@@ -17,29 +17,52 @@ class Workstation:
     [system.workstation] runs tasks in serial on a local machine.
 
     :type ntask: int
-    :param ntask: number of individual tasks/events to run during workflow
+    :param ntask: number of individual tasks/events to run during workflow.
+        Must be <= the number of source files in `path_specfem_data`
     :type nproc: int
     :param nproc: number of processors to use for each simulation
     :type log_level: str
     :param log_level: logger level to pass to logging module.
-        Available: 'debug', 'info', 'warning'
+        Available: 'debug', 'info', 'warning', 'critical'
     :type verbose: bool
     :param verbose: if True, formats the log messages to include the file
         name, line number and message type. Useful for debugging but
-        also very verbose
-    :type path_output: str
-    :param path_output: path to save files permanently to disk
-    :type path_system: str
-    :param path_system: scratch path to save any system related files
+        also very verbose.
+
+    [path structure]
+    :type path_output_log: str
+    :param path_output_log: path to a text file used to store the outputs of
+        the package wide logger, which are also written to stdout
+    :type path_par_file: str
+    :param path_par_file: path to parameter file which is used to instantiate
+        the package
+    :type path_log_files: str
+    :param path_log_files: path to a directory where individual log files are
+        saved whenever a number of parallel tasks are run on the system.
     """
     def __init__(self, ntask=1, nproc=1, log_level="DEBUG", verbose=False,
                  workdir=os.getcwd(), path_output=None, path_system=None,
-                 path_output_log=None, path_error_log=None, path_log_files=None,
-                 path_par_file=None, **kwargs):
-        """Workstation System Class Parameters"""
+                 path_par_file=None, path_output_log=None, path_log_files=None,
+                 **kwargs):
+        """
+        Workstation System Class Parameters
+
+        .. note::
+            Paths listed here are shared with `workflow.forward` and so are not
+            included in the class docstring.
+
+        :type workdir: str
+        :param workdir: working directory in which to look for data and store
+            results. Defaults to current working directory
+        :type path_output: str
+        :param path_output: path to directory used for permanent storage on disk.
+            Results and exported scratch files are saved here.
+        :type path_system: str
+        :param path_system: scratch path to save any system related files
+        """
         self.ntask = ntask
         self.nproc = nproc
-        self.log_level = log_level
+        self.log_level = log_level.upper()
         self.verbose = verbose
 
         # Define internal path system
@@ -49,8 +72,8 @@ class Workstation:
             output=path_output or os.path.join(workdir, "output"),
             log_files=path_log_files or os.path.join(workdir, "logs"),
             output_log=path_output_log or os.path.join(workdir, "sfoutput.log"),
-            error_log=path_error_log or os.path.join(workdir, "sferror.log"),
         )
+        self._acceptable_log_levels = ["CRITICAL", "WARNING", "INFO", "DEBUG"]
 
     def check(self):
         """
@@ -59,17 +82,10 @@ class Workstation:
         assert(os.path.exists(self.path.par_file)), \
             f"parameter file does not exist but should"
 
-    def taskid(self):
-        """
-        Provides a unique identifier for each running task, which should be set
-        by the 'run'' command.
-
-        :rtype: int
-        :return: returns the os environment variable SEISFLOWS_TASKID which is
-            set by run() to label each of the currently
-            running processes on the SYSTEM.
-        """
-        return get_task_id()
+        assert(self.ntask > 0), f"number of events/tasks `ntask` cannot be neg'"
+        assert(self.nproc == 1), f"system.workstation rqeuires `nproc`==1"
+        assert(self.log_level) in self._acceptable_log_levels, \
+            f"`system.log_level` must be in {self._acceptable_log_levels}"
 
     def setup(self):
         """
@@ -94,8 +110,7 @@ class Workstation:
 
         # If resuming, move old log files to keep them out of the way. Number
         # in ascending order, so we don't end up overwriting things
-        for src in [self.path.output_log, self.path.error_log,
-                    self.path.par_file]:
+        for src in [self.path.output_log, self.path.par_file]:
             i = 1
             if os.path.exists(src):
                 dst = os.path.join(self.path.log_files, number_fid(src, i))
@@ -105,22 +120,19 @@ class Workstation:
                 logger.debug(f"copying par/log file to: {dst}")
                 unix.cp(src=src, dst=dst)
 
-    # def submit(self, workflow, submit_call=None):
-    #     """
-    #     Submits the main workflow job as a serial job submitted directly to
-    #     the compute node that is running the master job
-    #
-    #     TO DO fix this
-    #
-    #     :type submit_call: str or None
-    #     :param submit_call: the command line workload manager call to be run by
-    #         subprocess. This is only needed for overriding classes, it has no
-    #         effect on the Workstation class
-    #     """
-    #     self.setup()
-    #     workflow = sys.modules["seisflows_workflow"]
-    #     workflow.checkpoint()
-    #     workflow.main()
+    def submit(self, workflow, submit_call=None):
+        """
+        Submits the main workflow job as a serial job submitted directly to
+        the system that is running the master job
+
+        :type submit_call: str or None
+        :param submit_call: the command line workload manager call to be run by
+            subprocess. This is only needed for overriding classes, it has no
+            effect on the Workstation class
+        """
+        workflow.setup()
+        workflow.check()
+        workflow.run()
 
     def run(self, funcs, single=False, **kwargs):
         """

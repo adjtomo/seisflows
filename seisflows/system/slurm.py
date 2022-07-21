@@ -31,21 +31,21 @@ class Slurm(Cluster):
     Resource Management (SLURM) system.
 
     :type ntask_max: int
-    :param ntask_max: limit the number of concurrent tasks in a given
-        array job
+    :param ntask_max: limit the number of concurrent tasks in a given array job
     :type slurm_args: str
-    :param slurm_args: Any optional, additional SLURM arguments that will
+    :param slurm_args: Any (optional) additional SLURM arguments that will
         be passed to the SBATCH scripts. Should be in the form:
         '--key1=value1 --key2=value2"
     """
     __doc__ = Cluster.__doc__ + __doc__
 
-    def __init__(self, ntask_max=100, slurm_args="", **kwargs):
+    def __init__(self, ntask_max=100, slurm_args="",  **kwargs):
         """Slurm-specific setup parameters"""
         super().__init__(**kwargs)
 
         # Overwrite the existing 'mpiexec'
-        self.mpiexec = "srun -u"
+        if self.mpiexec is None:
+            self.mpiexec = "srun -u"
         self.ntask_max = ntask_max
         self.slurm_args = slurm_args
 
@@ -75,7 +75,7 @@ class Slurm(Cluster):
                 f"{self.slurm_args or ''}",
                 f"--job-name={self.title}",
                 f"--output={self.path.output_log}",
-                f"--error={self.path.error_log}",
+                f"--error={self.path.output_log}",
                 f"--ntasks-per-node={self.node_size}",
                 f"--nodes=1",
                 f"--time={self.walltime:d}",
@@ -139,8 +139,8 @@ class Slurm(Cluster):
                         "process job")
             run_call = _modify_run_call_single_proc(run_call)
 
-        # Stdout will be job number. Federated clusters will return job # and
-        # cluster name (e.g., 1234;Cluster1), so split that off, only want job #
+        # Stdout will be job number (e.g., 1234). Federated clusters will return
+        # job # and cluster name (e.g., 1234;Cluster1). We only want job #
         job_id = subprocess.run(run_call, stdout=subprocess.PIPE,
                                 text=True, shell=True).stdout
         job_id = str(job_id).split(";")[0]
@@ -176,32 +176,33 @@ def check_job_status(job_id):
                   "OUT_OF_MEMORY", "CANCELLED"]
     while True:
         job_ids, states = query_job_states(job_id)
-        if [_ == "COMPLETED" for _ in states]:
+        if [state == "COMPLETED" for state in states]:
             return 1  # Pass
-        elif any([check in states for check in bad_states]):
+        elif any([check in states for check in bad_states]):  # Any bad states?
             logger.info("atleast 1 system job returned a failing exit code")
             for job_id, state in zip(job_ids, states):
                 if state in bad_states:
                     logger.debug(f"{job_id}: {state}")
             return -1  # Fail
         else:
-            time.sleep(5)  # Don't overload 'sacct' command
+            time.sleep(5)  # Don't query 'sacct' command too often
 
 
 def query_job_states(job_id):
     """
-    Queries completion status of an array job by running:
-        $ sacct -nLX -o jobid,state -j {job_id}
+    Queries completion status of an array job by running the SLURM cmd `sacct`
+    Available job states are listed here: https://slurm.schedmd.com/sacct.html
 
-        # Example outputs from this sacct command
+    .. note::
+        The actual command line call wil look something like this
+        $ sacct -nLX -o jobid,state -j 441630
         441630_0    PENDING
         441630_1    COMPLETED
 
-    Available job states: https://slurm.schedmd.com/sacct.html
-
     .. note::
+        SACCT flag options are described as follows:
         -L: queries all available clusters, not just the cluster that ran the
-            `sacct` call
+            `sacct` call. Used for federated clusters
         -X: supress the .batch and .extern jobnames that are normally returned
             but don't represent that actual running job
 
@@ -224,6 +225,7 @@ def query_job_states(job_id):
 def _modify_run_call_single_proc(run_call):
     """
     Modifies a SLURM SBATCH command to use only 1 processor as a single run
+    by replacing the --array and --ntasks options
 
     :type run_call: str
     :param run_call: The SBATCH command to modify

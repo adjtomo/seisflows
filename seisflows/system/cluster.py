@@ -3,11 +3,6 @@
 The Cluster class provides the core utilities interaction with HPC systems
 which must be overloaded by subclasses for specific workload managers, or
 specific clusters.
-
-.. warning::
-    The Cluster class is an abstract base class for the Systems module which and
-    MUST be overwritten by system-specific child classes, it cannot be used to
-    run jobs by itself.
 """
 import os
 import dill
@@ -26,14 +21,15 @@ class Cluster(Workstation):
         to the name of the current working directory
     :type mpiexec: str
     :param mpiexec: Function used to invoke executables on the system.
-        For example 'srun' on SLURM systems.
+        For example 'mpirun', 'mpiexec', 'srun', 'ibrun'
     :type walltime: int
     :param walltime: maximum job time in minutes for the master SeisFlows
         job submitted to cluster
     :type tasktime: int
     :param tasktime: maximum job time in minutes for each job spawned by
         the SeisFlows master job during a workflow. These include, e.g.,
-        running the forward solver
+        running the forward solver, adjoint solver, smoother, kernel combiner.
+        All spawned tasks receive the same task time.
     :type environs: str
     :param environs: Optional environment variables to be provided in the
         following format VAR1=var1,VAR2=var2... Will be set using

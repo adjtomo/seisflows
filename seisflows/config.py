@@ -57,7 +57,8 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
     """
     # Read in parameters from file. Set up the logger
     parameters = load_yaml(os.path.join(workdir, parameter_file))
-    config_logger(level=parameters.log_level, filename=parameters.path_log_file,
+    config_logger(level=parameters.log_level,
+                  filename=parameters.path_output_log,
                   verbose=parameters.verbose)
 
     # Instantiate SeisFlows modules dynamically based on choices and parameters

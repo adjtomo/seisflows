@@ -5,6 +5,17 @@ In the terminology of seismic imaging, we are running a forward and adjoint
 simulation to derive the gradient of the objective function. This workflow
 sets up the machinery to derive a scaled, smoothed gradient from an initial
 model
+
+.. warning::
+    Misfit kernels require large amounts of disk space for storage.
+    Setting `export_kernel`==True when PAR.NTASK is large and model files
+    are large may lead to large file overhead.
+
+.. note::
+    Migration workflow includes an option to mask the gradient. While both
+    masking and preconditioning involve scaling the gradient, they are
+    fundamentally different operations: masking is ad hoc, preconditioning
+    is a change of variables; For more info, see Modrak & Tromp 2016 GJI
 """
 import os
 
@@ -20,21 +31,6 @@ class Migration(Forward):
     event-dependent misfit kernels. Sum and postprocess kernels to produce
     gradient. In seismic exploration this is 'reverse time migration'.
 
-    .. warning::
-        Misfit kernels require large amounts of disk space for storage.
-        Setting `export_kernel`==True when PAR.NTASK is large and model files
-        are large may lead to large file overhead.
-
-    .. note::
-        Migration workflow includes an option to mask the gradient. While both
-        masking and preconditioning involve scaling the gradient, they are
-        fundamentally different operations: masking is ad hoc, preconditioning
-        is a change of variables; For more info, see Modrak & Tromp 2016 GJI
-
-    :type path_mask: str
-    :param path_mask: optional path to a masking function which is used to
-        mask out or scale parts of the gradient. The user-defined mask must
-        match the file format of the input model (e.g., .bin files).
     :type export_gradient: bool
     :param export_gradient: export the gradient after it has been generated
         in the scratch directory. If False, gradient can be discarded from
@@ -43,12 +39,26 @@ class Migration(Forward):
     :param export_kernels: export each sources event kernels after they have
         been generated in the scratch directory. If False, gradient can be
         discarded from scratch at any time in the workflow
+
+    [path structure]
+
+    :type path_mask: str
+    :param path_mask: optional path to a masking function which is used to
+        mask out or scale parts of the gradient. The user-defined mask must
+        match the file format of the input model (e.g., .bin files).
     """
     __doc__ = Forward.__doc__ + __doc__
 
     def __init__(self, modules=None, path_mask=None, export_gradient=False,
                  export_kernels=False, **kwargs):
-        """Instantiate Migration-specific parameters"""
+        """
+        Instantiate Migration-specific parameters
+
+        :type modules: list
+        :param modules: list of sub-modules that will be established as class
+            attributes by the setup() function. Should not need to be set by the
+            user
+        """
         super().__init__(**kwargs)
 
         self._modules = modules

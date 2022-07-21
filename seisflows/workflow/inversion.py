@@ -30,8 +30,8 @@ from seisflows.tools.specfem import Model
 
 class Inversion(Migration):
     """
-    [workflow.inversion] Peforms iterative nonlinear inversion using a built-in
-    optimization library which stores model vectors on disk.
+    [workflow.inversion] Peforms iterative nonlinear inversion using the
+    built-in optimization library.
 
     :type start: int
     :param start: start inversion workflow at this iteration. 1 <= start <= inf
@@ -40,6 +40,9 @@ class Inversion(Migration):
     :type export_model: bool
     :param export_model: export best-fitting model from the line search to disk.
         If False, new models can be discarded from scratch at any time.
+
+    [path structure]
+
     :type path_eval_func: str
     :param path_eval_func: scratch path to store files for line search objective
         function evaluations, including models, misfit and residuals
@@ -61,11 +64,9 @@ class Inversion(Migration):
                               os.path.join(self.path.workdir, "scratch",
                                            "eval_func")
 
-        # Overwriting base class required modules list
+        # Internal attribute for keeping track of inversion
+        self._iteration = start
         self._required_modules = ["system", "solver", "preprocess", "optimize"]
-
-        # Empty module variables that should be filled in by setup
-        self.optimize = None
 
     @property
     def task_list(self):
@@ -108,6 +109,9 @@ class Inversion(Migration):
 
     def setup(self):
         """
+        Assigns modules as attributes of the workflow. I.e., `self.solver` to
+        access the solver module (or `workflow.solver` from outside class)
+
         Lays groundwork for inversion by running setup() functions for the
         involved sub-modules, generating True model synthetic data if necessary,
         and generating the pre-requisite database files.
@@ -116,14 +120,6 @@ class Inversion(Migration):
 
         unix.mkdir(self.path.eval_func)
         self.optimize = self._modules.optimize
-
-    def checkpoint(self):
-        """
-        Override checkpoint and add the optimization iteration parameter
-        """
-        super().checkpoint()
-        with open(self.path.state_file, "a") as f:
-            f.write(f"iteration: {self.optimize.iteration}")
 
     def run(self):
         """Call the forward.run() function iteratively, from `start` to `end`"""

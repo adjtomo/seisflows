@@ -46,27 +46,45 @@ class Gradient:
         are 'bracket' and 'backtrack'. See seisflows.plugins.line_search
         for all available options
     :type preconditioner: str
-    :param preconditioner: algorithm for preconditioning gradients
+    :param preconditioner: algorithm for preconditioning gradients. Currently
+        available: 'diagonal'. Requires `path_preconditioner` to point to a
+        set of files that define the preconditioner, formatted the same as the
+        input model
     :type step_count_max: int
     :param step_count_max: maximum number of trial steps to perform during
         the line search before a change in line search behavior is
-        considered
+        considered, or a line search is considered to have failed.
     :type step_len_init: float
-    :param step_len_init: initial line search step length as a fraction of
-        current model parameters.
+    :param step_len_init: initial line search step length guess, provided
+        as a fraction of current model parameters.
     :type step_len_max: float
     :param step_len_max: maximum allowable step length during the line
         search. Set as a fraction of the current model parameters
-    :type path_line_search: str
-    :param path_line_search: full path to a file used to periodically
-        save the line search history as a NumPy .npz file
+
+    [path structure]
+    :type path_preconditioner: str
+    :param path_preconditioner: optional path to a set of preconditioner files
+        formatted the same as the input model (or output model of solver).
+        Required to exist and contain files if `preconditioner`==True
     """
     def __init__(self, line_search_method="bracket", preconditioner=None,
                  step_count_max=10, step_len_init=0.05, step_len_max=0.5,
-                 workdir=os.getcwd(), path_optimize=None, path_line_search=None,
-                 path_output=None, path_preconditioner=None,
-                 **kwargs):
-        """Gradient-descent input parameters"""
+                 workdir=os.getcwd(), path_optimize=None, path_output=None,
+                 path_preconditioner=None, **kwargs):
+        """
+        Gradient-descent input parameters.
+
+        .. note::
+            Paths listed here are shared with `workflow.forward` and so are not
+            included in the class docstring.
+
+        :type workdir: str
+        :param workdir: working directory in which to look for data and store
+            results. Defaults to current working directory
+        :type path_output: str
+        :param path_output: path to directory used for permanent storage on disk.
+            Results and exported scratch files are saved here.
+        """
         super().__init__()
 
         self.preconditioner = preconditioner
@@ -80,10 +98,6 @@ class Gradient:
                     os.path.join(os.getcwd(), "scratch", "optimize"),
             output=path_output or os.path.join(workdir, "output"),
             preconditioner=path_preconditioner,
-        )
-        self.path["line_search"] = (
-                path_line_search or
-                os.path.join(self.path.scratch, "line_search")
         )
 
         # Internal check to see if the chosen line search algorithm exists
@@ -106,7 +120,7 @@ class Gradient:
         self._line_search = getattr(
             line_search_dir, line_search_method.title())(
             step_count_max=step_count_max, step_len_max=step_len_max,
-            path=self.path.line_search
+            path=os.path.join(self.path.scratch, "line_search")
         )
 
     @property

@@ -232,10 +232,10 @@ Check parameters, state, or values of an active environment
                 """,
         help="Check state of an active environment")
 
-    check.add_argument("choice", type=str,  nargs="?",
-                       help="Parameter, state, or value to check")
-    check.add_argument("args", type=str,  nargs="*",
-                       help="Generic arguments passed to check functions")
+    # check.add_argument("choice", type=str,  nargs="?",
+    #                    help="Parameter, state, or value to check")
+    # check.add_argument("args", type=str,  nargs="*",
+    #                    help="Generic arguments passed to check functions")
     # =========================================================================
     print_ = subparser.add_parser(
         "print", formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -442,18 +442,16 @@ class SeisFlows:
         unix.cp(self._args.parameter_file, temp_par_file)
 
         try:
-            written = []
+            written, path_docstrings = [], []
             f = open(self._args.parameter_file, "a")
-            print(f"writing parameters for modules: ")
+            # Write all module parameters and corresponding docstrings
             for module in modules:
-                print(f"{module.__class__.__name__}")
-                # Write the docstring
-                f.write(f"# {'=' * 77}\n#")
-                f.write(module.__doc__.replace("\n", "\n#"))
-                f.write(f"\n# {'=' * 77}\n")
+                docstring = module.__doc__.replace("\n", "\n#")
+                docstring = docstring.split("[path structure]")[0]
+                f.write(f"# {'=' * 77}\n#{docstring}\n# {'=' * 77}\n")
+
                 # Write the parameters, make sure to not have the same one twice
                 for key, val in vars(module).items():
-                    print(key)
                     # Skip already written, hidden vars, and paths
                     if (key in written) or key.startswith("_") or key == "path":
                         continue
@@ -461,6 +459,31 @@ class SeisFlows:
                     if val is None:
                         val = "null"
                     f.write(f"{key}: {val}\n")
+                    written.append(key)
+            # Write docstrings for publically accesible path structure
+            f.write(f"# {'=' * 77}\n")
+            f.write("#\n")
+            f.write("#\t [path structure] SeisFlows internal/external paths")
+            for module in modules:
+                docstring = module.__doc__.strip().replace("\n", "\n#")
+                docstring = docstring.split("[path structure]")
+                try:
+                    # The extra split is to catch any inherited docstrings
+                    f.write(docstring[1].split("[")[0])
+                # IndexError means no path docstring to write out
+                except IndexError as e:
+                    continue
+            f.write(f"\n# {'=' * 77}\n")
+
+            # Write values for publically accessible path structure
+            written = []
+            for module in modules:
+                for key, val in module.path.items():
+                    if key in written:
+                        continue
+                    if val is None:
+                        val = "null"
+                    f.write(f"path_{key}: {val}\n")
                     written.append(key)
         except Exception:
             unix.rm(self._args.parameter_file)
@@ -524,7 +547,7 @@ class SeisFlows:
 
         unix.rm(f"_{self._args.parameter_file}")
 
-    def validate(self, **kwargs):
+    def check(self, **kwargs):
         """
         Run check() functions for a given parameter file and each of the
         SeisFlows modules, ensuring that parameters are acceptable for the
@@ -535,7 +558,10 @@ class SeisFlows:
 
         workflow = import_seisflows(workdir=self._args.workdir,
                                     parameter_file=self._args.parameter_file)
-        workflow.check()
+        try:
+            workflow.check()
+        except AssertionError as e:
+            print(msg.cli(str(e), border="=", header="parameter errror"))
 
     def submit(self, **kwargs):
         """
@@ -549,7 +575,7 @@ class SeisFlows:
 
         workflow = import_seisflows(workdir=self._args.workdir,
                                     parameter_file=self._args.parameter_file)
-        workflow.system.submit()
+        workflow.system.submit(workflow)
 
     def clean(self, force=False, **kwargs):
         """
@@ -864,27 +890,27 @@ class SeisFlows:
         ))
         print(msg.cli(items=items))
 
-    def check(self, choice=None, **kwargs):
-        """
-        Check parameters, state or values  of an active SeisFlows environment.
-        Type 'seisflows check --help' for a detailed help message.
-
-        :type choice: str
-        :param choice: underlying sub-function to choose
-        """
-        acceptable_args = {"model": self._check_model_parameters,
-                           "iter": self._check_current_iteration,
-                           "src": self._check_source_names,
-                           "isrc": self._check_source_index}
-
-        # Ensure that help message is thrown for empty commands
-        if choice not in acceptable_args.keys():
-            self._subparser.print_help()
-            sys.exit(0)
-
-        self._register_parameters()
-        self._load_modules()
-        acceptable_args[choice](*self._args.args, **kwargs)
+    # def check(self, choice=None, **kwargs):
+    #     """
+    #     Check parameters, state or values  of an active SeisFlows environment.
+    #     Type 'seisflows check --help' for a detailed help message.
+    #
+    #     :type choice: str
+    #     :param choice: underlying sub-function to choose
+    #     """
+    #     acceptable_args = {"model": self._check_model_parameters,
+    #                        "iter": self._check_current_iteration,
+    #                        "src": self._check_source_names,
+    #                        "isrc": self._check_source_index}
+    #
+    #     # Ensure that help message is thrown for empty commands
+    #     if choice not in acceptable_args.keys():
+    #         self._subparser.print_help()
+    #         sys.exit(0)
+    #
+    #     self._register_parameters()
+    #     self._load_modules()
+    #     acceptable_args[choice](*self._args.args, **kwargs)
 
     def print(self, choice=None, **kwargs):
         """

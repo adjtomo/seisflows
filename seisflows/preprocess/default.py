@@ -20,9 +20,8 @@ from seisflows.plugins.preprocess import adjoint as adjoint_sources
 
 class Default:
     """
-    [preprocess.default] SeisFlows preprocessing module provides data processing
-    functions for seismic traces, with options for data misfit, filtering,
-    normalization and muting.
+    [preprocess.default] Data processing for seismic traces, with options for
+    data misfit, filtering, normalization and muting.
 
     :type data_format: str
     :param data_format: data format for reading traces into memory. For
@@ -70,9 +69,6 @@ class Default:
         LATE: mute late arrivals;
         SHORT: mute short source-receiver distances;
         LONG: mute long source-receiver distances
-    :type path_preprocess: str
-    :param path_preprocess: scratch path for all preprocessing processes,
-        including saving files
     """
     def __init__(self, data_format="ascii", misfit="waveform",
                  adjoint="waveform", normalize=None, filter=None,
@@ -83,7 +79,16 @@ class Default:
         """
         Preprocessing module parameters
 
+        .. note::
+            Paths listed here are shared with `workflow.forward` and so are not
+            included in the class docstring.
 
+        :type workdir: str
+        :param workdir: working directory in which to look for data and store
+        results. Defaults to current working directory
+        :type path_preprocess: str
+        :param path_preprocess: scratch path for all preprocessing processes,
+            including saving files
         """
         self.data_format = data_format.upper()
         self.misfit = misfit

@@ -34,8 +34,8 @@ class NLCG(Gradient):
         if self._line_search.title != "Bracket":
             logger.warning(f"NLCG optimization requires 'bracket'ing line "
                            f"search. Overwritng {self._line_search}")
-            self._line_search = "Bracket"
-            self.line_search = getattr(line_search_dir, self._line_search)(
+            self.line_search_method = "Bracket"
+            self._line_search = getattr(line_search_dir, self._line_search)(
                 step_count_max=self.step_count_max,
                 step_len_max=self.step_len_max
             )
@@ -124,7 +124,7 @@ class NLCG(Gradient):
                 restarted = 0
 
         # Save values to disk and memory
-        self.restarted = restarted
+        self._restarted = restarted
 
         return p_new
 
@@ -137,8 +137,8 @@ class NLCG(Gradient):
         g = self.load("g_new")
         self.save("p_new", -1 * g.vector)
 
-        self.line_search.clear_history()
-        self.restarted = 1
+        self._line_search.clear_history()
+        self._restarted = 1
         self._NLCG_iter = 1
 
     def _fletcher_reeves(self, g_new, g_old):

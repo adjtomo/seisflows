@@ -31,14 +31,12 @@ from seisflows.tools.specfem import getpar, setpar
 
 class Specfem:
     """
-    [solver.specfem] SPECFEM interface shared between 2D/3D/3D_GLOBE
-    implementations providing generalized interface to establish SPECFEM
-    working directories, call SPECFEM binaries, and keep track of a number of
-    parallel processes.
+    [solver.specfem] Generalized SPECFEM interface to manipulate
+    SPECFEM2D/3D/3D_GLOBE via Python.
 
     :type data_format: str
     :param data_format: data format for reading traces into memory.
-        Available: ['SU' seismic unix format, 'ASCII' human-readable ascii]
+        Available: ['SU': seismic unix format, 'ASCII': human-readable ascii]
     :type materials: str
     :param materials: Material parameters used to define model. Available:
         ['ELASTIC': Vp, Vs, 'ACOUSTIC': Vp, 'ISOTROPIC', 'ANISOTROPIC']
@@ -69,11 +67,8 @@ class Specfem:
     :type mpiexec: str
     :param mpiexec: MPI executable used to run parallel processes. Should also
         be defined for the system module
-    :type workdir: str
-    :param workdir: working directory in which to look for data and store
-        results. Defaults to current working directory
-    :type path_solver: str
-    :param path_solver: scratch path for all solver related tasks
+
+    [path structure]
     :type path_data: str
     :param path_data: path to any externally stored data required by the solver
     :type path_specfem_bin: str
@@ -83,12 +78,6 @@ class Specfem:
     :param path_specfem_data: path to SPECFEM DATA/ directory which must
         contain the CMTSOLUTION, STATIONS and Par_file files used for
         running SPECFEM
-    :type path_model_true: str
-    :param path_model_true: path to a target model if `case`=='synthetic' and
-        a set of synthetic 'observations' are required for workflow.
-    :type path_output: str
-    :param path_output: shared output directory on disk for more permanent
-        storage of solver related files such as traces, kernels, gradients.
     """
     def __init__(self, data_format="ascii",  materials="acoustic",
                  density=False, nproc=1, ntask=1, attenuation=False,
@@ -98,7 +87,29 @@ class Specfem:
                  path_data=None, path_specfem_bin=None, path_specfem_data=None,
                  path_model_init=None, path_model_true=None, path_output=None,
                  **kwargs):
-        """Set default SPECFEM interface parameters"""
+        """
+        Set default SPECFEM interface parameters
+
+        .. note::
+            Paths listed here are shared with `workflow.forward` and so are not
+            included in the class docstring.
+
+        :type workdir: str
+        :param workdir: working directory in which to look for data and store
+            results. Defaults to current working directory
+        :type path_solver: str
+        :param path_solver: scratch path for all solver related tasks
+        :type path_model_init: str
+        :param path_model_init: path to the starting model used to calculate the
+            initial misfit. Must match the expected `solver_io` format.
+        :type path_model_true: str
+        :param path_model_true: path to a target model if `case`=='synthetic' and
+            a set of synthetic 'observations' are required for workflow.
+        :type path_output: str
+        :param path_output: shared output directory on disk for more permanent
+            storage of solver related files such as traces, kernels, gradients.
+        """
+        # Publically accessible parameters
         self.data_format = data_format
         self.materials = materials
         self.nproc = nproc
@@ -109,7 +120,6 @@ class Specfem:
         self.smooth_v = smooth_v
         self.components = components
         self.solver_io = solver_io
-        self.mpiexec = mpiexec
         self.source_prefix = source_prefix or "SOURCE"
 
         # Define internally used directory structure
@@ -126,11 +136,12 @@ class Specfem:
         )
         self.path.mainsolver = os.path.join(self.path.scratch, "mainsolver")
 
-        # Establish internally defined parameter system
+        # Private internal parameters for keeping track of solver requirements
         self._parameters = []
         if self.density:
             self._parameters.append("rho")
 
+        self._mpiexec = mpiexec
         self._source_names = None  # for property source_names
         self._ext = None  # for database file extensions
         self._io = getattr(solver_io_dir, self.solver_io)  # for database IO
@@ -167,10 +178,18 @@ class Specfem:
             "IO method has no attribute 'write'"
 
         # Check that User has provided appropriate bin/ and DATA/ directories
-        for name, dir_ in zip(["bin/", "DATA/"],
-                              [self.path.specfem_bin, self.path.specfem_data]):
-            assert(dir_ is not None), f"SPECFEM path '{name}' cannot be None"
-            assert(os.path.exists(dir_)), f"SPECFEM path '{name}' must exist"
+        assert(self.path.specfem_bin is not None), (
+            f"`path_specfem_bin` cannot be NoneType. Must point to directory " 
+            f"containing SPECFEM executables"
+        )
+        assert(os.path.exists(self.path.specfem_bin)), (
+            f"`path_specfem_bin` must exist and point to directory "
+            f"containing SPECFEM executables"
+        )
+        assert(glob(os.path.join(self.path.specfem_bin, "*"))), (
+            f"`path_specfem_bin` is empty but is expected to contain "
+            f"executable " \
+            f"binary files")
 
         # Check that the required SPECFEM files are available in DATA/
         for fid in ["STATIONS", "Par_file"]:
@@ -655,8 +674,8 @@ class Specfem:
             sys.exit(-1)
 
         # Append with mpiexec if we are running with MPI
-        if self.mpiexec:
-            executable = f"{self.mpiexec} {executable}"
+        if self._mpiexec:
+            executable = f"{self._mpiexec} {executable}"
 
         try:
             with open(stdout, "w") as f:
