@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
-This is the subclass seisflows.solver.Specfem3D
 This class provides utilities for the Seisflows solver interactions with
-Specfem3D Cartesian. It inherits all attributes from seisflows.solver.Base,
-and overwrites these functions to provide specified interaction with Specfem3D
+Specfem3D Cartesian.
 """
 import os
 
@@ -31,9 +29,9 @@ class Specfem3D(Specfem):
 
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
-            self.parameters += ["vp"]
+            self._parameters += ["vp"]
         elif self.materials.upper() == "ELASTIC":
-            self.parameters += ["vp", "vs"]
+            self._parameters += ["vp", "vs"]
 
         # Overwriting the base class parameters
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]

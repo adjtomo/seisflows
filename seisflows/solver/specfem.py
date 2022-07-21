@@ -131,8 +131,9 @@ class Specfem:
         if self.density:
             self._parameters.append("rho")
 
-        self._source_names = None
-        self._io = getattr(solver_io_dir, self.solver_io)
+        self._source_names = None  # for property source_names
+        self._ext = None  # for database file extensions
+        self._io = getattr(solver_io_dir, self.solver_io)  # for database IO
 
         # Define available choices for check parameters
         self._available_model_types = ["gll"]
@@ -158,6 +159,7 @@ class Specfem:
             )
 
         # Make sure we can read in the model/kernel/gradient files
+        # TODO is this even used? Can we remove?
         assert hasattr(solver_io_dir, self.solver_io)
         assert hasattr(self._io, "read_slice"), \
             "IO method has no attribute 'read'"
@@ -170,7 +172,7 @@ class Specfem:
             assert(dir_ is not None), f"SPECFEM path '{name}' cannot be None"
             assert(os.path.exists(dir_)), f"SPECFEM path '{name}' must exist"
 
-        # Check that the required SPECFEM files are available
+        # Check that the required SPECFEM files are available in DATA/
         for fid in ["STATIONS", "Par_file"]:
             assert(os.path.exists(os.path.join(self.path.specfem_data, fid))), (
                 f"DATA/{fid} does not exist but is required by SeisFlows solver"
@@ -195,29 +197,26 @@ class Specfem:
         assert(model_type in self._available_model_types), \
             f"{model_type} not in available types {self._available_model_types}"
 
+        # Assign file extensions to be used for database file searching
+        if model_type == "gll":
+            self._ext = ".bin"
+
+        # Make sure the initial model is set and actually contains files
         assert(self.path.model_init is not None and
                os.path.exists(self.path.model_init)), \
             f"`path_model_init` is required for the solver, but does not exist"
 
+        assert(len(glob(os.path.join(self.path.model_init, "*")))), \
+            f"`path_model_init` is empty but should have model files"
+
+        if self.path.model_true is not None:
+            assert(os.path.exists(self.path.model_true)), \
+                f"`path_model_true` is provided but does not exist"
+            assert(len(glob(os.path.join(self.path.model_true, "*")))), \
+                f"`path_model_true` is empty but should have model files"
+
         # Check that the number of tasks/events matches the number of events
         self._source_names = self._check_source_names()
-
-    @property
-    def taskid(self):
-        """
-        Returns the currently running process for embarassingly parallelized
-        tasks. Task IDs are assigned to the environment by system.run().
-        Task IDs are simply integer values from 0 to the number of
-        simultaneously running tasks.
-
-        .. note::
-            Dependent on environment variable 'SEISFLOWS_TASKID' which is
-            assigned by system.run() to each individually running process.
-
-        :rtype: int
-        :return: task id for given solver
-        """
-        return get_task_id()
 
     @property
     def source_names(self):
@@ -249,7 +248,7 @@ class Specfem:
         :rtype: str
         :return: given source name for given task id
         """
-        return self.source_names[self.taskid]
+        return self.source_names[get_task_id()]
 
     @property
     def cwd(self):
@@ -334,7 +333,8 @@ class Specfem:
             versions must overwrite this function
 
         :rtype: str
-        :return: path where SPECFEM2D database files are stored
+        :return: path where SPECFEM2D database files are stored, relative to
+            `solver.cwd`
         """
         return "DATA"
 
@@ -343,12 +343,16 @@ class Specfem:
         """
         Return a list of paths to model files that match the internal parameter
         list. Used to generate model vectors of the same length as gradients.
+
+        :rtype: list
+        :return: a list of full paths to model files that matches the internal
+            list of solver parameters
         """
         _model_files = []
         for parameter in self._parameters:
             _model_files += glob(os.path.join(self.path.mainsolver,
                                               self.model_databases,
-                                              f"*{parameter}*.bin"))
+                                              f"*{parameter}{self._ext}"))
         return _model_files
 
     @property
@@ -362,7 +366,8 @@ class Specfem:
             versions must overwrite this function
 
         :rtype: str
-        :return: path where SPECFEM2D database files are stored
+        :return: path where SPECFEM2D database files are stored, relative to
+            `solver.cwd`
         """
         return "OUTPUT_FILES"
 
@@ -372,16 +377,14 @@ class Specfem:
 
         Sets up directory structure expected by SPECFEM and copies or generates
         seismic data to be inverted or migrated
-
-        TODO the .bin during model export assumes GLL file format, more general?
         """
         self._initialize_working_directories()
 
         # Export the initial model to the SeisFlows output directory
-        unix.mkdir(self.path.output)
+        dst = os.path.join(self.path.output, "MODEL_INIT", "")
+        unix.mkdir(dst)
         for key in self._parameters:
-            src = glob(os.path.join(self.path.model_init, f"*{key}.bin"))
-            dst = os.path.join(self.path.output, "MODEL_INIT")
+            src = glob(os.path.join(self.path.model_init, f"*{key}{self._ext}"))
             unix.cp(src, dst)
 
     def forward_simulation(self, executables=None, save_traces=False,
@@ -493,24 +496,26 @@ class Specfem:
             self._run_binary(executable=exc, stdout=stdout)
 
         # Rename kernels to work w/ conflicting name conventions
+        # Change directory so that the rename doesn't affect the full path
         unix.cd(self.kernel_databases)
-        logger.debug(f"renaming event kernels for {self.source_name}")
+        logger.debug(f"renaming output event kernels: 'alpha' -> 'vp'")
         for tag in ["alpha", "alpha[hv]", "reg1_alpha", "reg1_alpha[hv]"]:
-            names = glob(f"*proc??????_{tag}_kernel.bin")
+            names = glob(f"*proc??????_{tag}_kernel{self._ext}")
             unix.rename(old="alpha", new="vp", names=names)
 
+        logger.debug(f"renaming output event kernels: 'alpha' -> 'vp'")
         for tag in ["beta", "beta[hv]", "reg1_beta", "reg1_beta[hv]"]:
-            names = glob(f"*proc??????_{tag}_kernel.bin")
+            names = glob(f"*proc??????_{tag}_kernel{self._ext}")
             unix.rename(old="beta", new="vs", names=names)
 
         # Save and export the kernels to user-defined locations
         if export_kernels:
             unix.mkdir(export_kernels)
-            unix.cp(src=glob("*_kernel.bin"), dst=export_kernels)
+            unix.cp(src=glob(f"*_kernel{self._ext}"), dst=export_kernels)
 
         if save_kernels:
             unix.mkdir(save_kernels)
-            unix.mv(src=glob("*_kernel.bin"), dst=save_kernels)
+            unix.mv(src=glob(f"*_kernel{self._ext}"), dst=save_kernels)
 
     def combine(self, input_path, output_path, parameters=None):
         """
@@ -518,7 +523,7 @@ class Specfem:
         Sums kernels from individual source contributions to create gradient.
 
         .. note::
-            The binary xcombine_sem simply sums matching databases (.bin)
+            The binary xcombine_sem simply sums matching databases
 
         .. note::
             It is ASSUMED that this function is being called by
@@ -708,7 +713,7 @@ class Specfem:
         unix.cd(self.cwd)
 
         # Copy the model files (ex: proc000023_vp.bin ...) into database dir
-        src = glob(os.path.join(path_model, "*"))
+        src = glob(os.path.join(path_model, f"*{self._ext}"))
         dst = os.path.join(self.cwd, self.model_databases, "")
         unix.cp(src, dst)
 
@@ -753,10 +758,8 @@ class Specfem:
         if cwd is None:
             cwd = self.cwd
             source_name = self.source_name
-            taskid = self.taskid
         else:
             source_name = os.path.basename(cwd)
-            taskid = self.source_names.index(source_name)
 
         logger.debug(f"initializing solver directory source: {source_name}")
 
@@ -784,7 +787,7 @@ class Specfem:
         unix.ln(src, dst)
 
         # Symlink TaskID==0 as mainsolver in solver directory for convenience
-        if taskid == 0:
+        if self.source_names.index(source_name) == 0:
             if not os.path.exists(self.path.mainsolver):
                 logger.debug(f"linking source '{source_name}' as 'mainsolver'")
                 unix.ln(cwd, self.path.mainsolver)

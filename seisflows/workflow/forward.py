@@ -230,6 +230,9 @@ class Forward:
             for key, val in self._states.items():
                 f.write(f"{key}: {val}\n")
 
+        # Pickle the current working state so that system can load it during run
+
+
     def run(self):
         """
         Call the Task List in order to 'run' the workflow. Contains logic for

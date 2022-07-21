@@ -25,7 +25,7 @@
 # POSTPROCESS (str): Postprocessing schema for kernels and gradients
 # ==============================================================================
 SYSTEM: workstation
-WORKFLOW: inversion
+WORKFLOW: forward
 SOLVER: specfem2d
 OPTIMIZE: gradient
 PREPROCESS: default

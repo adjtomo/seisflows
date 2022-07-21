@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
-This is the subclass seisflows.solver.specfem3d_globe
 This class provides utilities for the Seisflows solver interactions with
-Specfem3D Globe. It inherits all attributes from seisflows.solver.specfem3d,
-and overwrites these functions to provide specified interaction with Specfem3D.
+Specfem3D Globe.
 
 SPECFEM3D_Globe specfic notes:
     - does not allow SU seismogram outputs, only ASCII, SAC, ASDF, 3D_Array

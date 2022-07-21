@@ -4,13 +4,10 @@ This is a subclass seisflows.system.workstation
 Provides utilities for submitting jobs in serial on a single machine
 """
 import os
-import sys
-import pickle
 from contextlib import redirect_stdout
 
 from seisflows import logger
 from seisflows.tools.core import Dict
-from seisflows.config import save
 from seisflows.tools import unix
 from seisflows.tools.core import number_fid, get_task_id, set_task_id
 
@@ -19,13 +16,6 @@ class Workstation:
     """
     [system.workstation] runs tasks in serial on a local machine.
 
-    :type title: str
-    :param title: The name used to submit jobs to the system, defaults
-        to the name of the current working directory
-    :type mpiexec: str
-    :param mpiexec: Function used to invoke executables on the system.
-        For example 'srun' on SLURM systems. If None this will default to
-        './' for calling executables.
     :type ntask: int
     :param ntask: number of individual tasks/events to run during workflow
     :type nproc: int
@@ -42,14 +32,11 @@ class Workstation:
     :type path_system: str
     :param path_system: scratch path to save any system related files
     """
-    def __init__(self, title=None, mpiexec=None, ntask=1, nproc=1,
-                 log_level="DEBUG", verbose=False, workdir=os.getcwd(),
-                 path_output=None, path_system=None, path_output_log=None,
-                 path_error_log=None, path_log_files=None, path_par_file=None,
-                 **kwargs):
+    def __init__(self, ntask=1, nproc=1, log_level="DEBUG", verbose=False,
+                 workdir=os.getcwd(), path_output=None, path_system=None,
+                 path_output_log=None, path_error_log=None, path_log_files=None,
+                 path_par_file=None, **kwargs):
         """Workstation System Class Parameters"""
-        self.title = title
-        self.mpiexec = mpiexec
         self.ntask = ntask
         self.nproc = nproc
         self.log_level = log_level
@@ -118,22 +105,22 @@ class Workstation:
                 logger.debug(f"copying par/log file to: {dst}")
                 unix.cp(src=src, dst=dst)
 
-    def submit(self, workflow, submit_call=None):
-        """
-        Submits the main workflow job as a serial job submitted directly to
-        the compute node that is running the master job
-
-        TO DO fix this
-
-        :type submit_call: str or None
-        :param submit_call: the command line workload manager call to be run by
-            subprocess. This is only needed for overriding classes, it has no
-            effect on the Workstation class
-        """
-        self.setup()
-        workflow = sys.modules["seisflows_workflow"]
-        workflow.checkpoint()
-        workflow.main()
+    # def submit(self, workflow, submit_call=None):
+    #     """
+    #     Submits the main workflow job as a serial job submitted directly to
+    #     the compute node that is running the master job
+    #
+    #     TO DO fix this
+    #
+    #     :type submit_call: str or None
+    #     :param submit_call: the command line workload manager call to be run by
+    #         subprocess. This is only needed for overriding classes, it has no
+    #         effect on the Workstation class
+    #     """
+    #     self.setup()
+    #     workflow = sys.modules["seisflows_workflow"]
+    #     workflow.checkpoint()
+    #     workflow.main()
 
     def run(self, funcs, single=False, **kwargs):
         """
@@ -142,10 +129,9 @@ class Workstation:
         .. note::
             kwargs will be passed to the underlying `method` that is called
 
-        :type classname: str
-        :param classname: the class to run
-        :type method: str
-        :param method: the method from the given `classname` to run
+        :type funcs: list of methods
+        :param funcs: a list of functions that should be run in order. All
+            kwargs passed to run() will be passed into the functions.
         :type single: bool
         :param single: run a single-process, non-parallel task, such as
             smoothing the gradient, which only needs to be run by once.
@@ -178,25 +164,3 @@ class Workstation:
                 with redirect_stdout(f):
                     for func in funcs:
                         func(**kwargs)
-
-    def save_kwargs_to_disk(self, path, classname, method, kwargs):
-        """
-        Writes keyword arguments for a given method to disk
-
-        :type path: str
-        :param path: path to save the checkpointed pickle files to
-        :type classname: str
-        :param classname: name of the class to save
-        :type method: str
-        :param method: the specific function to be checkpointed
-        :type kwargs: dict
-        :param kwargs: dictionary to pass to object saving
-        """
-        argspath = os.path.join(path, "kwargs")
-        argsfile = os.path.join(argspath, f"{classname}_{method}.p")
-
-        unix.mkdir(argspath)
-        with open(argsfile, "wb") as f:
-            pickle.dump(kwargs, f)
-
-        save(path=self.path.output)

@@ -8,6 +8,10 @@ import yaml
 import numpy as np
 from seisflows import logger
 
+# Acceptable environment variables assigned to individually running tasks when
+# running SeisFlows on a system
+ENV_VARIABLES = ["SEISFLOWS_TASKID", "SLURM_ARRAY_TASK_ID"]
+
 
 class Dict(dict):
     """
@@ -68,48 +72,29 @@ class Null:
         return self
 
 
-class TaskIDError(Exception):
-    """
-    A specific error that gets called when tasks are not run on system,
-    i.e., when we can't find 'SEISFLOWS_TASKID' in the environment variables.
-    This means we are attempting to access child process variables inside
-    the parent process.
-    """
-    pass
-
-
-def get_task_id(force=False):
+def get_task_id():
     """
     Task IDs are assigned to each child process spawned by the system module
     during a SeisFlows workflow. SeisFlows modules use this Task ID to keep
     track of embarassingly parallel process, e.g., solver uses the Task ID to
     determine which source is being considered.
 
-    :type force: bool
-    :param force: If no task id is found, force set it to 0
     :rtype: int
     :return: task id for given solver
-    :raises TaskIDError: if no environment variable is found
     """
-    _taskid = os.getenv("SEISFLOWS_TASKID")
-    if _taskid is None:
-        logger.warning("Environment variable 'SEISFLOWS_TASKID' not found. "
-                       "Assigning Task ID == 0")
-        _taskid = 0
-        # if force:
-        #     _taskid = 0
-        #     logger.warning("Environment variable 'SEISFLOWS_TASKID' not found. "
-        #                    "Assigning Task ID == 0")
-        # else:
-        #     raise TaskIDError("Environment variable 'SEISFLOWS_TASKID' not "
-        #                       "found. Please make sure the process asking "
-        #                       "for task id is called by system.")
-    return int(_taskid)
+    for env_var in ENV_VARIABLES:
+        _taskid = os.getenv(env_var)
+        if _taskid is not None:
+            return int(_taskid)
+    else:
+        logger.warning("Environment Task ID variable not found. Assigning 0")
+        return 0
 
 
 def set_task_id(task_id):
     """
-    Set the SEISFLOWS_TASKID in os environs
+    Set the SEISFLOWS_TASKID in os environs for local workflows. If running
+    on HPC systems, running array jobs will assign the Task ID
 
     .. note::
         Mostly used for debugging/testing purposes as a way of mimicing

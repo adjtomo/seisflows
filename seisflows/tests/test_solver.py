@@ -6,24 +6,11 @@ import os
 import pytest
 from glob import glob
 from seisflows.config import ROOT_DIR
-from seisflows.tools import unix
 from seisflows.tools.core import set_task_id
 from seisflows.solver.specfem import Specfem
 
 
 TEST_DATA = os.path.join(ROOT_DIR, "tests", "test_data", "test_solver")
-
-
-def test_taskid():
-    """
-    Make sure that task id returns correctly
-
-    TODO move this into test_utils
-    """
-    solver = Specfem()
-    assert(solver.taskid == 0)
-    os.environ["SEISFLOWS_TASKID"] = "9"
-    assert(solver.taskid == 9)
 
 
 def test_source_names():

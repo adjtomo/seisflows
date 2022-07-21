@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
-This is the subclass seisflows.solver.specfem2d
-
 This class provides utilities for the Seisflows solver interactions with
-Specfem2D. It inherits all attributes from seisflows.solver.Base,
+Specfem2D.
 """
 import os
 from glob import glob
@@ -89,4 +87,5 @@ class Specfem2D(Specfem):
             unix.cp(src=src, dst=input_path)
 
         super().smooth(input_path=input_path, output_path=output_path,
-                       parameters=parameters, span_h=span_h, span_v=span_v)
+                       parameters=parameters, span_h=span_h, span_v=span_v,
+                       use_gpu=use_gpu)

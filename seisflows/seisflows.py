@@ -15,7 +15,6 @@ facilitates interface with the underlying SeisFlows package.
 """
 import os
 import sys
-import pickle
 import inspect
 import logging
 import warnings
@@ -25,8 +24,8 @@ import subprocess
 from glob import glob
 from IPython import embed
 
-from seisflows.config import (custom_import, save, NAMES, ROOT_DIR,
-                              config_logger)
+from seisflows import logger
+from seisflows.config import custom_import, NAMES, ROOT_DIR, config_logger
 from seisflows.tools import unix, msg
 from seisflows.tools.core import load_yaml, Dict
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
@@ -389,153 +388,6 @@ class SeisFlows:
         """
         return [_ for _ in dir(self) if not _.startswith("_")]
 
-    def _register_parameters(self):
-        """
-        Load the paths and parameters from file into sys.modules, set the
-        default parameters if they are missing from the file, and expand all
-        paths to absolute pathnames. Also configure the logger.
-
-        .. note::
-            This is ideally the FIRST thing that happens everytime SeisFlows
-            is initiated. The package cannot do anything without the resulting
-            PATH and PARAMETER variables.
-        """
-        # Check if the filepaths exist
-        if not os.path.exists(self._args.parameter_file):
-            print(msg.cli(f"SeisFlows parameter file not found: "
-                          f"'{self._args.parameter_file}'. Run 'seisflows "
-                          f"setup' to create a new parameter file.")
-                  )
-            sys.exit(-1)
-
-        # Register parameters from the parameter file
-        try:
-            parameters = load_yaml(self._args.parameter_file)
-        except Exception as e:
-            print(msg.cli(f"Please check that your parameter file is properly "
-                          f"formatted in the YAML format. The read error is:",
-                          items=[str(e)], header="parameter file read error",
-                          border="="))
-            sys.exit(-1)
-
-        # Distribute the paths and parameters internally and separately
-        # If we are running seisflows configure, paths will be empty
-        try:
-            paths = parameters.pop("PATHS")
-        except KeyError:
-            paths = {}
-
-        # WORKDIR needs to be set here as it's expected by most modules
-        if "WORKDIR" not in paths:
-            paths["WORKDIR"] = self._args.workdir
-
-        # Parameter file is set here as well so that it can be user-defined
-        if "PAR_FILE" not in paths:
-            paths["PAR_FILE"] = self._args.parameter_file
-
-        # Expand all paths to be absolute on the filesystem
-        for key, val in paths.items():
-            try:
-                paths[key] = os.path.expanduser(os.path.abspath(val))
-            except TypeError:
-                continue
-
-        # Register parameters to sys and internally
-        sys.modules["seisflows_parameters"] = Dict(parameters)
-        sys.modules["seisflows_paths"] = Dict(paths)
-        self._paths = Dict(paths)
-        self._parameters = Dict(parameters)
-
-    def _register_modules(self):
-        """
-        First time setup procedure which loads in the user-chosen modules
-        and registers them into sys.modules so that they are globally accessible
-        to the program.
-
-        :type check: bool
-        :param check: run the check() function for each of the instantiated
-            modules, which essentially checks the validity of all the
-            user-defined parameters. This is typically wanted, but sometimes
-            you don't want to check, e.g., during testing when you know
-            some parameters are set incorrectly
-        """
-        assert(self._paths is not None), (
-            f"seisflows._register_parameters() must be run before "
-            f"_register_modules()"
-        )
-        assert(self._parameters is not None), (
-            f"seisflows._register_parameters() must be run before "
-            f"_register_modules()"
-        )
-        # Check if current workflow exists on disk, exit so as to not overwrite
-        if "OUTPUT" in self._paths and os.path.exists(self._paths.OUTPUT):
-            print(msg.cli(
-                "Data from previous workflow found in working directory.",
-                items=["> seisflows restart: delete data, start new workflow",
-                       "> seisflows resume: resume existing workflow"],
-                header="warning", border="=")
-            )
-            sys.exit(-1)
-
-        # Instantiate and register objects
-        for name in NAMES:
-            sys.modules[f"seisflows_{name}"] = custom_import(name)()
-
-        # Bare minimum Module requirements for SeisFlows
-        req_modules = ["WORKFLOW", "SYSTEM"]
-        for req in req_modules:
-            if not hasattr(self._parameters, req):
-                print(msg.cli(f"SeisFlows requires modules: {req_modules}."
-                              "Please specify these in the parameter file. Use "
-                              "'seisflows print module' to determine suitable "
-                              "choices.", header="error", border="="))
-                sys.exit(-1)
-
-    def _check_parameters(self):
-        """
-        Runs the .check() function on each of the modules, which validates the
-        given parameters in a parameter file to ensure that a workflow will not
-        break unexpectedly
-        """
-        errors = []
-        for name in NAMES:
-            try:
-                sys.modules[f"seisflows_{name}"].check()
-            except AssertionError as e:
-                errors.append(f"{name}: {e}")
-        if errors:
-            print(msg.cli("seisflows.config module check failed with:",
-                          items=errors, header="module check error",
-                          border="="))
-            sys.exit(-1)
-
-    def _load_modules(self):
-        """
-        A function to load and check each of the SeisFlows modules,
-        re-initiating the SeisFlows environment. All modules are reliant on one
-        another so any access to SeisFlows requires loading everything
-        simultaneously and in correct order.
-
-        .. note::
-            This is similar to config.load() except it doesn't load paths
-            and parameters. This allows the User to OVERLOAD the currently
-            defined paths and parameters anytime they call 'seisflows resume'
-        """
-        for NAME in NAMES:
-            fid = os.path.join(self._paths.OUTPUT, f"seisflows_{NAME}.p")
-
-            if not os.path.exists(fid):
-                print(msg.cli("Not a SeisFlows working directory (no state "
-                              "files found). Run 'seisflows init' or "
-                              "'seisflows submit' to instantiate a working "
-                              "directory.")
-                      )
-                sys.exit(-1)
-
-            with open(fid, "rb") as f:
-                sys.modules[f"seisflows_{NAME}"] = pickle.load(f)
-        self._check_parameters()
-
     def setup(self, force=False, **kwargs):
         """
         Initiate a SeisFlows working directory from scratch by establishing a
@@ -549,7 +401,7 @@ class SeisFlows:
         :type force: bool
         :param force: flag to force parameter file overwriting
         """
-        PAR_FILE = os.path.join(ROOT_DIR, "examples", "parameters.yaml")
+        par_file = os.path.join(ROOT_DIR, "examples", "parameters.yaml")
 
         if os.path.exists(self._args.parameter_file):
             if force:
@@ -565,7 +417,7 @@ class SeisFlows:
             else:
                 sys.exit(0)
 
-        unix.cp(PAR_FILE, self._args.workdir)
+        unix.cp(par_file, self._args.workdir)
         print(msg.cli(f"creating parameter file: {self._args.parameter_file}"))
 
     def configure(self, absolute_paths=False, **kwargs):
@@ -582,8 +434,7 @@ class SeisFlows:
         # Load in a barebones parameter file and instantiate specific classes
         parameters = load_yaml(os.path.join(self._args.workdir,
                                             self._args.parameter_file))
-        classes = [custom_import(name, parameters[name])() for name in NAMES]
-
+        modules = [custom_import(name, parameters[name])() for name in NAMES]
 
         # If writing to parameter file fails for any reason, the file will be
         # mangled, create a temporary copy that can be re-instated upon failure
@@ -591,13 +442,30 @@ class SeisFlows:
         unix.cp(self._args.parameter_file, temp_par_file)
 
         try:
-            import pdb;pdb.set_trace()
-        except Exception as e:
+            written = []
+            f = open(self._args.parameter_file, "a")
+            for module in modules:
+                # Write the docstring
+                f.write(f"# {'=' * 77}\n#")
+                f.write(module.__doc__.replace("\n", "\n#"))
+                f.write(f"\n# {'=' * 77}\n")
+                # Write the parameters, make sure to not have the same one twice
+                for key, val in vars(module).items():
+                    # Skip already written, hidden vars, and paths
+                    if (key in written) or key.startswith("_"):
+                        continue
+                    if val is None:
+                        val = "null"  # required by YAML
+                    f.write(f"{key}: {val}\n")
+                    written.append(key)
+        except Exception:
             unix.rm(self._args.parameter_file)
             unix.cp(temp_par_file, self._args.parameter_file)
-            print(msg.cli(text="seisflows configure traceback", header="error"))
+            logger.critical(
+                msg.cli(text="seisflows configure traceback", header="error")
+            )
             print(traceback.format_exc())
-            sys.exit(-1)
+            raise
         else:
             unix.rm(temp_par_file)
 
