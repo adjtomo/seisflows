@@ -24,12 +24,6 @@ different optimization algorithms.
 
     Problems in any of these areas usually manifest themselves through
     stagnation of the nonlinear optimizationalgorithm.
-
-TODO fix line search, currently broken. Store line search variables in .npz
-    arrays rather than as internal attributes, that way it's easier to restart
-    from a broken workflow. Need to figure out how to reset and restart
-    line searches efficiently
-    Change line search to words not numbers
 """
 import os
 import numpy as np
@@ -67,18 +61,15 @@ class Gradient:
     :param path_line_search: full path to a file used to periodically
         save the line search history as a NumPy .npz file
     """
-    def __init__(self, start=1, line_search_method="bracket",
-                 preconditioner=None, step_count_max=10, step_len_init=0.05,
-                 step_len_max=0.5, workdir=os.getcwd(), path_optimize=None,
-                 path_line_search=None, path_output=None,
-                 path_preconditioner=None,
+    def __init__(self, line_search_method="bracket", preconditioner=None,
+                 step_count_max=10, step_len_init=0.05, step_len_max=0.5,
+                 workdir=os.getcwd(), path_optimize=None, path_line_search=None,
+                 path_output=None, path_preconditioner=None,
                  **kwargs):
         """Gradient-descent input parameters"""
         super().__init__()
 
-        self.iteration = start  # to match PAR.BEGIN
         self.preconditioner = preconditioner
-
         self.step_count_max = step_count_max
         self.step_len_init = step_len_init
         self.step_len_max = step_len_max
@@ -101,25 +92,27 @@ class Gradient:
                            f"algorithm, defaulting to 'bracket'")
             line_search_method = "bracket"
 
-        # .title() ensures we grab the class and not the module
-        self.line_search = getattr(line_search_dir, line_search_method.title())(
-            step_count_max=step_count_max, step_len_max=step_len_max,
-            path=self.path.line_search
-        )
+        self.line_search_method = line_search_method
 
-        # Internally used parameters for checking validity
+        # Internally used parameters for keeping track of optimization
+        self._restarted = False
         self._acceptable_vectors = ["m_new", "m_old", "m_try",
                                     "g_new", "g_old", "g_try",
                                     "p_new", "p_old", "alpha",
                                     "f_new", "f_old", "f_try"]
         self._acceptable_preconditioners = ["diagonal"]
 
-        self.restarted = False
+        # .title() ensures we grab the class and not the module
+        self._line_search = getattr(
+            line_search_dir, line_search_method.title())(
+            step_count_max=step_count_max, step_len_max=step_len_max,
+            path=self.path.line_search
+        )
 
     @property
     def step_count(self):
         """Convenience property to access `step_count` from line search"""
-        return self.line_search.step_count
+        return self._line_search.step_count
 
     def check(self):
         """
@@ -145,7 +138,7 @@ class Gradient:
         Sets up nonlinear optimization machinery
         """
         unix.mkdir(self.path.scratch)
-        self.line_search.save_search_history()  # will be empty
+        self.checkpoint_line_search()  # will be empty
 
     def load(self, name):
         """
@@ -203,6 +196,14 @@ class Gradient:
         else:
             raise TypeError(f"optimize.save unrecognized type error {type(m)}")
 
+    def checkpoint_line_search(self):
+        """
+        Convenience wrapper of the underlying _line_search.save_search_history
+        to avoid accessing the private attr. _line_search from outside the class
+        """
+        self._line_search.check_search_history()
+        self._line_search.save_search_history()
+
     def _precondition(self, q):
         """
         Apply available preconditioner to a given gradient
@@ -258,23 +259,23 @@ class Gradient:
 
         # Restart plugin line search if the optimization library restarts
         if self.restarted:
-            self.line_search.clear_history()
+            self._line_search.clear_history()
 
         # Optional safeguard to prevent step length from getting too large
         if self.step_len_max:
             new_step_len_max = self.step_len_max * norm_m / norm_p
-            self.line_search.step_len_max = new_step_len_max
+            self._line_search.step_len_max = new_step_len_max
             logger.info(f"enforcing max step length safeguard")
 
         # Initialize the line search and save it to disk.
-        self.line_search.update_search_history(func_val=f, step_len=0.,
+        self._line_search.update_search_history(func_val=f, step_len=0.,
                                                gtg=gtg, gtp=gtp)
-        self.line_search.check_search_history(iteration=self.iteration)
+        self._line_search.check_search_history()
 
-        alpha, _ = self.line_search.calculate_step_length()
+        alpha, _ = self._line_search.calculate_step_length()
 
         # Alpha defines the trial step length. Optional step length override
-        if self.step_len_init and len(self.line_search.step_lens) <= 1:
+        if self.step_len_init and len(self._line_search.step_lens) <= 1:
             alpha = self.step_len_init * norm_m / norm_p
             logger.debug(f"overwriting initial step length, "
                          f"alpha_new={alpha:.2E}")
@@ -303,12 +304,12 @@ class Gradient:
         f_try = self.load("f_try")  # misfit for the trial model
 
         # Update the line search with a new step length and misfit value
-        self.line_search.step_count += 1
-        self.line_search.update_search_history(step_len=alpha, func_val=f_try)
-        self.line_search.check_search_history(iteration=self.iteration)
+        self._line_search.step_count += 1
+        self._line_search.update_search_history(step_len=alpha, func_val=f_try)
+        self._line_search.check_search_history()
 
         # Calculate a new step length based on line search algorithm
-        alpha_try, status = self.line_search.calculate_step_length()
+        alpha_try, status = self._line_search.calculate_step_length()
 
         # Status == 0: Retry line search // Status == 1: Line search passed
         if status in [0, 1]:
@@ -344,7 +345,7 @@ class Gradient:
         logger.info(msg.sub("FINALIZING LINE SEARCH"))
 
         # Remove the old model parameters
-        if self.iteration > 1:
+        if glob("?_old"):
             logger.info("removing previously accepted model files (?_old)")
             for fid in ["m_old", "f_old", "g_old", "p_old"]:
                 unix.rm(os.path.join(self.path.scratch, fid))
@@ -364,12 +365,12 @@ class Gradient:
                 dst=os.path.join(self.path.scratch, "m_new.npz"))
 
         # Choose minimum misfit value as final misfit/model. index 0 is initial
-        f = self.line_search.get_search_history()[1]
+        f = self._line_search.get_search_history()[1]
         self.save("f_new", f.min())
         logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
 
         logger.info("resetting line search step count to 0")
-        self.line_search.step_count = 0
+        self._line_search.step_count = 0
 
     def attempt_line_search_restart(self, threshold=1E-3):
         """
@@ -438,7 +439,7 @@ class Gradient:
 
         g = self.load("g_new")
         p = self.load("p_new")
-        x, f, *_ = self.line_search.get_search_history()
+        x, f, *_ = self._line_search.get_search_history()
 
         # Calculated stats factors
         # TODO What is this? It was returning a RuntimeError for value too small
@@ -450,19 +451,17 @@ class Gradient:
         grad_norm_L2 = np.linalg.norm(g.vector, 2)
 
         misfit = f[0]
-        restarted = self.restarted
         slope = (f[1] - f[0]) / (x[1] - x[0])
-        step_count = self.line_search.step_count
+        step_count = self._line_search.step_count
         step_length = x[f.argmin()]
         theta = 180. * np.pi ** -1 * angle(p.vector, -1 * g.vector)
 
         with open(fid, "a") as f:
-            f.write(f"{self.iteration:0>2},"
-                    # f"{factor:6.3E},"
+            f.write(# f"{factor:6.3E},"
                     f"{grad_norm_L1:6.3E},"
                     f"{grad_norm_L2:6.3E},"
                     f"{misfit:6.3E},"
-                    f"{restarted:6.3E},"
+                    f"{self._restarted:6.3E},"
                     f"{slope:6.3E},"
                     f"{step_count:0>2},"
                     f"{step_length:6.3E},"

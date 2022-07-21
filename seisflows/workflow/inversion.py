@@ -170,7 +170,7 @@ class Inversion(Migration):
         then exposed on disk to the solver.
         """
         logger.info(f"initializing "
-                    f"'{self.optimize.line_search.__class__.__name__}'ing "
+                    f"'{self.optimize.line_search_method}'ing "
                     f"line search")
 
         # 'p' is the search direction used to perturb the initial model
@@ -189,7 +189,7 @@ class Inversion(Migration):
         m_try, alpha = self.optimize.initialize_search()
         self.optimize.save(name="m_try", m=m_try)
         self.optimize.save(name="alpha", m=alpha)
-        self.optimize.line_search.save_search_history()
+        self.optimize.checkpoint_line_search()
 
         # Expose model `m_try` to the solver by placing it in eval_func dir.
         m_try.write(path=os.path.join(self.path.eval_func, "model"))
@@ -219,14 +219,14 @@ class Inversion(Migration):
 
         # Increment step count, calculate new step length/model, check misfit
         status = self.optimize.update_line_search()
-        self.optimize.line_search.save_search_history()
+        self.optimize.checkpoint_line_search()
 
         # Proceed based on the outcome of the line search
         if status == 1:
             # Save outcome of line search to disk; reset step to 0 for next iter
             logger.info("trial step successful. finalizing line search")
             self.optimize.finalize_search()
-            self.optimize.line_search.save_search_history()
+            self.optimize.checkpoint_line_search()
             return
         elif status == 0:
             logger.info("trial step unsuccessful. re-attempting line search")

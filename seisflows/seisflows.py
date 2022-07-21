@@ -25,7 +25,7 @@ from glob import glob
 from IPython import embed
 
 from seisflows import logger
-from seisflows.config import custom_import, NAMES, ROOT_DIR, config_logger
+from seisflows.config import custom_import, NAMES, ROOT_DIR, config_logger, import_seisflows
 from seisflows.tools import unix, msg
 from seisflows.tools.core import load_yaml, Dict
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
@@ -444,18 +444,22 @@ class SeisFlows:
         try:
             written = []
             f = open(self._args.parameter_file, "a")
+            print(f"writing parameters for modules: ")
             for module in modules:
+                print(f"{module.__class__.__name__}")
                 # Write the docstring
                 f.write(f"# {'=' * 77}\n#")
                 f.write(module.__doc__.replace("\n", "\n#"))
                 f.write(f"\n# {'=' * 77}\n")
                 # Write the parameters, make sure to not have the same one twice
                 for key, val in vars(module).items():
+                    print(key)
                     # Skip already written, hidden vars, and paths
-                    if (key in written) or key.startswith("_"):
+                    if (key in written) or key.startswith("_") or key == "path":
                         continue
+                    # YAML wants NoneType to be 'null'
                     if val is None:
-                        val = "null"  # required by YAML
+                        val = "null"
                     f.write(f"{key}: {val}\n")
                     written.append(key)
         except Exception:
@@ -469,71 +473,7 @@ class SeisFlows:
         else:
             unix.rm(temp_par_file)
 
-    # def configure(self, absolute_paths=False, **kwargs):
-    #     """
-    #     Dynamically generate the parameter file by writing out docstrings and
-    #     default values for each of the SeisFlows module parameters.
-    #     This function writes files manually, consistent with the .yaml format.
-    #
-    #     :type absolute_paths: bool
-    #     :param absolute_paths: if True, expand pathnames to absolute paths,
-    #         else if False, use path names relative to the working directory.
-    #         Defaults to False, uses relative paths.
-    #     """
-    #     self._register_parameters()
-    #
-    #     # Check if the User set turn off any modules (if None, dont instantiate)
-    #     names = copy(NAMES)
-    #     for name, choice in self._parameters.items():
-    #         if choice is None:
-    #             names.remove(name.lower())
-    #
-    #     # Need to attempt importing all modules before we access their par/paths
-    #     for NAME in NAMES:
-    #         sys.modules[f"seisflows_{NAME}"] = custom_import(NAME)()
-    #
-    #     # System defines foundational directory structure required by other
-    #     # modules. Don't validate the parameters because they aren't yet set
-    #     sys.modules["seisflows_system"].required.validate(paths=True,
-    #                                                       parameters=False)
-    #
-    #     # If writing to parameter file fails for any reason, the file will be
-    #     # mangled, create a temporary copy that can be re-instated upon failure
-    #     temp_par_file = f".{self._args.parameter_file}"
-    #     unix.cp(self._args.parameter_file, temp_par_file)
-    #
-    #     try:
-    #         # Paths are collected for each but written at the end
-    #         seisflows_paths = {}
-    #         with open(self._args.parameter_file, "a") as f:
-    #             for name in names:
-    #                 req = sys.modules[f"seisflows_{name}"].required
-    #                 seisflows_paths.update(req.paths)
-    #
-    #                 # Write the docstring header and then the parameters in YAML
-    #                 msg.write_par_file_header(f, req.parameters, name)
-    #                 msg.write_par_file_paths_pars(f, req.parameters)
-    #
-    #             # Write the paths in the same format as parameters
-    #             msg.write_par_file_header(f, seisflows_paths, name="PATHS")
-    #             f.write("PATHS:\n")
-    #
-    #             # If requested, set the paths relative to the current dir
-    #             if not absolute_paths:
-    #                 for key, attrs in seisflows_paths.items():
-    #                     if attrs["default"]:
-    #                         seisflows_paths[key]["default"] = os.path.relpath(
-    #                                                            attrs["default"])
-    #             msg.write_par_file_paths_pars(f, seisflows_paths, indent=4)
-    #     # General error catch as anything can happen here
-    #     except Exception as e:
-    #         unix.rm(self._args.parameter_file)
-    #         unix.cp(temp_par_file, self._args.parameter_file)
-    #         print(msg.cli(text="seisflows configure traceback", header="error"))
-    #         print(traceback.format_exc())
-    #         sys.exit(-1)
-    #     else:
-    #         unix.rm(temp_par_file)
+        f.close()
 
     def swap(self, module, classname, **kwargs):
         """
@@ -584,29 +524,18 @@ class SeisFlows:
 
         unix.rm(f"_{self._args.parameter_file}")
 
-    def init(self, **kwargs):
+    def validate(self, **kwargs):
         """
-        Establish a SeisFlows working environment on disk. Instantiates a
-        working state in memory (sys.modules) and then writes this state as \
-        pickle files to the OUTPUT directory for User inspection and debug
-        purposes.
+        Run check() functions for a given parameter file and each of the
+        SeisFlows modules, ensuring that parameters are acceptable for the
+        given set of user-defined parameters
         """
         unix.mkdir(self._args.workdir)
         unix.cd(self._args.workdir)
 
-        self._register_parameters()
-        self._register_modules()
-        self._check_parameters()
-
-        save(path=self._paths.OUTPUT)
-
-        # Ensure that all parameters and paths that need to be instantiated
-        # are present in sys modules
-        for NAME in NAMES:
-            sys.modules[f"seisflows_{NAME}"].required.validate()
-
-        print(msg.cli(f"instantiating SeisFlows working state in: "
-                      f"{self._paths.OUTPUT}"))
+        workflow = import_seisflows(workdir=self._args.workdir,
+                                    parameter_file=self._args.parameter_file)
+        workflow.check()
 
     def submit(self, **kwargs):
         """
@@ -618,25 +547,9 @@ class SeisFlows:
         unix.mkdir(self._args.workdir)
         unix.cd(self._args.workdir)
 
-        # If parameter `RESUME_FROM` is set, unset it because submit and restart
-        # should start from a fresh workflow
-        try:
-            self.par(parameter="RESUME_FROM", value="", skip_print=True)
-        except SystemExit as e:
-            pass
-
-        # Read in the Parameter file and set parameters into sys.modules.
-        self._register_parameters()
-        self._register_modules()
-        self._check_parameters()
-
-        config_logger(level=self._parameters.LOG_LEVEL,
-                      verbose=self._parameters.VERBOSE,
-                      filename=self._paths.LOGFILE)
-
-        # Submit workflow.main() to the system
-        system = sys.modules["seisflows_system"]
-        system.submit()
+        workflow = import_seisflows(workdir=self._args.workdir,
+                                    parameter_file=self._args.parameter_file)
+        workflow.system.submit()
 
     def clean(self, force=False, **kwargs):
         """
@@ -679,21 +592,6 @@ class SeisFlows:
                         continue
             print(msg.cli(items=items, header="clean", border="="))
 
-    def resume(self, **kwargs):
-        """
-        Resume a previously started workflow by loading the module pickle files
-        and submitting the workflow from where it left off.
-        """
-        self._register_parameters()
-        self._load_modules()
-
-        config_logger(level=self._parameters.LOG_LEVEL,
-                      verbose=self._parameters.VERBOSE,
-                      filename=self._paths.LOGFILE)
-
-        system = sys.modules["seisflows_system"]
-        system.submit()
-
     def restart(self, force=False, **kwargs):
         """
         Restart simply means clean the workding dir and submit a new workflow.
@@ -708,18 +606,18 @@ class SeisFlows:
         interactive environment allowing exploration of the package space.
         Does not allow stepping through of code (not a breakpoint).
         """
-        self._register_parameters()
-        self._load_modules()
+        workflow = import_seisflows(workdir=self._args.workdir,
+                                    parameter_file=self._args.parameter_file)
 
-        # Distribute modules to common names for easy access during debug mode
-        PATH = sys.modules["seisflows_paths"]
-        PAR = sys.modules["seisflows_parameters"]
-        system = sys.modules["seisflows_system"]
-        preprocess = sys.modules["seisflows_preprocess"]
-        solver = sys.modules["seisflows_solver"]
-        postprocess = sys.modules["seisflows_postprocess"]
-        optimize = sys.modules["seisflows_optimize"]
-        workflow = sys.modules["seisflows_workflow"]
+        # Break out sub-modules and parameters so they're more easily accesible
+        parameters = load_yaml(self._args.parameter_file)
+        system = workflow.system
+        solver = workflow.solver
+        preprocess = workflow.preprocess
+        optimize = workflow.optimize
+
+        for module in [workflow, system, solver, preprocess, optimize]:
+            print(module)
 
         print(msg.cli("SeisFlows's debug mode is an embedded IPython "
                       "environment. All modules are loaded by default. "
@@ -896,20 +794,6 @@ class SeisFlows:
                    delim=":")
             if not skip_print:
                 print(msg.cli(f"{key}: {cur_val} -> {value}"))
-
-    def _par_required(self):
-        """
-        Only list parameters which have not been set as a default value.
-        Filled in with default values defined in SeisFlowsPathParameters
-        """
-        sf = SeisFlowsPathsParameters
-        with open(self._args.parameter_file, "r") as f:
-            lines = f.readlines()
-            for check in [sf.default_par, sf.default_path]:
-                print(f"{check}\n{'='*len(check)}")
-                for line in lines:
-                    if check in line:
-                        print(f"\t{line.split(':')[0].strip()}")
 
     def examples(self, run=None, choice=None, **kwargs):
         """

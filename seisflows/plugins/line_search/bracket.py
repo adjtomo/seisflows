@@ -74,17 +74,13 @@ class Bracket:
         self.gtp = []
         self.step_count = 0
 
-    def check_search_history(self, iteration):
+    def check_search_history(self):
         """
         Since the line search is just a wrapper for list of numbers, check that
         search history hasn't been muddled up by ensuring that internal lists
         are the correct length for the given evaluation
-
-        :type iteration: int
-        :param iteration: current iteration of the workflow
         """
-        assert(len(self.gtg) == iteration), f"too many entries for 'gtg'"
-        assert(len(self.gtp) == iteration), f"too many entries for 'gtp'"
+        assert(len(self.gtg) == len(self.gtp)), f"too many entries for 'gtg'"
         assert(len(self.func_vals) == len(self.step_lens)), \
             f"number of function evaluations does not match step lengths"
         assert(self.step_count + 1 == len(self.func_vals)), \

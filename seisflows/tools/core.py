@@ -166,7 +166,7 @@ def number_fid(fid, i=0):
     output_000.txt, output_001.txt, output_002.txt, ouput_003.txt ...
 
     .. note::
-        Replace statement is catch all so we assume that there is only one \
+        Replace statement is catch-all, so we assume that there is only one
         instance of the file extension in the entire path.
 
     :type fid: str

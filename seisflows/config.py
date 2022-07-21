@@ -4,8 +4,6 @@ This is the Seisflows Config script, it contains utilities that are called upon
 throughout the Seisflows workflow. It also (re)defines some important functions
 that are used extensively by the machinery of Seisflows.
 
-SeisFlows consists of interacting objects:
-'system', 'preprocess', 'solver', 'postprocess', 'optimize', 'workflow'
 
 Each corresponds simultaneously to a module in the SeisFlows source code,
 a class that is instantiated and made accessible via sys.modules, and a
@@ -23,44 +21,27 @@ import traceback
 from pkgutil import find_loader
 from importlib import import_module
 
-
 from seisflows import logger
 from seisflows.tools.core import Dict, Null
-from seisflows.tools import msg, unix
+from seisflows.tools import msg
 from seisflows.tools.core import load_yaml
 
 
-"""
-!!! WARNING !!!
-
-The following constants are (some of the only) hardwired components
-of the package. The naming, order, case, etc., of each constant may be 
-important, and any changes to these will more-than-likely break the underlying 
-mechanics of the package. Do not touch unless you know what you're doing!
-"""
 # List of module names required by SeisFlows for imports. Order-sensitive
-# In sys.modules these will be prepended by 'seisflows_', e.g., seisflows_system
-# NAMES = ["system", "preprocess", "solver", "optimize", "workflow"]
 NAMES = ["workflow", "system", "solver", "preprocess", "optimize"]
 
 # The location of this config file, which is the main repository
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-"""
-!!! ^^^ WARNING ^^^ !!!
-"""
 
 
 def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
     """
-    Standard SeisFlows workflow setup block which runs some standard setup
-    tasks including: setting the working directory, instantiating the logging
-    module and dynmically importing each of the SeisFlows modules by specific
-    class names.
-
-    .. note::
-        This should be called in the exact way each time:
-        > pars, modules = import_seisflows()
-        > system, preprocess, solver, postprocess, optimize = modules
+    Standard SeisFlows workflow setup block which runs a number of setup
+    tasks including: loading a user-defiend parameter file, configuring the
+    package-wide logger based on user-input path to log file and desired
+    verbosity, and instantiating all modules in a generic fashion based on user
+    choice. Returns the 'workflow' module, which contains all other submodules
+    as attributes.
 
     :type workdir: str
     :param workdir: the current working directory in which to perform a
@@ -71,9 +52,8 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
         should be created by the command line argument 'seisflows configure'.
         Defaults to 'parameters.yaml'
     :rtype: module
-    :return: instantiated workflow module which contains all instantiated
-        sub-modules containing set parameters
-        'system', 'preprcess', 'solver', 'postprocess', 'optimize'
+    :return: instantiated 'workflow' module which contains all sub-modules which
+        have been instantiated with user-defined parameters
     """
     # Read in parameters from file. Set up the logger
     parameters = load_yaml(os.path.join(workdir, parameter_file))
@@ -104,6 +84,7 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
     to stdout, and a file logger which writes to `filename`. Two levels of
     verbosity and three levels of log messages allow the user to determine
     how much output they want to see.
+
     :type level: str
     :param level: log level to be passed to logger, available are
         'CRITICAL', 'WARNING', 'INFO', 'DEBUG'
@@ -155,7 +136,8 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
 def custom_import(name=None, module=None, classname=None):
     """
     Imports SeisFlows module and extracts class that is the camelcase version
-    of the module name
+    of the module name. Used to dynamically import sub-modules by name only,
+    avoiding the need to hardcode import statements.
 
     For example:
         custom_import('workflow', 'inversion')

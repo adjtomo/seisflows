@@ -30,7 +30,7 @@ class ThriftyInversion(Inversion):
         """
         super().__init__()
 
-        self.line_search_method = line_search_method
+        self._line_search_method = line_search_method
         self._thrifty_status = False
 
     def check(self):
@@ -39,7 +39,7 @@ class ThriftyInversion(Inversion):
         """
         super().check()
 
-        assert(self.line_search_method.title() == "Backtrack"), (
+        assert(self._line_search_method.title() == "Backtrack"), (
             "Thrifty inversion requires `line_search_method` == 'backtrack'"
         )
 
