@@ -177,21 +177,24 @@ class Specfem:
         assert hasattr(self._io, "write_slice"), \
             "IO method has no attribute 'write'"
 
-        # Check that User has provided appropriate bin/ and DATA/ directories
-        assert(self.path.specfem_bin is not None), (
-            f"`path_specfem_bin` cannot be NoneType. Must point to directory " 
+        # Check that User has provided appropriate binary files to run SPECFEM
+        assert(self.path.specfem_bin is not None and
+               os.path.exists(self.path.specfem_bin)), (
+            f"`path_specfem_bin` must exist and must point to directory " 
             f"containing SPECFEM executables"
         )
-        assert(os.path.exists(self.path.specfem_bin)), (
-            f"`path_specfem_bin` must exist and point to directory "
-            f"containing SPECFEM executables"
-        )
-        assert(glob(os.path.join(self.path.specfem_bin, "*"))), (
-            f"`path_specfem_bin` is empty but is expected to contain "
-            f"executable " \
-            f"binary files")
+        for fid in self._required_binaries:
+            assert(os.path.exists(os.path.join(self.path.specfem_bin, fid))), (
+                f"`path_specfem_bin`/{fid} does not exist but is required by "
+                f"SeisFlows solver module"
+            )
 
-        # Check that the required SPECFEM files are available in DATA/
+        # Check that SPECFEM/DATA directory exists
+        assert(self.path.specfem_data is not None and
+               os.path.exists(self.path.specfem_data)), (
+            f"`path_specfem_data` must exist and must point to directory " 
+            f"containing SPECFEM input files"
+        )
         for fid in ["STATIONS", "Par_file"]:
             assert(os.path.exists(os.path.join(self.path.specfem_data, fid))), (
                 f"DATA/{fid} does not exist but is required by SeisFlows solver"
@@ -202,12 +205,6 @@ class Specfem:
         assert(glob(os.path.join(self.path.specfem_data,
                                  f"{self.source_prefix}*"))), (
             f"No source files with prefix {self.source_prefix} found in DATA/")
-
-        # Check that required binary files exist which are called upon by solver
-        for fid in self._required_binaries:
-            assert(os.path.exists(os.path.join(self.path.specfem_bin, fid))), (
-                f"bin/{fid} does not exist but is required by SeisFlows solver"
-            )
 
         # Check that model type is set correctly in the Par_file
         model_type = getpar(key="MODEL",
