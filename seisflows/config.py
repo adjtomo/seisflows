@@ -12,11 +12,7 @@ of as comprising the complete 'state' of a SeisFlows session
 """
 import os
 import sys
-import json
-import types
-import pickle
 import logging
-import copyreg
 import traceback
 from pkgutil import find_loader
 from importlib import import_module
@@ -69,7 +65,7 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
         if name == "workflow":
             continue
         modules[name] = custom_import(name, parameters[name])(**parameters)
-        parameters.pop(name)  # drop name so workflow doesnt instantiate it
+        # parameters.pop(name)  # drop name so workflow doesnt instantiate it
 
     # Import workflow separately by providing all the instantiated modules to it
     workflow = \

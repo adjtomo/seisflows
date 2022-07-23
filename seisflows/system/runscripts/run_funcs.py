@@ -69,7 +69,11 @@ def export(myenv):
                 os.environ[key] = val
             # Variables to be deleted will not split on '=', throwing ValueError
             except ValueError:
-                del os.environ[item]
+                try:
+                    del os.environ[item]
+                # If a NoneType sneaks through, it will throw TypeEror on 'del'
+                except TypeError:
+                    continue
 
 
 if __name__ == '__main__':

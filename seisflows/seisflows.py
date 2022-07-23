@@ -16,7 +16,6 @@ facilitates interface with the underlying SeisFlows package.
 import os
 import sys
 import inspect
-import logging
 import warnings
 import argparse
 import traceback
@@ -25,7 +24,7 @@ from glob import glob
 from IPython import embed
 
 from seisflows import logger
-from seisflows.config import custom_import, NAMES, ROOT_DIR, config_logger, import_seisflows
+from seisflows.config import custom_import, NAMES, ROOT_DIR, import_seisflows
 from seisflows.tools import unix, msg
 from seisflows.tools.core import load_yaml, Dict
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
@@ -321,8 +320,6 @@ class SeisFlows:
         any checks we must load the entire SeisFlows environment, which is slow
         but provides the most flexibility when accessing internal information
     """
-    logger = logging.getLogger(__name__).getChild(__qualname__)
-
     def __init__(self):
         """
         Parse user-defined arguments and establish internal parameters used to
@@ -575,7 +572,8 @@ class SeisFlows:
 
         workflow = import_seisflows(workdir=self._args.workdir,
                                     parameter_file=self._args.parameter_file)
-        workflow.system.submit(workflow)
+        system = workflow._modules.system
+        system.submit(workflow)
 
     def clean(self, force=False, **kwargs):
         """
@@ -602,21 +600,11 @@ class SeisFlows:
                                   "(y/[n])", header="clean", border="="))
 
         if check == "y":
-            # CFGPATHS defines the outermost directory structure of SeisFlows
-            # We safeguard below against deleting the parameter file
-            items = []
-            for fid_ in CFGPATHS.values():
-                for fid in glob(os.path.join(self._args.workdir, fid_)):
-                    # Safeguards against deleting files that should not be dltd
-                    try:
-                        assert("yaml" not in fid)
-                        assert(not os.path.islink(fid))
-                        unix.rm(fid)
-                        items.append(f"- deleting file/folder: {fid}")
-                    except AssertionError:
-                        items.append(f"+ skipping over: {fid}")
-                        continue
-            print(msg.cli(items=items, header="clean", border="="))
+            pars = load_yaml(self._args.parameter_file)
+            unix.rm(pars.path_scratch)
+            unix.rm(pars.path_output)
+            unix.rm(pars.path_log_files)
+            unix.rm(pars.path_state_file)
 
     def restart(self, force=False, **kwargs):
         """
@@ -637,13 +625,11 @@ class SeisFlows:
 
         # Break out sub-modules and parameters so they're more easily accesible
         parameters = load_yaml(self._args.parameter_file)
-        system = workflow.system
-        solver = workflow.solver
-        preprocess = workflow.preprocess
-        optimize = workflow.optimize
+        system, solver, preprocess, optimize = workflow._modules.values()
 
+        print("Loaded SeisFlows Modules:")
         for module in [workflow, system, solver, preprocess, optimize]:
-            print(module)
+            print(f"{module.__class__}")
 
         print(msg.cli("SeisFlows's debug mode is an embedded IPython "
                       "environment. All modules are loaded by default. "

@@ -37,6 +37,11 @@ class Inversion(Migration):
     :param start: start inversion workflow at this iteration. 1 <= start <= inf
     :type end: int
     :param end: end inversion workflow at this iteration. start <= end <= inf
+    :type thrifty: bool
+    :param thrifty: a thrifty inversion skips the costly intialization step
+        (i.e., forward simulations and misfit quantification) if the final
+        forward simulations from the previous iterations line search can be
+        used in the current one. Requires L-BFGS optimization.
     :type export_model: bool
     :param export_model: export best-fitting model from the line search to disk.
         If False, new models can be discarded from scratch at any time.
@@ -49,23 +54,36 @@ class Inversion(Migration):
     """
     __doc__ = Migration.__doc__ + __doc__
 
-    def __init__(self, modules=None, start=1, end=1, export_model=True,
-                 path_eval_func=None, **kwargs):
-        """Instantiate Inversion-specific parameters"""
+    def __init__(self, modules=None, start=1, end=1, thrifty=False,
+                 optimize="LBFGS", export_model=True, path_eval_func=None,
+                 **kwargs):
+        """
+        Instantiate Inversion-specific parameters. Non-essential parameters are
+        listed here, rather than in the class docstring.
 
+        :type optimize: str
+        :param optimize: Name of the optimization module chosen by the user.
+            This should be instantiated by default when using `import_seisflows`
+            Used to check that the correct module is set when performing a
+            `thrifty` inversion.
+        """
         super().__init__(**kwargs)
 
         self._modules = modules
         self.start = start
         self.end = end
         self.export_model = export_model
+        self.thrifty = thrifty
 
-        self.path.eval_func = path_eval_func or \
-                              os.path.join(self.path.workdir, "scratch",
+        # Append an additional path for line search function evaluations
+        self.path["eval_func"] = path_eval_func or \
+                                 os.path.join(self.path.workdir, "scratch",
                                            "eval_func")
 
         # Internal attribute for keeping track of inversion
         self._iteration = start
+        self._optimize_name = optimize
+        self._thrifty_status = False
         self._required_modules = ["system", "solver", "preprocess", "optimize"]
 
     @property
@@ -107,6 +125,12 @@ class Inversion(Migration):
             f"Incorrect START or END parameter. Values must be in order: " \
             f"1 <= {self.start} <= {self.end}"
 
+        if self.thrifty:
+            assert(self._optimize_name == "LBFGS"), (
+                f"a `thrifty` inversion requires the optimization module to be "
+                f"set as 'LBFGS'"
+            )
+
     def setup(self):
         """
         Assigns modules as attributes of the workflow. I.e., `self.solver` to
@@ -130,11 +154,32 @@ class Inversion(Migration):
 
     def evaluate_initial_misfit(self):
         """
-        Overwrite `workflow.forward` just to sum residuals output by preprocess
-        module and save them to disk, to be discoverable by the optimization
-        library
+        Overwrite `workflow.forward` to skip over initial misfit evaluation
+        (using `MODEL_INIT`) if we are past iteration 1. Additionally, sum
+        residuals output by preprocess module and save float to disk, to be
+        discoverable by the optimization library
         """
-        super().evaluate_initial_misfit()
+        if self._iteration == 1:
+            super().evaluate_initial_misfit()
+        else:
+            # Thrifty inversion SKIPS initial misfit evaluation, re-using final
+            # model from previous line search. Can only happen mid-workflow
+            if self.thrifty and (
+                    self._thrifty_status or self._iteration == self.start):
+                logger.info(msg.mnr("THRIFTY INVERSION; SKIP MISFIT EVAL"))
+            else:
+                logger.info(msg.mnr("EVALUATING MISFIT FOR MODEL `m_new`"))
+                # Previous line search will have saved `m_new` as the initial model,
+                # export in SPECFEM format to a path discoverable by all solvers
+                path_model = os.path.join(self.path.eval_grad, "model")
+                m_new = self.optimize.load("m_new")
+                m_new.write(path=path_model)
+                # Run forward simulation/misfit quantification with previous model
+                self.system.run(
+                    [self.evaluate_objective_function],
+                    path_model=path_model,
+                    save_residuals=os.path.join(self.path.eval_grad, "residuals")
+                )
 
         # Override function to sum residuals into the optimization library
         residuals = np.loadtxt(os.path.join(self.path.eval_grad, "residuals"))
@@ -185,7 +230,7 @@ class Inversion(Migration):
         m_try, alpha = self.optimize.initialize_search()
         self.optimize.save(name="m_try", m=m_try)
         self.optimize.save(name="alpha", m=alpha)
-        self.optimize.checkpoint_line_search()
+        self.optimize.checkpoint()
 
         # Expose model `m_try` to the solver by placing it in eval_func dir.
         m_try.write(path=os.path.join(self.path.eval_func, "model"))
@@ -215,14 +260,14 @@ class Inversion(Migration):
 
         # Increment step count, calculate new step length/model, check misfit
         status = self.optimize.update_line_search()
-        self.optimize.checkpoint_line_search()
+        self.optimize.checkpoint()
 
         # Proceed based on the outcome of the line search
         if status == 1:
             # Save outcome of line search to disk; reset step to 0 for next iter
             logger.info("trial step successful. finalizing line search")
             self.optimize.finalize_search()
-            self.optimize.checkpoint_line_search()
+            self.optimize.checkpoint()
             return
         elif status == 0:
             logger.info("trial step unsuccessful. re-attempting line search")
@@ -259,14 +304,46 @@ class Inversion(Migration):
     def clean_scratch_directory(self):
         """
         Cleans directories in which function and gradient evaluations were
-        carried out
+        carried out. Contains some logic to consider whether or not to continue
+        with a thrifty inversion.
         """
         logger.info(msg.mnr("CLEANING WORKDIR FOR NEXT ITERATION"))
 
-        unix.rm(self.path.eval_grad)
-        unix.rm(self.path.eval_func)
+        self._thrifty_status = self._update_thrifty_status()
+        if self._thrifty_status:
+            unix.rm(self.path.eval_grad)
+            # Eval func model now defines the current model 'm_new'
+            unix.mv(self.path.eval_func, self.path.eval_grad)
+            unix.mkdir(self.path.eval_func)
+        else:
+            unix.rm(self.path.eval_grad)
+            unix.rm(self.path.eval_func)
 
-        unix.mkdir(self.path.eval_grad)
-        unix.mkdir(self.path.eval_func)
+            unix.mkdir(self.path.eval_grad)
+            unix.mkdir(self.path.eval_func)
 
+    def _update_thrifty_status(self):
+        """
+        Determine if line search forward simulation can be carried over to the
+        next iteration. Checks criteria related to the current iteration and
+        its position relative to the start and end of the workflow.
+        """
+        if self._iteration == self.start:
+            logger.info("thrifty inversion encountering first iteration, "
+                        "defaulting to standard inversion workflow")
+            _thrifty_status = False
+        elif self.optimize._restarted:  # NOQA
+            logger.info("optimization has been restarted, defaulting to "
+                        "standard inversion workflow")
+            _thrifty_status = False
+        elif self.optimize.iter == self.end:
+            logger.info("thrifty inversion encountering final iteration, "
+                        "defaulting to inversion workflow")
+            _thrifty_status = False
+        else:
+            logger.info("acceptable conditions for thrifty inverison, "
+                        "continuing with thrifty inversion")
+            _thrifty_status = True
+
+        return _thrifty_status
 

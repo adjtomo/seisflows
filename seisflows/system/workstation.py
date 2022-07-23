@@ -71,7 +71,7 @@ class Workstation:
             par_file=path_par_file or os.path.join(workdir, "parameters.yaml"),
             output=path_output or os.path.join(workdir, "output"),
             log_files=path_log_files or os.path.join(workdir, "logs"),
-            output_log=path_output_log or os.path.join(workdir, "sfoutput.log"),
+            output_log=path_output_log or os.path.join(workdir, "sflog.txt"),
         )
         self._acceptable_log_levels = ["CRITICAL", "WARNING", "INFO", "DEBUG"]
 
@@ -130,8 +130,8 @@ class Workstation:
             subprocess. This is only needed for overriding classes, it has no
             effect on the Workstation class
         """
-        workflow.setup()
         workflow.check()
+        workflow.setup()
         workflow.run()
 
     def run(self, funcs, single=False, **kwargs):

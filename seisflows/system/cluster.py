@@ -3,8 +3,15 @@
 The Cluster class provides the core utilities interaction with HPC systems
 which must be overloaded by subclasses for specific workload managers, or
 specific clusters.
+
+The `Cluster` class acts as a base class for more specific cluster
+implementations (like SLURM). However it can be used standalone. When running
+jobs on the `Cluster` system, jobs will be submitted to the master system
+using `subprocess.run`, mimicing how jobs would be run on a cluster but not
+actually submitting to any job scheduler.
 """
 import os
+import sys
 import dill
 import subprocess
 from seisflows import logger
@@ -49,7 +56,7 @@ class Cluster(Workstation):
         self.mpiexec = mpiexec
         self.walltime = walltime
         self.tasktime = tasktime
-        self.environs = environs
+        self.environs = environs or ""
 
     def _pickle_func_list(self, funcs, **kwargs):
         """
@@ -103,11 +110,18 @@ class Cluster(Workstation):
             attempts default run call which should be suited for the given
             system
         """
+        # Single tasks only need to be run one time, as `TASK_ID` === 0
+        if single:
+            ntasks = 1
+        else:
+            ntasks = self.ntask
+
         funcs_fid, kwargs_fid = self._pickle_func_list(funcs, **kwargs)
         logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
                     f"system {self.ntask} times")
 
         if run_call is None:
+            # e.g., run --funcs func.p --kwargs kwargs.p --environment ...
             run_call = " ".join([
                 f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
                 f"--funcs {funcs_fid}",
@@ -116,8 +130,13 @@ class Cluster(Workstation):
             ])
         logger.debug(run_call)
 
-        for task_id in range(self.ntask):
+        for task_id in range(ntasks):
             logger.debug(f"running task id {task_id} "
                          f"(job {task_id + 1}/{self.ntask})")
             # Subprocess waits for the process to end before running the next
-            subprocess.run(run_call.format(task_id=task_id), shell=True)
+            try:
+                subprocess.run(run_call.format(task_id=task_id), shell=True)
+            except subprocess.CalledProcessError as e:
+                logger.critical(f"run task_id {task_id} has failed with error "
+                                f"message {e}")
+                sys.exit(-1)

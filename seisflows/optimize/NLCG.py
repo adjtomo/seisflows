@@ -31,11 +31,12 @@ class NLCG(Gradient):
         super().__init__(**kwargs)
 
         # Overwrite user-chosen line search. L-BFGS requires 'Backtrack'ing LS
-        if self._line_search.title != "Bracket":
+        if self.line_search_method.title != "Bracket":
             logger.warning(f"NLCG optimization requires 'bracket'ing line "
-                           f"search. Overwritng {self._line_search}")
+                           f"search. Overwritng {self.line_search_method}")
             self.line_search_method = "Bracket"
-            self._line_search = getattr(line_search_dir, self._line_search)(
+            self._line_search = getattr(
+                line_search_dir, self.line_search_method)(
                 step_count_max=self.step_count_max,
                 step_len_max=self.step_len_max
             )

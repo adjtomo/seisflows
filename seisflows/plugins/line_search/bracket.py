@@ -83,8 +83,9 @@ class Bracket:
         assert(len(self.gtg) == len(self.gtp)), f"too many entries for 'gtg'"
         assert(len(self.func_vals) == len(self.step_lens)), \
             f"number of function evaluations does not match step lengths"
-        assert(self.step_count + 1 == len(self.func_vals)), \
-            f"current step coutn doesn't match the number of function evals"
+        if self.func_vals:
+            assert(self.step_count + 1 == len(self.func_vals)), \
+                f"current step count doesn't match the number of function evals"
 
     def save_search_history(self, file=None):
         """

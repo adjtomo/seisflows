@@ -93,7 +93,7 @@ class Forward:
             model_init=path_model_init,
             model_true=path_model_true,
             state_file=path_state_file or
-                       os.path.join(workdir, ".statefile.txt"),
+                       os.path.join(workdir, "sfstate.txt"),
             data=path_data,
         )
 
@@ -230,9 +230,9 @@ class Forward:
 
         # Distribute modules to the class namespace. We don't do this at init
         # incase _modules was set as NoneType
-        self.solver = self._modules.solver
-        self.system = self._modules.system
-        self.preprocess = self._modules.preprocess
+        self.solver = self._modules.solver  # NOQA
+        self.system = self._modules.system  # NOQA
+        self.preprocess = self._modules.preprocess  # NOQA
 
     def checkpoint(self):
         """

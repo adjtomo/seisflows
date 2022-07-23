@@ -152,7 +152,7 @@ class Gradient:
         Sets up nonlinear optimization machinery
         """
         unix.mkdir(self.path.scratch)
-        self.checkpoint_line_search()  # will be empty
+        self.checkpoint()  # will be empty
 
     def load(self, name):
         """
@@ -210,13 +210,16 @@ class Gradient:
         else:
             raise TypeError(f"optimize.save unrecognized type error {type(m)}")
 
-    def checkpoint_line_search(self):
+    def checkpoint(self):
         """
         Convenience wrapper of the underlying _line_search.save_search_history
         to avoid accessing the private attr. _line_search from outside the class
         """
         self._line_search.check_search_history()
         self._line_search.save_search_history()
+
+        # TODO add in checkpointing for optimization, saving iteration,
+        #   restarted condition, etc?
 
     def _precondition(self, q):
         """
@@ -272,7 +275,7 @@ class Gradient:
         gtp = dot(g.vector, p.vector)
 
         # Restart plugin line search if the optimization library restarts
-        if self.restarted:
+        if self._restarted:
             self._line_search.clear_history()
 
         # Optional safeguard to prevent step length from getting too large

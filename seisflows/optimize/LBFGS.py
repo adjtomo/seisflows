@@ -58,11 +58,12 @@ class LBFGS(Gradient):
         super().__init__(**kwargs)
 
         # Overwrite user-chosen line search. L-BFGS requires 'Backtrack'ing LS
-        if self._line_search.title() != "Backtrack":
+        if self.line_search_method.title() != "Backtrack":
             logger.warning(f"L-BFGS optimization requires 'backtrack'ing line "
-                           f"search. Overwritng {self._line_search}")
+                           f"search. Overwriting '{self.line_search_method}'")
             self.line_search_method = "Backtrack"
-            self._line_search = getattr(line_search_dir, self._line_search)(
+            self._line_search = getattr(
+                line_search_dir, self.line_search_method)(
                 step_count_max=self.step_count_max,
                 step_len_max=self.step_len_max
             )
@@ -113,8 +114,9 @@ class LBFGS(Gradient):
         # Load the current gradient direction, which is the L-BFGS search
         # direction if this is the first iteration
         g = self.load("g_new")
+
         if self._LBFGS_iter == 1:
-            logger.info("first L-BFGS iteration, default to gradient descent")
+            logger.info("first L-BFGS iteration, default to 'Gradient' descent")
             p_new = -1 * g.vector
             restarted = False
 
@@ -138,16 +140,19 @@ class LBFGS(Gradient):
             # its angle to the previous search direction
             if self._check_status(g, q):
                 logger.info("new L-BFGS search direction found")
-                p_new = -q
+                p_new = q.update(vector=-1 * q.vector)
                 restarted = False
             else:
                 logger.info("new search direction not appropriate, defaulting "
                             "to gradient desceitn")
                 self.restart()
-                p_new = -g
+                p_new = g.update(vector=-1 * g.vector)
                 restarted = True
 
-        # Save values to disk and memory
+        # Assign newly computed 'p_new' vector to a Model instance
+        p_new = g.update(vector=p_new)
+
+        # Assign restart condition to internal memory
         self._restarted = restarted
 
         return p_new
