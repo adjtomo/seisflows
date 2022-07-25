@@ -184,10 +184,13 @@ class Gradient:
         """
         assert(name in self._acceptable_vectors)
         model_npz = os.path.join(self.path.scratch, f"{name}.npz")
+        model_npy = model_npz.replace(".npz", ".npy")
         model_txt = model_npz.replace(".npz", ".txt")
         if os.path.exists(model_npz):
             model = Model(path=os.path.join(self.path.scratch,
                                             f"{name}.npz"), load=True)
+        elif os.path.exists(model_npy):
+            model = np.load(model_npy)
         elif os.path.exists(model_txt):
             model = float(np.loadtxt(model_txt))
         else:
@@ -210,6 +213,9 @@ class Gradient:
             path = os.path.join(self.path.scratch, f"{name}.npz")
             m.model = m.split()  # overwrite m representation
             m.save(path=path)
+        elif isinstance(m, np.array):
+            path = os.path.join(self.path.scratch, f"{name}.npy")
+            np.save(path=path)
         elif isinstance(m, (float, int)):
             path = os.path.join(self.path.scratch, f"{name}.txt")
             np.savetxt(path, [m])
