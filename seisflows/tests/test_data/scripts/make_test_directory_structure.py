@@ -3,7 +3,7 @@ Create a test directory structure with actual data to test individual modules
 """
 import os
 from seisflows.tools import unix
-from seisflows.config import CFGPATHS, ROOT_DIR
+from seisflows.tools.config import CFGPATHS, ROOT_DIR
 
 
 testdir = os.path.join(ROOT_DIR, "tests", "test_data")

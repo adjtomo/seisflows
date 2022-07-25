@@ -16,7 +16,7 @@ from pyatoa import Pyaflowa, Inspector
 
 from seisflows import logger
 from seisflows.tools import unix, msg
-from seisflows.config import CFGPATHS
+from seisflows.tools.config import CFGPATHS
 
 
 class Pyatoa:

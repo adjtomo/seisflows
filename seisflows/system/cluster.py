@@ -15,7 +15,7 @@ import sys
 import dill
 import subprocess
 from seisflows import logger
-from seisflows.config import ROOT_DIR
+from seisflows.tools.config import ROOT_DIR
 from seisflows.system.workstation import Workstation
 
 

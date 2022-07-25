@@ -17,17 +17,10 @@ import traceback
 from pkgutil import find_loader
 from importlib import import_module
 
-from seisflows import logger
+from seisflows import logger, NAMES
 from seisflows.tools.core import Dict, Null
 from seisflows.tools import msg
 from seisflows.tools.core import load_yaml
-
-
-# List of module names required by SeisFlows for imports. Order-sensitive
-NAMES = ["workflow", "system", "solver", "preprocess", "optimize"]
-
-# The location of this config file, which is the main repository
-ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
 
 def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):

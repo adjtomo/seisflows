@@ -10,7 +10,7 @@ import time
 import subprocess
 
 from seisflows.system.cluster import Cluster
-from seisflows.config import ROOT_DIR
+from seisflows.tools.config import ROOT_DIR
 
 
 class Lsf(Cluster):

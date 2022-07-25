@@ -346,6 +346,18 @@ class Inversion(Migration):
         """
         logger.info(msg.mnr("CLEANING WORKDIR FOR NEXT ITERATION"))
 
+        # Export scratch files to output if requested
+        if self.export_model:
+            model = self.optimize.load_vector("m_new")
+            model.write(path=os.path.join(self.path.output,
+                                          f"M{self.iteration:0>2}")
+                        )
+
+        # Update optimization
+        self.iteration += 1
+        logger.info(f"setting current iteration to: {self.iteration}")
+        self.optimize.checkpoint()
+
         # Clear out the scratch directory
         self._thrifty_status = self._update_thrifty_status()
         if self._thrifty_status:
@@ -360,23 +372,15 @@ class Inversion(Migration):
             unix.mkdir(self.path.eval_grad)
             unix.mkdir(self.path.eval_func)
 
-        # Export scratch files to output if requested
-        if self.export_model:
-            model = self.optimize.load_vector("m_new")
-            model.write(path=os.path.join(self.path.output,
-                                          f"M{self.iteration:0>2}")
-                        )
-
-        # Update optimization
-        self.iteration += 1
-        logger.info(f"setting current iteration to: {self.iteration}")
-        self.optimize.checkpoint()
-
     def _update_thrifty_status(self):
         """
         Determine if line search forward simulation can be carried over to the
         next iteration. Checks criteria related to the current iteration and
         its position relative to the start and end of the workflow.
+
+        .. note::
+            Resumed, failed workflows will not re-load `_thrifty_status` so
+            initial misfit will always be evaluated in that case.
         """
         if self.iteration == self.start:
             logger.info("thrifty inversion encountering first iteration, "

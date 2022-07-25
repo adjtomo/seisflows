@@ -8,7 +8,7 @@ runs jobs through singularity
 """
 import os
 import numpy as np
-from seisflows.config import ROOT_DIR
+from seisflows.tools.config import ROOT_DIR
 from seisflows.system.slurm import Slurm
 
 

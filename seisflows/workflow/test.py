@@ -13,7 +13,7 @@ import numpy as np
 from glob import glob
 
 from seisflows.tools.core import Base
-from seisflows.config import ROOT_DIR, CFGPATHS, save, config_logger
+from seisflows.tools.config import ROOT_DIR, CFGPATHS, save, config_logger
 
 
 class Test(Base):

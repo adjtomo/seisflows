@@ -19,7 +19,7 @@ import sys
 import argparse
 
 from seisflows.tools import unix
-from seisflows.config import load, config_logger
+from seisflows.tools.config import load, config_logger
 
 
 def parse_args():

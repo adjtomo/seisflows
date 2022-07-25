@@ -22,7 +22,7 @@ import subprocess
 from seisflows import logger
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
-from seisflows.config import ROOT_DIR
+from seisflows.tools.config import ROOT_DIR
 
 
 class Slurm(Cluster):

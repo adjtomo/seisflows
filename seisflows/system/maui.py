@@ -21,7 +21,7 @@ import os
 import numpy as np
 from seisflows import logger
 from seisflows.system.slurm import Slurm
-from seisflows.config import ROOT_DIR
+from seisflows.tools.config import ROOT_DIR
 
 
 class Maui(Slurm):

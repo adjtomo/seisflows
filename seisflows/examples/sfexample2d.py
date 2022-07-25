@@ -34,7 +34,7 @@ import subprocess
 import numpy as np
 
 from seisflows.tools import msg
-from seisflows.config import Dict
+from seisflows.tools.config import Dict
 from seisflows.seisflows import SeisFlows
 from seisflows.tools.unix import cd, cp, rm, ln, mv, mkdir
 

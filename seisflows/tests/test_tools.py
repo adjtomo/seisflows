@@ -4,8 +4,9 @@ Test any of the utility functions defined in the Tools directory
 import os
 import pytest
 from glob import glob
+from seisflows import ROOT_DIR
 from seisflows.tools.specfem import Model
-from seisflows.config import ROOT_DIR, NAMES, CFGPATHS
+from seisflows.tools.config import custom_import
 
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
@@ -46,3 +47,23 @@ def test_specfem_model(tmpdir):
     # Check that writing fortran binary works
     m.write(path=tmpdir)
     assert(len(glob(os.path.join(tmpdir, f"*{m.fmt}"))) == 2)
+
+
+def test_custom_import():
+    """
+    Test that importing based on internal modules works for various inputs
+    :return:
+    """
+    with pytest.raises(SystemExit):
+        custom_import()
+    with pytest.raises(SystemExit):
+        custom_import(name="NOT A VALID NAME")
+
+    module = custom_import(name="optimize", module="LBFGS")
+    assert(module.__name__ == "LBFGS")
+    assert(module.__module__ == "seisflows.optimize.LBFGS")
+
+    # Check one more to be safe
+    module = custom_import(name="preprocess", module="default")
+    assert(module.__name__ == "Default")
+    assert(module.__module__ == "seisflows.preprocess.default")

@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 from seisflows.tools.core import Dict
 from seisflows.seisflows import SeisFlows
-from seisflows.config import ROOT_DIR, NAMES, CFGPATHS
+from seisflows.tools.config import ROOT_DIR, NAMES, CFGPATHS
 from seisflows.tools.core import load_yaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
@@ -306,7 +306,7 @@ def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
     assert (len(lines_conf) == len(lines_fill))
 
     # My attempt to flush sys.modules which did NOT work
-    # from seisflows.config import NAMES, PAR, PATH
+    # from seisflows.tools.config import NAMES, PAR, PATH
     # for name in NAMES:
     #     del sys.modules[f"seisflows_{name}"]
     # del sys.modules[PAR]
