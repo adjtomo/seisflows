@@ -67,10 +67,10 @@ class Gradient:
         formatted the same as the input model (or output model of solver).
         Required to exist and contain files if `preconditioner`==True
     """
-    def __init__(self, line_search_method="bracket", preconditioner=None,
-                 step_count_max=10, step_len_init=0.05, step_len_max=0.5,
-                 workdir=os.getcwd(), path_optimize=None, path_output=None,
-                 path_preconditioner=None, **kwargs):
+    def __init__(self, line_search_method="bracket",
+                 preconditioner=None, step_count_max=10, step_len_init=0.05,
+                 step_len_max=0.5, workdir=os.getcwd(), path_optimize=None,
+                 path_output=None, path_preconditioner=None, **kwargs):
         """
         Gradient-descent input parameters.
 
@@ -100,6 +100,10 @@ class Gradient:
             preconditioner=path_preconditioner,
         )
 
+        # Hidden paths to store checkpoint file in scratch directory
+        self.path["_checkpoint"] = os.path.join(self.path.scratch,
+                                                "checkpoint")
+
         # Internal check to see if the chosen line search algorithm exists
         if not hasattr(line_search_dir, line_search_method):
             logger.warning(f"{line_search_method} is not a valid line search "
@@ -120,7 +124,6 @@ class Gradient:
         self._line_search = getattr(
             line_search_dir, line_search_method.title())(
             step_count_max=step_count_max, step_len_max=step_len_max,
-            path=os.path.join(self.path.scratch, "line_search")
         )
 
     @property
@@ -152,9 +155,12 @@ class Gradient:
         Sets up nonlinear optimization machinery
         """
         unix.mkdir(self.path.scratch)
+
+        # Load checkpoint (if resuming) or save current checkpoint
+        self.load_checkpoint()
         self.checkpoint()  # will be empty
 
-    def load(self, name):
+    def load_vector(self, name):
         """
         Convenience function to access the full paths of model and gradient
         vectors that are saved to disk
@@ -189,7 +195,7 @@ class Gradient:
 
         return model
 
-    def save(self, name, m):
+    def save_vector(self, name, m):
         """
         Convenience function to save/overwrite vectors on disk
 
@@ -212,14 +218,47 @@ class Gradient:
 
     def checkpoint(self):
         """
-        Convenience wrapper of the underlying _line_search.save_search_history
-        to avoid accessing the private attr. _line_search from outside the class
-        """
-        self._line_search.check_search_history()
-        self._line_search.save_search_history()
+        The optimization module (and its underlying `line_search` attribute)
+        requires continuity across runs of the same workflow (e.g., in the
+        event of a failed job). This function saves internal attributes of
+        the optimization module to disk so that a resumed workflow does not
+        lose information from its previous version.
 
-        # TODO add in checkpointing for optimization, saving iteration,
-        #   restarted condition, etc?
+        User can checkpoint other variables by adding kwargs
+        """
+        dict_out = dict(restarted=self._restarted,
+                        func_vals=self._line_search.func_vals,
+                        step_lens=self._line_search.step_lens,
+                        gtg=self._line_search.gtg,
+                        gtp=self._line_search.gtp,
+                        step_count=self._line_search.step_count)
+
+        np.savez(file=self.path._checkpoint, **dict_out)
+
+    def load_checkpoint(self):
+        """
+        Counterpart to `optimize.checkpoint`. Loads a checkpointed optimization
+        module from disk and sets internal tracking attributes.
+        """
+        # NumPy appends '.npz' when saving. Make sure we honor that.
+        if not self.path._checkpoint.endswith(".npz"):
+            fid = f"{self.path._checkpoint}.npz"
+        else:
+            fid = self.path._checkpoint
+
+        if os.path.exists(fid):
+            logger.info("re-loading optimization module from checkpoint")
+            dict_in = np.load(file=fid)
+
+            self._restarted = bool(dict_in["restarted"])
+            self._line_search.func_vals = list(dict_in["func_vals"])
+            self._line_search.step_lens = list(dict_in["step_lens"])
+            self._line_search.gtg = list(dict_in["gtg"])
+            self._line_search.gtp = list(dict_in["gtp"])
+            self._line_search.step_count = int(dict_in["step_count"])
+        else:
+            logger.info("no optimization checkpoint found, assuming first run")
+            self.checkpoint()
 
     def _precondition(self, q):
         """
@@ -253,7 +292,7 @@ class Gradient:
         :rtype: seisflows.tools.specfem.Model
         :return: search direction as a Model instance
         """
-        g_new = self.load("g_new")
+        g_new = self.load_vector("g_new")
         p_new = g_new.update(vector=-1 * self._precondition(g_new.vector))
 
         return p_new
@@ -264,10 +303,10 @@ class Gradient:
         direction with a given step length, calculated by the chosen line
         search algorithm.
         """
-        m = self.load("m_new")  # current model from external solver
-        g = self.load("g_new")  # current gradient from scaled kernels
-        p = self.load("p_new")  # current search direction from optimization
-        f = self.load("f_new")  # current misfit value from preprocess
+        m = self.load_vector("m_new")  # current model from external solver
+        g = self.load_vector("g_new")  # current gradient from scaled kernels
+        p = self.load_vector("p_new")  # current search direction
+        f = self.load_vector("f_new")  # current misfit value from preprocess
 
         norm_m = max(abs(m.vector))
         norm_p = max(abs(p.vector))
@@ -287,7 +326,7 @@ class Gradient:
         # Initialize the line search and save it to disk.
         self._line_search.update_search_history(func_val=f, step_len=0.,
                                                gtg=gtg, gtp=gtp)
-        self._line_search.check_search_history()
+        # self._line_search.check_search_history()
 
         alpha, _ = self._line_search.calculate_step_length()
 
@@ -317,13 +356,13 @@ class Gradient:
             status == -1  : failed
         """
         # Collect information on a forward evaluation that just took place
-        alpha = self.load("alpha")  # step length
-        f_try = self.load("f_try")  # misfit for the trial model
+        alpha = self.load_vector("alpha")  # step length
+        f_try = self.load_vector("f_try")  # misfit for the trial model
 
         # Update the line search with a new step length and misfit value
         self._line_search.step_count += 1
         self._line_search.update_search_history(step_len=alpha, func_val=f_try)
-        self._line_search.check_search_history()
+        # self._line_search.check_search_history()
 
         # Calculate a new step length based on line search algorithm
         alpha_try, status = self._line_search.calculate_step_length()
@@ -331,18 +370,18 @@ class Gradient:
         # Status == 0: Retry line search // Status == 1: Line search passed
         if status in [0, 1]:
             # Save new step length to disk
-            self.save("alpha", alpha_try)
+            self.save_vector("alpha", alpha_try)
 
             # Create a new trial model based on search direction, step length
             # and the initial model vector
-            m = self.load("m_new")
-            p = self.load("p_new")
+            m = self.load_vector("m_new")
+            p = self.load_vector("p_new")
 
             # Sets the latest trial model
             m_try = m.update(vector=m.vector + alpha * p.vector)
             logger.info("trial model 'm_try' parameters: ")
             m_try.check()
-            self.save("m_try", m_try)
+            self.save_vector("m_try", m_try)
 
         return status
 
@@ -383,7 +422,7 @@ class Gradient:
 
         # Choose minimum misfit value as final misfit/model. index 0 is initial
         f = self._line_search.get_search_history()[1]
-        self.save("f_new", f.min())
+        self.save_vector("f_new", f.min())
         logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
 
         logger.info("resetting line search step count to 0")
@@ -406,8 +445,8 @@ class Gradient:
         :rtype: int
         :return: pass (1) fail (0) status for retrying line search
         """
-        g = self.load("g_new")
-        p = self.load("p_new")
+        g = self.load_vector("g_new")
+        p = self.load_vector("p_new")
 
         theta = angle(p.vector, -1 * g.vector)
         logger.debug(f"checking gradient/search direction angle, "
@@ -447,15 +486,15 @@ class Gradient:
         # First time, write header information
         if not os.path.exists(fid):
             with open(fid, "w") as f:
-                for header in ["ITER", # "FACTOR",
+                for header in [# "ITER", "FACTOR",
                                "GRAD_NORM_L1", "GRAD_NORM_L2",
                                "MISFIT", "RESTART", "SLOPE", "STEP", "LENGTH",
                                "THETA"]:
                     f.write(f"{header.upper()},")
                 f.write("\n")
 
-        g = self.load("g_new")
-        p = self.load("p_new")
+        g = self.load_vector("g_new")
+        p = self.load_vector("p_new")
         x, f, *_ = self._line_search.get_search_history()
 
         # Calculated stats factors

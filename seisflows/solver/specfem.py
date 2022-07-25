@@ -519,7 +519,7 @@ class Specfem:
             names = glob(f"*proc??????_{tag}_kernel{self._ext}")
             unix.rename(old="alpha", new="vp", names=names)
 
-        logger.debug(f"renaming output event kernels: 'alpha' -> 'vp'")
+        logger.debug(f"renaming output event kernels: 'beta' -> 'vs'")
         for tag in ["beta", "beta[hv]", "reg1_beta", "reg1_beta[hv]"]:
             names = glob(f"*proc??????_{tag}_kernel{self._ext}")
             unix.rename(old="beta", new="vs", names=names)
@@ -670,7 +670,7 @@ class Specfem:
                             header="external solver error", border="="))
             sys.exit(-1)
 
-        # Append with mpiexec if we are running with MPI
+        # Prepend with `mpiexec` if we are running with MPI
         if self._mpiexec:
             executable = f"{self._mpiexec} {executable}"
 
@@ -684,7 +684,7 @@ class Specfem:
                         "nonzero exit code (failure). Consider stopping any "
                         "currently running jobs to avoid wasted "
                         "computational resources. Check 'scratch/solver/"
-                        "mainsolver/{stdout}' for the solvers stdout log "
+                        f"mainsolver/{stdout}' for the solvers stdout log "
                         "message. The failing command and error message are:",
                         items=[f"exc: {executable}", f"err: {e}"],
                         header="external solver error",
@@ -742,8 +742,6 @@ class Specfem:
         for source_name in self.source_names:
             cwd = os.path.join(self.path.scratch, source_name)
             if os.path.exists(cwd):
-                logger.warning(f"solver scratch path for source {source_name} "
-                               f"already exists")
                 continue
             self._initialize_working_directory(cwd=cwd)
 

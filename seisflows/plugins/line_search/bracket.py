@@ -87,36 +87,6 @@ class Bracket:
             assert(self.step_count + 1 == len(self.func_vals)), \
                 f"current step count doesn't match the number of function evals"
 
-    def save_search_history(self, file=None):
-        """
-        Save the current line search history to disk. Used to re-load a line
-        search from disk in the case of a failed search
-        """
-        if file is None:
-            file = self.path
-
-        dict_out = dict(func_vals=self.func_vals, step_lens=self.step_lens,
-                        gtg=self.gtg, gtp=self.gtp, step_count=self.step_count)
-        np.savez(file=file, **dict_out)
-
-    def load_search_history(self, file=None):
-        """
-        Load line search history from disk. Used to re-load line search in the
-        case of failed line searches.
-        """
-        if file is None:
-            file = self.path
-
-        # Numpy will append .npz to saved files, just ensure we honor that
-        if not file.endswith(".npz"):
-            file = f"{file}.npz"
-
-        dict_in = np.load(file=file)
-        self.step_count = int(dict_in["step_count"])  # only var thats not list
-        for key in ["func_vals", "step_lens", "gtg", "gtp"]:
-            assert(key in dict_in), f"line search .npz file has no key {key}"
-            setattr(self, key, list(dict_in[key]))
-
     def get_search_history(self, sort=True):
         """
         A convenience function, collects information based on the current

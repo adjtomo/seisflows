@@ -165,12 +165,12 @@ class Forward:
             if self.data_case.lower() == "data":
                 assert(self.path.data is not None and
                        os.path.exists(self.path.data)), \
-                    f"importing data with `data_case`=='import' requires " \
+                    f"importing data with `data_case`=='data' requires " \
                     f"'path_data' to exist"
             elif self.data_case.lower() == "synthetic":
                 assert(self.path.model_true is not None and
                        os.path.exists(self.path.model_true)), \
-                    f"creating data with `data_case`=='create' requires " \
+                    f"creating data with `data_case`=='synthetic' requires " \
                     f"'path_model_true' to exist and point to a target model"
         else:
             logger.warning(f"`workflow.data_case` is None, SeisFlows will not "
@@ -252,8 +252,6 @@ class Forward:
             for key, val in self._states.items():
                 f.write(f"{key}: {val}\n")
 
-        # Pickle the current working state so that system can load it during run
-
     def run(self):
         """
         Call the Task List in order to 'run' the workflow. Contains logic for
@@ -275,6 +273,7 @@ class Forward:
                 try:
                     func()
                     self._states[func.__name__] = "completed"
+                    self.checkpoint()
                 except Exception as e:
                     self._states[func.__name__] = "failed"
                     self.checkpoint()

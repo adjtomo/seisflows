@@ -533,9 +533,13 @@ def setpar(key, val, file, delim="=", match_partial=False):
 
     lines = open(file, "r").readlines()
 
-    # Replace value in place
+    # Replace value in place. We only want to replace the 'LAST' occurrence
+    # otherwise we risk replacing the actual key (e.g., 'data_case' == 'data')
+    # will replace 'data' twice with a normal .replace()
     if val_out != "":
-        lines[i] = lines[i].replace(val_out, str(val))
+        line_reverse = lines[i][::-1].replace(val_out[::-1], str(val)[::-1], 1)
+        lines[i] = line_reverse[::-1]
+        # lines[i] = lines[i].replace(val_out, str(val))
     else:
         # Special case where the initial parameter is empty so we just replace
         # the newline formatter at the end

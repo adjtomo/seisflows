@@ -476,7 +476,8 @@ class SeisFlows:
             written = []
             for module in modules:
                 for key, val in module.path.items():
-                    if key in written:
+                    # '_key' means hidden path so don't include in par file
+                    if key in written or key.startswith("_"):
                         continue
                     if val is None:
                         val = "null"
@@ -605,6 +606,7 @@ class SeisFlows:
             unix.rm(pars.path_output)
             unix.rm(pars.path_log_files)
             unix.rm(pars.path_state_file)
+            unix.rm(pars.path_output_log)
 
     def restart(self, force=False, **kwargs):
         """

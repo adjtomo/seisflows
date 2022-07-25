@@ -37,6 +37,10 @@ class Inversion(Migration):
     :param start: start inversion workflow at this iteration. 1 <= start <= inf
     :type end: int
     :param end: end inversion workflow at this iteration. start <= end <= inf
+    :type iteration: int
+    :param iteration: The current iteration of the workflow. If NoneType, takes
+        the value of `start` (i.e., first iteration of the workflow). User can
+        also set between `start` and `end` to resume a failed workflow.
     :type thrifty: bool
     :param thrifty: a thrifty inversion skips the costly intialization step
         (i.e., forward simulations and misfit quantification) if the final
@@ -54,8 +58,9 @@ class Inversion(Migration):
     """
     __doc__ = Migration.__doc__ + __doc__
 
-    def __init__(self, modules=None, start=1, end=1, thrifty=False,
-                 optimize="LBFGS", export_model=True, path_eval_func=None,
+    def __init__(self, modules=None, start=1, end=1,
+                 thrifty=False, optimize="LBFGS", export_model=True,
+                 path_eval_func=None,
                  **kwargs):
         """
         Instantiate Inversion-specific parameters. Non-essential parameters are
@@ -81,10 +86,16 @@ class Inversion(Migration):
                                            "eval_func")
 
         # Internal attribute for keeping track of inversion
-        self._iteration = start
         self._optimize_name = optimize
         self._thrifty_status = False
         self._required_modules = ["system", "solver", "preprocess", "optimize"]
+
+        # Grab iteration from state file
+        if "iteration" in self._states:
+            self.iteration = int(self._states["iteration"])
+            logger.debug(f"setting iteration=={self.iteration} from state file")
+        else:
+            self.iteration = start
 
     @property
     def task_list(self):
@@ -112,7 +123,7 @@ class Inversion(Migration):
                 self.evaluate_gradient_from_kernels,
                 self.initialize_line_search,
                 self.perform_line_search,
-                self.clean_scratch_directory
+                self.finalize_iteration
                 ]
 
     def check(self):
@@ -124,6 +135,18 @@ class Inversion(Migration):
         assert(1 <= self.start <= self.end), \
             f"Incorrect START or END parameter. Values must be in order: " \
             f"1 <= {self.start} <= {self.end}"
+
+        assert(self.start <= self.iteration <= self.end), \
+            f"`workflow.iteration` must be between `start` and `end`"
+
+        if self.iteration > 1:
+            assert(os.path.exists(self.path.eval_grad)), \
+                f"scratch path `eval_grad` does not exist but should for a " \
+                f"workflow with `iteration` >= 1"
+
+        if self.iteration >= self.end:
+            logger.warning(f"current `iteration` is >= chosen `end` point. "
+                           f"Inversion workflow will not `run`")
 
         if self.thrifty:
             assert(self._optimize_name == "LBFGS"), (
@@ -143,14 +166,28 @@ class Inversion(Migration):
         super().setup()
 
         unix.mkdir(self.path.eval_func)
+
         self.optimize = self._modules.optimize
+        # If optimization has been run before, re-load from checkpoint
+        self.optimize.load_checkpoint()
 
     def run(self):
         """Call the forward.run() function iteratively, from `start` to `end`"""
-        for i in range(self.start, self.end + 1):
-            logger.info(msg.mnr(f"RUNNING ITERATION {i:0>2}"))
-            super().run()
-            logger.info(msg.mnr(f"COMPLETED ITERATION {i:0>2}"))
+        while self.iteration < self.end:
+            logger.info(msg.mnr(f"RUNNING ITERATION {self.iteration:0>2}"))
+            super().run()  # Runs task list
+            logger.info(msg.mnr(f"COMPLETED ITERATION {self.iteration:0>2}"))
+            # Clear the state file for new iteration
+            self._states = {}
+            self.checkpoint()
+
+    def checkpoint(self):
+        """
+        Add an additional line in the state file to keep track of iteration,
+        """
+        super().checkpoint()
+        with open(self.path.state_file, "a") as f:
+            f.write(f"iteration: {self.iteration}")
 
     def evaluate_initial_misfit(self):
         """
@@ -159,20 +196,20 @@ class Inversion(Migration):
         residuals output by preprocess module and save float to disk, to be
         discoverable by the optimization library
         """
-        if self._iteration == 1:
+        if self.iteration == 1:
             super().evaluate_initial_misfit()
         else:
             # Thrifty inversion SKIPS initial misfit evaluation, re-using final
             # model from previous line search. Can only happen mid-workflow
             if self.thrifty and (
-                    self._thrifty_status or self._iteration == self.start):
+                    self._thrifty_status or self.iteration == self.start):
                 logger.info(msg.mnr("THRIFTY INVERSION; SKIP MISFIT EVAL"))
             else:
                 logger.info(msg.mnr("EVALUATING MISFIT FOR MODEL `m_new`"))
                 # Previous line search will have saved `m_new` as the initial model,
                 # export in SPECFEM format to a path discoverable by all solvers
                 path_model = os.path.join(self.path.eval_grad, "model")
-                m_new = self.optimize.load("m_new")
+                m_new = self.optimize.load_vector("m_new")
                 m_new.write(path=path_model)
                 # Run forward simulation/misfit quantification with previous model
                 self.system.run(
@@ -184,7 +221,7 @@ class Inversion(Migration):
         # Override function to sum residuals into the optimization library
         residuals = np.loadtxt(os.path.join(self.path.eval_grad, "residuals"))
         total_misfit = self.preprocess.sum_residuals(residuals)
-        self.optimize.save(name="f_new", m=total_misfit)
+        self.optimize.save_vector(name="f_new", m=total_misfit)
 
     def evaluate_gradient_from_kernels(self):
         """
@@ -195,10 +232,10 @@ class Inversion(Migration):
         super().evaluate_gradient_from_kernels()
 
         model = Model(os.path.join(self.path.eval_grad, "model"))
-        self.optimize.save(name="m_new", m=model)
+        self.optimize.save_vector(name="m_new", m=model)
 
         gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"))
-        self.optimize.save(name="g_new", m=gradient)
+        self.optimize.save_vector(name="g_new", m=gradient)
 
     def initialize_line_search(self):
         """
@@ -224,12 +261,12 @@ class Inversion(Migration):
                 header="line search error")
             )
             sys.exit(-1)
-        self.optimize.save(name="p_new", m=p_new)
+        self.optimize.save_vector(name="p_new", m=p_new)
 
         # Scale search direction with step length alpha generate a model update
         m_try, alpha = self.optimize.initialize_search()
-        self.optimize.save(name="m_try", m=m_try)
-        self.optimize.save(name="alpha", m=alpha)
+        self.optimize.save_vector(name="m_try", m=m_try)
+        self.optimize.save_vector(name="alpha", m=alpha)
         self.optimize.checkpoint()
 
         # Expose model `m_try` to the solver by placing it in eval_func dir.
@@ -250,8 +287,6 @@ class Inversion(Migration):
             status == 0 : not finished
             status < 0  : failed
         """
-        # self.optimize.line_search.load_search_history()
-
         logger.info(msg.sub(f"LINE SEARCH STEP COUNT "
                             f"{self.optimize.step_count + 1:0>2}"))
 
@@ -271,6 +306,7 @@ class Inversion(Migration):
             return
         elif status == 0:
             logger.info("trial step unsuccessful. re-attempting line search")
+            self.optimize.checkpoint()
             self.perform_line_search()  # RECURSIVE CALL
         elif status == -1:
             if self.optimize.attempt_line_search_restart():
@@ -278,6 +314,7 @@ class Inversion(Migration):
                             "optimization algorithm and line search.")
                 # Reset the line search machinery; set step count to 0
                 self.optimize.restart()
+                self.optimize.checkpoint()
                 self.perform_line_search()  # RECURSIVE CALL
             else:
                 logger.critical(
@@ -299,9 +336,9 @@ class Inversion(Migration):
                                             "residuals"))
         total_misfit = self.preprocess.sum_residuals(residuals)
         logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
-        self.optimize.save(name="f_try", m=total_misfit)
+        self.optimize.save_vector(name="f_try", m=total_misfit)
 
-    def clean_scratch_directory(self):
+    def finalize_iteration(self):
         """
         Cleans directories in which function and gradient evaluations were
         carried out. Contains some logic to consider whether or not to continue
@@ -309,6 +346,7 @@ class Inversion(Migration):
         """
         logger.info(msg.mnr("CLEANING WORKDIR FOR NEXT ITERATION"))
 
+        # Clear out the scratch directory
         self._thrifty_status = self._update_thrifty_status()
         if self._thrifty_status:
             unix.rm(self.path.eval_grad)
@@ -322,13 +360,25 @@ class Inversion(Migration):
             unix.mkdir(self.path.eval_grad)
             unix.mkdir(self.path.eval_func)
 
+        # Export scratch files to output if requested
+        if self.export_model:
+            model = self.optimize.load_vector("m_new")
+            model.write(path=os.path.join(self.path.output,
+                                          f"M{self.iteration:0>2}")
+                        )
+
+        # Update optimization
+        self.iteration += 1
+        logger.info(f"setting current iteration to: {self.iteration}")
+        self.optimize.checkpoint()
+
     def _update_thrifty_status(self):
         """
         Determine if line search forward simulation can be carried over to the
         next iteration. Checks criteria related to the current iteration and
         its position relative to the start and end of the workflow.
         """
-        if self._iteration == self.start:
+        if self.iteration == self.start:
             logger.info("thrifty inversion encountering first iteration, "
                         "defaulting to standard inversion workflow")
             _thrifty_status = False
@@ -336,7 +386,7 @@ class Inversion(Migration):
             logger.info("optimization has been restarted, defaulting to "
                         "standard inversion workflow")
             _thrifty_status = False
-        elif self.optimize.iter == self.end:
+        elif self.iteration == self.end:
             logger.info("thrifty inversion encountering final iteration, "
                         "defaulting to inversion workflow")
             _thrifty_status = False
