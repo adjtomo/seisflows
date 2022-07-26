@@ -3,8 +3,10 @@ Test any of the utility functions defined in the Tools directory
 """
 import os
 import pytest
+import numpy as np
 from glob import glob
 from seisflows import ROOT_DIR
+from seisflows.tools.core import Dict
 from seisflows.tools.specfem import Model
 from seisflows.tools.config import custom_import
 
@@ -40,13 +42,20 @@ def test_specfem_model(tmpdir):
 
     # Check that saving and loading npz file works
     m.save(path=os.path.join(tmpdir, "test.npz"))
-    m_new = Model(path=os.path.join(tmpdir, "test.npz"), load=True)
+    m_new = Model(path=os.path.join(tmpdir, "test.npz"))
     assert(m_new.ngll[0] == m.ngll[0])
     assert(m_new.fmt == m.fmt)
 
     # Check that writing fortran binary works
     m.write(path=tmpdir)
     assert(len(glob(os.path.join(tmpdir, f"*{m.fmt}"))) == 2)
+
+    # Check that we can instantiate a model from an input vector
+    m = Model()
+    m.model = Dict(x=[np.array([-1.2, 1.])])
+    assert(m.nproc == 1)
+    assert(m.ngll == [2])
+    assert(m.parameters == ["x"])
 
 
 def test_custom_import():

@@ -27,7 +27,7 @@ class Model:
                              "vpv", "vph", "vsv", "vsh", "eta"]
     acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
 
-    def __init__(self, path, fmt=None, parameters=None, load=False):
+    def __init__(self, path=None, fmt=None, parameters=None):
         """
         Model only needs path to model to determine model parameters. Format
         `fmt` can be provided by the user or guessed based on available file
@@ -44,38 +44,38 @@ class Model:
         :param fmt: expected format of the files (e.g., '.bin'), if None, will
             attempt to guess based on the file extensions found in `path`
             Available formats are: .bin, .dat
-        :type load: bool
-        :param load: load the model into disk as dictionary and vector
-            representations. If False, will guess how to import data based on
-            file extensions or lack thereof
         """
-        assert os.path.exists(path), f"specfem model path {path} does not exist"
         self.path = path
-        self.parameters = parameters
+        self.fmt = fmt
+        self.model = None
+        self._parameters = None
+        self._ngll = None
+        self._nproc = None
 
-        # Load an existing model
-        if os.path.splitext(path)[-1] == ".npz" or load:
-            self.model, self.ngll, self.fmt = self.load(file=self.path)
-            _first_key = list(self.model.keys())[0]
-            self.nproc = len(self.model[_first_key])
-        # Read a model from files
-        else:
-            if fmt is None:
-                self.fmt = self._guess_file_format()
+        # Load an existing model if a valid path is given
+        if self.path and os.path.exists(path):
+            # Read existing model from a previously saved .npz file
+            if os.path.splitext(path)[-1] == ".npz":
+                self.model, self._ngll, self.fmt = self.load(file=self.path)
+                _first_key = list(self.model.keys())[0]
+                self._nproc = len(self.model[_first_key])
+            # Read a SPECFEM model from its native output files
             else:
-                self.fmt = fmt
-            self.nproc, self.available_parameters = self._get_nproc_parameters()
-            self.model, self.ngll = self.read(parameters=parameters)
+                if self.fmt is None:
+                    self.fmt = self._guess_file_format()
+                self._nproc, self.available_parameters = \
+                    self._get_nproc_parameters()
+                self.model = self.read(parameters=parameters)
 
-        # .sorted() enforces parameter order every time, otherwise things can
-        # get screwy if keys returns different each time
-        self.parameters = sorted(self.model.keys())
+            # .sorted() enforces parameter order every time, otherwise things
+            # can get screwy if keys returns different each time
+            self._parameters = sorted(self.model.keys())
 
     @staticmethod
     def fnfmt(i="*", val="*", ext="*"):
         """
-        Expected SPECFEM filename format with some checks to ensure that 
-        wildcards and numbers are accepted. An example filename is: 
+        Expected SPECFEM filename format with some checks to ensure that
+        wildcards and numbers are accepted. An example filename is:
         'proc000001_vs.bin'
 
         :type i: int or str
@@ -98,20 +98,72 @@ class Model:
         return filename_format
 
     @property
+    def parameters(self):
+        """
+        Returns a list of parameters which defines the model.
+        """
+        if not self._parameters:
+            self._parameters = list(self.model.keys())
+        return self._parameters
+
+    @property
+    def ngll(self):
+        """
+        Provide the number of GLL (Gauss Lobatto Legendre) points per processor
+        chunk. Access hidden attribute `_ngll` in the case that the model
+        is very large, we only want to count the GLL points once.
+
+        :rtype: list of float
+        :return: each float represents the number of GLL points for the chunk
+            number that corresponds to its index
+        """
+        if not self._ngll:
+            self._update_ngll_from_model()
+        return self._ngll
+
+    def _update_ngll_from_model(self):
+        """Convenience function to count NGLL points as length of data arrays
+        for each parameter processor chunk"""
+        self._ngll = []
+        for proc in self.model[self.parameters[0]]:
+            self._ngll.append(len(proc))
+
+    @property
+    def nproc(self):
+        """
+        Returns the number of processors that define the model/gradient/kernel.
+
+        :rtype: int
+        :return: number of processors that define the model
+        """
+        if not self._nproc:
+            self._nproc = len(self.model[self.parameters[0]])
+        return self._nproc
+
+    @property
     def vector(self):
-        """conveience property to access the merge() property which creates a
-        linear vector defining all model parameters"""
-        return self.merge()
+        """
+        Conveience property to access the merge() function which creates a
+        linear vector defining all model parameters
+
+        :rtype: np.array
+        :return: a linear vector of all model parameters
+        """
+        try:
+            return self.merge()
+        except TypeError as e:
+            raise TypeError("Model cannot merge files into continous "
+                            "vector") from e
 
     def read(self, parameters=None):
         """
         Utility function to load in SPECFEM models/kernels/gradients saved in
-        various formats. Will try to guess format of model. Assumes that models 
+        various formats. Will try to guess format of model. Assumes that models
         are saved using the following filename format:
 
         proc{num}_{val}.{format} where `num` is usually a 6 digit number
         representing the processor number (e.g., 000000), `val` is the parameter
-        value of the model/kernel/gradient and `format` is the format of the 
+        value of the model/kernel/gradient and `format` is the format of the
         file (e.g., bin)
 
         :type parameters: list of str
@@ -140,12 +192,7 @@ class Model:
         for parameter in parameters:
             parameter_dict[parameter] = load_fx(parameter=parameter)
 
-        # Save some metadata to be able to manipulate model slices freely
-        ngll = []
-        for array in parameter_dict[parameters[0]]:
-            ngll.append(len(array))
-
-        return parameter_dict, ngll
+        return parameter_dict
 
     def merge(self, parameter=None):
         """
@@ -305,7 +352,7 @@ class Model:
         fids = glob(os.path.join(self.path, self.fnfmt(val="*", ext=self.fmt)))
         fids = [os.path.basename(_) for _ in fids]  # drop full path
         fids = [os.path.splitext(_)[0] for _ in fids]  # drop extension
-        
+
         if self.fmt == ".bin":
             avail_par = list(set(["_".join(_.split("_")[1:]) for _ in fids]))
             nproc = len(glob(os.path.join(
