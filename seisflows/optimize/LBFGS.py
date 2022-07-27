@@ -25,6 +25,8 @@ Status codes
     status > 0  : finished
     status == 0 : not finished
     status < 0  : failed
+
+TODO store LBFGS_iter during checkpointing
 """
 import os
 import numpy as np
@@ -73,9 +75,9 @@ class LBFGS(Gradient):
         self.LBFGS_thresh = lbfgs_thresh
 
         # Set new L-BFGS dependent paths for storing previous gradients
-        self.path["LBFGS"] = os.path.join(self.path.scratch, "LBFGS")
-        self.path["y_file"] = os.path.join(self.path.scratch, "LBFGS", "Y")
-        self.path["s_file"] = os.path.join(self.path.scratch, "LBFGS", "S")
+        self.path["_LBFGS"] = os.path.join(self.path.scratch, "LBFGS")
+        self.path["_y_file"] = os.path.join(self.path["_LBFGS"], "Y.dat")
+        self.path["_s_file"] = os.path.join(self.path["_LBFGS"], "S.dat")
 
         # Internally used memory parameters for the L-BFGS optimization algo.
         self._LBFGS_iter = 0
@@ -86,16 +88,44 @@ class LBFGS(Gradient):
         Set up the LBFGS optimization schema
         """
         super().setup()
-        unix.mkdir(self.path.LBFGS)
+        unix.mkdir(self.path._LBFGS)
+
+    def checkpoint(self):
+        """
+        Overwrite default checkpointing to store internal L-BFGS Attributes
+        """
+        super().checkpoint()
+        checkpoint_dict = np.load(self.path._checkpoint)
+        checkpoint_dict["LBFGS_iter"] = self._LBFGS_iter
+        checkpoint_dict["memory_used"] = self._memory_used
+
+        np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
+
+    def load_checkpoint(self):
+        """
+        Counterpart to `optimize.checkpoint`. Loads a checkpointed optimization
+        module from disk and sets internal tracking attributes. Adds additional
+        functionality to restore internal L-BFGS attributes
+        """
+        super().load_checkpoint()
+
+        # NumPy appends '.npz' when saving. Make sure we honor that.
+        if not self.path._checkpoint.endswith(".npz"):
+            fid = f"{self.path._checkpoint}.npz"
+        else:
+            fid = self.path._checkpoint
+
+        if os.path.exists(fid):
+            dict_in = np.load(file=fid)
+            self._LBFGS_iter = int(dict_in["LBFGS_iter"])
+            self._memory_used = int(dict_in["memory_used"])
 
     def compute_direction(self):
         """
         Call on the L-BFGS optimization machinery to compute a search
         direction using internally stored memory of previous gradients.
-        The potential outcomes when computing direction with L-BFGS
 
-        TODO do we need to precondition L-BFGS?
-
+        The potential outcomes when computing direction with L-BFGS:
         1. First iteration of L-BFGS optimization, search direction is defined
             as the inverse gradient
         2. L-BFGS internal iteration ticks over the maximum allowable number of
@@ -106,6 +136,8 @@ class LBFGS(Gradient):
         4. New search direction is acceptably angled from previous,
             becomes the new search direction
 
+        TODO do we need to precondition L-BFGS?
+
         :rtype: seisflows.tools.specfem.Model
         :return: search direction as a Model instance
         """
@@ -113,20 +145,19 @@ class LBFGS(Gradient):
 
         # Load the current gradient direction, which is the L-BFGS search
         # direction if this is the first iteration
-        g = self.load("g_new")
+        g = self.load_vector("g_new")
 
         if self._LBFGS_iter == 1:
             logger.info("first L-BFGS iteration, default to 'Gradient' descent")
-            p_new = -1 * g.vector
+            p_new = g.update(vector=-1 * g.vector)
             restarted = False
-
         # Restart condition or first iteration lead to setting search direction
         # as the inverse gradient (i.e., default to steepest descent)
         elif self._LBFGS_iter > self.LBFGS_max:
             logger.info("restarting L-BFGS due to periodic restart condition. "
                         "setting search direction as inverse gradient")
             self.restart()
-            p_new = -1 * g.vector
+            p_new = g.update(vector=-1 * g.vector)
             restarted = True
         # Normal LBFGS direction computation
         else:
@@ -134,11 +165,12 @@ class LBFGS(Gradient):
             # 'q' becomes the new search direction 'g'
             logger.info("applying inverse Hessian to gradient")
             s, y = self._update_search_history()
-            q = self._apply_inverse_hessian(g.vector, s, y)
+            _q_vector = self._apply_inverse_hessian(g.vector, s, y)
+            q = g.update(vector=_q_vector)
 
             # Determine if the new search direction is appropriate by checking
             # its angle to the previous search direction
-            if self._check_status(g, q):
+            if self._check_status(g.vector, q.vector):
                 logger.info("new L-BFGS search direction found")
                 p_new = q.update(vector=-1 * q.vector)
                 restarted = False
@@ -148,9 +180,6 @@ class LBFGS(Gradient):
                 self.restart()
                 p_new = g.update(vector=-1 * g.vector)
                 restarted = True
-
-        # Assign newly computed 'p_new' vector to a Model instance
-        p_new = g.update(vector=p_new)
 
         # Assign restart condition to internal memory
         self._restarted = restarted
@@ -165,18 +194,19 @@ class LBFGS(Gradient):
         logger.info("restarting L-BFGS optimization algorithm")
 
         # Fall back to gradient descent for search direction
-        g = self.load("g_new")
-        self.save("p_new", -1 * g.vector)
+        g = self.load_vector("g_new")
+        p_new = g.update(vector=-1 * g.vector)
+        self.save_vector("p_new", p_new)
 
         # Clear internal memory
-        self._line_search.clear_history()
+        self._line_search.clear_search_history()
         self._restarted = True
         self._LBFGS_iter = 1
         self._memory_used = 0
 
         # Clear out previous gradient information
-        s = np.memmap(filename=self.path.s_file, mode="r+")
-        y = np.memmap(filename=self.path.y_file, mode="r+")
+        s = np.memmap(filename=self.path._s_file, mode="r+")
+        y = np.memmap(filename=self.path._y_file, mode="r+")
         s[:] = 0.
         y[:] = 0.
 
@@ -199,11 +229,11 @@ class LBFGS(Gradient):
         :rtype y: np.memmap
         :return y: memory of the gradient differences `g_new - g_old`
         """
-        unix.cd(self.path)
-
         # Determine the iterates for model m and gradient g
-        s_k = self.load("m_new").vector - self.load("m_old").vector
-        y_k = self.load("g_new").vector - self.load("g_old").vector
+        s_k = \
+            self.load_vector("m_new").vector - self.load_vector("m_old").vector
+        y_k = \
+            self.load_vector("g_new").vector - self.load_vector("g_old").vector
 
         # Determine the shape of the memory map (length of model, length of mem)
         m = len(s_k)
@@ -211,20 +241,20 @@ class LBFGS(Gradient):
 
         # Initial iteration, need to create the memory map
         if self._memory_used == 0:
-            s = np.memmap(filename=self.path.s_file, mode="w+", dtype="float32",
-                          shape=(m, n))
-            y = np.memmap(filename=self.path.y_file, mode="w+", dtype="float32",
-                          shape=(m, n))
+            s = np.memmap(filename=self.path._s_file, mode="w+",
+                          dtype="float32", shape=(m, n))
+            y = np.memmap(filename=self.path._y_file, mode="w+",
+                          dtype="float32", shape=(m, n))
             # Store the model and gradient differences in memmaps
             s[:, 0] = s_k
             y[:, 0] = y_k
             self._memory_used = 1
         # Subsequent iterations will append to memory maps
         else:
-            s = np.memmap(filename=self.path.s_file, mode="r+", dtype="float32",
-                          shape=(m, n))
-            y = np.memmap(filename=self.path.y_file, mode="r+", dtype="float32",
-                          shape=(m, n))
+            s = np.memmap(filename=self.path._s_file, mode="r+",
+                          dtype="float32", shape=(m, n))
+            y = np.memmap(filename=self.path._y_file, mode="r+",
+                          dtype="float32", shape=(m, n))
             # Shift all stored memory by one index to make room for latest mem
             s[:, 1:] = s[:, :-1]
             y[:, 1:] = y[:, :-1]
@@ -256,9 +286,9 @@ class LBFGS(Gradient):
         if s is None or y is None:
             m = len(q)
             n = self.LBFGS_mem
-            s = np.memmap(filename=self.path.s_file, mode="w+", dtype="float32",
+            s = np.memmap(filename=self.path._s_file, mode="w+", dtype="float32",
                           shape=(m, n))
-            y = np.memmap(filename=self.path.y_file, mode="w+", dtype="float32",
+            y = np.memmap(filename=self.path._y_file, mode="w+", dtype="float32",
                           shape=(m, n))
 
         # First matrix product

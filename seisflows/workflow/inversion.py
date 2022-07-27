@@ -294,21 +294,35 @@ class Inversion(Migration):
         self._evaluate_line_search_misfit()
 
         # Increment step count, calculate new step length/model, check misfit
-        status = self.optimize.update_line_search()
+        m_try, alpha, status = self.optimize.update_line_search()
         self.optimize.checkpoint()
 
         # Proceed based on the outcome of the line search
-        if status == 1:
+        if status.upper() == "PASS":
             # Save outcome of line search to disk; reset step to 0 for next iter
             logger.info("trial step successful. finalizing line search")
+
+            # Save new model (m_try) and step length (alpha) for records
+            self.optimize.save_vector("alpha", alpha)
+            self.optimize.save_vector("m_try", m_try)
+            del m_try  # clear potentially large model vector from memory
+
             self.optimize.finalize_search()
             self.optimize.checkpoint()
             return
-        elif status == 0:
+        elif status.upper() == "TRY":
             logger.info("trial step unsuccessful. re-attempting line search")
+
+            # Save new model (m_try) and step length (alpha) for new trial step
+            self.optimize.save_vector("alpha", alpha)
+            self.optimize.save_vector("m_try", m_try)
+            del m_try  # clear potentially large model vector from memory
+
+            # Checkpoint and re-run line search evaluation
             self.optimize.checkpoint()
             self.perform_line_search()  # RECURSIVE CALL
-        elif status == -1:
+        elif status.upper() == "FAIL":
+            # Check if we are able to restart line search w/ new parameters
             if self.optimize.attempt_line_search_restart():
                 logger.info("line search has failed. restarting "
                             "optimization algorithm and line search.")
@@ -316,6 +330,7 @@ class Inversion(Migration):
                 self.optimize.restart()
                 self.optimize.checkpoint()
                 self.perform_line_search()  # RECURSIVE CALL
+            # If we can't then line search has failed. Abort workflow
             else:
                 logger.critical(
                     msg.cli("Line search has failed to reduce the misfit and "

@@ -27,7 +27,7 @@ class Model:
                              "vpv", "vph", "vsv", "vsh", "eta"]
     acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
 
-    def __init__(self, path=None, fmt=None, parameters=None):
+    def __init__(self, path=None, fmt="", parameters=None):
         """
         Model only needs path to model to determine model parameters. Format
         `fmt` can be provided by the user or guessed based on available file

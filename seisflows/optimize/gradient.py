@@ -95,7 +95,7 @@ class Gradient:
         # Set required path structure
         self.path = Dict(
             scratch=path_optimize or
-                    os.path.join(os.getcwd(), "scratch", "optimize"),
+                    os.path.join(workdir, "scratch", "optimize"),
             output=path_output or os.path.join(workdir, "output"),
             preconditioner=path_preconditioner,
         )
@@ -103,6 +103,8 @@ class Gradient:
         # Hidden paths to store checkpoint file in scratch directory
         self.path["_checkpoint"] = os.path.join(self.path.scratch,
                                                 "checkpoint")
+        self.path["_stats_file"] = os.path.join(self.path.scratch,
+                                                "output_optim.txt")
 
         # Internal check to see if the chosen line search algorithm exists
         if not hasattr(line_search_dir, line_search_method):
@@ -183,18 +185,19 @@ class Gradient:
         :param name: name of the vector, acceptable: m, g, p, f, alpha
         """
         assert(name in self._acceptable_vectors)
+
         model_npz = os.path.join(self.path.scratch, f"{name}.npz")
         model_npy = model_npz.replace(".npz", ".npy")
         model_txt = model_npz.replace(".npz", ".txt")
+
         if os.path.exists(model_npz):
-            model = Model(path=os.path.join(self.path.scratch,
-                                            f"{name}.npz"), load=True)
+            model = Model(path=model_npz)
         elif os.path.exists(model_npy):
             model = np.load(model_npy)
         elif os.path.exists(model_txt):
             model = float(np.loadtxt(model_txt))
         else:
-            raise FileNotFoundError(f"no optimization file found for {name}")
+            raise FileNotFoundError(f"no optimization file found for '{name}'")
 
         return model
 
@@ -213,7 +216,7 @@ class Gradient:
             path = os.path.join(self.path.scratch, f"{name}.npz")
             m.model = m.split()  # overwrite m representation
             m.save(path=path)
-        elif isinstance(m, np.array):
+        elif isinstance(m, np.ndarray):
             path = os.path.join(self.path.scratch, f"{name}.npy")
             np.save(path=path)
         elif isinstance(m, (float, int)):
@@ -239,7 +242,7 @@ class Gradient:
                         gtp=self._line_search.gtp,
                         step_count=self._line_search.step_count)
 
-        np.savez(file=self.path._checkpoint, **dict_out)
+        np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
 
     def load_checkpoint(self):
         """
@@ -308,6 +311,9 @@ class Gradient:
         Generate a trial model by perturbing the current model in the search
         direction with a given step length, calculated by the chosen line
         search algorithm.
+
+        :rtype: tuple
+        :return: (Model, float) or (m_try==trial model, alpha=step length)
         """
         m = self.load_vector("m_new")  # current model from external solver
         g = self.load_vector("g_new")  # current gradient from scaled kernels
@@ -321,7 +327,7 @@ class Gradient:
 
         # Restart plugin line search if the optimization library restarts
         if self._restarted:
-            self._line_search.clear_history()
+            self._line_search.clear_search_history()
 
         # Optional safeguard to prevent step length from getting too large
         if self.step_len_max:
@@ -331,8 +337,7 @@ class Gradient:
 
         # Initialize the line search and save it to disk.
         self._line_search.update_search_history(func_val=f, step_len=0.,
-                                               gtg=gtg, gtp=gtp)
-        # self._line_search.check_search_history()
+                                                gtg=gtg, gtp=gtp)
 
         alpha, _ = self._line_search.calculate_step_length()
 
@@ -356,10 +361,24 @@ class Gradient:
         has been run and misfit calculated. Checks misfit against line search
         history to see if the line search has been completed.
 
-        Available status codes from line_search.calculate_step_length():
-            status == 1  : finished
-            status == 0 : not finished
-            status == -1  : failed
+        .. note::
+            This is a bit confusing as it calculates the step length `alpha` for
+            the NEXT line search step, while working with the `alpha` value that
+            was calculated from the LAST line search step.
+
+        If line search returns a passing exit code (0 or 1), sets up for a
+        subsequent line search evaluation by saving a new step length (alpha),
+        and creating a new trial model (m_try).
+
+        .. note:
+            Available status returns are:
+            'TRY': try/re-try the line search as conditions have not been met
+            'PASS': line search was successful, you can terminate the search
+            'FAIL': line search has failed for one or more reasons.
+
+        :rtype: tuple
+        :return: (Model, float, bool) or (m_try==trial model, alpha=step length,
+            status==how to proceed with line search)
         """
         # Collect information on a forward evaluation that just took place
         alpha = self.load_vector("alpha")  # step length
@@ -368,28 +387,30 @@ class Gradient:
         # Update the line search with a new step length and misfit value
         self._line_search.step_count += 1
         self._line_search.update_search_history(step_len=alpha, func_val=f_try)
-        # self._line_search.check_search_history()
 
-        # Calculate a new step length based on line search algorithm
+        # Calculate a new step length based on the step length and corresponding
+        # misfit that we should have just calculated
         alpha_try, status = self._line_search.calculate_step_length()
 
+        # Vectors are saved to disk immediately to avoid passing them in memory
         # Status == 0: Retry line search // Status == 1: Line search passed
-        if status in [0, 1]:
-            # Save new step length to disk
-            self.save_vector("alpha", alpha_try)
-
+        if status.upper() in ["TRY", "PASS"]:
             # Create a new trial model based on search direction, step length
             # and the initial model vector
-            m = self.load_vector("m_new")
-            p = self.load_vector("p_new")
+            _m = self.load_vector("m_new")
+            _p = self.load_vector("p_new")
 
-            # Sets the latest trial model
-            m_try = m.update(vector=m.vector + alpha * p.vector)
+            # Sets the latest trial model using the current `alpha` value
+            m_try = _m.update(vector=_m.vector + alpha * _p.vector)
             logger.info("trial model 'm_try' parameters: ")
             m_try.check()
-            self.save_vector("m_try", m_try)
 
-        return status
+            # Newly calculated `alpha` value overwrites original `alpha`
+            alpha = alpha_try
+        else:
+            m_try = None
+
+        return m_try, alpha, status
 
     def finalize_search(self):
         """
@@ -448,8 +469,8 @@ class Gradient:
         :type threshold: float
         :param threshold: angle threshold for the angle between the search
             direction and the gradient.
-        :rtype: int
-        :return: pass (1) fail (0) status for retrying line search
+        :rtype: bool
+        :return: pass (True) fail (False) status for retrying line search
         """
         g = self.load_vector("g_new")
         p = self.load_vector("p_new")
@@ -459,9 +480,9 @@ class Gradient:
                      f"theta: {theta:6.3f}")
 
         if abs(theta) < threshold:
-            return 0  # Do not restart
+            return False  # Do not restart
         else:
-            return 1  # Go for restart
+            return True  # Go for restart
 
     def restart(self):
         """
@@ -485,19 +506,19 @@ class Gradient:
         Used because stats line search information can be overwritten
         by subsequent iterations so we need to append values to text files
         if they should be retained.
+
+        .. note::
+            This CSV file can be easily read and plotted using np.genfromtxt
+            >>> np.genfromtxt("optim_stats.txt", delimiter=",", names=True, \
+                              dtype=None)
         """
         logger.info(f"writing optimization stats")
-        fid = os.path.join(self.path.output,  f"optim_stats.txt")
-
         # First time, write header information
-        if not os.path.exists(fid):
-            with open(fid, "w") as f:
-                for header in [# "ITER", "FACTOR",
-                               "GRAD_NORM_L1", "GRAD_NORM_L2",
-                               "MISFIT", "RESTART", "SLOPE", "STEP", "LENGTH",
-                               "THETA"]:
-                    f.write(f"{header.upper()},")
-                f.write("\n")
+        if not os.path.exists(self.path._stats_file):
+            _head = ("step_count,step_length,gradient_norm_L1,gradient_norm_L2,"
+                     "misfit,if_restarted,slope,theta\n")
+            with open(self.path._stats_file, "w") as f:
+                f.write(_head)
 
         g = self.load_vector("g_new")
         p = self.load_vector("p_new")
@@ -518,14 +539,14 @@ class Gradient:
         step_length = x[f.argmin()]
         theta = 180. * np.pi ** -1 * angle(p.vector, -1 * g.vector)
 
-        with open(fid, "a") as f:
+        with open(self.path._stats_file, "a") as f:
             f.write(# f"{factor:6.3E},"
+                    f"{step_count:0>2},"
+                    f"{step_length:6.3E},"
                     f"{grad_norm_L1:6.3E},"
                     f"{grad_norm_L2:6.3E},"
                     f"{misfit:6.3E},"
-                    f"{self._restarted:6.3E},"
+                    f"{int(self._restarted)},"
                     f"{slope:6.3E},"
-                    f"{step_count:0>2},"
-                    f"{step_length:6.3E},"
                     f"{theta:6.3E}\n"
                     )

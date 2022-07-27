@@ -134,6 +134,16 @@ class Bracket:
         """
         Determines step length (alpha) and search status (status) using a
         bracketing line search.
+
+        .. note:
+            Available status returns are:
+            'TRY': try/re-try the line search as conditions have not been met
+            'PASS': line search was successful, you can terminate the search
+            'FAIL': line search has failed for one or more reasons.
+
+        :rtype: tuple (float, str)
+        :return: (alpha==calculated step length,
+            status==how to treat the next step count evaluation)
         """
         # Determine the line search history
         x, f, gtg, gtp, step_count, update_count = self.get_search_history()
@@ -145,7 +155,7 @@ class Bracket:
             alpha = gtg[-1] ** -1
             logger.info(f"try: first evaluation, attempt guess step length, "
                         f"alpha={alpha:.2E}")
-            status = 0
+            status = "TRY"
         # For every iteration's initial step, set alpha manually
         elif step_count == 0:
             # Based on the first equation in sec 3.5 of Nocedal and Wright 2ed
@@ -153,26 +163,26 @@ class Bracket:
             alpha = self.step_lens[idx] * gtp[-2] / gtp[-1]
             logger.info(f"try: first step count of iteration, "
                         f"setting scaled step length, alpha={alpha:.2E}")
-            status = 0
+            status = "TRY"
         # If misfit is reduced and then increased, we've bracketed. Pass
         elif _check_bracket(x, f) and _good_enough(x, f):
             alpha = x[f.argmin()]
             logger.info(f"pass: bracket acceptable and step length "
                         f"reasonable.")
-            status = 1
+            status = "PASS"
         # If misfit is reduced but not close, set to quadratic fit
         elif _check_bracket(x, f):
             alpha = polynomial_fit(x, f)
             logger.info(f"try: bracket acceptable but step length unreasonable "
                         f"attempting to re-adjust step length "
                         f"alpha={alpha:.2E}")
-            status = 0
+            status = "TRY"
         # If misfit continues to step down, increase step length
         elif step_count <= self.step_count_max and all(f <= f[0]):
             alpha = 1.618034 * x[-1]  # 1.618034 is the 'golden ratio'
             logger.info(f"try: misfit not bracketed, increasing step length "
                         f"using golden ratio, alpha={alpha:.2E}")
-            status = 0
+            status = "TRY"
         # If misfit increases, reduce step length by backtracking
         elif step_count <= self.step_count_max:
             slope = gtp[-1] / gtg[-1]
@@ -181,14 +191,14 @@ class Bracket:
             logger.info(f"try: misfit increasing, attempting "
                         f"to reduce step length using parabloic backtrack, "
                         f"alpha={alpha:.2E}")
-            status = 0
+            status = "TRY"
         # step_count_max exceeded, fail
         else:
             logger.info(f"fail: bracketing line search has failed "
                         f"to reduce the misfit before exceeding "
                         f"`step_count_max`={self.step_count_max}")
             alpha = None
-            status = -1
+            status = "FAIL"
 
         # Apply optional step length safeguard
         if alpha is not None:
@@ -197,14 +207,14 @@ class Bracket:
                 logger.info(f"try: applying initial step length "
                             f"safegaurd as alpha has exceeded maximum step "
                             f"length, alpha_new={alpha:.2E}")
-                status = 0
+                status = "TRY"
             # Stop because safeguard prevents us from going further
             elif alpha > self.step_len_max:
                 alpha = self.step_len_max
                 logger.info(f"try: applying initial step length "
                             f"safegaurd as alpha has exceeded maximum step "
                             f"length, alpha_new={alpha:.2E}")
-                status = 1  # TODO shouldn't this be 0 or -1?
+                status = "PASS"  # TODO shouldn't this be 0 or -1?
 
         return alpha, status
 

@@ -261,7 +261,6 @@ def rosenbrock():
     """
     Rosenbrock test problem for optimization library testing
 
-    https://en.wikipedia.org/wiki/Rosenbrock_function
     """
     model_init = np.array([-1.2, 1])  # This is the guess for the global min
     model_true = np.array([1, 1])  # This is the actual minimum

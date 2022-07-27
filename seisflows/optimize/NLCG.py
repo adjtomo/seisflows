@@ -138,7 +138,7 @@ class NLCG(Gradient):
         g = self.load("g_new")
         self.save("p_new", -1 * g.vector)
 
-        self._line_search.clear_history()
+        self._line_search.clear_search_history()
         self._restarted = 1
         self._NLCG_iter = 1
 
