@@ -69,7 +69,8 @@ def setup_optimization_vectors(tmpdir):
 
     # Calcualte the gradient and save as a Model
     gradient = rosenbrock_gradient(x=m_init.vector)
-    g_new = m_init.update(vector=gradient)
+    g_new = m_init.copy()
+    g_new.update(vector=gradient)
     g_new.save(path=os.path.join(tmpdir, "g_new.npz"))
 
 
@@ -240,14 +241,14 @@ def _test_inversion_optimization_problem_general(optimize):
     optimize.save_vector("m_new", m_init)
 
     for iteration in range(100):
-        print(iteration)
         # Step 1: Evaluate the objective function for given model 'm_new'
         m_new = optimize.load_vector("m_new")
         f_new = rosenbrock_objective_function(x=m_new.vector)
         optimize.save_vector("f_new", f_new)
         # Step 2: Evaluate the gradient of the objective function
         gradient = rosenbrock_gradient(x=m_new.vector)
-        g_new = m_new.update(vector=gradient)
+        g_new = m_new.copy()
+        g_new.update(vector=gradient)
         optimize.save_vector("g_new", g_new)
         # Step 3: Compute the search direction using the gradient
         p_new = optimize.compute_direction()
@@ -288,6 +289,9 @@ def test_inversion_optimization_problem_with_gradient(
 def test_inversion_optimization_problem_with_LBFGS(  # NOQA
         tmpdir, setup_optimization_vectors):
     """Wrapper function to test the L-BFGS descent optimization problem"""
+    # from seisflows.tools.config import config_logger
+    # config_logger(level="DEBUG", filename=os.path.join(tmpdir, "log.txt"), verbose=False)
+
     lbfgs = LBFGS(path_optimize=tmpdir, path_output=tmpdir,
                   line_search_method="backtrack")
     os.mkdir(lbfgs.path._LBFGS)

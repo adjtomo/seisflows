@@ -86,13 +86,6 @@ def uniquerows(a, sort_array=False, return_index=False):
         return ua
 
 
-def stack(*args):
-    """
-    Column-wise stack arrays
-    """
-    return np.column_stack(args)
-
-
 def gridsmooth(Z, span):
     """
     Smooths values on 2D rectangular grid
@@ -178,7 +171,7 @@ def mesh2grid(v, mesh):
     x = np.linspace(x.min(), x.max(), nx)
     z = np.linspace(z.min(), z.max(), nz)
     X, Z = np.meshgrid(x, z)
-    grid = stack(X.flatten(), Z.flatten())
+    grid = np.column_stack(X.flatten(), Z.flatten())
 
     # Interpolate to structured grid
     V = _interp.griddata(mesh, v, grid, 'linear')

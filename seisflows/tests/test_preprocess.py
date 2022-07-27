@@ -5,7 +5,7 @@ SPECFEM
 import os
 import pytest
 from glob import glob
-from seisflows.tools.config import ROOT_DIR
+from seisflows import ROOT_DIR
 from seisflows.preprocess.default import Default
 
 

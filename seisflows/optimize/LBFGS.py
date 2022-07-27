@@ -146,10 +146,11 @@ class LBFGS(Gradient):
         # Load the current gradient direction, which is the L-BFGS search
         # direction if this is the first iteration
         g = self.load_vector("g_new")
+        p_new = g.copy()
 
         if self._LBFGS_iter == 1:
             logger.info("first L-BFGS iteration, default to 'Gradient' descent")
-            p_new = g.update(vector=-1 * g.vector)
+            p_new.update(vector=-1 * g.vector)
             restarted = False
         # Restart condition or first iteration lead to setting search direction
         # as the inverse gradient (i.e., default to steepest descent)
@@ -157,7 +158,7 @@ class LBFGS(Gradient):
             logger.info("restarting L-BFGS due to periodic restart condition. "
                         "setting search direction as inverse gradient")
             self.restart()
-            p_new = g.update(vector=-1 * g.vector)
+            p_new.update(vector=-1 * g.vector)
             restarted = True
         # Normal LBFGS direction computation
         else:
@@ -165,20 +166,20 @@ class LBFGS(Gradient):
             # 'q' becomes the new search direction 'g'
             logger.info("applying inverse Hessian to gradient")
             s, y = self._update_search_history()
-            _q_vector = self._apply_inverse_hessian(g.vector, s, y)
-            q = g.update(vector=_q_vector)
+            q = g.copy()
+            q.update(vector=self._apply_inverse_hessian(g.vector, s, y))
 
             # Determine if the new search direction is appropriate by checking
             # its angle to the previous search direction
             if self._check_status(g.vector, q.vector):
                 logger.info("new L-BFGS search direction found")
-                p_new = q.update(vector=-1 * q.vector)
+                p_new.update(vector=-1 * q.vector)
                 restarted = False
             else:
                 logger.info("new search direction not appropriate, defaulting "
                             "to gradient desceitn")
                 self.restart()
-                p_new = g.update(vector=-1 * g.vector)
+                p_new.update(vector=-1 * g.vector)
                 restarted = True
 
         # Assign restart condition to internal memory
@@ -195,7 +196,8 @@ class LBFGS(Gradient):
 
         # Fall back to gradient descent for search direction
         g = self.load_vector("g_new")
-        p_new = g.update(vector=-1 * g.vector)
+        p_new = g.copy()
+        p_new.update(vector=-1 * g.vector)
         self.save_vector("p_new", p_new)
 
         # Clear internal memory
@@ -286,10 +288,10 @@ class LBFGS(Gradient):
         if s is None or y is None:
             m = len(q)
             n = self.LBFGS_mem
-            s = np.memmap(filename=self.path._s_file, mode="w+", dtype="float32",
-                          shape=(m, n))
-            y = np.memmap(filename=self.path._y_file, mode="w+", dtype="float32",
-                          shape=(m, n))
+            s = np.memmap(filename=self.path._s_file, mode="w+",
+                          dtype="float32", shape=(m, n))
+            y = np.memmap(filename=self.path._y_file, mode="w+",
+                          dtype="float32", shape=(m, n))
 
         # First matrix product
         # Recursion step 2 from appendix A of Modrak & Tromp 2016
@@ -301,11 +303,8 @@ class LBFGS(Gradient):
             al[ii] = rh[ii] * np.dot(s[:, ii], q)
             q = q - al[ii] * y[:, ii]
 
-        # Apply a preconditioner if available
-        if self.preconditioner:
-            r = self._precondition(q)
-        else:
-            r = q
+        # Apply an optional preconditioner. Otherwise r==q
+        r = self._precondition(q)
 
         # Use scaling M3 proposed by Liu and Nocedal 1989
         sty = np.dot(y[:, 0], s[:, 0])

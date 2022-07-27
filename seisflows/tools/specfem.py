@@ -4,6 +4,7 @@ i.e., SPECFEM2D/3D/3D_GLOBE
 """
 import os
 import numpy as np
+from copy import deepcopy
 from glob import glob
 from seisflows import logger
 from seisflows.tools.config import Dict
@@ -61,7 +62,7 @@ class Model:
                 self._nproc = len(self.model[_first_key])
             # Read a SPECFEM model from its native output files
             else:
-                if self.fmt is None:
+                if not self.fmt:
                     self.fmt = self._guess_file_format()
                 self._nproc, self.available_parameters = \
                     self._get_nproc_parameters()
@@ -154,6 +155,10 @@ class Model:
         except TypeError as e:
             raise TypeError("Model cannot merge files into continous "
                             "vector") from e
+
+    def copy(self):
+        """Returns a deep copy of self so that models can be transferred"""
+        return deepcopy(self)
 
     def read(self, parameters=None):
         """
@@ -338,8 +343,6 @@ class Model:
             self.model = model
         elif vector is not None:
             self.model = self.split(vector=vector)
-
-        return self
 
     def _get_nproc_parameters(self):
         """

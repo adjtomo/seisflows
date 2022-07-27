@@ -302,7 +302,8 @@ class Gradient:
         :return: search direction as a Model instance
         """
         g_new = self.load_vector("g_new")
-        p_new = g_new.update(vector=-1 * self._precondition(g_new.vector))
+        p_new = g_new.copy()
+        p_new.update(vector=-1 * self._precondition(g_new.vector))
 
         return p_new
 
@@ -349,7 +350,8 @@ class Gradient:
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
-        m_try = m.update(vector=m.vector + alpha * p.vector)
+        m_try = m.copy()
+        m_try.update(vector=m.vector + alpha * p.vector)
         logger.info("trial model 'm_try' parameters: ")
         m_try.check()
 
@@ -401,7 +403,8 @@ class Gradient:
             _p = self.load_vector("p_new")
 
             # Sets the latest trial model using the current `alpha` value
-            m_try = _m.update(vector=_m.vector + alpha * _p.vector)
+            m_try = _m.copy()
+            m_try.update(vector=_m.vector + alpha * _p.vector)
             logger.info("trial model 'm_try' parameters: ")
             m_try.check()
 
