@@ -23,7 +23,6 @@ import subprocess
 from glob import glob
 
 from seisflows import logger
-from seisflows.plugins import solver_io as solver_io_dir
 from seisflows.tools import msg, unix
 from seisflows.tools.config import get_task_id, Dict
 from seisflows.tools.specfem import getpar, setpar
@@ -119,7 +118,7 @@ class Specfem:
         self.smooth_h = smooth_h
         self.smooth_v = smooth_v
         self.components = components
-        self.solver_io = solver_io
+        # self.solver_io = solver_io  # currently not used
         self.source_prefix = source_prefix or "SOURCE"
 
         # Define internally used directory structure
@@ -144,7 +143,6 @@ class Specfem:
         self._mpiexec = mpiexec
         self._source_names = None  # for property source_names
         self._ext = None  # for database file extensions
-        self._io = getattr(solver_io_dir, self.solver_io)  # for database IO
 
         # Define available choices for check parameters
         self._available_model_types = ["gll"]
@@ -168,14 +166,6 @@ class Specfem:
             raise NotImplementedError(
                 f"solver.data_format must be {self._available_data_formats}"
             )
-
-        # Make sure we can read in the model/kernel/gradient files
-        # TODO is this even used? Can we remove?
-        assert hasattr(solver_io_dir, self.solver_io)
-        assert hasattr(self._io, "read_slice"), \
-            "IO method has no attribute 'read'"
-        assert hasattr(self._io, "write_slice"), \
-            "IO method has no attribute 'write'"
 
         # Check that User has provided appropriate binary files to run SPECFEM
         assert(self.path.specfem_bin is not None and
