@@ -220,64 +220,6 @@ def test_optimize_attempt_line_search_restart(tmpdir,
     assert(optimize.attempt_line_search_restart() == True)
 
 
-# def test_inversion_optimization_problem_with_gradient(
-#         tmpdir, setup_optimization_vectors):
-#     """
-#     Rather than run a single line search evaluation, which all the previous
-#     tests have done, we want to run a inversion workflow to find a best fitting
-#     model. To do this we essentially have to mimic the inversion workflow, but
-#     with barebones functions.
-#
-#     This takes bits and pieces from the previous tests
-#
-#     .. note::
-#         We do not save `m_try` to disk each time it is evaluated because it is
-#         small. However in real workflows, `m_try` must be saved to disk rather
-#         than passed in memory because it is likely to be a large vector.
-#     """
-#     optimize = Gradient(path_optimize=tmpdir, path_output=tmpdir)
-#
-#     m_init = Model()
-#     m_init.model = Dict(x=[np.array([-1.2, 1])])  # Starting guess for Rosenbrock
-#     m_init.save(path=os.path.join(tmpdir, "m_new.npz"))
-#
-#     for iteration in range(100):
-#         # Step 1: Evaluate the objective function for given model 'm_new'
-#         m_new = optimize.load_vector("m_new")
-#         f_new = rosenbrock_objective_function(x=m_new.vector)
-#         optimize.save_vector("f_new", f_new)
-#         # Step 2: Evaluate the gradient of the objective function
-#         gradient = rosenbrock_gradient(x=m_new.vector)
-#         g_new = m_new.update(vector=gradient)
-#         optimize.save_vector("g_new", g_new)
-#         # Step 3: Compute the search direction using the gradient
-#         p_new = optimize.compute_direction()
-#         optimize.save_vector("p_new", p_new)
-#         # Step 4a: Set up the line search with a trial model `m_try`
-#         m_try, alpha = optimize.initialize_search()
-#         optimize.save_vector("alpha", alpha)
-#         # Step 4b: Run the line search w/ various trial models 'til lower misfit
-#         while True:
-#             f_try = rosenbrock_objective_function(m_try.vector)
-#             np.savetxt(os.path.join(tmpdir, "f_try.txt"), [f_try])
-#             # Will look for the previously saved 'alpha' value
-#             m_try, alpha, status = optimize.update_line_search()
-#             if status == "PASS":
-#                 break
-#             else:
-#                 optimize.save_vector("alpha", alpha)
-#         optimize.save_vector("m_try", m_try)
-#         # Set up for the next iteration, most importantly `m_try` -> `m_new`
-#         optimize.finalize_search()
-#
-#     # Just check a few of the stats file outputs to make sure this runs right
-#     assert(os.path.exists(optimize.path._stats_file))
-#     stats = np.genfromtxt(optimize.path._stats_file, delimiter=",", names=True)
-#     assert(len(stats) == 100.)
-#     assert(stats["misfit"].min() == pytest.approx(0.9992, 3))
-#     assert(stats["if_restarted"].sum() == 0.)
-
-
 def _test_inversion_optimization_problem_general(optimize):
     """
     Rather than run a single line search evaluation, which all the previous
@@ -356,7 +298,19 @@ def test_inversion_optimization_problem_with_LBFGS(  # NOQA
     stats = np.genfromtxt(optimize.path._stats_file, delimiter=",", names=True)
     assert(len(stats) == 100.)
     assert(stats["misfit"].min() == pytest.approx(0.1468, 3))
-    # assert(stats["if_restarted"].sum() == 0.)
+    # TODO finish assertion tests here, figure out why LBFGS is restarting
+    #   at each iteration?
+
+
+def test_inversion_optimization_problem_with_NLCG(  # NOQA
+        tmpdir, setup_optimization_vectors):
+    nlcg = NLCG(path_optimize=tmpdir, path_output=tmpdir)
+    os.mkdir(nlcg.path._LBFGS)
+    optimize = _test_inversion_optimization_problem_general(nlcg)
+
+    # Just check a few of the stats file outputs to make sure this runs right
+    assert(os.path.exists(optimize.path._stats_file))
+    # TODO finish assertion tests here
 
 
 def test_optimize_recover_from_failure():
@@ -364,5 +318,9 @@ def test_optimize_recover_from_failure():
     We need to make sure we can recover an optimization from a job failure.
     That means that checkpointing and re-loading from checkpoint works as
     expected
+
+    TODO
     """
     pass
+
+
