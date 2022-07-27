@@ -25,7 +25,7 @@ from IPython import embed
 
 from seisflows import logger, ROOT_DIR, NAMES
 from seisflows.tools import unix, msg
-from seisflows.tools.core import load_yaml, Dict
+from seisflows.tools.config import load_yaml, Dict
 from seisflows.tools.config import custom_import, import_seisflows
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)

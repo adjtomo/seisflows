@@ -5,7 +5,7 @@ and running line search
 import os
 import pytest
 import numpy as np
-from seisflows.tools.core import Dict
+from seisflows.tools.config import Dict
 from seisflows.tools.specfem import Model
 from seisflows.tools.math import angle
 from seisflows.optimize.gradient import Gradient
@@ -298,8 +298,7 @@ def test_inversion_optimization_problem_with_LBFGS(  # NOQA
     stats = np.genfromtxt(optimize.path._stats_file, delimiter=",", names=True)
     assert(len(stats) == 100.)
     assert(stats["misfit"].min() == pytest.approx(0.1468, 3))
-    # TODO finish assertion tests here, figure out why LBFGS is restarting
-    #   at each iteration?
+    pytest.set_trace()
 
 
 def test_inversion_optimization_problem_with_NLCG(  # NOQA

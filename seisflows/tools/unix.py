@@ -9,7 +9,22 @@ import random
 import shutil
 import socket
 import subprocess
-from seisflows.tools.core import iterable
+
+
+def _iterable(arg):
+    """
+    Make an argument iterable. Allows for more generalized inputs to these
+    unix-style functions.
+
+    :type arg: anything
+    :param arg: an argument to make iterable
+    :rtype: list
+    :return: iterable argument
+    """
+    if not isinstance(arg, (list, tuple)):
+        return [arg]
+    else:
+        return arg
 
 
 def cat(src, dst=None):
@@ -136,7 +151,7 @@ def mkdir(dirs):
     """
     time.sleep(2 * random.random())  # interval [0, 2]s
 
-    for dir_ in iterable(dirs):
+    for dir_ in _iterable(dirs):
         if not os.path.isdir(dir_):
             os.makedirs(dir_)
 
@@ -174,7 +189,7 @@ def rename(old, new, names):
     :type names: list
     :param names: files to replace expressions in
     """
-    for name in iterable(names):
+    for name in _iterable(names):
         if name.find(old) >= 0:
             os.rename(name, name.replace(old, new))
 
@@ -183,7 +198,7 @@ def rm(path):
     """
     Remove files or directories
     """
-    for name in iterable(path):
+    for name in _iterable(path):
         if os.path.isfile(name) or os.path.islink(name):
             os.remove(name)
         elif os.path.isdir(name):

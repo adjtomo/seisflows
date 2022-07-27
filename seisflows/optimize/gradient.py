@@ -31,7 +31,7 @@ from glob import glob
 
 from seisflows import logger
 from seisflows.tools import msg, unix
-from seisflows.tools.core import Dict
+from seisflows.tools.config import Dict
 from seisflows.tools.math import angle, dot
 from seisflows.tools.specfem import Model
 from seisflows.plugins import line_search as line_search_dir

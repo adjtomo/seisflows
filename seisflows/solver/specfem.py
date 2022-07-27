@@ -25,7 +25,7 @@ from glob import glob
 from seisflows import logger
 from seisflows.plugins import solver_io as solver_io_dir
 from seisflows.tools import msg, unix
-from seisflows.tools.core import get_task_id, Dict
+from seisflows.tools.config import get_task_id, Dict
 from seisflows.tools.specfem import getpar, setpar
 
 

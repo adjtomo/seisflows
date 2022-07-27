@@ -6,7 +6,7 @@ import os
 import numpy as np
 from glob import glob
 from seisflows import logger
-from seisflows.tools.core import Dict
+from seisflows.tools.config import Dict
 from seisflows.tools import unix
 from seisflows.tools.math import poissons_ratio
 

@@ -10,7 +10,7 @@ from time import asctime
 
 from seisflows import logger
 from seisflows.tools import msg, unix
-from seisflows.tools.core import Dict
+from seisflows.tools.config import Dict
 from seisflows.tools.specfem import Model
 
 

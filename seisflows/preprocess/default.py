@@ -12,7 +12,7 @@ from obspy import Stream, Trace, UTCDateTime
 
 from seisflows import logger
 from seisflows.tools import signal, unix
-from seisflows.tools.core import Dict
+from seisflows.tools.config import Dict
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
 from seisflows.plugins.preprocess import adjoint as adjoint_sources

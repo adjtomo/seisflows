@@ -7,9 +7,9 @@ import os
 from contextlib import redirect_stdout
 
 from seisflows import logger
-from seisflows.tools.core import Dict
+from seisflows.tools.config import Dict
 from seisflows.tools import unix
-from seisflows.tools.core import number_fid, get_task_id, set_task_id
+from seisflows.tools.config import number_fid, get_task_id, set_task_id
 
 
 class Workstation:
