@@ -12,8 +12,9 @@ import subprocess
 from unittest.mock import patch
 
 from seisflows.tools.config import Dict
+from seisflows import ROOT_DIR
 from seisflows.seisflows import SeisFlows
-from seisflows.tools.config import ROOT_DIR, NAMES, CFGPATHS
+from seisflows.tools.config import NAMES
 from seisflows.tools.config import load_yaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
@@ -111,35 +112,6 @@ def test_edited_parameter_file_name(tmpdir, par_file_dict, filled_par_file):
     assert(out.stdout.strip() == f"{par_name.upper()}: {check_val}")
 
 
-def test_register(tmpdir, par_file_dict, copy_par_file):
-    """
-    Test that the register function, which reads in PATHS and PARAMETERS
-    works as expected, returning paths and parameters that we can read
-    """
-    copy_par_file
-    os.chdir(tmpdir)
-
-    with patch.object(sys, "argv", ["seisflows"]):
-        sf = SeisFlows()
-        assert(sf._paths is None)
-        assert(sf._parameters is None)
-        sf._register_parameters()
-
-    # Check that paths and parameters have been set in sys.modules
-    paths = sys.modules["seisflows_paths"]
-    parameters = sys.modules["seisflows_parameters"]
-
-    # Check one or two parameters have been set correctly
-    assert("PATHS" not in parameters)
-    for key, val in par_file_dict.items():
-        if key == "PATHS":
-            continue
-        assert(parameters[key] == val)
-
-    path_check_full = os.path.abspath(par_file_dict.PATHS["SCRATCH"])
-    assert(path_check_full == paths.SCRATCH)
-
-
 def test_cmd_setup(tmpdir):
     """
     Test setting up the SeisFlows working directory
@@ -175,142 +147,66 @@ def test_cmd_setup(tmpdir):
             assert(test_phrase not in text)
 
 
-def test_cmd_init(tmpdir, copy_par_file):
-    """
-    Test 'seisflows init' command which instantiates a working directory and
-    saves the active working state as pickle files
-    :return:
-    """
-    os.chdir(tmpdir)
-    copy_par_file
-
-    # Create necessary paths to get past some assertion errors
-    parameters = load_yaml("parameters.yaml")
-    paths = parameters.pop("PATHS")
-
-    for key in ["MODEL_INIT", "MODEL_TRUE"]:
-        os.mkdir(paths[key])
-
-    with patch.object(sys, "argv", ["seisflows"]):
-        sf = SeisFlows()
-        sf.init()
-
-    for name in NAMES:
-        assert(os.path.exists(os.path.join(paths["OUTPUT"],
-                                           f"seisflows_{name}.p"))
-               )
-
-
-def test_cmd_submit(tmpdir):
-    """
-    Test submit, also test the functionality of resume and restart which
-    are essentially wrappers for this call
-    :param tmpdir:
-    :return:
-    """
+# def test_cmd_submit(tmpdir):
+#     """
+#     Test submit, also test the functionality of resume and restart which
+#     are essentially wrappers for this call
+#     :param tmpdir:
+#     :return:
+#     """
+#     pass
+#
+#
+# def test_cmd_clean(tmpdir):
+#     """
+#
+#     :param tmpdir:
+#     :return:
+#     """
     pass
 
 
-def test_cmd_clean(tmpdir):
-    """
-
-    :param tmpdir:
-    :return:
-    """
-    os.chdir(tmpdir)
-
-    # Create a bunch of files that match what should be deleted. Make them as
-    # directories even though some should be files because we just want to see
-    # if they get deleted or not
-    for path in CFGPATHS.values():
-        os.mkdir(path)
-
-    # Symlink the last file to make sure it still exists even if it matches
-    shutil.rmtree(path)
-    os.symlink(src=CFGPATHS.PAR_FILE, dst=path)
-
-    with patch.object(sys, "argv", ["seisflows"]):
-        sf = SeisFlows()
-        sf.clean(force=True)
-
-    for fid in [path, "parameters.yaml"]:
-        assert(os.path.exists(fid))
-
-
-def test_load_modules(tmpdir, copy_par_file):
-    """
-    Test if module loading from sys.modules works
-
-    :param tmpdir:
-    :return:
-    """
-    # Run init first to create a working state
-    os.chdir(tmpdir)
-    copy_par_file
-
-    # Create necessary paths to get past some assertion errors
-    parameters = load_yaml("parameters.yaml")
-    paths = parameters.pop("PATHS")
-
-    for key in ["MODEL_INIT", "MODEL_TRUE"]:
-        os.mkdir(paths[key])
-
-    with patch.object(sys, "argv", ["seisflows"]):
-        sf = SeisFlows()
-        sf.init()
-
-    # Check a random parameter and then set it to something different
-    preprocess = sys.modules["seisflows_preprocess"]
-    assert(preprocess.misfit is None)
-    preprocess.misfit = 1
-
-    # See if we can load modules and restore previous working state which
-    # overwrites the previous operation
-    sf._load_modules()
-    assert(sys.modules["seisflows_preprocess"].misfit != 1)
-
-
-def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
-    """
-    Test configuring a parameter file from a template par file
-
-    .. note::
-        I don't know exactly why, but this test needs to be run AFTER any other
-        test which runs seisflows.init(), otherwise the parameters are not
-        instantiated properly (you will hit a KeyError when trying to access
-        PAR). I think this is because of how seisflows.configure() registers
-        a relatively empty parameter file (only modules are defined), and this
-        gets saved into sys modules, affecting subsequent tests which end up
-        accessing sys.modules. I tried flushing sys.modules but it didn't work.
-        This behavior shouldn't get encountered in a real run because we
-        won't need to run init() and configure() in the same python
-        runtime environment, but I leave this warning here
-        wondering if I'll have to fix it at some point... -B
-    """
-    os.chdir(tmpdir)
-
-    # Copy in the setup par file so we can configure it
-    src = setup_par_file
-    dst = os.path.join(tmpdir, "parameters.yaml")
-    shutil.copy(src, dst)
-
-    # run seisflows init
-    with patch.object(sys, "argv", ["seisflows"]):
-        sf = SeisFlows()
-        sf.configure(relative_paths=False)
-
-    # Simple check that the configuration parameter file has the same number
-    # of lines as the one that has been created by configure
-    lines_conf = open(conf_par_file, "r").readlines()
-    lines_fill = open("parameters.yaml", "r").readlines()
-    assert (len(lines_conf) == len(lines_fill))
-
-    # My attempt to flush sys.modules which did NOT work
-    # from seisflows.tools.config import NAMES, PAR, PATH
-    # for name in NAMES:
-    #     del sys.modules[f"seisflows_{name}"]
-    # del sys.modules[PAR]
-    # del sys.modules[PATH]
+# def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
+#     """
+#     Test configuring a parameter file from a template par file
+#
+#     .. note::
+#         I don't know exactly why, but this test needs to be run AFTER any other
+#         test which runs seisflows.init(), otherwise the parameters are not
+#         instantiated properly (you will hit a KeyError when trying to access
+#         PAR). I think this is because of how seisflows.configure() registers
+#         a relatively empty parameter file (only modules are defined), and this
+#         gets saved into sys modules, affecting subsequent tests which end up
+#         accessing sys.modules. I tried flushing sys.modules but it didn't work.
+#         This behavior shouldn't get encountered in a real run because we
+#         won't need to run init() and configure() in the same python
+#         runtime environment, but I leave this warning here
+#         wondering if I'll have to fix it at some point... -B
+#     """
+#     os.chdir(tmpdir)
+#
+#     # Copy in the setup par file so we can configure it
+#     src = setup_par_file
+#     dst = os.path.join(tmpdir, "parameters.yaml")
+#     shutil.copy(src, dst)
+#
+#     # run seisflows init
+#     with patch.object(sys, "argv", ["seisflows"]):
+#         sf = SeisFlows()
+#         sf.configure(relative_paths=False)
+#
+#     # Simple check that the configuration parameter file has the same number
+#     # of lines as the one that has been created by configure
+#     lines_conf = open(conf_par_file, "r").readlines()
+#     lines_fill = open("parameters.yaml", "r").readlines()
+#     assert (len(lines_conf) == len(lines_fill))
+#
+#     # My attempt to flush sys.modules which did NOT work
+#     # from seisflows.tools.config import NAMES, PAR, PATH
+#     # for name in NAMES:
+#     #     del sys.modules[f"seisflows_{name}"]
+#     # del sys.modules[PAR]
+#     # del sys.modules[PATH]
 
 
 def test_cmd_par(tmpdir, copy_par_file):
