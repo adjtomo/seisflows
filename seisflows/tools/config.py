@@ -3,11 +3,12 @@
 Seisflows configuration tools, containing core utilities that are called upon
 throughout the Seisflows workflow.
 """
+import dill
+import logging
 import os
 import sys
 import re
 import yaml
-import logging
 import numpy as np
 import traceback
 from pkgutil import find_loader
@@ -185,7 +186,6 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
         if name == "workflow":
             continue
         modules[name] = custom_import(name, parameters[name])(**parameters)
-        # parameters.pop(name)  # drop name so workflow doesnt instantiate it
 
     # Import workflow separately by providing all the instantiated modules to it
     workflow = \
@@ -337,6 +337,44 @@ def custom_import(name=None, module=None, classname=None):
         print(msg.cli(f"The following method was not found in the imported "
                       f"class: seisflows.{name}.{module}.{classname}"))
         sys.exit(-1)
+
+
+def pickle_function_list(functions, path=os.getcwd(), **kwargs):
+    """
+    Save a list of functions and their keyword arguments as pickle files.
+    Return the names of the files. Used for running functions from spawned
+    processes during cluster runs.
+
+    .. note::
+        The idea here is that we need this list of functions to be
+        discoverable by a system separate to the one that defined them. To
+        do this we can pickle Python objects on disk, and have the new
+        system read in the pickle files and evaluate the objects. We use
+        'dill' because Pickle can't serialize methods/functions
+
+    :type functions: list of methods
+    :param functions: a list of functions that should be run in order. All
+        kwargs passed to run() will be passed into the functions.
+    :type path: str
+    :param path: path to save the pickle files. Defaults to current working
+        directory
+    :rtype: tuple of str
+    :return: (name of the pickle file containing the function,
+        name of the pickle file containing keyword arguments)
+    """
+    # Save the instances that define the functions as a pickle object
+    func_names = "_".join([_.__name__ for _ in functions])  # unique identifier
+    fid_funcs_pickle = os.path.join(path, f"{func_names}.p")
+
+    with open(fid_funcs_pickle, "wb") as f:
+        dill.dump(obj=functions, file=f)
+
+    # Save the kwargs as a separate pickle object
+    fid_kwargs_pickle = os.path.join(path, f"{func_names}_kwargs.p")
+    with open(fid_kwargs_pickle, "wb") as f:
+        dill.dump(obj=kwargs, file=f)
+
+    return fid_funcs_pickle, fid_kwargs_pickle
 
 
 def number_fid(fid, i=0):

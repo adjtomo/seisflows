@@ -30,8 +30,6 @@ class Slurm(Cluster):
     [system.slurm] Interface for submitting jobs to Simple Linux Utility for
     Resource Management (SLURM) system.
 
-    :type ntask_max: int
-    :param ntask_max: limit the number of concurrent tasks in a given array job
     :type slurm_args: str
     :param slurm_args: Any (optional) additional SLURM arguments that will
         be passed to the SBATCH scripts. Should be in the form:

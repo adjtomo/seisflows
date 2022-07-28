@@ -12,10 +12,11 @@ actually submitting to any job scheduler.
 """
 import os
 import sys
-import dill
 import subprocess
-from seisflows import logger
-from seisflows.tools.config import ROOT_DIR
+from concurrent.futures import ProcessPoolExecutor, wait
+from seisflows import logger, ROOT_DIR
+from seisflows.tools.unix import nproc
+from seisflows.tools.config import pickle_function_list
 from seisflows.system.workstation import Workstation
 
 
@@ -29,6 +30,8 @@ class Cluster(Workstation):
     :type mpiexec: str
     :param mpiexec: Function used to invoke executables on the system.
         For example 'mpirun', 'mpiexec', 'srun', 'ibrun'
+    :type ntask_max: int
+    :param ntask_max: limit the number of concurrent tasks in a given array job
     :type walltime: int
     :param walltime: maximum job time in minutes for the master SeisFlows
         job submitted to cluster
@@ -44,8 +47,8 @@ class Cluster(Workstation):
     """
     __doc__ = Workstation.__doc__ + __doc__
 
-    def __init__(self, title=None, mpiexec="", walltime=10, tasktime=1,
-                 environs="", **kwargs):
+    def __init__(self, title=None, mpiexec="", ntask_max=None, walltime=10,
+                 tasktime=1, environs="", **kwargs):
         """Instantiate the Cluster System class"""
         super().__init__(**kwargs)
 
@@ -54,40 +57,41 @@ class Cluster(Workstation):
         else:
             self.title = title
         self.mpiexec = mpiexec
+        self.ntask_max = ntask_max or nproc() - 1  # -1 because master job
         self.walltime = walltime
         self.tasktime = tasktime
         self.environs = environs or ""
 
-    def _pickle_func_list(self, funcs, **kwargs):
+    def submit(self, workdir=None, parameter_file="parameters.yaml",
+               submit_call=None):
         """
-        Save a list of functions and their keyword arguments as pickle files.
-        Return the names of the files for the run() function.
+        Submits the main workflow job as a separate job submitted directly to
+        the system that is running the master job
 
-        .. note::
-            The idea here is that we need this list of functions to be
-            discoverable by a system separate to the one that defined them. To
-            do this we can pickle Python objects on disk, and have the new
-            system read in the pickle files and evaluate the objects. We use
-            'dill' because Pickle can't serialize methods/functions
-
-        :type funcs: list of methods
-        :param funcs: a list of functions that should be run in order. All
-            kwargs passed to run() will be passed into the functions.
+        :type workdir: str
+        :param workdir: path to the current working directory
+        :type parameter_file: str
+        :param parameter_file: paramter file file name used to instantiate
+            the SeisFlows package
+        :type submit_call: str
+        :param submit_call: child classes may require a specific submit call
+            if the job should be submitted to another system (e.g., on cluster
+            submitting jobs on compute nodes and not running directly on the
+            login node)
         """
-        # Save the instances that define the functions as a pickle object
-        func_names = "_".join([_.__name__ for _ in funcs])  # unique identifier
-        fid_funcs_pickle = os.path.join(self.path.scratch, f"{func_names}.p")
-
-        with open(fid_funcs_pickle, "wb") as f:
-            dill.dump(obj=funcs, file=f)
-
-        # Save the kwargs as a separate pickle object
-        fid_kwargs_pickle = os.path.join(self.path.scratch,
-                                         f"{func_names}_kwargs.p")
-        with open(fid_kwargs_pickle, "wb") as f:
-            dill.dump(obj=kwargs, file=f)
-
-        return fid_funcs_pickle, fid_kwargs_pickle
+        if submit_call is None:
+            # e.g., submit -w ./ -p parameters.yaml
+            submit_call = " ".join([
+                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",
+                f"--workdir {workdir}",
+                f"--parameter_file {parameter_file}",
+            ])
+        logger.debug(submit_call)
+        try:
+            subprocess.run(submit_call, shell=True)
+        except subprocess.CalledProcessError as e:
+            logger.critical(f"SeisFlows master job has failed with: {e}")
+            sys.exit(-1)
 
     def run(self, funcs, single=False, run_call=None, **kwargs):
         """
@@ -108,18 +112,18 @@ class Cluster(Workstation):
         :type run_call: str
         :param run_call: the call used to submit the run script. If None,
             attempts default run call which should be suited for the given
-            system
+            system. Can be overwritten by child classes to involve other
+            arguments
         """
         # Single tasks only need to be run one time, as `TASK_ID` === 0
-        if single:
-            ntasks = 1
-        else:
-            ntasks = self.ntask
-
-        funcs_fid, kwargs_fid = self._pickle_func_list(funcs, **kwargs)
+        ntasks = {True: 1, False: self.ntask}[single]
+        funcs_fid, kwargs_fid = pickle_function_list(functions=funcs,
+                                                     path=self.path.scratch,
+                                                     **kwargs)
         logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
                     f"system {self.ntask} times")
 
+        # Create the run call which will simply call an external Python script
         if run_call is None:
             # e.g., run --funcs func.p --kwargs kwargs.p --environment ...
             run_call = " ".join([
@@ -130,13 +134,36 @@ class Cluster(Workstation):
             ])
         logger.debug(run_call)
 
-        for task_id in range(ntasks):
-            logger.debug(f"running task id {task_id} "
-                         f"(job {task_id + 1}/{self.ntask})")
-            # Subprocess waits for the process to end before running the next
-            try:
-                subprocess.run(run_call.format(task_id=task_id), shell=True)
-            except subprocess.CalledProcessError as e:
-                logger.critical(f"run task_id {task_id} has failed with error "
-                                f"message {e}")
-                sys.exit(-1)
+        # Don't need to spin up concurrent.futures for a single run
+        if single:
+            self._run_task(run_call=run_call, task_id=0)
+        # Run tasks in parallel and wait for all of them to finish
+        else:
+            with ProcessPoolExecutor(max_workers=nproc() - 1) as executor:
+                futures = [executor.submit(self._run_task, run_call, task_id)
+                           for task_id in range(ntasks)]
+            wait(futures)
+
+    def _run_task(self, run_call, task_id):
+        """
+        Convenience function to run a single Python job with subprocess.run
+        with some error catching and redirect of stdout to a log file.
+
+        :type run_call: str
+        :param run_call: python call to run a task involving loading the
+            pickled function list and its kwargs, and then running them
+        :type task_id: int
+        :param task_id: given task id, used for log messages and to format
+            the run call
+        """
+        logger.debug(f"running task id {task_id} ({task_id + 1}/{self.ntask})")
+        try:
+            f = open(self._get_log_file(task_id), "w")
+            subprocess.run(run_call.format(task_id=task_id), shell=True,
+                           stdout=f)
+        except subprocess.CalledProcessError as e:
+            logger.critical(f"run task_id {task_id} has failed with error "
+                            f"message {e}")
+            sys.exit(-1)
+        finally:
+            f.close()

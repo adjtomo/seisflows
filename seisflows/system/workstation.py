@@ -7,9 +7,9 @@ import os
 from contextlib import redirect_stdout
 
 from seisflows import logger
-from seisflows.tools.config import Dict
 from seisflows.tools import unix
-from seisflows.tools.config import number_fid, get_task_id, set_task_id
+from seisflows.tools.config import Dict, import_seisflows
+from seisflows.tools.config import number_fid, set_task_id
 
 
 class Workstation:
@@ -67,6 +67,7 @@ class Workstation:
 
         # Define internal path system
         self.path = Dict(
+            workdir=workdir or os.getcwd(),
             scratch=path_system or os.path.join(workdir, "scratch", "system"),
             par_file=path_par_file or os.path.join(workdir, "parameters.yaml"),
             output=path_output or os.path.join(workdir, "output"),
@@ -84,7 +85,7 @@ class Workstation:
 
         assert(self.ntask > 0), f"number of events/tasks `ntask` cannot be neg'"
         assert(self.nproc == 1), f"system.workstation rqeuires `nproc`==1"
-        assert(self.log_level) in self._acceptable_log_levels, \
+        assert(self.log_level in self._acceptable_log_levels), \
             f"`system.log_level` must be in {self._acceptable_log_levels}"
 
     def setup(self):
@@ -120,16 +121,25 @@ class Workstation:
                 logger.debug(f"copying par/log file to: {dst}")
                 unix.cp(src=src, dst=dst)
 
-    def submit(self, workflow, submit_call=None):
+    def submit(self, workdir=None, parameter_file="parameters.yaml",
+               submit_call=None):
         """
         Submits the main workflow job as a serial job submitted directly to
         the system that is running the master job
 
-        :type submit_call: str or None
-        :param submit_call: the command line workload manager call to be run by
-            subprocess. This is only needed for overriding classes, it has no
-            effect on the Workstation class
+        :type workdir: str
+        :param workdir: path to the current working directory
+        :type parameter_file: str
+        :param parameter_file: paramter file file name used to instantiate
+            the SeisFlows package
+        :type submit_call: str
+        :param submit_call: child classes may require a specific submit call
+            if the job should be submitted to another system (e.g., on cluster
+            submitting jobs on compute nodes and not running directly on the
+            login node)
         """
+        workflow = import_seisflows(workdir=workdir or self.path.workdir,
+                                    parameter_file=parameter_file)
         workflow.check()
         workflow.setup()
         workflow.run()
@@ -156,19 +166,10 @@ class Workstation:
         else:
             ntasks = self.ntask
 
-        for taskid in range(ntasks):
+        for task_id in range(ntasks):
             # Set Task ID for currently running process
-            set_task_id(taskid)
-
-            # Make sure that we're creating new log files EACH time we run()
-            idx = 0
-            while True:
-                log_file = os.path.join(self.path.log_files,
-                                        f"{idx:0>4}_{taskid:0>2}.log")
-                if os.path.exists(log_file):
-                    idx += 1
-                else:
-                    break
+            set_task_id(task_id)
+            log_file = self._get_log_file(task_id)
 
             # Redirect output to a log file to mimic cluster runs where 'run'
             # task output logs are sent to different files
@@ -176,3 +177,18 @@ class Workstation:
                 with redirect_stdout(f):
                     for func in funcs:
                         func(**kwargs)
+
+    def _get_log_file(self, task_id):
+        """
+        To mimic clusters which assign job numbers to spawned processes, our
+        on-system runs will also assign job numbers simply be incrementing the
+        number on the log files on system.
+        """
+        idx = 1
+        while True:
+            log_file = os.path.join(self.path.log_files,
+                                    f"{idx:0>4}_{task_id:0>2}.log")
+            if os.path.exists(log_file):
+                idx += 1
+            else:
+                return log_file

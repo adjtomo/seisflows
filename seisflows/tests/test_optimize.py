@@ -221,7 +221,89 @@ def test_optimize_attempt_line_search_restart(tmpdir,
     assert(optimize.attempt_line_search_restart() == True)
 
 
-def _test_inversion_optimization_problem_general(optimize):
+def test_line_search_recover_from_failure(tmpdir, setup_optimization_vectors):
+    """
+    Run a small optimization problem to try to reduce the Rosenbrock
+    objective function using the Bracket'ing line search method. Simulate a job
+    failure during the line search, and attempts to recover the line search
+    from a checkpointed state, mimicing a real life inversion where a line
+    search might fail a job (forward simulation), and we do not want to have to
+    run the line search from the beginning.
+    """
+    optimize = Gradient(path_optimize=tmpdir, path_output=tmpdir,
+                        line_search_method="bracket", step_count_max=100)
+
+    # Make sure the initial misfit is high
+    assert(optimize.load_vector("f_new") == pytest.approx(24.2, 1))
+
+    # Calculate the initial search direction which is just the inverse gradient
+    p_new = optimize.compute_direction()
+    p_new.save(path=os.path.join(tmpdir, "p_new"))
+
+    # Saves trial model 'm_try' and corresponding step length 'alpha'
+    m_try, alpha = optimize.initialize_search()
+    optimize.save_vector("m_try", m_try)
+    optimize.save_vector("alpha", alpha)
+
+    def line_search(_optimize, allow_break=True):
+        """Each line search evaluation requires calculating a new model and
+        corresponding misfit value. Simulate a break at a given step count"""
+        m_try = _optimize.load_vector("m_try")
+        f_try = rosenbrock_objective_function(m_try.vector)
+
+        # Line search is most likely to break at the function evaluation
+        # break mimics a job failure on cluster, before `f_try` has been saved
+        if allow_break and _optimize.step_count == 3:
+            return "BREAK"
+
+        np.savetxt(os.path.join(tmpdir, "f_try.txt"), [f_try])
+
+        m_try, alpha, status = _optimize.update_line_search()
+        _optimize.save_vector("m_try", m_try)
+        _optimize.save_vector("alpha", alpha)
+        return status
+
+    # Run a line search until the line search breaks
+    while True:
+        status = line_search(optimize, allow_break=True)
+        if status == "PASS":
+            break
+        elif status == "BREAK":
+            optimize.checkpoint()
+            break
+
+    # Try to restart the line search by re-instantiating from a checkpoint with
+    # a newly instantiated optimization module
+    optimize_restarted = Gradient(path_optimize=tmpdir, path_output=tmpdir,
+                                  line_search_method="bracket",
+                                  step_count_max=100)
+    optimize_restarted.load_checkpoint()
+    assert(optimize_restarted.step_count == 3)
+    while True:
+        status = line_search(optimize_restarted, allow_break=False)
+        if status == "PASS":
+            break
+
+    # The rest of this is copied from `test_bracket_line_search` which completes
+    # a successful line search. So if these values are the same then we know
+    # we have successfully restarted a line search
+    assert(status == "PASS")  # pass
+    assert(optimize_restarted.step_count == 5)  # Took 5 steps to reduce misfit
+    # Make sure we have reduced the final misfit
+    assert(min(optimize_restarted._line_search.func_vals) ==
+           pytest.approx(4.22, 3))
+
+    # Change model names and reset line search
+    optimize_restarted.finalize_search()
+
+    # Check that the final model
+    m_new = optimize_restarted.load_vector("m_new")
+    m_old = optimize_restarted.load_vector("m_old")
+    m_angle = angle(m_new.vector, m_old.vector)
+    assert(m_angle == pytest.approx(0.3, 2))
+
+
+def _test_inversion_optimization_problem_general(optimize, iterations=200):
     """
     Rather than run a single line search evaluation, which all the previous
     tests have done, we want to run a inversion workflow to find a best fitting
@@ -235,12 +317,21 @@ def _test_inversion_optimization_problem_general(optimize):
         We do not save `m_try` to disk each time it is evaluated because it is
         small. However in real workflows, `m_try` must be saved to disk rather
         than passed in memory because it is likely to be a large vector.
+
+    :type optimize: module
+    :param optimize: specific SeisFlows optimization module to test
+    :type iterations: int
+    :param iterations: number of iterations to run. defaults to 200
     """
     m_init = Model()
-    m_init.model = Dict(x=[np.array([-1.2, 1])])  # Starting guess for Rosenbrock
+    m_init.model = Dict(x=[np.array([-1.2, 1])])  # Initial guess for Rosenbrock
     optimize.save_vector("m_new", m_init)
 
-    for iteration in range(100):
+    m_true = m_init.copy()
+    m_true.update(vector=np.array([1., 1.]))  # Rosenbrock global minimum
+
+    # 200 allowable iterations, but reaching global min. will stop inversion
+    for iteration in range(iterations):
         # Step 1: Evaluate the objective function for given model 'm_new'
         m_new = optimize.load_vector("m_new")
         f_new = rosenbrock_objective_function(x=m_new.vector)
@@ -264,11 +355,19 @@ def _test_inversion_optimization_problem_general(optimize):
             m_try, alpha, status = optimize.update_line_search()
             if status == "PASS":
                 break
+            elif status == "FAIL":
+                return optimize
             else:
                 optimize.save_vector("alpha", alpha)
         optimize.save_vector("m_try", m_try)
         # Set up for the next iteration, most importantly `m_try` -> `m_new`
         optimize.finalize_search()
+
+        # Figure out how far the updated model is from global minimum
+        m_diff = np.linalg.norm(m_new.vector - m_true.vector)
+        m_diff /= np.linalg.norm(m_new.vector)
+        if m_diff < 1e-3:
+            break
 
     return optimize
 
@@ -281,17 +380,14 @@ def test_inversion_optimization_problem_with_gradient(
     # Just check a few of the stats file outputs to make sure this runs right
     assert(os.path.exists(optimize.path._stats_file))
     stats = np.genfromtxt(optimize.path._stats_file, delimiter=",", names=True)
-    assert(len(stats) == 100.)
-    assert(stats["misfit"].min() == pytest.approx(0.9992, 3))
+    assert(len(stats) == 200.)  # Fails to reach global minimum
+    assert(stats["misfit"].min() == pytest.approx(0.2669, 3))
     assert(stats["if_restarted"].sum() == 0.)
 
 
 def test_inversion_optimization_problem_with_LBFGS(  # NOQA
         tmpdir, setup_optimization_vectors):
     """Wrapper function to test the L-BFGS descent optimization problem"""
-    # from seisflows.tools.config import config_logger
-    # config_logger(level="DEBUG", filename=os.path.join(tmpdir, "log.txt"), verbose=False)
-
     lbfgs = LBFGS(path_optimize=tmpdir, path_output=tmpdir,
                   line_search_method="backtrack")
     os.mkdir(lbfgs.path._LBFGS)
@@ -300,30 +396,22 @@ def test_inversion_optimization_problem_with_LBFGS(  # NOQA
     # Just check a few of the stats file outputs to make sure this runs right
     assert(os.path.exists(optimize.path._stats_file))
     stats = np.genfromtxt(optimize.path._stats_file, delimiter=",", names=True)
-    assert(len(stats) == 100.)
-    assert(stats["misfit"].min() == pytest.approx(0.1468, 3))
-    pytest.set_trace()
+    assert(len(stats) == 95.)  # reaches global min. in 95 iterations
+    assert(stats["misfit"].min() == pytest.approx(1.07e-7, 3))
+    assert(stats["if_restarted"].sum() == 0.)
 
 
 def test_inversion_optimization_problem_with_NLCG(  # NOQA
         tmpdir, setup_optimization_vectors):
-    nlcg = NLCG(path_optimize=tmpdir, path_output=tmpdir)
-    os.mkdir(nlcg.path._LBFGS)
+    # NLCG will need more step counts
+    nlcg = NLCG(path_optimize=tmpdir, path_output=tmpdir,
+                step_count_max=20)
     optimize = _test_inversion_optimization_problem_general(nlcg)
 
     # Just check a few of the stats file outputs to make sure this runs right
     assert(os.path.exists(optimize.path._stats_file))
-    # TODO finish assertion tests here
-
-
-def test_optimize_recover_from_failure():
-    """
-    We need to make sure we can recover an optimization from a job failure.
-    That means that checkpointing and re-loading from checkpoint works as
-    expected
-
-    TODO
-    """
-    pass
-
+    stats = np.genfromtxt(optimize.path._stats_file, delimiter=",", names=True)
+    assert(len(stats) == 200.)  # Fails to reach global minimum
+    assert(stats["misfit"].min()) == pytest.approx(0.1013, 3)
+    assert(stats["if_restarted"].sum() == 91.)
 

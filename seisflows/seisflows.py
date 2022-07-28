@@ -25,8 +25,8 @@ from IPython import embed
 
 from seisflows import logger, ROOT_DIR, NAMES
 from seisflows.tools import unix, msg
-from seisflows.tools.config import load_yaml, Dict
-from seisflows.tools.config import custom_import, import_seisflows
+from seisflows.tools.config import (Dict, load_yaml, custom_import,
+                                    import_seisflows, config_logger)
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)
 
@@ -571,10 +571,10 @@ class SeisFlows:
         unix.mkdir(self._args.workdir)
         unix.cd(self._args.workdir)
 
-        workflow = import_seisflows(workdir=self._args.workdir,
-                                    parameter_file=self._args.parameter_file)
-        system = workflow._modules.system
-        system.submit(workflow)
+        parameters = load_yaml(self._args.parameter_file)
+        system = custom_import("system", parameters.system)(**parameters)
+        system.submit(workdir=self._args.workdir,
+                      par_file=self._args.parameter_file)
 
     def clean(self, force=False, **kwargs):
         """

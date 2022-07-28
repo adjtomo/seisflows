@@ -31,9 +31,9 @@ class NLCG(Gradient):
         super().__init__(**kwargs)
 
         # Overwrite user-chosen line search. L-BFGS requires 'Backtrack'ing LS
-        if self.line_search_method.title != "Bracket":
+        if self.line_search_method.title() != "Bracket":
             logger.warning(f"NLCG optimization requires 'bracket'ing line "
-                           f"search. Overwritng {self.line_search_method}")
+                           f"search. Overwritng '{self.line_search_method}'")
             self.line_search_method = "Bracket"
             self._line_search = getattr(
                 line_search_dir, self.line_search_method)(
@@ -90,12 +90,13 @@ class NLCG(Gradient):
 
         # Load the current gradient direction
         g_new = self.load_vector("g_new")
+        p_new = g_new.copy()
 
         # CASE 1: If first iteration, search direction is the current gradient
         if self._NLCG_iter == 1:
             logger.info("first NLCG iteration, setting search direction "
                         "as inverse gradient")
-            p_new = g_new.update(vector=-1 * g_new.vector)
+            p_new.update(vector=-1 * g_new.vector)
             restarted = False
         # CASE 2: Force restart if the iterations have surpassed the maximum
         # number of allowable iter
@@ -104,7 +105,7 @@ class NLCG(Gradient):
                         "condition. setting search direction as inverse "
                         "gradient")
             self.restart()
-            p_new = g_new.update(vector=-1 * g_new.vector)
+            p_new.update(vector=-1 * g_new.vector)
             restarted = True
         # Normal NLCG direction compuitation
         else:
@@ -114,23 +115,24 @@ class NLCG(Gradient):
             beta = self._calc_beta(g_new.vector, g_old.vector)
 
             # Apply preconditioner and calc. scale factor for search dir. (beta)
-            _p_new_vec = (-1 * self._precondition(g_new.vector) +
-                          beta * p_old.vector)
-            p_new = g_new.update(vector=_p_new_vec)
+            _p_new_vec = (
+                    -1 * self._precondition(g_new.vector) + beta * p_old.vector
+            )
+            p_new.update(vector=_p_new_vec)
 
-            # Check restart conditions, return search direction and status
+            # Check restart conditions, return search direction and statusa
             if check_conjugacy(g_new.vector, g_old.vector) > self.NLCG_thresh:
                 logger.info("restarting NLCG due to loss of conjugacy")
                 self.restart()
-                p_new = g_new.update(vector=-1 * g_new.vector)
+                p_new.update(vector=-1 * g_new.vector)
                 restarted = True
-            elif check_descent(p_new, g_new) > 0.:
+            elif check_descent(p_new.vector, g_new.vector) > 0.:
                 logger.info("restarting NLCG, not a descent direction")
                 self.restart()
-                p_new = g_new.update(vector=-1 * g_new.vector)
+                p_new.update(vector=-1 * g_new.vector)
                 restarted = True
             else:
-                p_new = p_new
+                # p_new = p_new
                 restarted = False
 
         # Save values to disk and memory
@@ -144,8 +146,9 @@ class NLCG(Gradient):
         """
         logger.info("restarting NLCG optimization algorithm")
 
-        g = self.load_vector("g_new")
-        p_new = g.update(vector=-1 * g.vector)
+        g_new = self.load_vector("g_new")
+        p_new = g_new.copy()
+        p_new.update(vector=-1 * g_new.vector)
         self.save_vector("p_new", p_new)
 
         self._line_search.clear_search_history()
