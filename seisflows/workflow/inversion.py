@@ -167,7 +167,7 @@ class Inversion(Migration):
 
         unix.mkdir(self.path.eval_func)
 
-        self.optimize = self._modules.optimize
+        self.optimize = self._modules.optimize  # NOQA
         # If optimization has been run before, re-load from checkpoint
         self.optimize.load_checkpoint()
 
@@ -188,6 +188,29 @@ class Inversion(Migration):
         super().checkpoint()
         with open(self.path.state_file, "a") as f:
             f.write(f"iteration: {self.iteration}")
+
+    def evaluate_objective_function(self, save_residuals=False, **kwargs):
+        """
+        Overwrite evaluate objective function to include MORE input parameters
+        specifying which evaluation in the inversion we are at. Also removes
+        the check for a preprocessing module because it is assumed we have a
+        preprocsesing module for an inversion workflow.
+
+        .. note::
+            Must be run by system.run() so that solvers are assigned individual
+            task ids/ working directories.
+        """
+        logger.debug(f"quantifying misfit with "
+                     f"'{self.preprocess.__class__.__name__}'")
+
+        self.preprocess.quantify_misfit(
+            observed=self.solver.data_filenames(choice="obs"),
+            synthetic=self.solver.data_filenames(choice="syn"),
+            save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
+            save_residuals=save_residuals,
+            iteration=self.iteration,
+            step_count=self.optimize.step_count,
+        )
 
     def evaluate_initial_misfit(self):
         """
@@ -211,11 +234,14 @@ class Inversion(Migration):
                 path_model = os.path.join(self.path.eval_grad, "model")
                 m_new = self.optimize.load_vector("m_new")
                 m_new.write(path=path_model)
+
                 # Run forward simulation/misfit quantification with previous model
                 self.system.run(
-                    [self.evaluate_objective_function],
+                    [self.run_forward_simulations,
+                     self.evaluate_objective_function],
                     path_model=path_model,
-                    save_residuals=os.path.join(self.path.eval_grad, "residuals")
+                    save_residuals=os.path.join(self.path.eval_grad,
+                                                "residuals")
                 )
 
         # Override function to sum residuals into the optimization library
@@ -343,7 +369,8 @@ class Inversion(Migration):
     def _evaluate_line_search_misfit(self):
         """Convenience fuinction to wrap forward solver and misfit calc"""
         self.system.run(
-            [self.evaluate_objective_function],
+            [self.run_forward_simulations,
+             self.evaluate_objective_function],
             path_model=os.path.join(self.path.eval_func, "model"),
             save_residuals=os.path.join(self.path.eval_func, "residuals")
         )

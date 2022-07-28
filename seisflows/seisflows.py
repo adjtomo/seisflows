@@ -574,7 +574,7 @@ class SeisFlows:
         parameters = load_yaml(self._args.parameter_file)
         system = custom_import("system", parameters.system)(**parameters)
         system.submit(workdir=self._args.workdir,
-                      par_file=self._args.parameter_file)
+                      parameter_file=self._args.parameter_file)
 
     def clean(self, force=False, **kwargs):
         """

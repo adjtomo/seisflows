@@ -125,6 +125,11 @@ class Default:
         self._acceptable_adjsrcs = [_ for _ in dir(adjoint_sources)
                                     if not _.startswith("_")]
 
+        # Internal attributes used to keep track of inversion workflows
+        self._iteration = None
+        self._step_count = None
+        self._source_names = None
+
     def check(self):
         """ 
         Checks parameters and paths
@@ -331,6 +336,8 @@ class Default:
         Reads in observed and synthetic waveforms, applies optional
         preprocessing, assesses misfit, and writes out adjoint sources and
         STATIONS_ADJOINT file.
+
+        TODO use concurrent futures to parallelize this
 
         .. note::
             Meant to be called by solver.eval_func(), may have unused arguments

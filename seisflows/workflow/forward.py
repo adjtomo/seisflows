@@ -293,8 +293,10 @@ class Forward:
             because we are potentially running two simulations back to back.
         """
         logger.info(msg.mnr("EVALUATING MISFIT FOR INITIAL MODEL"))
+
         self.system.run(
             [self.prepare_data_for_solver,
+             self.run_forward_simulations,
              self.evaluate_objective_function],
             path_model=self.path.model_init,
             save_residuals=os.path.join(self.path.eval_grad, "residuals")
@@ -335,12 +337,9 @@ class Forward:
                 export_traces=export_traces
             )
 
-    def evaluate_objective_function(self, path_model, save_residuals=False,
-                                    **kwargs):
+    def run_forward_simulations(self, path_model, **kwargs):
         """
-        Performs forward simulation for a single given event. Also evaluates the
-        objective function and writes residuals and adjoint sources for later
-        tasks.
+        Performs forward simulation for a single given event.
 
         .. note::
             if PAR.PREPROCESS == None, will not perform misfit quantification
@@ -371,13 +370,26 @@ class Forward:
             export_traces=export_traces
         )
 
-        # (optional) Perform data-synthetic misfit quantification
-        if self.preprocess:
-            logger.debug(f"quantifying misfit with "
-                         f"'{self.preprocess.__class__.__name__}'")
-            self.preprocess.quantify_misfit(
-                observed=self.solver.data_filenames(choice="obs"),
-                synthetic=self.solver.data_filenames(choice="syn"),
-                save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
-                save_residuals=save_residuals
-            )
+    def evaluate_objective_function(self, save_residuals=False, **kwargs):
+        """
+        Uses the preprocess module to evaluate the misfit/objective function
+        given synthetics generated during forward simulations
+
+        .. note::
+            Must be run by system.run() so that solvers are assigned individual
+            task ids/ working directories.
+        """
+        if self.preprocess is None:
+            logger.debug("no preprocessing module selected, will not evaluate "
+                         "objective function")
+            return
+
+        logger.debug(f"quantifying misfit with "
+                     f"'{self.preprocess.__class__.__name__}'")
+        self.preprocess.quantify_misfit(
+            # observed=self.solver.data_filenames(choice="obs"),
+            # synthetic=self.solver.data_filenames(choice="syn"),
+            source_name=self.solver.source_name,
+            save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
+            save_residuals=save_residuals
+        )
