@@ -1,1 +1,13 @@
-EVENT 2
+XXXX 2012 03 30 18 47 38.66  -40.9316  175.4123  17.6 0.0 0.0 NORTH ISLAND, NEW ZEALAND
+event name:      		 002
+time shift:           0.0000
+half duration:        0.0000
+latitude:           -40.9316
+longitude:          175.4123
+depth:               17.5977
+Mrr:           -1.451500E+22
+Mtt:            2.777100E+22
+Mpp:           -1.325600E+22
+Mrt:            1.085300E+22
+Mrp:           -2.075000E+21
+Mtp:           -1.439600E+22

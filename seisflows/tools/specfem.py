@@ -8,7 +8,7 @@ from copy import deepcopy
 from glob import glob
 from seisflows import logger
 from seisflows.tools.config import Dict
-from seisflows.tools import unix
+from seisflows.tools import unix, msg
 from seisflows.tools.math import poissons_ratio
 
 
@@ -492,6 +492,51 @@ class Model:
                     buffer.tofile(f)
                     data.tofile(f)
                     buffer.tofile(f)
+
+
+def check_source_names(path_specfem_data, source_prefix, ntask=None):
+    """
+    Determines names of sources by applying wildcard rule to user-supplied
+    input files. Source names are only provided up to PAR.NTASK and are
+    returned in alphabetical order.
+
+    .. note::
+        SeisFlows expects sources to be stored in the DATA/ directory with a
+        prefix and a source name, e.g., {source_prefix}_{source_name} which
+        would evaluate to something like CMTSOLUTION_001
+
+    :type path_specfem_data: str
+    :param path_specfem_data: path to a
+    :type source_prefix: str
+    :param source_prefix: type of SPECFEM input source, e.g., CMTSOLUTION
+    :type ntask: int
+    :parma ntask: if provided, curtails the list of sources up to `ntask`. If
+        None, returns all files found matching the wildcard
+    :rtype: list
+    :return: alphabetically ordered list of source names up to PAR.NTASK
+    """
+    wildcard = f"{source_prefix}_*"
+    fids = sorted(glob(os.path.join(path_specfem_data, wildcard)))
+    if not fids:
+        logger.warning(
+            msg.cli("No matching source files when searching PATH for the "
+                    "given WILDCARD",
+                    items=[f"PATH: {path_specfem_data}",
+                           f"WILDCARD: {wildcard}"],
+                    header="error")
+              )
+        return
+    if ntask is not None:
+        assert(len(fids) >= ntask), (
+            f"Number of requested tasks/events {ntask} exceeds number "
+            f"of available sources {len(fids)}"
+        )
+        fids = fids[:ntask]
+
+    # Create internal definition of sources names by stripping prefixes
+    names = [os.path.basename(fid).split("_")[-1] for fid in fids]
+
+    return names
 
 
 def getpar(key, file, delim="=", match_partial=False):

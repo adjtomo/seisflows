@@ -59,8 +59,8 @@ def test_initialize_working_directory(tmpdir):
     assert(glob(os.path.join(solver.cwd, "*")))
     event_fid = os.path.join(solver.cwd, "DATA", "CMTSOLUTION")
     assert(os.path.islink(event_fid))
-    event_line = open(event_fid).readlines()[0].strip()
-    assert(event_line == "EVENT 1")
+    event_line = open(event_fid).readlines()[1].strip()
+    assert(event_line.split(":")[1].strip() == "001")
 
 
 def test_run_binary(tmpdir):

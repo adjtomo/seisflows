@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-The Pyatoa preprocessing module for waveform gathering, preprocessing and
-misfit quantification.
+The Pyaflowa preprocessing module for waveform gathering, preprocessing and
+misfit quantification. We use the name 'Pyaflowa' to avoid any potential
+name overlaps with the actual pyatoa package.
 """
 import os
 import numpy as np
@@ -11,12 +12,13 @@ from pyatoa.utils.read import read_station_codes
 
 from seisflows import logger
 from seisflows.tools import unix
-from seisflows.tools.config import Dict
+from seisflows.tools.config import Dict, get_task_id
+from seisflows.tools.specfem import check_source_names
 
 
-class Pyatoa:
+class Pyaflowa:
     """
-    [preprocess.pyatoa] preprocessing and misfit quantification using Pyatoa
+    [preprocess.pyaflowa] preprocessing and misfit quantification using Pyatoa
 
     :type data_format: str
     :param data_format: data format for reading traces into memory. Pyatoa
@@ -93,28 +95,18 @@ class Pyatoa:
     :param path_data: optional path for preprocessing module to discover
         waveform and meta-data.
     """
-    def __init__(self, data_format="ascii", components=None, start=None,
-                 ntask=1, nproc=1, source_prefix=None, min_period=None,
-                 max_period=None, filter_corners=4, client=None, rotate=False,
-                 pyflex_preset="default", fix_windows=False, adj_src_type="cc",
-                 plot=True, pyatoa_log_level="DEBUG", unit_output="VEL",
-                 start_pad_s=0., end_pad_s=None, workdir=os.getcwd(),
-                 path_preprocess=None, path_specfem_data=None, path_data=None,
+    def __init__(self, min_period=1., max_period=10., filter_corners=4,
+                 client=None, rotate=False, pyflex_preset="default",
+                 fix_windows=False, adj_src_type="cc", plot=True,
+                 pyatoa_log_level="DEBUG", unit_output="VEL", start_pad_s=0.,
+                 end_pad_s=None, workdir=os.getcwd(), path_preprocess=None,
+                 path_solver=None, path_specfem_data=None, path_data=None,
                  path_output=None, export_datasets=True, export_figures=True,
-                 export_log_files=True,
+                 export_log_files=True, data_format="ascii",
+                 data_case="data", components=None,
+                 start=None, ntask=1, nproc=1, source_prefix=None,
                  **kwargs):
-        """
-        Pyatoa preprocessing parameters that will be passed to Pyaflowa
-        """
-        # Shared SeisFlows parameters
-        self.data_format = data_format.upper()
-        self.components = components
-        self.start = start
-        self.ntask = ntask
-        self.nproc = nproc
-        self.source_prefix = source_prefix
-
-        # Pyatoa-specific parameters that are provided to the Config class
+        """Pyatoa preprocessing parameters"""
         self.min_period = min_period
         self.max_period = max_period
         self.filter_corners = filter_corners
@@ -132,6 +124,7 @@ class Pyatoa:
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
                                                     "preprocess"),
+            solver=path_solver or os.path.join(workdir, "scratch", "solver"),
             output=path_output or os.path.join(workdir, "output"),
             specfem_data=path_specfem_data,
             data=path_data,
@@ -155,11 +148,23 @@ class Pyatoa:
             self.path["_waveforms"] = None
             self.path["_responses"] = None
 
-        # Internal parameters for workflow
+        # SeisFlows parameters that should be set by other modules. Keep hidden
+        # so `seisflows configure` doesn't attribute these to preprocess.
+        self._data_format = data_format.upper()
+        self._data_case = data_case.lower()
+        self._components = components
+        self._start = start
+        self._ntask = ntask
+        self._nproc = nproc
+        self._source_prefix = source_prefix
+
+        # Internal parameters to check against user-set parameters
         self._acceptable_data_formats = ["ASCII"]
         self._acceptable_source_prefixes = ["SOURCE", "FORCESOLUTION",
                                             "CMTSOLUTION"]
-        self._config = None  # to be created by setup()
+
+        # Internal attributes to be filled in by setup()
+        self._config = None
         self._fix_windows = False
         self._station_codes = []
         self._source_names = []
@@ -169,7 +174,7 @@ class Pyatoa:
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
         """
-        assert(self.data_format.upper() == "ASCII"), \
+        assert(self._data_format.upper() == "ASCII"), \
             "Pyatoa preprocess requires `data_format`=='ASCII'"
 
         assert(self.path.specfem_data is not None and
@@ -182,9 +187,9 @@ class Pyatoa:
             f"Pyatoa preprocessing requires that the `STATIONS` file exists " \
             f"within `path_specfem_data`"
 
-        assert(self.source_prefix in self._acceptable_source_prefixes), (
+        assert(self._source_prefix in self._acceptable_source_prefixes), (
             f"Pyatoa can only accept `source_prefix` in " 
-            f"{self._acceptable_source_prefixes}, not '{self.source_prefix}'"
+            f"{self._acceptable_source_prefixes}, not '{self._source_prefix}'"
         )
 
     def setup(self):
@@ -196,8 +201,7 @@ class Pyatoa:
         for pathname in ["scratch", "_logs", "_datasets", "_figures"]:
             unix.mkdir(self.path[pathname])
 
-        # These values should be constant for a given workflow. The Config class
-        # will run its own internal checks when instantiated
+        # Generalized Config object that can be shared among all child processes
         self._config = Config(
             min_period=self.min_period, max_period=self.max_period,
             filter_corners=self.filter_corners, client=self.client,
@@ -205,19 +209,26 @@ class Pyatoa:
             fix_windows=self.fix_windows, adj_src_type=self.adj_src_type,
             log_level=self.pyatoa_log_level, unit_output=self.unit_output,
             start_pad_s=self.start_pad_s, end_pad_s=self.end_pad_s,
+            component_list=list(self._components),
+            synthetics_only=bool(self._data_case == "synthetic"),
             paths={"waveforms": self.path["_waveforms"] or [],
                    "responses": self.path["_responses"] or [],
                    "events": [self.path.specfem_data]
                    }
         )
-
         # Generate a list of station codes that will be used to search for data
         self._station_codes = read_station_codes(
             path_to_stations=os.path.join(self.path.specfem_data, "STATIONS"),
             loc="*", cha="*"
         )
 
-    def quantify_misfit(self, source_name=None, save_residuals=None,
+        # Get an internal list of source names. Will be the same as solver
+        self._source_names = check_source_names(
+            path_specfem_data=self.path.specfem_data,
+            source_prefix=self._source_prefix, ntask=self._ntask
+        )
+
+    def quantify_misfit(self, source_name, save_residuals=None,
                         save_adjsrcs=None, iteration=1, step_count=0,
                         **kwargs):
         """
@@ -238,27 +249,37 @@ class Pyatoa:
         :type save_adjsrcs: str
         :param save_adjsrcs: if not None, path to write adjoint sources to
         """
+        # Set the individual Config class for our given event and evaluation
         config = self._config.copy()
         config.event_id = source_name
         config.iteration = iteration
         config.step_count = step_count
 
-        ds = ASDFDataSet(os.path.join(self.path["_datasets"], source_name))
-        mgmt = Manager(config=config, ds=ds)
+        # Force the Manager to look in the solver directory for data
+        # Note: we are assuming the SeisFlows solver directory structure here
+        config.paths["waveforms"].append(
+            os.path.join(self.path.solver, source_name, "traces", "obs")
+        )
+        config.paths["synthetics"].append(
+            os.path.join(self.path.solver, source_name, "traces", "syn")
+        )
 
-        # Will look for events in `path_specfem_data` matching {prefix}_{name}
-        # e.g., 'CMTSOLUTION_2018p130600'
-        import pdb;pdb.set_trace()
-        mgmt.gather(choice=["event"], source_name=source_name,
-                    prefix=self.source_prefix)
+        # Set up the Pyatoa workflow, attempt to gather event metadata
+        ds = ASDFDataSet(
+            os.path.join(self.path["_datasets"], f"{source_name}.h5")
+        )
+        mgmt = Manager(config=config, ds=ds)
+        mgmt.gather(choice=["event"], event_id=source_name,
+                    prefix=f"{self._source_prefix}_")
+
+        # Run data/metadata gathering, processing and misfit quantification
         misfit, nwin = 0, 0
         for station_code in self._station_codes:
             net, sta, loc, cha = station_code.split(".")
             _processed = False
-
+            # Will gather data and metadata based on the station codes and
+            # input paths from the Configuration object
             try:
-                # Will gather data and metadata based on the station codes and
-                # input paths from the Configuration object
                 mgmt.gather(choice=["inv", "st_obs", "st_syn"],
                             code=station_code)
             except ManagerError as e:
@@ -281,7 +302,10 @@ class Pyatoa:
                     f"{net}_{sta}.png"
                 )
                 save = os.path.join(self.path["_figures"], plot_fid)
-                mgmt.plot(choice="both", show=False, save=save)
+                try:
+                    mgmt.plot(choice="both", show=False, save=save)
+                except ManagerError:
+                    mgmt.plot(choice="wav", show=False, save=save)
 
             # Write out the .adj adjoint source files
             if _processed and save_adjsrcs:
@@ -342,7 +366,7 @@ class Pyatoa:
             # 'Once' picks windows only for the first function evaluation of
             # the current set of iterations.
             elif self.fix_windows.upper() == "ONCE":
-                if iteration == self.start and step_count == 0:
+                if iteration == self._start and step_count == 0:
                     fix_windows = False
                     logger.info("new windows; first workflow evaluation")
                 else:

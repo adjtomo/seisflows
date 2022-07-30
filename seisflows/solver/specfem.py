@@ -25,7 +25,7 @@ from glob import glob
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.config import get_task_id, Dict
-from seisflows.tools.specfem import getpar, setpar
+from seisflows.tools.specfem import getpar, setpar, check_source_names
 
 
 class Specfem:
@@ -222,7 +222,10 @@ class Specfem:
                 f"`path_model_true` is empty but should have model files"
 
         # Check that the number of tasks/events matches the number of events
-        self._source_names = self._check_source_names()
+        self._source_names = check_source_names(
+            path_specfem_data=self.path.specfem_data,
+            source_prefix=self.source_prefix, ntask=self.ntask
+        )
 
     @property
     def source_names(self):
@@ -239,7 +242,10 @@ class Specfem:
         :return: list of source names
         """
         if self._source_names is None:
-            self._source_names = self._check_source_names()
+            self._source_names = check_source_names(
+                path_specfem_data=self.path.specfem_data,
+                source_prefix=self.source_prefix, ntask=self.ntask
+            )
         return self._source_names
 
     @property
@@ -796,39 +802,3 @@ class Specfem:
                 logger.debug(f"linking source '{source_name}' as 'mainsolver'")
                 unix.ln(cwd, self.path.mainsolver)
 
-    def _check_source_names(self):
-        """
-        Determines names of sources by applying wildcard rule to user-supplied
-        input files. Source names are only provided up to PAR.NTASK and are
-        returned in alphabetical order.
-
-        :rtype: list
-        :return: alphabetically ordered list of source names up to PAR.NTASK
-        """
-        assert(self.path.specfem_data is not None), \
-            f"solver source names requires 'solver.path.specfem_data' to exist"
-        assert(os.path.exists(self.path.specfem_data)), \
-            f"solver source names requires 'solver.path.specfem_data' to exist"
-
-        # Apply wildcard rule and check for available sources, exit if no
-        # sources found because then we can't proceed
-        wildcard = f"{self.source_prefix}_*"
-        fids = sorted(glob(os.path.join(self.path.specfem_data, wildcard)))
-        if not fids:
-            print(msg.cli("No matching source files when searching PATH for "
-                          "the given WILDCARD",
-                          items=[f"PATH: {self.path.specfem_data}",
-                                 f"WILDCARD: {wildcard}"], header="error"
-                          )
-                  )
-            sys.exit(-1)
-        else:
-            assert(len(fids) >= self.ntask), (
-                f"Number of requested tasks/events {self.ntask} exceeds number "
-                f"of available sources {len(fids)}"
-            )
-
-        # Create internal definition of sources names by stripping prefixes
-        names = [os.path.basename(fid).split("_")[-1] for fid in fids]
-
-        return names[:self.ntask]
