@@ -6,13 +6,14 @@ name overlaps with the actual pyatoa package.
 """
 import os
 import numpy as np
+from concurrent.futures import ProcessPoolExecutor
 from pyasdf import ASDFDataSet
 from pyatoa import Config, Manager, ManagerError
 from pyatoa.utils.read import read_station_codes
 
 from seisflows import logger
 from seisflows.tools import unix
-from seisflows.tools.config import Dict, get_task_id
+from seisflows.tools.config import Dict
 from seisflows.tools.specfem import check_source_names
 
 
@@ -268,51 +269,24 @@ class Pyaflowa:
         ds = ASDFDataSet(
             os.path.join(self.path["_datasets"], f"{source_name}.h5")
         )
-        mgmt = Manager(config=config, ds=ds)
+        mgmt = Manager(config=config)
         mgmt.gather(choice=["event"], event_id=source_name,
                     prefix=f"{self._source_prefix}_")
 
-        # Run data/metadata gathering, processing and misfit quantification
+        # Run misfit quantification for each station concurrently
         misfit, nwin = 0, 0
-        for station_code in self._station_codes:
-            net, sta, loc, cha = station_code.split(".")
-            _processed = False
-            # Will gather data and metadata based on the station codes and
-            # input paths from the Configuration object
-            try:
-                mgmt.gather(choice=["inv", "st_obs", "st_syn"],
-                            code=station_code)
-            except ManagerError as e:
-                continue
-            # If any part of the processing fails, move on to plotting
-            try:
-                mgmt.standardize()
-                mgmt.preprocess()
-                mgmt.window(
-                    fix_windows=self._check_fixed_windows(iteration, step_count)
-                )
-                mgmt.measure()
-                _processed = True
-            except ManagerError as e:
-                pass
-
-            if self.plot:
-                plot_fid = (
-                    f"{source_name}_{config.iter_tag}_{config.step_tag}_"
-                    f"{net}_{sta}.png"
-                )
-                save = os.path.join(self.path["_figures"], plot_fid)
-                try:
-                    mgmt.plot(choice="both", show=False, save=save)
-                except ManagerError:
-                    mgmt.plot(choice="wav", show=False, save=save)
-
-            # Write out the .adj adjoint source files
-            if _processed and save_adjsrcs:
-                mgmt.write_adjsrcs(path=save_adjsrcs, write_blanks=True)
-
-            misfit += mgmt.stats.misfit
-            nwin += mgmt.stats.nwin
+        with ProcessPoolExecutor(max_workers=unix.nproc() - 1) as executor:
+            futures = [
+                executor.submit(
+                    self._quantify_misfit_station, mgmt, code, save_adjsrcs)
+                for code in self._station_codes
+            ]
+            # Collect misfit values from function as they complete
+            for future in futures:
+                _misfit, _nwin = future.result()
+                if _misfit is not None:
+                    misfit += _misfit
+                    nwin += _nwin
 
         if save_residuals:
             try:
@@ -322,6 +296,57 @@ class Pyaflowa:
                 # windows found, or calc'ing misfit on whole trace)
                 residuals = misfit
             np.savetxt(save_residuals, [residuals], fmt="%11.6e")
+
+    def _quantify_misfit_station(self, mgmt, station_code, save_adjsrcs):
+        """
+        Run misfit quantification for a single event-station pair. Gathers,
+        preprocesses, windows and measures data, saves adjoint source if
+        requested, and then returns the total misfit and the collected
+        windows for the station.
+        """
+        _processed = False
+        net, sta, loc, cha = station_code.split(".")
+        try:
+            mgmt.gather(choice=["inv", "st_obs", "st_syn"], code=station_code)
+        except ManagerError as e:
+            return None, None
+
+        # If any part of the processing fails, move on to plotting because we
+        # will have gathered waveform data so a figure is still useful.
+        try:
+            _fix_windows = self._check_fixed_windows(
+                iteration=mgmt.config.iteration,
+                step_count=mgmt.config.step_count
+            )
+            mgmt.standardize()
+            mgmt.preprocess()
+            mgmt.window(fix_windows=_fix_windows)
+            mgmt.measure()
+            _processed = True
+        except ManagerError as e:
+            pass
+
+        # Plot waveform + map figure. Map may fail if we don't have appropriate
+        # metdata, in which case we fall back to plotting waveform only
+        if self.plot:
+            # e.g., 001_i01_s00_XX_ABC.png
+            plot_fid = (
+                f"{mgmt.config.event_id}_"
+                f"{mgmt.config.iter_tag}_{mgmt.config.step_tag}_"
+                f"{net}_{sta}.png"
+            )
+            save = os.path.join(self.path["_figures"], plot_fid)
+            try:
+                mgmt.plot(choice="both", show=False, save=save)
+            except ManagerError:
+                mgmt.plot(choice="wav", show=False, save=save)
+
+        # Write out the .adj adjoint source files for solver to discover.
+        # Write empty adjoint sources for components with no adjoint sources
+        if _processed and save_adjsrcs:
+            mgmt.write_adjsrcs(path=save_adjsrcs, write_blanks=True)
+
+        return mgmt.stats.misfit, mgmt.stats.nwin
 
     def _check_fixed_windows(self, iteration, step_count):
         """
