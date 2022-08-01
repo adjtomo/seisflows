@@ -365,8 +365,10 @@ class Gradient:
 
         .. note::
             This is a bit confusing as it calculates the step length `alpha` for
-            the NEXT line search step, while working with the `alpha` value that
-            was calculated from the LAST line search step.
+            the NEXT line search step, while storing the `alpha` value that
+            was calculated from the LAST line search step. This is because we
+            need a corresponding misfit `f_try` from the value of `alpha`, which
+            happens externally with the solver module
 
         If line search returns a passing exit code (0 or 1), sets up for a
         subsequent line search evaluation by saving a new step length (alpha),
@@ -383,20 +385,21 @@ class Gradient:
             status==how to proceed with line search)
         """
         # Collect information on a forward evaluation that just took place
-        alpha = self.load_vector("alpha")  # step length
+        alpha_try = self.load_vector("alpha")  # step length
         f_try = self.load_vector("f_try")  # misfit for the trial model
 
         # Update the line search with a new step length and misfit value
         self._line_search.step_count += 1
-        self._line_search.update_search_history(step_len=alpha, func_val=f_try)
+        self._line_search.update_search_history(step_len=alpha_try,
+                                                func_val=f_try)
 
-        # Calculate a new step length based on the step length and corresponding
-        # misfit that we should have just calculated
-        alpha_try, status = self._line_search.calculate_step_length()
+        # Calculate a new step length based on the current step length and its
+        # corresponding misfit.
+        alpha, status = self._line_search.calculate_step_length()
 
-        # Vectors are saved to disk immediately to avoid passing them in memory
-        # Status == 0: Retry line search // Status == 1: Line search passed
-        if status.upper() in ["TRY", "PASS"]:
+        # Note: if status is 'PASS' then `alpha` represents the step length of
+        # the lowest misfit in the line search and we reconstruct `m_try` w/ it
+        if status.upper() in ["PASS", "TRY"]:
             # Create a new trial model based on search direction, step length
             # and the initial model vector
             _m = self.load_vector("m_new")
@@ -405,12 +408,10 @@ class Gradient:
             # Sets the latest trial model using the current `alpha` value
             m_try = _m.copy()
             m_try.update(vector=_m.vector + alpha * _p.vector)
-            logger.info("trial model 'm_try' parameters: ")
+            logger.info("line search model 'm_try' parameters: ")
             m_try.check()
-
-            # Newly calculated `alpha` value overwrites original `alpha`
-            alpha = alpha_try
-        else:
+        elif status.upper() == "FAIL":
+            # Failed line search skips over costly vector manipulations
             m_try = None
 
         return m_try, alpha, status
@@ -445,6 +446,9 @@ class Gradient:
         for src in glob(os.path.join(self.path.scratch, "*_new.*")):
             dst = src.replace("_new.", "_old.")
             unix.mv(src, dst)
+
+        # Reconstruct
+        x, f, *_ = self._line_search.get_search_history()
 
         logger.info("setting accepted trial model (try) as current model (new)")
         unix.mv(src=os.path.join(self.path.scratch, "m_try.npz"),

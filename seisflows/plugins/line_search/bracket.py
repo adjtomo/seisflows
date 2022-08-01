@@ -133,7 +133,8 @@ class Bracket:
     def calculate_step_length(self):
         """
         Determines step length (alpha) and search status (status) using a
-        bracketing line search.
+        bracketing line search. Evaluates Wolfe conditions to determine if
+        a step length is acceptable.
 
         .. note:
             Available status returns are:
@@ -168,7 +169,7 @@ class Bracket:
         elif _check_bracket(x, f) and _good_enough(x, f):
             alpha = x[f.argmin()]
             logger.info(f"pass: bracket acceptable and step length "
-                        f"reasonable.")
+                        f"reasonable. returning minimum line search misfit.")
             status = "PASS"
         # If misfit is reduced but not close, set to quadratic fit
         elif _check_bracket(x, f):
@@ -209,12 +210,13 @@ class Bracket:
                             f"length, alpha_new={alpha:.2E}")
                 status = "TRY"
             # Stop because safeguard prevents us from going further
+            # TODO Why is this passing? should status not be carried over?
             elif alpha > self.step_len_max:
                 alpha = self.step_len_max
                 logger.info(f"try: applying initial step length "
                             f"safegaurd as alpha has exceeded maximum step "
                             f"length, alpha_new={alpha:.2E}")
-                status = "PASS"  # TODO shouldn't this be 0 or -1?
+                status = "PASS"
 
         return alpha, status
 

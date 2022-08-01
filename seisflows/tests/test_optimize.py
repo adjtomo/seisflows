@@ -5,6 +5,7 @@ and running line search
 import os
 import pytest
 import numpy as np
+import matplotlib.pyplot as plt
 from seisflows.tools.config import Dict
 from seisflows.tools.specfem import Model
 from seisflows.tools.math import angle
@@ -303,7 +304,7 @@ def test_line_search_recover_from_failure(tmpdir, setup_optimization_vectors):
     assert(m_angle == pytest.approx(0.3, 2))
 
 
-def _test_inversion_optimization_problem_general(optimize, iterations=200):
+def _test_inversion_optimization_problem_general(optimize, iterations=250):
     """
     Rather than run a single line search evaluation, which all the previous
     tests have done, we want to run a inversion workflow to find a best fitting
@@ -318,10 +319,13 @@ def _test_inversion_optimization_problem_general(optimize, iterations=200):
         small. However in real workflows, `m_try` must be saved to disk rather
         than passed in memory because it is likely to be a large vector.
 
+    .. note::
+        This replaces `workflow.test_optimize` from original code
+
     :type optimize: module
     :param optimize: specific SeisFlows optimization module to test
     :type iterations: int
-    :param iterations: number of iterations to run. defaults to 200
+    :param iterations: number of iterations to run. defaults to 250
     """
     m_init = Model()
     m_init.model = Dict(x=[np.array([-1.2, 1])])  # Initial guess for Rosenbrock
@@ -330,7 +334,8 @@ def _test_inversion_optimization_problem_general(optimize, iterations=200):
     m_true = m_init.copy()
     m_true.update(vector=np.array([1., 1.]))  # Rosenbrock global minimum
 
-    # 200 allowable iterations, but reaching global min. will stop inversion
+    # N allowable iterations, but reaching global min. will stop inversion
+    inversion_status = "DNF"  # finished
     for iteration in range(iterations):
         # Step 1: Evaluate the objective function for given model 'm_new'
         m_new = optimize.load_vector("m_new")
@@ -356,7 +361,7 @@ def _test_inversion_optimization_problem_general(optimize, iterations=200):
             if status == "PASS":
                 break
             elif status == "FAIL":
-                return optimize
+                return optimize, status
             else:
                 optimize.save_vector("alpha", alpha)
         optimize.save_vector("m_try", m_try)
@@ -367,22 +372,35 @@ def _test_inversion_optimization_problem_general(optimize, iterations=200):
         m_diff = np.linalg.norm(m_new.vector - m_true.vector)
         m_diff /= np.linalg.norm(m_new.vector)
         if m_diff < 1e-3:
+            inversion_status = "FIN"  # finished
             break
 
-    return optimize
+    return optimize, inversion_status
 
 
 def test_inversion_optimization_problem_with_gradient(
         tmpdir, setup_optimization_vectors):
     """Wrapper function to test the Gradient descent optimization problem"""
-    gradient = Gradient(path_optimize=tmpdir, path_output=tmpdir)
-    optimize = _test_inversion_optimization_problem_general(gradient)
+    gradient = Gradient(path_optimize=tmpdir, path_output=tmpdir,
+                        step_count_max=40)
+    optimize, status = _test_inversion_optimization_problem_general(gradient)
+
     # Just check a few of the stats file outputs to make sure this runs right
     assert(os.path.exists(optimize.path._stats_file))
     stats = np.genfromtxt(optimize.path._stats_file, delimiter=",", names=True)
-    assert(len(stats) == 200.)  # Fails to reach global minimum
-    assert(stats["misfit"].min() == pytest.approx(0.2669, 3))
+    assert(status == "DNF")  # Did Not Finish
+    assert(len(stats) == 250.)  # Fails to reach global minimum
+    assert(stats["misfit"].min() == pytest.approx(0.1638, 3))
     assert(stats["if_restarted"].sum() == 0.)
+
+    # Make plot in the tmpdir incase we need to debug the misfit reduction
+    if True:
+        plt.plot(stats["misfit"], "go-", markersize=2)
+        plt.title("Gradient descent misfit; Rosenbrock problem")
+        plt.xlabel("Iteration")
+        plt.ylabel("Misfit")
+        plt.axhline(1e-3, c="k")
+        plt.savefig(os.path.join(tmpdir, "gradient_misfit.png"))
 
 
 def test_inversion_optimization_problem_with_LBFGS(  # NOQA
@@ -391,27 +409,45 @@ def test_inversion_optimization_problem_with_LBFGS(  # NOQA
     lbfgs = LBFGS(path_optimize=tmpdir, path_output=tmpdir,
                   line_search_method="backtrack")
     os.mkdir(lbfgs.path._LBFGS)
-    optimize = _test_inversion_optimization_problem_general(lbfgs)
+    optimize, status = _test_inversion_optimization_problem_general(lbfgs)
 
     # Just check a few of the stats file outputs to make sure this runs right
     assert(os.path.exists(optimize.path._stats_file))
     stats = np.genfromtxt(optimize.path._stats_file, delimiter=",", names=True)
-    assert(len(stats) == 95.)  # reaches global min. in 95 iterations
-    assert(stats["misfit"].min() == pytest.approx(1.07e-7, 3))
-    assert(stats["if_restarted"].sum() == 0.)
+    assert(status == "FIN")
+    assert(len(stats) == 53.)  # reaches global min. in 95 iterations
+    assert(stats["misfit"].min() == pytest.approx(1.043e-7, 3))
+    assert(stats["if_restarted"].sum() == 1.)  # 1 restart
+
+    if True:
+        plt.plot(stats["misfit"], "ro-", markersize=2)
+        plt.title("L-BFGS misfit; Rosenbrock problem")
+        plt.xlabel("Iteration")
+        plt.ylabel("Misfit")
+        plt.axhline(1e-3, c="k")
+        plt.savefig(os.path.join(tmpdir, "lbfgs_misfit.png"))
 
 
 def test_inversion_optimization_problem_with_NLCG(  # NOQA
         tmpdir, setup_optimization_vectors):
     # NLCG will need more step counts
     nlcg = NLCG(path_optimize=tmpdir, path_output=tmpdir,
-                step_count_max=20)
-    optimize = _test_inversion_optimization_problem_general(nlcg)
+                step_count_max=40)
+    optimize, status = _test_inversion_optimization_problem_general(nlcg)
 
     # Just check a few of the stats file outputs to make sure this runs right
     assert(os.path.exists(optimize.path._stats_file))
     stats = np.genfromtxt(optimize.path._stats_file, delimiter=",", names=True)
-    assert(len(stats) == 200.)  # Fails to reach global minimum
-    assert(stats["misfit"].min()) == pytest.approx(0.1013, 3)
-    assert(stats["if_restarted"].sum() == 91.)
+    assert(status == "FIN")
+    assert(len(stats) == 46.)  # Fails to reach global minimum
+    assert(stats["misfit"].min()) == pytest.approx(3.693E-5, 3)
+    assert(stats["if_restarted"].sum() == 1.)
 
+    if True:
+        plt.plot(stats["misfit"], "bo-", markersize=2)
+        plt.title("NLCG misfit; Rosenbrock problem")
+        plt.xlabel("Iteration")
+        plt.ylabel("Misfit")
+        plt.axhline(1e-3, c="k")
+        plt.savefig(os.path.join(tmpdir, "nlcg_misfit.png"))
+        
