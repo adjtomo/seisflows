@@ -450,4 +450,3 @@ def test_inversion_optimization_problem_with_NLCG(  # NOQA
         plt.ylabel("Misfit")
         plt.axhline(1e-3, c="k")
         plt.savefig(os.path.join(tmpdir, "nlcg_misfit.png"))
-        
