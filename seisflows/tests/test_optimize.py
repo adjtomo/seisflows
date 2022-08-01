@@ -174,7 +174,7 @@ def test_bracket_line_search(tmpdir, setup_optimization_vectors):
             break
 
     assert(status == "PASS")  # pass
-    assert(optimize.step_count == 5)  # Took 5 steps to reduce misfit
+    assert(optimize.step_count == 4)  # Took 4 steps to reduce misfit
     # Make sure we have reduced the final misfit
     assert(min(optimize._line_search.func_vals) == pytest.approx(4.22, 3))
 
@@ -289,7 +289,7 @@ def test_line_search_recover_from_failure(tmpdir, setup_optimization_vectors):
     # a successful line search. So if these values are the same then we know
     # we have successfully restarted a line search
     assert(status == "PASS")  # pass
-    assert(optimize_restarted.step_count == 5)  # Took 5 steps to reduce misfit
+    assert(optimize_restarted.step_count == 4)  # Took 4 steps to reduce misfit
     # Make sure we have reduced the final misfit
     assert(min(optimize_restarted._line_search.func_vals) ==
            pytest.approx(4.22, 3))
