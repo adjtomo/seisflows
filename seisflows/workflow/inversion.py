@@ -204,8 +204,7 @@ class Inversion(Migration):
                      f"'{self.preprocess.__class__.__name__}'")
 
         self.preprocess.quantify_misfit(
-            observed=self.solver.data_filenames(choice="obs"),
-            synthetic=self.solver.data_filenames(choice="syn"),
+            source_name=self.solver.source_name,
             save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
             save_residuals=save_residuals,
             iteration=self.iteration,
@@ -413,6 +412,8 @@ class Inversion(Migration):
 
             unix.mkdir(self.path.eval_grad)
             unix.mkdir(self.path.eval_func)
+
+        self.preprocess.finalize()
 
     def _update_thrifty_status(self):
         """

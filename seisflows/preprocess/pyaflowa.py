@@ -5,15 +5,20 @@ misfit quantification. We use the name 'Pyaflowa' to avoid any potential
 name overlaps with the actual pyatoa package.
 """
 import os
+import logging
+import time
+import random
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor
+from glob import glob
 from pyasdf import ASDFDataSet
-from pyatoa import Config, Manager, ManagerError
+from pyatoa import Config, Manager, Inspector, ManagerError
 from pyatoa.utils.read import read_station_codes
+from pyatoa.utils.images import imgs_to_pdf, merge_pdfs
 
 from seisflows import logger
 from seisflows.tools import unix
-from seisflows.tools.config import Dict
+from seisflows.tools.config import Null, Dict, get_task_id
 from seisflows.tools.specfem import check_source_names
 
 
@@ -71,7 +76,7 @@ class Pyaflowa:
     :param pyatoa_log_level: Log level to set Pyatoa, Pyflex, Pyadjoint.
         Available: ['null': no logging, 'warning': warnings only,
         'info': task tracking, 'debug': log all small details (recommended)]
-    :type start_pad_s: int
+    :type start_pad_s: float
     :param start_pad_s: seconds BEFORE origin time to gather data. Must be
         >= T_0 specificed in SPECFEM constants.h. Positive values only
     :type end_pad_s: int
@@ -138,6 +143,7 @@ class Pyaflowa:
 
         # Pyatoa-specific internal path structure for storing data etc.
         self.path["_logs"] = os.path.join(self.path.scratch, "logs")
+        self.path["_tmplogs"] = os.path.join(self.path._logs, "tmp")
         self.path["_datasets"] = os.path.join(self.path.scratch, "datasets")
         self.path["_figures"] = os.path.join(self.path.scratch, "figures")
 
@@ -199,10 +205,12 @@ class Pyaflowa:
         defined directory structure that will be used to store the outputs 
         of the preprocessing workflow
         """
-        for pathname in ["scratch", "_logs", "_datasets", "_figures"]:
+        for pathname in ["scratch", "_logs", "_tmplogs", "_datasets",
+                         "_figures"]:
             unix.mkdir(self.path[pathname])
 
         # Generalized Config object that can be shared among all child processes
+        # Contains paths to look for data and metadata
         self._config = Config(
             min_period=self.min_period, max_period=self.max_period,
             filter_corners=self.filter_corners, client=self.client,
@@ -222,42 +230,50 @@ class Pyaflowa:
             path_to_stations=os.path.join(self.path.specfem_data, "STATIONS"),
             loc="*", cha="*"
         )
-
         # Get an internal list of source names. Will be the same as solver
         self._source_names = check_source_names(
             path_specfem_data=self.path.specfem_data,
             source_prefix=self._source_prefix, ntask=self._ntask
         )
 
-    def quantify_misfit(self, source_name, save_residuals=None,
+    def quantify_misfit(self, source_name=None, save_residuals=None,
                         save_adjsrcs=None, iteration=1, step_count=0,
                         **kwargs):
         """
-        Prepares solver for gradient evaluation by writing residuals and
-        adjoint traces. Meant to be called by
-        `workflow.evaluate_objective_function`
-
-        Reads in observed and synthetic waveforms, applies optional
-        preprocessing, assesses misfit, and writes out adjoint sources and
-        STATIONS_ADJOINT file.
+        Prepares solver for gradient evaluation by evaluating data-synthetic
+        misfit and writing residuals and adjoint traces. Meant to be called by
+        `workflow.evaluate_objective_function`.
 
         .. note::
-            Meant to be called by solver.eval_func(), may have unused arguments
-            to keep functions general across subclasses.
+            meant to be run on system using system.run() with access to solver
 
+        :type source_name: str
+        :param source_name: name of the event to quantify misfit for. If not
+            given, will attempt to gather event id from the given task id which
+            is assigned by system.run()
         :type save_residuals: str
         :param save_residuals: if not None, path to write misfit/residuls to
         :type save_adjsrcs: str
         :param save_adjsrcs: if not None, path to write adjoint sources to
+        :type iteration: int
+        :param iteration: current iteration of the workflow, information should
+            be provided by `workflow` module if we are running an inversion.
+            Defaults to 1 if not given (1st iteration)
+        :type step_count: int
+        :param step_count: current step count of the line search. Information
+            should be provided by the `optimize` module if we are running an
+            inversion. Defaults to 0 if not given (1st evaluation)
         """
         # Set the individual Config class for our given event and evaluation
         config = self._config.copy()
-        config.event_id = source_name
+        config.event_id = source_name or self._source_names[get_task_id()]
         config.iteration = iteration
         config.step_count = step_count
 
         # Force the Manager to look in the solver directory for data
-        # Note: we are assuming the SeisFlows solver directory structure here
+        # note: we are assuming the SeisFlows `solver` directory structure here.
+        #   If we change how the default `solver` directory is named (defined by
+        #   `solver.initialize_solver_directories()`), then this will break
         config.paths["waveforms"].append(
             os.path.join(self.path.solver, source_name, "traces", "obs")
         )
@@ -265,50 +281,109 @@ class Pyaflowa:
             os.path.join(self.path.solver, source_name, "traces", "syn")
         )
 
-        # Set up the Pyatoa workflow, attempt to gather event metadata
-        ds = ASDFDataSet(
-            os.path.join(self.path["_datasets"], f"{source_name}.h5")
-        )
-        mgmt = Manager(config=config)
-        mgmt.gather(choice=["event"], event_id=source_name,
-                    prefix=f"{self._source_prefix}_")
-
         # Run misfit quantification for each station concurrently
         misfit, nwin = 0, 0
         with ProcessPoolExecutor(max_workers=unix.nproc() - 1) as executor:
             futures = [
                 executor.submit(
-                    self._quantify_misfit_station, mgmt, code, save_adjsrcs)
+                    self._quantify_misfit_station, config, code, save_adjsrcs)
                 for code in self._station_codes
             ]
-            # Collect misfit values from function as they complete
+            # We only need to return misfit information. All data/results are
+            # saved to the ASDFDataSet and status is logged to separate log file
             for future in futures:
                 _misfit, _nwin = future.result()
                 if _misfit is not None:
                     misfit += _misfit
                     nwin += _nwin
 
+        # Calculate misfit based on the raw misfit and total number of windows
         if save_residuals:
+            # Calculate the misfit based on the number of windows. Equation from
+            # Tape et al. (2010). If no windows, misfit is simply raw misfit
             try:
                 residuals = 0.5 * misfit / nwin
             except ZeroDivisionError:
                 # Dealing with the case where nwin==0 (signifying either no
                 # windows found, or calc'ing misfit on whole trace)
                 residuals = misfit
-            np.savetxt(save_residuals, [residuals], fmt="%11.6e")
+            with open(save_residuals, "a") as f:
+                f.write(f"{residuals:.2E}\n")
 
-    def _quantify_misfit_station(self, mgmt, station_code, save_adjsrcs):
+        # Combine all the individual .png files created into a single PDF
+        if self.plot:
+            output_fid = os.path.join(self.path._figures, self._ftag(config))
+            self._make_event_figure_pdf(source_name, output_fid)
+
+        # Finally, collect all the temporary log files and write a main log file
+        pyatoa_logger = self._config_pyatoa_logger(
+            fid=os.path.join(self.path._logs, f"{self._ftag(config)}.log")
+        )
+        pyatoa_logger.info(
+            f"\n{'=' * 80}\n{'SUMMARY':^80}\n{'=' * 80}\n"
+            f"SOURCE NAME: {config.event_id}\n"
+            f"WINDOWS: {nwin}\n"
+            f"RAW MISFIT: {misfit:.4f}\n"
+            f"\n{'=' * 80}\n{'RAW LOGS':^80}\n{'=' * 80}"
+            )
+        self._collect_tmp_log_files(pyatoa_logger, config.event_id)
+
+    @staticmethod
+    def _ftag(config):
+        """
+        Create a re-usable file tag from the Config object as multiple functions
+        will use this tag for file naming and file discovery.
+
+        :type config: pyatoa.core.config.Config
+        :param config: Configuration object that must contain the 'event_id',
+            iteration and step count
+        """
+        return f"{config.event_id}_{config.iter_tag}_{config.step_tag}"
+
+    def _quantify_misfit_station(self, config, station_code,
+                                 save_adjsrcs=False):
         """
         Run misfit quantification for a single event-station pair. Gathers,
         preprocesses, windows and measures data, saves adjoint source if
         requested, and then returns the total misfit and the collected
         windows for the station.
+
+        :type config: pyatoa.core.config.Config
+        :param config: Config object that defines all the processing parameters
+            required by the Pyatoa workflow
+        :type station_code: str
+        :param station_code: chosen station to quantify misfit for. Should be
+            in the format 'NN.SSS.LL.CCC'
+        :type save_adjsrcs: str
+        :param save_adjsrcs: path to directory where adjoint sources should be
+            saved. Filenames will be generated automatically by Pyatoa to fit
+            the naming schema required by SPECFEM. If False, no adjoint sources
+            will be saved. They of course can be saved manually later using
+            Pyatoa + PyASDF
         """
-        _processed = False
+        # Unique identifier for the given source-receiver pair for file naming
+        # Something like 001_i01_s00_XX_XYZ
         net, sta, loc, cha = station_code.split(".")
+        tag = f"{self._ftag(config)}_{net}_{sta}"
+
+        # Configure a single source-receiver pair logger which will be collected
+        # later by the main function
+        log_file = os.path.join(self.path._tmplogs, f"{tag}.log")
+        station_logger = self._config_pyatoa_logger(fid=log_file)
+        station_logger.info(f"\n{'/' * 80}\n{station_code:^80}\n{'/' * 80}")
+
+        # Begin data gathering/processing and misfit quantification
+        mgmt = Manager(config=config)
+        mgmt.gather(choice=["event"], event_id=config.event_id,
+                    prefix=f"{self._source_prefix}_")
+
+        # Attempt to gather data. If fail, return because theres nothing else
+        # we can do without data
+        _processed = False
         try:
             mgmt.gather(choice=["inv", "st_obs", "st_syn"], code=station_code)
         except ManagerError as e:
+            station_logger.critical(e)
             return None, None
 
         # If any part of the processing fails, move on to plotting because we
@@ -316,7 +391,8 @@ class Pyaflowa:
         try:
             _fix_windows = self._check_fixed_windows(
                 iteration=mgmt.config.iteration,
-                step_count=mgmt.config.step_count
+                step_count=mgmt.config.step_count,
+                logger=station_logger,
             )
             mgmt.standardize()
             mgmt.preprocess()
@@ -324,21 +400,18 @@ class Pyaflowa:
             mgmt.measure()
             _processed = True
         except ManagerError as e:
+            station_logger.warning(e)
             pass
 
         # Plot waveform + map figure. Map may fail if we don't have appropriate
         # metdata, in which case we fall back to plotting waveform only
         if self.plot:
             # e.g., 001_i01_s00_XX_ABC.png
-            plot_fid = (
-                f"{mgmt.config.event_id}_"
-                f"{mgmt.config.iter_tag}_{mgmt.config.step_tag}_"
-                f"{net}_{sta}.png"
-            )
-            save = os.path.join(self.path["_figures"], plot_fid)
+            save = os.path.join(self.path["_figures"], f"{tag}.png")
             try:
                 mgmt.plot(choice="both", show=False, save=save)
-            except ManagerError:
+            except ManagerError as e:
+                station_logger.warning(e)
                 mgmt.plot(choice="wav", show=False, save=save)
 
         # Write out the .adj adjoint source files for solver to discover.
@@ -346,9 +419,82 @@ class Pyaflowa:
         if _processed and save_adjsrcs:
             mgmt.write_adjsrcs(path=save_adjsrcs, write_blanks=True)
 
+        # Wait until the very end to write to the HDF5 file, then do it
+        # pseudo-serially to get around trying to parallel write to HDF5 file
+        while True:
+            try:
+                with ASDFDataSet(os.path.join(self.path["_datasets"],
+                                              f"{config.event_id}.h5")) as ds:
+                    mgmt.write(ds=ds)
+                break
+            except (BlockingIOError, FileExistsError):
+                # Random sleep time [0,1]s to decrease chances of two processes
+                # attempting to access at exactly the same time
+                time.sleep(random.random())
+
         return mgmt.stats.misfit, mgmt.stats.nwin
 
-    def _check_fixed_windows(self, iteration, step_count):
+    def sum_residuals(self, residuals):
+        """
+        Return summed residuals devided by number of events following equation
+        in Tape et al. 2010
+
+        :type residuals: np.array
+        :param residuals: list of residuals from each NTASK event
+        :rtype: float
+        :return: sum of squares of residuals
+        """
+        assert(len(residuals) == self._ntask), \
+            f"recovered an incorrect number of residual values"
+        summed_residuals = np.sum(residuals)
+        return summed_residuals / self._ntask
+
+    def finalize(self):
+        """
+        Run some serial finalization tasks specific to Pyatoa, which will help
+        aggregate the collection of output information.
+
+        .. note::
+            This finalize function performs the following tasks:
+            * Generate .csv files using the Inspector
+            * Aggregate event-specific PDFs into a single evaluation PDF
+            * Save scratch/ data into output/ if requested
+        """
+        # Generate the Inspector from existing datasets and save to disk
+        # Allow this is fail, which might happen if we don't have enough data
+        # or the Dataset is not formatted as expected
+        unix.cd(self.path._datasets)
+        insp = Inspector("inspector", verbose=False)
+        try:
+            insp.discover()
+            insp.save()
+        except Exception as e:
+            logger.warning(f"Uncontrolled exception in Pyatoa Inspector "
+                           f"creation -- will not create inspector:\n{e}")
+
+        # Make the final PDF for easier User ingestion of waveform/map figures
+        self._make_evaluation_composite_pdf()
+
+        # Move scratch/ directory results into more permanent storage
+        if self.export_datasets:
+            src = glob(os.path.join(self.path._datasets, "*.h5"))
+            dst = os.path.join(self.path.output, "datasets", "")
+            unix.mkdir(dst)
+            unix.cp(src, dst)
+
+        if self.export_figures:
+            src = glob(os.path.join(self.path._figures, "*.pdf"))
+            dst = os.path.join(self.path.output, "figures", "")
+            unix.mkdir(dst)
+            unix.cp(src, dst)
+
+        if self.export_log_files:
+            src = glob(os.path.join(self.path._logs, "*.txt"))
+            dst = os.path.join(self.path.output, "logs", "")
+            unix.mkdir(dst)
+            unix.cp(src, dst)
+
+    def _check_fixed_windows(self, iteration, step_count, logger=Null()):
         """
         Determine how to address re-using misfit windows during an inversion
         workflow. Throw some log messages out to let the User know whether or
@@ -371,6 +517,10 @@ class Pyaflowa:
         :param step_count: Current line search step count within the SeisFlows3
             workflow. Within SeisFlows3 this is defined by
             `optimize.line_search.step_count`
+        :type logger: logging.Logger
+        :param logger: The main logger for a given event, should be
+            defined by `pyaflowa.quantify_misfit()`. If not provided, logs will
+            get sent to DevNull
         :rtype: bool
         :return: bool on whether to use windows from the previous step
         """
@@ -404,182 +554,120 @@ class Pyaflowa:
 
         return fix_windows
 
-    #
-    # def finalize(self):
-    #     """
-    #     Run some serial finalization tasks specific to Pyatoa, which will help
-    #     aggregate the collection of output information.
-    #
-    #     .. note::
-    #         This finalize function performs the following tasks:
-    #         * Generate .csv files using the Inspector
-    #         * Aggregate event-specific PDFs into a single evaluation PDF
-    #         * Save scratch/ data into output/ if requested
-    #     """
-    #     # Initiate Pyaflowa to get access to path structure
-    #     pyaflowa = Pyaflowa(sfpar=self.par, sfpath=self.path)
-    #     unix.cd(pyaflowa.paths.datasets)
-    #
-    #     # Generate the Inspector from existing datasets and save to disk
-    #     # Allow this is fail, which might happen if we don't have enough data
-    #     # or the Dataset is not formatted as expected
-    #     insp = Inspector(self.par.TITLE, verbose=False)  # !!! TODO
-    #     try:
-    #         insp.discover()
-    #         insp.save()
-    #     except Exception as e:
-    #         logger.warning(f"Uncontrolled exception in Inspector creation "
-    #                             f"will not create inspector:\n{e}")
-    #
-    #     # Make the final PDF for easier User ingestion of waveform/map figures
-    #     pyaflowa.make_evaluation_composite_pdf()
-    #
-    #     # Move scratch/ directory results into more permanent storage
-    #     if self.export_datasets:
-    #         datasets = glob(os.path.join(pyaflowa.paths.datasets, "*.h5"))
-    #         self._save_quantity(datasets, tag="datasets")
-    #
-    #     if self.export_figures:
-    #         figures = glob(os.path.join(pyaflowa.paths.figures, "*.pdf"))
-    #         self._save_quantity(figures, tag="figures")
-    #
-    #     if self.export_log_files:
-    #         logs = glob(os.path.join(pyaflowa.paths.logs, "*.txt"))
-    #         path_out = os.path.join(self.path_output, CFGPATHS.LOGDIR)
-    #         self._save_quantity(logs, path_out=path_out)
-    #
-    # def prepare_eval_grad(self, cwd, taskid, source_name, **kwargs):
-    #     """
-    #     Prepare the gradient evaluation by gathering, preprocessing waveforms,
-    #     and measuring misfit between observations and synthetics using Pyatoa.
-    #
-    #     Reads in observed and synthetic waveforms, applies optional
-    #     preprocessing, assesses misfit, and writes out adjoint sources and
-    #     STATIONS_ADJOINT file.
-    #
-    #     .. note::
-    #         Meant to be called by solver.eval_func(), may have unused arguments
-    #         to keep functions general across preprocessing subclasses.
-    #
-    #     :type cwd: str
-    #     :param cwd: current specfem working directory containing observed and
-    #         synthetic seismic data to be read and processed. Should be defined
-    #         by solver.cwd
-    #     :type source_name: str
-    #     :param source_name: the event id to be used for tagging and data lookup.
-    #         Should be defined by solver.source_name
-    #     :type taskid: int
-    #     :param taskid: identifier of the currently running solver instance.
-    #         Should be defined by solver.taskid
-    #     :type filenames: list of str
-    #     :param filenames: [not used] list of filenames defining the files in
-    #         traces
-    #     """
-    #     if taskid == 0:
-    #         logger.debug("preparing files for gradient evaluation with "
-    #                           "Pyaflowa")
-    #
-    #     # Process all the stations for a given event using Pyaflowa
-    #     pyaflowa = self._setup_event_pyaflowa(source_name)
-    #     scaled_misfit = pyaflowa.process(nproc=self.nproc)
-    #
-    #     if scaled_misfit is None:
-    #         print(msg.cli(f"Event {source_name} returned no misfit, you may "
-    #                       f"want to check logs and waveform figures, "
-    #                       f"or consider discarding this event from your "
-    #                       f"workflow",
-    #                       items=[pyaflowa.paths.logs, pyaflowa.paths.figures],
-    #                       header="pyatoa preprocessing error", border="="))
-    #         sys.exit(-1)
-    #
-    #     # Event misfit defined by Tape et al. (2010) written to solver dir.
-    #     self._write_residuals(path=cwd, scaled_misfit=scaled_misfit)
-    #
-    # def _setup_event_pyaflowa(self, source_name, iteration, step_count=""):
-    #     """
-    #     A convenience function to set up a Pyaflowa processing instance for
-    #     a specific event.
-    #
-    #     .. note::
-    #         This is meant to be called by preprocess.prepare_eval_grad() but its
-    #         also useful for debugging and manual processing where you can simply
-    #         return a formatted Pyaflowa object and debug it directly.
-    #
-    #     :type source_name: str
-    #     :param source_name: solver source name to evaluate setup for. Must
-    #         match from list defined by: solver.source_names
-    #     """
-    #     # Outsource data processing to an event-specfic Pyaflowa instance
-    #     pyaflowa = Pyaflowa(sfpar=self.par, sfpath=self.path)
-    #     pyaflowa.setup(source_name=source_name, iteration=iteration,
-    #                    step_count=step_count, loc="*", cha="*")
-    #
-    #     return pyaflowa
-    #
-    # def _save_quantity(self, filepaths, tag="", path_out=""):
-    #     """
-    #     Repeatable convenience function to save quantities from the scratch/
-    #     directory to the output/ directory
-    #
-    #     :type filepaths: list
-    #     :param filepaths: full path to files that should be saved to output/
-    #     :type tag: str
-    #     :param tag: tag for saving the files in self.path.OUTPUT. If not given, will
-    #         save directly into the output/ directory
-    #     :type path_out: str
-    #     :param path_out: overwrite the default output path file naming
-    #     """
-    #     if not path_out:
-    #         path_out = os.path.join(self.path_output, tag)
-    #
-    #     if not os.path.exists(path_out):
-    #         unix.mkdir(path_out)
-    #
-    #     for src in filepaths:
-    #         dst = os.path.join(path_out, os.path.basename(src))
-    #         unix.cp(src, dst)
-    #
-    # @staticmethod
-    # def _write_residuals(path, scaled_misfit):
-    #     """
-    #     Computes residuals and saves them to a text file in the appropriate path
-    #
-    #     :type path: str
-    #     :param path: scratch directory path, e.g. self.path.GRAD or self.path.FUNC
-    #     :type scaled_misfit: float
-    #     :param scaled_misfit: the summation of misfit from each
-    #         source-receiver pair calculated by prepare_eval_grad()
-    #     :type source_name: str
-    #     :param source_name: name of the source related to the misfit, used
-    #         for file naming
-    #     """
-    #     residuals_file = os.path.join(path, "residuals")
-    #     np.savetxt(residuals_file, [scaled_misfit], fmt="%11.6e")
-    #
-    # def sum_residuals(self, files):
-    #     """
-    #     Averages the event misfits and returns the total misfit.
-    #     Total misfit defined by Tape et al. (2010)
-    #
-    #     :type files: str
-    #     :param files: list of single-column text files containing residuals
-    #         that will have been generated using prepare_eval_grad()
-    #     :rtype: float
-    #     :return: average misfit
-    #     """
-    #     if len(files) != self.ntask:
-    #         print(msg.cli(f"Pyatoa preprocessing module did not recover the "
-    #                       f"correct number of residual files "
-    #                       f"({len(files)}/{self.ntask}). Please check that "
-    #                       f"the preprocessing logs", header="error")
-    #               )
-    #         sys.exit(-1)
-    #
-    #     total_misfit = 0
-    #     for filename in files:
-    #         total_misfit += np.sum(np.loadtxt(filename))
-    #
-    #     total_misfit /= self.ntask
-    #
-    #     return total_misfit
-    #
+    def _config_pyatoa_logger(self, fid):
+        """
+        Create a log file to track processing of a given source-receiver pair.
+        Because each station is processed asynchronously, we don't want them to
+        log to the main file at the same time, otherwise we get a random mixing
+        of log messages. Instead we have them log to temporary files, which
+        are combined at the end of the processing script in serial.
+
+        :type fid: str
+        :param fid: full path and filename for logger that will be configured
+        :rtype: logging.Logger
+        :return: a logger which does NOT log to stdout and only logs to
+            the given file defined by `fid`
+        """
+        handler = logging.FileHandler(fid, mode="w")
+        logfmt = "[%(asctime)s] - %(name)s - %(levelname)s: %(message)s"
+        formatter = logging.Formatter(logfmt, datefmt="%Y-%m-%d %H:%M:%S")
+        handler.setFormatter(formatter)
+        for log in ["pyflex", "pyadjoint", "pyatoa"]:
+            # Set the overall log level
+            logger = logging.getLogger(log)
+            # Turn off any existing handlers (stream and file)
+            while logger.hasHandlers():
+                logger.removeHandler(logger.handlers[0])
+            # Log to new temporary file
+            logger.setLevel(self.pyatoa_log_level)
+            logger.addHandler(handler)
+
+        return logger
+
+    def _collect_tmp_log_files(self, pyatoa_logger, event_id):
+        """
+        Each source-receiver pair has made its own log file. This function
+        collects these files and writes their content back into the main log.
+        This is a lot of IO but should be okay since the files are small.
+
+        .. note::
+            This was the most foolproof method for having multiple parallel
+            processes write to the same file. I played around with StringIO
+            buffers and file locks, but they became overly complicated and
+            ultimately did not work how I wanted them to. This function trades
+            filecount and IO overhead for simplicity.
+
+        .. warning::
+            The assumption here is that the number of source-receiver pairs
+            is manageable (in the thousands). If we start reaching file count
+            limits on the cluster then this method for logging may have to be
+            re-thought. See link for example:
+            https://stackless.readthedocs.io/en/3.7-slp/howto/
+              logging-cookbook.html#using-concurrent-futures-processpoolexecutor
+
+        :type pyatoa_logger: logging.Logger
+        :param pyatoa_logger: The main logger for a given event, should be
+            defined by `pyaflowa.quantify_misfit()`
+        :type event_id: str
+        :param event_id: given event id that we are concerned with. Used to
+            search for matching log files in the temporary log file directory
+        """
+        tmp_logs = sorted(glob(os.path.join(self.path._tmplogs,
+                                            f"*{event_id}_*.log")))
+        with open(pyatoa_logger.handlers[0].baseFilename, "a") as fw:
+            for tmp_log in tmp_logs:
+                with open(tmp_log, "r") as fr:
+                    fw.writelines(fr.readlines())
+                unix.rm(tmp_log)  # delete after writing
+
+    def _make_event_figure_pdf(self, source_name, output_fid):
+        """
+        Combine a list of single source-receiver PNGs into a single PDF file
+        for the given event. Mostly a convenience function to make it easier
+        to ingest waveform figures during a workflow.
+
+        """
+        # Sorrted by network and station name
+        input_fids = sorted(glob(os.path.join(self.path._figures,
+                                              f"{source_name}*.png")))
+        if not input_fids:
+            logger.warning(f"Pyatoa found no event figures for {source_name} "
+                           f"to combine")
+            return
+
+        # Assuming the file naming format defined by `_quantify_misfit_station`
+        source_name, iteration, step_count, *_ = input_fids[0].split("_")
+
+        # e.g. i01s00_2018p130600.pdf
+        output_fid = (f"{source_name}_{iteration}_{step_count}.pdf")
+
+        # Merge all output pdfs into a single pdf, delete originals
+        save = os.path.join(self.path._figures, output_fid)
+        imgs_to_pdf(fids=sorted(input_fids), fid_out=save)
+        for fid in input_fids:
+            os.remove(fid)
+
+    def _make_evaluation_composite_pdf(self):
+        """
+        Utility function to combine all PDFs generated by
+        make_event_figure_pdf() into a single PDF tagged by the current
+        evaluation (iteration, step count). This is meant to make it easier
+        for the User to scroll through figures. Option to delete the original
+        event-specific PDFs which are now redundant
+        .. note::
+            This can be run without running Pyaflowa.format()
+        :type delete_originals: bool
+        :param delete_originals: delete original pdf files after mergin
+        """
+        event_figures = glob(os.path.join(self.path._figures, "*", "*.pdf"))
+        if not event_figures:
+            logger.warning("Pyatoa could not find event PDFs to merge")
+            return
+        # Collecting evaluation tags, e.g., ['i01s00', 'i01s01']
+        tags = set([os.path.basename(_).split("_")[0] for _ in event_figures])
+        for tag in tags:
+            fids = [fid for fid in event_figures if tag in fid]
+            fid_out = os.path.join(self.path._figures, f"{tag}.pdf")
+            merge_pdfs(fids=sorted(fids), fid_out=fid_out)
+            for fid in fids:
+                os.remove(fid)

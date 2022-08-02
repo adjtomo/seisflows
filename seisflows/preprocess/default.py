@@ -391,6 +391,10 @@ class Default:
                     fid = self._rename_as_adjoint_source(fid)
                     self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
 
+    def finalize(self):
+        """Teardown procedures for the default preprocessing class"""
+        pass
+
     @staticmethod
     def sum_residuals(residuals):
         """

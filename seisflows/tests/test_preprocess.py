@@ -4,7 +4,9 @@ SPECFEM
 """
 import os
 import pytest
+import numpy as np
 from glob import glob
+from pyasdf import ASDFDataSet
 from seisflows import ROOT_DIR
 from seisflows.preprocess.default import Default
 from seisflows.preprocess.pyatoa import Pyaflowa
@@ -108,6 +110,7 @@ def test_pyaflowa_setup(tmpdir):
         path_solver=os.path.join(TEST_SOLVER, "mainsolver"),
         source_prefix="CMTSOLUTION",
         ntask=2,
+        components="Y",
     )
 
     assert(pyaflowa._station_codes == [])
@@ -119,20 +122,44 @@ def test_pyaflowa_setup(tmpdir):
     assert(pyaflowa._station_codes[0] == "AA.S0001.*.*")
     assert(len(pyaflowa._source_names) == pyaflowa._ntask)
     assert(pyaflowa._source_names[0] == "001")
+    assert(pyaflowa._config.component_list == ["Y"])
 
 
 def test_pyaflowa_quantify_misfit(tmpdir):
     """
-    Test misfit quantification for Pyatoa including data gathering
+    Test misfit quantification for Pyatoa including data gathering. Waveform
+    data and source and receiver metadata is exposed from the test data
+    directory. Data and synthetics are the same so residuals will be 0. Want
+    to check that we can process in parallel and that Pyatoa outputs figures,
+    and data
     """
     pyaflowa = Pyaflowa(
         workdir=tmpdir,
         path_specfem_data=os.path.join(TEST_SOLVER, "mainsolver", "DATA"),
-        path_solver=TEST_SOLVER, source_prefix="CMTSOLUTION", ntask=1,
+        path_solver=TEST_SOLVER, source_prefix="CMTSOLUTION", ntask=2,
         data_case="synthetic", components="Y",
     )
     pyaflowa.setup()
     save_residuals = os.path.join(tmpdir, "residuals.txt")
-    pyaflowa.quantify_misfit(source_name=pyaflowa._source_names[0],
-                             save_residuals=save_residuals)
-    pytest.set_trace()
+    for source_name in pyaflowa._source_names:
+        save_residuals = os.path.join(tmpdir, f"residuals_{source_name}.txt")
+        pyaflowa.quantify_misfit(source_name=source_name,
+                                 save_residuals=save_residuals,
+                                 save_adjsrcs=tmpdir)
+
+    residuals = np.loadtxt(save_residuals)  # just check one of the file
+    assert(residuals == 0.)  # data and synthetics are the same
+
+    # Check that windows and adjoint sources were saved to dataset
+    for source_name in pyaflowa._source_names:
+        with ASDFDataSet(os.path.join(pyaflowa.path._datasets,
+                                      f"{source_name}.h5")) as ds:
+            # Pyatoa selects 18 windows for 2 events and 2 stations
+            assert(len(ds.auxiliary_data.MisfitWindows.i01.s00.list()) == 18)
+            assert(len(ds.auxiliary_data.AdjointSources.i01.s00.list()) == 2)
+
+    # Check that adjoint sources are all zero
+    adjsrcs = glob(os.path.join(tmpdir, "*.adj"))
+    for adjsrc in adjsrcs:
+        data = np.loadtxt(adjsrc)
+        assert(not data[:,1].any())  # assert all zeros
