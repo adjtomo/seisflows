@@ -104,8 +104,9 @@ class Pyaflowa:
     def __init__(self, min_period=1., max_period=10., filter_corners=4,
                  client=None, rotate=False, pyflex_preset="default",
                  fix_windows=False, adj_src_type="cc", plot=True,
-                 pyatoa_log_level="DEBUG", unit_output="VEL", start_pad=None,
-                 end_pad=None, workdir=os.getcwd(), path_preprocess=None,
+                 pyatoa_log_level="DEBUG", unit_output="VEL",
+                 # start_pad=None, end_pad=None,
+                 workdir=os.getcwd(), path_preprocess=None,
                  path_solver=None, path_specfem_data=None, path_data=None,
                  path_output=None, export_datasets=True, export_figures=True,
                  export_log_files=True, data_format="ascii",
@@ -124,8 +125,8 @@ class Pyaflowa:
         self.plot = plot
         self.pyatoa_log_level = pyatoa_log_level
         self.unit_output = unit_output
-        self.start_pad = start_pad
-        self.end_pad = end_pad
+        # self.start_pad = start_pad
+        # self.end_pad = end_pad
 
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
@@ -180,8 +181,6 @@ class Pyaflowa:
         """ 
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
-
-        TODO some type of check for the time offset value
         """
         assert(self._data_format.upper() == "ASCII"), \
             "Pyatoa preprocess requires `data_format`=='ASCII'"
@@ -200,21 +199,21 @@ class Pyaflowa:
             f"Pyatoa can only accept `source_prefix` in " 
             f"{self._acceptable_source_prefixes}, not '{self._source_prefix}'"
         )
-
-        if self.start_pad is None:
-            logger.warning("Pyatoa `start_pad` is not set, setting to T0=0. "
-                           "This value should be set to the T0 value of "
-                           "SPECFEM, otherwise its output adjoint sources will "
-                           "be incorrect length.")
-            self.start_pad = 0.
-
-        if self.end_pad is None:
-            logger.warning("Pyatoa `end_pad` is not set, setting to T=0. "
-                           "This value should be set to the total length of "
-                           "your synthetic seismograms (i.e., DT * NT) from "
-                           "SPECFEM, IFF you want Pyatoa to gather observed "
-                           "data from disk/webservice.")
-            self.end_pad = 0.
+        #
+        # if self.start_pad is None:
+        #     logger.warning("Pyatoa `start_pad` is not set, setting to T0=0. "
+        #                    "This value should be set to the T0 value of "
+        #                    "SPECFEM, otherwise its output adjoint sources will "
+        #                    "be incorrect length.")
+        #     self.start_pad = 0.
+        #
+        # if self.end_pad is None:
+        #     logger.warning("Pyatoa `end_pad` is not set, setting to T=0. "
+        #                    "This value should be set to the total length of "
+        #                    "your synthetic seismograms (i.e., DT * NT) from "
+        #                    "SPECFEM, IFF you want Pyatoa to gather observed "
+        #                    "data from disk/webservice.")
+        #     self.end_pad = 0.
 
     def setup(self):
         """
