@@ -144,7 +144,7 @@ class Inversion(Migration):
                 f"scratch path `eval_grad` does not exist but should for a " \
                 f"workflow with `iteration` >= 1"
 
-        if self.iteration >= self.end:
+        if self.iteration >= self.end + 1:
             logger.warning(f"current `iteration` is >= chosen `end` point. "
                            f"Inversion workflow will not `run`")
 
@@ -173,7 +173,7 @@ class Inversion(Migration):
 
     def run(self):
         """Call the forward.run() function iteratively, from `start` to `end`"""
-        while self.iteration < self.end:
+        while self.iteration < self.end + 1:
             logger.info(msg.mnr(f"RUNNING ITERATION {self.iteration:0>2}"))
             super().run()  # Runs task list
             logger.info(msg.mnr(f"COMPLETED ITERATION {self.iteration:0>2}"))
@@ -244,7 +244,8 @@ class Inversion(Migration):
                 )
 
         # Override function to sum residuals into the optimization library
-        residuals = np.loadtxt(os.path.join(self.path.eval_grad, "residuals"))
+        residuals = np.loadtxt(os.path.join(self.path.eval_grad,
+                                            "residuals.txt"))
         total_misfit = self.preprocess.sum_residuals(residuals)
         self.optimize.save_vector(name="f_new", m=total_misfit)
 

@@ -299,7 +299,7 @@ class Forward:
              self.run_forward_simulations,
              self.evaluate_objective_function],
             path_model=self.path.model_init,
-            save_residuals=os.path.join(self.path.eval_grad, "residuals")
+            save_residuals=os.path.join(self.path.eval_grad, "residuals.txt")
         )
 
     def prepare_data_for_solver(self, **kwargs):

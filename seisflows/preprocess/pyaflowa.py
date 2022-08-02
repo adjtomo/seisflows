@@ -13,7 +13,7 @@ from concurrent.futures import ProcessPoolExecutor
 from glob import glob
 from pyasdf import ASDFDataSet
 from pyatoa import Config, Manager, Inspector, ManagerError
-from pyatoa.utils.read import read_station_codes
+from pyatoa.utils.read import read_station_codes, read_sem
 from pyatoa.utils.images import imgs_to_pdf, merge_pdfs
 
 from seisflows import logger
@@ -76,11 +76,11 @@ class Pyaflowa:
     :param pyatoa_log_level: Log level to set Pyatoa, Pyflex, Pyadjoint.
         Available: ['null': no logging, 'warning': warnings only,
         'info': task tracking, 'debug': log all small details (recommended)]
-    :type start_pad_s: float
-    :param start_pad_s: seconds BEFORE origin time to gather data. Must be
+    :type start_pad: float
+    :param start_pad: seconds BEFORE origin time to gather data. Must be
         >= T_0 specificed in SPECFEM constants.h. Positive values only
-    :type end_pad_s: int
-    :param end_pad_s: seconds AFTER origin time to gather data. Must be
+    :type end_pad: int
+    :param end_pad: seconds AFTER origin time to gather data. Must be
         >= NT * DT (from SPECFEM Par_file) postive values only.
     :type unit_output: str
     :param unit_output: Data units. Must match the synthetic output of
@@ -104,8 +104,8 @@ class Pyaflowa:
     def __init__(self, min_period=1., max_period=10., filter_corners=4,
                  client=None, rotate=False, pyflex_preset="default",
                  fix_windows=False, adj_src_type="cc", plot=True,
-                 pyatoa_log_level="DEBUG", unit_output="VEL", start_pad_s=0.,
-                 end_pad_s=None, workdir=os.getcwd(), path_preprocess=None,
+                 pyatoa_log_level="DEBUG", unit_output="VEL", start_pad=None,
+                 end_pad=None, workdir=os.getcwd(), path_preprocess=None,
                  path_solver=None, path_specfem_data=None, path_data=None,
                  path_output=None, export_datasets=True, export_figures=True,
                  export_log_files=True, data_format="ascii",
@@ -124,8 +124,8 @@ class Pyaflowa:
         self.plot = plot
         self.pyatoa_log_level = pyatoa_log_level
         self.unit_output = unit_output
-        self.start_pad_s = start_pad_s
-        self.end_pad_s = end_pad_s
+        self.start_pad = start_pad
+        self.end_pad = end_pad
 
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
@@ -180,6 +180,8 @@ class Pyaflowa:
         """ 
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
+
+        TODO some type of check for the time offset value
         """
         assert(self._data_format.upper() == "ASCII"), \
             "Pyatoa preprocess requires `data_format`=='ASCII'"
@@ -199,6 +201,21 @@ class Pyaflowa:
             f"{self._acceptable_source_prefixes}, not '{self._source_prefix}'"
         )
 
+        if self.start_pad is None:
+            logger.warning("Pyatoa `start_pad` is not set, setting to T0=0. "
+                           "This value should be set to the T0 value of "
+                           "SPECFEM, otherwise its output adjoint sources will "
+                           "be incorrect length.")
+            self.start_pad = 0.
+
+        if self.end_pad is None:
+            logger.warning("Pyatoa `end_pad` is not set, setting to T=0. "
+                           "This value should be set to the total length of "
+                           "your synthetic seismograms (i.e., DT * NT) from "
+                           "SPECFEM, IFF you want Pyatoa to gather observed "
+                           "data from disk/webservice.")
+            self.end_pad = 0.
+
     def setup(self):
         """
         Sets up data preprocessing machinery by establishing an internally
@@ -209,7 +226,7 @@ class Pyaflowa:
                          "_figures"]:
             unix.mkdir(self.path[pathname])
 
-        # Generalized Config object that can be shared among all child processes
+        # Convert SeisFlows user parameters into Pyatoa config parameters
         # Contains paths to look for data and metadata
         self._config = Config(
             min_period=self.min_period, max_period=self.max_period,
@@ -217,7 +234,6 @@ class Pyaflowa:
             rotate=self.rotate, pyflex_preset=self.pyflex_preset,
             fix_windows=self.fix_windows, adj_src_type=self.adj_src_type,
             log_level=self.pyatoa_log_level, unit_output=self.unit_output,
-            start_pad_s=self.start_pad_s, end_pad_s=self.end_pad_s,
             component_list=list(self._components),
             synthetics_only=bool(self._data_case == "synthetic"),
             paths={"waveforms": self.path["_waveforms"] or [],
@@ -235,6 +251,55 @@ class Pyaflowa:
             path_specfem_data=self.path.specfem_data,
             source_prefix=self._source_prefix, ntask=self._ntask
         )
+
+    def _setup_quantify_misfit(self, source_name, iteration, step_count):
+        """
+        Create an event-specific Config object which contains information about
+        the current event, and position in the workflow evaluation. Also
+        provides specific information on event paths and timing to be used by
+        the Manager
+
+        :type source_name: str
+        :param source_name: name of the event to quantify misfit for. If not
+            given, will attempt to gather event id from the given task id which
+            is assigned by system.run()
+        :type iteration: int
+        :param iteration: current iteration of the workflow, information should
+            be provided by `workflow` module if we are running an inversion.
+            Defaults to 1 if not given (1st iteration)
+        :type step_count: int
+        :param step_count: current step count of the line search. Information
+            should be provided by the `optimize` module if we are running an
+            inversion. Defaults to 0 if not given (1st evaluation)
+        :rtype: pyatoa.core.config.Config
+        :return: Config object that is specifically crafted for a given event
+            that can be directly fed to the Manager for misfit quantification
+        """
+        config = self._config.copy()
+        config.event_id = source_name or self._source_names[get_task_id()]
+        config.iteration = iteration
+        config.step_count = step_count
+
+        # Force the Manager to look in the solver directory for data
+        # note: we are assuming the SeisFlows `solver` directory structure here.
+        #   If we change how the default `solver` directory is named (defined by
+        #   `solver.initialize_solver_directories()`), then this will break
+        obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
+        config.paths["waveforms"].append(obs_path)
+
+        syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
+        config.paths["synthetics"].append(syn_path)
+
+        # Extract start and end times from one of the synthetic traces so that
+        # Pyatoa knows how long seismograms are and when to start them
+        # NOTE: assuming all synthetic time axes are the same for this source
+        synthetics = glob(os.path.join(syn_path, "*"))
+        assert(synthetics), f"Pyatoa found no synthetics in: {syn_path}"
+        tr_syn = read_sem(synthetics[0])[0]
+        config.start_pad = abs(tr_syn.stats.time_offset)  # needs to be positive
+        config.end_pad = tr_syn.stats.endtime - tr_syn.stats.starttime
+
+        return config
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         save_adjsrcs=None, iteration=1, step_count=0,
@@ -264,22 +329,7 @@ class Pyaflowa:
             should be provided by the `optimize` module if we are running an
             inversion. Defaults to 0 if not given (1st evaluation)
         """
-        # Set the individual Config class for our given event and evaluation
-        config = self._config.copy()
-        config.event_id = source_name or self._source_names[get_task_id()]
-        config.iteration = iteration
-        config.step_count = step_count
-
-        # Force the Manager to look in the solver directory for data
-        # note: we are assuming the SeisFlows `solver` directory structure here.
-        #   If we change how the default `solver` directory is named (defined by
-        #   `solver.initialize_solver_directories()`), then this will break
-        config.paths["waveforms"].append(
-            os.path.join(self.path.solver, source_name, "traces", "obs")
-        )
-        config.paths["synthetics"].append(
-            os.path.join(self.path.solver, source_name, "traces", "syn")
-        )
+        config = self._setup_quantify_misfit(source_name, iteration, step_count)
 
         # Run misfit quantification for each station concurrently
         misfit, nwin = 0, 0
@@ -444,8 +494,6 @@ class Pyaflowa:
         :rtype: float
         :return: sum of squares of residuals
         """
-        assert(len(residuals) == self._ntask), \
-            f"recovered an incorrect number of residual values"
         summed_residuals = np.sum(residuals)
         return summed_residuals / self._ntask
 
