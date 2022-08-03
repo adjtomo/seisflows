@@ -41,8 +41,12 @@ from seisflows.plugins import line_search as line_search_dir
 
 class LBFGS(Gradient):
     """
-    [optimize.lbfgs] Limited memory BFGS nonlienar optimization algorithm
+    L-BFGS Optimization
+    -------------------
+    Limited memory BFGS nonlienar optimization algorithm
 
+    Parameters
+    ----------
     :type lbfgs_mem: int
     :param lbfgs_mem: L-BFGS memory. Max number of previous gradients to
         retain in local memory for approximating the objective function.
@@ -51,6 +55,10 @@ class LBFGS(Gradient):
     :type lbfgs_thresh: L-BFGS angle restart threshold. If the angle between
         the current and previous search direction exceeds this value,
         optimization algorithm will be restarted.
+
+    Paths
+    -----
+    ***
     """
     __doc__ = Gradient.__doc__ + __doc__
 

@@ -30,9 +30,12 @@ from seisflows.tools.specfem import getpar, setpar, check_source_names
 
 class Specfem:
     """
-    [solver.specfem] Generalized SPECFEM interface to manipulate
-    SPECFEM2D/3D/3D_GLOBE via Python.
+    Solver SPECFEM
+    --------------
+    Generalized SPECFEM interface to manipulate SPECFEM2D/3D/3D_GLOBE w/ Python
 
+    Parameters
+    ----------
     :type data_format: str
     :param data_format: data format for reading traces into memory.
         Available: ['SU': seismic unix format, 'ASCII': human-readable ascii]
@@ -67,7 +70,8 @@ class Specfem:
     :param mpiexec: MPI executable used to run parallel processes. Should also
         be defined for the system module
 
-    [path structure]
+    Paths
+    -----
     :type path_data: str
     :param path_data: path to any externally stored data required by the solver
     :type path_specfem_bin: str
@@ -77,6 +81,7 @@ class Specfem:
     :param path_specfem_data: path to SPECFEM DATA/ directory which must
         contain the CMTSOLUTION, STATIONS and Par_file files used for
         running SPECFEM
+    ***
     """
     def __init__(self, data_format="ascii",  materials="acoustic",
                  density=False, nproc=1, ntask=1, attenuation=False,

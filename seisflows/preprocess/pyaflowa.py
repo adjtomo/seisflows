@@ -24,8 +24,13 @@ from seisflows.tools.specfem import check_source_names
 
 class Pyaflowa:
     """
-    [preprocess.pyaflowa] preprocessing and misfit quantification using Pyatoa
+    Preprocess Pyaflowa
+    -------------------
+    Preprocessing and misfit quantification using Python's Adjoint Tomography
+    Operations Assistance (Pyatoa)
 
+    Parameters
+    ----------
     :type min_period: float
     :param min_period: Minimum filter corner in unit seconds. Bandpass
     filter if set with `max_period`, highpass filter if set without
@@ -84,9 +89,11 @@ class Pyaflowa:
     :type export_log_files: bool
     :param export_log_files: periodically save log files created by Pyatoa
 
-    [path structure]
+    Paths
+    -----
     :type path_preprocess: str
     :param path_preprocess: scratch path for preprocessing related steps
+    ***
     """
     def __init__(self, min_period=1., max_period=10., filter_corners=4,
                  client=None, rotate=False, pyflex_preset="default",
@@ -286,6 +293,12 @@ class Pyaflowa:
         .. note::
             meant to be run on system using system.run() with access to solver
 
+        .. warning:: 
+            parallel processing with concurrent futures currently leads to 
+            computer crashes and I have not been able to figure out why or how
+            to deal with it. So for the moment misfit quantification on a 
+            per-event basis is run serially
+
         :type source_name: str
         :param source_name: name of the event to quantify misfit for. If not
             given, will attempt to gather event id from the given task id which
@@ -305,9 +318,11 @@ class Pyaflowa:
         """
         # Generate an event/evaluation specific config object to control Pyatoa
         config = self._setup_quantify_misfit(source_name, iteration, step_count)
+
         # Run misfit quantification for ALL stations and this given event
+        # !!! Do not set parallel == True, see note in docstring !!!
         misfit, nwin = self._run_quantify_misfit(config, save_adjsrcs,
-                                                 parallel=True)
+                                                 parallel=False)
         # Calculate misfit based on the raw misfit and total number of windows
         if save_residuals:
             # Calculate the misfit based on the number of windows. Equation from

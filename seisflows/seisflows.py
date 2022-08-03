@@ -423,11 +423,46 @@ class SeisFlows:
         default values for each of the SeisFlows module parameters.
         This function writes files manually, consistent with the .yaml format.
 
+        .. note::
+            This function relies on docstrings being formatted the same way
+            throughout the package. Note the trailing '***' character at the end
+            of the docstring. This is required for `configure` to know where one
+            docstring ends and another beings. The formatting looks like:
+
+            Title
+            -----
+            some description
+
+            Parameters
+            ----------
+            :type a: int
+            :param a: parameter a
+
+            Paths
+            -----
+            :type path_a: str
+            :param path_a: path for a
+            ***
+
         :type absolute_paths: bool
         :param absolute_paths: if True, expand pathnames to absolute paths,
             else if False, use path names relative to the working directory.
             Defaults to False, uses relative paths.
         """
+        def split_module_docstring(mod, idx):
+            """
+            Since our docstrings are concatenated, we need to break them
+            and remove the path docstrings, those come later.
+
+            :type idx: int
+            :param idx: 0 returns parameter docstrings, 1 returns path docstring
+            """
+            docstring = mod.__doc__.replace("\n", "\n#")
+            docssplit = docstring.split("***\n#")
+            docfinal = "".join([_.split("Paths\n#    -----\n#")[idx] for _ in
+                                docssplit])
+            return docfinal
+
         # Load in a barebones parameter file and instantiate specific classes
         parameters = load_yaml(os.path.join(self._args.workdir,
                                             self._args.parameter_file))
@@ -443,10 +478,8 @@ class SeisFlows:
             f = open(self._args.parameter_file, "a")
             # Write all module parameters and corresponding docstrings
             for module in modules:
-                docstring = module.__doc__.replace("\n", "\n#")
-                docstring = docstring.split("[path structure]")[0]
+                docstring = split_module_docstring(module, 0)
                 f.write(f"# {'=' * 77}\n#{docstring}\n# {'=' * 77}\n")
-
                 # Write the parameters, make sure to not have the same one twice
                 for key, val in vars(module).items():
                     # Skip already written, hidden vars, and paths
@@ -457,20 +490,16 @@ class SeisFlows:
                         val = "null"
                     f.write(f"{key}: {val}\n")
                     written.append(key)
+
             # Write docstrings for publically accesible path structure
             f.write(f"# {'=' * 77}\n")
             f.write("#\n")
-            f.write("#\t [path structure] SeisFlows internal/external paths")
+            f.write("#\t Paths\n")
+            f.write("#\t -----\n")
             for module in modules:
-                docstring = module.__doc__.strip().replace("\n", "\n#")
-                docstring = docstring.split("[path structure]")
-                try:
-                    # The extra split is to catch any inherited docstrings
-                    f.write(docstring[1].split("[")[0])
-                # IndexError means no path docstring to write out
-                except IndexError as e:
-                    continue
-            f.write(f"\n# {'=' * 77}\n")
+                docstring = split_module_docstring(module, -1)
+                f.write(f"#{docstring}\n")
+            f.write(f"# {'=' * 77}\n")
 
             # Write values for publically accessible path structure
             written = []

@@ -27,10 +27,14 @@ from seisflows.workflow.forward import Forward
 
 class Migration(Forward):
     """
-    [workflow.migration] Run forward and adjoint solver to produce
-    event-dependent misfit kernels. Sum and postprocess kernels to produce
-    gradient. In seismic exploration this is 'reverse time migration'.
+    Migration Workflow
+    ------------------
+    Run forward and adjoint solver to produce event-dependent misfit kernels.
+    Sum and postprocess kernels to produce gradient. In seismic exploration
+    this is 'reverse time migration'.
 
+    Parameters
+    ----------
     :type export_gradient: bool
     :param export_gradient: export the gradient after it has been generated
         in the scratch directory. If False, gradient can be discarded from
@@ -40,12 +44,13 @@ class Migration(Forward):
         been generated in the scratch directory. If False, gradient can be
         discarded from scratch at any time in the workflow
 
-    [path structure]
-
+    Paths
+    -----
     :type path_mask: str
     :param path_mask: optional path to a masking function which is used to
         mask out or scale parts of the gradient. The user-defined mask must
         match the file format of the input model (e.g., .bin files).
+    ***
     """
     __doc__ = Forward.__doc__ + __doc__
 

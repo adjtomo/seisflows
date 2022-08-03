@@ -22,8 +22,12 @@ from seisflows.system.workstation import Workstation
 
 class Cluster(Workstation):
     """
-    [system.cluster] generic or common HPC/cluster interfacing commands
+    Cluster System
+    ------------------
+    Generic or common HPC/cluster interfacing commands
 
+    Parameters
+    ----------
     :type title: str
     :param title: The name used to submit jobs to the system, defaults
         to the name of the current working directory
@@ -44,6 +48,10 @@ class Cluster(Workstation):
     :param environs: Optional environment variables to be provided in the
         following format VAR1=var1,VAR2=var2... Will be set using
         os.environs
+
+    Paths
+    -----
+    ***
     """
     __doc__ = Workstation.__doc__ + __doc__
 

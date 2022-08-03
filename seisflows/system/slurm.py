@@ -19,21 +19,28 @@ import math
 import time
 import subprocess
 
-from seisflows import logger
+from seisflows import ROOT_DIR, logger
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
-from seisflows.tools.config import ROOT_DIR
 
 
 class Slurm(Cluster):
     """
-    [system.slurm] Interface for submitting jobs to Simple Linux Utility for
+    System Slurm
+    ------------------
+    Runs tasks in serial on a local machine.Interface for submitting jobs to Simple Linux Utility for
     Resource Management (SLURM) system.
 
+    Parameters
+    ----------
     :type slurm_args: str
     :param slurm_args: Any (optional) additional SLURM arguments that will
         be passed to the SBATCH scripts. Should be in the form:
         '--key1=value1 --key2=value2"
+
+    Paths
+    -----
+    ***
     """
     __doc__ = Cluster.__doc__ + __doc__
 

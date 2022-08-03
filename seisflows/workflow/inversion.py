@@ -30,9 +30,13 @@ from seisflows.tools.specfem import Model
 
 class Inversion(Migration):
     """
-    [workflow.inversion] Peforms iterative nonlinear inversion using the
-    built-in optimization library.
+    Inversion Workflow
+    ------------------
+    Peforms iterative nonlinear inversion using the machinery of the Forward
+    and Migration workflows, as well as a built-in optimization library.
 
+    Parameters
+    ----------
     :type start: int
     :param start: start inversion workflow at this iteration. 1 <= start <= inf
     :type end: int
@@ -50,11 +54,12 @@ class Inversion(Migration):
     :param export_model: export best-fitting model from the line search to disk.
         If False, new models can be discarded from scratch at any time.
 
-    [path structure]
-
+    Paths
+    -----
     :type path_eval_func: str
     :param path_eval_func: scratch path to store files for line search objective
         function evaluations, including models, misfit and residuals
+    ***
     """
     __doc__ = Migration.__doc__ + __doc__
 
@@ -228,13 +233,15 @@ class Inversion(Migration):
                 logger.info(msg.mnr("THRIFTY INVERSION; SKIP MISFIT EVAL"))
             else:
                 logger.info(msg.mnr("EVALUATING MISFIT FOR MODEL `m_new`"))
-                # Previous line search will have saved `m_new` as the initial model,
-                # export in SPECFEM format to a path discoverable by all solvers
+                # Previous line search will have saved `m_new` as the initial
+                # model, export in SPECFEM format to a path discoverable by all
+                # solvers
                 path_model = os.path.join(self.path.eval_grad, "model")
                 m_new = self.optimize.load_vector("m_new")
                 m_new.write(path=path_model)
 
-                # Run forward simulation/misfit quantification with previous model
+                # Run forward simulation/misfit quantification with previous
+                # model
                 self.system.run(
                     [self.run_forward_simulations,
                      self.evaluate_objective_function],

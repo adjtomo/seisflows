@@ -14,8 +14,12 @@ from seisflows.tools.config import number_fid, set_task_id
 
 class Workstation:
     """
-    [system.workstation] runs tasks in serial on a local machine.
+    Workstation System
+    ------------------
+    Runs tasks in serial on a local machine.
 
+    Parameters
+    ----------
     :type ntask: int
     :param ntask: number of individual tasks/events to run during workflow.
         Must be <= the number of source files in `path_specfem_data`
@@ -29,7 +33,8 @@ class Workstation:
         name, line number and message type. Useful for debugging but
         also very verbose.
 
-    [path structure]
+    Paths
+    -----
     :type path_output_log: str
     :param path_output_log: path to a text file used to store the outputs of
         the package wide logger, which are also written to stdout
@@ -39,6 +44,7 @@ class Workstation:
     :type path_log_files: str
     :param path_log_files: path to a directory where individual log files are
         saved whenever a number of parallel tasks are run on the system.
+    ***
     """
     def __init__(self, ntask=1, nproc=1, log_level="DEBUG", verbose=False,
                  workdir=os.getcwd(), path_output=None, path_system=None,

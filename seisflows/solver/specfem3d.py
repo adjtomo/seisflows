@@ -12,13 +12,21 @@ from seisflows.solver.specfem import Specfem
 
 class Specfem3D(Specfem):
     """
-    [solver.specfem3d] SPECFEM3D-specific alterations to the base SPECFEM module
+    Solver SPECFEM3D
+    ----------------
+    SPECFEM3D-specific alterations to the base SPECFEM module
 
+    Parameters
+    ----------
     :type source_prefix: str
     :param source_prefix: Prefix of source files in path SPECFEM_DATA. Defaults
         to 'CMTSOLUTION'
     :type multiples: bool
     :param multiples: set an absorbing top-boundary condition
+
+    Paths
+    -----
+    ***
     """
     __doc__ = Specfem.__doc__ + __doc__
 

@@ -39,8 +39,12 @@ from seisflows.plugins import line_search as line_search_dir
 
 class Gradient:
     """
-    [optimization.gradient] gradient/steepest descent optimization algorithm.
+    Gradient Optimization
+    ---------------------
+    Gradient/steepest descent optimization algorithm.
 
+    Parameters
+    ----------
     :type line_search_method: str
     :param line_search_method: chosen line_search algorithm. Currently available
         are 'bracket' and 'backtrack'. See seisflows.plugins.line_search
@@ -61,11 +65,13 @@ class Gradient:
     :param step_len_max: maximum allowable step length during the line
         search. Set as a fraction of the current model parameters
 
-    [path structure]
+    Paths
+    -----
     :type path_preconditioner: str
     :param path_preconditioner: optional path to a set of preconditioner files
         formatted the same as the input model (or output model of solver).
         Required to exist and contain files if `preconditioner`==True
+    ***
     """
     def __init__(self, line_search_method="bracket",
                  preconditioner=None, step_count_max=10, step_len_init=0.05,

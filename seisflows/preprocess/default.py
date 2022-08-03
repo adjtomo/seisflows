@@ -20,9 +20,13 @@ from seisflows.plugins.preprocess import adjoint as adjoint_sources
 
 class Default:
     """
-    [preprocess.default] Data processing for seismic traces, with options for
-    data misfit, filtering, normalization and muting.
+    Default Preprocess
+    ------------------
+    Data processing for seismic traces, with options for data misfit,
+    filtering, normalization and muting.
 
+    Parameters
+    ----------
     :type data_format: str
     :param data_format: data format for reading traces into memory. For
         available see: seisflows.plugins.preprocess.readers
@@ -69,6 +73,13 @@ class Default:
         LATE: mute late arrivals;
         SHORT: mute short source-receiver distances;
         LONG: mute long source-receiver distances
+
+    Paths
+    -----
+    :type path_preprocess: str
+    :param path_preprocess: scratch path for all preprocessing processes,
+        including saving files
+    ***
     """
     def __init__(self, data_format="ascii", misfit="waveform",
                  adjoint="waveform", normalize=None, filter=None,

@@ -11,8 +11,16 @@ from seisflows.solver.specfem3d import Specfem3D
 
 class Specfem3DGlobe(Specfem3D):
     """
-    [solver.specfem3d_globe] SPECFEM3D_Globe-specific alterations to the
-    solver.specfem3d (cartesian) module
+    Solver SPECFEM3D_GLOBE
+    ----------------------
+    SPECFEM3D_Globe-specific alterations to the solver.specfem3d module
+
+    Parameters
+    ----------
+
+    Paths
+    -----
+    ***
     """
     __doc__ = Specfem3D.__doc__ + __doc__
 

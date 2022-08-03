@@ -12,8 +12,12 @@ from seisflows.plugins import line_search as line_search_dir
 
 class NLCG(Gradient):
     """
-    [optimize.NLCG] Nonlinear conjugate gradient method
+    NLCG Optimization
+    -----------------
+    Nonlinear conjugate gradient method
 
+    Parameters
+    ----------
     :type nlcg_max: int
     :param nlcg_max: NLCG periodic restart interval, should be between 1
         and infinity
@@ -22,6 +26,10 @@ class NLCG(Gradient):
     :type calc_beta: str
     :param calc_beta: method to calculate the parameter 'beta' in the
         NLCG algorithm. Available: 'pollak_ribere', 'fletcher_reeves'
+
+    Paths
+    -----
+    ***
     """
     __doc__ = Gradient.__doc__ + __doc__
 
