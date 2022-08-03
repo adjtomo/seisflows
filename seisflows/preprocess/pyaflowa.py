@@ -97,7 +97,7 @@ class Pyaflowa:
                  workdir=os.getcwd(), path_preprocess=None,
                  path_solver=None, path_specfem_data=None, path_data=None,
                  path_output=None, data_format="ascii",
-                 data_case="data", components=None,
+                 data_case="data", components="ZNE",
                  start=None, ntask=1, nproc=1, source_prefix=None,
                  **kwargs):
         """
@@ -263,6 +263,82 @@ class Pyaflowa:
             source_prefix=self._source_prefix, ntask=self._ntask
         )
 
+    @staticmethod
+    def _ftag(config):
+        """
+        Create a re-usable file tag from the Config object as multiple functions
+        will use this tag for file naming and file discovery.
+
+        :type config: pyatoa.core.config.Config
+        :param config: Configuration object that must contain the 'event_id',
+            iteration and step count
+        """
+        return f"{config.event_id}_{config.iter_tag}_{config.step_tag}"
+
+    def quantify_misfit(self, source_name=None, save_residuals=None,
+                        save_adjsrcs=None, iteration=1, step_count=0,
+                        **kwargs):
+        """
+        Prepares solver for gradient evaluation by evaluating data-synthetic
+        misfit and writing residuals and adjoint traces. Meant to be called by
+        `workflow.evaluate_objective_function`.
+
+        .. note::
+            meant to be run on system using system.run() with access to solver
+
+        :type source_name: str
+        :param source_name: name of the event to quantify misfit for. If not
+            given, will attempt to gather event id from the given task id which
+            is assigned by system.run()
+        :type save_residuals: str
+        :param save_residuals: if not None, path to write misfit/residuls to
+        :type save_adjsrcs: str
+        :param save_adjsrcs: if not None, path to write adjoint sources to
+        :type iteration: int
+        :param iteration: current iteration of the workflow, information should
+            be provided by `workflow` module if we are running an inversion.
+            Defaults to 1 if not given (1st iteration)
+        :type step_count: int
+        :param step_count: current step count of the line search. Information
+            should be provided by the `optimize` module if we are running an
+            inversion. Defaults to 0 if not given (1st evaluation)
+        """
+        # Generate an event/evaluation specific config object to control Pyatoa
+        config = self._setup_quantify_misfit(source_name, iteration, step_count)
+        # Run misfit quantification for ALL stations and this given event
+        misfit, nwin = self._run_quantify_misfit(config, save_adjsrcs,
+                                                 parallel=True)
+        # Calculate misfit based on the raw misfit and total number of windows
+        if save_residuals:
+            # Calculate the misfit based on the number of windows. Equation from
+            # Tape et al. (2010). If no windows, misfit is simply raw misfit
+            try:
+                residuals = 0.5 * misfit / nwin
+            except ZeroDivisionError:
+                # Dealing with the case where nwin==0 (signifying either no
+                # windows found, or calc'ing misfit on whole trace)
+                residuals = misfit
+            with open(save_residuals, "a") as f:
+                f.write(f"{residuals:.2E}\n")
+
+        # Combine all the individual .png files created into a single PDF
+        if self.plot:
+            fid = os.path.join(self.path._figures, f"{self._ftag(config)}.pdf")
+            self._make_event_figure_pdf(source_name=source_name, output_fid=fid)
+
+        # Finally, collect all the temporary log files and write a main log file
+        pyatoa_logger = self._config_pyatoa_logger(
+            fid=os.path.join(self.path._logs, f"{self._ftag(config)}.log")
+        )
+        pyatoa_logger.info(
+            f"\n{'=' * 80}\n{'SUMMARY':^80}\n{'=' * 80}\n"
+            f"SOURCE NAME: {config.event_id}\n"
+            f"WINDOWS: {nwin}\n"
+            f"RAW MISFIT: {misfit:.4f}\n"
+            f"\n{'=' * 80}\n{'RAW LOGS':^80}\n{'=' * 80}"
+            )
+        self._collect_tmp_log_files(pyatoa_logger, config.event_id)
+
     def _setup_quantify_misfit(self, source_name, iteration, step_count):
         """
         Create an event-specific Config object which contains information about
@@ -312,80 +388,6 @@ class Pyaflowa:
 
         return config
 
-    @staticmethod
-    def _ftag(config):
-        """
-        Create a re-usable file tag from the Config object as multiple functions
-        will use this tag for file naming and file discovery.
-
-        :type config: pyatoa.core.config.Config
-        :param config: Configuration object that must contain the 'event_id',
-            iteration and step count
-        """
-        return f"{config.event_id}_{config.iter_tag}_{config.step_tag}"
-
-    def quantify_misfit(self, source_name=None, save_residuals=None,
-                        save_adjsrcs=None, iteration=1, step_count=0,
-                        **kwargs):
-        """
-        Prepares solver for gradient evaluation by evaluating data-synthetic
-        misfit and writing residuals and adjoint traces. Meant to be called by
-        `workflow.evaluate_objective_function`.
-
-        .. note::
-            meant to be run on system using system.run() with access to solver
-
-        :type source_name: str
-        :param source_name: name of the event to quantify misfit for. If not
-            given, will attempt to gather event id from the given task id which
-            is assigned by system.run()
-        :type save_residuals: str
-        :param save_residuals: if not None, path to write misfit/residuls to
-        :type save_adjsrcs: str
-        :param save_adjsrcs: if not None, path to write adjoint sources to
-        :type iteration: int
-        :param iteration: current iteration of the workflow, information should
-            be provided by `workflow` module if we are running an inversion.
-            Defaults to 1 if not given (1st iteration)
-        :type step_count: int
-        :param step_count: current step count of the line search. Information
-            should be provided by the `optimize` module if we are running an
-            inversion. Defaults to 0 if not given (1st evaluation)
-        """
-        config = self._setup_quantify_misfit(source_name, iteration, step_count)
-        misfit, nwin = self._run_quantify_misfit(config, save_adjsrcs, False)
-
-        # Calculate misfit based on the raw misfit and total number of windows
-        if save_residuals:
-            # Calculate the misfit based on the number of windows. Equation from
-            # Tape et al. (2010). If no windows, misfit is simply raw misfit
-            try:
-                residuals = 0.5 * misfit / nwin
-            except ZeroDivisionError:
-                # Dealing with the case where nwin==0 (signifying either no
-                # windows found, or calc'ing misfit on whole trace)
-                residuals = misfit
-            with open(save_residuals, "a") as f:
-                f.write(f"{residuals:.2E}\n")
-
-        # Combine all the individual .png files created into a single PDF
-        if self.plot:
-            fid = os.path.join(self.path._figures, f"{self._ftag(config)}.pdf")
-            self._make_event_figure_pdf(source_name=source_name, output_fid=fid)
-
-        # Finally, collect all the temporary log files and write a main log file
-        pyatoa_logger = self._config_pyatoa_logger(
-            fid=os.path.join(self.path._logs, f"{self._ftag(config)}.log")
-        )
-        pyatoa_logger.info(
-            f"\n{'=' * 80}\n{'SUMMARY':^80}\n{'=' * 80}\n"
-            f"SOURCE NAME: {config.event_id}\n"
-            f"WINDOWS: {nwin}\n"
-            f"RAW MISFIT: {misfit:.4f}\n"
-            f"\n{'=' * 80}\n{'RAW LOGS':^80}\n{'=' * 80}"
-            )
-        self._collect_tmp_log_files(pyatoa_logger, config.event_id)
-
     def _run_quantify_misfit(self, config, save_adjsrcs, parallel=False):
         """
         Run misfit quantification for each station concurrently or in serial.
@@ -396,25 +398,25 @@ class Pyaflowa:
         misfit, nwin = 0, 0
         # Run processing in parallel
         if parallel:
-            with ProcessPoolExecutor(max_workers=2) as executor:
-                futures = (
-                    executor.submit(self._quantify_misfit_station, config,
-                                    code, save_adjsrcs)
-                    for code in self._station_codes
-                )
-                # We only need to return misfit information. All data/results are
-                # saved to the ASDFDataSet and status is logged to separate log file
+            with ProcessPoolExecutor(max_workers=1) as executor:
+                futures = (executor.submit(self._quantify_misfit_station,
+                                           config, code, save_adjsrcs)
+                           for code in self._station_codes)
+                # We only need to return misfit information. All data/results
+                # are saved to the ASDFDataSet and status is logged to separate
+                # log file
                 for future in as_completed(futures):
                     _misfit, _nwin = future.result()
-                    del future  # Free up memory otherwise ram lock
+                    del future  # Free up memory once future is completed
                     if _misfit is not None:
                         misfit += _misfit
                         nwin += _nwin
         # Run processing in serial
         else:
             for code in self._station_codes:
-                _misfit, _nwin = self._quantify_misfit_station(config, code,
-                                                               save_adjsrcs)
+                _misfit, _nwin = self._quantify_misfit_station(
+                    config=config, station_code=code, save_adjsrcs=save_adjsrcs
+                )
                 if _misfit is not None:
                     misfit += _misfit
                     nwin += _nwin
