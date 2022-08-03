@@ -40,7 +40,7 @@ def test_initialize_working_directory(tmpdir):
 
     solver = Specfem(path_specfem_data=specfem_data,
                      path_specfem_bin=specfem_bin,
-                     source_prefix="CMTSOLUTION", workdir=tmpdir
+                     source_prefix="SOURCE", workdir=tmpdir
                      )
     assert(not os.path.exists(solver.path.mainsolver))
 
@@ -57,10 +57,10 @@ def test_initialize_working_directory(tmpdir):
     assert(os.path.islink(solver.path.mainsolver))
     assert(os.path.exists(solver.cwd))
     assert(glob(os.path.join(solver.cwd, "*")))
-    event_fid = os.path.join(solver.cwd, "DATA", "CMTSOLUTION")
+    event_fid = os.path.join(solver.cwd, "DATA", "SOURCE")
     assert(os.path.islink(event_fid))
-    event_line = open(event_fid).readlines()[1].strip()
-    assert(event_line.split(":")[1].strip() == "001")
+    event_line = open(event_fid).readlines()[0].strip()
+    assert(event_line == "## Source 1")
 
 
 def test_run_binary(tmpdir):
