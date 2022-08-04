@@ -266,16 +266,19 @@ def nproc():
     Get the number of processors available. Same as calling 'nproc' from
     Linux command line.
 
-    TODO probably replace this with multiprocessing.cpu_count()
+    TODO replace all instances of nproc() with os.cpu_count()
+
 
     :rtype: int
     :return: number of processors
     :raises EnvironmentError: if nproc cannot be determined
     """
+    _nproc = os.cpu_count()
 
     # Method 1 calls 'nproc'. May fail and return '' if 'nproc' not avail.
-    _nproc = subprocess.run("nproc", shell=True, text=True,
-                            stdout=subprocess.PIPE).stdout.strip()
+    if not _nproc:
+        _nproc = subprocess.run("nproc", shell=True, text=True,
+                                stdout=subprocess.PIPE).stdout.strip()
     # Method 2 checks /proc/cpuinfo
     if not _nproc:
         if os.path.exists("/proc/cpuinfo"):
