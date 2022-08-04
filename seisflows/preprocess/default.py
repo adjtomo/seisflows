@@ -7,6 +7,7 @@ and write adjoint sources that are expected by the solver.
 """
 import os
 import numpy as np
+from glob import glob
 from obspy import read as obspy_read
 from obspy import Stream, Trace, UTCDateTime
 
@@ -86,7 +87,8 @@ class Default:
                  min_period=None, max_period=None, min_freq=None, max_freq=None,
                  mute=None, early_slope=None, early_const=None, late_slope=None,
                  late_const=None, short_dist=None, long_dist=None,
-                 workdir=os.getcwd(), path_preprocess=None, **kwargs):
+                 workdir=os.getcwd(), path_preprocess=None, path_solver=None,
+                 **kwargs):
         """
         Preprocessing module parameters
 
@@ -124,7 +126,8 @@ class Default:
 
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
-                                                    "preprocess")
+                                                    "preprocess"),
+            solver=path_solver or os.path.join(workdir, "scratch", "solver")
         )
 
         self._acceptable_data_formats = ["SU", "ASCII"]
@@ -338,8 +341,21 @@ class Default:
                 fid = fid.replace(og_extension, ".adj")
         return fid
 
-    def quantify_misfit(self, observed, synthetic,
-                        save_residuals=None, save_adjsrcs=None, **kwargs):
+    def _setup_quantify_misfit(self, source_name):
+        """
+        Gather waveforms from the Solver scratch directory and
+        """
+        obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
+        syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
+
+        observed = sorted(glob(os.path.join(obs_path, "*")))
+        synthetic = sorted(glob(os.path.join(syn_path, "*")))
+
+        return observed, synthetic
+
+    def quantify_misfit(self, source_name=None, save_residuals=None, 
+                        save_adjsrcs=None, iteration=1, step_count=0,
+                        **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
         adjoint traces. Meant to be called by solver.eval_func().
@@ -350,19 +366,25 @@ class Default:
 
         TODO use concurrent futures to parallelize this
 
-        .. note::
-            Meant to be called by solver.eval_func(), may have unused arguments
-            to keep functions general across subclasses.
-
-        :type observed: list
-        :param observed: list of observed waveforms
-        :type synthetic: list
-        :param synthetic: list of synthetic waveforms
+        :type source_name: str
+        :param source_name: name of the event to quantify misfit for. If not
+            given, will attempt to gather event id from the given task id which
+            is assigned by system.run()
         :type save_residuals: str
         :param save_residuals: if not None, path to write misfit/residuls to
         :type save_adjsrcs: str
         :param save_adjsrcs: if not None, path to write adjoint sources to
+        :type iteration: int
+        :param iteration: current iteration of the workflow, information should
+            be provided by `workflow` module if we are running an inversion.
+            Defaults to 1 if not given (1st iteration)
+        :type step_count: int
+        :param step_count: current step count of the line search. Information
+            should be provided by the `optimize` module if we are running an
+            inversion. Defaults to 0 if not given (1st evaluation)
         """
+        observed, synthetic = self._setup_quantify_misfit(source_name)
+
         for obs_fid, syn_fid in zip(observed, synthetic):
             obs = self.read(fid=obs_fid)
             syn = self.read(fid=syn_fid)

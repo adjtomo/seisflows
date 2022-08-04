@@ -182,6 +182,8 @@ class Inversion(Migration):
             logger.info(msg.mnr(f"RUNNING ITERATION {self.iteration:0>2}"))
             super().run()  # Runs task list
             logger.info(msg.mnr(f"COMPLETED ITERATION {self.iteration:0>2}"))
+            self.iteration += 1
+            logger.info(f"setting current iteration to: {self.iteration}")
             # Clear the state file for new iteration
             self._states = {}
             self.checkpoint()
@@ -247,7 +249,7 @@ class Inversion(Migration):
                      self.evaluate_objective_function],
                     path_model=path_model,
                     save_residuals=os.path.join(self.path.eval_grad,
-                                                "residuals")
+                                                "residuals.txt")
                 )
 
         # Override function to sum residuals into the optimization library
@@ -379,10 +381,10 @@ class Inversion(Migration):
             [self.run_forward_simulations,
              self.evaluate_objective_function],
             path_model=os.path.join(self.path.eval_func, "model"),
-            save_residuals=os.path.join(self.path.eval_func, "residuals")
+            save_residuals=os.path.join(self.path.eval_func, "residuals.txt")
         )
         residuals = np.loadtxt(os.path.join(self.path.eval_func,
-                                            "residuals"))
+                                            "residuals.txt"))
         total_misfit = self.preprocess.sum_residuals(residuals)
         logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
         self.optimize.save_vector(name="f_try", m=total_misfit)
@@ -403,8 +405,6 @@ class Inversion(Migration):
                         )
 
         # Update optimization
-        self.iteration += 1
-        logger.info(f"setting current iteration to: {self.iteration}")
         self.optimize.checkpoint()
 
         # Clear out the scratch directory

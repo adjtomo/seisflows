@@ -223,16 +223,6 @@ class Forward:
                 f.write(f"# Acceptable states: 'completed', 'failed'\n")
                 f.write(f"# =======================================\n")
 
-        # Load in the initial model and check its poissons ratio
-        if self.path.model_init:
-            logger.info("checking initial model parameters")
-            _model = Model(os.path.join(self.path.model_init))
-            _model.check()
-        if self.path.model_true:
-            logger.info("checking true/target model parameters")
-            _model = Model(os.path.join(self.path.model_true))
-            _model.check()
-
         # Distribute modules to the class namespace. We don't do this at init
         # incase _modules was set as NoneType
         self.solver = self._modules.solver  # NOQA
@@ -298,6 +288,16 @@ class Forward:
             because we are potentially running two simulations back to back.
         """
         logger.info(msg.mnr("EVALUATING MISFIT FOR INITIAL MODEL"))
+
+        # Load in the initial model and check its poissons ratio
+        if self.path.model_init:
+            logger.info("checking initial model parameters")
+            _model = Model(os.path.join(self.path.model_init))
+            _model.check()
+        if self.path.model_true:
+            logger.info("checking true/target model parameters")
+            _model = Model(os.path.join(self.path.model_true))
+            _model.check()
 
         self.system.run(
             [self.prepare_data_for_solver,

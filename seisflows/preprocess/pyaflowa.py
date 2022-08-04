@@ -24,7 +24,7 @@ from seisflows.tools.specfem import check_source_names
 
 class Pyaflowa:
     """
-    Preprocess Pyaflowa
+    Pyaflowa Preprocess
     -------------------
     Preprocessing and misfit quantification using Python's Adjoint Tomography
     Operations Assistance (Pyatoa)

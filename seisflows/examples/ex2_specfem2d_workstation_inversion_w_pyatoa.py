@@ -83,15 +83,16 @@ class SFPyatoaEx2D(SFExample2D):
 
         print("> EX2: Setting SeisFlows parameters for Pyatao preprocessing")
         self.sf.setup(force=True)  # Force will delete existing parameter file
-        self.sf.par("preprocess", "pyatoa")
+        self.sf.par("workflow", "inversion")
+        self.sf.par("preprocess", "pyaflowa")
         self.sf.configure()
 
         self.sf.par("end", 1)  # only 1 iteration
         self.sf.par("ntask", self.ntask)  # 3 sources for this example
         self.sf.par("materials", "elastic")  # how velocity model parameterized
         self.sf.par("density", "constant")  # update density or keep constant
-        self.sf.par("format", "ascii")  # how to output synthetic seismograms
-        self.sf.par("case", "synthetic")  # synthetic-synthetic inversion
+        self.sf.par("data_format", "ascii")  # output synthetic seismograms
+        self.sf.par("data_case", "synthetic")  # synthetic-synthetic inversion
         self.sf.par("attenuation", False)
         self.sf.par("components", "Y")
 
@@ -99,14 +100,12 @@ class SFPyatoaEx2D(SFExample2D):
         self.sf.par("unit_output", "DISP")
         self.sf.par("min_period", 10)  # filter bounds define window selection
         self.sf.par("max_period", 200)
-        self.sf.par("start_pad", 48)  # T0 set in Par_file
-        self.sf.par("end_pad", 5000 * .06)  # nt * dt defined by Par_file
         # self.sf.par("pyflex_preset", "")  # To turn off windowing completely
 
-        self.sf.par("specfem_bin", self.workdir_paths.bin)
-        self.sf.par("specfem_data", self.workdir_paths.data)
-        self.sf.par("model_init", self.workdir_paths.model_init)
-        self.sf.par("model_true", self.workdir_paths.model_true)
+        self.sf.par("path_specfem_bin", self.workdir_paths.bin)
+        self.sf.par("path_specfem_data", self.workdir_paths.data)
+        self.sf.par("path_model_init", self.workdir_paths.model_init)
+        self.sf.par("path_model_true", self.workdir_paths.model_true)
 
     def finalize_specfem2d_par_file(self):
         """
