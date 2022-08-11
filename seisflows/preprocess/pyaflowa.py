@@ -481,7 +481,7 @@ class Pyaflowa:
         else:
             ds = None
         mgmt = Manager(config=config, ds=ds)
-        # If data gather fails, return because theres nothing else we can do
+        # If data gather fails, return because there's nothing else we can do
         try:
             # `gather` function uses Config path structure and Client attribute
             # to search for data on disk or via webservices (if requested).

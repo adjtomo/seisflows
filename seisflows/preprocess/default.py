@@ -13,7 +13,7 @@ from obspy import Stream, Trace, UTCDateTime
 
 from seisflows import logger
 from seisflows.tools import signal, unix
-from seisflows.tools.config import Dict
+from seisflows.tools.config import Dict, get_task_id
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
 from seisflows.plugins.preprocess import adjoint as adjoint_sources
@@ -345,15 +345,25 @@ class Default:
         """
         Gather waveforms from the Solver scratch directory and
         """
+        source_name = source_name or self._source_names[get_task_id()]
+
         obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
         syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
 
         observed = sorted(glob(os.path.join(obs_path, "*")))
         synthetic = sorted(glob(os.path.join(syn_path, "*")))
 
+        assert(len(observed) == len(synthetic)), (
+            f"number of observed traces does not match length of synthetic for "
+            f"source: {source_name}"
+        )
+
+        assert(len(observed) != 0 and len(synthetic) != 0), \
+            f"cannot quantify misfit, missing observed or synthetic traces"
+
         return observed, synthetic
 
-    def quantify_misfit(self, source_name=None, save_residuals=None, 
+    def quantify_misfit(self, source_name=None, save_residuals=None,
                         save_adjsrcs=None, iteration=1, step_count=0,
                         **kwargs):
         """
