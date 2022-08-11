@@ -14,102 +14,78 @@ from unittest.mock import patch
 from seisflows.tools.config import Dict
 from seisflows import ROOT_DIR
 from seisflows.seisflows import SeisFlows
-from seisflows.tools.config import NAMES
 from seisflows.tools.config import load_yaml
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
 
 
 @pytest.fixture
-def filled_par_file():
-    """A parameter file that is completely filled out and can be read in"""
-    return os.path.join(TEST_DIR, "test_data", "test_filled_parameters.yaml")
-
-
-@pytest.fixture
-def conf_par_file():
-    """A par file that has been configured but requires user-defined values"""
-    return os.path.join(TEST_DIR, "test_data", "test_conf_parameters.yaml")
-
-
-@pytest.fixture
-def setup_par_file():
-    """A barebones par file that only contains module names"""
-    return os.path.join(TEST_DIR, "test_data", "test_setup_parameters.yaml")
-
-
-@pytest.fixture
-def copy_par_file(tmpdir, filled_par_file):
-    """
-    Copy the template parameter file into the temporary test directory
-    :rtype: str
-    :return: location of the parameter file
-    """
-    src = filled_par_file
-    dst = os.path.join(tmpdir, "parameters.yaml")
-    shutil.copy(src, dst)
-
-
-@pytest.fixture
-def par_file_dict(filled_par_file):
+def par_file():
     """
     Return the test parameter file as a dictionary object
     :rtype: seisflows.config.Dict
     :return: dictionary of parameters
     """
-    return Dict(load_yaml(filled_par_file))
+    return os.path.join(TEST_DIR, "test_data", "parameters.yaml")
 
 
-def test_call_seisflows(tmpdir, par_file_dict, copy_par_file):
+@pytest.fixture
+def par_file_dict(par_file):
+    """
+    Return the test parameter file as a dictionary object
+    :rtype: seisflows.config.Dict
+    :return: dictionary of parameters
+    """
+    return Dict(load_yaml(par_file))
+
+
+def test_call_seisflows(par_file, par_file_dict):
     """
     Test calling the 'par' command from command line and inside a python
     environemnt. Check that case-insensitivity is also honored
     Check against the actual value coming from the parameter file
     Also tests the seisflows 'par' command
     """
-    copy_par_file
-    os.chdir(tmpdir)
-    check_val = par_file_dict.LINESEARCH
+    check_val = par_file_dict.workflow
 
     # Mock argv to match the actual scenario in which SeisFlows will be called
     with patch.object(sys, "argv", ["seisflows"]):
-        for name in ["linesearch", "LINESEARCH", "LineSearch"]:
-            # From the command line
-            cmd_line_arg = ["seisflows", "par", name]
+        for name in ["Workflow", "WORKFLOW", "WorkFlow"]:
+            # $ seisflows par workflow -p path/to/parameters.yaml
+            cmd_line_arg = ["seisflows", "-p", par_file, "par", name]
             out = subprocess.run(cmd_line_arg, capture_output=True,
                                  universal_newlines=True)
-            assert(out.stdout.strip() == f"{name.upper()}: {check_val}")
+            assert(out.stdout.strip() == f"{name.lower()}: {check_val}")
 
             # Test from inside a Python environment; we need to redirect stdout
             # to make sure the print statement is working as expected
             f = io.StringIO()
             with contextlib.redirect_stdout(f):
-                sf = SeisFlows()
+                sf = SeisFlows(parameter_file=par_file)
                 sf(command="par", parameter=name)
             stdout = f.getvalue()
-            assert(stdout.strip() == f"{name.upper()}: {check_val}")
+            assert(stdout.strip() == f"{name.lower()}: {check_val}")
 
 
-def test_edited_parameter_file_name(tmpdir, par_file_dict, filled_par_file):
+def test_edited_parameter_file_name(tmpdir, par_file, par_file_dict):
     """
     Similar test as call_seisflows but just make sure that arbitrary naming
     of the parameter file still works
     """
+    # Copy given parameter file with a weird name
     par_fid = "CRAZY_PARAMETER_NAME-0x123kd.yaml"
-    par_name = "linesearch"
-
-    src = filled_par_file
+    src = par_file
     dst = os.path.join(tmpdir, par_fid)
     shutil.copy(src, dst)
+    check_key = "workflow"
+    check_val = par_file_dict[check_key]
 
-    os.chdir(tmpdir)
-    check_val = par_file_dict.LINESEARCH
-    cmd_line_arg = ["seisflows", "-p", par_fid, "par", par_name]
+    cmd_line_arg = ["seisflows", "-p", dst, "par", check_key]
     # Mock argv to match the actual scenario in which SeisFlows will be called
     with patch.object(sys, "argv", ["seisflows"]):
         out = subprocess.run(cmd_line_arg, capture_output=True,
                              universal_newlines=True)
-    assert(out.stdout.strip() == f"{par_name.upper()}: {check_val}")
+    assert(out.stdout.strip() == f"{check_key.lower()}: {check_val}")
 
 
 def test_cmd_setup(tmpdir):
@@ -209,55 +185,54 @@ def test_cmd_setup(tmpdir):
 #     # del sys.modules[PATH]
 
 
-def test_cmd_par(tmpdir, copy_par_file):
+def test_cmd_par(tmpdir, par_file):
     """
     Make sure the 'par' command can print and edit the parameter file
     :param tmpdir:
     :return:
     """
-    # Run init first to create a working state
-    os.chdir(tmpdir)
-    copy_par_file
+    # Copy given parameter file with a weird name
+    src = par_file
+    dst = os.path.join(tmpdir, "parameters.yaml")
+    shutil.copy(src, dst)
 
-    parameter = "begin"
-    expected_val = "1"
-    new_val = "2"
+    parameter = "workflow"
+    expected_val = "forward"
+    new_val = "migration"
 
     # testing the get option: seisflows par `parameter`
     with patch.object(sys, "argv", ["seisflows"]):
-        sf = SeisFlows()
         # Run this with subprocess so we can capture the print statement
-        cmd_line_arg = ["seisflows", "par", parameter]
+        cmd_line_arg = ["seisflows", "-p", dst, "par", parameter]
         out = subprocess.run(cmd_line_arg, capture_output=True,
                              universal_newlines=True)
 
     # Check that we printed out the correct value
     par, val = out.stdout.strip().split(":")
-    assert(par.upper() == parameter.upper())
-    assert(int(val) == int(expected_val))
+    assert(par.strip() == parameter)
+    assert(val.strip() == expected_val)
 
     # testing the set option: seisflows par `parameter` `value`
     with patch.object(sys, "argv", ["seisflows"]):
-        sf = SeisFlows()
         # Run this with subprocess so we can capture the print statement
-        cmd_line_arg = ["seisflows", "par", parameter, new_val]
+        cmd_line_arg = ["seisflows","-p", dst, "par", parameter, new_val]
         out1 = subprocess.run(cmd_line_arg, capture_output=True,
                               universal_newlines=True)
 
         # Run this with subprocess so we can capture the print statement
-        cmd_line_arg = ["seisflows", "par", parameter]
+        cmd_line_arg = ["seisflows", "-p", dst, "par", parameter]
         out2 = subprocess.run(cmd_line_arg, capture_output=True,
                               universal_newlines=True)
 
     # Check that the changed print statement works
     par, vals = out1.stdout.strip().split(":")
     val_old, val_new = vals.strip().split(" -> ")
-    assert(par.upper() == parameter.upper())
-    assert(int(val_old) == int(expected_val))
-    assert(int(val_new) == int(new_val))
+    assert(par.strip() == parameter)
+    assert(val_old.strip() == expected_val)
+    assert(val_new.strip() == new_val)
 
     # Check that we printed out the correctly changed value
     par, val = out2.stdout.strip().split(":")
-    assert(par.upper() == parameter.upper())
-    assert(int(val) == int(new_val))
+    assert(par.strip() == parameter)
+    assert(val.strip() == new_val)
 

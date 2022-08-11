@@ -320,16 +320,32 @@ class SeisFlows:
         any checks we must load the entire SeisFlows environment, which is slow
         but provides the most flexibility when accessing internal information
     """
-    def __init__(self):
+    def __init__(self, workdir=None, parameter_file=None):
         """
         Parse user-defined arguments and establish internal parameters used to
         control which functions execute and how. Instance must be called to
         execute internal functions
+
+        .. note::
+            Normally the `workdir` and `parameter_file` paramters should be
+            set through the argparser (i.e., command line) but we allow
+            it to be set in a Python environment through __init__ incase there
+            is no access to the argparser through the command line (e.g., when
+            testing functionality using pytest)
+
+        :type workdir: str
+        :param workdir: the working directory to initiate a SeisFlows workflow.
+        :type parameter_file: str
+        :param parameter_file: full path to the parameter file
         """
         self._parser, self._subparser = sfparser()
         self._paths = None
         self._parameters = None
         self._args = self._parser.parse_args()
+        if workdir is not None:
+            self._args.workdir = workdir
+        if parameter_file is not None:
+            self._args.parameter_file = parameter_file
 
     def __call__(self, command=None, **kwargs):
         """
@@ -1111,88 +1127,88 @@ class SeisFlows:
         else:
             self._inspect_class_that_defined_method(name, func, **kwargs)
 
-    def _check_model_parameters(self, src=None, **kwargs):
-        """
-        Print out the min/max values from one or all of the currently available
-        models. Useful for checking what models are associated with what part of
-        the workflow, e.g. evaluate function, evaluate gradient.
-
-        :type src: str
-        :param src: the name of a specific model to check, e.g. 'm_try', 
-            otherwise will check parameters for all models
-        """
-        optimize = sys.modules["seisflows_optimize"]
-        PATH = sys.modules["seisflows_paths"]
-
-        avail = glob(os.path.join(PATH.OPTIMIZE, "m_*"))
-        srcs = [os.path.basename(_) for _ in avail]
-        if src:
-            if src not in srcs:
-                print(msg.cli(f"{src} not in available models: {avail}"))
-                sys.exit(-1)
-            srcs = [src]
-        for tag in srcs:
-            m = optimize.load(tag)
-            m.check()
-
-    def _check_current_iteration(self, **kwargs):
-        """
-        Display the current point in the workflow in terms of the iteration
-        and step count number. Args are not used by allow for a more general
-        check() function.
-        """
-        optimize = sys.modules["seisflows_optimize"]
-        try:
-            items = []
-            ln = optimize.line_search
-            items.append(f"Iteration: {optimize.iter}")
-            items.append(f"Step Count: {ln.step_count} / {ln.step_count_max}")
-            print(msg.cli(items=items))
-        except AttributeError:
-            print(msg.cli("OPTIMIZATION module has not been initialized yet, "
-                          "cannot retrieve iteration or step count values."))
-            sys.exit(-1)
-
-    def _check_source_names(self, source_name=None, **kwargs):
-        """
-        Sources are tagged by name but also by index in the source names which
-        can be confusing and usually requires doubling checking. This check
-        just prints out source names next to their respective index, or if a
-        source name is requested, provides the index for that
-
-        :type source_name: str
-        :param source_name: name of source to check index, if None will simply
-            print out all sources
-        """
-        try:
-            source_names = sys.modules["seisflows_solver"].source_names
-        except FileNotFoundError as e:
-            print(msg.cli(str(e)))
-            sys.exit(-1)
-
-        if source_name:
-            print(msg.cli(f"{source_names.index(source_name)}: {source_name}"))
-        else:
-            items = []
-            for i, source_name in enumerate(source_names):
-                items.append(f"{i:>3}: {source_name}")
-            print(msg.cli(items=items, header="source names"))
-
-    def _check_source_index(self, idx=None, **kwargs):
-        """
-        Look up source name by index
-
-        :type idx: int
-        :param idx: index of source to look up
-        """
-        if idx is None:
-            self._check_source_names(source_name=None)
-        else:
-            solver = sys.modules["seisflows_solver"]
-            try:
-                print(msg.cli(f"{idx}: {solver.source_names[int(idx)]}"))
-            except IndexError:
-                print(msg.cli(f"idx out of range: {len(solver.source_names)}"))
+    # def _check_model_parameters(self, src=None, **kwargs):
+    #     """
+    #     Print out the min/max values from one or all of the currently available
+    #     models. Useful for checking what models are associated with what part of
+    #     the workflow, e.g. evaluate function, evaluate gradient.
+    #
+    #     :type src: str
+    #     :param src: the name of a specific model to check, e.g. 'm_try',
+    #         otherwise will check parameters for all models
+    #     """
+    #     optimize = sys.modules["seisflows_optimize"]
+    #     PATH = sys.modules["seisflows_paths"]
+    #
+    #     avail = glob(os.path.join(PATH.OPTIMIZE, "m_*"))
+    #     srcs = [os.path.basename(_) for _ in avail]
+    #     if src:
+    #         if src not in srcs:
+    #             print(msg.cli(f"{src} not in available models: {avail}"))
+    #             sys.exit(-1)
+    #         srcs = [src]
+    #     for tag in srcs:
+    #         m = optimize.load(tag)
+    #         m.check()
+    #
+    # def _check_current_iteration(self, **kwargs):
+    #     """
+    #     Display the current point in the workflow in terms of the iteration
+    #     and step count number. Args are not used by allow for a more general
+    #     check() function.
+    #     """
+    #     optimize = sys.modules["seisflows_optimize"]
+    #     try:
+    #         items = []
+    #         ln = optimize.line_search
+    #         items.append(f"Iteration: {optimize.iter}")
+    #         items.append(f"Step Count: {ln.step_count} / {ln.step_count_max}")
+    #         print(msg.cli(items=items))
+    #     except AttributeError:
+    #         print(msg.cli("OPTIMIZATION module has not been initialized yet, "
+    #                       "cannot retrieve iteration or step count values."))
+    #         sys.exit(-1)
+    #
+    # def _check_source_names(self, source_name=None, **kwargs):
+    #     """
+    #     Sources are tagged by name but also by index in the source names which
+    #     can be confusing and usually requires doubling checking. This check
+    #     just prints out source names next to their respective index, or if a
+    #     source name is requested, provides the index for that
+    #
+    #     :type source_name: str
+    #     :param source_name: name of source to check index, if None will simply
+    #         print out all sources
+    #     """
+    #     try:
+    #         source_names = sys.modules["seisflows_solver"].source_names
+    #     except FileNotFoundError as e:
+    #         print(msg.cli(str(e)))
+    #         sys.exit(-1)
+    #
+    #     if source_name:
+    #         print(msg.cli(f"{source_names.index(source_name)}: {source_name}"))
+    #     else:
+    #         items = []
+    #         for i, source_name in enumerate(source_names):
+    #             items.append(f"{i:>3}: {source_name}")
+    #         print(msg.cli(items=items, header="source names"))
+    #
+    # def _check_source_index(self, idx=None, **kwargs):
+    #     """
+    #     Look up source name by index
+    #
+    #     :type idx: int
+    #     :param idx: index of source to look up
+    #     """
+    #     if idx is None:
+    #         self._check_source_names(source_name=None)
+    #     else:
+    #         solver = sys.modules["seisflows_solver"]
+    #         try:
+    #             print(msg.cli(f"{idx}: {solver.source_names[int(idx)]}"))
+    #         except IndexError:
+    #             print(msg.cli(f"idx out of range: {len(solver.source_names)}"))
 
 
 def return_modules():
