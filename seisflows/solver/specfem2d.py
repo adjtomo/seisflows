@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
 This class provides utilities for the Seisflows solver interactions with
-Specfem2D.
+Specfem2D. It builds upon the base Specfem class which generalizes all solver
+interactions with various versions of Specfem.
+
+TODO
+    Internal paramater f0 is not currently used. Can we remove or integrate?
 """
 import os
 from glob import glob
@@ -36,7 +40,7 @@ class Specfem2D(Specfem):
         super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.multiples = multiples
-        self.f0 = None
+        self._f0 = None
 
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
@@ -47,7 +51,7 @@ class Specfem2D(Specfem):
     def setup(self):
         """Setup the SPECFEM2D solver interface in a SeisFlows workflow"""
         source_file = os.path.join(self.path.specfem_data, self.source_prefix)
-        self.f0 = getpar(key="f0", file=source_file)[1]
+        self._f0 = getpar(key="f0", file=source_file)[1]
 
         par_file = os.path.join(self.path.specfem_data, "Par_file")
         if self.multiples:

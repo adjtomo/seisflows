@@ -26,7 +26,7 @@ from IPython import embed
 from seisflows import logger, ROOT_DIR, NAMES
 from seisflows.tools import unix, msg
 from seisflows.tools.config import (Dict, load_yaml, custom_import,
-                                    import_seisflows, config_logger)
+                                    import_seisflows)
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)
 
@@ -938,7 +938,7 @@ class SeisFlows:
         :param choice: underlying sub-function to choose
         """
         acceptable_args = {"modules": self._print_modules,
-                           "flow": self._print_flow,
+                           "tasks": self._print_tasks,
                            "inherit": self._print_inheritance}
 
         # Ensure that help message is thrown for empty commands
@@ -951,6 +951,8 @@ class SeisFlows:
     def reset(self, choice=None, **kwargs):
         """
         Mid-level function to wrap lower level reset functions
+
+        TODO re-write '_reset_line_search'
         """
         acceptable_args = {"line_search": self._reset_line_search,}
 
@@ -959,12 +961,9 @@ class SeisFlows:
             self._subparser.print_help()
             sys.exit(0)
 
-        self._register_parameters()
-        self._load_modules()
         acceptable_args[choice](*self._args.args, **kwargs)
 
-    @staticmethod
-    def _inspect_class_that_defined_method(name, func, **kwargs):
+    def _inspect_class_that_defined_method(self, name, func, **kwargs):
         """
         Given a function name and generalized module (e.g. solver), inspect
         which of the subclasses actually defined the function. Makes it easier
@@ -979,17 +978,21 @@ class SeisFlows:
         :param func: Corresponding method/function name for the given module
         """
         # Dynamically get the correct module and function based on names
-        try:
-            module = sys.modules[f"seisflows_{name}"]
-        except KeyError:
-            print(msg.cli(f"SeisFlows has no module: {name}"))
-            sys.exit(-1)
-        try:
-            method = getattr(module, func)
-        except AttributeError:
-            print(msg.cli(f"SeisFlows.{name} has no function: {func}"))
-            sys.exit(-1)
+        # try:
+        #     module = sys.modules[f"seisflows_{name}"]
+        # except KeyError:
+        #     print(msg.cli(f"SeisFlows has no module: {name}"))
+        #     sys.exit(-1)
+        # try:
+        #     method = getattr(module, func)
+        # except AttributeError:
+        #     print(msg.cli(f"SeisFlows.{name} has no function: {func}"))
+        #     sys.exit(-1)
 
+        parameters = load_yaml(os.path.join(self._args.workdir,
+                                            self._args.parameter_file))
+        module = custom_import(name, parameters[name])()
+        method = getattr(module, func)
         method_name = method.__name__
         if method.__self__:
             classes = [method.__self__.__class__]
@@ -1006,8 +1009,7 @@ class SeisFlows:
         print(msg.cli(f"Error matching class for SeisFlows.{name}.{func}"))
         sys.exit(-1)
 
-    @staticmethod
-    def _inspect_module_hierarchy(name=None, **kwargs):
+    def _inspect_module_hierarchy(self, name=None, **kwargs):
         """
         Determine the order of class hierarchy for a given SeisFlows module.
 
@@ -1021,48 +1023,25 @@ class SeisFlows:
         :param name: choice of module, if None, will print hierarchies for all
             modules.
         """
+        parameters = load_yaml(os.path.join(self._args.workdir,
+                                            self._args.parameter_file))
+
         items = []
         for NAME in NAMES:
             if name and NAME != name:
                 continue
-            module = sys.modules[f"seisflows_{NAME}"]
+            module = custom_import(NAME, parameters[NAME])()
             item_str = f"{NAME.upper():<12}"
             for i, cls in enumerate(inspect.getmro(type(module))[::-1]):
+                # The base inheritance is always 'object', skip printing this.
+                if i == 0:
+                    continue
                 item_str += f"> {cls.__name__:<10}"
             items.append(item_str)
         print(msg.cli(items=items, header="seisflows inheritance"))
 
-    def _reset_line_search(self, **kwargs):
-        """
-        TODO Delete me
 
-        Reset the machinery of the line search. This is useful for if a line
-        search fails or stagnates but the User does not want to re-run the
-        entire iteration. They can reset the line search and resume the workflow
-        from the line search step
-
-        The following rubric details how you might use this from command line:
-
-        .. rubric::
-            $ seisflows reset line_search
-            $ seisflows par resume_from line_search
-            $ seisflows resume_from -f
-        """
-        optimize = sys.modules["seisflows_optimize"]
-        workflow = sys.modules["seisflows_workflow"]
-        
-        current_step = optimize.line_search.step_count
-        optimize.line_search.reset()
-
-        # Manually set step count back to 0, this usually happens in
-        # optimize.finalize_search()
-        optimize.line_search.step_count = 0
-
-        print(msg.cli(f"resetting line search machinery. step count: "
-                      f"{current_step} -> {optimize.line_search.step_count }"))
-        workflow.checkpoint()
-
-    def _print_modules(self, name=None, package=None, **kwargs):
+    def _print_modules(self, package=None, **kwargs):
         """
         Print out available modules in the SeisFlows name space for all
         available packages and modules.
@@ -1084,10 +1063,10 @@ class SeisFlows:
             items.append(f"- {module_}".expandtabs(tabsize=4))
             for module_ in module_list:
                 items.append(f"\t* {module_}".expandtabs(tabsize=4))
-        print(msg.cli("'+': package, '-': module, '*': class", items=items,
+        print(msg.cli("'-': module, '*': class", items=items,
                       header="seisflows modules"))
 
-    def _print_flow(self, **kwargs):
+    def _print_tasks(self, **kwargs):
         """
         Simply print out the seisflows.workflow.main() flow variable which
         describes what order workflow functions will be run. Useful for
@@ -1096,14 +1075,12 @@ class SeisFlows:
         .. rubric::
             $ seisflows print flow
         """
-        self._register_parameters()
-        self._load_modules()
-
-        workflow = custom_import("workflow")()
-        flow = workflow.main(return_flow=True)
-        items = [f"{a+1}: {b.__name__}" for a, b in enumerate(flow)]
-        print(msg.cli(f"Flow arguments for {type(workflow)}", items=items,
-                      header="seisflows workflow main"))
+        parameters = load_yaml(os.path.join(self._args.workdir,
+                                            self._args.parameter_file))
+        wf = custom_import("workflow", parameters["workflow"])()
+        items = [f"{a+1}: {b.__name__}" for a, b in enumerate(wf.task_list)]
+        print(msg.cli(f"Task list for {type(wf)}", items=items,
+                      header="seisflows workflow task list"))
 
     def _print_inheritance(self, name=None, func=None, **kwargs):
         """
@@ -1129,8 +1106,6 @@ class SeisFlows:
                 seisflows inspect solver eval_func
 
         """
-        self._register_parameters()
-        self._load_modules()
         if func is None:
             self._inspect_module_hierarchy(name, **kwargs)
         else:
