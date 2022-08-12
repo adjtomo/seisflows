@@ -320,7 +320,7 @@ class SFExample2D:
         Use subprocess to run the SeisFlows example we just set up
         """
         cd(self.cwd)
-        subprocess.run("seisflows submit -f", check=False, shell=True)
+        subprocess.run("seisflows submit", check=False, shell=True)
 
     def main(self):
         """

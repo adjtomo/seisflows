@@ -123,66 +123,27 @@ def test_cmd_setup(tmpdir):
             assert(test_phrase not in text)
 
 
-# def test_cmd_submit(tmpdir):
-#     """
-#     Test submit, also test the functionality of resume and restart which
-#     are essentially wrappers for this call
-#     :param tmpdir:
-#     :return:
-#     """
-#     pass
-#
-#
-# def test_cmd_clean(tmpdir):
-#     """
-#
-#     :param tmpdir:
-#     :return:
-#     """
-    pass
+def test_cmd_configure(tmpdir, par_file):
+    """
+    Test configuring a parameter file from a template par file
+    """
+    os.chdir(tmpdir)
 
+    # Copy in the setup par file so we can configure it
+    src = par_file
+    dst = os.path.join(tmpdir, "parameters.yaml")
+    shutil.copy(src, dst)
 
-# def test_cmd_configure(tmpdir, setup_par_file, conf_par_file):
-#     """
-#     Test configuring a parameter file from a template par file
-#
-#     .. note::
-#         I don't know exactly why, but this test needs to be run AFTER any other
-#         test which runs seisflows.init(), otherwise the parameters are not
-#         instantiated properly (you will hit a KeyError when trying to access
-#         PAR). I think this is because of how seisflows.configure() registers
-#         a relatively empty parameter file (only modules are defined), and this
-#         gets saved into sys modules, affecting subsequent tests which end up
-#         accessing sys.modules. I tried flushing sys.modules but it didn't work.
-#         This behavior shouldn't get encountered in a real run because we
-#         won't need to run init() and configure() in the same python
-#         runtime environment, but I leave this warning here
-#         wondering if I'll have to fix it at some point... -B
-#     """
-#     os.chdir(tmpdir)
-#
-#     # Copy in the setup par file so we can configure it
-#     src = setup_par_file
-#     dst = os.path.join(tmpdir, "parameters.yaml")
-#     shutil.copy(src, dst)
-#
-#     # run seisflows init
-#     with patch.object(sys, "argv", ["seisflows"]):
-#         sf = SeisFlows()
-#         sf.configure(relative_paths=False)
-#
-#     # Simple check that the configuration parameter file has the same number
-#     # of lines as the one that has been created by configure
-#     lines_conf = open(conf_par_file, "r").readlines()
-#     lines_fill = open("parameters.yaml", "r").readlines()
-#     assert (len(lines_conf) == len(lines_fill))
-#
-#     # My attempt to flush sys.modules which did NOT work
-#     # from seisflows.tools.config import NAMES, PAR, PATH
-#     # for name in NAMES:
-#     #     del sys.modules[f"seisflows_{name}"]
-#     # del sys.modules[PAR]
-#     # del sys.modules[PATH]
+    # run seisflows configure
+    with patch.object(sys, "argv", ["seisflows"]):
+        sf = SeisFlows(workdir=tmpdir, parameter_file="parameters.yaml")
+        sf.configure()
+
+    # Check some random values that were not in the template file
+    parameters = load_yaml(dst)
+    assert("path_model_init" in parameters.keys())
+    assert("smooth_h" in parameters.keys())
+    assert("ntask" in parameters.keys())
 
 
 def test_cmd_par(tmpdir, par_file):
@@ -215,7 +176,7 @@ def test_cmd_par(tmpdir, par_file):
     # testing the set option: seisflows par `parameter` `value`
     with patch.object(sys, "argv", ["seisflows"]):
         # Run this with subprocess so we can capture the print statement
-        cmd_line_arg = ["seisflows","-p", dst, "par", parameter, new_val]
+        cmd_line_arg = ["seisflows", "-p", dst, "par", parameter, new_val]
         out1 = subprocess.run(cmd_line_arg, capture_output=True,
                               universal_newlines=True)
 

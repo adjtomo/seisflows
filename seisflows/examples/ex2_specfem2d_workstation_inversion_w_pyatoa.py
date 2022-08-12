@@ -26,7 +26,7 @@ class SFPyatoaEx2D(SFExample2D):
     advantage of the default SPECFEM2D stuff, onyl changes the generation of
     MODEL TRUE, the number of stations, and the setup of the parameter file.
     """
-    def __init__(self, ntask=2, niter=1, nsta=5):
+    def __init__(self, ntask=2, niter=2, nsta=5):
         """
         Overload init and attempt to import Pyatoa before running example,
         overload the default number of tasks to 2, and add a new init parameter
@@ -85,6 +85,7 @@ class SFPyatoaEx2D(SFExample2D):
         self.sf.setup(force=True)  # Force will delete existing parameter file
         self.sf.par("workflow", "inversion")
         self.sf.par("preprocess", "pyaflowa")
+        self.sf.par("optimize", "LBFGS")
         self.sf.configure()
 
         self.sf.par("end", 1)  # only 1 iteration
