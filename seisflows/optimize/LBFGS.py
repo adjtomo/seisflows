@@ -103,11 +103,11 @@ class LBFGS(Gradient):
         Overwrite default checkpointing to store internal L-BFGS Attributes
         """
         super().checkpoint()
-        checkpoint_dict = np.load(self.path._checkpoint)
+        checkpoint_dict = dict(np.load(self.path._checkpoint))
         checkpoint_dict["LBFGS_iter"] = self._LBFGS_iter
         checkpoint_dict["memory_used"] = self._memory_used
 
-        np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
+        np.savez(file=self.path._checkpoint, **checkpoint_dict)  # NOQA
 
     def load_checkpoint(self):
         """

@@ -108,7 +108,7 @@ class Gradient:
 
         # Hidden paths to store checkpoint file in scratch directory
         self.path["_checkpoint"] = os.path.join(self.path.scratch,
-                                                "checkpoint")
+                                                "checkpoint.npz")
         self.path["_stats_file"] = os.path.join(self.path.scratch,
                                                 "output_optim.txt")
 
