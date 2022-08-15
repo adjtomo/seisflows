@@ -10,6 +10,6 @@ If you use SeisFlows for your work, please cite:
     SeisFlows — Flexible waveform inversion software.
     Computers & geosciences, 115, 88-95.
 
-Publications which have used (and cited) SeisFlows (and SeisFlows3) can be
+Publications which have used (and cited) SeisFlows can be
 found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683593672&as_sdt=405&sciodt=0,2&hl=en>`__.
 

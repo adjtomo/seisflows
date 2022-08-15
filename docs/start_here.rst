@@ -1,5 +1,5 @@
 Getting started
-=================================
+================
 
 Assuming installation detailed on the `home page <index.html>`__ has
 completed successfully, you can start playing around with SeisFlows.
@@ -22,8 +22,10 @@ For more information on the SeisFlows command line tool, see the
 Running tests
 ~~~~~~~~~~~~~
 
-SeisFlows has some unit tests that ensure the capabilities of the command line
-tool and package organization are working as intended. To run the tests:
+SeisFlows has some unit/integration tests that ensure the capabilities of
+the package are working as intended. Tests should be run before and after any
+edits to the source code are made. To run the tests, from the top level
+`seisflows` directory:
 
 .. parsed-literal::
 
@@ -34,25 +36,6 @@ tool and package organization are working as intended. To run the tests:
 If developing SeisFlows, please ensure that you run these tests before and after
 any changes are made to ensure that your changes do not break intended package
 functionality.
-
-Running the test problem
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-SeisFlows comes with a small test problem that is intended to not only test
-the workflow capabilities of the package, but also for users to rapidly develop
-new modules without needing to run large, potentially expensive, workflows.
-
-In order to set up the test problem:
-
-.. parsed-literal::
-
-    cd path/to/working/directory  # ideally this directory is empty
-    seisflows setup  # this will create a template parameters.yaml file
-    seisflows par workflow test
-    seisflows configure
-
-At this stage, you will have a full SeisFlows parameter file. Certain system or
-module specific
 
 Running an example problem
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

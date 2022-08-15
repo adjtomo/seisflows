@@ -24,6 +24,7 @@ optimization problems.
    Major backwards-incompatible changes from the legacy codebase include:
 
       -  > complete shift to Python3.7 source code, abandoning Python2 support
+      -  > reworked internal architecture to be more 'Pythonic'
       -  > richer source code emphasizing readability and standards
       -  > a new command line tool for improved package control
       -  > redesigned, dynamically-generated parameter file
@@ -56,7 +57,7 @@ environment.
 
 .. code:: bash
 
-   $ conda create -n seisflows python=3.7
+   $ conda create -n seisflows python=3.10
    $ conda activate seisflows
    $ git clone --branch devel https://github.com/adjtomo/seisflows.git
    $ cd seisflows
@@ -76,15 +77,8 @@ SeisFlows + Pyatoa
 --------------------
 To include the waveform measurement capabilities of Pyatoa, you must install
 separately. See the `Pyatoa documentation
-<https://pyatoa.readthedocs.io/en/latest/>`__ for the most up to date
+<https://pyatoa.readthedocs.io/en/latest/#installation>`__ for the most up to date
 install instructions.
-
-.. code:: bash
-
-   $ cd ..
-   $ git clone --branch devel https://github.com/bch0w/pyatoa.git
-   $ cd pyatoa
-   $ pip install .
 
 
 .. toctree::
@@ -125,6 +119,7 @@ install instructions.
    :caption: Development
 
    background
+   design
    changelog
    code_dev_plan
 

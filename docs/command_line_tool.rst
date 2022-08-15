@@ -1,12 +1,10 @@
 Commmand Line Tool
 ==================
 
-``SeisFlows`` is primarily interacted with via command line calls and a
-parameter file. In this page we explain how to use this command line
-tool to create a SeisFlows parameters file, edit and configure it, and
-establish a SeisFlows working directory. We also provide explanation
-for other command line options which act as helper utilities for
-improved package control.
+``SeisFlows`` is primarily interacted with via a parameter file and command line tool.
+In this page we explain how to use this command line tool to create a SeisFlows parameters
+file, edit and configure it, and run a workflow. We also provide explanation
+for other command line options which act as helper utilities for package control.
 
 After installing SeisFlows into a Conda environment, the ``seisflows``
 command will be available directly from the command line. To access the

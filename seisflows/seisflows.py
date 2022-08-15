@@ -193,11 +193,6 @@ def sfparser():
     par.add_argument("-p", "--skip_print", action="store_true", default=False,
                      help="Skip the print statement which is typically "
                           "sent to stdout after changing parameters.")
-    par.add_argument("-r", "--required", action="store_true", default=False,
-                     help="Only list parameters which have not been set as a "
-                          "default value, typically set with some attention "
-                          "catching argument. 'parameter' and 'value' will be "
-                          "ignored.")
     # =========================================================================
     sempar = subparser.add_parser(
         "sempar", help="View and edit SPECFEM parameter file",
@@ -628,7 +623,7 @@ class SeisFlows:
         Clean the SeisFlows working directory except for the parameter file.
 
         :type force: bool
-        :param force: ignore the warning check that precedes the clean() 
+        :param force: ignore the warning check that precedes the clean()
             function, useful if you don't want any input messages popping up
         """
         # Check if the filepaths exist
@@ -712,7 +707,7 @@ class SeisFlows:
                 seisflows sempar velocity_model
 
             to edit the values of a velocity model (SPECFEM2D)
-                
+
                 seisflows sempar velocity_model \
                     "1 1 2600.d0 5800.d0 3500.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0"
 
@@ -732,8 +727,8 @@ class SeisFlows:
         :type value: str
         :param value: value to set for parameter. if none, will simply print out
             the current parameter value. to set as nonetype, set to 'null'
-            SPECFEM2D: if set to 'velocity_model' allows the user to set and 
-            edit the velocity model defined in the SPECMFE2D Par_file. Not a 
+            SPECFEM2D: if set to 'velocity_model' allows the user to set and
+            edit the velocity model defined in the SPECMFE2D Par_file. Not a
             very smart capability, likely easier to do this manually.
         :type par_file: str
         :param par_file: name of the SPECFEM parameter file, defaults: Par_file
@@ -784,8 +779,7 @@ class SeisFlows:
                 if not skip_print:
                     print(msg.cli(f"{key}: {cur_val} -> {value}"))
 
-    def par(self, parameter, value=None, skip_print=False, required=False,
-            **kwargs):
+    def par(self, parameter, value=None, skip_print=False, **kwargs):
         """
         Check or set parameters in the seisflows parameter file.
 
@@ -814,19 +808,13 @@ class SeisFlows:
         :type skip_print: bool
         :param skip_print: skip the print statement which is typically sent
             to stdout after changing parameters.
-        :type required: bool
-        :param required: Only list parameters which have not been set as a
-            default value, 'parameter' and 'value' will be ignored.
         """
         if not os.path.exists(self._args.parameter_file):
             sys.exit(f"\n\tparameter file '{self._args.parameter_file}' "
                      f"does not exist\n")
 
-        if parameter is None and not required:
+        if parameter is None:
             self._subparser.print_help()
-            sys.exit(0)
-        elif required:
-            self._par_required()
             sys.exit(0)
 
         # SeisFlows parameter file dictates upper-case parameters

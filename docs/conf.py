@@ -59,5 +59,5 @@ html_static_path = ['_static']
 
 # AutoAPI variables
 autoapi_type = "python"
-autoapi_dirs = ["../seisflows", "../seisflows-super"]
+autoapi_dirs = ["../seisflows"] 
 autoapi_add_toctree_entry = True

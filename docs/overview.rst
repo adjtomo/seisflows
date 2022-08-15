@@ -37,12 +37,10 @@ SeisFlows Modules:
       internal structure makes it relatively seamless to switch between
       workstation problems, and HPC jobs (Examples: workstation, Slurm)
     * **Solver**: External numerical solver used to generate models, synthetics,
-      and kernels (Examples: SPECFEM2D, SPECFEM3D Cartesian, SPECFEM3D Globe)
+      and kernels (Examples: SPECFEM2D, SPECFEM3D Cartesian, SPECFEM3D Globe), and
+      to smooth and manipulate kernels and gradients.
     * **Preprocessing**: Signal processing operations performed on time series,
       including downsampling, detrending, filtering, etc.
-    * **Postprocessing**: Regularization and image processing operations
-      carried out on the gradient computations. Typical tasks involve
-      smoothing, preconditioning and masking
     * **Optimization**: Nonlinear optimization algorithms used to find
       the minimum of a waveform-based objective function (Examples: L-BFGS,
       NLCG, steepest descent)
