@@ -181,12 +181,16 @@ class Inversion(Migration):
         while self.iteration < self.end + 1:
             logger.info(msg.mnr(f"RUNNING ITERATION {self.iteration:0>2}"))
             super().run()  # Runs task list
-            logger.info(msg.mnr(f"COMPLETED ITERATION {self.iteration:0>2}"))
-            self.iteration += 1
-            logger.info(f"setting current iteration to: {self.iteration}")
-            # Clear the state file for new iteration
-            self._states = {}
-            self.checkpoint()
+            # Assuming that if `stop_after` is used, that we are NOT iterating
+            if self.stop_after is None:
+                logger.info(msg.mnr(f"COMPLETE ITERATION {self.iteration:0>2}"))
+                self.iteration += 1
+                logger.info(f"setting current iteration to: {self.iteration}")
+                # Clear the state file for new iteration
+                self._states = {}
+                self.checkpoint()
+            else:
+                break
 
     def checkpoint(self):
         """
@@ -240,7 +244,7 @@ class Inversion(Migration):
                 # solvers
                 path_model = os.path.join(self.path.eval_grad, "model")
                 m_new = self.optimize.load_vector("m_new")
-                m_new.write(path=path_model)
+                m_new.write(path=path_model, parameters=self.solver._parameters)
 
                 # Run forward simulation/misfit quantification with previous
                 # model
@@ -305,7 +309,8 @@ class Inversion(Migration):
         self.optimize.checkpoint()
 
         # Expose model `m_try` to the solver by placing it in eval_func dir.
-        m_try.write(path=os.path.join(self.path.eval_func, "model"))
+        m_try.write(path=os.path.join(self.path.eval_func, "model"),
+                    parameters=self.solver._parameters)
 
     def perform_line_search(self):
         """
@@ -401,7 +406,8 @@ class Inversion(Migration):
         if self.export_model:
             model = self.optimize.load_vector("m_new")
             model.write(path=os.path.join(self.path.output,
-                                          f"M{self.iteration:0>2}")
+                                          f"M{self.iteration:0>2}"),
+                        parameters=self.solver._parameters
                         )
 
         # Update optimization

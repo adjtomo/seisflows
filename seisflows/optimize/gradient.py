@@ -428,10 +428,6 @@ class Gradient:
 
         Removes old model/search parameters, moves current parameters to old,
         sets up new current parameters and writes statistic outputs
-
-        TODO does moving 'm_try' to 'm_new' actually make sense with bracketing
-            line search where our last trial model will potentially have a
-            higher misfit due to the 'bracket'ing nature?
         """
         unix.cd(self.path.scratch)
 
