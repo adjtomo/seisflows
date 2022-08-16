@@ -34,7 +34,7 @@ import subprocess
 import numpy as np
 
 from seisflows.tools import msg
-from seisflows.config import Dict
+from seisflows.tools.config import Dict
 from seisflows.seisflows import SeisFlows
 from seisflows.tools.unix import cd, cp, rm, ln, mv, mkdir
 
@@ -287,21 +287,24 @@ class SFExample2D:
         cd(self.cwd)
 
         self.sf.setup(force=True)  # Force will delete existing parameter file
+        self.sf.par("workflow", "inversion")
         self.sf.configure()
 
         self.sf.par("ntask", self.ntask)  # default 3 sources for this example
         self.sf.par("materials", "elastic")  # how velocity model parameterized
-        self.sf.par("density", "constant")  # update density or keep constant
-        self.sf.par("format", "ascii")  # how to output synthetic seismograms
-        self.sf.par("begin", 1)  # first iteration
+        self.sf.par("density", False)  # update density or keep constant
+        self.sf.par("data_format", "ascii")  # how to output synthetic seismograms
+        self.sf.par("start", 1)  # first iteration
         self.sf.par("end", self.niter)  # final iteration -- we will run 2
-        self.sf.par("case", "synthetic")  # synthetic-synthetic inversion
+        self.sf.par("step_count_max", 5)  # will cause iteration 2 to fail
+        self.sf.par("data_case", "synthetic")  # synthetic-synthetic inversion
+        self.sf.par("components", "Y")  # only Y component seismograms avail.
         self.sf.par("attenuation", False)
 
-        self.sf.par("specfem_bin", self.workdir_paths.bin)
-        self.sf.par("specfem_data", self.workdir_paths.data)
-        self.sf.par("model_init", self.workdir_paths.model_init)
-        self.sf.par("model_true", self.workdir_paths.model_true)
+        self.sf.par("path_specfem_bin", self.workdir_paths.bin)
+        self.sf.par("path_specfem_data", self.workdir_paths.data)
+        self.sf.par("path_model_init", self.workdir_paths.model_init)
+        self.sf.par("path_model_true", self.workdir_paths.model_true)
 
     def finalize_specfem2d_par_file(self):
         """
@@ -317,7 +320,7 @@ class SFExample2D:
         Use subprocess to run the SeisFlows example we just set up
         """
         cd(self.cwd)
-        subprocess.run("seisflows submit -f", check=False, shell=True)
+        subprocess.run("seisflows submit", check=False, shell=True)
 
     def main(self):
         """

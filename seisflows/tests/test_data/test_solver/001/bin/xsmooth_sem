@@ -1,0 +1,3 @@
+#!/bin/bash -e
+echo "xsmooth_sem"
+

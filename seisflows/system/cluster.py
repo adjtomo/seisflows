@@ -3,108 +3,175 @@
 The Cluster class provides the core utilities interaction with HPC systems
 which must be overloaded by subclasses for specific workload managers, or
 specific clusters.
+
+The `Cluster` class acts as a base class for more specific cluster
+implementations (like SLURM). However it can be used standalone. When running
+jobs on the `Cluster` system, jobs will be submitted to the master system
+using `subprocess.run`, mimicing how jobs would be run on a cluster but not
+actually submitting to any job scheduler.
 """
+import os
+import sys
 import subprocess
+from concurrent.futures import ProcessPoolExecutor, wait
+from seisflows import logger, ROOT_DIR
+from seisflows.tools.unix import nproc
+from seisflows.tools.config import pickle_function_list
 from seisflows.system.workstation import Workstation
 
 
 class Cluster(Workstation):
     """
-    Abstract base class for the Systems module which controls interaction with
-    compute systems such as HPC clusters.
+    Cluster System
+    ------------------
+    Generic or common HPC/cluster interfacing commands
+
+    Parameters
+    ----------
+    :type title: str
+    :param title: The name used to submit jobs to the system, defaults
+        to the name of the current working directory
+    :type mpiexec: str
+    :param mpiexec: Function used to invoke executables on the system.
+        For example 'mpirun', 'mpiexec', 'srun', 'ibrun'
+    :type ntask_max: int
+    :param ntask_max: limit the number of concurrent tasks in a given array job
+    :type walltime: int
+    :param walltime: maximum job time in minutes for the master SeisFlows
+        job submitted to cluster
+    :type tasktime: int
+    :param tasktime: maximum job time in minutes for each job spawned by
+        the SeisFlows master job during a workflow. These include, e.g.,
+        running the forward solver, adjoint solver, smoother, kernel combiner.
+        All spawned tasks receive the same task time.
+    :type environs: str
+    :param environs: Optional environment variables to be provided in the
+        following format VAR1=var1,VAR2=var2... Will be set using
+        os.environs
+
+    Paths
+    -----
+    ***
     """
-    def __init__(self):
+    __doc__ = Workstation.__doc__ + __doc__
+
+    def __init__(self, title=None, mpiexec="", ntask_max=None, walltime=10,
+                 tasktime=1, environs="", **kwargs):
+        """Instantiate the Cluster System class"""
+        super().__init__(**kwargs)
+
+        if title is None:
+            self.title = os.path.basename(os.getcwd())
+        else:
+            self.title = title
+        self.mpiexec = mpiexec
+        self.ntask_max = ntask_max or nproc() - 1  # -1 because master job
+        self.walltime = walltime
+        self.tasktime = tasktime
+        self.environs = environs or ""
+
+    def submit(self, workdir=None, parameter_file="parameters.yaml",
+               submit_call=None):
         """
-        Instantiate the Cluster System class
-        """
-        super().__init__()
+        Submits the main workflow job as a separate job submitted directly to
+        the system that is running the master job
 
-        self.required.par(
-            "WALLTIME", required=True, par_type=float,
-            docstr="Maximum job time in minutes for main SeisFlows job"
-        )
-        self.required.par(
-            "TASKTIME", required=True, par_type=float,
-            docstr="Maximum job time in minutes for each SeisFlows task"
-        )
-        # note: OVERLOADS the Workstation `NTASK` parameter
-        self.required.par(
-            "NTASK", required=True, par_type=int,
-            docstr="Number of separate, individual tasks. Also equal to "
-                   "the number of desired sources in workflow"
-        )
-        # note: OVERLOADS the Workstation `NPROC` parameter
-        self.required.par(
-            "NPROC", required=True, par_type=int,
-            docstr="Number of processor to use for each simulation"
-        )
-        self.required.par(
-            "ENVIRONS", required=False, default="", par_type=str,
-            docstr="Optional environment variables to be provided in the"
-                   "following format VAR1=var1,VAR2=var2... Will be set"
-                   "using os.environs"
-        )
-
-    def check(self, validate=True):
-        """
-        Checks parameters and paths
-        """
-        super().check(validate=validate)
-
-    def submit(self, submit_call=None):
-        """
-        Main insertion point of SeisFlows onto the compute system.
-
-        .. rubric::
-            $ seisflows submit
-
-        .. note::
-            The expected behavior of the submit() function is to:
-            1) run system setup, creating directory structure,
-            2) execute workflow by submitting workflow.main()
-
+        :type workdir: str
+        :param workdir: path to the current working directory
+        :type parameter_file: str
+        :param parameter_file: paramter file file name used to instantiate
+            the SeisFlows package
         :type submit_call: str
-        :param submit_call: the command line workload manager call to be run by
-            subprocess. These need to be passed in by specific workload manager
-            subclasses.
+        :param submit_call: child classes may require a specific submit call
+            if the job should be submitted to another system (e.g., on cluster
+            submitting jobs on compute nodes and not running directly on the
+            login node)
         """
-        self.setup()
-        workflow = self.module("workflow")
-        workflow.checkpoint()
-        # check==True: subprocess will wait for workflow.main() to finish
-        subprocess.run(submit_call, shell=True, check=True)
+        if submit_call is None:
+            # e.g., submit -w ./ -p parameters.yaml
+            submit_call = " ".join([
+                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",
+                f"--workdir {workdir}",
+                f"--parameter_file {parameter_file}",
+            ])
+        logger.debug(submit_call)
+        try:
+            subprocess.run(submit_call, shell=True)
+        except subprocess.CalledProcessError as e:
+            logger.critical(f"SeisFlows master job has failed with: {e}")
+            sys.exit(-1)
 
-    def run(self, classname, method, single=False, **kwargs):
+    def run(self, funcs, single=False, run_call=None, **kwargs):
         """
-        Runs a task multiple times in parallel
+        Runs tasks multiple times in parallel by submitting NTASK new jobs to
+        system. The list of functions and its kwargs are saved as pickles files,
+        and then re-loaded by each submitted process with specific environment
+        variables. Each spawned process will run the list of functions.
 
-        .. note::
-            The expected behavior of the run() function is to: submit N jobs to
-            the system in parallel. For example, in a simulation step, run()
-            submits N jobs to the compute system where N is the number of
-            events requiring an adjoint simulation.
-
-        :type classname: str
-        :param classname: the class to run
-        :type method: str
-        :param method: the method from the given `classname` to run
+        :type funcs: list of methods
+        :param funcs: a list of functions that should be run in order. All
+            kwargs passed to run() will be passed into the functions.
         :type single: bool
         :param single: run a single-process, non-parallel task, such as
             smoothing the gradient, which only needs to be run by once.
             This will change how the job array and the number of tasks is
             defined, such that the job is submitted as a single-core job to
             the system.
+        :type run_call: str
+        :param run_call: the call used to submit the run script. If None,
+            attempts default run call which should be suited for the given
+            system. Can be overwritten by child classes to involve other
+            arguments
         """
-        raise NotImplementedError('Must be implemented by subclass.')
+        # Single tasks only need to be run one time, as `TASK_ID` === 0
+        ntasks = {True: 1, False: self.ntask}[single]
+        funcs_fid, kwargs_fid = pickle_function_list(functions=funcs,
+                                                     path=self.path.scratch,
+                                                     **kwargs)
+        logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
+                    f"system {self.ntask} times")
 
-    def taskid(self):
+        # Create the run call which will simply call an external Python script
+        if run_call is None:
+            # e.g., run --funcs func.p --kwargs kwargs.p --environment ...
+            run_call = " ".join([
+                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
+                f"--funcs {funcs_fid}",
+                f"--kwargs {kwargs_fid}",
+                f"--environment SEISFLOWS_TASKID={{task_id}},{self.environs}"
+            ])
+        logger.debug(run_call)
+
+        # Don't need to spin up concurrent.futures for a single run
+        if single:
+            self._run_task(run_call=run_call, task_id=0)
+        # Run tasks in parallel and wait for all of them to finish
+        else:
+            with ProcessPoolExecutor(max_workers=nproc() - 1) as executor:
+                futures = [executor.submit(self._run_task, run_call, task_id)
+                           for task_id in range(ntasks)]
+            wait(futures)
+
+    def _run_task(self, run_call, task_id):
         """
-        Provides a unique identifier for each running task. This is
-        compute system specific.
+        Convenience function to run a single Python job with subprocess.run
+        with some error catching and redirect of stdout to a log file.
 
-        :rtype: int
-        :return: this function is expected to return a unique numerical
-            identifier.
+        :type run_call: str
+        :param run_call: python call to run a task involving loading the
+            pickled function list and its kwargs, and then running them
+        :type task_id: int
+        :param task_id: given task id, used for log messages and to format
+            the run call
         """
-        raise NotImplementedError('Must be implemented by subclass.')
-
+        logger.debug(f"running task id {task_id} ({task_id + 1}/{self.ntask})")
+        try:
+            f = open(self._get_log_file(task_id), "w")
+            subprocess.run(run_call.format(task_id=task_id), shell=True,
+                           stdout=f)
+        except subprocess.CalledProcessError as e:
+            logger.critical(f"run task_id {task_id} has failed with error "
+                            f"message {e}")
+            sys.exit(-1)
+        finally:
+            f.close()

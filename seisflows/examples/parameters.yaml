@@ -17,16 +17,14 @@
 #
 #                                    MODULES
 #                                    ///////
-# WORKFLOW (str):    The method for running SeisFlows; equivalent to main()
-# SOLVER (str):      External numerical solver to use for waveform simulations
-# SYSTEM (str):      Computer architecture of the system being used
-# OPTIMIZE (str):    Optimization algorithm for the inverse problem
-# PREPROCESS (str):  Preprocessing schema for waveform data
-# POSTPROCESS (str): Postprocessing schema for kernels and gradients
+# workflow (str):    The types and order of functions for running SeisFlows
+# system (str):      Computer architecture of the system being used
+# solver (str):      External numerical solver to use for waveform simulations
+# preprocess (str):  Preprocessing schema for waveform data
+# optimize (str):    Optimization algorithm for the inverse problem
 # ==============================================================================
-SYSTEM: workstation
-WORKFLOW: inversion
-SOLVER: specfem2d
-OPTIMIZE: gradient
-PREPROCESS: default
-POSTPROCESS: default
+workflow: forward
+system: workstation
+solver: specfem2d
+preprocess: default
+optimize: gradient

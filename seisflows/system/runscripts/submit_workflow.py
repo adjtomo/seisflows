@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 Only required when system==cluster (or any subclass of cluster)
-
-This script is executes a MASTER job through job scheduler
-(e.g., PBS, LSF, or SLURM) by running workflow.main() on the compute system.
+This script is used to execute a MASTER job on system. It is essentially the
+same as `system.workstation.Workstation.submit()`, except it can be called as
+a script using subprocess, allowing it to be submitted to e.g., a job scheduler
 
 .. note::
     Not to be called by the user. This is called when the user runs
@@ -11,15 +11,13 @@ This script is executes a MASTER job through job scheduler
     be called by system.submit().
 
 .. rubric::
-    >> python submit --output ./OUTPUT
+    >> python submit -w ./ -p parameters.yaml
     OR
-    >> sbatch submit --output ./OUTPUT
+    >> sbatch submit -w ./ -p parameters.yaml
 """
-import sys
+import os
 import argparse
-
-from seisflows.tools import unix
-from seisflows.config import load, config_logger
+from seisflows.tools.config import import_seisflows
 
 
 def parse_args():
@@ -27,10 +25,11 @@ def parse_args():
     Get command line arguments required for the submit script
     """
     parser = argparse.ArgumentParser("Run arguments for system submitted tasks")
-    parser.add_argument("-o", "--output", type=str, nargs="?", required=True,
-                        help="the SeisFlows output directory used to load the "
-                             "active working state from inside the compute node"
-                        )
+    parser.add_argument("-w", "--workdir", type=str, nargs="?", required=True,
+                        default=os.getcwd(), help="SeisFlows working directory")
+    parser.add_argument("-p", "--parameter_file", type=str, nargs="?",
+                        required=True, default="parameters.yaml",
+                        help="SeisFlows parameter file")
 
     return parser.parse_args()
 
@@ -40,20 +39,8 @@ if __name__ == '__main__':
     Submit workflow.main() as a MASTER JOB on the compute system
     """
     args = parse_args()
-
-    # Load the currently active working state
-    unix.cd(args.output)
-    load(args.output)
-
-    # Ensure that the two main modules are loaded
-    workflow = sys.modules["seisflows_workflow"]
-    system = sys.modules["seisflows_system"]
-
-    # Set up logging on the compute system to print to stdout only
-    PAR = sys.modules["seisflows_parameters"]
-    PATH = sys.modules["seisflows_paths"]
-    config_logger(level=PAR.LOG_LEVEL, verbose=PAR.VERBOSE) 
-
-    # Execute MASTER JOB as workflow.main()
-    workflow.main()
-
+    workflow = import_seisflows(workdir=args.workdir,
+                                parameter_file=args.parameter_file)
+    workflow.check()
+    workflow.setup()
+    workflow.run()

@@ -1,68 +1,78 @@
 #!/usr/bin/env python3
 """
-This is the custom class for an NLCG optimization schema.
-It inherits from the `seisflows.optimize.gradient.Gradient` class
+Nonlinear conjugate gradient method for optimization
 """
+import numpy as np
+
+from seisflows import logger
 from seisflows.optimize.gradient import Gradient
-from seisflows.tools import unix
 from seisflows.tools.math import dot
+from seisflows.plugins import line_search as line_search_dir
 
 
 class NLCG(Gradient):
     """
+    NLCG Optimization
+    -----------------
     Nonlinear conjugate gradient method
 
-    Optimization Variables:
-        m: model
-        f: objective function value
-        g: gradient direction
-        p: search direction
+    Parameters
+    ----------
+    :type nlcg_max: int
+    :param nlcg_max: NLCG periodic restart interval, should be between 1
+        and infinity
+    :type nlcg_thresh: NLCG conjugacy restart threshold, should be
+        between 1 and infinity
+    :type calc_beta: str
+    :param calc_beta: method to calculate the parameter 'beta' in the
+        NLCG algorithm. Available: 'pollak_ribere', 'fletcher_reeves'
 
-    Line Search Variables:
-        x: list of step lenths from current line search
-        f: correpsonding list of function values
-        m: number of step lengths in current line search
-        n: number of model updates in optimization problem
-        gtg: dot product of gradient with itself
-        gtp: dot product of gradient and search direction
-
-    Status codes
-        status > 0  : finished
-        status == 0 : not finished
-        status < 0  : failed
+    Paths
+    -----
+    ***
     """
-    def __init__(self):
-        """
-        These parameters should not be set by the user.
-        Attributes are initialized as NoneTypes for clarity and docstrings.
+    __doc__ = Gradient.__doc__ + __doc__
 
-        TODO allow user to choose the calc_beta function
+    def __init__(self, nlcg_max=np.inf, nlcg_thresh=np.inf,
+                 calc_beta="pollak_ribere", **kwargs):
+        """NLCG-specific input parameters"""
+        super().__init__(**kwargs)
 
-        :type NLCG_iter: Class
-        :param NLCG_iter: an internally used iteration that differs from
-            optimization iter. Keeps track of internal NLCG memory.
-        """
-        super().__init__()
+        # Overwrite user-chosen line search. L-BFGS requires 'Backtrack'ing LS
+        if self.line_search_method.title() != "Bracket":
+            logger.warning(f"NLCG optimization requires 'bracket'ing line "
+                           f"search. Overwritng '{self.line_search_method}'")
+            self.line_search_method = "Bracket"
+            self._line_search = getattr(
+                line_search_dir, self.line_search_method)(
+                step_count_max=self.step_count_max,
+                step_len_max=self.step_len_max
+            )
 
-        self.required.par(
-            "NLCGMAX", required=False, default="null", par_type=float,
-            docstr="NLCG periodic restart interval, between 1 and inf"
+        self.NLCG_max = nlcg_max
+        self.NLCG_thresh = nlcg_thresh
+
+        # Check paramter validity
+        _acceptable_calc_beta = ["pollak_ribere", "fletcher_reeves"]
+        assert(calc_beta in _acceptable_calc_beta), (
+            f"unacceptable `calc_beta`, must be in {_acceptable_calc_beta}"
         )
-        self.required.par(
-            "NLCGTHRESH", required=False, default="null", par_type=float,
-            docstr="NLCG conjugacy restart threshold, between 1 and inf"
-        )
-        self.NLCG_iter = 0
-        self.calc_beta = self._pollak_ribere
+        self.calc_beta = calc_beta
 
-    def check(self, validate=True):
-        """
-        Checks parameters, paths, and dependencies
-        """
-        super().check(validate=validate)
+        # Internally used parameters
+        self._NLCG_iter = 0
+        self._calc_beta = getattr(self, f"_{calc_beta}")
 
-        assert(self.par.LINESEARCH.upper() == "BRACKET"), \
-            f"NLCG requires a bracketing line search algorithm"
+    def checkpoint(self):
+        """
+        Overwrite default checkpointing to store internal L-BFGS Attributes
+        """
+        super().checkpoint()
+
+        checkpoint_dict = np.load(self.path._checkpoint)
+        checkpoint_dict["NLCG_iter"] = self._NLCG_iter
+
+        np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
 
     def compute_direction(self):
         """
@@ -80,69 +90,78 @@ class NLCG(Gradient):
             force restart, inverse gradient search direction
         5. New NLCG search direction has conjugacy and is a descent direction
             and is set as the new search direction.
-        """
-        self.logger.debug(f"computing search direction with NLCG")
-        self.NLCG_iter += 1
 
-        unix.cd(self.path.OPTIMIZE)
+        :rtype: seisflows.tools.specfem.Model
+        :return: search direction as a Model instance
+        """
+        self._NLCG_iter += 1
 
         # Load the current gradient direction
-        g_new = self.load("g_new")
+        g_new = self.load_vector("g_new")
+        p_new = g_new.copy()
 
         # CASE 1: If first iteration, search direction is the current gradient
-        if self.NLCG_iter == 1:
-            self.logger.info("first NLCG iteration, setting search direction"
-                             "as inverse gradient")
-            p_new = -g_new
-            restarted = 0
+        if self._NLCG_iter == 1:
+            logger.info("first NLCG iteration, setting search direction "
+                        "as inverse gradient")
+            p_new.update(vector=-1 * g_new.vector)
+            restarted = False
         # CASE 2: Force restart if the iterations have surpassed the maximum
         # number of allowable iter
-        elif self.NLCG_iter > self.par.NLCGMAX:
-            self.logger.info("restarting NLCG due to periodic restart "
-                             "condition. setting search direction as inverse "
-                             "gradient")
+        elif self._NLCG_iter > self.NLCG_max:
+            logger.info("restarting NLCG due to periodic restart "
+                        "condition. setting search direction as inverse "
+                        "gradient")
             self.restart()
-            p_new = -g_new
-            restarted = 1
+            p_new.update(vector=-1 * g_new.vector)
+            restarted = True
         # Normal NLCG direction compuitation
         else:
             # Compute search direction
-            g_old = self.load("g_old")
-            p_old = self.load("p_old")
+            g_old = self.load_vector("g_old")
+            p_old = self.load_vector("p_old")
+            beta = self._calc_beta(g_new.vector, g_old.vector)
 
             # Apply preconditioner and calc. scale factor for search dir. (beta)
-            if self.precond is not None:
-                beta = self.calc_beta(g_new, g_old)
-                p_new = -1 * self._precondition(g_new) + beta * p_old
-            else:
-                beta = self.calc_beta(g_new, g_old)
-                p_new = -g_new + beta * p_old
+            _p_new_vec = (
+                    -1 * self._precondition(g_new.vector) + beta * p_old.vector
+            )
+            p_new.update(vector=_p_new_vec)
 
-            # Check restart conditions, return search direction and status
-            if check_conjugacy(g_new, g_old) > self.par.NLCGTHRESH:
-                self.logger.info("restarting NLCG due to loss of conjugacy")
+            # Check restart conditions, return search direction and statusa
+            if check_conjugacy(g_new.vector, g_old.vector) > self.NLCG_thresh:
+                logger.info("restarting NLCG due to loss of conjugacy")
                 self.restart()
-                p_new = -g_new
-                restarted = 1
-            elif check_descent(p_new, g_new) > 0.:
-                self.logger.info("restarting NLCG, not a descent direction")
+                p_new.update(vector=-1 * g_new.vector)
+                restarted = True
+            elif check_descent(p_new.vector, g_new.vector) > 0.:
+                logger.info("restarting NLCG, not a descent direction")
                 self.restart()
-                p_new = -g_new
-                restarted = 1
+                p_new.update(vector=-1 * g_new.vector)
+                restarted = True
             else:
-                p_new = p_new
-                restarted = 0
+                # p_new = p_new
+                restarted = False
 
         # Save values to disk and memory
-        self.save("p_new", p_new)
-        self.restarted = restarted
+        self._restarted = restarted
+
+        return p_new
 
     def restart(self):
         """
         Overwrite the Base restart class and include a restart of the NLCG
         """
-        super().restart()
-        self.NLCG_iter = 1
+        logger.info("restarting NLCG optimization algorithm")
+
+        g_new = self.load_vector("g_new")
+        p_new = g_new.copy()
+        p_new.update(vector=-1 * g_new.vector)
+        self.save_vector("p_new", p_new)
+
+        self._line_search.clear_search_history()
+        self._restarted = 1
+        self._NLCG_iter = 1
 
     def _fletcher_reeves(self, g_new, g_old):
         """

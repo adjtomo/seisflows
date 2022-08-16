@@ -1,63 +1,65 @@
 #!/usr/bin/env python3
 """
-This is the subclass seisflows.solver.Specfem3D
 This class provides utilities for the Seisflows solver interactions with
-Specfem3D Cartesian. It inherits all attributes from seisflows.solver.Base,
-and overwrites these functions to provide specified interaction with Specfem3D
+Specfem3D Cartesian.
 """
 import os
-from glob import glob
 
-from seisflows.solver.specfem import Specfem
 from seisflows.tools import unix
-from seisflows.tools.wrappers import exists
 from seisflows.tools.specfem import setpar, getpar
+from seisflows.solver.specfem import Specfem
 
 
 class Specfem3D(Specfem):
     """
-    Python interface to Specfem3D Cartesian.
-    """
-    def __init__(self):
-        """
-        Initiate parameters required for Specfem3D Cartesian
-        """
-        super().__init__()
+    Solver SPECFEM3D
+    ----------------
+    SPECFEM3D-specific alterations to the base SPECFEM module
 
-        self.required.par(
-            "SOURCE_PREFIX", required=False, default="CMTSOLUTION",
-            par_type=str,
-            docstr="Prefix of SOURCE files in path SPECFEM_DATA. Available "
-                   "['CMTSOLUTION', FORCESOLUTION']")
+    Parameters
+    ----------
+    :type source_prefix: str
+    :param source_prefix: Prefix of source files in path SPECFEM_DATA. Defaults
+        to 'CMTSOLUTION'
+    :type multiples: bool
+    :param multiples: set an absorbing top-boundary condition
+
+    Paths
+    -----
+    ***
+    """
+    __doc__ = Specfem.__doc__ + __doc__
+
+    def __init__(self, source_prefix="CMTSOLUTION", **kwargs):
+        """Instantiate a Specfem3D_Cartesian solver interface"""
+
+        super().__init__(source_prefix=source_prefix, **kwargs)
+
+        # Define parameters based on material type
+        if self.materials.upper() == "ACOUSTIC":
+            self._parameters += ["vp"]
+        elif self.materials.upper() == "ELASTIC":
+            self._parameters += ["vp", "vs"]
+
+        # Overwriting the base class parameters
+        self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
+        self._required_binaries = ["xspecfem3D", "xmeshfem3D",
+                                   "xgenerate_databases" "xcombine_sem",
+                                   "xsmooth_sem"]
 
     def data_wildcard(self, comp="?"):
         """
         Returns a wildcard identifier for synthetic data
 
+        TODO where does SU put its component?
+
         :rtype: str
         :return: wildcard identifier for channels
         """
-        if self.par.FORMAT.upper() == "SU":
+        if self.data_format.upper() == "SU":
             return f"*_d?_SU"
-        elif self.par.FORMAT.upper() == "ASCII":
+        elif self.data_format.upper() == "ASCII":
             return f"*.?X{comp}.sem?"
-
-    @property
-    def data_filenames(self):
-        """
-        Returns the filenames of all data, either by the requested components
-        or by all available files in the directory.
-
-        :rtype: list
-        :return: list of data filenames
-        """
-        unix.cd(os.path.join(self.cwd, "traces", "obs"))
-
-        if self.par.COMPONENTS:
-            files = glob(self.data_wildcard(comp=self.par.COMPONENTS.lower()))
-        else:
-            files = glob(self.data_wildcard(comp="?"))
-        return sorted(files)
 
     @property
     def model_databases(self):
@@ -67,7 +69,7 @@ class Specfem3D(Specfem):
         """
         local_path = getpar(key="LOCAL_PATH",
                             file=os.path.join(self.cwd, "DATA", "Par_file"))[1]
-        return os.path.join(self.cwd, local_path)
+        return local_path
 
     @property
     def kernel_databases(self):
@@ -77,104 +79,75 @@ class Specfem3D(Specfem):
         """
         return self.model_databases
 
-    def eval_func(self, path, write_residuals=True):
-        """
-        Performs forward simulations and evaluates the misfit function using
-        the preprocess module. Overrides to add a data renaming call
-
-        .. note::
-            This task should be run in parallel by system.run()
-
-        :type path: str
-        :param path: directory from which model is imported and where residuals
-            will be exported
-        :type write_residuals: bool
-        :param write_residuals: calculate and export residuals        """
-        super().eval_func(path=path, write_residuals=write_residuals)
-
-        # Work around SPECFEM3D conflicting name conventions of SU data
-        self._rename_data()
-
-    def _forward(self, output_path):
+    def forward_simulation(self, executables=None, save_traces=False,
+                           export_traces=False):
         """
         Calls SPECFEM3D forward solver, exports solver outputs to traces dir
 
-        :type output_path: str
-        :param output_path: path to export traces to after completion of
-            simulation expected values are either 'traces/obs' for 'observation'
-            data (i.e., synthetics generated by the TRUE model), or
-            'traces/syn', for synthetics generated during function evaluations
+        :type executables: list or None
+        :param executables: list of SPECFEM executables to run, in order, to
+            complete a forward simulation. This can be left None in most cases,
+            which will select default values based on the specific solver
+            being called (2D/3D/3D_GLOBE). It is made an optional parameter
+            to keep the function more general for inheritance purposes.
+        :type save_traces: str
+        :param save_traces: move files from their native SPECFEM output location
+            to another directory. This is used to move output waveforms to
+            'traces/obs' or 'traces/syn' so that SeisFlows knows where to look
+            for them, and so that SPECFEM doesn't overwrite existing files
+            during subsequent forward simulations
+        :type export_traces: str
+        :param export_traces: export traces from the scratch directory to a more
+            permanent storage location. i.e., copy files from their original
+            location
         """
-        # Set parameters and run forward simulation
-        setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
-        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
-        if self.par.ATTENUATION:
+        if executables is None:
+            executables = ["bin/xgenerate_databases", "bin/xspecfem3D"]
+
+        unix.cd(self.cwd)
+
+        # SPECFEM3D has to deal with attenuation
+        if self.attenuation:
             setpar(key="ATTENUATION", val=".true.", file="DATA/Par_file")
         else:
             setpar(key="ATTENUATION", val=".false`.", file="DATA/Par_file")
 
-        self._call_solver(executable="bin/xgenerate_databases",
-                          output="fwd_mesher.log")
-        self._call_solver(executable="bin/xmeshfem3D", output="fwd_solver.log")
+        super().forward_simulation(executables=executables,
+                                   save_traces=save_traces,
+                                   export_traces=export_traces
+                                   )
 
-        # Find and move output traces, by default to synthetic traces dir
-        unix.mv(src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
-                dst=output_path)
-
-    def _adjoint(self):
+    def adjoint_simulation(self, executables=None, save_kernels=False,
+                           export_kernels=False):
         """
         Calls SPECFEM3D adjoint solver, creates the `SEM` folder with adjoint
         traces which is required by the adjoint solver
-        """
-        setpar(key="SIMULATION_TYPE", val="3", file="DATA/Par_file")
-        setpar(key="SAVE_FORWARD", val=".false.", file="DATA/Par_file")
 
-        # Attenuation should always be OFF during adjoint simulations, else
-        # you will get a floating point error
+        :type executables: list or None
+        :param executables: list of SPECFEM executables to run, in order, to
+            complete an adjoint simulation. This can be left None in most cases,
+            which will select default values based on the specific solver
+            being called (2D/3D/3D_GLOBE). It is made an optional parameter
+            to keep the function more general for inheritance purposes.
+        :type save_kernels: str
+        :param save_kernels: move the kernels from their native SPECFEM output
+            location to another path. This is used to move kernels to another
+            SeisFlows scratch directory so that they are discoverable by
+            other modules. The typical location they are moved to is
+            path_eval_grad
+        :type export_kernels: str
+        :param export_kernels: export/copy/save kernels from the scratch
+            directory to a more permanent storage location. i.e., copy files
+            from their original location. Note that kernel file sizes are LARGE,
+            so exporting kernels can lead to massive storage requirements.
+        """
+        if executables is None:
+            executables = ["bin/xspecfem3D"]
+
+        # Make sure attenuation is OFF, if ON you'll get a floating point error
+        unix.cd(self.cwd)
         setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
-        unix.rm("SEM")
-        unix.ln("traces/adj", "SEM")
-
-        self._call_solver(executable="bin/xspecfem3D", output="adj_solver.log")
-
-    def _initialize_adjoint_traces(self):
-        """
-        Setup utility: Creates the "adjoint traces" expected by SPECFEM
-
-        .. note::
-            Adjoint traces are initialized by writing zeros for all channels.
-            Channels actually in use during an inversion or migration will be
-            overwritten with nonzero values later on.
-        """
-        # Initialize adjoint traces as zeroes for all data_filenames
-        # write to `traces/adj`
-        super()._initialize_adjoint_traces()
-
-        # Rename data to work around Specfem naming convetions
-        self._rename_data()
-
-        # Workaround for Specfem3D's requirement that all components exist,
-        # even ones not in use as adjoint traces
-        if self.par.FORMAT.upper() == "SU":
-            unix.cd(os.path.join(self.cwd, "traces", "adj"))
-
-            for iproc in range(self.par.NPROC):
-                for channel in ["x", "y", "z"]:
-                    dst = f"{iproc:d}_d{channel}_SU.adj"
-                    if not exists(dst):
-                        src = f"{iproc:d}_d{self.par.COMPONENTS[0]}_SU.adj"
-                        unix.cp(src, dst)
-
-    def _rename_data(self):
-        """
-        Works around conflicting data filename conventions
-
-        Specfem3D's uses different name conventions for regular traces
-        and 'adjoint' traces
-        """
-        if self.par.FORMAT.upper() == "SU":
-            files = glob(os.path.join(self.cwd, "traces", "adj", "*SU"))
-            unix.rename(old='_SU', new='_SU.adj', names=files)
-
-
+        super().adjoint_simulation(executables=executables,
+                                   save_kernels=save_kernels,
+                                   export_kernels=export_kernels)

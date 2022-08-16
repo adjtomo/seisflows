@@ -8,8 +8,23 @@ import time
 import random
 import shutil
 import socket
+import subprocess
 
-from seisflows.tools.wrappers import iterable
+
+def _iterable(arg):
+    """
+    Make an argument iterable. Allows for more generalized inputs to these
+    unix-style functions.
+
+    :type arg: anything
+    :param arg: an argument to make iterable
+    :rtype: list
+    :return: iterable argument
+    """
+    if not isinstance(arg, (list, tuple)):
+        return [arg]
+    else:
+        return arg
 
 
 def cat(src, dst=None):
@@ -41,7 +56,7 @@ def cd(path):
     os.chdir(path)
 
 
-def cp(src='', dst=''):
+def cp(src, dst):
     """
     Copy files
 
@@ -52,7 +67,7 @@ def cp(src='', dst=''):
     """
     if isinstance(src, (list, tuple)):
         if len(src) > 1:
-            assert os.path.isdir(dst), "unexpected type for unix.cp 'dst'"
+            assert os.path.isdir(dst), f"unix.cp 'dst' must be directory: {dst}"
         for sub in src:
             cp(sub, dst)
         return
@@ -89,7 +104,7 @@ def ln(src, dst):
         >>> from seisflows.tools.unix import ln
         >>> ln("example_file", "path/to/sylink/new_filename")
         >>> # OR
-        >>> sln("example_file", "path/to/sylink/")
+        >>> ln("example_file", "path/to/sylink/")
 
     :type src: str
     :param src: path to file or directory to symlink
@@ -136,7 +151,7 @@ def mkdir(dirs):
     """
     time.sleep(2 * random.random())  # interval [0, 2]s
 
-    for dir_ in iterable(dirs):
+    for dir_ in _iterable(dirs):
         if not os.path.isdir(dir_):
             os.makedirs(dir_)
 
@@ -174,7 +189,7 @@ def rename(old, new, names):
     :type names: list
     :param names: files to replace expressions in
     """
-    for name in iterable(names):
+    for name in _iterable(names):
         if name.find(old) >= 0:
             os.rename(name, name.replace(old, new))
 
@@ -183,7 +198,7 @@ def rm(path):
     """
     Remove files or directories
     """
-    for name in iterable(path):
+    for name in _iterable(path):
         if os.path.isfile(name) or os.path.islink(name):
             os.remove(name)
         elif os.path.isdir(name):
@@ -224,7 +239,7 @@ def touch(filename, times=None):
 
 def which(name):
     """
-    Shows the full path of shell commands
+    Shows the full path of shell commands and executables
 
     :type name: str
     :param name: name of shell command to check
@@ -245,3 +260,36 @@ def which(name):
     else:
         return None
 
+
+def nproc():
+    """
+    Get the number of processors available. Same as calling 'nproc' from
+    Linux command line.
+
+    TODO replace all instances of nproc() with os.cpu_count()
+
+
+    :rtype: int
+    :return: number of processors
+    :raises EnvironmentError: if nproc cannot be determined
+    """
+    _nproc = os.cpu_count()
+
+    # Method 1 calls 'nproc'. May fail and return '' if 'nproc' not avail.
+    if not _nproc:
+        _nproc = subprocess.run("nproc", shell=True, text=True,
+                                stdout=subprocess.PIPE).stdout.strip()
+    # Method 2 checks /proc/cpuinfo
+    if not _nproc:
+        if os.path.exists("/proc/cpuinfo"):
+            processors = 0
+            lines = open("/proc/cpuinfo", "r").readlines()
+            for line in lines:
+                if line.startswith("processor"):
+                    processors += 1
+            if processors:
+                _nproc = processors
+    if not _nproc:
+        raise EnvironmentError("Could not access 'nproc' information on system")
+
+    return int(_nproc)

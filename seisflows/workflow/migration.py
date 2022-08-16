@@ -5,154 +5,196 @@ In the terminology of seismic imaging, we are running a forward and adjoint
 simulation to derive the gradient of the objective function. This workflow
 sets up the machinery to derive a scaled, smoothed gradient from an initial
 model
+
+.. warning::
+    Misfit kernels require large amounts of disk space for storage.
+    Setting `export_kernel`==True when PAR.NTASK is large and model files
+    are large may lead to large file overhead.
+
+.. note::
+    Migration workflow includes an option to mask the gradient. While both
+    masking and preconditioning involve scaling the gradient, they are
+    fundamentally different operations: masking is ad hoc, preconditioning
+    is a change of variables; For more info, see Modrak & Tromp 2016 GJI
 """
 import os
 
+from seisflows import logger
+from seisflows.tools import msg, unix
+from seisflows.tools.specfem import Model
 from seisflows.workflow.forward import Forward
-from seisflows.tools import msg
 
 
 class Migration(Forward):
     """
-    Migration base class.
+    Migration Workflow
+    ------------------
+    Run forward and adjoint solver to produce event-dependent misfit kernels.
+    Sum and postprocess kernels to produce gradient. In seismic exploration
+    this is 'reverse time migration'.
 
-    Performs the workflow of an inversion up to the postprocessing. In the
-    terminology of seismic exploration, implements a 'reverse time migration'.
+    Parameters
+    ----------
+    :type export_gradient: bool
+    :param export_gradient: export the gradient after it has been generated
+        in the scratch directory. If False, gradient can be discarded from
+        scratch at any time in the workflow
+    :type export_kernels: bool
+    :param export_kernels: export each sources event kernels after they have
+        been generated in the scratch directory. If False, gradient can be
+        discarded from scratch at any time in the workflow
+
+    Paths
+    -----
+    :type path_mask: str
+    :param path_mask: optional path to a masking function which is used to
+        mask out or scale parts of the gradient. The user-defined mask must
+        match the file format of the input model (e.g., .bin files).
+    ***
     """
-    def __init__(self):
+    __doc__ = Forward.__doc__ + __doc__
+
+    def __init__(self, modules=None, path_mask=None, export_gradient=False,
+                 export_kernels=False, **kwargs):
         """
-        Init is used to instantiate global parameters defined by the input
-        parameter file.
+        Instantiate Migration-specific parameters
+
+        :type modules: list
+        :param modules: list of sub-modules that will be established as class
+            attributes by the setup() function. Should not need to be set by the
+            user
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
-        self.required.par(
-            "CASE", required=False, default="data", par_type=str,
-            docstr="How to address 'data' in your workflow, available options: "
-                   "1) 'data': Real data inversion. Observed waveforms must be "
-                   "provided by the user in PATH.DATA/{SOURCE_NAME}. OR if "
-                   "PAR.PREPROCESS=='pyatoa' data should be discoverable "
-                   "via IRIS webservices based on event ID and station codes"
-                   "2) 'synthetic': A synthetic-synthetic workflow. 'Data' "
-                   "will be generated as synthetics using PATH.MODEL_TRUE. "
-        )
-        self.required.par(
-            "SAVEGRADIENT", required=False, default=True, par_type=bool,
-            docstr="Save gradient files each time the gradient is evaluated"
-        )
-        self.required.par(
-            "SAVEKERNELS", required=False, default=False, par_type=bool,
-            docstr="Save event kernel files each time they are evaluated"
-        )
-        self.required.par(
-            "SAVEAS", required=False, default="binary", par_type=str,
-            docstr="Format to save models, gradients, kernels. Available: "
-                   "['binary': save files in native SPECFEM .bin format, "
-                   "'vector': save files as NumPy .npy files, "
-                   "'both': save as both binary and vectors]"
-        )
-        self.required.path(
-            "GRAD", required=False,
-            default=os.path.join(self.path.WORKDIR, "scratch", "evalgrad"),
-            docstr="scratch path to store any models or kernels related to "
-                   "gradient evaluations. Sub-directories will be generated "
-                   "inside PATH.GRAD to save various stages of gradient "
-                   "manipulation"
-        )
-        self.required.path(
-            "MODEL_TRUE", required=False,
-            default=os.path.join(self.path.WORKDIR, "specfem", "MODEL_TRUE"),
-            docstr="Target model to be used for PAR.CASE == 'synthetic'. The "
-                   "TRUE model will be used to evaluate forward simulations "
-                   "ONCE at the beginning of the workflow, to generate 'data'."
-        )
+        self._modules = modules
+        self.export_gradient = export_gradient
+        self.export_kernels = export_kernels
 
-    def check(self, validate=True):
+        self.path["mask"] = path_mask
+
+        # Overwriting base class required modules list
+        self._required_modules = ["system", "solver", "preprocess"]
+
+    @property
+    def task_list(self):
         """
-        Checks parameters and paths. Must be implemented by sub-class
+        USER-DEFINED TASK LIST. This property defines a list of class methods
+        that take NO INPUT and have NO RETURN STATEMENTS. This defines your
+        linear workflow, i.e., these tasks are to be run in order from start to
+        finish to complete a workflow.
+
+        This excludes 'check' (which is run during 'import_seisflows') and
+        'setup' which should be run separately
+
+        .. note::
+            For workflows that require an iterative approach (e.g. inversion),
+            this task list will be looped over, so ensure that any setup and
+            teardown tasks (run once per workflow, not once per iteration) are
+            not included.
+
+        :rtype: list
+        :return: list of methods to call in order during a workflow
         """
-        super().check(validate=validate)
+        return [self.evaluate_initial_misfit,
+                self.run_adjoint_simulations,
+                self.postprocess_event_kernels,
+                self.evaluate_gradient_from_kernels
+                ]
 
-        if self.par.CASE.upper() == "SYNTHETIC":
-            assert os.path.exists(self.path.MODEL_TRUE), \
-                "CASE == SYNTHETIC requires PATH.MODEL_TRUE"
-
-        if not self.path.DATA or not os.path.exists(self.path.DATA):
-            assert "MODEL_TRUE" in self.path, f"DATA or MODEL_TRUE must exist"
-
-    def setup(self, flow=None, return_flow=False):
+    def run_adjoint_simulations(self):
         """
-        Override the Forward.setup() method to include new flow functions
-        AND run setup for a the Postprocess module which will be used to deal
-        with the gradient
+        Performs adjoint simulations for a single given event. File manipulation
+        to ensure kernels are discoverable by other modules
         """
-        super().setup(flow=flow, return_flow=return_flow)
+        def run_adjoint_simulation():
+            """Adjoint simulation function to be run by system.run()"""
+            if self.export_kernels:
+                export_kernels = os.path.join(self.path.output, "kernels",
+                                              self.solver.source_name)
+            else:
+                export_kernels = False
 
-        postprocess = self.module("postprocess")
-        postprocess.setup()
+            # Run adjoint simulations on system. Make kernels discoverable in
+            # path `eval_grad`. Optionally export those kernels
+            self.solver.adjoint_simulation(
+                save_kernels=os.path.join(self.path.eval_grad, "kernels",
+                                          self.solver.source_name, ""),
+                export_kernels=export_kernels
+            )
 
-    def main(self, flow=None, return_flow=False):
-        """Inherits from seisflows.workflow.forward.Forward"""
-        flow = (self.evaluate_initial_misfit,
-                self.evaluate_gradient,
-                self.process_kernels,
-                self.write_gradient
+        logger.info(msg.mnr("EVALUATING EVENT KERNELS W/ ADJOINT SIMULATIONS"))
+        self.system.run([run_adjoint_simulation])
+
+    def postprocess_event_kernels(self):
+        """
+        Combine/sum NTASK event kernels into a single volumetric kernel and
+        then (optionally) smooth the output misfit kernel by convolving with
+        a 3D Gaussian function with user-defined horizontal and vertical
+        half-widths.
+        """
+        def combine_event_kernels():
+            """Combine event kernels into a misfit kernel"""
+            logger.info("combining event kernels into single misfit kernel")
+            self.solver.combine(
+                input_path=os.path.join(self.path.eval_grad, "kernels"),
+                output_path=os.path.join(self.path.eval_grad, "misfit_kernel")
+            )
+
+        def smooth_misfit_kernel():
+            """Smooth the output misfit kernel"""
+            if self.solver.smooth_h > 0. or self.solver.smooth_v > 0.:
+                logger.info(
+                    f"smoothing misfit kernel: "
+                    f"H={self.solver.smooth_h}; V={self.solver.smooth_v}"
+                )
+                # Make a distinction that we have a pre- and post-smoothed kern.
+                unix.mv(
+                    src=os.path.join(self.path.eval_grad, "misfit_kernel"),
+                    dst=os.path.join(self.path.eval_grad, "mk_nosmooth")
+                )
+                self.solver.smooth(
+                    input_path=os.path.join(self.path.eval_grad, "mk_nosmooth"),
+                    output_path=os.path.join(self.path.eval_grad,
+                                             "misfit_kernel")
                 )
 
-        self.main(flow=flow, return_flow=return_flow)
+        logger.info(msg.mnr("GENERATING/PROCESSING MISFIT KERNEL"))
+        self.system.run([combine_event_kernels, smooth_misfit_kernel],
+                        single=True)
 
-    def evaluate_initial_misfit(self):
-        """Inherits from seisflows.workflow.forward.Forward"""
-        super().evaluate_initial_misfit()
-
-    def evaluate_gradient(self, path=None):
+    def evaluate_gradient_from_kernels(self):
         """
-        Performs adjoint simulation to retrieve the gradient of the objective.
-
-        .. note::
-            In the terminology of seismic exploration, we are 'backprojecting'
+        Generates the 'gradient' from the 'misfit kernel'. This involves
+        scaling the gradient by the model vector (log dm --> dm) and applying
+        an optional mask function to the gradient.
         """
-        system = self.module("system")
+        logger.info("scaling gradient to absolute model perturbations")
+        gradient = Model(path=os.path.join(self.path.eval_grad,
+                                           "misfit_kernel"))
 
-        self.logger.info(msg.mnr("EVALUATING GRADIENT"))
-        self.logger.debug(
-            f"evaluating gradient {self.par.NTASK} times on system..."
-        )
-        system.run("solver", "eval_grad", path=path or self.path.GRAD,
-                   export_traces=self.par.SAVETRACES)
+        # Set model: we only need to access parameters which will be updated
+        # Assuming that the model in the solver also generated the kernels
+        dst = os.path.join(self.path.eval_grad, "model")
+        unix.rm(dst)
+        unix.mkdir(dst)
+        for src in self.solver.model_files:
+            unix.ln(src, dst=os.path.join(dst, os.path.basename(src)))
 
-    def process_kernels(self):
-        """
-        System-run wrapper for postprocess.process_kernels which is meant to
-        sum and smooth all individual event kernels
-        """
-        system = self.module("system")
-        self.logger.info(msg.mnr("PROCESSING KERNELS"))
+        # Read in new model that will have been generated by `setup` or by
+        # optimization library
+        model = Model(path=dst)
 
-        # Runs kernel processing as a single parallel process
-        system.run("postprocess", "sum_smooth_kernels", single=True,
-                   path_grad=self.path.GRAD)
+        # Merge to vector and convert to absolute perturbations:
+        # log dm --> dm (see Eq.13 Tromp et al 2005)
+        gradient.update(vector=gradient.vector * model.vector)
+        gradient.write(path=os.path.join(self.path.eval_grad, "gradient"))
 
-    def write_gradient(self):
-        """
-        Uses the optimization and postprocess modules to scale the gradient
-        to the given model, write the gradient in vector form and model form,
-        and apply an optional mask to the gradient
+        # Apply an optional mask to the gradient
+        if self.path.mask:
+            logger.info("applying mask function to gradient")
+            mask = Model(path=self.path.mask)
+            unix.mv(src=os.path.join(self.path.eval_grad, "gradient"),
+                    dst=os.path.join(self.path.eval_grad, "gradient_nomask"))
 
-        .. note::
-
-        """
-        postprocess = self.module("postprocess")
-        optimize = self.module("optimize")
-        solver = self.module("solver")
-
-        # Scale the gradient by a mask and by the model
-        gradient = postprocess.scale_gradient(input_path=self.path.GRAD)
-        # Save the new gradient as a vector in PATH.OPTIMIZE
-        optimize.save("g_new", gradient)
-        # Save the new gradient as a set of model files (i.e., proc*_kernel.bin)
-        solver.save(solver.split(gradient),
-                    path=os.path.join(self.path.GRAD, "gradient"),
-                    suffix="_kernel")
-
-
+            gradient.update(vector=gradient.vector * mask.vector)
+            gradient.write(path=os.path.join(self.path.eval_grad, "gradient"))

@@ -1,7 +1,12 @@
 #! /usr/bin/env python
 """
-Run an IPython notebook (execute all cells) and then convert the notebook to a \
+Run an IPython notebook (execute all cells) and then convert the notebook to a 
 Sphinx .rst doc page in HTML
+
+.. rubric::
+    python convert.py  # to convert all .ipynb files
+    OR
+    python convert.py {notebook}.ipynb  # to convert a given notebook
 
 .. note::
     You will not need this if using the nbsphinx extension. 
