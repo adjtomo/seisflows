@@ -45,6 +45,7 @@ class Specfem:
     :type density: bool
     :param density: How to treat density during inversion. If True, updates
         density during inversion. If False, keeps it constant.
+        TODO allow density scaling during an inversion
     :type attenuation: bool
     :param attenuation: How to treat attenuation during inversion.
         if True, turns on attenuation during forward simulations only. If
@@ -231,6 +232,9 @@ class Specfem:
             path_specfem_data=self.path.specfem_data,
             source_prefix=self.source_prefix, ntask=self.ntask
         )
+
+        assert(isinstance(self.density, bool)), \
+            f"solver `density` must be True (variable) or False (constant)"
 
     @property
     def source_names(self):

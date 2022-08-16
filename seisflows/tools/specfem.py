@@ -49,7 +49,7 @@ class Model:
         self.path = path
         self.fmt = fmt
         self.model = None
-        self._parameters = None
+        self._parameters = parameters
         self._ngll = None
         self._nproc = None
 

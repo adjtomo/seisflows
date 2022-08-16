@@ -197,8 +197,18 @@ class Inversion(Migration):
         Add an additional line in the state file to keep track of iteration,
         """
         super().checkpoint()
-        with open(self.path.state_file, "a") as f:
-            f.write(f"iteration: {self.iteration}")
+        with open(self.path.state_file, "r") as f:
+            lines = f.readlines()
+        # Clear out the previous 'iteration' line and add in new
+        for i, line in enumerate(lines[:]):
+            if "iteration:" in line:
+                lines.pop(i)
+                break
+        lines.append(f"iteration: {self.iteration}")
+
+        # Rewrite checkpoint file with new iteration line
+        with open(self.path.state_file, "w") as f:
+            f.writelines(lines)
 
     def evaluate_objective_function(self, save_residuals=False, **kwargs):
         """
@@ -244,7 +254,7 @@ class Inversion(Migration):
                 # solvers
                 path_model = os.path.join(self.path.eval_grad, "model")
                 m_new = self.optimize.load_vector("m_new")
-                m_new.write(path=path_model, parameters=self.solver._parameters)
+                m_new.write(path=path_model)
 
                 # Run forward simulation/misfit quantification with previous
                 # model
@@ -270,7 +280,8 @@ class Inversion(Migration):
         """
         super().evaluate_gradient_from_kernels()
 
-        model = Model(os.path.join(self.path.eval_grad, "model"))
+        model = Model(os.path.join(self.path.eval_grad, "model"),
+                      parameters=self.solver._parameters)
         self.optimize.save_vector(name="m_new", m=model)
 
         gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"))
@@ -309,8 +320,7 @@ class Inversion(Migration):
         self.optimize.checkpoint()
 
         # Expose model `m_try` to the solver by placing it in eval_func dir.
-        m_try.write(path=os.path.join(self.path.eval_func, "model"),
-                    parameters=self.solver._parameters)
+        m_try.write(path=os.path.join(self.path.eval_func, "model"))
 
     def perform_line_search(self):
         """
@@ -407,7 +417,6 @@ class Inversion(Migration):
             model = self.optimize.load_vector("m_new")
             model.write(path=os.path.join(self.path.output,
                                           f"M{self.iteration:0>2}"),
-                        parameters=self.solver._parameters
                         )
 
         # Update optimization

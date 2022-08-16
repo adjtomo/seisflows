@@ -10,8 +10,30 @@ Template
 --------
 
 Each workflow starts with the module-only template parameter file which
-defines the core modules which make up the package. Running
-``seisflows setup`` from the command line will create this file.
+defines the core modules of the package. Your choices for each of these
+modules will determine which paths and parameters are included in the
+full parameter file. Running ``seisflows setup`` from the command line
+will create the template file.
+
+.. code:: ipython3
+
+    ! seisflows setup -h
+
+
+.. parsed-literal::
+
+    usage: seisflows setup [-h] [-f]
+    
+    In the specified working directory, copy template parameter file containing
+    only module choices, and symlink source code for both the base and super
+    repositories for easy edit access. If a parameter file matching the provided
+    name exists in the working directory, a prompt will appear asking the user if
+    they want to overwrite.
+    
+    optional arguments:
+      -h, --help   show this help message and exit
+      -f, --force  automatically overwrites existing parameter file
+
 
 .. code:: ipython3
 
@@ -49,30 +71,31 @@ defines the core modules which make up the package. Running
     #
     #                                    MODULES
     #                                    ///////
-    # WORKFLOW (str):    The method for running SeisFlows; equivalent to main()
-    # SOLVER (str):      External numerical solver to use for waveform simulations
-    # SYSTEM (str):      Computer architecture of the system being used
-    # OPTIMIZE (str):    Optimization algorithm for the inverse problem
-    # PREPROCESS (str):  Preprocessing schema for waveform data
-    # POSTPROCESS (str): Postprocessing schema for kernels and gradients
+    # workflow (str):    The types and order of functions for running SeisFlows
+    # system (str):      Computer architecture of the system being used
+    # solver (str):      External numerical solver to use for waveform simulations
+    # preprocess (str):  Preprocessing schema for waveform data
+    # optimize (str):    Optimization algorithm for the inverse problem
     # ==============================================================================
-    WORKFLOW: inversion
-    SOLVER: specfem2d
-    SYSTEM: workstation
-    OPTIMIZE: LBFGS 
-    PREPROCESS: base
-    POSTPROCESS: base
+    workflow: forward
+    system: workstation
+    solver: specfem2d
+    preprocess: default
+    optimize: gradient
 
 
-How do I choose my modules?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+How do I choose modules?
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-As seen above, each of the modules comes with a default value. But you
-may want to run a migration, not an inversion. Or run with SPECFEM3D not
-2D. As stated in the comments at the top of the file, the
-``seisflows print modules`` command lists out all available options.
-Don’t see an option that works for you? Learn to extend the SeisFlows
-package here: **!!! docs page link here !!!**
+As seen above, each of the modules comes with a default value which
+represents the base class\* for this module.
+
+* For an explanation of base classes and Python inheritance, see the `inheritance page.<inheritance.html>`__ 
+
+These default values are likely not suitable for all, e.g., if you want
+to run an inversion and not a forward workflow, or use SPECFEM3D not
+SPECFEM2D. To see all available module options, use the
+``seisflows print modules`` command.
 
 .. code:: ipython3
 
@@ -81,61 +104,44 @@ package here: **!!! docs page link here !!!**
 
 .. parsed-literal::
 
-                                   SEISFLOWS3 MODULES                               
-                                   //////////////////                               
-    '+': package, '-': module, '*': class
+                                   SEISFLOWS MODULES                                
+                                   /////////////////                                
+    '-': module, '*': class
     
-    + SYSTEM
-        - seisflows
-            * base
-            * cluster
-            * lsf
-            * slurm
-            * workstation
-        - seisflows-super
-            * chinook
-            * maui
-    + PREPROCESS
-        - seisflows
-            * base
-            * pyatoa
-        - seisflows-super
-            * pyatoa_nz
-    + SOLVER
-        - seisflows
-            * base
-            * specfem2d
-            * specfem3d
-            * specfem3d_globe
-        - seisflows-super
-            * specfem3d_maui
-    + POSTPROCESS
-        - seisflows
-            * base
-        - seisflows-super
-    + OPTIMIZE
-        - seisflows
-            * LBFGS
-            * NLCG
-            * base
-        - seisflows-super
-    + WORKFLOW
-        - seisflows
-            * base
-            * inversion
-            * migration
-            * test
-        - seisflows-super
-            * thrifty_inversion
-            * thrifty_maui
+    - workflow
+        * forward
+        * inversion
+        * migration
+    - system
+        * chinook
+        * cluster
+        * frontera
+        * lsf
+        * maui
+        * slurm
+        * workstation
+    - solver
+        * specfem
+        * specfem2d
+        * specfem3d
+        * specfem3d_globe
+    - preprocess
+        * default
+        * pyaflowa
+    - optimize
+        * LBFGS
+        * NLCG
+        * gradient
 
 
 How do I change modules?
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Feel free to use any old text editor to edit the YAML file, or you can
-use the ``seisflows par`` command to make changes directly from the
-command line. For example, say we want to use SPECFEM3D
+Feel free to use any text editor, or use the ``seisflows par`` command
+to make changes directly from the command line. For example, say we want
+to use SPECFEM3D as our solver module.
+
+This is also covered in the `command line tool page.<command_line_tool.html>`__
 
 .. code:: ipython3
 
@@ -145,7 +151,7 @@ command line. For example, say we want to use SPECFEM3D
 
 .. parsed-literal::
 
-    SOLVER: specfem2d -> specfem3d
+    solver: specfem2d -> specfem3d
 
 
 .. code:: ipython3
@@ -156,47 +162,69 @@ command line. For example, say we want to use SPECFEM3D
 
 .. parsed-literal::
 
-    SOLVER: specfem3d
+    solver: specfem3d
 
 
-How do I get to a full parameter file?
+How do I create a full parameter file?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The module-only parameter file serves as as a template for dynamically
-generating a full parameter file. Since each module requires it’s own
+generating the full parameter file. Since each module requires it’s own
 unique set of parameters and paths, each parameter file will look
-different. We can use the ``seisflows configure`` command to complete
-our parmater file, based on the chosen modules.
+different. We use the ``seisflows configure`` command to complete the
+file.
+
+.. code:: ipython3
+
+    ! seisflows configure -h
+
+
+.. parsed-literal::
+
+    usage: seisflows configure [-h] [-a]
+    
+    SeisFlows parameter files will vary depending on chosen modules and their
+    respective required parameters. This function will dynamically traverse the
+    source code and generate a template parameter file based on module choices.
+    The resulting file incldues docstrings and type hints for each parameter.
+    Optional parameters will be set with default values and required parameters
+    and paths will be marked appropriately. Required parameters must be set before
+    a workflow can be submitted.
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -a, --absolute_paths  Set default paths relative to cwd
+
 
 .. code:: ipython3
 
     ! seisflows configure
 
+Below we will take a look at the parameter file we just created
 
-.. parsed-literal::
+Anatomy of a parameter file
+---------------------------
 
-    filling parameters.yaml w/ default values
-
-
-Anatomy of the parameter file
------------------------------
-
-As we will see below, the parameter file has now been generated. Each
-module will define its own section, separated by a header of comments.
+Each of SeisFlows’ modules will define its own section in the parameter
+file, separated by a header of comments representing the docstring.
 Within each header, parameter names, types and descriptions are listed.
 At the bottom of the parameter file, there is a section defining paths
-required by the workflow. Section headers will look something:
+required by SeisFlows. Section headers will look something:
 
 .. code:: ipython3
 
     # =============================================================================
-    #                                    MODULE
-    #                                    //////                                    
-    # PARAMETER_NAME (type):
-    #   Description
+    # MODULE
+    # ------
+    # Module description 
+    #
+    # Parameters
+    # ----------
+    # :type parameter: type
+    # :param paramter: description
     # ...
     # =============================================================================
-    PARAMETER_NAME: parameter_value
+    parameter: value
 
 .. code:: ipython3
 
@@ -224,313 +252,110 @@ required by the workflow. Section headers will look something:
     #
     #                                    MODULES
     #                                    ///////
-    # WORKFLOW (str):    The method for running SeisFlows; equivalent to main()
-    # SOLVER (str):      External numerical solver to use for waveform simulations
-    # SYSTEM (str):      Computer architecture of the system being used
-    # OPTIMIZE (str):    Optimization algorithm for the inverse problem
-    # PREPROCESS (str):  Preprocessing schema for waveform data
-    # POSTPROCESS (str): Postprocessing schema for kernels and gradients
+    # workflow (str):    The types and order of functions for running SeisFlows
+    # system (str):      Computer architecture of the system being used
+    # solver (str):      External numerical solver to use for waveform simulations
+    # preprocess (str):  Preprocessing schema for waveform data
+    # optimize (str):    Optimization algorithm for the inverse problem
     # ==============================================================================
-    WORKFLOW: inversion
-    SOLVER: specfem3d
-    SYSTEM: workstation
-    OPTIMIZE: LBFGS 
-    PREPROCESS: base
-    POSTPROCESS: base
+    workflow: forward
+    system: workstation
+    solver: specfem3d
+    preprocess: default
+    optimize: gradient
+    # =============================================================================
+    #
+    #    Forward Workflow
+    #    ----------------
+    #    Run forward solver in parallel and (optionally) calculate
+    #    data-synthetic misfit and adjoint sources.
+    #
+    #    Parameters
+    #    ----------
+    #    :type modules: list of module
+    #    :param modules: instantiated SeisFlows modules which should have been
+    #        generated by the function `seisflows.config.import_seisflows` with a
+    #        parameter file generated by seisflows.configure
+    #    :type data_case: str
+    #    :param data_case: How to address 'data' in the workflow, available options:
+    #        'data': real data will be provided by the user in
+    #        `path_data/{source_name}` in the same format that the solver will
+    #        produce synthetics (controlled by `solver.format`) OR
+    #        synthetic': 'data' will be generated as synthetic seismograms using
+    #        a target model provided in `path_model_true`. If None, workflow will
+    #        not attempt to generate data.
+    #    :type export_traces: bool
+    #    :param export_traces: export all waveforms that are generated by the
+    #        external solver to `path_output`. If False, solver traces stored in
+    #        scratch may be discarded at any time in the workflow
+    #    :type export_residuals: bool
+    #    :param export_residuals: export all residuals (data-synthetic misfit) that
+    #        are generated by the external solver to `path_output`. If False,
+    #        residuals stored in scratch may be discarded at any time in the workflow
+    #
+    #        
+    # =============================================================================
+    data_case: data
+    export_traces: False
+    export_residuals: False
+    # =============================================================================
+    #
+    #    Workstation System
+    #    ------------------
+    #    Runs tasks in serial on a local machine.
+    #
+    #    Parameters
+    #    ----------
+    #    :type ntask: int
+    #    :param ntask: number of individual tasks/events to run during workflow.
+    #        Must be <= the number of source files in `path_specfem_data`
+    #    :type nproc: int
+    #    :param nproc: number of processors to use for each simulation
+    #    :type log_level: str
+    #    :param log_level: logger level to pass to logging module.
+
+
+.. code:: ipython3
+
+    ! tail parameters.yaml
+
+
+.. parsed-literal::
+
+    path_model_true: null
+    path_state_file: /Users/Chow/Repositories/seisflows/docs/notebooks/sfstate.txt
+    path_data: null
+    path_par_file: /Users/Chow/Repositories/seisflows/docs/notebooks/parameters.yaml
+    path_log_files: /Users/Chow/Repositories/seisflows/docs/notebooks/logs
+    path_output_log: /Users/Chow/Repositories/seisflows/docs/notebooks/sflog.txt
+    path_specfem_bin: null
+    path_specfem_data: null
+    path_solver: /Users/Chow/Repositories/seisflows/docs/notebooks/scratch/solver
+    path_preconditioner: null
+
+
+How do I know how parameters need to be set?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Most SeisFlows parameters come with reasonable default values. The
+docstrings headers will also list the expected type and available
+options (if any). You may also run the ``seisflows check`` command which
+verifies that parameters are set correctly.
+
+.. code:: ipython3
+
+    ! seisflows check
+
+
+.. parsed-literal::
+
     
-    # =============================================================================
-    #                                    SYSTEM                                    
-    #                                    //////                                    
-    # TITLE (str):
-    #   The name used to submit jobs to the system, defaults to the name of the
-    #   working directory
-    # PRECHECK (list):
-    #   A list of parameters that will be displayed to stdout before 'submit' or
-    #   'resume' is run. Useful for manually reviewing important parameters prior
-    #   to system submission
-    # LOG_LEVEL (str):
-    #   Verbosity output of SF3 logger. Available from least to most verbosity:
-    #   'CRITICAL', 'WARNING', 'INFO', 'DEBUG'; defaults to 'DEBUG'
-    # VERBOSE (bool):
-    #   Level of verbosity provided to the output log. If True, log statements
-    #   will declare what module/class/function they are being called from.
-    #   Useful for debugging but also very noisy.
-    # MPIEXEC (str):
-    #   Function used to invoke executables on the system. For example 'srun' on
-    #   SLURM systems, or './' on a workstation. If left blank, will guess based
-    #   on the system.
-    # NTASK (int):
-    #   Number of separate, individual tasks. Also equal to the number of desired
-    #   sources in workflow
-    # NPROC (int):
-    #   Number of processor to use for each simulation
-    # =============================================================================
-    TITLE: docs
-    PRECHECK:
-        - TITLE
-    LOG_LEVEL: DEBUG
-    VERBOSE: False
-    MPIEXEC:
-    NTASK: 1
-    NPROC: 1
-    
-    # =============================================================================
-    #                                  PREPROCESS                                  
-    #                                  //////////                                  
-    # MISFIT (str):
-    #   Misfit function for waveform comparisons, for available see
-    #   seisflows.plugins.misfit
-    # BACKPROJECT (str):
-    #   Backprojection function for migration, for available see
-    #   seisflows.plugins.adjoint
-    # NORMALIZE (list):
-    #   Data normalization parameters used to normalize the amplitudes of
-
-
-.. code:: ipython3
-
-    ! tail --lines=54 parameters.yaml
-
-
-.. parsed-literal::
-
-    # =============================================================================
-    #                                     PATHS                                    
-    #                                     /////                                    
-    # SCRATCH:
-    #   scratch path to hold temporary data during workflow
-    # OUTPUT:
-    #   directory to save workflow outputs to disk
-    # SYSTEM:
-    #   scratch path to hold any system related data
-    # LOCAL:
-    #   path to local data to be used during workflow
-    # LOGFILE:
-    #   the main output log file where all processes will track their status
-    # SOLVER:
-    #   scratch path to hold solver working directories
-    # SPECFEM_BIN:
-    #   path to the SPECFEM binary executables
-    # SPECFEM_DATA:
-    #   path to the SPECFEM DATA/ directory containing the 'Par_file', 'STATIONS'
-    #   file and 'CMTSOLUTION' files
-    # DATA:
-    #   path to data available to workflow
-    # MASK:
-    #   Directory to mask files for gradient masking
-    # OPTIMIZE:
-    #   scratch path to store data related to nonlinear optimization
-    # MODEL_INIT:
-    #   location of the initial model to be used for workflow
-    # MODEL_TRUE:
-    #   Target model to be used for PAR.CASE == 'synthetic'
-    # FUNC:
-    #   scratch path to store data related to function evaluations
-    # GRAD:
-    #   scratch path to store data related to gradient evaluations
-    # HESS:
-    #   scratch path to store data related to Hessian evaluations
-    # =============================================================================
-    PATHS:
-        SCRATCH: /home/bchow/REPOSITORIES/seisflows/seisflows/docs/scratch
-        OUTPUT: /home/bchow/REPOSITORIES/seisflows/seisflows/docs/output
-        SYSTEM: /home/bchow/REPOSITORIES/seisflows/seisflows/docs/scratch/system
-        LOCAL:
-        LOGFILE: /home/bchow/REPOSITORIES/seisflows/seisflows/docs/output_sf3.txt
-        SOLVER: /home/bchow/REPOSITORIES/seisflows/seisflows/docs/scratch/solver
-        SPECFEM_BIN: !!! REQUIRED PATH !!!
-        SPECFEM_DATA: !!! REQUIRED PATH !!!
-        DATA:
-        MASK:
-        OPTIMIZE: /home/bchow/REPOSITORIES/seisflows/seisflows/docs/scratch/optimize
-        MODEL_INIT: !!! REQUIRED PATH !!!
-        MODEL_TRUE:
-        FUNC: /home/bchow/REPOSITORIES/seisflows/seisflows/docs/scratch/scratch
-        GRAD: /home/bchow/REPOSITORIES/seisflows/seisflows/docs/scratch/evalgrad
-        HESS: /home/bchow/REPOSITORIES/seisflows/seisflows/docs/scratch/evalhess
-
-
-How do I know what parameters need to be set?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-   **NOTE**: Required parameters that can not be set to default values
-   will be listed as ``!!! REQUIRED PARAMETER !!!``
-
-We can check the required paths and parameters manually by scrolling
-through the parameter file, or we can use the
-``seisflows par --required`` command to list them out all at once.
-
-.. code:: ipython3
-
-    ! seisflows par --required
-
-
-.. parsed-literal::
-
-    !!! REQUIRED PARAMETER !!!
-    ==========================
-    	MATERIALS
-    	DENSITY
-    	ATTENUATION
-    	NT
-    	DT
-    	FORMAT
-    	CASE
-    	END
-    !!! REQUIRED PATH !!!
-    =====================
-    	SPECFEM_BIN
-    	SPECFEM_DATA
-    	MODEL_INIT
-
-
-Checking parameter validity
----------------------------
-
-You might be asking, how do I know if my parameters are set correctly?
-SeisFlows modules feature check() functions which dictate correct
-parameter values. You can run ``seisflows init`` to run these check()
-functions. Because we have required parameters still left unset in our
-parameter file, we expect the ``seisflows init`` function to throw an
-error.
-
-.. code:: ipython3
-
-    ! seisflows init
-
-
-.. parsed-literal::
-
     ================================================================================
-                               PARAMETER FILE READ ERROR                            
-                               /////////////////////////                            
-    Please check that your parameter file is properly formatted in the YAML format.
-    If you have just run 'seisflows configure', you may have some required
-    parameters that will need to be filled out before you can proceed. The error
-    message is:
-    
-    could not determine a constructor for the tag 'tag:yaml.org,2002:!'
-      in "parameters.yaml", line 147, column 12
+                                    PARAMETER ERRROR                                
+                                    ////////////////                                
+    `path_specfem_bin` must exist and must point to directory containing SPECFEM
+    executables
     ================================================================================
-
-
-Let’s set some random variables for the required parameters with the
-``seisflows par`` command and try again.
-
-.. code:: ipython3
-
-    ! seisflows par materials elastic
-    ! seisflows par density constant
-    ! seisflows par attenuation False
-    ! seisflows par nt 100
-    ! seisflows par dt .05
-    ! seisflows par format ascii
-    ! seisflows par case data
-    ! seisflows par end 1
-    ! seisflows par specfem_bin ./
-    ! seisflows par specfem_data ./
-    ! seisflows par model_init ./
-
-
-.. parsed-literal::
-
-    MATERIALS: !!! REQUIRED PARAMETER !!! -> elastic
-    DENSITY: !!! REQUIRED PARAMETER !!! -> constant
-    ATTENUATION: !!! REQUIRED PARAMETER !!! -> False
-    NT: !!! REQUIRED PARAMETER !!! -> 100
-    DT: !!! REQUIRED PARAMETER !!! -> .05
-    FORMAT: !!! REQUIRED PARAMETER !!! -> ascii
-    CASE: !!! REQUIRED PARAMETER !!! -> data
-    END: !!! REQUIRED PARAMETER !!! -> 1
-    SPECFEM_BIN: !!! REQUIRED PATH !!! -> ./
-    SPECFEM_DATA: !!! REQUIRED PATH !!! -> ./
-    MODEL_INIT: !!! REQUIRED PATH !!! -> ./
-
-
-.. code:: ipython3
-
-    ! seisflows init
-
-
-.. parsed-literal::
-
-    instantiating SeisFlows working state in directory: output
-
-
-Of course we knew that the above parameters were acceptable. But what if
-we input an unacceptable parameter into the parameter file and try
-again?
-
-.. code:: ipython3
-
-    ! rm -r output/
-    ! seisflows par materials visibily_incorrect_value
-    ! seisflows init
-
-
-.. parsed-literal::
-
-    MATERIALS: elastic -> visibily_incorrect_value
-    ================================================================================
-                                   MODULE CHECK ERROR                               
-                                   //////////////////                               
-    seisflows.config module check failed with:
-    
-    solver: MATERIALS must be in ['ELASTIC', 'ACOUSTIC', 'ISOTROPIC', 'ANISOTROPIC']
-    ================================================================================
-
-
-And voila, the module check has thrown an error, and told us (the User)
-how to properly set the value of the materials parameter. Hopefully a
-combination of thorough explanations in the parameter file section
-headers, and error catching with ``seisflows init`` makes crafting your
-own parameter file a smooth process.
-
-.. code:: ipython3
-
-    ! head -155 parameters.yaml | tail --lines=38
-
-
-.. parsed-literal::
-
-    
-    # =============================================================================
-    #                                    SOLVER                                    
-    #                                    //////                                    
-    # MATERIALS (str):
-    #   Material parameters used to define model. Available: ['ELASTIC': Vp, Vs,
-    #   'ACOUSTIC': Vp, 'ISOTROPIC', 'ANISOTROPIC']
-    # DENSITY (str):
-    #   How to treat density during inversion. Available: ['CONSTANT': Do not
-    #   update density, 'VARIABLE': Update density]
-    # ATTENUATION (str):
-    #   If True, turn on attenuation during forward simulations, otherwise set
-    #   attenuation off. Attenuation is always off for adjoint simulations.
-    # COMPONENTS (str):
-    #   Components used to generate data, formatted as a single string, e.g. ZNE
-    #   or NZ or E
-    # SOLVERIO (int):
-    #   The format external solver files. Available: ['fortran_binary', 'adios']
-    # NT (float):
-    #   Number of time steps set in the SPECFEM Par_file
-    # DT (float):
-    #   Time step or delta set in the SPECFEM Par_file
-    # FORMAT (float):
-    #   Format of synthetic waveforms used during workflow, available options:
-    #   ['ascii', 'su']
-    # SOURCE_PREFIX (str):
-    #   Prefix of SOURCE files in path SPECFEM_DATA. Available ['CMTSOLUTION',
-    #   FORCESOLUTION']
-    # =============================================================================
-    MATERIALS: visibily_incorrect_value
-    DENSITY: constant
-    ATTENUATION: False
-    COMPONENTS: ZNE
-    SOLVERIO: fortran_binary
-    NT: 100
-    DT: .05
-    FORMAT: ascii
-    SOURCE_PREFIX: CMTSOLUTION
 
 
 .. code:: ipython3
