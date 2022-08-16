@@ -99,12 +99,8 @@ but this can easily be accomplished in bash.
 .. code:: ipython3
 
     # vvv USER MUST EDIT THE FOLLOWING PATHS vvv
-    # MAC PATHS
-    WORKDIR = "/Users/Chow/Work/work/sf_specfem2d_example" 
-    SPECFEM2D = "/Users/Chow/Repositories/specfem2d"
-    # LINUX PATHS
-    # WORKDIR = "/home/bchow/Work/work/sf_specfem2d_example" 
-    # SPECFEM2D = "/home/bchow/REPOSITORIES/specfem2d"
+    WORKDIR = "/home/bchow/Work/scratch" 
+    SPECFEM2D = "/home/bchow/REPOSITORIES/specfem2d"
     # where WORKDIR: points to your own working directory
     # and SPECFEM2D: points to an existing specfem2D repository if available (if not set as '')
     # ^^^ USER MUST EDIT THE FOLLOWING PATHS ^^^
@@ -129,7 +125,8 @@ but this can easily be accomplished in bash.
 .. code:: ipython3
 
     # Download SPECFEM2D from GitHub, devel branch for latest codebase OR symlink from existing repo
-    os.makedirs(WORKDIR)
+    if not os.path.exists(WORKDIR):
+        os.makedirs(WORKDIR)
     os.chdir(WORKDIR)
     
     if os.path.exists("specfem2d"):
@@ -171,15 +168,10 @@ but this can easily be accomplished in bash.
 
 .. parsed-literal::
 
-    /Users/Chow/Repositories/specfem2d
-    [1m[34mxadj_seismogram[m[m                    [1m[34mxmeshfem2D[m[m
-    [1m[32mxadj_seismogram.dSYM[m[m               [1m[32mxmeshfem2D.dSYM[m[m
-    [1m[34mxcheck_quality_external_mesh[m[m       [1m[34mxsmooth_sem[m[m
-    [1m[32mxcheck_quality_external_mesh.dSYM[m[m  [1m[32mxsmooth_sem.dSYM[m[m
-    [1m[34mxcombine_sem[m[m                       [1m[34mxspecfem2D[m[m
-    [1m[32mxcombine_sem.dSYM[m[m                  [1m[32mxspecfem2D.dSYM[m[m
-    [1m[34mxconvolve_source_timefunction[m[m      [1m[34mxsum_kernels[m[m
-    [1m[32mxconvolve_source_timefunction.dSYM[m[m [1m[32mxsum_kernels.dSYM[m[m
+    /home/bchow/REPOSITORIES/specfem2d
+    xadj_seismogram		      xconvolve_source_timefunction  xspecfem2D
+    xcheck_quality_external_mesh  xmeshfem2D		     xsum_kernels
+    xcombine_sem		      xsmooth_sem
 
 
 1b. Create a separate SPECFEM2D working directory
@@ -222,8 +214,8 @@ to define our **DATA/** directory (last tested 8/15/22, bdba4389).
 
 .. parsed-literal::
 
-    /Users/Chow/Work/work/sf_specfem2d_example/specfem2d_workdir
-    [1m[32mDATA[m[m [1m[32mbin[m[m
+    /home/bchow/Work/scratch/specfem2d_workdir
+    bin  DATA
 
 
 .. code:: ipython3
@@ -243,14 +235,14 @@ to define our **DATA/** directory (last tested 8/15/22, bdba4389).
 
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
-     D a t e : 15 - 08 - 2022                                 T i m e  : 10:13:31
+     D a t e : 16 - 08 - 2022                                 T i m e  : 14:26:37
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
     
     see results in directory: OUTPUT_FILES/
     
     done
-    Mon Aug 15 10:13:31 PDT 2022
+    Tue Aug 16 02:26:37 PM AKDT 2022
 
 
 --------------
@@ -290,22 +282,15 @@ how SeisFlows3 operates within the SPECFEM2D framework):
 
 .. parsed-literal::
 
-    Par_file                         SOURCE_013
-    Par_file_Tape2007_132rec_checker SOURCE_014
-    Par_file_Tape2007_onerec         SOURCE_015
-    [1m[35mSOURCE[m[m                           SOURCE_016
-    SOURCE_001                       SOURCE_017
-    SOURCE_002                       SOURCE_018
-    SOURCE_003                       SOURCE_019
-    SOURCE_004                       SOURCE_020
-    SOURCE_005                       SOURCE_021
-    SOURCE_006                       SOURCE_022
-    SOURCE_007                       SOURCE_023
-    SOURCE_008                       SOURCE_024
-    SOURCE_009                       SOURCE_025
-    SOURCE_010                       STATIONS_checker
-    SOURCE_011                       interfaces_Tape2007.dat
-    SOURCE_012                       model_velocity.dat_checker
+    interfaces_Tape2007.dat		     SOURCE_003  SOURCE_012  SOURCE_021
+    model_velocity.dat_checker	     SOURCE_004  SOURCE_013  SOURCE_022
+    Par_file			     SOURCE_005  SOURCE_014  SOURCE_023
+    Par_file_Tape2007_132rec_checker     SOURCE_006  SOURCE_015  SOURCE_024
+    Par_file_Tape2007_onerec	     SOURCE_007  SOURCE_016  SOURCE_025
+    proc000000_model_velocity.dat_input  SOURCE_008  SOURCE_017  STATIONS
+    SOURCE				     SOURCE_009  SOURCE_018  STATIONS_checker
+    SOURCE_001			     SOURCE_010  SOURCE_019
+    SOURCE_002			     SOURCE_011  SOURCE_020
 
 
 1c. Generate initial and target models
@@ -362,7 +347,7 @@ of the initial model.
 
 .. parsed-literal::
 
-    [1m[32mDATA[m[m         [1m[32mOUTPUT_FILES[m[m [1m[32mbin[m[m
+    bin  DATA  OUTPUT_FILES
 
 
 .. code:: ipython3
@@ -391,8 +376,8 @@ of the initial model.
      **** Specfem 2-D Solver - serial version  ****
      **********************************************
     
-     Running Git version of the code corresponding to 
-     dating From 
+     Running Git version of the code corresponding to commit cf89366717d9435985ba852ef1d41a10cee97884
+     dating From Date:   Mon Nov 29 23:20:51 2021 -0800
     
     
      NDIM =            2
@@ -403,7 +388,7 @@ of the initial model.
      Tape-Liu-Tromp (GJI 2007)
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
-     D a t e : 15 - 08 - 2022                                 T i m e  : 10:14:13
+     D a t e : 16 - 08 - 2022                                 T i m e  : 14:26:52
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
 
@@ -463,8 +448,8 @@ directly.
      **** Specfem 2-D Solver - serial version  ****
      **********************************************
     
-     Running Git version of the code corresponding to 
-     dating From 
+     Running Git version of the code corresponding to commit cf89366717d9435985ba852ef1d41a10cee97884
+     dating From Date:   Mon Nov 29 23:20:51 2021 -0800
     
     
      NDIM =            2
@@ -475,7 +460,7 @@ directly.
      Tape-Liu-Tromp (GJI 2007)
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
-     D a t e : 15 - 08 - 2022                                 T i m e  : 10:14:13
+     D a t e : 16 - 08 - 2022                                 T i m e  : 14:26:52
      -------------------------------------------------------------------------------
      -------------------------------------------------------------------------------
 
@@ -488,7 +473,7 @@ directly.
 
 .. parsed-literal::
 
-    [1m[32mDATA[m[m              [1m[32mOUTPUT_FILES_INIT[m[m [1m[32mOUTPUT_FILES_TRUE[m[m [1m[32mbin[m[m
+    bin  DATA  OUTPUT_FILES_INIT  OUTPUT_FILES_TRUE
 
 
 2. Initialize SeisFlows (SF)
@@ -577,7 +562,7 @@ line commands.
 .. parsed-literal::
 
     creating parameter file: parameters.yaml
-    parameters.yaml   [1m[35mspecfem2d[m[m         [1m[32mspecfem2d_workdir[m[m
+    parameters.yaml  sflog.txt  specfem2d  specfem2d_workdir
 
 
 .. code:: ipython3
@@ -716,7 +701,7 @@ choice for each.
 .. code:: ipython3
 
     ! seisflows configure
-    ! cat parameters.yaml
+    ! head --lines=50 parameters.yaml
 
 
 .. parsed-literal::
@@ -771,369 +756,13 @@ choice for each.
     #        produce synthetics (controlled by `solver.format`) OR
     #        synthetic': 'data' will be generated as synthetic seismograms using
     #        a target model provided in `path_model_true`. If None, workflow will
-    #        not attempt to generate data.
-    #    :type stop_after: str
-    #    :param stop_after: optional name of task in task list (use
-    #        `seisflows print tasks` to get task list for given workflow) to stop
-    #        workflow after, allowing user to prematurely stop a workflow to explore
-    #        intermediate results or debug.
-    #    :type export_traces: bool
-    #    :param export_traces: export all waveforms that are generated by the
-    #        external solver to `path_output`. If False, solver traces stored in
-    #        scratch may be discarded at any time in the workflow
-    #    :type export_residuals: bool
-    #    :param export_residuals: export all residuals (data-synthetic misfit) that
-    #        are generated by the external solver to `path_output`. If False,
-    #        residuals stored in scratch may be discarded at any time in the workflow
-    #
-    #        
-    #    Migration Workflow
-    #    ------------------
-    #    Run forward and adjoint solver to produce event-dependent misfit kernels.
-    #    Sum and postprocess kernels to produce gradient. In seismic exploration
-    #    this is 'reverse time migration'.
-    #
-    #    Parameters
-    #    ----------
-    #    :type export_gradient: bool
-    #    :param export_gradient: export the gradient after it has been generated
-    #        in the scratch directory. If False, gradient can be discarded from
-    #        scratch at any time in the workflow
-    #    :type export_kernels: bool
-    #    :param export_kernels: export each sources event kernels after they have
-    #        been generated in the scratch directory. If False, gradient can be
-    #        discarded from scratch at any time in the workflow
-    #
-    #        
-    #    Inversion Workflow
-    #    ------------------
-    #    Peforms iterative nonlinear inversion using the machinery of the Forward
-    #    and Migration workflows, as well as a built-in optimization library.
-    #
-    #    Parameters
-    #    ----------
-    #    :type start: int
-    #    :param start: start inversion workflow at this iteration. 1 <= start <= inf
-    #    :type end: int
-    #    :param end: end inversion workflow at this iteration. start <= end <= inf
-    #    :type iteration: int
-    #    :param iteration: The current iteration of the workflow. If NoneType, takes
-    #        the value of `start` (i.e., first iteration of the workflow). User can
-    #        also set between `start` and `end` to resume a failed workflow.
-    #    :type thrifty: bool
-    #    :param thrifty: a thrifty inversion skips the costly intialization step
-    #        (i.e., forward simulations and misfit quantification) if the final
-    #        forward simulations from the previous iterations line search can be
-    #        used in the current one. Requires L-BFGS optimization.
-    #    :type export_model: bool
-    #    :param export_model: export best-fitting model from the line search to disk.
-    #        If False, new models can be discarded from scratch at any time.
-    #
-    #        
-    # =============================================================================
-    data_case: data
-    stop_after: null
-    export_traces: False
-    export_residuals: False
-    export_gradient: False
-    export_kernels: False
-    start: 1
-    end: 1
-    export_model: True
-    thrifty: False
-    iteration: 1
-    # =============================================================================
-    #
-    #    Workstation System
-    #    ------------------
-    #    Runs tasks in serial on a local machine.
-    #
-    #    Parameters
-    #    ----------
-    #    :type ntask: int
-    #    :param ntask: number of individual tasks/events to run during workflow.
-    #        Must be <= the number of source files in `path_specfem_data`
-    #    :type nproc: int
-    #    :param nproc: number of processors to use for each simulation
-    #    :type log_level: str
-    #    :param log_level: logger level to pass to logging module.
-    #        Available: 'debug', 'info', 'warning', 'critical'
-    #    :type verbose: bool
-    #    :param verbose: if True, formats the log messages to include the file
-    #        name, line number and message type. Useful for debugging but
-    #        also very verbose.
-    #
-    #        
-    # =============================================================================
-    ntask: 1
-    nproc: 1
-    log_level: DEBUG
-    verbose: False
-    # =============================================================================
-    #
-    #    Solver SPECFEM
-    #    --------------
-    #    Generalized SPECFEM interface to manipulate SPECFEM2D/3D/3D_GLOBE w/ Python
-    #
-    #    Parameters
-    #    ----------
-    #    :type data_format: str
-    #    :param data_format: data format for reading traces into memory.
-    #        Available: ['SU': seismic unix format, 'ASCII': human-readable ascii]
-    #    :type materials: str
-    #    :param materials: Material parameters used to define model. Available:
-    #        ['ELASTIC': Vp, Vs, 'ACOUSTIC': Vp, 'ISOTROPIC', 'ANISOTROPIC']
-    #    :type density: bool
-    #    :param density: How to treat density during inversion. If True, updates
-    #        density during inversion. If False, keeps it constant.
-    #        TODO allow density scaling during an inversion
-    #    :type attenuation: bool
-    #    :param attenuation: How to treat attenuation during inversion.
-    #        if True, turns on attenuation during forward simulations only. If
-    #        False, attenuation is always set to False. Requires underlying
-    #        attenution (Q_mu, Q_kappa) model
-    #    :type smooth_h: float
-    #    :param smooth_h: Gaussian half-width for horizontal smoothing in units
-    #        of meters. If 0., no smoothing applied
-    #    :type smooth_h: float
-    #    :param smooth_v: Gaussian half-width for vertical smoothing in units
-    #        of meters.
-    #    :type components: str
-    #    :param components: components to consider and tag data with. Should be
-    #        string of letters such as 'RTZ'
-    #    :type solver_io: str
-    #    :param solver_io: format of model/kernel/gradient files expected by the
-    #        numerical solver. Available: ['fortran_binary': default .bin files].
-    #        TODO: ['adios': ADIOS formatted files]
-    #    :type source_prefix: str
-    #    :param source_prefix: prefix of source/event/earthquake files. If None,
-    #        will attempt to guess based on the specific solver chosen.
-    #    :type mpiexec: str
-    #    :param mpiexec: MPI executable used to run parallel processes. Should also
-    #        be defined for the system module
-    #
-    #        
-    #    Solver SPECFEM2D
-    #    ----------------
-    #    SPECFEM2D-specific alterations to the base SPECFEM module
-    #
-    #    Parameters
-    #    ----------
-    #    :type source_prefix: str
-    #    :param source_prefix: Prefix of source files in path SPECFEM_DATA. Defaults
-    #        to 'SOURCE'
-    #    :type multiples: bool
-    #    :param multiples: set an absorbing top-boundary condition
-    #
-    #        
-    # =============================================================================
-    data_format: ascii
-    materials: acoustic
-    density: False
-    attenuation: False
-    smooth_h: 0.0
-    smooth_v: 0.0
-    components: ZNE
-    source_prefix: SOURCE
-    multiples: False
-    # =============================================================================
-    #
-    #    Default Preprocess
-    #    ------------------
-    #    Data processing for seismic traces, with options for data misfit,
-    #    filtering, normalization and muting.
-    #
-    #    Parameters
-    #    ----------
-    #    :type data_format: str
-    #    :param data_format: data format for reading traces into memory. For
-    #        available see: seisflows.plugins.preprocess.readers
-    #    :type misfit: str
-    #    :param misfit: misfit function for waveform comparisons. For available
-    #        see seisflows.plugins.preprocess.misfit
-    #    :type backproject: str
-    #    :param backproject: backprojection function for migration, or the
-    #        objective function in FWI. For available see
-    #        seisflows.plugins.preprocess.adjoint
-    #    :type normalize: str
-    #    :param normalize: Data normalization parameters used to normalize the
-    #        amplitudes of waveforms. Choose from two sets:
-    #        ENORML1: normalize per event by L1 of traces; OR
-    #        ENORML2: normalize per event by L2 of traces;
-    #        &
-    #        TNORML1: normalize per trace by L1 of itself; OR
-    #        TNORML2: normalize per trace by L2 of itself
-    #    :type filter: str
-    #    :param filter: Data filtering type, available options are:
-    #        BANDPASS (req. MIN/MAX PERIOD/FREQ);
-    #        LOWPASS (req. MAX_FREQ or MIN_PERIOD);
-    #        HIGHPASS (req. MIN_FREQ or MAX_PERIOD)
-    #    :type min_period: float
-    #    :param min_period: Minimum filter period applied to time series.
-    #        See also MIN_FREQ, MAX_FREQ, if User defines FREQ parameters, they
-    #        will overwrite PERIOD parameters.
-    #    :type max_period: float
-    #    :param max_period: Maximum filter period applied to time series. See
-    #        also MIN_FREQ, MAX_FREQ, if User defines FREQ parameters, they will
-    #        overwrite PERIOD parameters.
-    #    :type min_freq: float
-    #    :param min_freq: Maximum filter frequency applied to time series,
-    #        See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ parameters,
-    #        they will overwrite PERIOD parameters.
-    #    :type max_freq: float
-    #    :param max_freq: Maximum filter frequency applied to time series,
-    #        See also MIN_PERIOD, MAX_PERIOD, if User defines FREQ parameters,
-    #        they will overwrite PERIOD parameters.
-    #    :type mute: list
-    #    :param mute: Data mute parameters used to zero out early / late
-    #        arrivals or offsets. Choose any number of:
-    #        EARLY: mute early arrivals;
-    #        LATE: mute late arrivals;
-    #        SHORT: mute short source-receiver distances;
-    #        LONG: mute long source-receiver distances
-    #
-    #        
-    # =============================================================================
-    misfit: waveform
-    adjoint: waveform
-    normalize: []
-    filter: null
-    min_period: null
-    max_period: null
-    min_freq: null
-    max_freq: null
-    mute: []
-    early_slope: null
-    early_const: null
-    late_slope: null
-    late_const: null
-    short_dist: null
-    
-    # =============================================================================
-    #
-    #    Gradient Optimization
-    #    ---------------------
-    #    Gradient/steepest descent optimization algorithm.
-    #
-    #    Parameters
-    #    ----------
-    #    :type line_search_method: str
-    #    :param line_search_method: chosen line_search algorithm. Currently available
-    #        are 'bracket' and 'backtrack'. See seisflows.plugins.line_search
-    #        for all available options
-    #    :type preconditioner: str
-    #    :param preconditioner: algorithm for preconditioning gradients. Currently
-    #        available: 'diagonal'. Requires `path_preconditioner` to point to a
-    #        set of files that define the preconditioner, formatted the same as the
-    #        input model
-    #    :type step_count_max: int
-    #    :param step_count_max: maximum number of trial steps to perform during
-    #        the line search before a change in line search behavior is
-    #        considered, or a line search is considered to have failed.
-    #    :type step_len_init: float
-    #    :param step_len_init: initial line search step length guess, provided
-    #        as a fraction of current model parameters.
-    #    :type step_len_max: float
-    #    :param step_len_max: maximum allowable step length during the line
-    #        search. Set as a fraction of the current model parameters
-    #
-    #        
-    # =============================================================================
-    preconditioner: null
-    step_count_max: 10
-    step_len_init: 0.05
-    step_len_max: 0.5
-    line_search_method: bracket
-    # =============================================================================
-    #
-    #	 Paths
-    #	 -----
-    #    :type workdir: str
-    #    :param workdir: working directory in which to look for data and store
-    #        results. Defaults to current working directory
-    #    :type path_output: str
-    #    :param path_output: path to directory used for permanent storage on disk.
-    #        Results and exported scratch files are saved here.
-    #    :type path_data: str
-    #    :param path_data: path to any externally stored data required by the solver
-    #    :type path_state_file: str
-    #    :param path_state_file: path to a text file used to track the current
-    #        status of a workflow (i.e., what functions have already been completed),
-    #        used for checkpointing and resuming workflows
-    #    :type path_model_init: str
-    #    :param path_model_init: path to the starting model used to calculate the
-    #        initial misfit. Must match the expected `solver_io` format.
-    #    :type path_model_true: str
-    #    :param path_model_true: path to a target model if `case`=='synthetic' and
-    #        a set of synthetic 'observations' are required for workflow.
-    #    :type path_eval_grad: str
-    #    :param path_eval_grad: scratch path to store files for gradient evaluation,
-    #        including models, kernels, gradient and residuals.
-    #        :type path_mask: str
-    #    :param path_mask: optional path to a masking function which is used to
-    #        mask out or scale parts of the gradient. The user-defined mask must
-    #        match the file format of the input model (e.g., .bin files).
-    #        :type path_eval_func: str
-    #    :param path_eval_func: scratch path to store files for line search objective
-    #        function evaluations, including models, misfit and residuals
-    #        
-    #    :type path_output_log: str
-    #    :param path_output_log: path to a text file used to store the outputs of
-    #        the package wide logger, which are also written to stdout
-    #    :type path_par_file: str
-    #    :param path_par_file: path to parameter file which is used to instantiate
-    #        the package
-    #    :type path_log_files: str
-    #    :param path_log_files: path to a directory where individual log files are
-    #        saved whenever a number of parallel tasks are run on the system.
-    #        
-    #    :type path_data: str
-    #    :param path_data: path to any externally stored data required by the solver
-    #    :type path_specfem_bin: str
-    #    :param path_specfem_bin: path to SPECFEM bin/ directory which
-    #        contains binary executables for running SPECFEM
-    #    :type path_specfem_data: str
-    #    :param path_specfem_data: path to SPECFEM DATA/ directory which must
-    #        contain the CMTSOLUTION, STATIONS and Par_file files used for
-    #        running SPECFEM
-    #            
-    #    :type path_preprocess: str
-    #    :param path_preprocess: scratch path for all preprocessing processes,
-    #        including saving files
-    #        
-    #    :type path_preconditioner: str
-    #    :param path_preconditioner: optional path to a set of preconditioner files
-    #        formatted the same as the input model (or output model of solver).
-    #        Required to exist and contain files if `preconditioner`==True
-    #        
-    # =============================================================================
-    path_workdir: /Users/Chow/Work/work/sf_specfem2d_example
-    path_scratch: /Users/Chow/Work/work/sf_specfem2d_example/scratch
-    path_eval_grad: /Users/Chow/Work/work/sf_specfem2d_example/scratch/eval_grad
-    path_output: /Users/Chow/Work/work/sf_specfem2d_example/output
-    path_model_init: null
-    path_model_true: null
-    path_state_file: /Users/Chow/Work/work/sf_specfem2d_example/sfstate.txt
-    path_data: null
-    path_mask: null
-    path_eval_func: /Users/Chow/Work/work/sf_specfem2d_example/scratch/eval_func
-    path_par_file: /Users/Chow/Work/work/sf_specfem2d_example/parameters.yaml
-    path_log_files: /Users/Chow/Work/work/sf_specfem2d_example/logs
-    path_output_log: /Users/Chow/Work/work/sf_specfem2d_example/sflog.txt
-    path_specfem_bin: null
-    path_specfem_data: null
-    path_solver: /Users/Chow/Work/work/sf_specfem2d_example/scratch/solver
-    path_preconditioner: null
 
 
 .. code:: ipython3
 
     # EDIT THE SEISFLOWS PARAMETER FILE
     ! seisflows par ntask 3  # set the number of sources/events to use
-    ! seisflows par materials elastic  # how the velocity model is parameterized
-    ! seisflows par density False  # update density or keep constant
-    ! seisflows par attenuation False
-    ! seisflows par start 1  # first iteration
+    ! seisflows par materials elastic  # update Vp and Vs during inversion
     ! seisflows par end 2  # final iteration -- we will only run 1
     ! seisflows par data_case synthetic  # synthetic-synthetic means we need both INIT and TRUE models
     ! seisflows par components Y  # this default example creates Y-component seismograms
@@ -1150,13 +779,16 @@ choice for each.
 
     ntask: 1 -> 3
     materials: acoustic -> elastic
-    density: False -> False
-    attenuation: False -> False
-    start: 1 -> 1
     end: 1 -> 2
     data_case: data -> synthetic
     components: ZNE -> Y
     step_count_max: 10 -> 5
+    path_specfem_bin: null -> /home/bchow/Work/scratch/specfem2d_workdir/bin
+    path_specfem_data: null -> /home/bchow/Work/scratch/specfem2d_workdir/DATA
+    path_model_init: null ->
+    /home/bchow/Work/scratch/specfem2d_workdir/OUTPUT_FILES_INIT
+    path_model_true: null ->
+    /home/bchow/Work/scratch/specfem2d_workdir/OUTPUT_FILES_TRUE
 
 
 
@@ -1261,21 +893,16 @@ In the Inversion workflow, the tasks listed are described as follows:
    preparation for subsequent iterations
 
 Let’s set the ``stop_after`` argument to **evaluate_initial_misfit**,
-this will halt the workflow after the intialization step. We’ll also set
-the ``verbose`` parameter to ‘False’, to keep the logging format
-relatively simple. We will explore the ``verbose``\ ==True option in a
-later cell.
+this will halt the workflow after the intialization step.
 
 .. code:: ipython3
 
     ! seisflows par stop_after evaluate_initial_misfit
-    ! seisflows par verbose False
 
 
 .. parsed-literal::
 
     stop_after: null -> evaluate_initial_misfit
-    verbose: False -> False
 
 
 --------------
@@ -1298,59 +925,59 @@ Since this is our first run, we’ll use ``seisflows submit``.
 
 .. parsed-literal::
 
-    2022-08-15 16:11:40 (I) | 
+    2022-08-16 14:32:48 (I) | 
     ================================================================================
                              SETTING UP INVERSION WORKFLOW                          
     ================================================================================
-    2022-08-15 16:11:47 (D) | running setup for module 'system.Workstation'
-    2022-08-15 16:11:50 (D) | copying par/log file to: /Users/Chow/Work/work/sf_specfem2d_example/logs/sflog_001.txt
-    2022-08-15 16:11:50 (D) | copying par/log file to: /Users/Chow/Work/work/sf_specfem2d_example/logs/parameters_001.yaml
-    2022-08-15 16:11:50 (D) | running setup for module 'solver.Specfem2D'
-    2022-08-15 16:11:50 (I) | initializing 3 solver directories
-    2022-08-15 16:11:50 (D) | initializing solver directory source: 001
-    2022-08-15 16:11:58 (D) | linking source '001' as 'mainsolver'
-    2022-08-15 16:11:58 (D) | initializing solver directory source: 002
-    2022-08-15 16:12:04 (D) | initializing solver directory source: 003
-    2022-08-15 16:12:13 (D) | running setup for module 'preprocess.Default'
-    2022-08-15 16:12:14 (D) | running setup for module 'optimize.Gradient'
-    2022-08-15 16:12:15 (I) | no optimization checkpoint found, assuming first run
-    2022-08-15 16:12:16 (I) | re-loading optimization module from checkpoint
-    2022-08-15 16:12:16 (I) | 
+    2022-08-16 14:32:55 (D) | running setup for module 'system.Workstation'
+    2022-08-16 14:32:57 (D) | copying par/log file to: /home/bchow/Work/scratch/logs/sflog_001.txt
+    2022-08-16 14:32:57 (D) | copying par/log file to: /home/bchow/Work/scratch/logs/parameters_001.yaml
+    2022-08-16 14:32:57 (D) | running setup for module 'solver.Specfem2D'
+    2022-08-16 14:32:57 (I) | initializing 3 solver directories
+    2022-08-16 14:32:57 (D) | initializing solver directory source: 001
+    2022-08-16 14:33:04 (D) | linking source '001' as 'mainsolver'
+    2022-08-16 14:33:04 (D) | initializing solver directory source: 002
+    2022-08-16 14:33:09 (D) | initializing solver directory source: 003
+    2022-08-16 14:33:16 (D) | running setup for module 'preprocess.Default'
+    2022-08-16 14:33:16 (D) | running setup for module 'optimize.Gradient'
+    2022-08-16 14:33:17 (I) | no optimization checkpoint found, assuming first run
+    2022-08-16 14:33:17 (I) | re-loading optimization module from checkpoint
+    2022-08-16 14:33:17 (I) | 
     ////////////////////////////////////////////////////////////////////////////////
                                   RUNNING ITERATION 01                              
     ////////////////////////////////////////////////////////////////////////////////
-    2022-08-15 16:12:16 (I) | 
+    2022-08-16 14:33:17 (I) | 
     ================================================================================
                                RUNNING INVERSION WORKFLOW                           
     ================================================================================
-    2022-08-15 16:12:16 (I) | 
+    2022-08-16 14:33:17 (I) | 
     ////////////////////////////////////////////////////////////////////////////////
                           EVALUATING MISFIT FOR INITIAL MODEL                       
     ////////////////////////////////////////////////////////////////////////////////
-    2022-08-15 16:12:16 (I) | checking initial model parameters
-    2022-08-15 16:12:16 (I) | 2600.00 <= rho <= 2600.00
-    2022-08-15 16:12:16 (I) | 3500.00 <= vs <= 3500.00
-    2022-08-15 16:12:16 (I) | 5800.00 <= vp <= 5800.00
-    2022-08-15 16:12:16 (I) | checking true/target model parameters
-    2022-08-15 16:12:16 (I) | 2600.00 <= rho <= 2600.00
-    2022-08-15 16:12:16 (I) | 3550.00 <= vs <= 3550.00
-    2022-08-15 16:12:16 (I) | 5900.00 <= vp <= 5900.00
-    2022-08-15 16:12:16 (I) | preparing observation data for source 001
-    2022-08-15 16:12:16 (I) | running forward simulation w/ target model for 001
-    2022-08-15 16:12:33 (I) | evaluating objective function for source 001
-    2022-08-15 16:12:33 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:12:53 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:12:53 (I) | preparing observation data for source 002
-    2022-08-15 16:12:53 (I) | running forward simulation w/ target model for 002
-    2022-08-15 16:13:09 (I) | evaluating objective function for source 002
-    2022-08-15 16:13:09 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:13:31 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:13:31 (I) | preparing observation data for source 003
-    2022-08-15 16:13:31 (I) | running forward simulation w/ target model for 003
-    2022-08-15 16:14:16 (I) | evaluating objective function for source 003
-    2022-08-15 16:14:16 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:14:33 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:14:33 (I) | stop workflow at `stop_after`: evaluate_initial_misfit
+    2022-08-16 14:33:17 (I) | checking initial model parameters
+    2022-08-16 14:33:17 (I) | 5800.00 <= vp <= 5800.00
+    2022-08-16 14:33:17 (I) | 2600.00 <= rho <= 2600.00
+    2022-08-16 14:33:17 (I) | 3500.00 <= vs <= 3500.00
+    2022-08-16 14:33:17 (I) | checking true/target model parameters
+    2022-08-16 14:33:17 (I) | 5900.00 <= vp <= 5900.00
+    2022-08-16 14:33:17 (I) | 2600.00 <= rho <= 2600.00
+    2022-08-16 14:33:17 (I) | 3550.00 <= vs <= 3550.00
+    2022-08-16 14:33:17 (I) | preparing observation data for source 001
+    2022-08-16 14:33:17 (I) | running forward simulation w/ target model for 001
+    2022-08-16 14:33:21 (I) | evaluating objective function for source 001
+    2022-08-16 14:33:21 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:33:25 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:33:25 (I) | preparing observation data for source 002
+    2022-08-16 14:33:25 (I) | running forward simulation w/ target model for 002
+    2022-08-16 14:33:29 (I) | evaluating objective function for source 002
+    2022-08-16 14:33:29 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:33:33 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:33:33 (I) | preparing observation data for source 003
+    2022-08-16 14:33:33 (I) | running forward simulation w/ target model for 003
+    2022-08-16 14:33:36 (I) | evaluating objective function for source 003
+    2022-08-16 14:33:36 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:33:40 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:33:40 (I) | stop workflow at `stop_after`: evaluate_initial_misfit
 
 
 .. note::
@@ -1428,49 +1055,49 @@ functions again:
 
 .. parsed-literal::
 
-    2022-08-15 16:15:06 (D) | setting iteration==1 from state file
-    2022-08-15 16:15:06 (I) | 
+    2022-08-16 14:36:42 (D) | setting iteration==1 from state file
+    2022-08-16 14:36:42 (I) | 
     ================================================================================
                              SETTING UP INVERSION WORKFLOW                          
     ================================================================================
-    2022-08-15 16:15:16 (D) | running setup for module 'system.Workstation'
-    2022-08-15 16:15:20 (D) | copying par/log file to: /Users/Chow/Work/work/sf_specfem2d_example/logs/sflog_002.txt
-    2022-08-15 16:15:20 (D) | copying par/log file to: /Users/Chow/Work/work/sf_specfem2d_example/logs/parameters_002.yaml
-    2022-08-15 16:15:20 (D) | running setup for module 'solver.Specfem2D'
-    2022-08-15 16:15:20 (I) | initializing 3 solver directories
-    2022-08-15 16:15:22 (D) | running setup for module 'preprocess.Default'
-    2022-08-15 16:15:23 (D) | running setup for module 'optimize.Gradient'
-    2022-08-15 16:15:25 (I) | re-loading optimization module from checkpoint
-    2022-08-15 16:15:27 (I) | re-loading optimization module from checkpoint
-    2022-08-15 16:15:27 (I) | 
+    2022-08-16 14:36:48 (D) | running setup for module 'system.Workstation'
+    2022-08-16 14:36:51 (D) | copying par/log file to: /home/bchow/Work/scratch/logs/sflog_002.txt
+    2022-08-16 14:36:51 (D) | copying par/log file to: /home/bchow/Work/scratch/logs/parameters_002.yaml
+    2022-08-16 14:36:51 (D) | running setup for module 'solver.Specfem2D'
+    2022-08-16 14:36:51 (I) | initializing 3 solver directories
+    2022-08-16 14:36:51 (D) | running setup for module 'preprocess.Default'
+    2022-08-16 14:36:52 (D) | running setup for module 'optimize.Gradient'
+    2022-08-16 14:36:53 (I) | re-loading optimization module from checkpoint
+    2022-08-16 14:36:54 (I) | re-loading optimization module from checkpoint
+    2022-08-16 14:36:54 (I) | 
     ////////////////////////////////////////////////////////////////////////////////
                                   RUNNING ITERATION 01                              
     ////////////////////////////////////////////////////////////////////////////////
-    2022-08-15 16:15:27 (I) | 
+    2022-08-16 14:36:54 (I) | 
     ================================================================================
                                RUNNING INVERSION WORKFLOW                           
     ================================================================================
-    2022-08-15 16:15:27 (I) | 'evaluate_initial_misfit' has already been run, skipping
-    2022-08-15 16:15:27 (I) | 
+    2022-08-16 14:36:54 (I) | 'evaluate_initial_misfit' has already been run, skipping
+    2022-08-16 14:36:54 (I) | 
     ////////////////////////////////////////////////////////////////////////////////
                     EVALUATING EVENT KERNELS W/ ADJOINT SIMULATIONS                 
     ////////////////////////////////////////////////////////////////////////////////
-    2022-08-15 16:15:27 (I) | running SPECFEM executable bin/xspecfem2D, log to 'adj_solver.log'
-    2022-08-15 16:16:11 (D) | renaming output event kernels: 'alpha' -> 'vp'
-    2022-08-15 16:16:11 (D) | renaming output event kernels: 'beta' -> 'vs'
-    2022-08-15 16:16:12 (I) | running SPECFEM executable bin/xspecfem2D, log to 'adj_solver.log'
-    2022-08-15 16:16:59 (D) | renaming output event kernels: 'alpha' -> 'vp'
-    2022-08-15 16:16:59 (D) | renaming output event kernels: 'beta' -> 'vs'
-    2022-08-15 16:16:59 (I) | running SPECFEM executable bin/xspecfem2D, log to 'adj_solver.log'
-    2022-08-15 16:17:45 (D) | renaming output event kernels: 'alpha' -> 'vp'
-    2022-08-15 16:17:45 (D) | renaming output event kernels: 'beta' -> 'vs'
-    2022-08-15 16:17:45 (I) | 
+    2022-08-16 14:36:54 (I) | running SPECFEM executable bin/xspecfem2D, log to 'adj_solver.log'
+    2022-08-16 14:37:05 (D) | renaming output event kernels: 'alpha' -> 'vp'
+    2022-08-16 14:37:05 (D) | renaming output event kernels: 'beta' -> 'vs'
+    2022-08-16 14:37:05 (I) | running SPECFEM executable bin/xspecfem2D, log to 'adj_solver.log'
+    2022-08-16 14:37:16 (D) | renaming output event kernels: 'alpha' -> 'vp'
+    2022-08-16 14:37:16 (D) | renaming output event kernels: 'beta' -> 'vs'
+    2022-08-16 14:37:18 (I) | running SPECFEM executable bin/xspecfem2D, log to 'adj_solver.log'
+    2022-08-16 14:37:29 (D) | renaming output event kernels: 'alpha' -> 'vp'
+    2022-08-16 14:37:29 (D) | renaming output event kernels: 'beta' -> 'vs'
+    2022-08-16 14:37:30 (I) | 
     ////////////////////////////////////////////////////////////////////////////////
                           GENERATING/PROCESSING MISFIT KERNEL                       
     ////////////////////////////////////////////////////////////////////////////////
-    2022-08-15 16:17:45 (I) | combining event kernels into single misfit kernel
-    2022-08-15 16:17:47 (I) | scaling gradient to absolute model perturbations
-    2022-08-15 16:17:49 (I) | stop workflow at `stop_after`: evaluate_gradient_from_kernels
+    2022-08-16 14:37:30 (I) | combining event kernels into single misfit kernel
+    2022-08-16 14:37:31 (I) | scaling gradient to absolute model perturbations
+    2022-08-16 14:37:32 (I) | stop workflow at `stop_after`: evaluate_gradient_from_kernels
 
 
 --------------
@@ -1501,7 +1128,7 @@ computation.
 
 .. parsed-literal::
 
-    [1m[32mgradient[m[m      [1m[32mkernels[m[m       [1m[32mmisfit_kernel[m[m [1m[32mmodel[m[m         residuals.txt
+    gradient  kernels  misfit_kernel  model  residuals.txt
 
 
 .. code:: ipython3
@@ -1512,7 +1139,7 @@ computation.
 
 .. parsed-literal::
 
-    proc000000_vp_kernel.bin proc000000_vs_kernel.bin
+    proc000000_vp_kernel.bin  proc000000_vs_kernel.bin
 
 
 .. code:: ipython3
@@ -1524,7 +1151,7 @@ computation.
 
 .. parsed-literal::
 
-    [1m[32m001[m[m [1m[32m002[m[m [1m[32m003[m[m
+    001  002  003
 
 
 .. code:: ipython3
@@ -1537,7 +1164,7 @@ computation.
 
 .. parsed-literal::
 
-    checkpoint.npz f_new.txt      g_new.npz      m_new.npz
+    checkpoint.npz	f_new.txt  g_new.npz  m_new.npz
 
 
 .. code:: ipython3
@@ -1573,12 +1200,12 @@ atleast two trial steps to complete the line search.
 
 .. code:: ipython3
 
-    ! seisflows par stop_after finalize_iteration  # We don't want to run the finalize() argument so that we can explore the dir
+    ! seisflows par stop_after perform_line_search  # We don't want to run the finalize_iteration argument so that we can explore the dir
 
 
 .. parsed-literal::
 
-    stop_after: evaluate_gradient_from_kernels -> finalize_iteration
+    stop_after: evaluate_gradient_from_kernels -> perform_line_search
 
 
 .. code:: ipython3
@@ -1588,136 +1215,131 @@ atleast two trial steps to complete the line search.
 
 .. parsed-literal::
 
-    2022-08-15 16:21:55 (D) | setting iteration==1 from state file
-    2022-08-15 16:21:55 (I) | 
+    2022-08-16 14:41:12 (D) | setting iteration==1 from state file
+    2022-08-16 14:41:12 (I) | 
     ================================================================================
                              SETTING UP INVERSION WORKFLOW                          
     ================================================================================
-    2022-08-15 16:22:03 (D) | running setup for module 'system.Workstation'
-    2022-08-15 16:22:05 (D) | copying par/log file to: /Users/Chow/Work/work/sf_specfem2d_example/logs/sflog_003.txt
-    2022-08-15 16:22:05 (D) | copying par/log file to: /Users/Chow/Work/work/sf_specfem2d_example/logs/parameters_003.yaml
-    2022-08-15 16:22:05 (D) | running setup for module 'solver.Specfem2D'
-    2022-08-15 16:22:05 (I) | initializing 3 solver directories
-    2022-08-15 16:22:07 (D) | running setup for module 'preprocess.Default'
-    2022-08-15 16:22:08 (D) | running setup for module 'optimize.Gradient'
-    2022-08-15 16:22:09 (I) | re-loading optimization module from checkpoint
-    2022-08-15 16:22:11 (I) | re-loading optimization module from checkpoint
-    2022-08-15 16:22:11 (I) | 
+    2022-08-16 14:41:18 (D) | running setup for module 'system.Workstation'
+    2022-08-16 14:41:21 (D) | copying par/log file to: /home/bchow/Work/scratch/logs/sflog_003.txt
+    2022-08-16 14:41:21 (D) | copying par/log file to: /home/bchow/Work/scratch/logs/parameters_003.yaml
+    2022-08-16 14:41:21 (D) | running setup for module 'solver.Specfem2D'
+    2022-08-16 14:41:21 (I) | initializing 3 solver directories
+    2022-08-16 14:41:22 (D) | running setup for module 'preprocess.Default'
+    2022-08-16 14:41:24 (D) | running setup for module 'optimize.Gradient'
+    2022-08-16 14:41:26 (I) | re-loading optimization module from checkpoint
+    2022-08-16 14:41:28 (I) | re-loading optimization module from checkpoint
+    2022-08-16 14:41:28 (I) | 
     ////////////////////////////////////////////////////////////////////////////////
                                   RUNNING ITERATION 01                              
     ////////////////////////////////////////////////////////////////////////////////
-    2022-08-15 16:22:11 (I) | 
+    2022-08-16 14:41:28 (I) | 
     ================================================================================
                                RUNNING INVERSION WORKFLOW                           
     ================================================================================
-    2022-08-15 16:22:11 (I) | 'evaluate_initial_misfit' has already been run, skipping
-    2022-08-15 16:22:11 (I) | 'run_adjoint_simulations' has already been run, skipping
-    2022-08-15 16:22:11 (I) | 'postprocess_event_kernels' has already been run, skipping
-    2022-08-15 16:22:11 (I) | 'evaluate_gradient_from_kernels' has already been run, skipping
-    2022-08-15 16:22:11 (I) | initializing 'bracket'ing line search
-    2022-08-15 16:22:11 (I) | enforcing max step length safeguard
-    2022-08-15 16:22:11 (D) | step length(s) = 0.00E+00
-    2022-08-15 16:22:11 (D) | misfit val(s)  = 1.28E-03
-    2022-08-15 16:22:11 (I) | try: first evaluation, attempt guess step length, alpha=9.08E+11
-    2022-08-15 16:22:11 (I) | try: applying initial step length safegaurd as alpha has exceeded maximum step length, alpha_new=1.44E+10
-    2022-08-15 16:22:11 (D) | overwriting initial step length, alpha_new=2.32E+09
-    2022-08-15 16:22:11 (I) | trial model 'm_try' parameters: 
-    2022-08-15 16:22:11 (I) | 5800.00 <= vp <= 5800.00
-    2022-08-15 16:22:11 (I) | 3244.51 <= vs <= 3790.00
-    2022-08-15 16:22:12 (I) | 
+    2022-08-16 14:41:28 (I) | 'evaluate_initial_misfit' has already been run, skipping
+    2022-08-16 14:41:28 (I) | 'run_adjoint_simulations' has already been run, skipping
+    2022-08-16 14:41:28 (I) | 'postprocess_event_kernels' has already been run, skipping
+    2022-08-16 14:41:28 (I) | 'evaluate_gradient_from_kernels' has already been run, skipping
+    2022-08-16 14:41:28 (I) | initializing 'bracket'ing line search
+    2022-08-16 14:41:28 (I) | enforcing max step length safeguard
+    2022-08-16 14:41:28 (D) | step length(s) = 0.00E+00
+    2022-08-16 14:41:28 (D) | misfit val(s)  = 1.28E-03
+    2022-08-16 14:41:28 (I) | try: first evaluation, attempt guess step length, alpha=9.08E+11
+    2022-08-16 14:41:28 (I) | try: applying initial step length safegaurd as alpha has exceeded maximum step length, alpha_new=1.44E+10
+    2022-08-16 14:41:28 (D) | overwriting initial step length, alpha_new=2.32E+09
+    2022-08-16 14:41:28 (I) | trial model 'm_try' parameters: 
+    2022-08-16 14:41:28 (I) | 5800.00 <= vp <= 5800.00
+    2022-08-16 14:41:28 (I) | 3244.51 <= vs <= 3790.00
+    2022-08-16 14:41:29 (I) | 
     LINE SEARCH STEP COUNT 01
     --------------------------------------------------------------------------------
-    2022-08-15 16:22:12 (I) | evaluating objective function for source 001
-    2022-08-15 16:22:12 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:22:23 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:22:23 (I) | evaluating objective function for source 002
-    2022-08-15 16:22:23 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:22:35 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:22:35 (I) | evaluating objective function for source 003
-    2022-08-15 16:22:35 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:22:48 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:22:48 (D) | misfit for trial model (f_try) == 8.65E-04
-    2022-08-15 16:22:48 (D) | step length(s) = 0.00E+00, 2.32E+09
-    2022-08-15 16:22:48 (D) | misfit val(s)  = 1.28E-03, 8.65E-04
-    2022-08-15 16:22:48 (I) | try: misfit not bracketed, increasing step length using golden ratio, alpha=3.76E+09
-    2022-08-15 16:22:49 (I) | line search model 'm_try' parameters: 
-    2022-08-15 16:22:49 (I) | 5800.00 <= vp <= 5800.00
-    2022-08-15 16:22:49 (I) | 3086.61 <= vs <= 3969.23
-    2022-08-15 16:22:49 (I) | trial step unsuccessful. re-attempting line search
-    2022-08-15 16:22:49 (I) | 
+    2022-08-16 14:41:29 (I) | evaluating objective function for source 001
+    2022-08-16 14:41:29 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:41:33 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:41:33 (I) | evaluating objective function for source 002
+    2022-08-16 14:41:33 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:41:36 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:41:36 (I) | evaluating objective function for source 003
+    2022-08-16 14:41:36 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:41:40 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:41:40 (D) | misfit for trial model (f_try) == 8.65E-04
+    2022-08-16 14:41:40 (D) | step length(s) = 0.00E+00, 2.32E+09
+    2022-08-16 14:41:40 (D) | misfit val(s)  = 1.28E-03, 8.65E-04
+    2022-08-16 14:41:40 (I) | try: misfit not bracketed, increasing step length using golden ratio, alpha=3.76E+09
+    2022-08-16 14:41:40 (I) | line search model 'm_try' parameters: 
+    2022-08-16 14:41:40 (I) | 5800.00 <= vp <= 5800.00
+    2022-08-16 14:41:40 (I) | 3086.61 <= vs <= 3969.23
+    2022-08-16 14:41:40 (I) | trial step unsuccessful. re-attempting line search
+    2022-08-16 14:41:40 (I) | 
     LINE SEARCH STEP COUNT 02
     --------------------------------------------------------------------------------
-    2022-08-15 16:22:49 (I) | evaluating objective function for source 001
-    2022-08-15 16:22:49 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:23:01 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:23:01 (I) | evaluating objective function for source 002
-    2022-08-15 16:23:01 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:23:13 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:23:13 (I) | evaluating objective function for source 003
-    2022-08-15 16:23:13 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:23:25 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:23:25 (D) | misfit for trial model (f_try) == 1.73E-03
-    2022-08-15 16:23:25 (D) | step length(s) = 0.00E+00, 2.32E+09, 3.76E+09
-    2022-08-15 16:23:25 (D) | misfit val(s)  = 1.28E-03, 8.65E-04, 1.73E-03
-    2022-08-15 16:23:25 (I) | try: bracket acceptable but step length unreasonable attempting to re-adjust step length alpha=1.59E+09
-    2022-08-15 16:23:25 (I) | line search model 'm_try' parameters: 
-    2022-08-15 16:23:25 (I) | 5800.00 <= vp <= 5800.00
-    2022-08-15 16:23:25 (I) | 3325.01 <= vs <= 3698.63
-    2022-08-15 16:23:25 (I) | trial step unsuccessful. re-attempting line search
-    2022-08-15 16:23:25 (I) | 
+    2022-08-16 14:41:40 (I) | evaluating objective function for source 001
+    2022-08-16 14:41:40 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:41:44 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:41:44 (I) | evaluating objective function for source 002
+    2022-08-16 14:41:44 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:41:48 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:41:48 (I) | evaluating objective function for source 003
+    2022-08-16 14:41:48 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:41:52 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:41:52 (D) | misfit for trial model (f_try) == 1.73E-03
+    2022-08-16 14:41:52 (D) | step length(s) = 0.00E+00, 2.32E+09, 3.76E+09
+    2022-08-16 14:41:52 (D) | misfit val(s)  = 1.28E-03, 8.65E-04, 1.73E-03
+    2022-08-16 14:41:52 (I) | try: bracket acceptable but step length unreasonable attempting to re-adjust step length alpha=1.59E+09
+    2022-08-16 14:41:52 (I) | line search model 'm_try' parameters: 
+    2022-08-16 14:41:52 (I) | 5800.00 <= vp <= 5800.00
+    2022-08-16 14:41:52 (I) | 3325.01 <= vs <= 3698.63
+    2022-08-16 14:41:52 (I) | trial step unsuccessful. re-attempting line search
+    2022-08-16 14:41:52 (I) | 
     LINE SEARCH STEP COUNT 03
     --------------------------------------------------------------------------------
-    2022-08-15 16:23:25 (I) | evaluating objective function for source 001
-    2022-08-15 16:23:25 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:23:37 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:23:37 (I) | evaluating objective function for source 002
-    2022-08-15 16:23:37 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:23:51 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:23:51 (I) | evaluating objective function for source 003
-    2022-08-15 16:23:51 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:24:03 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:24:04 (D) | misfit for trial model (f_try) == 2.59E-03
-    2022-08-15 16:24:04 (D) | step length(s) = 0.00E+00, 1.59E+09, 2.32E+09, 3.76E+09
-    2022-08-15 16:24:04 (D) | misfit val(s)  = 1.28E-03, 2.59E-03, 8.65E-04, 1.73E-03
-    2022-08-15 16:24:04 (I) | try: bracket acceptable but step length unreasonable attempting to re-adjust step length alpha=2.82E+09
-    2022-08-15 16:24:04 (I) | line search model 'm_try' parameters: 
-    2022-08-15 16:24:04 (I) | 5800.00 <= vp <= 5800.00
-    2022-08-15 16:24:04 (I) | 3189.77 <= vs <= 3852.13
-    2022-08-15 16:24:04 (I) | trial step unsuccessful. re-attempting line search
-    2022-08-15 16:24:04 (I) | 
+    2022-08-16 14:41:52 (I) | evaluating objective function for source 001
+    2022-08-16 14:41:52 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:41:56 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:41:56 (I) | evaluating objective function for source 002
+    2022-08-16 14:41:56 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:42:00 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:42:00 (I) | evaluating objective function for source 003
+    2022-08-16 14:42:00 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:42:03 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:42:03 (D) | misfit for trial model (f_try) == 2.59E-03
+    2022-08-16 14:42:03 (D) | step length(s) = 0.00E+00, 1.59E+09, 2.32E+09, 3.76E+09
+    2022-08-16 14:42:03 (D) | misfit val(s)  = 1.28E-03, 2.59E-03, 8.65E-04, 1.73E-03
+    2022-08-16 14:42:03 (I) | try: bracket acceptable but step length unreasonable attempting to re-adjust step length alpha=2.82E+09
+    2022-08-16 14:42:03 (I) | line search model 'm_try' parameters: 
+    2022-08-16 14:42:03 (I) | 5800.00 <= vp <= 5800.00
+    2022-08-16 14:42:03 (I) | 3189.77 <= vs <= 3852.13
+    2022-08-16 14:42:03 (I) | trial step unsuccessful. re-attempting line search
+    2022-08-16 14:42:03 (I) | 
     LINE SEARCH STEP COUNT 04
     --------------------------------------------------------------------------------
-    2022-08-15 16:24:04 (I) | evaluating objective function for source 001
-    2022-08-15 16:24:04 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:24:15 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:24:15 (I) | evaluating objective function for source 002
-    2022-08-15 16:24:15 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:24:27 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:24:27 (I) | evaluating objective function for source 003
-    2022-08-15 16:24:27 (D) | running forward simulation with 'Specfem2D'
-    2022-08-15 16:24:39 (D) | quantifying misfit with 'Default'
-    2022-08-15 16:24:39 (D) | misfit for trial model (f_try) == 3.46E-03
-    2022-08-15 16:24:39 (D) | step length(s) = 0.00E+00, 1.59E+09, 2.32E+09, 2.82E+09, 3.76E+09
-    2022-08-15 16:24:39 (D) | misfit val(s)  = 1.28E-03, 2.59E-03, 8.65E-04, 3.46E-03, 1.73E-03
-    2022-08-15 16:24:39 (I) | pass: bracket acceptable and step length reasonable. returning minimum line search misfit.
-    2022-08-15 16:24:39 (I) | line search model 'm_try' parameters: 
-    2022-08-15 16:24:39 (I) | 5800.00 <= vp <= 5800.00
-    2022-08-15 16:24:39 (I) | 3244.51 <= vs <= 3790.00
-    2022-08-15 16:24:39 (I) | trial step successful. finalizing line search
-    2022-08-15 16:24:39 (I) | 
+    2022-08-16 14:42:03 (I) | evaluating objective function for source 001
+    2022-08-16 14:42:03 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:42:07 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:42:07 (I) | evaluating objective function for source 002
+    2022-08-16 14:42:07 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:42:11 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:42:11 (I) | evaluating objective function for source 003
+    2022-08-16 14:42:11 (D) | running forward simulation with 'Specfem2D'
+    2022-08-16 14:42:15 (D) | quantifying misfit with 'Default'
+    2022-08-16 14:42:15 (D) | misfit for trial model (f_try) == 3.46E-03
+    2022-08-16 14:42:15 (D) | step length(s) = 0.00E+00, 1.59E+09, 2.32E+09, 2.82E+09, 3.76E+09
+    2022-08-16 14:42:15 (D) | misfit val(s)  = 1.28E-03, 2.59E-03, 8.65E-04, 3.46E-03, 1.73E-03
+    2022-08-16 14:42:15 (I) | pass: bracket acceptable and step length reasonable. returning minimum line search misfit.
+    2022-08-16 14:42:15 (I) | line search model 'm_try' parameters: 
+    2022-08-16 14:42:15 (I) | 5800.00 <= vp <= 5800.00
+    2022-08-16 14:42:15 (I) | 3244.51 <= vs <= 3790.00
+    2022-08-16 14:42:15 (I) | trial step successful. finalizing line search
+    2022-08-16 14:42:15 (I) | 
     FINALIZING LINE SEARCH
     --------------------------------------------------------------------------------
-    2022-08-15 16:24:39 (I) | writing optimization stats
-    2022-08-15 16:24:39 (I) | renaming current (new) optimization vectors as previous model (old)
-    2022-08-15 16:24:39 (I) | setting accepted trial model (try) as current model (new)
-    2022-08-15 16:24:39 (I) | misfit of accepted trial model is f=8.645E-04
-    2022-08-15 16:24:39 (I) | resetting line search step count to 0
-    2022-08-15 16:24:39 (I) | 
-    ////////////////////////////////////////////////////////////////////////////////
-                          CLEANING WORKDIR FOR NEXT ITERATION                       
-    ////////////////////////////////////////////////////////////////////////////////
-    2022-08-15 16:24:41 (I) | thrifty inversion encountering first iteration, defaulting to standard inversion workflow
-    2022-08-15 16:24:42 (I) | stop workflow at `stop_after`: finalize_iteration
+    2022-08-16 14:42:15 (I) | writing optimization stats
+    2022-08-16 14:42:15 (I) | renaming current (new) optimization vectors as previous model (old)
+    2022-08-16 14:42:15 (I) | setting accepted trial model (try) as current model (new)
+    2022-08-16 14:42:15 (I) | misfit of accepted trial model is f=8.645E-04
+    2022-08-16 14:42:15 (I) | resetting line search step count to 0
+    2022-08-16 14:42:15 (I) | stop workflow at `stop_after`: perform_line_search
 
 
 From the log statements above, we can see that the SeisFlows line search
@@ -1735,9 +1357,8 @@ of the line search made preparations for a subsequent iteration.
 
 .. parsed-literal::
 
-    alpha.txt        f_old.txt        m_new.npz        p_old.npz
-    checkpoint.npz   f_try.txt        m_old.npz
-    f_new.txt        g_old.npz        output_optim.txt
+    alpha.txt	f_new.txt  f_try.txt  m_new.npz  output_optim.txt
+    checkpoint.npz	f_old.txt  g_old.npz  m_old.npz  p_old.npz
 
 
 .. code:: ipython3
