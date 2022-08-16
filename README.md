@@ -3,6 +3,8 @@ SeisFlows
 
 `Documentation` can be found on Read the Docs: https://seisflows.readthedocs.io (in development)
 
+
+[![SCOPED](https://img.shields.io/endpoint?url=https://runkit.io/wangyinz/scoped/branches/master/Pyatoa)](https://github.com/SeisSCOPED/container/pkgs/container/pyatoa)
 [![Documentation Status](https://readthedocs.org/projects/seisflows/badge/?version=latest)](https://seisflows.readthedocs.io/en/latest/?badge=latest)
 ---
 
@@ -11,7 +13,7 @@ SeisFlows is a Python-based waveform inversion package used to tackle the proble
                                                                                  
 With a growing user base in academia and industry, this package has been used for production scale inversions, some with over a billion model parameters, for research problems related to oil and gas exploration, earthquake seismology, and general nonlinear optimization problems.                                         
                                                                                  
-Changes made in the SeisFlows3 package include code refactor to Python3, improvements in source-code implementation and readability, stronger adherance to coding standards (PEP-8), and additional functionalities not present in the original package.                                                                       
+Recent changes made with respect to the original SeisFlows code (now named SeisFlows Legacy): include code refactor to Python3, improvements in source-code implementation and readability, stronger adherance to coding standards (PEP-8), and additional functionalities including a command line tool and improved parameter input system.                                                                    
 
 References
 ----------
