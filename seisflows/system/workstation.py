@@ -127,8 +127,7 @@ class Workstation:
                 logger.debug(f"copying par/log file to: {dst}")
                 unix.cp(src=src, dst=dst)
 
-    def submit(self, workdir=None, parameter_file="parameters.yaml",
-               submit_call=None):
+    def submit(self, workdir=None, parameter_file="parameters.yaml"):
         """
         Submits the main workflow job as a serial job submitted directly to
         the system that is running the master job
@@ -138,11 +137,6 @@ class Workstation:
         :type parameter_file: str
         :param parameter_file: paramter file file name used to instantiate
             the SeisFlows package
-        :type submit_call: str
-        :param submit_call: child classes may require a specific submit call
-            if the job should be submitted to another system (e.g., on cluster
-            submitting jobs on compute nodes and not running directly on the
-            login node)
         """
         workflow = import_seisflows(workdir=workdir or self.path.workdir,
                                     parameter_file=parameter_file)

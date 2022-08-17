@@ -12,16 +12,22 @@ Useful commands for figuring out system-specific required parameters
     system supers will not be up to date until access to those systems are
     granted. This rosetta stone, for converting from SLURM to other workload
     management tools will be useful: https://slurm.schedmd.com/rosetta.pdf
+
+TODO
+    Create 'slurm_singulairty', a child class for singularity-based runs which
+    loads and runs programs through singularity, OR add a parameter options
+    which will change the run and/or submit calls
 """
 import os
 import sys
-import math
+import numpy as np
 import time
 import subprocess
 
 from seisflows import ROOT_DIR, logger
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
+from seisflows.tools.config import pickle_function_list
 
 
 class Slurm(Cluster):
@@ -33,6 +39,9 @@ class Slurm(Cluster):
 
     Parameters
     ----------
+    :type ntask_max: int
+    :param ntask_max: set the maximum number of simultaneously running array
+        job processes that are submitted to a cluster at one time.
     :type slurm_args: str
     :param slurm_args: Any (optional) additional SLURM arguments that will
         be passed to the SBATCH scripts. Should be in the form:
@@ -56,46 +65,98 @@ class Slurm(Cluster):
 
         # Must be overwritten by child class
         self.node_size = None
+        self.partition = None
+        self._partitions = {}
 
-    def check(self, validate=True):
+    def check(self):
         """
         Checks parameters and paths
         """
+        super().check()
+
         assert(self.node_size is not None), (
             f"Slurm system child classes require defining the `node_size` or "
             f"the number of cores per node inherent to the compute system")
 
-    def submit(self, submit_call=None):
+        assert(self.partition in self._partitions), \
+            f"Cluster partition name must match {self._partitions}"
+
+        assert("--parsable" in self.run_call_header), (
+            f"System `run_call_header` requires SBATCH argument '--parsable' "
+            f"which is required to keep STDOUT formatted correctly when "
+            f"submitting jobs to the system."
+        )
+
+    @property
+    def nodes(self):
+        """Defines the number of nodes which is derived from system node size"""
+        _nodes = np.ceil(self.nproc / float(self.node_size))
+        _nodes = _nodes.astype(int)
+        return _nodes
+
+    @property
+    def nodesize(self):
+        """Defines the node size of a given cluster partition. This is a hard
+        set number defined by the system architecture"""
+        return self._partitions[self.partition]
+
+    @property
+    def submit_call_header(self):
         """
-        Submits workflow as a single process master job on a SLURM system
+        The submit call defines the SBATCH header which is used to submit a
+        workflow task list to the system. It is usually dictated by the
+        system's required parameters, such as account names and partitions.
+        Submit calls are modified and called by the `submit` function.
 
-        :type submit_call: str
-        :param submit_call: subclasses (e.g., specific SLURM cluster subclasses)
-            can overload the sbatch command line input by setting
-            submit_call. If set to None, default submit_call will be set here.
+        :rtype: str
+        :return: the system-dependent portion of a submit call
         """
-        if submit_call is None:
-            submit_call = " ".join([
-                f"sbatch",
-                f"{self.slurm_args or ''}",
-                f"--job-name={self.title}",
-                f"--output={self.path.output_log}",
-                f"--error={self.path.output_log}",
-                f"--ntasks-per-node={self.node_size}",
-                f"--nodes=1",
-                f"--time={self.walltime:d}",
-                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",
-                f"--output {self.path.output}"
-            ])
+        _call = " ".join([
+            f"sbatch",
+            f"{self.slurm_args or ''}",
+            f"--job-name={self.title}",
+            f"--output={self.path.output_log}",
+            f"--error={self.path.output_log}",
+            f"--ntasks-per-node={self.node_size}",
+            f"--nodes=1",
+            f"--time={self.walltime:d}"
+        ])
+        return _call
 
-        logger.debug(submit_call)
-        super().submit(submit_call=submit_call)
+    @property
+    def run_call_header(self):
+        """
+        The run call defines the SBATCH header which is used to run tasks during
+        an executing workflow. Like the submit call its arguments are dictated
+        by the given system. Run calls are modified and called by the `run`
+        function
 
-    def run(self, funcs, single=False, run_call=None, **kwargs):
+        :rtype: str
+        :return: the system-dependent portion of a run call
+        """
+        _call = " ".join([
+             f"sbatch",
+             f"{self.slurm_args or ''}",
+             f"--job-name={self.title}",
+             f"--nodes={self.nodes}",
+             f"--ntasks-per-node={self.node_size:d}",
+             f"--ntasks={self.nproc:d}",
+             f"--time={self.tasktime:d}",
+             f"--output={os.path.join(self.path.log_files, '%A_%a')}",
+             f"--array=0-{self.ntask-1}%{self.ntask_max}",
+             f"--parsable"
+        ])
+        return _call
+
+
+    def run(self, funcs, single=False, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on a SLURM
         cluster. Executes classname.method(*args, **kwargs) `NTASK` times,
         each time on `NPROC` CPU cores
+
+        .. note::
+            Completely overwrites the `Cluster.run()` command
 
         :type funcs: list of methods
         :param funcs: a list of functions that should be run in order. All
@@ -106,34 +167,22 @@ class Slurm(Cluster):
             This will change how the job array and the number of tasks is
             defined, such that the job is submitted as a single-core job to
             the system.
-        :type run_call: str
-        :param run_call: subclasses (e.g., specific SLURM cluster subclasses)
-            can overload the sbatch command line input by setting
-            run_call. If set to None, default run_call will be set here.
         """
-        funcs_fid, kwargs_fid = self._pickle_func_list(funcs, **kwargs)
+        funcs_fid, kwargs_fid = pickle_function_list(funcs,
+                                                     path=self.path.scratch,
+                                                     **kwargs)
         logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
                     f"system {self.ntask} times")
 
         # Default sbatch command line input, can be overloaded by subclasses
         # Copy-paste this default run_call and adjust accordingly for subclass
-        if run_call is None:
-            run_call = " ".join([
-                "sbatch",
-                f"{self.slurm_args or ''}",
-                f"--job-name={self.title}",
-                f"--nodes={math.ceil(self.nproc/float(self.node_size)):d}",
-                f"--ntasks-per-node={self.node_size:d}",
-                f"--ntasks={self.nproc:d}",
-                f"--time={self.tasktime:d}",
-                f"--output={os.path.join(self.path.log_files, '%A_%a')}",
-                f"--array=0-{self.ntask-1}%{self.ntask_max}",
-                f"--parsable",  # keeps stdout cleaner
-                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
-                f"--funcs {funcs_fid}",
-                f"--kwargs {kwargs_fid}",
-                f"--environment {self.environs or ''}"
-            ])
+        run_call = " ".join([
+            f"{self.run_call_header}",
+            f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
+            f"--funcs {funcs_fid}",
+            f"--kwargs {kwargs_fid}",
+            f"--environment {self.environs or ''}"
+        ])
         logger.debug(run_call)
 
         # Single-process jobs simply need to replace a few sbatch arguments.
