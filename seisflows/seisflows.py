@@ -489,6 +489,8 @@ class SeisFlows:
             f = open(self._args.parameter_file, "a")
             # Write all module parameters and corresponding docstrings
             for module in modules:
+                if not module:
+                    continue
                 docstring = split_module_docstring(module, 0)
                 f.write(f"# {'=' * 77}\n#{docstring}\n# {'=' * 77}\n")
                 # Write the parameters, make sure to not have the same one twice
@@ -508,6 +510,8 @@ class SeisFlows:
             f.write("#\t Paths\n")
             f.write("#\t -----\n")
             for module in modules:
+                if not module:
+                    return
                 docstring = split_module_docstring(module, -1)
                 f.write(f"#{docstring}\n")
             f.write(f"# {'=' * 77}\n")
@@ -515,6 +519,8 @@ class SeisFlows:
             # Write values for publically accessible path structure
             written = []
             for module in modules:
+                if not module:
+                    continue
                 for key, val in module.path.items():
                     # '_key' means hidden path so don't include in par file
                     if key in written or key.startswith("_"):
