@@ -8,49 +8,83 @@ System module. Chinook-specific parameters and functions are defined here.
 Information on Chinook can be found here:
 https://uaf-rcs.gitbook.io/uaf-rcs-hpc-docs/hpc
 """
+import os
 from seisflows.system.slurm import Slurm
 
 
 class Chinook(Slurm):
     """
-    System interface for the University of Alaska HPC Chinook, which operates
-    on a SLURM system.
+    System Chinook
+    --------------
+    University of Alaska Fairbanks HPC Chinook, SLURM based system
+
+    Parameters
+    ----------
+    :type partition: str
+    :param partition: Chinook has various partitions which each have their
+        own number of cores per compute node. Available are: analysis, t1small,
+        t2small, t1standard, t2standard, gpu
+
+    Paths
+    -----
+
+    ***
     """
-    def __init__(self):
-        """
-        These parameters should not be set by the user.
-        Attributes are initialized as NoneTypes for clarity and docstrings.
+    __doc__ = Slurm.__doc__ + __doc__
 
-        :type partitions: dict
-        :param partitions: Chinook has various partitions which each have their
-            own number of cores per compute node, defined here
-        """
-        super().__init__()
 
-        self.required.par(
-            "PARTITION", required=False, default="t1small", par_type=int,
-            docstr="Name of partition on main cluster, available: "
-                   "analysis, t1small, t2small, t1standard, t2standard, gpu")
+    def __init__(self, partition="t1small", **kwargs):
+        """Chinook init"""
+        super().__init__(**kwargs)
 
-        self.required.par(
-            "MPIEXEC", required=False, default="srun", par_type=str,
-            docstr="Function used to invoke parallel executables")
+        self.partition = partition
 
-        self.partitions = {"debug": 24, "t1small": 28, "t2small": 28,
+        self._partitions = {"debug": 24, "t1small": 28, "t2small": 28,
                            "t1standard": 40, "t2standard": 40, "analysis": 28
                            }
 
-    def check(self, validate=True):
+    @property
+    def submit_call_header(self):
         """
-        Checks parameters and paths
+        The submit call defines the SBATCH header which is used to submit a
+        workflow task list to the system. It is usually dictated by the
+        system's required parameters, such as account names and partitions.
+        Submit calls are modified and called by the `submit` function.
+
+        :rtype: str
+        :return: the system-dependent portion of a submit call
         """
-        super().check(validate=validate)
+        _call = " ".join([
+            f"sbatch",
+            f"--job-name={self.title}",
+            f"--output={self.path.output_log}",
+            f"--error={self.path.output_log}",
+            f"--ntasks=1",
+            f"--partition={self.partition}",
+            f"--time={self._walltime}"
+        ])
+        return _call
 
-        assert(self.par.PARTITION in self.partitions.keys()), \
-            f"Chinook partition must be in {self.partitions.keys()}"
+    @property
+    def run_call_header(self):
+        """
+        The run call defines the SBATCH header which is used to run tasks during
+        an executing workflow. Like the submit call its arguments are dictated
+        by the given system. Run calls are modified and called by the `run`
+        function
 
-        assert(self.par.NODESIZE == self.partitions[self.par.PARTITION]), \
-            (f"PARTITION {self.par.PARTITION} is expected to have NODESIZE=" 
-             f"{self.partitions[self.par.PARTITION]}, not current "
-             f"{self.par.NODESIZE}")
-
+        :rtype: str
+        :return: the system-dependent portion of a run call
+        """
+        _call = " ".join([
+            f"sbatch",
+            f"{self.slurm_args or ''}",
+            f"--job-name={self.title}",
+            f"--ntasks={self.nproc:d}",
+            f"--tasks-per-node={self.nodesize}",
+            f"--time={self._tasktime}",
+            f"--output={os.path.join(self.path.log_files, '%A_%a')}",
+            f"--array=0-{self.ntask-1 % self.ntask_max}",
+            f"--parsable"
+        ])
+        return _call

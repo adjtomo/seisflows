@@ -489,6 +489,8 @@ class SeisFlows:
             f = open(self._args.parameter_file, "a")
             # Write all module parameters and corresponding docstrings
             for module in modules:
+                if not module:
+                    continue
                 docstring = split_module_docstring(module, 0)
                 f.write(f"# {'=' * 77}\n#{docstring}\n# {'=' * 77}\n")
                 # Write the parameters, make sure to not have the same one twice
@@ -508,6 +510,8 @@ class SeisFlows:
             f.write("#\t Paths\n")
             f.write("#\t -----\n")
             for module in modules:
+                if not module:
+                    continue
                 docstring = split_module_docstring(module, -1)
                 f.write(f"#{docstring}\n")
             f.write(f"# {'=' * 77}\n")
@@ -515,6 +519,8 @@ class SeisFlows:
             # Write values for publically accessible path structure
             written = []
             for module in modules:
+                if not module:
+                    continue
                 for key, val in module.path.items():
                     # '_key' means hidden path so don't include in par file
                     if key in written or key.startswith("_"):
@@ -559,33 +565,32 @@ class SeisFlows:
 
         # Load in old parameter file and then move it to a hidden file
         ogpars = load_yaml(self._args.parameter_file)
-        ogpaths = Dict(ogpars.pop("PATHS"))
         unix.mv(self._args.parameter_file, f"_{self._args.parameter_file}")
+        try:
+            # Create a new parameter file with updated module
+            unix.cp(PAR_FILE, self._args.workdir)
+            for name in NAMES:
+                setpar(key=name, val=ogpars[name],
+                       file=self._args.parameter_file, delim=":")
 
-        # Create a new parameter file with updated module
-        unix.cp(PAR_FILE, self._args.workdir)
-        for name in NAMES:
-            setpar(key=name, val=ogpars[name.upper()],
-                   file=self._args.parameter_file, delim=":")
+            # Overwrite with new parameters
+            setpar(key=module, val=classname, file=self._args.parameter_file,
+                   delim=":")
+            self.configure()
 
-        # Overwrite with new parameters
-        setpar(key=module, val=classname, file=self._args.parameter_file,
-               delim=":")
-        self.configure()
-        for key, val in ogpars.items():
-            try:
-                setpar(key=key, val=val, file=self._args.parameter_file,
-                       delim=":")
-            except KeyError:
-                continue
-        for key, val in ogpaths.items():
-            try:
-                setpar(key=key, val=val, file=self._args.parameter_file,
-                       delim=":")
-            except KeyError:
-                continue
-
-        unix.rm(f"_{self._args.parameter_file}")
+            ogpars.pop(module)  # don't edit the parameter were changing
+            for key, val in ogpars.items():
+                try:
+                    setpar(key=key, val=val, file=self._args.parameter_file,
+                           delim=":")
+                except KeyError:
+                    continue
+        # Replace parameter file if any errors happen
+        except Exception as e:
+            unix.mv(f"_{self._args.parameter_file}", self._args.parameter_file)
+            raise(e)
+        finally:
+            unix.rm(f"_{self._args.parameter_file}")
 
     def check(self, **kwargs):
         """
@@ -644,11 +649,11 @@ class SeisFlows:
 
         if check == "y":
             pars = load_yaml(self._args.parameter_file)
-            unix.rm(pars.path_scratch)
-            unix.rm(pars.path_output)
-            unix.rm(pars.path_log_files)
-            unix.rm(pars.path_state_file)
-            unix.rm(pars.path_output_log)
+            for name in ["scratch", "output", "log_files", "state_file", 
+                         "output_log"]:
+                path = f"path_{name}"
+                if path in pars:
+                    unix.rm(path)
 
     def restart(self, force=False, **kwargs):
         """

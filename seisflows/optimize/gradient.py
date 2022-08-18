@@ -41,7 +41,8 @@ class Gradient:
     """
     Gradient Optimization
     ---------------------
-    Gradient/steepest descent optimization algorithm.
+    Defines foundational structure for Optimization module. Applies a 
+    gradient/steepest descent optimization algorithm.
 
     Parameters
     ----------

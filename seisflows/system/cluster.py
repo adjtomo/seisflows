@@ -36,14 +36,15 @@ class Cluster(Workstation):
         For example 'mpirun', 'mpiexec', 'srun', 'ibrun'
     :type ntask_max: int
     :param ntask_max: limit the number of concurrent tasks in a given array job
-    :type walltime: int
+    :type walltime: float
     :param walltime: maximum job time in minutes for the master SeisFlows
-        job submitted to cluster
-    :type tasktime: int
+        job submitted to cluster. Fractions of minutes acceptable.
+    :type tasktime: float
     :param tasktime: maximum job time in minutes for each job spawned by
         the SeisFlows master job during a workflow. These include, e.g.,
         running the forward solver, adjoint solver, smoother, kernel combiner.
-        All spawned tasks receive the same task time.
+        All spawned tasks receive the same task time. Fractions of minutes
+        acceptable.
     :type environs: str
     :param environs: Optional environment variables to be provided in the
         following format VAR1=var1,VAR2=var2... Will be set using
@@ -70,8 +71,41 @@ class Cluster(Workstation):
         self.tasktime = tasktime
         self.environs = environs or ""
 
-    def submit(self, workdir=None, parameter_file="parameters.yaml",
-               submit_call=None):
+    @property
+    def submit_call_header(self):
+        """
+        The submit call defines the SBATCH header which is used to submit a
+        workflow task list to the system. It is usually dictated by the
+        system's required parameters, such as account names and partitions.
+        Submit calls are modified and called by the `submit` function.
+
+        .. note::
+            Generalized `cluster` returns empty string but child system
+            classes will need to overwrite the submit call.
+
+        :rtype: str
+        :return: the system-dependent portion of a submit call
+        """
+        return ""
+
+    @property
+    def run_call_header(self):
+        """
+        The run call defines the SBATCH header which is used to run tasks during
+        an executing workflow. Like the submit call its arguments are dictated
+        by the given system. Run calls are modified and called by the `run`
+        function
+
+        .. note::
+            Generalized `cluster` returns empty string but child system
+            classes will need to overwrite the submit call.
+
+        :rtype: str
+        :return: the system-dependent portion of a run call
+        """
+        return ""
+
+    def submit(self, workdir=None, parameter_file="parameters.yaml"):
         """
         Submits the main workflow job as a separate job submitted directly to
         the system that is running the master job
@@ -81,19 +115,15 @@ class Cluster(Workstation):
         :type parameter_file: str
         :param parameter_file: paramter file file name used to instantiate
             the SeisFlows package
-        :type submit_call: str
-        :param submit_call: child classes may require a specific submit call
-            if the job should be submitted to another system (e.g., on cluster
-            submitting jobs on compute nodes and not running directly on the
-            login node)
         """
-        if submit_call is None:
-            # e.g., submit -w ./ -p parameters.yaml
-            submit_call = " ".join([
-                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",
-                f"--workdir {workdir}",
-                f"--parameter_file {parameter_file}",
-            ])
+        # e.g., submit -w ./ -p parameters.yaml
+        submit_call = " ".join([
+            f"{self.submit_call_header}",
+            f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",
+            f"--workdir {workdir}",
+            f"--parameter_file {parameter_file}",
+        ])
+
         logger.debug(submit_call)
         try:
             subprocess.run(submit_call, shell=True)
@@ -101,7 +131,7 @@ class Cluster(Workstation):
             logger.critical(f"SeisFlows master job has failed with: {e}")
             sys.exit(-1)
 
-    def run(self, funcs, single=False, run_call=None, **kwargs):
+    def run(self, funcs, single=False, **kwargs):
         """
         Runs tasks multiple times in parallel by submitting NTASK new jobs to
         system. The list of functions and its kwargs are saved as pickles files,
@@ -132,14 +162,14 @@ class Cluster(Workstation):
                     f"system {self.ntask} times")
 
         # Create the run call which will simply call an external Python script
-        if run_call is None:
-            # e.g., run --funcs func.p --kwargs kwargs.p --environment ...
-            run_call = " ".join([
-                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
-                f"--funcs {funcs_fid}",
-                f"--kwargs {kwargs_fid}",
-                f"--environment SEISFLOWS_TASKID={{task_id}},{self.environs}"
-            ])
+        # e.g., run --funcs func.p --kwargs kwargs.p --environment ...
+        run_call = " ".join([
+            f"{self.run_call_header}",
+            f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
+            f"--funcs {funcs_fid}",
+            f"--kwargs {kwargs_fid}",
+            f"--environment SEISFLOWS_TASKID={{task_id}},{self.environs}"
+        ])
         logger.debug(run_call)
 
         # Don't need to spin up concurrent.futures for a single run

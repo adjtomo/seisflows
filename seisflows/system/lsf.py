@@ -8,9 +8,9 @@ using the Platform Load Sharing Facility (LSF) workload management platform.
 import os
 import time
 import subprocess
-
+import sys
+from seisflows import ROOT_DIR
 from seisflows.system.cluster import Cluster
-from seisflows.tools.config import ROOT_DIR
 
 
 class Lsf(Cluster):
@@ -37,6 +37,9 @@ class Lsf(Cluster):
         These parameters should not be set by the user.
         Attributes are initialized as NoneTypes for clarity and docstrings.
         """
+        raise NotImplementedError("This module is still a work in progress")
+        sys.exit(-1)
+
         super().__init__()
 
         self.logger.warning("system.LSF is underdeveloped and "
