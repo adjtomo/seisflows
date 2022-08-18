@@ -57,7 +57,7 @@ class Frontera(Slurm):
             f"--job-name={self.title}",  # -J
             f"--partition={self.partition}",  # -p
             f"--output={self.path.output_log}",  # -o
-            f"--error={self.path.error_log}",
+            f"--error={self.path.output_log}",
             f"--nodes=1",  # -N
             f"--ntasks=1",  # -n
             f"--time={self.walltime:d}"  # -t

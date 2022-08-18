@@ -511,7 +511,7 @@ class SeisFlows:
             f.write("#\t -----\n")
             for module in modules:
                 if not module:
-                    return
+                    continue
                 docstring = split_module_docstring(module, -1)
                 f.write(f"#{docstring}\n")
             f.write(f"# {'=' * 77}\n")
@@ -650,11 +650,11 @@ class SeisFlows:
 
         if check == "y":
             pars = load_yaml(self._args.parameter_file)
-            unix.rm(pars.path_scratch)
-            unix.rm(pars.path_output)
-            unix.rm(pars.path_log_files)
-            unix.rm(pars.path_state_file)
-            unix.rm(pars.path_output_log)
+            for name in ["scratch", "output", "log_files", "state_file", 
+                         "output_log"]:
+                path = f"path_{name}"
+                if path in pars:
+                    unix.rm(path)
 
     def restart(self, force=False, **kwargs):
         """

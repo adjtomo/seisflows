@@ -11,9 +11,9 @@ from seisflows.tools import unix
 from seisflows.tools.config import Dict, get_task_id
 
 
-class Test:
+class TestSystem:
     """
-    Test Workflow
+    TestSystem Workflow
     -------------
     Test individual sub-modules in a 'live' testing environment
 
@@ -43,21 +43,34 @@ class Test:
         """
         return []
 
+    def check(self):    
+        """
+        Run check functions for all underlying modules
+        """
+        logger.info("running check for test workflow")
+        for name, module in self._modules.items():
+            if module:
+                module.check()
+
     def setup(self):
         """
         Creates required directory structure
         """
+        logger.info("running setup for test workflow")
         for path in [self.path.workdir, self.path.scratch, self.path.output]:
             unix.mkdir(path)
 
-        for module in self._modules:
-            module.setup()
+        for name, module in self._modules.items():
+            if module:
+                module.setup()
 
-    def test_system_run(self):
+    def run(self):
         """
         Use the system sub-module to submit some simple functions to ensure that
         we can run jobs on the system and that the job checking works
         """
+        logger.info("running test workflow")
+
         if not "system" in self._modules:
             logger.warning("No `system` module chosen, skipping "
                            "`test_system_run`")

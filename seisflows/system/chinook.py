@@ -58,7 +58,7 @@ class Chinook(Slurm):
             f"sbatch",
             f"--job-name={self.title}",
             f"--output={self.path.output_log}",
-            f"--error={self.path.error_log}",
+            f"--error={self.path.output_log}",
             f"--ntasks=1",
             f"--partition={self.partition}",
             f"--time={self.walltime:d}"

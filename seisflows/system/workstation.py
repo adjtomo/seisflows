@@ -48,7 +48,7 @@ class Workstation:
     """
     def __init__(self, ntask=1, nproc=1, log_level="DEBUG", verbose=False,
                  workdir=os.getcwd(), path_output=None, path_system=None,
-                 path_par_file=None, path_output_log=None, path_log_files=None,
+                 path_par_file=None, path_output_log=None,  path_log_files=None,
                  **kwargs):
         """
         Workstation System Class Parameters

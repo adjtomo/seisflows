@@ -67,8 +67,13 @@ class Maui(Slurm):
         self.ancil_cluster = ancil_cluster
         self.ancil_partition = ancil_partition
         self.ancil_tasktime = ancil_tasktime
+        if self.environs and "SLURM_MEM_PER_CPU" not in self.environs:
+            self.environs = f"{self.environs},SLURM_MEM_PER_CPU"
+        else:
+            self.environs = "SLURM_MEM_PER_CPU"
 
         self._partitions = {"nesi_research": 40}
+        self._available_clusters = ["maui", "mahuika"]
 
     def check(self):
         """
@@ -80,8 +85,15 @@ class Maui(Slurm):
             ("Maui runs Slurm>=21 which enforces mutually exclusivity of Slurm "
              "memory environment variables SLURM_MEM_PER_CPU and "
              "SLURM_MEM_PER_NODE. Due to the cross-cluster nature of "
-             "running SeisFlows3 on Maui, we must remove one env. variable. "
+             "running SeisFlows on Maui, we must remove one env. variable. "
              "Please add 'SLURM_MEM_PER_CPU' to self.par.ENVIRONS.")
+
+        assert(self.cluster in self._available_clusters), (
+            f"System 'Maui' parameter cluster must be in "
+            f"{self._available_clusters}"
+            )
+
+        assert(self.account), f"System 'Maui' requires parameter 'account'"
 
     @property
     def submit_call_header(self):
@@ -111,7 +123,7 @@ class Maui(Slurm):
             f"--partition={self.ancil_partition}",
             f"--job-name={self.title}",
             f"--output={self.path.output_log}",
-            f"--error={self.path.error_log}",
+            f"--error={self.path.output_log}",
             f"--ntasks=1",
             f"--cpus-per-task=1",
             f"--time={self.walltime:d}"

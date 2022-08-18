@@ -239,9 +239,9 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
     formatter = logging.Formatter(fmt_str, datefmt="%Y-%m-%d %H:%M:%S")
 
     # Stream handler to print log statements to stdout
-    st_handler = logging.StreamHandler(sys.stdout)
-    st_handler.setFormatter(formatter)
-    logger.addHandler(st_handler)
+    # st_handler = logging.StreamHandler(sys.stdout)
+    # st_handler.setFormatter(formatter)
+    # logger.addHandler(st_handler)
 
     # File handler to print log statements to text file `filename`
     if filename is not None:

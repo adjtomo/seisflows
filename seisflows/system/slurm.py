@@ -34,8 +34,8 @@ class Slurm(Cluster):
     """
     System Slurm
     ------------------
-    Runs tasks in serial on a local machine.Interface for submitting jobs to Simple Linux Utility for
-    Resource Management (SLURM) system.
+    Runs tasks in serial on a local machine. Interface for submitting jobs to 
+    Simple Linux Utility for Resource Management (SLURM) system.
 
     Parameters
     ----------
@@ -64,7 +64,6 @@ class Slurm(Cluster):
         self.slurm_args = slurm_args
 
         # Must be overwritten by child class
-        self.node_size = None
         self.partition = None
         self._partitions = {}
 
@@ -75,8 +74,8 @@ class Slurm(Cluster):
         super().check()
 
         assert(self.node_size is not None), (
-            f"Slurm system child classes require defining the `node_size` or "
-            f"the number of cores per node inherent to the compute system")
+            f"Slurm system child classes require defining the node_size or "
+            f"the number of cores per node inherent to the compute system.")
 
         assert(self.partition in self._partitions), \
             f"Cluster partition name must match {self._partitions}"
@@ -95,7 +94,7 @@ class Slurm(Cluster):
         return _nodes
 
     @property
-    def nodesize(self):
+    def node_size(self):
         """Defines the node size of a given cluster partition. This is a hard
         set number defined by the system architecture"""
         return self._partitions[self.partition]
@@ -171,8 +170,12 @@ class Slurm(Cluster):
         funcs_fid, kwargs_fid = pickle_function_list(funcs,
                                                      path=self.path.scratch,
                                                      **kwargs)
-        logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
-                    f"system {self.ntask} times")
+        if single:
+            logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
+                        f"system 1 time")
+        else:
+            logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
+                        f"system {self.ntask} times")
 
         # Default sbatch command line input, can be overloaded by subclasses
         # Copy-paste this default run_call and adjust accordingly for subclass
@@ -183,7 +186,6 @@ class Slurm(Cluster):
             f"--kwargs {kwargs_fid}",
             f"--environment {self.environs or ''}"
         ])
-        logger.debug(run_call)
 
         # Single-process jobs simply need to replace a few sbatch arguments.
         # Do it AFTER `run_call` has been defined so that subclasses submitting
@@ -192,6 +194,8 @@ class Slurm(Cluster):
             logger.info("replacing parts of sbatch run call for single "
                         "process job")
             run_call = _modify_run_call_single_proc(run_call)
+
+        logger.debug(run_call)
 
         # Stdout will be job number (e.g., 1234). Federated clusters will return
         # job # and cluster name (e.g., 1234;Cluster1). We only want job #
@@ -229,6 +233,7 @@ def check_job_status(job_id):
     bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL",
                   "OUT_OF_MEMORY", "CANCELLED"]
     while True:
+        time.sleep(5)  # give job time to process and also prevent over-query
         job_ids, states = query_job_states(job_id)
         if [state == "COMPLETED" for state in states]:
             return 1  # Pass
@@ -238,8 +243,6 @@ def check_job_status(job_id):
                 if state in bad_states:
                     logger.debug(f"{job_id}: {state}")
             return -1  # Fail
-        else:
-            time.sleep(5)  # Don't query 'sacct' command too often
 
 
 def query_job_states(job_id):
