@@ -60,7 +60,7 @@ class Frontera(Slurm):
             f"--error={self.path.output_log}",
             f"--nodes=1",  # -N
             f"--ntasks=1",  # -n
-            f"--time={self.walltime:d}"  # -t
+            f"--time={self._walltime}"  # -t
         ])
         if self.allocation is not None:
             _call = f"{_call} --allocation={self.allocation}"
@@ -86,7 +86,7 @@ class Frontera(Slurm):
             f"--ntasks={self.nproc:d}",
             f"--nodes={self.nodes}",
             f"--array=0-{self.ntask - 1 % self.ntask_max}",
-            f"--time={self.tasktime:d}",
+            f"--time={self._tasktime}",
             f"--parsable"
         ])
         if self.allocation is not None:

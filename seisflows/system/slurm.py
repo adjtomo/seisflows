@@ -13,6 +13,11 @@ Useful commands for figuring out system-specific required parameters
     granted. This rosetta stone, for converting from SLURM to other workload
     management tools will be useful: https://slurm.schedmd.com/rosetta.pdf
 
+.. note::
+   SLURM systems expect walltime/tasktime in format: "minutes", 
+   "minutes:seconds", "hours:minutes:seconds". SeisFlows uses the latter
+   and converts task and walltimes from input of minutes to a time string.
+
 TODO
     Create 'slurm_singulairty', a child class for singularity-based runs which
     loads and runs programs through singularity, OR add a parameter options
@@ -67,6 +72,10 @@ class Slurm(Cluster):
         self.partition = None
         self._partitions = {}
 
+        # Convert walltime and tasktime to datetime str 'H:MM:SS'
+        self._tasktime = str(time.timedelta(minutes=self.tasktime))
+        self._walltime = str(time.timedelta(minutes=self.walltime))
+
     def check(self):
         """
         Checks parameters and paths
@@ -118,7 +127,7 @@ class Slurm(Cluster):
             f"--error={self.path.output_log}",
             f"--ntasks-per-node={self.node_size}",
             f"--nodes=1",
-            f"--time={self.walltime:d}"
+            f"--time={self._walltime}"
         ])
         return _call
 
@@ -140,7 +149,7 @@ class Slurm(Cluster):
              f"--nodes={self.nodes}",
              f"--ntasks-per-node={self.node_size:d}",
              f"--ntasks={self.nproc:d}",
-             f"--time={self.tasktime:d}",
+             f"--time={self._tasktime}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",
              f"--array=0-{self.ntask-1}%{self.ntask_max}",
              f"--parsable"
@@ -214,7 +223,7 @@ class Slurm(Cluster):
             )
             sys.exit(-1)
         else:
-            logger.info(f"tasks finished successfully")
+            logger.info(f"task {job_id} finished successfully")
 
 
 def check_job_status(job_id):

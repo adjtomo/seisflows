@@ -126,7 +126,7 @@ class Maui(Slurm):
             f"--error={self.path.output_log}",
             f"--ntasks=1",
             f"--cpus-per-task=1",
-            f"--time={self.walltime:d}"
+            f"--time={self._walltime}"
         ])
         return _call
 
@@ -151,7 +151,7 @@ class Maui(Slurm):
              f"--cpus-per-task={self.cpus_per_task}",
              f"--nodes={self.nodes:d}",
              f"--ntasks={self.nproc:d}",
-             f"--time={self.tasktime:d}",
+             f"--time={self._tasktime}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",
              f"--array=0-{self.ntask-1 % self.ntask_max}",
              f"--parsable"

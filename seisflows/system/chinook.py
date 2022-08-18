@@ -61,7 +61,7 @@ class Chinook(Slurm):
             f"--error={self.path.output_log}",
             f"--ntasks=1",
             f"--partition={self.partition}",
-            f"--time={self.walltime:d}"
+            f"--time={self._walltime}"
         ])
         return _call
 
@@ -82,7 +82,7 @@ class Chinook(Slurm):
             f"--job-name={self.title}",
             f"--ntasks={self.nproc:d}",
             f"--tasks-per-node={self.nodesize}",
-            f"--time={self.tasktime:d}",
+            f"--time={self._tasktime}",
             f"--output={os.path.join(self.path.log_files, '%A_%a')}",
             f"--array=0-{self.ntask-1 % self.ntask_max}",
             f"--parsable"

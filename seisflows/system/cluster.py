@@ -36,14 +36,15 @@ class Cluster(Workstation):
         For example 'mpirun', 'mpiexec', 'srun', 'ibrun'
     :type ntask_max: int
     :param ntask_max: limit the number of concurrent tasks in a given array job
-    :type walltime: int
+    :type walltime: float
     :param walltime: maximum job time in minutes for the master SeisFlows
-        job submitted to cluster
-    :type tasktime: int
+        job submitted to cluster. Fractions of minutes acceptable.
+    :type tasktime: float
     :param tasktime: maximum job time in minutes for each job spawned by
         the SeisFlows master job during a workflow. These include, e.g.,
         running the forward solver, adjoint solver, smoother, kernel combiner.
-        All spawned tasks receive the same task time.
+        All spawned tasks receive the same task time. Fractions of minutes
+        acceptable.
     :type environs: str
     :param environs: Optional environment variables to be provided in the
         following format VAR1=var1,VAR2=var2... Will be set using
