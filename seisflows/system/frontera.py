@@ -2,133 +2,93 @@
 """
 Frontera is one of the Texas Advanced Computing Center (TACC) HPCs.
 https://frontera-portal.tacc.utexas.edu/
-
-TODO we may need to include or create a "singularity" class or run script which
-runs jobs through singularity
 """
 import os
-import numpy as np
-from seisflows.tools.config import ROOT_DIR
 from seisflows.system.slurm import Slurm
 
 
 class Frontera(Slurm):
     """
-    System interface for TACC Frontera based on SLURM workload manager
+    System Frontera
+    --------------
+    Texas Advanced Computing Center HPC Frontera, SLURM based system
+
+    Parameters
+    ----------
+    :type partition: str
+    :param partition: Chinook has various partitions which each have their
+        own number of cores per compute node. Available are: small, normal,
+        large, development, flex
+    :type allocation: str
+    :param allocation: Name of allocation/project on the Frontera system.
+        Required if you have more than one active allocation.
+
+    Paths
+    -----
+
+    ***
     """
-    def __init__(self):
-        """
-        These parameters should not be set by the user.
-        Attributes are initialized as NoneTypes for clarity and docstrings.
+    def __init__(self, partition="small", allocation=None, **kwargs):
+        """Frontera init"""
+        super().__init__(**kwargs)
 
-        :type partitions: dict
-        :param partitions: Chinook has various partitions which each have their
-            own number of cores per compute node, defined here
-        """
-        super().__init__()
-
-        self.required.par(
-            "PARTITION", required=False, default="small", par_type=str,
-            docstr="Name of partition on main cluster"
-        )
-        self.required.par(
-            "ALLOCATION", required=False, default="", par_type=str,
-            docstr="Name of allocation/project on the Frontera system. "
-                   "Required if you have more than one active allocation."
-        )
-        self.required.par(
-            "MPIEXEC", required=False, default="ibrun", par_type=str,
-            docstr="Function used to invoke parallel executables. Defaults to"
-                   "'ibrun' based on TACC user manual.")
+        self.partition = partition
+        self.allocation = allocation
+        self.mpiexec = "ibrun"
 
         # TODO find out the cores-per-node values for these partitions
-        # self.partitions = {"small":, "normal":, "large":, "development:"
-        #                    "flex":}
+        self.partitions = {"small": None, "normal": None, "large": None,
+                           "development": None, "flex": None}
 
-    def check(self, validate=True):
+
+    @property
+    def submit_call_header(self):
         """
-        Checks parameters and paths
+        The submit call defines the SBATCH header which is used to submit a
+        workflow task list to the system. It is usually dictated by the
+        system's required parameters, such as account names and partitions.
+        Submit calls are modified and called by the `submit` function.
+
+        :rtype: str
+        :return: the system-dependent portion of a submit call
         """
-        super().check(validate=validate)
+        _call = " ".join([
+            f"sbatch",
+            f"--job-name={self.title}",  # -J
+            f"--partition={self.partition}",  # -p
+            f"--output={self.path.output_log}",  # -o
+            f"--error={self.path.output_log}",
+            f"--nodes=1",  # -N
+            f"--ntasks=1",  # -n
+            f"--time={self._walltime}"  # -t
+        ])
+        if self.allocation is not None:
+            _call = f"{_call} --allocation={self.allocation}"
+        return _call
 
-        assert(self.par.PARTITION in self.partitions.keys()), \
-            f"Chinook partition must be in {self.partitions.keys()}"
-
-        assert(self.par.NODESIZE == self.partitions[self.par.PARTITION]), \
-            (f"PARTITION {self.par.PARTITION} is expected to have NODESIZE=" 
-             f"{self.partitions[self.par.PARTITION]}, not current "
-             f"{self.par.NODESIZE}")
-
-    def submit(self, submit_call=None):
+    @property
+    def run_call_header(self):
         """
-        Submits workflow as a serial job on the TACC partition 'small'.
+        The run call defines the SBATCH header which is used to run tasks during
+        an executing workflow. Like the submit call its arguments are dictated
+        by the given system. Run calls are modified and called by the `run`
+        function
 
-        .. note::
-            The SBATCH commands can either be short or full length. TACC's
-            start up guide uses short length keys so that's what we do here, but
-            their long names can be substituted
-
-        :type submit_call: str
-        :param submit_call: SBATCH command line call to submit workflow.main()
-            to the system. If None, will generate one on the fly with
-            user-defined parameters
+        :rtype: str
+        :return: the system-dependent portion of a run call
         """
-        if submit_call is None:
-            submit_call = " ".join([
-                "sbatch",
-                f"{self.par.SLURMARGS or ''}",
-                f"-J {self.par.TITLE}",  # job name
-                f"-O {self.output_log}",  # stdout output file
-                f"-E {self.error_log}",  # stderr error file
-                f"-P {self.par.PARTITION}",  # queue/partition name
-                f"-A {self.par.ALLOCATION}",  # project/allocation name
-                f"-N 1",  # total number of nodes requested
-                f"-n 1",  # number of mpi tasks
-                f"-t {self.par.WALLTIME}",  # job walltime
-                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",
-                f"--output {self.path.OUTPUT}"
-            ])
-        super().submit(submit_call=submit_call)
-
-    def run(self, classname, method, single=False, run_call=None, **kwargs):
-        """
-        Runs task multiple times in embarrassingly parallel fasion on a SLURM
-        cluster.
-
-        :type classname: str
-        :param classname: the class to run
-        :type method: str
-        :param method: the method from the given `classname` to run
-        :type single: bool
-        :param single: run a single-process, non-parallel task, such as
-            smoothing the gradient, which only needs to be run by once.
-            This will change how the job array and the number of tasks is
-            defined, such that the job is submitted as a single-core job to
-            the system.
-        :type run_call: str
-        :param run_call: SBATCH command line run call to be submitted to the
-            system. If None, will generate one on the fly with user-defined
-            parameters
-        """
-        if run_call is None:
-            _nodes = np.ceil(self.par.NPROC / float(self.par.NODESIZE))
-
-            run_call = " ".join([
-                "sbatch",
-                f"{self.par.SLURMARGS or ''}",
-                f"-J {self.par.TITLE}",  # job name
-                f"-O {self.output_log}",  # stdout output file
-                f"-E {self.error_log}",  # stderr error file
-                f"-P {self.par.PARTITION}",  # queue/partition name
-                f"-A {self.par.ALLOCATION}",  # project/allocation name
-                f"-N {_nodes}",  # total number of nodes requested
-                f"-n {self.par.NPROC}",  # number of mpi tasks
-                f"-t {self.par.WALLTIME}",  # job walltime
-                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
-                f"--output {self.path.OUTPUT}"
-                f"--classname {classname}",
-                f"--funcname {method}",
-                f"--environment {self.par.ENVIRONS or ''}"
-            ])
-
-        super().run(classname, method, single, run_call=run_call, **kwargs)
+        _call = " ".join([
+            f"sbatch",
+            f"{self.slurm_args or ''}",
+            f"--job-name={self.title}",
+            f"--partition={self.partition}",
+            f"--output={os.path.join(self.path.log_files, '%A_%a')}",
+            f"--ntasks={self.nproc:d}",
+            f"--nodes={self.nodes}",
+            f"--array=0-{self.ntask - 1 % self.ntask_max}",
+            f"--time={self._tasktime}",
+            f"--parsable"
+        ])
+        if self.allocation is not None:
+            _call = f"{_call} --allocation={self.allocation}"
+        return _call

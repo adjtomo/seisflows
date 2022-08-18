@@ -297,6 +297,7 @@ class Inversion(Migration):
         direction (p_new) to recover the trial model (m_try). This model is
         then exposed on disk to the solver.
         """
+        logger.info(msg.mnr("RUNNING LINE SEARCH"))
         logger.info(f"initializing "
                     f"'{self.optimize.line_search_method}'ing "
                     f"line search")
@@ -410,7 +411,7 @@ class Inversion(Migration):
         carried out. Contains some logic to consider whether or not to continue
         with a thrifty inversion.
         """
-        logger.info(msg.mnr("CLEANING WORKDIR FOR NEXT ITERATION"))
+        logger.info(msg.sub("CLEANING WORKDIR FOR NEXT ITERATION"))
 
         # Export scratch files to output if requested
         if self.export_model:

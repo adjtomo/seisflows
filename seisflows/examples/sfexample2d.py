@@ -358,7 +358,8 @@ if __name__ == "__main__":
         f"This is a [SPECFEM2D] [WORKSTATION] example, which will "
         f"run an inversion to assess misfit between two homogeneous halfspace "
         f"models with slightly different velocities. [3 events, 1 station, 2 "
-        f"iterations]. The tasks involved include: ",
+        f"iterations]. The inversion is expected to fail after the 5th line "
+        f"search step count of the 2nd iteration. The tasks involved include: ",
         items=["1. (optional) Download, configure, compile SPECFEM2D",
                "2. Set up a SPECFEM2D working directory",
                "3. Generate starting model from Tape2007 example",
