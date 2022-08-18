@@ -39,7 +39,7 @@ from seisflows.tools.config import pickle_function_list
 class Slurm(Cluster):
     """
     System Slurm
-    ------------------
+    ------------
     Interface for submitting and monitoring jobs on HPC systems running the 
     Simple Linux Utility for Resource Management (SLURM) workload manager.
 

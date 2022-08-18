@@ -105,6 +105,7 @@ install instructions.
    :caption: Examples
 
    specfem2d_example
+   example_on_cluster
 
 .. toctree::
    :maxdepth: 1
