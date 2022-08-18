@@ -1,4 +1,4 @@
-Specfem2D workstation example
+Specfem2D Workstation Example
 =============================
 
 To demonstrate the inversion capabilities of SeisFlows, we will run a
@@ -28,20 +28,49 @@ generate initial and target models, and (3) Run a SeisFlows inversion.
 .. warning:: 
     This example attempts to automatically download and compile SPECFEM2D. This step may fail if you are software required by SPECFEM2D, there are issues with the SPECFEM2D repository itself, or the configuration and compiling steps fail. If you run any issues, it is recommended that you manually install and compile SPECFEM2D, and directly provide its path to this example problem when prompted.
 
+Example #1
+~~~~~~~~~~
+
+Example #1 runs a 2 iteration inversion using SPECFEM2D, the default
+preprocessing module and a gradient descent optimization algorithm. You
+can run it using the ``examples setup`` and ``submit`` commands.
+
+.. note::
+    Example number 1 is meant to FAIL during the line search of Iteration #2, after exceeding the maximum allowable line search step count. This is meant to illustrate line search behavior and allow the User to explore a working directory mid-workflow.
+
+.. code:: ipython3
+
+    ! seisflows examples setup 1
+    ! seisflows submit
+
+You can also directly run the example after setup using the
+``examples run`` command:
+
 .. code:: ipython3
 
     ! seisflows examples run 1
+
+Example #2
+~~~~~~~~~~
+
+Example #2 runs a 1 iteration inversion using SPECFEM2D, the Pyaflowa
+preprocessing module and an L-BFGS optimization algorithm. It
+successfully completes the line search and is meant to illustrate the
+output of the Pyaflowa preprocessing module.
+
+.. code:: ipython3
+
+    ! seisflows examples run 2
 
 --------------
 
 Option 2: Manual run
 --------------------
 
-The notebook below details a walkthrough of the automated run shown
-above. This is meant for those who want to understand what is going on
-under the hood. You are welcome to follow along on your workstation. The
-following Table of Contents outlines the steps we will take in this
-tutorial:
+The notebook below details a walkthrough of Example #1 shown above. This
+is meant for those who want to understand what is going on under the
+hood. You are welcome to follow along on your workstation. The following
+Table of Contents outlines the steps we will take in this tutorial:
 
 .. warning:: 
     Navigation links will not work outside of Jupyter. Please use the navigation bar to the left.
