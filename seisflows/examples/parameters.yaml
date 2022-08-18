@@ -8,10 +8,12 @@
 # SeisFlows' behavior at runtime. Each module requires its own sub-parameters.
 #
 # .. rubric::
-#   - To determine available options for modules listed below, run:
+#   - Determine available options for modules by running:
 #       > seisflows print modules
-#   - To auto-fill with docstrings and default values (recommended), run:
+#   - Auto-fill with docstrings and default values (recommended) by running:
 #       > seisflows configure
+#   - Swap out module parameters for a configured parameter file by running:
+#       > seisflows swap {module} {name} (e.g., seisflows swap solver specfem3d)
 #   - To set values as NoneType, use: null
 #   - To set values as infinity, use: inf
 #
