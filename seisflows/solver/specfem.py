@@ -438,8 +438,8 @@ class Specfem:
         """
         if executables is None:
             executables = ["bin/xmeshfem2D", "bin/xspecfem2D"]
-        unix.cd(self.cwd)
 
+        unix.cd(self.cwd)
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
 

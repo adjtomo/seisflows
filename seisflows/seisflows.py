@@ -565,33 +565,32 @@ class SeisFlows:
 
         # Load in old parameter file and then move it to a hidden file
         ogpars = load_yaml(self._args.parameter_file)
-        ogpaths = Dict(ogpars.pop("PATHS"))
         unix.mv(self._args.parameter_file, f"_{self._args.parameter_file}")
+        try:
+            # Create a new parameter file with updated module
+            unix.cp(PAR_FILE, self._args.workdir)
+            for name in NAMES:
+                setpar(key=name, val=ogpars[name],
+                       file=self._args.parameter_file, delim=":")
 
-        # Create a new parameter file with updated module
-        unix.cp(PAR_FILE, self._args.workdir)
-        for name in NAMES:
-            setpar(key=name, val=ogpars[name.upper()],
-                   file=self._args.parameter_file, delim=":")
+            # Overwrite with new parameters
+            setpar(key=module, val=classname, file=self._args.parameter_file,
+                   delim=":")
+            self.configure()
 
-        # Overwrite with new parameters
-        setpar(key=module, val=classname, file=self._args.parameter_file,
-               delim=":")
-        self.configure()
-        for key, val in ogpars.items():
-            try:
-                setpar(key=key, val=val, file=self._args.parameter_file,
-                       delim=":")
-            except KeyError:
-                continue
-        for key, val in ogpaths.items():
-            try:
-                setpar(key=key, val=val, file=self._args.parameter_file,
-                       delim=":")
-            except KeyError:
-                continue
-
-        unix.rm(f"_{self._args.parameter_file}")
+            ogpars.pop(module)  # don't edit the parameter were changing
+            for key, val in ogpars.items():
+                try:
+                    setpar(key=key, val=val, file=self._args.parameter_file,
+                           delim=":")
+                except KeyError:
+                    continue
+        # Replace parameter file if any errors happen
+        except Exception as e:
+            unix.mv(f"_{self._args.parameter_file}", self._args.parameter_file)
+            raise(e)
+        finally:
+            unix.rm(f"_{self._args.parameter_file}")
 
     def check(self, **kwargs):
         """

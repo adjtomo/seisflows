@@ -45,9 +45,6 @@ class Slurm(Cluster):
 
     Parameters
     ----------
-    :type ntask_max: int
-    :param ntask_max: set the maximum number of simultaneously running array
-        job processes that are submitted to a cluster at one time.
     :type slurm_args: str
     :param slurm_args: Any (optional) additional SLURM arguments that will
         be passed to the SBATCH scripts. Should be in the form:
@@ -60,7 +57,13 @@ class Slurm(Cluster):
     __doc__ = Cluster.__doc__ + __doc__
 
     def __init__(self, ntask_max=100, slurm_args="",  **kwargs):
-        """Slurm-specific setup parameters"""
+        """
+        Slurm-specific setup parameters
+
+        :type ntask_max: int
+        :param ntask_max: set the maximum number of simultaneously running array
+            job processes that are submitted to a cluster at one time.
+        """
         super().__init__(**kwargs)
 
         # Overwrite the existing 'mpiexec'
@@ -218,7 +221,7 @@ class Slurm(Cluster):
         if status == -1:  # Failed job
             logger.critical(
                 msg.cli(f"Stopping workflow. Please check logs for details.",
-                        items=[f"TASKS:   {[_.__name_ for _ in funcs]}",
+                        items=[f"TASKS:   {[_.__name__ for _ in funcs]}",
                                f"SBATCH:  {run_call}"],
                         header="slurm run error", border="=")
             )
@@ -233,6 +236,12 @@ def check_job_status(job_id):
     If the job goes into a bad state like 'FAILED', log the failing
     job's id and their states. If all jobs complete nominally, return
 
+    .. note::
+        The time.sleep() is critical before querying job status because the 
+        system will likely take a second to intitiate jobs so if we 
+        `query_job_states` before this has happenend, it will return empty
+        lists and cause the function to error out
+
     :type job_id: str
     :param job_id: main job id to query, returned from the subprocess.run that
     ran the jobs
@@ -243,7 +252,7 @@ def check_job_status(job_id):
     bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL",
                   "OUT_OF_MEMORY", "CANCELLED"]
     while True:
-        time.sleep(2)  # give job time to process and also prevent over-query
+        time.sleep(5)  # give job time to process and also prevent over-query
         job_ids, states = query_job_states(job_id)
         if all([state == "COMPLETED" for state in states]):
             return 1  # Pass

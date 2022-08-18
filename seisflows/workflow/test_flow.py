@@ -169,6 +169,7 @@ class TestFlow:
             self.system.run(funcs=[_test_function], single=True)
             logger.critical("job was expected to fail but did not")
         except SystemExit:
+            logger.info("job failure catch was successful")
             pass 
     
         # Check the log file for job failure
