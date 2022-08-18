@@ -29,6 +29,7 @@ import numpy as np
 import time
 import subprocess
 
+from datetime import timedelta
 from seisflows import ROOT_DIR, logger
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
@@ -73,8 +74,8 @@ class Slurm(Cluster):
         self._partitions = {}
 
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
-        self._tasktime = str(time.timedelta(minutes=self.tasktime))
-        self._walltime = str(time.timedelta(minutes=self.walltime))
+        self._tasktime = str(timedelta(minutes=self.tasktime))
+        self._walltime = str(timedelta(minutes=self.walltime))
 
     def check(self):
         """
@@ -242,9 +243,9 @@ def check_job_status(job_id):
     bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL",
                   "OUT_OF_MEMORY", "CANCELLED"]
     while True:
-        time.sleep(5)  # give job time to process and also prevent over-query
+        time.sleep(2)  # give job time to process and also prevent over-query
         job_ids, states = query_job_states(job_id)
-        if [state == "COMPLETED" for state in states]:
+        if all([state == "COMPLETED" for state in states]):
             return 1  # Pass
         elif any([check in states for check in bad_states]):  # Any bad states?
             logger.info("atleast 1 system job returned a failing exit code")

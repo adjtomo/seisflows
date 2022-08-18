@@ -7,6 +7,7 @@ order before committing a large number of compute resources.
 """
 import os
 import time
+import sys
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix, msg
@@ -108,6 +109,8 @@ class TestFlow:
         for func in self.task_list:
             func()
 
+        logger.info(msg.mjr("FINISHED TEST WORKFLOW"))
+
     def test_system_print_hello_world(self):
         """
         Use the system to run a simple print function which names the currently
@@ -125,6 +128,8 @@ class TestFlow:
 
         # Run an array job
         self.system.run(funcs=[_test_function], single=False)
+
+        time.sleep(5)  # give the system a second to catch up
 
         # Check the results of the run 
         log_files = glob(os.path.join(self.system.path.log_files, "*_*"))
@@ -153,7 +158,7 @@ class TestFlow:
                 time.sleep(1)
                 print(f"Task ID {get_task_id()} waited {i} sec.")
 
-            raise Exception("intentional exception for job failure test")
+            sys.exit(-1)  # intentional job failure
 
         # Clear the log files dir. as this is how we will check results
         unix.rm(self.system.path.log_files)
@@ -163,7 +168,6 @@ class TestFlow:
         try:
             self.system.run(funcs=[_test_function], single=True)
             logger.critical("job was expected to fail but did not")
-            sys.exit(-1)
         except SystemExit:
             pass 
     
