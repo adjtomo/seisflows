@@ -40,8 +40,8 @@ class Slurm(Cluster):
     """
     System Slurm
     ------------------
-    Runs tasks in serial on a local machine. Interface for submitting jobs to 
-    Simple Linux Utility for Resource Management (SLURM) system.
+    Interface for submitting and monitoring jobs on HPC systems running the 
+    Simple Linux Utility for Resource Management (SLURM) workload manager.
 
     Parameters
     ----------

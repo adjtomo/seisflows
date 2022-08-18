@@ -16,7 +16,8 @@ class Workstation:
     """
     Workstation System
     ------------------
-    Runs tasks in serial on a local machine.
+    Defines foundational structure for System module. When used standalone, 
+    runs tasks in serial on a local machine.
 
     Parameters
     ----------

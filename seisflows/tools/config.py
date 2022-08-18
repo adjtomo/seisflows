@@ -154,7 +154,7 @@ def set_task_id(task_id):
 def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
     """
     Standard SeisFlows workflow setup block which runs a number of setup
-    tasks including: loading a user-defiend parameter file, configuring the
+    tasks including: loading a user-defined parameter file, configuring the
     package-wide logger based on user-input path to log file and desired
     verbosity, and instantiating all modules in a generic fashion based on user
     choice. Returns the 'workflow' module, which contains all other submodules
