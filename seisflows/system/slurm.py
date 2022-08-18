@@ -291,9 +291,9 @@ def _modify_run_call_single_proc(run_call):
     """
     for part in run_call.split(" "):
         if "--array" in part:
-            run_call.replace(part, "--array=0-0")
+            run_call = run_call.replace(part, "--array=0-0")
         elif "--ntasks" in part:
-            run_call.replace(part, "--ntasks=1")
+            run_call = run_call.replace(part, "--ntasks=1")
 
     # Append taskid to environment variable, deal with the case where
     # self.par.ENVIRONS is an empty string
