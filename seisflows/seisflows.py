@@ -580,6 +580,8 @@ class SeisFlows:
 
             ogpars.pop(module)  # don't edit the parameter were changing
             for key, val in ogpars.items():
+                if val is None:
+                    val = "null"
                 try:
                     setpar(key=key, val=val, file=self._args.parameter_file,
                            delim=":")
