@@ -160,7 +160,8 @@ class Slurm(Cluster):
         ])
         return _call
 
-    def _stdout_to_job_id(stdout)
+    @staticmethod
+    def _stdout_to_job_id(stdout):
         """
         The stdout message after an SBATCH job is submitted, from which we get
         the job number, differs between systems, allow this to vary

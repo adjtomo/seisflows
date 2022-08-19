@@ -2,8 +2,17 @@
 """
 Frontera is one of the Texas Advanced Computing Center (TACC) HPCs.
 https://frontera-portal.tacc.utexas.edu/
+
+.. note::
+    One caveat of the TACC Systems is that you cannot submit 'sbatch' from 
+    compute nodes, which is how SeisFlows operates. To work around this, 
+    the run call SSHs from the compute node to the login node to submit the
+    sbatch script. This requires knowing the User name, and that SSH keys
+    are available. Thanks to Ian Wang for the suggestion.
 """
 import os
+import sys
+from seisflows import logger
 from seisflows.system.slurm import Slurm
 
 
@@ -15,6 +24,10 @@ class Frontera(Slurm):
 
     Parameters
     ----------
+    :type user: str
+    :param user: User's username on TACC systems. Can be determined by 'whoami'
+        or will be gathered from the 'USER' environment variable. Used for
+        internal ssh'ing from compute nodes to login nodes.
     :type partition: str
     :param partition: Chinook has various partitions which each have their
         own number of cores per compute node. Available are: small, normal,
@@ -28,15 +41,18 @@ class Frontera(Slurm):
 
     ***
     """
-    def __init__(self, partition="development", allocation=None, **kwargs):
+    def __init__(self, user=None, partition="development", allocation=None, 
+                 **kwargs):
         """Frontera init"""
         super().__init__(**kwargs)
 
+        self.user = user or os.environ["USER"]  # alt. getpass.getuser()
         self.partition = partition
         self.allocation = allocation
         self.mpiexec = "ibrun"
 
-        # TODO find out the cores-per-node values for these partitions
+        # See note in file docstring for why we need this SSH call
+        self._ssh_call = f"ssh {self.user}@frontera.tacc.utexas.edu"
         self._partitions = {"small": 28, "normal": 28, "large": 28,
                             "development": 28, "flex": 28}
 
@@ -53,6 +69,7 @@ class Frontera(Slurm):
         :return: the system-dependent portion of a submit call
         """
         _call = " ".join([
+            f"{self._ssh_call}",
             f"sbatch",
             f"--job-name={self.title}",  # -J
             f"--partition={self.partition}",  # -p
@@ -78,6 +95,7 @@ class Frontera(Slurm):
         :return: the system-dependent portion of a run call
         """
         _call = " ".join([
+            f"{self._ssh_call}",
             f"sbatch",
             f"{self.slurm_args or ''}",
             f"--job-name={self.title}",
@@ -93,7 +111,8 @@ class Frontera(Slurm):
             _call = f"{_call} --allocation={self.allocation}"
         return _call
 
-    def _stdout_to_job_id(stdout)                                                
+    @staticmethod
+    def _stdout_to_job_id(stdout):
         """                                                                      
         The stdout message after an SBATCH job is submitted. On Frontera, the
         standard message is preceded by a log message which looks like:

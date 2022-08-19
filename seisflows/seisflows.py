@@ -655,7 +655,7 @@ class SeisFlows:
                          "output_log"]:
                 path = f"path_{name}"
                 if path in pars:
-                    unix.rm(path)
+                    unix.rm(pars[path])
 
     def restart(self, force=False, **kwargs):
         """
