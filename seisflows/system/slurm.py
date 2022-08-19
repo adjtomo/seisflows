@@ -264,7 +264,7 @@ def check_job_status(job_id):
             return -1  # Fail
 
 
-def query_job_states(job_id):
+def query_job_states(job_id, _recheck=0):
     """
     Queries completion status of an array job by running the SLURM cmd `sacct`
     Available job states are listed here: https://slurm.schedmd.com/sacct.html
@@ -285,11 +285,31 @@ def query_job_states(job_id):
     :type job_id: str
     :param job_id: main job id to query, returned from the subprocess.run that
         ran the jobs
+    :type rechecks: int
+    :param rechecks: Used for recursive calling of the function. It can take 
+        time for jobs to be initiated on a system, which may result in the 
+        stdout of the 'sacct' command to be empty. In this case we wait and call
+        the function again. Rechecks are used to prevent endless loops by 
+        putting a stop criteria
     """
     job_ids, job_states = [], []
     cmd = f"sacct -nLX -o jobid,state -j {job_id}"
     stdout = subprocess.run(cmd, stdout=subprocess.PIPE,
                             text=True, shell=True).stdout
+
+    # Recursively re-check job state incase the job has not been instantiated 
+    # in which cause 'stdout' is an empty string
+    if not stdout:
+        _recheck += 1
+        if _recheck > 10:
+            logger.critical(f"cannot access job information through '{cmd}', "
+                            f"waited 50s with no return, please check job "
+                            f"scheduler and log messages")
+            sys.exit(-1)
+        time.sleep(5)
+        query_job_states(job_id, _recheck)
+
+    # Return the job numbers and respective states for the given job ID
     for job_line in str(stdout).strip().split("\n"):
         job_id, job_state = job_line.split()
         job_ids.append(job_id)
