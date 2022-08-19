@@ -28,7 +28,7 @@ class Frontera(Slurm):
 
     ***
     """
-    def __init__(self, partition="small", allocation=None, **kwargs):
+    def __init__(self, partition="development", allocation=None, **kwargs):
         """Frontera init"""
         super().__init__(**kwargs)
 
@@ -37,8 +37,8 @@ class Frontera(Slurm):
         self.mpiexec = "ibrun"
 
         # TODO find out the cores-per-node values for these partitions
-        self.partitions = {"small": None, "normal": None, "large": None,
-                           "development": None, "flex": None}
+        self._partitions = {"small": 28, "normal": 28, "large": 28,
+                            "development": 28, "flex": 28}
 
 
     @property
@@ -92,3 +92,42 @@ class Frontera(Slurm):
         if self.allocation is not None:
             _call = f"{_call} --allocation={self.allocation}"
         return _call
+
+    def _stdout_to_job_id(stdout)                                                
+        """                                                                      
+        The stdout message after an SBATCH job is submitted. On Frontera, the
+        standard message is preceded by a log message which looks like:
+
+        ```
+        -----------------------------------------------------------------
+                   Welcome to the Frontera Supercomputer                 
+        -----------------------------------------------------------------
+
+        No reservation for this job
+        --> Verifying valid submit host (login3)...OK
+        --> Verifying valid jobname...OK
+        --> Verifying valid ssh keys...OK
+        --> Verifying access to desired queue (development)...OK
+        --> Checking available allocation (EAR21042)...OK
+        --> Verifying that quota for filesystem ... is at 3.87% allocated...OK
+        --> Verifying that quota for filesystem ... is at  0.91% allocated...OK
+        4738284
+
+        ```
+        :type stdout: str                                                        
+        :param stdout: standard SBATCH response after submitting a job with the
+            '--parsable' flag
+        :rtype: str                                                              
+        :return: a matching job ID. We convert str->int->str to ensure that      
+            the job id is an integer value (which it must be)     
+        """
+        job_id = stdout.split("OK")[-1].strip().split(";")[0]
+        try:                                                                     
+            int(job_id)                                                          
+        except ValueError:                                                       
+            logger.critical(f"parsed job id '{job_id}' does not evaluate as an " 
+                            f"integer, please check that function "              
+                            f"`system._stdout_to_job_id()` is set correctly")    
+            sys.exit(-1)                                                         
+                                                                                 
+        return job_id    

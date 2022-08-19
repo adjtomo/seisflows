@@ -160,12 +160,45 @@ class Slurm(Cluster):
         ])
         return _call
 
+    def _stdout_to_job_id(stdout)
+        """
+        The stdout message after an SBATCH job is submitted, from which we get
+        the job number, differs between systems, allow this to vary
+
+        .. note:: Examples
+            1) standard example: Submitted batch job 4738244
+            2) (1) with '--parsable' flag: 4738244
+            3) federated cluster: Submitted batch job 4738244; Maui
+            4) (3) with '--parsable' flag: 4738244; Maui
+        
+        This function deals with cases (2) and (4). Other systems that have more 
+        complicated stdout messages will need to overwrite this function
+
+        :type stdout: str
+        :param stdout: standard SBATCH response after submitting a job with the
+            '--parsable' flag
+        :rtype: str
+        :return: a matching job ID. We convert str->int->str to ensure that
+            the job id is an integer value (which it must be)
+        :raises SystemExit: if the job id does not evaluate as an integer
+        """
+        job_id = str(stdout).split(";")[0]
+        try:
+            int(job_id)
+        except ValueError:
+            logger.critical(f"parsed job id '{job_id}' does not evaluate as an "
+                            f"integer, please check that function "
+                            f"`system._stdout_to_job_id()` is set correctly")
+            sys.exit(-1)
+
+        return job_id
+
 
     def run(self, funcs, single=False, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on a SLURM
-        cluster. Executes classname.method(*args, **kwargs) `NTASK` times,
-        each time on `NPROC` CPU cores
+        cluster. Executes the list of functions (`funcs`) NTASK times with each
+        task occupying NPROC cores.
 
         .. note::
             Completely overwrites the `Cluster.run()` command
@@ -210,14 +243,20 @@ class Slurm(Cluster):
 
         logger.debug(run_call)
 
-        # Stdout will be job number (e.g., 1234). Federated clusters will return
-        # job # and cluster name (e.g., 1234;Cluster1). We only want job #
-        job_id = subprocess.run(run_call, stdout=subprocess.PIPE,
+        # Grab the job id (used to monitor job status) from the stdout message
+        stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
                                 text=True, shell=True).stdout
-        job_id = str(job_id).split(";")[0]
+        job_id = self._stdout_to_job_id(stdout)
 
         # Monitor the job queue until all jobs have completed, or any one fails
-        status = check_job_status(job_id)
+        try:
+            status = check_job_status(job_id)
+        except FileNotFoundError:
+            logger.critical(f"cannot access job information through 'sacct', "
+                            f"waited 50s with no return, please check job "
+                            f"scheduler and log messages")
+            sys.exit(-1)
+
         if status == -1:  # Failed job
             logger.critical(
                 msg.cli(f"Stopping workflow. Please check logs for details.",
@@ -249,6 +288,8 @@ def check_job_status(job_id):
     :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
         fail (one or more jobs returned failing status)
     """
+    logger.debug(f"checking job status for submitted job: {job_id}")
+
     bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL",
                   "OUT_OF_MEMORY", "CANCELLED"]
     while True:
@@ -291,6 +332,7 @@ def query_job_states(job_id, _recheck=0):
         stdout of the 'sacct' command to be empty. In this case we wait and call
         the function again. Rechecks are used to prevent endless loops by 
         putting a stop criteria
+    :raises FileNotFoundError: if 'sacct' does not return any output for ~1 min.
     """
     job_ids, job_states = [], []
     cmd = f"sacct -nLX -o jobid,state -j {job_id}"
@@ -302,10 +344,7 @@ def query_job_states(job_id, _recheck=0):
     if not stdout:
         _recheck += 1
         if _recheck > 10:
-            logger.critical(f"cannot access job information through '{cmd}', "
-                            f"waited 50s with no return, please check job "
-                            f"scheduler and log messages")
-            sys.exit(-1)
+            raise FileNotFoundError
         time.sleep(5)
         query_job_states(job_id, _recheck)
 
