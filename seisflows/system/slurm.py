@@ -289,7 +289,7 @@ def check_job_status(job_id):
     :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
         fail (one or more jobs returned failing status)
     """
-    logger.debug(f"checking job status for submitted job: {job_id}")
+    logger.debug(f"monitoring job status for submitted job: {job_id}")
 
     bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL",
                   "OUT_OF_MEMORY", "CANCELLED"]

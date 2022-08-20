@@ -3,12 +3,17 @@
 Frontera is one of the Texas Advanced Computing Center (TACC) HPCs.
 https://frontera-portal.tacc.utexas.edu/
 
-.. note::
-    One caveat of the TACC Systems is that you cannot submit 'sbatch' from 
+.. note:: Caveat 1  
+    On TACC Systems is that you cannot submit 'sbatch' from 
     compute nodes, which is how SeisFlows operates. To work around this, 
     the run call SSHs from the compute node to the login node to submit the
     sbatch script. This requires knowing the User name, and that SSH keys
     are available. Thanks to Ian Wang for the suggestion.
+
+.. note:: Caveat 2
+    TACC does not allow the '--array' option, which SeisFlows used to submit
+    multiple jobs in a single SBATCH command. To work around this, the Frontera
+    module submits jobs one by one.
 """
 import os
 import sys
@@ -53,9 +58,37 @@ class Frontera(Slurm):
 
         # See note in file docstring for why we need this SSH call
         self._ssh_call = f"ssh {self.user}@frontera.tacc.utexas.edu"
-        self._partitions = {"small": 28, "normal": 28, "large": 28,
-                            "development": 28, "flex": 28}
 
+        # Internally used check parameters. Because 'development' and 'large'
+        # partitions do not allow >1 job per user, we cannot use them
+        self._acceptable_partitions = ["small", "normal", "flex"]
+        self._partitions = {"small": 28, "normal": 28, "large": 28, "flex": 28,
+                            "development": 28}
+        self._max_jobs = {"small": 20, "large": 1, "normal": 100, "flex": 15,
+                          "development": 1}
+
+        # Hard set `ntask_max` based on TACCS 'QOSMaxJobsPerUserLimit' 
+        self.ntask_max = self._max_jobs[self.partition]
+
+    def check(self):
+        """
+        Checks parameters and paths
+        """
+        super().check()
+
+        assert(self.partition in self._acceptable_partitions), \
+            f"Frontera `partition` must be in {self._acceptable_partitions}"
+
+        assert(self._max_jobs[self.partition] > 1), (
+            f"Frontera partition '{self.partition}' does not allow more than 1 "
+            f"simultaneously running job, meaning SeisFlows will not work. "
+            f"please choose a different partition"
+            )
+
+        if self.tasktime > 60 and self.partition == "flex":
+            logger.warning("Frontera's 'Flex' partition may cancel jobs that "
+                           "exceed 60 minute wall time. Consider choosing a "
+                           "different partition if this may be a problem")
 
     @property
     def submit_call_header(self):
@@ -69,7 +102,6 @@ class Frontera(Slurm):
         :return: the system-dependent portion of a submit call
         """
         _call = " ".join([
-            f"{self._ssh_call}",
             f"sbatch",
             f"--job-name={self.title}",  # -J
             f"--partition={self.partition}",  # -p
@@ -103,7 +135,7 @@ class Frontera(Slurm):
             f"--output={os.path.join(self.path.log_files, '%A_%a')}",
             f"--ntasks={self.nproc:d}",
             f"--nodes={self.nodes}",
-            f"--array=0-{self.ntask - 1 % self.ntask_max}",
+            # f"--array=0-{self.ntask - 1 % self.ntask_max}",
             f"--time={self._tasktime}",
             f"--parsable"
         ])
