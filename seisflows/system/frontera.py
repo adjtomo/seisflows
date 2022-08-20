@@ -33,6 +33,12 @@ class Frontera(Slurm):
     :param user: User's username on TACC systems. Can be determined by 'whoami'
         or will be gathered from the 'USER' environment variable. Used for
         internal ssh'ing from compute nodes to login nodes.
+    :type conda_env: str
+    :param conda_env: name of the Conda environment in which you are running 
+        SeisFlows. Defaults to environment variable 'CONDA_DEFAULT_ENV'. Used
+        to activate the conda environment AFTER ssh'ing from compute to login
+        node, to ensure that the newly submitted job has access to the SeisFlows
+        environment
     :type partition: str
     :param partition: Chinook has various partitions which each have their
         own number of cores per compute node. Available are: small, normal,
@@ -46,18 +52,20 @@ class Frontera(Slurm):
 
     ***
     """
-    def __init__(self, user=None, partition="development", allocation=None, 
-                 **kwargs):
+    def __init__(self, user=None, conda_env=None, partition="development", 
+                 allocation=None, **kwargs):
         """Frontera init"""
         super().__init__(**kwargs)
 
         self.user = user or os.environ["USER"]  # alt. getpass.getuser()
+        self.conda_env = conda_env or os.environ["CONDA_DEFAULT_ENV"]
         self.partition = partition
         self.allocation = allocation
         self.mpiexec = "ibrun"
 
         # See note in file docstring for why we need this SSH call
-        self._ssh_call = f"ssh {self.user}@frontera.tacc.utexas.edu"
+        self._ssh_call = (f"ssh {self.user}@frontera.tacc.utexas.edu "
+                          f"'conda activate {self.conda_env}; ")
 
         # Internally used check parameters. Because 'development' and 'large'
         # partitions do not allow >1 job per user, we cannot use them

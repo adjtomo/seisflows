@@ -231,7 +231,8 @@ class Slurm(Cluster):
             f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
             f"--funcs {funcs_fid}",
             f"--kwargs {kwargs_fid}",
-            f"--environment {self.environs or ''}"
+            f"--environment {self.environs or ''}'"
+            # f"--environment {self.environs or ''}"
         ])
 
         # Single-process jobs simply need to replace a few sbatch arguments.
