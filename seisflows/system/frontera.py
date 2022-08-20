@@ -3,22 +3,29 @@
 Frontera is one of the Texas Advanced Computing Center (TACC) HPCs.
 https://frontera-portal.tacc.utexas.edu/
 
-.. note:: Caveat 1  
-    On TACC Systems is that you cannot submit 'sbatch' from 
-    compute nodes, which is how SeisFlows operates. To work around this, 
-    the run call SSHs from the compute node to the login node to submit the
-    sbatch script. This requires knowing the User name, and that SSH keys
-    are available. Thanks to Ian Wang for the suggestion.
+.. note:: Frontera Caveat 1  
+    On TACC Systems you cannot submit 'sbatch' from compute nodes. Work around:
+    SSHs from compute node to login node, activate conda environemtn, submit 
+    sbatch script. This requires knowing the User name, conda environment name,
+    and ensuring SSH keys are available. Thanks to Ian Wang for the suggestion
+    to SSH around the problem.
 
-.. note:: Caveat 2
-    TACC does not allow the '--array' option, which SeisFlows used to submit
+    Essentially we are running, from the compute node:
+    $ ssh user@hostname 'conda activate env; sbatch --arg=val run_function.sh'
+
+.. note:: Frontera Caveat 2
+    TACC does not allow the '--array' option, which SeisFlows uses to submit
     multiple jobs in a single SBATCH command. To work around this, the Frontera
     module submits jobs one by one.
 """
 import os
 import sys
-from seisflows import logger
-from seisflows.system.slurm import Slurm
+import subprocess
+from seisflows import ROOT_DIR, logger
+from seisflows.tools import msg
+from seisflows.tools.config import pickle_function_list
+from seisflows.system.slurm import (Slurm, query_job_states, BAD_STATES, 
+                                    check_job_status_list)
 
 
 class Frontera(Slurm):
@@ -63,9 +70,9 @@ class Frontera(Slurm):
         self.allocation = allocation
         self.mpiexec = "ibrun"
 
-        # See note in file docstring for why we need this SSH call
-        self._ssh_call = (f"ssh {self.user}@frontera.tacc.utexas.edu "
-                          f"'conda activate {self.conda_env}; ")
+        # See 'Frontera Caveat 1' note for why we need these calls
+        self._ssh_call = f"ssh {self.user}@frontera.tacc.utexas.edu"
+        self._conda_activate = f"conda activate {self.conda_env}"
 
         # Internally used check parameters. Because 'development' and 'large'
         # partitions do not allow >1 job per user, we cannot use them
@@ -135,15 +142,13 @@ class Frontera(Slurm):
         :return: the system-dependent portion of a run call
         """
         _call = " ".join([
-            f"{self._ssh_call}",
             f"sbatch",
             f"{self.slurm_args or ''}",
             f"--job-name={self.title}",
             f"--partition={self.partition}",
-            f"--output={os.path.join(self.path.log_files, '%A_%a')}",
+            f"--output={os.path.join(self.path.log_files, '%A')}",
             f"--ntasks={self.nproc:d}",
             f"--nodes={self.nodes}",
-            # f"--array=0-{self.ntask - 1 % self.ntask_max}",
             f"--time={self._tasktime}",
             f"--parsable"
         ])
@@ -190,3 +195,81 @@ class Frontera(Slurm):
             sys.exit(-1)                                                         
                                                                                  
         return job_id    
+
+    def run(self, funcs, single=False, **kwargs):                                
+        """                                                                      
+        Runs task multiple times in embarrassingly parallel fasion on Frontera.
+        Executes the list of functions (`funcs`) NTASK times with each  
+        task occupying NPROC cores.                                              
+                                                                                 
+        .. note::                                                                
+            Completely overwrites the `Slurm.run()` command                    
+
+         TODO 
+            * can we ssh once or do we have to do it for each process?
+            * the ssh command prints the ssh prompt to the log file, how do
+              we supress that?
+                                                                                 
+        :type funcs: list of methods                                             
+        :param funcs: a list of functions that should be run in order. All       
+            kwargs passed to run() will be passed into the functions.            
+        :type single: bool                                                       
+        :param single: run a single-process, non-parallel task, such as          
+            smoothing the gradient, which only needs to be run by once.          
+            This will change how the job array and the number of tasks is        
+            defined, such that the job is submitted as a single-core job to      
+            the system.                                                          
+        """                                                                      
+        funcs_fid, kwargs_fid = pickle_function_list(funcs,                      
+                                                     path=self.path.scratch,     
+                                                     **kwargs)                   
+        if single:                                                               
+            logger.info(f"running functions {[_.__name__ for _ in funcs]} on "   
+                        f"system 1 time")                                        
+            _ntask = 1
+        else:                                                                    
+            logger.info(f"running functions {[_.__name__ for _ in funcs]} on "   
+                        f"system {self.ntask} times")                            
+            _ntask = self.ntask
+                                                                                 
+        # Run call is slightly different for Frontera, which needs ssh and 
+        # cannot run array jobs
+        job_ids = []
+        for taskid in range(_ntask):
+            run_call = " ".join([
+                f"{self.run_call_header}",
+                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
+                f"--funcs {funcs_fid}",
+                f"--kwargs {kwargs_fid}",
+                f"--environment {self.environs or ''},SEISFLOWS_TASKID={taskid}"
+            ])                    
+            # Need to wrap run call in quotes so it can go through ssh
+            run_call = f"{self._ssh_call} '{self._conda_activate}; {run_call}'"
+            if taskid == 0:
+                logger.debug(run_call)
+                                                                                 
+            stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
+                                    text=True, shell=True).stdout
+            job_ids.append(self._stdout_to_job_id(stdout))
+
+        # Monitor the job queue until all jobs have completed, or any one fails  
+        try:                                                                     
+            status = check_job_status_list(job_ids)
+        except FileNotFoundError:                                                
+            logger.critical(f"cannot access job information through 'sacct', "   
+                            f"waited 50s with no return, please check job "      
+                            f"scheduler and log messages")                       
+            sys.exit(-1)                                                         
+                                                                                 
+        if status == -1:  # Failed job                                           
+            logger.critical(                                                     
+                msg.cli(f"Stopping workflow. Please check logs for details.",    
+                        items=[f"TASKS:   {[_.__name__ for _ in funcs]}",        
+                               f"SBATCH:  {run_call}"],                          
+                        header="slurm run error", border="=")    
+            )                                                                    
+            sys.exit(-1)                                                         
+        else:                                                                    
+            logger.info(f"{self.ntask} tasks finished successfully") 
+
+

@@ -36,6 +36,10 @@ from seisflows.tools import msg
 from seisflows.tools.config import pickle_function_list
 
 
+# Define bad states defined by SLURM which signifiy failed jobs
+BAD_STATES = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY", "CANCELLED"]
+
+
 class Slurm(Cluster):
     """
     System Slurm
@@ -194,6 +198,32 @@ class Slurm(Cluster):
 
         return job_id
 
+    @staticmethod
+    def _modify_run_call_single_proc(run_call):
+        """
+        Modifies a SLURM SBATCH command to use only 1 processor as a single run
+        by replacing the --array and --ntasks options
+
+        :type run_call: str
+        :param run_call: The SBATCH command to modify
+        :rtype: str
+        :return: a modified SBATCH command that should only run on 1 processor
+        """
+        for part in run_call.split(" "):
+            if "--array" in part:
+                run_call = run_call.replace(part, "--array=0-0")
+            elif "--ntasks" in part:
+                run_call = run_call.replace(part, "--ntasks=1")
+
+        # Append taskid to environment variable, deal with the case where
+        # self.par.ENVIRONS is an empty string
+        task_id_str = "SEISFLOWS_TASKID=0"
+        if not run_call.strip().endswith("--environment"):
+            task_id_str = f",{task_id_str}"  # appending to the list of vars
+
+        run_call += task_id_str
+
+        return run_call
 
     def run(self, funcs, single=False, **kwargs):
         """
@@ -231,8 +261,7 @@ class Slurm(Cluster):
             f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
             f"--funcs {funcs_fid}",
             f"--kwargs {kwargs_fid}",
-            f"--environment {self.environs or ''}'"
-            # f"--environment {self.environs or ''}"
+            f"--environment {self.environs or ''}"
         ])
 
         # Single-process jobs simply need to replace a few sbatch arguments.
@@ -241,7 +270,7 @@ class Slurm(Cluster):
         if single:
             logger.info("replacing parts of sbatch run call for single "
                         "process job")
-            run_call = _modify_run_call_single_proc(run_call)
+            run_call = self._modify_run_call_single_proc(run_call)
 
         logger.debug(run_call)
 
@@ -252,7 +281,7 @@ class Slurm(Cluster):
 
         # Monitor the job queue until all jobs have completed, or any one fails
         try:
-            status = check_job_status(job_id)
+            status = check_job_status_array(job_id)
         except FileNotFoundError:
             logger.critical(f"cannot access job information through 'sacct', "
                             f"waited 50s with no return, please check job "
@@ -271,7 +300,7 @@ class Slurm(Cluster):
             logger.info(f"task {job_id} finished successfully")
 
 
-def check_job_status(job_id):
+def check_job_status_array(job_id):
     """
     Repeatedly check the status of a currently running job using 'sacct'.
     If the job goes into a bad state like 'FAILED', log the failing
@@ -289,22 +318,55 @@ def check_job_status(job_id):
     :rtype: int
     :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
         fail (one or more jobs returned failing status)
+    :raises FileNotFoundError: if 'sacct' does not return any output for ~1 min.
     """
-    logger.debug(f"monitoring job status for submitted job: {job_id}")
-
-    bad_states = ["TIMEOUT", "FAILED", "NODE_FAIL",
-                  "OUT_OF_MEMORY", "CANCELLED"]
+    logger.info(f"monitoring job status for submitted job: {job_id}")
     while True:
         time.sleep(5)  # give job time to process and also prevent over-query
         job_ids, states = query_job_states(job_id)
         if all([state == "COMPLETED" for state in states]):
             return 1  # Pass
-        elif any([check in states for check in bad_states]):  # Any bad states?
+        elif any([check in states for check in BAD_STATES]):  # Any bad states?
             logger.info("atleast 1 system job returned a failing exit code")
             for job_id, state in zip(job_ids, states):
-                if state in bad_states:
+                if state in BAD_STATES:
                     logger.debug(f"{job_id}: {state}")
             return -1  # Fail
+
+def check_job_status_list(job_ids):                                          
+    """                                                                          
+    Check the status of a list of currently running jobs. This is used for 
+    systems that cannot submit array jobs (e.g., Frontera) where we instead
+    submit jobs one by one and have to check the status of all those jobs
+    together.
+
+    :type job_ids: list of str
+    :param job_id: job ID's to query with SACCT. Will be considered one group
+        of jobs, who all need to finish successfully otherwise the entire group
+        is considered failed
+    :rtype: int
+    :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
+        fail (one or more jobs returned failing status)
+    :raises FileNotFoundError: if 'sacct' does not return any output for ~1 min.
+    """                                                                          
+    logger.info(f"monitoring job status for {len(job_ids)} submitted jobs")      
+    logger.debug(job_ids)                                                        
+                                                                                 
+    while True:                                                                  
+        time.sleep(5)                                                            
+        job_id_list, states = [], []                                             
+        for job_id in job_ids:                                                   
+            _job_ids, _states = query_job_states(job_id)                         
+            job_id_list += _job_ids                                              
+            states += _states                                                    
+        if all([state == "COMPLETED" for state in states]):                      
+            return 1  # Pass                                                     
+        elif any([check in states for check in BAD_STATES]):  # Any bad states?  
+            logger.info("atleast 1 system job returned a failing exit code")     
+            for job_id, state in zip(job_ids, states):                           
+                if state in BAD_STATES:                                          
+                    logger.debug(f"{job_id}: {state}")                           
+            return -1  # Fail  
 
 
 def query_job_states(job_id, _recheck=0):
@@ -359,29 +421,4 @@ def query_job_states(job_id, _recheck=0):
     return job_ids, job_states
 
 
-def _modify_run_call_single_proc(run_call):
-    """
-    Modifies a SLURM SBATCH command to use only 1 processor as a single run
-    by replacing the --array and --ntasks options
-
-    :type run_call: str
-    :param run_call: The SBATCH command to modify
-    :rtype: str
-    :return: a modified SBATCH command that should only run on 1 processor
-    """
-    for part in run_call.split(" "):
-        if "--array" in part:
-            run_call = run_call.replace(part, "--array=0-0")
-        elif "--ntasks" in part:
-            run_call = run_call.replace(part, "--ntasks=1")
-
-    # Append taskid to environment variable, deal with the case where
-    # self.par.ENVIRONS is an empty string
-    task_id_str = "SEISFLOWS_TASKID=0"
-    if not run_call.strip().endswith("--environment"):
-        task_id_str = f",{task_id_str}"  # appending to the list of vars
-
-    run_call += task_id_str
-
-    return run_call
 
