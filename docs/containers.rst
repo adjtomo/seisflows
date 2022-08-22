@@ -38,7 +38,7 @@ To get the latest version of the `Pyatoa` Docker image, run:
 
 .. code-block:: bash
 
-    $ docker pull ghcr.io/seisscoped/pyatoa:nightly
+    docker pull ghcr.io/seisscoped/pyatoa:nightly
 
 Their are two methods for running the SeisFlows example using this Docker image,
 either through a `JupyterHub interface <https://jupyter.org/hub>`__, or through
@@ -53,7 +53,7 @@ We can run SeisFlows through JupyterHub by running through a port:
 
 .. code-block:: bash
 
-    $ docker run -p 8888:8888 ghcr.io/seisscoped/pyatoa:nightly
+    docker run -p 8888:8888 ghcr.io/seisscoped/pyatoa:nightly
 
 To open the running JupyterHub instance, open the URL that is pasted to stdout
 in your favorite web browser. This will likely look something like
@@ -69,9 +69,9 @@ the example in a new directory to avoid muddling up the home directory.
 
 .. code-block:: bash
 
-    $ mkdir sf_sem2d_example
-    $ cd sf_sem2d_example
-    $ seisflows examples run 2  # when prompted, simply hit enter
+    mkdir sf_sem2d_example
+    cd sf_sem2d_example
+    seisflows examples run 2  # when prompted, simply hit enter
 
 This example will download, configure and compile SPECFEM2D into your
 JupyterHub instance, and then run a SeisFlows-Pyatoa-SPECFEM2D inversion
@@ -90,13 +90,13 @@ line tool. To run the help message:
 
 .. code-block:: bash
 
-    $ docker run ghcr.io/seisscoped/pyatoa:nightly seisflows -h
+    docker run ghcr.io/seisscoped/pyatoa:nightly seisflows -h
 
 Running the example should be as easy as:
 
 .. code-block:: bash
 
-    $ docker run ghcr.io/seisscoped/pyatoa:nightly seisflows examples run 2
+    docker run ghcr.io/seisscoped/pyatoa:nightly seisflows examples run 2
 
 In the above example, SeisFlows automatically identifies the SPECFEM2D
 installation within the Docker image and uses this as the external numerical
@@ -127,14 +127,14 @@ To download the required image on your system:
 
 .. code-block:: bash
 
-    $ module load tacc-singularity
-    $ singularity pull ghcr.io/seisscoped/pyatoa:nightly
+    module load tacc-singularity
+    singularity pull ghcr.io/seisscoped/pyatoa:nightly
 
 To run the SeisFlows help message
 
 .. code-block:: bash
 
-    $ singularity run ghcr.io/seisscoped/pyatoa:nightly seisflows -h
+    singularity run ghcr.io/seisscoped/pyatoa:nightly seisflows -h
 
 To set your system to use Singularity, you just need to append '-singularity' to
 an existing system subclass in the SeisFlows parameter file. For example, since
@@ -142,11 +142,11 @@ we are running on Frontera, we set our system to 'frontera-singularity'.
 
 .. code-block:: bash
 
-    $ seisflows setup  # create the 'parameters.yaml' file
-    $ seisflows par system frontera-singularity  # set the system
+    seisflows setup  # create the 'parameters.yaml' file
+    seisflows par system frontera-singularity  # set the system
     # ... set any other main modules here
-    $ seisflows configure  # fill out the parameter file
+    seisflows configure  # fill out the parameter file
     # ... edit your parameters here and then run SeisFlows
-    $ singularity run ghcr.io/seisscoped/pyatoa:nightly seisflows submit
+    singularity run ghcr.io/seisscoped/pyatoa:nightly seisflows submit
 
 
