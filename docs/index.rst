@@ -112,6 +112,7 @@ install instructions.
    :hidden:
    :caption: How To
 
+   containers
    extending
 
 .. toctree::
