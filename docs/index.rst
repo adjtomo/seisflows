@@ -110,7 +110,7 @@ install instructions.
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: How To
+   :caption: How To's
 
    containers
    extending
