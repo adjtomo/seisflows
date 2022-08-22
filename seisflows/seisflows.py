@@ -580,6 +580,8 @@ class SeisFlows:
 
             ogpars.pop(module)  # don't edit the parameter were changing
             for key, val in ogpars.items():
+                if val is None:
+                    val = "null"
                 try:
                     setpar(key=key, val=val, file=self._args.parameter_file,
                            delim=":")
@@ -653,7 +655,7 @@ class SeisFlows:
                          "output_log"]:
                 path = f"path_{name}"
                 if path in pars:
-                    unix.rm(path)
+                    unix.rm(pars[path])
 
     def restart(self, force=False, **kwargs):
         """
