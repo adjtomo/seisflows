@@ -286,6 +286,15 @@ working state before the workflow can be resumed
                           help="Run your choice of example problem")
     examples.add_argument("choice", type=str,  nargs="?", default=None,
                           help="Name of the specific example problem to run")
+    examples.add_argument("-r", "--specfem2d_repo", type=str,  nargs="?",
+                          default=None,
+                          help= "path to the SPECFEM2D directory which should "
+                                "contain binary executables. If not given, "
+                                "assumes directory is called 'specfem2d/' in "
+                                "the current working directory. If that dir "
+                                "is not found, SPECFEM2D will be downloaded, "
+                                "configured and compiled automatically in the "
+                                "current working directory.")
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
@@ -851,7 +860,7 @@ class SeisFlows:
             if not skip_print:
                 print(msg.cli(f"{key}: {cur_val} -> {value}"))
 
-    def examples(self, run=None, choice=None, **kwargs):
+    def examples(self, run=None, choice=None, specfem2d_repo=None, **kwargs):
         """
         List or run a SeisFlows example problem
 
@@ -872,7 +881,12 @@ class SeisFlows:
         :type choice: str
         :param choice: The choice of example, must match the given tag or file
             name that is assigned to it
+        :type specfem2d_repo: str
+        :param specfem2d_repo: path to the SPECFEM2D directory which should
+            contain binary executables. If not given, SPECFEM2D will be
+            downloaded configured and compiled automatically.
         """
+        # Gather all the available examples in the repository
         examples_dir = os.path.join(ROOT_DIR, "examples")
         examples_list = []
         example_names = sorted(glob(os.path.join(examples_dir, "ex*.py")))
@@ -890,7 +904,7 @@ class SeisFlows:
             # Case 2: seisflows examples run 1 OR seisflows examples run ex1_...
             elif run in ["run", "setup"]:
                 arg1 = choice
-                arg2 = f" {run}"  # space so that we do $ python ex.py run
+                arg2 = f"{run}"  # space so that we do $ python ex.py run
         if arg1:
             # Allow for matching against index (int) and name (str)
             try:
@@ -902,8 +916,16 @@ class SeisFlows:
                 j, exname, fid = ex_tup
                 if arg1 in [j, exname]:
                     print(f"{run.capitalize()} example: {exname}")
-                    subprocess.run(f"python {fid}{arg2}", shell=True,
-                                   check=False)
+                    # Set default value for SPECFEM2D repository and make
+                    # sure paths are fully expanded to avoid any pathing error
+                    if specfem2d_repo is None:
+                        specfem2d_repo = os.path.join(os.getcwd(), "specfem2d")
+                    specfem2d_repo = os.path.expanduser(
+                        os.path.abspath(specfem2d_repo)
+                    )
+                    # $ python /path/to/example.py run path/to/specfem2d
+                    subprocess.run(f"python {fid} {arg2} {specfem2d_repo}",
+                                   shell=True, check=False)
                     return
 
         # Default behavior is to just print this help dialogue
@@ -919,28 +941,6 @@ class SeisFlows:
             header="seisflows examples"
         ))
         print(msg.cli(items=items))
-
-    # def check(self, choice=None, **kwargs):
-    #     """
-    #     Check parameters, state or values  of an active SeisFlows environment.
-    #     Type 'seisflows check --help' for a detailed help message.
-    #
-    #     :type choice: str
-    #     :param choice: underlying sub-function to choose
-    #     """
-    #     acceptable_args = {"model": self._check_model_parameters,
-    #                        "iter": self._check_current_iteration,
-    #                        "src": self._check_source_names,
-    #                        "isrc": self._check_source_index}
-    #
-    #     # Ensure that help message is thrown for empty commands
-    #     if choice not in acceptable_args.keys():
-    #         self._subparser.print_help()
-    #         sys.exit(0)
-    #
-    #     self._register_parameters()
-    #     self._load_modules()
-    #     acceptable_args[choice](*self._args.args, **kwargs)
 
     def print(self, choice=None, **kwargs):
         """
