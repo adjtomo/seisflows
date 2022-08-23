@@ -151,7 +151,8 @@ def set_task_id(task_id):
     os.environ["SEISFLOWS_TASKID"] = str(task_id)
 
 
-def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
+def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml",
+                     **kwargs):
     """
     Standard SeisFlows workflow setup block which runs a number of setup
     tasks including: loading a user-defined parameter file, configuring the
@@ -176,7 +177,7 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
     parameters = load_yaml(os.path.join(workdir, parameter_file))
     config_logger(level=parameters.log_level,
                   filename=parameters.path_output_log,
-                  verbose=parameters.verbose)
+                  verbose=parameters.verbose, **kwargs)
 
     # Instantiate SeisFlows modules dynamically based on choices and parameters
     # provided in the input parameter file
@@ -194,7 +195,8 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml"):
     return workflow
 
 
-def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
+def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True,
+                  stream_handler=True):
     """
     Explicitely configure the logging module with some parameters defined
     by the user in the System module. Instantiates a stream logger to write
@@ -238,10 +240,13 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True):
     logger.setLevel(level)
     formatter = logging.Formatter(fmt_str, datefmt="%Y-%m-%d %H:%M:%S")
 
-    # Stream handler to print log statements to stdout
-    # st_handler = logging.StreamHandler(sys.stdout)
-    # st_handler.setFormatter(formatter)
-    # logger.addHandler(st_handler)
+    # Stream handler to print log statements to stdout. Sometimes we don't want
+    # this, e.g., on an HPC system having both stream and file will print
+    # double log messages to your log file
+    if stream_handler:
+        st_handler = logging.StreamHandler(sys.stdout)
+        st_handler.setFormatter(formatter)
+        logger.addHandler(st_handler)
 
     # File handler to print log statements to text file `filename`
     if filename is not None:

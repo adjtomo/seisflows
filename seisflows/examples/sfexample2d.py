@@ -44,7 +44,7 @@ class SFExample2D:
     A class for running SeisFlows examples. Simplifies calls structure so that
     multiple example runs can benefit from the code written here
     """
-    def __init__(self, ntask=3, niter=2):
+    def __init__(self, ntask=3, niter=2, specfem2d_repo=None):
         """
         Set path structure which is used to navigate around SPECFEM repositories
         and the example working directory
@@ -54,14 +54,11 @@ class SFExample2D:
             defaults to 3
         :type niter: int
         :param niter: number of iterations to run. defaults to 2
+        :type specfem2d_repo: str
+        :param specfem2d_repo: path to the SPECFEM2D directory which should
+            contain binary executables. If not given, SPECFEM2D will be
+            downloaded configured and compiled automatically.
         """
-        specfem2d_repo = input(
-            msg.cli("If you have already downloaded SPECMFE2D, please input "
-                    "the full path to the repo. If left blank, this example "
-                    "will pull the latest version from GitHub and attempt "
-                    "to configure and make the binaries:\n> ")
-        )
-
         self.cwd = os.getcwd()
         self.sem2d_paths, self.workdir_paths = self.define_dir_structures(
             cwd=self.cwd, specfem2d_repo=specfem2d_repo
@@ -365,14 +362,16 @@ if __name__ == "__main__":
                "3. Generate starting model from Tape2007 example",
                "4. Generate target model w/ perturbed starting model",
                "5. Set up a SeisFlows working directory",
-               f"6. Run an inversion workflow"],
+               "6. Run an inversion workflow"],
         header="seisflows example 1",
         border="=")
     )
 
     # Dynamically traverse sys.argv to get user-input command line. Cannot
     # use argparser here because we're being called by SeisFlows CLI tool which
-    # is occupying argparser
-    if len(sys.argv) > 1:
-        sfex2d = SFExample2D()
+    # is occupying argparser. Call looks something like:
+    # $ python /path/to/example.py run path/to/specfem2d
+    if len(sys.argv) > 2:
+        _, _, specfem2d_repo = sys.argv
+        sfex2d = SFExample2D(specfem2d_repo=specfem2d_repo)
         sfex2d.main()

@@ -40,7 +40,8 @@ if __name__ == '__main__':
     """
     args = parse_args()
     workflow = import_seisflows(workdir=args.workdir,
-                                parameter_file=args.parameter_file)
+                                parameter_file=args.parameter_file,
+                                stream_handler=False)
     workflow.check()
     workflow.setup()
     workflow.run()

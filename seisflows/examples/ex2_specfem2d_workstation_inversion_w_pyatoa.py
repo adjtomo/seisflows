@@ -26,7 +26,7 @@ class SFPyatoaEx2D(SFExample2D):
     advantage of the default SPECFEM2D stuff, onyl changes the generation of
     MODEL TRUE, the number of stations, and the setup of the parameter file.
     """
-    def __init__(self, ntask=2, niter=2, nsta=5):
+    def __init__(self, ntask=2, niter=2, nsta=5, specfem2d_repo=None):
         """
         Overload init and attempt to import Pyatoa before running example,
         overload the default number of tasks to 2, and add a new init parameter
@@ -40,8 +40,13 @@ class SFPyatoaEx2D(SFExample2D):
         :type nsta: int
         :param nsta: number of stations to include in inversion, between 1 and
             131
+        :type specfem2d_repo: str
+        :param specfem2d_repo: path to the SPECFEM2D directory which should
+            contain binary executables. If not given, SPECFEM2D will be
+            downloaded configured and compiled automatically.
         """
-        super().__init__(ntask=ntask, niter=niter)
+        super().__init__(ntask=ntask, niter=niter,
+                         specfem2d_repo=specfem2d_repo)
         self.nsta = nsta
         # -1 because it represents index but we need to talk in terms of count
         assert(1 <= self.nsta <= 131), \
@@ -153,6 +158,7 @@ if __name__ == "__main__":
     # Dynamically traverse sys.argv to get user-input command line. Cannot
     # use argparser here because we're being called by SeisFlows CLI tool which
     # is occupying argparser
-    if len(sys.argv) > 1:
-        sfex2d = SFPyatoaEx2D()
+    if len(sys.argv) > 2:
+        _, _, specfem2d_repo = sys.argv
+        sfex2d = SFPyatoaEx2D(specfem2d_repo=specfem2d_repo)
         sfex2d.main()
