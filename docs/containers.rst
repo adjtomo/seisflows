@@ -71,7 +71,7 @@ the example in a new directory to avoid muddling up the home directory.
 
     mkdir sf_sem2d_example
     cd sf_sem2d_example
-    seisflows examples run 2  # when prompted, simply hit enter
+    seisflows examples run 2
 
 This example will download, configure and compile SPECFEM2D into your
 JupyterHub instance, and then run a SeisFlows-Pyatoa-SPECFEM2D inversion
