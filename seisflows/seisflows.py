@@ -25,8 +25,7 @@ from IPython import embed
 
 from seisflows import logger, ROOT_DIR, NAMES
 from seisflows.tools import unix, msg
-from seisflows.tools.config import (Dict, load_yaml, custom_import,
-                                    import_seisflows)
+from seisflows.tools.config import load_yaml, custom_import, import_seisflows
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model)
 
@@ -413,14 +412,11 @@ class SeisFlows:
         .. note::
             Future working directory setup functions can be placed here
 
-        :type symlink: bool
-        :param symlink: flag to turn on source code symlinking
         :type force: bool
         :param force: flag to force parameter file overwriting
         """
-        par_file = os.path.join(ROOT_DIR, "examples", "parameters.yaml")
-
-        if os.path.exists(self._args.parameter_file):
+        par_file = os.path.join(self._args.workdir, self._args.parameter_file)
+        if os.path.exists(par_file):
             if force:
                 check = "y"
             else:
@@ -429,13 +425,12 @@ class SeisFlows:
                             f"({self._args.parameter_file}) found. Do you "
                             f"wish to overwrite with a blank file? (y/[n])"
                             ))
-            if check == "y":
-                unix.rm(self._args.parameter_file)
-            else:
+            if check != "y":
                 sys.exit(0)
 
-        unix.cp(par_file, self._args.workdir)
-        print(msg.cli(f"creating parameter file: {self._args.parameter_file}"))
+        with open(par_file, "w") as f:
+            f.write(msg.base_parameter_file)
+        print(msg.cli(f"created parameter file: {self._args.parameter_file}"))
 
     def configure(self, absolute_paths=False, **kwargs):
         """
