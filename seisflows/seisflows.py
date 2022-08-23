@@ -464,6 +464,8 @@ class SeisFlows:
             else if False, use path names relative to the working directory.
             Defaults to False, uses relative paths.
         """
+        print("configuring SeisFlows parameter file")
+
         def split_module_docstring(mod, idx):
             """
             Since our docstrings are concatenated, we need to break them
@@ -560,8 +562,6 @@ class SeisFlows:
         .. rubric::
             $ seisflows swap system slurm
         """
-        PAR_FILE = os.path.join(ROOT_DIR, "examples", "parameters.yaml")
-
         if module not in NAMES:
             print(msg.cli(text=f"{module} does not match {NAMES}",
                           header="error"))
@@ -572,7 +572,7 @@ class SeisFlows:
         unix.mv(self._args.parameter_file, f"_{self._args.parameter_file}")
         try:
             # Create a new parameter file with updated module
-            unix.cp(PAR_FILE, self._args.workdir)
+            self.setup(force=True)
             for name in NAMES:
                 setpar(key=name, val=ogpars[name],
                        file=self._args.parameter_file, delim=":")
