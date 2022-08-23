@@ -158,7 +158,7 @@ if __name__ == "__main__":
     # Dynamically traverse sys.argv to get user-input command line. Cannot
     # use argparser here because we're being called by SeisFlows CLI tool which
     # is occupying argparser
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 2:
         _, _, specfem2d_repo = sys.argv
         sfex2d = SFPyatoaEx2D(specfem2d_repo=specfem2d_repo)
         sfex2d.main()

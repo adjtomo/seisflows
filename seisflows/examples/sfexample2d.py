@@ -371,7 +371,7 @@ if __name__ == "__main__":
     # use argparser here because we're being called by SeisFlows CLI tool which
     # is occupying argparser. Call looks something like:
     # $ python /path/to/example.py run path/to/specfem2d
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 2:
         _, _, specfem2d_repo = sys.argv
         sfex2d = SFExample2D(specfem2d_repo=specfem2d_repo)
         sfex2d.main()
