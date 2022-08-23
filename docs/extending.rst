@@ -1,5 +1,5 @@
-Extending SeisFlows
-===================
+Extending the Codebase
+======================
 
 .. note::
     Page Under Construction

@@ -1,5 +1,5 @@
-Running in Containers
-=====================
+SeisFlows in Containers
+=======================
 
 As part of the `NSF-funded SCOPED project
 <https://www.nsf.gov/awardsearch/showAward?AWD_ID=2104052>`__ SeisFlows has
@@ -114,6 +114,14 @@ that allows Users to run container images on HPCs. You might want to use
 Apptainer if you cannot download software using Conda on your HPC, or you simply
 do not want to go through the trouble of downloading software on your system.
 
+Relevant Links:
+
+* Singularity on Chinook: 
+  https://uaf-rcs.gitbook.io/uaf-rcs-hpc-docs/third-party-software/singularity
+* Singularity on TACC:
+  https://containers-at-tacc.readthedocs.io/en/latest/singularity/
+01.singularity_basics.html
+
 
 .. note::
     This section was written working on TACC's Frontera, a SLURM based HPC.
@@ -127,14 +135,15 @@ To download the required image on your system:
 
 .. code-block:: bash
 
-    module load tacc-singularity
-    singularity pull ghcr.io/seisscoped/pyatoa:nightly
+    module load tacc-singularity  # on TACC Frontera
+    # module load singularity  # on UAF Chinook
+    singularity pull seisflows.sif docker://ghcr.io/seisscoped/pyatoa:nightly
 
 To run the SeisFlows help message
 
 .. code-block:: bash
 
-    singularity run ghcr.io/seisscoped/pyatoa:nightly seisflows -h
+    singularity run seisflows.sif seisflows -h
 
 To set your system to use Singularity, you just need to append '-singularity' to
 an existing system subclass in the SeisFlows parameter file. For example, since

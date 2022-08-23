@@ -105,13 +105,13 @@ install instructions.
    :caption: Examples
 
    specfem2d_example
-   example_on_cluster
 
 .. toctree::
    :maxdepth: 1
    :hidden:
    :caption: How To's
 
+   example_on_cluster
    containers
    extending
 

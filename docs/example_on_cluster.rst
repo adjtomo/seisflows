@@ -23,7 +23,7 @@ We first set up our working directory using the example setup shown in the `SPEC
     /home/bchow/Work/scratch
 
 
-.. code:: ipython3
+.. code:: bash
 
     ! ln -s /home/bchow/REPOSITORIES/specfem2d .  # place SPECFEM2D repository in the working directory
     ! seisflows examples setup 2  # run example setup but do not `submit` workflow
