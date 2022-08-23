@@ -11,32 +11,37 @@ import contextlib
 import subprocess
 from unittest.mock import patch
 
-from seisflows.tools.config import Dict
 from seisflows import ROOT_DIR
+from seisflows.tools import msg
 from seisflows.seisflows import SeisFlows
-from seisflows.tools.config import load_yaml
+from seisflows.tools.config import load_yaml, Dict
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
 
 
 @pytest.fixture
-def par_file():
+def par_file(tmpdir):
     """
-    Return the test parameter file as a dictionary object
-    :rtype: seisflows.config.Dict
-    :return: dictionary of parameters
+    Create a template parameter file
     """
-    return os.path.join(TEST_DIR, "test_data", "parameters.yaml")
+    fid = os.path.join(tmpdir, "parameters.yaml")
+    with open(fid, "w") as f:
+        f.write(msg.base_parameter_file)
+    return fid
 
 
 @pytest.fixture
-def par_file_dict(par_file):
+def par_file_dict():
     """
-    Return the test parameter file as a dictionary object
+    Return default parameter file parameters as a dictionary object
+
     :rtype: seisflows.config.Dict
     :return: dictionary of parameters
     """
-    return Dict(load_yaml(par_file))
+    par_file = Dict(workflow="forward", system="workstation",
+                    solver="specfem2d", preprocess="default",
+                    optimize="gradient")
+    return par_file
 
 
 def test_call_seisflows(par_file, par_file_dict):
@@ -129,18 +134,13 @@ def test_cmd_configure(tmpdir, par_file):
     """
     os.chdir(tmpdir)
 
-    # Copy in the setup par file so we can configure it
-    src = par_file
-    dst = os.path.join(tmpdir, "parameters.yaml")
-    shutil.copy(src, dst)
-
     # run seisflows configure
     with patch.object(sys, "argv", ["seisflows"]):
         sf = SeisFlows(workdir=tmpdir, parameter_file="parameters.yaml")
         sf.configure()
 
     # Check some random values that were not in the template file
-    parameters = load_yaml(dst)
+    parameters = load_yaml(par_file)
     assert("path_model_init" in parameters.keys())
     assert("smooth_h" in parameters.keys())
     assert("ntask" in parameters.keys())
@@ -152,11 +152,6 @@ def test_cmd_par(tmpdir, par_file):
     :param tmpdir:
     :return:
     """
-    # Copy given parameter file with a weird name
-    src = par_file
-    dst = os.path.join(tmpdir, "parameters.yaml")
-    shutil.copy(src, dst)
-
     parameter = "workflow"
     expected_val = "forward"
     new_val = "migration"
@@ -164,7 +159,7 @@ def test_cmd_par(tmpdir, par_file):
     # testing the get option: seisflows par `parameter`
     with patch.object(sys, "argv", ["seisflows"]):
         # Run this with subprocess so we can capture the print statement
-        cmd_line_arg = ["seisflows", "-p", dst, "par", parameter]
+        cmd_line_arg = ["seisflows", "-p", par_file, "par", parameter]
         out = subprocess.run(cmd_line_arg, capture_output=True,
                              universal_newlines=True)
 
@@ -176,12 +171,12 @@ def test_cmd_par(tmpdir, par_file):
     # testing the set option: seisflows par `parameter` `value`
     with patch.object(sys, "argv", ["seisflows"]):
         # Run this with subprocess so we can capture the print statement
-        cmd_line_arg = ["seisflows", "-p", dst, "par", parameter, new_val]
+        cmd_line_arg = ["seisflows", "-p", par_file, "par", parameter, new_val]
         out1 = subprocess.run(cmd_line_arg, capture_output=True,
                               universal_newlines=True)
 
         # Run this with subprocess so we can capture the print statement
-        cmd_line_arg = ["seisflows", "-p", dst, "par", parameter]
+        cmd_line_arg = ["seisflows", "-p", par_file, "par", parameter]
         out2 = subprocess.run(cmd_line_arg, capture_output=True,
                               universal_newlines=True)
 

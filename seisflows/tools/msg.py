@@ -155,6 +155,43 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
     return output_str
 
 
+# Template parameter file used for 'seisflows setup' to initiate a workflow
+base_parameter_file = """
+# //////////////////////////////////////////////////////////////////////////////
+#
+#                        SeisFlows YAML Parameter File
+#
+# //////////////////////////////////////////////////////////////////////////////
+#
+# Modules correspond to the structure of the source code, and determine
+# SeisFlows' behavior at runtime. Each module requires its own sub-parameters.
+#
+# .. rubric::
+#   - Determine available options for modules by running:
+#       > seisflows print modules
+#   - Auto-fill with docstrings and default values (recommended) by running:
+#       > seisflows configure
+#   - Swap out module parameters for a configured parameter file by running:
+#       > seisflows swap {module} {name} (e.g., seisflows swap solver specfem3d)
+#   - To set values as NoneType, use: null
+#   - To set values as infinity, use: inf
+#
+#                                    MODULES
+#                                    ///////
+# workflow (str):    The types and order of functions for running SeisFlows
+# system (str):      Computer architecture of the system being used
+# solver (str):      External numerical solver to use for waveform simulations
+# preprocess (str):  Preprocessing schema for waveform data
+# optimize (str):    Optimization algorithm for the inverse problem
+# ==============================================================================
+workflow: forward
+system: workstation
+solver: specfem2d
+preprocess: default
+optimize: gradient
+"""
+
+
 # SeisFlows 'Globe' logo in ASCII. Used for CLI print statements
 ascii_logo = """
                                                                                 
