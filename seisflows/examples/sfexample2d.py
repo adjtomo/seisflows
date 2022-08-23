@@ -127,7 +127,7 @@ class SFExample2D:
         Last successfully tested 4/28/22
         """
         if not os.path.exists(self.sem2d_paths.repo):
-            cmd = ("git clone --recursive --branch devel " 
+            cmd = ("git clone --recursive --branch devel --depth=1" 
                    "https://github.com/geodynamics/specfem2d.git")
 
             print(f"Downloading SPECFEM2D with command: {cmd}")
