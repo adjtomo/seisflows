@@ -1,5 +1,5 @@
-Working Directory Structure
-===========================
+Working Directory
+=================
 
 SeisFlows sets it's own working directory when executing a workflow. Below we explore the working directory set up by the `SPECFEM2D-workstation example <specfem2d_example.html>`__. Working directories may change slightly depending on the chosen workflow, but will more or less follow the same structure.
 

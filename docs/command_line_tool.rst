@@ -58,8 +58,8 @@ help dialogue, you can type ``seisflows`` or ``seisflows -h``
     'seisflows [command] -h' for more detailed descriptions of each command.
 
 
-Setting up a parameter file
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Setting up
+~~~~~~~~~~
 
 seisflows setup
 ^^^^^^^^^^^^^^^
@@ -309,8 +309,8 @@ SeisFlows workflow.
    the package will raise AssertionErrors for incorrectly or improperly
    set parameters.
 
-Filling out the parameter file
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Editing the parameter file
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 seisflows par
 ^^^^^^^^^^^^^
@@ -413,6 +413,40 @@ having to wait on queue times or waste computational resources.
 Here we can see that a given path has not been set correctly in the
 parameter file.
 
+seisflows swap
+^^^^^^^^^^^^^^
+
+The ``seisflows swap`` command allows you to swap out a set of module
+parameters without affecting other parts of the parameter file. Some
+cases for when this might be useful include switching from a
+‘workstation’ system to a ‘cluster’ system, or swapping solvers from
+‘specfem2d’ to ‘specfem3d’.
+
+.. code:: ipython3
+
+    ! seisflows swap -h
+
+
+.. parsed-literal::
+
+    usage: seisflows swap [-h] [module] [classname]
+    
+    During workflow development, it may be necessary to swap between different
+    sub-modules (e.g., system.workstation -> system.cluster). However this would
+    typically involving re-generating and re-filling a parameter file. The 'swap'
+    function makes it easier to swap parameters between modules.
+    
+    positional arguments:
+      module      Module name to swap
+      classname   Classname to swap to
+    
+    optional arguments:
+      -h, --help  show this help message and exit
+
+
+Running workflows
+~~~~~~~~~~~~~~~~~
+
 seisflows submit
 ^^^^^^^^^^^^^^^^
 
@@ -426,3 +460,38 @@ chosen ``system``. For Users running on laptops and workstations,
 tasks in the ``workflow`` task list. On clusters, ``submit`` will launch
 a master job on a compute node, which will itself step through tasks in
 the task list, ensuring that no processing is run on login nodes.
+
+.. code:: ipython3
+
+    ! seisflows submit -h
+
+
+.. parsed-literal::
+
+    usage: seisflows submit [-h] [-s STOP_AFTER]
+    
+    The main SeisFlows execution command. Submit a SeisFlows workflow to the
+    chosen system, equal to executing seisflows.workflow.main(). This function
+    will create and fill the working directory with required paths, perform path
+    and parameter error checking, and establish the active working environment
+    before executing the workflow.
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -s STOP_AFTER, --stop_after STOP_AFTER
+                            Optional override of the 'STOP_AFTER' parameter
+
+
+seisflows clean
+^^^^^^^^^^^^^^^
+
+The ``clean`` function is used to clear an existing working directory.
+It deletes all SeisFlows created files and directories using paths in
+the parameter file, but does not delete the parameter file itself. Use
+the ``-f`` or ``--force`` flag to skip over the ‘are you sure?’ check
+statement.
+
+.. code:: ipython3
+
+    ! seisflows clean -f
+
