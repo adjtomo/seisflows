@@ -488,10 +488,47 @@ seisflows clean
 The ``clean`` function is used to clear an existing working directory.
 It deletes all SeisFlows created files and directories using paths in
 the parameter file, but does not delete the parameter file itself. Use
-the ``-f`` or ``--force`` flag to skip over the ‘are you sure?’ check
+the ``-f/--force`` flag to skip over the ‘are you sure?’ check
 statement.
 
 .. code:: ipython3
 
-    ! seisflows clean -f
+    ! seisflows clean -h 
+
+
+.. parsed-literal::
+
+    usage: seisflows clean [-h] [-f]
+    
+    Delete all SeisFlows related files in the working directory, except for the
+    parameter file.
+    
+    optional arguments:
+      -h, --help   show this help message and exit
+      -f, --force  Skip the warning check that precedes the clean function
+
+
+seisflows restart
+^^^^^^^^^^^^^^^^^
+
+The ``restart`` function is a convenience function which wraps ``clean``
+and ``submit``. It is used to restart workflows using the same parameter
+file. It also takes the ``-f/--force`` flag that the clean function
+defines.
+
+.. code:: ipython3
+
+    ! seisflows restart -h
+
+
+.. parsed-literal::
+
+    usage: seisflows restart [-h] [-f]
+    
+    Akin to running seisflows clean; seisflows submit. Restarts the workflow by
+    removing the current state and submitting a fresh workflow.
+    
+    optional arguments:
+      -h, --help   show this help message and exit
+      -f, --force  Skip the clean warning check statement
 

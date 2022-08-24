@@ -150,7 +150,7 @@ if __name__ == "__main__":
                "4. Generate target model w/ perturbed starting model",
                "5. Set up a SeisFlows working directory",
                f"6. Run an inversion workflow. The line search is expected to "
-               f"attempt 4 evaluations (i01s04)"],
+               f"attempt 2 evaluations (i01s02)"],
         header="seisflows example 2",
         border="=")
     )

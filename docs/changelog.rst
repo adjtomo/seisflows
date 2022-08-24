@@ -37,6 +37,7 @@ Major
 
 Moderate
 --------
+* Support added for SLURM-based TACC Frontera system
 * All modules now have their own setup() and check() functions which help
   establish a workflow before anything needs to be submitted to the system.
 * System run functions no longer require global pickling into sys modules, but
