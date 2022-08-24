@@ -43,7 +43,7 @@ BAD_STATES = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY", "CANCELLED"]
 class Slurm(Cluster):
     """
     System Slurm
-    ------------------
+    ------------
     Interface for submitting and monitoring jobs on HPC systems running the 
     Simple Linux Utility for Resource Management (SLURM) workload manager.
 

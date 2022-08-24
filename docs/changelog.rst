@@ -1,8 +1,8 @@
 Change Log
 ===============
 
-The following list documents changes made from ``SeisFlows Legacy``
-codebase (Last updated Aug. 12, 2022).
+The following list documents changes made since v2.0.0 
+(Last updated Aug. 18, 2022).
 
 Major
 ------
@@ -37,6 +37,7 @@ Major
 
 Moderate
 --------
+* Support added for SLURM-based TACC Frontera system
 * All modules now have their own setup() and check() functions which help
   establish a workflow before anything needs to be submitted to the system.
 * System run functions no longer require global pickling into sys modules, but
@@ -90,6 +91,12 @@ Moderate
   getting and setting values in the SPECFEM Par_file
 * Separated system mid-tier classes into "Cluster" and "Workstation" to
   differentiate working on HPC systems
+* Added a TestFlow workflow which 'live' tests System abilities directly on
+  login/compute nodes of a cluster
+* Reworked some of the internal system.Cluster architecture to take advantage
+  of inheritance - Systems now specify headers for their run and submit calls.
+  e.g., slurm-based systems specify their own SBATCH commands but all use the 
+  same call structure after the SBATCH header
 
 
 Minor
@@ -129,5 +136,6 @@ Minor
 * Enforced package-wide constants at the top of seisflows.config
 * Added __init__() functions to most of the modules to define any
   instance-dependent variables, which previously were not explained.
-
+* New Docs page to describe how to transition from a 2D workstation example 
+  to a 2D cluster example.
 

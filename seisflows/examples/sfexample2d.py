@@ -91,7 +91,7 @@ class SFExample2D:
         :type ex: str
         :type ex: The name of the example problem inside SPECFEM2D/EXAMPLES
         """
-        if not specfem2d_repo:
+        if not os.path.exists(specfem2d_repo):
             print(f"No existing SPECFEM2D repo given, default to: "
                   f"{cwd}/specfem2d")
             specfem2d_repo = os.path.join(cwd, "specfem2d")
@@ -127,7 +127,7 @@ class SFExample2D:
         Last successfully tested 4/28/22
         """
         if not os.path.exists(self.sem2d_paths.repo):
-            cmd = ("git clone --recursive --branch devel --depth=1" 
+            cmd = ("git clone --recursive --branch devel --depth=1 " 
                    "https://github.com/geodynamics/specfem2d.git")
 
             print(f"Downloading SPECFEM2D with command: {cmd}")

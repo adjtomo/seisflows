@@ -17,7 +17,7 @@ from seisflows.tools.config import Dict, get_task_id
 class TestFlow:
     """
     TestFlow Workflow
-    -------------
+    -----------------
     Test individual sub-modules in a 'live' testing environment in order to
     ensure SeisFlows works appropriately given an established system and solver.
 
