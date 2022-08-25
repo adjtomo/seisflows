@@ -347,6 +347,7 @@ class SFExample2D:
         if self.run_example:
             print(msg.cli("RUNNING SEISFLOWS INVERSION WORKFLOW", border="="))
             self.run_sf_example()
+        print(msg.cli("EXAMPLE COMPLETED SUCCESFULLY"))
 
 
 if __name__ == "__main__":
