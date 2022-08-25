@@ -16,91 +16,145 @@ on high performance computers using
 .. note::
     The `Pyatoa` container is shipped with the latest versions of
     `SeisFlows <https://github.com/adjtomo/seisflows>`__,
-    `Pyatoa <https://github.com/adjtomo/pyatoa>`__,
+    `Pyatoa <https://github.com/adjtomo/pyatoa>`__, and
     `PySEP <https://github.com/uafgeotools/pysep>`__.
 
 The remainder of this documentation page assumes you are familiar with Docker
-and containers. To learn more about Docker and containers you can visit:
+and containers.
+
+To learn more about Docker and containers, see:
 https://www.docker.com/resources/what-container/
 
-To install Docker on your workstation, visit:
+For instructions to install Docker on your workstation, visit:
 https://docs.docker.com/get-docker/
 
 
 Workstation example with Docker
 -------------------------------
 
-Here we will step through how running the
-`SeisFlows-SPECFEM2D <specfem2d_example.html>`__ example using the available
-Docker image.
-
-To get the latest version of the `Pyatoa` Docker image, run:
+Here we will step through how to run the
+`SeisFlows-SPECFEM2D <specfem2d_example.html>`__ example using Docker.
+First we need to get the latest version of the `Pyatoa` Docker image:
 
 .. code-block:: bash
 
-    docker pull ghcr.io/seisscoped/pyatoa:nightly
+    docker pull ghcr.io/seisscoped/pyatoa:latest
+
+.. note::
+    These docs were run using Docker image ID ``c57883926aae`` (last accessed
+    Aug. 24, 2022). If you notice that the docs page is out of date with respect
+    to the latest Docker image, please raise a
+    `SeisFlows GitHub issue <https://github.com/adjtomo/seisflows/issues>`__.
 
 Their are two methods for running the SeisFlows example using this Docker image,
-either through a `JupyterHub interface <https://jupyter.org/hub>`__, or through
-the command line. The former provides a graphical user interface that mimics
-a virtual desktop for easier navigation, while the latter provides more
-flexibility for scripting and using SeisFlows as a research tool.
+either 1) through a `JupyterHub interface <https://jupyter.org/hub>`__, or
+2) via the command line. The former provides a graphical user interface that
+mimics a virtual desktop for easier navigation, while the latter provides a
+push-button approach.
 
 From JupyterHub
 ^^^^^^^^^^^^^^^
 
-We can run SeisFlows through JupyterHub by running through a port:
+We can run SeisFlows through JupyterHub by opening the container through a port:
 
 .. code-block:: bash
 
-    docker run -p 8888:8888 ghcr.io/seisscoped/pyatoa:nightly
+    docker run -p 8888:8888 ghcr.io/seisscoped/pyatoa:latest
 
-To open the running JupyterHub instance, open the URL that is pasted to stdout
-in your favorite web browser. This will likely look something like
-http://127.0.0.1:8888/lab?token=xxx where xxx is your unique token
+To access the JupyterHub instance, open the URL that was output to the display
+in your favorite web browser. The URL will likely look something like
+http://127.0.0.1:8888/lab?token=??? where '???' is a unique token
 
-Once you have opened the JupyterHub instance, you should see a graphical
-user interface. The Pyatoa, PySEP and SeisFlows repositories will be downloaded
-and navigable in the file system on the left hand side of the window.
+Within the JupyterHub instance, you will be greeted with a graphical
+user interface (see below). The Pyatoa, PySEP and SeisFlows repositories are
+navigable in the file system on the left-hand side of the window.
 
-From inside the JupyterHub instance, click the 'Terminal' icon to open up a
-terminal window, and run the following example command. Note, it's best to run
-the example in a new directory to avoid muddling up the home directory.
+.. image:: images/container_1_jupyterhub.png
+    :align: center
+|
+From inside the JupyterHub instance, click the `Terminal` icon (highlighted red
+above) to open up a terminal window. Using the terminal we will run our example
+in an empty directory to avoid muddling up the home directory.
 
 .. code-block:: bash
 
+    # From inside the JupyterHub terminal
     mkdir sf_sem2d_example
     cd sf_sem2d_example
     seisflows examples run 2
 
-This example will download, configure and compile SPECFEM2D into your
+.. image:: images/container_2_example.png
+    :align: center
+|
+This example will download, configure and compile SPECFEM2D within your
 JupyterHub instance, and then run a SeisFlows-Pyatoa-SPECFEM2D inversion
-problem.
+problem. See `the SPECFEM2D example docs page <specfem2d_example.html>`__
+for a more thorough explanation of what's going on under the hood.
+
+.. warning::
+    Once you close the JupyterHub instance, all progress you've made since
+    opening it will be lost. If you would like to save your progress, you can
+    use the ``--mount`` command to mount your local filesystem inside the
+    container.
+
+Aside: Mounting a local filesystem
+"""""""""""""""""""""""""""""""""""
+
+By default, JupyterHub does not provide explicit access to your local
+filesystem. This is not ideal as we would usually like to save/view results. So
+we often provide the container access to the local filesystem using the
+``--mount`` flag.
+
+For example, if you already have SPECFEM2D downloaded and compiled on your local
+filesystem, you can mount it to the container to avoid having to redo this
+action. Or, as in the following code snippet, we bind our local filesystem's
+working directory (WORKDIR) into the containers filesystem as
+*/home/scoped/work* to save results.
+
+See the `Docker bind mounts <https://docs.docker.com/storage/bind-mounts/>`__
+documentation for more information.
+
+.. code-block:: bash
+
+    WORKDIR=/Users/Chow/Work/scratch
+    docker run -p 8888:8888 \
+        --mount type=bind,source=${WORKDIR},target=/home/scoped/work \
+        ghcr.io/seisscoped/pyatoa:latest
 
 
 From the command line
 ^^^^^^^^^^^^^^^^^^^^^
 
-.. warning::
-    Command line implementation does not currently work.
-
-To run the SeisFlows SPECFEM2D example from the command line, we simply need
-to point Docker to the image we just downloaded, and call the SeisFlows command
-line tool. To run the help message:
+Running the container from the command line is much simpler. To print the
+SeisFlows help message, we simply have to run the following:
 
 .. code-block:: bash
 
-    docker run ghcr.io/seisscoped/pyatoa:nightly seisflows -h
+    docker run ghcr.io/seisscoped/pyatoa:latest seisflows -h
 
-Running the example should be as easy as:
+The following code snippet will run a SeisFlows-Pyatoa-Specfem2D example.
+The extra fluff in the command allows the container to save files to your
+computer while it runs the example.
 
 .. code-block:: bash
 
-    docker run ghcr.io/seisscoped/pyatoa:nightly seisflows examples run 2
+    WORKDIR=/Users/Chow/Work/scratch  # choose your own directory here
+    cd ${WORKDIR}
+    docker run \
+        --workdir $(pwd) \
+        --mount type=bind,source=$(pwd),target=$(pwd),
+        ghcr.io/seisscoped/pyatoa:nightly \
+        seisflows examples run 2
 
-In the above example, SeisFlows automatically identifies the SPECFEM2D
-installation within the Docker image and uses this as the external numerical
-solver. All results will be output to your current working directory.
+In the above example, we set the working directory (-w/--workdir) to the
+current working directory (on the local filesystem). We also mount the current
+working directory inside the container (--mount), meaning the container has
+access to our local filesystem for reading/writing. We then use the Docker
+image to run a SeisFlows-Pyatoa-Specfem2D example. Outputs of the example will
+be written into the working directory (WORKDIR).
+
+See `the SPECFEM2D example docs page <specfem2d_example.html>`__
+for a more thorough explanation of what's going on under the hood.
 
 
 HPC example with Apptainer/Singularity
@@ -118,20 +172,21 @@ Relevant Links:
 
 * Singularity on Chinook: 
   https://uaf-rcs.gitbook.io/uaf-rcs-hpc-docs/third-party-software/singularity
-* Singularity on TACC:
-  https://containers-at-tacc.readthedocs.io/en/latest/singularity/
-01.singularity_basics.html
-
+* Singularity at TACC:
+  https://containers-at-tacc.readthedocs.io/en/latest/singularity/01.singularity_basics.html
+* Singularity on Maui:
+  https://support.nesi.org.nz/hc/en-gb/articles/360001107916-Singularity
 
 .. note::
-    This section was written working on TACC's Frontera, a SLURM based HPC.
+    This section was written while working on TACC's Frontera, a SLURM system.
     Instructions may differ depending on your Systems setup and workload
-    manager. Because Singularity cannot be run on the Login nodes, the following
-    code blocks are run in the `idev <https://frontera-portal.tacc.utexas.edu/
-    user-guide/running/#interactive-sessions-with-idev-and-srun>`__ interactive
-    environment.
+    manager. Because Singularity cannot be run on the login nodes at TACC, the
+    following code blocks are run in the `idev <https://frontera-portal.tacc.
+    utexas.edu/user-guide/running/#interactive-sessions-with-idev-and-srun>`__
+    interactive environment.
 
-To download the required image on your system:
+To download the required image on your system, we first need to load the
+singularity module, and then use a familiar ``pull`` command.
 
 .. code-block:: bash
 
@@ -139,15 +194,17 @@ To download the required image on your system:
     # module load singularity  # on UAF Chinook
     singularity pull seisflows.sif docker://ghcr.io/seisscoped/pyatoa:nightly
 
-To run the SeisFlows help message
+We have now downloaded our image as a `.sif` file. To use the image to run the
+SeisFlows help message:
 
 .. code-block:: bash
 
     singularity run seisflows.sif seisflows -h
 
-To set your system to use Singularity, you just need to append '-singularity' to
-an existing system subclass in the SeisFlows parameter file. For example, since
-we are running on Frontera, we set our system to 'frontera-singularity'.
+To get SeisFlows to use your system's Singularity (if supported), you just need
+to append '-singularity' to an existing system subclass in the SeisFlows
+parameter file. For example, since we are running on Frontera, we set our
+system to 'frontera-singularity'.
 
 .. code-block:: bash
 
