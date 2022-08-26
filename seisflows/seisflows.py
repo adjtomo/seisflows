@@ -918,6 +918,8 @@ class SeisFlows:
                     specfem2d_repo = os.path.expanduser(
                         os.path.abspath(specfem2d_repo)
                     )
+                    os.chdir(self._args.workdir) # run example in working dir.
+
                     # $ python /path/to/example.py run path/to/specfem2d
                     subprocess.run(f"python {fid} {arg2} {specfem2d_repo}",
                                    shell=True, check=False)

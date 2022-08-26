@@ -27,7 +27,12 @@ optimization problems.
          `Pyatoa <https://github.com/adjtomo/pyatoa>`__
 
    See the `change log <changelog.html>`__ for point-by-point changes from the
-   original codebase.
+   original codebase. The `Legacy SeisFlows codebase
+   <https://github.com/adjtomo/seisflows/releases/tag/v1.1.0>`__ can still be 
+   accessed along with its `documentation <https://github.com/adjtomo/seisflows/
+   tree/46a9604d8907bc5fbf2ddc11e16914a870e6db77/docs>`__, but is no longer
+   supported by the developers.
+ 
 
 
 .. warning::
@@ -117,6 +122,7 @@ installed manually to the same Conda environment.
    :caption: Examples
 
    specfem2d_example
+   2D_example_walkthrough
 
 .. toctree::
    :maxdepth: 1
