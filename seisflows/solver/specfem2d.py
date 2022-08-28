@@ -85,7 +85,7 @@ class Specfem2D(Specfem):
         super().setup()
 
         # Copy in coordinate files to the Model definition so we can plot
-        for name, model in zip(["MINIT", "MTRUE"],
+        for name, model in zip(["MODEL_INIT", "MODEL_TRUE"],
                                [self.path.model_init, self.path.model_true]):
             dst = os.path.join(self.path.output, name)
             for par in ["x", "z"]:

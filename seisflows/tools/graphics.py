@@ -9,7 +9,7 @@ from scipy.interpolate import interp1d
 from obspy.core.stream import Stream
 
 
-def plot_2D_contour(x, z, data, **kwargs):
+def plot_2D_contour(x, z, data, cmap="viridis"):
     """
     Plots values of a SPECEFM2D model on an unstructured grid
 
@@ -26,8 +26,8 @@ def plot_2D_contour(x, z, data, **kwargs):
     ry = 1/np.sqrt(1 + r**2)
 
     f = plt.figure(figsize=(10 * rx, 10 * ry))
-    p = plt.tricontourf(x, z, data, levels=125, **kwargs)
-    cbar = plt.colorbar(p, shrink=0.8, pad=0.025)
+    p = plt.tricontourf(x, z, data, levels=125, cmap=cmap)
+    cbar = plt.colorbar(p, shrink=0.8, pad=0.025) # , format="%.2f")
     plt.axis("image")
 
     return f, p, cbar

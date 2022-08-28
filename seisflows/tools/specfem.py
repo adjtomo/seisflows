@@ -355,8 +355,10 @@ class Model:
         .npz array so that it can be loaded in at a later time for future use
         """
         model = self.split()
-        if self.coordinates is not None:
-            model = {**model, **self.coordinates}
+        if self.coordinates:
+            # Incase we have model parameters called 'x' or 'z', rename for save
+            model["x_coord"] = self.coordinates["x"]
+            model["z_coord"] = self.coordinates["z"]
 
         np.savez(file=path, fmt=self.fmt, **model)
 
@@ -379,15 +381,15 @@ class Model:
             if key == "fmt":
                 continue
             # Special case where we are using SPECFEM2D and carry around coords
-            if key in ["x", "z"]:
-                coords[key] = data[key]
+            elif "coord" in key:
+                coords[key[0]] = data[key]  # drop '_coord' suffix from `save`
             else:
                 model[key] = data[key]
-            # Assign the number of GLL points per slice. Only needs to happen
-            # once because all model values should have same points/slice
-            if not ngll:
-                for array in model[key]:
-                    ngll.append(len(array))
+                # Assign the number of GLL points per slice. Only needs to happen
+                # once because all model values should have same points/slice
+                if not ngll:
+                    for array in model[key]:
+                        ngll.append(len(array))
 
         return model, coords, ngll, str(data["fmt"])
 
@@ -402,8 +404,7 @@ class Model:
         elif vector is not None:
             self.model = self.split(vector=vector)
 
-    def plot2d(self, parameter, cmap=None, show=True, save=None,
-               **kwargs):
+    def plot2d(self, parameter, cmap=None, show=True, save=None):
         """
         Plot internal model parameters as a 2D contour plot. Kwargs are passed
         to underlying matplotlib.pylpot.tricontourf function.
@@ -445,14 +446,15 @@ class Model:
             z = np.append(z, self.coordinates["z"][iproc])
         data = self.merge(parameter=parameter)
 
-        f, p, cbar = plot_2D_contour(x=x, z=z, data=data, cmap=cmap,
-                                          **kwargs)
+        f, p, cbar = plot_2D_contour(x=x, z=z, data=data, cmap=cmap)
 
         # Set some figure labels based on information we know here
         ax = plt.gca()
         ax.set_xlabel("X [m]")
         ax.set_ylabel("Z [m]")
-        ax.set_title(parameter.title())
+        ax.set_title(f"{parameter.title()}_min = {data.min()};\n"
+                     f"{parameter.title()}_max = {data.max()};\n"
+                     f"{parameter.title()}_mean = {data.mean()}; ")
         cbar.ax.set_ylabel(parameter.title(), rotation=270, labelpad=15)
 
         if save:

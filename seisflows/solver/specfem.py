@@ -404,7 +404,7 @@ class Specfem:
 
         # Export the initial and target models to the SeisFlows output directory
         # Copy ALL files with relevant extension, just incase
-        for name, model in zip(["MINIT", "MTRUE"],
+        for name, model in zip(["MODEL_INIT", "MODEL_TRUE"],
                                [self.path.model_init, self.path.model_true]):
             dst = os.path.join(self.path.output, name)
             if not os.path.exists(dst):

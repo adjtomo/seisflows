@@ -285,6 +285,20 @@ class Inversion(Migration):
         """
         super().evaluate_gradient_from_kernels()
 
+        # Rename kernels (K) and gradient (G) output files by iteration number
+        # so they don't get overwritten by future iterations.
+        src = os.path.join(self.path.output, "kernels")
+        dst = os.path.join(self.path.output, f"KERNELS_{self.iteration:0>2}")
+        if os.path.exists(src):
+            logger.debug(f"{src} -> {dst}")
+            unix.mv(src, dst)
+
+        src = os.path.join(self.path.output, "gradient")
+        dst = os.path.join(self.path.output, f"GRADIENT_{self.iteration:0>2}")
+        if os.path.exists(src):
+            logger.debug(f"{src} -> {dst}")
+            unix.mv(src, dst)
+
         # Expose the gradient to the optimization library
         gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"))
         self.optimize.save_vector(name="g_new", m=gradient)
@@ -440,21 +454,6 @@ class Inversion(Migration):
             unix.mkdir(self.path.eval_func)
 
         self.preprocess.finalize()
-
-        # Rename kernels (K) and gradient (G) output files by iteration number
-        # so they don't get overwritten by future iterations. These files are
-        # created by functions defined in the `migration` workflow
-        src = os.path.join(self.path.output, "kernels")
-        dst = os.path.join(self.path.output, f"K{self.iteration:0>2}")
-        if os.path.exists(src):
-            logger.debug(f"{src} -> {dst}")
-            unix.mv(src, dst)
-
-        src = os.path.join(self.path.output, "gradient")
-        dst = os.path.join(self.path.output, f"G{self.iteration:0>2}")
-        if os.path.exists(src):
-            logger.debug(f"{src} -> {dst}")
-            unix.mv(src, dst)
 
 
     def _update_thrifty_status(self):
