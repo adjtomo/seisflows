@@ -433,7 +433,7 @@ class Inversion(Migration):
         if self.export_model:
             model = self.optimize.load_vector("m_new")
             model.write(path=os.path.join(self.path.output,
-                                          f"M{self.iteration:0>2}"),
+                                          f"MODEL_{self.iteration:0>2}"),
                         )
 
         # Update optimization

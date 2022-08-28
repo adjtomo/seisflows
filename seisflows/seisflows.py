@@ -998,14 +998,10 @@ class SeisFlows:
         assert(base_model.coordinates is not None), \
             f"`MODEL_INIT` does not have any available 2D coordinates"
 
-        assert(parameter in base_model.parameters), \
-            f"Model `parameter` must be in {base_model.parameters}"
-
         # Now read in the actual updated values and update the model
-        update_model = Model(path=os.path.join(output_dir, name))
-        plot_model = base_model.copy()
-        plot_model.update(vector=update_model.vector)
-
+        plot_model = Model(path=os.path.join(output_dir, name))
+        plot_model.coordinates = base_model.coordinates
+        # plot2d has internal check for acceptable parameter value
         plot_model.plot2d(parameter=parameter, show=True, cmap=cmap)
 
     def reset(self, choice=None, **kwargs):
