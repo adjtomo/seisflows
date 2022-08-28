@@ -3,6 +3,7 @@ Utilities to interact with, manipulate or call on the external solver,
 i.e., SPECFEM2D/3D/3D_GLOBE
 """
 import os
+import matplotlib.pyplot as plt
 import numpy as np
 from copy import deepcopy
 from glob import glob
@@ -10,6 +11,7 @@ from seisflows import logger
 from seisflows.tools.config import Dict
 from seisflows.tools import unix, msg
 from seisflows.tools.math import poissons_ratio
+from seisflows.tools.graphics import plot_2D_contour
 
 
 
@@ -59,7 +61,8 @@ class Model:
         if self.path and os.path.exists(path):
             # Read existing model from a previously saved .npz file
             if os.path.splitext(path)[-1] == ".npz":
-                self.model, self._ngll, self.fmt = self.load(file=self.path)
+                self.model, self.coordinates, self._ngll, self.fmt = \
+                    self.load(file=self.path)
                 _first_key = list(self.model.keys())[0]
                 self._nproc = len(self.model[_first_key])
             # Read a SPECFEM model from its native output files
@@ -69,7 +72,14 @@ class Model:
                 self._nproc, self.available_parameters = \
                     self._get_nproc_parameters()
                 self.model = self.read(parameters=parameters)
-                self.coordinates = self.read_coordinates()
+                # Coordinates are only useful for SPECFEM2D models
+                try:
+                    self.coordinates = self.read_coordinates_specfem2d()
+                except AssertionError as e:
+                    logger.warning(e)
+                    logger.debug("cannot read model coordinates, assuming "
+                                 "solver is not SPECFEM2D")
+                    pass
 
             # .sorted() enforces parameter order every time, otherwise things
             # can get screwy if keys returns different each time
@@ -202,36 +212,43 @@ class Model:
 
         return parameter_dict
 
-    def read_coordinates(self):
+    def read_coordinates_specfem2d(self):
         """
         Attempt to read coordinate files from the given model definition.
         This is only really useful for SPECFEM2D, where we can plot the
-        model, kernel and gradient using matplotlib. When you get to 3D,
-        the coordinates don't match up one-to-one with the values and you need
-        external viewing software to plot.
+        model, kernel and gradient using matplotlib.
+
+        .. warning
+            This will NOT work for SPECEFM3D. When you get to 3D, the
+            coordinates don't match up one-to-one with the model values so you
+            need external viewing software (e.g., ParaView) to plot.
 
         :rtype: Dict
         :return: a dictioanary with the X and Z coordinates read in from
             a SPECFEM2D model, if applicable
         """
-        load_fx = {".bin": self._read_specfem2d_coordinates_fortran_binary,
-                   ".dat": self._read_specfem2d_coordinates_ascii
-                   }[self.fmt]
+        coordinates = {"x": [], "z": []}
+        if self.fmt == ".bin":
+            coordinates["x"] = self._read_model_fortran_binary(parameter="x")
+            coordinates["z"] = self._read_model_fortran_binary(parameter="z")
+        elif self.fmt == ".dat":
+            fids =  glob(os.path.join(self.path,
+                                      self.fnfmt(val="*", ext=".dat")))
+            for fid in sorted(fids):
+                coordinates["x"].append(np.loadtxt(fid).T[:, 0])
+                coordinates["z"].append(np.loadtxt(fid).T[:, 0])
 
-        return load_fx()
+        # Internal check for parameter validity by checking length of coord
+        # against length of model. If they're not the same, then it's not
+        # useful to store coordinates because they can't be used for plotting
+        assert(len(coordinates["x"]) == len(coordinates["z"])), \
+            f"coordinate arrays do not match in length"
+        # Assuming all model parameters have the same length
+        assert(len(coordinates["x"]) ==
+               len(self.model[list(self.model.keys())[0]])), \
+            f"length of coordinates array does not match model length"
 
-    def _read_specfem2d_coordinates_fortran_binary(self):
-        """
-        Read the X and Z coordinates from SPECFEM's Fortran Binary (.bin)
-        files, which can be used for plotting models and gradients.
-        """
-
-
-    def _read_specfem2d_coordinates_ascii(self):
-        """
-        Read the X and Z coordinates from SPECFEM's ASCII files (.dat)
-        files, which can be used for plotting models and gradients.
-        """
+        return coordinates
 
     def merge(self, parameter=None):
         """
@@ -341,7 +358,7 @@ class Model:
         .npz array so that it can be loaded in at a later time for future use
         """
         model = self.split()
-        np.savez(file=path, fmt=self.fmt, **model)
+        np.savez(file=path, fmt=self.fmt, **model, **self.coordinates)
 
     def load(self, file):
         """
@@ -355,17 +372,24 @@ class Model:
         :return: (Model Dictionary, ngll points for each slice, file format)
         """
         model = Dict()
+        coords = Dict()
         ngll = []
         data = np.load(file=file)
         for i, key in enumerate(data.files):
             if key == "fmt":
                 continue
-            model[key] = data[key]
+            # Special case where we are using SPECFEM2D and carry around coords
+            if key in ["x", "z"]:
+                coords[key] = data[key]
+            else:
+                model[key] = data[key]
+            # Assign the number of GLL points per slice. Only needs to happen
+            # once because all model values should have same points/slice
             if not ngll:
                 for array in model[key]:
                     ngll.append(len(array))
 
-        return model, ngll, str(data["fmt"])
+        return model, coords, ngll, str(data["fmt"])
 
     def update(self, model=None, vector=None):
         """
@@ -377,6 +401,59 @@ class Model:
             self.model = model
         elif vector is not None:
             self.model = self.split(vector=vector)
+
+    def plot2d(self, parameter, cmap=None, show=True, save=None,
+               **kwargs):
+        """
+        Plot internal model parameters as a 2D contour plot. Kwargs are passed
+        to underlying matplotlib.pylpot.tricontourf function.
+
+        .. warning::
+            This is only available for SPECFEM2D models. SPECFEM3D model
+            coordinates do not match the model vectors (because the grids are
+            irregular) and cannot be visualized like this.
+
+        :type parameter: str
+        :param parameter: chosen internal parameter value to plot.
+        :type cmap: str
+        :param cmap: colormap which match available matplotlib colormap.
+            If None, will choose default colormap based on parameter choice.
+        :type show: bool
+        :param show: show the figure after plotting
+        :type save: str
+        :param save: if not None, full path to figure to save the output image
+        """
+        assert(parameter in self._parameters), \
+            f"chosen `parameter` must be in {self._parameters}"
+
+        # Choose default colormap based on parameter values
+        if cmap is None:
+            if "kernel" in parameter:
+                cmap = "seismic_r"
+            else:
+                cmap = "Spectral"
+
+        # 'Merge' the coordinate matrices to get a vector representation
+        x, z = np.array([]), np.array([])
+        for iproc in range(self.nproc):
+            x = np.append(x, self.coordinates["x"][iproc])
+            z = np.append(z, self.coordinates["z"][iproc])
+        data = self.merge(parameter=parameter)
+
+        f, p, cbar = plot_2D_contour(x=x, z=z, data=data, cmap=cmap,
+                                          **kwargs)
+
+        # Set some figure labels based on information we know here
+        ax = plt.gca()
+        ax.set_xlabel("X [m]")
+        ax.set_ylabel("Z [m]")
+        ax.set_title(parameter.title())
+        cbar.ax.set_ylabel(parameter.title(), rotation=270, labelpad=15)
+
+        if save:
+            plt.savefig(save)
+        if show:
+            plt.show()
 
     def _get_nproc_parameters(self):
         """
@@ -760,18 +837,18 @@ def read_fortran_binary(filename):
     :return: numpy array with data with data read in as type Float32
     """
     nbytes = os.path.getsize(filename)
-    with open(filename, 'rb') as file:
+    with open(filename, "rb") as file:
         # read size of record
         file.seek(0)
-        n = np.fromfile(file, dtype='int32', count=1)[0]
+        n = np.fromfile(file, dtype="int32", count=1)[0]
 
         if n == nbytes - 8:
             file.seek(4)
-            data = np.fromfile(file, dtype='float32')
+            data = np.fromfile(file, dtype="float32")
             return data[:-1]
         else:
             file.seek(0)
-            data = np.fromfile(file, dtype='float32')
+            data = np.fromfile(file, dtype="float32")
             return data
 
 
@@ -791,10 +868,10 @@ def write_fortran_binary(arr, filename):
     :param filename: full path to file that should be written in format
         unformatted Fortran binary
     """
-    buffer = np.array([4 * len(arr)], dtype='int32')
-    data = np.array(arr, dtype='float32'
+    buffer = np.array([4 * len(arr)], dtype="int32")
+    data = np.array(arr, dtype="float32")
 
-    with open(filename, 'wb') as file:
+    with open(filename, "wb") as file:
         buffer.tofile(file)
         data.tofile(file)
         buffer.tofile(file)
