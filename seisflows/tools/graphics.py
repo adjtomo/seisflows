@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Visualization tools for Seisflows
+Basic visualization tools for SeisFlows to visualize waveforms, models, etc.
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,25 +9,28 @@ from scipy.interpolate import interp1d
 from obspy.core.stream import Stream
 
 
-def plot_gll(x, y, z):
+def plot_2D_contour(x, z, data, cmap="viridis"):
     """
-    Plots values on 2D unstructured GLL mesh
+    Plots values of a SPECEFM2D model on an unstructured grid
+
     :type x: np.array
     :param x: x values of GLL mesh
-    :type y: np.array
-    :param y: y values of GLL mesh
     :type z: np.array
     :param z: z values of GLL mesh
+    :type data: np.array
+    :param data: D
     """
-    r = (max(x) - min(x))/(max(y) - min(y))
+    # Figure out aspect ratio of the figure
+    r = (max(x) - min(x))/(max(z) - min(z))
     rx = r/np.sqrt(1 + r**2)
     ry = 1/np.sqrt(1 + r**2)
 
-    f = plt.figure(figsize=(10*rx, 10*ry))
-    p = plt.tricontourf(x, y, z, 125)
-    plt.axis('image')
+    f = plt.figure(figsize=(10 * rx, 10 * ry))
+    p = plt.tricontourf(x, z, data, levels=125, cmap=cmap)
+    cbar = plt.colorbar(p, shrink=0.8, pad=0.025) # , format="%.2f")
+    plt.axis("image")
 
-    return f, p
+    return f, p, cbar
 
 
 def plot_vector(t, v, xlabel='', ylabel='', title=''):
