@@ -54,7 +54,7 @@ class Migration(Forward):
     """
     __doc__ = Forward.__doc__ + __doc__
 
-    def __init__(self, modules=None, path_mask=None, export_gradient=False,
+    def __init__(self, modules=None, path_mask=None, export_gradient=True,
                  export_kernels=False, **kwargs):
         """
         Instantiate Migration-specific parameters
@@ -198,3 +198,11 @@ class Migration(Forward):
 
             gradient.update(vector=gradient.vector * mask.vector)
             gradient.write(path=os.path.join(self.path.eval_grad, "gradient"))
+
+        # Export gradient to disk
+        if self.export_gradient:
+            logger.info("exporting gradient to disk")
+            src = os.path.join(self.path.eval_grad, "gradient")
+            dst = os.path.join(self.path.output, "gradient")
+            unix.cp(src, dst)
+

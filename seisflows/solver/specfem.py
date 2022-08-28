@@ -402,12 +402,17 @@ class Specfem:
         """
         self._initialize_working_directories()
 
-        # Export the initial model to the SeisFlows output directory
-        dst = os.path.join(self.path.output, "MODEL_INIT", "")
-        unix.mkdir(dst)
-        for key in self._parameters:
-            src = glob(os.path.join(self.path.model_init, f"*{key}{self._ext}"))
-            unix.cp(src, dst)
+        # Export the initial and target models to the SeisFlows output directory
+        # Copy ALL files with relevant extension, just incase
+        for name, model in zip(["MINIT", "MTRUE"],
+                               [self.path.model_init, self.path.model_true]):
+            dst = os.path.join(self.path.output, name)
+            if not os.path.exists(dst):
+                unix.mkdir(dst)
+                for par in self._parameters:
+                    src = glob(os.path.join(self.path.model_init,
+                                            f"*{par}{self._ext}"))
+                    unix.cp(src, dst)
 
     def forward_simulation(self, executables=None, save_traces=False,
                            export_traces=False, **kwargs):
@@ -533,11 +538,15 @@ class Specfem:
         # Save and export the kernels to user-defined locations
         if export_kernels:
             unix.mkdir(export_kernels)
-            unix.cp(src=glob(f"*_kernel{self._ext}"), dst=export_kernels)
+            for par in self._parameters:
+                unix.cp(src=glob(f"*{par}_kernel{self._ext}"),
+                        dst=export_kernels)
 
         if save_kernels:
             unix.mkdir(save_kernels)
-            unix.mv(src=glob(f"*_kernel{self._ext}"), dst=save_kernels)
+            for par in self._parameters:
+                unix.mv(src=glob(f"*{par}_kernel{self._ext}"), dst=save_kernels)
+
 
     def combine(self, input_path, output_path, parameters=None):
         """

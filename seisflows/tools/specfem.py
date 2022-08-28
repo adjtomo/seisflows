@@ -75,10 +75,7 @@ class Model:
                 # Coordinates are only useful for SPECFEM2D models
                 try:
                     self.coordinates = self.read_coordinates_specfem2d()
-                except AssertionError as e:
-                    logger.warning(e)
-                    logger.debug("cannot read model coordinates, assuming "
-                                 "solver is not SPECFEM2D")
+                except AssertionError:
                     pass
 
             # .sorted() enforces parameter order every time, otherwise things
@@ -358,7 +355,10 @@ class Model:
         .npz array so that it can be loaded in at a later time for future use
         """
         model = self.split()
-        np.savez(file=path, fmt=self.fmt, **model, **self.coordinates)
+        if self.coordinates is not None:
+            model = {**model, **self.coordinates}
+
+        np.savez(file=path, fmt=self.fmt, **model)
 
     def load(self, file):
         """
@@ -425,6 +425,11 @@ class Model:
         """
         assert(parameter in self._parameters), \
             f"chosen `parameter` must be in {self._parameters}"
+
+        assert(self.coordinates is not None), (
+            f"`plot2d` function requires model coordinates which are only "
+            f"available for solver SPECFEM2D"
+        )
 
         # Choose default colormap based on parameter values
         if cmap is None:

@@ -48,8 +48,31 @@ class Specfem2D(Specfem):
         elif self.materials.upper() == "ELASTIC":
             self._parameters += ["vp", "vs"]
 
+    # @property
+    # def model_files(self):
+    #     """
+    #     Return a list of paths to model files AND coordinates, which can be
+    #     used by SeisFlows to plot SPECFEM2D models and gradients.
+    #
+    #     :rtype: list
+    #     :return: a list of full paths to model files that matches the internal
+    #         list of solver parameters
+    #     """
+    #     _model_files = super().model_files
+    #
+    #     # Append coordinates 'x' and 'z' files to current list of model files
+    #     for parameter in ["x", "z"]:
+    #         _model_files += glob(os.path.join(self.path.mainsolver,
+    #                                           self.model_databases,
+    #                                           f"*{parameter}{self._ext}"))
+    #     return _model_files
+
     def setup(self):
-        """Setup the SPECFEM2D solver interface in a SeisFlows workflow"""
+        """
+        Setup the SPECFEM2D solver interface in a SeisFlows workflow
+        Append coordinate files to exported model files so that we can use
+        them for plotting later
+        """
         source_file = os.path.join(self.path.specfem_data, self.source_prefix)
         self._f0 = getpar(key="f0", file=source_file)[1]
 
@@ -60,6 +83,15 @@ class Specfem2D(Specfem):
             setpar(key="absorbtop", val=".true.", file=par_file)
 
         super().setup()
+
+        # Copy in coordinate files to the Model definition so we can plot
+        for name, model in zip(["MINIT", "MTRUE"],
+                               [self.path.model_init, self.path.model_true]):
+            dst = os.path.join(self.path.output, name)
+            for par in ["x", "z"]:
+                src = glob(os.path.join(self.path.model_init,
+                                        f"*{par}{self._ext}"))
+                unix.cp(src, dst)
 
     def smooth(self, input_path, output_path, parameters=None, span_h=0.,
                span_v=0., use_gpu=False):
