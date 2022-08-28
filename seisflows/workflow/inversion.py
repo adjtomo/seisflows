@@ -241,6 +241,11 @@ class Inversion(Migration):
         """
         if self.iteration == 1:
             super().evaluate_initial_misfit()
+
+            # Expose the initial model to the optimization library
+            model = Model(self.path.model_init,
+                          parameters=self.solver._parameters)
+            self.optimize.save_vector(name="m_new", m=model)
         else:
             # Thrifty inversion SKIPS initial misfit evaluation, re-using final
             # model from previous line search. Can only happen mid-workflow
@@ -280,10 +285,21 @@ class Inversion(Migration):
         """
         super().evaluate_gradient_from_kernels()
 
-        model = Model(os.path.join(self.path.eval_grad, "model"),
-                      parameters=self.solver._parameters)
-        self.optimize.save_vector(name="m_new", m=model)
+        # Rename kernels (K) and gradient (G) output files by iteration number
+        # so they don't get overwritten by future iterations.
+        src = os.path.join(self.path.output, "kernels")
+        dst = os.path.join(self.path.output, f"KERNELS_{self.iteration:0>2}")
+        if os.path.exists(src):
+            logger.debug(f"{src} -> {dst}")
+            unix.mv(src, dst)
 
+        src = os.path.join(self.path.output, "gradient")
+        dst = os.path.join(self.path.output, f"GRADIENT_{self.iteration:0>2}")
+        if os.path.exists(src):
+            logger.debug(f"{src} -> {dst}")
+            unix.mv(src, dst)
+
+        # Expose the gradient to the optimization library
         gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"))
         self.optimize.save_vector(name="g_new", m=gradient)
 
@@ -417,7 +433,7 @@ class Inversion(Migration):
         if self.export_model:
             model = self.optimize.load_vector("m_new")
             model.write(path=os.path.join(self.path.output,
-                                          f"M{self.iteration:0>2}"),
+                                          f"MODEL_{self.iteration:0>2}"),
                         )
 
         # Update optimization
@@ -438,6 +454,7 @@ class Inversion(Migration):
             unix.mkdir(self.path.eval_func)
 
         self.preprocess.finalize()
+
 
     def _update_thrifty_status(self):
         """

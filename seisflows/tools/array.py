@@ -2,8 +2,6 @@
 """
 Tools useful for array manipulation in Seisflows
 """
-import os
-
 import numpy as np
 import scipy.signal as _signal
 import scipy.interpolate as _interp

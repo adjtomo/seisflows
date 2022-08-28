@@ -27,7 +27,7 @@ from seisflows import logger, ROOT_DIR, NAMES
 from seisflows.tools import unix, msg
 from seisflows.tools.config import load_yaml, custom_import, import_seisflows
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
-                                     setpar_vel_model)
+                                     setpar_vel_model, Model)
 
 
 def sfparser():
@@ -230,6 +230,20 @@ Check parameters, state, or values of an active environment
     # check.add_argument("args", type=str,  nargs="*",
     #                    help="Generic arguments passed to check functions")
     # =========================================================================
+    plot2d = subparser.add_parser(
+        "plot2d", formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="""Plots model/kernels/gradient files located in the output/
+        directory. ONLY available for SPECFEM2D models.""",
+        help="Plot 2D figures of models/kernels/gradients.")
+
+    plot2d.add_argument("name", type=str, nargs="?",
+                        help="Name of directory in the output/ directory")
+    plot2d.add_argument("parameter", type=str, nargs="?",
+                        help="Name of parameter to plot from `name`. E.g., 'vs', "
+                             "'vp' etc.")
+    plot2d.add_argument("-c", "--cmap", type=str, nargs="?",
+                        help="colormap to be passed to PyPlot")
+    # =========================================================================
     print_ = subparser.add_parser(
         "print", formatter_class=argparse.RawDescriptionHelpFormatter,
         description="""
@@ -297,7 +311,7 @@ working state before the workflow can be resumed
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
-                      "sempar": sempar, "clean": clean,
+                      "sempar": sempar, "clean": clean, "plot2d": plot2d,
                       "restart": restart, "print": print_, "reset": reset,
                       "examples": examples, "swap": swap}
     if parser.parse_args().command in subparser_dict:
@@ -957,6 +971,40 @@ class SeisFlows:
             sys.exit(0)
 
         acceptable_args[choice](*self._args.args, **kwargs)
+
+    def plot2d(self, name, parameter, cmap=None, **kwargs):
+        """
+        Plot model, gradient or kernels in the PATH.OUTPUT
+
+        :type name: str
+        :param name: Name of directory in the output/ directory
+        :type parameter: str
+        :param parameter: Name of parameter to plot from `name`, e.g., 'vs',
+            'vp' etc.
+        :type cmap: str
+        :param cmap: optional colormap parameter to be passed to Pyplot
+        """
+        # Figure out which models/gradients/kernels we can actually plot
+        _, output_dir, _ = getpar(key="path_output",
+                                  file=self._args.parameter_file,
+                                  delim=":")
+        acceptable_names = [
+            os.path.basename(_) for _ in glob(os.path.join(output_dir, "*"))
+        ]
+        assert(name in acceptable_names), (
+            f"`seisflows plot 2d` can only plot {acceptable_names}"
+        )
+        # Grab model_init to use its coordinates
+        # name of directory for model_init is defined by solver.specfem.setup()
+        base_model = Model(path=os.path.join(output_dir, "MODEL_INIT"))
+        assert(base_model.coordinates is not None), \
+            f"`MODEL_INIT` does not have any available 2D coordinates"
+
+        # Now read in the actual updated values and update the model
+        plot_model = Model(path=os.path.join(output_dir, name))
+        plot_model.coordinates = base_model.coordinates
+        # plot2d has internal check for acceptable parameter value
+        plot_model.plot2d(parameter=parameter, show=True, cmap=cmap)
 
     def reset(self, choice=None, **kwargs):
         """
