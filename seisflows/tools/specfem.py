@@ -12,6 +12,7 @@ from seisflows.tools import unix, msg
 from seisflows.tools.math import poissons_ratio
 
 
+
 class Model:
     """
     A container for reading, storing and manipulating model/gradient/kernel
@@ -49,6 +50,7 @@ class Model:
         self.path = path
         self.fmt = fmt
         self.model = None
+        self.coordinates = None
         self._parameters = parameters
         self._ngll = None
         self._nproc = None
@@ -67,6 +69,7 @@ class Model:
                 self._nproc, self.available_parameters = \
                     self._get_nproc_parameters()
                 self.model = self.read(parameters=parameters)
+                self.coordinates = self.read_coordinates()
 
             # .sorted() enforces parameter order every time, otherwise things
             # can get screwy if keys returns different each time
@@ -198,6 +201,37 @@ class Model:
             parameter_dict[parameter] = load_fx(parameter=parameter)
 
         return parameter_dict
+
+    def read_coordinates(self):
+        """
+        Attempt to read coordinate files from the given model definition.
+        This is only really useful for SPECFEM2D, where we can plot the
+        model, kernel and gradient using matplotlib. When you get to 3D,
+        the coordinates don't match up one-to-one with the values and you need
+        external viewing software to plot.
+
+        :rtype: Dict
+        :return: a dictioanary with the X and Z coordinates read in from
+            a SPECFEM2D model, if applicable
+        """
+        load_fx = {".bin": self._read_specfem2d_coordinates_fortran_binary,
+                   ".dat": self._read_specfem2d_coordinates_ascii
+                   }[self.fmt]
+
+        return load_fx()
+
+    def _read_specfem2d_coordinates_fortran_binary(self):
+        """
+        Read the X and Z coordinates from SPECFEM's Fortran Binary (.bin)
+        files, which can be used for plotting models and gradients.
+        """
+
+
+    def _read_specfem2d_coordinates_ascii(self):
+        """
+        Read the X and Z coordinates from SPECFEM's ASCII files (.dat)
+        files, which can be used for plotting models and gradients.
+        """
 
     def merge(self, parameter=None):
         """
@@ -404,29 +438,12 @@ class Model:
         :rtype: np.array
         :return: vector of model values for given `parameter`
         """
-        def _read(filename):
-            """Read a single slice (e.g., proc000000_vs.bin) binary file"""
-            nbytes = os.path.getsize(filename)
-            with open(filename, 'rb') as file:
-                # read size of record
-                file.seek(0)
-                n = np.fromfile(file, dtype='int32', count=1)[0]
-
-                if n == nbytes-8:
-                    file.seek(4)
-                    data = np.fromfile(file, dtype='float32')
-                    return data[:-1]
-                else:
-                    file.seek(0)
-                    data = np.fromfile(file, dtype='float32')
-                    return data
-
         array = []
         fids = glob(os.path.join(
             self.path, self.fnfmt(val=parameter, ext=".bin"))
         )
         for fid in sorted(fids):  # make sure were going in numerical order
-            array.append(_read(fid))
+            array.append(read_fortran_binary(fid))
 
         array = np.array(array)
 
@@ -485,13 +502,8 @@ class Model:
             for i, data in enumerate(self.model[parameter]):
                 filename = self.fnfmt(i=i, val=parameter, ext=".bin")
                 filepath = os.path.join(path, filename)
-                buffer = np.array([4 * len(data)], dtype="int32")
-                data = data.astype("float32")
 
-                with open(filepath, 'wb') as f:
-                    buffer.tofile(f)
-                    data.tofile(f)
-                    buffer.tofile(f)
+                write_fortran_binary(arr=data, filename=filepath)
 
 
 def check_source_names(path_specfem_data, source_prefix, ntask=None):
@@ -732,12 +744,20 @@ def setpar_vel_model(file, model):
     setpar(key="nbmodels", val=len(model), file=file)
 
 
-def _read(filename):
+def read_fortran_binary(filename):
     """
-    Legacy code: Reads Fortran style binary data into numpy array.
+    Reads Fortran-style unformatted binary data into numpy array.
 
     .. note::
-        Has been rewritten into the Model class but left here if useful
+        The FORTRAN runtime system embeds the record boundaries in the data by
+        inserting an INTEGER*4 byte count at the beginning and end of each
+        unformatted sequential record during an unformatted sequential WRITE.
+        see: https://docs.oracle.com/cd/E19957-01/805-4939/6j4m0vnc4/index.html
+
+    :type filename: str
+    :param filename: full path to the Fortran unformatted binary file to read
+    :rtype: np.array
+    :return: numpy array with data with data read in as type Float32
     """
     nbytes = os.path.getsize(filename)
     with open(filename, 'rb') as file:
@@ -745,7 +765,7 @@ def _read(filename):
         file.seek(0)
         n = np.fromfile(file, dtype='int32', count=1)[0]
 
-        if n == nbytes-8:
+        if n == nbytes - 8:
             file.seek(4)
             data = np.fromfile(file, dtype='float32')
             return data[:-1]
@@ -755,23 +775,26 @@ def _read(filename):
             return data
 
 
-def _write(v, filename):
+def write_fortran_binary(arr, filename):
     """
-    Legacy code: Writes Fortran style binary files
-    Data are written as single precision floating point numbers
-
-    .. note::
-        Has been rewritten into the Model class but left here if useful
+    Writes Fortran style binary files. Data are written as single precision
+    floating point numbers.
 
     .. note::
         FORTRAN unformatted binaries are bounded by an INT*4 byte count. This
         function mimics that behavior by tacking on the boundary data.
         https://docs.oracle.com/cd/E19957-01/805-4939/6j4m0vnc4/index.html
+
+    :type arr: np.array
+    :param arr: data array to write as Fortran binary
+    :type filename: str
+    :param filename: full path to file that should be written in format
+        unformatted Fortran binary
     """
-    n = np.array([4 * len(v)], dtype='int32')
-    v = np.array(v, dtype='float32')
+    buffer = np.array([4 * len(arr)], dtype='int32')
+    data = np.array(arr, dtype='float32'
 
     with open(filename, 'wb') as file:
-        n.tofile(file)
-        v.tofile(file)
-        n.tofile(file)
+        buffer.tofile(file)
+        data.tofile(file)
+        buffer.tofile(file)
