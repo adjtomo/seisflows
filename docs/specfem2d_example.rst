@@ -101,6 +101,103 @@ working directory.
 A successfully completed example problem will end with the following log
 messages:
 
+.. code:: bash
+
+    ...
+    2022-08-25 17:29:16 (I) | 5800.00 <= vp <= 5800.00
+    2022-08-25 17:29:16 (I) | 3236.17 <= vs <= 3802.01
+    2022-08-25 17:29:16 (I) | trial step unsuccessful. re-attempting line search
+    2022-08-25 17:29:16 (I) | 
+    LINE SEARCH STEP COUNT 06
+    --------------------------------------------------------------------------------
+    2022-08-25 17:29:16 (I) | evaluating objective function for source 001
+    2022-08-25 17:29:16 (D) | running forward simulation with 'Specfem2D'
+    2022-08-25 17:29:20 (D) | quantifying misfit with 'Default'
+    2022-08-25 17:29:20 (I) | evaluating objective function for source 002
+    2022-08-25 17:29:20 (D) | running forward simulation with 'Specfem2D'
+    2022-08-25 17:29:24 (D) | quantifying misfit with 'Default'
+    2022-08-25 17:29:24 (I) | evaluating objective function for source 003
+    2022-08-25 17:29:24 (D) | running forward simulation with 'Specfem2D'
+    2022-08-25 17:29:28 (D) | quantifying misfit with 'Default'
+    2022-08-25 17:29:28 (D) | misfit for trial model (f_try) == 7.53E-03
+    2022-08-25 17:29:28 (D) | step length(s) = 0.00E+00, 1.47E+08, 2.95E+08, 5.89E+08, 1.18E+09, 2.36E+09, 4.72E+09
+    2022-08-25 17:29:28 (D) | misfit val(s)  = 8.65E-04, 7.53E-03, 6.28E-03, 5.02E-03, 3.77E-03, 2.51E-03, 1.26E-03
+    2022-08-25 17:29:28 (I) | fail: bracketing line search has failed to reduce the misfit before exceeding `step_count_max`=5
+    2022-08-25 17:29:28 (D) | checking gradient/search direction angle, theta:  0.000
+    2022-08-25 17:29:28 (C) | 
+    ================================================================================
+                                   LINE SEARCH FAILED                               
+                                   //////////////////                               
+    Line search has failed to reduce the misfit and has run out of fallback options.
+    Aborting inversion.
+    ================================================================================
+    EXAMPLE COMPLETED SUCCESFULLY
+
+    
+Using the `working directory documentation page <working_directory.html>`__ you can figure out how to navigate around and look at the results of our small inversion problem. We will have a look at a few of the files and directories here. I've run the example problem in a scratch directory but your output directory should look the same.
+
+.. code:: ipython3
+
+    %cd ~/Work/scratch
+    ! ls
+
+
+.. parsed-literal::
+
+    /home/bchow/Work/scratch
+    logs	parameters.yaml  sflog.txt    specfem2d
+    output	scratch		 sfstate.txt  specfem2d_workdir
+
+
+In the ``output/`` directory, we can see the updated model from our
+first iteration (MODEL_01) and the gradient that was used to create it
+(GRADIENT_01). The 2nd iteration produced a gradient (GRADIENT_02), but
+was unable to succesfully reduce the misfit during the line search,
+which is why we don’t have a MODEL_02.
+
+.. code:: ipython3
+
+    ! ls output
+    ! echo
+    ! ls output/MODEL_01
+
+
+.. parsed-literal::
+
+    GRADIENT_01  GRADIENT_02  MODEL_01  MODEL_INIT	MODEL_TRUE
+    
+    proc000000_vp.bin  proc000000_vs.bin
+
+
+Because we’re working with SPECFEM2D, we can plot the models and
+gradients that were created during our workflow using the
+``seisflows plot2d`` command. If we use the ``--savefig`` option we can
+also save the output .png files to disk.
+
+.. code:: ipython3
+
+    ! seisflows plot2d GRADIENT_01 vs_kernel --savefig i02_gradient_vs_kernel.png
+
+
+.. parsed-literal::
+
+    Figure(707.107x707.107)
+
+
+.. code:: ipython3
+
+    # Because this docs page was made in a Jupyter Notebook, we need to use IPython to open the resulting .png
+    from IPython.display import Image
+    Image(filename='i02_gradient_vs_kernel.png') 
+
+
+
+
+.. image:: images/specfem2d_example_files/specfem2d_example_15_0.png
+
+
+
+Have a look at the `working directory documentation page <working_directory.html>`__ for more detailed explanations of how to navigate the SeisFlows working directory.
 
 Example #2
 ~~~~~~~~~~
