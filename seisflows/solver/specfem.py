@@ -628,8 +628,8 @@ class Specfem:
         if span_v is None:
             span_v = self.smooth_v
 
-        logger.info(f"smoothing {parameters} with horizontal Gaussian "
-                    f"{span_h}m and vertical Gaussian {span_v}m")
+        logger.debug(f"smoothing {parameters} with horizontal Gaussian "
+                     f"{span_h}m and vertical Gaussian {span_v}m")
 
         if not os.path.exists(output_path):
             unix.mkdir(output_path)
