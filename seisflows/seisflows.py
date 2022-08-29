@@ -243,6 +243,8 @@ Check parameters, state, or values of an active environment
                              "'vp' etc.")
     plot2d.add_argument("-c", "--cmap", type=str, nargs="?",
                         help="colormap to be passed to PyPlot")
+    plot2d.add_argument("-s", "--savefig", type=str, nargs="?", default=None,
+                        help="optional name and path to save figure")
     # =========================================================================
     print_ = subparser.add_parser(
         "print", formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -972,7 +974,8 @@ class SeisFlows:
 
         acceptable_args[choice](*self._args.args, **kwargs)
 
-    def plot2d(self, name, parameter, cmap=None, **kwargs):
+    def plot2d(self, name=None, parameter=None, cmap=None, savefig=None,
+               **kwargs):
         """
         Plot model, gradient or kernels in the PATH.OUTPUT
 
@@ -983,17 +986,27 @@ class SeisFlows:
             'vp' etc.
         :type cmap: str
         :param cmap: optional colormap parameter to be passed to Pyplot
+        :type savefig: str
+        :param savefig: optional name and path of filename to save figure
+            to disk
         """
         # Figure out which models/gradients/kernels we can actually plot
         _, output_dir, _ = getpar(key="path_output",
                                   file=self._args.parameter_file,
                                   delim=":")
-        acceptable_names = [
-            os.path.basename(_) for _ in glob(os.path.join(output_dir, "*"))
-        ]
-        assert(name in acceptable_names), (
-            f"`seisflows plot 2d` can only plot {acceptable_names}"
-        )
+        # Assuming only models/kernels/gradients have the format *_* in output
+        acceptable_names = sorted([
+            os.path.basename(_) for _ in glob(os.path.join(output_dir, "*_*"))
+        ])
+        if name is None:
+            print(msg.cli(f"Available models/gradients/kernels",
+                          items=sorted(acceptable_names), header="Plot2D")
+                  )
+            sys.exit(0)
+        else:
+            assert(name in acceptable_names), (
+                f"`seisflows plot 2d` can only plot {acceptable_names}"
+            )
         # Grab model_init to use its coordinates
         # name of directory for model_init is defined by solver.specfem.setup()
         base_model = Model(path=os.path.join(output_dir, "MODEL_INIT"))
@@ -1004,7 +1017,8 @@ class SeisFlows:
         plot_model = Model(path=os.path.join(output_dir, name))
         plot_model.coordinates = base_model.coordinates
         # plot2d has internal check for acceptable parameter value
-        plot_model.plot2d(parameter=parameter, show=True, cmap=cmap)
+        plot_model.plot2d(parameter=parameter, cmap=cmap, show=True,
+                          save=savefig)
 
     def reset(self, choice=None, **kwargs):
         """

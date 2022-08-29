@@ -579,19 +579,19 @@ class Pyaflowa:
         if self.export_datasets:
             src = glob(os.path.join(self.path._datasets, "*.h5"))
             src += glob(os.path.join(self.path._datasets, "*.csv"))  # inspector
-            dst = os.path.join(self.path.output, "datasets", "")
+            dst = os.path.join(self.path.output, "pyaflowa", "datasets", "")
             unix.mkdir(dst)
             unix.cp(src, dst)
 
         if self.export_figures:
             src = glob(os.path.join(self.path._figures, "*.pdf"))
-            dst = os.path.join(self.path.output, "figures", "")
+            dst = os.path.join(self.path.output, "pyaflowa", "figures", "")
             unix.mkdir(dst)
             unix.cp(src, dst)
 
         if self.export_log_files:
             src = glob(os.path.join(self.path._logs, "*.log"))
-            dst = os.path.join(self.path.output, "logs", "")
+            dst = os.path.join(self.path.output, "pyaflowa", "logs", "")
             unix.mkdir(dst)
             unix.cp(src, dst)
 
