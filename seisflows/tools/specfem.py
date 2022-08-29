@@ -11,8 +11,7 @@ from seisflows import logger
 from seisflows.tools.config import Dict
 from seisflows.tools import unix, msg
 from seisflows.tools.math import poissons_ratio
-from seisflows.tools.graphics import plot_2D_contour
-
+from seisflows.tools.graphics import plot_2d_contour
 
 
 class Model:
@@ -436,8 +435,10 @@ class Model:
         if cmap is None:
             if "kernel" in parameter:
                 cmap = "seismic_r"
+                zero_midpoint = True
             else:
                 cmap = "Spectral"
+                zero_midpoint = False
 
         # 'Merge' the coordinate matrices to get a vector representation
         x, z = np.array([]), np.array([])
@@ -446,7 +447,8 @@ class Model:
             z = np.append(z, self.coordinates["z"][iproc])
         data = self.merge(parameter=parameter)
 
-        f, p, cbar = plot_2D_contour(x=x, z=z, data=data, cmap=cmap)
+        f, p, cbar = plot_2d_contour(x=x, z=z, data=data, cmap=cmap,
+                                     zero_midpoint=zero_midpoint)
 
         # Set some figure labels based on information we know here
         ax = plt.gca()

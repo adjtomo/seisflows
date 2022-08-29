@@ -9,9 +9,9 @@ from scipy.interpolate import interp1d
 from obspy.core.stream import Stream
 
 
-def plot_2D_contour(x, z, data, cmap="viridis"):
+def plot_2d_contour(x, z, data, cmap="viridis", zero_midpoint=False):
     """
-    Plots values of a SPECEFM2D model on an unstructured grid
+    Plots values of a SPECEFM2D model/gradient on an unstructured grid
 
     :type x: np.array
     :param x: x values of GLL mesh
@@ -19,14 +19,29 @@ def plot_2D_contour(x, z, data, cmap="viridis"):
     :param z: z values of GLL mesh
     :type data: np.array
     :param data: D
+    :type cmap: str
+    :param cmap: matplotlib colormap to be applied to the contour plot. Defaults
+        to 'viridis'
+    :type zero_midpoint: bool
+    :param zero_midpoint: set 0 as the midpoint for the colorbar. Useful for
+        diverging colorscales (e.g., for gradients), where the neutral color
+        (e.g., white) is set at value=0
     """
     # Figure out aspect ratio of the figure
     r = (max(x) - min(x))/(max(z) - min(z))
     rx = r/np.sqrt(1 + r**2)
     ry = 1/np.sqrt(1 + r**2)
 
+    # Assign zero as the midpoint for things like gradients
+    if zero_midpoint:
+        abs_max_val = max(abs(data))
+        vmin = -1 * abs_max_val
+        vmax = abs_max_val
+    else:
+        vmin, vmax = None, None
+
     f = plt.figure(figsize=(10 * rx, 10 * ry))
-    p = plt.tricontourf(x, z, data, levels=125, cmap=cmap)
+    p = plt.tricontourf(x, z, data, levels=125, cmap=cmap, vmin=vmin, vmax=vmax)
     cbar = plt.colorbar(p, shrink=0.8, pad=0.025) # , format="%.2f")
     plt.axis("image")
 
