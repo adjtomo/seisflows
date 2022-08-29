@@ -532,3 +532,121 @@ defines.
       -h, --help   show this help message and exit
       -f, --force  Skip the clean warning check statement
 
+
+Plotting
+~~~~~~~~
+
+seisflows plot2d
+^^^^^^^^^^^^^^^^
+
+``plot2d`` allows you to quickly plot SPECFEM2D models, kernels and
+gradients which have been exported to disk during a SeisFlows workflow.
+From a SeisFlows working directory the format for running ``plot2d`` is
+provided in the help message.
+
+.. code:: ipython3
+
+    # a directory where we have run example #2
+    %cd ~/Work/scratch/  
+    ! ls
+
+
+.. parsed-literal::
+
+    /home/bchow/Work/scratch
+    logs	parameters.yaml  sflog.txt    specfem2d
+    output	scratch		 sfstate.txt  specfem2d_workdir
+
+
+.. code:: ipython3
+
+    ! seisflows plot2d -h
+
+
+.. parsed-literal::
+
+    usage: seisflows plot2d [-h] [-c [CMAP]] [-s [SAVEFIG]] [name] [parameter]
+    
+    Plots model/kernels/gradient files located in the output/
+            directory. ONLY available for SPECFEM2D models.
+    
+    positional arguments:
+      name                  Name of directory in the output/ directory
+      parameter             Name of parameter to plot from `name`. E.g., 'vs',
+                            'vp' etc.
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -c [CMAP], --cmap [CMAP]
+                            colormap to be passed to PyPlot
+      -s [SAVEFIG], --savefig [SAVEFIG]
+                            optional name and path to save figure
+
+
+Running ``plot2d`` without any arguments will print out a list of
+available directories you can plot
+
+.. code:: ipython3
+
+    ! seisflows plot2d 
+
+
+.. parsed-literal::
+
+                                         PLOT2D                                     
+                                         //////                                     
+    Available models/gradients/kernels
+    
+    GRADIENT_01
+    MODEL_01
+    MODEL_INIT
+    MODEL_TRUE
+
+
+Users will also have to choose which parameter they would like to plot,
+which is defined by the available parameters in the underlying model.
+Incorrect choices will throw an AssertionError which will tell you what
+parameters are available to plot.
+
+.. code:: ipython3
+
+    ! seisflows plot2d GRADIENT_01
+
+
+.. parsed-literal::
+
+    Traceback (most recent call last):
+      File "/home/bchow/miniconda3/envs/docs/bin/seisflows", line 33, in <module>
+        sys.exit(load_entry_point('seisflows', 'console_scripts', 'seisflows')())
+      File "/home/bchow/REPOSITORIES/seisflows/seisflows/seisflows.py", line 1298, in main
+        sf()
+      File "/home/bchow/REPOSITORIES/seisflows/seisflows/seisflows.py", line 410, in __call__
+        getattr(self, self._args.command)(**vars(self._args))
+      File "/home/bchow/REPOSITORIES/seisflows/seisflows/seisflows.py", line 1021, in plot2d
+        save=savefig)
+      File "/home/bchow/REPOSITORIES/seisflows/seisflows/tools/specfem.py", line 428, in plot2d
+        f"chosen `parameter` must be in {self._parameters}"
+    AssertionError: chosen `parameter` must be in ['vp_kernel', 'vs_kernel']
+
+
+.. code:: ipython3
+
+    ! seisflows plot2d GRADIENT_01 vs_kernel --savefig gradient_01_vs_kernel.png
+
+
+.. parsed-literal::
+
+    Figure(707.107x707.107)
+
+
+.. code:: ipython3
+
+    from IPython.display import Image
+    Image(filename='gradient_01_vs_kernel.png') 
+
+
+
+
+.. image:: images/command_line_tool_files/command_line_tool_39_0.png
+
+
