@@ -82,7 +82,7 @@ class Backtrack(Bracket):
                             f"successful w/ alpha={alpha}")
                 status = "PASS"
             # If misfit continually increases, decrease step length
-            elif step_count <= self.step_count_max:
+            elif step_count < self.step_count_max:
                 slope = gtp[-1] / gtg[-1]
                 alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
                                             f1=f[1], b1=0.1, b2=0.5)

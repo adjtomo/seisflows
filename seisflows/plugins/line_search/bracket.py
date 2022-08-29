@@ -179,13 +179,13 @@ class Bracket:
                         f"alpha={alpha:.2E}")
             status = "TRY"
         # If misfit continues to step down, increase step length
-        elif step_count <= self.step_count_max and all(f <= f[0]):
+        elif step_count < self.step_count_max and all(f <= f[0]):
             alpha = 1.618034 * x[-1]  # 1.618034 is the 'golden ratio'
             logger.info(f"try: misfit not bracketed, increasing step length "
                         f"using golden ratio, alpha={alpha:.2E}")
             status = "TRY"
         # If misfit increases, reduce step length by backtracking
-        elif step_count <= self.step_count_max:
+        elif step_count < self.step_count_max:
             slope = gtp[-1] / gtg[-1]
             alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
                                         f1=f[1], b1=0.1, b2=0.5)
