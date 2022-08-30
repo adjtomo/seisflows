@@ -29,9 +29,7 @@ class SFPyatoaEx2D(SFExample2D):
     def __init__(self, ntask=None, niter=None, nsta=None, method="run",
                  specfem2d_repo=None):
         """
-        Overload init and attempt to import Pyatoa before running example,
-        overload the default number of tasks to 2, and add a new init parameter
-        `nsta` which chooses the number of stations, between 1 and 132
+        Overload init and attempt to import Pyatoa before running example.
 
         :type ntask: int
         :param ntask: number of events to use in inversion, between 1 and 25.
@@ -110,7 +108,7 @@ class SFPyatoaEx2D(SFExample2D):
         """
         cd(self.cwd)
 
-        print("> EX2: Setting SeisFlows parameters for Pyatao preprocessing")
+        print("> EX2: Setting SeisFlows parameters for Pyatoa preprocessing")
         self.sf.setup(force=True)  # Force will delete existing parameter file
         self.sf.par("workflow", "inversion")
         self.sf.par("preprocess", "pyaflowa")
@@ -125,6 +123,8 @@ class SFPyatoaEx2D(SFExample2D):
         self.sf.par("data_case", "synthetic")  # synthetic-synthetic inversion
         self.sf.par("attenuation", False)
         self.sf.par("components", "Y")
+        self.sf.par("smooth_h", 5000.)
+        self.sf.par("smooth_v", 5000.)
 
         # PYATOA preprocessing parameters
         self.sf.par("unit_output", "DISP")

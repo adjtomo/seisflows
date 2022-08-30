@@ -1,37 +1,31 @@
 #!/usr/bin/env python3
 """
-                SEISFLOWS SPECFEM2D WORKSTATION EXAMPLE 2
+                SEISFLOWS SPECFEM2D WORKSTATION EXAMPLE 3
 
-This example will run N iterations of an inversion to assess misfit between
-a homogeneous halfspace model and a checkerboard model using X events and
-Y receivers. N, X and Y are all user-selectable.
+This example will run a number of forward simulations and misfit quantification.
+This is useful for generating a large number of synthetics through a given model
 
 .. note::
     See Example 1 docstring for more information
 
 .. rubric::
-    $ seisflows examples run 2
+    $ seisflows examples run 3
 """
-import os
-import sys
-
 from seisflows.tools import msg
-from seisflows.tools.unix import cd, rm, ln
+from seisflows.tools.unix import cd
 from seisflows.examples.sfexample2d import SFExample2D
 
 
-class SFPyatoaEx2D(SFExample2D):
+class SFFwdEx2D(SFExample2D):
     """
     A class for running SeisFlows examples. Overloads Example 1 to take
     advantage of the default SPECFEM2D stuff, onyl changes the generation of
     MODEL TRUE, the number of stations, and the setup of the parameter file.
     """
-    def __init__(self, ntask=None, niter=None, nsta=None, method="run",
-                 specfem2d_repo=None):
+    def __init__(self, ntask=None, nsta=None, method="run", specfem2d_repo=None,
+                 **kwargs):
         """
-        Overload init and attempt to import Pyatoa before running example,
-        overload the default number of tasks to 2, and add a new init parameter
-        `nsta` which chooses the number of stations, between 1 and 132
+        Overloads init of the base problem
 
         :type ntask: int
         :param ntask: number of events to use in inversion, between 1 and 25.
@@ -47,19 +41,8 @@ class SFPyatoaEx2D(SFExample2D):
             downloaded configured and compiled automatically.
         """
         # Setting default values for ntask, niter, nsta here vvv
-        super().__init__(ntask=ntask or 4, niter=niter or 2, nsta=nsta or 32,
+        super().__init__(ntask=ntask or 25, niter=1, nsta=nsta or 131,
                          method=method, specfem2d_repo=specfem2d_repo)
-
-        # Make sure that Pyatoa has been installed before running
-        try:
-            import pyatoa
-        except ModuleNotFoundError:
-            print(msg.cli("Module Pyatoa not found but is required for this "
-                          "example. Please install Pyatoa and rerun this "
-                          "example.", header="module not found error",
-                          border="=")
-                  )
-            sys.exit(-1)
 
     def print_dialogue(self):
         """
@@ -69,39 +52,20 @@ class SFPyatoaEx2D(SFExample2D):
         print(msg.ascii_logo_small)
         print(msg.cli(
             f"This is a [SPECFEM2D] [WORKSTATION] example, which will "
-            f"run an inversion to assess misfit between a starting homogeneous "
-            f"halfspace model and a target checkerboard model. This "
-            f"example problem uses the [PYAFLOWA] preprocessing "
-            f"module and the [LBFGS] optimization algorithm. "
+            f"run forward simulations generate synthetic seismograms through "
+            f"a given starting model. This example uses no preprocessing or "
+            f"optimization modules"
             f"[{self.ntask} events, {self.nsta} stations, {self.niter} "
             f"iterations]. "
             f"The tasks involved include: ",
             items=["1. (optional) Download, configure, compile SPECFEM2D",
                    "2. Set up a SPECFEM2D working directory",
                    "3. Generate starting model from 'Tape2007' example",
-                   "4. Generate target model w/ perturbed starting model",
-                   "5. Set up a SeisFlows working directory",
-                   "6. Run the inversion workflow"],
+                   "4. Set up a SeisFlows working directory",
+                   "5. Run the forward simulation workflow"],
             header="seisflows example 2",
             border="=")
         )
-
-    def setup_specfem2d_for_model_true(self):
-        """
-        Overwrites MODEL TRUE creation from EX1
-
-        Make some adjustments to the parameter file to create the final velocity
-        model. This function assumes it is running from inside the
-        SPECFEM2D/DATA directory
-        """
-        cd(self.workdir_paths.data)
-        assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
-
-        print("> EX: Updating SPECFEM2D to set checkerboard model as "
-              "MODEL_TRUE")
-        self.sf.sempar("model", "legacy")  # read model_velocity.dat_checker
-        rm("proc000000_model_velocity.dat_input")
-        ln("model_velocity.dat_checker", "proc000000_model_velocity.dat_input")
 
     def setup_seisflows_working_directory(self):
         """
@@ -112,12 +76,11 @@ class SFPyatoaEx2D(SFExample2D):
 
         print("> EX2: Setting SeisFlows parameters for Pyatao preprocessing")
         self.sf.setup(force=True)  # Force will delete existing parameter file
-        self.sf.par("workflow", "inversion")
-        self.sf.par("preprocess", "pyaflowa")
-        self.sf.par("optimize", "LBFGS")
+        self.sf.par("workflow", "forward")
+        self.sf.par("preprocess", "null")
+        self.sf.par("optimize", "null")
         self.sf.configure()
 
-        self.sf.par("end", 1)  # only 1 iteration
         self.sf.par("ntask", self.ntask)  # 3 sources for this example
         self.sf.par("materials", "elastic")  # how velocity model parameterized
         self.sf.par("density", False)  # update density or keep constant
@@ -126,15 +89,32 @@ class SFPyatoaEx2D(SFExample2D):
         self.sf.par("attenuation", False)
         self.sf.par("components", "Y")
 
-        # PYATOA preprocessing parameters
-        self.sf.par("unit_output", "DISP")
-        self.sf.par("min_period", 10)  # filter bounds define window selection
-        self.sf.par("max_period", 200)
-        # self.sf.par("pyflex_preset", "")  # To turn off windowing completely
-
         self.sf.par("path_specfem_bin", self.workdir_paths.bin)
         self.sf.par("path_specfem_data", self.workdir_paths.data)
         self.sf.par("path_model_init", self.workdir_paths.model_init)
-        self.sf.par("path_model_true", self.workdir_paths.model_true)
 
+    def main(self):
+        """
+        Setup the example and then optionally run the actual seisflows workflow
+        """
+        print(msg.cli("EXAMPLE SETUP", border="="))
 
+        # Step 1: Download and configure SPECFEM2D, make binaries. Optional
+        self.download_specfem2d()
+        self.configure_specfem2d_and_make_binaries()
+        # Step 2: Create a working directory and generate initial/final models
+        self.create_specfem2d_working_directory()
+        # Step 2a: Generate MODEL_INIT, rearrange consequent directory structure
+        print(msg.cli("GENERATING INITIAL MODEL", border="="))
+        self.setup_specfem2d_for_model_init()
+        self.run_xspecfem2d_binaries()
+        self.cleanup_xspecfem2d_run(choice="INIT")
+        # Step 3: Prepare Par_file and directory for MODEL_TRUE generation
+        self.setup_seisflows_working_directory()
+        self.finalize_specfem2d_par_file()
+        print(msg.cli("COMPLETE EXAMPLE SETUP", border="="))
+        # Step 4: Run the workflwo
+        if self.run_example:
+            print(msg.cli("RUNNING SEISFLOWS FORWARD WORKFLOW", border="="))
+            self.run_sf_example()
+            print(msg.cli("EXAMPLE COMPLETED SUCCESFULLY", border="="))

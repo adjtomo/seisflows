@@ -939,6 +939,8 @@ class SeisFlows:
         elif choice == 2:
             from seisflows.examples.ex2_hh_w_pyatoa \
                 import SFPyatoaEx2D as Example
+        elif choice == 3:
+            from seisflows.examples.ex3_fwd_solver import SFFwdEx2D as Example
         else:
             print(f"no SeisFlows example matching given number: {choice}")
             sys.exit(0)

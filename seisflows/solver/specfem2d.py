@@ -70,8 +70,7 @@ class Specfem2D(Specfem):
                                [self.path.model_init, self.path.model_true]):
             dst = os.path.join(self.path.output, name)
             for par in ["x", "z"]:
-                src = glob(os.path.join(self.path.model_init,
-                                        f"*{par}{self._ext}"))
+                src = glob(os.path.join(model, f"*{par}{self._ext}"))
                 unix.cp(src, dst)
 
     def smooth(self, input_path, output_path, parameters=None, span_h=None,

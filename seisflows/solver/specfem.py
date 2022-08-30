@@ -398,20 +398,20 @@ class Specfem:
         Prepares solver scratch directories for an impending workflow.
 
         Sets up directory structure expected by SPECFEM and copies or generates
-        seismic data to be inverted or migrated
+        seismic data to be inverted or migrated.
+
+        Exports INIT/STARTING and TRUE/TARGET models to disk (output/ dir.)
         """
         self._initialize_working_directories()
 
         # Export the initial and target models to the SeisFlows output directory
-        # Copy ALL files with relevant extension, just incase
         for name, model in zip(["MODEL_INIT", "MODEL_TRUE"],
                                [self.path.model_init, self.path.model_true]):
-            dst = os.path.join(self.path.output, name)
+            dst = os.path.join(self.path.output, name, "")
             if not os.path.exists(dst):
                 unix.mkdir(dst)
                 for par in self._parameters:
-                    src = glob(os.path.join(self.path.model_init,
-                                            f"*{par}{self._ext}"))
+                    src = glob(os.path.join(model, f"*{par}{self._ext}"))
                     unix.cp(src, dst)
 
     def forward_simulation(self, executables=None, save_traces=False,
