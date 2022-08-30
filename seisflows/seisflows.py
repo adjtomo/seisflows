@@ -19,7 +19,6 @@ import inspect
 import warnings
 import argparse
 import traceback
-import subprocess
 from glob import glob
 from IPython import embed
 
@@ -297,19 +296,41 @@ working state before the workflow can be resumed
         numerical solver
         """
     )
-    examples.add_argument("run", type=str, nargs="?", default=None,
-                          help="Run your choice of example problem")
-    examples.add_argument("choice", type=str,  nargs="?", default=None,
-                          help="Name of the specific example problem to run")
+    examples.add_argument("method", type=str, nargs="?", default=None,
+                          help="Method for running the example problem. If not"
+                               "provided, simply prints out the list of "
+                               "available example problems. If given as an "
+                               "integer value, will print out the help message "
+                               "for the given example. If 'run', will run the "
+                               "example. If 'setup' will simply setup the "
+                               "example working directory but will not execute "
+                               "`seisflows submit`")
+    examples.add_argument("choice", type=int,  nargs="?", default=None,
+                          help="If `method` in ['setup', 'run'], integer"
+                               "value corresponding to the given example "
+                               "problem which can listed using `seisflows "
+                               "examples`")
     examples.add_argument("-r", "--specfem2d_repo", type=str,  nargs="?",
                           default=None,
-                          help= "path to the SPECFEM2D directory which should "
-                                "contain binary executables. If not given, "
-                                "assumes directory is called 'specfem2d/' in "
-                                "the current working directory. If that dir "
-                                "is not found, SPECFEM2D will be downloaded, "
-                                "configured and compiled automatically in the "
-                                "current working directory.")
+                          help="path to the SPECFEM2D directory which should "
+                               "contain binary executables. If not given, "
+                               "assumes directory is called 'specfem2d/' in "
+                               "the current working directory. If that dir "
+                               "is not found, SPECFEM2D will be downloaded, "
+                               "configured and compiled automatically in the "
+                               "current working directory.")
+    examples.add_argument("--nsta", type=int, nargs="?", default=None,
+                          help="User-defined number of stations to use for "
+                               "the example problem (1 <= NSTA <= 131). If "
+                               "not given, each example has its own default.")
+    examples.add_argument("--ntask", type=int, nargs="?", default=None,
+                          help="User-defined number of events to use for "
+                               "the example problem (1 <= NTASK <= 25). If "
+                               "not given, each example has its own default.")
+    examples.add_argument("--niter", type=int, nargs="?", default=None,
+                          help="User-defined number of iterations to run for "
+                               "the example problem (1 <= NITER <= inf). If "
+                               "not given, each example has its own default.")
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
@@ -871,9 +892,10 @@ class SeisFlows:
             if not skip_print:
                 print(msg.cli(f"{key}: {cur_val} -> {value}"))
 
-    def examples(self, run=None, choice=None, specfem2d_repo=None, **kwargs):
+    def examples(self, method=None, choice=None, specfem2d_repo=None,
+                 nsta=None, nevent=None, niter=None, **kwargs):
         """
-        List or run a SeisFlows example problem
+        List or run a SeisFlows example problems
 
         USAGE
 
@@ -887,8 +909,8 @@ class SeisFlows:
 
                 seisflows examples run 1
 
-        :type run: bool
-        :param run: if True, run an example of choice `choice`
+        :type method: bool
+        :param method: if True, run an example of choice `choice`
         :type choice: str
         :param choice: The choice of example, must match the given tag or file
             name that is assigned to it
@@ -897,6 +919,43 @@ class SeisFlows:
             contain binary executables. If not given, SPECFEM2D will be
             downloaded configured and compiled automatically.
         """
+        # e.g., $ seisflows examples
+        if method is None:
+            self._print_examples()
+            sys.exit(0)
+        # e.g., $ seisflows examples 1
+        elif method and choice is None:
+            try:
+                choice = int(method)
+            except ValueError:
+                print(f"`method` argument must be 'run', 'setup' or an integer "
+                      f"value corresponding to one of the available examples")
+                sys.exit(0)
+
+        # Allow the examples to be dynamically recovered based on user choice
+        if choice == 1:
+            from seisflows.examples.ex1_homogeneous_halfspace \
+                import SFExample2D as Example
+        elif choice == 2:
+            from seisflows.examples.ex2_hh_w_pyatoa \
+                import SFPyatoaEx2D as Example
+        else:
+            print(f"no SeisFlows example matching given number: {choice}")
+            sys.exit(0)
+
+        # Run or setup example, or just print system dialogue
+        example = Example(specfem2d_repo=specfem2d_repo, method=method,
+                          nsta=nsta, ntask=nevent, niter=niter)
+        example.print_dialogue()
+
+        # e.g., $ seisflows examples run 1
+        if method in ["setup", "run"]:
+            example.main()
+
+    @staticmethod
+    def _print_examples():
+        """Simply print a list of available examples which match the format
+        ex_?*.py"""
         # Gather all the available examples in the repository
         examples_dir = os.path.join(ROOT_DIR, "examples")
         examples_list = []
@@ -906,51 +965,16 @@ class SeisFlows:
             example_name = os.path.splitext(os.path.basename(fid))[0]
             examples_list.append((i+1, example_name, fid))
 
-        arg1, arg2 = None, None
-        if run:
-            # Case 1: seisflows examples 1 OR seisflows examples ex1_...
-            if choice is None:
-                arg1 = run
-                arg2 = ""
-            # Case 2: seisflows examples run 1 OR seisflows examples run ex1_...
-            elif run in ["run", "setup"]:
-                arg1 = choice
-                arg2 = f"{run}"  # space so that we do $ python ex.py run
-        if arg1:
-            # Allow for matching against index (int) and name (str)
-            try:
-                arg1 = int(arg1)
-            except ValueError:
-                pass
-
-            for ex_tup in examples_list:
-                j, exname, fid = ex_tup
-                if arg1 in [j, exname]:
-                    print(f"{run.capitalize()} example: {exname}")
-                    # Set default value for SPECFEM2D repository and make
-                    # sure paths are fully expanded to avoid any pathing error
-                    if specfem2d_repo is None:
-                        specfem2d_repo = os.path.join(os.getcwd(), "specfem2d")
-                    specfem2d_repo = os.path.expanduser(
-                        os.path.abspath(specfem2d_repo)
-                    )
-                    os.chdir(self._args.workdir) # run example in working dir.
-
-                    # $ python /path/to/example.py run path/to/specfem2d
-                    subprocess.run(f"python {fid} {arg2} {specfem2d_repo}",
-                                   shell=True, check=False)
-                    return
-
-        # Default behavior is to just print this help dialogue
         items = [f"{j}: {exname}" for j, exname, fid in examples_list]
-        print(msg.cli("Example options where <name_or_idx> is either the "
-                      "example name or corresponding index, provided below.",
-                      items=[
-            "'seisflows examples <name_or_idx>': print example description",
-            "'seisflows examples setup <name_or_idx>': setup example but "
-            "don't run workflow",
-            "'seisflows examples run <name_or_idx>': setup and run example"
-        ],
+        print(msg.cli(
+            "Example options where <name_or_idx> is either the example name "
+            "or corresponding index, provided below.",
+            items=[
+                "'seisflows examples <name_or_idx>': print example description",
+                "'seisflows examples setup <name_or_idx>': setup example but "
+                "don't run workflow 'seisflows examples run <name_or_idx>': "
+                "setup and run example"
+            ],
             header="seisflows examples"
         ))
         print(msg.cli(items=items))

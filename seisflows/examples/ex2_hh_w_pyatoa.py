@@ -2,9 +2,9 @@
 """
                 SEISFLOWS SPECFEM2D WORKSTATION EXAMPLE 2
 
-This example will run two iterations of an inversion to assess misfit between
-a homogeneous halfspace model and a checkerboard model using 2 events and
-5 receivers.
+This example will run N iterations of an inversion to assess misfit between
+a homogeneous halfspace model and a checkerboard model using X events and
+Y receivers. N, X and Y are all user-selectable.
 
 .. note::
     See Example 1 docstring for more information
@@ -26,7 +26,8 @@ class SFPyatoaEx2D(SFExample2D):
     advantage of the default SPECFEM2D stuff, onyl changes the generation of
     MODEL TRUE, the number of stations, and the setup of the parameter file.
     """
-    def __init__(self, ntask=2, niter=2, nsta=5, specfem2d_repo=None):
+    def __init__(self, ntask=None, niter=None, nsta=None, method="run",
+                 specfem2d_repo=None):
         """
         Overload init and attempt to import Pyatoa before running example,
         overload the default number of tasks to 2, and add a new init parameter
@@ -45,12 +46,10 @@ class SFPyatoaEx2D(SFExample2D):
             contain binary executables. If not given, SPECFEM2D will be
             downloaded configured and compiled automatically.
         """
-        super().__init__(ntask=ntask, niter=niter,
-                         specfem2d_repo=specfem2d_repo)
-        self.nsta = nsta
-        # -1 because it represents index but we need to talk in terms of count
-        assert(1 <= self.nsta <= 131), \
-            f"number of stations must be between 1 and 131, not {self.nsta}"
+        # Setting default values for ntask, niter, nsta here vvv
+        super().__init__(ntask=ntask or 4, niter=niter or 2, nsta=nsta or 32,
+                         method=method, specfem2d_repo=specfem2d_repo)
+
         # Make sure that Pyatoa has been installed before running
         try:
             import pyatoa
@@ -61,6 +60,31 @@ class SFPyatoaEx2D(SFExample2D):
                           border="=")
                   )
             sys.exit(-1)
+
+    def print_dialogue(self):
+        """
+        Print help/system dialogue message that explains the setup of th
+        this workflow
+        """
+        print(msg.ascii_logo_small)
+        print(msg.cli(
+            f"This is a [SPECFEM2D] [WORKSTATION] example, which will "
+            f"run an inversion to assess misfit between a starting homogeneous "
+            f"halfspace model and a target checkerboard model. This "
+            f"example problem uses the [PYAFLOWA] preprocessing "
+            f"module and the [LBFGS] optimization algorithm. "
+            f"[{self.ntask} events, {self.nsta} stations, {self.niter} "
+            f"iterations]. "
+            f"The tasks involved include: ",
+            items=["1. (optional) Download, configure, compile SPECFEM2D",
+                   "2. Set up a SPECFEM2D working directory",
+                   "3. Generate starting model from 'Tape2007' example",
+                   "4. Generate target model w/ perturbed starting model",
+                   "5. Set up a SeisFlows working directory",
+                   "6. Run the inversion workflow"],
+            header="seisflows example 2",
+            border="=")
+        )
 
     def setup_specfem2d_for_model_true(self):
         """
@@ -113,52 +137,4 @@ class SFPyatoaEx2D(SFExample2D):
         self.sf.par("path_model_init", self.workdir_paths.model_init)
         self.sf.par("path_model_true", self.workdir_paths.model_true)
 
-    def finalize_specfem2d_par_file(self):
-        """
-        Final changes to the SPECFEM2D Par_file before running SeisFlows.
-        Par_file will be used to control all the child specfem2d directories.
-        Need to tell them to read models from .bin files, and to use existing
-        station files rather than create them from the Par_file
-        """
-        print("> EX2: Finalizing SPECFEM2D Par_file for SeisFlows inversion")
 
-        cd(self.workdir_paths.data)
-        self.sf.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
-        self.sf.sempar("use_existing_stations", ".true.")  # Use STATIONS file
-        # Assign STATIONS_checker file which has 132 stations
-        rm("STATIONS")
-
-        # Only write the first 10 lines to get 10 stations in inversion
-        with open("STATIONS_checker", "r") as f:
-            lines = f.readlines()
-
-        print(f"> EX2: Using {self.nsta} stations in this inversion workflow")
-        with open("STATIONS", "w") as f:
-            f.writelines(lines[:self.nsta])
-
-
-if __name__ == "__main__":
-    print(msg.ascii_logo_small)
-    print(msg.cli(
-        f"This is a [SPECFEM2D] [WORKSTATION] example, which will "
-        f"run an inversion to assess misfit between a homogeneous halfspace  "
-        f"and checkerboard model using Pyatoa for misfit quantification "
-        f"[2 events, 5 stations, 1 iterations]. The tasks involved include: ",
-        items=["1. (optional) Download, configure, compile SPECFEM2D",
-               "2. Set up a SPECFEM2D working directory",
-               "3. Generate starting model from Tape2007 example",
-               "4. Generate target model w/ perturbed starting model",
-               "5. Set up a SeisFlows working directory",
-               f"6. Run an inversion workflow. The line search is expected to "
-               f"attempt 2 evaluations (i01s02)"],
-        header="seisflows example 2",
-        border="=")
-    )
-
-    # Dynamically traverse sys.argv to get user-input command line. Cannot
-    # use argparser here because we're being called by SeisFlows CLI tool which
-    # is occupying argparser
-    if len(sys.argv) > 2:
-        _, _, specfem2d_repo = sys.argv
-        sfex2d = SFPyatoaEx2D(specfem2d_repo=specfem2d_repo)
-        sfex2d.main()

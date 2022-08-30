@@ -44,7 +44,8 @@ class SFExample2D:
     A class for running SeisFlows examples. Simplifies calls structure so that
     multiple example runs can benefit from the code written here
     """
-    def __init__(self, ntask=3, niter=2, specfem2d_repo=None):
+    def __init__(self, ntask=None, niter=None, nsta=None, method="run",
+                 specfem2d_repo=None):
         """
         Set path structure which is used to navigate around SPECFEM repositories
         and the example working directory
@@ -54,6 +55,9 @@ class SFExample2D:
             defaults to 3
         :type niter: int
         :param niter: number of iterations to run. defaults to 2
+        :type nsta: int
+        :param nsta: number of stations to include in inversion, between 1 and
+            131
         :type specfem2d_repo: str
         :param specfem2d_repo: path to the SPECFEM2D directory which should
             contain binary executables. If not given, SPECFEM2D will be
@@ -63,20 +67,46 @@ class SFExample2D:
         self.sem2d_paths, self.workdir_paths = self.define_dir_structures(
             cwd=self.cwd, specfem2d_repo=specfem2d_repo
         )
-        self.ntask = ntask
+        self.ntask = ntask or 1
         assert(1 <= self.ntask <= 25), \
             f"number of tasks/events must be between 1 and 25, not {self.ntask}"
-        self.niter = niter
+        self.niter = niter or 1
         assert(1 <= self.niter <= np.inf), \
             f"number of iterations must be between 1 and inf, not {self.niter}"
+        self.nsta = nsta or 1
+        # -1 because it represents index but we need to talk in terms of count
+        assert(1 <= self.nsta <= 131), \
+            f"number of stations must be between 1 and 131, not {self.nsta}"
 
         # This bool information is provided by the User running 'setup' or 'run'
-        self.run_example = bool(sys.argv[1] == "run")
+        self.run_example = bool(method == "run")
 
         # Command line tool to use $ seisflows <cmd> from inside Python
         # Zero out sys.argv to ensure that no arguments are given to the CLI
         sys.argv = [sys.argv[0]]
         self.sf = SeisFlows()
+
+    def print_dialogue(self):
+        """
+        Print help/system dialogue message that explains the setup of th
+        this workflow
+        """
+        print(msg.ascii_logo_small)
+        print(msg.cli(
+            f"This is a [SPECFEM2D] [WORKSTATION] example, which will "
+            f"run an inversion to assess misfit between two homogeneous "
+            f"halfspace models with slightly different velocities. "
+            f"[{self.ntask} events, 1 station, {self.niter} iterations]. "
+            f"The tasks involved include: ",
+            items=["1. (optional) Download, configure, compile SPECFEM2D",
+                   "2. Set up a SPECFEM2D working directory",
+                   "3. Generate starting model from 'Tape2007' example",
+                   "4. Generate target model w/ perturbed starting model",
+                   "5. Set up a SeisFlows working directory",
+                   "6. Run the inversion workflow"],
+            header="seisflows example 1",
+            border="=")
+        )
 
     @staticmethod
     def define_dir_structures(cwd, specfem2d_repo, ex="Tape2007"):
@@ -91,15 +121,10 @@ class SFExample2D:
         :type ex: str
         :type ex: The name of the example problem inside SPECFEM2D/EXAMPLES
         """
-        if not os.path.exists(specfem2d_repo):
+        if specfem2d_repo is None or not os.path.exists(specfem2d_repo):
             print(f"No existing SPECFEM2D repo given, default to: "
                   f"{cwd}/specfem2d")
             specfem2d_repo = os.path.join(cwd, "specfem2d")
-        else:
-            assert(os.path.exists(specfem2d_repo)), (
-                f"User supplied SPECFEM2D directory '{specfem2d_repo}' "
-                f"does not exist, please check your path and try again."
-            )
 
         # This defines required structures from the SPECFEM2D repository
         sem2d = {
@@ -132,6 +157,11 @@ class SFExample2D:
 
             print(f"Downloading SPECFEM2D with command: {cmd}")
             subprocess.run(cmd, shell=True, check=True)
+
+        assert self.sem2d_paths.repo, (
+            f"User supplied SPECFEM2D directory '{self.sem2d_paths.repo}' "
+            f"does not exist, please check your path and try again."
+        )
 
     def configure_specfem2d_and_make_binaries(self):
         """
@@ -297,6 +327,8 @@ class SFExample2D:
         self.sf.par("data_case", "synthetic")  # synthetic-synthetic inversion
         self.sf.par("components", "Y")  # only Y component seismograms avail.
         self.sf.par("attenuation", False)
+        self.sf.par("misfit", "traveltime")  # cross-correlation phase measure
+        self.sf.par("adjoint", "traveltime")  # cross-correlation phase measure
 
         self.sf.par("path_specfem_bin", self.workdir_paths.bin)
         self.sf.par("path_specfem_data", self.workdir_paths.data)
@@ -305,12 +337,26 @@ class SFExample2D:
 
     def finalize_specfem2d_par_file(self):
         """
-        Last minute changes to get the SPECFEM2D Par_file in the correct format
-        for running SeisFlows. Setting model type to read from .bin GLL files
-        change number of stations etc.
+        Final changes to the SPECFEM2D Par_file before running SeisFlows.
+        Par_file will be used to control all the child specfem2d directories.
+        Need to tell them to read models from .bin files, and to use existing
+        station files rather than create them from the Par_file
         """
+        print("> Finalizing SPECFEM2D Par_file for SeisFlows inversion")
+
         cd(self.workdir_paths.data)
         self.sf.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
+        self.sf.sempar("use_existing_stations", ".true.")  # Use STATIONS file
+
+        # Assign STATIONS_checker file which has 132 stations
+        rm("STATIONS")
+
+        with open("STATIONS_checker", "r") as f:
+            lines = f.readlines()
+
+        print(f"> Using {self.nsta} stations in this inversion workflow")
+        with open("STATIONS", "w") as f:
+            f.writelines(lines[:self.nsta])
 
     def run_sf_example(self):
         """
@@ -324,6 +370,7 @@ class SFExample2D:
         Setup the example and then optionally run the actual seisflows workflow
         """
         print(msg.cli("EXAMPLE SETUP", border="="))
+
         # Step 1: Download and configure SPECFEM2D, make binaries. Optional
         self.download_specfem2d()
         self.configure_specfem2d_and_make_binaries()
@@ -349,30 +396,3 @@ class SFExample2D:
             self.run_sf_example()
         print(msg.cli("EXAMPLE COMPLETED SUCCESFULLY"))
 
-
-if __name__ == "__main__":
-    print(msg.ascii_logo_small)
-    print(msg.cli(
-        f"This is a [SPECFEM2D] [WORKSTATION] example, which will "
-        f"run an inversion to assess misfit between two homogeneous halfspace "
-        f"models with slightly different velocities. [3 events, 1 station, 2 "
-        f"iterations]. The inversion is expected to fail after the 5th line "
-        f"search step count of the 2nd iteration. The tasks involved include: ",
-        items=["1. (optional) Download, configure, compile SPECFEM2D",
-               "2. Set up a SPECFEM2D working directory",
-               "3. Generate starting model from Tape2007 example",
-               "4. Generate target model w/ perturbed starting model",
-               "5. Set up a SeisFlows working directory",
-               "6. Run an inversion workflow"],
-        header="seisflows example 1",
-        border="=")
-    )
-
-    # Dynamically traverse sys.argv to get user-input command line. Cannot
-    # use argparser here because we're being called by SeisFlows CLI tool which
-    # is occupying argparser. Call looks something like:
-    # $ python /path/to/example.py run path/to/specfem2d
-    if len(sys.argv) > 2:
-        _, _, specfem2d_repo = sys.argv
-        sfex2d = SFExample2D(specfem2d_repo=specfem2d_repo)
-        sfex2d.main()
