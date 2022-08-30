@@ -173,7 +173,10 @@ class Forward:
                                f"'{self.__class__.__name__}' workflow may be "
                                f"skipped")
 
-        if self.data_case is not None:
+        # If we are using the preprocessing module, we must have either
+        # 1) real data located in `path.data`, or 2) a target model to generate
+        # synthetic data, locaed in `path.model_true`
+        if self.data_case is not None and self._modules.preprocess:
             assert(self.data_case.lower() in self._acceptable_data_cases), \
                 f"`data_case` must be in {self._acceptable_data_cases}"
             if self.data_case.lower() == "data":
