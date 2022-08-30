@@ -320,13 +320,17 @@ class Forward:
             _model = Model(os.path.join(self.path.model_true))
             _model.check()
 
-        self.system.run(
-            [self.prepare_data_for_solver,
-             self.run_forward_simulations,
-             self.evaluate_objective_function],
-            path_model=self.path.model_init,
-            save_residuals=os.path.join(self.path.eval_grad, "residuals.txt")
-        )
+        # Define the tasks that will be run through `system.run`
+        run_list = [self.run_forward_simulations,
+                    self.evaluate_objective_function]
+        # Only need to prepare data for solver if we are preprocessing 
+        if self.preprocess:
+            run_list = [self.prepare_data_for_solver] + run_list
+
+        self.system.run(run_list, path_model=self.path.model_init,
+                        save_residuals=os.path.join(self.path.eval_grad,
+                                                    "residuals.txt")
+                        )
 
     def prepare_data_for_solver(self, **kwargs):
         """

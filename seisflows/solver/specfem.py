@@ -405,16 +405,7 @@ class Specfem:
         Exports INIT/STARTING and TRUE/TARGET models to disk (output/ dir.)
         """
         self._initialize_working_directories()
-
-        # Export the initial and target models to the SeisFlows output directory
-        for name, model in zip(["MODEL_INIT", "MODEL_TRUE"],
-                               [self.path.model_init, self.path.model_true]):
-            dst = os.path.join(self.path.output, name, "")
-            if not os.path.exists(dst):
-                unix.mkdir(dst)
-                for par in self._parameters:
-                    src = glob(os.path.join(model, f"*{par}{self._ext}"))
-                    unix.cp(src, dst)
+        self._export_starting_models()
 
     def forward_simulation(self, executables=None, save_traces=False,
                            export_traces=False, **kwargs):
@@ -823,3 +814,27 @@ class Specfem:
                 logger.debug(f"linking source '{source_name}' as 'mainsolver'")
                 unix.ln(cwd, self.path.mainsolver)
 
+    def _export_starting_models(self, parameters=None):
+        """
+        Export the initial and target models to the SeisFlows output/ directory.
+
+        :type parameters: list
+        :param parameters: list of parameters to export. If None, will default
+            to `self._parameters`
+        """
+        if parameters is None:
+            parameters = self._parameters
+
+        # Export the initial and target models to the SeisFlows output directory
+        for name, model in zip(["MODEL_INIT", "MODEL_TRUE"],
+                               [self.path.model_init, self.path.model_true]):
+            # Skip over if user has not provided model path (e.g., real data
+            # inversion will not have `model_true`)
+            if not model:
+                continue
+            dst = os.path.join(self.path.output, name, "")
+            if not os.path.exists(dst):
+                unix.mkdir(dst)
+                for par in parameters:
+                    src = glob(os.path.join(model, f"*{par}{self._ext}"))
+                    unix.cp(src, dst)

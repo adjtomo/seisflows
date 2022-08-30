@@ -66,12 +66,7 @@ class Specfem2D(Specfem):
         super().setup()
 
         # Copy in coordinate files to the Model definition so we can plot
-        for name, model in zip(["MODEL_INIT", "MODEL_TRUE"],
-                               [self.path.model_init, self.path.model_true]):
-            dst = os.path.join(self.path.output, name)
-            for par in ["x", "z"]:
-                src = glob(os.path.join(model, f"*{par}{self._ext}"))
-                unix.cp(src, dst)
+        self._export_starting_models(parameters=["x", "z"])
 
     def smooth(self, input_path, output_path, parameters=None, span_h=None,
                span_v=None, use_gpu=False):

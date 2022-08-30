@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-This is a subclass seisflows.system.workstation
-Provides utilities for submitting jobs in serial on a single machine
+The `workstation` class is the foundational `System` module in SeisFlows,
+it provides utilities for submitting jobs in SERIAL on a small-scale machine,
+e.g., a workstation or a laptop. All other `System` classes build on this class.
 """
 import os
 from contextlib import redirect_stdout
