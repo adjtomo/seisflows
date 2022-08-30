@@ -251,6 +251,8 @@ Stream.plot() function under the hood. Example call would be
                              "['SU', 'ASCII']. Defaults to 'ASCII'. See "
                              "SeisFlows.preprocess.default.read() for "
                              "all options.")
+    plotst.add_argument("-s", "--savefig", type=str, nargs="?", default=None,
+                        help="optional name and path to save figure")
     # =========================================================================
     print_ = subparser.add_parser(
         "print", formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1008,7 +1010,7 @@ class SeisFlows:
         acceptable_args[choice](*self._args.args, **kwargs)
 
     @staticmethod
-    def plotst(self, fids, data_format="ASCII", **kwargs):
+    def plotst(self, fids, data_format="ASCII", savefig=None, **kwargs):
         """
         Simple stream/waveform plotter to visualize synthetic waveforms created
         by the solver. Uses ObsPy under the hood to generate a large stream
@@ -1022,7 +1024,10 @@ class SeisFlows:
         :type fids: list
         :param fids: list of file ID's to plot
         :type data_format: str
-        :param data_format:
+        :param data_format: data format used to determine how to read data files
+        :type savefig: str or None
+        :param savefig: full path and filename to save the output figure. If
+            NoneType, will not save the figure
         """
         # Take advantage of the Default Preprocessing module's read() function
         plotter = Default(data_format=data_format)
@@ -1033,7 +1038,7 @@ class SeisFlows:
         for fid in fids:
             st += plotter.read(fid)
 
-        st.plot(**kwargs)
+        st.plot(outfile=savefig, **kwargs)
 
     def plot2d(self, name=None, parameter=None, cmap=None, savefig=None,
                **kwargs):

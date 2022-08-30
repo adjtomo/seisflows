@@ -320,12 +320,14 @@ class Forward:
             _model = Model(os.path.join(self.path.model_true))
             _model.check()
 
-        # Define the tasks that will be run through `system.run`
-        run_list = [self.run_forward_simulations,
-                    self.evaluate_objective_function]
-        # Only need to prepare data for solver if we are preprocessing 
+        # If no preprocessing module, than all of the additional functions for
+        # working with `data` are unncessary.
         if self.preprocess:
-            run_list = [self.prepare_data_for_solver] + run_list
+            run_list = [self.prepare_data_for_solver,
+                        self.run_forward_simulations,
+                        self.evaluate_objective_function]
+        else:
+            run_list = [self.run_forward_simulations]
 
         self.system.run(run_list, path_model=self.path.model_init,
                         save_residuals=os.path.join(self.path.eval_grad,
@@ -387,8 +389,9 @@ class Forward:
                      f"'{self.solver.__class__.__name__}'")
 
         # Figure out where to export waveform files to, if requested
+        # path will look like: 'output/solver/001/syn/NN.SSS.BXY.semd'
         if self.export_traces:
-            export_traces = os.path.join(self.path.output,
+            export_traces = os.path.join(self.path.output, "solver",
                                          self.solver.source_name, "syn")
         else:
             export_traces = False
@@ -417,8 +420,6 @@ class Forward:
         logger.debug(f"quantifying misfit with "
                      f"'{self.preprocess.__class__.__name__}'")
         self.preprocess.quantify_misfit(
-            # observed=self.solver.data_filenames(choice="obs"),
-            # synthetic=self.solver.data_filenames(choice="syn"),
             source_name=self.solver.source_name,
             save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
             save_residuals=save_residuals

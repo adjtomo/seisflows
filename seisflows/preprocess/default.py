@@ -243,9 +243,9 @@ class Default:
         """
         st = None
         if self.data_format.upper() == "SU":
-            st = obspy_read(os.path.join(fid), format="SU", byteorder="<")
+            st = obspy_read(fid, format="SU", byteorder="<")
         elif self.data_format.upper() == "ASCII":
-            st = self._read_ascii(fid)
+            st = read_ascii(fid)
         return st
 
     def write(self, st, fid):
@@ -550,54 +550,54 @@ class Default:
 
         return st_out
 
-    @staticmethod
-    def _read_ascii(fid, origintime=None):
-        """
-        Read waveforms in two-column ASCII format. This is copied directly from
-        pyatoa.utils.read.read_sem()
-        """
-        try:
-            times = np.loadtxt(fname=fid, usecols=0)
-            data = np.loadtxt(fname=fid, usecols=1)
 
-        # At some point in 2018, the Specfem developers changed how the ascii files
-        # were formatted from two columns to comma separated values, and repeat
-        # values represented as 2*value_float where value_float represents the data
-        # value as a float
-        except ValueError:
-            times, data = [], []
-            with open(fid, 'r') as f:
-                lines = f.readlines()
-            for line in lines:
-                try:
-                    time_, data_ = line.strip().split(',')
-                except ValueError:
-                    if "*" in line:
-                        time_ = data_ = line.split('*')[-1]
-                    else:
-                        raise ValueError
-                times.append(float(time_))
-                data.append(float(data_))
+def read_ascii(fid, origintime=None):
+    """
+    Read waveforms in two-column ASCII format. This is copied directly from
+    pyatoa.utils.read.read_sem()
+    """
+    try:
+        times = np.loadtxt(fname=fid, usecols=0)
+        data = np.loadtxt(fname=fid, usecols=1)
 
-            times = np.array(times)
-            data = np.array(data)
+    # At some point in 2018, the Specfem developers changed how the ascii files
+    # were formatted from two columns to comma separated values, and repeat
+    # values represented as 2*value_float where value_float represents the data
+    # value as a float
+    except ValueError:
+        times, data = [], []
+        with open(fid, 'r') as f:
+            lines = f.readlines()
+        for line in lines:
+            try:
+                time_, data_ = line.strip().split(',')
+            except ValueError:
+                if "*" in line:
+                    time_ = data_ = line.split('*')[-1]
+                else:
+                    raise ValueError
+            times.append(float(time_))
+            data.append(float(data_))
 
-        if origintime is None:
-            origintime = UTCDateTime("1970-01-01T00:00:00")
+        times = np.array(times)
+        data = np.array(data)
 
-        # We assume that dt is constant after 'precision' decimal points
-        delta = round(times[1] - times[0], 4)
+    if origintime is None:
+        origintime = UTCDateTime("1970-01-01T00:00:00")
 
-        # Honor that Specfem doesn't start exactly on 0
-        origintime += times[0]
+    # We assume that dt is constant after 'precision' decimal points
+    delta = round(times[1] - times[0], 4)
 
-        # Write out the header information
-        net, sta, cha, fmt = os.path.basename(fid).split('.')
-        stats = {"network": net, "station": sta, "location": "",
-                 "channel": cha, "starttime": origintime, "npts": len(data),
-                 "delta": delta, "mseed": {"dataquality": 'D'},
-                 "time_offset": times[0], "format": fmt
-                 }
-        st = Stream([Trace(data=data, header=stats)])
+    # Honor that Specfem doesn't start exactly on 0
+    origintime += times[0]
 
-        return st
+    # Write out the header information
+    net, sta, cha, fmt = os.path.basename(fid).split('.')
+    stats = {"network": net, "station": sta, "location": "",
+             "channel": cha, "starttime": origintime, "npts": len(data),
+             "delta": delta, "mseed": {"dataquality": 'D'},
+             "time_offset": times[0], "format": fmt
+             }
+    st = Stream([Trace(data=data, header=stats)])
+
+    return st

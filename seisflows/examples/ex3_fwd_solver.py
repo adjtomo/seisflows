@@ -43,7 +43,7 @@ class SFFwdEx2D(SFExample2D):
             downloaded configured and compiled automatically.
         """
         # Setting default values for ntask, niter, nsta here vvv
-        super().__init__(ntask=ntask or 25, niter=1, nsta=nsta or 131,
+        super().__init__(ntask=ntask or 10, niter=1, nsta=nsta or 25,
                          method=method, specfem2d_repo=specfem2d_repo)
 
     def print_dialogue(self):
@@ -53,19 +53,18 @@ class SFFwdEx2D(SFExample2D):
         """
         print(msg.ascii_logo_small)
         print(msg.cli(
-            f"This is a [SPECFEM2D] [WORKSTATION] example, which will "
-            f"run forward simulations generate synthetic seismograms through "
-            f"a given starting model. This example uses no preprocessing or "
-            f"optimization modules"
-            f"[{self.ntask} events, {self.nsta} stations, {self.niter} "
-            f"iterations]. "
+            f"This is a [SPECFEM2D] [WORKSTATION] example, which will run "
+            f"forward simulations to generate synthetic seismograms through "
+            f"a homogeneous halfspace starting model. This example uses no "
+            f"preprocessing or optimization modules. "
+            f"[{self.ntask} events, {self.nsta} stations] "
             f"The tasks involved include: ",
             items=["1. (optional) Download, configure, compile SPECFEM2D",
-                   "2. Set up a SPECFEM2D working directory",
-                   "3. Generate starting model from 'Tape2007' example",
-                   "4. Set up a SeisFlows working directory",
-                   "5. Run the forward simulation workflow"],
-            header="seisflows example 2",
+                   "2. [Setup] a SPECFEM2D working directory",
+                   "3. [Setup] starting model from 'Tape2007' example",
+                   "4. [Setup] a SeisFlows working directory",
+                   "5. [Run] the forward simulation workflow"],
+            header="seisflows example 3",
             border="=")
         )
 
@@ -90,6 +89,7 @@ class SFFwdEx2D(SFExample2D):
         self.sf.par("data_case", "synthetic")  # synthetic-synthetic inversion
         self.sf.par("attenuation", False)
         self.sf.par("components", "Y")
+        self.sf.par("export_traces", True)  # copy waveforms to disk
 
         self.sf.par("path_specfem_bin", self.workdir_paths.bin)
         self.sf.par("path_specfem_data", self.workdir_paths.data)

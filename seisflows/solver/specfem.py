@@ -453,14 +453,18 @@ class Specfem:
             for tag in ["d", "v", "a", "p"]:
                 unix.rename(old=f"single_{tag}.su", new="single.su",
                             names=glob(os.path.join("OUTPUT_FILES", "*.su")))
-
+        # Exporting traces to disk (output/) for more permanent storage
         if export_traces:
+            if not os.path.exists(export_traces):
+                unix.mkdir(export_traces)
             unix.cp(
                 src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
                 dst=export_traces
             )
-
+        # Save traces somewhere else in the scratch/ directory for easier access
         if save_traces:
+            if not os.path.exists(save_traces):
+                unix.mkdir(save_traces)
             unix.mv(
                 src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
                 dst=save_traces
