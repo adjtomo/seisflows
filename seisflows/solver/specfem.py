@@ -54,10 +54,12 @@ class Specfem:
         attenution (Q_mu, Q_kappa) model
     :type smooth_h: float
     :param smooth_h: Gaussian half-width for horizontal smoothing in units
-        of meters. If 0., no smoothing applied
+        of meters. If 0., no smoothing applied. Only applicable for workflows:
+        ['migration', 'inversion'], ignored for 'forward' workflow.
     :type smooth_h: float
     :param smooth_v: Gaussian half-width for vertical smoothing in units
-        of meters.
+        of meters. Only applicable for workflows: ['migration', 'inversion'],
+        ignored for 'forward' workflow.
     :type components: str
     :param components: components to consider and tag data with. Should be
         string of letters such as 'RTZ'

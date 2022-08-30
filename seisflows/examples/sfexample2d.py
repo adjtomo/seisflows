@@ -58,6 +58,10 @@ class SFExample2D:
         :type nsta: int
         :param nsta: number of stations to include in inversion, between 1 and
             131
+        :type method: str
+        :param method: method for running the example problem, can be:
+            * 'run': setup and run the example problem
+            * 'setup': only setup the example problem, do not `submit` job
         :type specfem2d_repo: str
         :param specfem2d_repo: path to the SPECFEM2D directory which should
             contain binary executables. If not given, SPECFEM2D will be
@@ -342,7 +346,7 @@ class SFExample2D:
         Need to tell them to read models from .bin files, and to use existing
         station files rather than create them from the Par_file
         """
-        print("> Finalizing SPECFEM2D Par_file for SeisFlows inversion")
+        print("> Finalizing SPECFEM2D Par_file for SeisFlows example")
 
         cd(self.workdir_paths.data)
         self.sf.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
@@ -354,7 +358,7 @@ class SFExample2D:
         with open("STATIONS_checker", "r") as f:
             lines = f.readlines()
 
-        print(f"> Using {self.nsta} stations in this inversion workflow")
+        print(f"> Using {self.nsta} stations in this SeisFlows example")
         with open("STATIONS", "w") as f:
             f.writelines(lines[:self.nsta])
 

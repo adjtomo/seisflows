@@ -924,7 +924,7 @@ class SeisFlows:
             self._print_examples()
             sys.exit(0)
         # e.g., $ seisflows examples 1
-        elif method and choice is None:
+        elif method and (choice is None):
             try:
                 choice = int(method)
             except ValueError:

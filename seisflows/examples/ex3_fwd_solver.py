@@ -30,11 +30,13 @@ class SFFwdEx2D(SFExample2D):
         :type ntask: int
         :param ntask: number of events to use in inversion, between 1 and 25.
             defaults to 3
-        :type niter: int
-        :param niter: number of iterations to run. defaults to 2
         :type nsta: int
         :param nsta: number of stations to include in inversion, between 1 and
             131
+        :type method: str
+        :param method: method for running the example problem, can be:
+            * 'run': setup and run the example problem
+            * 'setup': only setup the example problem, do not `submit` job
         :type specfem2d_repo: str
         :param specfem2d_repo: path to the SPECFEM2D directory which should
             contain binary executables. If not given, SPECFEM2D will be
