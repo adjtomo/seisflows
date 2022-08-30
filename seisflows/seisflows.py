@@ -21,8 +21,10 @@ import argparse
 import traceback
 from glob import glob
 from IPython import embed
+from obspy import Stream, read
 
 from seisflows import logger, ROOT_DIR, NAMES
+from seisflows.preprocess.default import Default
 from seisflows.tools import unix, msg
 from seisflows.tools.config import load_yaml, custom_import, import_seisflows
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
@@ -120,18 +122,6 @@ def sfparser():
     )
     swap.add_argument("module", nargs="?", help="Module name to swap")
     swap.add_argument("classname", nargs="?", help="Classname to swap to")
-    # =========================================================================
-    init = subparser.add_parser(
-        "init", help="Initiate working environment",
-        description="""Establish a SeisFlows working environment but don't 
-        submit the workflow to the system and do not perform variable  error 
-        checking. Saves the initial state as pickle files to allow for active 
-        environment inspection prior to running 'submit'. Useful for debugging, 
-        development and code exploration."""
-    )
-    # init.add_argument("-c", "--check", action="store_true",
-    #                   help="Perform parameter and path checking to ensure that "
-    #                        "user-defined parameters are accepatable")
     # =========================================================================
     submit = subparser.add_parser(
         "submit", help="Submit initial workflow to system",
@@ -244,6 +234,23 @@ Check parameters, state, or values of an active environment
                         help="colormap to be passed to PyPlot")
     plot2d.add_argument("-s", "--savefig", type=str, nargs="?", default=None,
                         help="optional name and path to save figure")
+    # =========================================================================
+    plotst = subparser.add_parser(
+        "plotst", formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="""Plots waveforms output by the solver. Uses ObsPy's 
+Stream.plot() function under the hood. Example call would be 
+`seisflows plotst scratch/solver/mainsolver/traces/syn/*`
+        """)
+
+    plotst.add_argument("fids", type=str, nargs="*",
+                        help="File IDs to be passed to plotting. Wildcards "
+                             "acceptable")
+    plotst.add_argument("--data_format", type=str, nargs="?", default="ASCII",
+                        help="Data format of the files. Must match file type "
+                             "that SeisFlows can read. These include:"
+                             "['SU', 'ASCII']. Defaults to 'ASCII'. See "
+                             "SeisFlows.preprocess.default.read() for "
+                             "all options.")
     # =========================================================================
     print_ = subparser.add_parser(
         "print", formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -999,6 +1006,34 @@ class SeisFlows:
             sys.exit(0)
 
         acceptable_args[choice](*self._args.args, **kwargs)
+
+    @staticmethod
+    def plotst(self, fids, data_format="ASCII", **kwargs):
+        """
+        Simple stream/waveform plotter to visualize synthetic waveforms created
+        by the solver. Uses ObsPy under the hood to generate a large stream
+        and then plots all waveforms together.
+
+        .. note::
+            Very simple function to look at waveforms. If you want more
+            sophisticated plotting tools, look at Python packages `Pyatoa`
+            or `PySEP`
+
+        :type fids: list
+        :param fids: list of file ID's to plot
+        :type data_format: str
+        :param data_format:
+        """
+        # Take advantage of the Default Preprocessing module's read() function
+        plotter = Default(data_format=data_format)
+        assert(data_format.upper() in plotter._acceptable_data_formats), \
+            f"data format must be in {plotter._acceptable_data_formats}"  # NOQA
+
+        st = Stream()
+        for fid in fids:
+            st += plotter.read(fid)
+
+        st.plot(**kwargs)
 
     def plot2d(self, name=None, parameter=None, cmap=None, savefig=None,
                **kwargs):
