@@ -26,8 +26,8 @@ class SFPyatoaEx2D(SFExample2D):
     advantage of the default SPECFEM2D stuff, onyl changes the generation of
     MODEL TRUE, the number of stations, and the setup of the parameter file.
     """
-    def __init__(self, ntask=None, niter=None, nsta=None, method="run",
-                 specfem2d_repo=None):
+    def __init__(self, ntask=None, niter=None, nsta=None, nproc=None,
+                 method="run", specfem2d_repo=None):
         """
         Overload init and attempt to import Pyatoa before running example.
 
@@ -44,7 +44,8 @@ class SFPyatoaEx2D(SFExample2D):
             contain binary executables. If not given, SPECFEM2D will be
             downloaded configured and compiled automatically.
         """
-        # Setting default values for ntask, niter, nsta here vvv
+        # We set defaults here because `seisflows examples` may input these
+        # values as NoneType which would override __init__ defaults.
         super().__init__(ntask=ntask or 4, niter=niter or 2, nsta=nsta or 32,
                          method=method, specfem2d_repo=specfem2d_repo)
 
@@ -58,6 +59,25 @@ class SFPyatoaEx2D(SFExample2D):
                           border="=")
                   )
             sys.exit(-1)
+
+        # Define the main SeisFlows modules, which will be different to the
+        # base example
+        self._modules = {
+            "workflow": "inversion",
+            "preprocess": "pyaflowa",
+            "optimize": "LBFGS",
+        }
+
+        # Adjust the existing parameter list
+        self._parameters["smooth_h"] = 5000.
+        self._parameters["smooth_v"] = 5000.
+
+        # Pyaflowa preprocessing parameters
+        self._parameters["unit_output"] = "DISP"
+        self._parameters["min_period"] = 10.  # filter bounds define windows
+        self._parameters["max_period"] = 200.
+        # self.sf.par("pyflex_preset", "")  # To turn off windowing completely
+
 
     def print_dialogue(self):
         """
@@ -75,11 +95,11 @@ class SFPyatoaEx2D(SFExample2D):
             f"iterations]. "
             f"The tasks involved include: ",
             items=["1. (optional) Download, configure, compile SPECFEM2D",
-                   "2. Set up a SPECFEM2D working directory",
-                   "3. Generate starting model from 'Tape2007' example",
-                   "4. Generate target model w/ perturbed starting model",
-                   "5. Set up a SeisFlows working directory",
-                   "6. Run the inversion workflow"],
+                   "2. [Setup] a SPECFEM2D working directory",
+                   "3. [Setup] starting model from 'Tape2007' example",
+                   "4. [Setup] target model w/ perturbed starting model",
+                   "5. [Setup] a SeisFlows working directory",
+                   "6. [Run] the inversion workflow"],
             header="seisflows example 2",
             border="=")
         )
@@ -95,46 +115,7 @@ class SFPyatoaEx2D(SFExample2D):
         cd(self.workdir_paths.data)
         assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
 
-        print("> EX: Updating SPECFEM2D to set checkerboard model as "
-              "MODEL_TRUE")
+        print("> Updating SPECFEM2D to set checkerboard model as current model")
         self.sf.sempar("model", "legacy")  # read model_velocity.dat_checker
         rm("proc000000_model_velocity.dat_input")
         ln("model_velocity.dat_checker", "proc000000_model_velocity.dat_input")
-
-    def setup_seisflows_working_directory(self):
-        """
-        Create and set the SeisFlows parameter file, making sure all required
-        parameters are set correctly for this example problem
-        """
-        cd(self.cwd)
-
-        print("> EX2: Setting SeisFlows parameters for Pyatoa preprocessing")
-        self.sf.setup(force=True)  # Force will delete existing parameter file
-        self.sf.par("workflow", "inversion")
-        self.sf.par("preprocess", "pyaflowa")
-        self.sf.par("optimize", "LBFGS")
-        self.sf.configure()
-
-        self.sf.par("end", 1)  # only 1 iteration
-        self.sf.par("ntask", self.ntask)  # 3 sources for this example
-        self.sf.par("materials", "elastic")  # how velocity model parameterized
-        self.sf.par("density", False)  # update density or keep constant
-        self.sf.par("data_format", "ascii")  # output synthetic seismograms
-        self.sf.par("data_case", "synthetic")  # synthetic-synthetic inversion
-        self.sf.par("attenuation", False)
-        self.sf.par("components", "Y")
-        self.sf.par("smooth_h", 5000.)
-        self.sf.par("smooth_v", 5000.)
-
-        # PYATOA preprocessing parameters
-        self.sf.par("unit_output", "DISP")
-        self.sf.par("min_period", 10)  # filter bounds define window selection
-        self.sf.par("max_period", 200)
-        # self.sf.par("pyflex_preset", "")  # To turn off windowing completely
-
-        self.sf.par("path_specfem_bin", self.workdir_paths.bin)
-        self.sf.par("path_specfem_data", self.workdir_paths.data)
-        self.sf.par("path_model_init", self.workdir_paths.model_init)
-        self.sf.par("path_model_true", self.workdir_paths.model_true)
-
-

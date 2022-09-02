@@ -44,8 +44,8 @@ class SFExample2D:
     A class for running SeisFlows examples. Simplifies calls structure so that
     multiple example runs can benefit from the code written here
     """
-    def __init__(self, ntask=None, niter=None, nsta=None, method="run",
-                 specfem2d_repo=None):
+    def __init__(self, ntask=None, niter=None, nsta=None, nproc=None,
+                 method="run", specfem2d_repo=None):
         """
         Set path structure which is used to navigate around SPECFEM repositories
         and the example working directory
@@ -71,6 +71,8 @@ class SFExample2D:
         self.sem2d_paths, self.workdir_paths = self.define_dir_structures(
             cwd=self.cwd, specfem2d_repo=specfem2d_repo
         )
+        # We set defaults here because `seisflows examples` may input these
+        # values as NoneType which would override __init__ defaults.
         self.ntask = ntask or 1
         assert(1 <= self.ntask <= 25), \
             f"number of tasks/events must be between 1 and 25, not {self.ntask}"
@@ -79,8 +81,9 @@ class SFExample2D:
             f"number of iterations must be between 1 and inf, not {self.niter}"
         self.nsta = nsta or 1
         # -1 because it represents index but we need to talk in terms of count
-        assert(1 <= self.nsta <= 131), \
+        assert(1 <= self.nsta <= 132), \
             f"number of stations must be between 1 and 131, not {self.nsta}"
+        self.nproc = nproc or 1  # must be 1 for Examples 1-3
 
         # This bool information is provided by the User running 'setup' or 'run'
         self.run_example = bool(method == "run")
@@ -89,6 +92,35 @@ class SFExample2D:
         # Zero out sys.argv to ensure that no arguments are given to the CLI
         sys.argv = [sys.argv[0]]
         self.sf = SeisFlows()
+
+        # Set the main SeisFlows modules prior to running the configure() cmd.
+        self._modules = {
+            "workflow": "inversion",
+        }
+        
+        # SeisFlows parameters are set as an attribute so that other examples 
+        # can overwrite or override
+        self._parameters = {
+            "ntask": self.ntask,  # default 3 sources for this example
+            "materials": "elastic",  # how velocity model parameterized
+            "density": False,  # update density or keep constant
+            "data_format": "ascii",  # how to output synthetic seismograms
+            "start": 1,  # first iteration
+            "end": self.niter,  # final iteration -- we will run 2
+            "step_count_max": 5,  # will cause iteration 2 to fail
+            "data_case": "synthetic",  # synthetic-synthetic inversion
+            "components": "Y",  # only Y component seismograms avail.
+            "attenuation": False,
+            "misfit": "traveltime",  # cross-correlation phase measure
+            "adjoint": "traveltime",  # cross-correlation phase measure
+            "path_specfem_bin": self.workdir_paths.bin,
+            "path_specfem_data": self.workdir_paths.data,
+            "path_model_init": self.workdir_paths.model_init,
+            "path_model_true": self.workdir_paths.model_true,
+        }
+
+        # Used to configure SPECFEM2D binaries
+        self._configure_cmd = "./configure"
 
     def print_dialogue(self):
         """
@@ -103,11 +135,11 @@ class SFExample2D:
             f"[{self.ntask} events, 1 station, {self.niter} iterations]. "
             f"The tasks involved include: ",
             items=["1. (optional) Download, configure, compile SPECFEM2D",
-                   "2. Set up a SPECFEM2D working directory",
-                   "3. Generate starting model from 'Tape2007' example",
-                   "4. Generate target model w/ perturbed starting model",
-                   "5. Set up a SeisFlows working directory",
-                   "6. Run the inversion workflow"],
+                   "2. [Setup] a SPECFEM2D working directory",
+                   "3. [Setup] starting model from 'Tape2007' example",
+                   "4. [Setup] target model w/ perturbed starting model",
+                   "5. [Setup] a SeisFlows working directory",
+                   "6. [Run] the inversion workflow"],
             header="seisflows example 1",
             border="=")
         )
@@ -167,7 +199,7 @@ class SFExample2D:
             f"does not exist, please check your path and try again."
         )
 
-    def configure_specfem2d_and_make_binaries(self):
+    def configure_specfem2d(self):
         """
         Run ./configure within the SPECFEM2D repo directory.
         This function assumes it is being run from inside the repo. Should guess
@@ -177,10 +209,10 @@ class SFExample2D:
         cd(self.sem2d_paths.repo)
         try:
             if not os.path.exists("./config.log"):
-                cmd = "./configure"
-                print(f"Configuring SPECFEM2D with command: {cmd}")
+                print(f"Configuring SPECFEM2D with command: "
+                      f"{self._configure_cmd}")
                 # Ignore the configure outputs from SPECFEM
-                subprocess.run(cmd, shell=True, check=True,
+                subprocess.run(self._configure_cmd, shell=True, check=True,
                                stdout=subprocess.DEVNULL)
             else:
                 print("SPECFEM2D already configured, skipping 'configure'")
@@ -190,6 +222,10 @@ class SFExample2D:
                   f"to configure SPECFEM2D manually.\n{e}")
             sys.exit(-1)
 
+    def make_specfem2d_executables(self):
+        """
+        Run `$ make all` in SPECFEM2D to create binary executables
+        """
         try:
             if not glob.glob("./bin/x*"):
                 cmd = "make all"
@@ -248,6 +284,7 @@ class SFExample2D:
 
         print("> Setting the SPECFEM2D Par_file for SeisFlows compatiblility")
 
+        self.sf.sempar("nproc", self.nproc)
         self.sf.sempar("setup_with_binary_database", 1)  # create .bin files
         self.sf.sempar("save_model", "binary")  # output model in .bin format
         self.sf.sempar("save_ASCII_kernels", ".false.")  # kernels also .bin
@@ -318,26 +355,14 @@ class SFExample2D:
         cd(self.cwd)
 
         self.sf.setup(force=True)  # Force will delete existing parameter file
-        self.sf.par("workflow", "inversion")
+        for key, val in self._modules.items():
+            self.sf.par(key, val)
+
         self.sf.configure()
 
-        self.sf.par("ntask", self.ntask)  # default 3 sources for this example
-        self.sf.par("materials", "elastic")  # how velocity model parameterized
-        self.sf.par("density", False)  # update density or keep constant
-        self.sf.par("data_format", "ascii")  # how to output synthetic seismograms
-        self.sf.par("start", 1)  # first iteration
-        self.sf.par("end", self.niter)  # final iteration -- we will run 2
-        self.sf.par("step_count_max", 5)  # will cause iteration 2 to fail
-        self.sf.par("data_case", "synthetic")  # synthetic-synthetic inversion
-        self.sf.par("components", "Y")  # only Y component seismograms avail.
-        self.sf.par("attenuation", False)
-        self.sf.par("misfit", "traveltime")  # cross-correlation phase measure
-        self.sf.par("adjoint", "traveltime")  # cross-correlation phase measure
-
-        self.sf.par("path_specfem_bin", self.workdir_paths.bin)
-        self.sf.par("path_specfem_data", self.workdir_paths.data)
-        self.sf.par("path_model_init", self.workdir_paths.model_init)
-        self.sf.par("path_model_true", self.workdir_paths.model_true)
+        # Adjust the parameters.yaml file
+        for key, val in self._parameters.items():
+            self.sf.par(key, val)
 
     def finalize_specfem2d_par_file(self):
         """
@@ -351,6 +376,7 @@ class SFExample2D:
         cd(self.workdir_paths.data)
         self.sf.sempar("model", "gll")  # GLL so SPECFEM reads .bin files
         self.sf.sempar("use_existing_stations", ".true.")  # Use STATIONS file
+        self.sf.sempar("nproc", self.nproc)
 
         # Assign STATIONS_checker file which has 132 stations
         rm("STATIONS")
@@ -366,8 +392,14 @@ class SFExample2D:
         """
         Use subprocess to run the SeisFlows example we just set up
         """
+        print(msg.cli("RUNNING SEISFLOWS EXAMPLE WORKFLOW", border="="))
         cd(self.cwd)
-        subprocess.run("seisflows submit", check=False, shell=True)
+        try:
+            subprocess.run("seisflows submit", check=True, shell=True)
+        except subprocess.CalledProcessError as e:
+            print(msg.cli("EXAMPLE FAILED", items=[str(e)], border="="))
+            sys.exit(-1)
+        print(msg.cli("EXAMPLE COMPLETED SUCCESFULLY", border="="))
 
     def main(self):
         """
@@ -377,7 +409,8 @@ class SFExample2D:
 
         # Step 1: Download and configure SPECFEM2D, make binaries. Optional
         self.download_specfem2d()
-        self.configure_specfem2d_and_make_binaries()
+        self.configure_specfem2d()
+        self.make_specfem2d_executables()
         # Step 2: Create a working directory and generate initial/final models
         self.create_specfem2d_working_directory()
         # Step 2a: Generate MODEL_INIT, rearrange consequent directory structure
@@ -396,7 +429,5 @@ class SFExample2D:
         print(msg.cli("COMPLETE EXAMPLE SETUP", border="="))
         # Step 4: Run the workflwo
         if self.run_example:
-            print(msg.cli("RUNNING SEISFLOWS INVERSION WORKFLOW", border="="))
             self.run_sf_example()
-            print(msg.cli("EXAMPLE COMPLETED SUCCESFULLY", border="="))
 

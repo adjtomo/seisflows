@@ -90,7 +90,7 @@ How do I choose modules?
 As seen above, each of the modules comes with a default value which
 represents the base class\* for this module.
 
-* For an explanation of base classes and Python inheritance, see the `inheritance page.<inheritance.html>`__ 
+* For an explanation of base classes and Python inheritance, see the `inheritance page <inheritance.html>`__ 
 
 These default values are likely not suitable for all, e.g., if you want
 to run an inversion and not a forward workflow, or use SPECFEM3D not
@@ -141,7 +141,7 @@ Feel free to use any text editor, or use the ``seisflows par`` command
 to make changes directly from the command line. For example, say we want
 to use SPECFEM3D as our solver module.
 
-This is also covered in the `command line tool page.<command_line_tool.html>`__
+This is also covered in the `command line tool page <command_line_tool.html>`__
 
 .. code:: ipython3
 

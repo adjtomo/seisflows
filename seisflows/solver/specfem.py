@@ -839,6 +839,6 @@ class Specfem:
             dst = os.path.join(self.path.output, name, "")
             if not os.path.exists(dst):
                 unix.mkdir(dst)
-                for par in parameters:
-                    src = glob(os.path.join(model, f"*{par}{self._ext}"))
-                    unix.cp(src, dst)
+            for par in parameters:
+                src = glob(os.path.join(model, f"*{par}{self._ext}"))
+                unix.cp(src, dst)

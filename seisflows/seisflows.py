@@ -203,21 +203,14 @@ def sfparser():
     # =========================================================================
     check = subparser.add_parser(
         "check",  formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="""
-Check parameters, state, or values of an active environment
-
-    model     check the min/max values of currently active models tracked by
-              optimize. 'seisflows check model [name]' to check specific model.
-    iter      Check current interation and step count of workflow
-    src       List source names and respective internal indices
-    isrc      Check source name for corresponding index
-                """,
-        help="Check state of an active environment")
-
-    # check.add_argument("choice", type=str,  nargs="?",
-    #                    help="Parameter, state, or value to check")
-    # check.add_argument("args", type=str,  nargs="*",
-    #                    help="Generic arguments passed to check functions")
+        description="Run check functions to ensure that the provided parameter "
+                    "file has been set correctly"
+    )
+    # =========================================================================
+    init = subparser.add_parser(
+        "init", formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Run check and setup functions to generate a SeisFlows "
+                    "working directory")
     # =========================================================================
     plot2d = subparser.add_parser(
         "plot2d", formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -660,6 +653,24 @@ class SeisFlows:
         except AssertionError as e:
             print(msg.cli(str(e), border="=", header="parameter errror"))
 
+    def init(self, **kwargs):
+        """
+        Run check() + setup() functions for a given parameter file and each of
+        the SeisFlows modules, ensuring that parameters are acceptable for the
+        given set of user-defined parameters and running setup procedure
+        which may create directories and perform some file management.
+        """
+        unix.mkdir(self._args.workdir)
+        unix.cd(self._args.workdir)
+
+        workflow = import_seisflows(workdir=self._args.workdir,
+                                    parameter_file=self._args.parameter_file)
+        try:
+            workflow.check()
+            workflow.setup()
+        except AssertionError as e:
+            print(msg.cli(str(e), border="=", header="parameter errror"))
+
     def submit(self, **kwargs):
         """
         Main SeisFlows execution command. Submit the SeisFlows workflow to
@@ -817,7 +828,7 @@ class SeisFlows:
                                          delim="=")
             except KeyError:
                 print(msg.cli(f"'{parameter}' not found in {par_file}"))
-                sys.exit(-1)
+                return
 
         # Option 1: Simply print out the value of the given parameter
         if value is None:
@@ -888,7 +899,7 @@ class SeisFlows:
         except KeyError:
             print(msg.cli(f"'{parameter}' not found in "
                           f"{self._args.parameter_file}"))
-            sys.exit(-1)
+            return
 
         # Option 1: Simply print out the value of the given parameter
         if value is None:
@@ -950,6 +961,9 @@ class SeisFlows:
                 import SFPyatoaEx2D as Example
         elif choice == 3:
             from seisflows.examples.ex3_fwd_solver import SFFwdEx2D as Example
+        elif choice == 4:
+            from seisflows.examples.ex4_multicore_fwd \
+                import SFMultiCoreEx2D as Example
         else:
             print(f"no SeisFlows example matching given number: {choice}")
             sys.exit(0)

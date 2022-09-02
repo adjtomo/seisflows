@@ -5,6 +5,7 @@ it provides utilities for submitting jobs in SERIAL on a small-scale machine,
 e.g., a workstation or a laptop. All other `System` classes build on this class.
 """
 import os
+import subprocess
 from contextlib import redirect_stdout
 
 from seisflows import logger
@@ -17,8 +18,9 @@ class Workstation:
     """
     Workstation System
     ------------------
-    Defines foundational structure for System module. When used standalone, 
-    runs tasks in serial on a local machine.
+    Defines foundational structure for System module. When used standalone,
+    runs solver tasks either in serial (if `nproc`==1; i.e., without MPI) or in
+    parallel (if `nproc`>1; i.e., with MPI). All other tasks are run in serial.
 
     Parameters
     ----------
@@ -26,7 +28,10 @@ class Workstation:
     :param ntask: number of individual tasks/events to run during workflow.
         Must be <= the number of source files in `path_specfem_data`
     :type nproc: int
-    :param nproc: number of processors to use for each simulation
+    :param nproc: number of processors to use for each simulation. Choose 1 for
+        serial simulations, and `nproc`>1 for parallel simulations.
+    :type mpiexec: str
+    :param mpiexec: MPI executable on system. Defaults to 'mpirun -n ${NPROC}'
     :type log_level: str
     :param log_level: logger level to pass to logging module.
         Available: 'debug', 'info', 'warning', 'critical'
@@ -48,10 +53,10 @@ class Workstation:
         saved whenever a number of parallel tasks are run on the system.
     ***
     """
-    def __init__(self, ntask=1, nproc=1, log_level="DEBUG", verbose=False,
-                 workdir=os.getcwd(), path_output=None, path_system=None,
-                 path_par_file=None, path_output_log=None,  path_log_files=None,
-                 **kwargs):
+    def __init__(self, ntask=1, nproc=1, mpiexec=None, log_level="DEBUG",
+                 verbose=False, workdir=os.getcwd(), path_output=None,
+                 path_system=None, path_par_file=None, path_output_log=None,
+                 path_log_files=None, **kwargs):
         """
         Workstation System Class Parameters
 
@@ -70,6 +75,7 @@ class Workstation:
         """
         self.ntask = ntask
         self.nproc = nproc
+        self.mpiexec = mpiexec
         self.log_level = log_level.upper()
         self.verbose = verbose
 
@@ -92,9 +98,23 @@ class Workstation:
             f"parameter file does not exist but should"
 
         assert(self.ntask > 0), f"number of events/tasks `ntask` cannot be neg'"
-        assert(self.nproc == 1), f"system.workstation rqeuires `nproc`==1"
         assert(self.log_level in self._acceptable_log_levels), \
             f"`system.log_level` must be in {self._acceptable_log_levels}"
+
+        if self.nproc > 1:
+            assert(self.mpiexec is not None), (
+                f"Multi-core workflows (`nproc`>1) require an MPI executable " 
+                f"`mpiexec`"
+            )
+            # Make user that `mpiexec` exists on system
+            stdout = subprocess.run(f"which {self.mpiexec}", shell=True,
+                                    text=True, stdout=subprocess.PIPE).stdout
+            assert(stdout.strip()), (
+                f"MPI executable {self.mpiexec} was not found on system with "
+                f"cmd: `which {self.mpiexec}. Please check that your MPI "
+                f"module is loaded and accessible from the command line"
+            )
+            logger.debug(f"MPI executable is located at: {stdout.strip()}")
 
     def setup(self):
         """
