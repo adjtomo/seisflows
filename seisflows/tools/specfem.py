@@ -331,22 +331,23 @@ class Model:
             if pr.min() > max_pr:
                 logger.warning(f"minimum poisson's ratio out of bounds: " 
                                f"{pr.min():.2f} < {min_pr}")
-
-        if "vs" in self.model and self.model.vs.min() < 0:
+        
+        if "vs" in self.model and np.hstack(self.model.vs).min() < 0:
             logger.warning(f"Vs minimum is negative {self.model.vs.min()}")
 
-        if "vp" in self.model and self.model.vp.min() < 0:
+        if "vp" in self.model and np.hstack(self.model.vp).min() < 0:
             logger.warning(f"Vp minimum is negative {self.model.vp.min()}")
 
         # Tell the User min and max values of the updated model
         for key, vals in self.model.items():
+            min_val = np.hstack(vals).min()
+            max_val = np.hstack(vals).max()
             # Choose formatter based on the magnitude of the value
-            if vals.min() < 1 or (vals.max() > 1E4):
-                parts = "{minval:.2E} <= {key} <= {maxval:.2E}"
+            if min_val < 1 or max_val> 1E4:
+                parts = f"{min_val:.2E} <= {key} <= {max_val:.2E}"
             else:
-                parts = "{minval:.2f} <= {key} <= {maxval:.2f}"
-            logger.info(parts.format(minval=vals.min(), key=key,
-                                     maxval=vals.max()))
+                parts = f"{min_val:.2f} <= {key} <= {max_val:.2f}"
+            logger.info(parts)
 
     def save(self, path):
         """
@@ -530,8 +531,8 @@ class Model:
         )
         for fid in sorted(fids):  # make sure were going in numerical order
             array.append(read_fortran_binary(fid))
-
-        array = np.array(array)
+        
+        array = np.array(array, dtype="object")
 
         return array
 
