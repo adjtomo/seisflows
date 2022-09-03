@@ -333,6 +333,11 @@ working state before the workflow can be resumed
                           help="User-defined number of iterations to run for "
                                "the example problem (1 <= NITER <= inf). If "
                                "not given, each example has its own default.")
+    examples.add_argument("--event_id", type=int, nargs="?", default=None,
+                          help="Allow User to choose a specific event ID from "
+                               "the Tape 2007 example (1 <= EVENT_ID <= 25). "
+                               "If not used, example will default to choosing "
+                               "sequential from 1 to NTASK")
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
@@ -913,7 +918,7 @@ class SeisFlows:
                 print(msg.cli(f"{key}: {cur_val} -> {value}"))
 
     def examples(self, method=None, choice=None, specfem2d_repo=None,
-                 nsta=None, nevent=None, niter=None, **kwargs):
+                 nsta=None, nevent=None, niter=None, event_id=None, **kwargs):
         """
         List or run a SeisFlows example problems
 
@@ -970,7 +975,8 @@ class SeisFlows:
 
         # Run or setup example, or just print system dialogue
         example = Example(specfem2d_repo=specfem2d_repo, method=method,
-                          nsta=nsta, ntask=nevent, niter=niter)
+                          nsta=nsta, ntask=nevent, niter=niter, 
+                          event_id=event_id)
         example.print_dialogue()
 
         # e.g., $ seisflows examples run 1

@@ -15,10 +15,10 @@ import os
 import subprocess
 from seisflows.tools import msg
 from seisflows.tools.unix import cd, rm, ln
-from seisflows.examples.ex3_fwd_solver import SFFwdEx2D
+from seisflows.examples.sfexample2d import SFExample2D
 
 
-class SFMultiCoreEx2D(SFFwdEx2D):
+class SFMultiCoreEx2D(SFExample2D):
     """
     A class for running SeisFlows examples. Overloads Example 1 to take
     advantage of the default SPECFEM2D stuff, onyl changes the generation of
@@ -54,6 +54,15 @@ class SFMultiCoreEx2D(SFFwdEx2D):
         self.mpiexec = "mpirun"
         self._parameters["nproc"] = self.nproc
         self._parameters["mpiexec"] = self.mpiexec
+
+        self._modules = {
+            "workflow": "forward",
+            "preprocess": "null",
+            "optimize": "null",
+        }
+
+        self._parameters["export_traces"] = True
+        self._parameters["path_model_true"] = "null"  # overload default par.
 
         # Overwrite configure cmd to get MPI
         self._configure_cmd = \
@@ -100,3 +109,30 @@ class SFMultiCoreEx2D(SFFwdEx2D):
             print(f"Running SPECFEM2D with command: {cmd}")
             subprocess.run(cmd, shell=True, check=True,
                            stdout=subprocess.DEVNULL)
+
+    def main(self):
+        """
+        Setup the example and then optionally run the actual seisflows workflow
+        Mostly the same as Example 1 main() except it does not generate
+        MODEL_TRUE, and instead sets MODEL_TRUE as the starting model.
+        """
+        print(msg.cli("EXAMPLE SETUP", border="="))
+
+        # Step 1: Download and configure SPECFEM2D, make binaries. Optional
+        self.download_specfem2d()
+        self.configure_specfem2d()
+        self.make_specfem2d_executables()
+        # Step 2: Create a working directory and generate initial/final models
+        self.create_specfem2d_working_directory()
+        # Step 2a: Generate MODEL_INIT, rearrange consequent directory structure
+        print(msg.cli("GENERATING INITIAL MODEL", border="="))
+        self.setup_specfem2d_for_model_init()  # setup SPECFEM run directory
+        self.run_xspecfem2d_binaries()
+        self.cleanup_xspecfem2d_run(choice="INIT")
+        # Step 3: Prepare Par_file and directory for MODEL_TRUE generation
+        self.setup_seisflows_working_directory()
+        self.finalize_specfem2d_par_file()
+        print(msg.cli("COMPLETE EXAMPLE SETUP", border="="))
+        # Step 4: Run the workflwo
+        if self.run_example:
+            self.run_sf_example()

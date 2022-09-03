@@ -27,7 +27,7 @@ class SFPyatoaEx2D(SFExample2D):
     MODEL TRUE, the number of stations, and the setup of the parameter file.
     """
     def __init__(self, ntask=None, niter=None, nsta=None, nproc=None,
-                 method="run", specfem2d_repo=None):
+                 event_id=None,  method="run", specfem2d_repo=None):
         """
         Overload init and attempt to import Pyatoa before running example.
 
@@ -39,6 +39,10 @@ class SFPyatoaEx2D(SFExample2D):
         :type nsta: int
         :param nsta: number of stations to include in inversion, between 1 and
             131
+        :type event_id: str
+        :param event_id: allow user to choose a specific event ID from the
+            example problem. Must match source files in SPECFEM2D example DATA/
+            directory. Overwrites `ntask` to be 1
         :type specfem2d_repo: str
         :param specfem2d_repo: path to the SPECFEM2D directory which should
             contain binary executables. If not given, SPECFEM2D will be
@@ -47,7 +51,8 @@ class SFPyatoaEx2D(SFExample2D):
         # We set defaults here because `seisflows examples` may input these
         # values as NoneType which would override __init__ defaults.
         super().__init__(ntask=ntask or 4, niter=niter or 2, nsta=nsta or 32,
-                         method=method, specfem2d_repo=specfem2d_repo)
+                         event_id=event_id, method=method, 
+                         specfem2d_repo=specfem2d_repo)
 
         # Make sure that Pyatoa has been installed before running
         try:
@@ -119,3 +124,4 @@ class SFPyatoaEx2D(SFExample2D):
         self.sf.sempar("model", "legacy")  # read model_velocity.dat_checker
         rm("proc000000_model_velocity.dat_input")
         ln("model_velocity.dat_checker", "proc000000_model_velocity.dat_input")
+

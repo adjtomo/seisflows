@@ -44,8 +44,8 @@ class SFExample2D:
     A class for running SeisFlows examples. Simplifies calls structure so that
     multiple example runs can benefit from the code written here
     """
-    def __init__(self, ntask=None, niter=None, nsta=None, nproc=None,
-                 method="run", specfem2d_repo=None):
+    def __init__(self, ntask=None, event_id=None, niter=None, nsta=None, 
+                 nproc=None, method="run", specfem2d_repo=None):
         """
         Set path structure which is used to navigate around SPECFEM repositories
         and the example working directory
@@ -53,6 +53,10 @@ class SFExample2D:
         :type ntask: int
         :param ntask: number of events to use in inversion, between 1 and 25.
             defaults to 3
+        :type event_id: str
+        :param event_id: allow user to choose a specific event ID from the 
+            example problem. Must match source files in SPECFEM2D example DATA/
+            directory. Overwrites `ntask` to be 1
         :type niter: int
         :param niter: number of iterations to run. defaults to 2
         :type nsta: int
@@ -71,6 +75,15 @@ class SFExample2D:
         self.sem2d_paths, self.workdir_paths = self.define_dir_structures(
             cwd=self.cwd, specfem2d_repo=specfem2d_repo
         )
+
+        if event_id is not None:
+            assert(1 <= event_id <= 25), \
+                f"event id must be between 1 and 25, not {event_id}"
+            self.event_id = f"SOURCE_{event_id:0>3}"
+            ntask = 1  # hard set 1 event if we choose a specific event
+        else:
+            self.event_id = None
+
         # We set defaults here because `seisflows examples` may input these
         # values as NoneType which would override __init__ defaults.
         self.ntask = ntask or 1
@@ -268,10 +281,19 @@ class SFExample2D:
 
         # Make sure that SPECFEM2D can find the expected files in the DATA/ dir
         cd(self.workdir_paths.data)
-        rm("SOURCE")
-        ln("SOURCE_001", "SOURCE")
         rm("Par_file")
         ln("Par_file_Tape2007_onerec", "Par_file")
+
+        rm("SOURCE")
+        # Check if user-chosen source file exists
+        if self.event_id is not None:
+            assert(os.path.exists(self.event_id)), \
+                f"{self.event_id} chosen but does not exist. Please check DATA"
+            rm("SOURCE")
+            ln(self.event_id, "SOURCE")
+            print(f"> Setting {self.event_id} as SOURCE")
+        else:
+            ln("SOURCE_001", "SOURCE")
 
     def setup_specfem2d_for_model_init(self):
         """
@@ -387,6 +409,18 @@ class SFExample2D:
         print(f"> Using {self.nsta} stations in this SeisFlows example")
         with open("STATIONS", "w") as f:
             f.writelines(lines[:self.nsta])
+
+        # Assign unique event id if necessary, move all the other sources
+        # out of the DATA directory so that SeisFlows does not see them
+        if self.event_id is not None:
+            print(f"> Assigning {self.event_id} as only source for workflow")
+            rm("SOURCE")
+            mkdir("SOURCES")
+            for event_id in glob.glob("SOURCE_???"):
+                if event_id == self.event_id:
+                    continue
+                mv(event_id, f"SOURCES/{event_id}")
+            ln(self.event_id, "SOURCE")
 
     def run_sf_example(self):
         """
