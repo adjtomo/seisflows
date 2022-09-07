@@ -531,8 +531,11 @@ class Model:
         )
         for fid in sorted(fids):  # make sure were going in numerical order
             array.append(read_fortran_binary(fid))
-        
-        array = np.array(array, dtype="object")
+       
+        # !!! Causes a visible deprecation warning from NumPy but setting
+        # !!! array type as 'object' causes problems with pickling and
+        # !!! merging arrays
+        array = np.array(array)
 
         return array
 
