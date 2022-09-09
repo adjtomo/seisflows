@@ -425,6 +425,7 @@ class Pyaflowa:
                     del future  # Free up memory once future is completed
                     if _misfit is not None:
                         misfit += _misfit
+                    if _nwin is not None:
                         nwin += _nwin
         # Run processing in serial
         else:
@@ -434,6 +435,7 @@ class Pyaflowa:
                 )
                 if _misfit is not None:
                     misfit += _misfit
+                if _nwin is not None:
                     nwin += _nwin
 
         return misfit, nwin
@@ -760,7 +762,7 @@ class Pyaflowa:
             return
         # Strip off event name to get evaluation tag for fid, i.e.: i01_s00.pdf
         fid_out = "_".join(os.path.basename(event_pdfs[0]).split("_")[1:])
-        path_out = os.path.join(self.path._figures, f"{fid_out}.pdf")
+        path_out = os.path.join(self.path._figures, f"{fid_out}")
         # Merge PDFs into a single PDF, delete originals
         merge_pdfs(fids=event_pdfs, fid_out=path_out)
         if os.path.exists(path_out):

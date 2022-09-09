@@ -186,8 +186,8 @@ class Inversion(Migration):
                 logger.info(msg.mnr(f"COMPLETE ITERATION {self.iteration:0>2}"))
                 self.iteration += 1
                 logger.info(f"setting current iteration to: {self.iteration}")
-                # Clear the state file for new iteration
-                self._states = {}
+                # Set the state file to pending for new iteration
+                self._states = {key: "pending" for key in self._states}
                 self.checkpoint()
             else:
                 break
@@ -454,7 +454,6 @@ class Inversion(Migration):
             unix.mkdir(self.path.eval_func)
 
         self.preprocess.finalize()
-
 
     def _update_thrifty_status(self):
         """

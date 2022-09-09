@@ -1029,7 +1029,6 @@ class SeisFlows:
 
         acceptable_args[choice](*self._args.args, **kwargs)
 
-    @staticmethod
     def plotst(self, fids, data_format="ASCII", savefig=None, **kwargs):
         """
         Simple stream/waveform plotter to visualize synthetic waveforms created
