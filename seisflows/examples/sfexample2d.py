@@ -45,7 +45,7 @@ class SFExample2D:
     multiple example runs can benefit from the code written here
     """
     def __init__(self, ntask=None, event_id=None, niter=None, nsta=None, 
-                 nproc=None, method="run", specfem2d_repo=None):
+                 nproc=None, method="run", specfem2d_repo=None, **kwargs):
         """
         Set path structure which is used to navigate around SPECFEM repositories
         and the example working directory

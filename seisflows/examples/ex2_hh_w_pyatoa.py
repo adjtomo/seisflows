@@ -27,7 +27,7 @@ class SFPyatoaEx2D(SFExample2D):
     MODEL TRUE, the number of stations, and the setup of the parameter file.
     """
     def __init__(self, ntask=None, niter=None, nsta=None, nproc=None,
-                 event_id=None,  method="run", specfem2d_repo=None):
+                 event_id=None,  method="run", specfem2d_repo=None, **kwargs):
         """
         Overload init and attempt to import Pyatoa before running example.
 
@@ -82,8 +82,6 @@ class SFPyatoaEx2D(SFExample2D):
         self._parameters["unit_output"] = "DISP"
         self._parameters["min_period"] = 10.  # filter bounds define windows
         self._parameters["max_period"] = 200.
-        # self.sf.par("pyflex_preset", "")  # To turn off windowing completely
-
 
     def print_dialogue(self):
         """
@@ -96,7 +94,8 @@ class SFPyatoaEx2D(SFExample2D):
             f"run an inversion to assess misfit between a starting homogeneous "
             f"halfspace model and a target checkerboard model. This "
             f"example problem uses the [PYAFLOWA] preprocessing "
-            f"module and the [LBFGS] optimization algorithm. "
+            f"module and the [LBFGS] optimization algorithm. In this example, "
+            f"windowing in Pyaflowa is turnd OFF."
             f"[{self.ntask} events, {self.nsta} stations, {self.niter} "
             f"iterations]. "
             f"The tasks involved include: ",

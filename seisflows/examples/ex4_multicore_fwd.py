@@ -12,6 +12,7 @@ parallelized version of SPECFEM2D to test out multi-core functionality.
     $ seisflows examples run 3
 """
 import os
+import sys
 import subprocess
 from seisflows.tools import msg
 from seisflows.tools.unix import cd, rm, ln
@@ -25,7 +26,7 @@ class SFMultiCoreEx2D(SFExample2D):
     MODEL TRUE, the number of stations, and the setup of the parameter file.
     """
     def __init__(self, ntask=None, nsta=None, nproc=None,
-                 method="run", specfem2d_repo=None, **kwargs):
+                 method="run", specfem2d_repo=None, mpiexec="mpirun", **kwargs):
         """
         Overloads init of the base problem
 
@@ -51,7 +52,22 @@ class SFMultiCoreEx2D(SFExample2D):
         super().__init__(ntask=ntask or 10, nsta=nsta or 25, nproc=nproc or 4,
                          niter=1, method=method, specfem2d_repo=specfem2d_repo)
 
-        self.mpiexec = "mpirun"
+        # Check that the MPI executable actually exists. Sometimes e.g., if we
+        # don't '$ module load mpi', we will get 'mpirun: command not found'
+        try:
+            subprocess.run(f"which {mpiexec}", check=True, shell=True,
+                           stdout=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            print(msg.cli(f"MPI executable '{mpiexec}' not found on system. "
+                          f"Please check that you have MPI installed/loaded. "
+                          f"If '{mpiexec}' is not how you invoke MPI, use the "
+                          "flag `--mpiexec {exc}` when running the example to "
+                          "change the default exectable", header="missing mpi",
+                          border="=")
+                  )
+            sys.exit(-1)
+
+        self.mpiexec = mpiexec
         self._parameters["nproc"] = self.nproc
         self._parameters["mpiexec"] = self.mpiexec
 
@@ -67,7 +83,6 @@ class SFMultiCoreEx2D(SFExample2D):
         # Overwrite configure cmd to get MPI
         self._configure_cmd = \
             "./configure FC=gfortran CC=gcc MPIF90=mpif90 --with-mpi"
-
 
     def print_dialogue(self):
         """

@@ -683,8 +683,10 @@ class Specfem:
             sys.exit(-1)
 
         # Prepend with `mpiexec` if we are running with MPI
+        # looks something like: `mpirun -n 4 ./bin/xspecfem2d`
         if self._mpiexec:
-            executable = f"{self._mpiexec} {executable}"
+            executable = f"{self._mpiexec} -n {self.nproc} {executable}"
+        logger.debug(f"running executable with cmd: '{executable}'")
 
         try:
             with open(stdout, "w") as f:
