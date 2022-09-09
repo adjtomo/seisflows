@@ -648,12 +648,12 @@ published in Tape et al.
 
 From the above figure we can see that the first order structure of our
 Vs event kernel is very similar to Panel (g) from Figure 9 of Tape et
-al. (2007). Our kernel shows some additional low-amplitude sensitivity,
-most prominently at the ring of alternative blue and red on the edges of
-the domain. From experience this is likely due to the ``Pyaflowa``
-preprocessing module attempting to window and fit very late arriving
-waves that are caused by boundary reflections from the edge of the
-domain.
+al. (2007). As mentioned, any differences between the kernel will be due
+to the differences in the parameters available to us during the
+inversion.
+
+Creating all the other kernels shown in Figure 9 of Tape et al. is an
+exercise left to the reader.
 
 Example #3: En-masse Forward Simulations
 ----------------------------------------
