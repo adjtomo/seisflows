@@ -20,7 +20,7 @@ activate the required Conda environment.
 
 .. code:: ipython3
 
-    from IPython.display import Image  # To display .png files in the notebook
+    from IPython.display import Image  # Used to display .png files in the notebook/docs
 
 Example #1: Simple, default inversion
 -------------------------------------
@@ -74,11 +74,11 @@ smoothing/regularization is applied to the gradient.
     velocities. [1 events, 1 station, 1 iterations]. The tasks involved include:
     
     1. (optional) Download, configure, compile SPECFEM2D
-    2. Set up a SPECFEM2D working directory
-    3. Generate starting model from 'Tape2007' example
-    4. Generate target model w/ perturbed starting model
-    5. Set up a SeisFlows working directory
-    6. Run the inversion workflow
+    2. [Setup] a SPECFEM2D working directory
+    3. [Setup] starting model from 'Tape2007' example
+    4. [Setup] target model w/ perturbed starting model
+    5. [Setup] a SeisFlows working directory
+    6. [Run] the inversion workflow
     ================================================================================
 
 
@@ -97,10 +97,11 @@ SPECFEM2D in your current working directory.
 
 .. code:: ipython3
 
+    # Run command with open variable to set SPECFEM2D path
     ! seisflows examples setup 1 -r ${PATH_TO_SPECFEM2D}
     ! seisflows submit
     
-    # The above commands are the same as the below
+    # The following command is the same as above
     ! seisflows examples run 1 --specfem2d_repo ${PATH_TO_SPECFEM2D}
 
 A successfully completed example problem will end with the following log
@@ -108,28 +109,6 @@ messages:
 
 .. code:: bash
 
-    LINE SEARCH STEP COUNT 02
-    --------------------------------------------------------------------------------
-    2022-08-29 15:50:58 (I) | evaluating objective function for source 001
-    2022-08-29 15:50:58 (D) | running forward simulation with 'Specfem2D'
-    2022-08-29 15:51:03 (D) | quantifying misfit with 'Default'
-    2022-08-29 15:51:03 (D) | misfit for trial model (f_try) == 4.61E-01
-    2022-08-29 15:51:03 (D) | step length(s) = 0.00E+00, 4.78E+09, 7.73E+09
-    2022-08-29 15:51:03 (D) | misfit val(s)  = 1.04E+00, 2.30E-01, 4.61E-01
-    2022-08-29 15:51:03 (I) | pass: bracket acceptable and step length reasonable. returning minimum line search misfit.
-    2022-08-29 15:51:03 (I) | line search model 'm_try' parameters: 
-    2022-08-29 15:51:03 (I) | 5800.00 <= vp <= 5800.00
-    2022-08-29 15:51:03 (I) | 3431.53 <= vs <= 3790.00
-    2022-08-29 15:51:03 (I) | trial step successful. finalizing line search
-    2022-08-29 15:51:03 (I) | 
-    FINALIZING LINE SEARCH
-    --------------------------------------------------------------------------------
-    2022-08-29 15:51:03 (I) | writing optimization stats
-    2022-08-29 15:51:03 (I) | renaming current (new) optimization vectors as previous model (old)
-    2022-08-29 15:51:03 (I) | setting accepted trial model (try) as current model (new)
-    2022-08-29 15:51:03 (I) | misfit of accepted trial model is f=2.304E-01
-    2022-08-29 15:51:03 (I) | resetting line search step count to 0
-    2022-08-29 15:51:03 (I) | 
     CLEANING WORKDIR FOR NEXT ITERATION
     --------------------------------------------------------------------------------
     2022-08-29 15:51:05 (I) | thrifty inversion encountering first iteration, defaulting to standard inversion workflow
@@ -138,7 +117,10 @@ messages:
                                  COMPLETE ITERATION 01                              
     ////////////////////////////////////////////////////////////////////////////////
     2022-08-29 15:51:06 (I) | setting current iteration to: 2
-
+    
+    ================================================================================
+    EXAMPLE COMPLETED SUCCESFULLY
+    ================================================================================
 
     
 Using the `working directory documentation page <working_directory.html>`__ you can figure out how to navigate around and look at the results of this small inversion problem. 
@@ -147,47 +129,65 @@ We will have a look at a few of the files and directories here. I've run the exa
 
 .. code:: ipython3
 
-    %cd ~/Work/scratch/example_1
+    %cd ~/sfexamples/example_1
     ! ls
 
 
 .. parsed-literal::
 
-    /home/bchow/Work/scratch/example_1
+    /home/bchow/Work/work/seisflows_example/example_1
     logs	parameters.yaml  sflog.txt    specfem2d
     output	scratch		 sfstate.txt  specfem2d_workdir
 
 
-In the ``output/`` directory, we can see our starting model
-(MODEL_INIT), our target model (MODEL_TRUE) and the updated model from
-our first iteration (MODEL_01) alongside the gradient that was used to
-create it (GRADIENT_01).
+Understanding example outputs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the ``output/`` directory, we can see our starting/initial model
+(*MODEL_INIT*), our true/target model (*MODEL_TRUE*) and the updated
+model from the first iteration (*MODEL_01*). In addition, we have saved
+the gradient generated during the first iteration (*GRADIENT_01*)
+because we set the parameter ``export_gradient`` to True.
 
 .. code:: ipython3
 
+    # The output directory contains important files exported during a workflow
     ! ls output
-    ! echo
-    ! ls output/MODEL_01
 
 
 .. parsed-literal::
 
     GRADIENT_01  MODEL_01  MODEL_INIT  MODEL_TRUE
-    
-    proc000000_vp.bin  proc000000_vs.bin
 
-
-Because we’re working with SPECFEM2D, we can plot the models and
-gradients that were created during our workflow using the
-``seisflows plot2d`` command. If we use the ``--savefig`` option we can
-also save the output .png files to disk. Because this docs page was made
-in a Jupyter Notebook, we need to use the IPython Image class to open
-the resulting .png file.
-
-This figure shows the starting homogeneous halfspace model in Vs.
 
 .. code:: ipython3
 
+    # A MODEL output directory contains model files in the chosen solver format. 
+    # In this case, Fortran Binary from SPECFEM2D
+    ! ls output/MODEL_01
+
+
+.. parsed-literal::
+
+    proc000000_vp.bin  proc000000_vs.bin
+
+
+Plotting results (only available w/ SPECFEM2D)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We can plot the model and gradient files created during our workflow
+using the ``seisflows plot2d`` command. The ``--savefig`` flag allows us
+to save output .png files to disk. The following figure shows the
+starting/initial homogeneous halfspace model in Vs.
+
+   **NOTE:** Because this docs page was made in a Jupyter Notebook, we
+   need to use the IPython Image class to open the resulting .png file
+   from inside the notebook. Users following along will need to open the
+   figure using the GUI or command line tool.
+
+.. code:: ipython3
+
+    # Plot and open the initial homogeneous halfspace model
     ! seisflows plot2d MODEL_INIT vs --savefig m_init_vs.png
     Image(filename='m_init_vs.png') 
 
@@ -199,11 +199,15 @@ This figure shows the starting homogeneous halfspace model in Vs.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_13_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_14_1.png
 
 
 
-Here we see the gradient created during the adjoint simulation.
+We can also plot the gradient that was created during the adjoint
+simulation. In this example we only have one source and one receiver, so
+the gradient shows a “banana-doughnut” style kernel, representing
+volumetric sensitivity of the measurement (waveform misfit) to changes
+in model values.
 
 .. code:: ipython3
 
@@ -218,12 +222,16 @@ Here we see the gradient created during the adjoint simulation.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_15_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_16_1.png
 
 
 
-Finally we see the updated model, which is the sum of the initial model,
-and a scaled gradient.
+Finally we can plot the updated model (*MODEL_01*), which is the sum of
+the initial model and a scaled gradient. The gradient was scaled during
+the line search, where we used a steepest-descent algorithm to reduce
+the misfit between data and synthetics. Since we only have one
+source-receiver pair in this workflow, the updated model shown below
+almost exactly mimics the Vs kernel shown above.
 
 .. code:: ipython3
 
@@ -238,35 +246,47 @@ and a scaled gradient.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_17_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_18_1.png
 
 
 
-Have a look at the `working directory documentation page <working_directory.html>`__ for more detailed explanations of how to navigate the SeisFlows working directory. You can also run Example \#1 with more stations (up to 131), tasks/events (up to 25) and iterations (as many as you want). Note that because this is a serial inversion, the compute time will scale with all of these values.
+Closing thoughts
+~~~~~~~~~~~~~~~~
+
+Have a look at the `working directory documentation page <working_directory.html>`__ for more detailed explanations of how to navigate the SeisFlows working directory that was created during this example.
+
+You can also run Example \#1 with more stations (up to 131), tasks/events (up to 25) and iterations (as many as you want!). Note that because this is a serial inversion, the compute time will scale with all of these values.
 
 .. code:: ipython3
 
+    # An example call for running Example 1 with variable number of stations, events and iterations
     ! seisflows examples run 1 --nsta 10 --ntask 5 --niter 2
 
-Example #2: Pyaflowa, L-BFGS inversion
---------------------------------------
+Example #2: Checkerboard inversion using Pyaflowa & L-BFGS
+----------------------------------------------------------
 
-Example #2 runs a 2 iteration inversion with misfit quantification taken
-care of by the ``Pyaflowa`` preprocessing module. Optimization (i.e.,
-model updates) are performed using the ``L-BFGS`` algorithm. This
-example is more complex than the default version of Example #1, using
-multiple events, stations and iterations. Example #2 also includes
-smoothing/regularization of the gradient before using it to perturb the
-starting velocity model.
+Building on the foundation of the previous example, Example #2 runs a 2
+iteration inversion with misfit quantification taken care of by the
+``Pyaflowa`` preprocessing module, which uses the misfit quantification
+package `Pyatoa <https://github.com/adjtomo/pyatoa>`__ under the hood.
+Model updates are performed using an ```L-BFGS`` nonlinear optimization
+algorithm <https://en.wikipedia.org/wiki/Limited-memory_BFGS>`__.
+Example #2 also includes smoothing/regularization of the gradient. This
+example more closely mimics a research-grade inversion problem.
+
+   **NOTE:** This example is computationally more intense than the
+   default version of Example #1 as it uses multiple events and
+   stations, and runs multiple iterations.
 
 .. code:: ipython3
 
+    # Run the help message dialogue to see what Example 2 will do
     ! seisflows examples 2
 
 
 .. parsed-literal::
 
-    No existing SPECFEM2D repo given, default to: /home/bchow/Work/scratch/example_1/specfem2d
+    No existing SPECFEM2D repo given, default to: /home/bchow/Work/work/seisflows_example/example_1/specfem2d
     
                                         @@@@@@@@@@                        
                                    .@@@@.    .%&(  %@.          
@@ -297,46 +317,30 @@ starting velocity model.
     iterations]. The tasks involved include:
     
     1. (optional) Download, configure, compile SPECFEM2D
-    2. Set up a SPECFEM2D working directory
-    3. Generate starting model from 'Tape2007' example
-    4. Generate target model w/ perturbed starting model
-    5. Set up a SeisFlows working directory
-    6. Run the inversion workflow
+    2. [Setup] a SPECFEM2D working directory
+    3. [Setup] starting model from 'Tape2007' example
+    4. [Setup] target model w/ perturbed starting model
+    5. [Setup] a SeisFlows working directory
+    6. [Run] the inversion workflow
     ================================================================================
 
 
-You can run the example with the same command as shown for Example 1:
+Run the example
+~~~~~~~~~~~~~~~
+
+You can run the example with the same command as shown for Example 1.
+Users following along will need to provide a path to their own
+installation of SPECFEM2D using the ``-r`` flag.
 
 .. code:: ipython3
 
     ! seisflows examples run 2 -r ${PATH_TO_SPECFEM2D}
 
-Succesful completion of the example problem will end with the following log message
+Succesful completion of the example problem will end with a log message that looks similar to the following
 
 .. code:: bash
 
-        LINE SEARCH STEP COUNT 01
-    --------------------------------------------------------------------------------
-    2022-08-29 18:07:14 (I) | evaluating objective function for source 001
-    2022-08-29 18:07:14 (D) | running forward simulation with 'Specfem2D'
-    2022-08-29 18:07:20 (D) | quantifying misfit with 'Pyaflowa'
-    2022-08-29 18:07:29 (I) | evaluating objective function for source 002
-    2022-08-29 18:07:29 (D) | running forward simulation with 'Specfem2D'
-    2022-08-29 18:07:35 (D) | quantifying misfit with 'Pyaflowa'
-    2022-08-29 18:07:43 (I) | evaluating objective function for source 003
-    2022-08-29 18:07:43 (D) | running forward simulation with 'Specfem2D'
-    2022-08-29 18:07:49 (D) | quantifying misfit with 'Pyaflowa'
-    2022-08-29 18:07:58 (I) | evaluating objective function for source 004
-    2022-08-29 18:07:58 (D) | running forward simulation with 'Specfem2D'
-    2022-08-29 18:08:04 (D) | quantifying misfit with 'Pyaflowa'
-    2022-08-29 18:08:13 (D) | misfit for trial model (f_try) == 4.73E-03
-    2022-08-29 18:08:13 (D) | step length(s) = 0.00E+00, 1.00E+00
-    2022-08-29 18:08:13 (D) | misfit val(s)  = 5.30E-02, 4.73E-03
-    2022-08-29 18:08:13 (I) | pass: misfit decreased, line search successful w/ alpha=1.0
-    2022-08-29 18:08:13 (I) | line search model 'm_try' parameters: 
-    2022-08-29 18:08:13 (I) | 5800.00 <= vp <= 5800.00
-    2022-08-29 18:08:13 (I) | 3193.01 <= vs <= 3821.37
-    2022-08-29 18:08:13 (I) | trial step successful. finalizing line search
+
     2022-08-29 18:08:13 (I) | 
     FINALIZING LINE SEARCH
     --------------------------------------------------------------------------------
@@ -355,25 +359,37 @@ Succesful completion of the example problem will end with the following log mess
     ////////////////////////////////////////////////////////////////////////////////
     2022-08-29 18:08:21 (I) | setting current iteration to: 3
 
+    ================================================================================
+    EXAMPLE COMPLETED SUCCESFULLY
+    ================================================================================
 
-As with Example \#1, we can look at the output gradients and models to visualize how the inversion performed.
+Understanding example outputs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As with Example #1, we can look at the output gradients and models to
+visualize what just happenend under the hood. Be sure to read through
+the output log messages as well, to get a better idea of what steps and
+tasks were performed to generate these outputs.
 
 .. code:: ipython3
 
-    %cd ~/Work/scratch/example_2
+    %cd ~/sfexamples/example_2
     ! ls
 
 
 .. parsed-literal::
 
-    /home/bchow/Work/scratch/example_2
+    /home/bchow/Work/work/seisflows_example/example_2
     logs	parameters.yaml  sflog.txt    specfem2d
     output	scratch		 sfstate.txt  specfem2d_workdir
 
 
+Running the ``plot2d`` command without any arguments is a useful way to
+determine what model/gradient files are available for plotting.
+
 .. code:: ipython3
 
-    ! seisflows plot2d  # to check what models/gradients/kernels are avilable for plotting
+    ! seisflows plot2d
 
 
 .. parsed-literal::
@@ -390,8 +406,18 @@ As with Example \#1, we can look at the output gradients and models to visualize
     MODEL_TRUE
 
 
-The starting model is a homogeneous halfspace but for Example #2 the
-target model is a checkerboard.
+Visualizing Initial and Target models
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The starting model for this example is the same homogeneous halfspace
+model shown in Example #1, with :math:`V_p`\ =5.8km/s and
+:math:`V_s`\ =3.5km/s.
+
+For this example, however, the target model is a checkerboard model with
+fast and slow perturbations roughly equal to :math:`\pm10\%` of the
+initial model. We can plot the model below to get a visual
+representation of these perturbations, where **red==slow** and
+**blue==fast**.
 
 .. code:: ipython3
 
@@ -406,15 +432,26 @@ target model is a checkerboard.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_28_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_32_1.png
 
 
 
-In the following gradient Vs kernel, we can see how the 5km x 5km
-smoothing blurs away some of the detail of the raw graident. The blue
-colors here suggest that the initial model needs to be sped up to best
-fit waveforms (and vice versa, red colors suggest slowing down the
-initial model).
+Visualizing the Gradient
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+We can look at the gradients created during the adjoint simulations to
+get an idea of how our inversion wanted to update the model. Gradients
+tell us how to perturb our starting model (the homogeneous halfspace) to
+best fit the data that was generated by our target model (the
+checkerboard).
+
+We can see that our gradient (Vs kernel) is characterized by large red
+and blue blobs. The blue colors in the kernel tell us that the initial
+model is too fast, while red colors tell us that the initial model is
+too slow (that is, **red==too slow** and **blue==too fast**). This makes
+sense if we look at the checkerboard target model above, where the
+perturbation is slow (red color) the corresponding kernel tells us the
+initial model is too fast (blue color).
 
 .. code:: ipython3
 
@@ -429,9 +466,26 @@ initial model).
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_30_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_34_1.png
 
 
+
+Visualizing the updated model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+After two iterations, the updated model starts to take form. We can
+clearly see tha the lack of data coverage on the outer edges of the
+model mean we do not see any appreciable update here, whereas the center
+of the domain shows the strongest model updates which are starting to
+resemble the checkerboard pattern shown in the target model.
+
+With only 4 events and 2 iterations, we do not have quite enough
+constraint to recover the sharp contrats between checkers shown in the
+Target model. We can see that smearing and regularization leads to more
+prominent slow (red) regions.
+
+If we were to increase the number of events and iterations, will it help
+our recovery of the target model? This task is left up to the reader!
 
 .. code:: ipython3
 
@@ -446,6 +500,333 @@ initial model).
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_31_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_36_1.png
+
+
+
+Re-creating kernels from Tape et al. 2007
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The 2D checkerboard model and source-receiver configuration that runs in
+this example comes from the published work of `Tape et
+al. (2007) <https://academic.oup.com/gji/article/168/3/1105/929373>`__.
+Here, Tape et al. generate event and misfit kernels for a number of
+individual events in `Figure
+9 <https://academic.oup.com/view-large/figure/31726687/168-3-1105-fig009.jpeg>`__
+(shown below). This exercise is meant to illustrate how kernel features
+change for a simple target model (the checkerboard) depending on the
+chosen source-receiver geometry.
+
+.. figure:: attachment:tape_etal_2007_fig9.jpeg
+   :alt: tape_etal_2007_fig9.jpeg
+
+   tape_etal_2007_fig9.jpeg
+
+*Caption: Construction of a misfit kernel. (a)–(g) Individual event
+kernels, each constructed via the method shown in Fig. 8 (which shows
+Event 5). The colour scale for each event kernel is shown beneath (g).
+(h) The misfit kernel is simply the sum of the 25 event kernels. (i) The
+source–receiver geometry and target phase‐speed model. There are a total
+of N= 25 × 132 = 3300 measurements that are used in constructing the
+misfit kernel (see Section 5).*
+
+Choosing an event
+^^^^^^^^^^^^^^^^^
+
+The Event ID that generated each kernel is specified in the title of
+each sub plot (e.g., Panel. (a) corresponds to Event #1). We can attempt
+to re-create these kernels by choosing specific event IDs to run Example
+2 with.
+
+   **NOTE:** Our choice of preprocessing module, misfit function,
+   gradient smoothing length, nonlinear optimization algorithm, etc.
+   will affect how each event kernel is produced, and consequently how
+   much they differ from the published kernels shown above. We do not
+   expect to perfectly match the event kernels above, but rather to see
+   that first order structure is the same.
+
+To specify the specific event ID, we can use the ``--event_id`` flag
+when running Example 2. For this docs page we’ll choose Event #7, which
+is represented by Panel (g) in the figure above.
+
+.. code:: ipython3
+
+    # Run the help message to view the description of the optional arguemnt --event_id
+    ! seisflows examples -h
+
+
+.. parsed-literal::
+
+    usage: seisflows examples [-h] [-r [SPECFEM2D_REPO]] [--nsta [NSTA]]
+                              [--ntask [NTASK]] [--niter [NITER]]
+                              [--event_id [EVENT_ID]]
+                              [method] [choice]
+    
+    Lists out available example problems and allows the user to run example
+    problems directly from the command line. Some example problems may have pre-
+    run prompts mainly involving the numerical solver
+    
+    positional arguments:
+      method                Method for running the example problem. If
+                            notprovided, simply prints out the list of available
+                            example problems. If given as an integer value, will
+                            print out the help message for the given example. If
+                            'run', will run the example. If 'setup' will simply
+                            setup the example working directory but will not
+                            execute `seisflows submit`
+      choice                If `method` in ['setup', 'run'], integervalue
+                            corresponding to the given example problem which can
+                            listed using `seisflows examples`
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -r [SPECFEM2D_REPO], --specfem2d_repo [SPECFEM2D_REPO]
+                            path to the SPECFEM2D directory which should contain
+                            binary executables. If not given, assumes directory is
+                            called 'specfem2d/' in the current working directory.
+                            If that dir is not found, SPECFEM2D will be
+                            downloaded, configured and compiled automatically in
+                            the current working directory.
+      --nsta [NSTA]         User-defined number of stations to use for the example
+                            problem (1 <= NSTA <= 131). If not given, each example
+                            has its own default.
+      --ntask [NTASK]       User-defined number of events to use for the example
+                            problem (1 <= NTASK <= 25). If not given, each example
+                            has its own default.
+      --niter [NITER]       User-defined number of iterations to run for the
+                            example problem (1 <= NITER <= inf). If not given,
+                            each example has its own default.
+      --event_id [EVENT_ID]
+                            Allow User to choose a specific event ID from the Tape
+                            2007 example (1 <= EVENT_ID <= 25). If not used,
+                            example will default to choosing sequential from 1 to
+                            NTASK
+
+
+.. code:: ipython3
+
+    # Run command with open variable to set SPECFEM2D path. Choose event_id==7 and only run 1 iteration
+    ! seisflows examples run 2 -r ${PATH_TO_SPECFEM2D} --event_id 7 --niter 1
+
+Comparing kernels
+^^^^^^^^^^^^^^^^^
+
+This workflow should run faster than Example #2 proper, because we are
+only using 1 event and 1 iteration. In the same vein as above, we can
+visualize the output gradient to see how well it matches with those
+published in Tape et al.
+
+.. code:: ipython3
+
+    %cd ~/sfexamples/example_2a
+    ! ls
+
+
+.. parsed-literal::
+
+    /home/bchow/Work/work/seisflows_example/example_2a
+    logs	parameters.yaml  sflog.txt    specfem2d
+    output	scratch		 sfstate.txt  specfem2d_workdir
+
+
+.. code:: ipython3
+
+    ! seisflows plot2d GRADIENT_01 vs_kernel --save g_01_vs.png
+    Image("g_01_vs.png")
+
+
+.. parsed-literal::
+
+    Figure(707.107x707.107)
+
+
+
+
+.. image:: images/specfem2d_example_files/specfem2d_example_43_1.png
+
+
+
+From the above figure we can see that the first order structure of our
+Vs event kernel is very similar to Panel (g) from Figure 9 of Tape et
+al. (2007). Our kernel shows some additional low-amplitude sensitivity,
+most prominently at the ring of alternative blue and red on the edges of
+the domain. From experience this is likely due to the ``Pyaflowa``
+preprocessing module attempting to window and fit very late arriving
+waves that are caused by boundary reflections from the edge of the
+domain.
+
+Example #3: En-masse Forward Simulations
+----------------------------------------
+
+SeisFlows is not just an inversion tool, it can also be used to simplify
+workflows to run forward simulations using external numerical solvers.
+In Example #3 we use SeisFlows to run en-masse forward simulations.
+
+To motivate this use case, imagine a User who has a velocity model of a
+specific region (at any scale). This User would like to run a number of
+forward simulations for N events and S stations to generate N x S
+synthetic seismograms. These synthetics may be used directly, or
+compared to observed seismograms to understand how well the regional
+velocity model characterizes actual Earth structure.
+
+Although this could be done manually, if N is large, this effort may
+require a large number of manual tasks, including the creation of
+working directories, editing submit calls, and providing book keeping
+for the external solver. SeisFlows is here to automate all of these
+tasks.
+
+.. code:: ipython3
+
+    # Run the help dialogue to see what 
+    ! seisflows examples 3
+
+
+.. parsed-literal::
+
+    No existing SPECFEM2D repo given, default to: /home/bchow/Work/work/seisflows_example/example_2a/specfem2d
+    
+                                        @@@@@@@@@@                        
+                                   .@@@@.    .%&(  %@.          
+                                @@@@   @@@@   &@@@@@@ ,%@       
+                             @@@@   @@@,  /@@              @    
+                            @@@   @@@@   @@@              @     
+                          @@@@   @@@@   @@@                @  @ 
+                          @@@   @@@@   ,@@@                @ @  
+                         @@@@   @@@@    @@@@              @@ @ @
+                         @@@@   @@@@@    @@@@@          @@@ @@ @
+                         @@@@    @@@@@     @@@@@@@@@@@@@@  @@  @
+                          @@@@    @@@@@@        @@@&     @@@  @ 
+                          @@@@@     @@@@@@@@         %@@@@#  @@ 
+                            @@@@#      @@@@@@@@@@@@@@@@@   @@   
+                             &@@@@@          @@@@(       @@&    
+                                @@@@@@@             /@@@@       
+                                    @@@@@@@@@@@@@@@@@
+                                        @@@@@@@@@@          
+    
+    
+    ================================================================================
+                                  SEISFLOWS EXAMPLE 3                               
+                                  ///////////////////                               
+    This is a [SPECFEM2D] [WORKSTATION] example, which will run forward simulations
+    to generate synthetic seismograms through a homogeneous halfspace starting
+    model. This example uses no preprocessing or optimization modules. [10 events,
+    25 stations] The tasks involved include:
+    
+    1. (optional) Download, configure, compile SPECFEM2D
+    2. [Setup] a SPECFEM2D working directory
+    3. [Setup] starting model from 'Tape2007' example
+    4. [Setup] a SeisFlows working directory
+    5. [Run] the forward simulation workflow
+    ================================================================================
+
+
+.. code:: ipython3
+
+    # Run command with open variable to set SPECFEM2D path
+    ! seisflows examples run 3 -r ${PATH_TO_SPECFEM2D}
+
+You will be met with the following log message after succesful completion of the example problem
+
+.. code:: bash
+
+    ================================================================================
+    EXAMPLE COMPLETED SUCCESFULLY
+    ================================================================================
+
+Understanding example outputs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This example does not produce gradients or updated models, only
+synthetic seismograms. We can view these seismograms using the
+``seisflows plotst`` command, which is used to quickly plot synthetic
+seismograms (using ObsPy under the hood).
+
+.. code:: ipython3
+
+    %cd ~/sfexamples/example_3
+    ! ls
+
+
+.. parsed-literal::
+
+    /home/bchow/Work/work/seisflows_example/example_3
+    logs	parameters.yaml  sflog.txt    specfem2d
+    output	scratch		 sfstate.txt  specfem2d_workdir
+
+
+In this example, we have set the ``export_traces`` parameter to
+**True**, which tells SeisFlows to store synthetic waveforms generated
+during the workflow in the ``output/`` directory. Under the hood,
+SeisFlows is copying all synthetic seismograms from the Solver’s
+``scratch/`` directory, to a more permanent location.
+
+.. code:: ipython3
+
+    # The `export_traces` parameter tells SeisFlows to save synthetics after each round of forward simulations
+    ! seisflows par export_traces  
+
+
+.. parsed-literal::
+
+    export_traces: True
+
+
+.. code:: ipython3
+
+    # Exported traces will be stored in the `output` directory
+    ! ls output
+
+
+.. parsed-literal::
+
+    MODEL_INIT  solver
+
+
+.. code:: ipython3
+
+    # Synthetics will be stored on a per-event basis, and in the format that the external solver created them
+    ! ls output/solver/
+    ! echo
+    ! ls output/solver/001/syn
+
+
+.. parsed-literal::
+
+    001  002  003  004  005  006  007  008	009  010
+    
+    AA.S000000.BXY.semd  AA.S000009.BXY.semd  AA.S000018.BXY.semd
+    AA.S000001.BXY.semd  AA.S000010.BXY.semd  AA.S000019.BXY.semd
+    AA.S000002.BXY.semd  AA.S000011.BXY.semd  AA.S000020.BXY.semd
+    AA.S000003.BXY.semd  AA.S000012.BXY.semd  AA.S000021.BXY.semd
+    AA.S000004.BXY.semd  AA.S000013.BXY.semd  AA.S000022.BXY.semd
+    AA.S000005.BXY.semd  AA.S000014.BXY.semd  AA.S000023.BXY.semd
+    AA.S000006.BXY.semd  AA.S000015.BXY.semd  AA.S000024.BXY.semd
+    AA.S000007.BXY.semd  AA.S000016.BXY.semd
+    AA.S000008.BXY.semd  AA.S000017.BXY.semd
+
+
+.. code:: ipython3
+
+    # The `plotst` function allows us to quickly visualize output seismograms
+    ! seisflows plotst output/solver/001/syn/AA.S000000.BXY.semd --save AA.S000000.BXY.semd.png
+    Image(filename="AA.S000000.BXY.semd.png")
+
+
+
+
+.. image:: images/specfem2d_example_files/specfem2d_example_55_0.png
+
+
+
+.. code:: ipython3
+
+    # `plotst` also takes wildcards to plot multiple synthetics in a single figure
+    ! seisflows plotst output/solver/001/syn/AA.S00000[123].BXY.semd --save AA.S000001-3.BXY.semd.png
+    Image(filename="AA.S000001-3.BXY.semd.png")
+
+
+
+
+.. image:: images/specfem2d_example_files/specfem2d_example_56_0.png
 
 
