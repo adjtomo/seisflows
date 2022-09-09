@@ -1,17 +1,17 @@
-Specfem2D Workstation Example
-=============================
+Specfem2D Workstation Examples
+==============================
 
 SeisFlows comes with some **Specfem2D synthetic examples** to showcase
-the package. These examples are meant to be run on a **local machine**
-(tested on a Linux workstation running CentOS 7, and an Apple Laptop
-running macOS 10.14.6).
+the software in action. These examples are meant to be run on a **local
+machine** (tested on a Linux workstation running CentOS 7, and an Apple
+Laptop running macOS 10.14.6).
 
 The numerical solver we will use is:
 `SPECFEM2D <https://geodynamics.org/cig/software/specfem2d/>`__. We’ll
 also be working in our ``seisflows``
 `Conda <https://docs.conda.io/en/latest/>`__ environment, see the
-installation documentation page for instructions on how to install and
-activate the required Conda environment.
+installation section on the home page for instructions on how to install
+and activate the required Conda environment.
 
 --------------
 
@@ -22,19 +22,23 @@ activate the required Conda environment.
 
     from IPython.display import Image  # Used to display .png files in the notebook/docs
 
-Example #1: Simple, default inversion
--------------------------------------
+Example #1: Homogenous Halfspace Inversion
+------------------------------------------
 
 Example #1 runs a 1-iteration synthetic inversion with 1 event and 1
-station, used to illustrate misfit kernels in adjoint tomography.
+station, used to illustrate misfit kernels and updated models in adjoint
+tomography.
 
-The starting model (MODEL_INIT) and target model (MODEL_TRUE) are used
-to generate synthetics and data, respectively. Both models are
-homogeneous halfspace models with slightly varying P- and S-wave
-velocity values. Only Vp and Vs are updated during the example.
+The starting/initial model (*MODEL_INIT*) and target/true model
+(*MODEL_TRUE*) are used to generate synthetics and (synthetic) data,
+respectively. Both models are homogeneous halfspace models defined by
+velocity (Vp, Vs) and density (:math:`\rho`) with slightly varying P-
+and S-wave velocity values (**INIT**: :math:`V_p`\ =5.8km/s,
+:math:`V_s`\ =3.5km/s; **TRUE**: :math:`V_p`\ =5.9km/s,
+:math:`V_s`\ =3.55km/s). Only Vp and Vs are updated during the example.
 
 Misfit during Example #1 is defined by a ‘traveltime’ misfit using the
-default preprocessing module. It also uses a gradient-descent
+``Default`` preprocessing module. It also uses a ``gradient-descent``
 optimization algorithm paired with a bracketing line search. No
 smoothing/regularization is applied to the gradient.
 
@@ -172,18 +176,19 @@ because we set the parameter ``export_gradient`` to True.
     proc000000_vp.bin  proc000000_vs.bin
 
 
-Plotting results (only available w/ SPECFEM2D)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Plotting results
+~~~~~~~~~~~~~~~~
 
 We can plot the model and gradient files created during our workflow
 using the ``seisflows plot2d`` command. The ``--savefig`` flag allows us
 to save output .png files to disk. The following figure shows the
 starting/initial homogeneous halfspace model in Vs.
 
-   **NOTE:** Because this docs page was made in a Jupyter Notebook, we
-   need to use the IPython Image class to open the resulting .png file
-   from inside the notebook. Users following along will need to open the
-   figure using the GUI or command line tool.
+.. note::
+    Models and gradients can only be plotted when using `SPECFEM2D` as the chosen solver. Other solvers (e.g., SPECFEM3D and 3D_GLOBE) require external software (e.g., ParaView) to visualize volumetric quantities like models and gradients.
+
+.. note::
+    Because this docs page was made in a Jupyter Notebook, we need to use the IPython Image class to open the resulting .png file from inside the notebook. Users following along will need to open the figure using the GUI or command line tool.
 
 .. code:: ipython3
 
@@ -199,7 +204,7 @@ starting/initial homogeneous halfspace model in Vs.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_14_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_15_1.png
 
 
 
@@ -222,7 +227,7 @@ in model values.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_16_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_17_1.png
 
 
 
@@ -246,7 +251,7 @@ almost exactly mimics the Vs kernel shown above.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_18_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_19_1.png
 
 
 
@@ -262,21 +267,21 @@ You can also run Example \#1 with more stations (up to 131), tasks/events (up to
     # An example call for running Example 1 with variable number of stations, events and iterations
     ! seisflows examples run 1 --nsta 10 --ntask 5 --niter 2
 
-Example #2: Checkerboard inversion using Pyaflowa & L-BFGS
-----------------------------------------------------------
+Example #2: Checkerboard Inversion (w/ Pyaflowa & L-BFGS)
+---------------------------------------------------------
 
 Building on the foundation of the previous example, Example #2 runs a 2
 iteration inversion with misfit quantification taken care of by the
 ``Pyaflowa`` preprocessing module, which uses the misfit quantification
 package `Pyatoa <https://github.com/adjtomo/pyatoa>`__ under the hood.
-Model updates are performed using an ```L-BFGS`` nonlinear optimization
+
+Model updates are performed using an `L-BFGS nonlinear optimization
 algorithm <https://en.wikipedia.org/wiki/Limited-memory_BFGS>`__.
 Example #2 also includes smoothing/regularization of the gradient. This
 example more closely mimics a research-grade inversion problem.
 
-   **NOTE:** This example is computationally more intense than the
-   default version of Example #1 as it uses multiple events and
-   stations, and runs multiple iterations.
+.. note::
+    This example is computationally more intense than the default version of Example \#1 as it uses multiple events and stations, and runs multiple iterations. 
 
 .. code:: ipython3
 
@@ -340,15 +345,6 @@ Succesful completion of the example problem will end with a log message that loo
 
 .. code:: bash
 
-
-    2022-08-29 18:08:13 (I) | 
-    FINALIZING LINE SEARCH
-    --------------------------------------------------------------------------------
-    2022-08-29 18:08:13 (I) | writing optimization stats
-    2022-08-29 18:08:13 (I) | renaming current (new) optimization vectors as previous model (old)
-    2022-08-29 18:08:13 (I) | setting accepted trial model (try) as current model (new)
-    2022-08-29 18:08:13 (I) | misfit of accepted trial model is f=4.727E-03
-    2022-08-29 18:08:13 (I) | resetting line search step count to 0
     2022-08-29 18:08:13 (I) | 
     CLEANING WORKDIR FOR NEXT ITERATION
     --------------------------------------------------------------------------------
@@ -406,6 +402,30 @@ determine what model/gradient files are available for plotting.
     MODEL_TRUE
 
 
+Similarly, running ``plot2d`` with 1 argument will help determine what
+quantities are available to plot
+
+.. code:: ipython3
+
+    ! seisflows plot2d MODEL_TRUE
+
+
+.. parsed-literal::
+
+    Traceback (most recent call last):
+      File "/home/bchow/miniconda3/envs/docs/bin/seisflows", line 33, in <module>
+        sys.exit(load_entry_point('seisflows', 'console_scripts', 'seisflows')())
+      File "/home/bchow/REPOSITORIES/seisflows/seisflows/seisflows.py", line 1383, in main
+        sf()
+      File "/home/bchow/REPOSITORIES/seisflows/seisflows/seisflows.py", line 438, in __call__
+        getattr(self, self._args.command)(**vars(self._args))
+      File "/home/bchow/REPOSITORIES/seisflows/seisflows/seisflows.py", line 1106, in plot2d
+        save=savefig)
+      File "/home/bchow/REPOSITORIES/seisflows/seisflows/tools/specfem.py", line 428, in plot2d
+        f"chosen `parameter` must be in {self._parameters}"
+    AssertionError: chosen `parameter` must be in ['vp', 'vs']
+
+
 Visualizing Initial and Target models
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -432,7 +452,7 @@ representation of these perturbations, where **red==slow** and
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_32_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_36_1.png
 
 
 
@@ -451,7 +471,7 @@ model is too fast, while red colors tell us that the initial model is
 too slow (that is, **red==too slow** and **blue==too fast**). This makes
 sense if we look at the checkerboard target model above, where the
 perturbation is slow (red color) the corresponding kernel tells us the
-initial model is too fast (blue color).
+initial (homogeneous halfspace) model is too fast (blue color).
 
 .. code:: ipython3
 
@@ -466,7 +486,7 @@ initial model is too fast (blue color).
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_34_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_38_1.png
 
 
 
@@ -474,15 +494,15 @@ Visualizing the updated model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 After two iterations, the updated model starts to take form. We can
-clearly see tha the lack of data coverage on the outer edges of the
+clearly see that the lack of data coverage on the outer edges of the
 model mean we do not see any appreciable update here, whereas the center
 of the domain shows the strongest model updates which are starting to
 resemble the checkerboard pattern shown in the target model.
 
 With only 4 events and 2 iterations, we do not have quite enough
-constraint to recover the sharp contrats between checkers shown in the
-Target model. We can see that smearing and regularization leads to more
-prominent slow (red) regions.
+constraint to recover the sharp contrasts between checkers shown in the
+Target model. We can see that data coverage, smearing and regularization
+leads to more prominent slow (red) regions.
 
 If we were to increase the number of events and iterations, will it help
 our recovery of the target model? This task is left up to the reader!
@@ -500,7 +520,7 @@ our recovery of the target model? This task is left up to the reader!
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_36_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_40_1.png
 
 
 
@@ -508,27 +528,27 @@ Re-creating kernels from Tape et al. 2007
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The 2D checkerboard model and source-receiver configuration that runs in
-this example comes from the published work of `Tape et
+this example come from the published work of `Tape et
 al. (2007) <https://academic.oup.com/gji/article/168/3/1105/929373>`__.
-Here, Tape et al. generate event and misfit kernels for a number of
-individual events in `Figure
-9 <https://academic.oup.com/view-large/figure/31726687/168-3-1105-fig009.jpeg>`__
-(shown below). This exercise is meant to illustrate how kernel features
-change for a simple target model (the checkerboard) depending on the
-chosen source-receiver geometry.
+Here, Tape et al. generate event kernels for a number of individual
+events (`Figure
+9 <https://academic.oup.com/view-large/figure/31726687/168-3-1105-fig009.jpeg>`__,
+shown below). This exercise illustrates how kernel features change for a
+simple target model (the checkerboard) depending on the chosen
+source-receiver geometry.
 
-.. figure:: attachment:tape_etal_2007_fig9.jpeg
-   :alt: tape_etal_2007_fig9.jpeg
+An attentive reader will notice that the misfit kernel we generated
+above looks very similar to Panel (h) in the figure below.
 
-   tape_etal_2007_fig9.jpeg
+.. image:: images/reference_figures/tape_etal_2007_fig9.jpeg
 
-*Caption: Construction of a misfit kernel. (a)–(g) Individual event
-kernels, each constructed via the method shown in Fig. 8 (which shows
-Event 5). The colour scale for each event kernel is shown beneath (g).
-(h) The misfit kernel is simply the sum of the 25 event kernels. (i) The
-source–receiver geometry and target phase‐speed model. There are a total
-of N= 25 × 132 = 3300 measurements that are used in constructing the
-misfit kernel (see Section 5).*
+Caption from publication: *Construction of a misfit kernel. (a)–(g)
+Individual event kernels, each constructed via the method shown in Fig.
+8 (which shows Event 5). The colour scale for each event kernel is shown
+beneath (g). (h) The misfit kernel is simply the sum of the 25 event
+kernels. (i) The source–receiver geometry and target phase‐speed model.
+There are a total of N= 25 × 132 = 3300 measurements that are used in
+constructing the misfit kernel (see Section 5).*
 
 Choosing an event
 ^^^^^^^^^^^^^^^^^
@@ -538,16 +558,12 @@ each sub plot (e.g., Panel. (a) corresponds to Event #1). We can attempt
 to re-create these kernels by choosing specific event IDs to run Example
 2 with.
 
-   **NOTE:** Our choice of preprocessing module, misfit function,
-   gradient smoothing length, nonlinear optimization algorithm, etc.
-   will affect how each event kernel is produced, and consequently how
-   much they differ from the published kernels shown above. We do not
-   expect to perfectly match the event kernels above, but rather to see
-   that first order structure is the same.
-
 To specify the specific event ID, we can use the ``--event_id`` flag
 when running Example 2. For this docs page we’ll choose Event #7, which
 is represented by Panel (g) in the figure above.
+
+.. note::
+    Our choice of preprocessing module, misfit function, gradient smoothing length, nonlinear optimization algorithm, etc. will affect how each event kernel is produced, and consequently how much they differ from the published kernels shown above. We do not expect to perfectly match the event kernels above, but rather to see that first order structure is the same.
 
 .. code:: ipython3
 
@@ -642,7 +658,7 @@ published in Tape et al.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_43_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_50_1.png
 
 
 
@@ -662,28 +678,33 @@ SeisFlows is not just an inversion tool, it can also be used to simplify
 workflows to run forward simulations using external numerical solvers.
 In Example #3 we use SeisFlows to run en-masse forward simulations.
 
-To motivate this use case, imagine a User who has a velocity model of a
-specific region (at any scale). This User would like to run a number of
-forward simulations for N events and S stations to generate N x S
+Motivation
+~~~~~~~~~~
+
+Imagine a User who has a velocity model of a specific region (at any
+scale). This User would like to run a number of forward simulations for
+**N** events and **S** stations to generate **N** :math:`\times` **S**
 synthetic seismograms. These synthetics may be used directly, or
 compared to observed seismograms to understand how well the regional
 velocity model characterizes actual Earth structure.
 
-Although this could be done manually, if N is large, this effort may
-require a large number of manual tasks, including the creation of
-working directories, editing submit calls, and providing book keeping
-for the external solver. SeisFlows is here to automate all of these
-tasks.
+If **N** is large this effort may require a large number of manual
+tasks, including the creation of working directories, editing submit
+calls (if working on a cluster), and book keeping for files generated by
+the external solver. SeisFlows is here to automate all of these tasks.
+
+Running the example
+~~~~~~~~~~~~~~~~~~~
 
 .. code:: ipython3
 
-    # Run the help dialogue to see what 
+    # Run the help dialogue to see what occurs in Example 3
     ! seisflows examples 3
 
 
 .. parsed-literal::
 
-    No existing SPECFEM2D repo given, default to: /home/bchow/Work/work/seisflows_example/example_2a/specfem2d
+    No existing SPECFEM2D repo given, default to: /home/bchow/Work/work/seisflows_example/example_2/specfem2d
     
                                         @@@@@@@@@@                        
                                    .@@@@.    .%&(  %@.          
@@ -814,7 +835,7 @@ SeisFlows is copying all synthetic seismograms from the Solver’s
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_55_0.png
+.. image:: images/specfem2d_example_files/specfem2d_example_62_0.png
 
 
 
@@ -827,6 +848,6 @@ SeisFlows is copying all synthetic seismograms from the Solver’s
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_56_0.png
+.. image:: images/specfem2d_example_files/specfem2d_example_63_0.png
 
 

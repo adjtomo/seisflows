@@ -11,10 +11,10 @@ on high performance computers using
 
 .. note::
     The SeisFlows Docker image can be found here:
-    https://github.com/SeisSCOPED/pyatoa
+    https://github.com/SeisSCOPED/adjtomo
 
 .. note::
-    The `Pyatoa` container is shipped with the latest versions of
+    The `adjTomo` container is shipped with the latest versions of
     `SeisFlows <https://github.com/adjtomo/seisflows>`__,
     `Pyatoa <https://github.com/adjtomo/pyatoa>`__, and
     `PySEP <https://github.com/uafgeotools/pysep>`__.
@@ -38,7 +38,7 @@ First we need to get the latest version of the `Pyatoa` Docker image:
 
 .. code-block:: bash
 
-    docker pull ghcr.io/seisscoped/pyatoa:latest
+    docker pull ghcr.io/seisscoped/adjtomo:latest
 
 .. note::
     These docs were run using Docker image ID ``c57883926aae`` (last accessed
@@ -110,7 +110,7 @@ SeisFlows help message, we simply have to run the following:
 
 .. code-block:: bash
 
-    docker run ghcr.io/seisscoped/pyatoa:latest seisflows -h
+    docker run ghcr.io/seisscoped/adjtomo:latest seisflows -h
 
 The following code snippet will run a SeisFlows-Pyatoa-Specfem2D example.
 The extra fluff in the command allows the container to save files to your
@@ -123,7 +123,7 @@ computer while it runs the example.
     docker run \
         --workdir $(pwd) \
         --mount type=bind,source=$(pwd),target=$(pwd),
-        ghcr.io/seisscoped/pyatoa:nightly \
+        ghcr.io/seisscoped/adjtomo:nightly \
         seisflows examples run 2
 
 In the above example, we set the working directory (-w/--workdir) to the
@@ -172,7 +172,7 @@ singularity module, and then use a familiar ``pull`` command.
 
     module load tacc-singularity  # on TACC Frontera
     # module load singularity  # on UAF Chinook
-    singularity pull seisflows.sif docker://ghcr.io/seisscoped/pyatoa:nightly
+    singularity pull seisflows.sif docker://ghcr.io/seisscoped/adjtomo:nightly
 
 We have now downloaded our image as a `.sif` file. To use the image to run the
 SeisFlows help message:
@@ -193,6 +193,6 @@ system to 'frontera-singularity'.
     # ... set any other main modules here
     seisflows configure  # fill out the parameter file
     # ... edit your parameters here and then run SeisFlows
-    singularity run ghcr.io/seisscoped/pyatoa:nightly seisflows submit
+    singularity run ghcr.io/seisscoped/adjtomo:nightly seisflows submit
 
 
