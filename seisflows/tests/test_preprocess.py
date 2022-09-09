@@ -201,7 +201,9 @@ def test_pyaflowa_line_search(tmpdir):
 
     # Just check file count to see that finalize did what it's supposed to do
     # since finalize just moves and collects files
-    assert(len(glob(os.path.join(pyaflowa.path.output, "figures", "*"))) == 1)
-    assert(len(glob(os.path.join(pyaflowa.path.output, "logs", "*"))) == 6)
-    assert(len(glob(os.path.join(pyaflowa.path.output,
+    assert(len(glob(os.path.join(pyaflowa.path.output, "pyaflowa", 
+                                 "figures", "*"))) == 1)
+    assert(len(glob(os.path.join(pyaflowa.path.output, "pyaflowa", 
+                                 "logs", "*"))) == 6)
+    assert(len(glob(os.path.join(pyaflowa.path.output, "pyaflowa",
                                  "datasets", "*.csv"))) == 2)
