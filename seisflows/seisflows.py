@@ -19,11 +19,12 @@ import inspect
 import warnings
 import argparse
 import traceback
-import subprocess
 from glob import glob
 from IPython import embed
+from obspy import Stream, read
 
 from seisflows import logger, ROOT_DIR, NAMES
+from seisflows.preprocess.default import Default
 from seisflows.tools import unix, msg
 from seisflows.tools.config import load_yaml, custom_import, import_seisflows
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
@@ -122,18 +123,6 @@ def sfparser():
     swap.add_argument("module", nargs="?", help="Module name to swap")
     swap.add_argument("classname", nargs="?", help="Classname to swap to")
     # =========================================================================
-    init = subparser.add_parser(
-        "init", help="Initiate working environment",
-        description="""Establish a SeisFlows working environment but don't 
-        submit the workflow to the system and do not perform variable  error 
-        checking. Saves the initial state as pickle files to allow for active 
-        environment inspection prior to running 'submit'. Useful for debugging, 
-        development and code exploration."""
-    )
-    # init.add_argument("-c", "--check", action="store_true",
-    #                   help="Perform parameter and path checking to ensure that "
-    #                        "user-defined parameters are accepatable")
-    # =========================================================================
     submit = subparser.add_parser(
         "submit", help="Submit initial workflow to system",
         description="""The main SeisFlows execution command. Submit a SeisFlows 
@@ -214,21 +203,14 @@ def sfparser():
     # =========================================================================
     check = subparser.add_parser(
         "check",  formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="""
-Check parameters, state, or values of an active environment
-
-    model     check the min/max values of currently active models tracked by
-              optimize. 'seisflows check model [name]' to check specific model.
-    iter      Check current interation and step count of workflow
-    src       List source names and respective internal indices
-    isrc      Check source name for corresponding index
-                """,
-        help="Check state of an active environment")
-
-    # check.add_argument("choice", type=str,  nargs="?",
-    #                    help="Parameter, state, or value to check")
-    # check.add_argument("args", type=str,  nargs="*",
-    #                    help="Generic arguments passed to check functions")
+        description="Run check functions to ensure that the provided parameter "
+                    "file has been set correctly"
+    )
+    # =========================================================================
+    init = subparser.add_parser(
+        "init", formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Run check and setup functions to generate a SeisFlows "
+                    "working directory")
     # =========================================================================
     plot2d = subparser.add_parser(
         "plot2d", formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -243,6 +225,27 @@ Check parameters, state, or values of an active environment
                              "'vp' etc.")
     plot2d.add_argument("-c", "--cmap", type=str, nargs="?",
                         help="colormap to be passed to PyPlot")
+    plot2d.add_argument("-s", "--savefig", type=str, nargs="?", default=None,
+                        help="optional name and path to save figure")
+    # =========================================================================
+    plotst = subparser.add_parser(
+        "plotst", formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="""Plots waveforms output by the solver. Uses ObsPy's 
+Stream.plot() function under the hood. Example call would be 
+`seisflows plotst scratch/solver/mainsolver/traces/syn/*`
+        """)
+
+    plotst.add_argument("fids", type=str, nargs="*",
+                        help="File IDs to be passed to plotting. Wildcards "
+                             "acceptable")
+    plotst.add_argument("--data_format", type=str, nargs="?", default="ASCII",
+                        help="Data format of the files. Must match file type "
+                             "that SeisFlows can read. These include:"
+                             "['SU', 'ASCII']. Defaults to 'ASCII'. See "
+                             "SeisFlows.preprocess.default.read() for "
+                             "all options.")
+    plotst.add_argument("-s", "--savefig", type=str, nargs="?", default=None,
+                        help="optional name and path to save figure")
     # =========================================================================
     print_ = subparser.add_parser(
         "print", formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -295,19 +298,46 @@ working state before the workflow can be resumed
         numerical solver
         """
     )
-    examples.add_argument("run", type=str, nargs="?", default=None,
-                          help="Run your choice of example problem")
-    examples.add_argument("choice", type=str,  nargs="?", default=None,
-                          help="Name of the specific example problem to run")
+    examples.add_argument("method", type=str, nargs="?", default=None,
+                          help="Method for running the example problem. If not"
+                               "provided, simply prints out the list of "
+                               "available example problems. If given as an "
+                               "integer value, will print out the help message "
+                               "for the given example. If 'run', will run the "
+                               "example. If 'setup' will simply setup the "
+                               "example working directory but will not execute "
+                               "`seisflows submit`")
+    examples.add_argument("choice", type=int,  nargs="?", default=None,
+                          help="If `method` in ['setup', 'run'], integer"
+                               "value corresponding to the given example "
+                               "problem which can listed using `seisflows "
+                               "examples`")
     examples.add_argument("-r", "--specfem2d_repo", type=str,  nargs="?",
                           default=None,
-                          help= "path to the SPECFEM2D directory which should "
-                                "contain binary executables. If not given, "
-                                "assumes directory is called 'specfem2d/' in "
-                                "the current working directory. If that dir "
-                                "is not found, SPECFEM2D will be downloaded, "
-                                "configured and compiled automatically in the "
-                                "current working directory.")
+                          help="path to the SPECFEM2D directory which should "
+                               "contain binary executables. If not given, "
+                               "assumes directory is called 'specfem2d/' in "
+                               "the current working directory. If that dir "
+                               "is not found, SPECFEM2D will be downloaded, "
+                               "configured and compiled automatically in the "
+                               "current working directory.")
+    examples.add_argument("--nsta", type=int, nargs="?", default=None,
+                          help="User-defined number of stations to use for "
+                               "the example problem (1 <= NSTA <= 131). If "
+                               "not given, each example has its own default.")
+    examples.add_argument("--ntask", type=int, nargs="?", default=None,
+                          help="User-defined number of events to use for "
+                               "the example problem (1 <= NTASK <= 25). If "
+                               "not given, each example has its own default.")
+    examples.add_argument("--niter", type=int, nargs="?", default=None,
+                          help="User-defined number of iterations to run for "
+                               "the example problem (1 <= NITER <= inf). If "
+                               "not given, each example has its own default.")
+    examples.add_argument("--event_id", type=int, nargs="?", default=None,
+                          help="Allow User to choose a specific event ID from "
+                               "the Tape 2007 example (1 <= EVENT_ID <= 25). "
+                               "If not used, example will default to choosing "
+                               "sequential from 1 to NTASK")
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
@@ -628,6 +658,24 @@ class SeisFlows:
         except AssertionError as e:
             print(msg.cli(str(e), border="=", header="parameter errror"))
 
+    def init(self, **kwargs):
+        """
+        Run check() + setup() functions for a given parameter file and each of
+        the SeisFlows modules, ensuring that parameters are acceptable for the
+        given set of user-defined parameters and running setup procedure
+        which may create directories and perform some file management.
+        """
+        unix.mkdir(self._args.workdir)
+        unix.cd(self._args.workdir)
+
+        workflow = import_seisflows(workdir=self._args.workdir,
+                                    parameter_file=self._args.parameter_file)
+        try:
+            workflow.check()
+            workflow.setup()
+        except AssertionError as e:
+            print(msg.cli(str(e), border="=", header="parameter errror"))
+
     def submit(self, **kwargs):
         """
         Main SeisFlows execution command. Submit the SeisFlows workflow to
@@ -785,7 +833,7 @@ class SeisFlows:
                                          delim="=")
             except KeyError:
                 print(msg.cli(f"'{parameter}' not found in {par_file}"))
-                sys.exit(-1)
+                return
 
         # Option 1: Simply print out the value of the given parameter
         if value is None:
@@ -856,7 +904,7 @@ class SeisFlows:
         except KeyError:
             print(msg.cli(f"'{parameter}' not found in "
                           f"{self._args.parameter_file}"))
-            sys.exit(-1)
+            return
 
         # Option 1: Simply print out the value of the given parameter
         if value is None:
@@ -869,9 +917,10 @@ class SeisFlows:
             if not skip_print:
                 print(msg.cli(f"{key}: {cur_val} -> {value}"))
 
-    def examples(self, run=None, choice=None, specfem2d_repo=None, **kwargs):
+    def examples(self, method=None, choice=None, specfem2d_repo=None,
+                 nsta=None, nevent=None, niter=None, event_id=None, **kwargs):
         """
-        List or run a SeisFlows example problem
+        List or run a SeisFlows example problems
 
         USAGE
 
@@ -885,8 +934,8 @@ class SeisFlows:
 
                 seisflows examples run 1
 
-        :type run: bool
-        :param run: if True, run an example of choice `choice`
+        :type method: bool
+        :param method: if True, run an example of choice `choice`
         :type choice: str
         :param choice: The choice of example, must match the given tag or file
             name that is assigned to it
@@ -895,6 +944,49 @@ class SeisFlows:
             contain binary executables. If not given, SPECFEM2D will be
             downloaded configured and compiled automatically.
         """
+        # e.g., $ seisflows examples
+        if method is None:
+            self._print_examples()
+            sys.exit(0)
+        # e.g., $ seisflows examples 1
+        elif method and (choice is None):
+            try:
+                choice = int(method)
+            except ValueError:
+                print(f"`method` argument must be 'run', 'setup' or an integer "
+                      f"value corresponding to one of the available examples")
+                sys.exit(0)
+
+        # Allow the examples to be dynamically recovered based on user choice
+        if choice == 1:
+            from seisflows.examples.ex1_homogeneous_halfspace \
+                import SFExample2D as Example
+        elif choice == 2:
+            from seisflows.examples.ex2_hh_w_pyatoa \
+                import SFPyatoaEx2D as Example
+        elif choice == 3:
+            from seisflows.examples.ex3_fwd_solver import SFFwdEx2D as Example
+        elif choice == 4:
+            from seisflows.examples.ex4_multicore_fwd \
+                import SFMultiCoreEx2D as Example
+        else:
+            print(f"no SeisFlows example matching given number: {choice}")
+            sys.exit(0)
+
+        # Run or setup example, or just print system dialogue
+        example = Example(specfem2d_repo=specfem2d_repo, method=method,
+                          nsta=nsta, ntask=nevent, niter=niter, 
+                          event_id=event_id)
+        example.print_dialogue()
+
+        # e.g., $ seisflows examples run 1
+        if method in ["setup", "run"]:
+            example.main()
+
+    @staticmethod
+    def _print_examples():
+        """Simply print a list of available examples which match the format
+        ex_?*.py"""
         # Gather all the available examples in the repository
         examples_dir = os.path.join(ROOT_DIR, "examples")
         examples_list = []
@@ -904,49 +996,16 @@ class SeisFlows:
             example_name = os.path.splitext(os.path.basename(fid))[0]
             examples_list.append((i+1, example_name, fid))
 
-        arg1, arg2 = None, None
-        if run:
-            # Case 1: seisflows examples 1 OR seisflows examples ex1_...
-            if choice is None:
-                arg1 = run
-                arg2 = ""
-            # Case 2: seisflows examples run 1 OR seisflows examples run ex1_...
-            elif run in ["run", "setup"]:
-                arg1 = choice
-                arg2 = f"{run}"  # space so that we do $ python ex.py run
-        if arg1:
-            # Allow for matching against index (int) and name (str)
-            try:
-                arg1 = int(arg1)
-            except ValueError:
-                pass
-
-            for ex_tup in examples_list:
-                j, exname, fid = ex_tup
-                if arg1 in [j, exname]:
-                    print(f"{run.capitalize()} example: {exname}")
-                    # Set default value for SPECFEM2D repository and make
-                    # sure paths are fully expanded to avoid any pathing error
-                    if specfem2d_repo is None:
-                        specfem2d_repo = os.path.join(os.getcwd(), "specfem2d")
-                    specfem2d_repo = os.path.expanduser(
-                        os.path.abspath(specfem2d_repo)
-                    )
-                    # $ python /path/to/example.py run path/to/specfem2d
-                    subprocess.run(f"python {fid} {arg2} {specfem2d_repo}",
-                                   shell=True, check=False)
-                    return
-
-        # Default behavior is to just print this help dialogue
         items = [f"{j}: {exname}" for j, exname, fid in examples_list]
-        print(msg.cli("Example options where <name_or_idx> is either the "
-                      "example name or corresponding index, provided below.",
-                      items=[
-            "'seisflows examples <name_or_idx>': print example description",
-            "'seisflows examples setup <name_or_idx>': setup example but "
-            "don't run workflow",
-            "'seisflows examples run <name_or_idx>': setup and run example"
-        ],
+        print(msg.cli(
+            "Example options where <name_or_idx> is either the example name "
+            "or corresponding index, provided below.",
+            items=[
+                "'seisflows examples <name_or_idx>': print example description",
+                "'seisflows examples setup <name_or_idx>': setup example but "
+                "don't run workflow 'seisflows examples run <name_or_idx>': "
+                "setup and run example"
+            ],
             header="seisflows examples"
         ))
         print(msg.cli(items=items))
@@ -970,7 +1029,38 @@ class SeisFlows:
 
         acceptable_args[choice](*self._args.args, **kwargs)
 
-    def plot2d(self, name, parameter, cmap=None, **kwargs):
+    def plotst(self, fids, data_format="ASCII", savefig=None, **kwargs):
+        """
+        Simple stream/waveform plotter to visualize synthetic waveforms created
+        by the solver. Uses ObsPy under the hood to generate a large stream
+        and then plots all waveforms together.
+
+        .. note::
+            Very simple function to look at waveforms. If you want more
+            sophisticated plotting tools, look at Python packages `Pyatoa`
+            or `PySEP`
+
+        :type fids: list
+        :param fids: list of file ID's to plot
+        :type data_format: str
+        :param data_format: data format used to determine how to read data files
+        :type savefig: str or None
+        :param savefig: full path and filename to save the output figure. If
+            NoneType, will not save the figure
+        """
+        # Take advantage of the Default Preprocessing module's read() function
+        plotter = Default(data_format=data_format)
+        assert(data_format.upper() in plotter._acceptable_data_formats), \
+            f"data format must be in {plotter._acceptable_data_formats}"  # NOQA
+
+        st = Stream()
+        for fid in fids:
+            st += plotter.read(fid)
+
+        st.plot(outfile=savefig, **kwargs)
+
+    def plot2d(self, name=None, parameter=None, cmap=None, savefig=None,
+               **kwargs):
         """
         Plot model, gradient or kernels in the PATH.OUTPUT
 
@@ -981,17 +1071,27 @@ class SeisFlows:
             'vp' etc.
         :type cmap: str
         :param cmap: optional colormap parameter to be passed to Pyplot
+        :type savefig: str
+        :param savefig: optional name and path of filename to save figure
+            to disk
         """
         # Figure out which models/gradients/kernels we can actually plot
         _, output_dir, _ = getpar(key="path_output",
                                   file=self._args.parameter_file,
                                   delim=":")
-        acceptable_names = [
-            os.path.basename(_) for _ in glob(os.path.join(output_dir, "*"))
-        ]
-        assert(name in acceptable_names), (
-            f"`seisflows plot 2d` can only plot {acceptable_names}"
-        )
+        # Assuming only models/kernels/gradients have the format *_* in output
+        acceptable_names = sorted([
+            os.path.basename(_) for _ in glob(os.path.join(output_dir, "*_*"))
+        ])
+        if name is None:
+            print(msg.cli(f"Available models/gradients/kernels",
+                          items=sorted(acceptable_names), header="Plot2D")
+                  )
+            sys.exit(0)
+        else:
+            assert(name in acceptable_names), (
+                f"`seisflows plot 2d` can only plot {acceptable_names}"
+            )
         # Grab model_init to use its coordinates
         # name of directory for model_init is defined by solver.specfem.setup()
         base_model = Model(path=os.path.join(output_dir, "MODEL_INIT"))
@@ -1002,7 +1102,8 @@ class SeisFlows:
         plot_model = Model(path=os.path.join(output_dir, name))
         plot_model.coordinates = base_model.coordinates
         # plot2d has internal check for acceptable parameter value
-        plot_model.plot2d(parameter=parameter, show=True, cmap=cmap)
+        plot_model.plot2d(parameter=parameter, cmap=cmap, show=True,
+                          save=savefig)
 
     def reset(self, choice=None, **kwargs):
         """

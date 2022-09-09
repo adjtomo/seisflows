@@ -11,10 +11,10 @@ on high performance computers using
 
 .. note::
     The SeisFlows Docker image can be found here:
-    https://github.com/SeisSCOPED/pyatoa
+    https://github.com/SeisSCOPED/adjtomo
 
 .. note::
-    The `Pyatoa` container is shipped with the latest versions of
+    The `adjTomo` container is shipped with the latest versions of
     `SeisFlows <https://github.com/adjtomo/seisflows>`__,
     `Pyatoa <https://github.com/adjtomo/pyatoa>`__, and
     `PySEP <https://github.com/uafgeotools/pysep>`__.
@@ -38,7 +38,7 @@ First we need to get the latest version of the `Pyatoa` Docker image:
 
 .. code-block:: bash
 
-    docker pull ghcr.io/seisscoped/pyatoa:latest
+    docker pull ghcr.io/seisscoped/adjtomo:latest
 
 .. note::
     These docs were run using Docker image ID ``c57883926aae`` (last accessed
@@ -59,7 +59,15 @@ We can run SeisFlows through JupyterHub by opening the container through a port:
 
 .. code-block:: bash
 
-    docker run -p 8888:8888 ghcr.io/seisscoped/pyatoa:latest
+    docker run -p 8888:8888 \
+        --mount type=bind,source=$(pwd),target=/home/scoped/work
+        ghcr.io/seisscoped/pyatoa:latest
+
+.. warning::
+    If you do **not** use the ``--mount`` command, all progres will be lost
+    once you close the container. See the
+    `Docker bind mounts <https://docs.docker.com/storage/bind-mounts/>`__
+    documentation for more information.
 
 To access the JupyterHub instance, open the URL that was output to the display
 in your favorite web browser. The URL will likely look something like
@@ -86,40 +94,12 @@ in an empty directory to avoid muddling up the home directory.
 .. image:: images/container_2_example.png
     :align: center
 |
-This example will download, configure and compile SPECFEM2D within your
-JupyterHub instance, and then run a SeisFlows-Pyatoa-SPECFEM2D inversion
-problem. See `the SPECFEM2D example docs page <specfem2d_example.html>`__
-for a more thorough explanation of what's going on under the hood.
+This example will download, configure and compile SPECFEM2D, and then run a
+SeisFlows-Pyatoa-SPECFEM2D inversion problem. See `the SPECFEM2D example docs
+page <specfem2d_example.html>`__ for a more thorough explanation of what's
+going on under the hood.
 
-.. warning::
-    Once you close the JupyterHub instance, all progress you've made since
-    opening it will be lost. If you would like to save your progress, you can
-    use the ``--mount`` command to mount your local filesystem inside the
-    container.
-
-Aside: Mounting a local filesystem
-"""""""""""""""""""""""""""""""""""
-
-By default, JupyterHub does not provide explicit access to your local
-filesystem. This is not ideal as we would usually like to save/view results. So
-we often provide the container access to the local filesystem using the
-``--mount`` flag.
-
-For example, if you already have SPECFEM2D downloaded and compiled on your local
-filesystem, you can mount it to the container to avoid having to redo this
-action. Or, as in the following code snippet, we bind our local filesystem's
-working directory (WORKDIR) into the containers filesystem as
-*/home/scoped/work* to save results.
-
-See the `Docker bind mounts <https://docs.docker.com/storage/bind-mounts/>`__
-documentation for more information.
-
-.. code-block:: bash
-
-    WORKDIR=/Users/Chow/Work/scratch
-    docker run -p 8888:8888 \
-        --mount type=bind,source=${WORKDIR},target=/home/scoped/work \
-        ghcr.io/seisscoped/pyatoa:latest
+A successful inversion
 
 
 From the command line
@@ -130,7 +110,7 @@ SeisFlows help message, we simply have to run the following:
 
 .. code-block:: bash
 
-    docker run ghcr.io/seisscoped/pyatoa:latest seisflows -h
+    docker run ghcr.io/seisscoped/adjtomo:latest seisflows -h
 
 The following code snippet will run a SeisFlows-Pyatoa-Specfem2D example.
 The extra fluff in the command allows the container to save files to your
@@ -143,7 +123,7 @@ computer while it runs the example.
     docker run \
         --workdir $(pwd) \
         --mount type=bind,source=$(pwd),target=$(pwd),
-        ghcr.io/seisscoped/pyatoa:nightly \
+        ghcr.io/seisscoped/adjtomo:nightly \
         seisflows examples run 2
 
 In the above example, we set the working directory (-w/--workdir) to the
@@ -192,7 +172,7 @@ singularity module, and then use a familiar ``pull`` command.
 
     module load tacc-singularity  # on TACC Frontera
     # module load singularity  # on UAF Chinook
-    singularity pull seisflows.sif docker://ghcr.io/seisscoped/pyatoa:nightly
+    singularity pull seisflows.sif docker://ghcr.io/seisscoped/adjtomo:nightly
 
 We have now downloaded our image as a `.sif` file. To use the image to run the
 SeisFlows help message:
@@ -213,6 +193,6 @@ system to 'frontera-singularity'.
     # ... set any other main modules here
     seisflows configure  # fill out the parameter file
     # ... edit your parameters here and then run SeisFlows
-    singularity run ghcr.io/seisscoped/pyatoa:nightly seisflows submit
+    singularity run ghcr.io/seisscoped/adjtomo:nightly seisflows submit
 
 

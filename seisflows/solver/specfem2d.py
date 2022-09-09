@@ -48,25 +48,6 @@ class Specfem2D(Specfem):
         elif self.materials.upper() == "ELASTIC":
             self._parameters += ["vp", "vs"]
 
-    # @property
-    # def model_files(self):
-    #     """
-    #     Return a list of paths to model files AND coordinates, which can be
-    #     used by SeisFlows to plot SPECFEM2D models and gradients.
-    #
-    #     :rtype: list
-    #     :return: a list of full paths to model files that matches the internal
-    #         list of solver parameters
-    #     """
-    #     _model_files = super().model_files
-    #
-    #     # Append coordinates 'x' and 'z' files to current list of model files
-    #     for parameter in ["x", "z"]:
-    #         _model_files += glob(os.path.join(self.path.mainsolver,
-    #                                           self.model_databases,
-    #                                           f"*{parameter}{self._ext}"))
-    #     return _model_files
-
     def setup(self):
         """
         Setup the SPECFEM2D solver interface in a SeisFlows workflow
@@ -85,16 +66,10 @@ class Specfem2D(Specfem):
         super().setup()
 
         # Copy in coordinate files to the Model definition so we can plot
-        for name, model in zip(["MODEL_INIT", "MODEL_TRUE"],
-                               [self.path.model_init, self.path.model_true]):
-            dst = os.path.join(self.path.output, name)
-            for par in ["x", "z"]:
-                src = glob(os.path.join(self.path.model_init,
-                                        f"*{par}{self._ext}"))
-                unix.cp(src, dst)
+        self._export_starting_models(parameters=["x", "z"])
 
-    def smooth(self, input_path, output_path, parameters=None, span_h=0.,
-               span_v=0., use_gpu=False):
+    def smooth(self, input_path, output_path, parameters=None, span_h=None,
+               span_v=None, use_gpu=False):
         """
         Specfem2D requires additional model parameters in directory to perform
         the xsmooth_sem task. This function will copy these files into the

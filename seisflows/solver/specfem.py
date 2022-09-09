@@ -54,10 +54,12 @@ class Specfem:
         attenution (Q_mu, Q_kappa) model
     :type smooth_h: float
     :param smooth_h: Gaussian half-width for horizontal smoothing in units
-        of meters. If 0., no smoothing applied
+        of meters. If 0., no smoothing applied. Only applicable for workflows:
+        ['migration', 'inversion'], ignored for 'forward' workflow.
     :type smooth_h: float
     :param smooth_v: Gaussian half-width for vertical smoothing in units
-        of meters.
+        of meters. Only applicable for workflows: ['migration', 'inversion'],
+        ignored for 'forward' workflow.
     :type components: str
     :param components: components to consider and tag data with. Should be
         string of letters such as 'RTZ'
@@ -398,21 +400,12 @@ class Specfem:
         Prepares solver scratch directories for an impending workflow.
 
         Sets up directory structure expected by SPECFEM and copies or generates
-        seismic data to be inverted or migrated
+        seismic data to be inverted or migrated.
+
+        Exports INIT/STARTING and TRUE/TARGET models to disk (output/ dir.)
         """
         self._initialize_working_directories()
-
-        # Export the initial and target models to the SeisFlows output directory
-        # Copy ALL files with relevant extension, just incase
-        for name, model in zip(["MODEL_INIT", "MODEL_TRUE"],
-                               [self.path.model_init, self.path.model_true]):
-            dst = os.path.join(self.path.output, name)
-            if not os.path.exists(dst):
-                unix.mkdir(dst)
-                for par in self._parameters:
-                    src = glob(os.path.join(self.path.model_init,
-                                            f"*{par}{self._ext}"))
-                    unix.cp(src, dst)
+        self._export_starting_models()
 
     def forward_simulation(self, executables=None, save_traces=False,
                            export_traces=False, **kwargs):
@@ -460,14 +453,18 @@ class Specfem:
             for tag in ["d", "v", "a", "p"]:
                 unix.rename(old=f"single_{tag}.su", new="single.su",
                             names=glob(os.path.join("OUTPUT_FILES", "*.su")))
-
+        # Exporting traces to disk (output/) for more permanent storage
         if export_traces:
+            if not os.path.exists(export_traces):
+                unix.mkdir(export_traces)
             unix.cp(
                 src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
                 dst=export_traces
             )
-
+        # Save traces somewhere else in the scratch/ directory for easier access
         if save_traces:
+            if not os.path.exists(save_traces):
+                unix.mkdir(save_traces)
             unix.mv(
                 src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
                 dst=save_traces
@@ -628,8 +625,8 @@ class Specfem:
         if span_v is None:
             span_v = self.smooth_v
 
-        logger.info(f"smoothing {parameters} with horizontal Gaussian "
-                    f"{span_h}m and vertical Gaussian {span_v}m")
+        logger.debug(f"smoothing {parameters} with horizontal Gaussian "
+                     f"{span_h}m and vertical Gaussian {span_v}m")
 
         if not os.path.exists(output_path):
             unix.mkdir(output_path)
@@ -821,3 +818,27 @@ class Specfem:
                 logger.debug(f"linking source '{source_name}' as 'mainsolver'")
                 unix.ln(cwd, self.path.mainsolver)
 
+    def _export_starting_models(self, parameters=None):
+        """
+        Export the initial and target models to the SeisFlows output/ directory.
+
+        :type parameters: list
+        :param parameters: list of parameters to export. If None, will default
+            to `self._parameters`
+        """
+        if parameters is None:
+            parameters = self._parameters
+
+        # Export the initial and target models to the SeisFlows output directory
+        for name, model in zip(["MODEL_INIT", "MODEL_TRUE"],
+                               [self.path.model_init, self.path.model_true]):
+            # Skip over if user has not provided model path (e.g., real data
+            # inversion will not have `model_true`)
+            if not model:
+                continue
+            dst = os.path.join(self.path.output, name, "")
+            if not os.path.exists(dst):
+                unix.mkdir(dst)
+            for par in parameters:
+                src = glob(os.path.join(model, f"*{par}{self._ext}"))
+                unix.cp(src, dst)

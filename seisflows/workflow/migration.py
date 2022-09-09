@@ -114,6 +114,8 @@ class Migration(Forward):
             else:
                 export_kernels = False
 
+            logger.info(f"running adjoint simulation for source "
+                        f"{self.solver.source_name}")
             # Run adjoint simulations on system. Make kernels discoverable in
             # path `eval_grad`. Optionally export those kernels
             self.solver.adjoint_simulation(
