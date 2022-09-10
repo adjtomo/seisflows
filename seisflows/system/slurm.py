@@ -198,33 +198,6 @@ class Slurm(Cluster):
 
         return job_id
 
-    @staticmethod
-    def _modify_run_call_single_proc(run_call):
-        """
-        Modifies a SLURM SBATCH command to use only 1 processor as a single run
-        by replacing the --array and --ntasks options
-
-        :type run_call: str
-        :param run_call: The SBATCH command to modify
-        :rtype: str
-        :return: a modified SBATCH command that should only run on 1 processor
-        """
-        for part in run_call.split(" "):
-            if "--array" in part:
-                run_call = run_call.replace(part, "--array=0-0")
-            elif "--ntasks" in part:
-                run_call = run_call.replace(part, "--ntasks=1")
-
-        # Append taskid to environment variable, deal with the case where
-        # self.par.ENVIRONS is an empty string
-        task_id_str = "SEISFLOWS_TASKID=0"
-        if not run_call.strip().endswith("--environment"):
-            task_id_str = f",{task_id_str}"  # appending to the list of vars
-
-        run_call += task_id_str
-
-        return run_call
-
     def run(self, funcs, single=False, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on a SLURM
@@ -270,7 +243,7 @@ class Slurm(Cluster):
         if single:
             logger.info("replacing parts of sbatch run call for single "
                         "process job")
-            run_call = self._modify_run_call_single_proc(run_call)
+            run_call = modify_run_call_single_proc(run_call)
 
         logger.debug(run_call)
 
@@ -420,5 +393,29 @@ def query_job_states(job_id, _recheck=0):
 
     return job_ids, job_states
 
+def modify_run_call_single_proc(run_call):
+    """
+    Modifies a SLURM SBATCH command to use only 1 processor as a single run
+    by replacing the --array and --ntasks options
 
+    :type run_call: str
+    :param run_call: The SBATCH command to modify
+    :rtype: str
+    :return: a modified SBATCH command that should only run on 1 processor
+    """
+    for part in run_call.split(" "):
+        if "--array" in part:
+            run_call = run_call.replace(part, "--array=0-0")
+        elif "--ntasks" in part:
+            run_call = run_call.replace(part, "--ntasks=1")
+
+    # Append taskid to environment variable, deal with the case where
+    # self.par.ENVIRONS is an empty string
+    task_id_str = "SEISFLOWS_TASKID=0"
+    if not run_call.strip().endswith("--environment"):
+        task_id_str = f",{task_id_str}"  # appending to the list of vars
+
+    run_call += task_id_str
+
+    return run_call
 

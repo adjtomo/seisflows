@@ -17,13 +17,13 @@ Cluster, the User must manually submit.
     sub-classes
 """
 import os
-import sys
 import subprocess
 from seisflows import logger, ROOT_DIR
 from seisflows.tools import msg
 from seisflows.tools.unix import nproc, cp
 from seisflows.tools.config import pickle_function_list, import_seisflows
 from seisflows.system.workstation import Workstation
+from seisflows.system.slurm import modify_run_call_single_proc
 
 
 class Singularity(Workstation):
@@ -42,9 +42,6 @@ class Singularity(Workstation):
         For example 'mpirun', 'mpiexec', 'srun', 'ibrun'
     :type ntask_max: int
     :param ntask_max: limit the number of concurrent tasks in a given array job
-    :type walltime: float
-    :param walltime: maximum job time in minutes for the master SeisFlows
-        job submitted to cluster. Fractions of minutes acceptable.
     :type tasktime: float
     :param tasktime: maximum job time in minutes for each job spawned by
         the SeisFlows master job during a workflow. These include, e.g.,
@@ -58,11 +55,14 @@ class Singularity(Workstation):
 
     Paths
     -----
+    :type path_container: str
+    :param path_container: path to the Docker Image that contains adjTomo
+        software package
     ***
     """
     __doc__ = Workstation.__doc__ + __doc__
 
-    def __init__(self, title=None, mpiexec="", ntask_max=None, walltime=10,
+    def __init__(self, title=None, mpiexec="", ntask_max=None,
                  tasktime=1, environs="", singularity_exec="singularity",
                  path_container=None, **kwargs):
         """Instantiate the Cluster System class"""
@@ -93,15 +93,15 @@ class Singularity(Workstation):
         )
 
         # # Check that 'singularity' exists on system
-        # try:
-        #     subprocess.run(f"which {self.singularity_exec}", check=True,
-        #                    shell=True, stdout=subprocess.DEVNULL)
-        # except subprocess.CalledProcessError:
-        #     logger.critical(f"Singularity exectuable {self.singularity_exec} "
-        #                     f"not found on sytem (using `which`), but is "
-        #                     f"required to run a `Singularity` System. Please "
-        #                     f"check your parameter: `singularity_exec`.")
-        #     sys.exit(-1)
+        try:
+            subprocess.run(f"which {self.singularity_exec}", check=True,
+                           shell=True, stdout=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            logger.critical(f"Singularity exectuable {self.singularity_exec} "
+                            f"not found on sytem (using `which`), but is "
+                            f"required to run a `Singularity` System. Please "
+                            f"check your parameter: `singularity_exec`.")
+            sys.exit(-1)
 
     def setup(self):
         """
@@ -189,10 +189,14 @@ class Singularity(Workstation):
             f"{self.path.run}",
             f"--funcs {funcs_fid}",
             f"--kwargs {kwargs_fid}",
-            f"--environment SEISFLOWS_TASKID={{task_id}},{self.environs}"
+            f"--environment {self.environs}"
             f"'"  # <- important, closes the bash command started in header
         ])
         logger.debug(run_call)
+
+        # !!! This is SLURM dependent. Will need to change if other scheduler
+        if single:
+            modify_run_call_single_proc(run_call)
 
         # Write the run call inside a script to make it cleaner for User to call
         runscript = os.path.join(self.path.scratch, "run_task.sh")
@@ -203,5 +207,6 @@ class Singularity(Workstation):
         input(msg.cli(f"sh {os.path.relpath(runscript)}",
                       header="task run call", border="=",
                       items=["> please execute the above command",
-                             "> hit `enter` when all jobs are complete"])
+                             "> hit `enter` when all jobs are complete",
+                             "> monitor jobs using `sacct` or `squeue`"])
               )

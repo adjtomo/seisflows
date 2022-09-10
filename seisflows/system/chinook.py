@@ -81,7 +81,7 @@ class Chinook(Slurm):
             f"{self.slurm_args or ''}",
             f"--job-name={self.title}",
             f"--ntasks={self.nproc:d}",
-            f"--tasks-per-node={self.nodesize}",
+            f"--tasks-per-node={self.node_size}",
             f"--time={self._tasktime}",
             f"--output={os.path.join(self.path.log_files, '%A_%a')}",
             f"--array=0-{self.ntask-1 % self.ntask_max}",
