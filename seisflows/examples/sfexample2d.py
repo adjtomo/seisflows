@@ -37,6 +37,7 @@ from seisflows.tools import msg
 from seisflows.tools.config import Dict
 from seisflows.seisflows import SeisFlows
 from seisflows.tools.unix import cd, cp, rm, ln, mv, mkdir
+from seisflows.tools.unix import nproc as system_nproc
 
 
 class SFExample2D:
@@ -106,6 +107,10 @@ class SFExample2D:
             f"number of stations must be between 1 and 131, not {self.nsta}"
 
         self.nproc = nproc or 1  # must be 1 for Examples 1-3
+        assert(self.nproc <= system_nproc()), (
+            f"your system has a maximum {system_nproc()} processors, which is "
+            f"less than the requested value of {self.nproc}. Please adjust"
+        )
 
         # This bool information is provided by the User running 'setup' or 'run'
         self.run_example = bool(method == "run")
@@ -127,6 +132,7 @@ class SFExample2D:
             "materials": "elastic",  # how velocity model parameterized
             "density": False,  # update density or keep constant
             "data_format": "ascii",  # how to output synthetic seismograms
+            "nproc": self.nproc,  # number of cores to use for MPI tasks
             "start": 1,  # first iteration
             "end": self.niter,  # final iteration -- we will run 2
             "step_count_max": 5,  # will cause iteration 2 to fail
@@ -145,11 +151,11 @@ class SFExample2D:
         if with_mpi:
             self.mpiexec = mpiexec
             self._parameters["mpiexec"] = self.mpiexec  # Pass on to workflow
-            self.check_mpi_executable()
+            self._check_mpi_executable()
             self._configure_cmd = \
                 "./configure FC=gfortran CC=gcc MPIF90=mpif90 --with-mpi"
         else:
-            self.mpixec = None
+            self.mpiexec = None
             self._configure_cmd = "./configure"
 
     def print_dialogue(self):
@@ -174,7 +180,7 @@ class SFExample2D:
             border="=")
         )
 
-    def check_mpi_executable(self):
+    def _check_mpi_executable(self):
         """
         If User wants to run examples with MPI, checks that MPI executable is
         available and can be used to run solver. Sometimes if we don't
@@ -186,11 +192,11 @@ class SFExample2D:
         except subprocess.CalledProcessError:
             print(
                 msg.cli(f"MPI executable '{self.mpiexec}' not found on "
-                        f"system. Please check that you have MPI "
-                        f"installed/loaded. If '{self.mpiexec}' is not how you "
+                        f"system. Please check that you have MPI installed and "
+                        f"loaded. If '{self.mpiexec}' is not how you "
                         f"invoke MPI, use the flag `--mpiexec $MPIFLAG` when "
-                        f"running the example to change the default exectable",
-                        header="missing mpi", border="=")
+                        f"running the example to change the default executable",
+                        header="missing mpi executable", border="=")
                   )
             sys.exit(-1)
 
@@ -366,9 +372,9 @@ class SFExample2D:
 
     def run_xspecfem2d_binaries(self):
         """
-        Runs the xmeshfem2d and then xspecfem2d binaries using subprocess and then
-        do some cleanup to get files in the correct locations. Assumes that we
-        can run the binaries directly with './'
+        Runs the xmeshfem2d and then xspecfem2d binaries using subprocess and
+        then do some cleanup to get files in the correct locations. Runs either
+        with './' or with `mpiexec`
         """
         cd(self.workdir_paths.workdir)
 
@@ -424,7 +430,9 @@ class SFExample2D:
 
         self.sf.configure()
 
-        # Adjust the parameters.yaml file
+        # Adjust the parameters.yaml file based on the internal parameter list
+        # that is specified in __init__. This allows for child examples to
+        # re-use this function with any parameter list.
         for key, val in self._parameters.items():
             self.sf.par(key, val)
 

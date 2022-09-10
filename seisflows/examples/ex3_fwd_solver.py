@@ -24,7 +24,8 @@ class SFFwdEx2D(SFExample2D):
     MODEL TRUE and makes the parameter file more bare bones.
     """
     def __init__(self, ntask=None, nsta=None, nproc=None, method="run",
-                 specfem2d_repo=None, **kwargs):
+                 specfem2d_repo=None, with_mpi=False, mpiexec="mpirun",
+                 **kwargs):
         """
         Overloads init of the base problem
 
@@ -46,7 +47,8 @@ class SFFwdEx2D(SFExample2D):
         # We set defaults here because `seisflows examples` may input these
         # values as NoneType which would override __init__ defaults.
         super().__init__(ntask=ntask or 10, nsta=nsta or 25, nproc=nproc or 1,
-                         niter=1, method=method, specfem2d_repo=specfem2d_repo)
+                         niter=1, method=method, specfem2d_repo=specfem2d_repo,
+                         with_mpi=with_mpi, mpiexec=mpiexec)
 
         self._modules = {
             "workflow": "forward",

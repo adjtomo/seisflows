@@ -27,7 +27,8 @@ class SFPyatoaEx2D(SFExample2D):
     MODEL TRUE, the number of stations, and the setup of the parameter file.
     """
     def __init__(self, ntask=None, niter=None, nsta=None, nproc=None,
-                 event_id=None,  method="run", specfem2d_repo=None, **kwargs):
+                 event_id=None, method="run", specfem2d_repo=None,
+                 with_mpi=False, mpiexec="mpirun", **kwargs):
         """
         Overload init and attempt to import Pyatoa before running example.
 
@@ -48,11 +49,19 @@ class SFPyatoaEx2D(SFExample2D):
             contain binary executables. If not given, SPECFEM2D will be
             downloaded configured and compiled automatically.
         """
+        # Because of how the checkerboard model is defined (as a .dat file),
+        # we cannot run with nproc > 1 because the checkerboard model will be
+        # partititioned incorrectly. MPI with nproc==1 still okay.
+        if nproc is not None:
+            assert(nproc == 1), \
+                f"Example #2 can only be run as a serial (nproc==1) task"
+
         # We set defaults here because `seisflows examples` may input these
         # values as NoneType which would override __init__ defaults.
         super().__init__(ntask=ntask or 4, niter=niter or 2, nsta=nsta or 32,
                          event_id=event_id, method=method, 
-                         specfem2d_repo=specfem2d_repo)
+                         specfem2d_repo=specfem2d_repo, with_mpi=with_mpi,
+                         mpiexec=mpiexec)
 
         # Make sure that Pyatoa has been installed before running
         try:

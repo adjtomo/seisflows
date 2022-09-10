@@ -347,6 +347,10 @@ working state before the workflow can be resumed
                           help="Only for Example(s) 4. MPI executable to use "
                                "when running SPECFEM2D with MPI. Defaults to "
                                "'mpirun'")
+    examples.add_argument("--nproc", type=int, nargs="?", default=None,
+                          help="Number of processors to use for MPI runs. "
+                               "Default values chosen for each example problem."
+                          )
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par, "inspect": inspect,
@@ -926,9 +930,7 @@ class SeisFlows:
             if not skip_print:
                 print(msg.cli(f"{key}: {cur_val} -> {value}"))
 
-    def examples(self, method=None, choice=None, specfem2d_repo=None,
-                 nsta=None, nevent=None, niter=None, event_id=None, 
-                 mpiexec=None,**kwargs):
+    def examples(self, method=None, choice=None, **kwargs):
         """
         List or run a SeisFlows example problems
 
@@ -949,10 +951,6 @@ class SeisFlows:
         :type choice: str
         :param choice: The choice of example, must match the given tag or file
             name that is assigned to it
-        :type specfem2d_repo: str
-        :param specfem2d_repo: path to the SPECFEM2D directory which should
-            contain binary executables. If not given, SPECFEM2D will be
-            downloaded configured and compiled automatically.
         """
         # e.g., $ seisflows examples
         if method is None:
@@ -976,17 +974,12 @@ class SeisFlows:
                 import SFPyatoaEx2D as Example
         elif choice == 3:
             from seisflows.examples.ex3_fwd_solver import SFFwdEx2D as Example
-        elif choice == 4:
-            from seisflows.examples.ex4_multicore_fwd \
-                import SFMultiCoreEx2D as Example
         else:
             print(f"no SeisFlows example matching given number: {choice}")
             sys.exit(0)
 
         # Run or setup example, or just print system dialogue
-        example = Example(specfem2d_repo=specfem2d_repo, method=method,
-                          nsta=nsta, ntask=nevent, niter=niter, 
-                          event_id=event_id, mpiexec=mpiexec)
+        example = Example(method=method, **kwargs)
         example.print_dialogue()
 
         # e.g., $ seisflows examples run 1
