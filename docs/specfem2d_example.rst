@@ -108,8 +108,32 @@ SPECFEM2D in your current working directory.
     # The following command is the same as above
     ! seisflows examples run 1 --specfem2d_repo ${PATH_TO_SPECFEM2D}
 
-A successfully completed example problem will end with the following log
-messages:
+Running with MPI
+^^^^^^^^^^^^^^^^
+
+If you have compiled SPECFEM2D with MPI, and have MPI installed and
+loaded on your system, you can run this example with MPI. To do so, you
+only need use the ``--with_mpi`` flag. By default SeisFlows will use
+only 1 core, but you can choose the number of processors/tasks with the
+``--nproc ${NPROC}`` flag. The example call runs example 1 with 4 cores.
+
+.. code:: ipython3
+
+    # Run Solver tasks with MPI on 4 cores
+    ! seisflows examples run 1 -r ${PATH_TO_SPECFEM2D} --with_mpi --nproc 4
+
+By default the example problems assume that your MPI executable is
+``mpirun``. If for any reason ``mpirun`` is not what your system uses to
+call MPI, you can use the ``--mpiexec ${MPIEXEC}`` flag to change that.
+
+.. code:: ipython3
+
+    ! seisflows examples run 1 -r ${PATH_TO_SPECFEM2D} --with_mpi --nproc 4 --mpiexec srun
+
+We will not run the example in this notebook, however at this stage the
+User should run one of the following commands above to execute the
+example problem. A successfully completed example problem will end with
+the following log messages:
 
 .. code:: bash
 
@@ -204,7 +228,7 @@ starting/initial homogeneous halfspace model in Vs.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_15_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_19_1.png
 
 
 
@@ -227,7 +251,7 @@ in model values.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_17_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_21_1.png
 
 
 
@@ -251,7 +275,7 @@ almost exactly mimics the Vs kernel shown above.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_19_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_23_1.png
 
 
 
@@ -452,7 +476,7 @@ representation of these perturbations, where **red==slow** and
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_36_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_40_1.png
 
 
 
@@ -486,7 +510,7 @@ initial (homogeneous halfspace) model is too fast (blue color).
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_38_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_42_1.png
 
 
 
@@ -520,7 +544,7 @@ our recovery of the target model? This task is left up to the reader!
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_40_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_44_1.png
 
 
 
@@ -658,7 +682,7 @@ published in Tape et al.
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_50_1.png
+.. image:: images/specfem2d_example_files/specfem2d_example_54_1.png
 
 
 
@@ -835,7 +859,7 @@ SeisFlows is copying all synthetic seismograms from the Solver’s
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_62_0.png
+.. image:: images/specfem2d_example_files/specfem2d_example_66_0.png
 
 
 
@@ -848,6 +872,6 @@ SeisFlows is copying all synthetic seismograms from the Solver’s
 
 
 
-.. image:: images/specfem2d_example_files/specfem2d_example_63_0.png
+.. image:: images/specfem2d_example_files/specfem2d_example_67_0.png
 
 
