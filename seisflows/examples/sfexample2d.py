@@ -45,7 +45,8 @@ class SFExample2D:
     multiple example runs can benefit from the code written here
     """
     def __init__(self, ntask=None, event_id=None, niter=None, nsta=None, 
-                 nproc=None, method="run", specfem2d_repo=None, **kwargs):
+                 nproc=None, method="run", specfem2d_repo=None, with_mpi=False,
+                 mpiexec="mpirun", **kwargs):
         """
         Set path structure which is used to navigate around SPECFEM repositories
         and the example working directory
@@ -70,6 +71,13 @@ class SFExample2D:
         :param specfem2d_repo: path to the SPECFEM2D directory which should
             contain binary executables. If not given, SPECFEM2D will be
             downloaded configured and compiled automatically.
+        :type with_mpi: bool
+        :param with_mpi: run the example problem with MPI. That is, runs the
+            Solver with an MPI executable. All other tasks are run in serial.
+        :type mpiexec: str
+        :param mpiexec: MPI executable used to run MPI tasks. Defaults to
+            'mpiexec' but User is allowed to choose incase their system has
+            different MPI run call.
         """
         self.cwd = os.getcwd()
         self.sem2d_paths, self.workdir_paths = self.define_dir_structures(
@@ -96,6 +104,7 @@ class SFExample2D:
         # -1 because it represents index but we need to talk in terms of count
         assert(1 <= self.nsta <= 132), \
             f"number of stations must be between 1 and 131, not {self.nsta}"
+
         self.nproc = nproc or 1  # must be 1 for Examples 1-3
 
         # This bool information is provided by the User running 'setup' or 'run'
@@ -132,8 +141,16 @@ class SFExample2D:
             "path_model_true": self.workdir_paths.model_true,
         }
 
-        # Used to configure SPECFEM2D binaries
-        self._configure_cmd = "./configure"
+        # Determine if we are running serial or parallel solver tasks
+        if with_mpi:
+            self.mpiexec = mpiexec
+            self._parameters["mpiexec"] = self.mpiexec  # Pass on to workflow
+            self.check_mpi_executable()
+            self._configure_cmd = \
+                "./configure FC=gfortran CC=gcc MPIF90=mpif90 --with-mpi"
+        else:
+            self.mpixec = None
+            self._configure_cmd = "./configure"
 
     def print_dialogue(self):
         """
@@ -156,6 +173,26 @@ class SFExample2D:
             header="seisflows example 1",
             border="=")
         )
+
+    def check_mpi_executable(self):
+        """
+        If User wants to run examples with MPI, checks that MPI executable is
+        available and can be used to run solver. Sometimes if we don't
+        '$ module load mpi', we will get 'mpirun: command not found'
+        """
+        try:
+            subprocess.run(f"which {self.mpiexec}", check=True, shell=True,
+                           stdout=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            print(
+                msg.cli(f"MPI executable '{self.mpiexec}' not found on "
+                        f"system. Please check that you have MPI "
+                        f"installed/loaded. If '{self.mpiexec}' is not how you "
+                        f"invoke MPI, use the flag `--mpiexec $MPIFLAG` when "
+                        f"running the example to change the default exectable",
+                        header="missing mpi", border="=")
+                  )
+            sys.exit(-1)
 
     @staticmethod
     def define_dir_structures(cwd, specfem2d_repo, ex="Tape2007"):
@@ -335,8 +372,13 @@ class SFExample2D:
         """
         cd(self.workdir_paths.workdir)
 
-        cmd_mesh = f"./bin/xmeshfem2D > OUTPUT_FILES/mesher.log.txt"
-        cmd_spec = f"./bin/xspecfem2D > OUTPUT_FILES/solver.log.txt"
+        if self.mpiexec:
+            mpicmd = f"{self.mpiexec} -n {self.nproc}"
+            cmd_mesh = f"{mpicmd} bin/xmeshfem2D > OUTPUT_FILES/mesher.log.txt"
+            cmd_spec = f"{mpicmd} bin/xspecfem2D > OUTPUT_FILES/solver.log.txt"
+        else:
+            cmd_mesh = f"./bin/xmeshfem2D > OUTPUT_FILES/mesher.log.txt"
+            cmd_spec = f"./bin/xspecfem2D > OUTPUT_FILES/solver.log.txt"
 
         for cmd in [cmd_mesh, cmd_spec]:
             print(f"Running SPECFEM2D with command: {cmd}")

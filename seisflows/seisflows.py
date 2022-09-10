@@ -338,6 +338,11 @@ working state before the workflow can be resumed
                                "the Tape 2007 example (1 <= EVENT_ID <= 25). "
                                "If not used, example will default to choosing "
                                "sequential from 1 to NTASK")
+    examples.add_argument("--with_mpi", action="store_true", default=False,
+                          help="Run Solver with MPI using MPI exectuable "
+                               "`mpiexec` (defaults to 'mpirun'). Defaults to "
+                               "False, in which case executables are run "
+                               "in serial")
     examples.add_argument("--mpiexec", type=str, nargs="?", default="mpirun",
                           help="Only for Example(s) 4. MPI executable to use "
                                "when running SPECFEM2D with MPI. Defaults to "
