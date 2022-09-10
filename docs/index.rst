@@ -3,6 +3,9 @@
 
 ------------------
 
+SeisFlows Documentation
+=======================
+
 `SeisFlows <https://github.com/adjtomo/seisflows>`__  is a Python-based
 waveform inversion package used to tackle the problems of full waveform
 inversion, seismic migration, and adjoint tomography. SeisFlows constitutes
