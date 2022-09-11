@@ -107,6 +107,7 @@ class Workstation:
                 f"Multi-core workflows (`nproc`>1) require an MPI executable " 
                 f"`mpiexec`"
             )
+        if self.mpiexec is not None:
             # Make user that `mpiexec` exists on system
             try:
                 stdout = subprocess.run(f"which {self.mpiexec}", shell=True,

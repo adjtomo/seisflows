@@ -81,27 +81,27 @@ class Singularity(Workstation):
         self.path["container"] = path_container
         self.path["run"] = os.path.join(self.path.scratch, "run")
 
-    def check(self):
-        """
-        Checks path and parameter validity
-        """
-        super().check()
-
-        assert(self.path.container and os.path.exists(self.path.container)), (
-            f"`Singularity` System class requires a Docker Image specified in "
-            f" path `path_container`"
-        )
-
-        # # Check that 'singularity' exists on system
-        try:
-            subprocess.run(f"which {self.singularity_exec}", check=True,
-                           shell=True, stdout=subprocess.DEVNULL)
-        except subprocess.CalledProcessError:
-            logger.critical(f"Singularity exectuable {self.singularity_exec} "
-                            f"not found on sytem (using `which`), but is "
-                            f"required to run a `Singularity` System. Please "
-                            f"check your parameter: `singularity_exec`.")
-            sys.exit(-1)
+    # def check(self):
+    #     """
+    #     Checks path and parameter validity
+    #     """
+    #     super().check()
+    #
+    #     assert(self.path.container and os.path.exists(self.path.container)), (
+    #         f"`Singularity` System class requires a Docker Image specified in "
+    #         f" path `path_container`"
+    #     )
+    #
+    #     # # Check that 'singularity' exists on system
+    #     try:
+    #         subprocess.run(f"which {self.singularity_exec}", check=True,
+    #                        shell=True, stdout=subprocess.DEVNULL)
+    #     except subprocess.CalledProcessError:
+    #         logger.critical(f"Singularity exectuable {self.singularity_exec} "
+    #                         f"not found on sytem (using `which`), but is "
+    #                         f"required to run a `Singularity` System. Please "
+    #                         f"check your parameter: `singularity_exec`.")
+    #         sys.exit(-1)
 
     def setup(self):
         """

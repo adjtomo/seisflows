@@ -159,7 +159,7 @@ class Cluster(Workstation):
                                                      path=self.path.scratch,
                                                      **kwargs)
         logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
-                    f"system {self.ntask} times")
+                    f"system {ntasks} times")
 
         # Create the run call which will simply call an external Python script
         # e.g., run --funcs func.p --kwargs kwargs.p --environment ...
@@ -194,7 +194,7 @@ class Cluster(Workstation):
         :param task_id: given task id, used for log messages and to format
             the run call
         """
-        logger.debug(f"running task id {task_id} ({task_id + 1}/{self.ntask})")
+        logger.debug(f"running task id {task_id}")
         try:
             f = open(self._get_log_file(task_id), "w")
             subprocess.run(run_call.format(task_id=task_id), shell=True,
