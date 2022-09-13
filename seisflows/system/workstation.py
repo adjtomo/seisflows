@@ -5,6 +5,7 @@ it provides utilities for submitting jobs in SERIAL on a small-scale machine,
 e.g., a workstation or a laptop. All other `System` classes build on this class.
 """
 import os
+import sys
 import subprocess
 from contextlib import redirect_stdout
 
@@ -106,14 +107,19 @@ class Workstation:
                 f"Multi-core workflows (`nproc`>1) require an MPI executable " 
                 f"`mpiexec`"
             )
+        if self.mpiexec is not None:
             # Make user that `mpiexec` exists on system
-            stdout = subprocess.run(f"which {self.mpiexec}", shell=True,
-                                    text=True, stdout=subprocess.PIPE).stdout
-            assert(stdout.strip()), (
-                f"MPI executable {self.mpiexec} was not found on system with "
-                f"cmd: `which {self.mpiexec}. Please check that your MPI "
-                f"module is loaded and accessible from the command line"
-            )
+            try:
+                stdout = subprocess.run(f"which {self.mpiexec}", shell=True,
+                                        check=True, text=True,
+                                        stdout=subprocess.PIPE).stdout
+            except subprocess.CalledProcessError:
+                logger.critical(
+                    f"MPI executable {self.mpiexec} was not found on system "
+                    f"with cmd: `which {self.mpiexec}. Please check that your "
+                    f"MPI module is loaded and accessible from the command line"
+                )
+                sys.exit(-1)
             logger.debug(f"MPI executable is located at: {stdout.strip()}")
 
     def setup(self):
@@ -157,8 +163,8 @@ class Workstation:
         :type workdir: str
         :param workdir: path to the current working directory
         :type parameter_file: str
-        :param parameter_file: paramter file file name used to instantiate
-            the SeisFlows package
+        :param parameter_file: parameter file name used to instantiate the
+            SeisFlows package
         """
         workflow = import_seisflows(workdir=workdir or self.path.workdir,
                                     parameter_file=parameter_file)

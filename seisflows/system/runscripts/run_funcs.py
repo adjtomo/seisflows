@@ -16,6 +16,9 @@ import argparse
 import dill
 import os
 
+from seisflows import logger
+from seisflows.tools.config import config_logger
+
 
 def parse_args():
     """
@@ -94,8 +97,19 @@ if __name__ == '__main__':
     else:
         kwargs = {}
 
+    # Hold onto the main handler for after the task is finished
+    handlers = logger.handlers
+
+    # Redirect the logger to point at stdout, which the Cluster system (or sub
+    # class of it) will redirect to a task specific log file. Currently no
+    # way of accessing user defiend 'verbose' or 'log_level' parameters
+    config_logger(filename=None, stream_handler=True)
+
     # Evaluate the function with given keyword arguments
     for func in funcs:
         func(**kwargs)
+
+    # Replace original log handler now that the tasks have finished
+    logger.handlers = handlers
 
 
