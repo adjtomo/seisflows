@@ -255,12 +255,6 @@ class SFExample2D:
                   f"to compile SPECFEM2D manually.\n{e}")
             sys.exit(-1)
 
-        # Symlink the finished repo into the working directory so that any
-        # subsequent runs won't need to have the user re-type repo location
-        if not os.path.exists(os.path.join(self.cwd, "specfem2d")):
-            print("symlinking existing specfem2D repository to cwd")
-            ln(self.sem2d_paths.repo, os.path.join(self.cwd, "specfem2d"))
-
     def create_specfem2d_working_directory(self):
         """
         Create the working directory where we will generate our initial and
