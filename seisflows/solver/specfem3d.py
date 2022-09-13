@@ -44,7 +44,7 @@ class Specfem3D(Specfem):
         # Overwriting the base class parameters
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D",
-                                   "xgenerate_databases" "xcombine_sem",
+                                   "xgenerate_databases", "xcombine_sem",
                                    "xsmooth_sem"]
 
     def data_wildcard(self, comp="?"):
