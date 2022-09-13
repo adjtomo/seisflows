@@ -404,7 +404,7 @@ class Model:
         elif vector is not None:
             self.model = self.split(vector=vector)
 
-    def plot2d(self, parameter, cmap=None, show=True, save=None):
+    def plot2d(self, parameter, cmap=None, show=True, title="", save=None):
         """
         Plot internal model parameters as a 2D contour plot. Kwargs are passed
         to underlying matplotlib.pylpot.tricontourf function.
@@ -421,6 +421,10 @@ class Model:
             If None, will choose default colormap based on parameter choice.
         :type show: bool
         :param show: show the figure after plotting
+        :type title: str
+        :param title: optional title to prepend to some values that are
+            provided by default. Useful for adding information about iteration,
+            step count etc.
         :type save: str
         :param save: if not None, full path to figure to save the output image
         """
@@ -455,9 +459,13 @@ class Model:
         ax = plt.gca()
         ax.set_xlabel("X [m]")
         ax.set_ylabel("Z [m]")
-        ax.set_title(f"{parameter.title()}_min = {data.min()};\n"
-                     f"{parameter.title()}_max = {data.max()};\n"
-                     f"{parameter.title()}_mean = {data.mean()}; ")
+        # Allow User to title the figure, e.g., with iteration, step count etc.
+        _title = (f"{parameter.title()}_min = {data.min()};\n"
+                  f"{parameter.title()}_max = {data.max()};\n"
+                  f"{parameter.title()}_mean = {data.mean()}")
+        if title:
+            _title = f"{title}\n{_title}"
+        ax.set_title(_title)
         cbar.ax.set_ylabel(parameter.title(), rotation=270, labelpad=15)
 
         if save:
