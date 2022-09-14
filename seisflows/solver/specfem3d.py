@@ -195,7 +195,7 @@ class Specfem3D(Specfem):
                              "proc??????_absorb_field.bin"]:
                 logger.debug(f"removing '{glob_key}' files from database "
                              f"directory")
-                unix.rm(glob(os.path.join(self.model_databases, glob_key))
+                unix.rm(glob(os.path.join(self.model_databases, glob_key)
 
     def combine_vol_data_vtk(self, input_path, output_path, hi_res=False,
                              parameters=None):
