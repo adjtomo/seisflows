@@ -549,7 +549,6 @@ class Specfem:
             for par in self._parameters:
                 unix.mv(src=glob(f"*{par}_kernel{self._ext}"), dst=save_kernels)
 
-
     def combine(self, input_path, output_path, parameters=None):
         """
         Wrapper for 'xcombine_sem'.
@@ -656,7 +655,7 @@ class Specfem:
         files = glob(os.path.join(output_path, "*"))
         unix.rename(old="_smooth", new="", names=files)
 
-    def _run_binary(self, executable, stdout="solver.log"):
+    def _run_binary(self, executable, stdout="solver.log", with_mpi=True):
         """
         Calls MPI solver executable to run solver binaries, used by individual
         processes to run the solver on system. If the external solver returns a
@@ -677,6 +676,10 @@ class Specfem:
             'xcombine_sem alpha_kernel kernel_paths...'
         :type stdout: str
         :param stdout: where to redirect stdout
+        :type with_mpi: bool
+        :param with_mpi: If `mpiexec` is given, use MPI to run the executable.
+            Some executables (e.g., combine_vol_data_vtk) must be run in
+            serial so this flag allows them to turn off MPI running.
         :raises SystemExit: If external numerical solver return any failure
             code while running
         """
@@ -689,7 +692,7 @@ class Specfem:
 
         # Prepend with `mpiexec` if we are running with MPI
         # looks something like: `mpirun -n 4 ./bin/xspecfem2d`
-        if self._mpiexec:
+        if self._mpiexec and with_mpi:
             executable = f"{self._mpiexec} -n {self.nproc} {executable}"
         logger.debug(f"running executable with cmd: '{executable}'")
 
@@ -787,7 +790,6 @@ class Specfem:
                                "traces/adj", self.model_databases,
                                self.kernel_databases}
 
-        import pdb;pdb.set_trace()
         # Allow this function to be called on system or in serial
         if cwd is None:
             cwd = self.cwd
