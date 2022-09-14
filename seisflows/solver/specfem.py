@@ -787,6 +787,7 @@ class Specfem:
                                "traces/adj", self.model_databases,
                                self.kernel_databases}
 
+        import pdb;pdb.set_trace()
         # Allow this function to be called on system or in serial
         if cwd is None:
             cwd = self.cwd

@@ -47,6 +47,8 @@ class Specfem3D(Specfem):
                                    "xgenerate_databases", "xcombine_sem",
                                    "xsmooth_sem"]
 
+        self._model_databases = None
+
     def data_wildcard(self, comp="?"):
         """
         Returns a wildcard identifier for synthetic data
@@ -65,11 +67,14 @@ class Specfem3D(Specfem):
     def model_databases(self):
         """
         The location of databases for model outputs, usually
-        OUTPUT_FILES/DATABASES_MPI. Value is grabbed from the Par_file
+        OUTPUT_FILES/DATABASES_MPI. This can be determined by 'LOCAL_PATH'
+        in your Par_file
         """
-        local_path = getpar(key="LOCAL_PATH",
-                            file=os.path.join(self.cwd, "DATA", "Par_file"))[1]
-        return local_path
+        if self._model_databases is None:
+            self._model_databases = getpar(
+                key="LOCAL_PATH", file=os.path.join(self.path.specfem_data,
+                                                    "Par_file"))[1]
+        return self._model_databases
 
     @property
     def kernel_databases(self):
@@ -80,7 +85,7 @@ class Specfem3D(Specfem):
         return self.model_databases
 
     def forward_simulation(self, executables=None, save_traces=False,
-                           export_traces=False):
+                           export_traces=False, **kwargs):
         """
         Calls SPECFEM3D forward solver, exports solver outputs to traces dir
 
