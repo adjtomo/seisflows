@@ -200,7 +200,10 @@ class Specfem:
             )
 
         # Make sure source files exist and are appropriately labeled
-        assert(self.source_prefix in self._acceptable_source_prefixes)
+        assert(self.source_prefix in self._acceptable_source_prefixes), (
+            f"SPECFEM `source_prefix` must be in "
+            f"{self._acceptable_source_prefixes}"
+            )
         assert(glob(os.path.join(self.path.specfem_data,
                                  f"{self.source_prefix}*"))), (
             f"No source files with prefix {self.source_prefix} found in DATA/")
@@ -209,8 +212,10 @@ class Specfem:
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
                                               "Par_file"))[1]
-        assert(model_type in self._available_model_types), \
-            f"{model_type} not in available types {self._available_model_types}"
+        assert(model_type in self._available_model_types), (
+            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
+            f"match acceptable model types: {self._available_model_types}"
+            )
 
         # Assign file extensions to be used for database file searching
         if model_type == "gll":
