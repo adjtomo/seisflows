@@ -90,8 +90,8 @@ class Specfem:
     def __init__(self, data_format="ascii",  materials="acoustic",
                  density=False, nproc=1, ntask=1, attenuation=False,
                  smooth_h=0., smooth_v=0., components="ZNE",
-                 solver_io="fortran_binary", source_prefix=None, mpiexec=None,
-                 workdir=os.getcwd(), path_solver=None, path_eval_grad=None,
+                 source_prefix=None, mpiexec=None, workdir=os.getcwd(),
+                 path_solver=None, path_eval_grad=None,
                  path_data=None, path_specfem_bin=None, path_specfem_data=None,
                  path_model_init=None, path_model_true=None, path_output=None,
                  **kwargs):

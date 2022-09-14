@@ -22,6 +22,10 @@ class Specfem3D(Specfem):
     :type source_prefix: str
     :param source_prefix: Prefix of source files in path SPECFEM_DATA. Must be
         in ['CMTSOLUTION', 'FORCESOLUTION']. Defaults to 'CMTSOLUTION'
+    :type export_vtk: bool
+    :param export_vtk: anytime a model, kernel or gradient is considered,
+        generate a VTK file and store it in the scratch/ directory for the User
+        to visualize at their leisure.
     :type prune_scratch: bool
     :param prune_scratch: prune/remove database files as soon as they are used,
         to keep overall filesystem burden down
@@ -35,13 +39,14 @@ class Specfem3D(Specfem):
     """
     __doc__ = Specfem.__doc__ + __doc__
 
-    def __init__(self, source_prefix="CMTSOLUTION", prune_scratch=True,
-                 **kwargs):
+    def __init__(self, source_prefix="CMTSOLUTION", export_vtk=True,
+                 prune_scratch=True, **kwargs):
         """Instantiate a Specfem3D_Cartesian solver interface"""
 
         super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.prune_scratch = prune_scratch
+        self.export_vtk = export_vtk
 
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
@@ -53,9 +58,20 @@ class Specfem3D(Specfem):
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D",
                                    "xgenerate_databases", "xcombine_sem",
-                                   "xsmooth_sem"]
+                                   "xsmooth_sem", "xcombine_vol_data_vtk"]
 
         self._model_databases = None
+        self.path._vtk_files = os.path.join(self.path.scratch, "vtk_files")
+
+    def setup(self):
+        """
+        Generate .vtk files for the initial and target (if applicable) models,
+        which the User can use for external visualization
+        """
+        super().setup()
+
+        # Work-in-progress
+        # self.combine_vol_data_vtk()
 
     def data_wildcard(self, comp="?"):
         """
@@ -137,8 +153,7 @@ class Specfem3D(Specfem):
 
         if self.prune_scratch:
             logger.debug("removing '*.vt?' files from database directory")
-            unix.rm(glob(os.path.join(self.model_databases,
-                                      "proc??????_*.vt?")))
+            unix.rm(glob(os.path.join(self.model_databases, "proc*_*.vt?")))
 
     def adjoint_simulation(self, executables=None, save_kernels=False,
                            export_kernels=False):
@@ -180,9 +195,7 @@ class Specfem3D(Specfem):
                              "proc??????_absorb_field.bin"]:
                 logger.debug(f"removing '{glob_key}' files from database "
                              f"directory")
-                unix.rm(glob(os.path.join(self.model_databases,
-                                          "proc??????_*.vt?"))
-                        )
+                unix.rm(glob(os.path.join(self.model_databases, glob_key))
 
     def combine_vol_data_vtk(self, input_path, output_path, hi_res=False,
                              parameters=None):
