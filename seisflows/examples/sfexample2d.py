@@ -214,8 +214,6 @@ class SFExample2D:
         :type ex: The name of the example problem inside SPECFEM2D/EXAMPLES
         """
         if specfem2d_repo is None or not os.path.exists(specfem2d_repo):
-            print(f"No existing SPECFEM2D repo given, default to: "
-                  f"{cwd}/specfem2d")
             specfem2d_repo = os.path.join(cwd, "specfem2d")
 
         # This defines required structures from the SPECFEM2D repository
