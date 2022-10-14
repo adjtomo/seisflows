@@ -11,7 +11,7 @@ from seisflows import logger
 from seisflows.tools.config import Dict
 from seisflows.tools import unix, msg
 from seisflows.tools.math import poissons_ratio
-from seisflows.tools.graphics import plot_2d_contour
+from seisflows.tools.graphics import plot_2d_image
 
 
 class Model:
@@ -406,8 +406,7 @@ class Model:
 
     def plot2d(self, parameter, cmap=None, show=True, title="", save=None):
         """
-        Plot internal model parameters as a 2D contour plot. Kwargs are passed
-        to underlying matplotlib.pylpot.tricontourf function.
+        Plot internal model parameters as a 2D image plot.
 
         .. warning::
             This is only available for SPECFEM2D models. SPECFEM3D model
@@ -452,8 +451,8 @@ class Model:
             z = np.append(z, self.coordinates["z"][iproc])
         data = self.merge(parameter=parameter)
 
-        f, p, cbar = plot_2d_contour(x=x, z=z, data=data, cmap=cmap,
-                                     zero_midpoint=zero_midpoint)
+        f, p, cbar = plot_2d_image(x=x, z=z, data=data, cmap=cmap,
+                                   zero_midpoint=zero_midpoint)
 
         # Set some figure labels based on information we know here
         ax = plt.gca()
