@@ -83,6 +83,9 @@ class Model:
             # .sorted() enforces parameter order every time, otherwise things
             # can get screwy if keys returns different each time
             self._parameters = sorted(self.model.keys())
+        else:
+            logger.warning("no/invalid `path` given, initializing empty Model")
+
 
     @staticmethod
     def fnfmt(i="*", val="*", ext="*"):

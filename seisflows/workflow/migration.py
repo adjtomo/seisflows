@@ -18,7 +18,9 @@ model
     is a change of variables; For more info, see Modrak & Tromp 2016 GJI
 """
 import os
-
+import sys
+import shutil
+from glob import glob
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.model import Model
@@ -160,6 +162,13 @@ class Migration(Forward):
                                              "misfit_kernel")
                 )
 
+        # Make sure were in a clean scratch eval_grad directory
+        tags = ["misfit_kernel", "mk_nosmooth"]
+        for tag in tags:
+            scratch_path = os.path.join(self.path.eval_grad, tag)
+            if os.path.exists(scratch_path):
+                shutil.rmtree(scratch_path)
+
         logger.info(msg.mnr("GENERATING/PROCESSING MISFIT KERNEL"))
         self.system.run([combine_event_kernels, smooth_misfit_kernel],
                         single=True)
@@ -171,8 +180,19 @@ class Migration(Forward):
         an optional mask function to the gradient.
         """
         logger.info("scaling gradient to absolute model perturbations")
-        gradient = Model(path=os.path.join(self.path.eval_grad,
-                                           "misfit_kernel"))
+
+        # Check that kernel files exist before attempting to manipulate
+        misfit_kernel_path = os.path.join(self.path.eval_grad, "misfit_kernel")
+        if not glob(os.path.join(misfit_kernel_path, "*")):
+            logger.critical(msg.cli(
+                "directory 'scratch/eval_grad/misfit_kernel' is empty but "
+                "should contain summed kernels. Please check "
+                "'scratch/solver/mainsolver' log files to see if the "
+                "`xcombine` and `xsmooth` operations completed successfully", 
+                header="missing kernels error", border="=")
+                )
+            sys.exit(-1)
+        gradient = Model(path=misfit_kernel_path)
 
         # Set model: we only need to access parameters which will be updated
         # Assuming that the model in the solver also generated the kernels
