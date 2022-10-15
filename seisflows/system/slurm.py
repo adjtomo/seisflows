@@ -187,7 +187,7 @@ class Slurm(Cluster):
             the job id is an integer value (which it must be)
         :raises SystemExit: if the job id does not evaluate as an integer
         """
-        job_id = str(stdout).split(";")[0]
+        job_id = str(stdout).split(";")[0].strip()
         try:
             int(job_id)
         except ValueError:
@@ -271,6 +271,9 @@ class Slurm(Cluster):
             sys.exit(-1)
         else:
             logger.info(f"task {job_id} finished successfully")
+            # Wait for all processes to finish and write to disk (if they do)
+            # Moving on too quickly may result in required files not being avail
+            time.sleep(10)
 
 
 def check_job_status_array(job_id):
@@ -386,9 +389,7 @@ def query_job_states(job_id, _recheck=0):
         query_job_states(job_id, _recheck)
 
     # Return the job numbers and respective states for the given job ID
-    logger.debug(stdout)
     for job_line in str(stdout).strip().split("\n"):
-        logger.debug(f"job_line: {job_line}")
         if not job_line:
             continue
         job_id, job_state = job_line.split()
