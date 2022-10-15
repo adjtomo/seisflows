@@ -298,9 +298,13 @@ def check_job_status_array(job_id):
     """
     logger.info(f"monitoring job status for submitted job: {job_id}")
     while True:
-        time.sleep(5)  # give job time to process and also prevent over-query
+        time.sleep(10)  # give job time to process and also prevent over-query
         job_ids, states = query_job_states(job_id)
+        # Sometimes query_job_state() does not return, so we wait again
+        if not job_ids or not states:
+            continue
         if all([state == "COMPLETED" for state in states]):
+            logger.debug("all array jobs returned a 'COMPLETED' state")
             return 1  # Pass
         elif any([check in states for check in BAD_STATES]):  # Any bad states?
             logger.info("atleast 1 system job returned a failing exit code")
@@ -326,15 +330,17 @@ def check_job_status_list(job_ids):
     :raises FileNotFoundError: if 'sacct' does not return any output for ~1 min.
     """                                                                          
     logger.info(f"monitoring job status for {len(job_ids)} submitted jobs")      
-    logger.debug(job_ids)                                                        
                                                                                  
     while True:                                                                  
-        time.sleep(5)                                                            
-        job_id_list, states = [], []                                             
+        time.sleep(10)                                                            
+        job_id_list, states = [], []
         for job_id in job_ids:                                                   
             _job_ids, _states = query_job_states(job_id)                         
             job_id_list += _job_ids                                              
             states += _states                                                    
+        # Sometimes query_job_state() does not return, so we wait again
+        if not states or not job_id_list:
+            continue
         if all([state == "COMPLETED" for state in states]):                      
             return 1  # Pass                                                     
         elif any([check in states for check in BAD_STATES]):  # Any bad states?  
@@ -378,14 +384,14 @@ def query_job_states(job_id, _recheck=0):
     cmd = f"sacct -nLX -o jobid,state -j {job_id}"
     stdout = subprocess.run(cmd, stdout=subprocess.PIPE,
                             text=True, shell=True).stdout
-
+    
     # Recursively re-check job state incase the job has not been instantiated 
     # in which cause 'stdout' is an empty string
     if not stdout:
         _recheck += 1
         if _recheck > 10:
-            raise FileNotFoundError
-        time.sleep(5)
+            raise FileNotFoundError(f"Cannot access job ID {job_id}")
+        time.sleep(10)
         query_job_states(job_id, _recheck)
 
     # Return the job numbers and respective states for the given job ID

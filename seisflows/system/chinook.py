@@ -51,6 +51,11 @@ class Chinook(Slurm):
         system's required parameters, such as account names and partitions.
         Submit calls are modified and called by the `submit` function.
 
+        .. note::
+            Force the partition to run on 'Debug' since we are only running a 
+            single core job. This may run into walltime problems but for now
+            it seems more economincal to enforce this
+
         :rtype: str
         :return: the system-dependent portion of a submit call
         """
@@ -60,7 +65,8 @@ class Chinook(Slurm):
             f"--output={self.path.output_log}",
             f"--error={self.path.output_log}",
             f"--ntasks=1",
-            f"--partition={self.partition}",
+            f"--partition=debug",
+            # f"--partition={self.partition}",
             f"--time={self._walltime}"
         ])
         return _call
