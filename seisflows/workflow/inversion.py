@@ -25,7 +25,7 @@ import numpy as np
 from seisflows import logger
 from seisflows.workflow.migration import Migration
 from seisflows.tools import msg, unix
-from seisflows.tools.specfem import Model
+from seisflows.tools.model import Model
 
 
 class Inversion(Migration):

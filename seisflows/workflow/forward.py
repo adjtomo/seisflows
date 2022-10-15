@@ -11,7 +11,7 @@ from time import asctime
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.config import Dict
-from seisflows.tools.specfem import Model
+from seisflows.tools.model import Model
 
 
 class Forward:

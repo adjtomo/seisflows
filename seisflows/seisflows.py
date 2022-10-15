@@ -12,23 +12,19 @@ facilitates interface with the underlying SeisFlows package.
     - Write a new function within the SeisFlows class
     - Add a new subparser with optional arguments to sfparser()
     - Add subparser to subparser dict at the end of sfparser()
+    In-function import statements are used to reduce call-time for simpler fx's
 """
 import os
 import sys
-# import warnings
 import argparse
-# import traceback
-# from glob import glob
-# from IPython import embed
-# from obspy import Stream, read
+from glob import glob
 from inspect import getmro
-# 
-# from seisflows import logger, ROOT_DIR, NAMES
-# from seisflows.preprocess.default import Default
-# from seisflows.tools import unix, msg
-# from seisflows.tools.config import load_yaml, custom_import, import_seisflows
-# from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
-#                                      setpar_vel_model, Model)
+from seisflows import logger, ROOT_DIR, NAMES
+from seisflows.tools import unix, msg
+from seisflows.tools.config import load_yaml, custom_import, import_seisflows
+from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
+                                     setpar_vel_model)
+
 
 
 def sfparser():
@@ -521,6 +517,8 @@ class SeisFlows:
             else if False, use path names relative to the working directory.
             Defaults to False, uses relative paths.
         """
+        from traceback import format_exc
+
         print("configuring SeisFlows parameter file")
 
         def split_module_docstring(mod, idx):
@@ -600,7 +598,7 @@ class SeisFlows:
             logger.critical(
                 msg.cli(text="seisflows configure traceback", header="error")
             )
-            print(traceback.format_exc())
+            print(format_exc())
             raise
         else:
             unix.rm(temp_par_file)
@@ -712,6 +710,7 @@ class SeisFlows:
         :param force: ignore the warning check that precedes the clean()
             function, useful if you don't want any input messages popping up
         """
+
         # Check if the filepaths exist
         if not os.path.exists(self._args.parameter_file):
             print(msg.cli(f"SeisFlows parameter file not found: "
@@ -750,6 +749,8 @@ class SeisFlows:
         interactive environment allowing exploration of the package space.
         Does not allow stepping through of code (not a breakpoint).
         """
+        from IPython import embed
+
         workflow = import_seisflows(workdir=self._args.workdir,
                                     parameter_file=self._args.parameter_file)
 
@@ -822,8 +823,6 @@ class SeisFlows:
         :param skip_print: skip the print statement which is typically sent
             to stdout after changing parameters.
         """
-        from seisflows.tools.specfem import getpar, setpar, getpar_vel_model
-
         if not os.path.exists(par_file):
             sys.exit(f"\n\tparameter file '{par_file}' does not exist\n")
         if parameter is None:
@@ -897,7 +896,7 @@ class SeisFlows:
         :param skip_print: skip the print statement which is typically sent
             to stdout after changing parameters.
         """
-        from seisflows.tools.specfem import getpar
+        from warnings import warn
 
         if not os.path.exists(self._args.parameter_file):
             sys.exit(f"\n\tparameter file '{self._args.parameter_file}' "
@@ -910,8 +909,7 @@ class SeisFlows:
         # SeisFlows parameter file dictates upper-case parameters
         parameter = parameter.upper()
         if isinstance(value, str) and value.lower() == "none":
-            warnings.warn("to set values to NoneType, use 'null' not 'none'",
-                          UserWarning)
+            warn("to set values NoneType, use 'null' not 'none'", UserWarning)
 
         # Use the specfem tool to grab related information
         try:
@@ -1055,6 +1053,9 @@ class SeisFlows:
         :param savefig: full path and filename to save the output figure. If
             NoneType, will not save the figure
         """
+        from obspy import Stream
+        from seisflows.preprocess.default import Default
+
         # Take advantage of the Default Preprocessing module's read() function
         plotter = Default(data_format=data_format)
         assert(data_format.upper() in plotter._acceptable_data_formats), \
@@ -1082,6 +1083,8 @@ class SeisFlows:
         :param savefig: optional name and path of filename to save figure
             to disk
         """
+        from seisflows.tools.model import Model
+
         # Figure out which models/gradients/kernels we can actually plot
         _, output_dir, _ = getpar(key="path_output",
                                   file=self._args.parameter_file,

@@ -7,7 +7,7 @@ import pytest
 import numpy as np
 import matplotlib.pyplot as plt
 from seisflows.tools.config import Dict
-from seisflows.tools.specfem import Model
+from seisflows.tools.model import Model
 from seisflows.tools.math import angle
 from seisflows.optimize.gradient import Gradient
 from seisflows.optimize.LBFGS import LBFGS

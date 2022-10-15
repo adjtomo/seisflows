@@ -7,7 +7,7 @@ import numpy as np
 from glob import glob
 from seisflows import ROOT_DIR
 from seisflows.tools.config import Dict
-from seisflows.tools.specfem import Model
+from seisflows.tools.model import Model
 from seisflows.tools.config import custom_import
 
 
