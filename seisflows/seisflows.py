@@ -15,20 +15,20 @@ facilitates interface with the underlying SeisFlows package.
 """
 import os
 import sys
-import inspect
-import warnings
+# import warnings
 import argparse
-import traceback
-from glob import glob
-from IPython import embed
-from obspy import Stream, read
-
-from seisflows import logger, ROOT_DIR, NAMES
-from seisflows.preprocess.default import Default
-from seisflows.tools import unix, msg
-from seisflows.tools.config import load_yaml, custom_import, import_seisflows
-from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
-                                     setpar_vel_model, Model)
+# import traceback
+# from glob import glob
+# from IPython import embed
+# from obspy import Stream, read
+from inspect import getmro
+# 
+# from seisflows import logger, ROOT_DIR, NAMES
+# from seisflows.preprocess.default import Default
+# from seisflows.tools import unix, msg
+# from seisflows.tools.config import load_yaml, custom_import, import_seisflows
+# from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
+#                                      setpar_vel_model, Model)
 
 
 def sfparser():
@@ -353,7 +353,7 @@ working state before the workflow can be resumed
                           )
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
-    subparser_dict = {"check": check, "par": par, "inspect": inspect,
+    subparser_dict = {"check": check, "par": par,
                       "sempar": sempar, "clean": clean, "plot2d": plot2d,
                       "restart": restart, "print": print_, "reset": reset,
                       "examples": examples, "swap": swap}
@@ -822,6 +822,8 @@ class SeisFlows:
         :param skip_print: skip the print statement which is typically sent
             to stdout after changing parameters.
         """
+        from seisflows.tools.specfem import getpar, setpar, getpar_vel_model
+
         if not os.path.exists(par_file):
             sys.exit(f"\n\tparameter file '{par_file}' does not exist\n")
         if parameter is None:
@@ -895,6 +897,8 @@ class SeisFlows:
         :param skip_print: skip the print statement which is typically sent
             to stdout after changing parameters.
         """
+        from seisflows.tools.specfem import getpar
+
         if not os.path.exists(self._args.parameter_file):
             sys.exit(f"\n\tparameter file '{self._args.parameter_file}' "
                      f"does not exist\n")
@@ -1192,7 +1196,7 @@ class SeisFlows:
                 continue
             module = custom_import(NAME, parameters[NAME])()
             item_str = f"{NAME.upper():<12}"
-            for i, cls in enumerate(inspect.getmro(type(module))[::-1]):
+            for i, cls in enumerate(getmro(type(module))[::-1]):
                 # The base inheritance is always 'object', skip printing this.
                 if i == 0:
                     continue

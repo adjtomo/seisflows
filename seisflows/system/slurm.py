@@ -386,7 +386,11 @@ def query_job_states(job_id, _recheck=0):
         query_job_states(job_id, _recheck)
 
     # Return the job numbers and respective states for the given job ID
+    logger.debug(stdout)
     for job_line in str(stdout).strip().split("\n"):
+        logger.debug(f"job_line: {job_line}")
+        if not job_line:
+            continue
         job_id, job_state = job_line.split()
         job_ids.append(job_id)
         job_states.append(job_state)

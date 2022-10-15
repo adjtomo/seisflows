@@ -40,8 +40,8 @@ class Chinook(Slurm):
         self.partition = partition
 
         self._partitions = {"debug": 24, "t1small": 28, "t2small": 28,
-                           "t1standard": 40, "t2standard": 40, "analysis": 28
-                           }
+                            "t1standard": 40, "t2standard": 40, "analysis": 28
+                            }
 
     @property
     def submit_call_header(self):
@@ -81,6 +81,7 @@ class Chinook(Slurm):
             f"{self.slurm_args or ''}",
             f"--job-name={self.title}",
             f"--ntasks={self.nproc:d}",
+            f"--partition={self.partition}",
             f"--tasks-per-node={self.node_size}",
             f"--time={self._tasktime}",
             f"--output={os.path.join(self.path.log_files, '%A_%a')}",
