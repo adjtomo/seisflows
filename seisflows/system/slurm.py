@@ -273,7 +273,7 @@ class Slurm(Cluster):
             logger.info(f"task {job_id} finished successfully")
             # Wait for all processes to finish and write to disk (if they do)
             # Moving on too quickly may result in required files not being avail
-            time.sleep(10)
+            time.sleep(5)
 
 
 def check_job_status_array(job_id):
@@ -298,7 +298,7 @@ def check_job_status_array(job_id):
     """
     logger.info(f"monitoring job status for submitted job: {job_id}")
     while True:
-        time.sleep(10)  # give job time to process and also prevent over-query
+        time.sleep(5)  # give job time to process and also prevent over-query
         job_ids, states = query_job_states(job_id)
         # Sometimes query_job_state() does not return, so we wait again
         if not job_ids or not states:
