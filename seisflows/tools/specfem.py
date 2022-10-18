@@ -3,81 +3,55 @@ Utilities to interact with, manipulate or call on the external solver,
 i.e., SPECFEM2D/3D/3D_GLOBE
 """
 import os
-import sys
 import numpy as np
-import subprocess
-
-from collections import defaultdict
+from glob import glob
+from seisflows import logger
 from seisflows.tools import msg
-from seisflows.tools.math import poissons_ratio
-from seisflows.tools.wrappers import iterable
 
 
-class Minmax(defaultdict):
+def check_source_names(path_specfem_data, source_prefix, ntask=None):
     """
-    Keeps track of min, max values of model or kernel
+    Determines names of sources by applying wildcard rule to user-supplied
+    input files. Source names are only provided up to PAR.NTASK and are
+    returned in alphabetical order.
+
+    .. note::
+        SeisFlows expects sources to be stored in the DATA/ directory with a
+        prefix and a source name, e.g., {source_prefix}_{source_name} which
+        would evaluate to something like CMTSOLUTION_001
+
+    :type path_specfem_data: str
+    :param path_specfem_data: path to a
+    :type source_prefix: str
+    :param source_prefix: type of SPECFEM input source, e.g., CMTSOLUTION
+    :type ntask: int
+    :parma ntask: if provided, curtails the list of sources up to `ntask`. If
+        None, returns all files found matching the wildcard
+    :rtype: list
+    :return: alphabetically ordered list of source names up to PAR.NTASK
     """
-    def __init__(self):
-        super(Minmax, self).__init__(lambda: [+np.inf, -np.inf])
-
-    def update(self, keys, vals):
-        for key, val in _zip(keys, vals):
-            if min(val) < self.dict[key][0]:
-                self.dict[key][0] = min(val)
-            if max(val) > self.dict[key][1]:
-                self.dict[key][1] = max(val)
-
-    def __call__(self, key):
-        return self.dict[key]
-
-
-class Container(defaultdict):
-    """
-    Dictionary-like object for holding models or kernels
-    """
-    def __init__(self):
-        super(Container, self).__init__(lambda: [])
-        self.minmax = Minmax()
-
-
-def call_solver(mpiexec, executable, output="solver.log"):
-    """
-    Calls MPI solver executable to run solver binaries, used by individual
-    processes to run the solver on system. If the external solver returns a 
-    non-zero exit code (failure), this function will return a negative boolean.
-
-    :type mpiexec: str
-    :param mpiexec: call to mpi. If None (e.g., serial run, defaults to ./)
-    :type executable: str
-    :param executable: executable function to call
-    :type output: str
-    :param output: where to redirect stdout
-    """
-    # mpiexec is None when running in serial mode, so e.g., ./xmeshfem2D
-    if mpiexec is None:
-        exc_cmd = f"./{executable}"
-    # Otherwise mpiexec is system dependent (e.g., srun, mpirun)
-    else:
-        exc_cmd = f"{mpiexec} {executable}"
-
-    try:
-        # Write solver stdout (log files) to text file
-        f = open(output, "w")
-        subprocess.run(exc_cmd, shell=True, check=True, stdout=f)
-    except (subprocess.CalledProcessError, OSError) as e:
-        print(msg.cli("The external numerical solver has returned a nonzero "
-                      "exit code (failure). Consider stopping any currently "
-                      "running jobs to avoid wasted computational resources. "
-                      f"Check 'scratch/solver/mainsolver/{output}' for the "
-                      f"solvers stdout log message. "
-                      f"The failing command and error message are: ",
-                      items=[f"exc: {exc_cmd}", f"err: {e}"],
-                      header="external solver error",
-                      border="=")
+    wildcard = f"{source_prefix}_*"
+    fids = sorted(glob(os.path.join(path_specfem_data, wildcard)))
+    if not fids:
+        logger.warning(
+            msg.cli("No matching source files when searching PATH for the "
+                    "given WILDCARD",
+                    items=[f"PATH: {path_specfem_data}",
+                           f"WILDCARD: {wildcard}"],
+                    header="error")
               )
-        sys.exit(-1)
-    finally:
-        f.close()
+        return
+    if ntask is not None:
+        assert(len(fids) >= ntask), (
+            f"Number of requested tasks/events {ntask} exceeds number "
+            f"of available sources {len(fids)}"
+        )
+        fids = fids[:ntask]
+
+    # Create internal definition of sources names by stripping prefixes
+    names = [os.path.basename(fid).split("_")[-1] for fid in fids]
+
+    return names
 
 
 def getpar(key, file, delim="=", match_partial=False):
@@ -169,9 +143,13 @@ def setpar(key, val, file, delim="=", match_partial=False):
 
     lines = open(file, "r").readlines()
 
-    # Replace value in place
+    # Replace value in place. We only want to replace the 'LAST' occurrence
+    # otherwise we risk replacing the actual key (e.g., 'data_case' == 'data')
+    # will replace 'data' twice with a normal .replace()
     if val_out != "":
-        lines[i] = lines[i].replace(val_out, str(val))
+        line_reverse = lines[i][::-1].replace(val_out[::-1], str(val)[::-1], 1)
+        lines[i] = line_reverse[::-1]
+        # lines[i] = lines[i].replace(val_out, str(val))
     else:
         # Special case where the initial parameter is empty so we just replace
         # the newline formatter at the end
@@ -269,67 +247,57 @@ def setpar_vel_model(file, model):
     setpar(key="nbmodels", val=len(model), file=file)
 
 
-def check_poissons_ratio(vp, vs, min_val=-1., max_val=0.5):
+def read_fortran_binary(filename):
     """
-    Check Poisson's ratio based on Vp and Vs model vectors. Exit SeisFlows if
-    Poisson's ratio is outside `min_val` or `max_val` which by default are
-    set internally by SPECFEM. Otherwise return the value
+    Reads Fortran-style unformatted binary data into numpy array.
 
-    :type vp: np.array
-    :param vp: P-wave velocity model vector
-    :type vs: np.array
-    :param vp: S-wave velocity model vector
-    :type min_val: float
-    :param min_val: minimum model-wide acceptable value for poissons ratio
-    :type max_val: float
-    :param max_val: maximum model-wide acceptable value for poissons ratio
-    :return:
+    .. note::
+        The FORTRAN runtime system embeds the record boundaries in the data by
+        inserting an INTEGER*4 byte count at the beginning and end of each
+        unformatted sequential record during an unformatted sequential WRITE.
+        see: https://docs.oracle.com/cd/E19957-01/805-4939/6j4m0vnc4/index.html
+
+    :type filename: str
+    :param filename: full path to the Fortran unformatted binary file to read
+    :rtype: np.array
+    :return: numpy array with data with data read in as type Float32
     """
-    poissons = poissons_ratio(vp=vp, vs=vs)
-    pmin = poissons.min()
-    pmax = poissons.max()
-    if (pmin < min_val) or (pmax > max_val):
-        print(msg.cli(f"The Poisson's ratio of the given model is out of "
-                      f"bounds with respect to the defined range "
-                      f"({min_val}, {max_val}). "
-                      f"The model bounds were found to be:",
-                      items=[f"{pmin:.2f} < PR < {pmax:.2f}"], border="=",
-                      header="Poisson's Ratio Error")
-              )
-        sys.exit(-1)
-    return poissons
+    nbytes = os.path.getsize(filename)
+    with open(filename, "rb") as file:
+        # read size of record
+        file.seek(0)
+        n = np.fromfile(file, dtype="int32", count=1)[0]
+
+        if n == nbytes - 8:
+            file.seek(4)
+            data = np.fromfile(file, dtype="float32")
+            return data[:-1]
+        else:
+            file.seek(0)
+            data = np.fromfile(file, dtype="float32")
+            return data
 
 
-def _split(string, sep):
+def write_fortran_binary(arr, filename):
     """
-    Utility function to split a string by a given separation character or str
+    Writes Fortran style binary files. Data are written as single precision
+    floating point numbers.
 
-    :type string: str
-    :param string: string to split
-    :type sep: str
-    :param sep: substring to split by
+    .. note::
+        FORTRAN unformatted binaries are bounded by an INT*4 byte count. This
+        function mimics that behavior by tacking on the boundary data.
+        https://docs.oracle.com/cd/E19957-01/805-4939/6j4m0vnc4/index.html
+
+    :type arr: np.array
+    :param arr: data array to write as Fortran binary
+    :type filename: str
+    :param filename: full path to file that should be written in format
+        unformatted Fortran binary
     """
-    n = string.find(sep)
-    if n >= 0:
-        return string[:n], string[n + len(sep):]
-    else:
-        return string, ''
+    buffer = np.array([4 * len(arr)], dtype="int32")
+    data = np.array(arr, dtype="float32")
 
-
-def _merge(*parts):
-    """
-    Utility function to merge various strings together with no breaks
-    """
-    return ' '.join(parts)
-
-
-def _zip(keys, vals):
-    """
-    Zip together keys and vals
-
-    :type keys: dict_keys
-    :param keys: keys
-    :type vals: dict_values
-    :param vals: values
-    """
-    return zip(iterable(keys), iterable(vals))
+    with open(filename, "wb") as file:
+        buffer.tofile(file)
+        data.tofile(file)
+        buffer.tofile(file)

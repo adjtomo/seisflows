@@ -4,7 +4,7 @@ SeisFlows
 `Documentation` can be found on Read the Docs: https://seisflows.readthedocs.io (in development)
 
 
-[![SCOPED](https://img.shields.io/endpoint?url=https://runkit.io/wangyinz/scoped/branches/master/Pyatoa)](https://github.com/SeisSCOPED/container/pkgs/container/pyatoa)
+[![SCOPED](https://img.shields.io/endpoint?url=https://runkit.io/wangyinz/scoped/branches/master/adjTomo)](https://github.com/SeisSCOPED/container/pkgs/container/adjtomo)
 [![Documentation Status](https://readthedocs.org/projects/seisflows/badge/?version=latest)](https://seisflows.readthedocs.io/en/latest/?badge=latest)
 ---
 

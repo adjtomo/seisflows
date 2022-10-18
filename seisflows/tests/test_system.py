@@ -1,103 +1,82 @@
 """
-Test suite for the SeisFlows SYSTEM module, which controls interaction with
-various compute systems
+Test the system modules ability to run jobs
 """
 import os
-import sys
-import shutil
 import pytest
 from glob import glob
-from unittest.mock import patch
-from seisflows import config
-from seisflows.seisflows import SeisFlows
+from seisflows.tools import unix
+from seisflows.tools.config import get_task_id
+from seisflows.system.workstation import Workstation
+from seisflows.system.cluster import Cluster
 
 
-TEST_DIR = os.path.join(config.ROOT_DIR, "tests")
-REPO_DIR = os.path.abspath(os.path.join(config.ROOT_DIR, ".."))
-
-
-@pytest.fixture
-def copy_par_file(tmpdir):
+def _test_function_a(tmpdir):
     """
-    Copy the template parameter file into the temporary test directory
-    :rtype: str
-    :return: location of the parameter file
+    A test function that simply prints, used to check run
     """
-    src = os.path.join(TEST_DIR, "test_data", "test_filled_parameters.yaml")
-    dst = os.path.join(tmpdir, "parameters.yaml")
-    shutil.copy(src, dst)
+    test_dir = os.path.join(tmpdir, "test_dir")
+    if not os.path.exists(test_dir):
+        unix.mkdir(test_dir)
 
 
-@pytest.fixture
-def sfinit(tmpdir, copy_par_file):
+def _test_function_b(tmpdir):
     """
-    Re-used function that will initate a SeisFlows working environment in
-    sys modules
-    :return:
+    A test function that simply prints
     """
-    copy_par_file
-    os.chdir(tmpdir)
-    with patch.object(sys, "argv", ["seisflows"]):
-        sf = SeisFlows()
-        sf._register(force=True)
-    config.init_seisflows(check=False)
-
-    return sf
+    idx = get_task_id()
+    test_fid = f"test_file_{idx:0>2}.txt"
+    test_file = os.path.join(tmpdir, "test_dir", test_fid)
+    print(f"making test file {test_file}")
+    open(test_file, "w").close()
 
 
-def test_setup(sfinit):
+def test_workstation_run(tmpdir, ntask=26):
     """
-    Make sure that system.base.setup() creates the desired directory structure
-    and log files.
-
-    :param sfinit:
-    :param modules:
-    :return:
+    Make sure that Workstation run simply calls the functions in question
     """
-    sf = sfinit
-    system = sys.modules["seisflows_system"]
-    PATH = sys.modules["seisflows_paths"]
+    system = Workstation(workdir=tmpdir, path_system=tmpdir, ntask=ntask)
+    system.setup()  # make required dir. structure
+    system.run(funcs=[_test_function_a, _test_function_b], tmpdir=tmpdir)
 
-    # Make empty text files to check that they will be copied into the logs dir
-    for fid in [system.output_log, system.error_log]:
-        open(fid, "w")
+    assert(len(glob(os.path.join(system.path.log_files, "*"))) == ntask)
+    assert(len(glob(os.path.join(tmpdir, "test_dir", "*"))) == ntask)
 
-    for path in [PATH.SCRATCH, PATH.SYSTEM, PATH.OUTPUT]:
-        assert(not os.path.exists(path))
 
-    system.setup()
-    for path in [PATH.SCRATCH, PATH.SYSTEM, PATH.OUTPUT]:
-        assert(os.path.exists(path))
-
-    # Both log files and the parameter file should have been copied
-    assert(len(glob(os.path.join("logs", "*"))) == 3)
-
-def test_checkpoint(sfinit):
+def test_workstation_run_single(tmpdir, ntask=26):
     """
-    Check that output pickle files are created during a checkpoint and that
-    kwargs are saved
+    Make sure that Workstation run simply calls the functions only once
     """
-    sf = sfinit
-    system = sys.modules["seisflows_system"]
-    PATH = sys.modules["seisflows_paths"]
-    classname = "solver"
-    method = "eval_func"
-    system.checkpoint(path=PATH.OUTPUT, classname=classname, method=method,
-                      kwargs={"test": 5}
-                      )
-    assert(os.path.exists(os.path.join(PATH.OUTPUT, "kwargs",
-                                       f"{classname}_{method}.p")))
-    assert(len(glob(os.path.join(PATH.OUTPUT, "*.p"))) == len(config.NAMES))
+    system = Workstation(workdir=tmpdir, path_system=tmpdir, ntask=ntask)
+    system.setup()  # make required dir. structure
+    system.run(funcs=[_test_function_a, _test_function_b], tmpdir=tmpdir,
+               single=True)
+
+    assert(len(glob(os.path.join(system.path.log_files, "*"))) == 1)
+    assert(len(glob(os.path.join(tmpdir, "test_dir", "*"))) == 1)
 
 
-# SYSTEM.WORKSTATION
-def test_run_system_workstation(sfinit):
+def test_cluster_run(tmpdir, ntask=26):
     """
-    Ensure that workstation.run() simply runs a function as we would expect
+    Make sure that Cluster run can pickle the tasks and run them with subprocess
     """
-    sf = sfinit
-    system = sys.modules["seisflows_system"]
-    assert(type(system).__name__ == "Workstation")
-    # We don't care what the function does, just that we can call it
-    system.run(classname="system", method="taskid")
+    system = Cluster(workdir=tmpdir, path_system=tmpdir, ntask=ntask)
+    system.setup()  # make required dir. structure
+    system.run(funcs=[_test_function_a, _test_function_b], tmpdir=tmpdir)
+
+    assert(len(glob(os.path.join(system.path.log_files, "*"))) == ntask)
+    assert(len(glob(os.path.join(tmpdir, "test_dir", "*"))) == ntask)
+
+
+def test_cluster_run_single(tmpdir, ntask=26):
+    """
+    Make sure that Cluster runs single tasks accetpably
+    """
+    system = Cluster(workdir=tmpdir, path_system=tmpdir, ntask=ntask)
+    system.setup()  # make required dir. structure
+    system.run(funcs=[_test_function_a, _test_function_b], tmpdir=tmpdir,
+               single=True)
+
+    assert(len(glob(os.path.join(system.path.log_files, "*"))) == 1)
+    assert(len(glob(os.path.join(tmpdir, "test_dir", "*"))) == 1)
+
 

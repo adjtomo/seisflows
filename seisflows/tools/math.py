@@ -2,8 +2,12 @@
 """
 Mathematical tools for Seisflows
 """
+import sys
 import numpy as np
 from scipy.signal import hilbert as analytic
+
+from seisflows import logger
+from seisflows.tools import msg
 
 
 def angle(x, y):
@@ -148,8 +152,9 @@ def polynomial_fit(x, f):
     p = np.polyfit(x[i-1:i+2], f[i-1:i+2], 2)
 
     if p[0] <= 0:
-        # TODO Figure out why this exit condition is here
-        print(msg.cli("Polynomial line fitting returned a negative p[0] value"))
+        logger.critical(msg.cli("Polynomial line fitting returned a negative "
+                                "p[0] value which signifies a negative misfit "
+                                "and is not allowed."))
         sys.exit(-1)
 
     return -p[1] / (2 * p[0])

@@ -2,8 +2,6 @@
 """
 Tools useful for array manipulation in Seisflows
 """
-import os
-
 import numpy as np
 import scipy.signal as _signal
 import scipy.interpolate as _interp
@@ -84,13 +82,6 @@ def uniquerows(a, sort_array=False, return_index=False):
         return ua, ui
     else:
         return ua
-
-
-def stack(*args):
-    """
-    Column-wise stack arrays
-    """
-    return np.column_stack(args)
 
 
 def gridsmooth(Z, span):
@@ -178,7 +169,7 @@ def mesh2grid(v, mesh):
     x = np.linspace(x.min(), x.max(), nx)
     z = np.linspace(z.min(), z.max(), nz)
     X, Z = np.meshgrid(x, z)
-    grid = stack(X.flatten(), Z.flatten())
+    grid = np.column_stack(X.flatten(), Z.flatten())
 
     # Interpolate to structured grid
     V = _interp.griddata(mesh, v, grid, 'linear')

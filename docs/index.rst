@@ -1,12 +1,10 @@
-.. SeisFlows documentation master file, created by
-   sphinx-quickstart on Mon Oct 26 16:35:00 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 .. image:: images/sf_globe_banner_alpha.png
     :align: center
 
 ------------------
+
+SeisFlows Documentation
+=======================
 
 `SeisFlows <https://github.com/adjtomo/seisflows>`__  is a Python-based
 waveform inversion package used to tackle the problems of full waveform
@@ -23,7 +21,8 @@ optimization problems.
 .. note::
    Major backwards-incompatible changes from the legacy codebase include:
 
-      -  > complete shift to Python3.7 source code, abandoning Python2 support
+      -  > complete shift to Python>=3.7 source code, abandoning Python2 support
+      -  > reworked internal architecture to be more 'Pythonic'
       -  > richer source code emphasizing readability and standards
       -  > a new command line tool for improved package control
       -  > redesigned, dynamically-generated parameter file
@@ -31,7 +30,12 @@ optimization problems.
          `Pyatoa <https://github.com/adjtomo/pyatoa>`__
 
    See the `change log <changelog.html>`__ for point-by-point changes from the
-   original codebase.
+   original codebase. The `Legacy SeisFlows codebase
+   <https://github.com/adjtomo/seisflows/releases/tag/v1.1.0>`__ can still be 
+   accessed along with its `documentation <https://github.com/adjtomo/seisflows/
+   tree/46a9604d8907bc5fbf2ddc11e16914a870e6db77/docs>`__, but is no longer
+   supported by the developers.
+ 
 
 
 .. warning::
@@ -44,48 +48,57 @@ optimization problems.
 Installation
 =================
 
-Successful applications of SeisFlows will typically require direct editing of
-source code. For this reason, SeisFlows should be installed directly via the
-package library using Pip. The ``-e`` flag ensures that SeisFlows is
-installed in development mode, allowing source code changes to be immediately
-acccessible to Python.
+``SeisFlows`` is installed using a combination of Pip and 
+`Conda <https://conda.io/projects/conda/en/latest/index.html>`__. In the
+future we aim to unify this into a single install command.
 
-The `devel` branch houses the most up-to-date codebase. We recommend installing
-SeisFlows within a virtual environment (e.g., Conda) to preserve your root
-environment.
+*Preamble: many packages will require the conda-forge channel.*
+
+.. code:: bash
+    
+   conda config --add channels conda-forge
+
+To install ``SeisFlows`` and it's dependencies, we recommend installing within 
+a Conda environment to not affect your root environment. The `devel` branch 
+houses the most up-to-date codebase.  
 
 .. code:: bash
 
-   $ conda create -n seisflows python=3.7
-   $ conda activate seisflows
-   $ git clone --branch devel https://github.com/adjtomo/seisflows.git
-   $ cd seisflows
-   $ conda install --file requirements.txt
-   $ pip install -e .
+   conda create -n seisflows python=3.10
+   conda activate seisflows
+   git clone --branch devel https://github.com/adjtomo/seisflows.git
+   cd seisflows
+   conda install --file requirements.txt
+   pip install -e .
 
---------------------------------
 
-Requirements
-=============
-
-In most production-scale workflows, SeisFlows must be run on a cluster, or
-high performance computing system. However, serially run example problems
-making use of 2D solvers like SPECFEM2D are available for small problems and
-workflow tutorials.
-
-SeisFlows + Pyatoa
---------------------
-To include the waveform measurement capabilities of Pyatoa, you must install
-separately. See the `Pyatoa documentation
-<https://pyatoa.readthedocs.io/en/latest/>`__ for the most up to date
-install instructions.
+SeisFlows requires the waveform measurement capabilities of 
+`Pyatoa <https://github.com/adjtomo/pyatoa>`__, which currently must be 
+installed manually to the same Conda environment.
 
 .. code:: bash
 
-   $ cd ..
-   $ git clone --branch devel https://github.com/bch0w/pyatoa.git
-   $ cd pyatoa
-   $ pip install .
+   cd ..
+   git clone --branch devel https://github.com/adjtomo/pyatoa.git
+   cd pyatoa
+   conda install --file requirements.txt
+   pip install -e .
+
+
+.. note::
+    Successful applications of SeisFlows will typically require editing the
+    source code. For this reason, SeisFlows is installed using the Pip ``-e`` 
+    which enables development mode, where source code changes are immediately
+    acccessible to Python.
+
+
+.. note::
+    In most production-scale workflows, SeisFlows must be run on high 
+    performance computing systems running external numerical solvers like 
+    SPECFEM3D. The User will need to install and compile these separately. 
+    However, example problems in SeisFlows make use of, and can install, 
+    SPECFEM2D.
+
 
 
 .. toctree::
@@ -112,12 +125,15 @@ install instructions.
    :caption: Examples
 
    specfem2d_example
+   2D_example_walkthrough
 
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: How To
+   :caption: How To's
 
+   example_on_cluster
+   containers
    extending
 
 .. toctree::
@@ -126,6 +142,7 @@ install instructions.
    :caption: Development
 
    background
+   design
    changelog
    code_dev_plan
 

@@ -1,5 +1,5 @@
 Getting started
-=================================
+================
 
 Assuming installation detailed on the `home page <index.html>`__ has
 completed successfully, you can start playing around with SeisFlows.
@@ -18,6 +18,24 @@ Each sub-argument has it's own help message to further explain what it does.
 
 For more information on the SeisFlows command line tool, see the
 `command line tool <command_line_tool.html>`__ docs page.
+
+Running tests
+~~~~~~~~~~~~~
+
+SeisFlows has some unit/integration tests that ensure the capabilities of
+the package are working as intended. Tests should be run before and after any
+edits to the source code are made. To run the tests, from the top level
+`seisflows` directory:
+
+.. parsed-literal::
+
+    cd seisflows
+    cd tests
+    pytest
+
+If developing SeisFlows, please ensure that you run these tests before and after
+any changes are made to ensure that your changes do not break intended package
+functionality.
 
 Running an example problem
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

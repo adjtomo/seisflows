@@ -155,105 +155,44 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
     return output_str
 
 
-def write_par_file_header(f, paths_or_parameters, name="", tabsize=4,
-                          border="=", uline="/"):
-    """
-    Re-usable function to write docstring comments inside the SeisFlows
-    parameter file. Used by seisflows.SeisFlows.configure()
-
-    Headers look something like this
-
-    # ===========================
-    #       MODULE NAME
-    #       ///////////
-    # PAR (type):
-    #     description of par
-    # ===========================
-    PAR: val
-
-    :type f: _io.TextIO
-    :param f: open text file to write to
-    :type paths_or_parameters: dict
-    :param paths_or_parameters: the paths or parameters that should be written
-        to the header
-    :type name: str
-    :param name: the name of the module that is being written, will be used as
-        the header of the docstring
-    :type tabsize: int
-    :param tabsize: how large to expand tab character '\t' as spaces
-    :type border: str
-    :param border: character to use as the header and footer border
-    :type uline: str
-    :param uline: how to underline the header
-    """
-    # Some aesthetically pleasing dividers to separate sections
-    # Length 77 ensure that total line width is no more than 80 characters
-    # including the '#' and spaces
-    top = (f"\n# {border * 77}"
-           f"\n# {name.upper():^77}"
-           f"\n# {uline * len(name):^77}"
-           f"\n"
-           )
-    bot = f"# {border * 77}\n"
-
-    # Write top header, all parameters, types and descriptions, and then footer
-    f.write(top)
-    for key, attrs in paths_or_parameters.items():
-        if "type" in attrs:
-            f.write(f"# {key} ({attrs['type']}):\n")
-        else:
-            f.write(f"# {key}:\n")
-        docstrs = wrap(attrs["docstr"], width=77 - tabsize,
-                       break_long_words=False)
-        for line, docstr in enumerate(docstrs):
-            f.write(f"#\t{docstr}\n".expandtabs(tabsize=tabsize))
-    f.write(bot)
+# Template parameter file used for 'seisflows setup' to initiate a workflow
+base_parameter_file = """
+# //////////////////////////////////////////////////////////////////////////////
+#
+#                        SeisFlows YAML Parameter File
+#
+# //////////////////////////////////////////////////////////////////////////////
+#
+# Modules correspond to the structure of the source code, and determine
+# SeisFlows' behavior at runtime. Each module requires its own sub-parameters.
+#
+# .. rubric::
+#   - Determine available options for modules by running:
+#       > seisflows print modules
+#   - Auto-fill with docstrings and default values (recommended) by running:
+#       > seisflows configure
+#   - Swap out module parameters for a configured parameter file by running:
+#       > seisflows swap {module} {name} (e.g., seisflows swap solver specfem3d)
+#   - To set values as NoneType, use: null
+#   - To set values as infinity, use: inf
+#
+#                                    MODULES
+#                                    ///////
+# workflow (str):    The types and order of functions for running SeisFlows
+# system (str):      Computer architecture of the system being used
+# solver (str):      External numerical solver to use for waveform simulations
+# preprocess (str):  Preprocessing schema for waveform data
+# optimize (str):    Optimization algorithm for the inverse problem
+# ==============================================================================
+workflow: forward
+system: workstation
+solver: specfem2d
+preprocess: default
+optimize: gradient
+"""
 
 
-def write_par_file_paths_pars(f, paths_or_parameters, indent=0, tabsize=4):
-    """
-    Re-usable function to write paths or parameters in yaml format to the
-    SeisFlows parameter file. Used by seisflows.SeisFlows.configure()
-
-    Parameters are written something like:
-
-    PAR1: val1
-    PAR2: val2
-    Par3:
-        - val3a
-        - val3b
-        - val3c
-
-    :type f: _io.TextIO
-    :param f: open text file to write to
-    :type paths_or_parameters: dict
-    :param paths_or_parameters: the paths or parameters that should be written
-        to the header
-    :type indent: int
-    :param indent: level of indentation to match yaml style. passed to
-        str.expandtabs(tabsize=`indent`)
-    :type tabsize: int
-    :param tabsize: how large to expand tab character '\t' as spaces
-    """
-    for key, attrs in paths_or_parameters.items():
-        # Lists need to be treated differently in yaml format
-        if isinstance(attrs["default"], list):
-            if len(attrs["default"]) == 0:
-                f.write(f"{key}: []\n")
-            else:
-                f.write(f"{key}:\n")
-                for val in attrs["default"]:
-                    f.write(f"\t- {val}\n".expandtabs(tabsize=tabsize))
-        else:
-            # Yaml saves NoneType values as 'null' or blank lines
-            if attrs["default"] is None:
-                f.write(f"\t{key}:\n".expandtabs(tabsize=indent))
-            else:
-                f.write(
-                    f"\t{key}: {attrs['default']}\n".expandtabs(tabsize=indent)
-                )
-
-
+# SeisFlows 'Globe' logo in ASCII. Used for CLI print statements
 ascii_logo = """
                                                                                 
                              @@@@@@@@@@@@@@@@@@@@@@@                            
