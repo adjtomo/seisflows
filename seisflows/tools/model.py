@@ -33,7 +33,7 @@ class Model:
                              "vpv", "vph", "vsv", "vsh", "eta"]
     acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
 
-    def __init__(self, path=None, fmt="", parameters=None):
+    def __init__(self, path=None, fmt="", parameters=None, flavor=None):
         """
         Model only needs path to model to determine model parameters. Format
         `fmt` can be provided by the user or guessed based on available file
@@ -50,14 +50,24 @@ class Model:
         :param fmt: expected format of the files (e.g., '.bin'), if None, will
             attempt to guess based on the file extensions found in `path`
             Available formats are: .bin, .dat
+        :type flavor: str
+        :param flavor: optional, tell Model what version of SPECFEM was used
+            to generate the model, acceptable values are ['2D', '3D', '3DGLOBE']
+            If None, will try to guess based on file matching
         """
         self.path = path
         self.fmt = fmt
+        self.flavor = None
         self.model = None
         self.coordinates = None
         self._parameters = parameters
         self._ngll = None
         self._nproc = None
+
+        if self.flavor is not None:
+            acceptable_flavors = ["2D" , "3D", "3DGLOBE"]
+            assert(self.flavor in acceptable_flavors), \
+                f"User-defined `flavor' must be in {acceptable_flavors}"
 
         # Load an existing model if a valid path is given
         if self.path and os.path.exists(path):
@@ -69,16 +79,20 @@ class Model:
                 self._nproc = len(self.model[_first_key])
             # Read a SPECFEM model from its native output files
             else:
+                # Dynamically guess things about the model based on files given
                 if not self.fmt:
                     self.fmt = self._guess_file_format()
+                if not self.flavor:
+                    self.flavor = self._guess_specfem_flavor()
+    
+                # Gather internal representation of the model for manipulation
                 self._nproc, self.available_parameters = \
                     self._get_nproc_parameters()
                 self.model = self.read(parameters=parameters)
+
                 # Coordinates are only useful for SPECFEM2D models
-                try:
+                if self.flavor == "2D":
                     self.coordinates = self.read_coordinates_specfem2d()
-                except AssertionError:
-                    pass
 
             # .sorted() enforces parameter order every time, otherwise things
             # can get screwy if keys returns different each time
@@ -87,8 +101,7 @@ class Model:
             logger.warning("no/invalid `path` given, initializing empty Model")
 
 
-    @staticmethod
-    def fnfmt(i="*", val="*", ext="*"):
+    def fnfmt(self, i="*", val="*", ext="*", reg="?"):
         """
         Expected SPECFEM filename format with some checks to ensure that
         wildcards and numbers are accepted. An example filename is:
@@ -102,15 +115,26 @@ class Model:
         :type ext: str
         :param ext: the file format (e.g., '.bin'). If NOT preceded by a '.'
             will have one prepended
+        :type reg: str
+        :param reg: file format for 'reg'ion used for SPECFEM3D_GLOBE ONLY, 
+            regions are 1, 2 or 3 relating to crust, mantle, core, respectively.
+            Defults to wildcard '?'
         :rtype: str
         :return: filename formatter for use in model manipulation
         """
         if not ext.startswith("."):
             ext = f".{ext}"
-        if isinstance(i, int):
-            filename_format = f"proc{i:0>6}_{val}{ext}"
+        # Unique modifier for SPECFEM3D_GLOBE files
+        if self.flavor == "3DGLOBE":
+            globe = f"_reg{reg}"
         else:
-            filename_format = f"proc{i}_{val}{ext}"
+            globe = ""
+
+        if isinstance(i, int):
+            filename_format = f"proc{i:0>6}{globe}_{val}{ext}"
+        else:
+            filename_format = f"proc{i}{globe}_{val}{ext}"
+
         return filename_format
 
     @property
@@ -208,9 +232,17 @@ class Model:
                    }[self.fmt]
 
         # Create a dictionary object containing all parameters and their models
-        parameter_dict = Dict({key: [] for key in parameters})
-        for parameter in parameters:
-            parameter_dict[parameter] = load_fx(parameter=parameter)
+        if self.flavor in ["2D", "3D"]:
+            parameter_dict = Dict({key: [] for key in parameters})
+            for parameter in parameters:
+                parameter_dict[parameter] = load_fx(parameter=parameter)
+        # SPECFEM3D_GLOBE requires one more nested level for each region
+        elif self.flavor == "3DGLOBE":
+            parameter_dict = Dict({key: {} for key in parameters})
+            for parameter in parameters:
+                for i in [1, 2, 3]:
+                    parameter_dict[parameter][f"reg{i}"] = \
+                            load_fx(parameter=parameter, reg=i)
 
         return parameter_dict
 
@@ -239,6 +271,9 @@ class Model:
             for fid in sorted(fids):
                 coordinates["x"].append(np.loadtxt(fid).T[:, 0])
                 coordinates["z"].append(np.loadtxt(fid).T[:, 0])
+        
+        if not coordinates["x"] or not coordinates["z"]:
+            raise AssertionError("no coordinates found")
 
         # Internal check for parameter validity by checking length of coord
         # against length of model. If they're not the same, then it's not
@@ -271,9 +306,16 @@ class Model:
         else:
             parameters = [parameter]
 
-        for parameter in parameters:
-            for iproc in range(self.nproc):
-                m = np.append(m, self.model[parameter][iproc])
+        if self.flavor in ["2D", "3D"]:
+            for parameter in parameters:
+                for iproc in range(self.nproc):
+                    m = np.append(m, self.model[parameter][iproc])
+        elif self.flavor == "3DGLOBE":
+            for parameter in parameters:
+                for region in ["reg1", "reg2", "reg3"]:
+                    for iproc in range(self.nproc):
+                        print(f"{parameter}{region}{iproc}")
+                        m = np.append(m, self.model[parameter][region][iproc])
 
         return m
 
@@ -490,6 +532,10 @@ class Model:
         fids = [os.path.basename(_) for _ in fids]  # drop full path
         fids = [os.path.splitext(_)[0] for _ in fids]  # drop extension
 
+        # Drop the 'reg?' tag for 3DGLOBE files
+        if self.flavor == "3DGLOBE":
+            fids = ["_".join(_.split("_")[1:]) for _ in fids]
+
         if self.fmt == ".bin":
             avail_par = list(set(["_".join(_.split("_")[1:]) for _ in fids]))
             nproc = len(glob(os.path.join(
@@ -528,7 +574,32 @@ class Model:
         )
         return list(fmt)[0]  # pulling single entry from set
 
-    def _read_model_fortran_binary(self, parameter):
+    def _guess_specfem_flavor(self):
+        """
+        Guess if SPECFEM2D/3D/3D_GLOBE was used to generate the model based
+        on the format of the file. Check based on unique available files or 
+        properties
+
+        :rtype: str
+        :return: SPECFEM flavor, one of ['2D', '3D', '3DGLOBE']
+        """
+        fullpaths = glob(os.path.join(self.path, f"*{self.fmt}"))
+        assert(fullpaths), f"cannot find files for flavor guessing"
+
+        fids = [os.path.basename(_) for _ in fullpaths]
+        unique_tags = set([_.split("_")[1] for _ in fids])
+
+        if "reg1" in unique_tags:
+            flavor = "3DGLOBE"
+        # SPECFEM2D won't have a 'y' model
+        elif "y" in unique_tags:
+            flavor = "3D"
+        else:
+            flavor = "2D"
+
+        return flavor
+
+    def _read_model_fortran_binary(self, parameter, **kwargs):
         """
         Load Fortran binary models into disk. This is the preferred model format
         for SeisFlows <-> SPECFEM interaction
@@ -540,7 +611,7 @@ class Model:
         """
         array = []
         fids = glob(os.path.join(
-            self.path, self.fnfmt(val=parameter, ext=".bin"))
+            self.path, self.fnfmt(val=parameter, ext=".bin", **kwargs))
         )
         for fid in sorted(fids):  # make sure were going in numerical order
             array.append(read_fortran_binary(fid))
