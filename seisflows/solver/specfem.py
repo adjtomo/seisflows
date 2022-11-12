@@ -56,10 +56,14 @@ class Specfem:
     :param smooth_h: Gaussian half-width for horizontal smoothing in units
         of meters. If 0., no smoothing applied. Only applicable for workflows:
         ['migration', 'inversion'], ignored for 'forward' workflow.
+        SPECFEM3D_GLOBE only: if `smooth_type`=='laplacian' then this is just 
+        the X and Y extent of the applied smoothing
     :type smooth_h: float
     :param smooth_v: Gaussian half-width for vertical smoothing in units
         of meters. Only applicable for workflows: ['migration', 'inversion'],
         ignored for 'forward' workflow.
+        SPECFEM3D_GLOBE only: if `smooth_type`=='laplacian' then this is just 
+        the Z extent of the applied smoothing
     :type components: str
     :param components: components to consider and tag data with. Should be
         string of letters such as 'RTZ'
@@ -159,6 +163,7 @@ class Specfem:
             "ELASTIC", "ACOUSTIC",  # specfem2d, specfem3d
             "ISOTROPIC", "ANISOTROPIC"  # specfem3d_globe
         ]
+        # SPECFEM2D specific attributes. Should be overwritten by 3D versions
         self._available_data_formats = ["ASCII", "SU"]
         self._required_binaries = ["xspecfem2D", "xmeshfem2D", "xcombine_sem",
                                    "xsmooth_sem"]
