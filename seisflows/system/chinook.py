@@ -33,11 +33,11 @@ class Chinook(Slurm):
     __doc__ = Slurm.__doc__ + __doc__
 
 
-    def __init__(self, partition="t1small", **kwargs):
+    def __init__(self, mpiexec="mpiexec", partition="t1small", **kwargs):
         """Chinook init"""
         super().__init__(**kwargs)
 
-        self.mpiexec = "mpiexec"
+        self.mpiexec = mpiexec
         self.partition = partition
 
         self._partitions = {"debug": 24, "t1small": 28, "t2small": 28,

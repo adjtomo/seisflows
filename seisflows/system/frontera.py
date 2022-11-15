@@ -60,7 +60,7 @@ class Frontera(Slurm):
     ***
     """
     def __init__(self, user=None, conda_env=None, partition="development", 
-                 allocation=None, **kwargs):
+                 allocation=None, mpiexec="ibrun", **kwargs):
         """Frontera init"""
         super().__init__(**kwargs)
 
@@ -68,7 +68,7 @@ class Frontera(Slurm):
         self.conda_env = conda_env or os.environ["CONDA_DEFAULT_ENV"]
         self.partition = partition
         self.allocation = allocation
-        self.mpiexec = "ibrun"
+        self.mpiexec = mpiexec
 
         # See 'Frontera Caveat 1' note for why we need these calls
         self._ssh_call = f"ssh {self.user}@frontera.tacc.utexas.edu"
