@@ -33,10 +33,11 @@ class Chinook(Slurm):
     __doc__ = Slurm.__doc__ + __doc__
 
 
-    def __init__(self, partition="t1small", **kwargs):
+    def __init__(self, mpiexec="mpiexec", partition="t1small", **kwargs):
         """Chinook init"""
         super().__init__(**kwargs)
 
+        self.mpiexec = mpiexec
         self.partition = partition
 
         self._partitions = {"debug": 24, "t1small": 28, "t2small": 28,
@@ -88,7 +89,7 @@ class Chinook(Slurm):
             f"--job-name={self.title}",
             f"--ntasks={self.nproc:d}",
             f"--partition={self.partition}",
-            f"--tasks-per-node={self.node_size}",
+            # f"--tasks-per-node={self.node_size}",  # actually not required?
             f"--time={self._tasktime}",
             f"--output={os.path.join(self.path.log_files, '%A_%a')}",
             f"--array=0-{self.ntask-1 % self.ntask_max}",

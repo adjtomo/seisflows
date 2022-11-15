@@ -186,6 +186,13 @@ class Specfem3D(Specfem):
         unix.cd(self.cwd)
         setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
+        # Make sure we have a STATIONS_ADJOINT file. Simply copy STATIONS file
+        # !!! Do we need to tailor this to output of preprocess module? !!!
+        dst = os.path.join(self.cwd, "DATA", "STATIONS_ADJOINT")
+        if not os.path.exists(dst):
+            src = os.path.join(self.cwd, "DATA", "STATIONS")
+            unix.cp(src, dst)
+
         super().adjoint_simulation(executables=executables,
                                    save_kernels=save_kernels,
                                    export_kernels=export_kernels)
