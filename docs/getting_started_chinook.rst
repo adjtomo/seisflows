@@ -96,9 +96,9 @@ Here we choose SPECFEM3D and compile using the Intel compiler suite:
 
 .. code:: bash
     
-    mkdir $CENTER1/REPOS  # Center1 is our working filesystem
-    cd $CENTER1/REPOS
-    git clone --branch devel https://github.com/SPECFEM/specfem3d.git
+    mkdir $CENTER/REPOS  # Center1 is our working filesystem
+    cd $CENTER/REPOS
+    git clone --branch devel --depth=1 https://github.com/SPECFEM/specfem3d.git
     cd specfem3d
     module load intel  # latest Intel compiler suite
     ./configure F90=ifort FC=ifort MPIFC=mpiifort CC=icc MPICC=mpiicc --with-mpi 
@@ -118,11 +118,11 @@ repository) to keep things clean and manageable.
 
 .. code:: bash
 
-    mkdir $CENTER1/work/specfem3d_workdir  # clean working directory
-    cd $CENTER1/work/specfem3d_workdir
-    ln -s $CENTER1/REPOS/specfem3d/bin .  # making sure we have the executables
-    cp -r $CENTER1/REPOS/specfem3d/EXAMPLES/homogeneous_halfspace/DATA .
-    cp -r $CENTER1/REPOS/specfem3d/EXAMPLES/homogeneous_halfspace/meshfem3D_files ./DATA
+    mkdir $CENTER/work/specfem3d_workdir  # clean working directory
+    cd $CENTER/work/specfem3d_workdir
+    ln -s $CENTER/REPOS/specfem3d/bin .  # making sure we have the executables
+    cp -r $CENTER/REPOS/specfem3d/EXAMPLES/homogeneous_halfspace/DATA .
+    cp -r $CENTER/REPOS/specfem3d/EXAMPLES/homogeneous_halfspace/meshfem3D_files ./DATA
     mkdir OUTPUT_FILES
 
 
@@ -146,7 +146,7 @@ simply copy our example CMTSOLUTION and rename:
 
 .. code:: bash
 
-    cd $CENTER1/work/specfem3d_workdir/DATA
+    cd $CENTER/work/specfem3d_workdir/DATA
     mv CMTSOLUTION CMTSOLUTION_01  # source 1 is the example default 
     cp CMTSOLUTION_01 CMTSOLUTION_02  # source 2 is the same as source 1
     ln -s CMTSOLUTION_01/ CMTSOLUTION  # not necessary but aesthetically pleasing
@@ -199,8 +199,8 @@ I will run SeisFlows in a separate directory to keep things clean.
 
 .. code:: bash
 
-    mkdir $CENTER1/work/seisflows_workdir
-    cd $CENTER1/work/seisflows_workdir
+    mkdir $CENTER/work/seisflows_workdir
+    cd $CENTER/work/seisflows_workdir
     seisflows setup  # creates a template parameters.yaml file
 
 Have a look at the `parameter file docs page <parameter_file.html>`__ for 
@@ -293,9 +293,9 @@ Following the parameter errors raised, you will have to change the following:
 .. code:: bash
 
     # Changing paths to tell SeisFlows where to find SPECFEM
-    seisflows par path_specfem_bin ${CENTER1}/work/specfem3d_workdir/bin
-    seisflows par path_specfem_data ${CENTER1}/work/specfem3d_workdir/DATA
-    seisflows par path_model_init ${CENTER1}/work/specfem3d_workdir/OUTPUT_FILES/DATABASES_MPI
+    seisflows par path_specfem_bin ${CENTER}/work/specfem3d_workdir/bin
+    seisflows par path_specfem_data ${CENTER}/work/specfem3d_workdir/DATA
+    seisflows par path_model_init ${CENTER}/work/specfem3d_workdir/OUTPUT_FILES/DATABASES_MPI
 
 Based on docstrings, I know I will also want to set the following parameters 
 in order to suit my current research problem:
@@ -452,7 +452,7 @@ to keep things simple:
 
 .. code:: bash
 
-    cd $CENTER1/work/specfem3d_workdir
+    cd $CENTER/work/specfem3d_workdir
     mv OUTPUT_FILES OUTPUT_FILES_INIT  # setting aside our initial model
     cd DATA/meshfem3D_files
     mv Mesh_Par_file Mesh_Par_file_init  # setting aside initial mesh
@@ -472,7 +472,7 @@ And now we need to run the SPECFEM binaries again to generate our target model
 
 .. code:: bash
 
-    cd $CENTER1/work/specfem3d_workdir
+    cd $CENTER/work/specfem3d_workdir
     mkdir OUTPUT_FILES_TRUE
     ln -s OUTPUT_FILES_TRUE OUTPUT_FILES
     seisflows sempar -P DATA/Par_file model default  # make sure SPECFEM reads the model from the mesh
@@ -497,14 +497,14 @@ Following the 'check'list we will need to change the folowing parameters
 .. code:: bash
 
     seisflows par data_case synthetic  # synthetic inversion (no data)
-    seisflows par path_model_true ${CENTER1}/work/specfem3d_workdir/OUTPUT_FILES_TRUE/DATABASES_MPI
+    seisflows par path_model_true ${CENTER}/work/specfem3d_workdir/OUTPUT_FILES_TRUE/DATABASES_MPI
 
 
 We'll also set the following parameters:
 
 .. code:: bash
 
-    seisflows par path_model_init ${CENTER1}/work/specfem3d_workdir/OUTPUT_FILES_INIT/DATABASES_MPI  # to deal with the fact that we renamed this directory
+    seisflows par path_model_init ${CENTER}/work/specfem3d_workdir/OUTPUT_FILES_INIT/DATABASES_MPI  # to deal with the fact that we renamed this directory
     seisflows par materials elastic  # update vp and vs
     seisflows par end 2  # stop after iteration 2 is finished
 
