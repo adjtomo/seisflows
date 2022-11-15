@@ -33,12 +33,22 @@ successful login to Chinook04:
 .. parsed-literal:: 
 
            /`-._
-         _/,.._/          dP""b8 88  88 88 88b 88  dP"Yb   dP"Yb  88  dP
-      ,-'   ,  `-:,.-')  dP   `" 88  88 88 88Yb88 dP   Yb dP   Yb 88odP  
-     : o ):';     _  {   Yb      888888 88 88 Y88 Yb   dP Yb   dP 88"Yb  
-      `-.  `' _,.-\`-.)   YboodP 88  88 88 88  Y8  YbodP   YbodP  88  Yb 
+         _/,.._/          dP""b8 88  88 88 88b 88  dP"Yb   dP"Yb  88  dP  
+      ,-'   ,  `-:,.-')  dP   `" 88  88 88 88Yb88 dP   Yb dP   Yb 88odP   
+     : o ):';     _  {   Yb      888888 88 88 Y88 Yb   dP Yb   dP 88"Yb   
+      `-.  `' _,.-\`-.)   YboodP 88  88 88 88  Y8  YbodP   YbodP  88  Yb  
          `\\``\,.-'    
+    
+You may get MPI errors when running SPECFEM if you do not include module 
+load statements in your bashrc file, as the compute nodes will not have the 
+appropriate modules to run executables. To deal with this, you will want to 
+add the following lines to the following file: ``~/.bashrc``
 
+.. code:: bash
+
+    module purge
+    module load slurm
+    module load intel
 
 
 1) Install Conda
@@ -73,12 +83,12 @@ SeisFlows requires a pre-established SPECFEM working directory, with:
 
 a) binary executables (configured and compiled), 
 b) an appropriate DATA/ directory containing source, stations and Par_file, and 
-c) an initial (and target) model defined using one of SPECFEM's internally defined model formats.
+c) an initial model defined using one of SPECFEM's internally defined model formats.
 
 .. note::
     
     If you already have a valid directory where you run forward simulations, 
-    you can likely skip the following subsections 3a -- 3d.
+    you can skip subsection 3a
 
 
 3a) Configure and compile
@@ -96,13 +106,14 @@ Here we choose SPECFEM3D and compile using the Intel compiler suite:
 
 .. code:: bash
     
-    mkdir $CENTER/REPOS  # Center1 is our working filesystem
+    mkdir -p $CENTER/REPOS  # Center1 is our working filesystem
     cd $CENTER/REPOS
     git clone --branch devel --depth=1 https://github.com/SPECFEM/specfem3d.git
     cd specfem3d
+    module load slurm  # load SLURM workload manager
     module load intel  # latest Intel compiler suite
     ./configure F90=ifort FC=ifort MPIFC=mpiifort CC=icc MPICC=mpiicc --with-mpi 
-    make all
+    make all  # -j to compile in parallel, if parallel, run on interactive mode
 
 3b) Generate appropriate DATA/ directory
 ``````````````````````````````````````````
@@ -118,7 +129,7 @@ repository) to keep things clean and manageable.
 
 .. code:: bash
 
-    mkdir $CENTER/work/specfem3d_workdir  # clean working directory
+    mkdir -p $CENTER/work/specfem3d_workdir  # clean working directory
     cd $CENTER/work/specfem3d_workdir
     ln -s $CENTER/REPOS/specfem3d/bin .  # making sure we have the executables
     cp -r $CENTER/REPOS/specfem3d/EXAMPLES/homogeneous_halfspace/DATA .
@@ -138,7 +149,7 @@ CMTSOLUTIONS, then one easy way to differentiate them would be to name them e.g.
 CMTSOLUTION_1, CMTSOLUTION_2, ..., CMTSOLUTION_N. These tags could also 
 refer to event ids or origin times, it's up to the user.
 
-`Here is one example of the naming schema used in a published study. 
+`Here is one example of the naming scheme used in a published study. 
 <https://github.com/bch0w/spectral/tree/master/nzatom/cmtsolutions>`__
 
 For this example, since we don't have multiple sources to choose from, we will
@@ -149,10 +160,10 @@ simply copy our example CMTSOLUTION and rename:
     cd $CENTER/work/specfem3d_workdir/DATA
     mv CMTSOLUTION CMTSOLUTION_01  # source 1 is the example default 
     cp CMTSOLUTION_01 CMTSOLUTION_02  # source 2 is the same as source 1
-    ln -s CMTSOLUTION_01/ CMTSOLUTION  # not necessary but aesthetically pleasing
+    ln -s CMTSOLUTION_01/ CMTSOLUTION  # so that SPECFEM can still find source 1
 
-3d) Create Initial (and target) models
-``````````````````````````````````````
+3d) Create Initial model
+`````````````````````````
 
 Now we'll run SPECFEM to generate our mesh and model. This is the same procedure 
 you would follow if running a forward simulation in SPECFEM, except we will not
@@ -199,7 +210,7 @@ I will run SeisFlows in a separate directory to keep things clean.
 
 .. code:: bash
 
-    mkdir $CENTER/work/seisflows_workdir
+    mkdir -p $CENTER/work/seisflows_workdir
     cd $CENTER/work/seisflows_workdir
     seisflows setup  # creates a template parameters.yaml file
 
@@ -354,8 +365,8 @@ that get submitted to the system using the `squeue` or `sacct` commands.
 - Each spawned job is logging to a unique file in ``logs/``
 - Each source has it's own working directory in ``scratch/solver/``
 
-a) Recovering from job failures
-````````````````````````````````
+6a) Recovering from job failures
+`````````````````````````````````
 
 SeisFlows has a state file (`sfstate.txt`) that tracks the progress of your 
 inversion. Each main workflow function (e.g., forward simulations) constitute a
@@ -373,7 +384,7 @@ completed tasks, saving computational cost.
     will need to re-run ALL forward simulations. In the future I hope to 
     include some more detailed checkpointing to avoid this.
 
-b) SeisFlows debug mode
+6b) SeisFlows debug mode
 `````````````````````````
 
 SeisFlows has a debug mode, which is simply an IPython environment with all
@@ -399,25 +410,21 @@ submitting your job.
 But what if you now want to run a synthetic inversion to compare synthetic 
 seismograms from two very similar models? How do you get from here to there?
 
-.. note::
         
-    It is a good idea to either clear out your current working directory, or
-    start a new one, before proceeding with a separate workflow. To delete all
-    non-essential files, you can run `seisflows clean -f`. Otherwise to start
-    a new working directory, you can simply copy over the parameter file to
-    a new directory. 
+It is a good idea to either clear out your current working directory, or
+start a new one, before proceeding with a separate workflow. To delete all
+non-essential files, you can run:
 
-.. note::
-     
-    If you decide to copy over the parameter file (from previous note), make 
-    sure you update your paths! 
+.. code:: bash
+
+    seisflows clean -f
 
 
-a) Swap modules in the parameter file
+7a) Swap modules in the parameter file
 ``````````````````````````````````````
 
 SeisFlows ``swap`` allows Users to swap out valid modules without disturbing 
-the remainder of the parameter file. That is, if we wanted to swap out 
+the remainder of the parameter file. So since we want to swap out 
 our 'forward' workflow for an 'inversion' workflow, we can do:
 
 .. code:: bash
@@ -431,16 +438,16 @@ This is the same for swapping from SPECFEM3D -> SPECFEM3D_GLOBE or choosing
 preprocessing parameters.
 
 The inversion workflow requires a corresponding `preprocess` and `optimize` 
-module. We can set these to the preferred classes `pyaflowa` and `LBFGS`. Again
+module. We can set these to the preferred classes `default` and `LBFGS`. Again
 have a look at the output of `seisflows print modules` for all choices.
 
 .. code:: bash
     
-    seisflows swap preprocess pyaflowa
+    seisflows swap preprocess default
     seisflows swap optimize LBFGS
 
 
-b) Generate your target model
+7b) Generate your target model
 ````````````````````````````````
 
 The inversion workflow requires data. Since we have decided to do a synthetic
@@ -474,14 +481,14 @@ And now we need to run the SPECFEM binaries again to generate our target model
 
     cd $CENTER/work/specfem3d_workdir
     mkdir OUTPUT_FILES_TRUE
-    ln -s OUTPUT_FILES_TRUE OUTPUT_FILES
+    ln -s OUTPUT_FILES_TRUE OUTPUT_FILES  # making sure SPECFEM can find this dir.
     seisflows sempar -P DATA/Par_file model default  # make sure SPECFEM reads the model from the mesh
-    sbatch run_xmeshfem3D.sh
+    sbatch run_xmeshfem3d.sh
     sbatch run_xgenerate_databases.sh
     seisflows sempar -P DATA/Par_file model gll  # reset for seisflows run
 
 
-c) Set inversion-specific parameters
+7c) Set inversion-specific parameters
 `````````````````````````````````````
 
 Again we can use `seisflows check` to see what new parameters we need to set, 
@@ -490,6 +497,7 @@ optimize).
 
 .. code:: bash
     
+    cd $CENTER/work/seisflows_workdir
     seisflows check
 
 Following the 'check'list we will need to change the folowing parameters
@@ -499,22 +507,22 @@ Following the 'check'list we will need to change the folowing parameters
     seisflows par data_case synthetic  # synthetic inversion (no data)
     seisflows par path_model_true ${CENTER}/work/specfem3d_workdir/OUTPUT_FILES_TRUE/DATABASES_MPI
 
-
 We'll also set the following parameters:
 
 .. code:: bash
 
     seisflows par path_model_init ${CENTER}/work/specfem3d_workdir/OUTPUT_FILES_INIT/DATABASES_MPI  # to deal with the fact that we renamed this directory
-    seisflows par materials elastic  # update vp and vs
+    seisflows par materials elastic  # update both vp and vs
     seisflows par end 2  # stop after iteration 2 is finished
 
-d) SeisFlows submit
+7d) SeisFlows submit
 ````````````````````
 
-Again we run `submit` to submit our workflow. Make sure you have cleared out 
-your previous run or switched to a new working directory!
+Again we run `submit` to submit our workflow. 
 
 .. code:: bash
 
     seisflows submit
+
+You can monitor ``sflog.txt`` to watch the progress of your job.
  
