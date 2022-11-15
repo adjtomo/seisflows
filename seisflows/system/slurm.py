@@ -78,6 +78,7 @@ class Slurm(Cluster):
 
         # Must be overwritten by child class
         self.partition = None
+        self.submit_to = None
         self._partitions = {}
 
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
@@ -96,6 +97,9 @@ class Slurm(Cluster):
 
         assert(self.partition in self._partitions), \
             f"Cluster partition name must match {self._partitions}"
+
+        assert(self.submit_to in self._partitions), \
+            f"Submission partition name must match {self._partitions}"
 
         assert("--parsable" in self.run_call_header), (
             f"System `run_call_header` requires SBATCH argument '--parsable' "
