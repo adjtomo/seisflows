@@ -83,6 +83,7 @@ def load_yaml(filename):
     """
     Define how the PyYaml yaml loading function behaves.
     Replaces None and inf strings with NoneType and numpy.inf respectively
+    Also expands all paths (parameters that start with 'path_') to be absolute 
 
     :type filename: str
     :param filename: .yaml file to load in
@@ -109,10 +110,14 @@ def load_yaml(filename):
 
     # Replace 'None' and 'inf' values to match expectations
     for key, val in mydict.items():
-        if val == "None":
-            mydict[key] = None
-        if val == "inf":
-            mydict[key] = np.inf
+        if isinstance(val, str):
+            if val.capitalize() == "None":
+                mydict[key] = None
+            elif val.lower() == "inf":
+                mydict[key] = np.inf
+        # SeisFlows specific: expand all path parameters to absolute path
+        if key.startswith("path_") and val is not None:
+            mydict[key] = os.path.abspath(val)
 
     return mydict
 
@@ -175,6 +180,8 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml",
     """
     # Read in parameters from file. Set up the logger
     parameters = load_yaml(os.path.join(workdir, parameter_file))
+
+    # Expand relative paths to absolute internally to avoid rel path errors
     config_logger(level=parameters.log_level,
                   filename=parameters.path_output_log,
                   verbose=parameters.verbose, **kwargs)
