@@ -33,13 +33,10 @@ def check_source_names(path_specfem_data, source_prefix, ntask=None):
     wildcard = f"{source_prefix}_*"
     fids = sorted(glob(os.path.join(path_specfem_data, wildcard)))
     if not fids:
-        logger.warning(
-            msg.cli("No matching source files when searching PATH for the "
-                    "given WILDCARD",
-                    items=[f"PATH: {path_specfem_data}",
-                           f"WILDCARD: {wildcard}"],
-                    header="error")
-              )
+        print(msg.cli("No matching source files when searching PATH for the "
+                      "given WILDCARD", header="source error", border="=",
+                      items=[f"PATH: {path_specfem_data}",
+                             f"WILDCARD: {wildcard}"]))
         return
     if ntask is not None:
         assert(len(fids) >= ntask), (
