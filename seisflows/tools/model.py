@@ -33,7 +33,8 @@ class Model:
                              "vpv", "vph", "vsv", "vsh", "eta"]
     acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
 
-    def __init__(self, path=None, fmt="", parameters=None, flavor=None):
+    def __init__(self, path=None, fmt="", parameters=None, regions="123", 
+                 flavor=None):
         """
         Model only needs path to model to determine model parameters. Format
         `fmt` can be provided by the user or guessed based on available file
@@ -50,6 +51,14 @@ class Model:
         :param fmt: expected format of the files (e.g., '.bin'), if None, will
             attempt to guess based on the file extensions found in `path`
             Available formats are: .bin, .dat
+        :type parameters: list
+        :param parameters: the list of parameters to consider when defining
+            the 'model', which is what will be updated during an inversion. 
+        :type regions: str
+        :param regions: only for SPECFEM3D_GLOBE, which regions of the chunk 
+            to consider in your 'model'. Valid regions are 1, 2 and 3. If you 
+            want all regions, set as '123'. If you only want region 1, set as 
+            '1'. Order insensitive.
         :type flavor: str
         :param flavor: optional, tell Model what version of SPECFEM was used
             to generate the model, acceptable values are ['2D', '3D', '3DGLOBE']
@@ -60,6 +69,7 @@ class Model:
         self.flavor = None
         self.model = None
         self.coordinates = None
+        self.regions = sorted([f"reg{i}" for i in regions])
         self._parameters = parameters
         self._ngll = None
         self._nproc = None
@@ -101,7 +111,7 @@ class Model:
             logger.warning("no/invalid `path` given, initializing empty Model")
 
 
-    def fnfmt(self, i="*", val="*", ext="*", reg="?"):
+    def fnfmt(self, i="*", val="*", ext="*", reg="*"):
         """
         Expected SPECFEM filename format with some checks to ensure that
         wildcards and numbers are accepted. An example filename is:
@@ -126,7 +136,7 @@ class Model:
             ext = f".{ext}"
         # Unique modifier for SPECFEM3D_GLOBE files
         if self.flavor == "3DGLOBE":
-            globe = f"_reg{reg}"
+            globe = f"_{reg}"
         else:
             globe = ""
 
@@ -143,7 +153,7 @@ class Model:
         Returns a list of parameters which defines the model.
         """
         if not self._parameters:
-            self._parameters = list(self.model.keys())
+            self._parameters = sorted(list(self.model.keys()))
         return self._parameters
 
     @property
@@ -240,9 +250,9 @@ class Model:
         elif self.flavor == "3DGLOBE":
             parameter_dict = Dict({key: {} for key in parameters})
             for parameter in parameters:
-                for i in [1, 2, 3]:
-                    parameter_dict[parameter][f"reg{i}"] = \
-                            load_fx(parameter=parameter, reg=i)
+                for region in self.regions:
+                    parameter_dict[parameter][region] = \
+                            load_fx(parameter=parameter, reg=region)
 
         return parameter_dict
 
@@ -312,9 +322,8 @@ class Model:
                     m = np.append(m, self.model[parameter][iproc])
         elif self.flavor == "3DGLOBE":
             for parameter in parameters:
-                for region in ["reg1", "reg2", "reg3"]:
+                for region in self.regions:
                     for iproc in range(self.nproc):
-                        print(f"{parameter}{region}{iproc}")
                         m = np.append(m, self.model[parameter][region][iproc])
 
         return m
@@ -538,19 +547,33 @@ class Model:
 
         if self.fmt == ".bin":
             avail_par = list(set(["_".join(_.split("_")[1:]) for _ in fids]))
-            nproc = len(glob(os.path.join(
-                self.path, self.fnfmt(val=avail_par[0], ext=self.fmt)))
-            )
+            # Remove any parameters not accepted by Model
+            avail_par = list(set(avail_par).intersection(
+                                        set(self.acceptable_parameters)
+                                        ))
+            # Count the number of files for matching parameters only (do once)
+            # Globe version requires the region number in the wild card
+            if self.flavor == "3DGLOBE":
+                nproc = len(glob(os.path.join(
+                    self.path, self.fnfmt(val=avail_par[0], ext=self.fmt, 
+                                          reg=self.regions[0])))
+                )
+            else:
+                nproc = len(glob(os.path.join(
+                    self.path, self.fnfmt(val=avail_par[0], ext=self.fmt)))
+                )
         elif self.fmt == ".dat":
             # e.g., 'proc000000_rho_vp_vs'
             _, *avail_par = fids[0].split("_")
+            # Remove any parameters not accepted by Model
+            avail_par = list(set(avail_par).intersection(
+                                        set(self.acceptable_parameters)
+                                        ))
             nproc = len(fids) + 1
         else:
             raise NotImplementedError(f"{self.fmt} is not yet supported by "
                                       f"SeisFlows")
 
-        # Remove any parameters not accepted by Model
-        avail_par = set(avail_par).intersection(set(self.acceptable_parameters))
 
         return nproc, list(avail_par)
 
@@ -589,7 +612,7 @@ class Model:
         fids = [os.path.basename(_) for _ in fullpaths]
         unique_tags = set([_.split("_")[1] for _ in fids])
 
-        if "reg1" in unique_tags:
+        if self.regions[0] in unique_tags:
             flavor = "3DGLOBE"
         # SPECFEM2D won't have a 'y' model
         elif "y" in unique_tags:
@@ -638,9 +661,9 @@ class Model:
     def _read_model_ascii(self, parameter):
         """
         Load ASCII SPECFEM2D models into disk. ASCII models are generally saved
-        all in a single file with all parameters together as a N column ASCII file
-        where columns 1 and 2 are the coordinates of the mesh, and the remainder
-        columns are data corresponding to the filenames
+        all in a single file with all parameters together as a N column ASCII 
+        file where columns 1 and 2 are the coordinates of the mesh, and the 
+        remainder columns are data corresponding to the filenames
         e.g., proc000000_rho_vp_vs.dat, rho is column 3, vp is 4 etc.
 
         :type parameter: str
@@ -672,9 +695,17 @@ class Model:
             as 'int32' at the top and bottom of the data array.
             https://docs.oracle.com/cd/E19957-01/805-4939/6j4m0vnc4/index.html
         """
-        for parameter in self.parameters:
-            for i, data in enumerate(self.model[parameter]):
-                filename = self.fnfmt(i=i, val=parameter, ext=".bin")
-                filepath = os.path.join(path, filename)
-
-                write_fortran_binary(arr=data, filename=filepath)
+        if self.flavor in ["2D", "3D"]:
+            for parameter in self.parameters:
+                for i, data in enumerate(self.model[parameter]):
+                    filename = self.fnfmt(i=i, val=parameter, ext=".bin")
+                    filepath = os.path.join(path, filename)
+                    write_fortran_binary(arr=data, filename=filepath)
+        elif self.flavor == "3DGLOBE":
+            for parameter in self.parameters:
+                for region in self.regions:
+                    for i, data in enumerate(self.model[parameter][region]):
+                        filename = self.fnfmt(i=i, val=parameter, reg=region,
+                                              ext=".bin")
+                        filepath = os.path.join(path, filename)
+                        write_fortran_binary(arr=data, filename=filepath)
