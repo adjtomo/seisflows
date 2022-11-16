@@ -50,6 +50,10 @@ class Frontera(Slurm):
     :param partition: Chinook has various partitions which each have their
         own number of cores per compute node. Available are: small, normal,
         large, development, flex
+    :type submit_to: str 
+    :param submit_to: (Optional) partition to submit the main/master job which 
+        is a serial Python task that controls the workflow. Likely this should
+        be 'small' or 'development'. If not given, defaults to `partition`.
     :type allocation: str
     :param allocation: Name of allocation/project on the Frontera system.
         Required if you have more than one active allocation.
@@ -60,15 +64,16 @@ class Frontera(Slurm):
     ***
     """
     def __init__(self, user=None, conda_env=None, partition="development", 
-                 allocation=None, **kwargs):
+                 submit_to=None, allocation=None, mpiexec="ibrun", **kwargs):
         """Frontera init"""
         super().__init__(**kwargs)
 
         self.user = user or os.environ["USER"]  # alt. getpass.getuser()
         self.conda_env = conda_env or os.environ["CONDA_DEFAULT_ENV"]
         self.partition = partition
+        self.submit_to = submit_to or self.partition
         self.allocation = allocation
-        self.mpiexec = "ibrun"
+        self.mpiexec = mpiexec
 
         # See 'Frontera Caveat 1' note for why we need these calls
         self._ssh_call = f"ssh {self.user}@frontera.tacc.utexas.edu"

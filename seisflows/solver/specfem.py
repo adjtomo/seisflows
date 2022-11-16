@@ -791,8 +791,8 @@ class Specfem:
             will set based on current running seisflows task (self.taskid)
         """
         # Define a constant list of required SPECFEM dir structure, relative cwd
-        _required_structure = {"bin", "DATA", "traces/obs", "traces/syn",
-                               "traces/adj", self.model_databases,
+        _required_structure = {"bin", "DATA", "OUTPUT_FILES", "traces/obs", 
+                               "traces/syn", "traces/adj", self.model_databases,
                                self.kernel_databases}
 
         # Allow this function to be called on system or in serial

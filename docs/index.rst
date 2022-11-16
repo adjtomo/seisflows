@@ -126,6 +126,7 @@ installed manually to the same Conda environment.
 
    specfem2d_example
    2D_example_walkthrough
+   getting_started_chinook
 
 .. toctree::
    :maxdepth: 1
