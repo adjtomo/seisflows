@@ -23,11 +23,11 @@ class Specfem3DGlobe(Specfem3D):
     ----------
     :type smooth_type: str
     :param smooth_type: choose how smoothing is performed for gradients.
-	these are tied to the internal smoothing functions available.
-	- 'gaussian': convolve with a 3D gaussian, slow and computationally
-	    intensive, but default and matches 2D and 3D_Cartesian smoothing
-	- 'laplacian' (default): average points around vertex to smooth. 
-	    faster and preferred method for GLOBE code
+        these are tied to the internal smoothing functions available.
+        - 'gaussian': convolve with a 3D gaussian, slow and computationally
+            intensive, but default and matches 2D and 3D_Cartesian smoothing
+        - 'laplacian' (default): average points around vertex to smooth. 
+            faster and preferred method for GLOBE code
 
     Paths
     -----
@@ -38,9 +38,13 @@ class Specfem3DGlobe(Specfem3D):
     def __init__(self, smooth_type="laplacian", **kwargs):
         """Instantiate a Specfem3D_Globe solver interface"""
         super().__init__(**kwargs)
-	self.smooth_type = smooth_type
 
-	self._acceptable_smooth_types = ["laplacian", "gaussian"]
+        self.smooth_type = smooth_type
+        self._acceptable_smooth_types = ["laplacian", "gaussian"]
+
+        self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem",
+                                   "xsmooth_sem", "xsmooth_laplacian_sem",
+                                   "xcombine_vol_data_vtk"]
 
         if self.materials.upper() == "ACOUSTIC":
             self._parameters += ["vp"]
@@ -52,13 +56,13 @@ class Specfem3DGlobe(Specfem3D):
             self._parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
 
     def check(self):
-	"""
-	Checks parameter validity for SPECFEM3D_GLOBE parameters
-	"""
-	super().check()
-	
-	assert(self.smooth_type in self._acceptable_smooth_types), \
-	    f"`smooth_type` must be in {self._acceptable_smooth_types}" 
+        """
+        Checks parameter validity for SPECFEM3D_GLOBE parameters
+        """
+        super().check()
+        
+        assert(self.smooth_type in self._acceptable_smooth_types), \
+            f"`smooth_type` must be in {self._acceptable_smooth_types}" 
 
     def data_wildcard(self, comp="?"):
         """
@@ -100,22 +104,22 @@ class Specfem3DGlobe(Specfem3D):
         if exeuctables is None:
             executables = ["bin/xspecfem3D"]
 
-	    # Database files only need to be made once, usually at the first
-	    # evaluation. Once made, we don't have to run xmeshfem3D anymore.
-	    if not glob(os.path.join(self.model_databases, "proc*_Database")):
-		executables = ["bin/xmeshfem3D"] + executables
+            # Database files only need to be made once, usually at the first
+            # evaluation. Once made, we don't have to run xmeshfem3D anymore.
+            if not glob(os.path.join(self.model_databases, "proc*_Database")):
+                executables = ["bin/xmeshfem3D"] + executables
 
         super().forward_simulation(executables=executables, 
                                    save_traces=save_traces, 
                                    export_traces=export_traces, 
-				   **kwargs)
+                                   **kwargs)
 
     def adjoint_simulation(self, executables=None, save_kernels=False,
-			   export_kernels=False):
-	"""
-	Supers SPECFEM3D for adjoint solver and removes GLOBE-specific fwd files
+                           export_kernels=False):
+        """
+        Supers SPECFEM3D for adjoint solver and removes GLOBE-specific fwd files
 
-	:type executables: list or None                                          
+        :type executables: list or None                                          
         :param executables: list of SPECFEM executables to run, in order, to     
             complete an adjoint simulation. This can be left None in most cases, 
             which will select default values based on the specific solver        
@@ -132,12 +136,12 @@ class Specfem3DGlobe(Specfem3D):
             directory to a more permanent storage location. i.e., copy files     
             from their original location. Note that kernel file sizes are LARGE, 
             so exporting kernels can lead to massive storage requirements.
-	"""
-	super().adjoint_simulation(executables=executables,                      
-			       	   save_kernels=save_kernels,                    
-			       	   export_kernels=export_kernels)                
+        """
+        super().adjoint_simulation(executables=executables,                      
+                                   save_kernels=save_kernels,                    
+                                   export_kernels=export_kernels)                
         
-	# Working around fact that save_forward arrays have diff naming
+        # Working around fact that save_forward arrays have diff naming
         if self.prune_scratch:                                                   
             for glob_key in ["proc??????_reg?_absorb_buffer.bin"]: 
                 logger.debug(f"removing '{glob_key}' files from database "       
@@ -177,12 +181,12 @@ class Specfem3DGlobe(Specfem3D):
                                   
 
     def smooth_laplacian(self, input_path, output_path, parameters=None, 
-			 span_h=None, span_v=None):
+                         span_h=None, span_v=None):
         """                                                                      
         Wrapper for SPECFEM binary: xsmooth_laplacian_sem
 
         Smooths kernels by with Laplacian smoothing which takes averages of a
-	mesh corner with all it's surrounding points.
+        mesh corner with all it's surrounding points.
 
         .. note::
             Externally this smooth function behaves almost identically to
