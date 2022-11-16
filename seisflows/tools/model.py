@@ -420,16 +420,16 @@ class Model:
         Checks parameters for SPECFEM3D_GLOBE derived models
         """
         # Check for negative velocities
-        for par in ["vsv", "vsh", "vph", "vpv"]:
+        for par in ["vsv", "vsh", "vph", "vpv", "vp", "vs"]:
             for reg in self.regions:
                 if par in self.model and \
                         np.hstack(self.model[par][reg]).min() < 0:
                     logger.warning(f"{reg}_{par} minimum for is negative "
                                    f"{self.model['par']['reg'].min()}")
 
-        # Check Poisson's ratio for all anisotropic velocity combinations
-        for vs_par in ["vsv", "vsh"]:
-            for vp_par in ["vpv", "vph"]:
+        # Check Poisson's ratio for all (an)isotropic velocity combinations
+        for vs_par in ["vs", "vsv", "vsh"]:
+            for vp_par in ["vp", "vpv", "vph"]:
                 if vs_par in self.parameters and vp_par in self.parameters:
                     pr = poissons_ratio(vp=self.merge(parameter=vp_par),
                                         vs=self.merge(parameter=vs_par))
