@@ -377,6 +377,15 @@ class Model:
         ratio. Checks for negative velocity values. And prints out model
         min/max values
         """
+        if self.flavor in ["2D", "3D"]:
+            self._check_2d3d_parameters(min_pr, max_pr)
+        elif self.flavor == "3DGLOBE":
+            self._check_3dglobe_parameters(min_pr, max_pr)
+
+    def _check_2d3d_parameters(self, min_pr=-1., max_pr=0.5):
+        """
+        Checks parameters for SPECFEM2D and SPECFEM3D derived models
+        """
         if "vs" in self.parameters and "vp" in self.parameters:
             pr = poissons_ratio(vp=self.merge(parameter="vp"),
                                 vs=self.merge(parameter="vs"))
@@ -405,6 +414,48 @@ class Model:
             else:
                 parts = f"{min_val:.2f} <= {key} <= {max_val:.2f}"
             logger.info(parts)
+
+    def _check_3dglobe_parameters(self, min_pr=-1., max_pr=0.5):
+        """
+        Checks parameters for SPECFEM3D_GLOBE derived models
+        """
+        # Check for negative velocities
+        for par in ["vsv", "vsh", "vph", "vpv"]:
+            for reg in self.regions:
+                if par in self.model and \
+                        np.hstack(self.model[par][reg]).min() < 0:
+                    logger.warning(f"{reg}_{par} minimum for is negative "
+                                   f"{self.model['par']['reg'].min()}")
+
+        # Check Poisson's ratio for all anisotropic velocity combinations
+        for vs_par in ["vsv", "vsh"]:
+            for vp_par in ["vpv", "vph"]:
+                if vs_par in self.parameters and vp_par in self.parameters:
+                    pr = poissons_ratio(vp=self.merge(parameter=vp_par),
+                                        vs=self.merge(parameter=vs_par))
+                    if pr.min() < 0:
+                        logger.warning(f"minimum {vp_par}, {vs_par} poisson's "
+                                       f"ratio is negative")
+                    if pr.max() < min_pr:
+                        logger.warning(f"maximum {vp_par}, {vs_par} poisson's "
+                                       f"ratio out of bounds: "
+                                       f"{pr.max():.2f} > {max_pr}")
+                    if pr.min() > max_pr:
+                        logger.warning(f"minimum {vp_par}, {vs_par} poisson's "
+                                       f"ratio out of bounds: "
+                                       f"{pr.min():.2f} < {min_pr}")
+
+        # SPECFEM3D_GLOBE requires an additional separation by region
+        for key, vals in self.model.items():
+            for reg in self.regions:
+                min_val = np.hstack(vals[reg]).min()
+                max_val = np.hstack(vals[reg]).max()
+                # Choose formatter based on the magnitude of the value
+                if min_val < 1 or max_val > 1E4:
+                    parts = f"{min_val:.2E} <= {reg}_{key} <= {max_val:.2E}"
+                else:
+                    parts = f"{min_val:.2f} <= {reg}_{key} <= {max_val:.2f}"
+                logger.info(parts)
 
     def save(self, path):
         """
