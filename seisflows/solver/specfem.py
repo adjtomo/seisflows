@@ -818,6 +818,9 @@ class Specfem:
         # Copy all input DATA/ files except the source files
         src = glob(os.path.join(self.path.specfem_data, "*"))
         src = [_ for _ in src if self.source_prefix not in _]
+        # Skip over directories, we don't need any subdirs in DATA, assuming
+        # we only want STATIONS, SOURCE, Par_file
+        src = [_ for _ in src if not os.path.isdir(_)]
         dst = os.path.join(cwd, "DATA", "")
         unix.cp(src, dst)
 
