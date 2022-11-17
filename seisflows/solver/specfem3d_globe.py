@@ -10,6 +10,8 @@ SPECFEM3D_Globe specific notes:
       should have extension '.adj'
         
 """
+import os
+from glob import glob
 from seisflows.solver.specfem3d import Specfem3D
 
 
@@ -21,6 +23,10 @@ class Specfem3DGlobe(Specfem3D):
 
     Parameters
     ----------
+    :type regions: str
+    :param regions: which regions of the chunk  to consider in your 'model'. 
+        Valid regions are 1, 2 and 3. If you want all regions, set as '123'. 
+        If you only want region 1, set as  '1', etc. Order insensitive. 
     :type smooth_type: str
     :param smooth_type: choose how smoothing is performed for gradients.
         these are tied to the internal smoothing functions available.
@@ -35,13 +41,19 @@ class Specfem3DGlobe(Specfem3D):
     """
     __doc__ = Specfem3D.__doc__ + __doc__
 
-    def __init__(self, smooth_type="laplacian", **kwargs):
+    def __init__(self, regions="123", smooth_type="laplacian", **kwargs):
         """Instantiate a Specfem3D_Globe solver interface"""
         super().__init__(**kwargs)
 
         self.smooth_type = smooth_type
-        self._acceptable_smooth_types = ["laplacian", "gaussian"]
 
+        # These two variables are the same but we have a public version so it 
+        # will show up in the parameter file (for 3D_GLOBE only), and a private
+        # one so that the other SPECFEM versions can set it as None and use it
+        self.regions = str(regions)
+        self._regions = sorted(self.regions) 
+
+        self._acceptable_smooth_types = ["laplacian", "gaussian"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem",
                                    "xsmooth_sem", "xsmooth_laplacian_sem",
                                    "xcombine_vol_data_vtk"]
@@ -63,6 +75,12 @@ class Specfem3DGlobe(Specfem3D):
         
         assert(self.smooth_type in self._acceptable_smooth_types), \
             f"`smooth_type` must be in {self._acceptable_smooth_types}" 
+
+        # Check that regions are some combination of 1, 2 and/or 3
+        for r in self._regions:
+            assert(int(r) in [1, 2, 3]), (
+                f"`regions` must be some integer combination 1, 2 and/or 3"
+                )
 
     def data_wildcard(self, comp="?"):
         """
@@ -101,7 +119,7 @@ class Specfem3DGlobe(Specfem3D):
             permanent storage location. i.e., copy files from their original     
             location 
         """
-        if exeuctables is None:
+        if executables is None:
             executables = ["bin/xspecfem3D"]
 
             # Database files only need to be made once, usually at the first

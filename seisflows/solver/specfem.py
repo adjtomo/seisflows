@@ -131,7 +131,6 @@ class Specfem:
         self.smooth_h = smooth_h
         self.smooth_v = smooth_v
         self.components = components
-        # self.solver_io = solver_io  # currently not used
         self.source_prefix = source_prefix or "SOURCE"
 
         # Define internally used directory structure
@@ -168,6 +167,9 @@ class Specfem:
         self._required_binaries = ["xspecfem2D", "xmeshfem2D", "xcombine_sem",
                                    "xsmooth_sem"]
         self._acceptable_source_prefixes = ["SOURCE", "FORCE", "FORCESOLUTION"]
+        
+        # Empty variable that will need to be overwritten by SPECFEM3D_GLOBE
+        self._regions = None
 
     def check(self):
         """

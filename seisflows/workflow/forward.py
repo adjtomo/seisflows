@@ -314,11 +314,17 @@ class Forward:
         # Load in the initial model and check its poissons ratio
         if self.path.model_init:
             logger.info("checking initial model parameters")
-            _model = Model(os.path.join(self.path.model_init))
+            _model = Model(os.path.join(self.path.model_init),
+                           parameters=self.solver._parameters, 
+                           regions=self.solver._regions  # 3DGLOBE only
+                           )
             _model.check()
         if self.path.model_true:
             logger.info("checking true/target model parameters")
-            _model = Model(os.path.join(self.path.model_true))
+            _model = Model(os.path.join(self.path.model_true),
+                           parameters=self.solver._parameters, 
+                           regions=self.solver._regions  # 3DGLOBE only
+                           )
             _model.check()
 
         # If no preprocessing module, than all of the additional functions for
