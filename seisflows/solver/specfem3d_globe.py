@@ -12,6 +12,8 @@ SPECFEM3D_Globe specific notes:
 """
 import os
 from glob import glob
+from seisflows import logger
+from seisflows.tools import unix
 from seisflows.solver.specfem3d import Specfem3D
 
 
@@ -196,7 +198,7 @@ class Specfem3DGlobe(Specfem3D):
                     parameters=parameters, span_h=span_h * 1E-3, 
                     span_v=span_v * 1E-3
                     )
-                                  
+
 
     def smooth_laplacian(self, input_path, output_path, parameters=None, 
                          span_h=None, span_v=None):

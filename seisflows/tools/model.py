@@ -66,7 +66,7 @@ class Model:
         """
         self.path = path
         self.fmt = fmt
-        self.flavor = None
+        self.flavor = flavor
         self.model = None
         self.coordinates = None
         self.regions = sorted([f"reg{i}" for i in regions])
@@ -109,7 +109,6 @@ class Model:
             self._parameters = sorted(self.model.keys())
         else:
             logger.warning("no/invalid `path` given, initializing empty Model")
-
 
     def fnfmt(self, i="*", val="*", ext="*", reg="*"):
         """
