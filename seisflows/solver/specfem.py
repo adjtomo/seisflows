@@ -251,6 +251,21 @@ class Specfem:
         assert(isinstance(self.density, bool)), \
             f"solver `density` must be True (variable) or False (constant)"
 
+        # Check the size of the DATA/ directory and let the User know if 
+        # large files are present, e.g., tomo xyz files or topo/bathy
+        for root, dirs, files in os.walk(self.path.specfem_data):
+            for name in files:
+                fullpath = os.path.join(root, name)
+                if not os.path.islink(fullpath):
+                    filesize = os.path.getsize(fullpath) / 1E9  # Bytes -> GB
+                    if filesize > 0.5:
+                        logger.warning(
+                            f"SPECFEM DATA/ file '{fullpath}' is >.5GB and "
+                            f"will be copied {self.ntask} time(s). Please be "
+                            f"sure to check if this file is necessary for your "
+                            f"workflow"
+                            )
+
     @property
     def source_names(self):
         """
@@ -820,9 +835,6 @@ class Specfem:
         # Copy all input DATA/ files except the source files
         src = glob(os.path.join(self.path.specfem_data, "*"))
         src = [_ for _ in src if self.source_prefix not in _]
-        # Skip over directories, we don't need any subdirs in DATA, assuming
-        # we only want STATIONS, SOURCE, Par_file
-        src = [_ for _ in src if not os.path.isdir(_)]
         dst = os.path.join(cwd, "DATA", "")
         unix.cp(src, dst)
 

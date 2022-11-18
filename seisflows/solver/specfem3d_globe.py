@@ -14,17 +14,18 @@ import os
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix
-from seisflows.solver.specfem3d import Specfem3D
+from seisflows.solver.specfem import Specfem
 
 
-class Specfem3DGlobe(Specfem3D):
+class Specfem3DGlobe(Specfem):
     """
     Solver SPECFEM3D_GLOBE
     ----------------------
-    SPECFEM3D_Globe-specific alterations to the solver.specfem3d module
+    SPECFEM3D_Globe-specific alterations to the base SPECFEM module
 
     Parameters
     ----------
+
     :type regions: str
     :param regions: which regions of the chunk  to consider in your 'model'. 
         Valid regions are 1, 2 and 3. If you want all regions, set as '123'. 
@@ -43,11 +44,13 @@ class Specfem3DGlobe(Specfem3D):
     """
     __doc__ = Specfem3D.__doc__ + __doc__
 
-    def __init__(self, regions="123", smooth_type="laplacian", **kwargs):
+    def __init__(self, source_prefix="CMTSOLUTION", regions="123", 
+                 smooth_type="laplacian", **kwargs):
         """Instantiate a Specfem3D_Globe solver interface"""
-        super().__init__(**kwargs)
+        super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.smooth_type = smooth_type
+        self.
 
         # These two variables are the same but we have a public version so it 
         # will show up in the parameter file (for 3D_GLOBE only), and a private
@@ -84,6 +87,10 @@ class Specfem3DGlobe(Specfem3D):
                 f"`regions` must be some integer combination 1, 2 and/or 3"
                 )
 
+        # Check that attenuation parameter is the same as the internal parameter
+        # because GLOBE version cannot handle mismatched definitions
+
+
     def data_wildcard(self, comp="?"):
         """
         Returns a wildcard identifier for synthetic data
@@ -99,10 +106,16 @@ class Specfem3DGlobe(Specfem3D):
                            export_traces=False, **kwargs):
         """
         Calls SPECFEM3D_GLOBE forward solver, exports solver outputs to traces.
-        
-        .. note::
-            SPECFEM3D_GLOBE does not require 'xgenerate_databases' which is 
-            required for Cartesian. This function overwrites that
+       
+        Some key differences between 3D and 3D_GLOBE that need to be addressed:
+            1) SPECFEM3D_GLOBE does not require 'xgenerate_databases' which is 
+                required for Cartesian. 
+            2) Related to (1), we do NOT want to re-run the mesher, event at 
+                the very beginning. The Solver will simply re-load GLL model 
+                when run with a valid GLL model
+            3) 3DGLOBE cannot toggle attenuation on/off. If it was on to create 
+                the model, it MUST be on for the solver (otherwise throws 
+                a weird 'recompile solver' error)
 
         :type executables: list or None                                          
         :param executables: list of SPECFEM executables to run, in order, to     
