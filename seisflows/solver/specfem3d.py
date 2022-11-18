@@ -60,6 +60,7 @@ class Specfem3D(Specfem):
                                    "xgenerate_databases", "xcombine_sem",
                                    "xsmooth_sem", "xcombine_vol_data_vtk"]
 
+        # Internally used parameters set by functions within class
         self._model_databases = None
         self.path._vtk_files = os.path.join(self.path.scratch, "vtk_files")
 
