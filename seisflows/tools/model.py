@@ -174,8 +174,13 @@ class Model:
         """Convenience function to count NGLL points as length of data arrays
         for each parameter processor chunk"""
         self._ngll = []
-        for proc in self.model[self.parameters[0]]:
-            self._ngll.append(len(proc))
+        if self.flavor in ["2D", "3D"]:
+            for proc in self.model[self.parameters[0]]:
+                self._ngll.append(len(proc))
+        elif self.flavor == "3DGLOBE":
+            for proc in self.model[self.parameters[0]][self.regions[0]]:
+                self._ngll.append(len(proc))
+
 
     @property
     def nproc(self):
@@ -357,6 +362,27 @@ class Model:
         :rtype: Dict of np.array
         :return: dictionary of model parameters split up by number of processors
         """
+        if self.flavor in ["2D", "3D"]:
+            model = self._split_2d3d(vector)
+        elif self.flavor == "3DGLOBE":
+            model=self._split_3dglobe(vector)
+
+        return model
+
+    def _split_2d3d(self, vector=None):
+        """
+        Converts internal vector representation `m` to dictionary representation
+        `model`. Does this by separating the vector based on how it was
+        constructed, parameter-wise and processor-wise
+
+        For SPECFEM2D/3D models
+
+        :type vector: np.array
+        :param vector: allow Model to split an input vector. If none given,
+            will split the internal vector representation
+        :rtype: Dict of np.array
+        :return: dictionary of model parameters split up by number of processors
+        """
         if vector is None:
             vector = self.vector
 
@@ -368,6 +394,49 @@ class Model:
                 model[key].extend([vector[imin:imax]])
 
             model[key] = np.array(model[key])
+        return model
+
+    def _split_3dglobe(self, vector=None):
+        """
+        Converts internal vector representation `m` to dictionary representation
+        `model`. Does this by separating the vector based on how it was
+        constructed, parameter-wise and processor-wise
+
+        For SPECFEM3D_GLOBE models, has to separately deal with the 'region'
+
+        :type vector: np.array
+        :param vector: allow Model to split an input vector. If none given,
+            will split the internal vector representation
+        :rtype: Dict of np.array
+        :return: dictionary of model parameters split up by number of processors
+        """
+        if vector is None:
+            vector = self.vector
+
+        regions = Dict({region: [] for region in self.regions})
+        model = Dict({key: Dict({region: [] for region in self.regions}) \
+                        for key in self.parameters})
+
+        for idim, key in enumerate(self.parameters):
+            for ireg, region in enumerate(self.regions):
+                for iproc in range(self.nproc):
+                    # The first two terms give you the place in the vector that
+                    # accesses parameter `par` and region `reg`. The last term
+                    # gives you the number of GLL points for the given processor
+                    #
+                    # sum(ngll) * idim gives you all processors for 1 parameter
+                    # sum(ngll[:iproc]) gives number of GLL points for proc i
+                    imin = (sum(self.ngll) * idim + 
+                            len(self.regions) * ireg + 
+                            sum(self.ngll[:iproc])
+                            )
+                    imax = (sum(self.ngll) * idim + 
+                            len(self.regions) * ireg + 
+                            sum(self.ngll[:iproc + 1])
+                            )
+                    model[key][region].extend([vector[imin:imax]])
+
+                model[key][region] = np.array(model[key][region])
         return model
 
     def check(self, min_pr=-1., max_pr=0.5):
