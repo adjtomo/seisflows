@@ -591,12 +591,13 @@ def read_ascii(fid, origintime=None):
     # Honor that Specfem doesn't start exactly on 0
     origintime += times[0]
 
-    # Write out the header information
-    net, sta, cha, fmt = os.path.basename(fid).split('.')
+    # Write out the header information. Deal with the fact that SPECFEM2D/3D and
+    # 3D_GLOBE have slightly different formats for their filenames
+    net, sta, cha, *fmt = os.path.basename(fid).split('.')
     stats = {"network": net, "station": sta, "location": "",
              "channel": cha, "starttime": origintime, "npts": len(data),
              "delta": delta, "mseed": {"dataquality": 'D'},
-             "time_offset": times[0], "format": fmt
+             "time_offset": times[0], "format": fmt[0]
              }
     st = Stream([Trace(data=data, header=stats)])
 

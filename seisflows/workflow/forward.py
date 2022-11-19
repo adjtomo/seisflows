@@ -297,6 +297,7 @@ class Forward:
                 break
 
         self.checkpoint()
+        logger.info(f"finished all {len(self.task_list)} tasks in task list")
 
     def evaluate_initial_misfit(self):
         """
