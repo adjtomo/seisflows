@@ -329,16 +329,24 @@ class Default:
         Rename synthetic waveforms into filenames consistent with how SPECFEM
         expects adjoint sources to be named. Usually this just means adding
         a '.adj' to the end of the filename
-
-        TODO how does SPECFEM3D_GLOBE expect this? filenames end with .sem.ascii
-            so the .ascii will get replaced. Is that okay?
         """
         if not fid.endswith(".adj"):
             if self.data_format.upper() == "SU":
                 fid = f"{fid}.adj"
             elif self.data_format.upper() == "ASCII":
-                og_extension = os.path.splitext(fid)[-1]  # e.g., .semd
-                fid = fid.replace(og_extension, ".adj")
+                # Differentiate between SPECFEM3D and 3D_GLOBE
+                # SPECFEM3D: NN.SSSS.CCC.sem?
+                # SPECFEM3D_GLOBE: NN.SSSS.CCC.sem.ascii
+                ext = os.path.splitext(fid)[-1]  
+                # SPECFEM3D
+                if ".sem" in ext:
+                    fid = fid.replace(ext, ".adj")
+                # GLOBE (!!! Hardcoded to only work with ASCII format)
+                elif ext = ".ascii":
+                    root, ext1 = os.path.splitext(fid)  # .ascii
+                    root, ext2 = os.path.splitext(root)  # .sem
+                    fid = fid.replace(f"{ext2}{ext1}" ".adj")
+
         return fid
 
     def _setup_quantify_misfit(self, source_name):
