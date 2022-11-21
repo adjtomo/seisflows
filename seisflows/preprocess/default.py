@@ -342,7 +342,7 @@ class Default:
                 if ".sem" in ext:
                     fid = fid.replace(ext, ".adj")
                 # GLOBE (!!! Hardcoded to only work with ASCII format)
-                elif ext = ".ascii":
+                elif ext == ".ascii":
                     root, ext1 = os.path.splitext(fid)  # .ascii
                     root, ext2 = os.path.splitext(root)  # .sem
                     fid = fid.replace(f"{ext2}{ext1}" ".adj")
