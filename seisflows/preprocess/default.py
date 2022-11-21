@@ -345,7 +345,7 @@ class Default:
                 elif ext == ".ascii":
                     root, ext1 = os.path.splitext(fid)  # .ascii
                     root, ext2 = os.path.splitext(root)  # .sem
-                    fid = fid.replace(f"{ext2}{ext1}" ".adj")
+                    fid = fid.replace(f"{ext2}{ext1}", ".adj")
 
         return fid
 
