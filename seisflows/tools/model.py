@@ -68,22 +68,24 @@ class Model:
         self.fmt = fmt
         self.flavor = flavor
         self.model = None
+        self.regions = sorted([f"reg{i}" for i in regions])
         self.coordinates = None
         self._parameters = parameters
         self._ngll = None
         self._nproc = None
-
+    
+        # Check that User-provided (optional) flavor matches acceptable values
         if self.flavor is not None:
             acceptable_flavors = ["2D", "3D", "3DGLOBE"]
             assert(self.flavor in acceptable_flavors), \
                 f"User-defined `flavor' must be in {acceptable_flavors}"
 
-        # Add regions to the acceptable parameters, i.e., 'reg1_vp'
-        if self.flavor == "3DGLOBE":
-            for region in regions:
-                region_parameters = [f"reg{region}_{_}" for _ in
-                                     self.acceptable_parameters]
-                self.acceptable_parameters.extend(region_parameters)
+        # Edit acceptable parameters for 3DGLOBE, which must include region name
+        region_parameters = []
+        for region in ["1", "2", "3"]:
+            region_parameters.extend([f"reg{region}_{_}" for _ in
+                                     self.acceptable_parameters])
+        self.acceptable_parameters.extend(region_parameters)
 
         # Load an existing model if a valid path is given
         if self.path and os.path.exists(path):
@@ -116,7 +118,7 @@ class Model:
         else:
             logger.warning("no/invalid `path` given, initializing empty Model")
 
-    def fnfmt(self, i="*", val="*", ext="*", reg="*"):
+    def fnfmt(self, i="*", val="*", ext="*"):
         """
         Expected SPECFEM filename format with some checks to ensure that
         wildcards and numbers are accepted. An example filename is:
@@ -130,25 +132,16 @@ class Model:
         :type ext: str
         :param ext: the file format (e.g., '.bin'). If NOT preceded by a '.'
             will have one prepended
-        :type reg: str
-        :param reg: file format for 'reg'ion used for SPECFEM3D_GLOBE ONLY, 
-            regions are 1, 2 or 3 relating to crust, mantle, core, respectively.
-            Defults to wildcard '?'
         :rtype: str
         :return: filename formatter for use in model manipulation
         """
         if not ext.startswith("."):
             ext = f".{ext}"
-        # Unique modifier for SPECFEM3D_GLOBE files
-        if self.flavor == "3DGLOBE":
-            globe = f"_{reg}"
-        else:
-            globe = ""
 
         if isinstance(i, int):
-            filename_format = f"proc{i:0>6}{globe}_{val}{ext}"
+            filename_format = f"proc{i:0>6}_{val}{ext}"
         else:
-            filename_format = f"proc{i}{globe}_{val}{ext}"
+            filename_format = f"proc{i}_{val}{ext}"
 
         return filename_format
 
@@ -180,12 +173,8 @@ class Model:
         """Convenience function to count NGLL points as length of data arrays
         for each parameter processor chunk"""
         self._ngll = []
-        if self.flavor in ["2D", "3D"]:
-            for proc in self.model[self.parameters[0]]:
-                self._ngll.append(len(proc))
-        elif self.flavor == "3DGLOBE":
-            for proc in self.model[self.parameters[0]][self.regions[0]]:
-                self._ngll.append(len(proc))
+        for proc in self.model[self.parameters[0]]:
+            self._ngll.append(len(proc))
 
     @property
     def nproc(self):
@@ -251,17 +240,9 @@ class Model:
                    }[self.fmt]
 
         # Create a dictionary object containing all parameters and their models
-        if self.flavor in ["2D", "3D"]:
-            parameter_dict = Dict({key: [] for key in parameters})
-            for parameter in parameters:
-                parameter_dict[parameter] = load_fx(parameter=parameter)
-        # SPECFEM3D_GLOBE requires one more nested level for each region
-        elif self.flavor == "3DGLOBE":
-            parameter_dict = Dict({key: Dict() for key in parameters})
-            for parameter in parameters:
-                for region in self.regions:
-                    parameter_dict[parameter][region] = \
-                            load_fx(parameter=parameter, reg=region)
+        parameter_dict = Dict({key: [] for key in parameters})
+        for parameter in parameters:
+            parameter_dict[parameter] = load_fx(parameter=parameter)
 
         return parameter_dict
 
@@ -325,15 +306,9 @@ class Model:
         else:
             parameters = [parameter]
 
-        if self.flavor in ["2D", "3D"]:
-            for parameter in parameters:
-                for iproc in range(self.nproc):
-                    m = np.append(m, self.model[parameter][iproc])
-        elif self.flavor == "3DGLOBE":
-            for parameter in parameters:
-                for region in self.regions:
-                    for iproc in range(self.nproc):
-                        m = np.append(m, self.model[parameter][region][iproc])
+        for parameter in parameters:
+            for iproc in range(self.nproc):
+                m = np.append(m, self.model[parameter][iproc])
 
         return m
 
@@ -360,27 +335,6 @@ class Model:
         Converts internal vector representation `m` to dictionary representation
         `model`. Does this by separating the vector based on how it was
         constructed, parameter-wise and processor-wise
-
-        :type vector: np.array
-        :param vector: allow Model to split an input vector. If none given,
-            will split the internal vector representation
-        :rtype: Dict of np.array
-        :return: dictionary of model parameters split up by number of processors
-        """
-        if self.flavor in ["2D", "3D"]:
-            model = self._split_2d3d(vector)
-        elif self.flavor == "3DGLOBE":
-            model=self._split_3dglobe(vector)
-
-        return model
-
-    def _split_2d3d(self, vector=None):
-        """
-        Converts internal vector representation `m` to dictionary representation
-        `model`. Does this by separating the vector based on how it was
-        constructed, parameter-wise and processor-wise
-
-        For SPECFEM2D/3D models
 
         :type vector: np.array
         :param vector: allow Model to split an input vector. If none given,
@@ -696,27 +650,18 @@ class Model:
         fids = [os.path.basename(_) for _ in fids]  # drop full path
         fids = [os.path.splitext(_)[0] for _ in fids]  # drop extension
 
-        # Drop the 'reg?' tag for 3DGLOBE files
-        if self.flavor == "3DGLOBE":
-            fids = ["_".join(_.split("_")[1:]) for _ in fids]
-
         if self.fmt == ".bin":
             avail_par = list(set(["_".join(_.split("_")[1:]) for _ in fids]))
             # Remove any parameters not accepted by Model
             avail_par = list(set(avail_par).intersection(
                                         set(self.acceptable_parameters)
                                         ))
+
             # Count the number of files for matching parameters only (do once)
             # Globe version requires the region number in the wild card
-            if self.flavor == "3DGLOBE":
-                nproc = len(glob(os.path.join(
-                    self.path, self.fnfmt(val=avail_par[0], ext=self.fmt, 
-                                          reg=self.regions[0])))
-                )
-            else:
-                nproc = len(glob(os.path.join(
-                    self.path, self.fnfmt(val=avail_par[0], ext=self.fmt)))
-                )
+            nproc = len(glob(os.path.join(
+                self.path, self.fnfmt(val=avail_par[0], ext=self.fmt)))
+            )
         elif self.fmt == ".dat":
             # e.g., 'proc000000_rho_vp_vs'
             _, *avail_par = fids[0].split("_")
@@ -779,7 +724,7 @@ class Model:
 
         return flavor
 
-    def _read_model_fortran_binary(self, parameter, **kwargs):
+    def _read_model_fortran_binary(self, parameter):
         """
         Load Fortran binary models into disk. This is the preferred model format
         for SeisFlows <-> SPECFEM interaction
@@ -791,7 +736,7 @@ class Model:
         """
         array = []
         fids = glob(os.path.join(
-            self.path, self.fnfmt(val=parameter, ext=".bin", **kwargs))
+            self.path, self.fnfmt(val=parameter, ext=".bin"))
         )
         for fid in sorted(fids):  # make sure were going in numerical order
             array.append(read_fortran_binary(fid))
@@ -852,17 +797,9 @@ class Model:
             as 'int32' at the top and bottom of the data array.
             https://docs.oracle.com/cd/E19957-01/805-4939/6j4m0vnc4/index.html
         """
-        if self.flavor in ["2D", "3D"]:
-            for parameter in self.parameters:
-                for i, data in enumerate(self.model[parameter]):
-                    filename = self.fnfmt(i=i, val=parameter, ext=".bin")
-                    filepath = os.path.join(path, filename)
-                    write_fortran_binary(arr=data, filename=filepath)
-        elif self.flavor == "3DGLOBE":
-            for parameter in self.parameters:
-                for region in self.regions:
-                    for i, data in enumerate(self.model[parameter][region]):
-                        filename = self.fnfmt(i=i, val=parameter, reg=region,
-                                              ext=".bin")
-                        filepath = os.path.join(path, filename)
-                        write_fortran_binary(arr=data, filename=filepath)
+        for parameter in self.parameters:
+            for i, data in enumerate(self.model[parameter]):
+                filename = self.fnfmt(i=i, val=parameter, ext=".bin")
+                filepath = os.path.join(path, filename)
+                write_fortran_binary(arr=data, filename=filepath)
+
