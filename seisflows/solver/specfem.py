@@ -354,10 +354,10 @@ class Specfem:
         :return: wildcard identifier for channels
         """
         if kernel:
-            _ker = "kernel"
+            _ker = "_kernel"
         else:
             _ker = ""
-        return f"proc??????_{par}_{_ker}{self._ext}"
+        return f"proc??????_{par}{_ker}{self._ext}"
 
     def data_filenames(self, choice="obs"):
         """
