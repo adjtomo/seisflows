@@ -302,7 +302,9 @@ class Inversion(Migration):
             unix.mv(src, dst)
 
         # Expose the gradient to the optimization library
-        gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"))
+        gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"),
+                         regions=self.solver._regions
+                         )
         self.optimize.save_vector(name="g_new", m=gradient)
 
     def initialize_line_search(self):
