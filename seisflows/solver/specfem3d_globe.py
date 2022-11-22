@@ -269,8 +269,8 @@ class Specfem3DGlobe(Specfem):
 
     def combine(self, input_path, output_path, parameters=None):                 
         """
-	Overwrite of xcombine_sem with an additional file check as 
-	SPECFEM3D_GLOBE requires file 'mesh_parameters.bin'
+        Overwrite of xcombine_sem with an additional file check as 
+        SPECFEM3D_GLOBE requires file 'mesh_parameters.bin'
                                                                                  
         :type input_path: str                                                    
         :param input_path: path to data                                          
@@ -280,14 +280,18 @@ class Specfem3DGlobe(Specfem):
         :param parameters: optional list of parameters,                          
             defaults to `self._parameters`                                       
         """
-	# Copy in 'mesh_parameters.bin' from LOCAL_PATH
-	src = os.path.join(self.model_databases, "mesh_parameters.bin")
-	for name in self.source_names:
-	    dst = os.path.join(input_path, name, "mesh_parameters.bin")
-	    unix.cp(src, dst)
-	
-	super().combine(input_path=input_path, output_path=output_path,
-			parameters=parameters)
+        # Switch to relative pathing
+        unix.cd(self.cwd)
+
+        # Copy the 'mesh_parameters.bin' from LOCAL_PATH. Assumed to be the 
+        # same for all tasks
+        src = os.path.join(self.model_databases, "mesh_parameters.bin")
+        for name in self.source_names:
+            dst = os.path.join(input_path, name, "mesh_parameters.bin")
+            unix.cp(src, dst)
+        
+        super().combine(input_path=input_path, output_path=output_path,
+                        parameters=parameters)
 
     def smooth(self, input_path, output_path, parameters=None, span_h=None,      
                span_v=None, use_gpu=False):                                      
