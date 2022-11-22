@@ -355,49 +355,6 @@ class Model:
             model[key] = np.array(model[key])
         return model
 
-    def _split_3dglobe(self, vector=None):
-        """
-        Converts internal vector representation `m` to dictionary representation
-        `model`. Does this by separating the vector based on how it was
-        constructed, parameter-wise and processor-wise
-
-        For SPECFEM3D_GLOBE models, has to separately deal with the 'region'
-
-        :type vector: np.array
-        :param vector: allow Model to split an input vector. If none given,
-            will split the internal vector representation
-        :rtype: Dict of np.array
-        :return: dictionary of model parameters split up by number of processors
-        """
-        if vector is None:
-            vector = self.vector
-
-        regions = Dict({region: [] for region in self.regions})
-        model = Dict({key: Dict({region: [] for region in self.regions}) \
-                        for key in self.parameters})
-
-        for idim, key in enumerate(self.parameters):
-            for ireg, region in enumerate(self.regions):
-                for iproc in range(self.nproc):
-                    # The first two terms give you the place in the vector that
-                    # accesses parameter `par` and region `reg`. The last term
-                    # gives you the number of GLL points for the given processor
-                    #
-                    # sum(ngll) * idim gives you all processors for 1 parameter
-                    # sum(ngll[:iproc]) gives number of GLL points for proc i
-                    imin = (sum(self.ngll) * idim + 
-                            len(self.regions) * ireg + 
-                            sum(self.ngll[:iproc])
-                            )
-                    imax = (sum(self.ngll) * idim + 
-                            len(self.regions) * ireg + 
-                            sum(self.ngll[:iproc + 1])
-                            )
-                    model[key][region].extend([vector[imin:imax]])
-
-                model[key][region] = np.array(model[key][region])
-        return model
-
     def check(self, min_pr=-1., max_pr=0.5):
         """
         Checks parameters in the model. If Vs and Vp present, checks poissons
@@ -447,42 +404,45 @@ class Model:
         Checks parameters for SPECFEM3D_GLOBE derived models
         """
         # Check for negative velocities
-        for par in ["vsv", "vsh", "vph", "vpv", "vp", "vs"]:
+        for tag in ["vsv", "vsh", "vph", "vpv", "vp", "vs"]:
             for reg in self.regions:
+                par = f"{reg}_{tag}"
                 if par in self.model and \
-                        np.hstack(self.model[par][reg]).min() < 0:
-                    logger.warning(f"{reg}_{par} minimum for is negative "
-                                   f"{self.model['par']['reg'].min()}")
+                        np.hstack(self.model[par]).min() < 0:
+                    logger.warning(f"{par} minimum for is negative "
+                                   f"{self.model['par'].min()}")
 
         # Check Poisson's ratio for all (an)isotropic velocity combinations
         for vs_par in ["vs", "vsv", "vsh"]:
             for vp_par in ["vp", "vpv", "vph"]:
-                if vs_par in self.parameters and vp_par in self.parameters:
-                    pr = poissons_ratio(vp=self.merge(parameter=vp_par),
-                                        vs=self.merge(parameter=vs_par))
-                    if pr.min() < 0:
-                        logger.warning(f"minimum {vp_par}, {vs_par} poisson's "
-                                       f"ratio is negative")
-                    if pr.max() < min_pr:
-                        logger.warning(f"maximum {vp_par}, {vs_par} poisson's "
-                                       f"ratio out of bounds: "
-                                       f"{pr.max():.2f} > {max_pr}")
-                    if pr.min() > max_pr:
-                        logger.warning(f"minimum {vp_par}, {vs_par} poisson's "
-                                       f"ratio out of bounds: "
-                                       f"{pr.min():.2f} < {min_pr}")
+                for reg in self.regions:
+                    vs_par = f"{reg}_{vs_par}"  # e.g., 'reg1_vsv'
+                    vp_par = f"{reg}_{vp_par}"
+                    if vs_par in self.parameters and vp_par in self.parameters:
+                        pr = poissons_ratio(vp=self.merge(parameter=vp_par),
+                                            vs=self.merge(parameter=vs_par))
+                        if pr.min() < 0:
+                            logger.warning(f"minimum {vp_par}, {vs_par} "
+                                           f"poisson's ratio is negative")
+                        if pr.max() < min_pr:
+                            logger.warning(f"maximum {vp_par}, {vs_par} "
+                                           f"poisson's ratio out of bounds: "
+                                           f"{pr.max():.2f} > {max_pr}")
+                        if pr.min() > max_pr:
+                            logger.warning(f"minimum {vp_par}, {vs_par} "
+                                           f"poisson's ratio out of bounds: "
+                                           f"{pr.min():.2f} < {min_pr}")
 
         # SPECFEM3D_GLOBE requires an additional separation by region
         for key, vals in self.model.items():
-            for reg in self.regions:
-                min_val = np.hstack(vals[reg]).min()
-                max_val = np.hstack(vals[reg]).max()
-                # Choose formatter based on the magnitude of the value
-                if min_val < 1 or max_val > 1E4:
-                    parts = f"{min_val:.2E} <= {reg}_{key} <= {max_val:.2E}"
-                else:
-                    parts = f"{min_val:.2f} <= {reg}_{key} <= {max_val:.2f}"
-                logger.info(parts)
+            min_val = np.hstack(vals).min()
+            max_val = np.hstack(vals).max()
+            # Choose formatter based on the magnitude of the value
+            if min_val < 1 or max_val > 1E4:
+                parts = f"{min_val:.2E} <= {key} <= {max_val:.2E}"
+            else:
+                parts = f"{min_val:.2f} <= {key} <= {max_val:.2f}"
+            logger.info(parts)
 
     def save(self, path):
         """

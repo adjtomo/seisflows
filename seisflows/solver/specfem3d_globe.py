@@ -77,6 +77,12 @@ class Specfem3DGlobe(Specfem):
         self.prune_scratch = prune_scratch
         self.export_vtk = export_vtk
 
+        # These two variables are the same but we have a public version so it 
+        # will show up in the parameter file (for 3D_GLOBE only), and a private
+        # one so that the other SPECFEM versions can set it as None and use it
+        self.regions = str(regions)
+        self._regions = sorted(self.regions) 
+
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
             self._parameters += ["vp"]
@@ -85,11 +91,12 @@ class Specfem3DGlobe(Specfem):
         elif self.materials.upper() == "ANISOTROPIC":
             self._parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
 
-        # These two variables are the same but we have a public version so it 
-        # will show up in the parameter file (for 3D_GLOBE only), and a private
-        # one so that the other SPECFEM versions can set it as None and use it
-        self.regions = str(regions)
-        self._regions = sorted(self.regions) 
+        # Append regions to to the parameters, e.g., 'reg1_vpv'
+        overwrite_parameters = []
+        for reg in self._regions:
+            overwrite_parameters.extend([f"reg{reg}_{_}" for _ in 
+                                        self._parameters])
+        self._parameters = sorted(overwrite_parameters)
 
         # Overwriting the base class parameters
         self._available_data_formats = ["ASCII"]
