@@ -33,7 +33,6 @@ class Model:
                              "vpv", "vph", "vsv", "vsh", "eta"]
     acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
 
-
     def __init__(self, path=None, fmt="", parameters=None, regions="123", 
                  flavor=None):
         """
@@ -70,15 +69,21 @@ class Model:
         self.flavor = flavor
         self.model = None
         self.coordinates = None
-        self.regions = sorted([f"reg{i}" for i in regions])
         self._parameters = parameters
         self._ngll = None
         self._nproc = None
 
         if self.flavor is not None:
-            acceptable_flavors = ["2D" , "3D", "3DGLOBE"]
+            acceptable_flavors = ["2D", "3D", "3DGLOBE"]
             assert(self.flavor in acceptable_flavors), \
                 f"User-defined `flavor' must be in {acceptable_flavors}"
+
+        # Add regions to the acceptable parameters, i.e., 'reg1_vp'
+        if self.flavor == "3DGLOBE":
+            for region in regions:
+                region_parameters = [f"reg{region}_{_}" for _ in
+                                     self.acceptable_parameters]
+                self.acceptable_parameters.extend(region_parameters)
 
         # Load an existing model if a valid path is given
         if self.path and os.path.exists(path):
@@ -181,7 +186,6 @@ class Model:
         elif self.flavor == "3DGLOBE":
             for proc in self.model[self.parameters[0]][self.regions[0]]:
                 self._ngll.append(len(proc))
-
 
     @property
     def nproc(self):
@@ -758,7 +762,7 @@ class Model:
         :return: SPECFEM flavor, one of ['2D', '3D', '3DGLOBE']
         """
         fullpaths = glob(os.path.join(self.path, f"*{self.fmt}"))
-        assert(fullpaths), f"cannot find files for flavor guessing"
+        assert fullpaths, f"cannot find files for flavor guessing"
 
         # Not the most accurate way of doing this, but serves a purpose
         fids = [os.path.basename(_) for _ in fullpaths]
