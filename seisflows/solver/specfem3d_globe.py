@@ -137,27 +137,6 @@ class Specfem3DGlobe(Specfem):
         if self.data_format.upper() == "ASCII":
             return f"*.?X{comp}.sem.ascii"
 
-    def model_wildcard(self, par="*", kernel=False):
-        """                                                                      
-        Overwrites original function to return a model/kernel wildcard 
-        identifier for SPECFEM3D_GLOBE specific files. 
-        An example SPECFEM3D_GLOBE kernel filename (in FORTRAN binary file 
-        format) is: 'proc000001_reg1_rho_kernel.bin'
-
-        :type comp: str                                                          
-        :param comp: component formatter, defaults to wildcard '?'               
-        :type kernel: bool                                                       
-        :param kernel: wildcarding a kernel file. If True, adds the 'kernel'     
-            tag. If not, assuming we are wildcarding for a model file
-        :rtype: str                                                              
-        :return: wildcard identifier for channels                                
-        """
-        if kernel:
-            _ker = "_kernel"
-        else:
-            _ker = ""
-        return f"proc??????_reg?_{par}{_ker}{self._ext}"    
-
     @property
     def kernel_databases(self):
         """
@@ -296,6 +275,9 @@ class Specfem3DGlobe(Specfem):
         :param parameters: optional list of parameters,                          
             defaults to `self._parameters`                                       
         """
+        if parameters is None:
+            parameters = self._parameters
+
         # Switch to relative pathing
         unix.cd(self.cwd)
 
@@ -306,8 +288,11 @@ class Specfem3DGlobe(Specfem):
             dst = os.path.join(input_path, name, "mesh_parameters.bin")
             unix.cp(src, dst)
         
+        # 3DGLOBE 'xcombine_sem' does not expect `reg?_` prefix, strip off
+        stripped_parameters = list(set([_[5:] for _ in parameters]))
+
         super().combine(input_path=input_path, output_path=output_path,
-                        parameters=parameters)
+                        parameters=stripped_parameters)
 
     def smooth(self, input_path, output_path, parameters=None, span_h=None,      
                span_v=None, use_gpu=False):                                      
@@ -329,14 +314,20 @@ class Specfem3DGlobe(Specfem):
         :param use_gpu: whether to use GPU acceleration for smoothing. Requires  
             GPU compiled binaries and GPU compute node.                          
         """
+        if parameters is None:
+            parameters = self._parameters
+
+        # 3DGLOBE 'xsmooth_*sem' does not expect `reg?_` prefix, strip off
+        stripped_parameters = list(set([_[5:] for _ in parameters]))
+
         if self.smooth_type == "gaussian":
             super().smooth(input_path=input_path, output_path=output_path, 
-                           parameters=parameters, span_h=span_h, span_v=span_v,
-                           use_gpu=use_gpu)
+                           parameters=stripped_parameters, span_h=span_h, 
+                           span_v=span_v, use_gpu=use_gpu)
         elif self.smooth_type == "laplacian":
             self.smooth_laplacian(
                     input_path=input_path, output_path=output_path, 
-                    parameters=parameters, span_h=span_h, span_v=span_v
+                    parameters=stripped_parameters, span_h=span_h, span_v=span_v
                     )
 
     def smooth_laplacian(self, input_path, output_path, parameters=None, 

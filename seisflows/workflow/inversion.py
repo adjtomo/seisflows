@@ -298,6 +298,8 @@ class Inversion(Migration):
         src = os.path.join(self.path.output, "gradient")
         dst = os.path.join(self.path.output, f"GRADIENT_{self.iteration:0>2}")
         if os.path.exists(src):
+            if os.path.exists(dst):
+                unix.rm(dst)
             logger.debug(f"{src} -> {dst}")
             unix.mv(src, dst)
 

@@ -154,7 +154,7 @@ class Specfem:
 
         self._mpiexec = mpiexec
         self._source_names = None  # for property source_names
-        self._ext = None  # for database file extensions
+        self._ext = ""  # for database file extensions
 
         # Define available choices for check parameters
         self._available_model_types = ["gll"]
@@ -576,13 +576,13 @@ class Specfem:
         # Change directory so that the rename doesn't affect the full path
         # Deals with both SPECFEM3D and 3D_GLOBE, which adds in the 'reg?' tag
         unix.cd(self.kernel_databases)
-        for tag in ["alpha", "alpha[hv]"]:
+        for tag in ["alpha", "alpha[hv]", "reg?_alpha", "reg?_alpha[hv]"]:
             names = glob(self.model_wildcard(par=tag, kernel=True))
             if names:
                 logger.debug(f"renaming output event kernels: '{tag}' -> 'vp'")
                 unix.rename(old="alpha", new="vp", names=names)
 
-        for tag in ["beta", "beta[hv]"]:
+        for tag in ["beta", "beta[hv]", "reg?_beta", "reg?_beta[hv]"]:
             names = glob(self.model_wildcard(par=tag, kernel=True))
             if names:
                 logger.debug(f"renaming output event kernels: '{tag}' -> 'vs'")
