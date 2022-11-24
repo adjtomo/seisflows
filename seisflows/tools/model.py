@@ -31,9 +31,15 @@ class Model:
     # files created by SPECFEM, which includes things like 'ibool', 'info' etc.
     acceptable_parameters = ["vp", "vs", "rho",
                              "vpv", "vph", "vsv", "vsh", "eta"]
+    # Add kernel tag to all acceptable parameters for adjoint simulation results
     acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
+    # Edit acceptable parameters for 3DGLOBE, which must include region name
+    for parameter in acceptable_parameters[:]:
+        for region in ["1", "2", "3"]:
+            acceptable_parameters.append(f"reg{region}_{parameter}")
 
-    def __init__(self, path=None, fmt="", parameters=None):
+    def __init__(self, path=None, fmt="", parameters=None, regions="123", 
+                 flavor=None):
         """
         Model only needs path to model to determine model parameters. Format
         `fmt` can be provided by the user or guessed based on available file
@@ -50,14 +56,34 @@ class Model:
         :param fmt: expected format of the files (e.g., '.bin'), if None, will
             attempt to guess based on the file extensions found in `path`
             Available formats are: .bin, .dat
+        :type parameters: list
+        :param parameters: the list of parameters to consider when defining
+            the 'model', which is what will be updated during an inversion. 
+        :type regions: str
+        :param regions: only for SPECFEM3D_GLOBE, which regions of the chunk 
+            to consider in your 'model'. Valid regions are 1, 2 and 3. If you 
+            want all regions, set as '123'. If you only want region 1, set as 
+            '1'. Order insensitive.
+        :type flavor: str
+        :param flavor: optional, tell Model what version of SPECFEM was used
+            to generate the model, acceptable values are ['2D', '3D', '3DGLOBE']
+            If None, will try to guess based on file matching
         """
         self.path = path
         self.fmt = fmt
+        self.flavor = flavor
         self.model = None
+        self.regions = sorted([f"reg{i}" for i in regions])
         self.coordinates = None
         self._parameters = parameters
         self._ngll = None
         self._nproc = None
+    
+        # Check that User-provided (optional) flavor matches acceptable values
+        if self.flavor is not None:
+            acceptable_flavors = ["2D", "3D", "3DGLOBE"]
+            assert(self.flavor in acceptable_flavors), \
+                f"User-defined `flavor' must be in {acceptable_flavors}"
 
         # Load an existing model if a valid path is given
         if self.path and os.path.exists(path):
@@ -69,16 +95,20 @@ class Model:
                 self._nproc = len(self.model[_first_key])
             # Read a SPECFEM model from its native output files
             else:
+                # Dynamically guess things about the model based on files given
                 if not self.fmt:
                     self.fmt = self._guess_file_format()
+                if not self.flavor:
+                    self.flavor = self._guess_specfem_flavor()
+    
+                # Gather internal representation of the model for manipulation
                 self._nproc, self.available_parameters = \
                     self._get_nproc_parameters()
                 self.model = self.read(parameters=parameters)
+
                 # Coordinates are only useful for SPECFEM2D models
-                try:
+                if self.flavor == "2D":
                     self.coordinates = self.read_coordinates_specfem2d()
-                except AssertionError:
-                    pass
 
             # .sorted() enforces parameter order every time, otherwise things
             # can get screwy if keys returns different each time
@@ -86,9 +116,7 @@ class Model:
         else:
             logger.warning("no/invalid `path` given, initializing empty Model")
 
-
-    @staticmethod
-    def fnfmt(i="*", val="*", ext="*"):
+    def fnfmt(self, i="*", val="*", ext="*"):
         """
         Expected SPECFEM filename format with some checks to ensure that
         wildcards and numbers are accepted. An example filename is:
@@ -107,10 +135,12 @@ class Model:
         """
         if not ext.startswith("."):
             ext = f".{ext}"
+
         if isinstance(i, int):
             filename_format = f"proc{i:0>6}_{val}{ext}"
         else:
             filename_format = f"proc{i}_{val}{ext}"
+
         return filename_format
 
     @property
@@ -119,7 +149,7 @@ class Model:
         Returns a list of parameters which defines the model.
         """
         if not self._parameters:
-            self._parameters = list(self.model.keys())
+            self._parameters = sorted(list(self.model.keys()))
         return self._parameters
 
     @property
@@ -240,6 +270,12 @@ class Model:
                 coordinates["x"].append(np.loadtxt(fid).T[:, 0])
                 coordinates["z"].append(np.loadtxt(fid).T[:, 0])
 
+        # If nothing is found even though we expected files to be there
+        if not list(coordinates["x"]) or not list(coordinates["z"]):
+            logger.warning("no coordinates found for assumed SPECFEM2D model, "
+                           "will not be able to plot figures")
+            return None
+
         # Internal check for parameter validity by checking length of coord
         # against length of model. If they're not the same, then it's not
         # useful to store coordinates because they can't be used for plotting
@@ -326,6 +362,15 @@ class Model:
         ratio. Checks for negative velocity values. And prints out model
         min/max values
         """
+        if self.flavor in ["2D", "3D"]:
+            self._check_2d3d_parameters(min_pr, max_pr)
+        elif self.flavor == "3DGLOBE":
+            self._check_3dglobe_parameters(min_pr, max_pr)
+
+    def _check_2d3d_parameters(self, min_pr=-1., max_pr=0.5):
+        """
+        Checks parameters for SPECFEM2D and SPECFEM3D derived models
+        """
         if "vs" in self.parameters and "vp" in self.parameters:
             pr = poissons_ratio(vp=self.merge(parameter="vp"),
                                 vs=self.merge(parameter="vs"))
@@ -355,6 +400,51 @@ class Model:
                 parts = f"{min_val:.2f} <= {key} <= {max_val:.2f}"
             logger.info(parts)
 
+    def _check_3dglobe_parameters(self, min_pr=-1., max_pr=0.5):
+        """
+        Checks parameters for SPECFEM3D_GLOBE derived models
+        """
+        # Check for negative velocities
+        for tag in ["vsv", "vsh", "vph", "vpv", "vp", "vs"]:
+            for reg in self.regions:
+                par = f"{reg}_{tag}"
+                if par in self.model and \
+                        np.hstack(self.model[par]).min() < 0:
+                    logger.warning(f"{par} minimum for is negative "
+                                   f"{self.model['par'].min()}")
+
+        # Check Poisson's ratio for all (an)isotropic velocity combinations
+        for vs_par in ["vs", "vsv", "vsh"]:
+            for vp_par in ["vp", "vpv", "vph"]:
+                for reg in self.regions:
+                    vs_par = f"{reg}_{vs_par}"  # e.g., 'reg1_vsv'
+                    vp_par = f"{reg}_{vp_par}"
+                    if vs_par in self.parameters and vp_par in self.parameters:
+                        pr = poissons_ratio(vp=self.merge(parameter=vp_par),
+                                            vs=self.merge(parameter=vs_par))
+                        if pr.min() < 0:
+                            logger.warning(f"minimum {vp_par}, {vs_par} "
+                                           f"poisson's ratio is negative")
+                        if pr.max() < min_pr:
+                            logger.warning(f"maximum {vp_par}, {vs_par} "
+                                           f"poisson's ratio out of bounds: "
+                                           f"{pr.max():.2f} > {max_pr}")
+                        if pr.min() > max_pr:
+                            logger.warning(f"minimum {vp_par}, {vs_par} "
+                                           f"poisson's ratio out of bounds: "
+                                           f"{pr.min():.2f} < {min_pr}")
+
+        # SPECFEM3D_GLOBE requires an additional separation by region
+        for key, vals in self.model.items():
+            min_val = np.hstack(vals).min()
+            max_val = np.hstack(vals).max()
+            # Choose formatter based on the magnitude of the value
+            if min_val < 1 or max_val > 1E4:
+                parts = f"{min_val:.2E} <= {key} <= {max_val:.2E}"
+            else:
+                parts = f"{min_val:.2f} <= {key} <= {max_val:.2f}"
+            logger.info(parts)
+
     def save(self, path):
         """
         Save instance attributes (model, vector, metadata) to disk as an
@@ -367,6 +457,37 @@ class Model:
             model["z_coord"] = self.coordinates["z"]
 
         np.savez(file=path, fmt=self.fmt, **model)
+
+    def _load2d3d(self, file):
+        """
+        Load in a previously saved .npz file containing model information
+        and re-create a Model instance matching the one that was `save`d
+
+        :type file: str
+        :param file: .npz file to load data from. Must have been created by
+            Model.save()
+        :rtype: tuple (Dict, list, str)
+        :return: (Model Dictionary, ngll points for each slice, file format)
+        """
+        model = Dict()
+        coords = Dict()
+        ngll = []
+        data = np.load(file=file)
+        for i, key in enumerate(data.files):
+            if key == "fmt":
+                continue
+            # Special case where we are using SPECFEM2D and carry around coords
+            elif "coord" in key:
+                coords[key[0]] = data[key]  # drop '_coord' suffix from `save`
+            else:
+                model[key] = data[key]
+                # Assign the number of GLL points per slice. Only needs to happen
+                # once because all model values should have same points/slice
+                if not ngll:
+                    for array in model[key]:
+                        ngll.append(len(array))
+
+        return model, coords, ngll, str(data["fmt"])
 
     def load(self, file):
         """
@@ -492,19 +613,28 @@ class Model:
 
         if self.fmt == ".bin":
             avail_par = list(set(["_".join(_.split("_")[1:]) for _ in fids]))
+            # Remove any parameters not accepted by Model
+            avail_par = list(set(avail_par).intersection(
+                                        set(self.acceptable_parameters)
+                                        ))
+
+            # Count the number of files for matching parameters only (do once)
+            # Globe version requires the region number in the wild card
             nproc = len(glob(os.path.join(
                 self.path, self.fnfmt(val=avail_par[0], ext=self.fmt)))
             )
         elif self.fmt == ".dat":
             # e.g., 'proc000000_rho_vp_vs'
             _, *avail_par = fids[0].split("_")
+            # Remove any parameters not accepted by Model
+            avail_par = list(set(avail_par).intersection(
+                                        set(self.acceptable_parameters)
+                                        ))
             nproc = len(fids) + 1
         else:
             raise NotImplementedError(f"{self.fmt} is not yet supported by "
                                       f"SeisFlows")
 
-        # Remove any parameters not accepted by Model
-        avail_par = set(avail_par).intersection(set(self.acceptable_parameters))
 
         return nproc, list(avail_par)
 
@@ -527,6 +657,33 @@ class Model:
             f"found: {list(suffixes)}"
         )
         return list(fmt)[0]  # pulling single entry from set
+
+    def _guess_specfem_flavor(self):
+        """
+        Guess if SPECFEM2D/3D/3D_GLOBE was used to generate the model based
+        on the format of the file. Check based on unique available files or 
+        properties
+
+        :rtype: str
+        :return: SPECFEM flavor, one of ['2D', '3D', '3DGLOBE']
+        """
+        fullpaths = glob(os.path.join(self.path, f"*{self.fmt}"))
+        assert fullpaths, f"cannot find files for flavor guessing"
+
+        # Not the most accurate way of doing this, but serves a purpose
+        fids = [os.path.basename(_) for _ in fullpaths]
+        fids = [os.path.splitext(_)[0] for _ in fids]
+        unique_tags = set([_.split("_")[1] for _ in fids])
+    
+        if self.regions[0] in unique_tags:
+            flavor = "3DGLOBE"
+        # SPECFEM2D won't have a 'y' model
+        elif "y" in unique_tags:
+            flavor = "3D"
+        else:
+            flavor = "2D"
+
+        return flavor
 
     def _read_model_fortran_binary(self, parameter):
         """
@@ -567,9 +724,9 @@ class Model:
     def _read_model_ascii(self, parameter):
         """
         Load ASCII SPECFEM2D models into disk. ASCII models are generally saved
-        all in a single file with all parameters together as a N column ASCII file
-        where columns 1 and 2 are the coordinates of the mesh, and the remainder
-        columns are data corresponding to the filenames
+        all in a single file with all parameters together as a N column ASCII 
+        file where columns 1 and 2 are the coordinates of the mesh, and the 
+        remainder columns are data corresponding to the filenames
         e.g., proc000000_rho_vp_vs.dat, rho is column 3, vp is 4 etc.
 
         :type parameter: str
@@ -605,5 +762,5 @@ class Model:
             for i, data in enumerate(self.model[parameter]):
                 filename = self.fnfmt(i=i, val=parameter, ext=".bin")
                 filepath = os.path.join(path, filename)
-
                 write_fortran_binary(arr=data, filename=filepath)
+

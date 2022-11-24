@@ -146,7 +146,7 @@ def setpar(key, val, file, delim="=", match_partial=False):
     if val_out != "":
         key, val_and_comment = lines[i].split(delim)
         val_and_comment = val_and_comment.replace(val_out, str(val), 1)
-        lines[i] = "=".join([key, val_and_comment])
+        lines[i] = delim.join([key, val_and_comment])
     else:
         # Special case where the initial parameter is empty so we just replace
         # the newline formatter at the end

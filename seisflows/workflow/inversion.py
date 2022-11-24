@@ -244,7 +244,9 @@ class Inversion(Migration):
 
             # Expose the initial model to the optimization library
             model = Model(self.path.model_init,
-                          parameters=self.solver._parameters)
+                          parameters=self.solver._parameters,
+                          regions=self.solver._regions  # 3DGLOBE only
+                          )
             self.optimize.save_vector(name="m_new", m=model)
         else:
             # Thrifty inversion SKIPS initial misfit evaluation, re-using final
@@ -296,11 +298,15 @@ class Inversion(Migration):
         src = os.path.join(self.path.output, "gradient")
         dst = os.path.join(self.path.output, f"GRADIENT_{self.iteration:0>2}")
         if os.path.exists(src):
+            if os.path.exists(dst):
+                unix.rm(dst)
             logger.debug(f"{src} -> {dst}")
             unix.mv(src, dst)
 
         # Expose the gradient to the optimization library
-        gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"))
+        gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"),
+                         regions=self.solver._regions
+                         )
         self.optimize.save_vector(name="g_new", m=gradient)
 
     def initialize_line_search(self):

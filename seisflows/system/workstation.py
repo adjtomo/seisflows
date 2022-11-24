@@ -120,7 +120,6 @@ class Workstation:
                     f"MPI module is loaded and accessible from the command line"
                 )
                 sys.exit(-1)
-            logger.debug(f"MPI executable is located at: {stdout.strip()}")
 
     def setup(self):
         """

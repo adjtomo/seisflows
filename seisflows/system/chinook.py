@@ -73,7 +73,7 @@ class Chinook(Slurm):
             f"--output={self.path.output_log}",
             f"--error={self.path.output_log}",
             f"--ntasks=1",
-            f"--partition={self.main_partition}",
+            f"--partition={self.submit_to}",
             f"--time={self._walltime}"
         ])
         return _call
