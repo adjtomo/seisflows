@@ -31,7 +31,12 @@ class Model:
     # files created by SPECFEM, which includes things like 'ibool', 'info' etc.
     acceptable_parameters = ["vp", "vs", "rho",
                              "vpv", "vph", "vsv", "vsh", "eta"]
+    # Add kernel tag to all acceptable parameters for adjoint simulation results
     acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
+    # Edit acceptable parameters for 3DGLOBE, which must include region name
+    for parameter in acceptable_parameters[:]:
+        for region in ["1", "2", "3"]:
+            acceptable_parameters.append(f"reg{region}_{parameter}")
 
     def __init__(self, path=None, fmt="", parameters=None, regions="123", 
                  flavor=None):
@@ -79,13 +84,6 @@ class Model:
             acceptable_flavors = ["2D", "3D", "3DGLOBE"]
             assert(self.flavor in acceptable_flavors), \
                 f"User-defined `flavor' must be in {acceptable_flavors}"
-
-        # Edit acceptable parameters for 3DGLOBE, which must include region name
-        region_parameters = []
-        for region in ["1", "2", "3"]:
-            region_parameters.extend([f"reg{region}_{_}" for _ in
-                                     self.acceptable_parameters])
-        self.acceptable_parameters.extend(region_parameters)
 
         # Load an existing model if a valid path is given
         if self.path and os.path.exists(path):
@@ -271,9 +269,12 @@ class Model:
             for fid in sorted(fids):
                 coordinates["x"].append(np.loadtxt(fid).T[:, 0])
                 coordinates["z"].append(np.loadtxt(fid).T[:, 0])
-        
-        if not coordinates["x"] or not coordinates["z"]:
-            raise AssertionError("no coordinates found")
+
+        # If nothing is found even though we expected files to be there
+        if not list(coordinates["x"]) or not list(coordinates["z"]):
+            logger.warning("no coordinates found for assumed SPECFEM2D model, "
+                           "will not be able to plot figures")
+            return None
 
         # Internal check for parameter validity by checking length of coord
         # against length of model. If they're not the same, then it's not
