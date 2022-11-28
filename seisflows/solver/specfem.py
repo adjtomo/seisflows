@@ -818,29 +818,106 @@ class Specfem:
 
     def _initialize_working_directories(self):
         """
-        Serial task used to initialize working directories for each of the a
-        available sources
+        Serial task run by the master job which is used to initialize working
+        directories for each of the a available sources. Options to do this
+        for two difference approaches, the simultaneous runs approach, or the
+        array job approach.
         """
         logger.info(f"initializing {self.ntask} solver directories")
 
+        # Simultaneous run approach
         if self.run_simultaneous:
-            self._initialize_working_directories_simultaneous()
+            self._initialize_working_directories_simultaneous_runs()
+        # Array-job approach
         else:
             for source_name in self.source_names:
                 cwd = os.path.join(self.path.scratch, source_name)
                 if os.path.exists(cwd):
                     continue
-                self._initialize_working_directory_array(cwd=cwd)
+                self._initialize_working_directory_single(cwd=cwd)
 
-    def _initialize_working_directories_simultaneous(self):
+    def _initialize_working_directories_simultaneous_runs(self):
         """
         If `run_simultaneous` True, generates linked solver scratch directories
         where only the main solver contains mesh/model files. All other
         events/tasks occupy structure dictated by SPECFEM's
         `NUMBER_OF_SIMULTANEOUS_RUNS` approach
-        """
 
-    def _initialize_working_directory_array(self, cwd=None):
+        TODO add a skip statement incase this has already been run
+        """
+        # This is the mainsolver, but in SPECFEM terminology it is the ROOT dir.
+        # It is a barebones SPECFEM directory which contains executables,
+        # Par_file and some empty directories
+        unix.mkdir(self.path.mainsolver)
+
+        # Copy existing SPECFEM exectuables into the bin/ directory
+        unix.mkdir(os.path.join(self.path.mainsolver, "bin"))
+        src = glob(os.path.join(self.path.specfem_bin, "*"))
+        dst = os.path.join(self.path.mainsolver, "bin", "")
+        unix.cp(src, dst)
+
+        # Only the 'Par_file' is required for the ROOT directory
+        unix.mkdir(os.path.join(self.path.mainsolver, "DATA"))
+        src = os.path.join(self.path.specfem_data, "Par_file")
+        dst = os.path.join(self.path.mainsolver, "DATA", "Par_file")
+        unix.cp(src, dst)
+
+        # Edit the ROOT directory Par_file to deal with simultaneous runs
+        setpar(key="NUMBER_OF_SIMULTANEOUS_RUNS", val=str(self.ntask), file=dst)
+        setpar(key="BROADCAST_SAME_MESH_AND_MODEL", val=".true.", file=dst)
+
+        # Within the ROOTDIR, generate one run sub-directory for each event
+        _required_structure = {"DATA", "OUTPUT_FILES", "traces/obs",
+                               "traces/syn", "traces/adj", self.model_databases,
+                               self.kernel_databases}
+
+        for i, source_name in enumerate(self.source_names):
+            logger.debug(f"initializing solver directory source: {source_name}")
+
+            j = i + 1  # indexing starts from 1 for run directories
+            # each run dir must be named like: run0001, run0002, ..., run????
+            cwd = os.path.join(self.path.mainsolver, f"run{j:0>4}")
+
+            # Make sure we're starting fresh, incase this task was already run
+            unix.rm(cwd)
+            unix.mkdir(cwd)
+            unix.cd(cwd)
+
+            # Symlink the run directories to SeisFlows scratch solver directory
+            # to match the array-job format. Makes it easier for User to find
+            # things as well
+            dst = os.path.join(self.path.scratch, source_name)
+            unix.ln(cwd, dst)
+
+            # Generate required barebones directory structure inside run dir.
+            for dir_ in _required_structure:
+                unix.mkdir(os.path.join(cwd, dir_))
+
+            # Copy STATIONS file from specfem DATA/ directory
+            src = os.path.join(self.path.specfem_data, "STATIONS")
+            dst = os.path.join(cwd, "DATA", "STATIONS")
+            unix.cp(src, dst)
+
+            # Symlink event source specifically, only retaining source prefix
+            src = os.path.join(self.path.specfem_data,
+                               f"{self.source_prefix}_{source_name}")
+            dst = os.path.join(cwd, "DATA", self.source_prefix)
+            unix.ln(src, dst)
+
+            # run0001 is the heavy-lifter which must contain database files
+            if j == 1:
+                # Symlink OUTPUT_FILES and DATABASE directory to
+                # mainsolver so that we can use that directory for things like
+                # smoothing and combining data
+                for dir_ in sorted({"OUTPUT_FILES", self.model_databases,
+                                    self.kernel_databases}):
+                    src = os.path.join(cwd, dir_)
+                    dst = os.path.join(self.path.mainsolver, dir_)
+                    # Check to avoid symlinking existing directories
+                    if not os.path.exists(dst):
+                        unix.ln(src, dst)
+
+    def _initialize_working_directory_single(self, cwd=None):
         """
         If `run_simultaneous` False, creates independent solver scratch
         directories with structure expected by SPECFEM
