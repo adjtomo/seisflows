@@ -67,6 +67,14 @@ class Specfem:
     :type components: str
     :param components: components to consider and tag data with. Should be
         string of letters such as 'RTZ'
+    :type run_simultaneous: bool
+    :param run_simultaneous: Approach for job submission and model bookkeeping;
+        - If True: uses the SPECFEM 'number_of_simultaneous_runs' parameter to
+        run simulations with one large job occupying `nproc` * `ntask`
+        processors, with each event/task sharing one set of mesh/model files.
+        - If False: submits `ntask` array jobs, each occupying `nproc`
+        processors. Each event/task will constitute a separate solver directory,
+        with its own mesh/model files.
     :type solver_io: str
     :param solver_io: format of model/kernel/gradient files expected by the
         numerical solver. Available: ['fortran_binary': default .bin files].
@@ -94,8 +102,8 @@ class Specfem:
     def __init__(self, data_format="ascii",  materials="acoustic",
                  density=False, nproc=1, ntask=1, attenuation=False,
                  smooth_h=0., smooth_v=0., components="ZNE",
-                 source_prefix=None, mpiexec=None, workdir=os.getcwd(),
-                 path_solver=None, path_eval_grad=None,
+                 run_simultaneous=True,  source_prefix=None, mpiexec=None,
+                 workdir=os.getcwd(), path_solver=None, path_eval_grad=None,
                  path_data=None, path_specfem_bin=None, path_specfem_data=None,
                  path_model_init=None, path_model_true=None, path_output=None,
                  **kwargs):
@@ -128,6 +136,7 @@ class Specfem:
         self.ntask = ntask
         self.density = density
         self.attenuation = attenuation
+        self.run_simultaneous = run_simultaneous
         self.smooth_h = smooth_h
         self.smooth_v = smooth_v
         self.components = components
@@ -813,15 +822,28 @@ class Specfem:
         available sources
         """
         logger.info(f"initializing {self.ntask} solver directories")
-        for source_name in self.source_names:
-            cwd = os.path.join(self.path.scratch, source_name)
-            if os.path.exists(cwd):
-                continue
-            self._initialize_working_directory(cwd=cwd)
 
-    def _initialize_working_directory(self, cwd=None):
+        if self.run_simultaneous:
+            self._initialize_working_directories_simultaneous()
+        else:
+            for source_name in self.source_names:
+                cwd = os.path.join(self.path.scratch, source_name)
+                if os.path.exists(cwd):
+                    continue
+                self._initialize_working_directory_array(cwd=cwd)
+
+    def _initialize_working_directories_simultaneous(self):
         """
-        Creates scratch directory structure expected by SPECFEM
+        If `run_simultaneous` True, generates linked solver scratch directories
+        where only the main solver contains mesh/model files. All other
+        events/tasks occupy structure dictated by SPECFEM's
+        `NUMBER_OF_SIMULTANEOUS_RUNS` approach
+        """
+
+    def _initialize_working_directory_array(self, cwd=None):
+        """
+        If `run_simultaneous` False, creates independent solver scratch
+        directories with structure expected by SPECFEM
         (i.e., bin, DATA, OUTPUT_FILES). Copies executables (bin) and
         input data (DATA) directories, prepares simulation input files.
 
