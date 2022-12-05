@@ -73,7 +73,10 @@ class Model:
         self.fmt = fmt
         self.flavor = flavor
         self.model = None
-        self.regions = sorted([f"reg{i}" for i in regions])
+        if regions:
+            self.regions = sorted([f"reg{i}" for i in regions])
+        else:
+            self.regions = []
         self.coordinates = None
         self._parameters = parameters
         self._ngll = None
