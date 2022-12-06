@@ -73,7 +73,10 @@ class Model:
         self.fmt = fmt
         self.flavor = flavor
         self.model = None
-        self.regions = sorted([f"reg{i}" for i in regions])
+        if regions:
+            self.regions = sorted([f"reg{i}" for i in regions])
+        else:
+            self.regions = None
         self.coordinates = None
         self._parameters = parameters
         self._ngll = None
@@ -675,7 +678,7 @@ class Model:
         fids = [os.path.splitext(_)[0] for _ in fids]
         unique_tags = set([_.split("_")[1] for _ in fids])
     
-        if self.regions[0] in unique_tags:
+        if self.regions and self.regions[0] in unique_tags:
             flavor = "3DGLOBE"
         # SPECFEM2D won't have a 'y' model
         elif "y" in unique_tags:
