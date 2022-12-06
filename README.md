@@ -14,7 +14,7 @@ With a user base in both academia and industry, this package has been used for p
 
 - SeisFlows is under current active development, and is bundled with other inversion software under the [adjTomo organization](https://github.com/adjtomo).
 
-- Documentation, including install instructions, example problems and API, can be found on [Read the Docs](https://seisflows.readthedocs.io).
+- Documentation, including install instructions, example problems and API, can be found on [Read the Docs](https://seisflows.readthedocs.io) (Check the ['devel' version of Docs](https://seisflows.readthedocs.io/en/devel/) for the latest changes).
 
 - If you find any issues, have questions, or would like to join the community, please feel free to open up a [GitHub Issue](https://github.com/adjtomo/seisflows/issues) or [start a discussion](https://github.com/orgs/adjtomo/discussions). 
 
