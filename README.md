@@ -23,12 +23,12 @@ References
 ----------
 If you use this package in your own research, please cite the following papers:
 
-- Bryant Chow, Yoshihiro Kaneko, Carl Tape, Ryan Modrak, John Townend, An automated workflow for adjoint tomography     —waveform misfits and synthetic inversions for the North Island, New Zealand, Geophysical Journal International, Volume 223, Issue 3, December 2020, Pages 1461–1480, https://doi.org/10.1093/gji/ggaa381
+- Bryant Chow, Yoshihiro Kaneko, Carl Tape, Ryan Modrak, John Townend, *An automated workflow for adjoint tomography     —waveform misfits and synthetic inversions for the North Island, New Zealand*, Geophysical Journal International, Volume 223, Issue 3, December 2020, Pages 1461–1480, https://doi.org/10.1093/gji/ggaa381
 
-- Ryan Modrak, Dmitry Borisov, Matthieu Lefebvre, Jeroen Tromp; SeisFlows—Flexible waveform inversion software, Computers & Geosciences, Volume 115, June 2018, Pages 88-95, https://doi.org/10.1016/j.cageo.2018.02.004
+- Ryan Modrak, Dmitry Borisov, Matthieu Lefebvre, Jeroen Tromp; *SeisFlows—Flexible waveform inversion software*, Computers & Geosciences, Volume 115, June 2018, Pages 88-95, https://doi.org/10.1016/j.cageo.2018.02.004
 
 The following paper can also be cited relative to this software:
 
-- Ryan Modrak, Jeroen Tromp; Seismic waveform inversion best practices: regional, global and exploration test cases, Geophysical Journal International, Volume 206, Issue 3, 1 September 2016, Pages 1864–1889, https://doi.org/10.1093/gji/ggw202
+- Ryan Modrak, Jeroen Tromp; *Seismic waveform inversion best practices: regional, global and exploration test cases*, Geophysical Journal International, Volume 206, Issue 3, 1 September 2016, Pages 1864–1889, https://doi.org/10.1093/gji/ggw202
 
 
