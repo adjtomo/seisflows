@@ -1,5 +1,5 @@
-Running on a Cluster (UAF Chinook)  
-==================================
+HPC Example on UAF Chinook
+==========================
 
 This docs page introduces Users to running research-grade problems on high 
 performance computers (HPC). It is currently targeted at a specific university
@@ -22,7 +22,7 @@ Chinook is operated by Research Computing Systems (RCS).
     
     Resources last accessed Nov. 14, 2022
 
-0) Access Chinook
+0. Access Chinook
 ~~~~~~~~~~~~~~~~~
 
 For those following along in-person, we will access Chinook via SSH and then 
@@ -51,7 +51,7 @@ add the following lines to the following file: ``~/.bashrc``
     module load intel
 
 
-1) Install Conda
+1. Install Conda
 ~~~~~~~~~~~~~~~~
 
 First we need to install Conda, the Python package managaer. RCS has 
@@ -59,7 +59,7 @@ installation instructions related to installing Minoconda here:
 
 https://uaf-rcs.gitbook.io/uaf-rcs-hpc-docs/third-party-software/miniconda
 
-2) Install or load adjTomo
+2. Install or load adjTomo
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You have two options here for grabbing the adjTomo softwater suite. 1) Easiest 
@@ -76,7 +76,7 @@ the `main docs page <index.html#installation>`__.
 If you go with Option 2, make sure you activate your conda environment before 
 proceeding.
 
-3) Set up a SPECFEM2D/3D/3D_GLOBE working directory
+3. Set up a SPECFEM2D/3D/3D_GLOBE working directory
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 SeisFlows requires a pre-established SPECFEM working directory, with:
@@ -91,7 +91,7 @@ c) an initial model defined using one of SPECFEM's internally defined model form
     you can skip subsection 3a
 
 
-3a) Configure and compile
+3a. Configure and compile
 `````````````````````````
 
 You will need to clone SPECFEM2D/3D/3D_GLOBE (you choose the flavor), configure
@@ -115,7 +115,7 @@ Here we choose SPECFEM3D and compile using the Intel compiler suite:
     ./configure F90=ifort FC=ifort MPIFC=mpiifort CC=icc MPICC=mpiicc --with-mpi 
     make all  # -j to compile in parallel, if parallel, run on interactive mode
 
-3b) Generate appropriate DATA/ directory
+3b. Generate appropriate DATA/ directory
 ``````````````````````````````````````````
 
 Here you can choose to set your own mesh and model parameters to suit your 
@@ -137,7 +137,7 @@ repository) to keep things clean and manageable.
     mkdir OUTPUT_FILES
 
 
-3c) Dealing with multiple sources
+3c. Dealing with multiple sources
 `````````````````````````````````
 
 One key difference that needs to be addressed is that SeisFlows requires sources
@@ -162,7 +162,7 @@ simply copy our example CMTSOLUTION and rename:
     cp CMTSOLUTION_01 CMTSOLUTION_02  # source 2 is the same as source 1
     ln -s CMTSOLUTION_01/ CMTSOLUTION  # so that SPECFEM can still find source 1
 
-3d) Create Initial model
+3d. Create Initial model
 `````````````````````````
 
 Now we'll run SPECFEM to generate our mesh and model. This is the same procedure 
@@ -199,7 +199,7 @@ Have a look at the `command line tool docs page <command_line_tool.html>`__
 for more information on the command line tools available for SeisFlows.
 
 
-4) Setting up a SeisFlows working directory
+4. Setting up a SeisFlows working directory
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We are now ready to run SeisFlows. We just have to set up a working directory
@@ -217,7 +217,7 @@ I will run SeisFlows in a separate directory to keep things clean.
 Have a look at the `parameter file docs page <parameter_file.html>`__ for 
 more information on how the file is structured.
 
-4a) SeisFlows parameter file
+4a. SeisFlows parameter file
 ```````````````````````````````
 
 You can look at the generated parameter file to see what the template version 
@@ -252,7 +252,7 @@ By default we are running a ``forward`` workflow, which simply runs forward
 simulations en-masse. In following sections we will swap over to an inversion
 workflow.
 
-4b) Configuring the parameter file
+4b. Configuring the parameter file
 ````````````````````````````````````
 
 Each choice of base module (i.e., workflow system, solver, preprocess, optimize)
@@ -270,7 +270,7 @@ Have a look at your parameter file now to see all the module-specific parameters
 that have been instantiated.
 
 
-4c) Checking the parameter file
+4c. Checking the parameter file
 `````````````````````````````````
 
 As with SPECFEM, the parameter file in SeisFlows controls the entire package, 
@@ -321,7 +321,7 @@ in order to suit my current research problem:
     seisflows par export_traces True  # save seismograms to disk 
 
 
-5) Submit the main job
+5. Submit the main job
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 SeisFlows operates using a serial, single-core main job submitted to a 
@@ -352,7 +352,7 @@ corresponding to the two CMTSOLUTIONS we have in our DATA/ directory.
     implementation. Future work may place the main job on the login node as well.
 
 
-6) Inspecting SeisFlows
+6. Inspecting SeisFlows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Have a look at the `working directory docs page <working_directory.html>`__ 
@@ -365,7 +365,7 @@ that get submitted to the system using the `squeue` or `sacct` commands.
 - Each spawned job is logging to a unique file in ``logs/``
 - Each source has it's own working directory in ``scratch/solver/``
 
-6a) Recovering from job failures
+6a. Recovering from job failures
 `````````````````````````````````
 
 SeisFlows has a state file (`sfstate.txt`) that tracks the progress of your 
@@ -384,7 +384,7 @@ completed tasks, saving computational cost.
     will need to re-run ALL forward simulations. In the future I hope to 
     include some more detailed checkpointing to avoid this.
 
-6b) SeisFlows debug mode
+6b. SeisFlows debug mode
 `````````````````````````
 
 SeisFlows has a debug mode, which is simply an IPython environment with all
@@ -400,7 +400,7 @@ figure out a bug), and you want to know "what is this variable?", or
     seisflows debug
 
 
-7) Modifying for a synthetic inversion
+7. Modifying for a synthetic inversion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Great! This is essentially the standard method of operating SeisFlows: 
@@ -420,7 +420,7 @@ non-essential files, you can run:
     seisflows clean -f
 
 
-7a) Swap modules in the parameter file
+7a. Swap modules in the parameter file
 ``````````````````````````````````````
 
 SeisFlows ``swap`` allows Users to swap out valid modules without disturbing 
@@ -447,7 +447,7 @@ have a look at the output of `seisflows print modules` for all choices.
     seisflows swap optimize LBFGS
 
 
-7b) Generate your target model
+7b. Generate your target model
 ````````````````````````````````
 
 The inversion workflow requires data. Since we have decided to do a synthetic
@@ -488,7 +488,7 @@ And now we need to run the SPECFEM binaries again to generate our target model
     seisflows sempar -P DATA/Par_file model gll  # reset for seisflows run
 
 
-7c) Set inversion-specific parameters
+7c. Set inversion-specific parameters
 `````````````````````````````````````
 
 Again we can use `seisflows check` to see what new parameters we need to set, 
@@ -515,7 +515,7 @@ We'll also set the following parameters:
     seisflows par materials elastic  # update both vp and vs
     seisflows par end 2  # stop after iteration 2 is finished
 
-7d) SeisFlows submit
+7d. SeisFlows submit
 ````````````````````
 
 Again we run `submit` to submit our workflow. 

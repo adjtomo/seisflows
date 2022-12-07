@@ -1,7 +1,7 @@
 Extending the Codebase
 ======================
 
-.. note::
+.. warning::
     Page Under Construction
   
 SeisFlows works on the object oriented programming principal of inheritance.
