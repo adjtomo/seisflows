@@ -3,6 +3,7 @@ Overview
 ``SeisFlows`` is a Python-based package for automating waveform inversion.
 With a user base in both academia and industry, ``SeisFlows`` has been used
 for:
+
 - production scale inversions (some with over a billion model parameters),
 - research problems related to oil and gas exploration,
 - regional-scale earthquake-based adjoint tomography problems,

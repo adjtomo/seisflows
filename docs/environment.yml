@@ -5,7 +5,7 @@ name: seisflows-docs
 channels:
     - conda-forge
 dependencies:
-    - obspy=1.2.2
+    - obspy>=1.2.2
     - pyyaml=5.3.1
     - sphinx-autoapi
     - sphinx_rtd_theme>=1.0.0

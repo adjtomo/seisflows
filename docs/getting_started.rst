@@ -45,9 +45,8 @@ help you understand the key components of SeisFlows,
   setting up SeisFlows on your HPC system
 * `Background <background.html>`__: Learn about how the SeisFlows source code
   is structured
-* `Extend the package <extending.html>`__: See about becoming a contributor
-  to SeisFlows by adding your own functionality
-* `API <autoapi/index.html>`__: SeisFlows source code reference manual
+* `Extend the package <extending.html>`__: Become a SeisFlows contributor
+* `API <autoapi/index.html>`__: Source code reference manual
 
 
 
