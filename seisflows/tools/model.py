@@ -676,7 +676,7 @@ class Model:
         # Not the most accurate way of doing this, but serves a purpose
         fids = [os.path.basename(_) for _ in fullpaths]
         fids = [os.path.splitext(_)[0] for _ in fids]
-        unique_tags = set([_.split("_")[1] for _ in fids])
+        unique_tags = set(["_".join(_.split("_")[1:]) for _ in fids])
     
         if self.regions and self.regions[0] in unique_tags:
             flavor = "3DGLOBE"
