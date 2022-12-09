@@ -2,7 +2,7 @@ SeisFlows
 ==========
 
 [![SCOPED](https://img.shields.io/endpoint?url=https://runkit.io/wangyinz/scoped/branches/master/adjTomo)](https://github.com/SeisSCOPED/container/pkgs/container/adjtomo)
-[![Documentation Status](https://readthedocs.org/projects/seisflows/badge/?version=latest)](https://seisflows.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/seisflows/badge/?version=devel)](https://seisflows.readthedocs.io/en/devel/?badge=devel)
 
 SeisFlows is an open-source, Python-based waveform inversion package that tackles the problems of full waveform inversion, seismic migration, and adjoint tomography. 
 
