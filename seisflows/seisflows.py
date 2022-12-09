@@ -249,7 +249,7 @@ Stream.plot() function under the hood. Example call would be
 Print information related to an active environment
 
     modules       List available module names for all available packages
-    flow          Print out the workflow.main() flow arguments
+    tasks         Print out the workflow task list for valid `stop_after` values
     inherit       Track inheritance chain for all modules, determine method 
                   ownership for a given function. 
                   seisflows print inherit {optional module} {optional function}
@@ -590,6 +590,8 @@ class SeisFlows:
                         val = "null"
                     if absolute_paths:
                         val = os.path.abspath(val)
+                    else:
+                        val = os.path.relpath(val)
                     f.write(f"path_{key}: {val}\n")
                     written.append(key)
         except Exception:
