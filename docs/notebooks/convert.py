@@ -62,14 +62,14 @@ def adjust_nb(nbname):
         os.rename(nb_files_path_old, nb_files_path_new)
 
     # Cleanup text in the RST file and overwrite 
-    lines = cleanup_write_rst(rst_path)
+    lines = cleanup_rst(rst_path)
 
     # Overwrite existing RST file
     with open(rst_path, "w") as f:
         f.writelines(lines)
     
 
-def cleanup_write_rst(rst_file):
+def cleanup_rst(rst_file):
     """
     Files that get converted from a Jupyter notebook tend to have some weird 
     formatting that does not match the style of the rest of the docs, as 
@@ -87,7 +87,7 @@ def cleanup_write_rst(rst_file):
         # Change image paths to correct directory
         elif ".. image::" in line:
             new_line = line.replace(".. image:: ", ".. image:: images/")
-            rst_file[i] = new_line
+            lines_out.append(new_line)
         # Get rid of magic command '%'
         elif line.startswith("    %"):
             lines_out.append(line.replace("    %", "    "))
