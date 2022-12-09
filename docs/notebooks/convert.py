@@ -18,6 +18,8 @@ import sys
 import shutil
 import glob
 
+from textwrap import wrap
+
 
 def convert_nb(nbname):
     """
@@ -59,18 +61,43 @@ def adjust_nb(nbname):
             shutil.rmtree(nb_files_path_new)
         os.rename(nb_files_path_old, nb_files_path_new)
 
-    with open(rst_path, "r") as f:
-        rst_file = f.readlines()
+    # Cleanup text in the RST file and overwrite 
+    lines = cleanup_write_rst(rst_path)
 
-    # Check if any images in the converted notebook
-    for i, line in enumerate(rst_file[:]):
-        if ".. image::" in line:
-            # If so, replace with correct image location
+    # Overwrite existing RST file
+    with open(rst_path, "w") as f:
+        f.writelines(lines)
+    
+
+def cleanup_write_rst(rst_file):
+    """
+    Files that get converted from a Jupyter notebook tend to have some weird 
+    formatting that does not match the style of the rest of the docs, as 
+    magic commands.
+
+    This simple function just runs through a doc line by line and changes 
+    some of the code blocks. 
+    """
+    lines_out = []
+    lines = open(rst_file, "r").readlines()
+    for i, line in enumerate(lines[:]):
+        # Change ipython3 code blocks to bash
+        if line == ".. code:: ipython3\n":
+            lines_out.append(".. code:: bash\n")
+        # Change image paths to correct directory
+        elif ".. image::" in line:
             new_line = line.replace(".. image:: ", ".. image:: images/")
             rst_file[i] = new_line
+        # Get rid of magic command '%'
+        elif line.startswith("    %"):
+            lines_out.append(line.replace("    %", "    "))
+        # Get rid of magic command '!'
+        elif line.startswith("    !"):
+            lines_out.append(line.replace("    !", "   "))
+        else:
+            lines_out.append(line)
 
-    with open(rst_path, "w") as f:
-        f.writelines(rst_file)
+    return lines_out 
 
 
 if __name__ == "__main__":
@@ -78,6 +105,7 @@ if __name__ == "__main__":
         for nbname in sys.argv[1:]:
             convert_nb(nbname)
             adjust_nb(nbname)
+            
     else:
         for nbname in glob.glob("*ipynb"):
             convert_nb(nbname)

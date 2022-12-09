@@ -105,6 +105,15 @@ found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683
 .. toctree::
    :maxdepth: 1
    :hidden:
+   :caption: How To's
+
+   cluster_setup
+   containers
+
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
    :caption: Examples
 
    specfem2d_example
@@ -114,17 +123,9 @@ found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: How To's
-
-   cluster_setup
-   containers
-   extending
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
    :caption: Development
 
+   extending
    changelog
    code_dev_plan
 
