@@ -12,9 +12,9 @@ After installing SeisFlows into a Conda environment, the ``seisflows``
 command will be available directly from the command line. To access the
 help dialogue, you can type ``seisflows`` or ``seisflows -h``
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows
+    seisflows
 
 
 .. parsed-literal::
@@ -68,11 +68,11 @@ The first step of any SeisFlows workflow is to setting up a parameter
 file. The ``seisflows setup`` command copies in a template parameter
 file.
 
-.. code:: ipython3
+.. code:: bash
 
-    %cd ~/Scratch
-    ! rm *
-    ! ls
+    cd ~/Scratch
+    rm *
+    ls
 
 
 .. parsed-literal::
@@ -80,9 +80,9 @@ file.
     /Users/Chow/Scratch
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows setup -h
+    seisflows setup -h
 
 
 .. parsed-literal::
@@ -100,10 +100,10 @@ file.
       -f, --force  automatically overwrites existing parameter file
 
 
-.. code:: ipython3
+.. code:: bash
 
     # The '-f' flag (overwrite) will overwrite any existing parameter file
-    ! seisflows setup -f
+    seisflows setup -f
 
 
 .. parsed-literal::
@@ -116,10 +116,10 @@ generated, we can see that it contains some pre-defined default values
 for the core SeisFlows modules. Each of these modules defines it’s own
 set of unique parameters which make up a workflow.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls
-    ! wc -l parameters.yaml  # List the number of lines in the file
+    ls
+    wc -l parameters.yaml  # List the number of lines in the file
 
 
 .. parsed-literal::
@@ -128,9 +128,9 @@ set of unique parameters which make up a workflow.
           30 parameters.yaml
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! cat parameters.yaml
+    cat parameters.yaml
 
 
 .. parsed-literal::
@@ -174,9 +174,9 @@ We can now run the ``seisflows configure`` command which will build out
 our parameter file based on the module choices provided in the parameter
 file.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows configure -h
+    seisflows configure -h
 
 
 .. parsed-literal::
@@ -196,15 +196,15 @@ file.
       -a, --absolute_paths  Set default paths relative to cwd
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows configure
+    seisflows configure
 
-.. code:: ipython3
+.. code:: bash
 
-    ! head -200 parameters.yaml | tail -n 82  # have a look at the middle of the file
-    ! echo
-    ! wc -l parameters.yaml
+    head -200 parameters.yaml | tail -n 82  # have a look at the middle of the file
+    echo
+    wc -l parameters.yaml
 
 
 .. parsed-literal::
@@ -321,9 +321,9 @@ easier by allowing you to view and edit values from the command line.
 This makes it convenient to change parameters quickly and allows you to
 script your parameter file setup for improved reproducibility.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows par -h
+    seisflows par -h
 
 
 .. parsed-literal::
@@ -355,9 +355,9 @@ message:
 We can view parameters by providing a single ‘parameter’ argument to the
 ``par`` command
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows par ntask  # ntask is the number of tasks/events to be run during a workflow
+    seisflows par ntask  # ntask is the number of tasks/events to be run during a workflow
 
 
 .. parsed-literal::
@@ -368,9 +368,9 @@ We can view parameters by providing a single ‘parameter’ argument to the
 We can change a given parameter from it’s original value by providing a
 second ‘value’ argument
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows par ntask 3
+    seisflows par ntask 3
 
 
 .. parsed-literal::
@@ -394,9 +394,9 @@ This is especially important when submitting large jobs on clusters as
 the ``check`` function will allow the User to catch errors without
 having to wait on queue times or waste computational resources.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows check
+    seisflows check
 
 
 .. parsed-literal::
@@ -422,9 +422,9 @@ cases for when this might be useful include switching from a
 ‘workstation’ system to a ‘cluster’ system, or swapping solvers from
 ‘specfem2d’ to ‘specfem3d’.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows swap -h
+    seisflows swap -h
 
 
 .. parsed-literal::
@@ -461,9 +461,9 @@ tasks in the ``workflow`` task list. On clusters, ``submit`` will launch
 a master job on a compute node, which will itself step through tasks in
 the task list, ensuring that no processing is run on login nodes.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows submit -h
+    seisflows submit -h
 
 
 .. parsed-literal::
@@ -491,9 +491,9 @@ the parameter file, but does not delete the parameter file itself. Use
 the ``-f/--force`` flag to skip over the ‘are you sure?’ check
 statement.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows clean -h 
+    seisflows clean -h 
 
 
 .. parsed-literal::
@@ -516,9 +516,9 @@ and ``submit``. It is used to restart workflows using the same parameter
 file. It also takes the ``-f/--force`` flag that the clean function
 defines.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows restart -h
+    seisflows restart -h
 
 
 .. parsed-literal::
@@ -536,7 +536,7 @@ defines.
 Plotting
 ~~~~~~~~
 
-.. code:: ipython3
+.. code:: bash
 
     from IPython.display import Image  # Required for showing inline figures in notebook/docs
 
@@ -548,11 +548,11 @@ gradients which have been exported to disk during a SeisFlows workflow.
 From a SeisFlows working directory the format for running ``plot2d`` is
 provided in the help message.
 
-.. code:: ipython3
+.. code:: bash
 
     # a directory where we have run an example problem
-    %cd ~/sfexamples/example_2
-    ! ls
+    cd ~/sfexamples/example_2
+    ls
 
 
 .. parsed-literal::
@@ -562,9 +562,9 @@ provided in the help message.
     output	scratch		 sfstate.txt  specfem2d_workdir
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d -h
+    seisflows plot2d -h
 
 
 .. parsed-literal::
@@ -590,9 +590,9 @@ provided in the help message.
 Running ``plot2d`` without any arguments will print out a list of
 available directories you can plot
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d 
+    seisflows plot2d 
 
 
 .. parsed-literal::
@@ -614,9 +614,9 @@ which is defined by the available parameters in the underlying model.
 Incorrect choices will throw an AssertionError which will tell you what
 parameters are available to plot.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d GRADIENT_01
+    seisflows plot2d GRADIENT_01
 
 
 .. parsed-literal::
@@ -635,9 +635,9 @@ parameters are available to plot.
     AssertionError: chosen `parameter` must be in ['vp_kernel', 'vs_kernel']
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d GRADIENT_01 vs_kernel --savefig gradient_01_vs_kernel.png
+    seisflows plot2d GRADIENT_01 vs_kernel --savefig gradient_01_vs_kernel.png
     Image(filename='gradient_01_vs_kernel.png') 
 
 
@@ -662,10 +662,10 @@ during one of our example problems. Using the ``export_traces``
 parameter, our workflow has saved these waveforms to the ``output/``
 directory of our SeisFlows working directory.
 
-.. code:: ipython3
+.. code:: bash
 
-    %cd ~/sfexamples/example_3/output/solver/001/syn
-    ! ls
+    cd ~/sfexamples/example_3/output/solver/001/syn
+    ls
 
 
 .. parsed-literal::
@@ -682,10 +682,10 @@ directory of our SeisFlows working directory.
     AA.S000008.BXY.semd  AA.S000017.BXY.semd
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Run the help message
-    ! seisflows plotst -h
+    seisflows plotst -h
 
 
 .. parsed-literal::
@@ -713,10 +713,10 @@ directory of our SeisFlows working directory.
                             optional name and path to save figure
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Plot a single synthetic seismogram
-    ! seisflows plotst AA.S000000.BXY.semd --savefig AA.S000000.BXY.semd.png
+    seisflows plotst AA.S000000.BXY.semd --savefig AA.S000000.BXY.semd.png
     Image("AA.S000000.BXY.semd.png")
 
 
@@ -726,10 +726,10 @@ directory of our SeisFlows working directory.
 
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Use wild cards to plot multiple stations at once
-    ! seisflows plotst AA.S00000?.BXY.semd --savefig AA.S00000X.BXY.semd.png
+    seisflows plotst AA.S00000?.BXY.semd --savefig AA.S00000X.BXY.semd.png
     Image("AA.S00000X.BXY.semd.png")
 
 

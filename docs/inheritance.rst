@@ -3,7 +3,7 @@ Inheritance in Python
 
 ``SeisFlows`` is built upon the object-oriented programming concept of
 **inheritance**. This documentation page is a simple introduction to
-this concept to help new users and developers understand how SeisFlows
+this concept to help new users and developers understand how SeisFlows3
 is built and expected to operate.
 
 **Inheritance** is the ability of one class to derive attributes from
@@ -21,11 +21,11 @@ to talk about this inheritance is defined here:
 Consider the following toy example where we define a **Base** class
 which has some internal attributes and functions.
 
-.. code:: ipython3
+.. code:: bash
 
     class Base:
         """
-        A Baseclass example. All SeisFlows modules contain a Base class which 
+        A Baseclass example. All SeisFlows3 modules contain a Base class which 
         defines the foundational structure that all inherited classes will adopt
         """
         def __init__(self, example_integer=5, example_float=1.2):
@@ -65,7 +65,7 @@ which has some internal attributes and functions.
 We can quickly look at the behavior of this class by creating an
 instance of it.
 
-.. code:: ipython3
+.. code:: bash
 
     module = Base(example_integer=11, example_float=3.)
     module.check()
@@ -94,7 +94,7 @@ instance of it.
     AssertionError: The example integer must be < 10
 
 
-.. code:: ipython3
+.. code:: bash
 
     module = Base(example_integer=6, example_float=3.)
     module.check()
@@ -142,7 +142,7 @@ properties of its ``Parent``. This results in the least amount of code
 writing, keeps behavior consistent, and allows flexibility in editing
 established code (e.g., the ``Baseclass``). Let’s see how this is done:
 
-.. code:: ipython3
+.. code:: bash
 
     class Super(Base):
         """
@@ -151,7 +151,7 @@ established code (e.g., the ``Baseclass``). Let’s see how this is done:
         """
         pass
 
-.. code:: ipython3
+.. code:: bash
 
     module = Super(example_integer=6, example_float=3.)
     module.check()
@@ -169,7 +169,7 @@ Overwriting functions
 To solve the problem stated above, we can totally overwrite the
 manipulate function to provide different behavior
 
-.. code:: ipython3
+.. code:: bash
 
     class Super(Base):
         """
@@ -184,7 +184,7 @@ manipulate function to provide different behavior
             """ 
             return self.example_integer - self.example_float
 
-.. code:: ipython3
+.. code:: bash
 
     module = Super(example_integer=6, example_float=3.)
     module.check()
@@ -208,7 +208,7 @@ from the parent class, allowing us to build upon previously written
 code. This is useful if you don’t want to completely overwrite a
 previously-defined function.
 
-.. code:: ipython3
+.. code:: bash
 
     class Super(Base):
         """
@@ -225,7 +225,7 @@ previously-defined function.
             print(f"added_values={added_values}")
             return added_values ** 2
 
-.. code:: ipython3
+.. code:: bash
 
     module = Super(example_integer=6, example_float=3.)
     module.check()
@@ -251,7 +251,7 @@ class, but you want to extend it further for your own specific workflow.
 Here we define a ``Superer`` class, which inherits and extends the
 ``Super`` class (which itself inherits from the ``Base`` class).
 
-.. code:: ipython3
+.. code:: bash
 
     class Superer(Super):
         """
@@ -294,7 +294,7 @@ Here we define a ``Superer`` class, which inherits and extends the
             manipulated_value = self.manipulate()
             return self.new_value + manipulated_value
 
-.. code:: ipython3
+.. code:: bash
 
     module = Superer(example_integer=6, example_float=3., new_value=2)
     module.check()

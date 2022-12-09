@@ -49,14 +49,14 @@ working directory that will be used by SeisFlows. We’ll use to Python OS
 module to do our filesystem processes just to keep everything in Python,
 but this can easily be accomplished in bash.
 
-.. code:: ipython3
+.. code:: bash
 
     import os
     import glob
     import shutil
     import numpy as np
 
-.. code:: ipython3
+.. code:: bash
 
     # vvv USER MUST EDIT THE FOLLOWING PATHS vvv
     WORKDIR = "/home/bchow/Work/scratch" 
@@ -82,7 +82,7 @@ but this can easily be accomplished in bash.
     SPECFEM2D_MODEL_INIT = os.path.join(SPECFEM2D_WORKDIR, "OUTPUT_FILES_INIT")
     SPECFEM2D_MODEL_TRUE = os.path.join(SPECFEM2D_WORKDIR, "OUTPUT_FILES_TRUE")
 
-.. code:: ipython3
+.. code:: bash
 
     # Download SPECFEM2D from GitHub, devel branch for latest codebase OR symlink from existing repo
     if not os.path.exists(WORKDIR):
@@ -105,25 +105,25 @@ but this can easily be accomplished in bash.
     Existing SPECMFE2D respository found, symlinking to working directory
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Compile SPECFEM2D to generate the Makefile
     os.chdir(SPECFEM2D_ORIGINAL)
     if not os.path.exists("./config.log"):
         os.system("./configure")
 
-.. code:: ipython3
+.. code:: bash
 
     # Run make to generate SPECFEM2D binaries
     if not os.path.exists("bin"):
         os.system("make all")
 
-.. code:: ipython3
+.. code:: bash
 
     # Check out the binary files that have been created
     os.chdir(SPECFEM2D_ORIGINAL)
-    ! pwd
-    ! ls bin/
+    pwd
+    ls bin/
 
 
 .. parsed-literal::
@@ -152,7 +152,7 @@ In this tutorial we will be using the `Tape2007 example
 problem <https://github.com/geodynamics/specfem2d/tree/devel/EXAMPLES/Tape2007>`__
 to define our **DATA/** directory (last tested 8/15/22, bdba4389).
 
-.. code:: ipython3
+.. code:: bash
 
     # Incase we've run this docs page before, delete the working directory before remaking
     if os.path.exists(SPECFEM2D_WORKDIR):
@@ -168,8 +168,8 @@ to define our **DATA/** directory (last tested 8/15/22, bdba4389).
     # retain the original files for reference. We will be running one of the example problems: Tape2007
     shutil.copytree(os.path.join(TAPE_2007_EXAMPLE, "DATA"), "DATA")
     
-    ! pwd
-    ! ls
+    pwd
+    ls
 
 
 .. parsed-literal::
@@ -178,17 +178,17 @@ to define our **DATA/** directory (last tested 8/15/22, bdba4389).
     bin  DATA
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Run the Tape2007 example to make sure SPECFEM2D is working as expected
     os.chdir(TAPE_2007_EXAMPLE)
-    ! ./run_this_example.sh > output_log.txt
+    ./run_this_example.sh > output_log.txt
     
     assert(os.path.exists("OUTPUT_FILES/forward_image000004800.jpg")), \
         (f"Example did not run, the remainder of this docs page will likely not work."
          f"Please check the following directory: {TAPE_2007_EXAMPLE}")
     
-    ! tail output_log.txt
+    tail output_log.txt
 
 
 .. parsed-literal::
@@ -221,7 +221,7 @@ how SeisFlows3 operates within the SPECFEM2D framework):
 .. note:: 
     This file structure is the same for all versions of SPECFEM (2D/3D/3D_GLOBE)
 
-.. code:: ipython3
+.. code:: bash
 
     # First we will set the correct SOURCE and STATION files.
     # This is the same task as shown in ./run_this_example.sh
@@ -237,7 +237,7 @@ how SeisFlows3 operates within the SPECFEM2D framework):
         os.remove("Par_file")
     shutil.copy("Par_file_Tape2007_onerec", "Par_file")
     
-    ! ls
+    ls
 
 
 .. parsed-literal::
@@ -275,14 +275,14 @@ of the initial model.
 .. note::
     We can use the SeisFlows3 command line option `seisflows sempar` to directly edit the SPECFEM2D Par_file in the command line. This will work for the SPECFEM3D Par_file as well.
 
-.. code:: ipython3
+.. code:: bash
 
     os.chdir(SPECFEM2D_DATA)
     
     # Ensure that SPECFEM2D outputs the velocity model in the expected binary format
-    ! seisflows sempar setup_with_binary_database 1  # allow creation of .bin files
-    ! seisflows sempar save_model binary  # output model in .bin database format
-    ! seisflows sempar save_ascii_kernels .false.  # output kernels in .bin format, not ASCII
+    seisflows sempar setup_with_binary_database 1  # allow creation of .bin files
+    seisflows sempar save_model binary  # output model in .bin database format
+    seisflows sempar save_ascii_kernels .false.  # output kernels in .bin format, not ASCII
 
 
 .. parsed-literal::
@@ -292,7 +292,7 @@ of the initial model.
     save_ASCII_kernels: .true. -> .false.
 
 
-.. code:: ipython3
+.. code:: bash
 
     # SPECFEM requires that we create the OUTPUT_FILES directory before running
     os.chdir(SPECFEM2D_WORKDIR)
@@ -302,7 +302,7 @@ of the initial model.
         
     os.mkdir(SPECFEM2D_OUTPUT)
     
-    ! ls
+    ls
 
 
 .. parsed-literal::
@@ -310,23 +310,23 @@ of the initial model.
     bin  DATA  OUTPUT_FILES
 
 
-.. code:: ipython3
+.. code:: bash
 
     # GENERATE MODEL_INIT
     os.chdir(SPECFEM2D_WORKDIR)
     
     # Run the mesher and solver to generate our initial model
-    ! ./bin/xmeshfem2D > OUTPUT_FILES/mesher_log.txt
-    ! ./bin/xspecfem2D > OUTPUT_FILES/solver_log.txt
+    ./bin/xmeshfem2D > OUTPUT_FILES/mesher_log.txt
+    ./bin/xspecfem2D > OUTPUT_FILES/solver_log.txt
     
     # Move the model files (*.bin) into the OUTPUT_FILES directory, where SeisFlows3 expects them
-    ! mv DATA/*bin OUTPUT_FILES
+    mv DATA/*bin OUTPUT_FILES
     
     # Make sure we don't overwrite this initial model when creating our target model in the next step
-    ! mv OUTPUT_FILES OUTPUT_FILES_INIT
+    mv OUTPUT_FILES OUTPUT_FILES_INIT
     
-    ! head OUTPUT_FILES_INIT/solver_log.txt
-    ! tail OUTPUT_FILES_INIT/solver_log.txt
+    head OUTPUT_FILES_INIT/solver_log.txt
+    tail OUTPUT_FILES_INIT/solver_log.txt
 
 
 .. parsed-literal::
@@ -361,13 +361,13 @@ Now we want to perturb the initial model to create our target model
 velocity model. You can also do this manually by editing the Par_file
 directly.
 
-.. code:: ipython3
+.. code:: bash
 
     # GENERATE MODEL_TRUE
     os.chdir(SPECFEM2D_DATA)
     
     # Edit the Par_file by increasing velocities by ~10% 
-    ! seisflows sempar velocity_model '1 1 2600.d0 5900.d0 3550.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0'
+    seisflows sempar velocity_model '1 1 2600.d0 5900.d0 3550.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0'
 
 
 .. parsed-literal::
@@ -379,7 +379,7 @@ directly.
     1 1 2600.d0 5900.d0 3550.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Re-run the mesher and solver to generate our target velocity model
     os.chdir(SPECFEM2D_WORKDIR)
@@ -390,15 +390,15 @@ directly.
     os.mkdir(SPECFEM2D_OUTPUT)
     
     # Run the binaries to generate MODEL_TRUE
-    ! ./bin/xmeshfem2D > OUTPUT_FILES/mesher_log.txt
-    ! ./bin/xspecfem2D > OUTPUT_FILES/solver_log.txt
+    ./bin/xmeshfem2D > OUTPUT_FILES/mesher_log.txt
+    ./bin/xspecfem2D > OUTPUT_FILES/solver_log.txt
     
     # Move all the relevant files into OUTPUT_FILES 
-    ! mv ./DATA/*bin OUTPUT_FILES
-    ! mv OUTPUT_FILES OUTPUT_FILES_TRUE
+    mv ./DATA/*bin OUTPUT_FILES
+    mv OUTPUT_FILES OUTPUT_FILES_TRUE
     
-    ! head OUTPUT_FILES_INIT/solver_log.txt
-    ! tail OUTPUT_FILES_INIT/solver_log.txt
+    head OUTPUT_FILES_INIT/solver_log.txt
+    tail OUTPUT_FILES_INIT/solver_log.txt
 
 
 .. parsed-literal::
@@ -425,10 +425,10 @@ directly.
      -------------------------------------------------------------------------------
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Great, we have all the necessary SPECFEM files to run our SeisFlows inversion!
-    ! ls
+    ls
 
 
 .. parsed-literal::
@@ -464,9 +464,9 @@ In the previous section we saw the ``sempar`` command in action. We can
 use the ``-h`` or help flag to list all available SiesFlows3 command
 line commands.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows -h
+    seisflows -h
 
 
 .. parsed-literal::
@@ -510,13 +510,13 @@ line commands.
     'seisflows [command] -h' for more detailed descriptions of each command.
 
 
-.. code:: ipython3
+.. code:: bash
 
     # The command 'setup' creates the 'parameters.yaml' file that controls all of SeisFlows
     # the '-f' flag removes any exist 'parameters.yaml' file that might be in the directory
     os.chdir(WORKDIR)
-    ! seisflows setup -f
-    ! ls
+    seisflows setup -f
+    ls
 
 
 .. parsed-literal::
@@ -525,10 +525,10 @@ line commands.
     parameters.yaml  sflog.txt  specfem2d  specfem2d_workdir
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Let's have a look at this file, which has not yet been populated
-    ! cat parameters.yaml
+    cat parameters.yaml
 
 
 .. parsed-literal::
@@ -565,10 +565,10 @@ line commands.
     optimize: gradient
 
 
-.. code:: ipython3
+.. code:: bash
 
     # We can use the `seisflows print modules` command to list out the available options 
-    ! seisflows print modules
+    seisflows print modules
 
 
 .. parsed-literal::
@@ -603,12 +603,12 @@ line commands.
         * gradient
 
 
-.. code:: ipython3
+.. code:: bash
 
     # For this example, we can use most of the default modules, however we need to 
     # change the SOLVER module to let SeisFlows know we're using SPECFEM2D (as opposed to 3D)
-    ! seisflows par workflow inversion
-    ! cat parameters.yaml
+    seisflows par workflow inversion
+    cat parameters.yaml
 
 
 .. parsed-literal::
@@ -658,10 +658,10 @@ the parameters.yaml file directly, replacing some default parameters
 with our own values. Comments next to each evaluation describe the
 choice for each.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows configure
-    ! head --lines=50 parameters.yaml
+    seisflows configure
+    head --lines=50 parameters.yaml
 
 
 .. parsed-literal::
@@ -718,15 +718,15 @@ choice for each.
     #        a target model provided in `path_model_true`. If None, workflow will
 
 
-.. code:: ipython3
+.. code:: bash
 
     # EDIT THE SEISFLOWS PARAMETER FILE
-    ! seisflows par ntask 3  # set the number of sources/events to use
-    ! seisflows par materials elastic  # update Vp and Vs during inversion
-    ! seisflows par end 2  # final iteration -- we will only run 1
-    ! seisflows par data_case synthetic  # synthetic-synthetic means we need both INIT and TRUE models
-    ! seisflows par components Y  # this default example creates Y-component seismograms
-    ! seisflows par step_count_max 5  # limit the number of steps in the line search
+    seisflows par ntask 3  # set the number of sources/events to use
+    seisflows par materials elastic  # update Vp and Vs during inversion
+    seisflows par end 2  # final iteration -- we will only run 1
+    seisflows par data_case synthetic  # synthetic-synthetic means we need both INIT and TRUE models
+    seisflows par components Y  # this default example creates Y-component seismograms
+    seisflows par step_count_max 5  # limit the number of steps in the line search
     
     # Use Python syntax here to access path constants
     os.system(f"seisflows par path_specfem_bin {SPECFEM2D_BIN}")  # set path to SPECFEM2D binaries
@@ -766,10 +766,10 @@ One last thing, we will need to edit the SPECFEM2D Par_file parameter
 (*.bin files) rather than the meshing parameters defined in the
 Par_file.
 
-.. code:: ipython3
+.. code:: bash
 
     os.chdir(SPECFEM2D_DATA)
-    ! seisflows sempar model gll
+    seisflows sempar model gll
 
 
 .. parsed-literal::
@@ -799,10 +799,10 @@ results, or debug a failing workflow.
 The ``seisflows print flow`` command tells us what functions we can use
 for the ``stop_after`` parameter.
 
-.. code:: ipython3
+.. code:: bash
 
     os.chdir(WORKDIR)
-    ! seisflows print tasks
+    seisflows print tasks
 
 
 .. parsed-literal::
@@ -855,9 +855,9 @@ In the Inversion workflow, the tasks listed are described as follows:
 Let’s set the ``stop_after`` argument to **evaluate_initial_misfit**,
 this will halt the workflow after the intialization step.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows par stop_after evaluate_initial_misfit
+    seisflows par stop_after evaluate_initial_misfit
 
 
 .. parsed-literal::
@@ -878,9 +878,9 @@ Now let’s run SeisFlows. There are two ways to do this: ``submit`` and
 
 Since this is our first run, we’ll use ``seisflows submit``.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows submit 
+    seisflows submit 
 
 
 .. parsed-literal::
@@ -943,10 +943,10 @@ Since this is our first run, we’ll use ``seisflows submit``.
 .. note::
     For a detailed exploration of a SeisFlows working directory, see the `working directory <working_directory.html>`__ documentation page where we explain each of the files and directories that have been generated during this workflow. Below we just look at two files which are required for our adjoint simulation, the adjoint sources (.adj) and STATIONS_ADJOINT file
 
-.. code:: ipython3
+.. code:: bash
 
     # The adjoint source is created in the same format as the synthetics (two-column ASCII) 
-    ! head scratch/solver/001/traces/adj/AA.S0001.BXY.adj
+    head scratch/solver/001/traces/adj/AA.S0001.BXY.adj
 
 
 .. parsed-literal::
@@ -974,9 +974,9 @@ simply need to tell the workflow (via the parameters.yaml file) to
 ``resume_from`` the correct function. We can have a look at these
 functions again:
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows print tasks
+    seisflows print tasks
 
 
 .. parsed-literal::
@@ -994,11 +994,11 @@ functions again:
     7: finalize_iteration
 
 
-.. code:: ipython3
+.. code:: bash
 
     # We'll stop just before the line search so that we can take a look at the files 
     # generated during the middle tasks
-    ! seisflows par stop_after evaluate_gradient_from_kernels
+    seisflows par stop_after evaluate_gradient_from_kernels
 
 
 .. parsed-literal::
@@ -1006,11 +1006,11 @@ functions again:
     stop_after: evaluate_initial_misfit -> evaluate_gradient_from_kernels
 
 
-.. code:: ipython3
+.. code:: bash
 
     # We can use the `seisflows submit` command to continue an active workflow
     # The state file created during the first run will tell the workflow to resume from the stopped point in the workflow
-    ! seisflows submit 
+    seisflows submit 
 
 
 .. parsed-literal::
@@ -1079,11 +1079,11 @@ function. We can take a look at where SeisFlows has stored the
 information relating to kernel generation and the optimization
 computation.
 
-.. code:: ipython3
+.. code:: bash
 
     # Gradient evaluation files are stored here, the kernels are stored separately from the gradient incase
     # the user wants to manually manipulate them
-    ! ls scratch/eval_grad
+    ls scratch/eval_grad
 
 
 .. parsed-literal::
@@ -1091,10 +1091,10 @@ computation.
     gradient  kernels  misfit_kernel  model  residuals.txt
 
 
-.. code:: ipython3
+.. code:: bash
 
     # SeisFlows3 stores all kernels and gradient information as SPECFEM binary (.bin) files
-    ! ls scratch/eval_grad/gradient
+    ls scratch/eval_grad/gradient
 
 
 .. parsed-literal::
@@ -1102,11 +1102,11 @@ computation.
     proc000000_vp_kernel.bin  proc000000_vs_kernel.bin
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Kernels are stored on a per-event basis, and summed together (sum/). If smoothing was performed, 
     # we would see both smoothed and unsmoothed versions of the misfit kernel
-    ! ls scratch/eval_grad/kernels
+    ls scratch/eval_grad/kernels
 
 
 .. parsed-literal::
@@ -1114,12 +1114,12 @@ computation.
     001  002  003
 
 
-.. code:: ipython3
+.. code:: bash
 
     # We can see that some new values have been stored in prepartion for the line search,
     # including g_new (current gradient) and p_new (current search direction). These are also
     # stored as vector NumPy arrays (.npy files)
-    ! ls scratch/optimize
+    ls scratch/optimize
 
 
 .. parsed-literal::
@@ -1127,7 +1127,7 @@ computation.
     checkpoint.npz	f_new.txt  g_new.npz  m_new.npz
 
 
-.. code:: ipython3
+.. code:: bash
 
     g_new = np.load("scratch/optimize/g_new.npz")
     print(g_new["vs_kernel"])
@@ -1158,9 +1158,9 @@ which requires finding models which both increase and decrease the
 misfit with respect to the initial evaluation. Therefore it takes
 atleast two trial steps to complete the line search.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows par stop_after perform_line_search  # We don't want to run the finalize_iteration argument so that we can explore the dir
+    seisflows par stop_after perform_line_search  # We don't want to run the finalize_iteration argument so that we can explore the dir
 
 
 .. parsed-literal::
@@ -1168,9 +1168,9 @@ atleast two trial steps to complete the line search.
     stop_after: evaluate_gradient_from_kernels -> perform_line_search
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows submit
+    seisflows submit
 
 
 .. parsed-literal::
@@ -1308,11 +1308,11 @@ velocity) until satisfactory reduction in the objective function was
 met. This was the final step in the iteration, and so the finalization
 of the line search made preparations for a subsequent iteration.
 
-.. code:: ipython3
+.. code:: bash
 
     # We can see that we have 'new' and 'old' values for each of the optimization values,
     # representing the previous model (M00) and the current model (M01).
-    ! ls scratch/optimize
+    ls scratch/optimize
 
 
 .. parsed-literal::
@@ -1321,10 +1321,10 @@ of the line search made preparations for a subsequent iteration.
     checkpoint.npz	f_old.txt  g_old.npz  m_old.npz  p_old.npz
 
 
-.. code:: ipython3
+.. code:: bash
 
     # The stats/ directory contains text files describing the optimization/line search
-    ! cat scratch/optimize/output_optim.txt
+    cat scratch/optimize/output_optim.txt
 
 
 .. parsed-literal::

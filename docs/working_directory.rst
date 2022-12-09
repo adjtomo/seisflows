@@ -7,10 +7,10 @@ SeisFlows sets it's own working directory when executing a workflow. Below we ex
    specfem2d_workdir/) are not part of a standard SeisFlows working
    directory.
 
-.. code:: ipython3
+.. code:: bash
 
-    %cd /home/bchow/Work/scratch
-    ! ls
+    cd /home/bchow/Work/scratch
+    ls
 
 
 .. parsed-literal::
@@ -31,9 +31,9 @@ sub-directory where it stores temporary work data. Additionally, we have
 two eval*/ directories where objective function evaluation (eval_func)
 and gradient evaluation (eval_grad) files are stored.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls scratch
+    ls scratch
 
 
 .. parsed-literal::
@@ -54,9 +54,9 @@ contain all the necessary files to run SPECFEM binaries within).
 .. note::
     The first (alphabetically) solver in this directory is symlinked as the **mainsolver**. The mainsolver is used to run single-process functions (e.g., gradient smoothing). The mainsolver is also useful for scripting, as the name of the first event may be different from workflow to workflow, so **mainsolver** provides a consistent entry point into the solver subdirectories.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls scratch/solver
+    ls scratch/solver
 
 
 .. parsed-literal::
@@ -64,9 +64,9 @@ contain all the necessary files to run SPECFEM binaries within).
     001  002  003  mainsolver
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls scratch/solver/mainsolver
+    ls scratch/solver/mainsolver
 
 
 .. parsed-literal::
@@ -85,9 +85,9 @@ sources, which is dictated by SPECFEM. The traces/ directory contains
 all of the output waveforms required by this event. They are separated
 into observed (obs), synthetic (syn) and adjoint (adj) waveforms.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls scratch/solver/mainsolver/traces
+    ls scratch/solver/mainsolver/traces
 
 
 .. parsed-literal::
@@ -95,9 +95,9 @@ into observed (obs), synthetic (syn) and adjoint (adj) waveforms.
     adj  obs  syn
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls scratch/solver/mainsolver/traces/obs
+    ls scratch/solver/mainsolver/traces/obs
 
 
 .. parsed-literal::
@@ -105,10 +105,10 @@ into observed (obs), synthetic (syn) and adjoint (adj) waveforms.
     AA.S0001.BXY.semd
 
 
-.. code:: ipython3
+.. code:: bash
 
     # These waveforms are saved into a two-column ASCII format
-    ! tail scratch/solver/mainsolver/traces/obs/AA.S0001.BXY.semd
+    tail scratch/solver/mainsolver/traces/obs/AA.S0001.BXY.semd
 
 
 .. parsed-literal::
@@ -147,9 +147,9 @@ Optimization Variable Names are described as:
 * p_new: current search direction vector 
 * p_old: previous search direction vector  
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls scratch/optimize
+    ls scratch/optimize
 
 
 .. parsed-literal::
@@ -158,7 +158,7 @@ Optimization Variable Names are described as:
     checkpoint.npz	f_old.txt  g_old.npz  m_old.npz  p_old.npz
 
 
-.. code:: ipython3
+.. code:: bash
 
     import numpy as np
     m_new = np.load("scratch/optimize/m_new.npz")
@@ -171,9 +171,9 @@ Optimization Variable Names are described as:
       3499.9021825  3499.99078301]]
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! cat scratch/optimize/f_new.txt
+    cat scratch/optimize/f_new.txt
 
 
 .. parsed-literal::
@@ -186,7 +186,7 @@ line search (controlled by the Optimization module). It is used to
 resume failed or stopped line searches with minimal redundant use of
 computational resources.
 
-.. code:: ipython3
+.. code:: bash
 
     line_search = np.load("scratch/optimize/checkpoint.npz")
     
@@ -216,11 +216,11 @@ the misfit for each event. **eval_grad/** also contains **kernels**
 which define per-event kernels which are summed and manipulated with the
 postprocess module.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls scratch/eval_func
-    ! echo
-    ! ls scratch/eval_grad
+    ls scratch/eval_func
+    echo
+    ls scratch/eval_grad
 
 
 .. parsed-literal::
@@ -230,9 +230,9 @@ postprocess module.
     gradient  kernels  misfit_kernel  model  residuals.txt
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! cat scratch/eval_grad/residuals.txt
+    cat scratch/eval_grad/residuals.txt
 
 
 .. parsed-literal::
@@ -242,9 +242,9 @@ postprocess module.
     1.55E-02
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls scratch/eval_grad/kernels
+    ls scratch/eval_grad/kernels
 
 
 .. parsed-literal::
@@ -252,9 +252,9 @@ postprocess module.
     001  002  003
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls scratch/eval_grad/kernels/001
+    ls scratch/eval_grad/kernels/001
 
 
 .. parsed-literal::
@@ -290,9 +290,9 @@ can be located in this directory. These are tagged in ascending order.
 Because we did not run the finalization task in our SPECFEM2D problem,
 the output directory only contains our initial model.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls output
+    ls output
 
 
 .. parsed-literal::
@@ -300,9 +300,9 @@ the output directory only contains our initial model.
     MODEL_INIT
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls output/MODEL_INIT
+    ls output/MODEL_INIT
 
 
 .. parsed-literal::
@@ -320,9 +320,9 @@ jobs will be instructed to write their logs into this directory.
 Additionally, if a workflow is resumed (previous log files exist in the
 other directory) copies are saved to this directory.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! ls logs
+    ls logs
 
 
 .. parsed-literal::
@@ -344,9 +344,9 @@ stdout are recorded during a workflow. Allows a user to come back to a
 workflow and understand the tasks completed and any important
 information collected during the workflow
 
-.. code:: ipython3
+.. code:: bash
 
-    ! head -50 sflog.txt
+    head -50 sflog.txt
 
 
 .. parsed-literal::
@@ -414,9 +414,9 @@ computational resources. The State file simply contains the names of
 functions contained in the Workflow task list, as well as their
 respective status, which can be ‘completed’, ‘failed’, or not available.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! cat sfstate.txt
+    cat sfstate.txt
 
 
 .. parsed-literal::
