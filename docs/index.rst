@@ -3,64 +3,41 @@
 
 ------------------
 
-SeisFlows Documentation
-=======================
+SeisFlows --- Automated Inversion Software
+==========================================
 
-`SeisFlows <https://github.com/adjtomo/seisflows>`__  is a Python-based
-waveform inversion package used to tackle the problems of full waveform
-inversion, seismic migration, and adjoint tomography. SeisFlows constitutes
-the current main development branch of SeisFlows.
+`SeisFlows <https://github.com/adjtomo/seisflows>`__  is an open-source,
+Python-based waveform inversion package meant to automate the problems of full
+waveform inversion, seismic migration, and adjoint tomography on high
+performance computers.
 
-With a user base in both academia and industry, ``SeisFlows`` has been used
-for: production scale inversions (some with over a billion model parameters),
-research problems related to oil and gas exploration, regional-scale
-earthquake-based adjoint tomography problems, and general nonlinear
-optimization problems.
+SeisFlows is hosted on `GitHub <https://github.com/adjtomo/seisflows>`__ as
+part of the `adjTomo organization <https://github.com/adjtomo/>`__.
 
+---------------------------------
 
-.. note::
-   Major backwards-incompatible changes from the legacy codebase include:
+Quickstart
+~~~~~~~~~~~
 
-      -  > complete shift to Python>=3.7 source code, abandoning Python2 support
-      -  > reworked internal architecture to be more 'Pythonic'
-      -  > richer source code emphasizing readability and standards
-      -  > a new command line tool for improved package control
-      -  > redesigned, dynamically-generated parameter file
-      -  > native integration with the waveform misfit quantification tool:
-         `Pyatoa <https://github.com/adjtomo/pyatoa>`__
-
-   See the `change log <changelog.html>`__ for point-by-point changes from the
-   original codebase. The `Legacy SeisFlows codebase
-   <https://github.com/adjtomo/seisflows/releases/tag/v1.1.0>`__ can still be 
-   accessed along with its `documentation <https://github.com/adjtomo/seisflows/
-   tree/46a9604d8907bc5fbf2ddc11e16914a870e6db77/docs>`__, but is no longer
-   supported by the developers.
- 
-
-
-.. warning::
-    This docs page is currently under active development and may have missing
-    information or unfinished pages. We are doing our best to complete it in a
-    timely manner.
+- Check out the `Overview page <overview.html>`__ to learn about SeisFlows and
+  how to use it.
+- Found a bug or want to request a new feature? Feel free to
+  `open a GitHub Issue! <https://github.com/adjtomo/seisflows/issues>`__
+- Want to talk about SeisFlows?
+  `Check in on the discussions page. <https://github.com/orgs/adjtomo/discussions>`__
 
 ---------------------------------
 
 Installation
-=================
+~~~~~~~~~~~~
 
-``SeisFlows`` is installed using a combination of Pip and 
-`Conda <https://conda.io/projects/conda/en/latest/index.html>`__. In the
-future we aim to unify this into a single install command.
-
-*Preamble: many packages will require the conda-forge channel.*
-
-.. code:: bash
-    
-   conda config --add channels conda-forge
-
-To install ``SeisFlows`` and it's dependencies, we recommend installing within 
+To install SeisFlows and its dependencies, we recommend installing within
 a Conda environment to not affect your root environment. The `devel` branch 
-houses the most up-to-date codebase.  
+houses the most up-to-date codebase.
+
+.. note::
+    SeisFlows is installed using the Pip ``-e`` which enables development
+    mode, where source code changes are immediately acccessible to Python.
 
 .. code:: bash
 
@@ -68,9 +45,8 @@ houses the most up-to-date codebase.
    conda activate seisflows
    git clone --branch devel https://github.com/adjtomo/seisflows.git
    cd seisflows
-   conda install --file requirements.txt
+   conda install --file requirements.txt --channel conda-forge
    pip install -e .
-
 
 SeisFlows requires the waveform measurement capabilities of 
 `Pyatoa <https://github.com/adjtomo/pyatoa>`__, which currently must be 
@@ -81,24 +57,31 @@ installed manually to the same Conda environment.
    cd ..
    git clone --branch devel https://github.com/adjtomo/pyatoa.git
    cd pyatoa
-   conda install --file requirements.txt
+   conda install --file requirements.txt --channel conda-forge
    pip install -e .
 
-
-.. note::
-    Successful applications of SeisFlows will typically require editing the
-    source code. For this reason, SeisFlows is installed using the Pip ``-e`` 
-    which enables development mode, where source code changes are immediately
-    acccessible to Python.
+---------------------------------
 
 
-.. note::
-    In most production-scale workflows, SeisFlows must be run on high 
-    performance computing systems running external numerical solvers like 
-    SPECFEM3D. The User will need to install and compile these separately. 
-    However, example problems in SeisFlows make use of, and can install, 
-    SPECFEM2D.
+Cite SeisFlows
+~~~~~~~~~~~~~~~~~~
 
+If you use SeisFlows for your work, please cite the following papers:
+`Chow et al. (2020) <https://doi.org/10.1093/gji/ggaa381>`__ and
+`Modrak et al. (2018)
+<https://www.sciencedirect.com/science/article/pii/S0098300417300316>`__
+
+    Chow, B., Kaneko, Y., Tape, C., Modrak, R., & Townend, J. (2020).
+    *An automated workflow for adjoint tomography --- waveform misfits and
+    synthetic inversions for the North Island, New Zealand.*
+    Geophysical Journal International, 223(3), 1461-1480.
+
+    Modrak, R. T., Borisov, D., Lefebvre, M., & Tromp, J. (2018).
+    *SeisFlows — Flexible waveform inversion software.*
+    Computers & geosciences, 115, 88-95.
+
+Publications which have used (and cited) SeisFlows can be
+found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683593672&as_sdt=405&sciodt=0,2&hl=en>`__.
 
 
 .. toctree::
@@ -107,8 +90,8 @@ installed manually to the same Conda environment.
    :caption: Introduction
 
    overview
-   start_here
-   citeme
+   getting_started
+   background
 
 .. toctree::
    :maxdepth: 1
@@ -126,24 +109,23 @@ installed manually to the same Conda environment.
 
    specfem2d_example
    2D_example_walkthrough
-   getting_started_chinook
+   running_on_chinook
 
 .. toctree::
    :maxdepth: 1
    :hidden:
    :caption: How To's
 
-   example_on_cluster
+   tips_and_tricks
+   cluster_setup
    containers
-   extending
 
 .. toctree::
    :maxdepth: 1
    :hidden:
    :caption: Development
 
-   background
-   design
+   extending
    changelog
    code_dev_plan
 

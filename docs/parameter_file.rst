@@ -15,9 +15,9 @@ modules will determine which paths and parameters are included in the
 full parameter file. Running ``seisflows setup`` from the command line
 will create the template file.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows setup -h
+    seisflows setup -h
 
 
 .. parsed-literal::
@@ -35,9 +35,9 @@ will create the template file.
       -f, --force  automatically overwrites existing parameter file
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows setup
+    seisflows setup
 
 
 .. parsed-literal::
@@ -45,9 +45,9 @@ will create the template file.
     creating parameter file: parameters.yaml
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! cat parameters.yaml
+    cat parameters.yaml
 
 
 .. parsed-literal::
@@ -97,9 +97,9 @@ to run an inversion and not a forward workflow, or use SPECFEM3D not
 SPECFEM2D. To see all available module options, use the
 ``seisflows print modules`` command.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows print modules
+    seisflows print modules
 
 
 .. parsed-literal::
@@ -143,10 +143,10 @@ to use SPECFEM3D as our solver module.
 
 This is also covered in the `command line tool page <command_line_tool.html>`__
 
-.. code:: ipython3
+.. code:: bash
 
     # Changes the current parameter to the given value
-    ! seisflows par solver specfem3d
+    seisflows par solver specfem3d
 
 
 .. parsed-literal::
@@ -154,10 +154,10 @@ This is also covered in the `command line tool page <command_line_tool.html>`__
     solver: specfem2d -> specfem3d
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Prints out the current parameter value
-    ! seisflows par solver
+    seisflows par solver
 
 
 .. parsed-literal::
@@ -174,9 +174,9 @@ unique set of parameters and paths, each parameter file will look
 different. We use the ``seisflows configure`` command to complete the
 file.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows configure -h
+    seisflows configure -h
 
 
 .. parsed-literal::
@@ -196,9 +196,9 @@ file.
       -a, --absolute_paths  Set default paths relative to cwd
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows configure
+    seisflows configure
 
 Below we will take a look at the parameter file we just created
 
@@ -211,7 +211,7 @@ Within each header, parameter names, types and descriptions are listed.
 At the bottom of the parameter file, there is a section defining paths
 required by SeisFlows. Section headers will look something:
 
-.. code:: ipython3
+.. code:: bash
 
     # =============================================================================
     # MODULE
@@ -226,9 +226,9 @@ required by SeisFlows. Section headers will look something:
     # =============================================================================
     parameter: value
 
-.. code:: ipython3
+.. code:: bash
 
-    ! head -80 parameters.yaml
+    head -80 parameters.yaml
 
 
 .. parsed-literal::
@@ -315,9 +315,9 @@ required by SeisFlows. Section headers will look something:
     #    :param log_level: logger level to pass to logging module.
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! tail parameters.yaml
+    tail parameters.yaml
 
 
 .. parsed-literal::
@@ -342,9 +342,9 @@ docstrings headers will also list the expected type and available
 options (if any). You may also run the ``seisflows check`` command which
 verifies that parameters are set correctly.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows check
+    seisflows check
 
 
 .. parsed-literal::
@@ -358,6 +358,6 @@ verifies that parameters are set correctly.
     ================================================================================
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! rm parameters.yaml  # to delete the created file from this working directory
+    rm parameters.yaml  # to delete the created file from this working directory
