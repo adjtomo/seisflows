@@ -25,6 +25,10 @@ Quickstart
   `open a GitHub Issue! <https://github.com/adjtomo/seisflows/issues>`__
 - Want to talk about SeisFlows?
   `Check in on the discussions page. <https://github.com/orgs/adjtomo/discussions>`__
+- Contributions are encouranged and welcome! Want to fix a bug, write 
+  documentation, or add features? Have a look at the 
+  `adjTomo Contributor's Guide <https://pyatoa.readthedocs.io/en/latest/contributing.html>`__  (hosted on Pyatoa docs).
+
 
 ---------------------------------
 
@@ -36,17 +40,17 @@ a Conda environment to not affect your root environment. The `devel` branch
 houses the most up-to-date codebase.
 
 .. note::
+
     SeisFlows is installed using the Pip ``-e`` which enables development
-    mode, where source code changes are immediately acccessible to Python.
+    mode, where source code changes are immediately acccessible to Python (i.e.,
+    you do **not** need to re-install SeisFlows when updating source code).
 
 .. code:: bash
 
-   conda create -n seisflows python=3.10
-   conda activate seisflows
    git clone --branch devel https://github.com/adjtomo/seisflows.git
    cd seisflows
-   conda create --file environment.yml --channel conda-forge
-   pip install -e .
+   conda env create -f environment.yml
+   conda activate seisflows
 
 ---------------------------------
 
