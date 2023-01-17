@@ -25,6 +25,9 @@ Quickstart
   `open a GitHub Issue! <https://github.com/adjtomo/seisflows/issues>`__
 - Want to talk about SeisFlows?
   `Check in on the discussions page. <https://github.com/orgs/adjtomo/discussions>`__
+- Contributions are encouranged and welcome! Have a look at the 
+  `adjTomo Contributor's Guide <https://pyatoa.readthedocs.io/en/latest/contributing.html>`__  to see how you can contribute (hosted on Pyatoa's docs).
+
 
 ---------------------------------
 
@@ -36,29 +39,17 @@ a Conda environment to not affect your root environment. The `devel` branch
 houses the most up-to-date codebase.
 
 .. note::
+
     SeisFlows is installed using the Pip ``-e`` which enables development
-    mode, where source code changes are immediately acccessible to Python.
+    mode, where source code changes are immediately acccessible to Python (i.e.,
+    you do **not** need to re-install SeisFlows when updating source code).
 
 .. code:: bash
 
-   conda create -n seisflows python=3.10
-   conda activate seisflows
    git clone --branch devel https://github.com/adjtomo/seisflows.git
    cd seisflows
-   conda install --file requirements.txt --channel conda-forge
-   pip install -e .
-
-SeisFlows requires the waveform measurement capabilities of 
-`Pyatoa <https://github.com/adjtomo/pyatoa>`__, which currently must be 
-installed manually to the same Conda environment.
-
-.. code:: bash
-
-   cd ..
-   git clone --branch devel https://github.com/adjtomo/pyatoa.git
-   cd pyatoa
-   conda install --file requirements.txt --channel conda-forge
-   pip install -e .
+   conda env create -f environment.yml
+   conda activate seisflows
 
 ---------------------------------
 
