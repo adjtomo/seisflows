@@ -4,13 +4,5 @@ sphinx:
     builder: html
     configuration: docs/conf.py
 
-python:
-    version: 3.7
-    install:
-        - requirements: docs/requirements.txt
-        - requirements: requirements.txt
-        - method: setuptools
-          path: .
-
 conda:
     environment: docs/environment.yml
