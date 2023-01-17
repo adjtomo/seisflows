@@ -18,7 +18,7 @@ dependencies = [
     "pyyaml",
 	"IPython",
 	"dill",
-	"pyatoa @ git+https://github.com/adjtomo/pyatoa.git",
+	"pyatoa @ git+https://github.com/adjtomo/pyatoa@devel",
 ]
 
 [project.optional-dependencies]

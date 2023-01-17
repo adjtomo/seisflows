@@ -45,19 +45,7 @@ houses the most up-to-date codebase.
    conda activate seisflows
    git clone --branch devel https://github.com/adjtomo/seisflows.git
    cd seisflows
-   conda install --file requirements.txt --channel conda-forge
-   pip install -e .
-
-SeisFlows requires the waveform measurement capabilities of 
-`Pyatoa <https://github.com/adjtomo/pyatoa>`__, which currently must be 
-installed manually to the same Conda environment.
-
-.. code:: bash
-
-   cd ..
-   git clone --branch devel https://github.com/adjtomo/pyatoa.git
-   cd pyatoa
-   conda install --file requirements.txt --channel conda-forge
+   conda create --file environment.yml --channel conda-forge
    pip install -e .
 
 ---------------------------------
