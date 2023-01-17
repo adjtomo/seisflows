@@ -25,9 +25,8 @@ Quickstart
   `open a GitHub Issue! <https://github.com/adjtomo/seisflows/issues>`__
 - Want to talk about SeisFlows?
   `Check in on the discussions page. <https://github.com/orgs/adjtomo/discussions>`__
-- Contributions are encouranged and welcome! Want to fix a bug, write 
-  documentation, or add features? Have a look at the 
-  `adjTomo Contributor's Guide <https://pyatoa.readthedocs.io/en/latest/contributing.html>`__  (hosted on Pyatoa docs).
+- Contributions are encouranged and welcome! Have a look at the 
+  `adjTomo Contributor's Guide <https://pyatoa.readthedocs.io/en/latest/contributing.html>`__  to see how you can contribute (hosted on Pyatoa's docs).
 
 
 ---------------------------------
