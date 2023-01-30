@@ -64,7 +64,7 @@ SeisFlows and it's dependencies there, you can run the following:
     git clone --branch devel https://github.com/adjtomo/seisflows.git             
     cd seisflows 
     conda activate <your environment>
-    conda env update -f environment.yml --prune
+    conda env update -f environment.yml
 
 ---------------------------------
 
