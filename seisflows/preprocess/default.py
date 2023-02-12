@@ -28,9 +28,12 @@ class Default:
 
     Parameters
     ----------
-    :type data_format: str
-    :param data_format: data format for reading traces into memory. For
-        available see: seisflows.plugins.preprocess.readers
+    :type syn_data_format: str
+    :param syn_data_format: data format for reading synthetic traces into
+        memory. Available formats: 'su', 'ascii'
+    :type obs_data_format: str
+    :param obs_data_format: data format for reading observed traces into
+        memory. Available formats: 'su', 'ascii', 'sac'
     :type misfit: str
     :param misfit: misfit function for waveform comparisons. For available
         see seisflows.plugins.preprocess.misfit
@@ -82,7 +85,8 @@ class Default:
         including saving files
     ***
     """
-    def __init__(self, data_format="ascii", misfit="waveform",
+    def __init__(self, syn_data_format="ascii", obs_data_format="ascii",
+                 misfit="waveform",
                  adjoint="waveform", normalize=None, filter=None,
                  min_period=None, max_period=None, min_freq=None, max_freq=None,
                  mute=None, early_slope=None, early_const=None, late_slope=None,
@@ -103,7 +107,8 @@ class Default:
         :param path_preprocess: scratch path for all preprocessing processes,
             including saving files
         """
-        self.data_format = data_format.upper()
+        self.syn_data_format = syn_data_format.upper()
+        self.obs_data_format = obs_data_format.upper()
         self.misfit = misfit
         self.adjoint = adjoint
         self.normalize = normalize
@@ -130,7 +135,10 @@ class Default:
             solver=path_solver or os.path.join(workdir, "scratch", "solver")
         )
 
-        self._acceptable_data_formats = ["SU", "ASCII"]
+        # The list <obs_acceptable_data_formats> always includes
+        # <syn_acceptable_data_formats> in addition to other formats
+        self._obs_acceptable_data_formats = ["SU", "ASCII", "SAC"]
+        self._syn_acceptable_data_formats = ["SU", "ASCII"]
 
         # Misfits and adjoint sources are defined by the available functions
         # in each of these plugin files. Drop hidden variables from dir()
@@ -221,8 +229,11 @@ class Default:
                 "PAR.MIN_FREQ < PAR.MAX_FREQ"
             )
 
-        assert(self.data_format.upper() in self._acceptable_data_formats), \
-            f"data format must be in {self._acceptable_data_formats}"
+        assert(self.syn_data_format.upper() in self._syn_acceptable_data_formats), \
+            f"synthetic data format must be in {self._syn_acceptable_data_formats}"
+
+        assert(self.obs_data_format.upper() in self._obs_acceptable_data_formats), \
+            f"observed data format must be in {self._obs_acceptable_data_formats}"
 
     def setup(self):
         """
@@ -232,19 +243,23 @@ class Default:
         """
         unix.mkdir(self.path.scratch)
 
-    def read(self, fid):
+    def read(self, fid, data_format):
         """
         Waveform reading functionality. Imports waveforms as Obspy streams
 
         :type fid: str
         :param fid: path to file to read data from
+        :type data_format: str
+        :param data_format: format of the file to read data from
         :rtype: obspy.core.stream.Stream
         :return: ObsPy stream containing data stored in `fid`
         """
         st = None
-        if self.data_format.upper() == "SU":
+        if data_format.upper() == "SU":
             st = obspy_read(fid, format="SU", byteorder="<")
-        elif self.data_format.upper() == "ASCII":
+        elif data_format.upper() == "SAC":
+            st = obspy_read(fid, format="SAC")
+        elif data_format.upper() == "ASCII":
             st = read_ascii(fid)
         return st
 
@@ -258,7 +273,7 @@ class Default:
         :type fid: str
         :param fid: path to file to write stream to
         """
-        if self.data_format.upper() == "SU":
+        if self.syn_data_format.upper() == "SU":
             for tr in st:
                 # Work around for ObsPy data type conversion
                 tr.data = tr.data.astype(np.float32)
@@ -272,7 +287,7 @@ class Default:
             # Write data to file
             st.write(fid, format="SU")
 
-        elif self.data_format.upper() == "ASCII":
+        elif self.syn_data_format.upper() == "ASCII":
             for tr in st:
                 # Float provides time difference between starttime and default
                 time_offset = float(tr.stats.starttime)
@@ -314,7 +329,7 @@ class Default:
         :param output: path to save the new adjoint traces to.
         """
         for fid in data_filenames:
-            st = self.read(fid=fid).copy()
+            st = self.read(fid=fid, data_format=self.obs_data_format).copy()
             fid = os.path.basename(fid)  # drop any path before filename
             for tr in st:
                 tr.data *= 0
@@ -331,9 +346,9 @@ class Default:
         a '.adj' to the end of the filename
         """
         if not fid.endswith(".adj"):
-            if self.data_format.upper() == "SU":
+            if self.syn_data_format.upper() == "SU":
                 fid = f"{fid}.adj"
-            elif self.data_format.upper() == "ASCII":
+            elif self.syn_data_format.upper() == "ASCII":
                 # Differentiate between SPECFEM3D and 3D_GLOBE
                 # SPECFEM3D: NN.SSSS.CCC.sem?
                 # SPECFEM3D_GLOBE: NN.SSSS.CCC.sem.ascii
@@ -404,8 +419,8 @@ class Default:
         observed, synthetic = self._setup_quantify_misfit(source_name)
 
         for obs_fid, syn_fid in zip(observed, synthetic):
-            obs = self.read(fid=obs_fid)
-            syn = self.read(fid=syn_fid)
+            obs = self.read(fid=obs_fid, data_format=self.obs_data_format)
+            syn = self.read(fid=syn_fid, data_format=self.syn_data_format)
 
             # Process observations and synthetics identically
             if self.filter:
