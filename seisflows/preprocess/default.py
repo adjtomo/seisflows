@@ -145,6 +145,8 @@ class Default:
         self._syn_acceptable_data_formats = ["SU", "ASCII"]
         self._obs_acceptable_data_formats = ["SU", "ASCII", "SAC"]
 
+        self._acceptable_unit_output = ["DISP", "VEL", "ACC"]
+
         # Misfits and adjoint sources are defined by the available functions
         # in each of these plugin files. Drop hidden variables from dir()
         self._acceptable_misfits = [_ for _ in dir(misfit_functions)
@@ -239,6 +241,9 @@ class Default:
 
         assert(self.obs_data_format.upper() in self._obs_acceptable_data_formats), \
             f"observed data format must be in {self._obs_acceptable_data_formats}"
+
+        assert(self.unit_output.upper() in self._acceptable_unit_output), \
+            f"unit output must be in {self._acceptable_unit_output}"
 
     def setup(self):
         """
