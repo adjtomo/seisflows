@@ -133,6 +133,7 @@ class SFExample2D:
             "density": False,  # update density or keep constant
             "syn_data_format": "ascii",  # how to output synthetic seismograms
             "obs_data_format": "ascii",
+            "unit_output": "disp",
             "nproc": self.nproc,  # number of cores to use for MPI tasks
             "start": 1,  # first iteration
             "end": self.niter,  # final iteration -- we will run 2

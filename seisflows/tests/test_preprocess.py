@@ -86,7 +86,7 @@ def test_default_quantify_misfit(tmpdir):
     Quantify misfit with some example data
     """
     preprocess = Default(syn_data_format="ascii", obs_data_format="ascii",
-                         misfit="waveform",
+                         unit_output="disp", misfit="waveform",
                          adjoint="waveform", path_preprocess=tmpdir,
                          path_solver=TEST_SOLVER, source_prefix="SOURCE",
                          ntask=2,
