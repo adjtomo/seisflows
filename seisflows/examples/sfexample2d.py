@@ -131,7 +131,8 @@ class SFExample2D:
             "ntask": self.ntask,  # default 3 sources for this example
             "materials": "elastic",  # how velocity model parameterized
             "density": False,  # update density or keep constant
-            "data_format": "ascii",  # how to output synthetic seismograms
+            "syn_data_format": "ascii",  # how to output synthetic seismograms
+            "obs_data_format": "ascii",
             "nproc": self.nproc,  # number of cores to use for MPI tasks
             "start": 1,  # first iteration
             "end": self.niter,  # final iteration -- we will run 2
