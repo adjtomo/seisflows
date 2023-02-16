@@ -383,16 +383,64 @@ class Default:
         obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
         syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
 
-        observed = sorted(glob(os.path.join(obs_path, "*")))
-        synthetic = sorted(glob(os.path.join(syn_path, "*")))
+        observed = sorted(os.listdir(obs_path))
+        synthetic = sorted(os.listdir(syn_path))
+
+        assert(len(observed) != 0 and len(synthetic) != 0), \
+            f"cannot quantify misfit, missing observed or synthetic traces"
+
+        # verify observed traces format
+        obs_ext = list(set([os.path.splitext(x)[-1] for x in observed]))
+
+        if self.obs_data_format == "ASCII":
+            obs_ext_ok = obs_ext[0].upper() == ".ASCII" or \
+                         obs_ext[0].upper() == f".SEM{self.unit_output[0]}"
+        else:
+            obs_ext_ok = obs_ext[0].upper() == f".{self.obs_data_format}"
+
+        assert(len(obs_ext) == 1 and obs_ext_ok), (
+            f"observed traces have more than one format or their format "
+            f"is not the one defined in parameters.yaml"
+        )
+
+        # verify synthetic traces format
+        syn_ext = list(set([os.path.splitext(x)[-1] for x in synthetic]))
+
+        if self.syn_data_format == "ASCII":
+            syn_ext_ok = syn_ext[0].upper() == ".ASCII" or \
+                         syn_ext[0].upper() == f".SEM{self.unit_output[0]}"
+        else:
+            syn_ext_ok = syn_ext[0].upper() == f".{self.syn_data_format}"
+
+        assert(len(syn_ext) == 1 and syn_ext_ok), (
+            f"synthetic traces have more than one format or their format "
+            f"is not the one defined in parameters.yaml"
+        )
+
+        # remove data format
+        observed = [os.path.splitext(x)[0] for x in observed]
+        synthetic = [os.path.splitext(x)[0] for x in synthetic]
+
+        # only return traces that have both observed and synthetic files
+        matching_traces = sorted(list(set(synthetic).intersection(observed)))
+
+        assert(len(matching_traces) != 0), (
+            f"there are no traces with both observed and synthetic files for "
+            f"source: {source_name}; verify that observations and synthetics "
+            f"have the same name including channel code"
+        )
+
+        observed.clear()
+        synthetic.clear()
+
+        for file_name in matching_traces:
+            observed.append(os.path.join(obs_path, f"{file_name}{obs_ext[0]}"))
+            synthetic.append(os.path.join(syn_path, f"{file_name}{syn_ext[0]}"))
 
         assert(len(observed) == len(synthetic)), (
             f"number of observed traces does not match length of synthetic for "
             f"source: {source_name}"
         )
-
-        assert(len(observed) != 0 and len(synthetic) != 0), \
-            f"cannot quantify misfit, missing observed or synthetic traces"
 
         return observed, synthetic
 
