@@ -34,6 +34,10 @@ class Default:
     :type obs_data_format: str
     :param obs_data_format: data format for reading observed traces into
         memory. Available formats: 'su', 'ascii', 'sac'
+    :type unit_output: str
+    :param unit_output: Data units. Must match the synthetic output of
+        external solver. Available: ['DISP': displacement, 'VEL': velocity,
+        'ACC': acceleration]
     :type misfit: str
     :param misfit: misfit function for waveform comparisons. For available
         see seisflows.plugins.preprocess.misfit
@@ -86,7 +90,7 @@ class Default:
     ***
     """
     def __init__(self, syn_data_format="ascii", obs_data_format="ascii",
-                 misfit="waveform",
+                 unit_output="VEL", misfit="waveform",
                  adjoint="waveform", normalize=None, filter=None,
                  min_period=None, max_period=None, min_freq=None, max_freq=None,
                  mute=None, early_slope=None, early_const=None, late_slope=None,
@@ -109,6 +113,7 @@ class Default:
         """
         self.syn_data_format = syn_data_format.upper()
         self.obs_data_format = obs_data_format.upper()
+        self.unit_output = unit_output.upper()
         self.misfit = misfit
         self.adjoint = adjoint
         self.normalize = normalize
