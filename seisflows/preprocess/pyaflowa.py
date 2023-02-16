@@ -103,7 +103,7 @@ class Pyaflowa:
                  export_log_files=True,
                  workdir=os.getcwd(), path_preprocess=None,
                  path_solver=None, path_specfem_data=None, path_data=None,
-                 path_output=None, data_format="ascii",
+                 path_output=None, syn_data_format="ascii",
                  data_case="data", components="ZNE",
                  start=None, ntask=1, nproc=1, source_prefix=None,
                  **kwargs):
@@ -114,10 +114,10 @@ class Pyaflowa:
             Paths and parameters listed here are shared with other modules and
             so are not included in the main class docstring.
 
-        :type data_format: str
-        :param data_format: data format for reading traces into memory. Pyatoa
-            only works with 'ASCII' currently.
-            :type data_case: str
+        :type syn_data_format: str
+        :param syn_data_format: data format for reading synthetic traces into
+            memory. Pyatoa only works with 'ASCII' currently.
+        :type data_case: str
         :param data_case: How to address 'data' in the workflow, options:
             'data': real data will be provided by the user in
             `path_data/{source_name}` in the same format that the solver will
@@ -181,7 +181,7 @@ class Pyaflowa:
 
         # SeisFlows parameters that should be set by other modules. Keep hidden
         # so `seisflows configure` doesn't attribute these to preprocess.
-        self._data_format = data_format.upper()
+        self._syn_data_format = syn_data_format.upper()
         self._data_case = data_case.lower()
         self._components = components
         self._start = start
@@ -190,7 +190,7 @@ class Pyaflowa:
         self._source_prefix = source_prefix
 
         # Internal parameters to check against user-set parameters
-        self._acceptable_data_formats = ["ASCII"]
+        self._syn_acceptable_data_formats = ["ASCII"]
         self._acceptable_source_prefixes = ["SOURCE", "FORCESOLUTION",
                                             "CMTSOLUTION"]
         self._acceptable_fix_windows = ["ITER", "ONCE", True, False]
@@ -207,8 +207,8 @@ class Pyaflowa:
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
         """
-        assert(self._data_format.upper() == "ASCII"), \
-            "Pyatoa preprocess requires `data_format`=='ASCII'"
+        assert(self._syn_data_format.upper() == "ASCII"), \
+            "Pyatoa preprocess requires `syn_data_format`=='ASCII'"
 
         assert(self.path.specfem_data is not None and
                os.path.exists(self.path.specfem_data)), (
