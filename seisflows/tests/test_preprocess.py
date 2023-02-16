@@ -18,36 +18,45 @@ TEST_SOLVER = os.path.join(ROOT_DIR, "tests", "test_data", "test_solver")
 
 def test_default_read():
     """
-    Test that we can read SPECFEM generated synthetics with the preprocess mod.
+    Test that we can read observed/synthetic traces with the preprocess mod.
     """
     # If new data formats are added to preprocess, they need to be tested
-    tested_data_formats = ["ASCII", "SU"]
+    tested_data_formats = ["ASCII", "SU", "SAC"]
+
+    assert(set(tested_data_formats) == set(preprocess._obs_acceptable_data_formats))
     preprocess = Default()
-    assert(set(tested_data_formats) == set(preprocess._acceptable_data_formats))
 
-    preprocess = Default(data_format="ascii")
-    st1 = preprocess.read(os.path.join(TEST_DATA, "AA.S0001.BXY.semd"))
+    st1 = preprocess.read(os.path.join(TEST_DATA, "AA.S0001.BXY.semd"),
+                          data_format="ascii")
 
-    preprocess = Default(data_format="su")
-    st2 = preprocess.read(os.path.join(TEST_DATA, "Uy_file_single_d.su"))
+    st2 = preprocess.read(os.path.join(TEST_DATA, "Uy_file_single_d.su"),
+                          data_format="su")
+
+    st3 = preprocess.read(os.path.join(TEST_DATA, "AA.S0001.BXY.sac"),
+                          data_format="sac")
 
     assert(st1[0].stats.npts == st2[0].stats.npts)
+    assert(st3[0].stats.npts == st2[0].stats.npts)
 
 
 def test_default_write(tmpdir):
     """
-    Make sure we can write both data formats
+    Test that we can write synthetic waveforms to formats that SPECFEM recognizes
     """
-    # If new data formats are added to preprocess, they need to be tested
+    # If new data formats supported by SPECFEM are added to preprocess,
+    # they need to be tested
     tested_data_formats = ["ASCII", "SU"]
-    preprocess = Default()
-    assert(set(tested_data_formats) == set(preprocess._acceptable_data_formats))
 
-    preprocess = Default(data_format="ascii")
-    st1 = preprocess.read(os.path.join(TEST_DATA, "AA.S0001.BXY.semd"))
+    assert(set(tested_data_formats) == set(preprocess._syn_acceptable_data_formats))
+    preprocess = Default()
+
+    st1 = preprocess.read(os.path.join(TEST_DATA, "AA.S0001.BXY.semd"),
+                          data_format="ascii")
+
+    preprocess.syn_data_format = "ASCII"
     preprocess.write(st1, fid=os.path.join(tmpdir, "test_stream_ascii"))
 
-    preprocess.data_format = "SU"
+    preprocess.syn_data_format = "SU"
     preprocess.write(st1, fid=os.path.join(tmpdir, "test_stream_su"))
 
 
@@ -55,12 +64,14 @@ def test_default_initialize_adjoint_traces(tmpdir):
     """
     Make sure we can write empty adjoint sources expected by SPECFEM
     """
-    preprocess = Default(data_format="ascii")
+    preprocess = Default()
+
+    preprocess.obs_data_format = "ASCII"
     data_filenames = glob(os.path.join(TEST_DATA, "*semd"))
     preprocess.initialize_adjoint_traces(data_filenames=data_filenames,
                                          output=tmpdir)
 
-    preprocess.data_format = "SU"
+    preprocess.obs_data_format = "SU"
     data_filenames = glob(os.path.join(TEST_DATA, "*su"))
     preprocess.initialize_adjoint_traces(data_filenames=data_filenames,
                                          output=tmpdir)
@@ -74,7 +85,8 @@ def test_default_quantify_misfit(tmpdir):
     """
     Quantify misfit with some example data
     """
-    preprocess = Default(data_format="ascii", misfit="waveform",
+    preprocess = Default(syn_data_format="ascii", obs_data_format="ascii",
+                         misfit="waveform",
                          adjoint="waveform", path_preprocess=tmpdir,
                          path_solver=TEST_SOLVER, source_prefix="SOURCE",
                          ntask=2,
@@ -88,7 +100,8 @@ def test_default_quantify_misfit(tmpdir):
     )
 
     # !!! throws a segy error because data are not in the right format
-    # preprocess.data_format = "SU"
+    # preprocess.syn_data_format = "SU"
+    # preprocess.obs_data_format = "SU"
     # preprocess.quantify_misfit(
     #     source_name="001",
     #     save_residuals=os.path.join(tmpdir, "residuals_su"),
@@ -178,7 +191,7 @@ def test_pyaflowa_line_search(tmpdir):
     )
     pyaflowa.setup()
     unix.mkdir(pyaflowa.path.output)  # usually done by other modules setup
-    save_residuals = os.path.join(tmpdir, f"residuals.txt")
+    save_residuals = os.path.join(tmpdir, "residuals.txt")
     for source_name in pyaflowa._source_names:
         for step_count in range(3):
             # Ignore any outputs, just want to run misfit quantification
