@@ -116,7 +116,8 @@ class Pyaflowa:
 
         :type syn_data_format: str
         :param syn_data_format: data format for reading synthetic traces into
-            memory. Pyatoa only works with 'ASCII' currently.
+            memory. Shared with solver module. Pyatoa only works with 'ASCII'
+            currently.
         :type data_case: str
         :param data_case: How to address 'data' in the workflow, options:
             'data': real data will be provided by the user in
