@@ -240,7 +240,7 @@ file.
     #
     #        
     # =============================================================================
-    data_format: ascii
+    syn_data_format: ascii
     materials: acoustic
     density: False
     attenuation: False
@@ -258,9 +258,13 @@ file.
     #
     #    Parameters
     #    ----------
-    #    :type data_format: str
-    #    :param data_format: data format for reading traces into memory. For
-    #        available see: seisflows.plugins.preprocess.readers
+    #    :type syn_data_format: str
+    #    :param syn_data_format: data format for reading synthetic traces into
+    #        memory. Shared with solver module. For available see:
+    #        seisflows.plugins.preprocess.readers
+    #    :type obs_data_format: str
+    #    :param obs_data_format: data format for reading observed traces into
+    #        memory. For available see: seisflows.plugins.preprocess.readers
     #    :type misfit: str
     #    :param misfit: misfit function for waveform comparisons. For available
     #        see seisflows.plugins.preprocess.misfit
@@ -706,8 +710,8 @@ directory of our SeisFlows working directory.
       -h, --help            show this help message and exit
       --data_format [DATA_FORMAT]
                             Data format of the files. Must match file type that
-                            SeisFlows can read. These include:['SU', 'ASCII'].
-                            Defaults to 'ASCII'. See
+                            SeisFlows can read. These include:['SU', 'ASCII',
+                            'SAC']. Defaults to 'ASCII'. See
                             SeisFlows.preprocess.default.read() for all options.
       -s [SAVEFIG], --savefig [SAVEFIG]
                             optional name and path to save figure
