@@ -349,6 +349,34 @@ class Default:
             # Write traces back to the adjoint trace directory
             self.write(st=st, fid=os.path.join(output, adj_fid))
 
+    def _check_adjoint_traces(self, source_name, synthetic):
+        """Check that all adjoint traces required by SPECFEM exist"""
+        source_name = source_name or self._source_names[get_task_id()]
+        specfem_data_path = os.path,join(self.path.solver, source_name, "DATA")
+
+        stations = np.loadtxt(os.path.join(specfem_data_path,
+                                           "STATIONS_ADJOINT"), dtype="str")
+
+        if len(stations) == 0:
+            return
+
+        if not isinstance(stations[0], np.ndarray):
+            stations = [stations]
+
+        channels = [os.path.basename(syn).split('.')[2] for syn in synthetic]
+        channels = list(set(channels))
+
+        for station in stations:
+            sta = station[0]
+            net = station[1]
+            for chan in channels:
+                adj_trace = f"{net}.{sta}.{chan}.{self.syn_data_format}.adj"
+                if os.path.isfile(adj_trace):
+                    continue
+                else:
+                    #TODO: create adj file and save
+                    break
+
     def _rename_as_adjoint_source(self, fid):
         """
         Rename synthetic waveforms into filenames consistent with how SPECFEM
@@ -514,6 +542,9 @@ class Default:
                     fid = os.path.basename(syn_fid)
                     fid = self._rename_as_adjoint_source(fid)
                     self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
+
+        # TODO: check that required adjoint traces exist
+        # _check_adjoint_traces(self, synthetic)
 
     def finalize(self):
         """Teardown procedures for the default preprocessing class"""
