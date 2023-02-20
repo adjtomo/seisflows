@@ -349,33 +349,37 @@ class Default:
             # Write traces back to the adjoint trace directory
             self.write(st=st, fid=os.path.join(output, adj_fid))
 
-    def _check_adjoint_traces(self, source_name, synthetic):
+    def _check_adjoint_traces(self, source_name, save_adjsrcs, synthetic):
         """Check that all adjoint traces required by SPECFEM exist"""
         source_name = source_name or self._source_names[get_task_id()]
-        specfem_data_path = os.path,join(self.path.solver, source_name, "DATA")
+        specfem_data_path = os.path.join(self.path.solver, source_name, "DATA")
 
-        stations = np.loadtxt(os.path.join(specfem_data_path,
-                                           "STATIONS_ADJOINT"), dtype="str")
+        # check <STATIONS> because SPECFEM_2D has no <STATIONS_ADJOINT> file
+        adj_stations = np.loadtxt(os.path.join(specfem_data_path,
+                                               "STATIONS"), dtype="str")
 
-        if len(stations) == 0:
-            return
+        assert(len(adj_stations) != 0), f"No stations in STATIONS_ADJOINT"
 
-        if not isinstance(stations[0], np.ndarray):
-            stations = [stations]
+        if not isinstance(adj_stations[0], np.ndarray):
+            adj_stations = [adj_stations]
+
+        adj_template = "{net}.{sta}.{chan}.adj"
 
         channels = [os.path.basename(syn).split('.')[2] for syn in synthetic]
         channels = list(set(channels))
 
-        for station in stations:
-            sta = station[0]
-            net = station[1]
+        st = self.read(fid=synthetic[0], data_format=self.syn_data_format)
+        for tr in st:
+            tr.data *= 0.
+
+        for adj_sta in adj_stations:
+            sta = adj_sta[0]
+            net = adj_sta[1]
             for chan in channels:
-                adj_trace = f"{net}.{sta}.{chan}.{self.syn_data_format}.adj"
-                if os.path.isfile(adj_trace):
-                    continue
-                else:
-                    #TODO: create adj file and save
-                    break
+                adj_trace = adj_template.format(net=net, sta=sta, chan=chan)
+                adj_trace = os.path.join(save_adjsrcs, adj_trace)
+                if not os.path.isfile(adj_trace):
+                    self.write(st=st, fid=adj_trace)
 
     def _rename_as_adjoint_source(self, fid):
         """
@@ -543,8 +547,8 @@ class Default:
                     fid = self._rename_as_adjoint_source(fid)
                     self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
 
-        # TODO: check that required adjoint traces exist
-        # _check_adjoint_traces(self, synthetic)
+        if save_adjsrcs and self._generate_adjsrc:
+            self._check_adjoint_traces(source_name, save_adjsrcs, synthetic)
 
     def finalize(self):
         """Teardown procedures for the default preprocessing class"""
