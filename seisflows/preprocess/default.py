@@ -354,11 +354,10 @@ class Default:
         source_name = source_name or self._source_names[get_task_id()]
         specfem_data_path = os.path.join(self.path.solver, source_name, "DATA")
 
-        # check <STATIONS> because SPECFEM_2D has no <STATIONS_ADJOINT> file
+        # since <STATIONS_ADJOINT> is generated only when using SPECFEM3D
+        # by copying <STATIONS>, check adjoint stations in <STATIONS>
         adj_stations = np.loadtxt(os.path.join(specfem_data_path,
                                                "STATIONS"), dtype="str")
-
-        assert(len(adj_stations) != 0), f"No stations in STATIONS_ADJOINT"
 
         if not isinstance(adj_stations[0], np.ndarray):
             adj_stations = [adj_stations]
