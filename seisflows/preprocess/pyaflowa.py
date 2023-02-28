@@ -67,8 +67,14 @@ class Pyaflowa:
         the workflow, i.e., at self.par.BEGIN
     :type adj_src_type: str
     :param adj_src_type: Adjoint source type to evaluate misfit, defined by
-        Pyadjoint. Currently available options: ['cc': cross-correlation,
-        'mt': multitaper, 'wav': waveform']
+        Pyadjoint. See `pyadjoint.config.ADJSRC_TYPES` for available options.
+        Listed below, they are:
+        
+        - 'waveform': waveform misfit function
+        - 'convolution': convolution misfit function
+        - 'exponentiated_phase': exponentiated phase from Yuan et al. 2020
+        - 'cc_traveltime': cross-correlation traveltime misfit
+        - 'multitaper': multitaper misfit function
     :type plot: bool
     :param plot: plot waveform figures and source receiver maps during
         the preprocessing stage
