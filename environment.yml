@@ -7,10 +7,6 @@ dependencies:
     - obspy
     - cartopy
     - pyyaml
-    # Pyatoa requirements, ensure they are installed via Conda
-    - pyasdf 
-    - pillow
-    - pypdf2
     - pip:
       - -e .
        
