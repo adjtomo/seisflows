@@ -99,7 +99,7 @@ class Specfem3DGlobe(Specfem):
         self._parameters = sorted(overwrite_parameters)
 
         # Overwriting the base class parameters
-        self._available_data_formats = ["ASCII"]
+        self._syn_available_data_formats = ["ASCII"]
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._acceptable_smooth_types = ["laplacian", "gaussian"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem",
@@ -134,7 +134,7 @@ class Specfem3DGlobe(Specfem):
         :rtype: str
         :return: wildcard identifier for channels
         """
-        if self.data_format.upper() == "ASCII":
+        if self.syn_data_format.upper() == "ASCII":
             return f"*.?X{comp}.sem.ascii"
 
     @property

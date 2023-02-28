@@ -83,9 +83,9 @@ class Specfem3D(Specfem):
         :rtype: str
         :return: wildcard identifier for channels
         """
-        if self.data_format.upper() == "SU":
+        if self.syn_data_format.upper() == "SU":
             return f"*_d?_SU"
-        elif self.data_format.upper() == "ASCII":
+        elif self.syn_data_format.upper() == "ASCII":
             return f"*.?X{comp}.sem?"
 
     @property
