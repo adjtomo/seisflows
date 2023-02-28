@@ -19,6 +19,7 @@ dependencies = [
 	"IPython",
 	"dill",
 	"pyatoa @ git+https://github.com/adjtomo/pyatoa@devel",
+	"pysep-adjtomo",
 ]
 
 [project.optional-dependencies]

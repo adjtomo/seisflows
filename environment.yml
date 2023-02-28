@@ -11,8 +11,6 @@ dependencies:
     - pyasdf 
     - pillow
     - pypdf2
-    # Install Pyatoa via Pip which will install adjTomo tools
     - pip:
-      - git+https://github.com/adjtomo/pyatoa@devel
       - -e .
        
