@@ -28,9 +28,13 @@ class Default:
 
     Parameters
     ----------
-    :type data_format: str
-    :param data_format: data format for reading traces into memory. For
-        available see: seisflows.plugins.preprocess.readers
+    :type obs_data_format: str
+    :param obs_data_format: data format for reading observed traces into
+        memory. Available formats: 'su', 'ascii', 'sac'
+    :type unit_output: str
+    :param unit_output: Data units. Must match the synthetic output of
+        external solver. Available: ['DISP': displacement, 'VEL': velocity,
+        'ACC': acceleration]
     :type misfit: str
     :param misfit: misfit function for waveform comparisons. For available
         see seisflows.plugins.preprocess.misfit
@@ -82,7 +86,8 @@ class Default:
         including saving files
     ***
     """
-    def __init__(self, data_format="ascii", misfit="waveform",
+    def __init__(self, syn_data_format="ascii", obs_data_format="ascii",
+                 unit_output="VEL", misfit="waveform",
                  adjoint="waveform", normalize=None, filter=None,
                  min_period=None, max_period=None, min_freq=None, max_freq=None,
                  mute=None, early_slope=None, early_const=None, late_slope=None,
@@ -93,9 +98,12 @@ class Default:
         Preprocessing module parameters
 
         .. note::
-            Paths listed here are shared with `workflow.forward` and so are not
-            included in the class docstring.
+            Paths and parameters listed here are shared with other modules and 
+            so are not included in the class docstring.
 
+        :type syn_data_format: str
+        :param syn_data_format: data format for reading synthetic traces into
+            memory. Shared with solver module. Available formats: 'su', 'ascii'
         :type workdir: str
         :param workdir: working directory in which to look for data and store
         results. Defaults to current working directory
@@ -103,7 +111,9 @@ class Default:
         :param path_preprocess: scratch path for all preprocessing processes,
             including saving files
         """
-        self.data_format = data_format.upper()
+        self.syn_data_format = syn_data_format.upper()
+        self.obs_data_format = obs_data_format.upper()
+        self.unit_output = unit_output.upper()
         self.misfit = misfit
         self.adjoint = adjoint
         self.normalize = normalize
@@ -130,7 +140,12 @@ class Default:
             solver=path_solver or os.path.join(workdir, "scratch", "solver")
         )
 
-        self._acceptable_data_formats = ["SU", "ASCII"]
+        # The list <_obs_acceptable_data_formats> always includes
+        # <_syn_acceptable_data_formats> in addition to more formats
+        self._syn_acceptable_data_formats = ["SU", "ASCII"]
+        self._obs_acceptable_data_formats = ["SU", "ASCII", "SAC"]
+
+        self._acceptable_unit_output = ["DISP", "VEL", "ACC"]
 
         # Misfits and adjoint sources are defined by the available functions
         # in each of these plugin files. Drop hidden variables from dir()
@@ -221,8 +236,14 @@ class Default:
                 "PAR.MIN_FREQ < PAR.MAX_FREQ"
             )
 
-        assert(self.data_format.upper() in self._acceptable_data_formats), \
-            f"data format must be in {self._acceptable_data_formats}"
+        assert(self.syn_data_format.upper() in self._syn_acceptable_data_formats), \
+            f"synthetic data format must be in {self._syn_acceptable_data_formats}"
+
+        assert(self.obs_data_format.upper() in self._obs_acceptable_data_formats), \
+            f"observed data format must be in {self._obs_acceptable_data_formats}"
+
+        assert(self.unit_output.upper() in self._acceptable_unit_output), \
+            f"unit output must be in {self._acceptable_unit_output}"
 
     def setup(self):
         """
@@ -232,19 +253,23 @@ class Default:
         """
         unix.mkdir(self.path.scratch)
 
-    def read(self, fid):
+    def read(self, fid, data_format):
         """
         Waveform reading functionality. Imports waveforms as Obspy streams
 
         :type fid: str
         :param fid: path to file to read data from
+        :type data_format: str
+        :param data_format: format of the file to read data from
         :rtype: obspy.core.stream.Stream
         :return: ObsPy stream containing data stored in `fid`
         """
         st = None
-        if self.data_format.upper() == "SU":
+        if data_format.upper() == "SU":
             st = obspy_read(fid, format="SU", byteorder="<")
-        elif self.data_format.upper() == "ASCII":
+        elif data_format.upper() == "SAC":
+            st = obspy_read(fid, format="SAC")
+        elif data_format.upper() == "ASCII":
             st = read_ascii(fid)
         return st
 
@@ -258,7 +283,7 @@ class Default:
         :type fid: str
         :param fid: path to file to write stream to
         """
-        if self.data_format.upper() == "SU":
+        if self.syn_data_format.upper() == "SU":
             for tr in st:
                 # Work around for ObsPy data type conversion
                 tr.data = tr.data.astype(np.float32)
@@ -272,7 +297,7 @@ class Default:
             # Write data to file
             st.write(fid, format="SU")
 
-        elif self.data_format.upper() == "ASCII":
+        elif self.syn_data_format.upper() == "ASCII":
             for tr in st:
                 # Float provides time difference between starttime and default
                 time_offset = float(tr.stats.starttime)
@@ -314,7 +339,7 @@ class Default:
         :param output: path to save the new adjoint traces to.
         """
         for fid in data_filenames:
-            st = self.read(fid=fid).copy()
+            st = self.read(fid=fid, data_format=self.obs_data_format).copy()
             fid = os.path.basename(fid)  # drop any path before filename
             for tr in st:
                 tr.data *= 0
@@ -324,6 +349,37 @@ class Default:
             # Write traces back to the adjoint trace directory
             self.write(st=st, fid=os.path.join(output, adj_fid))
 
+    def _check_adjoint_traces(self, source_name, save_adjsrcs, synthetic):
+        """Check that all adjoint traces required by SPECFEM exist"""
+        source_name = source_name or self._source_names[get_task_id()]
+        specfem_data_path = os.path.join(self.path.solver, source_name, "DATA")
+
+        # since <STATIONS_ADJOINT> is generated only when using SPECFEM3D
+        # by copying <STATIONS>, check adjoint stations in <STATIONS>
+        adj_stations = np.loadtxt(os.path.join(specfem_data_path,
+                                               "STATIONS"), dtype="str")
+
+        if not isinstance(adj_stations[0], np.ndarray):
+            adj_stations = [adj_stations]
+
+        adj_template = "{net}.{sta}.{chan}.adj"
+
+        channels = [os.path.basename(syn).split('.')[2] for syn in synthetic]
+        channels = list(set(channels))
+
+        st = self.read(fid=synthetic[0], data_format=self.syn_data_format)
+        for tr in st:
+            tr.data *= 0.
+
+        for adj_sta in adj_stations:
+            sta = adj_sta[0]
+            net = adj_sta[1]
+            for chan in channels:
+                adj_trace = adj_template.format(net=net, sta=sta, chan=chan)
+                adj_trace = os.path.join(save_adjsrcs, adj_trace)
+                if not os.path.isfile(adj_trace):
+                    self.write(st=st, fid=adj_trace)
+
     def _rename_as_adjoint_source(self, fid):
         """
         Rename synthetic waveforms into filenames consistent with how SPECFEM
@@ -331,9 +387,9 @@ class Default:
         a '.adj' to the end of the filename
         """
         if not fid.endswith(".adj"):
-            if self.data_format.upper() == "SU":
+            if self.syn_data_format.upper() == "SU":
                 fid = f"{fid}.adj"
-            elif self.data_format.upper() == "ASCII":
+            elif self.syn_data_format.upper() == "ASCII":
                 # Differentiate between SPECFEM3D and 3D_GLOBE
                 # SPECFEM3D: NN.SSSS.CCC.sem?
                 # SPECFEM3D_GLOBE: NN.SSSS.CCC.sem.ascii
@@ -358,16 +414,64 @@ class Default:
         obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
         syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
 
-        observed = sorted(glob(os.path.join(obs_path, "*")))
-        synthetic = sorted(glob(os.path.join(syn_path, "*")))
+        observed = sorted(os.listdir(obs_path))
+        synthetic = sorted(os.listdir(syn_path))
+
+        assert(len(observed) != 0 and len(synthetic) != 0), \
+            f"cannot quantify misfit, missing observed or synthetic traces"
+
+        # verify observed traces format
+        obs_ext = list(set([os.path.splitext(x)[-1] for x in observed]))
+
+        if self.obs_data_format == "ASCII":
+            obs_ext_ok = obs_ext[0].upper() == ".ASCII" or \
+                         obs_ext[0].upper() == f".SEM{self.unit_output[0]}"
+        else:
+            obs_ext_ok = obs_ext[0].upper() == f".{self.obs_data_format}"
+
+        assert(len(obs_ext) == 1 and obs_ext_ok), (
+            f"observed traces have more than one format or their format "
+            f"is not the one defined in parameters.yaml"
+        )
+
+        # verify synthetic traces format
+        syn_ext = list(set([os.path.splitext(x)[-1] for x in synthetic]))
+
+        if self.syn_data_format == "ASCII":
+            syn_ext_ok = syn_ext[0].upper() == ".ASCII" or \
+                         syn_ext[0].upper() == f".SEM{self.unit_output[0]}"
+        else:
+            syn_ext_ok = syn_ext[0].upper() == f".{self.syn_data_format}"
+
+        assert(len(syn_ext) == 1 and syn_ext_ok), (
+            f"synthetic traces have more than one format or their format "
+            f"is not the one defined in parameters.yaml"
+        )
+
+        # remove data format
+        observed = [os.path.splitext(x)[0] for x in observed]
+        synthetic = [os.path.splitext(x)[0] for x in synthetic]
+
+        # only return traces that have both observed and synthetic files
+        matching_traces = sorted(list(set(synthetic).intersection(observed)))
+
+        assert(len(matching_traces) != 0), (
+            f"there are no traces with both observed and synthetic files for "
+            f"source: {source_name}; verify that observations and synthetics "
+            f"have the same name including channel code"
+        )
+
+        observed.clear()
+        synthetic.clear()
+
+        for file_name in matching_traces:
+            observed.append(os.path.join(obs_path, f"{file_name}{obs_ext[0]}"))
+            synthetic.append(os.path.join(syn_path, f"{file_name}{syn_ext[0]}"))
 
         assert(len(observed) == len(synthetic)), (
             f"number of observed traces does not match length of synthetic for "
             f"source: {source_name}"
         )
-
-        assert(len(observed) != 0 and len(synthetic) != 0), \
-            f"cannot quantify misfit, missing observed or synthetic traces"
 
         return observed, synthetic
 
@@ -404,8 +508,8 @@ class Default:
         observed, synthetic = self._setup_quantify_misfit(source_name)
 
         for obs_fid, syn_fid in zip(observed, synthetic):
-            obs = self.read(fid=obs_fid)
-            syn = self.read(fid=syn_fid)
+            obs = self.read(fid=obs_fid, data_format=self.obs_data_format)
+            syn = self.read(fid=syn_fid, data_format=self.syn_data_format)
 
             # Process observations and synthetics identically
             if self.filter:
@@ -433,14 +537,18 @@ class Default:
 
                 # Generate an adjoint source trace, write to file
                 if save_adjsrcs and self._generate_adjsrc:
-                    adjsrc = syn.copy()
+                    adjsrc = tr_syn.copy()
                     adjsrc.data = self._generate_adjsrc(
                         obs=tr_obs.data, syn=tr_syn.data,
                         nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
                     )
+                    adjsrc = Stream(adjsrc)
                     fid = os.path.basename(syn_fid)
                     fid = self._rename_as_adjoint_source(fid)
                     self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
+
+        if save_adjsrcs and self._generate_adjsrc:
+            self._check_adjoint_traces(source_name, save_adjsrcs, synthetic)
 
     def finalize(self):
         """Teardown procedures for the default preprocessing class"""

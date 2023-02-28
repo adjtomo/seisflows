@@ -37,8 +37,8 @@ class Specfem:
 
     Parameters
     ----------
-    :type data_format: str
-    :param data_format: data format for reading traces into memory.
+    :type syn_data_format: str
+    :param syn_data_format: data format for reading synthetic traces into memory.
         Available: ['SU': seismic unix format, 'ASCII': human-readable ascii]
     :type materials: str
     :param materials: Material parameters used to define model. Available:
@@ -91,7 +91,7 @@ class Specfem:
         running SPECFEM
     ***
     """
-    def __init__(self, data_format="ascii",  materials="acoustic",
+    def __init__(self, syn_data_format="ascii",  materials="acoustic",
                  density=False, nproc=1, ntask=1, attenuation=False,
                  smooth_h=0., smooth_v=0., components="ZNE",
                  source_prefix=None, mpiexec=None, workdir=os.getcwd(),
@@ -122,7 +122,7 @@ class Specfem:
             storage of solver related files such as traces, kernels, gradients.
         """
         # Publically accessible parameters
-        self.data_format = data_format
+        self.syn_data_format = syn_data_format
         self.materials = materials
         self.nproc = nproc
         self.ntask = ntask
@@ -163,7 +163,7 @@ class Specfem:
             "ISOTROPIC", "ANISOTROPIC"  # specfem3d_globe
         ]
         # SPECFEM2D specific attributes. Should be overwritten by 3D versions
-        self._available_data_formats = ["ASCII", "SU"]
+        self._syn_available_data_formats = ["ASCII", "SU"]
         self._required_binaries = ["xspecfem2D", "xmeshfem2D", "xcombine_sem",
                                    "xsmooth_sem"]
         self._acceptable_source_prefixes = ["SOURCE", "FORCE", "FORCESOLUTION"]
@@ -178,9 +178,9 @@ class Specfem:
         assert(self.materials.upper() in self._available_materials), \
             f"solver.materials must be in {self._available_materials}"
 
-        if self.data_format.upper() not in self._available_data_formats:
+        if self.syn_data_format.upper() not in self._syn_available_data_formats:
             raise NotImplementedError(
-                f"solver.data_format must be {self._available_data_formats}"
+                f"solver.syn_data_format must be {self._syn_available_data_formats}"
             )
 
         # Check that User has provided appropriate binary files to run SPECFEM
@@ -329,9 +329,9 @@ class Specfem:
         :rtype: str
         :return: wildcard identifier for channels
         """
-        if self.data_format.upper() == "SU":
+        if self.syn_data_format.upper() == "SU":
             return f"U{comp}_file_single.su"
-        elif self.data_format.upper() == "ASCII":
+        elif self.syn_data_format.upper() == "ASCII":
             return f"*.?X{comp}.sem?"
 
     def model_wildcard(self, par="*", kernel=False):
@@ -502,7 +502,7 @@ class Specfem:
             self._run_binary(executable=exc, stdout=stdout)
 
         # Work around SPECFEM's version dependent file names
-        if self.data_format.upper() == "SU":
+        if self.syn_data_format.upper() == "SU":
             for tag in ["d", "v", "a", "p"]:
                 unix.rename(old=f"single_{tag}.su", new="single.su",
                             names=glob(os.path.join("OUTPUT_FILES", "*.su")))
