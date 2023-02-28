@@ -537,11 +537,12 @@ class Default:
 
                 # Generate an adjoint source trace, write to file
                 if save_adjsrcs and self._generate_adjsrc:
-                    adjsrc = syn.copy()
+                    adjsrc = tr_syn.copy()
                     adjsrc.data = self._generate_adjsrc(
                         obs=tr_obs.data, syn=tr_syn.data,
                         nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
                     )
+                    adjsrc = Stream(adjsrc)
                     fid = os.path.basename(syn_fid)
                     fid = self._rename_as_adjoint_source(fid)
                     self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
