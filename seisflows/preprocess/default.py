@@ -28,9 +28,6 @@ class Default:
 
     Parameters
     ----------
-    :type syn_data_format: str
-    :param syn_data_format: data format for reading synthetic traces into
-        memory. Shared with solver module. Available formats: 'su', 'ascii'
     :type obs_data_format: str
     :param obs_data_format: data format for reading observed traces into
         memory. Available formats: 'su', 'ascii', 'sac'
@@ -101,9 +98,12 @@ class Default:
         Preprocessing module parameters
 
         .. note::
-            Paths listed here are shared with `workflow.forward` and so are not
-            included in the class docstring.
+            Paths and parameters listed here are shared with other modules and 
+            so are not included in the class docstring.
 
+        :type syn_data_format: str
+        :param syn_data_format: data format for reading synthetic traces into
+            memory. Shared with solver module. Available formats: 'su', 'ascii'
         :type workdir: str
         :param workdir: working directory in which to look for data and store
         results. Defaults to current working directory
