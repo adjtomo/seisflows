@@ -18,12 +18,10 @@ dependencies = [
     "pyyaml",
 	"IPython",
 	"dill",
-	"pyatoa @ git+https://github.com/adjtomo/pyatoa@devel",
-	"pysep-adjtomo",
+	"pyatoa",
 ]
 
 [project.optional-dependencies]
-test = ["pytest"]
 dev = ["pytest", "ipython", "ipdb"]
 
 [project.urls]

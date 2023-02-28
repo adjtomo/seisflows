@@ -16,7 +16,6 @@ from pyasdf import ASDFDataSet
 from pyatoa import Config, Manager, Inspector, ManagerError
 from pyatoa.utils.read import read_station_codes
 from pyatoa.utils.images import imgs_to_pdf, merge_pdfs
-from pysep.utils.io import read_sem
 
 from seisflows import logger
 from seisflows.tools import unix
@@ -285,7 +284,7 @@ class Pyaflowa:
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         save_adjsrcs=None, iteration=1, step_count=0,
-                        **kwargs):
+                        parallel=False, **kwargs):
         """
         Main processing function to be called by Workflow module. Generates
         total misfit and adjoint sources for a given event with name 
