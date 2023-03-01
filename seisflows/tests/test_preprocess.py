@@ -78,7 +78,6 @@ def test_default_initialize_adjoint_traces(tmpdir):
     preprocess.initialize_adjoint_traces(data_filenames=data_filenames,
                                          output=tmpdir)
 
-    pytest.set_trace()
     assert(len(glob(os.path.join(tmpdir, "*"))) == 2)
     for fid in glob(os.path.join(tmpdir, "*")):
         assert(fid.endswith(".adj"))
