@@ -32,3 +32,4 @@ The following paper can also be cited relative to this software:
 
 - Ryan Modrak, Jeroen Tromp; *Seismic waveform inversion best practices: regional, global and exploration test cases*, Geophysical Journal International, Volume 206, Issue 3, 1 September 2016, Pages 1864–1889, https://doi.org/10.1093/gji/ggw202
 
+
