@@ -9,16 +9,16 @@ import logging
 import time
 import random
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from glob import glob
 from pyasdf import ASDFDataSet
+
 from pyatoa import Config, Manager, Inspector, ManagerError
-from pyatoa.utils.read import read_station_codes, read_sem
+from pyatoa.utils.read import read_station_codes
 from pyatoa.utils.images import imgs_to_pdf, merge_pdfs
 
 from seisflows import logger
 from seisflows.tools import unix
-from seisflows.tools.config import Null, Dict, get_task_id
+from seisflows.tools.config import Dict, get_task_id
 from seisflows.tools.specfem import check_source_names
 
 
@@ -27,7 +27,7 @@ class Pyaflowa:
     Pyaflowa Preprocess
     -------------------
     Preprocessing and misfit quantification using Python's Adjoint Tomography
-    Operations Assistance (Pyatoa)
+    Operations Assistant (Pyatoa)
 
     Parameters
     ----------
@@ -66,8 +66,14 @@ class Pyaflowa:
         the workflow, i.e., at self.par.BEGIN
     :type adj_src_type: str
     :param adj_src_type: Adjoint source type to evaluate misfit, defined by
-        Pyadjoint. Currently available options: ['cc': cross-correlation,
-        'mt': multitaper, 'wav': waveform']
+        Pyadjoint. See `pyadjoint.config.ADJSRC_TYPES` for available options.
+        Listed below, they are:
+        
+        - 'waveform': waveform misfit function
+        - 'convolution': convolution misfit function
+        - 'exponentiated_phase': exponentiated phase from Yuan et al. 2020
+        - 'cc_traveltime': cross-correlation traveltime misfit
+        - 'multitaper': multitaper misfit function
     :type plot: bool
     :param plot: plot waveform figures and source receiver maps during
         the preprocessing stage
@@ -97,9 +103,9 @@ class Pyaflowa:
     """
     def __init__(self, min_period=1., max_period=10., filter_corners=4,
                  client=None, rotate=False, pyflex_preset="default",
-                 fix_windows=False, adj_src_type="cc", plot=True,
-                 pyatoa_log_level="DEBUG", unit_output="VEL", max_workers=None,
-                 export_datasets=True, export_figures=True, 
+                 fix_windows=False, adj_src_type="cc_traveltime", plot=True,
+                 pyatoa_log_level="DEBUG", unit_output="VEL",
+                 export_datasets=True, export_figures=True,
                  export_log_files=True,
                  workdir=os.getcwd(), path_preprocess=None,
                  path_solver=None, path_specfem_data=None, path_data=None,
@@ -149,8 +155,6 @@ class Pyaflowa:
         self.plot = plot
         self.pyatoa_log_level = pyatoa_log_level
         self.unit_output = unit_output
-
-        self.max_workers = max_workers
 
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
@@ -238,12 +242,18 @@ class Pyaflowa:
         of the preprocessing workflow
 
         .. note::
+
             `config.save_to_ds` must be set False, otherwise Pyatoa will try to
             write to a read-only ASDFDataSet causing preprocessing to fail.
         """
         for pathname in ["scratch", "_logs", "_tmplogs", "_datasets",
                          "_figures"]:
             unix.mkdir(self.path[pathname])
+
+        if self._data_case == "synthetic":
+            st_obs_type = "syn"
+        else:
+            st_obs_type = "obs"
 
         # Convert SeisFlows user parameters into Pyatoa config parameters
         # Contains paths to look for data and metadata
@@ -254,7 +264,7 @@ class Pyaflowa:
             fix_windows=self.fix_windows, adj_src_type=self.adj_src_type,
             log_level=self.pyatoa_log_level, unit_output=self.unit_output,
             component_list=list(self._components), save_to_ds=False,
-            synthetics_only=bool(self._data_case == "synthetic"),
+            st_obs_type=st_obs_type,
             paths={"waveforms": self.path["_waveforms"] or [],
                    "responses": self.path["_responses"] or [],
                    "events": [self.path.specfem_data]
@@ -272,7 +282,7 @@ class Pyaflowa:
         )
 
     @staticmethod
-    def _ftag(config):
+    def ftag(config):
         """
         Create a re-usable file tag from the Config object as multiple functions
         will use this tag for file naming and file discovery.
@@ -285,20 +295,16 @@ class Pyaflowa:
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         save_adjsrcs=None, iteration=1, step_count=0,
-                        **kwargs):
+                        parallel=False, **kwargs):
         """
-        Prepares solver for gradient evaluation by evaluating data-synthetic
-        misfit and writing residuals and adjoint traces. Meant to be called by
-        `workflow.evaluate_objective_function`.
+        Main processing function to be called by Workflow module. Generates
+        total misfit and adjoint sources for a given event with name 
+        `source_name`.
 
         .. note::
-            meant to be run on system using system.run() with access to solver
 
-        .. warning:: 
-            parallel processing with concurrent futures currently leads to 
-            computer crashes and I have not been able to figure out why or how
-            to deal with it. So for the moment misfit quantification on a 
-            per-event basis is run serially
+            Meant to be called by `workflow.evaluate_objective_function` and
+            run on system using system.run() to get access to compute nodes.
 
         :type source_name: str
         :param source_name: name of the event to quantify misfit for. If not
@@ -318,12 +324,25 @@ class Pyaflowa:
             inversion. Defaults to 0 if not given (1st evaluation)
         """
         # Generate an event/evaluation specific config object to control Pyatoa
-        config = self._setup_quantify_misfit(source_name, iteration, step_count)
+        config = self.set_config(source_name, iteration, step_count)
 
         # Run misfit quantification for ALL stations and this given event
-        # !!! Do not set parallel == True, see note in docstring !!!
-        misfit, nwin = self._run_quantify_misfit(config, save_adjsrcs,
-                                                 parallel=False)
+        misfit, nwin = 0, 0
+        # Run processing in parallel
+        if parallel:
+            # MPI Implementation
+            pass
+        # Run processing in serial
+        else:
+            for code in self._station_codes:
+                misfit_sta, nwin_sta = self.quantify_misfit_station(
+                    config=config, station_code=code, save_adjsrcs=save_adjsrcs
+                )
+                if misfit_sta is not None:
+                    misfit += misfit_sta
+                if nwin_sta is not None:
+                    nwin += nwin_sta
+
         # Calculate misfit based on the raw misfit and total number of windows
         if save_residuals:
             # Calculate the misfit based on the number of windows. Equation from
@@ -339,12 +358,12 @@ class Pyaflowa:
 
         # Combine all the individual .png files created into a single PDF
         if self.plot:
-            fid = os.path.join(self.path._figures, f"{self._ftag(config)}.pdf")
+            fid = os.path.join(self.path._figures, f"{self.ftag(config)}.pdf")
             self._make_event_figure_pdf(source_name=source_name, output_fid=fid)
 
         # Finally, collect all the temporary log files and write a main log file
-        pyatoa_logger = self._config_pyatoa_logger(
-            fid=os.path.join(self.path._logs, f"{self._ftag(config)}.log")
+        pyatoa_logger = self._config_adjtomo_loggers(
+            fid=os.path.join(self.path._logs, f"{self.ftag(config)}.log")
         )
         pyatoa_logger.info(
             f"\n{'=' * 80}\n{'SUMMARY':^80}\n{'=' * 80}\n"
@@ -355,7 +374,7 @@ class Pyaflowa:
             )
         self._collect_tmp_log_files(pyatoa_logger, config.event_id)
 
-    def _setup_quantify_misfit(self, source_name, iteration, step_count):
+    def set_config(self, source_name=None, iteration=1, step_count=0):
         """
         Create an event-specific Config object which contains information about
         the current event, and position in the workflow evaluation. Also
@@ -365,7 +384,7 @@ class Pyaflowa:
         :type source_name: str
         :param source_name: name of the event to quantify misfit for. If not
             given, will attempt to gather event id from the given task id which
-            is assigned by system.run()
+            is assigned by system.run(). Defaults to `self._source_names[0]`
         :type iteration: int
         :param iteration: current iteration of the workflow, information should
             be provided by `workflow` module if we are running an inversion.
@@ -379,7 +398,10 @@ class Pyaflowa:
             that can be directly fed to the Manager for misfit quantification
         """
         config = self._config.copy()
-        config.event_id = source_name or self._source_names[get_task_id()]
+
+        source_name = source_name or self._source_names[get_task_id()]
+        config.event_id = source_name
+
         config.iteration = iteration
         config.step_count = step_count
 
@@ -393,59 +415,14 @@ class Pyaflowa:
         syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
         config.paths["synthetics"].append(syn_path)
 
-        # Extract start and end times from one of the synthetic traces so that
-        # Pyatoa knows how long seismograms are and when to start them
-        # NOTE: assuming all synthetic time axes are the same for this source
-        synthetics = glob(os.path.join(syn_path, "*"))
-        assert synthetics, f"Pyatoa found no synthetics in: {syn_path}"
-        tr_syn = read_sem(synthetics[0])[0]
-        config.start_pad = abs(tr_syn.stats.time_offset)  # [s] must be positive
-        config.end_pad = tr_syn.stats.endtime - tr_syn.stats.starttime  # [s]
-
         return config
 
-    def _run_quantify_misfit(self, config, save_adjsrcs, parallel=False):
+    def quantify_misfit_station(self, config, station_code, save_adjsrcs=False):
         """
-        Run misfit quantification for each station concurrently or in serial.
-        If concurrent, play it safe and cap the max parallel workers at
-        half the processors otherwise you may run out of memory and crash the
-        CPU
-        """
-        misfit, nwin = 0, 0
-        # Run processing in parallel
-        if parallel:
-            with ProcessPoolExecutor(max_workers=1) as executor:
-                futures = (executor.submit(self._quantify_misfit_station,
-                                           config, code, save_adjsrcs)
-                           for code in self._station_codes)
-                # We only need to return misfit information. All data/results
-                # are saved to the ASDFDataSet and status is logged to separate
-                # log file
-                for future in as_completed(futures):
-                    _misfit, _nwin = future.result()
-                    del future  # Free up memory once future is completed
-                    if _misfit is not None:
-                        misfit += _misfit
-                    if _nwin is not None:
-                        nwin += _nwin
-        # Run processing in serial
-        else:
-            for code in self._station_codes:
-                _misfit, _nwin = self._quantify_misfit_station(
-                    config=config, station_code=code, save_adjsrcs=save_adjsrcs
-                )
-                if _misfit is not None:
-                    misfit += _misfit
-                if _nwin is not None:
-                    nwin += _nwin
+        Main Pyatoa processing function to quantify misfit + generation adjsrc.
 
-        return misfit, nwin
-
-    def _quantify_misfit_station(self, config, station_code,
-                                 save_adjsrcs=False):
-        """
-        Run misfit quantification for a single event-station pair. Gathers,
-        preprocesses, windows and measures data, saves adjoint source if
+        Run misfit quantification for a single event-station pair. Gather data,
+        preprocess, window and measure data, save adjoint source if
         requested, and then returns the total misfit and the collected
         windows for the station.
 
@@ -465,11 +442,11 @@ class Pyaflowa:
         # Unique identifier for the given source-receiver pair for file naming
         # Something like: 001_i01_s00_XX_XYZ
         net, sta, loc, cha = station_code.split(".")
-        tag = f"{self._ftag(config)}_{net}_{sta}"
+        tag = f"{self.ftag(config)}_{net}_{sta}"
 
         # Configure a single source-receiver pair temporary logger
         log_file = os.path.join(self.path._tmplogs, f"{tag}.log")
-        station_logger = self._config_pyatoa_logger(fid=log_file)
+        station_logger = self._config_adjtomo_loggers(fid=log_file)
         station_logger.info(f"\n{'/' * 80}\n{station_code:^80}\n{'/' * 80}")
 
         # Check whether or not we want to use misfit windows from last eval.
@@ -554,10 +531,11 @@ class Pyaflowa:
 
     def finalize(self):
         """
-        Run some serial finalization tasks specific to Pyatoa, which will help
-        aggregate the collection of output information.
+        Run serial finalization tasks at the end of a given iteration. These 
+        tasks are specific to Pyatoa, used to aggregate figures and data.
 
         .. note::
+
             This finalize function performs the following tasks:
             * Generate .csv files using the Inspector
             * Aggregate event-specific PDFs into a single evaluation PDF
@@ -657,7 +635,7 @@ class Pyaflowa:
 
         return fix_windows, msg
 
-    def _config_pyatoa_logger(self, fid):
+    def _config_adjtomo_loggers(self, fid):
         """
         Create a log file to track processing of a given source-receiver pair.
         Because each station is processed asynchronously, we don't want them to
@@ -675,7 +653,7 @@ class Pyaflowa:
         logfmt = "[%(asctime)s] - %(name)s - %(levelname)s: %(message)s"
         formatter = logging.Formatter(logfmt, datefmt="%Y-%m-%d %H:%M:%S")
         handler.setFormatter(formatter)
-        for log in ["pyflex", "pyadjoint", "pyatoa"]:
+        for log in ["pyflex", "pyadjoint", "pysep", "pyatoa"]:
             # Set the overall log level
             logger = logging.getLogger(log)
             # Turn off any existing handlers (stream and file)
@@ -694,6 +672,7 @@ class Pyaflowa:
         This is a lot of IO but should be okay since the files are small.
 
         .. note::
+
             This was the most foolproof method for having multiple parallel
             processes write to the same file. I played around with StringIO
             buffers and file locks, but they became overly complicated and
@@ -701,6 +680,7 @@ class Pyaflowa:
             filecount and IO overhead for simplicity.
 
         .. warning::
+
             The assumption here is that the number of source-receiver pairs
             is manageable (in the thousands). If we start reaching file count
             limits on the cluster then this method for logging may have to be

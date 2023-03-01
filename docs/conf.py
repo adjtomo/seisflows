@@ -19,8 +19,9 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'SeisFlows'
-copyright = '2023, SeisFlows Development Team'
-author = 'Ryan Modrak, Bryant Chow'
+copyright = '2023'
+author = 'adjTomo Dev Team'
+version = '2.2.0'
 
 
 # -- General configuration ---------------------------------------------------

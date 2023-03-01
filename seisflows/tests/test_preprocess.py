@@ -23,8 +23,9 @@ def test_default_read():
     # If new data formats are added to preprocess, they need to be tested
     tested_data_formats = ["ASCII", "SU", "SAC"]
 
-    assert(set(tested_data_formats) == set(preprocess._obs_acceptable_data_formats))
     preprocess = Default()
+    assert(set(tested_data_formats) ==
+           set(preprocess._obs_acceptable_data_formats))
 
     st1 = preprocess.read(os.path.join(TEST_DATA, "AA.S0001.BXY.semd"),
                           data_format="ascii")
@@ -47,8 +48,9 @@ def test_default_write(tmpdir):
     # they need to be tested
     tested_data_formats = ["ASCII", "SU"]
 
-    assert(set(tested_data_formats) == set(preprocess._syn_acceptable_data_formats))
     preprocess = Default()
+    assert(set(tested_data_formats) ==
+           set(preprocess._syn_acceptable_data_formats))
 
     st1 = preprocess.read(os.path.join(TEST_DATA, "AA.S0001.BXY.semd"),
                           data_format="ascii")
@@ -66,12 +68,12 @@ def test_default_initialize_adjoint_traces(tmpdir):
     """
     preprocess = Default()
 
-    preprocess.obs_data_format = "ASCII"
+    preprocess.syn_data_format = "ASCII"
     data_filenames = glob(os.path.join(TEST_DATA, "*semd"))
     preprocess.initialize_adjoint_traces(data_filenames=data_filenames,
                                          output=tmpdir)
 
-    preprocess.obs_data_format = "SU"
+    preprocess.syn_data_format = "SU"
     data_filenames = glob(os.path.join(TEST_DATA, "*su"))
     preprocess.initialize_adjoint_traces(data_filenames=data_filenames,
                                          output=tmpdir)
@@ -140,7 +142,7 @@ def test_pyaflowa_setup(tmpdir):
     assert(pyaflowa._config.component_list == ["Y"])
 
 
-def test_pyaflowa_setup_quantify_misfit(tmpdir):
+def test_pyaflowa_setup_config(tmpdir):
     """
     Test Config setup that is used to control `quantify_misfit` function
     """
@@ -151,12 +153,8 @@ def test_pyaflowa_setup_quantify_misfit(tmpdir):
         data_case="synthetic", components="Y", fix_windows="ITER",
     )
     pyaflowa.setup()
-    config = pyaflowa._setup_quantify_misfit(source_name="001", iteration=1,
-                                             step_count=1)
+    config = pyaflowa.set_config(source_name="001", iteration=1, step_count=1)
     assert(config.eval_tag == "i01s01")
-    # Data specific time series values calculated by function
-    assert(config.start_pad == 48)
-    assert(config.end_pad == 299.94)
 
 
 def test_pyaflowa_check_fixed_windows():
@@ -205,8 +203,7 @@ def test_pyaflowa_line_search(tmpdir):
 
     # Check that final residuals file is the same
     residuals = np.loadtxt(save_residuals)
-    # assert(pyaflowa.sum_residuals(residuals) == 6.045)
-    assert(pytest.approx(pyaflowa.sum_residuals(residuals), 4) == 7.8599)
+    assert(pytest.approx(pyaflowa.sum_residuals(residuals), .01) == .7463)
 
     # Check that atleast one adjoint sources are not zero
     adjsrcs = glob(os.path.join(tmpdir, "*.adj"))
