@@ -24,7 +24,8 @@ def test_default_read():
     tested_data_formats = ["ASCII", "SU", "SAC"]
 
     preprocess = Default()
-    assert(set(tested_data_formats) == set(preprocess._obs_acceptable_data_formats))
+    assert(set(tested_data_formats) ==
+           set(preprocess._obs_acceptable_data_formats))
 
     st1 = preprocess.read(os.path.join(TEST_DATA, "AA.S0001.BXY.semd"),
                           data_format="ascii")
@@ -48,7 +49,8 @@ def test_default_write(tmpdir):
     tested_data_formats = ["ASCII", "SU"]
 
     preprocess = Default()
-    assert(set(tested_data_formats) == set(preprocess._syn_acceptable_data_formats))
+    assert(set(tested_data_formats) ==
+           set(preprocess._syn_acceptable_data_formats))
 
     st1 = preprocess.read(os.path.join(TEST_DATA, "AA.S0001.BXY.semd"),
                           data_format="ascii")
@@ -66,16 +68,17 @@ def test_default_initialize_adjoint_traces(tmpdir):
     """
     preprocess = Default()
 
-    preprocess.obs_data_format = "ASCII"
+    preprocess.syn_data_format = "ASCII"
     data_filenames = glob(os.path.join(TEST_DATA, "*semd"))
     preprocess.initialize_adjoint_traces(data_filenames=data_filenames,
                                          output=tmpdir)
 
-    preprocess.obs_data_format = "SU"
+    preprocess.syn_data_format = "SU"
     data_filenames = glob(os.path.join(TEST_DATA, "*su"))
     preprocess.initialize_adjoint_traces(data_filenames=data_filenames,
                                          output=tmpdir)
 
+    pytest.set_trace()
     assert(len(glob(os.path.join(tmpdir, "*"))) == 2)
     for fid in glob(os.path.join(tmpdir, "*")):
         assert(fid.endswith(".adj"))

@@ -346,7 +346,7 @@ class Default:
                 tr.data *= 0
 
             adj_fid = self._rename_as_adjoint_source(fid)
-
+c
             # Write traces back to the adjoint trace directory
             self.write(st=st, fid=os.path.join(output, adj_fid))
 
