@@ -23,8 +23,8 @@ def test_default_read():
     # If new data formats are added to preprocess, they need to be tested
     tested_data_formats = ["ASCII", "SU", "SAC"]
 
-    assert(set(tested_data_formats) == set(preprocess._obs_acceptable_data_formats))
     preprocess = Default()
+    assert(set(tested_data_formats) == set(preprocess._obs_acceptable_data_formats))
 
     st1 = preprocess.read(os.path.join(TEST_DATA, "AA.S0001.BXY.semd"),
                           data_format="ascii")
@@ -47,8 +47,8 @@ def test_default_write(tmpdir):
     # they need to be tested
     tested_data_formats = ["ASCII", "SU"]
 
-    assert(set(tested_data_formats) == set(preprocess._syn_acceptable_data_formats))
     preprocess = Default()
+    assert(set(tested_data_formats) == set(preprocess._syn_acceptable_data_formats))
 
     st1 = preprocess.read(os.path.join(TEST_DATA, "AA.S0001.BXY.semd"),
                           data_format="ascii")
