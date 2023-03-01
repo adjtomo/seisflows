@@ -9,7 +9,6 @@ import logging
 import time
 import random
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from glob import glob
 from pyasdf import ASDFDataSet
 
@@ -19,7 +18,7 @@ from pyatoa.utils.images import imgs_to_pdf, merge_pdfs
 
 from seisflows import logger
 from seisflows.tools import unix
-from seisflows.tools.config import Null, Dict, get_task_id
+from seisflows.tools.config import Dict, get_task_id
 from seisflows.tools.specfem import check_source_names
 
 
@@ -105,8 +104,8 @@ class Pyaflowa:
     def __init__(self, min_period=1., max_period=10., filter_corners=4,
                  client=None, rotate=False, pyflex_preset="default",
                  fix_windows=False, adj_src_type="cc_traveltime", plot=True,
-                 pyatoa_log_level="DEBUG", unit_output="VEL", max_workers=None,
-                 export_datasets=True, export_figures=True, 
+                 pyatoa_log_level="DEBUG", unit_output="VEL",
+                 export_datasets=True, export_figures=True,
                  export_log_files=True,
                  workdir=os.getcwd(), path_preprocess=None,
                  path_solver=None, path_specfem_data=None, path_data=None,
@@ -251,6 +250,11 @@ class Pyaflowa:
                          "_figures"]:
             unix.mkdir(self.path[pathname])
 
+        if self._data_case == "synthetic":
+            st_obs_type = "syn"
+        else:
+            st_obs_type = "obs"
+
         # Convert SeisFlows user parameters into Pyatoa config parameters
         # Contains paths to look for data and metadata
         self._config = Config(
@@ -260,7 +264,7 @@ class Pyaflowa:
             fix_windows=self.fix_windows, adj_src_type=self.adj_src_type,
             log_level=self.pyatoa_log_level, unit_output=self.unit_output,
             component_list=list(self._components), save_to_ds=False,
-            synthetics_only=bool(self._data_case == "synthetic"),
+            st_obs_type=st_obs_type,
             paths={"waveforms": self.path["_waveforms"] or [],
                    "responses": self.path["_responses"] or [],
                    "events": [self.path.specfem_data]
