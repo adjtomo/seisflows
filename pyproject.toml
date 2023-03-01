@@ -18,7 +18,7 @@ dependencies = [
     "pyyaml",
 	"IPython",
 	"dill",
-	"pyatoa",
+	"pyatoa>=0.2.2",
 ]
 
 [project.optional-dependencies]
