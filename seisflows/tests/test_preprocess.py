@@ -142,7 +142,7 @@ def test_pyaflowa_setup(tmpdir):
     assert(pyaflowa._config.component_list == ["Y"])
 
 
-def test_pyaflowa_setup_quantify_misfit(tmpdir):
+def test_pyaflowa_setup_config(tmpdir):
     """
     Test Config setup that is used to control `quantify_misfit` function
     """
@@ -153,12 +153,8 @@ def test_pyaflowa_setup_quantify_misfit(tmpdir):
         data_case="synthetic", components="Y", fix_windows="ITER",
     )
     pyaflowa.setup()
-    config = pyaflowa._setup_quantify_misfit(source_name="001", iteration=1,
-                                             step_count=1)
+    config = pyaflowa.set_config(source_name="001", iteration=1, step_count=1)
     assert(config.eval_tag == "i01s01")
-    # Data specific time series values calculated by function
-    assert(config.start_pad == 48)
-    assert(config.end_pad == 299.94)
 
 
 def test_pyaflowa_check_fixed_windows():
@@ -208,6 +204,7 @@ def test_pyaflowa_line_search(tmpdir):
     # Check that final residuals file is the same
     residuals = np.loadtxt(save_residuals)
     # assert(pyaflowa.sum_residuals(residuals) == 6.045)
+    import pdb;pdb.set_trace()
     assert(pytest.approx(pyaflowa.sum_residuals(residuals), 4) == 7.8599)
 
     # Check that atleast one adjoint sources are not zero

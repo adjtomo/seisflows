@@ -442,7 +442,7 @@ class Pyaflowa:
 
         # Configure a single source-receiver pair temporary logger
         log_file = os.path.join(self.path._tmplogs, f"{tag}.log")
-        station_logger = self._config_pyatoa_logger(fid=log_file)
+        station_logger = self._config_adjtomo_loggers(fid=log_file)
         station_logger.info(f"\n{'/' * 80}\n{station_code:^80}\n{'/' * 80}")
 
         # Check whether or not we want to use misfit windows from last eval.
@@ -649,7 +649,7 @@ class Pyaflowa:
         logfmt = "[%(asctime)s] - %(name)s - %(levelname)s: %(message)s"
         formatter = logging.Formatter(logfmt, datefmt="%Y-%m-%d %H:%M:%S")
         handler.setFormatter(formatter)
-        for log in ["pyflex", "pyadjoint", "pyatoa", "pysep"]:
+        for log in ["pyflex", "pyadjoint", "pysep", "pyatoa"]:
             # Set the overall log level
             logger = logging.getLogger(log)
             # Turn off any existing handlers (stream and file)
