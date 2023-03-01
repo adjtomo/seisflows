@@ -318,7 +318,8 @@ class Default:
         else:
             return None
 
-    def initialize_adjoint_traces(self, data_filenames, output):
+    def initialize_adjoint_traces(self, data_filenames, output,
+                                  data_format=None):
         """
         SPECFEM requires that adjoint traces be present for every matching
         synthetic seismogram. If an adjoint source does not exist, it is
@@ -332,14 +333,14 @@ class Default:
         TODO over here, were they required?
 
         :type data_filenames: list of str
-        :param data_filenames: existing solver waveforms to read from.
+        :param data_filenames: existing solver waveforms (synthetic) to read.
             These will be copied, zerod out, and saved to path `save`. Should
             come from solver.data_filenames
         :type output: str
         :param output: path to save the new adjoint traces to.
         """
         for fid in data_filenames:
-            st = self.read(fid=fid, data_format=self.obs_data_format).copy()
+            st = self.read(fid=fid, data_format=self.syn_data_format).copy()
             fid = os.path.basename(fid)  # drop any path before filename
             for tr in st:
                 tr.data *= 0
