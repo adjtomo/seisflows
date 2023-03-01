@@ -37,8 +37,8 @@ class Specfem:
 
     Parameters
     ----------
-    :type data_format: str
-    :param data_format: data format for reading traces into memory.
+    :type syn_data_format: str
+    :param syn_data_format: data format for reading synthetic traces into memory.
         Available: ['SU': seismic unix format, 'ASCII': human-readable ascii]
     :type materials: str
     :param materials: Material parameters used to define model. Available:
@@ -56,10 +56,14 @@ class Specfem:
     :param smooth_h: Gaussian half-width for horizontal smoothing in units
         of meters. If 0., no smoothing applied. Only applicable for workflows:
         ['migration', 'inversion'], ignored for 'forward' workflow.
+        SPECFEM3D_GLOBE only: if `smooth_type`=='laplacian' then this is just 
+        the X and Y extent of the applied smoothing
     :type smooth_h: float
     :param smooth_v: Gaussian half-width for vertical smoothing in units
         of meters. Only applicable for workflows: ['migration', 'inversion'],
         ignored for 'forward' workflow.
+        SPECFEM3D_GLOBE only: if `smooth_type`=='laplacian' then this is just 
+        the Z extent of the applied smoothing
     :type components: str
     :param components: components to consider and tag data with. Should be
         string of letters such as 'RTZ'
@@ -87,7 +91,7 @@ class Specfem:
         running SPECFEM
     ***
     """
-    def __init__(self, data_format="ascii",  materials="acoustic",
+    def __init__(self, syn_data_format="ascii",  materials="acoustic",
                  density=False, nproc=1, ntask=1, attenuation=False,
                  smooth_h=0., smooth_v=0., components="ZNE",
                  source_prefix=None, mpiexec=None, workdir=os.getcwd(),
@@ -118,7 +122,7 @@ class Specfem:
             storage of solver related files such as traces, kernels, gradients.
         """
         # Publically accessible parameters
-        self.data_format = data_format
+        self.syn_data_format = syn_data_format
         self.materials = materials
         self.nproc = nproc
         self.ntask = ntask
@@ -127,7 +131,6 @@ class Specfem:
         self.smooth_h = smooth_h
         self.smooth_v = smooth_v
         self.components = components
-        # self.solver_io = solver_io  # currently not used
         self.source_prefix = source_prefix or "SOURCE"
 
         # Define internally used directory structure
@@ -151,7 +154,7 @@ class Specfem:
 
         self._mpiexec = mpiexec
         self._source_names = None  # for property source_names
-        self._ext = None  # for database file extensions
+        self._ext = ""  # for database file extensions
 
         # Define available choices for check parameters
         self._available_model_types = ["gll"]
@@ -159,10 +162,14 @@ class Specfem:
             "ELASTIC", "ACOUSTIC",  # specfem2d, specfem3d
             "ISOTROPIC", "ANISOTROPIC"  # specfem3d_globe
         ]
-        self._available_data_formats = ["ASCII", "SU"]
+        # SPECFEM2D specific attributes. Should be overwritten by 3D versions
+        self._syn_available_data_formats = ["ASCII", "SU"]
         self._required_binaries = ["xspecfem2D", "xmeshfem2D", "xcombine_sem",
                                    "xsmooth_sem"]
         self._acceptable_source_prefixes = ["SOURCE", "FORCE", "FORCESOLUTION"]
+        
+        # Empty variable that will need to be overwritten by SPECFEM3D_GLOBE
+        self._regions = None
 
     def check(self):
         """
@@ -171,9 +178,9 @@ class Specfem:
         assert(self.materials.upper() in self._available_materials), \
             f"solver.materials must be in {self._available_materials}"
 
-        if self.data_format.upper() not in self._available_data_formats:
+        if self.syn_data_format.upper() not in self._syn_available_data_formats:
             raise NotImplementedError(
-                f"solver.data_format must be {self._available_data_formats}"
+                f"solver.syn_data_format must be {self._syn_available_data_formats}"
             )
 
         # Check that User has provided appropriate binary files to run SPECFEM
@@ -244,6 +251,21 @@ class Specfem:
         assert(isinstance(self.density, bool)), \
             f"solver `density` must be True (variable) or False (constant)"
 
+        # Check the size of the DATA/ directory and let the User know if 
+        # large files are present, e.g., tomo xyz files or topo/bathy
+        for root, dirs, files in os.walk(self.path.specfem_data):
+            for name in files:
+                fullpath = os.path.join(root, name)
+                if not os.path.islink(fullpath):
+                    filesize = os.path.getsize(fullpath) / 1E9  # Bytes -> GB
+                    if filesize > 0.5:
+                        logger.warning(
+                            f"SPECFEM DATA/ file '{fullpath}' is >.5GB and "
+                            f"will be copied {self.ntask} time(s). Please be "
+                            f"sure to check if this file is necessary for your "
+                            f"workflow"
+                            )
+
     @property
     def source_names(self):
         """
@@ -307,10 +329,35 @@ class Specfem:
         :rtype: str
         :return: wildcard identifier for channels
         """
-        if self.data_format.upper() == "SU":
+        if self.syn_data_format.upper() == "SU":
             return f"U{comp}_file_single.su"
-        elif self.data_format.upper() == "ASCII":
+        elif self.syn_data_format.upper() == "ASCII":
             return f"*.?X{comp}.sem?"
+
+    def model_wildcard(self, par="*", kernel=False):
+        """
+        Returns a wildcard identifier to search for models kernels generated by
+        the solver. An example SPECFEM2D/3D kernel filename (in 
+        FORTRAN binary file format) is: 'proc000001_rho_kernel.bin'
+        Whereas the corresponding model would be 'proc000001_rho.bin'
+
+        Allows dynamically searching for specific files when renaming, moving
+        or copying files. Also allows for different wildcard for 3D_GLOBE 
+        version
+
+        :type comp: str
+        :param comp: component formatter, defaults to wildcard '?'
+        :type kernel: bool
+        :param kernel: wildcarding a kernel file. If True, adds the 'kernel' 
+            tag. If not, assuming we are wildcarding for a model file
+        :rtype: str
+        :return: wildcard identifier for channels
+        """
+        if kernel:
+            _ker = "_kernel"
+        else:
+            _ker = ""
+        return f"proc??????_{par}{_ker}{self._ext}"
 
     def data_filenames(self, choice="obs"):
         """
@@ -378,10 +425,11 @@ class Specfem:
             list of solver parameters
         """
         _model_files = []
-        for parameter in self._parameters:
+        for par in self._parameters:
             _model_files += glob(os.path.join(self.path.mainsolver,
                                               self.model_databases,
-                                              f"*{parameter}{self._ext}"))
+                                              self.model_wildcard(par=par))
+                                              )
         return _model_files
 
     @property
@@ -454,7 +502,7 @@ class Specfem:
             self._run_binary(executable=exc, stdout=stdout)
 
         # Work around SPECFEM's version dependent file names
-        if self.data_format.upper() == "SU":
+        if self.syn_data_format.upper() == "SU":
             for tag in ["d", "v", "a", "p"]:
                 unix.rename(old=f"single_{tag}.su", new="single.su",
                             names=glob(os.path.join("OUTPUT_FILES", "*.su")))
@@ -526,28 +574,32 @@ class Specfem:
 
         # Rename kernels to work w/ conflicting name conventions
         # Change directory so that the rename doesn't affect the full path
+        # Deals with both SPECFEM3D and 3D_GLOBE, which adds in the 'reg?' tag
         unix.cd(self.kernel_databases)
-        logger.debug(f"renaming output event kernels: 'alpha' -> 'vp'")
-        for tag in ["alpha", "alpha[hv]", "reg1_alpha", "reg1_alpha[hv]"]:
-            names = glob(f"*proc??????_{tag}_kernel{self._ext}")
-            unix.rename(old="alpha", new="vp", names=names)
+        for tag in ["alpha", "alpha[hv]", "reg?_alpha", "reg?_alpha[hv]"]:
+            names = glob(self.model_wildcard(par=tag, kernel=True))
+            if names:
+                logger.debug(f"renaming output event kernels: '{tag}' -> 'vp'")
+                unix.rename(old="alpha", new="vp", names=names)
 
-        logger.debug(f"renaming output event kernels: 'beta' -> 'vs'")
-        for tag in ["beta", "beta[hv]", "reg1_beta", "reg1_beta[hv]"]:
-            names = glob(f"*proc??????_{tag}_kernel{self._ext}")
-            unix.rename(old="beta", new="vs", names=names)
+        for tag in ["beta", "beta[hv]", "reg?_beta", "reg?_beta[hv]"]:
+            names = glob(self.model_wildcard(par=tag, kernel=True))
+            if names:
+                logger.debug(f"renaming output event kernels: '{tag}' -> 'vs'")
+                unix.rename(old="beta", new="vs", names=names)
 
         # Save and export the kernels to user-defined locations
         if export_kernels:
             unix.mkdir(export_kernels)
             for par in self._parameters:
-                unix.cp(src=glob(f"*{par}_kernel{self._ext}"),
+                unix.cp(src=glob(self.model_wildcard(par=par, kernel=True)),
                         dst=export_kernels)
 
         if save_kernels:
             unix.mkdir(save_kernels)
             for par in self._parameters:
-                unix.mv(src=glob(f"*{par}_kernel{self._ext}"), dst=save_kernels)
+                unix.mv(src=glob(self.model_wildcard(par=par, kernel=True)),
+                        dst=save_kernels)
 
     def combine(self, input_path, output_path, parameters=None):
         """
@@ -786,8 +838,8 @@ class Specfem:
             will set based on current running seisflows task (self.taskid)
         """
         # Define a constant list of required SPECFEM dir structure, relative cwd
-        _required_structure = {"bin", "DATA", "traces/obs", "traces/syn",
-                               "traces/adj", self.model_databases,
+        _required_structure = {"bin", "DATA", "OUTPUT_FILES", "traces/obs", 
+                               "traces/syn", "traces/adj", self.model_databases,
                                self.kernel_databases}
 
         # Allow this function to be called on system or in serial

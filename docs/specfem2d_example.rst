@@ -18,7 +18,7 @@ and activate the required Conda environment.
 .. warning:: 
     If you do not have a compiled version of SPECFEM2D, then each example will attempt to automatically download and compile SPECFEM2D. This step may fail if you do not have software required by SPECFEM2D, if there are issues with the SPECFEM2D repository itself, or if the configuration and compiling steps fail. If you run any issues, it is recommended that you manually install and compile SPECFEM2D, and directly provide its path to this example problem using the -r or --specfem2d_repo flags (shown below).
 
-.. code:: ipython3
+.. code:: bash
 
     from IPython.display import Image  # Used to display .png files in the notebook/docs
 
@@ -42,9 +42,9 @@ Misfit during Example #1 is defined by a ‘traveltime’ misfit using the
 optimization algorithm paired with a bracketing line search. No
 smoothing/regularization is applied to the gradient.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows examples 1  # print example help dialogue
+    seisflows examples 1  # print example help dialogue
 
 
 .. parsed-literal::
@@ -99,14 +99,14 @@ existing SPECFEM2D/ repository (with compiled binaries) if available. If
 not given, SeisFlows will automatically download, configure and compile
 SPECFEM2D in your current working directory.
 
-.. code:: ipython3
+.. code:: bash
 
     # Run command with open variable to set SPECFEM2D path
-    ! seisflows examples setup 1 -r ${PATH_TO_SPECFEM2D}
-    ! seisflows submit
+    seisflows examples setup 1 -r ${PATH_TO_SPECFEM2D}
+    seisflows submit
     
     # The following command is the same as above
-    ! seisflows examples run 1 --specfem2d_repo ${PATH_TO_SPECFEM2D}
+    seisflows examples run 1 --specfem2d_repo ${PATH_TO_SPECFEM2D}
 
 Running with MPI
 ^^^^^^^^^^^^^^^^
@@ -117,18 +117,18 @@ only need use the ``--with_mpi`` flag. By default SeisFlows will use
 only 1 core, but you can choose the number of processors/tasks with the
 ``--nproc ${NPROC}`` flag. The example call runs example 1 with 4 cores.
 
-.. code:: ipython3
+.. code:: bash
 
     # Run Solver tasks with MPI on 4 cores
-    ! seisflows examples run 1 -r ${PATH_TO_SPECFEM2D} --with_mpi --nproc 4
+    seisflows examples run 1 -r ${PATH_TO_SPECFEM2D} --with_mpi --nproc 4
 
 By default the example problems assume that your MPI executable is
 ``mpirun``. If for any reason ``mpirun`` is not what your system uses to
 call MPI, you can use the ``--mpiexec ${MPIEXEC}`` flag to change that.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows examples run 1 -r ${PATH_TO_SPECFEM2D} --with_mpi --nproc 4 --mpiexec srun
+    seisflows examples run 1 -r ${PATH_TO_SPECFEM2D} --with_mpi --nproc 4 --mpiexec srun
 
 We will not run the example in this notebook, however at this stage the
 User should run one of the following commands above to execute the
@@ -155,10 +155,10 @@ Using the `working directory documentation page <working_directory.html>`__ you 
 
 We will have a look at a few of the files and directories here. I've run the example problem in a scratch directory but your output directory should look the same.
 
-.. code:: ipython3
+.. code:: bash
 
-    %cd ~/sfexamples/example_1
-    ! ls
+    cd ~/sfexamples/example_1
+    ls
 
 
 .. parsed-literal::
@@ -177,10 +177,10 @@ model from the first iteration (*MODEL_01*). In addition, we have saved
 the gradient generated during the first iteration (*GRADIENT_01*)
 because we set the parameter ``export_gradient`` to True.
 
-.. code:: ipython3
+.. code:: bash
 
     # The output directory contains important files exported during a workflow
-    ! ls output
+    ls output
 
 
 .. parsed-literal::
@@ -188,11 +188,11 @@ because we set the parameter ``export_gradient`` to True.
     GRADIENT_01  MODEL_01  MODEL_INIT  MODEL_TRUE
 
 
-.. code:: ipython3
+.. code:: bash
 
     # A MODEL output directory contains model files in the chosen solver format. 
     # In this case, Fortran Binary from SPECFEM2D
-    ! ls output/MODEL_01
+    ls output/MODEL_01
 
 
 .. parsed-literal::
@@ -214,10 +214,10 @@ starting/initial homogeneous halfspace model in Vs.
 .. note::
     Because this docs page was made in a Jupyter Notebook, we need to use the IPython Image class to open the resulting .png file from inside the notebook. Users following along will need to open the figure using the GUI or command line tool.
 
-.. code:: ipython3
+.. code:: bash
 
     # Plot and open the initial homogeneous halfspace model
-    ! seisflows plot2d MODEL_INIT vs --savefig m_init_vs.png
+    seisflows plot2d MODEL_INIT vs --savefig m_init_vs.png
     Image(filename='m_init_vs.png') 
 
 
@@ -238,9 +238,9 @@ the gradient shows a “banana-doughnut” style kernel, representing
 volumetric sensitivity of the measurement (waveform misfit) to changes
 in model values.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d GRADIENT_01 vs_kernel --savefig g_01_vs.png
+    seisflows plot2d GRADIENT_01 vs_kernel --savefig g_01_vs.png
     Image(filename='g_01_vs.png') 
 
 
@@ -262,9 +262,9 @@ the misfit between data and synthetics. Since we only have one
 source-receiver pair in this workflow, the updated model shown below
 almost exactly mimics the Vs kernel shown above.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d MODEL_01 vs --savefig m_01_vs.png
+    seisflows plot2d MODEL_01 vs --savefig m_01_vs.png
     Image(filename='m_01_vs.png') 
 
 
@@ -286,10 +286,10 @@ Have a look at the `working directory documentation page <working_directory.html
 
 You can also run Example \#1 with more stations (up to 131), tasks/events (up to 25) and iterations (as many as you want!). Note that because this is a serial inversion, the compute time will scale with all of these values.
 
-.. code:: ipython3
+.. code:: bash
 
     # An example call for running Example 1 with variable number of stations, events and iterations
-    ! seisflows examples run 1 --nsta 10 --ntask 5 --niter 2
+    seisflows examples run 1 --nsta 10 --ntask 5 --niter 2
 
 Example #2: Checkerboard Inversion (w/ Pyaflowa & L-BFGS)
 ---------------------------------------------------------
@@ -307,10 +307,10 @@ example more closely mimics a research-grade inversion problem.
 .. note::
     This example is computationally more intense than the default version of Example \#1 as it uses multiple events and stations, and runs multiple iterations. 
 
-.. code:: ipython3
+.. code:: bash
 
     # Run the help message dialogue to see what Example 2 will do
-    ! seisflows examples 2
+    seisflows examples 2
 
 
 .. parsed-literal::
@@ -361,9 +361,9 @@ You can run the example with the same command as shown for Example 1.
 Users following along will need to provide a path to their own
 installation of SPECFEM2D using the ``-r`` flag.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows examples run 2 -r ${PATH_TO_SPECFEM2D}
+    seisflows examples run 2 -r ${PATH_TO_SPECFEM2D}
 
 Succesful completion of the example problem will end with a log message that looks similar to the following
 
@@ -391,10 +391,10 @@ visualize what just happenend under the hood. Be sure to read through
 the output log messages as well, to get a better idea of what steps and
 tasks were performed to generate these outputs.
 
-.. code:: ipython3
+.. code:: bash
 
-    %cd ~/sfexamples/example_2
-    ! ls
+    cd ~/sfexamples/example_2
+    ls
 
 
 .. parsed-literal::
@@ -407,9 +407,9 @@ tasks were performed to generate these outputs.
 Running the ``plot2d`` command without any arguments is a useful way to
 determine what model/gradient files are available for plotting.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d
+    seisflows plot2d
 
 
 .. parsed-literal::
@@ -429,9 +429,9 @@ determine what model/gradient files are available for plotting.
 Similarly, running ``plot2d`` with 1 argument will help determine what
 quantities are available to plot
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d MODEL_TRUE
+    seisflows plot2d MODEL_TRUE
 
 
 .. parsed-literal::
@@ -463,9 +463,9 @@ initial model. We can plot the model below to get a visual
 representation of these perturbations, where **red==slow** and
 **blue==fast**.
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d MODEL_TRUE vs --savefig m_true_vs.png
+    seisflows plot2d MODEL_TRUE vs --savefig m_true_vs.png
     Image(filename='m_true_vs.png') 
 
 
@@ -497,9 +497,9 @@ sense if we look at the checkerboard target model above, where the
 perturbation is slow (red color) the corresponding kernel tells us the
 initial (homogeneous halfspace) model is too fast (blue color).
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d GRADIENT_01 vs_kernel --savefig g_01_vs.png
+    seisflows plot2d GRADIENT_01 vs_kernel --savefig g_01_vs.png
     Image(filename='g_01_vs.png') 
 
 
@@ -531,9 +531,9 @@ leads to more prominent slow (red) regions.
 If we were to increase the number of events and iterations, will it help
 our recovery of the target model? This task is left up to the reader!
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d MODEL_02 vs --savefig m_02_vs.png
+    seisflows plot2d MODEL_02 vs --savefig m_02_vs.png
     Image(filename='m_02_vs.png') 
 
 
@@ -589,10 +589,10 @@ is represented by Panel (g) in the figure above.
 .. note::
     Our choice of preprocessing module, misfit function, gradient smoothing length, nonlinear optimization algorithm, etc. will affect how each event kernel is produced, and consequently how much they differ from the published kernels shown above. We do not expect to perfectly match the event kernels above, but rather to see that first order structure is the same.
 
-.. code:: ipython3
+.. code:: bash
 
     # Run the help message to view the description of the optional arguemnt --event_id
-    ! seisflows examples -h
+    seisflows examples -h
 
 
 .. parsed-literal::
@@ -643,10 +643,10 @@ is represented by Panel (g) in the figure above.
                             NTASK
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Run command with open variable to set SPECFEM2D path. Choose event_id==7 and only run 1 iteration
-    ! seisflows examples run 2 -r ${PATH_TO_SPECFEM2D} --event_id 7 --niter 1
+    seisflows examples run 2 -r ${PATH_TO_SPECFEM2D} --event_id 7 --niter 1
 
 Comparing kernels
 ^^^^^^^^^^^^^^^^^
@@ -656,10 +656,10 @@ only using 1 event and 1 iteration. In the same vein as above, we can
 visualize the output gradient to see how well it matches with those
 published in Tape et al.
 
-.. code:: ipython3
+.. code:: bash
 
-    %cd ~/sfexamples/example_2a
-    ! ls
+    cd ~/sfexamples/example_2a
+    ls
 
 
 .. parsed-literal::
@@ -669,9 +669,9 @@ published in Tape et al.
     output	scratch		 sfstate.txt  specfem2d_workdir
 
 
-.. code:: ipython3
+.. code:: bash
 
-    ! seisflows plot2d GRADIENT_01 vs_kernel --save g_01_vs.png
+    seisflows plot2d GRADIENT_01 vs_kernel --save g_01_vs.png
     Image("g_01_vs.png")
 
 
@@ -720,10 +720,10 @@ the external solver. SeisFlows is here to automate all of these tasks.
 Running the example
 ~~~~~~~~~~~~~~~~~~~
 
-.. code:: ipython3
+.. code:: bash
 
     # Run the help dialogue to see what occurs in Example 3
-    ! seisflows examples 3
+    seisflows examples 3
 
 
 .. parsed-literal::
@@ -765,10 +765,10 @@ Running the example
     ================================================================================
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Run command with open variable to set SPECFEM2D path
-    ! seisflows examples run 3 -r ${PATH_TO_SPECFEM2D}
+    seisflows examples run 3 -r ${PATH_TO_SPECFEM2D}
 
 You will be met with the following log message after succesful completion of the example problem
 
@@ -786,10 +786,10 @@ synthetic seismograms. We can view these seismograms using the
 ``seisflows plotst`` command, which is used to quickly plot synthetic
 seismograms (using ObsPy under the hood).
 
-.. code:: ipython3
+.. code:: bash
 
-    %cd ~/sfexamples/example_3
-    ! ls
+    cd ~/sfexamples/example_3
+    ls
 
 
 .. parsed-literal::
@@ -805,10 +805,10 @@ during the workflow in the ``output/`` directory. Under the hood,
 SeisFlows is copying all synthetic seismograms from the Solver’s
 ``scratch/`` directory, to a more permanent location.
 
-.. code:: ipython3
+.. code:: bash
 
     # The `export_traces` parameter tells SeisFlows to save synthetics after each round of forward simulations
-    ! seisflows par export_traces  
+    seisflows par export_traces  
 
 
 .. parsed-literal::
@@ -816,10 +816,10 @@ SeisFlows is copying all synthetic seismograms from the Solver’s
     export_traces: True
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Exported traces will be stored in the `output` directory
-    ! ls output
+    ls output
 
 
 .. parsed-literal::
@@ -827,12 +827,12 @@ SeisFlows is copying all synthetic seismograms from the Solver’s
     MODEL_INIT  solver
 
 
-.. code:: ipython3
+.. code:: bash
 
     # Synthetics will be stored on a per-event basis, and in the format that the external solver created them
-    ! ls output/solver/
-    ! echo
-    ! ls output/solver/001/syn
+    ls output/solver/
+    echo
+    ls output/solver/001/syn
 
 
 .. parsed-literal::
@@ -850,10 +850,10 @@ SeisFlows is copying all synthetic seismograms from the Solver’s
     AA.S000008.BXY.semd  AA.S000017.BXY.semd
 
 
-.. code:: ipython3
+.. code:: bash
 
     # The `plotst` function allows us to quickly visualize output seismograms
-    ! seisflows plotst output/solver/001/syn/AA.S000000.BXY.semd --save AA.S000000.BXY.semd.png
+    seisflows plotst output/solver/001/syn/AA.S000000.BXY.semd --save AA.S000000.BXY.semd.png
     Image(filename="AA.S000000.BXY.semd.png")
 
 
@@ -863,10 +863,10 @@ SeisFlows is copying all synthetic seismograms from the Solver’s
 
 
 
-.. code:: ipython3
+.. code:: bash
 
     # `plotst` also takes wildcards to plot multiple synthetics in a single figure
-    ! seisflows plotst output/solver/001/syn/AA.S00000[123].BXY.semd --save AA.S000001-3.BXY.semd.png
+    seisflows plotst output/solver/001/syn/AA.S00000[123].BXY.semd --save AA.S000001-3.BXY.semd.png
     Image(filename="AA.S000001-3.BXY.semd.png")
 
 

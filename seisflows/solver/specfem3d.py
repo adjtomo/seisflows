@@ -60,6 +60,7 @@ class Specfem3D(Specfem):
                                    "xgenerate_databases", "xcombine_sem",
                                    "xsmooth_sem", "xcombine_vol_data_vtk"]
 
+        # Internally used parameters set by functions within class
         self._model_databases = None
         self.path._vtk_files = os.path.join(self.path.scratch, "vtk_files")
 
@@ -82,9 +83,9 @@ class Specfem3D(Specfem):
         :rtype: str
         :return: wildcard identifier for channels
         """
-        if self.data_format.upper() == "SU":
+        if self.syn_data_format.upper() == "SU":
             return f"*_d?_SU"
-        elif self.data_format.upper() == "ASCII":
+        elif self.syn_data_format.upper() == "ASCII":
             return f"*.?X{comp}.sem?"
 
     @property
@@ -185,6 +186,13 @@ class Specfem3D(Specfem):
         # Make sure attenuation is OFF, if ON you'll get a floating point error
         unix.cd(self.cwd)
         setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
+
+        # Make sure we have a STATIONS_ADJOINT file. Simply copy STATIONS file
+        # !!! Do we need to tailor this to output of preprocess module? !!!
+        dst = os.path.join(self.cwd, "DATA", "STATIONS_ADJOINT")
+        if not os.path.exists(dst):
+            src = os.path.join(self.cwd, "DATA", "STATIONS")
+            unix.cp(src, dst)
 
         super().adjoint_simulation(executables=executables,
                                    save_kernels=save_kernels,

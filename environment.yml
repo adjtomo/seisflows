@@ -1,0 +1,12 @@
+name: seisflows
+channels:
+    - conda-forge
+    - defaults
+dependencies:
+    - pip
+    - obspy
+    - cartopy
+    - pyyaml
+    - pip:
+      - -e .
+       

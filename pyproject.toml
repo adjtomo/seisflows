@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seisflows"
+version = "2.2.0"
+description = "An automated workflow tool for full waveform inversion"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {file = "LICENSE"}
+authors = [
+    {name = "adjTomo Dev Team"},
+    {email = "adjtomo@gmail.com"}
+]
+dependencies = [
+    "obspy",
+    "pyyaml",
+	"IPython",
+	"dill",
+	"pyatoa>=0.2.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ipython", "ipdb"]
+
+[project.urls]
+homepage = "https://github.com/adjtomo/"
+documentation = "https://seisflows.readthedocs.io"
+repository = "https://github.com/adjtomo/seisflows"
+
+[project.scripts]
+seisflows = "seisflows.seisflows:main"

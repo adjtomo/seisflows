@@ -33,13 +33,10 @@ def check_source_names(path_specfem_data, source_prefix, ntask=None):
     wildcard = f"{source_prefix}_*"
     fids = sorted(glob(os.path.join(path_specfem_data, wildcard)))
     if not fids:
-        logger.warning(
-            msg.cli("No matching source files when searching PATH for the "
-                    "given WILDCARD",
-                    items=[f"PATH: {path_specfem_data}",
-                           f"WILDCARD: {wildcard}"],
-                    header="error")
-              )
+        print(msg.cli("No matching source files when searching PATH for the "
+                      "given WILDCARD", header="source error", border="=",
+                      items=[f"PATH: {path_specfem_data}",
+                             f"WILDCARD: {wildcard}"]))
         return
     if ntask is not None:
         assert(len(fids) >= ntask), (
@@ -143,13 +140,13 @@ def setpar(key, val, file, delim="=", match_partial=False):
 
     lines = open(file, "r").readlines()
 
-    # Replace value in place. We only want to replace the 'LAST' occurrence
-    # otherwise we risk replacing the actual key (e.g., 'data_case' == 'data')
-    # will replace 'data' twice with a normal .replace()
+    # Replace value in place by splitting on the delimiter and replacing the 
+    # first instance of the old value (avoids replacing comment values or 
+    # matching values inside the key)
     if val_out != "":
-        line_reverse = lines[i][::-1].replace(val_out[::-1], str(val)[::-1], 1)
-        lines[i] = line_reverse[::-1]
-        # lines[i] = lines[i].replace(val_out, str(val))
+        key, val_and_comment = lines[i].split(delim)
+        val_and_comment = val_and_comment.replace(val_out, str(val), 1)
+        lines[i] = delim.join([key, val_and_comment])
     else:
         # Special case where the initial parameter is empty so we just replace
         # the newline formatter at the end

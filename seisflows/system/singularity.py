@@ -60,6 +60,8 @@ class Singularity(Workstation):
         software package
     ***
     """
+    raise NotImplementedError("This system sub-module is not fully implemented")
+
     __doc__ = Workstation.__doc__ + __doc__
 
     def __init__(self, title=None, mpiexec="", ntask_max=None,

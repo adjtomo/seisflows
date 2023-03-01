@@ -249,7 +249,7 @@ Stream.plot() function under the hood. Example call would be
 Print information related to an active environment
 
     modules       List available module names for all available packages
-    flow          Print out the workflow.main() flow arguments
+    tasks         Print out the workflow task list for valid `stop_after` values
     inherit       Track inheritance chain for all modules, determine method 
                   ownership for a given function. 
                   seisflows print inherit {optional module} {optional function}
@@ -590,6 +590,8 @@ class SeisFlows:
                         val = "null"
                     if absolute_paths:
                         val = os.path.abspath(val)
+                    else:
+                        val = os.path.relpath(val)
                     f.write(f"path_{key}: {val}\n")
                     written.append(key)
         except Exception:
@@ -1057,13 +1059,13 @@ class SeisFlows:
         from seisflows.preprocess.default import Default
 
         # Take advantage of the Default Preprocessing module's read() function
-        plotter = Default(data_format=data_format)
-        assert(data_format.upper() in plotter._acceptable_data_formats), \
-            f"data format must be in {plotter._acceptable_data_formats}"  # NOQA
+        plotter = Default()
+        assert(data_format.upper() in plotter._obs_acceptable_data_formats), \
+            f"data format must be in {plotter._obs_acceptable_data_formats}"  # NOQA
 
         st = Stream()
         for fid in fids:
-            st += plotter.read(fid)
+            st += plotter.read(fid, data_format=data_format)
 
         st.plot(outfile=savefig, **kwargs)
 

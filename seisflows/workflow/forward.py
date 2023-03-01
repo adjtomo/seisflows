@@ -176,7 +176,7 @@ class Forward:
         # If we are using the preprocessing module, we must have either
         # 1) real data located in `path.data`, or 2) a target model to generate
         # synthetic data, locaed in `path.model_true`
-        if self.data_case is not None and self._modules.preprocess:
+        if self.data_case is not None and bool(self._modules.preprocess):
             assert(self.data_case.lower() in self._acceptable_data_cases), \
                 f"`data_case` must be in {self._acceptable_data_cases}"
             if self.data_case.lower() == "data":
@@ -189,9 +189,9 @@ class Forward:
                        os.path.exists(self.path.model_true)), \
                     f"creating data with `data_case`=='synthetic' requires " \
                     f"'path_model_true' to exist and point to a target model"
-        else:
+        elif self.data_case is None:
             logger.warning(f"`workflow.data_case` is None, SeisFlows will not "
-                           f"be able to find data for data-synthetic comparison"
+                           f"look for data for data-synthetic comparison"
                            )
 
         if self.stop_after is not None:
@@ -297,6 +297,7 @@ class Forward:
                 break
 
         self.checkpoint()
+        logger.info(f"finished all {len(self.task_list)} tasks in task list")
 
     def evaluate_initial_misfit(self):
         """
@@ -314,11 +315,17 @@ class Forward:
         # Load in the initial model and check its poissons ratio
         if self.path.model_init:
             logger.info("checking initial model parameters")
-            _model = Model(os.path.join(self.path.model_init))
+            _model = Model(os.path.join(self.path.model_init),
+                           parameters=self.solver._parameters, 
+                           regions=self.solver._regions  # 3DGLOBE only
+                           )
             _model.check()
         if self.path.model_true:
             logger.info("checking true/target model parameters")
-            _model = Model(os.path.join(self.path.model_true))
+            _model = Model(os.path.join(self.path.model_true),
+                           parameters=self.solver._parameters, 
+                           regions=self.solver._regions  # 3DGLOBE only
+                           )
             _model.check()
 
         # If no preprocessing module, than all of the additional functions for
