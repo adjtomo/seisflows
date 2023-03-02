@@ -19,8 +19,9 @@ from seisflows.tools import msg
 from seisflows.tools.config import pickle_function_list
 
 
-# Define bad states defined by SLURM which signifiy failed jobs
-BAD_STATES = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY", "CANCELLED"]
+# Define bad states defined by PJM which signifiy failed jobs
+# Acceptable job statuses are 'QUEUED', 'RUNNING', 'END'
+BAD_STATES = ["CANCEL", "HOLD", "ERROR"]
 
 
 class Pjm(Cluster):
@@ -120,8 +121,8 @@ class Pjm(Cluster):
         function
 
         TODO 
-            array job?
-            partition sizes?
+            - how to implement array job?
+            - what to set for partition sizes?
 
         :rtype: str
         :return: the system-dependent portion of a run call
@@ -207,8 +208,8 @@ class Pjm(Cluster):
             logger.critical(
                 msg.cli(f"Stopping workflow. Please check logs for details.",
                         items=[f"TASKS:   {[_.__name__ for _ in funcs]}",
-                               f"SBATCH:  {run_call}"],
-                        header="slurm run error", border="=")
+                               f"PJSUB:  {run_call}"],
+                        header="PJM run error", border="=")
             )
             sys.exit(-1)
         else:
@@ -295,21 +296,22 @@ def check_job_status_list(job_ids):
 
 def query_job_states(job_id, _recheck=0):
     """
-    Queries completion status of an array job by running the SLURM cmd `sacct`
-    Available job states are listed here: https://slurm.schedmd.com/sacct.html
+    Queries completion status of an array job by running the PJM cmd `pjstat`
+    Because `pjstat` treats running and finished jobs separately, we need to
+    query both the current running processes, and the history
 
     .. note::
         The actual command line call wil look something like this
-        $ sacct -nLX -o jobid,state -j 441630
-        441630_0    PENDING
-        441630_1    COMPLETED
+
+        $ pjstat 
+        Wisteria/BDEC-01 scheduled stop time: 2023/03/31(Fri) 09:00:00 (Remain: 28days 21:34:40)
+
+        JOB_ID       JOB_NAME   STATUS  PROJECT    RSCGROUP          START_DATE        ELAPSE           TOKEN           NODE  GPU
+        1334861      STDIN      END     gr58       interactive-o_n1  03/02 11:16:33    00:02:14             -              1    -
 
     .. note::
-        SACCT flag options are described as follows:
-        -L: queries all available clusters, not just the cluster that ran the
-            `sacct` call. Used for federated clusters
-        -X: supress the .batch and .extern jobnames that are normally returned
-            but don't represent that actual running job
+        `pjstat` flag options are described as follows:
+        -H: get the history (non-running jobs)
 
     :type job_id: str
     :param job_id: main job id to query, returned from the subprocess.run that
@@ -323,26 +325,29 @@ def query_job_states(job_id, _recheck=0):
     :raises FileNotFoundError: if 'sacct' does not return any output for ~1 min.
     """
     job_ids, job_states = [], []
-    cmd = f"sacct -nLX -o jobid,state -j {job_id}"
+
+    # Look at currently running jobs as well as completed jobs
+    cmd = f"pjstat {job_id}"
     stdout = subprocess.run(cmd, stdout=subprocess.PIPE,
                             text=True, shell=True).stdout
+    cmd = f"pjstat -H {job_id}"
+    stdout += subprocess.run(cmd, stdout=subprocess.PIPE,
+                             text=True, shell=True).stdout
+
+    # Parse through stdout to get the job ID status
+    for line in stdout.split("\n"):
+        if line.startswith(str(job_id)):
+            job_ids.append(line.split()[0])  # JOB_ID
+            job_states.append(line.split()[2])  # STATUS 
     
     # Recursively re-check job state incase the job has not been instantiated 
     # in which cause 'stdout' is an empty string
-    if not stdout:
+    if not job_ids:
         _recheck += 1
         if _recheck > 10:
             raise FileNotFoundError(f"Cannot access job ID {job_id}")
         time.sleep(10)
         query_job_states(job_id, _recheck)
-
-    # Return the job numbers and respective states for the given job ID
-    for job_line in str(stdout).strip().split("\n"):
-        if not job_line:
-            continue
-        job_id, job_state = job_line.split()
-        job_ids.append(job_id)
-        job_states.append(job_state)
 
     return job_ids, job_states
 
