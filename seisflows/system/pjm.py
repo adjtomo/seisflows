@@ -121,7 +121,7 @@ class Pjm(Cluster):
         function
 
         TODO 
-            - how to implement array job?
+            - how to implement array job? (--bulk? + --sparam start-end)
             - what to set for partition sizes?
 
         :rtype: str
@@ -130,6 +130,8 @@ class Pjm(Cluster):
         _call = " ".join([
              f"pjsub",
              f"{self.pjm_args or ''}",
+             f"--bulk",  # array job
+             f"--sparam 0-{self.ntask}",  # number of array jobs
              f"-L rscgrp={self.resource_group}",  # resource group
              f"-g {self.self.group}",  # project code
              f"-N {self.title}",  # job name
@@ -140,6 +142,34 @@ class Pjm(Cluster):
              f"--mpi proc={self.nproc}",
         ])
         return _call
+
+    @staticmethod                                                                
+    def _stdout_to_job_id(stdout):                                               
+        """                                                                      
+        The stdout message after a PJSUB job is submitted, from which we get   
+        the job number, example std output after submission:
+
+	[INFO] PJM 0000 pjsub Job 1334958 submitted.
+
+										     
+        :type stdout: str                                                        
+        :param stdout: standard SBATCH response after submitting a job with the  
+            '--parsable' flag                                                    
+        :rtype: str                                                              
+        :return: a matching job ID. We convert str->int->str to ensure that      
+            the job id is an integer value (which it must be)                    
+        :raises SystemExit: if the job id does not evaluate as an integer        
+        """                                                                      
+        job_id = str(stdout).split()[5].strip()                               
+        try:                                                                     
+            int(job_id)                                                          
+        except ValueError:                                                       
+            logger.critical(f"parsed job id '{job_id}' does not evaluate as an " 
+                            f"integer, please check that function "              
+                            f"`system._stdout_to_job_id()` is set correctly")    
+            sys.exit(-1)                                                         
+                                                                                 
+        return job_id   
 
     def run(self, funcs, single=False, **kwargs):
         """
@@ -306,8 +336,8 @@ def query_job_states(job_id, _recheck=0):
         $ pjstat 
         Wisteria/BDEC-01 scheduled stop time: 2023/03/31(Fri) 09:00:00 (Remain: 28days 21:34:40)
 
-        JOB_ID       JOB_NAME   STATUS  PROJECT    RSCGROUP          START_DATE        ELAPSE           TOKEN           NODE  GPU
-        1334861      STDIN      END     gr58       interactive-o_n1  03/02 11:16:33    00:02:14             -              1    -
+        JOB_ID JOB_NAME STATUS PROJECT RSCGROUP START_DATE ELAPSE TOKEN NODEGPU
+        1334861 STDIN END gr58interactive-o_n1 03/02 11:16:33  00:02:14 - 1 -
 
     .. note::
         `pjstat` flag options are described as follows:
