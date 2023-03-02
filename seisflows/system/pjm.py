@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
 Fujitsu brand clusters run their own Job Management System (Fujitsu Technical 
-Computing Suite) which we abbreviate as `PJM`. 
+Computing Suite) which we abbreviate as `PJM` (based on the batch job script 
+dierctives).
 
 PJM is similar to PBS/TORQUE but has its own unique peculiarities. Systems like 
-UToyko's Wisteria run the Fujitsu job scheduler
+UToyko's Wisteria, and Fugaku (one of the top supercomputers in the world) run 
+using the Fujitsu job scheduler.
 """
 import os
 import sys
@@ -29,7 +31,7 @@ class Pjm(Cluster):
     System Pjm
     ----------
     Interface for submitting and monitoring jobs on HPC systems running the 
-    Fujitsu job management system, abbreviated PJM
+    Fujitsu job management system, nicknamed PJM
 
     Parameters
     ----------
@@ -61,7 +63,6 @@ class Pjm(Cluster):
 
         # Must be overwritten by child class
         self.partition = None
-        self.submit_to = None
         self._partitions = {}
 
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
@@ -108,7 +109,6 @@ class Pjm(Cluster):
             f"-e {self.path.output_log}",  # write stderr to file
             f"-L elapse={self._walltime}",  # [[hour:]minute:]second
             f"-L node=1",
-            f"--mpi proc=1",
         ])
         return _call
 
@@ -148,10 +148,9 @@ class Pjm(Cluster):
         the job number, example std output after submission:
 
 	[INFO] PJM 0000 pjsub Job 1334958 submitted.
-										     
+
         :type stdout: str                                                        
-        :param stdout: standard SBATCH response after submitting a job with the  
-            '--parsable' flag                                                    
+        :param stdout: standard PJM output that is gathered from subprocess run
         :rtype: str                                                              
         :return: a matching job ID. We convert str->int->str to ensure that      
             the job id is an integer value (which it must be)                    
@@ -170,7 +169,7 @@ class Pjm(Cluster):
 
     def run(self, funcs, single=False, **kwargs):
         """
-        Runs task multiple times in embarrassingly parallel fasion on a SLURM
+        Runs task multiple times in embarrassingly parallel fasion on a PJM
         cluster. Executes the list of functions (`funcs`) NTASK times with each
         task occupying NPROC cores.
 
@@ -231,7 +230,7 @@ class Pjm(Cluster):
         if status == -1:  # Failed job
             logger.critical(
                 msg.cli(f"Stopping workflow. Please check logs for details.",
-                        items=[f"TASKS:   {[_.__name__ for _ in funcs]}",
+                        items=[f"TASKS:  {[_.__name__ for _ in funcs]}",
                                f"PJSUB:  {run_call}"],
                         header="PJM run error", border="=")
             )
