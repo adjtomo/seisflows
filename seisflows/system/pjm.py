@@ -130,8 +130,6 @@ class Pjm(Cluster):
         _call = " ".join([
              f"pjsub",
              f"{self.pjm_args or ''}",
-             f"--bulk",  # array job
-             f"--sparam 0-{self.ntask}",  # number of array jobs
              f"-L rscgrp={self.resource_group}",  # resource group
              f"-g {self.self.group}",  # project code
              f"-N {self.title}",  # job name
@@ -150,7 +148,6 @@ class Pjm(Cluster):
         the job number, example std output after submission:
 
 	[INFO] PJM 0000 pjsub Job 1334958 submitted.
-
 										     
         :type stdout: str                                                        
         :param stdout: standard SBATCH response after submitting a job with the  
@@ -196,34 +193,31 @@ class Pjm(Cluster):
         if single:
             logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
                         f"system 1 time")
+            _ntask = 1
         else:
             logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
                         f"system {self.ntask} times")
+            _ntask = self.ntask
 
         # Default sbatch command line input, can be overloaded by subclasses
         # Copy-paste this default run_call and adjust accordingly for subclass
-        run_call = " ".join([
-            f"{self.run_call_header}",
-            f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
-            f"--funcs {funcs_fid}",
-            f"--kwargs {kwargs_fid}",
-            f"--environment {self.environs or ''}"
-        ])
+        job_ids = []
+        for taskid in range(_ntask):
+            run_call = " ".join([
+                f"{self.run_call_header}",
+                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
+                f"--funcs {funcs_fid}",
+                f"--kwargs {kwargs_fid}",
+                f"--environment {self.environs or ''},SEISFLOWS_TASKID={taskid}"
+            ])
 
-        # Single-process jobs simply need to replace a few sbatch arguments.
-        # Do it AFTER `run_call` has been defined so that subclasses submitting
-        # custom run calls can still benefit from this
-        if single:
-            logger.info("replacing parts of pjsub run call for single "
-                        "process job")
-            run_call = modify_run_call_single_proc(run_call)
+            if taskid == 0:
+                logger.debug(run_call)
 
-        logger.debug(run_call)
-
-        # Grab the job id (used to monitor job status) from the stdout message
-        stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
-                                text=True, shell=True).stdout
-        job_id = self._stdout_to_job_id(stdout)
+            # Grab the job ids from each stdout message
+            stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
+                                    text=True, shell=True).stdout
+            job_ids.append(self._stdout_to_job_id(stdout))
 
         # Monitor the job queue until all jobs have completed, or any one fails
         try:
@@ -243,48 +237,11 @@ class Pjm(Cluster):
             )
             sys.exit(-1)
         else:
-            logger.info(f"task {job_id} finished successfully")
+            logger.info(f"{self.ntask} tasks finished successfully")
             # Wait for all processes to finish and write to disk (if they do)
             # Moving on too quickly may result in required files not being avail
             time.sleep(5)
 
-
-def check_job_status_array(job_id):
-    """
-    Repeatedly check the status of a currently running job using 'sacct'.
-    If the job goes into a bad state like 'FAILED', log the failing
-    job's id and their states. If all jobs complete nominally, return
-
-    .. note::
-        The time.sleep() is critical before querying job status because the 
-        system will likely take a second to intitiate jobs so if we 
-        `query_job_states` before this has happenend, it will return empty
-        lists and cause the function to error out
-
-    :type job_id: str
-    :param job_id: main job id to query, returned from the subprocess.run that
-    ran the jobs
-    :rtype: int
-    :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
-        fail (one or more jobs returned failing status)
-    :raises FileNotFoundError: if 'sacct' does not return any output for ~1 min.
-    """
-    logger.info(f"monitoring job status for submitted job: {job_id}")
-    while True:
-        time.sleep(5)  # give job time to process and also prevent over-query
-        job_ids, states = query_job_states(job_id)
-        # Sometimes query_job_state() does not return, so we wait again
-        if not job_ids or not states:
-            continue
-        if all([state == "COMPLETED" for state in states]):
-            logger.debug("all array jobs returned a 'COMPLETED' state")
-            return 1  # Pass
-        elif any([check in states for check in BAD_STATES]):  # Any bad states?
-            logger.info("atleast 1 system job returned a failing exit code")
-            for job_id, state in zip(job_ids, states):
-                if state in BAD_STATES:
-                    logger.debug(f"{job_id}: {state}")
-            return -1  # Fail
 
 def check_job_status_list(job_ids):                                          
     """                                                                          
@@ -314,7 +271,7 @@ def check_job_status_list(job_ids):
         # Sometimes query_job_state() does not return, so we wait again
         if not states or not job_id_list:
             continue
-        if all([state == "COMPLETED" for state in states]):                      
+        if all([state == "END" for state in states]):                      
             return 1  # Pass                                                     
         elif any([check in states for check in BAD_STATES]):  # Any bad states?  
             logger.info("atleast 1 system job returned a failing exit code")     
@@ -380,30 +337,4 @@ def query_job_states(job_id, _recheck=0):
         query_job_states(job_id, _recheck)
 
     return job_ids, job_states
-
-def modify_run_call_single_proc(run_call):
-    """
-    Modifies a SLURM SBATCH command to use only 1 processor as a single run
-    by replacing the --array and --ntasks options
-
-    :type run_call: str
-    :param run_call: The SBATCH command to modify
-    :rtype: str
-    :return: a modified SBATCH command that should only run on 1 processor
-    """
-    for part in run_call.split(" "):
-        if "--array" in part:
-            run_call = run_call.replace(part, "--array=0-0")
-        elif "--ntasks" in part:
-            run_call = run_call.replace(part, "--ntasks=1")
-
-    # Append taskid to environment variable, deal with the case where
-    # self.par.ENVIRONS is an empty string
-    task_id_str = "SEISFLOWS_TASKID=0"
-    if not run_call.strip().endswith("--environment"):
-        task_id_str = f",{task_id_str}"  # appending to the list of vars
-
-    run_call += task_id_str
-
-    return run_call
 
