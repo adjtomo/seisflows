@@ -49,7 +49,7 @@ class Fujitsu(Cluster):
     """
     __doc__ = Cluster.__doc__ + __doc__
 
-    def __init__(self, group=None, resource_group=None, ntask_max=100, 
+    def __init__(self, group=None, rscgrp=None, ntask_max=100, 
                  pjm_args="",  **kwargs):
         """
         Fujitsu-specific setup parameters
@@ -65,7 +65,7 @@ class Fujitsu(Cluster):
             self.mpiexec = "mpiexec"
         self.ntask_max = ntask_max
         self.group = group
-        self.resource_group = resource_group
+        self.rscgrp = rscgrp
         self.pjm_args = pjm_args
 
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
@@ -105,7 +105,7 @@ class Fujitsu(Cluster):
         _call = " ".join([
             f"pjsub",
             f"{self.pjm_args or ''}",
-            f"-L rscgrp={self.resource_group}",  # resource group
+            f"-L rscgrp={self.rscgrp}",  # resource group
             f"-g {self.self.group}",  # project code
             f"-N {self.title}",  # job name
             f"-o {self.path.output_log}",  # write stdout to file
@@ -133,7 +133,7 @@ class Fujitsu(Cluster):
         _call = " ".join([
              f"pjsub",
              f"{self.pjm_args or ''}",
-             f"-L rscgrp={self.resource_group}",  # resource group
+             f"-L rscgrp={self.rscgrp}",  # resource group
              f"-g {self.self.group}",  # project code
              f"-N {self.title}",  # job name
              f"-o {self.path.output_log}",  # write stdout to file

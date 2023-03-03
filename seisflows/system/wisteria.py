@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Wisteria is the University of Tokyo Fujitsu brand high performance computer.
-Wisteria runs on the PJM job scheduler.
+Wisteria runs on the Fujitsu/PJM job scheduler.
 
 .. notes::
 
@@ -11,26 +11,17 @@ Wisteria runs on the PJM job scheduler.
     - Aquarius has 45 nodes with 36 cores/node
 """
 import os
-from seisflows.system.pjm import Pjm
+from seisflows.system.fujitsu import Fujitsu
 
 
-class Chinook(Slurm):
+class Wisteria(Fujitsu):
     """
-    System Chinook
-    --------------
-    University of Alaska Fairbanks HPC Chinook, SLURM based system
+    System Wisteria
+    ---------------
+    University of Tokyo HPC Wisteria, running Fujitsu job scheduler
 
     Parameters
     ----------
-    :type partition: str
-    :param partition: Chinook has various partitions which each have their
-        own number of cores per compute node. Available are: analysis, t1small,
-        t2small, t1standard, t2standard, gpu
-    :type submit_to: str
-    :param submit_to: (Optional) partition to submit the main/master job which 
-        is a serial Python task that controls the workflow. Likely this should 
-        go on 'debug' for small jobs or 't1small' for mid-to-large jobs. If not
-        given, defaults to `partition`.
 
     Paths
     -----
@@ -40,8 +31,7 @@ class Chinook(Slurm):
     __doc__ = Slurm.__doc__ + __doc__
 
 
-    def __init__(self, mpiexec="mpiexec", partition="t1small", 
-                 submit_to=None,**kwargs):
+    def __init__(self, rscgrp="t1small", **kwargs):
         """Chinook init"""
         super().__init__(**kwargs)
 
