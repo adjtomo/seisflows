@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
 Fujitsu brand clusters run their own Job Management System (Fujitsu Technical 
-Computing Suite) which we abbreviate as `PJM` (based on the batch job script 
-dierctives).
+Computing Suite). 
+
+.. note::
+    The nickname `PJM`, based on the batch job script directives, may be used 
+    as a shorthand to refer to the Fujitsu job management system.
 
 PJM is similar to PBS/TORQUE but has its own unique peculiarities. Systems like 
 UToyko's Wisteria, and Fugaku (one of the top supercomputers in the world) run 
@@ -26,15 +29,19 @@ from seisflows.tools.config import pickle_function_list
 BAD_STATES = ["CANCEL", "HOLD", "ERROR"]
 
 
-class Pjm(Cluster):
+class Fujitsu(Cluster):
     """
-    System Pjm
-    ----------
+    System Fujitsu
+    --------------
     Interface for submitting and monitoring jobs on HPC systems running the 
-    Fujitsu job management system, nicknamed PJM
+    Fujitsu job management system, a.k.a PJM
 
     Parameters
     ----------
+    :type group: str
+    :param group: the Users group for allocating and charging resources
+    :type rscgrp: str
+    :param rscgrp: resource group or partition
 
     Paths
     -----
@@ -60,10 +67,6 @@ class Pjm(Cluster):
         self.group = group
         self.resource_group = resource_group
         self.pjm_args = pjm_args
-
-        # Must be overwritten by child class
-        self.partition = None
-        self._partitions = {}
 
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
         self._tasktime = str(timedelta(minutes=self.tasktime))
