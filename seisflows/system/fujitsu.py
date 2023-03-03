@@ -38,10 +38,10 @@ class Fujitsu(Cluster):
 
     Parameters
     ----------
-    :type group: str
-    :param group: the Users group for allocating and charging resources
-    :type rscgrp: str
-    :param rscgrp: resource group or partition
+    :type pjm_args: str                                                        
+    :param pjm_args: Any (optional) additional PJM arguments that will       
+        be passed to the pjsub scripts. Should be in the form:                  
+        '--key1=value1 --key2=value2"    
 
     Paths
     -----
@@ -49,13 +49,12 @@ class Fujitsu(Cluster):
     """
     __doc__ = Cluster.__doc__ + __doc__
 
-    def __init__(self, group=None, rscgrp=None, ntask_max=100, 
-                 pjm_args="",  **kwargs):
+    def __init__(self, ntask_max=100, pjm_args="",  **kwargs):
         """
         Fujitsu-specific setup parameters
 
         :type ntask_max: int
-        :param ntask_max: set the maximum number of simultaneously running array
+        :param ntask_max: set the maximum number of simultaneously running 
             job processes that are submitted to a cluster at one time.
         """
         super().__init__(**kwargs)
@@ -64,9 +63,12 @@ class Fujitsu(Cluster):
         if self.mpiexec is None:
             self.mpiexec = "mpiexec"
         self.ntask_max = ntask_max
-        self.group = group
-        self.rscgrp = rscgrp
         self.pjm_args = pjm_args
+
+        # Must be filled in by child class
+        self.group = None
+        self.rscgrp = None
+        self._rscgrps = {}
 
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
         self._tasktime = str(timedelta(minutes=self.tasktime))
@@ -77,6 +79,13 @@ class Fujitsu(Cluster):
         Checks parameters and paths
         """
         super().check()
+
+        assert(self.node_size is not None), (                                    
+            f"Fujitsu system child classes require defining the node_size or "     
+            f"the number of cores per node inherent to the compute system.")     
+                                                                                 
+        assert(self.rscgrp in self._rscgrps), \
+            f"Cluster resource group must match {self._rscgrps}"  
 
     @property
     def nodes(self):
@@ -89,7 +98,7 @@ class Fujitsu(Cluster):
     def node_size(self):
         """Defines the node size of a given cluster partition. This is a hard
         set number defined by the system architecture"""
-        return self._partitions[self.partition]
+        return self._rscgrps[self.rscgrp]
 
     @property
     def submit_call_header(self):
@@ -106,7 +115,7 @@ class Fujitsu(Cluster):
             f"pjsub",
             f"{self.pjm_args or ''}",
             f"-L rscgrp={self.rscgrp}",  # resource group
-            f"-g {self.self.group}",  # project code
+            f"-g {self.group}",  # project code
             f"-N {self.title}",  # job name
             f"-o {self.path.output_log}",  # write stdout to file
             f"-e {self.path.output_log}",  # write stderr to file
@@ -122,10 +131,6 @@ class Fujitsu(Cluster):
         an executing workflow. Like the submit call its arguments are dictated
         by the given system. Run calls are modified and called by the `run`
         function
-
-        TODO 
-            - how to implement array job? (--bulk? + --sparam start-end)
-            - what to set for partition sizes?
 
         :rtype: str
         :return: the system-dependent portion of a run call
@@ -144,13 +149,37 @@ class Fujitsu(Cluster):
         ])
         return _call
 
+    def submit(self, workdir=None, parameter_file="parameters.yaml"):            
+        """                                                                      
+        Submits the main workflow job as a separate job submitted directly to    
+        the system that is running the master job                                
+                                                                                 
+        :type workdir: str                                                       
+        :param workdir: path to the current working directory                    
+        :type parameter_file: str                                                
+        :param parameter_file: paramter file file name used to instantiate       
+            the SeisFlows package                                                
+        """                                                                      
+        # e.g., submit -w ./ -p parameters.yaml                                  
+        submit_call = " ".join([                                                 
+            f"{self.submit_call_header}",                                        
+            f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",      
+        ])
+                                                                                 
+        logger.debug(submit_call)                                                
+        try:                                                                     
+            subprocess.run(submit_call, shell=True)                              
+        except subprocess.CalledProcessError as e:                               
+            logger.critical(f"SeisFlows master job has failed with: {e}")        
+            sys.exit(-1)     
+
     @staticmethod                                                                
     def _stdout_to_job_id(stdout):                                               
         """                                                                      
         The stdout message after a PJSUB job is submitted, from which we get   
         the job number, example std output after submission:
 
-	[INFO] PJM 0000 pjsub Job 1334958 submitted.
+        [INFO] PJM 0000 pjsub Job 1334958 submitted.
 
         :type stdout: str                                                        
         :param stdout: standard PJM output that is gathered from subprocess run

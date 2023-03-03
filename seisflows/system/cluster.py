@@ -23,7 +23,7 @@ from seisflows.system.workstation import Workstation
 class Cluster(Workstation):
     """
     Cluster System
-    ------------------
+    --------------
     Generic or common HPC/cluster interfacing commands
 
     Parameters
