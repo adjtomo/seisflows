@@ -121,6 +121,7 @@ class Fujitsu(Cluster):
             f"-e {self.path.output_log}",  # write stderr to file
             f"-L elapse={self._walltime}",  # [[hour:]minute:]second
             f"-L node=1",
+            f"--mpi proc=1",
         ])
         return _call
 
@@ -139,7 +140,7 @@ class Fujitsu(Cluster):
              f"pjsub",
              f"{self.pjm_args or ''}",
              f"-L rscgrp={self.rscgrp}",  # resource group
-             f"-g {self.self.group}",  # project code
+             f"-g {self.group}",  # project code
              f"-N {self.title}",  # job name
              f"-o {self.path.output_log}",  # write stdout to file
              f"-e {self.path.output_log}",  # write stderr to file
