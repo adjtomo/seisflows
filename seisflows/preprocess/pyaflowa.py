@@ -195,6 +195,7 @@ class Pyaflowa:
             self._components = list(components)  # e.g. 'RTZ' -> ['R', 'T', 'Z']
         else:
             self._components = components
+
         self._start = start
         self._ntask = ntask
         self._nproc = nproc
