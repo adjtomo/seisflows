@@ -325,6 +325,11 @@ class Specfem:
         file naming schema. Allows formatting dcomponent e.g.,
         when called by solver.data_filenames.
 
+        Some example SPECFEM2D ASCII seismogram file names for reference:
+        - AA.S000000.BXY.semd: Membrane wave displacement
+        - AA.S000000.BXY.semp: Membrane wave pressure
+        - AA.S000000.PRE.semp: P-SV pressure seismogram
+
         .. note::
 
             SPECFEM3D/3D_GLOBE versions must overwrite this function
@@ -335,9 +340,9 @@ class Specfem:
         :return: wildcard identifier for channels
         """
         if self.syn_data_format.upper() == "SU":
-            return f"U{comp}_file_*.su"  # e.g., Up_file_single_p.su
+            return f"U{comp}*.su"  # e.g., Up_file_single_p.su
         elif self.syn_data_format.upper() == "ASCII":
-            return f"*.?X{comp}.sem?"
+            return f"*.??{comp}.sem?"  # e.g., AA.S000000.BXY.semd
 
     def model_wildcard(self, par="*", kernel=False):
         """
