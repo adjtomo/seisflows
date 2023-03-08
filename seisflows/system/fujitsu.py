@@ -49,7 +49,7 @@ class Fujitsu(Cluster):
     """
     __doc__ = Cluster.__doc__ + __doc__
 
-    def __init__(self, ntask_max=100, pjm_args="",  **kwargs):
+    def __init__(self, ntask_max=100, pjm_args="", **kwargs):
         """
         Fujitsu-specific setup parameters
 
@@ -70,6 +70,13 @@ class Fujitsu(Cluster):
         self.rscgrp = None
         self._rscgrps = {}
 
+        self._pre_call = (
+            "module purge && module load miniconda/py38_4.9.2 && "
+            "source "
+            "/work/opt/local/x86_64/cores/miniconda/py38_4.9.2/bin/activate "
+            "/work/01/gr58/share/adjtomo/conda/envs/adjtomo && "
+            )
+ 
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
         self._tasktime = str(timedelta(minutes=self.tasktime))
         self._walltime = str(timedelta(minutes=self.walltime))
@@ -163,11 +170,13 @@ class Fujitsu(Cluster):
         """                                                                      
         # e.g., submit -w ./ -p parameters.yaml                                  
         submit_call = " ".join([                                                 
-            f"{self.submit_call_header}",                                        
+            f"{self.submit_call_header}",
+            f"{self._pre_call}",
             f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",      
         ])
                                                                                  
         logger.debug(submit_call)                                                
+        import pdb;pdb.set_trace()
         try:                                                                     
             subprocess.run(submit_call, shell=True)                              
         except subprocess.CalledProcessError as e:                               
