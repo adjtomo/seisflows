@@ -4,8 +4,48 @@ i.e., SPECFEM2D/3D/3D_GLOBE
 """
 import os
 import numpy as np
+import shutil
 from glob import glob
 from seisflows.tools import msg
+
+
+def convert_stations_to_sources(stations_file, source_file,
+                                source_type="FORCESOLUTION", output_dir="./"):
+    """
+    Used for ambient noise adjoint tomography inversions where each station
+    is treated like a virtual source. This requires generating source files
+    for each station in a station file.
+
+    :type stations_file: str
+    :param stations_file: full path to SPECFEM STATIONS file which should be
+        formatted 'STATION NETWORK LATITUDE LONGITUDE ELEVATION BURIAL',
+        elevant and burial will not be used
+    :type source_file: str
+    :param source_file:
+    """
+    if source_type == "SOURCE":
+        lat_key = "xs"
+        lon_key = "zs"
+        delim = "="
+    elif source_type == "FORCESOLUTION":
+        lat_key = "latorUTM"
+        lon_key = "longorUTM"
+        delim = ":"
+    else:
+        raise KeyError(f"`source_type` must 'FORCESOLUTION' or 'SOURCE'")
+
+    stations = np.loadtxt(stations_file, dtype="str")
+    for sta in stations:
+        station, network, latitude, longitude, *_ = sta
+
+        # Copy the original source file to a new file
+        new_source = os.path.join(output_dir,
+                                  f"{source_type}_{network}{station}")
+        shutil.copy(source_file, new_source)
+
+        # Set the new location based on the station location
+        setpar(key=lat_key, val=latitude, file=new_source, delim=delim)
+        setpar(key=lon_key, val=longitude, file=new_source, delim=delim)
 
 
 def check_source_names(path_specfem_data, source_prefix, ntask=None):
