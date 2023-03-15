@@ -5,7 +5,6 @@ i.e., SPECFEM2D/3D/3D_GLOBE
 import os
 import numpy as np
 from glob import glob
-from seisflows import logger
 from seisflows.tools import msg
 
 
