@@ -105,7 +105,8 @@ def sfparser():
         can be submitted."""
     )
     configure.add_argument("-a", "--absolute_paths", action="store_true",
-                           help="Set default paths relative to cwd")
+                           help="Set paths as absolute. If not used (default), "
+                                "paths are set relative to `pwd`")
     # =========================================================================
     swap = subparser.add_parser(
         "swap", help="Swap module parameters in an existing parameter file",
