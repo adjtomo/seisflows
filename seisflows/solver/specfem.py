@@ -20,6 +20,7 @@ TODO
 import os
 import sys
 import subprocess
+from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
 
 from seisflows import logger
@@ -817,17 +818,33 @@ class Specfem:
         dst = os.path.join(self.cwd, self.model_databases, "")
         unix.cp(src, dst)
 
-    def _initialize_working_directories(self):
+    def _initialize_working_directories(self, max_workers=4):
         """
-        Serial task used to initialize working directories for each of the a
-        available sources
+        Serial or parallel task used to initialize working directories for
+        each of the available sources
         """
-        logger.info(f"initializing {self.ntask} solver directories")
-        for source_name in self.source_names:
-            cwd = os.path.join(self.path.scratch, source_name)
-            if os.path.exists(cwd):
-                continue
-            self._initialize_working_directory(cwd=cwd)
+        # Full path each source in the scratch directory for directories that
+        # do not exist, otherwise this function gets skipped
+        source_paths = [os.path.join(self.path.scratch, source_name)
+                        for source_name in self.source_names]
+        source_paths = [p for p in source_paths if not os.path.exists(p)]
+
+        if source_paths:
+            logger.info(f"initializing {self.ntask} solver directories")
+
+        if max_workers > 1:
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                futures = [
+                    executor.submit(self._initialize_working_directory, cwd)
+                    for cwd in source_paths
+                ]
+            wait(futures)
+        else:
+            for source_name in self.source_names:
+                cwd = os.path.join(self.path.scratch, source_name)
+                if os.path.exists(cwd):
+                    continue
+                self._initialize_working_directory(cwd=cwd)
 
     def _initialize_working_directory(self, cwd=None):
         """
