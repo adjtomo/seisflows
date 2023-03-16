@@ -124,6 +124,12 @@ class Forward:
                 key, val = line.strip().split(":")
                 self._states[key] = val.strip()
 
+        # Empty variables that need to be filled in with `setup`
+        self.solver = None
+        self.preprocess = None
+        self.optimize = None
+        self.sytem = None
+
     @property
     def task_list(self):
         """
