@@ -63,10 +63,8 @@ class Inversion(Migration):
     """
     __doc__ = Migration.__doc__ + __doc__
 
-    def __init__(self, modules=None, start=1, end=1,
-                 thrifty=False, optimize="LBFGS", export_model=True,
-                 path_eval_func=None,
-                 **kwargs):
+    def __init__(self, start=1, end=1, thrifty=False, optimize="LBFGS",
+                 export_model=True, path_eval_func=None, **kwargs):
         """
         Instantiate Inversion-specific parameters. Non-essential parameters are
         listed here, rather than in the class docstring.
@@ -79,7 +77,6 @@ class Inversion(Migration):
         """
         super().__init__(**kwargs)
 
-        self._modules = modules
         self.start = start
         self.end = end
         self.export_model = export_model

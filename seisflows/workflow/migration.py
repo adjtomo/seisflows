@@ -56,7 +56,7 @@ class Migration(Forward):
     """
     __doc__ = Forward.__doc__ + __doc__
 
-    def __init__(self, modules=None, path_mask=None, export_gradient=True,
+    def __init__(self, path_mask=None, export_gradient=True,
                  export_kernels=False, **kwargs):
         """
         Instantiate Migration-specific parameters
@@ -68,7 +68,6 @@ class Migration(Forward):
         """
         super().__init__(**kwargs)
 
-        self._modules = modules
         self.export_gradient = export_gradient
         self.export_kernels = export_kernels
 

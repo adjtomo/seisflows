@@ -159,12 +159,15 @@ def set_task_id(task_id):
 def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml",
                      **kwargs):
     """
-    Standard SeisFlows workflow setup block which runs a number of setup
-    tasks including: loading a user-defined parameter file, configuring the
-    package-wide logger based on user-input path to log file and desired
-    verbosity, and instantiating all modules in a generic fashion based on user
-    choice. Returns the 'workflow' module, which contains all other submodules
-    as attributes.
+    Critical SeisFlows workflow setup block which runs a number of setup
+    tasks prior to starting a workflow, tasks include:
+
+    - loading the user-defined parameter file
+    - configure the package-wide logger based on user-input path and verbosity
+    - instantiate user-selected modules with the appropriate parameters
+    - assign all non-workflow modules as attributes of the `workflow` module
+    - return `workflow` module which now has access to all parameters and all
+      modules and can be used to run SeisFlows
 
     :type workdir: str
     :param workdir: the current working directory in which to perform a
@@ -190,13 +193,17 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml",
     # provided in the input parameter file
     modules = Dict()
     for name in NAMES[:]:
-        # Workflow is instantiated differently
+        # Workflow will be instantiated at the end
         if name == "workflow":
             continue
+        # This provides a flexible approach to running something like:
+        # 'from seisflows.module.class import Class; Class()'
         modules[name] = custom_import(name, parameters[name])(**parameters)
+
     # Import workflow separately by providing all the instantiated modules to it
     workflow = \
-        custom_import("workflow", parameters["workflow"])(modules, **parameters)
+        custom_import("workflow", parameters["workflow"])(modules=modules,
+                                                          **parameters)
 
     return workflow
 
