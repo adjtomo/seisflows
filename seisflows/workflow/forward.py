@@ -6,6 +6,7 @@ Forward class represents the BASE workflow. All other workflows will build off
 of the scaffolding defined by the Forward class.
 """
 import os
+from glob import glob
 from time import asctime
 
 from seisflows import logger
@@ -359,7 +360,7 @@ class Forward:
             logger.info(f"copying data from `path_data`")
             src = os.path.join(self.path.data, self.solver.source_name, "*")
             dst = os.path.join(self.solver.cwd, "traces", "obs", "")
-            unix.cp(src, dst)
+            unix.cp(glob(src), dst)
         elif self.data_case == "synthetic":
             # Figure out where to export waveform files to, if requested
             if self.export_traces:

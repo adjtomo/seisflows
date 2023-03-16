@@ -11,8 +11,6 @@ Reference
   Journal of Geophysical Research: Solid Earth 124.6 (2019): 5794-5810.
 
 """
-import os
-from seisflows import logger
 from seisflows.workflow.inversion import Inversion
 
 
@@ -76,27 +74,6 @@ class NoiseInversion(Inversion):
         including models, kernels, gradient and residuals.
     ***
     """
-    def __init__(self, kernels=None, **kwargs):
-        """
-        Set default forward workflow parameters
-
-        :type modules: list
-        :param modules: list of sub-modules that will be established as class
-            attributes by the setup() function. Should not need to be set by the
-            user
-        """
-        super().__init__(**kwargs)
-
-        if kernels is None:
-            self.kernels = ["ZZ", "TT"]
-        else:
-            self.kernels = kernels
-
-        # Hard code some Forward workflow parameters to ensure that only certain
-        # workflow pathways area followed for noise inversions
-        self.data_case = "data"
-        self.path.model_true = None
-
     @property
     def task_list(self):
         """
@@ -118,25 +95,30 @@ class NoiseInversion(Inversion):
         :return: list of methods to call in order during a workflow
         """
         return [self.evaluate_initial_misfit,
-                self.run_adjoint_simulations,
-                self.postprocess_event_kernels,
-                self.evaluate_gradient_from_kernels,
-                self.initialize_line_search,
-                self.perform_line_search,
-                self.finalize_iteration
+                # self.run_adjoint_simulations,
+                # self.postprocess_event_kernels,
+                # self.evaluate_gradient_from_kernels,
+                # self.initialize_line_search,
+                # self.perform_line_search,
+                # self.finalize_iteration
                 ]
 
-    def check(self):
-        """
-        Check that noise workflow has correct parameters set
-        """
-        super().check()
 
-        # assert(self.solver.source_prefix == "FORCESOLUTION"), \
-        #     "noise simulations requires `source_prefix`=='FORCESOLUTION'"
+    def evaluate_initial_misfit_zz(self):
+        """
+        Generate Synthetic Greens Functions (SGF) for the ZZ component by
+        running simulations for each master station using a Z component force
+        """
+        # This is for FORCESOLUTION (3D/3D_GLOBE) only, ensure that
+        # we are using a vertical source (pointing up)
+        self.solver.modify_source_files(key="component dir vect source E",
+                                        val="0.d0")
+        self.solver.modify_source_files(key="component dir vect source N",
+                                        val="0.d0")
+        self.solver.modify_source_files(key="component dir vect source Z_UP",
+                                        val="1.d0")
 
-    def run_forward_simulations(self, path_model, **kwargs):
-        """
-        Performs forward simulation for a single given master station
-        """
-        # 
+        # Run the forward solver, this will generate SGF for Y (2D) or NEZ (3D)
+        # and run preprocessing
+        super().evaluate_initial_misfit()
+

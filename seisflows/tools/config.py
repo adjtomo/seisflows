@@ -194,7 +194,6 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml",
         if name == "workflow":
             continue
         modules[name] = custom_import(name, parameters[name])(**parameters)
-
     # Import workflow separately by providing all the instantiated modules to it
     workflow = \
         custom_import("workflow", parameters["workflow"])(modules, **parameters)

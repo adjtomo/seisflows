@@ -271,6 +271,30 @@ class Specfem:
                             f"workflow"
                             )
 
+    def modify_source_files(self, key, val):
+        """
+        Convenience public API that allows other modules to modify ALL source
+        files (SOURCE, FORCESOLUTION) simultaneously (and in parallel).
+
+        Primarily used to modify locations or force vector direction for
+        the generation of different kernels in noise workflows.
+
+        :type key: str
+        :param key: case-insensitive key to match in par_file. must match EXACT
+        :type val: str
+        :param val: value to OVERWRITE to the given key
+        """
+        # template:  <WORKDIR>/scratch/solver/<SOURCE NAME>/DATA/<SOURCE PREFIX>
+        # e.g., ./scratch/solver/001/DATA/FORCESOLUTION
+        filepaths = [os.path.join(self.path.scratch, source_name,
+                                  "DATA", self.source_prefix)
+                     for source_name in self.source_names
+                     ]
+        with ProcessPoolExecutor() as executor:
+            futures = [executor.submit(setpar, key, val, fid)
+                       for fid in filepaths]
+        wait(futures)
+
     @property
     def source_names(self):
         """
