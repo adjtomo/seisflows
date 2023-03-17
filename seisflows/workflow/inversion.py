@@ -170,8 +170,6 @@ class Inversion(Migration):
         unix.mkdir(self.path.eval_func)
 
         self.optimize = self._modules.optimize  # NOQA
-        # If optimization has been run before, re-load from checkpoint
-        self.optimize.load_checkpoint()
 
     def run(self):
         """Call the forward.run() function iteratively, from `start` to `end`"""
