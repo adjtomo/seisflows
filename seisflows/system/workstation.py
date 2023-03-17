@@ -110,9 +110,8 @@ class Workstation:
         if self.mpiexec is not None:
             # Make user that `mpiexec` exists on system
             try:
-                stdout = subprocess.run(f"which {self.mpiexec}", shell=True,
-                                        check=True, text=True,
-                                        stdout=subprocess.PIPE).stdout
+                subprocess.run(f"which {self.mpiexec}", shell=True, check=True,
+                               text=True, stdout=subprocess.PIPE).stdout
             except subprocess.CalledProcessError:
                 logger.critical(
                     f"MPI executable '{self.mpiexec}' was not found on system "

@@ -88,6 +88,7 @@ class NoiseInversion(Inversion):
         :return: list of methods to call in order during a workflow
         """
         task_list = []
+
         # Determine which kernels we will generate during the workflow
         if "ZZ" in self.kernels:
             task_list.append(self.generate_zz_kernels)
@@ -167,7 +168,7 @@ class NoiseInversion(Inversion):
                                    vals=kernel_vals,
                                    file="DATA/FORCESOLUTION")
 
-        super().run_adjoint_simulations(path_model, **kwargs)
+        super().run_forward_simulations(path_model, **kwargs)
 
         # TODO >redirect output `export_traces` seismograms to honor kernel name
 
@@ -192,6 +193,9 @@ class NoiseInversion(Inversion):
         component(s) by running simulations for each master station using an
         N and E component force (separately), rotating the components to T and
         R, and then reinjecting .
+
+        This is slightly more complicated than the ZZ case because we need to
+        retain both the E and N kernels for rotation and adjoint simulations.
         """
         # Run the forward solver to generate ET SGFs and adjoint sources
         self._kernel = "EE"
