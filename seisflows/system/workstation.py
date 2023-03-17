@@ -115,8 +115,8 @@ class Workstation:
                                         stdout=subprocess.PIPE).stdout
             except subprocess.CalledProcessError:
                 logger.critical(
-                    f"MPI executable {self.mpiexec} was not found on system "
-                    f"with cmd: `which {self.mpiexec}. Please check that your "
+                    f"MPI executable '{self.mpiexec}' was not found on system "
+                    f"with cmd: `which {self.mpiexec}`. Please check that your "
                     f"MPI module is loaded and accessible from the command line"
                 )
                 sys.exit(-1)
