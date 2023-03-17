@@ -120,6 +120,13 @@ found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683
 .. toctree::
    :maxdepth: 1
    :hidden:
+   :caption: Workflows
+
+   noise_inversion
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
    :caption: How To's
 
    tips_and_tricks

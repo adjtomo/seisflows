@@ -14,7 +14,7 @@ Reference
 import os
 from glob import glob
 from seisflows import logger
-from seisflows.tools import unix
+from seisflows.tools import unix, msg
 from seisflows.workflow.inversion import Inversion
 
 
@@ -54,7 +54,7 @@ class NoiseInversion(Inversion):
         super().__init__(**kwargs)
 
         self.kernels = kernels.upper()
-        self.kernel = None
+        self._kernel = None
 
     def check(self):
         """Additional checks for the Noise Inversion Workflow"""
@@ -63,8 +63,6 @@ class NoiseInversion(Inversion):
         acceptable_kernels = {"ZZ", "TT", "RR"}
         assert(set(self.kernels.split(",")).issubset(acceptable_kernels)), \
             f"`kernels` must be a subset of {acceptable_kernels}"
-
-        import pdb;pdb.set_trace()
 
         assert(self.data_case == "data"), \
             f"Noise Inversion workflow must have `data_case` == 'data'"
@@ -97,7 +95,7 @@ class NoiseInversion(Inversion):
         if "TT" in self.kernels or "RR" in self.kernels:
             task_list.append(self.generate_tt_rr_kernels)
 
-        task_list = task_list.extend([
+        task_list.extend([
             self.postprocess_event_kernels,
             self.evaluate_gradient_from_kernels,
             self.initialize_line_search,
@@ -114,7 +112,7 @@ class NoiseInversion(Inversion):
         within the `solver/traces/obs/` directory.
 
         Also completely ignores 'synthetic' data case because noise workflow
-        only works with data.
+        is only tooled to work with data.
 
         This will be run within the `evaluate_initial_misfit` function
 
@@ -125,9 +123,9 @@ class NoiseInversion(Inversion):
         logger.info(f"preparing observation data for source "
                     f"{self.solver.source_name}")
 
-        logger.info(f"copying {self.kernel} data from `path_data`")
+        logger.info(f"copying {self._kernel} data from `path_data`")
         src = os.path.join(
-            self.path.data, self.solver.source_name, self.kernel, "*"
+            self.path.data, self.solver.source_name, self._kernel, "*"
         )
         dst = os.path.join(self.solver.cwd, "traces", "obs", "")
 
@@ -136,26 +134,56 @@ class NoiseInversion(Inversion):
         unix.rm(glob(os.path.join(dst, "*")))
         unix.cp(glob(src), dst)
 
+        if not os.listdir(dst):
+            logger.warning(f"no `obs` traces for {self.solver.source_name}, "
+                           f"preprocessing will likely fail")
+
+    def run_forward_simulations(self, path_model, **kwargs):
+        """
+        Modifies the `forward.run_forward_simulation` to do some additional file
+        manipulations and output file redirects to prepare for noise inversion.
+
+        Internal parameter `_kernel` needs to be set by the calling functions
+        prior to running forward simulations.
+
+        .. note::
+            Must be run by system.run() so that solvers are assigned individual
+            task ids/ working directories.
+        """
+        # Edit the force vector based on the internaly value for chosen kernel
+        if self._kernel == "ZZ":
+            kernel_vals = ["0.d0", "0.d0", "1.d0"]  # E,N,Z
+        elif self._kernel == "NN":
+            kernel_vals = ["0.d0", "1.d0", "0.d0"]  # E,N,Z
+        elif self._kernel == "EE":
+            kernel_vals = ["1.d0", "0.d0", "0.d0"]  # E,N,Z
+        else:
+            raise NotImplementedError  # user should not get here
+
+        # Set FORCESOLUTION (3D/3D_GLOBE) to ensure correct force for kernel
+        self.solver.set_parameters(keys=["component dir vect source E",
+                                         "component dir vect source N",
+                                         "component dir vect source Z_UP"],
+                                   vals=kernel_vals,
+                                   file="DATA/FORCESOLUTION")
+
+        super().run_adjoint_simulations(path_model, **kwargs)
+
+        # TODO >redirect output `export_traces` seismograms to honor kernel name
+
+
     def generate_zz_kernels(self):
         """
         Generate Synthetic Greens Functions (SGF) for the ZZ component by
         running simulations for each master station using a Z component force.
         """
-        # This will be used to reference for data retrieval
-        self.kernel = "ZZ"
-
-        # This is for FORCESOLUTION (3D/3D_GLOBE) only, ensure that
-        # we are using a vertical source (pointing up)
-        self.solver.modify_source_files(key="component dir vect source E",
-                                        val="0.d0")
-        self.solver.modify_source_files(key="component dir vect source N",
-                                        val="0.d0")
-        self.solver.modify_source_files(key="component dir vect source Z_UP",
-                                        val="1.d0")
+        # This will be referenced in `run_forward_simulations`
+        self._kernel = "ZZ"
 
         # Run the forward solver to generate SGFs and adjoint sources
         super().evaluate_initial_misfit()
-        # Run the adjoint solver to generate kernels for
+
+        # Run the adjoint solver to generate kernels for ZZ sensitive structure
         super().run_adjoint_simulations()
 
     def generate_tt_rr_kernels(self):
@@ -165,5 +193,13 @@ class NoiseInversion(Inversion):
         N and E component force (separately), rotating the components to T and
         R, and then reinjecting .
         """
+        # Run the forward solver to generate ET SGFs and adjoint sources
+        self._kernel = "EE"
+        super().evaluate_initial_misfit()
 
 
+        # Run the forward solver to generate SGFs and adjoint sources
+        self._kernel = "NT"
+        super().evaluate_initial_misfit()
+
+        # Get preprocess module to rotate synthetics into proper

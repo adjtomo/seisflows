@@ -168,7 +168,6 @@ class Inversion(Migration):
         super().setup()
 
         unix.mkdir(self.path.eval_func)
-
         self.optimize = self._modules.optimize  # NOQA
 
     def run(self):

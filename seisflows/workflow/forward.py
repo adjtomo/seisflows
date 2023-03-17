@@ -224,7 +224,7 @@ class Forward:
             )
             self._modules[req_mod].setup()
 
-        # Run setup() for each of the instantiated modules
+        # Run setup() for each of the optional modules
         for opt_mod in self._optional_modules:
             if self._modules[opt_mod] and opt_mod not in self._required_modules:
                 logger.debug(
@@ -329,7 +329,7 @@ class Forward:
                            )
             _model.check()
 
-        # If no preprocessing module, than all of the additional functions for
+        # If no preprocessing module, then all the additional functions for
         # working with `data` are unncessary.
         if self.preprocess:
             run_list = [self.prepare_data_for_solver,
