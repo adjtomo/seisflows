@@ -177,7 +177,7 @@ class Cluster(Workstation):
             self._run_task(run_call=run_call, task_id=0)
         # Run tasks in parallel and wait for all of them to finish
         else:
-            with ProcessPoolExecutor(max_workers=nproc() - 1) as executor:
+            with ProcessPoolExecutor(max_workers=self.ntask_max) as executor:
                 futures = [executor.submit(self._run_task, run_call, task_id)
                            for task_id in range(ntasks)]
             wait(futures)

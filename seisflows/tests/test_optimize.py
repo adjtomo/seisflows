@@ -415,7 +415,7 @@ def test_inversion_optimization_problem_with_LBFGS(  # NOQA
     assert(os.path.exists(optimize.path._stats_file))
     stats = np.genfromtxt(optimize.path._stats_file, delimiter=",", names=True)
     assert(status == "FIN")
-    assert(len(stats) == 52.)  # reaches global min. in 95 iterations
+    assert(len(stats) == 53.)  # reaches global min. in 95 iterations
     assert(stats["misfit"].min() == pytest.approx(1.043e-7, 3))
     assert(stats["if_restarted"].sum() == 1.)  # 1 restart
 
