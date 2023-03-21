@@ -70,13 +70,6 @@ class Fujitsu(Cluster):
         self.rscgrp = None
         self._rscgrps = {}
 
-        self._pre_call = (
-            "module purge && module load miniconda/py38_4.9.2 && "
-            "source "
-            "/work/opt/local/x86_64/cores/miniconda/py38_4.9.2/bin/activate "
-            "/work/01/gr58/share/adjtomo/conda/envs/adjtomo && "
-            )
- 
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
         self._tasktime = str(timedelta(minutes=self.tasktime))
         self._walltime = str(timedelta(minutes=self.walltime))
@@ -160,7 +153,14 @@ class Fujitsu(Cluster):
     def submit(self, workdir=None, parameter_file="parameters.yaml"):            
         """                                                                      
         Submits the main workflow job as a separate job submitted directly to    
-        the system that is running the master job                                
+        the system that is running the master job. 
+
+        .. note::
+                
+            Fujitsu scheduler doesn't allow command line arugments 
+            (e.g., --workdir), so these are assumed to be default values where
+            the workdir is ${pwd} and the parameter file is called 
+            'parameters.yaml'
                                                                                  
         :type workdir: str                                                       
         :param workdir: path to the current working directory                    
@@ -171,12 +171,10 @@ class Fujitsu(Cluster):
         # e.g., submit -w ./ -p parameters.yaml                                  
         submit_call = " ".join([                                                 
             f"{self.submit_call_header}",
-            f"{self._pre_call}",
-            f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",      
+            f"{self.submit_workflow}",
         ])
                                                                                  
         logger.debug(submit_call)                                                
-        import pdb;pdb.set_trace()
         try:                                                                     
             subprocess.run(submit_call, shell=True)                              
         except subprocess.CalledProcessError as e:                               
@@ -217,6 +215,14 @@ class Fujitsu(Cluster):
 
         .. note::
             Completely overwrites the `Cluster.run()` command
+
+
+        .. note::
+                
+            Fujitsu scheduler doesn't allow command line arugments 
+            (e.g., --workdir), so these are assumed to be default values where
+            the workdir is ${pwd} and the parameter file is called 
+            'parameters.yaml'
 
         :type funcs: list of methods
         :param funcs: a list of functions that should be run in order. All

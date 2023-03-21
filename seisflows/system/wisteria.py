@@ -11,6 +11,7 @@ Wisteria runs on the Fujitsu/PJM job scheduler.
     - Aquarius has 45 nodes with 36 cores/node
 """
 import os
+from seisflows import ROOT_DIR
 from seisflows.system.fujitsu import Fujitsu
 
 
@@ -46,6 +47,13 @@ class Wisteria(Fujitsu):
     """
     __doc__ = Fujitsu.__doc__ + __doc__
 
+    # Overwrites submit and run call locations to provide custom scripts that
+    # are used to deal with the issue that the Conda environment is not 
+    # automatically inherited on a compute node
+    submit_workflow = os.path.join(ROOT_DIR, "system", "runscripts",
+                                   "custom_submit-wisteria")   
+    run_functions = os.path.join(ROOT_DIR, "system", "runscripts", 
+                                 "custom_run-wisteria")   
 
     def __init__(self, group=None, rscgrp=None, **kwargs):
         """Wisteria init"""

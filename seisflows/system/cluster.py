@@ -56,6 +56,12 @@ class Cluster(Workstation):
     """
     __doc__ = Workstation.__doc__ + __doc__
 
+    # These are class paths that specify the location of run and submit scripts
+    # Setting them outside init allows them to be inherited by all child classes
+    # implicitely. Should not be edited unless using custom submit/run scripts
+    submit_workflow = os.path.join(ROOT_DIR, "system", "runscripts", "submit")
+    run_functionu = os.path.join(ROOT_DIR, "system", "runscripts", "run")
+
     def __init__(self, title=None, mpiexec="", ntask_max=None, walltime=10,
                  tasktime=1, environs="", **kwargs):
         """Instantiate the Cluster System class"""
@@ -119,7 +125,7 @@ class Cluster(Workstation):
         # e.g., submit -w ./ -p parameters.yaml
         submit_call = " ".join([
             f"{self.submit_call_header}",
-            f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'submit')}",
+            f"{self.submit_workflow}",
             f"--workdir {workdir}",
             f"--parameter_file {parameter_file}",
         ])
@@ -165,7 +171,7 @@ class Cluster(Workstation):
         # e.g., run --funcs func.p --kwargs kwargs.p --environment ...
         run_call = " ".join([
             f"{self.run_call_header}",
-            f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
+            f"{self.run_functions}",
             f"--funcs {funcs_fid}",
             f"--kwargs {kwargs_fid}",
             f"--environment SEISFLOWS_TASKID={{task_id}},{self.environs}"
