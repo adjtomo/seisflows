@@ -173,7 +173,7 @@ class TestFlow:
             pass 
     
         # Check the log file for job failure
-        log_files = glob(os.path.join(self.system.path.log_files, "*_*"))
+        log_files = glob(os.path.join(self.system.path.log_files, "*"))
         assert(len(log_files) == 1), f"only one log file expected"
 
         logger.info("job queue and fail system test finished successfully")
