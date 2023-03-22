@@ -1,10 +1,27 @@
 #!/bin/bash -e
-
+# ==============================================================================
 # This is a Wisteria (UTokyo HPC) specific run script that is required 
 # because the compute node does not inherit the login node's Conda environment.
-# Instead we need to load the module and environment manually, before submit
+# Instead we need to load the module and environment manually, before run
+# ==============================================================================
 
+WORK_DIR=/work/01/gr58/share/adjtomo
+
+# Load MPI and activate Conda environment
+module load intel
+module load impi
 module load miniconda/py38_4.9.2
 source $MINICONDA_DIR/etc/profile.d/conda.sh
-conda activate /work/01/gr58/share/adjtomo/conda/envs/adjtomo 
-./run_funcs.sh
+conda activate $WORK_DIR/conda/envs/adjtomo 
+
+# Run Functions: ensure that we are using the correct Python version 
+
+# The following environment variables must be set by the '-x' flag in the 
+# corresponding system.run() function:
+# ---
+# SEISFLOWS_FUNCS: path to pickled functions
+# SEISFLOWS_KWARGS: kwargs to pass to given functions
+# SEISFLOWS_ENV: any additional environment variables
+# SEISFLOWS_TASKID: assigned processor number for given task
+# ---
+$WORK_DIR/conda/envs/adjtomo/bin/python $WORK_DIR/REPOSITORIES/seisflows/seisflows/system/runscripts/run --funcs $SEISFLOWS_FUNCS --kwargs $SEISFLOWS_KWARGS --environment SEISFLOWS_TASKID=$SEISFLOWS_TASKID,$SEISFLOWS_ENV

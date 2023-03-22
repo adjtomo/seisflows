@@ -216,14 +216,6 @@ class Fujitsu(Cluster):
         .. note::
             Completely overwrites the `Cluster.run()` command
 
-
-        .. note::
-                
-            Fujitsu scheduler doesn't allow command line arugments 
-            (e.g., --workdir), so these are assumed to be default values where
-            the workdir is ${pwd} and the parameter file is called 
-            'parameters.yaml'
-
         :type funcs: list of methods
         :param funcs: a list of functions that should be run in order. All
             kwargs passed to run() will be passed into the functions.
@@ -246,16 +238,17 @@ class Fujitsu(Cluster):
                         f"system {self.ntask} times")
             _ntask = self.ntask
 
-        # Default sbatch command line input, can be overloaded by subclasses
+        # Default Fujitsu command line input, can be overloaded by subclasses
         # Copy-paste this default run_call and adjust accordingly for subclass
         job_ids = []
         for taskid in range(_ntask):
             run_call = " ".join([
                 f"{self.run_call_header}",
-                f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
-                f"--funcs {funcs_fid}",
-                f"--kwargs {kwargs_fid}",
-                f"--environment {self.environs or ''},SEISFLOWS_TASKID={taskid}"
+                # -x in 'pjsub' sets environment variables which are distributed
+                # in the run script, see custom run scripts for example how
+                f"-x SEISFLOWS_FUNCS={funcs_fid},SEISFLOWS_KWARGS={kwargs_fid},"
+                f"SEISFLOWS_TASKID={taskid}",
+                f"{self.run_functions}",
             ])
 
             if taskid == 0:
