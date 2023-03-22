@@ -132,7 +132,7 @@ class TestFlow:
         time.sleep(5)  # give the system a second to catch up
 
         # Check the results of the run 
-        log_files = glob(os.path.join(self.system.path.log_files, "*_*"))
+        log_files = glob(os.path.join(self.system.path.log_files, "*"))
         assert(len(log_files) == self.system.ntask), \
             f"number of log files does not match expected number of tasks"
 
