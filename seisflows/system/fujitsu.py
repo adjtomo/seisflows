@@ -142,8 +142,8 @@ class Fujitsu(Cluster):
              f"-L rscgrp={self.rscgrp}",  # resource group
              f"-g {self.group}",  # project code
              f"-N {self.title}",  # job name
-             f"-o {self.path.output_log}",  # write stdout to file
-             f"-e {self.path.output_log}",  # write stderr to file
+             f"-o {os.path.join(self.path.log_files, '%j')}", 
+             f"-j",  # merge stderr with stdout
              f"-L elapse={self._walltime}",  # [[hour:]minute:]second
              f"-L node={self.nodes}",
              f"--mpi proc={self.nproc}",
@@ -213,6 +213,10 @@ class Fujitsu(Cluster):
         cluster. Executes the list of functions (`funcs`) NTASK times with each
         task occupying NPROC cores.
 
+        .. warning::
+            This has not been tested generally on Fujitsu systems, see system
+            Wisteria for a working application of the Fujitsu module
+
         .. note::
             Completely overwrites the `Cluster.run()` command
 
@@ -244,10 +248,9 @@ class Fujitsu(Cluster):
         for taskid in range(_ntask):
             run_call = " ".join([
                 f"{self.run_call_header}",
-                # -x in 'pjsub' sets environment variables which are distributed
-                # in the run script, see custom run scripts for example how
-                f"-x SEISFLOWS_FUNCS={funcs_fid},SEISFLOWS_KWARGS={kwargs_fid},"
-                f"SEISFLOWS_TASKID={taskid}",
+		f"--funcs {funcs_fid}",
+		f"--kwargs {kwargs_fid}",
+		f"--environment SEISFLOWS_TASKID={{task_id}},{self.environs}"
                 f"{self.run_functions}",
             ])
 
@@ -263,7 +266,7 @@ class Fujitsu(Cluster):
         try:
             status = check_job_status_array(job_id)
         except FileNotFoundError:
-            logger.critical(f"cannot access job information through 'sacct', "
+            logger.critical(f"cannot access job information through 'pjstat', "
                             f"waited 50s with no return, please check job "
                             f"scheduler and log messages")
             sys.exit(-1)
