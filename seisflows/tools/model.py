@@ -677,10 +677,15 @@ class Model:
         fids = [os.path.basename(_) for _ in fullpaths]
         fids = [os.path.splitext(_)[0] for _ in fids]
         unique_tags = set(["_".join(_.split("_")[1:]) for _ in fids])
-    
-        if self.regions and self.regions[0] in unique_tags:
+  
+        # SPECFEM3D_GLOBE
+        # Smash all the tags into a single string and look for 'reg1' (or 
+        # whatever region User chooses). Assuming here that SPECFEM2D/3D won't
+        # have parameters that contain the phrase 'reg1'
+        if self.regions and self.regions[0] in "".join(unique_tags):
             flavor = "3DGLOBE"
-        # SPECFEM2D won't have a 'y' model
+        # SPECFEM3D is the only one that has a 'y' parameter, globe code
+        # doesn't store coordinate information and 2D only has X and Z coords
         elif "y" in unique_tags:
             flavor = "3D"
         else:
