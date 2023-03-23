@@ -47,6 +47,8 @@ class NoiseInversion(Inversion):
 
     ***
     """
+    __doc__ = Inversion.__doc__ + __doc__  
+
     def __init__(self, kernels="ZZ", **kwargs):
         """
         Initialization of the Noise Inversion Workflow module
@@ -96,6 +98,7 @@ class NoiseInversion(Inversion):
         if "TT" in self.kernels or "RR" in self.kernels:
             task_list.append(self.generate_tt_rr_kernels)
 
+        # Standard inversion tasks
         task_list.extend([
             self.postprocess_event_kernels,
             self.evaluate_gradient_from_kernels,
@@ -171,7 +174,6 @@ class NoiseInversion(Inversion):
         super().run_forward_simulations(path_model, **kwargs)
 
         # TODO >redirect output `export_traces` seismograms to honor kernel name
-
 
     def generate_zz_kernels(self):
         """
