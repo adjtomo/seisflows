@@ -9,7 +9,7 @@ from glob import glob
 from seisflows.tools import msg
 
 
-def convert_stations_to_sources(stations_file, source_file, source_type
+def convert_stations_to_sources(stations_file, source_file, source_type,
                                 output_dir="./"):
     """
     Used for ambient noise adjoint tomography inversions where each station
@@ -33,14 +33,17 @@ def convert_stations_to_sources(stations_file, source_file, source_type
         lat_key = "xs"
         lon_key = "zs"
         delim = "="
+        _fid = "SOURCE"
     elif source_type == "FORCESOLUTION_3D":
         lat_key = "latorUTM"
         lon_key = "longorUTM"
         delim = ":"
+        _fid = "FORCESOLUTION"
     elif source_type == "FORCESOLUTION_3DGLOBE":
         lat_key = "latitude"
         lon_key = "longitude"
         delim = ":"
+        _fid = "FORCESOLUTION"
     else:
         raise KeyError(f"`source_type` must 'FORCESOLUTION_3D' or "
                        f"'FORCESOLUTION_3DGLOBE' or 'SOURCE'")
@@ -50,8 +53,7 @@ def convert_stations_to_sources(stations_file, source_file, source_type
         station, network, latitude, longitude, *_ = sta
 
         # Copy the original source file to a new file
-        new_source = os.path.join(output_dir,
-                                  f"{source_type}_{network}{station}")
+        new_source = os.path.join(output_dir, f"{_fid}_{network}_{station}")
         shutil.copy(source_file, new_source)
 
         # Set the new location based on the station location
@@ -95,8 +97,8 @@ def check_source_names(path_specfem_data, source_prefix, ntask=None):
         )
         fids = fids[:ntask]
 
-    # Create internal definition of sources names by stripping prefixes
-    names = [os.path.basename(fid).split("_")[-1] for fid in fids]
+    # Create internal definition of sources names by stripping prefix
+    names = ["_".join(os.path.basename(fid).split("_")[1:]) for fid in fids]
 
     return names
 
