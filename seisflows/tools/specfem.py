@@ -9,8 +9,8 @@ from glob import glob
 from seisflows.tools import msg
 
 
-def convert_stations_to_sources(stations_file, source_file,
-                                source_type="FORCESOLUTION", output_dir="./"):
+def convert_stations_to_sources(stations_file, source_file, source_type
+                                output_dir="./"):
     """
     Used for ambient noise adjoint tomography inversions where each station
     is treated like a virtual source. This requires generating source files
@@ -21,18 +21,29 @@ def convert_stations_to_sources(stations_file, source_file,
         formatted 'STATION NETWORK LATITUDE LONGITUDE ELEVATION BURIAL',
         elevant and burial will not be used
     :type source_file: str
-    :param source_file:
+    :param source_file: tells SeisFlows what type of file we are using, which
+        in turn defines the specific keys and delimiters to use when editing 
+        the source file. 
+
+        - SOURCE: SPECFEM2D source file
+        - FORCESOLUTION_3D: SPECFEM3D Cartesian FORCESOLUTION file 
+        - FORCESOLUTION_3DGLOBE: SPECFEM3D_GLOBE FORCESOLUTION file
     """
     if source_type == "SOURCE":
         lat_key = "xs"
         lon_key = "zs"
         delim = "="
-    elif source_type == "FORCESOLUTION":
+    elif source_type == "FORCESOLUTION_3D":
         lat_key = "latorUTM"
         lon_key = "longorUTM"
         delim = ":"
+    elif source_type == "FORCESOLUTION_3DGLOBE":
+        lat_key = "latitude"
+        lon_key = "longitude"
+        delim = ":"
     else:
-        raise KeyError(f"`source_type` must 'FORCESOLUTION' or 'SOURCE'")
+        raise KeyError(f"`source_type` must 'FORCESOLUTION_3D' or "
+                       f"'FORCESOLUTION_3DGLOBE' or 'SOURCE'")
 
     stations = np.loadtxt(stations_file, dtype="str")
     for sta in stations:
