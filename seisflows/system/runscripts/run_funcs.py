@@ -100,13 +100,13 @@ if __name__ == '__main__':
     # Hold onto the main handler for after the task is finished
     handlers = logger.handlers
 
-    # Redirect the logger to point at stdout, which the Cluster system (or sub
-    # class of it) will redirect to a task specific log file. User-defined
-    # 'verbose' and 'log_level' are passed through kwargs
+    # User-defined 'verbose' and 'log_level' piggyback on pickled kwargs file
     log_level = kwargs.get("log_level", "DEBUG")
     verbose = kwargs.get("verbose", False)
 
-    config_logger(filename=None, stream_handler=True, log_level=log_level,
+    # Redirect the logger to point at stdout, which the Cluster system (or sub
+    # class of it) will redirect to a task specific log file. 
+    config_logger(filename=None, stream_handler=True, level=log_level,
                   verbose=verbose)
 
     # Evaluate the function with given keyword arguments

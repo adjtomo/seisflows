@@ -138,6 +138,15 @@ class Cluster(Workstation):
         and then re-loaded by each submitted process with specific environment
         variables. Each spawned process will run the list of functions.
 
+        .. warning::
+
+            Logging parameters `verbose` and `log_level` are passed to each
+            compute job through the pickled kwargs file. This assumes that NONE
+            of the functions that are being passed through also have these 
+            variable names as arguments, otherwise there will be conflicting
+            arguments. Probably this won't be the case because these variable
+            names are generally reserved for logging purposes.
+
         :type funcs: list of methods
         :param funcs: a list of functions that should be run in order. All
             kwargs passed to run() will be passed into the functions.
