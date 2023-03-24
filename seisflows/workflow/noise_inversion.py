@@ -168,8 +168,8 @@ class NoiseInversion(Inversion):
         self.solver.set_parameters(keys=["component dir vect source E",
                                          "component dir vect source N",
                                          "component dir vect source Z_UP"],
-                                   vals=kernel_vals,
-                                   file="DATA/FORCESOLUTION")
+                                   vals=kernel_vals, file="DATA/FORCESOLUTION",
+                                   delim=":")
 
         super().run_forward_simulations(path_model, **kwargs)
 

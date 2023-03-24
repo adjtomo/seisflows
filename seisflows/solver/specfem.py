@@ -306,7 +306,7 @@ class Specfem:
                 sys.exit(-1)
                                                                 
 
-    def set_parameters(self, keys, vals, file):
+    def set_parameters(self, keys, vals, file, delim):
         """
         Public API that allows other modules modify solver-specific files with
         paths relative to the `cwd` attribute.
@@ -324,7 +324,7 @@ class Specfem:
         os.chdir(self.cwd)
         if os.path.exists(file):
             for key, val in zip(keys, vals):
-                setpar(key=key, val=val, file=file)
+                setpar(key=key, val=val, file=file, delim=delim)
 
     @property
     def source_names(self):
