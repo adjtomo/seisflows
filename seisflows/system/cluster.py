@@ -157,6 +157,8 @@ class Cluster(Workstation):
         ntasks = {True: 1, False: self.ntask}[single]
         funcs_fid, kwargs_fid = pickle_function_list(functions=funcs,
                                                      path=self.path.scratch,
+                                                     verbose=self.verbose,
+                                                     level=self.log_level,
                                                      **kwargs)
         logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
                     f"system {ntasks} times")

@@ -227,6 +227,8 @@ class Frontera(Slurm):
         """                                                                      
         funcs_fid, kwargs_fid = pickle_function_list(funcs,                      
                                                      path=self.path.scratch,     
+                                                     verbose=self.verbose,
+                                                     level=self.log_level,
                                                      **kwargs)                   
         if single:                                                               
             logger.info(f"running functions {[_.__name__ for _ in funcs]} on "   

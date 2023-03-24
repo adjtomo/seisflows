@@ -221,9 +221,11 @@ class Slurm(Cluster):
             defined, such that the job is submitted as a single-core job to
             the system.
         """
-        funcs_fid, kwargs_fid = pickle_function_list(funcs,
-                                                     path=self.path.scratch,
-                                                     **kwargs)
+        funcs_fid, kwargs_fid = pickle_function_list(
+                funcs, path=self.path.scratch, verbose=self.verbose,
+                level=self.log_level, **kwargs
+                )
+
         if single:
             logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
                         f"system 1 time")

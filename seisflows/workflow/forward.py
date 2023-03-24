@@ -344,11 +344,28 @@ class Forward:
         logger.info(f"preparing observation data for source "
                     f"{self.solver.source_name}")
 
+        # CASE=='data': import data from an external directory
         if self.data_case == "data":
             logger.info(f"copying data from `path_data`")
             src = os.path.join(self.path.data, self.solver.source_name, "*")
             dst = os.path.join(self.solver.cwd, "traces", "obs", "")
-            unix.cp(glob(src), dst)
+            # Check if there is data already in the directory, User may have 
+            # manually input it here, make sure we don't overwrite it
+            if glob(os.path.join(dst, "*")):
+                logger.warning(f"data already found in 'traces/obs' for "
+                               f"{self.solver.source_name}, will not copy data")
+            # If no data found in the source directory, warn User
+            elif not glob(src):
+                logger.critical(msg.cli(
+                    f"{self.solver.source_name} found no `obs` data with "
+                    f"wildcard: '{src}'. Please check `path_data` or manually "
+                    f"import data and re-submit", border="=", header="data err")
+                    )
+                sys.exit(-1)
+            # Default behavior, copy in source data from external directory
+            else:
+                unix.cp(glob(src), dst)
+        # CASE=='synthetic': generate synthetic 'data' from target model
         elif self.data_case == "synthetic":
             # Figure out where to export waveform files to, if requested
             if self.export_traces:
