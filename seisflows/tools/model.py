@@ -364,7 +364,24 @@ class Model:
         Checks parameters in the model. If Vs and Vp present, checks poissons
         ratio. Checks for negative velocity values. And prints out model
         min/max values
+
+        :type min_pr: float
+        :para min_pr: minimum allowable Poisson's ratio, if applicable
+        :type max_pr: float
+        :param max_pr: maximum allowable Poisson's ratio, if applicable
+        :raises AssertionError: if the input model has no values for any of its
+            parameters. This usually happens if the parameters are defined
+            incorrectly w.r.t the input model path
         """
+        # Checks to make sure the model is filled out, otherwise the following
+        # checks will fail unexpectedly
+        for key, val in self.model.items():
+            assert(val), (
+                 f"SPECFEM_{self.flavor} model '{key}' has no values, please "
+                 f"check your input model `path_model_init` and the chosen "
+                 f"`material` which controls the expected parameters"
+                 )
+
         if self.flavor in ["2D", "3D"]:
             self._check_2d3d_parameters(min_pr, max_pr)
         elif self.flavor == "3DGLOBE":

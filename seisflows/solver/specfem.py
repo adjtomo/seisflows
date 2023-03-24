@@ -26,6 +26,7 @@ from glob import glob
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.config import get_task_id, Dict
+from seisflows.tools.model import Model
 from seisflows.tools.specfem import getpar, setpar, check_source_names
 
 
@@ -270,6 +271,40 @@ class Specfem:
                             f"sure to check if this file is necessary for your "
                             f"workflow"
                             )
+
+    def check_input_models(self):
+        """
+        Convenience function to check parameter and model validity for 
+        `path_model_init` and `path_model_true`. Called by Workflow module 
+        during initial misfit evaluation (iteration==1)
+        """
+        # Load in the initial model and check parameter validity. This is        
+        # performed within the workflow so that all new models are checked       
+        if self.path.model_init:                                                 
+            logger.info("checking initial model parameters")                     
+            _model = Model(os.path.join(self.path.model_init),                   
+                           parameters=self._parameters, regions=self._regions)
+            try:           
+                _model.check()                                                   
+            except AssertionError as e:
+                logger.critical(
+                    msg.cli(str(e), header="model read error", border="=")
+                )
+                sys.exit(-1)
+
+        # Check target/true model if provided for synthetic-synthetic workflow   
+        if self.path.model_true:                                                 
+            logger.info("checking true/target model parameters")                 
+            _model = Model(os.path.join(self.path.model_true),                   
+                           parameters=self._parameters, regions=self._regions)
+            try:
+                _model.check()
+            except AssertionError as e:
+                logger.critical(
+                    msg.cli(str(e), header="model read error", border="=")
+                )
+                sys.exit(-1)
+                                                                
 
     def set_parameters(self, keys, vals, file):
         """
@@ -838,11 +873,19 @@ class Specfem:
         dst = os.path.join(self.cwd, self.model_databases, "")
         unix.cp(src, dst)
 
-    def _initialize_working_directories(self, max_workers=4):
+    def _initialize_working_directories(self, max_workers=None):
         """
         Serial or parallel task used to initialize working directories for
         each of the available sources
+
+        :type max_workers: int
+        :param max_workers: number of concurrent tasks to use when creating 
+            working directories. Defaults to using all available cores on 
+            the machine since this is a lightweight task
         """
+        if max_workers is None:
+            max_workers = unix.nproc() - 1  # use all available cores
+
         # Full path each source in the scratch directory for directories that
         # do not exist, otherwise this function gets skipped
         source_paths = [os.path.join(self.path.scratch, source_name)
@@ -850,7 +893,8 @@ class Specfem:
         source_paths = [p for p in source_paths if not os.path.exists(p)]
 
         if source_paths:
-            logger.info(f"initializing {self.ntask} solver directories")
+            logger.info(f"initializing {self.ntask} solver directories "
+                        f"{max_workers} at a time")
 
         if max_workers > 1:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:

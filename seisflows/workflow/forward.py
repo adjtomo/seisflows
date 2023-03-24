@@ -12,7 +12,6 @@ from time import asctime
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.config import Dict
-from seisflows.tools.model import Model
 
 
 class Forward:
@@ -308,26 +307,15 @@ class Forward:
         simulations are then run and prepocessing compares data-synthetic misfit
 
         .. note::
+
             This is run altogether on system to save on queue time waits,
             because we are potentially running two simulations back to back.
         """
         logger.info(msg.mnr("EVALUATING MISFIT FOR INITIAL MODEL"))
 
-        # Load in the initial model and check its poissons ratio
-        if self.path.model_init:
-            logger.info("checking initial model parameters")
-            _model = Model(os.path.join(self.path.model_init),
-                           parameters=self.solver._parameters, 
-                           regions=self.solver._regions  # 3DGLOBE only
-                           )
-            _model.check()
-        if self.path.model_true:
-            logger.info("checking true/target model parameters")
-            _model = Model(os.path.join(self.path.model_true),
-                           parameters=self.solver._parameters, 
-                           regions=self.solver._regions  # 3DGLOBE only
-                           )
-            _model.check()
+        # Check if we can read in the models to disk prior to submitting jobs
+        # this may exit the workflow if we get a read error
+        self.solver.check_input_models()
 
         # If no preprocessing module, then all the additional functions for
         # working with `data` are unncessary.

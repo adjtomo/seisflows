@@ -50,24 +50,24 @@ STATIONS file looks like this:
   S000002 AA 1.64438e+05 2.94733e+05 0.0 0.0
 
 then you must have a corresponding `path_data` which has subdirectories
-formatted NNSSS/ (N=network, S=station), and further subdirectories separating
+formatted NN.SSS/ (N=network, S=station), and further subdirectories separating
 EGF kernels. An example directory looks like:
 
 .. code:: bash
 
       EGF/
-      ├── AAS000000/
+      ├── AA.S000000/
       |   ├── ZZ/
       |   |   ├── AA.S000001.BXY.semd
       |   |   ├── AA.S000002.BXY.semd
       │   |   └── ...
       |   ├── RR/
       │   └── TT/
-      ├── AAS000001/
+      ├── AA.S000001/
       |   ├── ZZ/
       |   ├── RR/
       │   └── TT/
-      └── AAS000002/
+      └── AA.S000002/
           └── ...
 
 
