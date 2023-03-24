@@ -376,7 +376,7 @@ class Model:
         # Checks to make sure the model is filled out, otherwise the following
         # checks will fail unexpectedly
         for key, val in self.model.items():
-            assert(val), (
+            assert(val.any()), (
                  f"SPECFEM_{self.flavor} model '{key}' has no values, please "
                  f"check your input model `path_model_init` and the chosen "
                  f"`material` which controls the expected parameters"
