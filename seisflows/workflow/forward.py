@@ -331,7 +331,7 @@ class Forward:
                                                     "residuals.txt")
                         )
 
-    def prepare_data_for_solver(self, **kwargs):
+    def prepare_data_for_solver(self, _src=None, **kwargs):
         """
         Determines how to provide data to each of the solvers. Either by copying
         data in from a user-provided path, or generating synthetic 'data' using
@@ -340,6 +340,13 @@ class Forward:
         .. note ::
             Must be run by system.run() so that solvers are assigned individual
             task ids and working directories
+
+        :type _src: str
+        :param _src: internal variable used by child classes which inherit
+            from solver, allowing other workflows to change the default path
+            that data is searched for. Needs to be a wildcard. 
+            By default this function looks at the following wildcard path:
+            '{path_data}/{source_name}/*'
         """
         logger.info(f"preparing observation data for source "
                     f"{self.solver.source_name}")
@@ -347,8 +354,13 @@ class Forward:
         # CASE=='data': import data from an external directory
         if self.data_case == "data":
             logger.info(f"copying data from `path_data`")
-            src = os.path.join(self.path.data, self.solver.source_name, "*")
+
+            if _src is None:
+                src = os.path.join(self.path.data, self.solver.source_name, "*")
+            else:
+                src = _src
             dst = os.path.join(self.solver.cwd, "traces", "obs", "")
+
             # Check if there is data already in the directory, User may have 
             # manually input it here, make sure we don't overwrite it
             if glob(os.path.join(dst, "*")):
@@ -365,6 +377,7 @@ class Forward:
             # Default behavior, copy in source data from external directory
             else:
                 unix.cp(glob(src), dst)
+
         # CASE=='synthetic': generate synthetic 'data' from target model
         elif self.data_case == "synthetic":
             # Figure out where to export waveform files to, if requested

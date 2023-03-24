@@ -111,36 +111,32 @@ class NoiseInversion(Inversion):
 
     def prepare_data_for_solver(self, **kwargs):
         """
-        Overwrites workflow.forward.prepare_data_for_solver() by changing
+        Overrides workflow.forward.prepare_data_for_solver() by changing
         the location of expected data, and removing any data previously stored
         within the `solver/traces/obs/` directory.
-
-        Also completely ignores 'synthetic' data case because noise workflow
-        is only tooled to work with data.
 
         This will be run within the `evaluate_initial_misfit` function
 
         .. note ::
+
             Must be run by system.run() so that solvers are assigned individual
             task ids and working directories
         """
-        logger.info(f"preparing observation data for source "
-                    f"{self.solver.source_name}")
-
-        logger.info(f"copying {self._kernel} data from `path_data`")
+        # Use the forward workflow machinery to get data from external directory
+        # but change the expected location of data which needs to be categorized
+        # by kernel type
         src = os.path.join(
             self.path.data, self.solver.source_name, self._kernel, "*"
         )
+        super().prepare_data_for_solver(_src=src)
+
+        # We are assuming `dst` structure here is fixed w.r.t forward workflow
         dst = os.path.join(self.solver.cwd, "traces", "obs", "")
 
         # Remove any existing data that might have been placed here by previous
         # parts of the workflow
         unix.rm(glob(os.path.join(dst, "*")))
         unix.cp(glob(src), dst)
-
-        if not os.listdir(dst):
-            logger.warning(f"no `obs` traces for {self.solver.source_name}, "
-                           f"preprocessing will likely fail")
 
     def run_forward_simulations(self, path_model, **kwargs):
         """
