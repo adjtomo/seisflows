@@ -16,6 +16,14 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
     is treated like a virtual source. This requires generating source files
     for each station in a station file.
 
+    .. warning::
+
+        In SPECFEM3D_GLOBE, the FORCESOLUTION first line requires a specific 
+        format. I haven't tested this thoroughly but it either cannot exceed
+        a char limit, or cannot have characters like spaces or hyphens. To be 
+        safe, something like FORCE{N} will work, where N should be the source
+        number. This function enforces this just incase.
+
     :type stations_file: str
     :param stations_file: full path to SPECFEM STATIONS file which should be
         formatted 'STATION NETWORK LATITUDE LONGITUDE ELEVATION BURIAL',
@@ -49,7 +57,7 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
                        f"'FORCESOLUTION_3DGLOBE' or 'SOURCE'")
 
     stations = np.loadtxt(stations_file, dtype="str")
-    for sta in stations:
+    for i, sta in enumerate(stations):
         station, network, latitude, longitude, *_ = sta
 
         # Copy the original source file to a new file
@@ -59,6 +67,12 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
         # Set the new location based on the station location
         setpar(key=lat_key, val=latitude, file=new_source, delim=delim)
         setpar(key=lon_key, val=longitude, file=new_source, delim=delim)
+
+        # Enforce first line comment, see warning in docstring for explanation
+        lines = open(new_source, "r").readlines()
+        with open(new_source, "w") as f:
+            f.write(f"FORCE{i:0>3}\n")
+            f.writelines(lines[1:])
 
 
 def check_source_names(path_specfem_data, source_prefix, ntask=None):

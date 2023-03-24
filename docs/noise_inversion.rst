@@ -45,29 +45,29 @@ STATIONS file looks like this:
 
 .. code::
 
-  S000000 AA 2.43610e+05 2.78904e+05 0.0 0.0
-  S000001 AA 3.38981e+05 1.77849e+05 0.0 0.0
-  S000002 AA 1.64438e+05 2.94733e+05 0.0 0.0
+  A000 AA 2.43610e+05 2.78904e+05 0.0 0.0
+  A001 AA 3.38981e+05 1.77849e+05 0.0 0.0
+  B000 BB 1.64438e+05 2.94733e+05 0.0 0.0
 
 then you must have a corresponding `path_data` which has subdirectories
-formatted NN.SSS/ (N=network, S=station), and further subdirectories separating
+formatted NN_SSS/ (N=network, S=station), and further subdirectories separating
 EGF kernels. An example directory looks like:
 
 .. code:: bash
 
       EGF/
-      ├── AA.S000000/
+      ├── AA_A000/
       |   ├── ZZ/
-      |   |   ├── AA.S000001.BXY.semd
-      |   |   ├── AA.S000002.BXY.semd
+      |   |   ├── AA.A001.BXY.semd
+      |   |   ├── BB.B000.BXY.semd
       │   |   └── ...
       |   ├── RR/
       │   └── TT/
-      ├── AA.S000001/
+      ├── AA_A001/
       |   ├── ZZ/
       |   ├── RR/
       │   └── TT/
-      └── AA.S000002/
+      └── BB_B000/
           └── ...
 
 
@@ -80,7 +80,7 @@ in your `STATIONS` file have a corresponding source (if there is a corresponding
 EGF).
 
 For the example `STATIONS` file above, SeisFlows expects corresponding source
-files formatted `<SOURCE_PREFIX>_NNSSS`. For SPECFEM3D/3D_GLOBE, sources must
+files formatted `<SOURCE_PREFIX>_NN_SSS`. For SPECFEM3D/3D_GLOBE, sources must
 be FORCESOLUTIONS. For SPECFEM2D, sources must be SOURCE.
 
 .. code:: bash
@@ -88,9 +88,9 @@ be FORCESOLUTIONS. For SPECFEM2D, sources must be SOURCE.
      specfem_workdir/
      └── DATA/
          ├── Par_file
-         ├── FORCESOLUTION_AAS000000
-         ├── FORCESOLUTION_AAS000001
-         ├── FORCESOLUTION_AAS000002
+         ├── FORCESOLUTION_AA_A000
+         ├── FORCESOLUTION_AA_A001
+         ├── FORCESOLUTION_BB_B000
          └── ...
 
 Each force solution should have the same coordinates as it's corresponding

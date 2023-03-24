@@ -6,6 +6,7 @@ Forward class represents the BASE workflow. All other workflows will build off
 of the scaffolding defined by the Forward class.
 """
 import os
+import sys
 from glob import glob
 from time import asctime
 
@@ -371,7 +372,8 @@ class Forward:
                 logger.critical(msg.cli(
                     f"{self.solver.source_name} found no `obs` data with "
                     f"wildcard: '{src}'. Please check `path_data` or manually "
-                    f"import data and re-submit", border="=", header="data err")
+                    f"import data and re-submit", border="=", 
+                    header="data import error")
                     )
                 sys.exit(-1)
             # Default behavior, copy in source data from external directory
