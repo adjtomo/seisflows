@@ -7,7 +7,8 @@ and write adjoint sources that are expected by the solver.
 """
 import os
 import numpy as np
-from glob import glob
+from concurrent.futures import ProcessPoolExecutor, wait
+
 from obspy import read as obspy_read
 from obspy import Stream, Trace, UTCDateTime
 
@@ -463,6 +464,7 @@ class Default:
             f"have the same name including channel code"
         )
 
+        # Clear out lists so that they can be filled with data paths
         observed.clear()
         synthetic.clear()
 
@@ -488,8 +490,6 @@ class Default:
         preprocessing, assesses misfit, and writes out adjoint sources and
         STATIONS_ADJOINT file.
 
-        TODO use concurrent futures to parallelize this
-
         :type source_name: str
         :param source_name: name of the event to quantify misfit for. If not
             given, will attempt to gather event id from the given task id which
@@ -509,48 +509,83 @@ class Default:
         """
         observed, synthetic = self._setup_quantify_misfit(source_name)
 
-        for obs_fid, syn_fid in zip(observed, synthetic):
-            obs = self.read(fid=obs_fid, data_format=self.obs_data_format)
-            syn = self.read(fid=syn_fid, data_format=self.syn_data_format)
+        # Max workers is the total available number of cores
+        with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+            futures = [
+                executor.submit(self._quantify_misfit_single, obs, syn)
+                for (obs, syn) in zip(observed, synthetic)
+            ]
+        if save_residuals:
+            # Results are returned in the order that they were submitted and written
+            # to text file for other modules to find
+            with open(save_residuals, "a") as f:
+                for future in futures:
+                    residual = future.result()
+                    f.write(f"{residual:.2E}\n")
+        else:
+            # Simply wait for all processes to finish before proceeding
+            wait(futures)
 
-            # Process observations and synthetics identically
-            if self.filter:
-                obs = self._apply_filter(obs)
-                syn = self._apply_filter(syn)
-            if self.mute:
-                obs = self._apply_mute(obs)
-                syn = self._apply_mute(syn)
-            if self.normalize:
-                obs = self._apply_normalize(obs)
-                syn = self._apply_normalize(syn)
-
-            # Write the residuals/misfit and adjoint sources for each component
-            for tr_obs, tr_syn in zip(obs, syn):
-                # Simple check to make sure zip retains ordering
-                assert(tr_obs.stats.component == tr_syn.stats.component)
-                # Calculate the misfit value and write to file
-                if save_residuals and self._calculate_misfit:
-                    residual = self._calculate_misfit(
-                        obs=tr_obs.data, syn=tr_syn.data,
-                        nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
-                    )
-                    with open(save_residuals, "a") as f:
-                        f.write(f"{residual:.2E}\n")
-
-                # Generate an adjoint source trace, write to file
-                if save_adjsrcs and self._generate_adjsrc:
-                    adjsrc = tr_syn.copy()
-                    adjsrc.data = self._generate_adjsrc(
-                        obs=tr_obs.data, syn=tr_syn.data,
-                        nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
-                    )
-                    adjsrc = Stream(adjsrc)
-                    fid = os.path.basename(syn_fid)
-                    fid = self._rename_as_adjoint_source(fid)
-                    self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
-
+        # Write adjoint sources once all processing is done
         if save_adjsrcs and self._generate_adjsrc:
             self._check_adjoint_traces(source_name, save_adjsrcs, synthetic)
+
+    def _quantify_misfit_single(self, obs_fid, syn_fid, save_residuals,
+                                save_adjsrcs):
+        """
+        Run misfit quantification for one pair of data-synthetic waveforms.
+        This is kept in a separate function so that it can be parallelized for
+        more efficient processing
+        """
+        # Read in waveforms based on the User-defined format(s)
+        obs = self.read(fid=obs_fid, data_format=self.obs_data_format)
+        syn = self.read(fid=syn_fid, data_format=self.syn_data_format)
+
+        # Process observations and synthetics identically
+        obs, syn = self._apply_resample(obs, syn)
+        if self.filter:
+            obs = self._apply_filter(obs)
+            syn = self._apply_filter(syn)
+        if self.mute:
+            obs = self._apply_mute(obs)
+            syn = self._apply_mute(syn)
+        if self.normalize:
+            obs = self._apply_normalize(obs)
+            syn = self._apply_normalize(syn)
+
+        # Write the residuals/misfit and adjoint sources for each component
+        # The assumption here is that `obs` and `syn` are length=1
+        residual = 0
+        for tr_obs, tr_syn in zip(obs, syn):
+            # Simple check to make sure zip retains ordering
+            assert (tr_obs.stats.component == tr_syn.stats.component), (
+                f"Preprocesing for {obs_fid} has mismatching components. " 
+                f"Please check that your `obs` and `syn` data have overlapping " 
+                f"components"
+            )
+
+            # Calculate the misfit value and write to file
+            if save_residuals and self._calculate_misfit:
+                residual = self._calculate_misfit(
+                    obs=tr_obs.data, syn=tr_syn.data,
+                    nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
+                )
+            else:
+                residual = 0
+
+            # Generate an adjoint source trace, write to file in scratch dir.
+            if save_adjsrcs and self._generate_adjsrc:
+                adjsrc = tr_syn.copy()
+                adjsrc.data = self._generate_adjsrc(
+                    obs=tr_obs.data, syn=tr_syn.data,
+                    nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
+                )
+                adjsrc = Stream(adjsrc)
+                fid = os.path.basename(syn_fid)
+                fid = self._rename_as_adjoint_source(fid)
+                self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
+
+        return residual
 
     def finalize(self):
         """Teardown procedures for the default preprocessing class"""
@@ -568,6 +603,32 @@ class Default:
         :return: sum of squares of residuals
         """
         return np.sum(residuals ** 2.)
+
+    def _apply_resample(self, st_a, st_b):
+        """
+        Resample all traces in `st_a` to the sampling rate of `st_b`. Resamples
+        one to one, that is each trace in `obs` is resampled to the
+        corresponding indexed trace in `syn`
+
+        :type st_a: obspy.core.stream.Stream
+        :param st_a: stream to be resampled using sampling rates from `st_b`
+        :type st_b: obspy.core.stream.Stream
+        :param st_b:  stream whose sampling rates will be used to resample
+            `st_a`. Usually this is the synthetic data
+        :rtype: (obspy.core.stream.Stream, obspy.core.stream.Stream)
+        :return: `st_a` (resampled), `st_b`
+        """
+        for st_a, st_b in zip(st_a, st_b):
+            # Simple check to make sure zip retains ordering
+            assert (st_a.stats.component == st_b.stats.component)
+
+            # Is this the correct resampling method to use?
+            if st_a.stats.sampling_rate != st_b.stats.sampling_rate:
+                logger.debug(f"resampling {st_a.get_id()} to match "
+                             f"{st_b.get_id()}")
+                st_a.resample(sampling_rate=st_b.stats.sampling_rate)
+
+        return st_a, st_b
 
     def _apply_filter(self, st):
         """
