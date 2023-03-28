@@ -520,17 +520,16 @@ class Default:
         )
 
         # Generate the list of full path waveform fids for matching obs + syn
-        filepaths = []
+        obs_paths, syn_paths = [], []
         for short_fid in matching_traces:
             # Find the corresponding full path name based on the short match vrs
             obs_fid = observed[match_obs.index(short_fid)]
-            syn_fid = synthetic[match_syn.index(short_fid)]
-            # Create the tuple of matching full paths [(obs1, syn1), (obs2,...]
-            filepaths.append((os.path.join(obs_path, obs_fid),
-                              os.path.join(syn_path, syn_fid))
-                             )
+            obs_paths.append(os.path.join(obs_path, obs_fid))
 
-        return filepaths
+            syn_fid = synthetic[match_syn.index(short_fid)]
+            syn_paths.append(os.path.join(syn_path, syn_fid))
+
+        return obs_paths, syn_paths
 
     def _quantify_misfit_single(self, obs_fid, syn_fid, save_residuals=None,
                                 save_adjsrcs=None):
