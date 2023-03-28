@@ -8,6 +8,7 @@ and write adjoint sources that are expected by the solver.
 import os
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, wait
+from glob import glob
 
 from obspy import read as obspy_read
 from obspy import Stream, Trace, UTCDateTime
@@ -330,7 +331,7 @@ class Default:
         SPECFEM requires that adjoint traces be present for every matching
         synthetic seismogram. If an adjoint source does not exist, it is
         simply set as zeros. This function creates all adjoint traces as
-        zeros, to be filled out later.
+        zeros, to be filled out later. Does this in parallel for speedup
 
         :type data_filenames: list of str
         :param data_filenames: existing solver waveforms (synthetic) to read.
@@ -345,10 +346,19 @@ class Default:
                        data_format=self.syn_data_format).copy()
         for tr in st:
             tr.data *= 0
+        # Write adjoint sources in parallel using an empty Stream object
+        with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+            futures = [
+                executor.submit(self._write_adjsrc_single, st, fid, output) 
+                for fid in data_filenames
+                ]
+        # Simply wait until this task is completed
+        wait(futures)
 
-        for fid in data_filenames:
-            adj_fid = self._rename_as_adjoint_source(os.path.basename(fid))
-            self.write(st=st, fid=os.path.join(output, adj_fid))
+    def _write_adjsrc_single(self, st, fid, output):
+        """Parallelizable function to write out empty adjoint source"""
+        adj_fid = self._rename_as_adjoint_source(os.path.basename(fid))
+        self.write(st=st, fid=os.path.join(output, adj_fid))
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         save_adjsrcs=None, iteration=1, step_count=0,
@@ -458,7 +468,8 @@ class Default:
         # Initialize empty adjoint sources for all synthetics that may or may
         # not be overwritten by the misfit quantification step
         if save_adjsrcs is not None:
-            self.initialize_adjoint_traces(data_filenames=synthetic,
+            syn_filenames = glob(os.path.join(syn_path, "*"))
+            self.initialize_adjoint_traces(data_filenames=syn_filenames,
                                            output=save_adjsrcs)
 
         # Verify observed traces format is acceptable within this module
