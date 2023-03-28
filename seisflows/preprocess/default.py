@@ -46,11 +46,12 @@ class Default:
         seisflows.plugins.preprocess.adjoint
     :type normalize: str
     :param normalize: Data normalization parameters used to normalize the
-        amplitudes of waveforms. Choose from ONE of the following. These are
-        applied to BOTH `obs` and `syn` data:
+        amplitudes of waveforms. By default, set to NoneType, which means no 
+        normalization is applied. User can choose from one of the following 
+        options to normalize BOTH `obs` and `syn` data:
 
-        - TNORML1: normalize per trace by L1 of itself
-        - TNORML2: normalize per trace by L2 of itself
+        - TNORML1: normalize per trace by the L1 norm of itself
+        - TNORML2: normalize per trace by the L2 norm of itself
         - TNORM_MAX: normalize by the maximum positive amplitude in the trace
         - TNORM_ABSMAX: normalize by the absolute maximum amplitude in the trace
         - TNORM_MEAN: normalize by the mean of the absolute trace
@@ -60,10 +61,12 @@ class Default:
         - ENORML1: normalize per event by L1 of traces; OR
         - ENORML2: normalize per event by L2 of traces;
     :type filter: str
-    :param filter: Data filtering type, available options are:
-        BANDPASS (req. MIN/MAX PERIOD/FREQ);
-        LOWPASS (req. MAX_FREQ or MIN_PERIOD);
-        HIGHPASS (req. MIN_FREQ or MAX_PERIOD)
+    :param filter: Data filtering type, by default no filtering is applied.
+        Available options for user to choose are:
+
+        - BANDPASS (requires: MIN_FREQ + MAX_FREQ OR MIN_PERIOD + MAX PERIOD);
+        - LOWPASS (requires: MAX_FREQ OR MIN_PERIOD);
+        - HIGHPASS (requires: MIN_FREQ OR MAX_PERIOD);
     :type min_period: float
     :param min_period: Minimum filter period applied to time series.
         See also MIN_FREQ, MAX_FREQ, if User defines FREQ parameters, they
@@ -83,10 +86,11 @@ class Default:
     :type mute: list
     :param mute: Data mute parameters used to zero out early / late
         arrivals or offsets. Choose any number of:
-        EARLY: mute early arrivals;
-        LATE: mute late arrivals;
-        SHORT: mute short source-receiver distances;
-        LONG: mute long source-receiver distances
+        
+        - EARLY: mute early arrivals;
+        - LATE: mute late arrivals;
+        - SHORT: mute short source-receiver distances;
+        - LONG: mute long source-receiver distances
 
     Paths
     -----
@@ -163,6 +167,13 @@ class Default:
         self._acceptable_adjsrcs = [_ for _ in dir(adjoint_sources)
                                     if not _.startswith("_")]
 
+        # Acceptable preprocessing parameter options
+        self._acceptable_norms = {"TNORML1", "TNORML2", "TNORM_MAX",
+                                  "TNORM_ABSMAX", "TNORM_MEAN"}  
+                                  #, "ENORML1", "ENORML2"}
+        self._acceptable_mutes = {"EARLY", "LATE", "LONG", "SHORT"}
+        self._acceptable_filters = {"BANDPASS", "LOWPASS", "HIGHPASS"}
+
         # Internal attributes used to keep track of inversion workflows
         self._iteration = None
         self._step_count = None
@@ -182,17 +193,13 @@ class Default:
         # Data normalization option
         if self.normalize:
             # ENORMs removed for now, see warning in function _apply_normalize()
-            acceptable_norms = {"TNORML1", "TNORML2", "TNORM_MAX", 
-                                "TNORM_ABSMAX", "TNORM_MEAN"}  
-                                #, "ENORML1", "ENORML2"}
             chosen_norms = [_.upper() for _ in self.normalize]
-            assert(set(chosen_norms).issubset(acceptable_norms))
+            assert(set(chosen_norms).issubset(self_acceptable_norms))
 
         # Data muting options
         if self.mute:
-            acceptable_mutes = {"EARLY", "LATE", "LONG", "SHORT"}
             chosen_mutes = [_.upper() for _ in self.mute]
-            assert(set(chosen_mutes).issubset(acceptable_mutes))
+            assert(set(chosen_mutes).issubset(self._acceptable_mutes))
             if "EARLY" in chosen_mutes:
                 assert(self.early_slope is not None)
                 assert(self.early_slope >= 0.)
@@ -210,9 +217,8 @@ class Default:
 
         # Data filtering options that will be passed to ObsPy filters
         if self.filter:
-            acceptable_filters = ["BANDPASS", "LOWPASS", "HIGHPASS"]
-            assert self.filter.upper() in acceptable_filters, \
-                f"self.filter must be in {acceptable_filters}"
+            assert self.filter.upper() in self._acceptable_filters, \
+                f"self.filter must be in {self._acceptable_filters}"
 
             # Check that the correct filter bounds have been set
             if self.filter.upper() == "BANDPASS":
@@ -236,12 +242,18 @@ class Default:
             assert(self.min_freq < self.max_freq), (
                 "PAR.MIN_FREQ < PAR.MAX_FREQ"
             )
+    
+        # Check that User-chosen data formats are acceptable
+        assert(self.syn_data_format.upper() in 
+                self._syn_acceptable_data_formats), (
+            f"synthetic data format must be in "
+            f"{self._syn_acceptable_data_formats}"
+            )
 
-        assert(self.syn_data_format.upper() in self._syn_acceptable_data_formats), \
-            f"synthetic data format must be in {self._syn_acceptable_data_formats}"
-
-        assert(self.obs_data_format.upper() in self._obs_acceptable_data_formats), \
-            f"observed data format must be in {self._obs_acceptable_data_formats}"
+        assert(self.obs_data_format.upper() in 
+                self._obs_acceptable_data_formats), \
+            f"observed data format must be in "
+            f"{self._obs_acceptable_data_formats}"
 
         assert(self.unit_output.upper() in self._acceptable_unit_output), \
             f"unit output must be in {self._acceptable_unit_output}"
@@ -252,8 +264,8 @@ class Default:
         """
         unix.mkdir(self.path.scratch)
 
+        # Set the min/max frequencies and periods, frequency takes priority
         if self.filter:
-            # Set the min/max frequencies and periods, frequency takes priority
             if self.min_freq is not None:
                 self.max_period = 1 / self.min_freq
             elif self.max_period is not None:
