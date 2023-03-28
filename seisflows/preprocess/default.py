@@ -204,17 +204,6 @@ class Default:
             assert self.filter.upper() in acceptable_filters, \
                 f"self.filter must be in {acceptable_filters}"
 
-            # Set the min/max frequencies and periods, frequency takes priority
-            if self.min_freq is not None:
-                self.max_period = 1 / self.min_freq
-            elif self.max_period is not None:
-                self.min_freq = 1 / self.max_period
-
-            if self.max_freq is not None:
-                self.min_period = 1 / self.max_freq
-            elif self.min_period is not None:
-                self.max_freq =  1 / self.min_period
-
             # Check that the correct filter bounds have been set
             if self.filter.upper() == "BANDPASS":
                 assert(self.min_freq is not None and
@@ -252,6 +241,18 @@ class Default:
         Sets up data preprocessing machinery
         """
         unix.mkdir(self.path.scratch)
+
+        if self.filter:
+            # Set the min/max frequencies and periods, frequency takes priority
+            if self.min_freq is not None:
+                self.max_period = 1 / self.min_freq
+            elif self.max_period is not None:
+                self.min_freq = 1 / self.max_period
+
+            if self.max_freq is not None:
+                self.min_period = 1 / self.max_freq
+            elif self.min_period is not None:
+                self.max_freq =  1 / self.min_period
 
     def finalize(self):
         """
@@ -574,12 +575,15 @@ class Default:
         # The assumption here is that `obs` and `syn` are length=1
         residual = 0
         for tr_obs, tr_syn in zip(obs, syn):
-            # Simple check to make sure zip retains ordering
-            assert (tr_obs.stats.component == tr_syn.stats.component), (
-                f"Preprocesing for {obs_fid} has mismatching components. " 
-                f"Please check that your `obs` and `syn` data have overlapping " 
-                f"components"
-            )
+            # Simple check to make sure zip retains ordering. Only works if
+            # both syn and data have component stat. This may not be the case
+            # for poorly labelled data
+            if tr_obs.stats.component and tr_syn.stats.component:
+                assert (tr_obs.stats.component == tr_syn.stats.component), (
+                    f"Preprocesing for {obs_fid} has mismatching components. " 
+                    f"Please check that your `obs` and `syn` data have "
+                    f"overlapping components"
+                )
 
             # Calculate the misfit value and write to file
             if save_residuals and self._calculate_misfit:
@@ -682,9 +686,6 @@ class Default:
         :return: `st_a` (resampled), `st_b`
         """
         for st_a, st_b in zip(st_a, st_b):
-            # Simple check to make sure zip retains ordering
-            assert (st_a.stats.component == st_b.stats.component)
-
             # Is this the correct resampling method to use?
             if st_a.stats.sampling_rate != st_b.stats.sampling_rate:
                 logger.debug(f"resampling {st_a.get_id()} to match "
