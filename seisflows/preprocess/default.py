@@ -407,78 +407,6 @@ class Default:
 
         return fid
 
-    def _setup_quantify_misfit(self, source_name):
-        """
-        Gather waveforms from the Solver scratch directory which will be used
-        for generating adjoint sources
-        """
-        source_name = source_name or self._source_names[get_task_id()]
-
-        obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
-        syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
-
-        observed = sorted(os.listdir(obs_path))
-        synthetic = sorted(os.listdir(syn_path))
-
-        assert(len(observed) != 0 and len(synthetic) != 0), \
-            f"cannot quantify misfit, missing observed or synthetic traces"
-
-        # verify observed traces format
-        obs_ext = list(set([os.path.splitext(x)[-1] for x in observed]))
-
-        if self.obs_data_format.upper() == "ASCII":
-            obs_ext_ok = obs_ext[0].upper() == ".ASCII" or \
-                         obs_ext[0].upper() == f".SEM{self.unit_output[0]}"
-        else:
-            obs_ext_ok = obs_ext[0].upper() == f".{self.obs_data_format}"
-
-        assert(len(obs_ext) == 1 and obs_ext_ok), (
-            f"observed traces have more than one format or their format "
-            f"is not the one defined in parameters.yaml"
-        )
-
-        # verify synthetic traces format
-        syn_ext = list(set([os.path.splitext(x)[-1] for x in synthetic]))
-
-        if self.syn_data_format == "ASCII":
-            syn_ext_ok = syn_ext[0].upper() == ".ASCII" or \
-                         syn_ext[0].upper() == f".SEM{self.unit_output[0]}"
-        else:
-            syn_ext_ok = syn_ext[0].upper() == f".{self.syn_data_format}"
-
-        assert(len(syn_ext) == 1 and syn_ext_ok), (
-            f"synthetic traces have more than one format or their format "
-            f"is not the one defined in parameters.yaml"
-        )
-
-        # remove data format
-        observed = [os.path.splitext(x)[0] for x in observed]
-        synthetic = [os.path.splitext(x)[0] for x in synthetic]
-
-        # only return traces that have both observed and synthetic files
-        matching_traces = sorted(list(set(synthetic).intersection(observed)))
-
-        assert(len(matching_traces) != 0), (
-            f"there are no traces with both observed and synthetic files for "
-            f"source: {source_name}; verify that observations and synthetics "
-            f"have the same name including channel code"
-        )
-
-        # Clear out lists so that they can be filled with data paths
-        observed.clear()
-        synthetic.clear()
-
-        for file_name in matching_traces:
-            observed.append(os.path.join(obs_path, f"{file_name}{obs_ext[0]}"))
-            synthetic.append(os.path.join(syn_path, f"{file_name}{syn_ext[0]}"))
-
-        assert(len(observed) == len(synthetic)), (
-            f"number of observed traces does not match length of synthetic for "
-            f"source: {source_name}"
-        )
-
-        return observed, synthetic
-
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         save_adjsrcs=None, iteration=1, step_count=0,
                         **kwargs):
@@ -507,17 +435,18 @@ class Default:
             should be provided by the `optimize` module if we are running an
             inversion. Defaults to 0 if not given (1st evaluation)
         """
+        # Retrieve matching obs and syn trace filenames to run through misfit
         observed, synthetic = self._setup_quantify_misfit(source_name)
 
-        # Max workers is the total available number of cores
+        # Process each pair in parallel. Max workers is the total num. of cores
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
                 executor.submit(self._quantify_misfit_single, obs, syn)
                 for (obs, syn) in zip(observed, synthetic)
             ]
         if save_residuals:
-            # Results are returned in the order that they were submitted and written
-            # to text file for other modules to find
+            # Results are returned in the order that they were submitted and
+            # writte to text file for other modules to find
             with open(save_residuals, "a") as f:
                 for future in futures:
                     residual = future.result()
@@ -529,6 +458,122 @@ class Default:
         # Write adjoint sources once all processing is done
         if save_adjsrcs and self._generate_adjsrc:
             self._check_adjoint_traces(source_name, save_adjsrcs, synthetic)
+
+    def _setup_quantify_misfit(self, source_name):
+        """
+        Gather a list of filenames of matching waveform IDs that can be
+        run through the misfit quantification step. Perform some checks to
+        ensure that the data is provided in usable formats and that
+        preprocessing is only run for synthetics which have a matching
+        observation.
+
+        .. note::
+
+            Obs and syn waveform files are expected to be in the format
+            NN.SSS.CCc.* (N=network, S=station, C=channel, c=component;
+            following SPECFEM ASCII formatting). They will be matched on
+            `NN.SSS.c` (dropping channel naming because SEED convention may have
+            different channel naming). For example, synthetic name
+            'AA.S001.BXZ.semd' will be converted to 'AA.S001.Z', and matching
+            observation 'AA.S001.HHZ.SAC' will be converted to 'AA.S001.Z'.
+            These two will be matched.
+
+
+        .. note::
+
+            Assumes the directory structure that has been set up by the solver.
+            That is, that waveforms are stored in directories:
+            `scratch/solver/{source_name}/traces/obs`  for observations
+            `scratch/solver/{source_name}/traces/syn`  for synthetics
+
+        :type source_name: str
+        :param source_name: the name of the source to process
+        :rtype: list of tuples
+        :return: [(observed filename, synthetic filename)]. tuples will contain
+            filenames for matching stations + component for obs and syn
+        """
+        # Get organized by looking for available data
+        source_name = source_name or self._source_names[get_task_id()]
+
+        obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
+        syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
+
+        observed = sorted(os.listdir(obs_path))
+        synthetic = sorted(os.listdir(syn_path))
+
+        assert(len(observed) != 0 and len(synthetic) != 0), \
+            f"cannot quantify misfit, missing observed or synthetic traces"
+
+        # Verify observed traces format is acceptable within this module
+        obs_ext = list(set([os.path.splitext(x)[-1] for x in observed]))
+        assert(len(obs_ext) == 1), (
+            f"'{source_name}/traces/obs' has > 1 file formats available, but "
+            f"only 1 ({self.obs_data_format}) was expected"
+        )
+        # Check if the expected file format matches the provided one
+        if self.obs_data_format.upper() == "ASCII":
+            obs_ext_ok = obs_ext[0].upper() in [".ASCII",
+                                                f".SEM{self.unit_output[0]}"]
+        else:
+            obs_ext_ok = obs_ext[0].upper() == f".{self.obs_data_format}"
+        assert obs_ext_ok, (
+            f"{source_name}/traces/obs unexpected file format "
+            f"{obs_ext[0].upper()} != {self.obs_data_format}"
+        )
+
+        # Do the same checks but for the synthetic waveforms
+        syn_ext = list(set([os.path.splitext(x)[-1] for x in synthetic]))
+        assert(len(syn_ext) == 1), (
+            f"'{source_name}/traces/syn' has > 1 file formats available, but "
+            f"only 1 ({self.syn_data_format}) was expected"
+        )
+        # Check if the expected file format matches the provided one
+        if self.syn_data_format.upper() == "ASCII":
+            syn_ext_ok = syn_ext[0].upper() in [".ASCII",
+                                                f".SEM{self.unit_output[0]}"]
+        else:
+            syn_ext_ok = syn_ext[0].upper() == f".{self.syn_data_format}"
+        assert syn_ext_ok, (
+            f"{source_name}/traces/syn unexpected file format "
+            f"{syn_ext[0].upper()} != {self.syn_data_format}"
+        )
+
+        # fmt path/to/NN.SSS.CCc* -> NN.SSS.c (see docstring note for details)
+        match_obs = self._format_fids_for_filename_matching(observed)
+        match_syn = self._format_fids_for_filename_matching(synthetic)
+
+        # only return traces that have both observed and synthetic file match
+        matching_traces = sorted(list(set(match_syn).intersection(match_obs)))
+
+        assert(len(matching_traces) != 0), (
+            f"there are no traces with both observed and synthetic files for "
+            f"source: {source_name}; verify that 'traces/obs' and 'traces/syn' "
+            f"have the format 'NN.SSS.CCc*', and match on variables 'N', 'S', "
+            f"and 'c'"
+        )
+
+        # Generate the list of full path waveform fids for matching obs + syn
+        filepaths = []
+        for short_fid in matching_traces:
+            # Find the corresponding full path name based on the short match vrs
+            obs_fid = observed[match_obs.index(short_fid)]
+            syn_fid = synthetic[match_syn.index(short_fid)]
+            # Create the tuple of matching full paths [(obs1, syn1), (obs2,...]
+            filepaths.append((os.path.join(obs_path, obs_fid),
+                              os.path.join(syn_path, syn_fid))
+                             )
+
+        return filepaths
+
+    def _format_fids_for_filename_matching(self, fid_list):
+        """Convenience function to convert NN.SSS.CCc.* -> NN.SSS.c"""
+        # Drop full path incase these are given as absolute paths
+        full_fids = [os.path.basename(_) for _ in fid_list]
+        # Split into expected format NN.SSS.CCc, drop extension
+        parts = [_.split(".")[:3] for _ in full_fids]
+        # NN.SSS.CCc -> NN.SSS.c
+        short_fids = [".".join([_[0], _[1], _[2][-1]]) for _ in parts]
+        return short_fids
 
     def _quantify_misfit_single(self, obs_fid, syn_fid, save_residuals,
                                 save_adjsrcs):
