@@ -137,7 +137,7 @@ class Default:
         self.min_freq = min_freq
         self.max_freq = max_freq
         self.mute = mute or []
-        self.normalize = normalize or []
+        self.normalize = normalize 
 
         # Mute arrivals sub-parameters
         self.early_slope = early_slope
@@ -192,9 +192,7 @@ class Default:
 
         # Data normalization option
         if self.normalize:
-            # ENORMs removed for now, see warning in function _apply_normalize()
-            chosen_norms = [_.upper() for _ in self.normalize]
-            assert(set(chosen_norms).issubset(self_acceptable_norms))
+            assert(self.normalize.upper()) in self._acceptable_norms)
 
         # Data muting options
         if self.mute:
@@ -790,10 +788,9 @@ class Default:
         :return: stream with normalized traces
         """
         st_out = st.copy()
-        norm_choices = [_.upper() for _ in self.normalize]
 
         # Normalize each trace by its L1 norm
-        if "TNORML1" in norm_choices:
+        if self.normalize.upper() == "TNORML1":
             for tr in st_out:
                 w = np.linalg.norm(tr.data, ord=1)
                 if w < 0:
@@ -802,7 +799,7 @@ class Default:
                                    f"unintentional sign flip")
                 tr.data /= w
         # Normalize each trace by its L2 norm
-        elif "TNORML2" in norm_choices:
+        elif self.normalize.upper() == "TNORML2":
             for tr in st_out:
                 w = np.linalg.norm(tr.data, ord=2)
                 if w < 0:
@@ -811,17 +808,17 @@ class Default:
                                    f"unintentional sign flip")
                 tr.data /= w
         # Normalize each trace by its maximum positive amplitude
-        elif "TNORM_MAX" in norm_choices:
+        elif self.normalize.upper() == "TNORM_MAX":
             for tr in st_out:
                 w = np.max(tr.data)
                 tr.data /= w
         # Normalize each trace by the maximum amplitude (neg or pos) 
-        elif "TNORM_ABSMAX" in norm_choices:
+        elif self.normalize.upper() == "TNORM_ABSMAX":
             for tr in st_out:
                 w = np.abs(tr.max())
                 tr.data /= w
         # Normalize by the mean of absolute trace amplitudes
-        elif "TNORM_MEAN" in norm_choices:
+        elif self.normalize.upper() == "TNORM_MEAN":
             for tr in st_out:
                 w = np.mean(np.abs(tr.data))
                 tr.data /= w
