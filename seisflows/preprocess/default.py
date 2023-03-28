@@ -248,11 +248,17 @@ class Default:
 
     def setup(self):
         """
-        Sets up data preprocessing machinery by dynamicalyl loading the
-        misfit, adjoint source type, and specifying the expected file type
-        for input and output seismic data.
+        Sets up data preprocessing machinery
         """
         unix.mkdir(self.path.scratch)
+
+    def finalize(self):
+        """
+        Teardown procedures for the default preprocessing class. Required
+        to keep things general because Pyaflowa preprocessing module has
+        some finalize procedures.
+        """
+        pass
 
     def read(self, fid, data_format):
         """
@@ -319,93 +325,30 @@ class Default:
         else:
             return None
 
-    def initialize_adjoint_traces(self, data_filenames, output,
-                                  data_format=None):
+    def initialize_adjoint_traces(self, data_filenames, output):
         """
         SPECFEM requires that adjoint traces be present for every matching
         synthetic seismogram. If an adjoint source does not exist, it is
         simply set as zeros. This function creates all adjoint traces as
-        zeros, to be filled out later
-
-        Appends '.adj. to the solver filenames as expected by SPECFEM (if they
-        don't already have that extension)
-
-        TODO there are some sem2d and 3d specific tasks that are not carried
-        TODO over here, were they required?
+        zeros, to be filled out later.
 
         :type data_filenames: list of str
         :param data_filenames: existing solver waveforms (synthetic) to read.
             These will be copied, zerod out, and saved to path `save`. Should
             come from solver.data_filenames
         :type output: str
-        :param output: path to save the new adjoint traces to.
+        :param output: path to save the new adjoint traces to. Ideally this is
+            set to 'solver/traces/adj'
         """
-        for fid in data_filenames:
-            st = self.read(fid=fid, data_format=self.syn_data_format).copy()
-            fid = os.path.basename(fid)  # drop any path before filename
-            for tr in st:
-                tr.data *= 0
-
-            adj_fid = self._rename_as_adjoint_source(fid)
-
-            # Write traces back to the adjoint trace directory
-            self.write(st=st, fid=os.path.join(output, adj_fid))
-
-    def _check_adjoint_traces(self, source_name, save_adjsrcs, synthetic):
-        """Check that all adjoint traces required by SPECFEM exist"""
-        source_name = source_name or self._source_names[get_task_id()]
-        specfem_data_path = os.path.join(self.path.solver, source_name, "DATA")
-
-        # since <STATIONS_ADJOINT> is generated only when using SPECFEM3D
-        # by copying <STATIONS>, check adjoint stations in <STATIONS>
-        adj_stations = np.loadtxt(os.path.join(specfem_data_path,
-                                               "STATIONS"), dtype="str")
-
-        if not isinstance(adj_stations[0], np.ndarray):
-            adj_stations = [adj_stations]
-
-        adj_template = "{net}.{sta}.{chan}.adj"
-
-        channels = [os.path.basename(syn).split('.')[2] for syn in synthetic]
-        channels = list(set(channels))
-
-        st = self.read(fid=synthetic[0], data_format=self.syn_data_format)
+        # Read in a dummy synthetic file and zero out all data to write
+        st = self.read(fid=data_filenames[0],
+                       data_format=self.syn_data_format).copy()
         for tr in st:
-            tr.data *= 0.
+            tr.data *= 0
 
-        for adj_sta in adj_stations:
-            sta = adj_sta[0]
-            net = adj_sta[1]
-            for chan in channels:
-                adj_trace = adj_template.format(net=net, sta=sta, chan=chan)
-                adj_trace = os.path.join(save_adjsrcs, adj_trace)
-                if not os.path.isfile(adj_trace):
-                    self.write(st=st, fid=adj_trace)
-
-    def _rename_as_adjoint_source(self, fid):
-        """
-        Rename synthetic waveforms into filenames consistent with how SPECFEM
-        expects adjoint sources to be named. Usually this just means adding
-        a '.adj' to the end of the filename
-        """
-        if not fid.endswith(".adj"):
-            if self.syn_data_format.upper() == "SU":
-                fid = f"{fid}.adj"
-            elif self.syn_data_format.upper() == "ASCII":
-                # Differentiate between SPECFEM3D and 3D_GLOBE
-                # SPECFEM3D: NN.SSSS.CCC.sem?
-                # SPECFEM3D_GLOBE: NN.SSSS.CCC.sem.ascii
-                ext = os.path.splitext(fid)[-1]  
-                # SPECFEM3D
-                if ".sem" in ext:
-                    fid = fid.replace(ext, ".adj")
-                # GLOBE (!!! Hardcoded to only work with ASCII format)
-                elif ext == ".ascii":
-                    root, ext1 = os.path.splitext(fid)  # .ascii
-                    root, ext2 = os.path.splitext(root)  # .sem
-                    fid = fid.replace(f"{ext2}{ext1}", ".adj")
-
-        return fid
+        for fid in data_filenames:
+            adj_fid = self._rename_as_adjoint_source(os.path.basename(fid))
+            self.write(st=st, fid=os.path.join(output, adj_fid))
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         save_adjsrcs=None, iteration=1, step_count=0,
@@ -416,7 +359,18 @@ class Default:
 
         Reads in observed and synthetic waveforms, applies optional
         preprocessing, assesses misfit, and writes out adjoint sources and
-        STATIONS_ADJOINT file.
+        STATIONS_ADJOINT file. Processing for each station is done in parallel
+        using concurrent.futures.
+
+        .. warning::
+
+            The concurrent processing in this function may fail in the case
+            that a User is running N>1 events using the 'Cluster' system but
+            on a local workstation, because each event is also run with
+            multiprocessing, so their compute may quickly run out of RAM or
+            cores. Might need to introduce `max_workers_preproc` and
+            `max_workers_solver` to ensure that there is a good balance
+            between the two values.
 
         :type source_name: str
         :param source_name: name of the event to quantify misfit for. If not
@@ -436,13 +390,15 @@ class Default:
             inversion. Defaults to 0 if not given (1st evaluation)
         """
         # Retrieve matching obs and syn trace filenames to run through misfit
-        observed, synthetic = self._setup_quantify_misfit(source_name)
+        # and initialize empty adjoint sources
+        obs, syn = self._setup_quantify_misfit(source_name, save_adjsrcs)
 
         # Process each pair in parallel. Max workers is the total num. of cores
+        # !!! see note in docstring !!!
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
-                executor.submit(self._quantify_misfit_single, obs, syn)
-                for (obs, syn) in zip(observed, synthetic)
+                executor.submit(self._quantify_misfit_single, o, s)
+                for (o, s) in zip(obs, syn)
             ]
         if save_residuals:
             # Results are returned in the order that they were submitted and
@@ -455,11 +411,7 @@ class Default:
             # Simply wait for all processes to finish before proceeding
             wait(futures)
 
-        # Write adjoint sources once all processing is done
-        if save_adjsrcs and self._generate_adjsrc:
-            self._check_adjoint_traces(source_name, save_adjsrcs, synthetic)
-
-    def _setup_quantify_misfit(self, source_name):
+    def _setup_quantify_misfit(self, source_name, save_adjsrcs=None):
         """
         Gather a list of filenames of matching waveform IDs that can be
         run through the misfit quantification step. Perform some checks to
@@ -477,7 +429,6 @@ class Default:
             'AA.S001.BXZ.semd' will be converted to 'AA.S001.Z', and matching
             observation 'AA.S001.HHZ.SAC' will be converted to 'AA.S001.Z'.
             These two will be matched.
-
 
         .. note::
 
@@ -501,8 +452,14 @@ class Default:
         observed = sorted(os.listdir(obs_path))
         synthetic = sorted(os.listdir(syn_path))
 
-        assert(len(observed) != 0 and len(synthetic) != 0), \
+        assert (len(observed) != 0 and len(synthetic) != 0), \
             f"cannot quantify misfit, missing observed or synthetic traces"
+
+        # Initialize empty adjoint sources for all synthetics that may or may
+        # not be overwritten by the misfit quantification step
+        if save_adjsrcs is not None:
+            self.initialize_adjoint_traces(data_filenames=synthetic,
+                                           output=save_adjsrcs)
 
         # Verify observed traces format is acceptable within this module
         obs_ext = list(set([os.path.splitext(x)[-1] for x in observed]))
@@ -544,7 +501,6 @@ class Default:
 
         # only return traces that have both observed and synthetic file match
         matching_traces = sorted(list(set(match_syn).intersection(match_obs)))
-
         assert(len(matching_traces) != 0), (
             f"there are no traces with both observed and synthetic files for "
             f"source: {source_name}; verify that 'traces/obs' and 'traces/syn' "
@@ -565,22 +521,28 @@ class Default:
 
         return filepaths
 
-    def _format_fids_for_filename_matching(self, fid_list):
-        """Convenience function to convert NN.SSS.CCc.* -> NN.SSS.c"""
-        # Drop full path incase these are given as absolute paths
-        full_fids = [os.path.basename(_) for _ in fid_list]
-        # Split into expected format NN.SSS.CCc, drop extension
-        parts = [_.split(".")[:3] for _ in full_fids]
-        # NN.SSS.CCc -> NN.SSS.c
-        short_fids = [".".join([_[0], _[1], _[2][-1]]) for _ in parts]
-        return short_fids
-
-    def _quantify_misfit_single(self, obs_fid, syn_fid, save_residuals,
-                                save_adjsrcs):
+    def _quantify_misfit_single(self, obs_fid, syn_fid, save_residuals=None,
+                                save_adjsrcs=None):
         """
         Run misfit quantification for one pair of data-synthetic waveforms.
         This is kept in a separate function so that it can be parallelized for
-        more efficient processing
+        more efficient processing.
+
+        Order of processing steps is:
+        resample -> filter (optional) -> mute (optional) -> normalize (optional)
+            -> calculate misfit (optional) -> create adjoint source (optional)
+
+        :type obs_fid: str
+        :param obs_fid: filename for the observed waveform to be processed
+        :type syn_fid: str
+        :param syn_fid: filename for the synthetic waveform to be procsesed
+        :type save_residuals: str
+        :param save_residuals: if not None, path to write misfit/residuls to
+        :type save_adjsrcs: str
+        :param save_adjsrcs: if not None, path to write adjoint sources to
+        :rtype: float
+        :return: residual value, calculated by the chosen misfit function
+            comparing `obs` and `syn`
         """
         # Read in waveforms based on the User-defined format(s)
         obs = self.read(fid=obs_fid, data_format=self.obs_data_format)
@@ -632,9 +594,55 @@ class Default:
 
         return residual
 
-    def finalize(self):
-        """Teardown procedures for the default preprocessing class"""
-        pass
+    def _format_fids_for_filename_matching(self, fid_list):
+        """
+        Convenience function to convert NN.SSS.CCc.* -> NN.SSS.c
+
+        :type fid_list: list of str
+        :param fid_list: list of file path/IDs that need to be shortened
+        :rtype: list of str
+        :return: list of shortened file IDs
+        """
+        # Drop full path incase these are given as absolute paths
+        full_fids = [os.path.basename(_) for _ in fid_list]
+        # Split into expected format NN.SSS.CCc, drop extension
+        parts = [_.split(".")[:3] for _ in full_fids]
+        # NN.SSS.CCc -> NN.SSS.c  (drop the CC)
+        short_fids = [".".join([_[0], _[1], _[2][-1]]) for _ in parts]
+
+        return short_fids
+
+    def _rename_as_adjoint_source(self, fid):
+        """
+        Rename synthetic waveforms into filenames consistent with how SPECFEM
+        expects adjoint sources to be named. Usually this just means adding
+        a '.adj' to the end of the filename
+
+        :type fid: str
+        :param fid: file path to rename for adjoint source
+        :rtype: str
+        :return: renamed file that matches expected SPECFEM filename format
+            for adjoint sources
+        """
+        if not fid.endswith(".adj"):
+            if self.syn_data_format.upper() == "SU":
+                fid = f"{fid}.adj"
+            elif self.syn_data_format.upper() == "ASCII":
+                # Differentiate between SPECFEM3D and 3D_GLOBE file naming
+                # SPECFEM3D: NN.SSSS.CCC.sem?
+                # SPECFEM3D_GLOBE: NN.SSSS.CCC.sem.ascii
+                ext = os.path.splitext(fid)[-1]
+                # SPECFEM3D
+                if ".sem" in ext:
+                    fid = fid.replace(ext, ".adj")
+                # GLOBE (!!! Hardcoded to only work with ASCII format)
+                elif ext == ".ascii":
+                    root, ext1 = os.path.splitext(fid)  # .ascii
+                    root, ext2 = os.path.splitext(root)  # .sem
+                    fid = fid.replace(f"{ext2}{ext1}", ".adj")
+
+        return fid
+
 
     @staticmethod
     def sum_residuals(residuals):
