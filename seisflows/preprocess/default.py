@@ -40,18 +40,25 @@ class Default:
     :type misfit: str
     :param misfit: misfit function for waveform comparisons. For available
         see seisflows.plugins.preprocess.misfit
-    :type backproject: str
-    :param backproject: backprojection function for migration, or the
-        objective function in FWI. For available see
+    :type adjoint: str
+    :param adjoint: adjoint source misfit function (backprojection function for 
+        migration, or the objective function in FWI). For available see
         seisflows.plugins.preprocess.adjoint
     :type normalize: str
     :param normalize: Data normalization parameters used to normalize the
-        amplitudes of waveforms. Choose from two sets:
-        ENORML1: normalize per event by L1 of traces; OR
-        ENORML2: normalize per event by L2 of traces;
-        &
-        TNORML1: normalize per trace by L1 of itself; OR
-        TNORML2: normalize per trace by L2 of itself
+        amplitudes of waveforms. Choose from ONE of the following. These are
+        applied to BOTH `obs` and `syn` data:
+
+        - TNORML1: normalize per trace by L1 of itself
+        - TNORML2: normalize per trace by L2 of itself
+        - TNORM_MAX: normalize by the maximum positive amplitude in the trace
+        - TNORM_ABSMAX: normalize by the absolute maximum amplitude in the trace
+        - TNORM_MEAN: normalize by the mean of the absolute trace
+
+        Note: options ENORML? are not currently available. If this is a 
+        feature you would like to see, please open a GitHub Issue.
+        - ENORML1: normalize per event by L1 of traces; OR
+        - ENORML2: normalize per event by L2 of traces;
     :type filter: str
     :param filter: Data filtering type, available options are:
         BANDPASS (req. MIN/MAX PERIOD/FREQ);
@@ -174,7 +181,10 @@ class Default:
 
         # Data normalization option
         if self.normalize:
-            acceptable_norms = {"TNORML1", "TNORML2", "ENORML1", "ENORML2"}
+            # ENORMs removed for now, see warning in function _apply_normalize()
+            acceptable_norms = {"TNORML1", "TNORML2", "TNORM_MAX", 
+                                "TNORM_ABSMAX", "TNORM_MEAN"}  
+                                #, "ENORML1", "ENORML2"}
             chosen_norms = [_.upper() for _ in self.normalize]
             assert(set(chosen_norms).issubset(acceptable_norms))
 
@@ -696,7 +706,11 @@ class Default:
 
     def _apply_filter(self, st):
         """
-        Apply a filter to waveform data using ObsPy
+        Apply a filter to waveform data using ObsPy, throw on a standard 
+        demean, detrened and taper prior to filtering. Options for different
+        filtering types. Uses default filter options from ObsPy.
+        
+        Zerophase enforced to be True to avoid phase shifting data.
 
         :type st: obspy.core.stream.Stream
         :param st: stream to be filtered
@@ -751,10 +765,12 @@ class Default:
         """
         Normalize the amplitudes of waveforms based on user choice
 
-        .. note::
-            The normalization function has been refactored but not tested
-            as I was not aware of the intended functionality. Not gauranteed
-            to work, use at your own risk.
+        .. warning::
+
+            Event normalization does not currently work as this requires 
+            access to all waveform simultaneously whereas we do processing
+            trace by trace. Will need to devise a method for calculating this
+            in the future. For now, option has been remoevd
 
         :type st: obspy.core.stream.Stream
         :param st: All of the data streams to be normalized
@@ -764,32 +780,56 @@ class Default:
         st_out = st.copy()
         norm_choices = [_.upper() for _ in self.normalize]
 
-        # Normalize an event by the L1 norm of all traces
-        if 'ENORML1' in norm_choices:
-            w = 0.
-            for tr in st_out:
-                w += np.linalg.norm(tr.data, ord=1)
-            for tr in st_out:
-                tr.data /= w
-        # Normalize an event by the L2 norm of all traces
-        elif "ENORML2" in norm_choices:
-            w = 0.
-            for tr in st_out:
-                w += np.linalg.norm(tr.data, ord=2)
-            for tr in st_out:
-                tr.data /= w
         # Normalize each trace by its L1 norm
         if "TNORML1" in norm_choices:
             for tr in st_out:
                 w = np.linalg.norm(tr.data, ord=1)
-                if w > 0:
-                    tr.data /= w
+                if w < 0:
+                    logger.warning(f"CAUTION: L1 Norm for {tr.get_id()} is "
+                                   f"negative, this will result in "
+                                   f"unintentional sign flip")
+                tr.data /= w
+        # Normalize each trace by its L2 norm
         elif "TNORML2" in norm_choices:
-            # normalize each trace by its L2 norm
             for tr in st_out:
                 w = np.linalg.norm(tr.data, ord=2)
-                if w > 0:
-                    tr.data /= w
+                if w < 0:
+                    logger.warning(f"CAUTION: L2 Norm for {tr.get_id()} is "
+                                   f"negative, this will result in "
+                                   f"unintentional sign flip")
+                tr.data /= w
+        # Normalize each trace by its maximum positive amplitude
+        elif "TNORM_MAX" in norm_choices:
+            for tr in st_out:
+                w = np.max(tr.data)
+                tr.data /= w
+        # Normalize each trace by the maximum amplitude (neg or pos) 
+        elif "TNORM_ABSMAX" in norm_choices:
+            for tr in st_out:
+                w = np.abs(tr.max())
+                tr.data /= w
+        # Normalize by the mean of absolute trace amplitudes
+        elif "TNORM_MEAN" in norm_choices:
+            for tr in st_out:
+                w = np.mean(np.abs(tr.data))
+                tr.data /= w
+
+        # !!! These are not currently accessible. Open a GitHub issue if you
+        # !!! would like to see event-based normalization
+        # Normalize an event by the L1 norm of all traces
+        # if 'ENORML1' in norm_choices:
+        #     w = 0.
+        #     for tr in st_out:
+        #         w += np.linalg.norm(tr.data, ord=1)
+        #     for tr in st_out:
+        #         tr.data /= w
+        # # Normalize an event by the L2 norm of all traces
+        # elif "ENORML2" in norm_choices:
+        #     w = 0.
+        #     for tr in st_out:
+        #         w += np.linalg.norm(tr.data, ord=2)
+        #     for tr in st_out:
+        #         tr.data /= w
 
         return st_out
 
