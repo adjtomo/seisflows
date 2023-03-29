@@ -139,6 +139,18 @@ class Default:
         self.mute = mute or []
         self.normalize = normalize 
 
+        # Set the min/max frequencies and periods, frequency takes priority
+        if self.filter:
+            if self.min_freq is not None:
+                self.max_period = 1 / self.min_freq
+            elif self.max_period is not None:
+                self.min_freq = 1 / self.max_period
+
+            if self.max_freq is not None:
+                self.min_period = 1 / self.max_freq
+            elif self.min_period is not None:
+                self.max_freq =  1 / self.min_period
+
         # Mute arrivals sub-parameters
         self.early_slope = early_slope
         self.early_const = early_const
@@ -192,7 +204,7 @@ class Default:
 
         # Data normalization option
         if self.normalize:
-            assert(self.normalize.upper()) in self._acceptable_norms)
+            assert(self.normalize.upper() in self._acceptable_norms)
 
         # Data muting options
         if self.mute:
@@ -249,9 +261,10 @@ class Default:
             )
 
         assert(self.obs_data_format.upper() in 
-                self._obs_acceptable_data_formats), \
+                self._obs_acceptable_data_formats), (
             f"observed data format must be in "
             f"{self._obs_acceptable_data_formats}"
+            )
 
         assert(self.unit_output.upper() in self._acceptable_unit_output), \
             f"unit output must be in {self._acceptable_unit_output}"
@@ -261,18 +274,6 @@ class Default:
         Sets up data preprocessing machinery
         """
         unix.mkdir(self.path.scratch)
-
-        # Set the min/max frequencies and periods, frequency takes priority
-        if self.filter:
-            if self.min_freq is not None:
-                self.max_period = 1 / self.min_freq
-            elif self.max_period is not None:
-                self.min_freq = 1 / self.max_period
-
-            if self.max_freq is not None:
-                self.min_period = 1 / self.max_freq
-            elif self.min_period is not None:
-                self.max_freq =  1 / self.min_period
 
     def finalize(self):
         """
