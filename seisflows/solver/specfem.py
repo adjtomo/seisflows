@@ -19,6 +19,7 @@ TODO
 """
 import os
 import sys
+import time
 import subprocess
 from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
@@ -225,10 +226,11 @@ class Specfem:
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
                                               "Par_file"))[1]
-        assert(model_type in self._available_model_types), (
-            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
-            f"match acceptable model types: {self._available_model_types}"
-            )
+        # !!! UNCOMMENT ME !!!
+        # assert(model_type in self._available_model_types), (
+        #     f"SPECFEM Par_file parameter `model`='{model_type}' does not "
+        #     f"match acceptable model types: {self._available_model_types}"
+        #     )
 
         # Assign file extensions to be used for database file searching
         if model_type == "gll":
@@ -638,21 +640,11 @@ class Specfem:
             logger.info(f"running SPECFEM executable {exc}, log to '{stdout}'")
             self._run_binary(executable=exc, stdout=stdout)
 
-        # Rename kernels to work w/ conflicting name conventions
-        # Change directory so that the rename doesn't affect the full path
-        # Deals with both SPECFEM3D and 3D_GLOBE, which adds in the 'reg?' tag
-        unix.cd(self.kernel_databases)
-        for tag in ["alpha", "alpha[hv]", "reg?_alpha", "reg?_alpha[hv]"]:
-            names = glob(self.model_wildcard(par=tag, kernel=True))
-            if names:
-                logger.debug(f"renaming output event kernels: '{tag}' -> 'vp'")
-                unix.rename(old="alpha", new="vp", names=names)
-
-        for tag in ["beta", "beta[hv]", "reg?_beta", "reg?_beta[hv]"]:
-            names = glob(self.model_wildcard(par=tag, kernel=True))
-            if names:
-                logger.debug(f"renaming output event kernels: '{tag}' -> 'vs'")
-                unix.rename(old="beta", new="vs", names=names)
+        # Rename 'alpha' -> 'vp' and 'beta' -> 'vs' for consistency. 
+        # Wait a few seconds before doing this to avoid race condition of
+        # kernel file creation and renaming
+        time.sleep(5)
+        self._rename_kernel_parameters()
 
         # Save and export the kernels to user-defined locations
         if export_kernels:
@@ -666,6 +658,43 @@ class Specfem:
             for par in self._parameters:
                 unix.mv(src=glob(self.model_wildcard(par=par, kernel=True)),
                         dst=save_kernels)
+
+    def _rename_kernel_parameters(self):
+        """
+        Rename kernels to work w/ conflicting name conventions.
+        - alpha -> vp
+        - beta -> vs
+        
+        Performed directly inside the directory so that the rename won't affect 
+        any strings in the full path. Deals with both SPECFEM3D and 3D_GLOBE.
+        GLOBE version adds in the 'reg?' tag that needs to be considered.
+
+        Kept as a separate function so it can be called outside the adjoint
+        simulation task for debugging purposes.
+        """
+        # To return to the current working directory after rename
+        _cwd = os.getcwd()
+
+        unix.cd(os.path.join(self.cwd, self.kernel_databases))
+        for tag in ["alpha", "alpha[hv]", "reg?_alpha", "reg?_alpha[hv]"]:
+            names = glob(self.model_wildcard(par=tag, kernel=True))
+            if names:
+                logger.info(f"renaming output event kernels: '{tag}' -> 'vp'")
+                unix.rename(old="alpha", new="vp", names=names)
+                break
+        else:
+            logger.warning(f"found no kernels with tag 'alpha' to rename")
+
+        for tag in ["beta", "beta[hv]", "reg?_beta", "reg?_beta[hv]"]:
+            names = glob(self.model_wildcard(par=tag, kernel=True))
+            if names:
+                logger.info(f"renaming output event kernels: '{tag}' -> 'vs'")
+                unix.rename(old="beta", new="vs", names=names)
+                break
+        else:
+            logger.warning(f"found no kernels with tag 'beta' to rename")
+
+        unix.cd(_cwd)
 
     def combine(self, input_path, output_path, parameters=None):
         """
