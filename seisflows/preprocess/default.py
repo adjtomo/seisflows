@@ -706,12 +706,14 @@ class Default:
         :rtype: (obspy.core.stream.Stream, obspy.core.stream.Stream)
         :return: `st_a` (resampled), `st_b`
         """
-        for st_a, st_b in zip(st_a, st_b):
+        for tr_a, tr_b in zip(st_a, st_b):
+            sr_a = tr_a.stats.sampling_rate
+            sr_b = tr_b.stats.sampling_rate
             # Is this the correct resampling method to use?
-            if st_a.stats.sampling_rate != st_b.stats.sampling_rate:
-                logger.debug(f"resampling {st_a.get_id()} to match "
-                             f"{st_b.get_id()}")
-                st_a.resample(sampling_rate=st_b.stats.sampling_rate)
+            if sr_a != sr_b:
+                logger.debug(f"resampling '{st_a.get_id()}' {sr_a}->{sr_b} Hz")
+                # Resample in place
+                tr_a.resample(sampling_rate=tr_b.stats.sampling_rate)
 
         return st_a, st_b
 
@@ -788,11 +790,9 @@ class Default:
         :rtype: obspy.core.stream.Stream
         :return: stream with normalized traces
         """
-        st_out = st.copy()
-
         # Normalize each trace by its L1 norm
         if self.normalize.upper() == "TNORML1":
-            for tr in st_out:
+            for tr in st:
                 w = np.linalg.norm(tr.data, ord=1)
                 if w < 0:
                     logger.warning(f"CAUTION: L1 Norm for {tr.get_id()} is "
@@ -801,7 +801,7 @@ class Default:
                 tr.data /= w
         # Normalize each trace by its L2 norm
         elif self.normalize.upper() == "TNORML2":
-            for tr in st_out:
+            for tr in st:
                 w = np.linalg.norm(tr.data, ord=2)
                 if w < 0:
                     logger.warning(f"CAUTION: L2 Norm for {tr.get_id()} is "
@@ -810,17 +810,17 @@ class Default:
                 tr.data /= w
         # Normalize each trace by its maximum positive amplitude
         elif self.normalize.upper() == "TNORM_MAX":
-            for tr in st_out:
+            for tr in st:
                 w = np.max(tr.data)
                 tr.data /= w
         # Normalize each trace by the maximum amplitude (neg or pos) 
         elif self.normalize.upper() == "TNORM_ABSMAX":
-            for tr in st_out:
+            for tr in st:
                 w = np.abs(tr.max())
                 tr.data /= w
         # Normalize by the mean of absolute trace amplitudes
         elif self.normalize.upper() == "TNORM_MEAN":
-            for tr in st_out:
+            for tr in st:
                 w = np.mean(np.abs(tr.data))
                 tr.data /= w
 
@@ -841,7 +841,7 @@ class Default:
         #     for tr in st_out:
         #         tr.data /= w
 
-        return st_out
+        return st
 
 
 def read_ascii(fid, origintime=None):
