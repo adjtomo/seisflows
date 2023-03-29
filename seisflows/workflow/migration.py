@@ -107,7 +107,7 @@ class Migration(Forward):
         Performs adjoint simulations for a single given event. File manipulation
         to ensure kernels are discoverable by other modules
         """
-        def run_adjoint_simulation():
+        def run_adjoint_simulation(**kwargs):
             """Adjoint simulation function to be run by system.run()"""
             if self.export_kernels:
                 export_kernels = os.path.join(self.path.output, "kernels",
@@ -135,7 +135,7 @@ class Migration(Forward):
         a 3D Gaussian function with user-defined horizontal and vertical
         half-widths.
         """
-        def combine_event_kernels():
+        def combine_event_kernels(**kwargs):
             """Combine event kernels into a misfit kernel"""
             logger.info("combining event kernels into single misfit kernel")
             self.solver.combine(
@@ -143,7 +143,7 @@ class Migration(Forward):
                 output_path=os.path.join(self.path.eval_grad, "misfit_kernel")
             )
 
-        def smooth_misfit_kernel():
+        def smooth_misfit_kernel(**kwargs):
             """Smooth the output misfit kernel"""
             if self.solver.smooth_h > 0. or self.solver.smooth_v > 0.:
                 logger.info(
