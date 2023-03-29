@@ -429,7 +429,8 @@ class Default:
         # !!! see note in docstring !!!
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
-                executor.submit(self._quantify_misfit_single, o, s)
+                executor.submit(self._quantify_misfit_single, o, s, 
+                                save_residuals, save_adjsrcs)
                 for (o, s) in zip(obs, syn)
             ]
         if save_residuals:
@@ -612,6 +613,7 @@ class Default:
                     obs=tr_obs.data, syn=tr_syn.data,
                     nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
                 )
+                logger.debug(f"{tr_syn.get_id()} residual={residual:.3E}")
             else:
                 residual = 0
 
@@ -626,6 +628,7 @@ class Default:
                 fid = os.path.basename(syn_fid)
                 fid = self._rename_as_adjoint_source(fid)
                 self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
+                logger.debug(f"writing adjoint source: {fid}")
 
         return residual
 
@@ -711,7 +714,7 @@ class Default:
             sr_b = tr_b.stats.sampling_rate
             # Is this the correct resampling method to use?
             if sr_a != sr_b:
-                logger.debug(f"resampling '{st_a.get_id()}' {sr_a}->{sr_b} Hz")
+                logger.debug(f"resampling '{tr_a.get_id()}' {sr_a}->{sr_b} Hz")
                 # Resample in place
                 tr_a.resample(sampling_rate=tr_b.stats.sampling_rate)
 
