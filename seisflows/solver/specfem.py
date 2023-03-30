@@ -661,7 +661,7 @@ class Specfem:
                 kernel_files = glob(self.model_wildcard(par=par, kernel=True))
                 if kernel_files:
                     logger.debug(f"copying '{par}' kernels to {export_kernels}")
-                    unix.cp(src=kernel_files, dst=export_traces)
+                    unix.cp(src=kernel_files, dst=export_kernels)
                 else:
                     logger.warning(f"no kernel files for '{par}', cant export")
 
@@ -673,7 +673,7 @@ class Specfem:
                 kernel_files = glob(self.model_wildcard(par=par, kernel=True))
                 if kernel_files:
                     logger.debug(f"moving '{par}' kernels to {save_kernels}")
-                    unix.mv(src=kernel_files, dst=export_traces)
+                    unix.mv(src=kernel_files, dst=save_kernels)
                 else:
                     logger.warning(f"no kernel files for '{par}', cant export")
 
