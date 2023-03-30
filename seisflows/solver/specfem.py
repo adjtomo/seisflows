@@ -223,18 +223,24 @@ class Specfem:
             f"No source files with prefix {self.source_prefix} found in DATA/")
 
         # Check that model type is set correctly in the Par_file
-        model_type = getpar(key="MODEL",
-                            file=os.path.join(self.path.specfem_data,
-                                              "Par_file"))[1]
-        # !!! UNCOMMENT ME !!!
-        # assert(model_type in self._available_model_types), (
-        #     f"SPECFEM Par_file parameter `model`='{model_type}' does not "
-        #     f"match acceptable model types: {self._available_model_types}"
-        #     )
+        # !!! REVERT ME !!!
+        # model_type = getpar(key="MODEL",
+        #                     file=os.path.join(self.path.specfem_data,
+        #                                       "Par_file"))[1]
+        model_type = "gll"
+        assert(model_type in self._available_model_types), (
+            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
+            f"match acceptable model types: {self._available_model_types}"
+            )
 
         # Assign file extensions to be used for database file searching
         if model_type == "gll":
             self._ext = ".bin"
+
+        if self._ext is None:
+            logger.warning("no file model/kernel file extension found, this "
+                           "may cause critical issues when looking for files. "
+                           "check SPECFEM parameter `model`")
 
         # Make sure the initial model is set and actually contains files
         assert(self.path.model_init is not None and
@@ -643,7 +649,6 @@ class Specfem:
         # Rename 'alpha' -> 'vp' and 'beta' -> 'vs' for consistency. 
         # Wait a few seconds before doing this to avoid race condition of
         # kernel file creation and renaming
-        time.sleep(5)
         self._rename_kernel_parameters()
 
         # Save and export the kernels to user-defined locations
@@ -651,7 +656,8 @@ class Specfem:
             unix.mkdir(export_kernels)
             for par in self._parameters:
                 unix.cp(src=glob(self.model_wildcard(par=par, kernel=True)),
-                        dst=export_kernels)
+			dst=export_traces
+		)
 
         if save_kernels:
             unix.mkdir(save_kernels)
@@ -672,9 +678,6 @@ class Specfem:
         Kept as a separate function so it can be called outside the adjoint
         simulation task for debugging purposes.
         """
-        # To return to the current working directory after rename
-        _cwd = os.getcwd()
-
         unix.cd(os.path.join(self.cwd, self.kernel_databases))
         for tag in ["alpha", "alpha[hv]", "reg?_alpha", "reg?_alpha[hv]"]:
             names = glob(self.model_wildcard(par=tag, kernel=True))
@@ -694,7 +697,8 @@ class Specfem:
         else:
             logger.warning(f"found no kernels with tag 'beta' to rename")
 
-        unix.cd(_cwd)
+        # Return to the current working directory after rename
+        unix.cd(self.cwd)
 
     def combine(self, input_path, output_path, parameters=None):
         """
