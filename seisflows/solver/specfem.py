@@ -682,20 +682,14 @@ class Specfem:
         for tag in ["alpha", "alpha[hv]", "reg?_alpha", "reg?_alpha[hv]"]:
             names = glob(self.model_wildcard(par=tag, kernel=True))
             if names:
-                logger.info(f"renaming output event kernels: '{tag}' -> 'vp'")
+                logger.info(f"renaming {len(names)} kernels: '{tag}' -> 'vp'")
                 unix.rename(old="alpha", new="vp", names=names)
-                break
-        else:
-            logger.warning(f"found no kernels with tag 'alpha' to rename")
 
         for tag in ["beta", "beta[hv]", "reg?_beta", "reg?_beta[hv]"]:
             names = glob(self.model_wildcard(par=tag, kernel=True))
             if names:
-                logger.info(f"renaming output event kernels: '{tag}' -> 'vs'")
+                logger.info(f"renaming {len(names)} kernels: '{tag}' -> 'vs'")
                 unix.rename(old="beta", new="vs", names=names)
-                break
-        else:
-            logger.warning(f"found no kernels with tag 'beta' to rename")
 
         # Return to the current working directory after rename
         unix.cd(self.cwd)
