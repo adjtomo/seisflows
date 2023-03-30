@@ -651,19 +651,31 @@ class Specfem:
         # kernel file creation and renaming
         self._rename_kernel_parameters()
 
-        # Save and export the kernels to user-defined locations
+        # Kernel export and saving must take place within the kernel directory
+        unix.cd(os.path.join(self.cwd, self.kernel_databases))
+
+        # Export kernels: copy them to some external directory for storage
         if export_kernels:
             unix.mkdir(export_kernels)
             for par in self._parameters:
-                unix.cp(src=glob(self.model_wildcard(par=par, kernel=True)),
-			dst=export_traces
-		)
+                kernel_files = glob(self.model_wildcard(par=par, kernel=True))
+                if kernel_files:
+                    logger.debug(f"copying '{par}' kernels to {export_kernels}")
+                    unix.cp(src=kernel_files, dst=export_traces)
+                else:
+                    logger.warning(f"no kernel files for '{par}', cant export")
 
+        # Save kernels: move kernels to an internal directory for later steps
+        #   so they don't get overwritten by future adjoint simulations
         if save_kernels:
             unix.mkdir(save_kernels)
             for par in self._parameters:
-                unix.mv(src=glob(self.model_wildcard(par=par, kernel=True)),
-                        dst=save_kernels)
+                kernel_files = glob(self.model_wildcard(par=par, kernel=True))
+                if kernel_files:
+                    logger.debug(f"moving '{par}' kernels to {save_kernels}")
+                    unix.mv(src=kernel_files, dst=export_traces)
+                else:
+                    logger.warning(f"no kernel files for '{par}', cant export")
 
     def _rename_kernel_parameters(self):
         """
@@ -679,6 +691,7 @@ class Specfem:
         simulation task for debugging purposes.
         """
         unix.cd(os.path.join(self.cwd, self.kernel_databases))
+
         for tag in ["alpha", "alpha[hv]", "reg?_alpha", "reg?_alpha[hv]"]:
             names = glob(self.model_wildcard(par=tag, kernel=True))
             if names:
@@ -690,9 +703,6 @@ class Specfem:
             if names:
                 logger.info(f"renaming {len(names)} kernels: '{tag}' -> 'vs'")
                 unix.rename(old="beta", new="vs", names=names)
-
-        # Return to the current working directory after rename
-        unix.cd(self.cwd)
 
     def combine(self, input_path, output_path, parameters=None):
         """
