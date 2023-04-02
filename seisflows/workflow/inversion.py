@@ -22,6 +22,7 @@ import os
 import sys
 import numpy as np
 
+from glob import glob
 from seisflows import logger
 from seisflows.workflow.migration import Migration
 from seisflows.tools import msg, unix
@@ -224,6 +225,10 @@ class Inversion(Migration):
         logger.debug(f"quantifying misfit with "
                      f"'{self.preprocess.__class__.__name__}'")
 
+        save_residuals = save_residuals.format(src=self.solver.source_name,
+                                               it=str(self.iteration),
+                                               sc=str(self.optimize.step_count + 1))
+
         self.preprocess.quantify_misfit(
             source_name=self.solver.source_name,
             save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
@@ -270,12 +275,14 @@ class Inversion(Migration):
                      self.evaluate_objective_function],
                     path_model=path_model,
                     save_residuals=os.path.join(self.path.eval_grad,
-                                                "residuals.txt")
+                                                "residuals_{src}_{it}_{sc}.txt")
                 )
 
         # Override function to sum residuals into the optimization library
-        residuals = np.loadtxt(os.path.join(self.path.eval_grad,
-                                            "residuals.txt"))
+        residuals_files = glob(os.path.join(self.path.eval_grad,
+                            f"residuals_*_{self.iteration}_{self.optimize.step_count + 1}.txt"))
+
+        residuals = self.preprocess.read_residuals(residuals_files)
         total_misfit = self.preprocess.sum_residuals(residuals)
         self.optimize.save_vector(name="f_new", m=total_misfit)
 
@@ -419,10 +426,14 @@ class Inversion(Migration):
             [self.run_forward_simulations,
              self.evaluate_objective_function],
             path_model=os.path.join(self.path.eval_func, "model"),
-            save_residuals=os.path.join(self.path.eval_func, "residuals.txt")
+            save_residuals=os.path.join(self.path.eval_func,
+                                        "residuals_{src}_{it}_{sc}.txt")
         )
-        residuals = np.loadtxt(os.path.join(self.path.eval_func,
-                                            "residuals.txt"))
+
+        residuals_files = glob(os.path.join(self.path.eval_func,
+                            f"residuals_*_{self.iteration}_{self.optimize.step_count + 1}.txt"))
+
+        residuals = self.preprocess.read_residuals(residuals_files)
         total_misfit = self.preprocess.sum_residuals(residuals)
         logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
         self.optimize.save_vector(name="f_try", m=total_misfit)
@@ -489,4 +500,3 @@ class Inversion(Migration):
             _thrifty_status = True
 
         return _thrifty_status
-

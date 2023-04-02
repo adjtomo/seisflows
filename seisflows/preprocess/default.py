@@ -668,6 +668,12 @@ class Default:
 
         return st_out
 
+    def read_residuals(self, residuals_files):
+        residuals = np.array([])
+        for residuals_file in residuals_files:
+            tmp = np.loadtxt(residuals_file)
+            residuals = np.append(residuals, tmp)
+        return residuals
 
 def read_ascii(fid, origintime=None):
     """

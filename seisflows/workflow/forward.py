@@ -339,7 +339,7 @@ class Forward:
 
         self.system.run(run_list, path_model=self.path.model_init,
                         save_residuals=os.path.join(self.path.eval_grad,
-                                                    "residuals.txt")
+                                                    "residuals_{src}_{it}_{sc}.txt")
                         )
 
     def prepare_data_for_solver(self, **kwargs):
@@ -431,6 +431,10 @@ class Forward:
             logger.debug("no preprocessing module selected, will not evaluate "
                          "objective function")
             return
+
+        save_residuals = save_residuals.format(src=self.solver.source_name,
+                                               it="1",
+                                               sc="1")
 
         logger.debug(f"quantifying misfit with "
                      f"'{self.preprocess.__class__.__name__}'")

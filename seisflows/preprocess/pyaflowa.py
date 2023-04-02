@@ -757,3 +757,10 @@ class Pyaflowa:
             for event_pdf in event_pdfs:
                 os.remove(event_pdf)
 
+
+    def read_residuals(self, residuals_files):
+        residuals = np.array([])
+        for residuals_file in residuals_files:
+            tmp = np.loadtxt(residuals_file)
+            residuals = np.append(residuals, tmp)
+        return residuals
