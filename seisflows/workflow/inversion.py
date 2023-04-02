@@ -385,6 +385,7 @@ class Inversion(Migration):
             # Save new model (m_try) and step length (alpha) for records
             self.optimize.save_vector("alpha", alpha)
             self.optimize.save_vector("m_try", m_try)
+            m_try.write(path=os.path.join(self.path.eval_func, "model"))
             del m_try  # clear potentially large model vector from memory
 
             self.optimize.finalize_search()
@@ -396,6 +397,7 @@ class Inversion(Migration):
             # Save new model (m_try) and step length (alpha) for new trial step
             self.optimize.save_vector("alpha", alpha)
             self.optimize.save_vector("m_try", m_try)
+            m_try.write(path=os.path.join(self.path.eval_func, "model"))
             del m_try  # clear potentially large model vector from memory
 
             # Checkpoint and re-run line search evaluation
