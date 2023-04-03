@@ -225,9 +225,14 @@ class Inversion(Migration):
         logger.debug(f"quantifying misfit with "
                      f"'{self.preprocess.__class__.__name__}'")
 
-        save_residuals = save_residuals.format(src=self.solver.source_name,
-                                               it=str(self.iteration),
-                                               sc=str(self.optimize.step_count + 1))
+        # If line search, add step count as suffix in the residuals file
+        if self.path.eval_func == os.path.dirname(save_residuals):
+            save_residuals = save_residuals.format(src=self.solver.source_name,
+                                                   it=str(self.iteration),
+                                                   sc=str(self.optimize.step_count + 1))
+        else:
+            save_residuals = save_residuals.format(src=self.solver.source_name,
+                                                   it=str(self.iteration))
 
         if self.export_residuals:
             export_residuals = os.path.join(self.path.output, "residuals")
@@ -281,12 +286,12 @@ class Inversion(Migration):
                      self.evaluate_objective_function],
                     path_model=path_model,
                     save_residuals=os.path.join(self.path.eval_grad,
-                                                "residuals_{src}_{it}_{sc}.txt")
+                                                "residuals_{src}_{it}.txt")
                 )
 
         # Override function to sum residuals into the optimization library
         residuals_files = glob(os.path.join(self.path.eval_grad,
-                            f"residuals_*_{self.iteration}_{self.optimize.step_count + 1}.txt"))
+                            f"residuals_*_{self.iteration}.txt"))
 
         residuals = self.preprocess.read_residuals(residuals_files)
         total_misfit = self.preprocess.sum_residuals(residuals)
