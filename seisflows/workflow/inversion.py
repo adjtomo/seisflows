@@ -289,6 +289,13 @@ class Inversion(Migration):
                                                 "residuals_{src}_{it}.txt")
                 )
 
+        # Rename exported synthetic traces so they are not overwritten by
+        # future forward simulations
+        if self.export_traces:
+            unix.mv(src=os.path.join(self.path.output, "solver"),
+                    dst=os.path.join(self.path.output,
+                                     f"solver_{self.iteration:0>2}"))
+
         # Override function to sum residuals into the optimization library
         residuals_files = glob(os.path.join(self.path.eval_grad,
                             f"residuals_*_{self.iteration}.txt"))
