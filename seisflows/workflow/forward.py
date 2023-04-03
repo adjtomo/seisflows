@@ -436,10 +436,16 @@ class Forward:
                                                it="1",
                                                sc="1")
 
+        if self.export_residuals:
+            export_residuals = os.path.join(self.path.output, "residuals")
+        else:
+            export_residuals = False
+
         logger.debug(f"quantifying misfit with "
                      f"'{self.preprocess.__class__.__name__}'")
         self.preprocess.quantify_misfit(
             source_name=self.solver.source_name,
             save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
-            save_residuals=save_residuals
+            save_residuals=save_residuals,
+            export_residuals=export_residuals
         )

@@ -229,10 +229,16 @@ class Inversion(Migration):
                                                it=str(self.iteration),
                                                sc=str(self.optimize.step_count + 1))
 
+        if self.export_residuals:
+            export_residuals = os.path.join(self.path.output, "residuals")
+        else:
+            export_residuals = False
+
         self.preprocess.quantify_misfit(
             source_name=self.solver.source_name,
             save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
             save_residuals=save_residuals,
+            export_residuals=export_residuals,
             iteration=self.iteration,
             step_count=self.optimize.step_count,
         )
