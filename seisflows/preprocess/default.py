@@ -478,8 +478,8 @@ class Default:
         return observed, synthetic
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
-                        save_adjsrcs=None, iteration=1, step_count=0,
-                        **kwargs):
+                        export_residuals=None, save_adjsrcs=None, iteration=1,
+                        step_count=0, **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
         adjoint traces. Meant to be called by solver.eval_func().
@@ -551,6 +551,12 @@ class Default:
 
         if save_adjsrcs and self._generate_adjsrc:
             self._check_adjoint_traces(source_name, save_adjsrcs, synthetic)
+
+        # Exporting residuals to disk (output/) for more permanent storage
+        if export_residuals:
+            if not os.path.exists(export_residuals):
+                unix.mkdir(export_residuals)
+            unix.cp(src=save_residuals, dst=export_residuals)
 
     def finalize(self):
         """Teardown procedures for the default preprocessing class"""
