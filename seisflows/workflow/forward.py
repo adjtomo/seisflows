@@ -54,9 +54,10 @@ class Forward:
 
     Paths
     -----
-    :type workdir: str
-    :param workdir: working directory in which to perform a SeisFlows workflow.
-        SeisFlows internal directory structure will be created here. Default cwd
+    :type path_workdir: str
+    :param path_workdir: working directory in which to perform a SeisFlows 
+        workflow. SeisFlows internal directory structure will be created here. 
+        Default cwd
     :type path_output: str
     :param path_output: path to directory used for permanent storage on disk.
         Results and exported scratch files are saved here.

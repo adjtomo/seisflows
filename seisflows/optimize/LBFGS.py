@@ -43,7 +43,7 @@ class LBFGS(Gradient):
     """
     L-BFGS Optimization
     -------------------
-    Limited memory BFGS nonlienar optimization algorithm
+    Limited memory BFGS nonlinear optimization algorithm
 
     Parameters
     ----------
