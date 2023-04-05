@@ -201,22 +201,19 @@ class Bracket:
             alpha = None
             status = "FAIL"
 
-        # Apply optional step length safeguard
-        if alpha is not None:
+        # Apply optional step length safeguard to step length
+        if status == "TRY":
             if alpha > self.step_len_max and step_count == 0:
                 alpha = 0.618034 * self.step_len_max
                 logger.info(f"try: applying initial step length "
                             f"safegaurd as alpha has exceeded maximum step "
                             f"length, alpha_new={alpha:.2E}")
-                status = "TRY"
             # Stop because safeguard prevents us from going further
-            # TODO Why is this passing? should status not be carried over?
             elif alpha > self.step_len_max:
                 alpha = self.step_len_max
-                logger.info(f"try: applying initial step length "
-                            f"safegaurd as alpha has exceeded maximum step "
-                            f"length, alpha_new={alpha:.2E}")
-                status = "PASS"
+                logger.info(f"try: applying step length safegaurd as alpha has "
+                            f"exceeded maximum allowable step length, "
+                            f"alpha_new={alpha:.2E}")
 
         return alpha, status
 
