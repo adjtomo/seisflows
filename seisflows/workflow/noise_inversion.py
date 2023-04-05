@@ -205,3 +205,8 @@ class NoiseInversion(Inversion):
         super().evaluate_initial_misfit()
 
         # Get preprocess module to rotate synthetics into proper
+
+    def perform_line_search(self):
+        """Set kernel before running line search"""
+        self._kernel = "ZZ"
+        super().perform_line_search()
