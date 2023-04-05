@@ -143,20 +143,26 @@ class NoiseInversion(Inversion):
         Modifies the `forward.run_forward_simulation` to do some additional file
         manipulations and output file redirects to prepare for noise inversion.
 
-        Internal parameter `_kernel` needs to be set by the calling functions
-        prior to running forward simulations.
+        .. note::
+
+            Internal parameter `_kernel` needs to be set by the calling
+            functions prior to running forward simulations.
 
         .. note::
+
             Must be run by system.run() so that solvers are assigned individual
             task ids/ working directories.
         """
         # Edit the force vector based on the internaly value for chosen kernel
         if self._kernel == "ZZ":
             kernel_vals = ["0.d0", "0.d0", "1.d0"]  # E,N,Z
+            save_traces = None  # save to default location
         elif self._kernel == "NN":
             kernel_vals = ["0.d0", "1.d0", "0.d0"]  # E,N,Z
+            save_traces = os.path.join(self.solver.cwd, "traces", "syn", "NN")
         elif self._kernel == "EE":
             kernel_vals = ["1.d0", "0.d0", "0.d0"]  # E,N,Z
+            save_traces = os.path.join(self.solver.cwd, "traces", "syn", "EE")
         else:
             raise NotImplementedError  # user should not get here
 
@@ -167,14 +173,43 @@ class NoiseInversion(Inversion):
                                    vals=kernel_vals, file="DATA/FORCESOLUTION",
                                    delim=":")
 
-        super().run_forward_simulations(path_model, **kwargs)
+        super().run_forward_simulations(path_model, save_traces=save_traces,
+                                        **kwargs)
 
         # TODO >redirect output `export_traces` seismograms to honor kernel name
+
+    def evaluate_objective_function(self, save_residuals=False, **kwargs):
+        """
+        Modifications to original forward function to allow quantifying
+        misfit for RR and TT kernels which require seismogram rotation.
+
+        This will be run within the `evaluate_initial_misfit` function
+        """
+        if self._kernel == "ZZ":
+            super().evaluate_objective_function()
+        else:
+            # Check if we have generated all the necessary synthetics before
+            # running preprocessing
+            nn_traces = glob(os.path.join(
+                self.solver.cwd, "traces", "syn", "NN", "*")
+            )
+            ee_traces = glob(os.path.join(
+                self.solver.cwd, "traces", "syn", "EE", "*")
+            )
+            if not nn_traces or not ee_traces:
+                logger.info("not all required synthetics present for RR/TT "
+                            "kernels, skipping preprocessing")
+
+            logger.info("rotating NN and EE synthetics to RR and TT")
+            self.preprocess.rotate_kernels(source_name=self.solver.source_name)
+
+            # !!!
 
     def generate_zz_kernels(self):
         """
         Generate Synthetic Greens Functions (SGF) for the ZZ component by
-        running simulations for each master station using a Z component force.
+        running forward simulations for each master station using a Z component
+        force, and then running an adjoint simulation to generate kernels.
         """
         # This will be referenced in `run_forward_simulations`
         self._kernel = "ZZ"
@@ -188,20 +223,43 @@ class NoiseInversion(Inversion):
     def generate_tt_rr_kernels(self):
         """
         Generate Synthetic Greens Functions (SGF) for the TT and/or RR
-        component(s) by running simulations for each master station using an
-        N and E component force (separately), rotating the components to T and
-        R, and then reinjecting .
+        component(s) following Wang et al. (2019).
 
-        This is slightly more complicated than the ZZ case because we need to
-        retain both the E and N kernels for rotation and adjoint simulations.
+        .. note::
+
+            This is significantly more complicated than the ZZ case because we
+            need to rotate back and forth between the N and E simulations, and
+            the R and T EGFs.
+
+        Workflow steps are as follows:
+
+        1. Run E component forward simulation, save traces & forward arrays
+        2. Run N component forward simulations, save traces & forward arrays
+        3. Rotate N and E component SGF to R and T components based on
+           source-receiver azimuth values
+        4. Calculate RR and TT adjoint sources (u_rr, u_tt) w.r.t EGF data
+
+        5a. Rotate u_tt to N and E (u_ee, u_en, u_ne, u_nn)
+        6a. Run ET adjoint simulation (injecting u_ee, u_en) for K_ET
+        7a. Run NT adjoint simulation (injecting u_ne, u_nn) for K_NT
+        8a. Sum T kernels, K_ET + K_NT = K_TT
+
+        5a. Rotate u_rr to N and E (u_ee, u_en, u_ne, u_nn)
+        6b. Run ER adjoint simulation (injecting u_ee, u_en) for K_ER
+        7b. Run NR adjoint simulation (injecting u_ne, u_nn) for K_NR
+        8b. Sum R kernels, K_ER + K_NR = K_RR
+
+        9. Sum kernels K = K_RR + K_TT
         """
+        logger.info(msg.mnr("EVALUATING RR/TT MISFIT FOR INITIAL MODEL"))
+
         # Run the forward solver to generate ET SGFs and adjoint sources
+        # Note, this must be run BEFORE 'NN' to get preprocessing to work
         self._kernel = "EE"
         super().evaluate_initial_misfit()
 
-
         # Run the forward solver to generate SGFs and adjoint sources
-        self._kernel = "NT"
+        self._kernel = "NN"
         super().evaluate_initial_misfit()
 
         # Get preprocess module to rotate synthetics into proper

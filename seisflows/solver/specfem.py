@@ -19,7 +19,6 @@ TODO
 """
 import os
 import sys
-import time
 import subprocess
 from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
@@ -312,7 +311,6 @@ class Specfem:
                     msg.cli(str(e), header="model read error", border="=")
                 )
                 sys.exit(-1)
-                                                                
 
     def set_parameters(self, keys, vals, file, delim):
         """

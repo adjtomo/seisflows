@@ -29,7 +29,9 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
         formatted 'STATION NETWORK LATITUDE LONGITUDE ELEVATION BURIAL',
         elevant and burial will not be used
     :type source_file: str
-    :param source_file: tells SeisFlows what type of file we are using, which
+    :param source_file: path to 
+    :type source_type: str
+    :param source_type: tells SeisFlows what type of file we are using, which
         in turn defines the specific keys and delimiters to use when editing 
         the source file. 
 
