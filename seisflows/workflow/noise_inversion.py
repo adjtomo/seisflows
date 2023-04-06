@@ -56,10 +56,17 @@ class NoiseInversion(Inversion):
         super().__init__(**kwargs)
 
         self.kernels = kernels.upper()
-        self._kernel = None
+
+        # Specifies the force direction that we will use for simulations
+        self._force = None
 
     def check(self):
-        """Additional checks for the Noise Inversion Workflow"""
+        """
+        Additional checks for the Noise Inversion Workflow
+        """
+        assert(self.preprocess.__class__.__name__ == "Noise"), \
+            f"Noise Inversion workflow require the `noise` preprocessing class"
+
         super().check()
 
         acceptable_kernels = {"ZZ", "TT", "RR"}
@@ -126,7 +133,7 @@ class NoiseInversion(Inversion):
         # but change the expected location of data which needs to be categorized
         # by kernel type
         src = os.path.join(
-            self.path.data, self.solver.source_name, self._kernel, "*"
+            self.path.data, self.solver.source_name, self._force, "*"
         )
         super().prepare_data_for_solver(_src=src)
 
@@ -156,15 +163,15 @@ class NoiseInversion(Inversion):
         # Edit the force vector based on the internaly value for chosen kernel
         # !!! Try to define 'save_traces' as a variable, also defined in
         # !!! preprocess.noise
-        if self._kernel == "ZZ":
+        if self._force == "Z":
             kernel_vals = ["0.d0", "0.d0", "1.d0"]  # E,N,Z
             save_traces = None  # save to default location
-        elif self._kernel == "NN":
+        elif self._force == "N":
             kernel_vals = ["0.d0", "1.d0", "0.d0"]  # E,N,Z
-            save_traces = os.path.join(self.solver.cwd, "traces", "syn", "NN")
-        elif self._kernel == "EE":
+            save_traces = os.path.join(self.solver.cwd, "traces", "syn", "N")
+        elif self._force == "E":
             kernel_vals = ["1.d0", "0.d0", "0.d0"]  # E,N,Z
-            save_traces = os.path.join(self.solver.cwd, "traces", "syn", "EE")
+            save_traces = os.path.join(self.solver.cwd, "traces", "syn", "E")
         else:
             raise NotImplementedError  # user should not get here
 
@@ -187,24 +194,27 @@ class NoiseInversion(Inversion):
 
         This will be run within the `evaluate_initial_misfit` function
         """
-        if self._kernel == "ZZ":
+        if self._force == "Z":
             super().evaluate_objective_function()
         else:
             # Check if we have generated all the necessary synthetics before
             # running preprocessing
-            nn_traces = glob(os.path.join(
-                self.solver.cwd, "traces", "syn", "NN", "*")
+            n_traces = glob(os.path.join(
+                self.solver.cwd, "traces", "syn", "N", "*")
             )
-            ee_traces = glob(os.path.join(
-                self.solver.cwd, "traces", "syn", "EE", "*")
+            e_traces = glob(os.path.join(
+                self.solver.cwd, "traces", "syn", "E", "*")
             )
-            if not nn_traces or not ee_traces:
+            if not n_traces or not e_traces:
                 logger.info("not all required synthetics present for RR/TT "
                             "kernels, skipping preprocessing")
+                return
 
             logger.info("rotating NN and EE synthetics to RR and TT")
             self.preprocess.rotate_ne_traces_to_rt(
-                source_name=self.solver.source_name
+                source_name=self.solver.source_name,
+                data_wildcard=self.solver.data_wildcard(comp="{}"),
+                kernels=self.kernels.split(",")
             )
 
             # !!!
@@ -216,7 +226,7 @@ class NoiseInversion(Inversion):
         force, and then running an adjoint simulation to generate kernels.
         """
         # This will be referenced in `run_forward_simulations`
-        self._kernel = "ZZ"
+        self._force = "Z"
 
         # Run the forward solver to generate SGFs and adjoint sources
         super().evaluate_initial_misfit()
@@ -259,16 +269,16 @@ class NoiseInversion(Inversion):
 
         # Run the forward solver to generate ET SGFs and adjoint sources
         # Note, this must be run BEFORE 'NN' to get preprocessing to work
-        self._kernel = "EE"
+        self._force = "E"
         super().evaluate_initial_misfit()
 
         # Run the forward solver to generate SGFs and adjoint sources
-        self._kernel = "NN"
+        self._force = "N"
         super().evaluate_initial_misfit()
 
         # Get preprocess module to rotate synthetics into proper
 
     def perform_line_search(self):
         """Set kernel before running line search"""
-        self._kernel = "ZZ"
+        self._force = "Z"
         super().perform_line_search()

@@ -85,7 +85,7 @@ class Inversion(Migration):
         # Append an additional path for line search function evaluations
         self.path["eval_func"] = path_eval_func or \
                                  os.path.join(self.path.workdir, "scratch",
-                                           "eval_func")
+                                              "eval_func")
 
         # Internal attribute for keeping track of inversion
         self._optimize_name = optimize
