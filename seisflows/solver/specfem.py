@@ -988,9 +988,10 @@ class Specfem:
         dst = os.path.join(cwd, "bin", "")
         unix.cp(src, dst)
 
-        # Copy all input DATA/ files except the source files
+        # Copy in all input DATA/ file that are not '{source_prefix}*'
         src = glob(os.path.join(self.path.specfem_data, "*"))
-        src = [_ for _ in src if self.source_prefix not in _]
+        src = [_ for _ in src if not
+               os.path.basename(_).startswith(self.source_prefix)]
         dst = os.path.join(cwd, "DATA", "")
         unix.cp(src, dst)
 
