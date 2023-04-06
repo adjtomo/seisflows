@@ -210,7 +210,7 @@ class NoiseInversion(Inversion):
                             "kernels, skipping preprocessing")
                 return
 
-            logger.info("rotating NN and EE synthetics to RR and TT")
+            logger.info("rotating N and E synthetics to R and T")
             self.preprocess.rotate_ne_traces_to_rt(
                 source_name=self.solver.source_name,
                 data_wildcard=self.solver.data_wildcard(comp="{}"),
