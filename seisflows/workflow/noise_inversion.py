@@ -154,6 +154,8 @@ class NoiseInversion(Inversion):
             task ids/ working directories.
         """
         # Edit the force vector based on the internaly value for chosen kernel
+        # !!! Try to define 'save_traces' as a variable, also defined in
+        # !!! preprocess.noise
         if self._kernel == "ZZ":
             kernel_vals = ["0.d0", "0.d0", "1.d0"]  # E,N,Z
             save_traces = None  # save to default location
@@ -201,7 +203,9 @@ class NoiseInversion(Inversion):
                             "kernels, skipping preprocessing")
 
             logger.info("rotating NN and EE synthetics to RR and TT")
-            self.preprocess.rotate_kernels(source_name=self.solver.source_name)
+            self.preprocess.rotate_ne_traces_to_rt(
+                source_name=self.solver.source_name
+            )
 
             # !!!
 

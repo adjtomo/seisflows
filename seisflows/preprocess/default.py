@@ -444,7 +444,8 @@ class Default:
             # Simply wait for all processes to finish before proceeding
             wait(futures)
 
-    def _setup_quantify_misfit(self, source_name, save_adjsrcs=None):
+    def _setup_quantify_misfit(self, source_name, save_adjsrcs=None,
+                               obs_path=None, syn_path=None):
         """
         Gather a list of filenames of matching waveform IDs that can be
         run through the misfit quantification step. Perform some checks to
@@ -472,6 +473,14 @@ class Default:
 
         :type source_name: str
         :param source_name: the name of the source to process
+        :type obs_path: str
+        :param obs_path: optional overwrite parameter to tell preprocessing
+            where to look for 'observed' waveform files to be read. Defaults
+            to `scratch/solver/<source_name>/traces/obs`
+        :type syn_path: str
+        :param syn_path: optional overwrite parameter to tell preprocessing
+            where to look for 'observed' waveform files to be read. Defaults
+            to `scratch/solver/<source_name>/traces/syn`
         :rtype: list of tuples
         :return: [(observed filename, synthetic filename)]. tuples will contain
             filenames for matching stations + component for obs and syn

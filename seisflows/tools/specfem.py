@@ -7,6 +7,7 @@ import numpy as np
 import shutil
 from glob import glob
 from seisflows.tools import msg
+from seisflows.tools.config import Dict
 
 
 def convert_stations_to_sources(stations_file, source_file, source_type,
@@ -75,6 +76,29 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
         with open(new_source, "w") as f:
             f.write(f"FORCE{i:0>3}\n")
             f.writelines(lines[1:])
+
+
+def read_stations(stations_file):
+    """
+    Read the SPECFEM STATIONS file to get metadata information about stations.
+    This functionality is required in a few preprocessing or utility functions
+
+    :type stations_file: str
+    :param stations_file: full path to STATIONS file that will be read. We
+        assume the structure of the STATIONS file to be a text file with the
+        first 4 columns defining 'station ID, network ID, latitude, longitude'
+    :rtype: Dict
+    :return: keys are `network_station` and values are dictionaries contianing
+        'lat' and 'lon' for latitude and longitude values
+    """
+    sta_dict = {}
+    stations = np.loadtxt(stations_file, dtype=str)
+    for i, sta in enumerate(stations):
+        station, network, latitude, longitude, *_ = sta
+        sta_dict[f"{network}_{station}"] = {"latitude": float(latitude),
+                                            "longitude": float(longitude)
+                                            }
+    return Dict(sta_dict)
 
 
 def check_source_names(path_specfem_data, source_prefix, ntask=None):
