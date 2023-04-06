@@ -74,7 +74,7 @@ class Specfem3D(Specfem):
         # Work-in-progress
         # self.combine_vol_data_vtk()
 
-    def data_wildcard(self, net="*", sta="*", comp="?"):
+    def data_wildcard(self, comp="?"):
         """
         Returns a wildcard identifier for synthetic data
 
@@ -86,7 +86,7 @@ class Specfem3D(Specfem):
         if self.syn_data_format.upper() == "SU":
             return f"*_d?_SU"
         elif self.syn_data_format.upper() == "ASCII":
-            return f"{net}.{sta}.?X{comp}.sem?"
+            return f"*.?X{comp}.sem?"
 
     @property
     def model_databases(self):

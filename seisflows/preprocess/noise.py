@@ -102,8 +102,8 @@ class Noise(Default):
         :type data_wildcard: str
         :param data_wildcard: wildcard string that is used to find waveform
             data. Should match the `solver` module attribute, and have an
-            empty string formatter that will be used to specify the component.
-            E.g., '*.?X{}.sem.ascii'
+            empty string formatter that will be used to specify 'net', 'sta',
+            and 'comp'. E.g., '{net}.{sta}.?X{comp}.sem.ascii'
         :type kernels: str
         :param kernels: comma-separated list of kernels to consider writing
             files for. Saves on file overhead by not writing files that are
@@ -135,8 +135,7 @@ class Noise(Default):
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
                 executor.submit(self._rotate_ne_trace_to_rt,
-                                source_name, kernels,
-                                f_nn, f_ne, f_en, f_ee)
+                                source_name, f_nn, f_ne, f_en, f_ee, kernels)
                 for f_nn, f_ne, f_en, f_ee in zip(fids_nn, fids_ne,
                                                   fids_en, fids_ee)
                 ]
@@ -150,6 +149,13 @@ class Noise(Default):
         a single source station and receiver station pair and their
         respective azimuth values
 
+        .. warning::
+
+            This function makes a lot of assumptions about the directory
+            structure and the file naming scheme of synthetics. It is quite
+            inflexible and any changes to how SeisFlows treats the solver
+            directories or how SPECFEM creates synthetics may break it.
+
         .. note::
 
             We are assuming the structure of the filename is something
@@ -157,23 +163,35 @@ class Noise(Default):
 
         :type source_name: str
         :param source_name: the name of the source to process
+        :type f_nn: str
+        :param f_nn: path to the NN synthetic waveform (N force, N component)
+        :type f_ne: str
+        :param f_ne: path to the NE synthetic waveform (N force, E component)
+        :type f_en: str
+        :param f_en: path to the EN synthetic waveform (E force, N component)
+        :type f_nn: str
+        :param f_nn: path to the NN synthetic waveform (N force, N component)
         :type kernels: str
         :param kernels: comma-separated list of kernels to consider writing
             files for. Available are 'TT' and 'RR'. To do both, set as
             'RR,TT' (order insensitive)
         """
-        traces = os.path.join(self.path.solver, source_name, "traces", "syn")
+        # Define pertinent information about files and output names
+        net, sta, cha, *ext = os.path.basename(f_nn).split(".")
+        ext = ".".join(ext)  # ['semd', 'ascii'] -> 'semd.ascii.'
 
         # Determine the source station's latitude and longitude value
         src_lat = self._stations[source_name].latitude
         src_lon = self._stations[source_name].longitude
 
-        # Determine the receiver station's name and coordinates
+        # Determine the receiver station's name and coordinates.
+        # Assuming the structure of the file name here to get the net, sta code
+        rcv_name = f"{net}_{sta}"
         rcv_lat = self._stations[rcv_name].latitude
         rcv_lon = self._stations[rcv_name].longitude
 
-        # Calculate the azimuth and prime azimuth between the two stations
-        # See Fig. 1 from Wang et al. (2019) for theta and theta' definitions
+        # Calculate the azimuth (theta) and rotated back-azimuth (theta prime)
+        # between the two stations. See Fig. 1 from Wang et al. (2019) equations
         _, az, baz = gps2dist_azimuth(lat1=src_lat, lon1=src_lon,
                                       lat2=rcv_lat, lon2=rcv_lon)
         # Theta != Theta' for a spherical Earth, but they will be close
@@ -182,6 +200,7 @@ class Noise(Default):
 
         # Read in the N/E synthetic waveforms that need to be rotated
         # First letter represents the force direction, second is component
+        # e.g., ne -> north force recorded on east component
         st_nn = self.read(f_nn, data_format=self.syn_data_format)
         st_ne = self.read(f_ne, data_format=self.syn_data_format)
         st_ee = self.read(f_ee, data_format=self.syn_data_format)
@@ -207,8 +226,12 @@ class Noise(Default):
                           )
 
         if "TT" in kernels:
-            # *.?XE.sem?* -> *.?XT.sem?*
-            self.write(st=st_tt, fid=f_ee.replace("XE.", "XT."))
+            # scratch/solver/{source_name}/traces/syn/T/NN.SSS.?XT.sem?*
+            fid_t = os.path.join(self.path.solver, source_name, "traces", "syn",
+                                 "T", f"{net}.{sta}.{cha[:2]}T.{ext}")
+            self.write(st=st_tt, fid=fid_t)
         if "RR" in kernels:
-            self.write(st=st_rr, fid=)
+            fid_r = os.path.join(self.path.solver, source_name, "traces", "syn",
+                                 "R", f"{net}.{sta}.{cha[:2]}R.{ext}")
+            self.write(st=st_rr, fid=fid_r)
 

@@ -126,7 +126,7 @@ class Specfem3DGlobe(Specfem):
                 f"`regions` must be some integer combination 1, 2 and/or 3"
                 )
 
-    def data_wildcard(self,net="*", sta="*", comp="?"):
+    def data_wildcard(self, comp="?"):
         """
         Returns a wildcard identifier for synthetic data
         Currently only support for ASCII seismograms
@@ -135,7 +135,7 @@ class Specfem3DGlobe(Specfem):
         :return: wildcard identifier for channels
         """
         if self.syn_data_format.upper() == "ASCII":
-            return f"{net}.{sta}.?X{comp}.sem.ascii"
+            return f"*.?X{comp}.sem.ascii"
 
     @property
     def kernel_databases(self):

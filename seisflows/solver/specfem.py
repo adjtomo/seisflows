@@ -381,7 +381,7 @@ class Specfem:
         """
         return os.path.join(self.path.scratch, self.source_name)
 
-    def data_wildcard(self, net="*", sta="*", comp="?"):
+    def data_wildcard(self, comp="?"):
         """
         Returns a wildcard identifier for synthetic data based on SPECFEM2D
         file naming schema. Allows formatting dcomponent e.g.,
@@ -404,7 +404,7 @@ class Specfem:
         if self.syn_data_format.upper() == "SU":
             return f"U{comp}*.su"  # e.g., Up_file_single_p.su
         elif self.syn_data_format.upper() == "ASCII":
-            return f"{net}.{sta}.??{comp}.sem?"  # e.g., AA.S000000.BXY.semd
+            return f"*.??{comp}.sem?"  # e.g., AA.S000000.BXY.semd
 
     def model_wildcard(self, par="*", kernel=False):
         """
