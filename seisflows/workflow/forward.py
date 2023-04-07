@@ -380,9 +380,9 @@ class Forward:
                     header="data import error")
                     )
                 sys.exit(-1)
-            # Default behavior, copy in source data from external directory
+            # Default behavior, symlink source data from external directory
             else:
-                unix.cp(glob(src), dst)
+                unix.ln(glob(src), dst)
 
         # CASE=='synthetic': generate synthetic 'data' from target model
         elif self.data_case == "synthetic":

@@ -138,7 +138,7 @@ class NoiseInversion(Inversion):
 
         return task_list
 
-    def syn_path(self, tag):
+    def syn_path(self, tag=""):
         """
         Convenience path function that returns the full path for storing
         intermediate waveform files for a given component. These generally
@@ -174,7 +174,7 @@ class NoiseInversion(Inversion):
             Must be run by system.run() so that solvers are assigned individual
             task ids and working directories
         """
-        # Define where the obs data is stored so we can do some manipulations
+        # Define where the obs data is stored
         dst = os.path.join(self.solver.cwd, "traces", "obs", "")
 
         # Remove any existing data that might have been placed here previously
