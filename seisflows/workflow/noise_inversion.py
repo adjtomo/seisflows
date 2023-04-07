@@ -243,7 +243,8 @@ class NoiseInversion(Inversion):
 
         # TODO >redirect output `export_traces` seismograms to honor kernel name
 
-    def evaluate_objective_function(self, save_residuals=False, **kwargs):
+    def evaluate_objective_function(self, save_residuals=False, components=None,
+                                    **kwargs):
         """
         Modifications to original forward function to allow quantifying
         misfit for RR and TT kernels which require seismogram rotation.
@@ -257,7 +258,7 @@ class NoiseInversion(Inversion):
         """
         # Z component force behaves like a normal inversion
         if self._force == "Z":
-            super().evaluate_objective_function()
+            super().evaluate_objective_function(components=["Z"])
         # E and N component force need to wait for one another
         else:
             # Check if we have generated all the necessary synthetics before
@@ -269,10 +270,6 @@ class NoiseInversion(Inversion):
                             "kernels, skipping preprocessing")
                 return
 
-            # Remove any existing synthetics in the solver directory
-            unix.rm(self.syn_path())
-            unix.mkdir(self.syn_path())
-
             # This will generate RR and TT synthetics in `traces/syn/*`
             logger.info("rotating N and E synthetics to RR and TT components")
             self.preprocess.rotate_ne_traces_to_rt(
@@ -280,8 +277,8 @@ class NoiseInversion(Inversion):
                 data_wildcard=self.solver.data_wildcard(comp="{comp}"),
                 kernels=self.kernels.split(",")
             )
-            # Run preprocessing with rotated synthetics
-            super().evaluate_objective_function()
+            # Run preprocessing with rotated synthetics for N and E only
+            super().evaluate_objective_function(components=["N", "E"])
 
     def generate_zz_kernels(self):
         """

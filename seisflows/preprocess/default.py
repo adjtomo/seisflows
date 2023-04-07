@@ -413,8 +413,10 @@ class Default:
         :type save_adjsrcs: str
         :param save_adjsrcs: if not None, path to write adjoint sources to
         :type components: list
-        :param components: optional list of components to remove stations with
-            non-matching components. Should be list of strings e.g., ['Z', 'R']
+        :param components: optional list of components to ignore preprocessing
+            traces that do not have matching components. The adjoint sources for
+            these components will be 0. E.g., ['Z', 'N']. If None, all available
+            components will be considered.
         :type iteration: int
         :param iteration: current iteration of the workflow, information should
             be provided by `workflow` module if we are running an inversion.
@@ -478,8 +480,10 @@ class Default:
         :type source_name: str
         :param source_name: the name of the source to process
         :type components: list
-        :param components: optional list of components to remove stations with
-            non-matching components. Should be list of strings e.g., ['Z', 'R']
+        :param components: optional list of components to ignore preprocessing
+            traces that do not have matching components. The adjoint sources for
+            these components will be 0. E.g., ['Z', 'N']. If None, all available
+            components will be considered.
         :rtype: list of tuples
         :return: [(observed filename, synthetic filename)]. tuples will contain
             filenames for matching stations + component for obs and syn
@@ -541,8 +545,9 @@ class Default:
         )
 
         # fmt path/to/NN.SSS.CCc* -> NN.SSS.c (see docstring note for details)
-        match_obs = self._format_fids_for_file_matching(observed, components)
-        match_syn = self._format_fids_for_file_matching(synthetic, components)
+        # and curtail based on chosen components
+        match_obs = self._curtail_fids_for_file_matching(observed, components)
+        match_syn = self._curtail_fids_for_file_matching(synthetic, components)
 
         if components:
             logger.debug(f"chosen component list {components} retained "
@@ -650,15 +655,18 @@ class Default:
 
         return residual
 
-    def _format_fids_for_file_matching(self, fid_list, components=None):
+    def _curtail_fids_for_file_matching(self, fid_list, components=None):
         """
-        Convenience function to convert NN.SSS.CCc.* -> NN.SSS.c
+        Convenience function to convert NN.SSS.CCc.* -> NN.SSS.c and also
+        curtail list of file IDs by component
 
         :type fid_list: list of str
         :param fid_list: list of file path/IDs that need to be shortened
         :type components: list
-        :param components: optional list of components to remove stations with
-            non-matching components
+        :param components: optional list of components to ignore preprocessing
+            traces that do not have matching components. The adjoint sources for
+            these components will be 0. E.g., ['Z', 'N']. If None, all available
+            components will be considered.
         :rtype: list of str
         :return: list of shortened file IDs
         """

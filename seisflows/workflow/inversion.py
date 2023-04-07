@@ -188,7 +188,7 @@ class Inversion(Migration):
 
     def checkpoint(self):
         """
-        Add an additional line in the state file to keep track of iteration,
+        Add an additional line in the state file to keep track of iteration
         """
         super().checkpoint()
         with open(self.path.state_file, "r") as f:
@@ -204,7 +204,8 @@ class Inversion(Migration):
         with open(self.path.state_file, "w") as f:
             f.writelines(lines)
 
-    def evaluate_objective_function(self, save_residuals=False, **kwargs):
+    def evaluate_objective_function(self, save_residuals=False, components=None,
+                                    **kwargs):
         """
         Overwrite evaluate objective function to include MORE input parameters
         specifying which evaluation in the inversion we are at. Also removes
@@ -214,12 +215,20 @@ class Inversion(Migration):
         .. note::
             Must be run by system.run() so that solvers are assigned individual
             task ids/ working directories.
+
+        :type save_residuals: str
+        :param save_residuals: if not None, path to write misfit/residuls to
+        :type components: list
+        :param components: optional list of components to ignore preprocessing
+            traces that do not have matching components. The adjoint sources for
+            these components will be 0. E.g., ['Z', 'N']. If None, all available
+            components will be considered.
         """
         logger.debug(f"quantifying misfit with "
                      f"'{self.preprocess.__class__.__name__}'")
 
         self.preprocess.quantify_misfit(
-            source_name=self.solver.source_name,
+            source_name=self.solver.source_name, components=components,
             save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
             save_residuals=save_residuals,
             iteration=self.iteration,

@@ -436,7 +436,8 @@ class Forward:
             export_traces=export_traces
         )
 
-    def evaluate_objective_function(self, save_residuals=False, **kwargs):
+    def evaluate_objective_function(self, save_residuals=False, components=None,
+                                    **kwargs):
         """
         Uses the preprocess module to evaluate the misfit/objective function
         given synthetics generated during forward simulations
@@ -444,6 +445,14 @@ class Forward:
         .. note::
             Must be run by system.run() so that solvers are assigned individual
             task ids/ working directories.
+
+        :type save_residuals: str
+        :param save_residuals: if not None, path to write misfit/residuls to
+        :type components: list
+        :param components: optional list of components to ignore preprocessing
+            traces that do not have matching components. The adjoint sources for
+            these components will be 0. E.g., ['Z', 'N']. If None, all available
+            components will be considered.
         """
         if self.preprocess is None:
             logger.debug("no preprocessing module selected, will not evaluate "
@@ -453,7 +462,7 @@ class Forward:
         logger.debug(f"quantifying misfit with "
                      f"'{self.preprocess.__class__.__name__}'")
         self.preprocess.quantify_misfit(
-            source_name=self.solver.source_name,
+            source_name=self.solver.source_name, components=components,
             save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
-            save_residuals=save_residuals
+            save_residuals=save_residuals,
         )
