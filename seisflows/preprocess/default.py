@@ -383,8 +383,8 @@ class Default:
         self.write(st=st, fid=os.path.join(output, adj_fid))
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
-                        save_adjsrcs=None, iteration=1, step_count=0,
-                        **kwargs):
+                        save_adjsrcs=None, components=None, iteration=1,
+                        step_count=0, **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
         adjoint traces. Meant to be called by solver.eval_func().
@@ -412,6 +412,9 @@ class Default:
         :param save_residuals: if not None, path to write misfit/residuls to
         :type save_adjsrcs: str
         :param save_adjsrcs: if not None, path to write adjoint sources to
+        :type components: list
+        :param components: optional list of components to remove stations with
+            non-matching components. Should be list of strings e.g., ['Z', 'R']
         :type iteration: int
         :param iteration: current iteration of the workflow, information should
             be provided by `workflow` module if we are running an inversion.
@@ -423,7 +426,8 @@ class Default:
         """
         # Retrieve matching obs and syn trace filenames to run through misfit
         # and initialize empty adjoint sources
-        obs, syn = self._setup_quantify_misfit(source_name, save_adjsrcs)
+        obs, syn = self._setup_quantify_misfit(source_name, save_adjsrcs,
+                                               components)
 
         # Process each pair in parallel. Max workers is the total num. of cores
         # !!! see note in docstring !!!
@@ -445,7 +449,7 @@ class Default:
             wait(futures)
 
     def _setup_quantify_misfit(self, source_name, save_adjsrcs=None,
-                               obs_path=None, syn_path=None):
+                               components=None):
         """
         Gather a list of filenames of matching waveform IDs that can be
         run through the misfit quantification step. Perform some checks to
@@ -473,14 +477,9 @@ class Default:
 
         :type source_name: str
         :param source_name: the name of the source to process
-        :type obs_path: str
-        :param obs_path: optional overwrite parameter to tell preprocessing
-            where to look for 'observed' waveform files to be read. Defaults
-            to `scratch/solver/<source_name>/traces/obs`
-        :type syn_path: str
-        :param syn_path: optional overwrite parameter to tell preprocessing
-            where to look for 'observed' waveform files to be read. Defaults
-            to `scratch/solver/<source_name>/traces/syn`
+        :type components: list
+        :param components: optional list of components to remove stations with
+            non-matching components. Should be list of strings e.g., ['Z', 'R']
         :rtype: list of tuples
         :return: [(observed filename, synthetic filename)]. tuples will contain
             filenames for matching stations + component for obs and syn
@@ -493,6 +492,9 @@ class Default:
 
         observed = sorted(os.listdir(obs_path))
         synthetic = sorted(os.listdir(syn_path))
+
+        logger.debug(f"found {len(observed)} obs and {len(synthetic)} syn "
+                     f"waveforms for event {source_name}")
 
         assert (len(observed) != 0 and len(synthetic) != 0), \
             f"cannot quantify misfit, missing observed or synthetic traces"
@@ -539,8 +541,13 @@ class Default:
         )
 
         # fmt path/to/NN.SSS.CCc* -> NN.SSS.c (see docstring note for details)
-        match_obs = self._format_fids_for_filename_matching(observed)
-        match_syn = self._format_fids_for_filename_matching(synthetic)
+        match_obs = self._format_fids_for_file_matching(observed, components)
+        match_syn = self._format_fids_for_file_matching(synthetic, components)
+
+        if components:
+            logger.debug(f"chosen component list {components} retained "
+                         f"{len(match_obs)} obs and {len(match_syn)} syn "
+                         f"waveforms for event {source_name}")
 
         # only return traces that have both observed and synthetic file match
         matching_traces = sorted(list(set(match_syn).intersection(match_obs)))
@@ -550,6 +557,8 @@ class Default:
             f"have the format 'NN.SSS.CCc*', and match on variables 'N', 'S', "
             f"and 'c'"
         )
+        logger.info(f"{source_name} has {len(matching_traces)} matching traces"
+                    f"for preprocessing")
 
         # Generate the list of full path waveform fids for matching obs + syn
         obs_paths, syn_paths = [], []
@@ -641,21 +650,35 @@ class Default:
 
         return residual
 
-    def _format_fids_for_filename_matching(self, fid_list):
+    def _format_fids_for_file_matching(self, fid_list, components=None):
         """
         Convenience function to convert NN.SSS.CCc.* -> NN.SSS.c
 
         :type fid_list: list of str
         :param fid_list: list of file path/IDs that need to be shortened
+        :type components: list
+        :param components: optional list of components to remove stations with
+            non-matching components
         :rtype: list of str
         :return: list of shortened file IDs
         """
+        # To make sure component checking does not fail on case mismatch
+        if components:
+            components = [_.upper() for _ in components]
+
         # Drop full path incase these are given as absolute paths
         full_fids = [os.path.basename(_) for _ in fid_list]
         # Split into expected format NN.SSS.CCc, drop extension
-        parts = [_.split(".")[:3] for _ in full_fids]
-        # NN.SSS.CCc -> NN.SSS.c  (drop the CC)
-        short_fids = [".".join([_[0], _[1], _[2][-1]]) for _ in parts]
+        fids = [_.split(".")[:3] for _ in full_fids]
+        short_fids = []
+        for fid in fids:
+            net, sta, cha = fid
+            comp = cha[-1]
+            # If selecting on component, ignore those that do not match list
+            if components and comp.upper() not in components:
+                continue
+            # NN.SSS.c
+            short_fids.append(f"{net}.{sta}.{comp}")
 
         return short_fids
 

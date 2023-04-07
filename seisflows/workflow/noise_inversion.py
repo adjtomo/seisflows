@@ -216,10 +216,10 @@ class NoiseInversion(Inversion):
         """
         assert(self._force is not None), (
             f"`run_forward_simulation` requires that the internal attribute " 
-            f"`_force` is set prior to running"
+            f"`_force` is set prior to running forward simulations"
         )
 
-        # Edit the force vector based on the internaly value for chosen kernel
+        # Edit the force vector based on the internal value for chosen kernel
         kernel_vals, save_traces = None, None
         if self._force == "Z":
             kernel_vals = ["0.d0", "0.d0", "1.d0"]  # [E, N, Z]
