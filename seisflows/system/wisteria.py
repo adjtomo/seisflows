@@ -12,9 +12,9 @@ Wisteria runs on the Fujitsu/PJM job scheduler.
 
 .. note:: Wisteria Caveat 1     
                                                  
-    On Wisteria you cannot submit batch jobs from compute nodes. Work around:  
-    SSHs from compute node to login node and submit. This requires knowing the 
-    User name, and ensuring SSH keys are available. See also system Frontera.
+    On Wisteria you cannot submit batch jobs from compute nodes and you cannot
+    SSH from compute nodes (Manual 5.13), so the master job must be 
+    run from the login node or the pre-post node (Manual 5.2.3)
 
 .. note:: Wisteria Caveat 2    
                                                   
@@ -82,7 +82,6 @@ class Wisteria(Fujitsu):
         """Wisteria init"""
         super().__init__(**kwargs)
 
-        self.user = user or os.environ["USER"]
         self.group = group
         self.rscgrp = rscgrp
 
