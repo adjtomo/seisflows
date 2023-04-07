@@ -191,12 +191,6 @@ class Default:
         self._step_count = None
         self._source_names = None
 
-        # Internal attribute to define where to look for data
-        self._obs_data_path = \
-            os.path.join(self.path.solver, "{}", "traces", "obs")
-        self._syn_data_path = \
-            os.path.join(self.path.solver, "{}", "traces", "syn")
-
     def check(self):
         """ 
         Checks parameters and paths
@@ -261,13 +255,13 @@ class Default:
     
         # Check that User-chosen data formats are acceptable
         assert(self.syn_data_format.upper() in
-               self._syn_acceptable_data_formats), (
+                self._syn_acceptable_data_formats), (
             f"synthetic data format must be in "
             f"{self._syn_acceptable_data_formats}"
             )
 
         assert(self.obs_data_format.upper() in
-               self._obs_acceptable_data_formats), (
+                self._obs_acceptable_data_formats), (
             f"observed data format must be in "
             f"{self._obs_acceptable_data_formats}"
             )
@@ -450,7 +444,8 @@ class Default:
             # Simply wait for all processes to finish before proceeding
             wait(futures)
 
-    def _setup_quantify_misfit(self, source_name, save_adjsrcs=None):
+    def _setup_quantify_misfit(self, source_name, save_adjsrcs=None,
+                               obs_path=None, syn_path=None):
         """
         Gather a list of filenames of matching waveform IDs that can be
         run through the misfit quantification step. Perform some checks to
@@ -478,6 +473,14 @@ class Default:
 
         :type source_name: str
         :param source_name: the name of the source to process
+        :type obs_path: str
+        :param obs_path: optional overwrite parameter to tell preprocessing
+            where to look for 'observed' waveform files to be read. Defaults
+            to `scratch/solver/<source_name>/traces/obs`
+        :type syn_path: str
+        :param syn_path: optional overwrite parameter to tell preprocessing
+            where to look for 'observed' waveform files to be read. Defaults
+            to `scratch/solver/<source_name>/traces/syn`
         :rtype: list of tuples
         :return: [(observed filename, synthetic filename)]. tuples will contain
             filenames for matching stations + component for obs and syn
@@ -485,8 +488,8 @@ class Default:
         # Get organized by looking for available data
         source_name = source_name or self._source_names[get_task_id()]
 
-        obs_path = self._obs_data_path.format(source_name)
-        syn_path = self._syn_data_path.format(source_name)
+        obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
+        syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
 
         observed = sorted(os.listdir(obs_path))
         synthetic = sorted(os.listdir(syn_path))
@@ -504,7 +507,7 @@ class Default:
         # Verify observed traces format is acceptable within this module
         obs_ext = list(set([os.path.splitext(x)[-1] for x in observed]))
         assert(len(obs_ext) == 1), (
-            f"'{obs_path}' has > 1 file formats available, but "
+            f"'{source_name}/traces/obs' has > 1 file formats available, but "
             f"only 1 ({self.obs_data_format}) was expected"
         )
         # Check if the expected file format matches the provided one
@@ -513,14 +516,15 @@ class Default:
                                                 f".SEM{self.unit_output[0]}"]
         else:
             obs_ext_ok = obs_ext[0].upper() == f".{self.obs_data_format}"
-        assert obs_ext_ok, (f"{obs_path} unexpected file format "
-                            f"{obs_ext[0].upper()} != {self.obs_data_format}"
-                            )
+        assert obs_ext_ok, (
+            f"{source_name}/traces/obs unexpected file format "
+            f"{obs_ext[0].upper()} != {self.obs_data_format}"
+        )
 
         # Do the same checks but for the synthetic waveforms
         syn_ext = list(set([os.path.splitext(x)[-1] for x in synthetic]))
         assert(len(syn_ext) == 1), (
-            f"'{syn_path}' has > 1 file formats available, but "
+            f"'{source_name}/traces/syn' has > 1 file formats available, but "
             f"only 1 ({self.syn_data_format}) was expected"
         )
         # Check if the expected file format matches the provided one
@@ -529,9 +533,10 @@ class Default:
                                                 f".SEM{self.unit_output[0]}"]
         else:
             syn_ext_ok = syn_ext[0].upper() == f".{self.syn_data_format}"
-        assert syn_ext_ok, (f"{syn_path} unexpected file format "
-                            f"{syn_ext[0].upper()} != {self.syn_data_format}"
-                            )
+        assert syn_ext_ok, (
+            f"{source_name}/traces/syn unexpected file format "
+            f"{syn_ext[0].upper()} != {self.syn_data_format}"
+        )
 
         # fmt path/to/NN.SSS.CCc* -> NN.SSS.c (see docstring note for details)
         match_obs = self._format_fids_for_filename_matching(observed)

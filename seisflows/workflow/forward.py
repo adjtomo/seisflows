@@ -339,7 +339,10 @@ class Forward:
         data in from a user-provided path, or generating synthetic 'data' using
         a target model.
 
+        This only needs to be run once per workflow
+
         .. note ::
+
             Must be run by system.run() so that solvers are assigned individual
             task ids and working directories
 
