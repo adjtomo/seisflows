@@ -382,7 +382,8 @@ class Forward:
                 sys.exit(-1)
             # Default behavior, symlink source data from external directory
             else:
-                unix.ln(glob(src), dst)
+                for src_ in glob(src):
+                    unix.ln(src_, dst)
 
         # CASE=='synthetic': generate synthetic 'data' from target model
         elif self.data_case == "synthetic":

@@ -517,6 +517,7 @@ class Default:
             f"only 1 ({self.obs_data_format}) was expected"
         )
         # Check if the expected file format matches the provided one
+        import pdb;pdb.set_trace()
         if self.obs_data_format.upper() == "ASCII":
             obs_ext_ok = obs_ext[0].upper() in [".ASCII",
                                                 f".SEM{self.unit_output[0]}"]

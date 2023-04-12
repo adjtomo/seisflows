@@ -70,7 +70,7 @@ class NoiseInversion(Inversion):
     """
     __doc__ = Inversion.__doc__ + __doc__
 
-    def __init__(self, kernels="ZZ", **kwargs):
+    def __init__(self, kernels="ZZ", preprocess="noise", **kwargs):
         """
         Initialization of the Noise Inversion Workflow module
         """
@@ -80,6 +80,7 @@ class NoiseInversion(Inversion):
 
         # Specifies the force direction requirement for simulations and naming
         self._force = None
+        self._preprocess = preprocess
 
     def check(self):
         """
@@ -87,7 +88,7 @@ class NoiseInversion(Inversion):
         """
         super().check()
 
-        assert(self.preprocess.__class__.__name__ == "Noise"), \
+        assert(self._preprocess == "noise"), \
             f"Noise Inversion workflow require the `noise` preprocessing class"
 
         acceptable_kernels = {"ZZ", "TT", "RR"}

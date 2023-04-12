@@ -620,6 +620,25 @@ class SeisFlows:
         .. rubric::
             $ seisflows swap system slurm
         """
+        # Allow swapping paths only from absolute to relative and back
+        if module == "paths":
+            if classname == "absolute":
+                fx = os.path.abspath
+            elif classname == "relative":
+                fx = os.path.relpath
+            else:
+                print(msg.cli(text="paths swap must be 'absolute', 'relative'",
+                              header="error"))
+                sys.exit(-1)
+
+            pars = load_yaml(self._args.parameter_file)
+            for key, val in pars.items():
+                if key.startswith("path") and val is not None:
+                    setpar(key=key, val=fx(val), file=self._args.parameter_file,
+                           delim=":")
+            return
+            
+
         if module not in NAMES:
             print(msg.cli(text=f"{module} does not match {NAMES}",
                           header="error"))
