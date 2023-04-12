@@ -374,7 +374,7 @@ class Forward:
             self.solver.import_model(path_model=self.path.model_true)
             self.solver.forward_simulation(
                 save_traces=os.path.join(self.solver.cwd, "traces", "obs"),
-                export_traces=export_traces
+                export_traces=export_traces, save_forward=False
             )
 
     def run_forward_simulations(self, path_model, **kwargs):
@@ -406,9 +406,16 @@ class Forward:
 
         # Run the forward simulation with the given input model
         self.solver.import_model(path_model=path_model)
+        # Forward workflows do not require saving the large forward arrays
+        # because the assumption is that we will not be running adj simulations
+        if self.__class__.__name__ == "Forward":
+            save_forward = False
+            logger.info("Forward workflow, will not save forward arrays")
+        else:
+            save_forward = True
         self.solver.forward_simulation(
             save_traces=os.path.join(self.solver.cwd, "traces", "syn"),
-            export_traces=export_traces
+            export_traces=export_traces, save_forward=save_forward
         )
 
     def evaluate_objective_function(self, save_residuals=False, **kwargs):
