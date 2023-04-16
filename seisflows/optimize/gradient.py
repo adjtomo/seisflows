@@ -247,7 +247,9 @@ class Gradient:
                         step_lens=self._line_search.step_lens,
                         gtg=self._line_search.gtg,
                         gtp=self._line_search.gtp,
-                        step_count=self._line_search.step_count)
+                        step_count=self._line_search.step_count,
+                        step_len_max=self._line_search.step_len_max
+                       )
 
         np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
 
@@ -272,6 +274,7 @@ class Gradient:
             self._line_search.gtg = list(dict_in["gtg"])
             self._line_search.gtp = list(dict_in["gtp"])
             self._line_search.step_count = int(dict_in["step_count"])
+            self._line_search.step_len_max = float(dict_in["step_len_max"])
         else:
             logger.info("no optimization checkpoint found, assuming first run")
             self.checkpoint()
