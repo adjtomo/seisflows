@@ -339,7 +339,7 @@ class Forward:
 
         self.system.run(run_list, path_model=self.path.model_init,
                         save_residuals=os.path.join(self.path.eval_grad,
-                                                    "residuals_{src}_{it}.txt")
+                                                    "residuals_{src}_{it}_0.txt")
                         )
 
     def prepare_data_for_solver(self, **kwargs):
@@ -425,8 +425,9 @@ class Forward:
                          "objective function")
             return
 
-        save_residuals = save_residuals.format(src=self.solver.source_name,
-                                               it="1")
+        if save_residuals:
+            save_residuals = save_residuals.format(src=self.solver.source_name,
+                                                   it="1")
 
         if self.export_residuals:
             export_residuals = os.path.join(self.path.output, "residuals")
