@@ -110,7 +110,7 @@ class Specfem3D(Specfem):
         return self.model_databases
 
     def forward_simulation(self, executables=None, save_traces=False,
-                           export_traces=False, **kwargs):
+                           export_traces=False, save_forward=True, **kwargs):
         """
         Calls SPECFEM3D forward solver, exports solver outputs to traces dir
 
@@ -130,6 +130,10 @@ class Specfem3D(Specfem):
         :param export_traces: export traces from the scratch directory to a more
             permanent storage location. i.e., copy files from their original
             location
+        :type save_forward: bool
+        :param save_forward: whether to turn on the flag for saving the forward
+            arrays which are used for adjoint simulations. Not required if only
+            running forward simulations.
         """
         unix.cd(self.cwd)
 
@@ -149,7 +153,8 @@ class Specfem3D(Specfem):
 
         super().forward_simulation(executables=executables,
                                    save_traces=save_traces,
-                                   export_traces=export_traces
+                                   export_traces=export_traces,
+                                   save_forward=save_forward
                                    )
 
         if self.prune_scratch:
