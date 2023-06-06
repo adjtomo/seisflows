@@ -414,6 +414,10 @@ class Forward:
             Must be run by system.run() so that solvers are assigned individual
             task ids/ working directories.
         """
+        # Allow overriding Workflows to change the default directory structure
+        save_traces = kwargs.get("save_traces", 
+                                 os.path.join(self.solver.cwd, "traces", "syn"))
+
         assert(os.path.exists(path_model)), \
             f"Model path for objective function does not exist"
 
@@ -439,10 +443,10 @@ class Forward:
             logger.info("Forward workflow, will not save forward arrays")
         else:
             save_forward = True
-        self.solver.forward_simulation(
-            save_traces=os.path.join(self.solver.cwd, "traces", "syn"),
-            export_traces=export_traces, save_forward=save_forward
-        )
+
+        self.solver.forward_simulation(save_traces=save_traces,
+                export_traces=export_traces, save_forward=save_forward
+                )
 
     def evaluate_objective_function(self, save_residuals=False, components=None,
                                     **kwargs):

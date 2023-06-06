@@ -332,10 +332,12 @@ class NoiseInversion(Inversion):
         # Run the forward solver to generate ET SGFs and adjoint sources
         # Note, this must be run BEFORE 'NN' to get preprocessing to work
         self._force = "E"
+        logger.info("running misfit evaluation for component {self._force}")
         super().evaluate_initial_misfit()
 
         # Run the forward solver to generate SGFs and adjoint sources
         self._force = "N"
+        logger.info("running misfit evaluation for component {self._force}")
         super().evaluate_initial_misfit()
 
         # Get preprocess module to rotate synthetics into proper
