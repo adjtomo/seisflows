@@ -248,8 +248,9 @@ class NoiseInversion(Inversion):
     def evaluate_objective_function(self, save_residuals=False, components=None,
                                     **kwargs):
         """
-        Modifications to original forward function to allow quantifying
-        misfit for RR and TT kernels which require seismogram rotation.
+        Modifications to original Inverse workflow function to allow quantifying
+        misfit for RR and TT kernels which require seismogram rotations prior 
+        to running preprocessing.
 
         This will be run within the `evaluate_initial_misfit` function
 
@@ -290,8 +291,9 @@ class NoiseInversion(Inversion):
                 kernels=self.kernels
             )
             # Run preprocessing with rotated synthetics for N and E only
-            _comps = [kernel[0] for kernel in self.kernels]  # e.g., ['R', 'T'] 
-            super().evaluate_objective_function(components=_comps)
+            super().evaluate_objective_function(save_residuals=save_residuals,
+                                                components=components=["T", "R"]
+                                                )
 
     def generate_zz_kernels(self):
         """

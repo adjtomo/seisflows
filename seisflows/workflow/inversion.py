@@ -207,10 +207,8 @@ class Inversion(Migration):
     def evaluate_objective_function(self, save_residuals=False, components=None,
                                     **kwargs):
         """
-        Overwrite evaluate objective function to include MORE input parameters
-        specifying which evaluation in the inversion we are at. Also removes
-        the check for a preprocessing module because it is assumed we have a
-        preprocsesing module for an inversion workflow.
+        Simple overwrite to include iteration and step count parameters into
+        preprocessing for file naming and tagging.
 
         .. note::
             Must be run by system.run() so that solvers are assigned individual
@@ -224,16 +222,11 @@ class Inversion(Migration):
             these components will be 0. E.g., ['Z', 'N']. If None, all available
             components will be considered.
         """
-        logger.debug(f"quantifying misfit with "
-                     f"'{self.preprocess.__class__.__name__}'")
-
-        self.preprocess.quantify_misfit(
-            source_name=self.solver.source_name, components=components,
-            save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
-            save_residuals=save_residuals,
-            iteration=self.iteration,
-            step_count=self.optimize.step_count,
-        )
+        super().evaluate_objective_function(save_residuals=save_residuals,
+                                            components=components,
+                                            iteration=self.iteration,
+                                            step_count=self.optimize.step_count
+                                            )
 
     def evaluate_initial_misfit(self):
         """

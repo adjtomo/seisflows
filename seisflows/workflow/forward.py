@@ -301,7 +301,7 @@ class Forward:
         self.checkpoint()
         logger.info(f"finished all {len(self.task_list)} tasks in task list")
 
-    def evaluate_initial_misfit(self):
+    def evaluate_initial_misfit(self, **kwargs):
         """
         Evaluate the initial model misfit. This requires setting up 'data'
         before generating synthetics, which is either copied from user-supplied
@@ -331,6 +331,7 @@ class Forward:
         self.system.run(run_list, path_model=self.path.model_init,
                         save_residuals=os.path.join(self.path.eval_grad,
                                                     "residuals.txt")
+                        **kwargs
                         )
 
     def prepare_data_for_solver(self, _src=None, **kwargs):
@@ -466,6 +467,11 @@ class Forward:
             these components will be 0. E.g., ['Z', 'N']. If None, all available
             components will be considered.
         """
+        # These are only required for Workflow.Inversion which will overwrite
+        # this function to provide additional arguments to preprocess module
+        iteration = kwargs.get("iteration", 1)
+        step_count = kwargs.get("step_count", 0)
+
         if self.preprocess is None:
             logger.debug("no preprocessing module selected, will not evaluate "
                          "objective function")
@@ -473,8 +479,10 @@ class Forward:
 
         logger.debug(f"quantifying misfit with "
                      f"'{self.preprocess.__class__.__name__}'")
+
         self.preprocess.quantify_misfit(
             source_name=self.solver.source_name, components=components,
             save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
-            save_residuals=save_residuals,
+            save_residuals=save_residuals, 
+            iteration=iteration, step_count=step_count
         )
