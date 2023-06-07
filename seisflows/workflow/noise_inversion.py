@@ -22,6 +22,7 @@ simulating point forces.
         Journal of Geophysical Research: Solid Earth 124.6 (2019): 5794-5810.
 """
 import os
+import numpy as np
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix, msg
@@ -269,14 +270,24 @@ class NoiseInversion(Inversion):
             if not n_traces or not e_traces:
                 logger.info("not all required synthetics present for RR/TT "
                             "kernels, skipping preprocessing")
+
+                # Create a dummy residuals file so that the original function
+                # doesn't complain when it tries to read it. Sort of hacky.
+                # !!! Assuming filename based on function
+                # !!! `inversion.evaluate_misfit_function`
+                np.savetxt(
+                        os.path.join(self.path.eval_grad, "residuals.txt"), [0]
+                        )
                 return
 
-            # This will generate RR and TT synthetics in `traces/syn/*`
+            # This will generate RR and TT synthetics in `traces/syn` with
+            # synthetics generated using `traces/syn_e` and `traces/syn_n`
             logger.info("rotating N and E synthetics to RR and TT components")
             self.preprocess.rotate_ne_traces_to_rt(
                 source_name=self.solver.source_name,
-                data_wildcard=self.solver.data_wildcard(comp="{comp}"),
-                kernels=self.kernels.split(",")
+                data_wildcard=self.solver.data_wildcard(comp="{}"),
+                syn_path=self.syn_path(tag="_{}"),
+                kernels=self.kernels
             )
             # Run preprocessing with rotated synthetics for N and E only
             super().evaluate_objective_function(components=["N", "E"])
@@ -332,12 +343,12 @@ class NoiseInversion(Inversion):
         # Run the forward solver to generate ET SGFs and adjoint sources
         # Note, this must be run BEFORE 'NN' to get preprocessing to work
         self._force = "E"
-        logger.info("running misfit evaluation for component {self._force}")
+        logger.info("running misfit evaluation for component '{self._force}'")
         super().evaluate_initial_misfit()
 
         # Run the forward solver to generate SGFs and adjoint sources
         self._force = "N"
-        logger.info("running misfit evaluation for component {self._force}")
+        logger.info("running misfit evaluation for component '{self._force}'")
         super().evaluate_initial_misfit()
 
         # Get preprocess module to rotate synthetics into proper
