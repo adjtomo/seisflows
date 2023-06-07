@@ -290,7 +290,8 @@ class NoiseInversion(Inversion):
                 kernels=self.kernels
             )
             # Run preprocessing with rotated synthetics for N and E only
-            super().evaluate_objective_function(components=["N", "E"])
+            _comps = [kernel[0] for kernel in self.kernels]  # e.g., ['R', 'T'] 
+            super().evaluate_objective_function(components=_comps)
 
     def generate_zz_kernels(self):
         """
