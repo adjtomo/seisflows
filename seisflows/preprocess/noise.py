@@ -46,7 +46,7 @@ class Noise(Default):
             contain the CMTSOLUTION, STATIONS and Par_file files used for
             running SPECFEM
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
         self.path.specfem_data = path_specfem_data
 
