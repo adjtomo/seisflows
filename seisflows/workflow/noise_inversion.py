@@ -356,23 +356,30 @@ class NoiseInversion(Inversion):
 
         # Run adjoint simulations and then rename the saved kernels so that
         # they are not overwritten by the next set of adjoint simulations
-
         self.run_adjoint_simulations()
 
-
-    def run_adjoint_simulations(self):
+    def run_adjoint_simulations(self, **kwargs):
         """
         Overwrite the Workflow.Migration function to perform adjoint source
         rotation prior to adjoint simulation, and rename kernels afterwards
         """
+        save_kernels = os.path.join(self.path.eval_grad, "kernels",
+                                    self.solver.source_name, self._force)
+        export_kernels = os.path.join(self.path.output, "kernels",
+                                    self.solver.source_name, self._force)
+
         # ZZ kernels run adjoint simulations like a normal Inversion workflow
         if self._force == "Z":
-            super().run_adjoint_simulations()
+            super().run_adjoint_simulations(save_kernels=save_kernels,
+                                            export_kernels=export_kernels)
         # RR/TT kernels require rotating adjoint sources and file manipulations
         else:
             run_list = [self.preprocess.rotate_rt_adjsrcs_to_ne,
-                        self.run_adjoint_simulation_single,
-                        self.rename_]
+                        self.run_adjoint_simulation_single
+                        # Sum kernels?
+                        ]
+            self.system.run(run_list, save_kernels=save_kernels, 
+                            export_kernels=export_kernels, **kwargs)
 
     def perform_line_search(self):
         """Set kernel before running line search"""
