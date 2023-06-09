@@ -467,10 +467,13 @@ class Forward:
             these components will be 0. E.g., ['Z', 'N']. If None, all available
             components will be considered.
         """
-        # These are only required for Workflow.Inversion which will overwrite
-        # this function to provide additional arguments to preprocess module
+        # These are only required for overriding workflows which may hijack
+        # this function to provide specific arguments to preprocess module
         iteration = kwargs.get("iteration", 1)
         step_count = kwargs.get("step_count", 0)
+        save_adjsrcs = kwargs.get("save_adjsrcs", 
+                                  os.path.join(self.solver.cwd, "traces", "adj")
+                                  )
 
         if self.preprocess is None:
             logger.debug("no preprocessing module selected, will not evaluate "
@@ -482,7 +485,7 @@ class Forward:
 
         self.preprocess.quantify_misfit(
             source_name=self.solver.source_name, components=components,
-            save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
+            save_adjsrcs=save_adjsrcs,
             save_residuals=save_residuals, 
             iteration=iteration, step_count=step_count
         )

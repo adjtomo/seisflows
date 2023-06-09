@@ -292,7 +292,7 @@ class NoiseInversion(Inversion):
             )
             # Run preprocessing with rotated synthetics for N and E only
             super().evaluate_objective_function(save_residuals=save_residuals,
-                                                components=components=["T", "R"]
+                                                components=["T", "R"]
                                                 )
 
     def generate_zz_kernels(self):
@@ -354,7 +354,25 @@ class NoiseInversion(Inversion):
         logger.info("running misfit evaluation for component '{self._force}'")
         super().evaluate_initial_misfit()
 
-        # Get preprocess module to rotate synthetics into proper
+        # Run adjoint simulations and then rename the saved kernels so that
+        # they are not overwritten by the next set of adjoint simulations
+
+        self.run_adjoint_simulations()
+
+
+    def run_adjoint_simulations(self):
+        """
+        Overwrite the Workflow.Migration function to perform adjoint source
+        rotation prior to adjoint simulation, and rename kernels afterwards
+        """
+        # ZZ kernels run adjoint simulations like a normal Inversion workflow
+        if self._force == "Z":
+            super().run_adjoint_simulations()
+        # RR/TT kernels require rotating adjoint sources and file manipulations
+        else:
+            run_list = [self.preprocess.rotate_rt_adjsrcs_to_ne,
+                        self.run_adjoint_simulation_single,
+                        self.rename_]
 
     def perform_line_search(self):
         """Set kernel before running line search"""
