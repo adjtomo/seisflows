@@ -102,7 +102,7 @@ class Migration(Forward):
                 self.evaluate_gradient_from_kernels
                 ]
 
-    def run_adjoint_simulations(self):
+    def run_adjoint_simulations(self, **kwargs):
         """
         Performs adjoint simulations for all events. Some additional file 
         naming to ensure kernels are discoverable by other modules. 
@@ -113,31 +113,49 @@ class Migration(Forward):
             processing tasks, or to overwrite the adjoint simulation task
         """
         logger.info(msg.mnr("EVALUATING EVENT KERNELS W/ ADJOINT SIMULATIONS"))
-        self.system.run([self.run_adjoint_simulation_single])
+        self.system.run([self.run_adjoint_simulation_single], **kwargs)
 
-    def run_adjoint_simulation_single(**kwargs):
+    def run_adjoint_simulation_single(save_kernels=None, export_kernels=None,
+                                      **kwargs):
         """
-        Run an adjoint simulation for a single source
+        Run an adjoint simulation for a single source. Allow saving kernels by 
+        moving them out of the run directory to another location. Allow 
+        exporting kernels by copying them to the output directory.
 
         .. note::
+
             Must be run by system.run() so that solvers are assigned
             individual task ids/working directories.
+
+        :type save_kernels: str
+        :param save_kernels: path to a directory where kernels created by the 
+            adjoint simulation are moved to for further use in the workflow
+            Defaults to saving kernels in `scratch/eval_grad/kernels/<source>`
+        :type export kernels: str
+        :param export_kernels: path to a directory where kernels are copied for
+            more permanent storage, where they will not be wiped by `clean` or
+            `restart`. User parameter `export_kernels` must be set `True`.
         """
+        # Set default value for `export_kernels` or take program default
         if self.export_kernels:
-            export_kernels = os.path.join(self.path.output, "kernels",
-                                          self.solver.source_name)
+            if export_kernels is None:
+                export_kernels = os.path.join(self.path.output, "kernels",
+                                              self.solver.source_name)
         else:
             export_kernels = False
 
-        logger.info(f"running adjoint simulation for source "
-                    f"{self.solver.source_name}")
-        # Run adjoint simulations on system. Make kernels discoverable in
-        # path `eval_grad`. Optionally export those kernels
-        self.solver.adjoint_simulation(
+        # Set default value for `save_kernels` or take programmed default
+        if save_kernels is None:
             save_kernels=os.path.join(self.path.eval_grad, "kernels",
                                       self.solver.source_name, ""),
-            export_kernels=export_kernels
-        )
+
+        logger.info(f"running adjoint simulation for source "
+                    f"{self.solver.source_name}")
+
+        # Run adjoint simulations on system. Make kernels discoverable in
+        # path `eval_grad`. Optionally export those kernels
+        self.solver.adjoint_simulation(save_kernels=save_kernels,
+                                       export_kernels=export_kernels)
 
     def postprocess_event_kernels(self):
         """
