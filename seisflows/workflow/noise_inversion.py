@@ -140,11 +140,15 @@ class NoiseInversion(Inversion):
 
         return task_list
 
-    def syn_path(self, tag=""):
+    def trace_path(self, tag, comp=None):
         """
         Convenience path function that returns the full path for storing
-        intermediate waveform files for a given component. These generally
-        adhere to how the `solver` module names directories.
+        intermediate waveform files for a given component. 
+        These generally adhere to how the `solver` module names directories. 
+        
+        Required because this workflow will do a lot of pre-rotation waveform 
+        storage, so we use this function as the once-and-for-all definition for 
+        the paths
 
         .. note ::
 
@@ -152,11 +156,16 @@ class NoiseInversion(Inversion):
             task ids and working directories
 
         :type tag: str
-        :param tag: component used to tag the synthetic trace
+        :param tag: sub directory tag, e.g., 'syn' to store synthetic waveforms 
+            and 'adj' to store adjoint sources.
+        :type comp: str
+        :param comp: optional component used to tag the sub directory
         :rtype: str
         :return: full path to solver scratch traces directory to save waveforms
         """
-        return os.path.join(self.solver.cwd, "traces", f"syn{tag}")
+        if comp is not None:
+            tag = f"{tag}_{comp}"
+        return os.path.join(self.solver.cwd, "traces", tag)
 
     def prepare_data_for_solver(self, **kwargs):
         """
@@ -177,7 +186,7 @@ class NoiseInversion(Inversion):
             task ids and working directories
         """
         # Define where the obs data is stored
-        dst = os.path.join(self.solver.cwd, "traces", "obs", "")
+        dst = self.trace_path("obs")
 
         # Remove any existing data that might have been placed here previously
         # to avoid incorporating it into preprocessing
@@ -231,7 +240,7 @@ class NoiseInversion(Inversion):
             elif self._force == "E":
                 kernel_vals = ["1.d0", "0.d0", "0.d0"]  # [E, N, Z]
             # e.g., solver/{source_name}/traces/syn_e
-            save_traces = self.syn_path(tag=f"_{self._force.lower()}")
+            save_traces = self.trace_path(tag="syn", comp=self._force.lower())
 
         # Set FORCESOLUTION (3D/3D_GLOBE) to ensure correct force for kernel
         self.solver.set_parameters(keys=["component dir vect source E",
@@ -266,8 +275,8 @@ class NoiseInversion(Inversion):
         else:
             # Check if we have generated all the necessary synthetics before
             # running preprocessing
-            n_traces = glob(os.path.join(self.syn_path("_n"), "*"))
-            e_traces = glob(os.path.join(self.syn_path("_e"), "*"))
+            n_traces = glob(os.path.join(self.trace_path("syn", "n"), "*"))
+            e_traces = glob(os.path.join(self.trace_path("syn", "e"), "*"))
             if not n_traces or not e_traces:
                 logger.info("not all required synthetics present for RR/TT "
                             "kernels, skipping preprocessing")
@@ -287,7 +296,7 @@ class NoiseInversion(Inversion):
             self.preprocess.rotate_ne_traces_to_rt(
                 source_name=self.solver.source_name,
                 data_wildcard=self.solver.data_wildcard(comp="{}"),
-                syn_path=self.syn_path(tag="_{}"),
+                syn_path=self.trace_path(tag="syn", comp="{}"),
                 kernels=self.kernels
             )
             # Run preprocessing with rotated synthetics for N and E only
