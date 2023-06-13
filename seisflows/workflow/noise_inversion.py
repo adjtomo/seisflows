@@ -81,6 +81,7 @@ class NoiseInversion(Inversion):
 
         # Specifies the force direction requirement for simulations and naming
         self._force = None
+        self._kernel = None
         self._preprocess = preprocess
 
     def check(self):
@@ -164,7 +165,7 @@ class NoiseInversion(Inversion):
         :return: full path to solver scratch traces directory to save waveforms
         """
         if comp is not None:
-            tag = f"{tag}_{comp}"
+            tag = f"{tag}_{comp}".lower()
         return os.path.join(self.solver.cwd, "traces", tag)
 
     def prepare_data_for_solver(self, **kwargs):
@@ -240,7 +241,7 @@ class NoiseInversion(Inversion):
             elif self._force == "E":
                 kernel_vals = ["1.d0", "0.d0", "0.d0"]  # [E, N, Z]
             # e.g., solver/{source_name}/traces/syn_e
-            save_traces = self.trace_path(tag="syn", comp=self._force.lower())
+            save_traces = self.trace_path(tag="syn", comp=self._force)
 
         # Set FORCESOLUTION (3D/3D_GLOBE) to ensure correct force for kernel
         self.solver.set_parameters(keys=["component dir vect source E",
@@ -295,14 +296,23 @@ class NoiseInversion(Inversion):
             logger.info("rotating N and E synthetics to RR and TT components")
             self.preprocess.rotate_ne_traces_to_rt(
                 source_name=self.solver.source_name,
-                data_wildcard=self.solver.data_wildcard(comp="{}"),
                 syn_path=self.trace_path(tag="syn", comp="{}"),
+                data_wildcard=self.solver.data_wildcard(comp="{}"),
                 kernels=self.kernels
             )
             # Run preprocessing with rotated synthetics for N and E only
             super().evaluate_objective_function(save_residuals=save_residuals,
                                                 components=["T", "R"]
                                                 )
+            # Re-rotate T and R adjoint sources to N and E components for 
+            # adjoint simulations. Only rotate what is required for adj sim.
+            for choice in ["R", "T"]:
+                if choice in self.kernels:
+                    self.preprocess.rotate_rt_adjsrcs_to_ne(
+                        source_name=self.solver.source_name,
+                        adj_path=self.trace_path(tag="adj", comp=None),
+                        choice=choice,
+                        )
 
     def generate_zz_kernels(self):
         """
@@ -363,32 +373,82 @@ class NoiseInversion(Inversion):
         logger.info("running misfit evaluation for component '{self._force}'")
         super().evaluate_initial_misfit()
 
-        # Run adjoint simulations and then rename the saved kernels so that
-        # they are not overwritten by the next set of adjoint simulations
-        self.run_adjoint_simulations()
+        # Run adjoint simulations for each kernel RR and TT (if requested) by 
+        # running two adjoint simulations (E and N) per kernel. If Users 
+        # requests both kernels ZZ, RR and TT, that will be 5 required adjoint 
+        # simulations total.
+        for kernel in ["TT", "RR"]:  
+            # Skip over if User did not request 
+            if kernel not in self.kernels:
+                continue
+
+            # Set internal kernel variable which will let all spawned jobs
+            # know which set of adjoint sources are required for their sim
+            logger.info(f"running generating kernel for component: {kernel}")
+            self._kernel = kernel  # TT or RR
+
+            # We require two adjoint simulations per kernel to recover gradient
+            for force in ["E", "N"]:
+                self._force = force
+                logger.info(f"running adjoint simulation for kernel "
+                            f"{self._kernel} and force '{self._force}'")
+                self.run_adjoint_simulations()
+
+            # Unset internal variables just incase
+            self._kernel = None
+            self._force = None
 
     def run_adjoint_simulations(self, **kwargs):
         """
         Overwrite the Workflow.Migration function to perform adjoint source
         rotation prior to adjoint simulation, and rename kernels afterwards
         """
+        # Save and export kernels 
         save_kernels = os.path.join(self.path.eval_grad, "kernels",
                                     self.solver.source_name, self._force)
         export_kernels = os.path.join(self.path.output, "kernels",
                                     self.solver.source_name, self._force)
 
-        # ZZ kernels run adjoint simulations like a normal Inversion workflow
+        super().run_adjoint_simulations(save_kernels=save_kernels,
+                                        export_kernels=export_kernels,
+                                        **kwargs)
+
+    def _run_adjoint_simulation_single(save_kernels=None, export_kernels=None,
+                                       **kwargs):
+        """
+        Prepend a data retrieval operation to the RR or TT adjoint simulation so 
+        that the correct adjoint sources are discoverable during the solver sim.
+        ZZ kernel simulation runs the same as normal inversion workflow.
+
+        .. note::
+
+            Must be run by system.run() so that solvers are assigned
+            individual task ids/working directories.
+        """
         if self._force == "Z":
-            super().run_adjoint_simulations(save_kernels=save_kernels,
-                                            export_kernels=export_kernels)
-        # RR/TT kernels require rotating adjoint sources and file manipulations
-        else:
-            run_list = [self.preprocess.rotate_rt_adjsrcs_to_ne,
-                        self.run_adjoint_simulation_single
-                        # Sum kernels?
-                        ]
-            self.system.run(run_list, save_kernels=save_kernels, 
-                            export_kernels=export_kernels, **kwargs)
+            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
+                                                   **kwargs)
+        elif self._force in ["E", "N"]:
+            # Double check that _kernel has been set correctly by calling fx
+            assert(self._kernel in ["RR", "TT"]), (
+                f"internal variable mismatch, kernel '{self._kernel}' must be "
+                f"'RR' or 'TT'"
+                )
+
+            # Symlink the correct set of adjoint sources to the 'adj' directory
+            # `adj_dir` is something like 'adj_nt'
+            adj_dir = f"adj_{self._force.lower()}{self._kernel[0].lower()}" 
+            src = glob(os.path.join(self.solver.cwd, "traces", adj_dir, "*"))
+            dst = os.path.join(self.solver.cwd, "traces", "adj")
+            unix.ln(src, dst)
+
+            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
+                                                   **kwargs)
+
+            # Get rid of symlinks to make room for next simulation
+            for fid in glob(os.path.join(dst, "*.adj")):
+                if os.path.islink(fid):
+                    unix.rm(fid)
 
     def perform_line_search(self):
         """Set kernel before running line search"""

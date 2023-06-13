@@ -113,9 +113,9 @@ class Migration(Forward):
             processing tasks, or to overwrite the adjoint simulation task
         """
         logger.info(msg.mnr("EVALUATING EVENT KERNELS W/ ADJOINT SIMULATIONS"))
-        self.system.run([self.run_adjoint_simulation_single], **kwargs)
+        self.system.run([self._run_adjoint_simulation_single], **kwargs)
 
-    def run_adjoint_simulation_single(save_kernels=None, export_kernels=None,
+    def _run_adjoint_simulation_single(save_kernels=None, export_kernels=None,
                                       **kwargs):
         """
         Run an adjoint simulation for a single source. Allow saving kernels by 
@@ -146,8 +146,8 @@ class Migration(Forward):
 
         # Set default value for `save_kernels` or take programmed default
         if save_kernels is None:
-            save_kernels=os.path.join(self.path.eval_grad, "kernels",
-                                      self.solver.source_name, ""),
+            save_kernels = os.path.join(self.path.eval_grad, "kernels",
+                                        self.solver.source_name, ""),
 
         logger.info(f"running adjoint simulation for source "
                     f"{self.solver.source_name}")
