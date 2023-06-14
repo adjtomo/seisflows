@@ -80,8 +80,8 @@ class NoiseInversion(Inversion):
         self.kernels = kernels.upper()
 
         # Specifies the force direction requirement for simulations and naming
-        self._force = None
-        self._kernel = None
+        self._force = None  # direction of input force for fwd/adj simulation
+        self._cmpnt = None  # component of output synthetics/adjsrcs used
         self._preprocess = preprocess
 
     def check(self):
@@ -322,6 +322,7 @@ class NoiseInversion(Inversion):
         """
         # This will be referenced in `run_forward_simulations`
         self._force = "Z"
+        self._cmpnt = "Z"
 
         # Run the forward solver to generate SGFs and adjoint sources
         super().evaluate_initial_misfit()
@@ -374,40 +375,40 @@ class NoiseInversion(Inversion):
         super().evaluate_initial_misfit()
 
         # Run adjoint simulations for each kernel RR and TT (if requested) by 
-        # running two adjoint simulations (E and N) per kernel. If Users 
-        # requests both kernels ZZ, RR and TT, that will be 5 required adjoint 
-        # simulations total.
-        for kernel in ["TT", "RR"]:  
+        # running two adjoint simulations (E and N) per kernel. 
+        for cmpnt in ["T", "R"]:  
             # Skip over if User did not request 
-            if kernel not in self.kernels:
+            if cmpnt not in self.kernels:  # e.g., if 'R' in 'RR,TT'
                 continue
 
             # Set internal kernel variable which will let all spawned jobs
             # know which set of adjoint sources are required for their sim
-            logger.info(f"running generating kernel for component: {kernel}")
-            self._kernel = kernel  # TT or RR
+            logger.info(f"running generating kernel for component: {cmpnt}")
+            self._cmpnt = cmpnt  # T or R
 
             # We require two adjoint simulations per kernel to recover gradient
             for force in ["E", "N"]:
                 self._force = force
-                logger.info(f"running adjoint simulation for kernel "
-                            f"{self._kernel} and force '{self._force}'")
+                logger.info(f"running adjoint simulation for "
+                            f"'{self._force}{self._cmpnt}'")
                 self.run_adjoint_simulations()
 
             # Unset internal variables just incase
-            self._kernel = None
+            self._cmpnt = None
             self._force = None
 
     def run_adjoint_simulations(self, **kwargs):
         """
         Overwrite the Workflow.Migration function to perform adjoint source
-        rotation prior to adjoint simulation, and rename kernels afterwards
+        rotation prior to adjoint simulation. Only required for RR and TT kernel
         """
+        subdir = f"{self._force}{self._cmpnt}"  # one of: ZZ, NT, ET, NR, ER
+
         # Save and export kernels 
         save_kernels = os.path.join(self.path.eval_grad, "kernels",
-                                    self.solver.source_name, self._force)
+                                    self.solver.source_name, subdir)
         export_kernels = os.path.join(self.path.output, "kernels",
-                                    self.solver.source_name, self._force)
+                                    self.solver.source_name, subdir)
 
         super().run_adjoint_simulations(save_kernels=save_kernels,
                                         export_kernels=export_kernels,
@@ -429,15 +430,10 @@ class NoiseInversion(Inversion):
             super()._run_adjoint_simulation_single(save_kernels, export_kernels,
                                                    **kwargs)
         elif self._force in ["E", "N"]:
-            # Double check that _kernel has been set correctly by calling fx
-            assert(self._kernel in ["RR", "TT"]), (
-                f"internal variable mismatch, kernel '{self._kernel}' must be "
-                f"'RR' or 'TT'"
-                )
-
             # Symlink the correct set of adjoint sources to the 'adj' directory
             # `adj_dir` is something like 'adj_nt'
-            adj_dir = f"adj_{self._force.lower()}{self._kernel[0].lower()}" 
+            adj_dir = f"adj_{self._force.lower()}{self._cmpnt.lower()}" 
+
             src = glob(os.path.join(self.solver.cwd, "traces", adj_dir, "*"))
             dst = os.path.join(self.solver.cwd, "traces", "adj")
             unix.ln(src, dst)
