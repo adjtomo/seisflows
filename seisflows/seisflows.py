@@ -131,6 +131,13 @@ def sfparser():
     )
     submit.add_argument("-s", "--stop_after", default=None, type=str,
                         help="Optional override of the 'STOP_AFTER' parameter")
+    submit.add_argument("-l", "--login", default=False, action="store_true",
+                        help="`cluster`-based systems only: submit master job "
+                             "directly to the login node rather than as a "
+                             "separate process on a compute node. Useful for "
+                             "avoiding queue times for master job but may be "
+                             "discouraged by sysadmins as some processing will "
+                             "take place on the shared login node")
     # =========================================================================
     resume = subparser.add_parser(
         "resume", help="Re-submit previous workflow to system",
@@ -707,7 +714,7 @@ class SeisFlows:
             workflow.check()
             workflow.setup()
         except AssertionError as e:
-            print(msg.cli(str(e), border="=", header="parameter errror"))
+            print(msg.cli(str(e), border="=", header="parameter error"))
 
     def submit(self, **kwargs):
         """
@@ -721,8 +728,20 @@ class SeisFlows:
 
         parameters = load_yaml(self._args.parameter_file)
         system = custom_import("system", parameters.system)(**parameters)
-        system.submit(workdir=self._args.workdir,
-                      parameter_file=self._args.parameter_file)
+        if self._args.login is True:
+            try:
+                system.submit(workdir=self._args.workdir,
+                              parameter_file=self._args.parameter_file,
+                              login=True)
+            except TypeError:
+                print(msg.cli(f"System '{parameters.system}' does not accept "
+                              "argument `login`. This feature is only allowed "
+                              "for `cluster`-based systems. Please check "
+                              "system and try again.",
+                              border="=", header="submit error"))
+        else:
+            system.submit(workdir=self._args.workdir,
+                          parameter_file=self._args.parameter_file)
 
     def clean(self, force=False, **kwargs):
         """
