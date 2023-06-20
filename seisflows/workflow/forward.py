@@ -330,7 +330,7 @@ class Forward:
 
         self.system.run(run_list, path_model=self.path.model_init,
                         save_residuals=os.path.join(self.path.eval_grad,
-                                                    "residuals.txt")
+                                                    "residuals.txt"), 
                         **kwargs
                         )
 
