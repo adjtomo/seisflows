@@ -79,10 +79,11 @@ class NoiseInversion(Inversion):
 
         self.kernels = kernels.upper()
 
-        # Specifies the force direction requirement for simulations and naming
+        self._preprocess = preprocess
+
+        # Internal variables control behavior of spawend jobs
         self._force = None  # direction of input force for fwd/adj simulation
         self._cmpnt = None  # component of output synthetics/adjsrcs used
-        self._preprocess = preprocess
 
     def check(self):
         """
@@ -306,7 +307,7 @@ class NoiseInversion(Inversion):
                                                 )
             # Re-rotate T and R adjoint sources to N and E components for 
             # adjoint simulations. Only rotate what is required for adj sim.
-            for choice in ["R", "T"]:
+            for choice in ["T", "R"]:
                 if choice in self.kernels:
                     self.preprocess.rotate_rt_adjsrcs_to_ne(
                         source_name=self.solver.source_name,
@@ -366,12 +367,12 @@ class NoiseInversion(Inversion):
         # Run the forward solver to generate ET SGFs and adjoint sources
         # Note, this must be run BEFORE 'NN' to get preprocessing to work
         self._force = "E"
-        logger.info("running misfit evaluation for component '{self._force}'")
+        logger.info(f"running misfit evaluation for component '{self._force}'")
         super().evaluate_initial_misfit()
 
         # Run the forward solver to generate SGFs and adjoint sources
         self._force = "N"
-        logger.info("running misfit evaluation for component '{self._force}'")
+        logger.info(f"running misfit evaluation for component '{self._force}'")
         super().evaluate_initial_misfit()
 
         # Run adjoint simulations for each kernel RR and TT (if requested) by 
@@ -446,7 +447,25 @@ class NoiseInversion(Inversion):
                 if os.path.islink(fid):
                     unix.rm(fid)
 
-    def perform_line_search(self):
-        """Set kernel before running line search"""
-        self._force = "Z"
-        super().perform_line_search()
+    def _evaluate_line_search_misfit(self):
+        """
+        Used in line search for calculating misfit values to compare against
+        starting model. Here we overwrite the base function to allow rotating 
+        synthetics N+E -> R+T.
+
+        .. note::
+            Each call of this function will save residuals but these will be 
+            ignored and the final residual file will only be created once all 
+            forward simulations are run
+        """
+        if "ZZ" in self.kernels:
+            self._force = "Z"
+            super()._evaluate_line_search_misfit()
+        elif "RR" in self.kernels or "TT" in self.kernels:
+            self._force = "N"
+            super()._evaluate_line_search_misfit()
+
+            self._force = "E"
+            super()._evaluate_line_search_misfit()
+
+
