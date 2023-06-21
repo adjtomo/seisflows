@@ -119,6 +119,9 @@ def sfparser():
     )
     swap.add_argument("module", nargs="?", help="Module name to swap")
     swap.add_argument("classname", nargs="?", help="Classname to swap to")
+    swap.add_argument("-a", "--absolute_paths", action="store_true",
+                      help="Set paths as absolute. If not used (default), "
+                           "paths are set relative to `pwd`")
     # =========================================================================
     submit = subparser.add_parser(
         "submit", help="Submit initial workflow to system",
@@ -609,7 +612,7 @@ class SeisFlows:
 
         f.close()
 
-    def swap(self, module, classname, **kwargs):
+    def swap(self, module, classname, absolute_paths=False, **kwargs):
         """
         Swap the parameters of an existing parameter file with a new module.
         Useful for changing out parameters without having to re-make a
@@ -620,6 +623,11 @@ class SeisFlows:
 
         .. rubric::
             $ seisflows swap system slurm
+
+        :type absolute_paths: bool
+        :param absolute_paths: if True, expand pathnames to absolute paths,
+            else if False, use path names relative to the working directory.
+            Defaults to False, uses relative paths.
         """
         # Allow swapping paths only from absolute to relative and back
         if module == "paths":
@@ -658,13 +666,19 @@ class SeisFlows:
             # Overwrite with new parameters
             setpar(key=module, val=classname, file=self._args.parameter_file,
                    delim=":")
-            self.configure()
+            self.configure(absolute_paths=absolute_paths)
 
             ogpars.pop(module)  # don't edit the parameter were changing
             for key, val in ogpars.items():
                 if val is None:
                     val = "null"
                 try:
+                    # If setting paths, allow setting absolute or relative
+                    if key.startswith("path_"):
+                        if absolute_paths and val != "null":
+                            val = os.path.abspath(val)
+                        else:
+                            val = os.path.relpath(val)
                     setpar(key=key, val=val, file=self._args.parameter_file,
                            delim=":")
                 except KeyError:
