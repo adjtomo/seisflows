@@ -131,24 +131,17 @@ def sfparser():
     )
     submit.add_argument("-s", "--stop_after", default=None, type=str,
                         help="Optional override of the 'STOP_AFTER' parameter")
-    submit.add_argument("-l", "--login", default=False, action="store_true",
-                        help="`cluster`-based systems only: submit master job "
-                             "directly to the login node rather than as a "
-                             "separate process on a compute node. Useful for "
-                             "avoiding queue times for master job but may be "
-                             "discouraged by sysadmins as some processing will "
-                             "take place on the shared login node")
-    # =========================================================================
-    resume = subparser.add_parser(
-        "resume", help="Re-submit previous workflow to system",
-        description="""Resume a previously submitted workflow. Used when 
-        an active environment exists in the working directory, and must be 
-        submitted to the system again."""
-    )
-    resume.add_argument("-r", "--resume_from", default=None, type=str,
-                        help="Optional override of the 'RESUME_FROM' parameter")
-    resume.add_argument("-s", "--stop_after", default=None, type=str,
-                        help="Optional override of the 'STOP_AFTER' parameter")
+    # Argument `login` is shared between functions 'submit' and 'restart' so 
+    # define its behavior once and for all here and provide to each parser
+    _login_kwargs = dict(
+            default=False, action="store_true", 
+            help="`cluster`-based systems only: submit master job directly to "
+                 "the login node rather than as a separate process on a "
+                 "compute node. Useful for avoiding queue times for master job "
+                 "but may be discouraged by sysadmins as some processing will "
+                 "take place on the shared login node")
+
+    submit.add_argument("-l", "--login", **_login_kwargs)
     # =========================================================================
     restart = subparser.add_parser(
         "restart", help="Remove current environment and submit new workflow",
@@ -158,6 +151,7 @@ def sfparser():
     )
     restart.add_argument("-f", "--force", action="store_true",
                          help="Skip the clean warning check statement")
+    restart.add_argument("-l", "--login", **_login_kwargs)
     # =========================================================================
     clean = subparser.add_parser(
         "clean", help="Remove files relating to an active working environment",
