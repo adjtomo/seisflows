@@ -102,8 +102,7 @@ class Specfem3DGlobe(Specfem):
         self._syn_available_data_formats = ["ASCII"]
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._acceptable_smooth_types = ["laplacian", "gaussian"]
-        self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem",
-                                   "xcombine_vol_data_vtk"]
+        self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem"]
         if smooth_type == "laplacian":
             self._required_binaries.append("xsmooth_laplacian_sem")
         else:

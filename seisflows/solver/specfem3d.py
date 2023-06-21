@@ -58,7 +58,7 @@ class Specfem3D(Specfem):
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D",
                                    "xgenerate_databases", "xcombine_sem",
-                                   "xsmooth_sem", "xcombine_vol_data_vtk"]
+                                   "xsmooth_sem"]  #, "xcombine_vol_data_vtk"]
 
         # Internally used parameters set by functions within class
         self._model_databases = None
