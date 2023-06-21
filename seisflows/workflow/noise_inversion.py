@@ -409,14 +409,14 @@ class NoiseInversion(Inversion):
         save_kernels = os.path.join(self.path.eval_grad, "kernels",
                                     self.solver.source_name, subdir)
         export_kernels = os.path.join(self.path.output, "kernels",
-                                    self.solver.source_name, subdir)
+                                      self.solver.source_name, subdir)
 
         super().run_adjoint_simulations(save_kernels=save_kernels,
                                         export_kernels=export_kernels,
                                         **kwargs)
 
-    def _run_adjoint_simulation_single(save_kernels=None, export_kernels=None,
-                                       **kwargs):
+    def _run_adjoint_simulation_single(self, save_kernels=None, 
+                                       export_kernels=None, **kwargs):
         """
         Prepend a data retrieval operation to the RR or TT adjoint simulation so 
         that the correct adjoint sources are discoverable during the solver sim.
@@ -428,19 +428,18 @@ class NoiseInversion(Inversion):
             individual task ids/working directories.
         """
         if self._force == "Z":
-            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
-                                                   **kwargs)
+            super()._run_adjoint_simulation_single(save_kernels, export_kernels)
         elif self._force in ["E", "N"]:
             # Symlink the correct set of adjoint sources to the 'adj' directory
             # `adj_dir` is something like 'adj_nt'
             adj_dir = f"adj_{self._force.lower()}{self._cmpnt.lower()}" 
 
-            src = glob(os.path.join(self.solver.cwd, "traces", adj_dir, "*"))
+            srcs = glob(os.path.join(self.solver.cwd, "traces", adj_dir, "*"))
             dst = os.path.join(self.solver.cwd, "traces", "adj")
-            unix.ln(src, dst)
+            for src in srcs:
+                unix.ln(src, dst)
 
-            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
-                                                   **kwargs)
+            super()._run_adjoint_simulation_single(save_kernels, export_kernels)
 
             # Get rid of symlinks to make room for next simulation
             for fid in glob(os.path.join(dst, "*.adj")):

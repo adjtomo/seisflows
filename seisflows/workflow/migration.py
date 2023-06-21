@@ -115,8 +115,8 @@ class Migration(Forward):
         logger.info(msg.mnr("EVALUATING EVENT KERNELS W/ ADJOINT SIMULATIONS"))
         self.system.run([self._run_adjoint_simulation_single], **kwargs)
 
-    def _run_adjoint_simulation_single(save_kernels=None, export_kernels=None,
-                                      **kwargs):
+    def _run_adjoint_simulation_single(self, save_kernels=None, 
+                                       export_kernels=None, **kwargs):
         """
         Run an adjoint simulation for a single source. Allow saving kernels by 
         moving them out of the run directory to another location. Allow 
