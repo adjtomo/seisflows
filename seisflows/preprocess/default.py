@@ -379,7 +379,7 @@ class Default:
 
     def _write_adjsrc_single(self, st, fid, output):
         """Parallelizable function to write out empty adjoint source"""
-        adj_fid = self._rename_as_adjoint_source(os.path.basename(fid))
+        adj_fid = self.rename_as_adjoint_source(os.path.basename(fid))
         self.write(st=st, fid=os.path.join(output, adj_fid))
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
@@ -649,7 +649,7 @@ class Default:
                 )
                 adjsrc = Stream(adjsrc)
                 fid = os.path.basename(syn_fid)
-                fid = self._rename_as_adjoint_source(fid)
+                fid = self.rename_as_adjoint_source(fid)
                 self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
                 logger.debug(f"writing adjoint source: {fid}")
 
@@ -690,7 +690,7 @@ class Default:
 
         return short_fids
 
-    def _rename_as_adjoint_source(self, fid):
+    def rename_as_adjoint_source(self, fid):
         """
         Rename synthetic waveforms into filenames consistent with how SPECFEM
         expects adjoint sources to be named. Usually this just means adding
