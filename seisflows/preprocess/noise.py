@@ -34,7 +34,7 @@ class Noise(Default):
 
     ***
     """
-    def __init__(self, path_specfem_data, **kwargs):
+    def __init__(self, path_specfem_data=None, **kwargs):
         """
         Preprocessing module parameters
 
