@@ -103,8 +103,11 @@ class Specfem3DGlobe(Specfem):
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._acceptable_smooth_types = ["laplacian", "gaussian"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem",
-                                   "xsmooth_sem", "xsmooth_laplacian_sem",
                                    "xcombine_vol_data_vtk"]
+        if smooth_type == "laplacian":
+            self._required_binaries.append("xsmooth_laplacian_sem")
+        else:
+            self._required_binaries.append("xsmooth_sem")
 
         # Internally used parameters set by functions within class
         self._model_databases = None
