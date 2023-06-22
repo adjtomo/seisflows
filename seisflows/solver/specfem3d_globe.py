@@ -265,14 +265,15 @@ class Specfem3DGlobe(Specfem):
                              f"directory")                                       
                 unix.rm(glob(os.path.join(self.model_databases, glob_key)))
 
-    def combine(self, input_path, output_path, parameters=None):                 
+    def combine(self, input_paths, output_path, parameters=None):                 
         """
         Overwrite of xcombine_sem with an additional file check as 
         SPECFEM3D_GLOBE requires file 'mesh_parameters.bin'
                                                                                  
-        :type input_path: str                                                    
-        :param input_path: path to data                                          
-        :type output_path: strs                                                  
+        :type input_paths: str                                                    
+        :param input_paths: list of paths to directories containing binary
+            files to be combined
+        :type output_path: str
         :param output_path: path to export the outputs of xcombine_sem           
         :type parameters: list                                                   
         :param parameters: optional list of parameters,                          
@@ -294,7 +295,7 @@ class Specfem3DGlobe(Specfem):
         # 3DGLOBE 'xcombine_sem' does not expect `reg?_` prefix, strip off
         stripped_parameters = list(set([_[5:] for _ in parameters]))
 
-        super().combine(input_path=input_path, output_path=output_path,
+        super().combine(input_paths=input_paths, output_path=output_path,
                         parameters=stripped_parameters)
 
     def smooth(self, input_path, output_path, parameters=None, span_h=None,      

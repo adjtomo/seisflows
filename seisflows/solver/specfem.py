@@ -723,7 +723,7 @@ class Specfem:
         :type input_paths: list
         :param input_paths: list of paths to directories containing binary
             files to be combined
-        :type output_path: strs
+        :type output_path: str
         :param output_path: path to export the outputs of xcombine_sem
         :type parameters: list
         :param parameters: optional list of parameters,
