@@ -500,9 +500,14 @@ class NoiseInversion(Inversion):
 
         Assumes the sub-directory structure of kernels for path `eval_grad`
         """
+        # We need to combine the N? and E? kernels for EACH source
         if "RR" in self.kernels:
-            er_kernels = os.path.join(self.path.eval_grad, "ER")
-            nr_kernels = os.path.join(self.path.eval_grad, "NR")
+            
+            input_paths = [os.path.join(self.path.eval_grad, "ER"),
+                           os.path.join(self.path.eval_grad, "NR")
+                           ]
+            output_path = 
+
         if "TT" in self.kernels:
             pass
 

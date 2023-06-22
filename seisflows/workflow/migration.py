@@ -172,7 +172,8 @@ class Migration(Forward):
             input_paths = [os.path.join(self.path.eval_grad, "kernels", src) for
                            src in self.solver.source_names]
 
-            # Parameters to combine are the kernels, which follow {par}_kernel
+            # Parameters to combine are the kernels, which follow the 
+            # naming convention {par}_kernel
             parameters = [f"{par}_kernel" for par in self.solver.parameters]
 
             self.solver.combine(
