@@ -174,7 +174,7 @@ class Migration(Forward):
 
             # Parameters to combine are the kernels, which follow the 
             # naming convention {par}_kernel
-            parameters = [f"{par}_kernel" for par in self.solver.parameters]
+            parameters = [f"{par}_kernel" for par in self.solver._parameters]
 
             self.solver.combine(
                 input_paths=input_paths,

@@ -528,7 +528,7 @@ class NoiseInversion(Inversion):
             return
 
 
-        def generate_event_kernels():
+        def generate_event_kernels(**kwargs):
             """
             Combine horizontal (TT=ET+NT; RR=ER+NR) kernels and then sum
             all individual kernel contributions (ZZ+RR+TT) to generate the final
