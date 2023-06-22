@@ -562,7 +562,7 @@ class Default:
             f"have the format 'NN.SSS.CCc*', and match on variables 'N', 'S', "
             f"and 'c'"
         )
-        logger.info(f"{source_name} has {len(matching_traces)} matching traces"
+        logger.info(f"{source_name} has {len(matching_traces)} matching traces "
                     f"for preprocessing")
 
         # Generate the list of full path waveform fids for matching obs + syn

@@ -243,6 +243,7 @@ class NoiseInversion(Inversion):
         kernel_vals, save_traces = None, None
         if self._force == "Z":
             kernel_vals = ["0.d0", "0.d0", "1.d0"]  # [E, N, Z]
+            save_traces = self.trace_path(tag="syn")
         else:
             if self._force == "N":
                 kernel_vals = ["0.d0", "1.d0", "0.d0"]  # [E, N, Z]
