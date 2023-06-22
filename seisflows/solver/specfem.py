@@ -707,7 +707,7 @@ class Specfem:
                 logger.info(f"renaming {len(names)} kernels: '{tag}' -> 'vs'")
                 unix.rename(old="beta", new="vs", names=names)
 
-    def combine(self, input_path, output_path, parameters=None):
+    def combine(self, input_paths, output_path, parameters=None):
         """
         Wrapper for 'xcombine_sem'.
         Sums kernels from individual source contributions to create gradient.
@@ -720,8 +720,9 @@ class Specfem:
             system.run(single=True) so that we can use the main solver
             directory to perform the kernel summation task
 
-        :type input_path: str
-        :param input_path: path to data
+        :type input_paths: list
+        :param input_paths: list of paths to directories containing binary
+            files to be combined
         :type output_path: strs
         :param output_path: path to export the outputs of xcombine_sem
         :type parameters: list
@@ -738,15 +739,13 @@ class Specfem:
 
         # Write the source names into the kernel paths file for SEM/ directory
         with open("kernel_paths", "w") as f:
-            f.writelines(
-                [os.path.join(input_path, f"{name}\n")
-                 for name in self.source_names]
-            )
+            for input_path in input_paths:
+                f.write(f"{input_path}\n")
 
         # Call on xcombine_sem to combine kernels into a single file
         for name in parameters:
             # e.g.: mpiexec bin/xcombine_sem alpha_kernel kernel_paths output/
-            exc = f"bin/xcombine_sem {name}_kernel kernel_paths {output_path}"
+            exc = f"bin/xcombine_sem {name} kernel_paths {output_path}"
             # e.g., smooth_vp.log
             stdout = f"{self._exc2log(exc)}_{name}.log"
             self._run_binary(executable=exc, stdout=stdout)

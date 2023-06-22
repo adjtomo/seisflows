@@ -493,6 +493,22 @@ class NoiseInversion(Inversion):
                                        )
                 self.preprocess.write(st=st, fid=adjpath)
 
+    def postprocess_event_kernels(self):
+        """
+        Overwrite the Migration function to combine multiple event kernels
+        (ZZ, ET + NT, ER + NR) prior to smoothing kernels. 
+
+        Assumes the sub-directory structure of kernels for path `eval_grad`
+        """
+        if "RR" in self.kernels:
+            er_kernels = os.path.join(self.path.eval_grad, "ER")
+            nr_kernels = os.path.join(self.path.eval_grad, "NR")
+        if "TT" in self.kernels:
+            pass
+
+        super().postprocess_event_kernels()
+
+
     def _evaluate_line_search_misfit(self):
         """
         Used in line search for calculating misfit values to compare against
