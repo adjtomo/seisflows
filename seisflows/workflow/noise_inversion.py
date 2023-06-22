@@ -280,7 +280,8 @@ class NoiseInversion(Inversion):
         """
         # Z component force behaves like a normal inversion
         if self._force == "Z":
-            super().evaluate_objective_function(components=["Z"])
+            super().evaluate_objective_function(save_residuals=save_residuals,
+                                                components=["Z"])
         # E and N component force need to wait for one another
         else:
             # Check if we have generated all the necessary synthetics before

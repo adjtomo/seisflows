@@ -721,7 +721,6 @@ class Default:
 
         return fid
 
-
     @staticmethod
     def sum_residuals(residuals):
         """
