@@ -418,9 +418,10 @@ class NoiseInversion(Inversion):
     def _run_adjoint_simulation_single(self, save_kernels=None, 
                                        export_kernels=None, **kwargs):
         """
-        Prepend a data retrieval operation to the RR or TT adjoint simulation so 
-        that the correct adjoint sources are discoverable during the solver sim.
-        ZZ kernel simulation runs the same as normal inversion workflow.
+        Overwrites Migration workflow function to: 1) create necessary empty 
+        adjoint sources, 2) prepend a data retrieval operation to the RR or TT 
+        adjoint simulation so that the correct adjoint sources are discoverable 
+        during the solver sim.
 
         .. note::
 
@@ -428,8 +429,12 @@ class NoiseInversion(Inversion):
             individual task ids/working directories.
         """
         if self._force == "Z":
+            self._generate_empty_adjsrcs(components=["E", "N"])
+            
             super()._run_adjoint_simulation_single(save_kernels, export_kernels)
         elif self._force in ["E", "N"]:
+            self._generate_empty_adjsrcs(components=["Z"])
+
             # Symlink the correct set of adjoint sources to the 'adj' directory
             # `adj_dir` is something like 'adj_nt'
             adj_dir = f"adj_{self._force.lower()}{self._cmpnt.lower()}" 
@@ -445,6 +450,48 @@ class NoiseInversion(Inversion):
             for fid in glob(os.path.join(dst, "*.adj")):
                 if os.path.islink(fid):
                     unix.rm(fid)
+
+    def _generate_empty_adjsrcs(self, components):
+        """
+        Generate empty (zero amplitude) adjoint sources for every station and
+        given `component`. Uses the Solver and Preprocess modules to get after
+        file naming and trace characteristics.
+
+        .. note::
+
+            Must be run by system.run() so that solvers are assigned
+            individual task ids/working directories.
+
+        :type components: list of str
+        :param components: components to generate empty adjoint sources for.
+            e.g., ['E', 'N'] will generate E and N component adjoint sources.
+            Note that any files matching the output adjoint source file name
+            will be removed so ensure that there is no actual adjoint source
+            data in this file.
+        """
+        # Grab a dummy synthetic trace to use for time series structure
+        st = self.preprocess.read(fid=self.solver.data_filenames("syn")[0],
+                                  data_format=self.solver.syn_data_format)
+        st[0].data *= 0  # zero amplitude adjoint source
+
+        # Get list of synthetic traces which require a corresponding adj source
+        # and rename them so that they follow the expected SPECFEM format
+        adj_fids = [
+                self.preprocess.rename_as_adjoint_source(os.path.basename(f))
+                for f in self.solver.data_filenames("syn")
+                ]
+
+        # Replace the channel component with the user-requested components
+        # !!! Making assumptions about the filenaming structure here
+        channel = adj_fids[0].split(".")[2]  # e.g., MXT
+        chnfmt = channel[:2] + "{}"  # e.g., MX{}
+
+        for fid in adj_fids:
+            for comp in components:
+                adjpath = os.path.join(self.trace_path("adj"), 
+                                       fid.replace(channel, chnfmt.format(comp))
+                                       )
+                self.preprocess.write(st=st, fid=adjpath)
 
     def _evaluate_line_search_misfit(self):
         """
