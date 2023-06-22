@@ -20,6 +20,13 @@ simulating point forces.
         Green's functions from ambient noise: Methodology and application to
         Adjoint tomography."
         Journal of Geophysical Research: Solid Earth 124.6 (2019): 5794-5810.
+
+.. warning::
+
+    This workflow class makes a lot of assumptions about file naming and 
+    path structure that is less-than-general. This was necessary to get things
+    working but in the future a re-write may be warranted if the current
+    structure is too restrictive. -- Bryant, 6/2023
 """
 import os
 import numpy as np
@@ -495,22 +502,69 @@ class NoiseInversion(Inversion):
 
     def postprocess_event_kernels(self):
         """
-        Overwrite the Migration function to combine multiple event kernels
-        (ZZ, ET + NT, ER + NR) prior to smoothing kernels. 
+        Overwrite the Migration function to combine multiple individual kernels
+        (TT = ET + NT, RR = ER + NR) into a single event kernel (ZZ + TT + RR) 
+        prior to the standard operation of combining and smoothing 
 
-        Assumes the sub-directory structure of kernels for path `eval_grad`
+        .. warning::
+
+            Assumes the sub-directory structure of kernels for path `eval_grad`
         """
-        # We need to combine the N? and E? kernels for EACH source
-        if "RR" in self.kernels:
-            
-            input_paths = [os.path.join(self.path.eval_grad, "ER"),
-                           os.path.join(self.path.eval_grad, "NR")
-                           ]
-            output_path = 
+        def generate_event_kernels():
+            """
+            Combine horizontal (TT=ET+NT; RR=ER+NR) kernels and then sum
+            all individual kernel contributions (ZZ+RR+TT) to generate the final
+            event kernel for each source.
 
-        if "TT" in self.kernels:
-            pass
+            This will perform at most NTASK * 3 combinations
 
+            .. note::
+
+                Must be run by system.run(single=True) so that the operation
+                has access to the compute node for the kernel combination
+            """
+            # Parameters are constant and static for this whole process
+            parameters = [f"{par}_kernel" for par in self.solver.parameters] 
+
+            # We need to combine the N? and E? kernels for each source by itself
+            for src in self.solver.source_names:
+                # Sub-directory containing kernels for a given source
+                src_path = os.path.join(self.path.eval_grad, "kernels", src)
+
+                for kernel in ["RR", "TT"]:
+                    if kernel not in self.kernels:
+                        continue:
+                    # Input paths are either ER + NR, or ET + NT
+                    input_paths = [os.path.join(src_path, f"E{kernel[0]}"),
+                                   os.path.join(src_path, f"N{kernel[0]}")]
+
+                    # Output path is the respective combined kernel: RR or TT
+                    output_path = os.path.join(src_path, kernel)
+
+                    if not os.path.exists(output_path):
+                        unix.mkdir(output_path)
+
+                    # Call SPECFEM binary `xcombine_sem` to merge hrzntl kernels
+                    self.solver.combine(input_paths, output_path, parameters)
+
+                # Now we need to combine ZZ, RR and TT kernels (if available)
+                # into one single event kernel
+                input_paths = []
+                for kernel in self.kernels.split(","):
+                    # e.g., scratch/eval_grad/kernels/{src}/RR
+                    input_paths.append(src_path, kernel)
+
+                # We drop the event kernel directly into the source 
+                # sub-directory to match the expected input of the OG function
+                output_path = os.path.join(self.path.eval_grad, "kernels", src)
+
+                self.solver.combine(input_paths, output_path, parameters)
+
+        # Run above function on system to get access to compute node
+        self.system.run([generate_event_kernels], single=True)
+
+        # Now the original function takes over and combines event kernels into
+        # a misfit kernel, and applies smoothing, masking, etc.
         super().postprocess_event_kernels()
 
 

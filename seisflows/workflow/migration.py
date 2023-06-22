@@ -177,7 +177,7 @@ class Migration(Forward):
             parameters = [f"{par}_kernel" for par in self.solver.parameters]
 
             self.solver.combine(
-                input_paths=input_paths
+                input_paths=input_paths,
                 output_path=os.path.join(self.path.eval_grad, "misfit_kernel"),
                 parameters=parameters
             )
