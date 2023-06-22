@@ -510,13 +510,31 @@ class NoiseInversion(Inversion):
 
             Assumes the sub-directory structure of kernels for path `eval_grad`
         """
+        # If only ZZ kernels, then we don't need to do any prior kernel summing.
+        # Simply reorganize directory structures so that the original function
+        # can find the required files
+        if self.kernels == "ZZ":
+            # $ mv kernels/src/ZZ/* -> kernels/src
+            for srcname in self.solver.source_names:
+                dst = os.path.join(self.path.eval_grad, "kernels", srcname)
+                src = glob(os.path.join(dst, "ZZ", "*"))
+
+                unix.mv(src=src, dst=dst)
+
+            super().postprocess_event_kernels()
+
+            # Return to avoid accessing code below which is only required if any
+            # horizontal components are involved
+            return
+
+
         def generate_event_kernels():
             """
             Combine horizontal (TT=ET+NT; RR=ER+NR) kernels and then sum
             all individual kernel contributions (ZZ+RR+TT) to generate the final
             event kernel for each source.
 
-            This will perform at most NTASK * 3 combinations
+            This will perform at most NTASK combinations
 
             .. note::
 
@@ -524,49 +542,36 @@ class NoiseInversion(Inversion):
                 has access to the compute node for the kernel combination
             """
             # Parameters are constant and static for this whole process
-            parameters = [f"{par}_kernel" for par in self.solver.parameters] 
+            parameters = [f"{par}_kernel" for par in self.solver._parameters] 
 
             # We need to combine the N? and E? kernels for each source by itself
             for src in self.solver.source_names:
                 # Sub-directory containing kernels for a given source
                 src_path = os.path.join(self.path.eval_grad, "kernels", src)
 
+                # This will bring in all available kernels from: ER, NR, ET, NT
                 for kernel in ["RR", "TT"]:
                     if kernel not in self.kernels:
-                        continue:
-                    # Input paths are either ER + NR, or ET + NT
+                        continue
                     input_paths = [os.path.join(src_path, f"E{kernel[0]}"),
                                    os.path.join(src_path, f"N{kernel[0]}")]
 
-                    # Output path is the respective combined kernel: RR or TT
-                    output_path = os.path.join(src_path, kernel)
-
-                    if not os.path.exists(output_path):
-                        unix.mkdir(output_path)
-
-                    # Call SPECFEM binary `xcombine_sem` to merge hrzntl kernels
-                    self.solver.combine(input_paths, output_path, parameters)
-
-                # Now we need to combine ZZ, RR and TT kernels (if available)
-                # into one single event kernel
-                input_paths = []
-                for kernel in self.kernels.split(","):
-                    # e.g., scratch/eval_grad/kernels/{src}/RR
-                    input_paths.append(src_path, kernel)
+                # Sum in ZZ kernels to the final event kernel if available
+                if "ZZ" in self.kernels:
+                    input_paths.append(os.path.join(src_path, "ZZ"))
 
                 # We drop the event kernel directly into the source 
                 # sub-directory to match the expected input of the OG function
                 output_path = os.path.join(self.path.eval_grad, "kernels", src)
 
                 self.solver.combine(input_paths, output_path, parameters)
-
+        
         # Run above function on system to get access to compute node
         self.system.run([generate_event_kernels], single=True)
 
         # Now the original function takes over and combines event kernels into
         # a misfit kernel, and applies smoothing, masking, etc.
         super().postprocess_event_kernels()
-
 
     def _evaluate_line_search_misfit(self):
         """

@@ -288,8 +288,8 @@ class Specfem3DGlobe(Specfem):
         # Copy the 'mesh_parameters.bin' from LOCAL_PATH. Assumed to be the 
         # same for all tasks
         src = os.path.join(self.model_databases, "mesh_parameters.bin")
-        for name in self.source_names:
-            dst = os.path.join(input_path, name, "mesh_parameters.bin")
+        for input_path in input_paths:
+            dst = os.path.join(input_path, "mesh_parameters.bin")
             unix.cp(src, dst)
         
         # 3DGLOBE 'xcombine_sem' does not expect `reg?_` prefix, strip off
