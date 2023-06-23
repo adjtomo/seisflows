@@ -193,15 +193,16 @@ class NoiseInversion(Inversion):
             ZZ component kernel generation follows roughly the same workflow as 
             a standard earthquake based inversion.
         """
-        # This will be referenced in `run_forward_simulations`
+        # Internal tracking parameters used to name sub-directories, save
+        # files and dictate how simulatuions are run
         self._force = "Z"
         self._cmpnt = "Z"
 
         # Run the forward solver to generate SGFs and adjoint sources
-        super().evaluate_initial_misfit()
+        self.evaluate_initial_misfit()
 
         # Run the adjoint solver to generate kernels for ZZ sensitive structure
-        super().run_adjoint_simulations()
+        self.run_adjoint_simulations()
 
     def generate_tt_rr_kernels(self):
         """
@@ -242,12 +243,12 @@ class NoiseInversion(Inversion):
         # Note, this must be run BEFORE 'NN' to get preprocessing to work
         self._force = "E"
         logger.info(f"running misfit evaluation for component '{self._force}'")
-        super().evaluate_initial_misfit()
+        self.evaluate_initial_misfit()
 
         # Run the forward solver to generate SGFs and adjoint sources
         self._force = "N"
         logger.info(f"running misfit evaluation for component '{self._force}'")
-        super().evaluate_initial_misfit()
+        self.evaluate_initial_misfit()
 
         # Run adjoint simulations for each kernel RR and TT (if requested) by 
         # running two adjoint simulations (E and N) per kernel. 
@@ -431,7 +432,6 @@ class NoiseInversion(Inversion):
                                         **kwargs)
 
         # TODO >redirect output `export_traces` seismograms to honor kernel name
-
 
     def run_adjoint_simulations(self, **kwargs):
         """

@@ -545,27 +545,35 @@ class Default:
         )
 
         # fmt path/to/NN.SSS.CCc* -> NN.SSS.c (see docstring note for details)
-        # and curtail based on chosen components
-        match_obs = self._curtail_fids_for_file_matching(observed, components)
-        match_syn = self._curtail_fids_for_file_matching(synthetic, components)
-        if components:
-            logger.info(f"will only preprocess waveforms with components "
-                        f"matching: {components}")
+        match_obs = self._curtail_fids_for_file_matching(observed)
+        match_syn = self._curtail_fids_for_file_matching(synthetic)
 
         # only return traces that have both observed and synthetic file match
-        matching_traces = sorted(list(set(match_syn).intersection(match_obs)))
-        assert(len(matching_traces) != 0), (
+        match_traces = \
+                sorted(list(set(match_syn).intersection(set(match_obs))))
+        logger.info(f"{len(match_traces)} traces matching between obs and syn")
+
+        # Curtail based on user-chosen components if required
+        if components:
+            match_comps = []
+            for comp in components:
+                match_comps += [_ for _ in match_traces if _.endswith(comp)]
+            match_traces = match_comps
+            logger.info(f"{len(match_traces)} traces with comps {components}")
+
+        # Final check to makes sure that we still have data that can be compared
+        assert(len(match_traces) != 0), (
             f"there are no traces with both observed and synthetic files for "
             f"source: {source_name}; verify that 'traces/obs' and 'traces/syn' "
             f"have the format 'NN.SSS.CCc*', and match on variables 'N', 'S', "
             f"and 'c'"
         )
-        logger.info(f"{source_name} has {len(matching_traces)} matching traces "
+        logger.info(f"{source_name} has {len(match_traces)} matching traces "
                     f"for preprocessing")
 
         # Generate the list of full path waveform fids for matching obs + syn
         obs_paths, syn_paths = [], []
-        for short_fid in matching_traces:
+        for short_fid in match_traces:
             # Find the corresponding full path name based on the short match vrs
             obs_fid = observed[match_obs.index(short_fid)]
             obs_paths.append(os.path.join(obs_path, obs_fid))
@@ -669,10 +677,6 @@ class Default:
         :rtype: list of str
         :return: list of shortened file IDs
         """
-        # To make sure component checking does not fail on case mismatch
-        if components:
-            components = [_.upper() for _ in components]
-
         # Drop full path incase these are given as absolute paths
         full_fids = [os.path.basename(_) for _ in fid_list]
         # Split into expected format NN.SSS.CCc, drop extension
@@ -681,12 +685,8 @@ class Default:
         for fid in fids:
             net, sta, cha = fid
             comp = cha[-1]
-            # If selecting on component, ignore those that do not match list
-            if components and comp.upper() not in components:
-                short_fids.append(None)  # Used to retain indexing
-            else:
-                # NN.SSS.c
-                short_fids.append(f"{net}.{sta}.{comp}")
+            # NN.SSS.c
+            short_fids.append(f"{net}.{sta}.{comp}")
 
         return short_fids
 
