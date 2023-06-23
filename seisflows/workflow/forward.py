@@ -446,8 +446,9 @@ class Forward:
             save_forward = True
 
         self.solver.forward_simulation(save_traces=save_traces,
-                export_traces=export_traces, save_forward=save_forward
-                )
+                                       export_traces=export_traces, 
+                                       save_forward=save_forward
+                                       )
 
     def evaluate_objective_function(self, save_residuals=False, components=None,
                                     **kwargs):
@@ -456,6 +457,7 @@ class Forward:
         given synthetics generated during forward simulations
 
         .. note::
+
             Must be run by system.run() so that solvers are assigned individual
             task ids/ working directories.
 

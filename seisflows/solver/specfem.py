@@ -19,6 +19,7 @@ TODO
 """
 import os
 import sys
+import time
 import subprocess
 from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
@@ -595,6 +596,9 @@ class Specfem:
         if save_traces:
             if not os.path.exists(save_traces):
                 unix.mkdir(save_traces)
+            src = glob(os.path.join("OUTPUT_FILES", self.data_wildcard()))
+            _nfiles = len(src)  # used to check for file move completion
+
             unix.mv(
                 src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
                 dst=save_traces

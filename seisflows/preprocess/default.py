@@ -430,7 +430,7 @@ class Default:
         # and initialize empty adjoint sources
         obs, syn = self._setup_quantify_misfit(source_name, save_adjsrcs,
                                                components)
-
+        
         # Process each pair in parallel. Max workers is the total num. of cores
         # !!! see note in docstring !!!
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
@@ -548,11 +548,9 @@ class Default:
         # and curtail based on chosen components
         match_obs = self._curtail_fids_for_file_matching(observed, components)
         match_syn = self._curtail_fids_for_file_matching(synthetic, components)
-
         if components:
-            logger.debug(f"chosen component list {components} retained "
-                         f"{len(match_obs)} obs and {len(match_syn)} syn "
-                         f"waveforms for event {source_name}")
+            logger.info(f"will only preprocess waveforms with components "
+                        f"matching: {components}")
 
         # only return traces that have both observed and synthetic file match
         matching_traces = sorted(list(set(match_syn).intersection(match_obs)))
@@ -625,6 +623,7 @@ class Default:
             # for poorly labelled data
             if tr_obs.stats.component and tr_syn.stats.component:
                 assert (tr_obs.stats.component == tr_syn.stats.component), (
+                    f"{obs_fid}, {syn_fid}"
                     f"Mismatched components for '{os.path.basename(obs_fid)}' "
                     f"obs: `{tr_obs.stats.component}` != " 
                     f"syn: `{tr_syn.stats.component}`. Please check `obs` data"
@@ -684,9 +683,10 @@ class Default:
             comp = cha[-1]
             # If selecting on component, ignore those that do not match list
             if components and comp.upper() not in components:
-                continue
-            # NN.SSS.c
-            short_fids.append(f"{net}.{sta}.{comp}")
+                short_fids.append(None)  # Used to retain indexing
+            else:
+                # NN.SSS.c
+                short_fids.append(f"{net}.{sta}.{comp}")
 
         return short_fids
 
