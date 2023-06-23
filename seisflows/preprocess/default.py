@@ -625,10 +625,10 @@ class Default:
             # for poorly labelled data
             if tr_obs.stats.component and tr_syn.stats.component:
                 assert (tr_obs.stats.component == tr_syn.stats.component), (
-                    f"Preprocesing for {obs_fid} has mismatching components. " 
-                    f"Please check that your `obs` and `syn` data have "
-                    f"overlapping components"
-                )
+                    f"Mismatched components for '{os.path.basename(obs_fid)}' "
+                    f"obs: `{tr_obs.stats.component}` != " 
+                    f"syn: `{tr_syn.stats.component}`. Please check `obs` data"
+                    )
 
             # Calculate the misfit value and write to file
             if save_residuals and self._calculate_misfit:

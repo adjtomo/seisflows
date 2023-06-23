@@ -176,18 +176,116 @@ class NoiseInversion(Inversion):
             tag = f"{tag}_{comp}".lower()
         return os.path.join(self.solver.cwd, "traces", tag)
 
+    def generate_zz_kernels(self):
+        """
+        Main processing function for Noise Inversion workflow. 
+
+        Generates Synthetic Greens Functions (SGF) for the ZZ component by
+        running forward simulations for each master station using a Z component
+        force, and then running an adjoint simulation to generate kernels.
+
+        Some internal function overrides are required to adjust file and
+        sub-directory naming structure to avoid conflict with the TT and RR 
+        kernel generation.
+
+        .. note::
+
+            ZZ component kernel generation follows roughly the same workflow as 
+            a standard earthquake based inversion.
+        """
+        # This will be referenced in `run_forward_simulations`
+        self._force = "Z"
+        self._cmpnt = "Z"
+
+        # Run the forward solver to generate SGFs and adjoint sources
+        super().evaluate_initial_misfit()
+
+        # Run the adjoint solver to generate kernels for ZZ sensitive structure
+        super().run_adjoint_simulations()
+
+    def generate_tt_rr_kernels(self):
+        """
+        Main processing function for Noise Inversion workflow. 
+
+        Generate Synthetic Greens Functions (SGF) for the TT and/or RR
+        component(s) following processing steps laid out in Wang et al. (2019).
+
+        .. note::
+
+            This is significantly more complicated than the ZZ case because we
+            need to rotate back and forth between the N and E simulations, and
+            the R and T EGFs, which requires a lot of internal bookkeeping.
+
+        TT/RR Workflow Steps:
+
+          1. Run E component forward simulation, save traces & forward arrays
+          2. Run N component forward simulations, save traces & forward arrays
+          3. Rotate N and E component SGF to R and T components based on
+             source-receiver azimuth values
+          4. Calculate RR and TT adjoint sources (u_rr, u_tt) w.r.t EGF data
+
+          5a. Rotate u_tt to N and E (u_ee, u_en, u_ne, u_nn)
+          6a. Run ET adjoint simulation (injecting u_ee, u_en) for K_ET
+          7a. Run NT adjoint simulation (injecting u_ne, u_nn) for K_NT
+          8a. Sum T kernels, K_ET + K_NT = K_TT
+
+          5a. Rotate u_rr to N and E (u_ee, u_en, u_ne, u_nn)
+          6b. Run ER adjoint simulation (injecting u_ee, u_en) for K_ER
+          7b. Run NR adjoint simulation (injecting u_ne, u_nn) for K_NR
+          8b. Sum R kernels, K_ER + K_NR = K_RR
+
+          9. Sum kernels K = K_RR + K_TT
+        """
+        logger.info(msg.mnr("EVALUATING RR/TT MISFIT FOR INITIAL MODEL"))
+
+        # Run the forward solver to generate ET SGFs and adjoint sources
+        # Note, this must be run BEFORE 'NN' to get preprocessing to work
+        self._force = "E"
+        logger.info(f"running misfit evaluation for component '{self._force}'")
+        super().evaluate_initial_misfit()
+
+        # Run the forward solver to generate SGFs and adjoint sources
+        self._force = "N"
+        logger.info(f"running misfit evaluation for component '{self._force}'")
+        super().evaluate_initial_misfit()
+
+        # Run adjoint simulations for each kernel RR and TT (if requested) by 
+        # running two adjoint simulations (E and N) per kernel. 
+        for cmpnt in ["T", "R"]:  
+            # Skip over if User did not request 
+            if cmpnt not in self.kernels:  # e.g., if 'R' in 'RR,TT'
+                continue
+
+            # Set internal kernel variable which will let all spawned jobs
+            # know which set of adjoint sources are required for their sim
+            logger.info(f"running generating kernel for component: {cmpnt}")
+            self._cmpnt = cmpnt  # T or R
+
+            # We require two adjoint simulations per kernel to recover gradient
+            for force in ["E", "N"]:
+                self._force = force
+                logger.info(f"running adjoint simulation for "
+                            f"'{self._force}{self._cmpnt}'")
+                self.run_adjoint_simulations()
+
+            # Unset internal variables just incase
+            self._cmpnt = None
+            self._force = None
+
     def prepare_data_for_solver(self, **kwargs):
         """
-        Overrides workflow.forward.prepare_data_for_solver() by changing
-        the location of expected observed data, and removing any data
-        previously stored within the `solver/traces/obs/` directory.
+        Function Override of `workflow.forward.prepare_data_for_solver()` 
+        This will be run from within the `evaluate_initial_misfit` function.
 
-        Looks for data in the following locations:
+        Changes the location of expected observed data, and removes any data
+        previously stored within the `solver/traces/obs/` directory to avoid
+        data conflict
+
+        Data are searched for under the following locations for given kernels:
+
             ZZ kernel: `path_data`/{source_name}/ZZ/*
             RR kernel: `path_data`/{source_name}/RR/*
             TT kernel: `path_data`/{source_name}/TT/*
-
-        This will be run within the `evaluate_initial_misfit` function
 
         .. note ::
 
@@ -218,60 +316,20 @@ class NoiseInversion(Inversion):
         # Use Forward workflow machinery to copy in data
         super().prepare_data_for_solver(_src=src)
 
-    def run_forward_simulations(self, path_model, **kwargs):
-        """
-        Overrides the `forward.run_forward_simulation` to do some additional
-        file manipulations and output file redirects to prepare for noise
-        inversion, prior to running the forward simulation.
-
-        .. note::
-
-            Internal parameter `_force` needs to be set by the calling
-            functions prior to running forward simulations.
-
-        .. note::
-
-            Must be run by system.run() so that solvers are assigned individual
-            task ids/ working directories.
-        """
-        assert(self._force is not None), (
-            f"`run_forward_simulation` requires that the internal attribute " 
-            f"`_force` is set prior to running forward simulations"
-        )
-
-        # Edit the force vector based on the internal value for chosen kernel
-        kernel_vals, save_traces = None, None
-        if self._force == "Z":
-            kernel_vals = ["0.d0", "0.d0", "1.d0"]  # [E, N, Z]
-            save_traces = self.trace_path(tag="syn")
-        else:
-            if self._force == "N":
-                kernel_vals = ["0.d0", "1.d0", "0.d0"]  # [E, N, Z]
-            elif self._force == "E":
-                kernel_vals = ["1.d0", "0.d0", "0.d0"]  # [E, N, Z]
-            # e.g., solver/{source_name}/traces/syn_e
-            save_traces = self.trace_path(tag="syn", comp=self._force)
-
-        # Set FORCESOLUTION (3D/3D_GLOBE) to ensure correct force for kernel
-        self.solver.set_parameters(keys=["component dir vect source E",
-                                         "component dir vect source N",
-                                         "component dir vect source Z_UP"],
-                                   vals=kernel_vals, file="DATA/FORCESOLUTION",
-                                   delim=":")
-
-        super().run_forward_simulations(path_model, save_traces=save_traces,
-                                        **kwargs)
-
-        # TODO >redirect output `export_traces` seismograms to honor kernel name
-
     def evaluate_objective_function(self, save_residuals=False, components=None,
                                     **kwargs):
         """
-        Modifications to original Inverse workflow function to allow quantifying
-        misfit for RR and TT kernels which require seismogram rotations prior 
-        to running preprocessing.
+        Function Override of `workflow.inversion.evaluate_objective_function`
 
-        This will be run within the `evaluate_initial_misfit` function
+        Major modification to the original function for TT and RR kernel 
+        generation: output synthetics are rotated from N, E coordinate system
+        to R and T, prior to misfit quantification, to match expected EGF data
+        which is provided in R and T components. Resultant R and T adjoint 
+        sources are rotated back to N and E coordinate systems for subsquent
+        adjoint simulations.
+
+        ZZ kernel creation requires little modification and generally follows
+        the original workflow function.
 
         .. note::
 
@@ -324,93 +382,63 @@ class NoiseInversion(Inversion):
                         choice=choice,
                         )
 
-    def generate_zz_kernels(self):
+    def run_forward_simulations(self, path_model, **kwargs):
         """
-        Generate Synthetic Greens Functions (SGF) for the ZZ component by
-        running forward simulations for each master station using a Z component
-        force, and then running an adjoint simulation to generate kernels.
-        """
-        # This will be referenced in `run_forward_simulations`
-        self._force = "Z"
-        self._cmpnt = "Z"
+        Function Override of `workflow.forward.run_forward_simulation` 
 
-        # Run the forward solver to generate SGFs and adjoint sources
-        super().evaluate_initial_misfit()
-
-        # Run the adjoint solver to generate kernels for ZZ sensitive structure
-        super().run_adjoint_simulations()
-
-    def generate_tt_rr_kernels(self):
-        """
-        Generate Synthetic Greens Functions (SGF) for the TT and/or RR
-        component(s) following Wang et al. (2019).
+        Performs curated FORCESOLUTION file manipulation and output file 
+        redirects to get synthetic waveform data in the correct location for
+        future preprocessing steps. Able to handle Z, N and E forces required 
+        for ZZ, TT and RR kernel generation.
 
         .. note::
 
-            This is significantly more complicated than the ZZ case because we
-            need to rotate back and forth between the N and E simulations, and
-            the R and T EGFs.
+            Internal parameter `_force` needs to be set by the calling
+            functions prior to running forward simulations, otherwise this
+            function will return an AssertionError
 
-        Workflow steps are as follows:
+        .. note::
 
-        1. Run E component forward simulation, save traces & forward arrays
-        2. Run N component forward simulations, save traces & forward arrays
-        3. Rotate N and E component SGF to R and T components based on
-           source-receiver azimuth values
-        4. Calculate RR and TT adjoint sources (u_rr, u_tt) w.r.t EGF data
-
-        5a. Rotate u_tt to N and E (u_ee, u_en, u_ne, u_nn)
-        6a. Run ET adjoint simulation (injecting u_ee, u_en) for K_ET
-        7a. Run NT adjoint simulation (injecting u_ne, u_nn) for K_NT
-        8a. Sum T kernels, K_ET + K_NT = K_TT
-
-        5a. Rotate u_rr to N and E (u_ee, u_en, u_ne, u_nn)
-        6b. Run ER adjoint simulation (injecting u_ee, u_en) for K_ER
-        7b. Run NR adjoint simulation (injecting u_ne, u_nn) for K_NR
-        8b. Sum R kernels, K_ER + K_NR = K_RR
-
-        9. Sum kernels K = K_RR + K_TT
+            Must be run by system.run() so that solvers are assigned individual
+            task ids/ working directories.
         """
-        logger.info(msg.mnr("EVALUATING RR/TT MISFIT FOR INITIAL MODEL"))
+        assert(self._force is not None), (
+            f"`run_forward_simulation` requires that the internal attribute " 
+            f"`_force` is set prior to running forward simulations"
+        )
 
-        # Run the forward solver to generate ET SGFs and adjoint sources
-        # Note, this must be run BEFORE 'NN' to get preprocessing to work
-        self._force = "E"
-        logger.info(f"running misfit evaluation for component '{self._force}'")
-        super().evaluate_initial_misfit()
+        # Edit the force vector based on the internal value for chosen kernel
+        kernel_vals, save_traces = None, None
+        if self._force == "Z":
+            kernel_vals = ["0.d0", "0.d0", "1.d0"]  # [E, N, Z]
+            save_traces = self.trace_path(tag="syn")
+        else:
+            if self._force == "N":
+                kernel_vals = ["0.d0", "1.d0", "0.d0"]  # [E, N, Z]
+            elif self._force == "E":
+                kernel_vals = ["1.d0", "0.d0", "0.d0"]  # [E, N, Z]
+            # e.g., solver/{source_name}/traces/syn_e
+            save_traces = self.trace_path(tag="syn", comp=self._force)
 
-        # Run the forward solver to generate SGFs and adjoint sources
-        self._force = "N"
-        logger.info(f"running misfit evaluation for component '{self._force}'")
-        super().evaluate_initial_misfit()
+        # Set FORCESOLUTION (3D/3D_GLOBE) to ensure correct force for kernel
+        self.solver.set_parameters(keys=["component dir vect source E",
+                                         "component dir vect source N",
+                                         "component dir vect source Z_UP"],
+                                   vals=kernel_vals, file="DATA/FORCESOLUTION",
+                                   delim=":")
 
-        # Run adjoint simulations for each kernel RR and TT (if requested) by 
-        # running two adjoint simulations (E and N) per kernel. 
-        for cmpnt in ["T", "R"]:  
-            # Skip over if User did not request 
-            if cmpnt not in self.kernels:  # e.g., if 'R' in 'RR,TT'
-                continue
+        super().run_forward_simulations(path_model, save_traces=save_traces,
+                                        **kwargs)
 
-            # Set internal kernel variable which will let all spawned jobs
-            # know which set of adjoint sources are required for their sim
-            logger.info(f"running generating kernel for component: {cmpnt}")
-            self._cmpnt = cmpnt  # T or R
+        # TODO >redirect output `export_traces` seismograms to honor kernel name
 
-            # We require two adjoint simulations per kernel to recover gradient
-            for force in ["E", "N"]:
-                self._force = force
-                logger.info(f"running adjoint simulation for "
-                            f"'{self._force}{self._cmpnt}'")
-                self.run_adjoint_simulations()
-
-            # Unset internal variables just incase
-            self._cmpnt = None
-            self._force = None
 
     def run_adjoint_simulations(self, **kwargs):
         """
-        Overwrite the Workflow.Migration function to perform adjoint source
-        rotation prior to adjoint simulation. Only required for RR and TT kernel
+        Function Override of `workflow.migration.run_adjoint_simulations`
+
+        Redirects kernel saving to named sub-directories to avoid multiple 
+        adjoint simulations overwriting each others' kernel files
         """
         subdir = f"{self._force}{self._cmpnt}"  # one of: ZZ, NT, ET, NR, ER
 
@@ -427,10 +455,13 @@ class NoiseInversion(Inversion):
     def _run_adjoint_simulation_single(self, save_kernels=None, 
                                        export_kernels=None, **kwargs):
         """
-        Overwrites Migration workflow function to: 1) create necessary empty 
-        adjoint sources, 2) prepend a data retrieval operation to the RR or TT 
-        adjoint simulation so that the correct adjoint sources are discoverable 
-        during the solver sim.
+        Function Override of `workflow.migration._run_adjoint_simulation_single`
+
+        1) Creates necessary empty adjoint sources, e.g., ZZ kernel only 
+           requires 'Z' component adjoint sources, and 'N' and 'E' MUST be 0
+        2) For N and E (TT and RR kernels) adjoint simulations, symlinks correct 
+           adjoint sources to be discoverable by SPECFEM. Note that for 
+           horizontal components, four sets of adjoint sources are available 
 
         .. note::
 
@@ -462,9 +493,14 @@ class NoiseInversion(Inversion):
 
     def _generate_empty_adjsrcs(self, components):
         """
-        Generate empty (zero amplitude) adjoint sources for every station and
-        given `component`. Uses the Solver and Preprocess modules to get after
-        file naming and trace characteristics.
+        Internal NoiseInversion function used to generate empty (zero amplitude) 
+        adjoint sources for every station and given `component`. Uses the Solver 
+        and Preprocess modules to get after file naming and trace 
+        characteristics.
+
+        This function is required because the original Inversion method for 
+        generating empty adjoint sources is insuffficient for the file structure
+        that get's craeted here
 
         .. note::
 
@@ -504,9 +540,13 @@ class NoiseInversion(Inversion):
 
     def postprocess_event_kernels(self):
         """
-        Overwrite the Migration function to combine multiple individual kernels
-        (TT = ET + NT, RR = ER + NR) into a single event kernel (ZZ + TT + RR) 
-        prior to the standard operation of combining and smoothing 
+        Function Override of `workflow.migration.postprocess_event_kernels`
+
+        Combines multiple individual kernels, K, for each source.
+        That is `K_event = K_ZZ + K_TT + K_RR`, where (K_TT = K_ET + K_NT and 
+        K_RR = K_ER + K_NR). Uses the original function machinery to do the
+        final kernel summation (K_misfit = sum(K_event)) and postprocessing
+        (smoothing, masking, etc.)
 
         .. warning::
 
@@ -535,8 +575,6 @@ class NoiseInversion(Inversion):
             Combine horizontal (TT=ET+NT; RR=ER+NR) kernels and then sum
             all individual kernel contributions (ZZ+RR+TT) to generate the final
             event kernel for each source.
-
-            This will perform at most NTASK combinations
 
             .. note::
 
@@ -577,11 +615,15 @@ class NoiseInversion(Inversion):
 
     def _evaluate_line_search_misfit(self):
         """
-        Used in line search for calculating misfit values to compare against
-        starting model. Here we overwrite the base function to allow rotating 
-        synthetics N+E -> R+T.
+        Function Override of `workflow.inversion._evaluate_line_search_misfit`
+        Called inside `workflow.inversion.perform_line_search`
+        
+        Line search requires running forward simulations multiple times to 
+        generate the correct synthetics, as well as some synthetic rotation
+        if TT or RR included in kernels
 
-        .. note::
+        .. warning::
+
             Each call of this function will save residuals but these will be 
             ignored and the final residual file will only be created once all 
             forward simulations are run
