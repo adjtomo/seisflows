@@ -473,23 +473,24 @@ class NoiseInversion(Inversion):
             
             super()._run_adjoint_simulation_single(save_kernels, export_kernels)
         elif self._force in ["E", "N"]:
+            path_adj = os.path.join(self.solver.cwd, "traces", "adj")
+
+            # Remove any existing adjoint sources from directory 
+            unix.rm(path_adj)
+            unix.mkdir(path_adj)
+
+            # Generate empty Z components because we only have E and N component
             self._generate_empty_adjsrcs(components=["Z"])
 
             # Symlink the correct set of adjoint sources to the 'adj' directory
             # `adj_dir` is something like 'adj_nt'
             adj_dir = f"adj_{self._force.lower()}{self._cmpnt.lower()}" 
-
             srcs = glob(os.path.join(self.solver.cwd, "traces", adj_dir, "*"))
-            dst = os.path.join(self.solver.cwd, "traces", "adj")
             for src in srcs:
-                unix.ln(src, dst)
+                unix.ln(src, path_adj)
 
             super()._run_adjoint_simulation_single(save_kernels, export_kernels)
 
-            # Get rid of symlinks to make room for next simulation
-            for fid in glob(os.path.join(dst, "*.adj")):
-                if os.path.islink(fid):
-                    unix.rm(fid)
 
     def _generate_empty_adjsrcs(self, components):
         """
@@ -526,17 +527,14 @@ class NoiseInversion(Inversion):
                 for f in self.solver.data_filenames("syn")
                 ]
 
-        # Replace the channel component with the user-requested components
-        # !!! Making assumptions about the filenaming structure here
-        channel = adj_fids[0].split(".")[2]  # e.g., MXT
-        chnfmt = channel[:2] + "{}"  # e.g., MX{}
-
         for fid in adj_fids:
-            for comp in components:
-                adjpath = os.path.join(self.trace_path("adj"), 
-                                       fid.replace(channel, chnfmt.format(comp))
-                                       )
-                self.preprocess.write(st=st, fid=adjpath)
+            # !!! Making assumptions about the filenaming structure here
+            component = fid.split(".")[2][-1]  # NN.SSS.CCc.adj  <- after 'c'
+            # Only write components requested by the User or calling function
+            if component not in components:
+                continue
+            adjpath = os.path.join(self.trace_path("adj"), fid)
+            self.preprocess.write(st=st, fid=adjpath)
 
     def postprocess_event_kernels(self):
         """
