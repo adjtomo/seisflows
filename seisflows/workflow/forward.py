@@ -409,11 +409,17 @@ class Forward:
         Performs forward simulation for a single given event.
 
         .. note::
+
             if PAR.PREPROCESS == None, will not perform misfit quantification
 
         .. note::
             Must be run by system.run() so that solvers are assigned individual
             task ids/ working directories.
+
+        :type path_model: str
+        :param path_model: path to SPECFEM model files used to run the forwarsd
+            simulations. Files will be copied to each individual solver
+            directory.
         """
         # Allow overriding Workflows to change the default directory structure
         save_traces = kwargs.get("save_traces", 
