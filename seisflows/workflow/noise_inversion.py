@@ -107,10 +107,10 @@ class NoiseInversion(Inversion):
         """
         super().check()
 
-        assert(self.preprocess.__class__.__name__ == "noise"), \
+        assert(self._modules.preprocess.__class__.__name__ == "Noise"), \
             f"Noise Inversion workflow require the `noise` preprocessing class"
 
-        assert("3D" in self.solver.__class__.__name__ ), (
+        assert("3D" in self._modules.solver.__class__.__name__ ), (
             f"Noise Inversion workflow requires solver module 'specfem3d' or " 
             f"'specfem3d_globe'"
         )
@@ -118,7 +118,7 @@ class NoiseInversion(Inversion):
         assert(self.data_case == "data"), \
             f"Noise Inversion workflow must have `data_case` == 'data'"
 
-        assert(self.solver.source_prefix == "FORCESOLUTION"), (
+        assert(self._modules.solver.source_prefix == "FORCESOLUTION"), (
             f"Noise Inversion workflow requires solver `source_prefix` to be " 
             f"'FORCESOLUTION'"
         )
@@ -127,7 +127,9 @@ class NoiseInversion(Inversion):
         assert(set(self.kernels.split(",")).issubset(acceptable_kernels)), \
             f"`kernels` must be a subset of {acceptable_kernels}"
 
-        # Check whether data exists for all sources/master stations
+        # TODO: Check whether data exists for all sources/master stations
+
+        # TODO: Check that solver parameter ROTATE_SEISMOGRAMS_RTZ == False (?)
 
 
     @property
@@ -458,38 +460,6 @@ class NoiseInversion(Inversion):
 
         # TODO >redirect output `export_traces` seismograms to honor kernel name
 
-    def run_adjoint_simulations(self, **kwargs):
-        """
-        Function Override of `workflow.migration.run_adjoint_simulations`
-
-        Redirects kernel saving to named sub-directories to avoid multiple 
-        adjoint simulations overwriting each others' kernel files
-
-        :raises AssertionError: if internal variables `_force` or `_cmpt` are
-            not set by the calling function
-        """
-        # Internal variable check
-        assert(self._force is not None), (
-            f"`run_adjoint_simulations` requires that the internal attribute " 
-            f"`_force` is set prior to running forward simulations"
-        )
-        assert(self._cmpt is not None), (
-            f"`run_adjoint_simulations` requires that the internal attribute " 
-            f"`_cmpt` is set prior to running forward simulations"
-        )
-        # Kernel sub-directory should be one of: ZZ, NT, ET, NR, ER
-        subdir = f"{self._force}{self._cmpnt}"
-
-        # Redirect paths to where we save and export kernels to avoid overwrites
-        save_kernels = os.path.join(self.path.eval_grad, "kernels",
-                                    self.solver.source_name, subdir)
-        export_kernels = os.path.join(self.path.output, "kernels",
-                                      self.solver.source_name, subdir)
-
-        super().run_adjoint_simulations(save_kernels=save_kernels,
-                                        export_kernels=export_kernels,
-                                        **kwargs)
-
     def _run_adjoint_simulation_single(self, save_kernels=None, 
                                        export_kernels=None, **kwargs):
         """
@@ -506,6 +476,29 @@ class NoiseInversion(Inversion):
             Must be run by system.run() so that solvers are assigned
             individual task ids/working directories.
         """
+        # Internal variable check
+        assert(self._force is not None), (
+            f"`run_adjoint_simulations` requires that the internal attribute " 
+            f"`_force` is set prior to running forward simulations"
+        )
+        assert(self._cmpnt is not None), (
+            f"`run_adjoint_simulations` requires that the internal attribute " 
+            f"`_cmpnt` is set prior to running forward simulations"
+        )
+        # Kernel subdirectory should be one of: ZZ, NT, ET, NR, ER
+        subdir = f"{self._force}{self._cmpnt}"
+
+        # Redirect paths to where we save and export kernels to avoid overwrites
+        if save_kernels is None:
+            save_kernels = os.path.join(self.path.eval_grad, "kernels",
+                                        self.solver.source_name, subdir)
+        if export_kernels is None and self.export_kernels:
+            export_kernels = os.path.join(self.path.output, "kernels",
+                                          self.solver.source_name, subdir)
+        else:
+            export_kernels = False
+
+        # Run adjoint simulations for each kernel
         if self._force == "Z":
             self._generate_empty_adjsrcs(components=["E", "N"])
             
