@@ -666,12 +666,17 @@ class NoiseInversion(Inversion):
         """
         if "ZZ" in self.kernels:
             self._force = "Z"
+            # Use this function to set the correct 'obs' data
+            self.prepare_data_for_solver()
             super()._evaluate_line_search_misfit()
-        elif "RR" in self.kernels or "TT" in self.kernels:
+
+        if ("RR" in self.kernels) or ("TT" in self.kernels):
             self._force = "N"
+            self.prepare_data_for_solver()
             super()._evaluate_line_search_misfit()
 
             self._force = "E"
+            self.prepare_data_for_solver()
             super()._evaluate_line_search_misfit()
 
 
