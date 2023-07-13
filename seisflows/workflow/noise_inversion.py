@@ -564,12 +564,16 @@ class NoiseInversion(Inversion):
 
         for fid in adj_fids:
             # !!! Making assumptions about the filenaming structure here
-            component = fid.split(".")[2][-1]  # NN.SSS.CCc.adj  <- after 'c'
-            # Only write components requested by the User or calling function
-            if component not in components:
-                continue
-            adjpath = os.path.join(self.trace_path("adj"), fid)
-            self.preprocess.write(st=st, fid=adjpath)
+            channel = fid.split(".")[2]  # NN.SSS.CCc.adj
+            # Write out adjoint sources for all requested components
+            for component in components:
+                channel_out = channel[:2] + component  # e.g., MXZ -> MXR
+                # !!! May be an issue if station name is the same as channel
+                fid_out = fid.replace(channel, channel_out)
+                adjpath = os.path.join(self.trace_path("adj"), fid_out)
+                # Do not overwrite existing adjoint sources
+                if not os.path.exists(adjpath):
+                    self.preprocess.write(st=st, fid=adjpath)
 
     def postprocess_event_kernels(self):
         """
@@ -651,7 +655,7 @@ class NoiseInversion(Inversion):
 
     def _evaluate_line_search_misfit(self):
         """
-        Function Override of `workflow.inversion._evaluate_line_search_misfit`
+        Function Overwrite of `workflow.inversion._evaluate_line_search_misfit`
         Called inside `workflow.inversion.perform_line_search`
         
         Line search requires running forward simulations multiple times to 
@@ -664,19 +668,35 @@ class NoiseInversion(Inversion):
             ignored and the final residual file will only be created once all 
             forward simulations are run
         """
+        # Pre-set functions and parameters for system.run calls
+        run_list = [self.prepare_data_for_solver,
+                    self.run_forward_simulations,
+                    self.evaluate_objective_function]
+        path_model = os.path.join(self.path.eval_func, "model")
+        save_residuals = os.path.join(self.path.eval_func, "residuals_{}.txt")
+
+        forces = []
         if "ZZ" in self.kernels:
-            self._force = "Z"
-            # Use this function to set the correct 'obs' data
-            self.prepare_data_for_solver()
-            super()._evaluate_line_search_misfit()
-
+            forces.append("Z")
         if ("RR" in self.kernels) or ("TT" in self.kernels):
-            self._force = "N"
-            self.prepare_data_for_solver()
-            super()._evaluate_line_search_misfit()
+            forces.append("N")
+            forces.append("E")
 
-            self._force = "E"
-            self.prepare_data_for_solver()
-            super()._evaluate_line_search_misfit()
+        # Run forward simulations and misfit calculation for each required force
+        for force in forces:
+            self._force = force
+            self.system.run(run_list, path_model=path_model, 
+                            save_residuals=save_residuals.format(force)
+                            )
+       
+        # Sum misfit from ALL forward simulations
+        resi_fids = glob(os.path.join(self.path.eval_func, "residuals*.txt"))
+        residuals = []
+        for fid in resi_fids:
+            residuals = np.append(residuals, np.loadtxt(fid))
+
+        total_misfit = self.preprocess.sum_residuals(residuals)
+        logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
+        self.optimize.save_vector(name="f_try", m=total_misfit)
 
 
