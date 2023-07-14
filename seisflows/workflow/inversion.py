@@ -281,8 +281,10 @@ class Inversion(Migration):
                     [self.run_forward_simulations,
                      self.evaluate_objective_function],
                     path_model=path_model,
-                    save_residuals=os.path.join(self.path.eval_grad,
-                                                f"residuals_{{src}}_{self.iteration}_0.txt")
+                    save_residuals=os.path.join(
+                        self.path.eval_grad,
+                        f"residuals_{{src}}_{self.iteration}_0.txt")
+                    )
 
         # Rename exported synthetic traces so they are not overwritten by
         # future forward simulations
@@ -435,28 +437,30 @@ class Inversion(Migration):
                 )
                 sys.exit(-1)
 
- def _evaluate_line_search_misfit(self):
-        """Convenience fuinction to wrap forward solver and misfit calc"""
-        # Define where we are in the inversion for file passing between
-        # preprocess and workflow modules
-        iteration = self.iteration
-        step_count = self.optimize.step_count + 1
+    def _evaluate_line_search_misfit(self):
+           """Convenience fuinction to wrap forward solver and misfit calc"""
+           # Define where we are in the inversion for file passing between
+           # preprocess and workflow modules
+           iteration = self.iteration
+           step_count = self.optimize.step_count + 1
 
-        self.system.run(
-            [self.run_forward_simulations,
-             self.evaluate_objective_function],
-            path_model=os.path.join(self.path.eval_func, "model"),
-            save_residuals=os.path.join(self.path.eval_func,
-                                        f"residuals_{{src}}_{iteration}_{step_count}.txt")
-        )
+           self.system.run(
+               [self.run_forward_simulations,
+                self.evaluate_objective_function],
+               path_model=os.path.join(self.path.eval_func, "model"),
+               save_residuals=os.path.join(
+                   self.path.eval_func,
+                   f"residuals_{{src}}_{iteration}_{step_count}.txt")
+           )
 
-        residuals_files = glob(os.path.join(self.path.eval_func,
-                                            f"residuals_*_{iteration}_{step_count}.txt"))
+           residuals_files = glob(os.path.join(
+               self.path.eval_func, f"residuals_*_{iteration}_{step_count}.txt")
+               )
 
-        residuals = self.preprocess.read_residuals(residuals_files)
-        total_misfit = self.preprocess.sum_residuals(residuals)
-        logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
-        self.optimize.save_vector(name="f_try", m=total_misfit)
+           residuals = self.preprocess.read_residuals(residuals_files)
+           total_misfit = self.preprocess.sum_residuals(residuals)
+           logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
+           self.optimize.save_vector(name="f_try", m=total_misfit)
 
     def finalize_iteration(self):
         """
