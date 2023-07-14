@@ -227,13 +227,7 @@ class Inversion(Migration):
 
         # If line search, add step count as suffix in the residuals file
         if save_residuals:
-            if save_residuals.endswith("_{sc}.txt"):
-                save_residuals = save_residuals.format(src=self.solver.source_name,
-                                                       it=str(self.iteration),
-                                                       sc=str(self.optimize.step_count + 1))
-            else:
-                save_residuals = save_residuals.format(src=self.solver.source_name,
-                                                       it=str(self.iteration))
+            save_residuals = save_residuals.format(src=self.solver.source_name)
 
         if self.export_residuals:
             export_residuals = os.path.join(self.path.output, "residuals")
@@ -280,15 +274,15 @@ class Inversion(Migration):
                 m_new = self.optimize.load_vector("m_new")
                 m_new.write(path=path_model)
 
-                # Run forward simulation/misfit quantification with previous
-                # model
+                # Run forward simulation with previous model. Hard set line search
+                # step count in residual file names to 0 since it is assumed we are 
+                # running the initial misfit evaluation (i??s00)
                 self.system.run(
                     [self.run_forward_simulations,
                      self.evaluate_objective_function],
                     path_model=path_model,
                     save_residuals=os.path.join(self.path.eval_grad,
-                                                "residuals_{src}_{it}_0.txt")
-                )
+                                                f"residuals_{{src}}_{self.iteration}_0.txt")
 
         # Rename exported synthetic traces so they are not overwritten by
         # future forward simulations
@@ -441,18 +435,23 @@ class Inversion(Migration):
                 )
                 sys.exit(-1)
 
-    def _evaluate_line_search_misfit(self):
+ def _evaluate_line_search_misfit(self):
         """Convenience fuinction to wrap forward solver and misfit calc"""
+        # Define where we are in the inversion for file passing between
+        # preprocess and workflow modules
+        iteration = self.iteration
+        step_count = self.optimize.step_count + 1
+
         self.system.run(
             [self.run_forward_simulations,
              self.evaluate_objective_function],
             path_model=os.path.join(self.path.eval_func, "model"),
             save_residuals=os.path.join(self.path.eval_func,
-                                        "residuals_{src}_{it}_{sc}.txt")
+                                        f"residuals_{{src}}_{iteration}_{step_count}.txt")
         )
 
         residuals_files = glob(os.path.join(self.path.eval_func,
-                            f"residuals_*_{self.iteration}_{self.optimize.step_count + 1}.txt"))
+                                            f"residuals_*_{iteration}_{step_count}.txt"))
 
         residuals = self.preprocess.read_residuals(residuals_files)
         total_misfit = self.preprocess.sum_residuals(residuals)
