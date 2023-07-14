@@ -474,10 +474,16 @@ class Inversion(Migration):
         residuals_files = glob(os.path.join(
             self.path.eval_func, f"residuals_*_{iteration}_{step_count}.txt")
             )
+        assert(residuals_files), (
+                f"No residuals files found for Iteration {iteration} and "
+                f"step count {step_count}. Please check preprocessing"
+                )
         residuals = self._read_residuals(residuals_files)
 
         total_misfit = self.preprocess.sum_residuals(residuals)
-        logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
+        logger.debug(f"misfit for trial model "
+                     f"(f_try; i{iteration:0>2}s{step_count:0>2}) == "
+                     f"{total_misfit:.2E}")
         self.optimize.save_vector(name="f_try", m=total_misfit)
 
     def finalize_iteration(self):

@@ -675,7 +675,6 @@ class Default:
         return st_out
 
 
-
 def read_ascii(fid, origintime=None):
     """
     Read waveforms in two-column ASCII format. This is copied directly from
