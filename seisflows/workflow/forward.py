@@ -336,12 +336,14 @@ class Forward:
                         self.evaluate_objective_function]
         else:
             run_list = [self.run_forward_simulations]
-
+            
+        # `save_residuals` hard-coded for iteration 1 and step count 0
+        # assuming workflows calling this function are evaluating the
+        # very first round of misfit quantification (i.e., i01s00)
         self.system.run(run_list, path_model=self.path.model_init,
                         save_residuals=os.path.join(self.path.eval_grad,
-                                                    "residuals_{src}_{it}_0.txt")
-                        )
-
+                                                    "residuals_{src}_1_0.txt")
+                        
     def prepare_data_for_solver(self, **kwargs):
         """
         Determines how to provide data to each of the solvers. Either by copying
@@ -426,8 +428,7 @@ class Forward:
             return
 
         if save_residuals:
-            save_residuals = save_residuals.format(src=self.solver.source_name,
-                                                   it="1")
+            save_residuals = save_residuals.format(src=self.solver.source_name)
 
         if self.export_residuals:
             export_residuals = os.path.join(self.path.output, "residuals")
