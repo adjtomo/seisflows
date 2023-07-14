@@ -89,7 +89,7 @@ class Inversion(Migration):
         # Append an additional path for line search function evaluations
         self.path["eval_func"] = path_eval_func or \
                                  os.path.join(self.path.workdir, "scratch",
-                                           "eval_func")
+                                              "eval_func")
 
         # Internal attribute for keeping track of inversion
         self._optimize_name = optimize
@@ -243,6 +243,24 @@ class Inversion(Migration):
             step_count=self.optimize.step_count,
         )
 
+    def _read_residuals(self, residuals_files):
+        """
+        Convenience function to read in text files containing misfit information
+        written by the `preprocess.quantify_misfit` function
+
+        :type residual_files: list of str
+        :param residual files: list of names of text files written out by each
+        misfit quantification procedure
+        :rtype: np.array
+        :return: residuals from all files provided in `residual_files`
+        """
+        residuals = np.array([])
+        for residuals_file in residuals_files:
+            tmp = np.loadtxt(residuals_file)
+            residuals = np.append(residuals, tmp)
+
+        return residuals
+
     def evaluate_initial_misfit(self):
         """
         Overwrite `workflow.forward` to skip over initial misfit evaluation
@@ -295,9 +313,9 @@ class Inversion(Migration):
 
         # Override function to sum residuals into the optimization library
         residuals_files = glob(os.path.join(self.path.eval_grad,
-                            f"residuals_*_{self.iteration}_0.txt"))
+                               f"residuals_*_{self.iteration}_0.txt"))
+        residuals = self._read_residuals(residuals_files)
 
-        residuals = self.preprocess.read_residuals(residuals_files)
         total_misfit = self.preprocess.sum_residuals(residuals)
         self.optimize.save_vector(name="f_new", m=total_misfit)
 
@@ -438,29 +456,29 @@ class Inversion(Migration):
                 sys.exit(-1)
 
     def _evaluate_line_search_misfit(self):
-           """Convenience fuinction to wrap forward solver and misfit calc"""
-           # Define where we are in the inversion for file passing between
-           # preprocess and workflow modules
-           iteration = self.iteration
-           step_count = self.optimize.step_count + 1
+        """Convenience fuinction to wrap forward solver and misfit calc"""
+        # Define where we are in the inversion for file passing between
+        # preprocess and workflow modules
+        iteration = self.iteration
+        step_count = self.optimize.step_count + 1
 
-           self.system.run(
-               [self.run_forward_simulations,
-                self.evaluate_objective_function],
-               path_model=os.path.join(self.path.eval_func, "model"),
-               save_residuals=os.path.join(
-                   self.path.eval_func,
-                   f"residuals_{{src}}_{iteration}_{step_count}.txt")
-           )
+        self.system.run(
+            [self.run_forward_simulations,
+             self.evaluate_objective_function],
+            path_model=os.path.join(self.path.eval_func, "model"),
+            save_residuals=os.path.join(
+                self.path.eval_func,
+                f"residuals_{{src}}_{iteration}_{step_count}.txt")
+        )
 
-           residuals_files = glob(os.path.join(
-               self.path.eval_func, f"residuals_*_{iteration}_{step_count}.txt")
-               )
+        residuals_files = glob(os.path.join(
+            self.path.eval_func, f"residuals_*_{iteration}_{step_count}.txt")
+            )
+        residuals = self._read_residuals(residuals_files)
 
-           residuals = self.preprocess.read_residuals(residuals_files)
-           total_misfit = self.preprocess.sum_residuals(residuals)
-           logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
-           self.optimize.save_vector(name="f_try", m=total_misfit)
+        total_misfit = self.preprocess.sum_residuals(residuals)
+        logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
+        self.optimize.save_vector(name="f_try", m=total_misfit)
 
     def finalize_iteration(self):
         """

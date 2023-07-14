@@ -675,23 +675,6 @@ class Default:
         return st_out
 
 
-def read_residuals(self, residuals_files):
-    """
-    Convenience function to read in text files containing misfit information
-    written by `quantify_misfit` function
-    
-    :type residual_files: list of str
-    :param residual files: list of names of text files written out by each 
-    misfit quantification procedure
-    :rtype: np.array
-    :return: residuals from all files provided in `residual_files`
-    """
-    residuals = np.array([])
-    for residuals_file in residuals_files:
-        tmp = np.loadtxt(residuals_file)
-        residuals = np.append(residuals, tmp)
-    return residuals
-
 
 def read_ascii(fid, origintime=None):
     """
