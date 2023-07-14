@@ -20,6 +20,7 @@ from seisflows import logger
 from seisflows.tools import unix
 from seisflows.tools.config import Dict, get_task_id
 from seisflows.tools.specfem import check_source_names
+from seisflows.tools.preprocess import read_residuals
 
 
 class Pyaflowa:
