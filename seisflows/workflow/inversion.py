@@ -400,8 +400,11 @@ class Inversion(Migration):
             status == 0 : not finished
             status < 0  : failed
         """
+        # Step count += 1
+        self.optimize.increment_step_count()
+
         logger.info(msg.sub(f"LINE SEARCH STEP COUNT "
-                            f"{self.optimize.step_count + 1:0>2}"))
+                            f"{self.optimize.step_count:0>2}"))
 
         # Run fwd solver with the model 'm_try'. Corresponding misfit is 'f_try'
         self._evaluate_line_search_misfit()
@@ -460,7 +463,7 @@ class Inversion(Migration):
         # Define where we are in the inversion for file passing between
         # preprocess and workflow modules
         iteration = self.iteration
-        step_count = self.optimize.step_count + 1
+        step_count = self.optimize.step_count
 
         self.system.run(
             [self.run_forward_simulations,

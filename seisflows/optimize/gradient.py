@@ -367,6 +367,16 @@ class Gradient:
 
         return m_try, alpha
 
+    def increment_step_count(self):
+        """
+        Convenience function to increment line search step count by 1. This is
+        wrapped in a function to keep things explicit, rather than calling +=1 
+        randomly in script. We are also accessing a private member of the class
+        so better to have a public function take care of incrementing.
+        """
+        self._line_search.step_count += 1
+        logger.info(f"step count incremented -> {self._line_search.step_count}")
+
     def update_line_search(self):
         """
         Updates line search status and step length after a forward simulation
@@ -374,6 +384,7 @@ class Gradient:
         history to see if the line search has been completed.
 
         .. note::
+
             This is a bit confusing as it calculates the step length `alpha` for
             the NEXT line search step, while storing the `alpha` value that
             was calculated from the LAST line search step. This is because we
@@ -385,6 +396,7 @@ class Gradient:
         and creating a new trial model (m_try).
 
         .. note:
+
             Available status returns are:
             'TRY': try/re-try the line search as conditions have not been met
             'PASS': line search was successful, you can terminate the search
@@ -399,7 +411,6 @@ class Gradient:
         f_try = self.load_vector("f_try")  # misfit for the trial model
 
         # Update the line search with a new step length and misfit value
-        self._line_search.step_count += 1
         self._line_search.update_search_history(step_len=alpha_try,
                                                 func_val=f_try)
 
