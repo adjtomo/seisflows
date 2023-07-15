@@ -532,18 +532,14 @@ class Gradient:
         if they should be retained.
 
         .. note::
+
             This CSV file can be easily read and plotted using np.genfromtxt
             >>> np.genfromtxt("optim_stats.txt", delimiter=",", names=True, \
                               dtype=None)
         """
         logger.info(f"writing optimization stats")
-        # First time, write header information
-        if not os.path.exists(self.path._stats_file):
-            _head = ("step_count,step_length,gradient_norm_L1,gradient_norm_L2,"
-                     "misfit,if_restarted,slope,theta\n")
-            with open(self.path._stats_file, "w") as f:
-                f.write(_head)
 
+        # Gather required information from line search parameters
         g = self.load_vector("g_new")
         p = self.load_vector("p_new")
         x, f, *_ = self._line_search.get_search_history()
@@ -554,23 +550,39 @@ class Gradient:
         # factor = -1 * dot(g.vector, g.vector)
         # factor = factor ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
 
+        # First time, write header information and start model misfit. Note that
+        # most of the statistics do not apply to the starting model so they
+        # are set to 0 by default
+        if not os.path.exists(self.path._stats_file):
+            _head = ("step_count,step_length,grad_norm_L1,grad_norm_L2,"
+                     "misfit,if_restarted,slope,theta\n")
+            step_count = 0
+            step_length = x[0]
+            grad_norm_L1 = 0
+            grad_norm_L2 = 0
+            misfit = f[0]
+            slope = 0
+            theta = 0
+            _str = (f"{step_count:0>2},{step_length:6.3E},{grad_norm_L1:6.3E},"
+                    f"{grad_norm_L2:6.3E},{misfit:6.3E},{int(self._restarted)},"
+                    f"{slope:6.3E},{theta:6.3E}\n")
+            with open(self.path._stats_file, "w") as f_:
+                f_.write(_head)
+                f_.write(_str)
+
+        # Gather/calculate information from a given line search run
+        step_count = self._line_search.step_count
+        step_length = x[f.argmin()]
+        misfit = f[f.argmin()]
+
         grad_norm_L1 = np.linalg.norm(g.vector, 1)
         grad_norm_L2 = np.linalg.norm(g.vector, 2)
 
-        misfit = f[0]
         slope = (f[1] - f[0]) / (x[1] - x[0])
-        step_count = self._line_search.step_count
-        step_length = x[f.argmin()]
         theta = 180. * np.pi ** -1 * angle(p.vector, -1 * g.vector)
 
-        with open(self.path._stats_file, "a") as f:
-            f.write(# f"{factor:6.3E},"
-                    f"{step_count:0>2},"
-                    f"{step_length:6.3E},"
-                    f"{grad_norm_L1:6.3E},"
-                    f"{grad_norm_L2:6.3E},"
-                    f"{misfit:6.3E},"
-                    f"{int(self._restarted)},"
-                    f"{slope:6.3E},"
-                    f"{theta:6.3E}\n"
-                    )
+        _str = (f"{step_count:0>2},{step_length:6.3E},{grad_norm_L1:6.3E},"
+                f"{grad_norm_L2:6.3E},{misfit:6.3E},{int(self._restarted)},"
+                f"{slope:6.3E},{theta:6.3E}\n")
+        with open(self.path._stats_file, "a") as f_:
+            f_.write(_str)
