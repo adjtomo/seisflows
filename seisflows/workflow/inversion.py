@@ -409,7 +409,7 @@ class Inversion(Migration):
         # Run fwd solver with the model 'm_try'. Corresponding misfit is 'f_try'
         self._evaluate_line_search_misfit()
 
-        # Increment step count, calculate new step length/model, check misfit
+        # Calculate new step length/model, check misfit
         m_try, alpha, status = self.optimize.update_line_search()
         self.optimize.checkpoint()
 
