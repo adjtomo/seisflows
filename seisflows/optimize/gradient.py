@@ -247,7 +247,9 @@ class Gradient:
                         step_lens=self._line_search.step_lens,
                         gtg=self._line_search.gtg,
                         gtp=self._line_search.gtp,
-                        step_count=self._line_search.step_count)
+                        step_count=self._line_search.step_count,
+                        step_len_max=self._line_search.step_len_max
+                       )
 
         np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
 
@@ -272,6 +274,7 @@ class Gradient:
             self._line_search.gtg = list(dict_in["gtg"])
             self._line_search.gtp = list(dict_in["gtp"])
             self._line_search.step_count = int(dict_in["step_count"])
+            self._line_search.step_len_max = float(dict_in["step_len_max"])
         else:
             logger.info("no optimization checkpoint found, assuming first run")
             self.checkpoint()
@@ -364,6 +367,16 @@ class Gradient:
 
         return m_try, alpha
 
+    def increment_step_count(self):
+        """
+        Convenience function to increment line search step count by 1. This is
+        wrapped in a function to keep things explicit, rather than calling +=1 
+        randomly in script. We are also accessing a private member of the class
+        so better to have a public function take care of incrementing.
+        """
+        self._line_search.step_count += 1
+        logger.info(f"step count incremented -> {self._line_search.step_count}")
+
     def update_line_search(self):
         """
         Updates line search status and step length after a forward simulation
@@ -371,6 +384,7 @@ class Gradient:
         history to see if the line search has been completed.
 
         .. note::
+
             This is a bit confusing as it calculates the step length `alpha` for
             the NEXT line search step, while storing the `alpha` value that
             was calculated from the LAST line search step. This is because we
@@ -382,6 +396,7 @@ class Gradient:
         and creating a new trial model (m_try).
 
         .. note:
+
             Available status returns are:
             'TRY': try/re-try the line search as conditions have not been met
             'PASS': line search was successful, you can terminate the search
@@ -396,7 +411,6 @@ class Gradient:
         f_try = self.load_vector("f_try")  # misfit for the trial model
 
         # Update the line search with a new step length and misfit value
-        self._line_search.step_count += 1
         self._line_search.update_search_history(step_len=alpha_try,
                                                 func_val=f_try)
 
@@ -518,18 +532,14 @@ class Gradient:
         if they should be retained.
 
         .. note::
+
             This CSV file can be easily read and plotted using np.genfromtxt
             >>> np.genfromtxt("optim_stats.txt", delimiter=",", names=True, \
                               dtype=None)
         """
         logger.info(f"writing optimization stats")
-        # First time, write header information
-        if not os.path.exists(self.path._stats_file):
-            _head = ("step_count,step_length,gradient_norm_L1,gradient_norm_L2,"
-                     "misfit,if_restarted,slope,theta\n")
-            with open(self.path._stats_file, "w") as f:
-                f.write(_head)
 
+        # Gather required information from line search parameters
         g = self.load_vector("g_new")
         p = self.load_vector("p_new")
         x, f, *_ = self._line_search.get_search_history()
@@ -540,23 +550,39 @@ class Gradient:
         # factor = -1 * dot(g.vector, g.vector)
         # factor = factor ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
 
+        # First time, write header information and start model misfit. Note that
+        # most of the statistics do not apply to the starting model so they
+        # are set to 0 by default
+        if not os.path.exists(self.path._stats_file):
+            _head = ("step_count,step_length,grad_norm_L1,grad_norm_L2,"
+                     "misfit,if_restarted,slope,theta\n")
+            step_count = 0
+            step_length = x[0]
+            grad_norm_L1 = 0
+            grad_norm_L2 = 0
+            misfit = f[0]
+            slope = 0
+            theta = 0
+            _str = (f"{step_count:0>2},{step_length:6.3E},{grad_norm_L1:6.3E},"
+                    f"{grad_norm_L2:6.3E},{misfit:6.3E},{int(self._restarted)},"
+                    f"{slope:6.3E},{theta:6.3E}\n")
+            with open(self.path._stats_file, "w") as f_:
+                f_.write(_head)
+                f_.write(_str)
+
+        # Gather/calculate information from a given line search run
+        step_count = self._line_search.step_count
+        step_length = x[f.argmin()]
+        misfit = f[f.argmin()]
+
         grad_norm_L1 = np.linalg.norm(g.vector, 1)
         grad_norm_L2 = np.linalg.norm(g.vector, 2)
 
-        misfit = f[0]
         slope = (f[1] - f[0]) / (x[1] - x[0])
-        step_count = self._line_search.step_count
-        step_length = x[f.argmin()]
         theta = 180. * np.pi ** -1 * angle(p.vector, -1 * g.vector)
 
-        with open(self.path._stats_file, "a") as f:
-            f.write(# f"{factor:6.3E},"
-                    f"{step_count:0>2},"
-                    f"{step_length:6.3E},"
-                    f"{grad_norm_L1:6.3E},"
-                    f"{grad_norm_L2:6.3E},"
-                    f"{misfit:6.3E},"
-                    f"{int(self._restarted)},"
-                    f"{slope:6.3E},"
-                    f"{theta:6.3E}\n"
-                    )
+        _str = (f"{step_count:0>2},{step_length:6.3E},{grad_norm_L1:6.3E},"
+                f"{grad_norm_L2:6.3E},{misfit:6.3E},{int(self._restarted)},"
+                f"{slope:6.3E},{theta:6.3E}\n")
+        with open(self.path._stats_file, "a") as f_:
+            f_.write(_str)
