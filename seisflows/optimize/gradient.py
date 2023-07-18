@@ -343,20 +343,31 @@ class Gradient:
         # Optional safeguard to prevent step length from getting too large
         if self.step_len_max:
             new_step_len_max = self.step_len_max * norm_m / norm_p
+            logger.info(f"enforcing max step length safeguard "
+                        f"({self.step_len_max}): {new_step_len_max}")
             self._line_search.step_len_max = new_step_len_max
-            logger.info(f"enforcing max step length safeguard")
 
         # Initialize the line search and save it to disk.
         self._line_search.update_search_history(func_val=f, step_len=0.,
                                                 gtg=gtg, gtp=gtp)
 
-        alpha, _ = self._line_search.calculate_step_length()
-
-        # Alpha defines the trial step length. Optional step length override
+        # Optional: Step length override allowed for only the very first step
+        # of the very first iteration i01s01.
         if self.step_len_init and len(self._line_search.step_lens) <= 1:
             alpha = self.step_len_init * norm_m / norm_p
-            logger.debug(f"overwriting initial step length, "
+            logger.debug(f"Setting first step length using User-requested"
+                         f"`step_len_init`={self.step_len_init}. "
                          f"alpha_new={alpha:.2E}")
+            # Warn the User if we exceed safe guard but allow forcing the step
+            # length larger for this first step
+            if alpha > self._line_search.step_len_max:
+                logger.warning(f"warning, `step_len_init` has set step length "
+                               f"({alpha:.2E}) larger than the safeguard value "
+                               f"defined by `step_len_max` "
+                               f"({self._line_search.step_len_max:.2E})")
+        # Normal operation - Calculate step based on position in line search
+        else:
+            alpha, _ = self._line_search.calculate_step_length()
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
