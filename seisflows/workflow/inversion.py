@@ -101,6 +101,15 @@ class Inversion(Migration):
             self.iteration = start
 
     @property
+    def evaluation(self):
+        """
+        Convenience string return for log messages that gives the iteration
+        and step count of the current evaluation as a formatted string
+        e.g., i01s00
+        """
+        return f"i{self.iteration:0>2}s{self.optimize.step_count:0>2}"
+
+    @property
     def task_list(self):
         """
         USER-DEFINED TASK LIST. This property defines a list of class methods
@@ -396,12 +405,10 @@ class Inversion(Migration):
         # Run fwd solver with the model 'm_try'. Corresponding misfit is 'f_try'
         self._evaluate_line_search_misfit()
 
-        # Calculate new step length/model, check misfit
+        # Determine whether the line search successfully reduced misfit (PASS),
+        # must attempt another step (TRY), or has failed completely (FAIL)
         m_try, alpha, status = self.optimize.update_line_search()
         self.optimize.checkpoint()
-
-        # Provide model parameters for User log file
-
 
         # Proceed based on the outcome of the line search
         if status.upper() == "PASS":
@@ -411,9 +418,10 @@ class Inversion(Migration):
             # Save new model (m_try) and step length (alpha) for records
             self.optimize.save_vector("alpha", alpha)
             self.optimize.save_vector("m_try", m_try)
-            m_try.write(path=os.path.join(self.path.eval_func, "model"))
             del m_try  # clear potentially large model vector from memory
 
+            # Finalizing line search sets `m_try` -> `m_new` which is used
+            # for subsequent iterations
             self.optimize.finalize_search()
             self.optimize.checkpoint()
             return
@@ -423,8 +431,15 @@ class Inversion(Migration):
             # Save new model (m_try) and step length (alpha) for new trial step
             self.optimize.save_vector("alpha", alpha)
             self.optimize.save_vector("m_try", m_try)
-            m_try.write(path=os.path.join(self.path.eval_func, "model"))
+
+            # Expose the new model to the solver directories for the next step
+            _path_m_try = os.path.join(self.path.eval_func, "model")
+            m_try.write(path=_path_m_try)
             del m_try  # clear potentially large model vector from memory
+
+            # Provide `m_try` parameters to log file for sanity checks
+            logger.info(f"`m_try` model parameters for {self.evaluation}")
+            self.solver.check_model_values(path=_path_m_try)
 
             # Checkpoint and re-run line search evaluation
             self.optimize.checkpoint()
@@ -475,8 +490,7 @@ class Inversion(Migration):
 
         total_misfit = self.preprocess.sum_residuals(residuals)
         logger.debug(f"misfit for trial model "
-                     f"(f_try; i{iteration:0>2}s{step_count:0>2}) == "
-                     f"{total_misfit:.2E}")
+                     f"(f_try; {self.evaluation} == {total_misfit:.2E}")
         self.optimize.save_vector(name="f_try", m=total_misfit)
 
     def finalize_iteration(self):

@@ -280,40 +280,27 @@ class Specfem:
                             f"workflow"
                             )
 
-    def check_input_models(self):
+    def check_model_values(self, path):
         """
-        Convenience function to check parameter and model validity for 
-        `path_model_init` and `path_model_true`. Called by Workflow module 
-        during initial misfit evaluation (iteration==1)
-        """
-        # Load in the initial model and check parameter validity. This is        
-        # performed within the workflow so that all new models are checked       
-        if self.path.model_init:                                                 
-            logger.info("checking initial model parameters")                     
-            _model = Model(path=self.path.model_init,
-                           parameters=self._parameters, regions=self._regions
-                           )
-            try:           
-                _model.check()                                                   
-            except AssertionError as e:
-                logger.critical(
-                    msg.cli(str(e), header="model read error", border="=")
-                )
-                sys.exit(-1)
+        Convenience function to check parameter and model validity for
+        chosen Solver model. Should be called by the Workflow module
 
-        # Check target/true model if provided for synthetic-synthetic workflow   
-        if self.path.model_true:                                                 
-            logger.info("checking true/target model parameters")                 
-            _model = Model(self.path.model_true,
-                           parameters=self._parameters, regions=self._regions
-                           )
-            try:
-                _model.check()
-            except AssertionError as e:
-                logger.critical(
-                    msg.cli(str(e), header="model read error", border="=")
-                )
-                sys.exit(-1)
+        :type path: str
+        :param path: path to model file(s) that should be in the format expected
+            by the Model class (FORTRAN binary, ADIOS etc.)
+        """
+        assert os.path.exists(path), f"Model check path does not exist: {path}"
+
+        _model = Model(path=self.path.model_init,
+                       parameters=self._parameters, regions=self._regions
+                       )
+        try:
+            _model.check()
+        except AssertionError as e:
+            logger.critical(
+                msg.cli(str(e), header="model read error", border="=")
+            )
+            sys.exit(-1)
 
     def set_parameters(self, keys, vals, file, delim):
         """

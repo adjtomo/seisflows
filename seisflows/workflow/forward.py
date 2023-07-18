@@ -317,7 +317,13 @@ class Forward:
 
         # Check if we can read in the models to disk prior to submitting jobs
         # this may exit the workflow if we get a read error
-        self.solver.check_input_models()
+        if self.path.model_init is not None:
+            logger.info("initial model parameters:")
+            self.solver.check_model_values(path=self.path.model_init)
+
+        if self.path.model_true is not None:
+            logger.info("true/target model parameters:")
+            self.solver.check_model_values(path=self.path.model_true)
 
         # If no preprocessing module, then all the additional functions for
         # working with `data` are unncessary.
