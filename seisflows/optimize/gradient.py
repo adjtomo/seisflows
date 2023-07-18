@@ -411,11 +411,13 @@ class Gradient:
         f_try = self.load_vector("f_try")  # misfit for the trial model
 
         # Update the line search with a new step length and misfit value
+        # Or retain the accepted step and misfit if line search criteria met
         self._line_search.update_search_history(step_len=alpha_try,
                                                 func_val=f_try)
 
-        # Calculate a new step length based on the current step length and its
-        # corresponding misfit.
+        # PASS: If misfit acceptable, return step length of lowest misfit.
+        # TRY:  If another step is required, return new step length value
+        # FAIL: If a failure criteria is met, return None
         alpha, status = self._line_search.calculate_step_length()
 
         # Note: if status is 'PASS' then `alpha` represents the step length of
@@ -448,9 +450,9 @@ class Gradient:
         logger.info(msg.sub("FINALIZING LINE SEARCH"))
 
         # Remove the old model parameters
-        if glob("?_old"):
+        if glob("?_old*"):
             logger.info("removing previously accepted model files (?_old)")
-            for fid in ["m_old", "f_old", "g_old", "p_old"]:
+            for fid in ["m_old.npz", "f_old.txt", "g_old.npz", "p_old.npz"]:
                 unix.rm(os.path.join(self.path.scratch, fid))
 
         # Needs to be run before shifting model in next step
