@@ -154,10 +154,15 @@ class Gradient:
                 f"weight file"
             )
 
-        assert 0. < self.step_len_init, f"optimize.step_len_init must be >= 0."
-        assert 0. < self.step_len_max, f"optimize.step_len_max must be >= 0."
-        assert self.step_len_init < self.step_len_max, \
-            f"optimize.step_len_init must be < optimize.step_len_max"
+        if self.step_len_init is not None:
+            assert 0. < self.step_len_init, \
+                f"optimize.step_len_init must be >= 0."
+        if self.step_len_max is not None:
+            assert 0. < self.step_len_max, \
+                f"optimize.step_len_max must be >= 0."
+        if self.step_len_max is not None and self.step_len_init is not None:
+            assert self.step_len_init < self.step_len_max, \
+                f"optimize.step_len_init must be < optimize.step_len_max"
 
     def setup(self):
         """
@@ -343,8 +348,8 @@ class Gradient:
         # Optional safeguard to prevent step length from getting too large
         if self.step_len_max:
             new_step_len_max = self.step_len_max * norm_m / norm_p
-            logger.info(f"enforcing max step length safeguard "
-                        f"({self.step_len_max}): {new_step_len_max}")
+            logger.info(f"max step length safeguard ({self.step_len_max}) set "
+                        f"at: {new_step_len_max:.2E}")
             self._line_search.step_len_max = new_step_len_max
 
         # Initialize the line search and save it to disk.
@@ -355,7 +360,7 @@ class Gradient:
         # of the very first iteration i01s01.
         if self.step_len_init and len(self._line_search.step_lens) <= 1:
             alpha = self.step_len_init * norm_m / norm_p
-            logger.debug(f"Setting first step length using User-requested"
+            logger.debug(f"setting first step length with user-requested "
                          f"`step_len_init`={self.step_len_init}. "
                          f"alpha_new={alpha:.2E}")
             # Warn the User if we exceed safe guard but allow forcing the step

@@ -385,7 +385,10 @@ class Inversion(Migration):
         self.optimize.checkpoint()
 
         # Expose model `m_try` to the solver by placing it in eval_func dir.
-        m_try.write(path=os.path.join(self.path.eval_func, "model"))
+        _path_m_try = os.path.join(self.path.eval_func, "model")
+        m_try.write(path=_path_m_try)
+        logger.info(f"`m_try` model parameters for initial line search step")
+        self.solver.check_model_values(path=_path_m_try)
 
     def perform_line_search(self):
         """
@@ -444,7 +447,7 @@ class Inversion(Migration):
             del m_try  # clear potentially large model vector from memory
 
             # Provide `m_try` parameters to log file for sanity checks
-            logger.info(f"`m_try` model parameters for {self.evaluation}")
+            logger.info(f"`m_try` model parameters for next line search step")
             self.solver.check_model_values(path=_path_m_try)
 
             # Checkpoint and re-run line search evaluation
