@@ -419,7 +419,7 @@ class Inversion(Migration):
             # Save outcome of line search to disk; reset step to 0 for next iter
             logger.info("trial step successful. finalizing line search")
 
-            # Save new model (m_try) and step length (alpha) for records
+            # Save new model (m_try) and step length (alpha)
             self.optimize.save_vector("alpha", alpha)
             self.optimize.save_vector("m_try", m_try)
             del m_try  # clear potentially large model vector from memory
