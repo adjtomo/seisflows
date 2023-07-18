@@ -668,12 +668,14 @@ class NoiseInversion(Inversion):
             ignored and the final residual file will only be created once all 
             forward simulations are run
         """
+        iteration = self.iteration
+        step_count = self.optimize.step_count
+
         # Pre-set functions and parameters for system.run calls
         run_list = [self.prepare_data_for_solver,
                     self.run_forward_simulations,
                     self.evaluate_objective_function]
         path_model = os.path.join(self.path.eval_func, "model")
-        save_residuals = os.path.join(self.path.eval_func, "residuals_{}.txt")
 
         forces = []
         if "ZZ" in self.kernels:
@@ -685,15 +687,16 @@ class NoiseInversion(Inversion):
         # Run forward simulations and misfit calculation for each required force
         for force in forces:
             self._force = force
+            save_residuals = \
+                f"residuals_{{src}}_{iteration}_{step_count}_{force}.txt"
             self.system.run(run_list, path_model=path_model, 
                             save_residuals=save_residuals.format(force)
                             )
        
         # Sum misfit from ALL forward simulations
-        resi_fids = glob(os.path.join(self.path.eval_func, "residuals*.txt"))
-        residuals = []
-        for fid in resi_fids:
-            residuals = np.append(residuals, np.loadtxt(fid))
+        residuals_files = glob(os.path.join(self.path.eval_grad,
+                               f"residuals_*_{iteration}_{step_count}_?.txt"))
+        residuals = self._read_residuals(residuals_files)
 
         total_misfit = self.preprocess.sum_residuals(residuals)
         logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
