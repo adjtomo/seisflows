@@ -429,7 +429,6 @@ class Gradient:
             # Sets the latest trial model using the current `alpha` value
             m_try = _m.copy()
             m_try.update(vector=_m.vector + alpha * _p.vector)
-            logger.info("line search model 'm_try' parameters: ")
             m_try.check()
         elif status.upper() == "FAIL":
             # Failed line search skips over costly vector manipulations

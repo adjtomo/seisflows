@@ -400,6 +400,9 @@ class Inversion(Migration):
         m_try, alpha, status = self.optimize.update_line_search()
         self.optimize.checkpoint()
 
+        # Provide model parameters for User log file
+
+
         # Proceed based on the outcome of the line search
         if status.upper() == "PASS":
             # Save outcome of line search to disk; reset step to 0 for next iter

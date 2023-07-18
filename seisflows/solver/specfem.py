@@ -290,8 +290,9 @@ class Specfem:
         # performed within the workflow so that all new models are checked       
         if self.path.model_init:                                                 
             logger.info("checking initial model parameters")                     
-            _model = Model(os.path.join(self.path.model_init),                   
-                           parameters=self._parameters, regions=self._regions)
+            _model = Model(path=self.path.model_init,
+                           parameters=self._parameters, regions=self._regions
+                           )
             try:           
                 _model.check()                                                   
             except AssertionError as e:
@@ -303,8 +304,9 @@ class Specfem:
         # Check target/true model if provided for synthetic-synthetic workflow   
         if self.path.model_true:                                                 
             logger.info("checking true/target model parameters")                 
-            _model = Model(os.path.join(self.path.model_true),                   
-                           parameters=self._parameters, regions=self._regions)
+            _model = Model(self.path.model_true,
+                           parameters=self._parameters, regions=self._regions
+                           )
             try:
                 _model.check()
             except AssertionError as e:
