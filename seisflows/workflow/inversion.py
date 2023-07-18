@@ -464,7 +464,7 @@ class Inversion(Migration):
         residuals_files = glob(os.path.join(
             self.path.eval_func, f"residuals_*_{iteration}_{step_count}.txt")
             )
-        assert(residuals_files), (
+        assert residuals_files, (
                 f"No residuals files found for Iteration {iteration} and "
                 f"step count {step_count}. Please check preprocessing"
                 )

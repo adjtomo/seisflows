@@ -674,7 +674,8 @@ class NoiseInversion(Inversion):
         # Pre-set functions and parameters for system.run calls
         run_list = [self.prepare_data_for_solver,
                     self.run_forward_simulations,
-                    self.evaluate_objective_function]
+                    self.evaluate_objective_function
+                    ]
         path_model = os.path.join(self.path.eval_func, "model")
 
         forces = []
@@ -687,15 +688,21 @@ class NoiseInversion(Inversion):
         # Run forward simulations and misfit calculation for each required force
         for force in forces:
             self._force = force
-            save_residuals = \
+            save_residuals = os.path.join(
+                self.path.eval_func,
                 f"residuals_{{src}}_{iteration}_{step_count}_{force}.txt"
+            )
             self.system.run(run_list, path_model=path_model, 
-                            save_residuals=save_residuals.format(force)
+                            save_residuals=save_residuals
                             )
        
         # Sum misfit from ALL forward simulations
-        residuals_files = glob(os.path.join(self.path.eval_grad,
+        residuals_files = glob(os.path.join(self.path.eval_func,
                                f"residuals_*_{iteration}_{step_count}_?.txt"))
+        assert residuals_files, (
+                f"No residuals files found for Iteration {iteration} and "
+                f"step count {step_count}. Please check preprocessing"
+                )
         residuals = self._read_residuals(residuals_files)
 
         total_misfit = self.preprocess.sum_residuals(residuals)
