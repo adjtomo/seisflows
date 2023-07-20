@@ -808,6 +808,7 @@ class Default:
         source receiver distances
 
         .. note::
+
             The underlying mute functions have been refactored but not tested
             as I was not aware of the intended functionality. Not gauranteed
             to work, use at your own risk.
