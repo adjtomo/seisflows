@@ -137,7 +137,7 @@ class Default:
         self.min_freq = min_freq
         self.max_freq = max_freq
         self.mute = mute or []
-        self.normalize = normalize 
+        self.normalize = normalize or []
 
         # Set the min/max frequencies and periods, frequency takes priority
         if self.filter:

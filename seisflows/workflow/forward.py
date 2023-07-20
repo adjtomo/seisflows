@@ -54,10 +54,9 @@ class Forward:
 
     Paths
     -----
-    :type path_workdir: str
-    :param path_workdir: working directory in which to perform a SeisFlows 
-        workflow. SeisFlows internal directory structure will be created here. 
-        Default cwd
+    :type workdir: str
+    :param workdir: working directory in which to perform a SeisFlows workflow.
+        SeisFlows internal directory structure will be created here. Default cwd
     :type path_output: str
     :param path_output: path to directory used for permanent storage on disk.
         Results and exported scratch files are saved here.
@@ -358,7 +357,7 @@ class Forward:
 
         :type _src: str
         :param _src: internal variable used by child classes which inherit
-            from solver, allowing other workflows to change the default path
+            from Forward, allowing other workflows to change the default path
             that data is searched for. Needs to be a wildcard. 
             By default this function looks at the following wildcard path:
             '{path_data}/{source_name}/*'

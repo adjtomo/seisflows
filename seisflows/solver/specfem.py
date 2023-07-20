@@ -223,11 +223,9 @@ class Specfem:
             f"No source files with prefix {self.source_prefix} found in DATA/")
 
         # Check that model type is set correctly in the Par_file
-        # !!! REVERT ME !!!
-        # model_type = getpar(key="MODEL",
-        #                     file=os.path.join(self.path.specfem_data,
-        #                                       "Par_file"))[1]
-        model_type = "gll"
+        model_type = getpar(key="MODEL",
+                            file=os.path.join(self.path.specfem_data,
+                                              "Par_file"))[1]
         assert(model_type in self._available_model_types), (
             f"SPECFEM Par_file parameter `model`='{model_type}' does not "
             f"match acceptable model types: {self._available_model_types}"
@@ -236,8 +234,7 @@ class Specfem:
         # Assign file extensions to be used for database file searching
         if model_type == "gll":
             self._ext = ".bin"
-
-        if self._ext is None:
+        else:
             logger.warning("no file model/kernel file extension found, this "
                            "may cause critical issues when looking for files. "
                            "check SPECFEM parameter `model`")
@@ -585,9 +582,6 @@ class Specfem:
         if save_traces:
             if not os.path.exists(save_traces):
                 unix.mkdir(save_traces)
-            src = glob(os.path.join("OUTPUT_FILES", self.data_wildcard()))
-            _nfiles = len(src)  # used to check for file move completion
-
             unix.mv(
                 src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
                 dst=save_traces
