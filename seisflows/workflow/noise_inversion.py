@@ -455,10 +455,18 @@ class NoiseInversion(Inversion):
                                    vals=kernel_vals, file="DATA/FORCESOLUTION",
                                    delim=":")
 
-        super().run_forward_simulations(path_model, save_traces=save_traces,
-                                        **kwargs)
+        # Exporting traces to disk for permanent saving. Ensure that the force
+        # tag is set so that subsequent trace exports don't overwrite your files
+        if self.export_traces:
+            export_traces = os.path.join(
+                self.path.output, self.solver.source_name, f"syn_{self._force}"
+            )
+        else:
+            export_traces = False
 
-        # TODO >redirect output `export_traces` seismograms to honor kernel name
+        super().run_forward_simulations(path_model, save_traces=save_traces,
+                                        export_traces=export_traces, **kwargs
+                                        )
 
     def _run_adjoint_simulation_single(self, save_kernels=None, 
                                        export_kernels=None, **kwargs):
@@ -692,7 +700,7 @@ class NoiseInversion(Inversion):
                 self.path.eval_func,
                 f"residuals_{{src}}_{iteration}_{step_count}_{force}.txt"
             )
-            self.system.run(run_list, path_model=path_model, 
+            self.system.run(run_list, path_model=path_model,
                             save_residuals=save_residuals
                             )
        

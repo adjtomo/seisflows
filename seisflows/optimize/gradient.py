@@ -363,14 +363,8 @@ class Gradient:
             logger.debug(f"setting first step length with user-requested "
                          f"`step_len_init`={self.step_len_init}. "
                          f"alpha_new={alpha:.2E}")
-            # Warn the User if we exceed safe guard but allow forcing the step
-            # length larger for this first step
-            if alpha > self._line_search.step_len_max:
-                logger.warning(f"warning, `step_len_init` has set step length "
-                               f"({alpha:.2E}) larger than the safeguard value "
-                               f"defined by `step_len_max` "
-                               f"({self._line_search.step_len_max:.2E})")
         # Normal operation - Calculate step based on position in line search
+        # note that safeguard may be appled in the line search if alpha too big
         else:
             alpha, _ = self._line_search.calculate_step_length()
 

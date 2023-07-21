@@ -477,7 +477,12 @@ class Inversion(Migration):
                 sys.exit(-1)
 
     def _evaluate_line_search_misfit(self):
-        """Convenience fuinction to wrap forward solver and misfit calc"""
+        """
+        Convenience function to wrap forward solver and preprocessing misfit
+        calculation into a system run call. Collects residual files and updates
+        line search misfit (f_try) so that it can be compared to previous
+        step counts.
+        """
         # Define where we are in the inversion for file passing between
         # preprocess and workflow modules
         iteration = self.iteration

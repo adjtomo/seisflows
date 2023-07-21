@@ -429,9 +429,14 @@ class Forward:
             simulations. Files will be copied to each individual solver
             directory.
         """
-        # Allow overriding Workflows to change the default directory structure
+        # Allow overriding Workflows to change the default directory structures
+        # for where traces are saved and exported
         save_traces = kwargs.get("save_traces", 
                                  os.path.join(self.solver.cwd, "traces", "syn"))
+        export_traces = kwargs.get("export_traces",
+                                   os.path.join(self.path.output, "solver",
+                                                self.solver.source_name, "syn")
+                                   )
 
         assert(os.path.exists(path_model)), \
             f"Model path for objective function does not exist"
@@ -441,12 +446,10 @@ class Forward:
         logger.debug(f"running forward simulation with "
                      f"'{self.solver.__class__.__name__}'")
 
-        # Figure out where to export waveform files to, if requested
-        # path will look like: 'output/solver/001/syn/NN.SSS.BXY.semd'
-        if self.export_traces:
-            export_traces = os.path.join(self.path.output, "solver",
-                                         self.solver.source_name, "syn")
-        else:
+        # If requested, synthetic waveforms will be saved permanently to:
+        # 'output/solver/001/syn/NN.SSS.BXY.semd'
+        # User can turn off trace export by setting `export_traces` to False
+        if not self.export_traces:
             export_traces = False
 
         # Run the forward simulation with the given input model
