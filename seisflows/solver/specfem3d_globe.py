@@ -128,6 +128,12 @@ class Specfem3DGlobe(Specfem):
                 f"`regions` must be some integer combination 1, 2 and/or 3"
                 )
 
+        # Check that the DATA/ sub-directory crust2.0 is available.
+        # SPECFEM3D_GLOBE quirk requires this as a base model for GLL updates
+        assert(
+            os.path.exists(os.path.join(self.path.specfem_data, "crust2.0"))
+        ), f"DATA/crust2.0 is required for SPECFEM3D_GLOBE to use GLL models"
+
     def data_wildcard(self, comp="?"):
         """
         Returns a wildcard identifier for synthetic data
@@ -169,8 +175,6 @@ class Specfem3DGlobe(Specfem):
         """
         Calls SPECFEM3D_GLOBE forward solver, exports solver outputs to traces.
 
-
-
         :type executables: list or None                                          
         :param executables: list of SPECFEM executables to run, in order, to     
             complete a forward simulation. This can be left None in most cases,  
@@ -188,8 +192,10 @@ class Specfem3DGlobe(Specfem):
             permanent storage location. i.e., copy files from their original     
             location 
         """
+        # Forward simulations REQUIRE re-running the mesher to instantiate
+        # iterative model updates
         if executables is None:
-            executables = ["bin/xspecfem3D"]
+            executables = ["bin/xmeshfem3D", "bin/xspecfem3D"]
 
         super().forward_simulation(executables=executables, 
                                    save_traces=save_traces, 
@@ -446,3 +452,30 @@ class Specfem3DGlobe(Specfem):
             # e.g., smooth_vp.log
             stdout = f"{self._exc2log(exc)}_{name}.log"
             self._run_binary(executable=exc, stdout=stdout, with_mpi=False)
+
+    def import_model(self, path_model):
+        """
+        SPECFEM3D_GLOBE acts differently than the Cartesian version when
+        running GLL models. The User must put the GLL model files in
+        directory DATA/GLL (default, manually set PATHNAME_GLL_modeldir in
+        constants.h), and run the mesher to incorporate any model updates.
+
+        The updated GLL model files for iterative inversions need to be stored
+        in a specific directory. Here it is hardcoded to the default value for
+        SPECFEM3D_GLOBE constant `PATHNAME_GLL_modeldir`, which is specified in
+        `src/constants.h` as "DATA/GLL"
+
+        :type path_model: str
+        :param path_model: path to an existing starting model
+        """
+        assert(os.path.exists(path_model)), f"model {path_model} does not exist"
+        unix.cd(self.cwd)
+
+        # Copy the model files (ex: proc000023_vp.bin ...) into database dir
+        src = glob(os.path.join(path_model, f"*{self._ext}"))
+        dst = os.path.join(self.cwd, "DATA", "GLL", "")
+        if not os.path.exists(dst):
+            unix.mkdir(dst)
+
+        unix.cp(src, dst)
+

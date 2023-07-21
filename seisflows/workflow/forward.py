@@ -454,6 +454,7 @@ class Forward:
 
         # Run the forward simulation with the given input model
         self.solver.import_model(path_model=path_model)
+
         # Forward workflows do not require saving the large forward arrays
         # because the assumption is that we will not be running adj simulations
         if self.__class__.__name__ == "Forward":

@@ -456,10 +456,12 @@ class NoiseInversion(Inversion):
                                    delim=":")
 
         # Exporting traces to disk for permanent saving. Ensure that the force
-        # tag is set so that subsequent trace exports don't overwrite your files
+        # tag is set so that subsequent trace exports don't overwrite existing
         if self.export_traces:
+            # e.g., output/{source}/syn_Z_1_0/*
             export_traces = os.path.join(
-                self.path.output, self.solver.source_name, f"syn_{self._force}"
+                self.path.output, self.solver.source_name,
+                f"syn_{self._force}_{self.evaluation}"
             )
         else:
             export_traces = False
