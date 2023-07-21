@@ -130,9 +130,10 @@ class Specfem3DGlobe(Specfem):
 
         # Check that the DATA/ sub-directory crust2.0 is available.
         # SPECFEM3D_GLOBE quirk requires this as a base model for GLL updates
-        assert(
-            os.path.exists(os.path.join(self.path.specfem_data, "crust2.0"))
-        ), f"DATA/crust2.0 is required for SPECFEM3D_GLOBE to use GLL models"
+        for fid in ["s362ani", "crust2.0", "topo_bathy"]:  # !!! CHECK THIS
+            assert(
+                os.path.exists(os.path.join(self.path.specfem_data, fid))
+            ), f"DATA/{fid} is required for SPECFEM3D_GLOBE to use GLL models"
 
     def data_wildcard(self, comp="?"):
         """
