@@ -500,6 +500,11 @@ class Forward:
             return
 
         if save_residuals:
+            # Check that the calling workflow has properly set the string fmtr.
+            assert ("{src}" in save_residuals), (
+                "objective function evaluation requires string formatter {} " 
+                f"in `save_residuals`: {save_residuals}"
+            )
             save_residuals = save_residuals.format(src=self.solver.source_name)
 
         if self.export_residuals:
