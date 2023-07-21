@@ -190,7 +190,7 @@ class Bracket:
             alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
                                         f1=f[1], b1=0.1, b2=0.5)
             logger.info(f"try: misfit increasing, attempting "
-                        f"to reduce step length using parabloic backtrack, "
+                        f"to reduce step length using parabolic backtrack, "
                         f"alpha={alpha:.2E}")
             status = "TRY"
         # step_count_max exceeded, fail

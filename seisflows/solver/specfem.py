@@ -288,9 +288,8 @@ class Specfem:
         """
         assert os.path.exists(path), f"Model check path does not exist: {path}"
 
-        _model = Model(path=self.path.model_init,
-                       parameters=self._parameters, regions=self._regions
-                       )
+        _model = Model(path=path, parameters=self._parameters,
+                       regions=self._regions)
         try:
             _model.check()
         except AssertionError as e:
