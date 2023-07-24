@@ -736,19 +736,6 @@ class Default:
         """Teardown procedures for the default preprocessing class"""
         pass
 
-    @staticmethod
-    def sum_residuals(residuals):
-        """
-        Returns the summed square of residuals for each event. Following
-        Tape et al. 2007
-
-        :type residuals: np.array
-        :param residuals: list of residuals from each NTASK event
-        :rtype: float
-        :return: sum of squares of residuals
-        """
-        return np.sum(residuals ** 2.)
-
     def _apply_resample(self, st_a, st_b):
         """
         Resample all traces in `st_a` to the sampling rate of `st_b`. Resamples

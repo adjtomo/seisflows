@@ -290,9 +290,7 @@ class NoiseInversion(Inversion):
         # This is the same process that occurs at the end of
         # Inversion.evaluate_initial_misfit but slightly more general
         residuals_files = save_residuals.format(src="*", force="?")
-        residuals = self._read_residuals(residuals_files)
-
-        total_misfit = self.preprocess.sum_residuals(residuals)
+        total_misfit = self.sum_residuals(residuals_files)
         self.optimize.save_vector(name="f_new", m=total_misfit)
 
     def prepare_data_for_solver(self, **kwargs):
@@ -710,9 +708,8 @@ class NoiseInversion(Inversion):
                 f"No residuals files found for Iteration {iteration} and "
                 f"step count {step_count}. Please check preprocessing"
                 )
-        residuals = self._read_residuals(residuals_files)
+        total_misfit = self.sum_residuals(residuals_files)
 
-        total_misfit = self.preprocess.sum_residuals(residuals)
         logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
         self.optimize.save_vector(name="f_try", m=total_misfit)
 
