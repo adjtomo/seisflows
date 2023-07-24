@@ -131,7 +131,6 @@ class NoiseInversion(Inversion):
 
         # TODO: Check that solver parameter ROTATE_SEISMOGRAMS_RTZ == False (?)
 
-
     @property
     def task_list(self):
         """
@@ -153,25 +152,14 @@ class NoiseInversion(Inversion):
         :rtype: list
         :return: list of methods to call in order during a workflow
         """
-        task_list = []
-
-        # Determine which kernels we will generate during the workflow
-        if "ZZ" in self.kernels:
-            task_list.append(self.generate_zz_kernels)
-        # These components can be run together because they use the same sims
-        if "TT" in self.kernels or "RR" in self.kernels:
-            task_list.append(self.generate_tt_rr_kernels)
-
         # Standard inversion tasks
-        task_list.extend([
-            self.postprocess_event_kernels,
-            self.evaluate_gradient_from_kernels,
-            self.initialize_line_search,
-            self.perform_line_search,
-            self.finalize_iteration
-        ])
-
-        return task_list
+        return [self.generate_kernels,
+                self.postprocess_event_kernels,
+                self.evaluate_gradient_from_kernels,
+                self.initialize_line_search,
+                self.perform_line_search,
+                self.finalize_iteration
+                ]
 
     def trace_path(self, tag, comp=None):
         """
@@ -191,7 +179,7 @@ class NoiseInversion(Inversion):
         :type tag: str or None
         :param tag: sub directory tag, e.g., 'syn' to store synthetic waveforms 
             and 'adj' to store adjoint sources.
-        :type comp: str
+        :type comp: str or None
         :param comp: optional component used to tag the sub directory
         :rtype: str
         :return: full path to solver scratch traces directory to save waveforms
@@ -200,44 +188,22 @@ class NoiseInversion(Inversion):
             tag = f"{tag}_{comp}".lower()
         return os.path.join(self.solver.cwd, "traces", tag)
 
-    def generate_zz_kernels(self):
+    def generate_kernels(self):
         """
-        Main processing function for Noise Inversion workflow. 
+        Main processing function for Noise Inversion workflow, which replaces
+        the standard Inversion workflow functions `evaluate_initial_misfit` and
+        `run_adjoint_simulations`.
 
-        Generates Synthetic Greens Functions (SGF) for the ZZ component by
+        ZZ: Generates Synthetic Greens Functions (SGF) for the ZZ component by
         running forward simulations for each master station using a +Z component
         force, and then running an adjoint simulation to generate kernels.
 
-        Some internal function overrides are required to adjust file and
-        sub-directory naming structure to avoid conflict with the TT and RR 
-        kernel generation.
-
-        .. note::
-
-            ZZ component kernel generation follows roughly the same workflow as 
-            a standard earthquake based inversion.
-        """
-        # Internal tracking parameters used to name sub-directories, save
-        # files and dictate how simulatuions are run
-        self._force = "Z"
-        self._cmpnt = "Z"
-
-        # Run the forward solver to generate SGFs and adjoint sources
-        self.evaluate_initial_misfit()
-
-        # Run the adjoint solver to generate kernels for ZZ sensitive structure
-        self.run_adjoint_simulations()
-
-    def generate_tt_rr_kernels(self):
-        """
-        Main processing function for Noise Inversion workflow. 
-
-        Generate Synthetic Greens Functions (SGF) for the TT and/or RR
+        TT/RR: Generate Synthetic Greens Functions (SGF) for the TT and/or RR
         component(s) following processing steps laid out in Wang et al. (2019).
 
         .. note::
 
-            This is significantly more complicated than the ZZ case because we
+            TT/RR is significantly more complicated than the ZZ case because we
             need to rotate back and forth between the N and E simulations, and
             the R and T EGFs, which requires a lot of internal bookkeeping.
 
@@ -261,36 +227,73 @@ class NoiseInversion(Inversion):
 
           9. Sum kernels K = K_RR + K_TT
         """
-        logger.info(msg.mnr("EVALUATING RR/TT MISFIT FOR INITIAL MODEL"))
+        # Set up a template file name that will be used to track residuals
+        residuals_fid = f"residuals_{{src}}_{self.iteration}_0_{{force}}"
+        save_residuals = os.path.join(self.path.eval_grad, residuals_fid)
 
-        # Run the forward solver to generate E? and N? SGFs and adjoint sources
-        for force in ["E", "N"]:
-            self._force = force
-            logger.info(f"running misfit evaluation for comp: '{self._force}'")
-            self.evaluate_initial_misfit()
+        if "ZZ" in self.kernels:
+            logger.info(msg.mnr("EVALUATING ZZ MISFIT FOR INITIAL MODEL"))
 
-        # Run adjoint solver for each kernel RR and TT (if requested) by
-        # running two adjoint simulations (E and N) per kernel. 
-        for cmpnt in ["T", "R"]:  
-            # Skip over if User did not request 
-            if cmpnt not in self.kernels:  # e.g., if 'R' in 'RR,TT'
-                continue
+            # Internal tracking parameters used to name sub-directories, save
+            # files and dictate how simulatuions are run
+            self._force = "Z"
+            self._cmpnt = "Z"
 
-            # Set internal kernel variable which will let all spawned jobs
-            # know which set of adjoint sources are required for their sim
-            logger.info(f"running generating kernel for component: {cmpnt}")
-            self._cmpnt = cmpnt  # T or R
+            # Run the forward solver to generate SGFs and adjoint sources.
+            # Save the residual files but do not sum, will sum all at very end
+            self.evaluate_initial_misfit(
+                save_residuals=save_residuals.format(src="{src}",
+                                                     force=self._force),
+                sum_residuals=False
+            )
 
-            # We require two adjoint simulations per kernel to recover gradient
+            # Run the adjoint solver to generate kernels for ZZ sensitive structure
+            self.run_adjoint_simulations()
+
+        if "RR" in self.kernels or "TT" in self.kernels:
+            logger.info(msg.mnr("EVALUATING RR/TT MISFIT FOR INITIAL MODEL"))
+
+            # Run the forward solver to generate E? and N? SGFs and adj sources
             for force in ["E", "N"]:
                 self._force = force
-                logger.info(f"running adjoint simulation for "
-                            f"'{self._force}{self._cmpnt}'")
-                self.run_adjoint_simulations()
+                logger.info(f"running misfit evaluation for: '{self._force}'")
+                self.evaluate_initial_misfit(
+                    save_residuals=save_residuals.format(src="{src}",
+                                                         force=self._force),
+                    sum_residuals=False
+                )
 
-            # Unset internal variables to avoid any confusion in future runs
-            self._cmpnt = None
-            self._force = None
+            # Run adjoint solver for each kernel RR and TT (if requested) by
+            # running two adjoint simulations (E and N) per kernel.
+            for cmpnt in ["T", "R"]:
+                # Skip over if User did not request
+                if cmpnt not in self.kernels:  # e.g., if 'R' in 'RR,TT'
+                    continue
+
+                # Set internal kernel variable which will let all spawned jobs
+                # know which set of adjoint sources are required for their sim
+                logger.info(f"running generating kernel for component: {cmpnt}")
+                self._cmpnt = cmpnt  # T or R
+
+                # We require two adjoint simulations per kernel to recover gradient
+                for force in ["E", "N"]:
+                    self._force = force
+                    logger.info(f"running adjoint simulation for "
+                                f"'{self._force}{self._cmpnt}'")
+                    self.run_adjoint_simulations()
+
+                # Unset internal variables to avoid any confusion in future runs
+                self._cmpnt = None
+                self._force = None
+
+        # Sum all the misfit values together to create misfit value `f_new`.
+        # This is the same process that occurs at the end of
+        # Inversion.evaluate_initial_misfit but slightly more general
+        residuals_files = save_residuals.format(src="*", force="?")
+        residuals = self._read_residuals(residuals_files)
+
+        total_misfit = self.preprocess.sum_residuals(residuals)
+        self.optimize.save_vector(name="f_new", m=total_misfit)
 
     def prepare_data_for_solver(self, **kwargs):
         """
@@ -344,6 +347,8 @@ class NoiseInversion(Inversion):
         Function Override of `workflow.inversion.evaluate_objective_function` to
         get expected adjoint sources for each kernel.
 
+        Calls Preprocessing module to calculate misfit (f) and adjoint sources.
+
         ZZ kernel creation requires little modification and generally follows
         the original workflow function.
 
@@ -373,14 +378,6 @@ class NoiseInversion(Inversion):
                 logger.info("not all required synthetics present for RR/TT "
                             "kernels, waiting for additional forward simulation"
                             )
-
-                # Create a dummy residuals file so that the original function
-                # doesn't complain when it tries to read it. Sort of hacky.
-                # !!! Assuming filename based on function
-                # !!! `inversion.evaluate_misfit_function`
-                np.savetxt(
-                        os.path.join(self.path.eval_grad, "residuals.txt"), [0]
-                        )
                 return
 
             # This will generate RR and TT synthetics in `traces/syn` with
