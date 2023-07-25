@@ -250,6 +250,8 @@ class NoiseInversion(Inversion):
             logger.info(msg.mnr("EVALUATING RR/TT KERNELS FOR INITIAL MODEL"))
 
             # Run the forward solver to generate E? and N? SGFs and adj sources
+            # TODO: 'E' residuals skipped because 'N' synthetics have not been
+            #   generated yet. Rename residuals file? Also see line search misfit
             for force in ["E", "N"]:
                 self._force = force
                 logger.info(f"running misfit evaluation for: '{self._force}'")
@@ -288,7 +290,8 @@ class NoiseInversion(Inversion):
         residuals_files = glob(save_residuals.format(src="*", force="?"))
         total_misfit = self.sum_residuals(residuals_files)
         self.optimize.save_vector(name="f_new", m=total_misfit)
-        logger.info(f"f_new ({self.evaluation}) = {total_misfit:.2E}")
+        logger.info(f"total misfit `f_new` ({self.evaluation}) = "
+                    f"{total_misfit:.2E}")
 
     def prepare_data_for_solver(self, **kwargs):
         """
@@ -663,6 +666,9 @@ class NoiseInversion(Inversion):
         Line search requires running forward simulations multiple times to 
         generate the correct synthetics, as well as some synthetic rotation
         if TT or RR included in kernels
+
+        TODO clean out the traces/syn directory because it is causing false
+            misfit calculations for 'evaluate_objective_function'
 
         .. warning::
 
