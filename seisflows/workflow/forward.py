@@ -300,7 +300,7 @@ class Forward:
         self.checkpoint()
         logger.info(f"finished all {len(self.task_list)} tasks in task list")
 
-    def evaluate_initial_misfit(self, **kwargs):
+    def evaluate_initial_misfit(self, save_residuals=None, **kwargs):
         """
         Evaluate the initial model misfit. This requires setting up 'data'
         before generating synthetics, which is either copied from user-supplied
@@ -311,7 +311,26 @@ class Forward:
 
             This is run altogether on system to save on queue time waits,
             because we are potentially running two simulations back to back.
+
+        :type save_residuals: str
+        :param save_residuals: Location to save 'residuals_*.txt files which are
+            used to calculate total misfit (f_new), requires a string formatter
+            {src} so that the preprocessing module can generate a new file for
+            each source. Remainder of string is some combination of the
+            iteration, step count etc. . Allows inheriting workflows to
+            override this path if more specific file naming is required.
         """
+        if save_residuals is None:
+            save_residuals = os.path.join(self.path.eval_grad,
+                                          "residuals_{src}_1_0.txt")
+
+        # Require that `save_residuals` has an f-string formatter 'src' that
+        # allows each source process to write to its own file
+        assert("{src}" in save_residuals), (
+            f"Workflow path `save_residuals` requires string formatter "
+            "{src} within the string name"
+        )
+
         logger.info(msg.mnr("EVALUATING MISFIT FOR INITIAL MODEL"))
 
         # Check if we can read in the models to disk prior to submitting jobs
@@ -332,13 +351,9 @@ class Forward:
                         self.evaluate_objective_function]
         else:
             run_list = [self.run_forward_simulations]
-            
-        # `save_residuals` hard-coded for iteration 1 and step count 0
-        # assuming workflows calling this function are evaluating the
-        # very first round of misfit quantification (i.e., i01s00)
+
         self.system.run(run_list, path_model=self.path.model_init,
-                        save_residuals=os.path.join(self.path.eval_grad,
-                                                    "residuals_{src}_1_0.txt"),
+                        save_residuals=save_residuals,
                         **kwargs
                         )
 

@@ -38,7 +38,6 @@ to get data-comparable ZZ, RR and TT SGFs.
     naming assumptions with a '!!!'
 """
 import os
-import numpy as np
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix, msg
@@ -153,7 +152,7 @@ class NoiseInversion(Inversion):
         :return: list of methods to call in order during a workflow
         """
         # Standard inversion tasks
-        return [self.generate_kernels,
+        return [self.generate_event_kernels,
                 self.postprocess_event_kernels,
                 self.evaluate_gradient_from_kernels,
                 self.initialize_line_search,
@@ -188,24 +187,21 @@ class NoiseInversion(Inversion):
             tag = f"{tag}_{comp}".lower()
         return os.path.join(self.solver.cwd, "traces", tag)
 
-    def generate_kernels(self):
+    def generate_event_kernels(self):
         """
-        Main processing function for Noise Inversion workflow, which replaces
+        Main processing function for Noise Inversion workflow, which manipulates
         the standard Inversion workflow functions `evaluate_initial_misfit` and
         `run_adjoint_simulations`.
 
-        ZZ: Generates Synthetic Greens Functions (SGF) for the ZZ component by
-        running forward simulations for each master station using a +Z component
-        force, and then running an adjoint simulation to generate kernels.
+        Uses User-defined parameter `kernels` to determine workflow:
 
-        TT/RR: Generate Synthetic Greens Functions (SGF) for the TT and/or RR
-        component(s) following processing steps laid out in Wang et al. (2019).
-
-        .. note::
-
-            TT/RR is significantly more complicated than the ZZ case because we
-            need to rotate back and forth between the N and E simulations, and
-            the R and T EGFs, which requires a lot of internal bookkeeping.
+        - ZZ: Generates Synthetic Greens Functions (SGF) for the ZZ component by
+            running forward simulations for each master station using a +Z
+            component force, and then running an adjoint simulation to generate
+            kernels.
+        - TT/RR: Generate Synthetic Greens Functions (SGF) for the TT and/or RR
+            component(s) following processing steps laid out in
+            Wang et al. (2019) and outlined below
 
         TT/RR Workflow Steps:
 
@@ -227,12 +223,12 @@ class NoiseInversion(Inversion):
 
           9. Sum kernels K = K_RR + K_TT
         """
-        # Set up a template file name that will be used to track residuals
-        residuals_fid = f"residuals_{{src}}_{self.iteration}_0_{{force}}"
+        # Set up a template file name, will be used for preprocessing residuals
+        residuals_fid = f"residuals_{{src}}_{self.iteration}_0_{{force}}.txt"
         save_residuals = os.path.join(self.path.eval_grad, residuals_fid)
 
         if "ZZ" in self.kernels:
-            logger.info(msg.mnr("EVALUATING ZZ MISFIT FOR INITIAL MODEL"))
+            logger.info(msg.mnr("EVALUATING ZZ KERNELS FOR INITIAL MODEL"))
 
             # Internal tracking parameters used to name sub-directories, save
             # files and dictate how simulatuions are run
@@ -247,11 +243,11 @@ class NoiseInversion(Inversion):
                 sum_residuals=False
             )
 
-            # Run the adjoint solver to generate kernels for ZZ sensitive structure
+            # Run the adjoint solver to generate kernels for ZZ
             self.run_adjoint_simulations()
 
         if "RR" in self.kernels or "TT" in self.kernels:
-            logger.info(msg.mnr("EVALUATING RR/TT MISFIT FOR INITIAL MODEL"))
+            logger.info(msg.mnr("EVALUATING RR/TT KERNELS FOR INITIAL MODEL"))
 
             # Run the forward solver to generate E? and N? SGFs and adj sources
             for force in ["E", "N"]:
@@ -275,7 +271,7 @@ class NoiseInversion(Inversion):
                 logger.info(f"running generating kernel for component: {cmpnt}")
                 self._cmpnt = cmpnt  # T or R
 
-                # We require two adjoint simulations per kernel to recover gradient
+                # We require two adjoint simulations/kernel to recover gradient
                 for force in ["E", "N"]:
                     self._force = force
                     logger.info(f"running adjoint simulation for "
@@ -289,9 +285,10 @@ class NoiseInversion(Inversion):
         # Sum all the misfit values together to create misfit value `f_new`.
         # This is the same process that occurs at the end of
         # Inversion.evaluate_initial_misfit but slightly more general
-        residuals_files = save_residuals.format(src="*", force="?")
+        residuals_files = glob(save_residuals.format(src="*", force="?"))
         total_misfit = self.sum_residuals(residuals_files)
         self.optimize.save_vector(name="f_new", m=total_misfit)
+        logger.info(f"f_new ({self.evaluation}) = {total_misfit:.2E}")
 
     def prepare_data_for_solver(self, **kwargs):
         """
