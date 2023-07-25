@@ -250,7 +250,8 @@ class NoiseInversion(Inversion):
             logger.info(msg.mnr("EVALUATING RR/TT KERNELS FOR INITIAL MODEL"))
 
             # Run the forward solver to generate E? and N? SGFs and adj sources
-            # Only one residuals file will be made as a result of the two sims
+            # Order of simulations matters here! E must be first as preprocess
+            # will hold until N simulations are run.
             for force in ["E", "N"]:
                 self._force = force
                 logger.info(f"running misfit evaluation for: '{self._force}'")
@@ -366,14 +367,11 @@ class NoiseInversion(Inversion):
                                                 components=["Z"])
         # Run E and N misfit quantification
         else:
-            # We require both N and E forward simulations to be run prior to
-            # preprocessing step
-            n_traces = glob(os.path.join(self.trace_path("syn", "n"), "*"))
-            e_traces = glob(os.path.join(self.trace_path("syn", "e"), "*"))
-            if not n_traces or not e_traces:
-                logger.info("not all required synthetics present for RR/TT "
-                            "kernels, waiting for additional forward simulation"
-                            )
+            # Order of forward simulations matters! N simulations must come last
+            if self._force == "E":
+                logger.info("waiting for additional N component forward "
+                            "simulation before proceeding with R/T "
+                            "preprocessing")
                 return
 
             # This will generate RR and TT synthetics in `traces/syn` with
@@ -427,9 +425,6 @@ class NoiseInversion(Inversion):
             f"`_force` is set prior to running forward simulations"
         )
 
-        # Clear out any existing synthetic traces to avoid file conflicts
-        unix.rm(glob(os.path.join(self.trace_path(tag="syn"), "*")))
-
         # Edit the force vector based on the internal value for chosen kernel
         kernel_vals, save_traces = None, None
         if self._force == "Z":
@@ -443,6 +438,10 @@ class NoiseInversion(Inversion):
                 kernel_vals = ["1.d0", "0.d0", "0.d0"]  # format: [E, N, Z]
             # e.g., solver/{source_name}/traces/syn_e
             save_traces = self.trace_path(tag="syn", comp=self._force)
+
+        # Clear out synthetics from previous evaluations to avoid file conflict
+        unix.rm(os.path.join(save_traces, "*"))
+        unix.mkdir(save_traces)
 
         # Set FORCESOLUTION (3D/3D_GLOBE) to ensure correct force for kernel
         self.solver.set_parameters(keys=["component dir vect source E",
@@ -697,12 +696,15 @@ class NoiseInversion(Inversion):
         if "ZZ" in self.kernels:
             forces.append("Z")
         if ("RR" in self.kernels) or ("TT" in self.kernels):
+            # Order of simulations matters here! E must be first as
+            # preprocessing will hold until N simulations are run.
             forces.append("E")
             forces.append("N")
 
         # Run forward simulations and misfit calculation for each required force
         for force in forces:
             self._force = force
+            logger.info(f"running misfit evaluation for: '{self._force}'")
             # Z residuals will be saved tag Z, N/E residuals saved tag RT
             tag = {"Z": "Z", "N": "RT", "E": "RT"}[self._force]
             self.system.run(
