@@ -224,7 +224,7 @@ class NoiseInversion(Inversion):
           9. Sum kernels K = K_RR + K_TT
         """
         # Set up a template file name, will be used for preprocessing residuals
-        residuals_fid = f"residuals_{{src}}_{self.iteration}_0_{{force}}.txt"
+        residuals_fid = f"residuals_{{src}}_{self.iteration}_0_{{tag}}.txt"
         save_residuals = os.path.join(self.path.eval_grad, residuals_fid)
 
         if "ZZ" in self.kernels:
@@ -239,7 +239,7 @@ class NoiseInversion(Inversion):
             # Save the residual files but do not sum, will sum all at very end
             self.evaluate_initial_misfit(
                 save_residuals=save_residuals.format(src="{src}",
-                                                     force=self._force),
+                                                     tag=self._force),
                 sum_residuals=False
             )
 
@@ -250,14 +250,12 @@ class NoiseInversion(Inversion):
             logger.info(msg.mnr("EVALUATING RR/TT KERNELS FOR INITIAL MODEL"))
 
             # Run the forward solver to generate E? and N? SGFs and adj sources
-            # TODO: 'E' residuals skipped because 'N' synthetics have not been
-            #   generated yet. Rename residuals file? Also see line search misfit
+            # Only one residuals file will be made as a result of the two sims
             for force in ["E", "N"]:
                 self._force = force
                 logger.info(f"running misfit evaluation for: '{self._force}'")
                 self.evaluate_initial_misfit(
-                    save_residuals=save_residuals.format(src="{src}",
-                                                         force=self._force),
+                    save_residuals=save_residuals.format(src="{src}", tag="RT"),
                     sum_residuals=False
                 )
 
@@ -287,7 +285,7 @@ class NoiseInversion(Inversion):
         # Sum all the misfit values together to create misfit value `f_new`.
         # This is the same process that occurs at the end of
         # Inversion.evaluate_initial_misfit but slightly more general
-        residuals_files = glob(save_residuals.format(src="*", force="?"))
+        residuals_files = glob(save_residuals.format(src="*", tag="*"))
         total_misfit = self.sum_residuals(residuals_files)
         self.optimize.save_vector(name="f_new", m=total_misfit)
         logger.info(f"total misfit `f_new` ({self.evaluation}) = "
@@ -428,6 +426,9 @@ class NoiseInversion(Inversion):
             f"`run_forward_simulation` requires that the internal attribute " 
             f"`_force` is set prior to running forward simulations"
         )
+
+        # Clear out any existing synthetic traces to avoid file conflicts
+        unix.rm(glob(os.path.join(self.trace_path(tag="syn"), "*")))
 
         # Edit the force vector based on the internal value for chosen kernel
         kernel_vals, save_traces = None, None
@@ -679,6 +680,11 @@ class NoiseInversion(Inversion):
         iteration = self.iteration
         step_count = self.optimize.step_count
 
+        # Set up a template file name, will be used for preprocessing residuals
+        # Same as in `generate_kernels` (!!! Should this be made a parameter?)
+        resi_rid = f"residuals_{{src}}_{iteration}_{step_count}_{{tag}}.txt"
+        save_residuals = os.path.join(self.path.eval_func, resi_rid)
+
         # Pre-set functions and parameters for system.run calls
         run_list = [self.prepare_data_for_solver,
                     self.run_forward_simulations,
@@ -686,27 +692,26 @@ class NoiseInversion(Inversion):
                     ]
         path_model = os.path.join(self.path.eval_func, "model")
 
+        # Determine which forward simulations we will need to run
         forces = []
         if "ZZ" in self.kernels:
             forces.append("Z")
         if ("RR" in self.kernels) or ("TT" in self.kernels):
-            forces.append("N")
             forces.append("E")
+            forces.append("N")
 
         # Run forward simulations and misfit calculation for each required force
         for force in forces:
             self._force = force
-            save_residuals = os.path.join(
-                self.path.eval_func,
-                f"residuals_{{src}}_{iteration}_{step_count}_{force}.txt"
+            # Z residuals will be saved tag Z, N/E residuals saved tag RT
+            tag = {"Z": "Z", "N": "RT", "E": "RT"}[self._force]
+            self.system.run(
+                run_list, path_model=path_model,
+                save_residuals=save_residuals.format(src="{src}", tag=tag)
             )
-            self.system.run(run_list, path_model=path_model,
-                            save_residuals=save_residuals
-                            )
        
-        # Sum misfit from ALL forward simulations
-        residuals_files = glob(os.path.join(self.path.eval_func,
-                               f"residuals_*_{iteration}_{step_count}_?.txt"))
+        # Sum misfit from all forward simulations
+        residuals_files = glob(save_residuals.format(src="*", tag="*"))
         assert residuals_files, (
                 f"No residuals files found for Iteration {iteration} and "
                 f"step count {step_count}. Please check preprocessing"
