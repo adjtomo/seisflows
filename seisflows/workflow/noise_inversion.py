@@ -109,7 +109,7 @@ class NoiseInversion(Inversion):
         assert(self._modules.preprocess.__class__.__name__ == "Noise"), \
             f"Noise Inversion workflow require the `noise` preprocessing class"
 
-        assert("3D" in self._modules.solver.__class__.__name__ ), (
+        assert("3D" in self._modules.solver.__class__.__name__), (
             f"Noise Inversion workflow requires solver module 'specfem3d' or " 
             f"'specfem3d_globe'"
         )
@@ -367,7 +367,7 @@ class NoiseInversion(Inversion):
                                                 components=["Z"])
         # Run E and N misfit quantification
         else:
-            # Order of forward simulations matters! N simulations must come last
+            # Order of forward simulations matters! E simulations must be first
             if self._force == "E":
                 logger.info("waiting for additional N component forward "
                             "simulation before proceeding with R/T "
@@ -383,7 +383,7 @@ class NoiseInversion(Inversion):
                 data_wildcard=self.solver.data_wildcard(comp="{}"),
                 kernels=self.kernels
             )
-            # Run preprocessing with rotated synthetics for N and E only,
+            # Run preprocessing with rotated synthetics for horizontal cmpnts,
             # generate adjoint sources for R and T components
             super().evaluate_objective_function(save_residuals=save_residuals,
                                                 components=["T", "R"]
