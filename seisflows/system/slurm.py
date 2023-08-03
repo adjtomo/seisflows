@@ -39,6 +39,14 @@ from seisflows.tools.config import pickle_function_list
 # Define bad states defined by SLURM which signifiy failed jobs
 BAD_STATES = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY", "CANCELLED"]
 
+# Time to wait [s] in between queries to SLURM system queue using sacct
+# Helps give SLURM system time to catch up to job submissions and queue updates
+WAIT_TIME_S = 30  
+
+# Timeout time [s] for querying queue w/ `sacct` getting any positive return
+# Sometimes it takes a while for `sacct` to register on the compute node
+TIMEOUT_S = 300
+
 
 class Slurm(Cluster):
     """
@@ -53,12 +61,6 @@ class Slurm(Cluster):
     :param slurm_args: Any (optional) additional SLURM arguments that will
         be passed to the SBATCH scripts. Should be in the form:
         '--key1=value1 --key2=value2"
-    :type timeout_s: int
-    :param timeout_s: timeout counter in seconds for querying job status on 
-        a SLURM system with `sacct`. Occasionally it takes some time for jobs
-        to show up when querying with `sacct`, and this quantity simply sets 
-        an upper limit for how long SeisFlows should wait when seeing no 
-        stdout from job queue queries before crashing.
 
     Paths
     -----
@@ -66,7 +68,7 @@ class Slurm(Cluster):
     """
     __doc__ = Cluster.__doc__ + __doc__
 
-    def __init__(self, ntask_max=100, slurm_args="", timeout_s=1000, **kwargs):
+    def __init__(self, ntask_max=100, slurm_args="", **kwargs):
         """
         Slurm-specific setup parameters
 
@@ -81,7 +83,6 @@ class Slurm(Cluster):
             self.mpiexec = "srun -u"
         self.ntask_max = ntask_max
         self.slurm_args = slurm_args
-        self.timeout_s = timeout_s
 
         # Must be overwritten by child class
         self.partition = None
@@ -270,8 +271,9 @@ class Slurm(Cluster):
             status = check_job_status_array(job_id)
         except FileNotFoundError:
             logger.critical(f"cannot access job information through 'sacct', "
-                            f"waited {self.timeout_s}s with no return, please "
-                            f"check job scheduler and log messages")
+                            f"waited {TIMEOUT_S}s with no return, please "
+                            f"check job scheduler and log messages, or "
+                            f"increase timeout constant in `system.slurm`")
             sys.exit(-1)
 
         if status == -1:  # Failed job
@@ -311,7 +313,7 @@ def check_job_status_array(job_id):
     """
     logger.info(f"monitoring job status for submitted job: {job_id}")
     while True:
-        time.sleep(5)  # give job time to process and also prevent over-query
+        time.sleep(WAIT_TIME_S)  # give job time to process 
         job_ids, states = query_job_states(job_id)
         # Sometimes query_job_state() does not return, so we wait again
         if not job_ids or not states:
@@ -345,7 +347,7 @@ def check_job_status_list(job_ids):
     logger.info(f"monitoring job status for {len(job_ids)} submitted jobs")      
                                                                                  
     while True:                                                                  
-        time.sleep(10)                                                            
+        time.sleep(WAIT_TIME_S)                                                            
         job_id_list, states = [], []
         for job_id in job_ids:                                                   
             _job_ids, _states = query_job_states(job_id)                         
@@ -364,7 +366,7 @@ def check_job_status_list(job_ids):
             return -1  # Fail  
 
 
-def query_job_states(job_id, timeout_s=1000,_recheck=0):
+def query_job_states(job_id, _recheck=0):
     """
     Queries completion status of an array job by running the SLURM cmd `sacct`
     Available job states are listed here: https://slurm.schedmd.com/sacct.html
@@ -397,15 +399,15 @@ def query_job_states(job_id, timeout_s=1000,_recheck=0):
     cmd = f"sacct -nLX -o jobid,state -j {job_id}"
     result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
     stdout = result.stdout
-    
+
     # Recursively re-check job state incase the job has not been instantiated 
     # in which cause 'stdout' is an empty string
     if not stdout:
-        _wait_time_s = 10
         _recheck += 1
-        if _recheck > (timeout_s // _wait_time_s):
-            raise FileNotFoundError(f"Cannot access job ID {job_id}")
-        time.sleep(_wait_time_s)
+        if _recheck > (TIMEOUT_S // WAIT_TIME_S):
+            raise FileNotFoundError(f"cannot access job ID {job_id}")
+        time.sleep(WAIT_TIME_S)
+        # Recursive call while ticking up `_recheck` as a timeout counter
         query_job_states(job_id, _recheck)
 
     # Return the job numbers and respective states for the given job ID
