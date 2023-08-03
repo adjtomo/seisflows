@@ -6,6 +6,49 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, **kwargs):
+    """
+    Very simple plotting routine to show waveforms and adjoint sources
+    manipulated by the Default preprocessing module. Plots are simple and are
+    provided in a default style that can be adjusted via keyword arguments.
+
+    :type tr_obs: obspy.core.stream.Stream
+    :param tr_obs: observed seismogram, data
+    :type tr_syn: obspy.core.stream.Stream
+    :param tr_syn: synthetic seismogram
+    :type tr_adj: obspy.core.stream.Stream
+    :param tr_adj: optional adjoint source. if not given, none will be plotted
+    :type fid_out: str
+    :param fid_out: name and path to save output file. If none given, output
+        file will be saved to current working directory and named based on the
+        trace ID of the obs data
+    """
+    dpi = kwargs.get("dpi", 100)
+    figsize = kwargs.get("figsize", (800 / dpi, 300 / dpi))
+    lw = kwargs.get("linewidth", 1)
+    obs_color = kwargs.get("obs_color", "k")
+    syn_color = kwargs.get("syn_color", "r")
+    adj_color = kwargs.get("adj_color", "g")
+
+    f, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    plt.plot(tr_obs.times(), tr_obs.data, c=obs_color, lw=lw,
+             label="obs", zorder=6)
+    plt.plot(tr_syn.times(), tr_syn.data, c=syn_color, lw=lw,
+             label="syn", zorder=6)
+    if tr_adj is not None:
+        plt.plot(tr_adj.times(), tr_adj.data, c=adj_color, lw=lw,
+                 label="adj", ls="--", alpha=0.75, zorder=5)
+
+    plt.title(tr_syn.id)
+    plt.xlabel("Time [s]")
+    plt.ylabel("Amplitude")
+    plt.legend(loc="upper right")
+    if not fid_out:
+        fid_out = f"./{tr_syn.id.replace('.', '_')}.png"
+    plt.tight_layout()
+    plt.savefig(fid_out)
+    plt.close()
+
 
 def plot_2d_contour(x, z, data, cmap="viridis", zero_midpoint=False):
     """

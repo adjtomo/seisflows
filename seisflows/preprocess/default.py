@@ -16,6 +16,7 @@ from obspy import Stream, Trace, UTCDateTime
 from seisflows import logger
 from seisflows.tools import signal, unix
 from seisflows.tools.config import Dict, get_task_id
+from seisflows.tools.graphics import plot_waveforms
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
 from seisflows.plugins.preprocess import adjoint as adjoint_sources
@@ -91,6 +92,9 @@ class Default:
         - LATE: mute late arrivals;
         - SHORT: mute short source-receiver distances;
         - LONG: mute long source-receiver distances
+    :type plot: bool
+    :param plot: plot waveforms from each evaluation of the misfit. By default
+        turned off as this can produce many files for an interative inversion.
 
     Paths
     -----
@@ -104,7 +108,7 @@ class Default:
                  adjoint="waveform", normalize=None, filter=None,
                  min_period=None, max_period=None, min_freq=None, max_freq=None,
                  mute=None, early_slope=None, early_const=None, late_slope=None,
-                 late_const=None, short_dist=None, long_dist=None,
+                 late_const=None, short_dist=None, long_dist=None, plot=False,
                  workdir=os.getcwd(), path_preprocess=None, path_solver=None,
                  **kwargs):
         """
@@ -159,6 +163,7 @@ class Default:
         self.short_dist = short_dist
         self.long_dist = long_dist
 
+        self.plot = plot
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
                                                     "preprocess"),
@@ -670,6 +675,20 @@ class Default:
                 fid = self.rename_as_adjoint_source(fid)
                 self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
                 logger.debug(f"writing adjoint source: {fid}")
+            else:
+                adjsrc = None
+
+            if self.plot:
+                fig_path = os.path.join(self.path.scratch,
+                                        self._source_names[get_task_id()])
+                if not os.path.exists(fig_path):
+                    unix.mkdir(fig_path)
+                plot_waveforms(
+                    tr_obs=obs, tr_syn=syn, tr_adj=adjsrc,
+                    fid_out=os.path.join(
+                        fig_path, f"./{tr_syn.id.replace('.', '_')}.png"
+                    )
+                )
 
         return residual
 
