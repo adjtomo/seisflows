@@ -446,7 +446,7 @@ class Default:
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
                 executor.submit(self._quantify_misfit_single, o, s, 
-                                save_residuals, save_adjsrcs)
+                                source_name, save_residuals, save_adjsrcs)
                 for (o, s) in zip(obs, syn)
             ]
         if save_residuals:
@@ -599,8 +599,8 @@ class Default:
 
         return obs_paths, syn_paths
 
-    def _quantify_misfit_single(self, obs_fid, syn_fid, save_residuals=None,
-                                save_adjsrcs=None):
+    def _quantify_misfit_single(self, obs_fid, syn_fid, source_name=None, 
+                                save_residuals=None, save_adjsrcs=None):
         """
         Run misfit quantification for one pair of data-synthetic waveforms.
         This is kept in a separate function so that it can be parallelized for
@@ -614,6 +614,9 @@ class Default:
         :param obs_fid: filename for the observed waveform to be processed
         :type syn_fid: str
         :param syn_fid: filename for the synthetic waveform to be procsesed
+        :type source_name: str
+        :param source_name: name of the source used for tagging output waveform
+            figures if internal paramter `plot` is set True
         :type save_residuals: str
         :param save_residuals: if not None, path to write misfit/residuls to
         :type save_adjsrcs: str
@@ -670,21 +673,26 @@ class Default:
                     obs=tr_obs.data, syn=tr_syn.data,
                     nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
                 )
-                adjsrc = Stream(adjsrc)
                 fid = os.path.basename(syn_fid)
                 fid = self.rename_as_adjoint_source(fid)
-                self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
+                self.write(st=Stream(adjsrc), 
+                           fid=os.path.join(save_adjsrcs, fid))
                 logger.debug(f"writing adjoint source: {fid}")
             else:
                 adjsrc = None
 
             if self.plot:
-                fig_path = os.path.join(self.path.scratch,
-                                        self._source_names[get_task_id()])
+                # If source name is not provided by calling function, assign to
+                # the given task ID which can later be used to track source name
+                if source_name is None:
+                    source_name = get_task_id()
+
+                fig_path = os.path.join(self.path.scratch, source_name)
                 if not os.path.exists(fig_path):
                     unix.mkdir(fig_path)
+
                 plot_waveforms(
-                    tr_obs=obs, tr_syn=syn, tr_adj=adjsrc,
+                    tr_obs=tr_obs, tr_syn=tr_syn, tr_adj=adjsrc,
                     fid_out=os.path.join(
                         fig_path, f"./{tr_syn.id.replace('.', '_')}.png"
                     )
