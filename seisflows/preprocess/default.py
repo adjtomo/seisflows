@@ -677,7 +677,6 @@ class Default:
                 fid = self.rename_as_adjoint_source(fid)
                 self.write(st=Stream(adjsrc), 
                            fid=os.path.join(save_adjsrcs, fid))
-                logger.debug(f"writing adjoint source: {fid}")
             else:
                 adjsrc = None
 

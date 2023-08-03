@@ -31,18 +31,27 @@ def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, **kwargs):
     adj_color = kwargs.get("adj_color", "g")
 
     f, ax = plt.subplots(figsize=figsize, dpi=dpi)
-    plt.plot(tr_obs.times(), tr_obs.data, c=obs_color, lw=lw,
-             label="obs", zorder=6)
-    plt.plot(tr_syn.times(), tr_syn.data, c=syn_color, lw=lw,
-             label="syn", zorder=6)
+
+    lines = []  # for legend
+    lo = ax.plot(tr_obs.times(), tr_obs.data, c=obs_color, lw=lw, label="obs", 
+                 zorder=6)
+    ls = ax.plot(tr_syn.times(), tr_syn.data, c=syn_color, lw=lw, label="syn", 
+                 zorder=6)
+    lines.append([lo, ls])
+
     if tr_adj is not None:
-        plt.plot(tr_adj.times(), tr_adj.data, c=adj_color, lw=lw,
-                 label="adj", ls="--", alpha=0.75, zorder=5)
+        twax = ax.twinx()
+        la = twax.plot(tr_adj.times(), tr_adj.data, c=adj_color, lw=lw,
+                       label="adj", ls="--", alpha=0.75, zorder=5)
+        twax.set_ylabel("Adj. Amplitude")
 
     plt.title(tr_syn.id)
-    plt.xlabel("Time [s]")
-    plt.ylabel("Amplitude")
-    plt.legend(loc="upper right")
+    ax.set_xlabel("Time [s]")
+    ax.set_ylabel("Amplitude")
+
+    labels = [l.get_label() for l in lines]
+    ax.legend(lines, labels, loc="upper right")
+
     if not fid_out:
         fid_out = f"./{tr_syn.id.replace('.', '_')}.png"
     plt.tight_layout()
