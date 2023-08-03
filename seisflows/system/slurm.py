@@ -53,6 +53,12 @@ class Slurm(Cluster):
     :param slurm_args: Any (optional) additional SLURM arguments that will
         be passed to the SBATCH scripts. Should be in the form:
         '--key1=value1 --key2=value2"
+    :type timeout_s: int
+    :param timeout_s: timeout counter in seconds for querying job status on 
+        a SLURM system with `sacct`. Occasionally it takes some time for jobs
+        to show up when querying with `sacct`, and this quantity simply sets 
+        an upper limit for how long SeisFlows should wait when seeing no 
+        stdout from job queue queries before crashing.
 
     Paths
     -----
@@ -60,7 +66,7 @@ class Slurm(Cluster):
     """
     __doc__ = Cluster.__doc__ + __doc__
 
-    def __init__(self, ntask_max=100, slurm_args="",  **kwargs):
+    def __init__(self, ntask_max=100, slurm_args="", timeout_s=1000, **kwargs):
         """
         Slurm-specific setup parameters
 
@@ -75,6 +81,7 @@ class Slurm(Cluster):
             self.mpiexec = "srun -u"
         self.ntask_max = ntask_max
         self.slurm_args = slurm_args
+        self.timeout_s = timeout_s
 
         # Must be overwritten by child class
         self.partition = None
@@ -263,8 +270,8 @@ class Slurm(Cluster):
             status = check_job_status_array(job_id)
         except FileNotFoundError:
             logger.critical(f"cannot access job information through 'sacct', "
-                            f"waited 50s with no return, please check job "
-                            f"scheduler and log messages")
+                            f"waited {self.timeout_s}s with no return, please "
+                            f"check job scheduler and log messages")
             sys.exit(-1)
 
         if status == -1:  # Failed job
@@ -357,7 +364,7 @@ def check_job_status_list(job_ids):
             return -1  # Fail  
 
 
-def query_job_states(job_id, _recheck=0):
+def query_job_states(job_id, timeout_s=1000,_recheck=0):
     """
     Queries completion status of an array job by running the SLURM cmd `sacct`
     Available job states are listed here: https://slurm.schedmd.com/sacct.html
@@ -388,16 +395,17 @@ def query_job_states(job_id, _recheck=0):
     """
     job_ids, job_states = [], []
     cmd = f"sacct -nLX -o jobid,state -j {job_id}"
-    stdout = subprocess.run(cmd, stdout=subprocess.PIPE,
-                            text=True, shell=True).stdout
+    result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+    stdout = result.stdout
     
     # Recursively re-check job state incase the job has not been instantiated 
     # in which cause 'stdout' is an empty string
     if not stdout:
+        _wait_time_s = 10
         _recheck += 1
-        if _recheck > 10:
+        if _recheck > (timeout_s // _wait_time_s):
             raise FileNotFoundError(f"Cannot access job ID {job_id}")
-        time.sleep(10)
+        time.sleep(_wait_time_s)
         query_job_states(job_id, _recheck)
 
     # Return the job numbers and respective states for the given job ID
