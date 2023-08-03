@@ -2,6 +2,7 @@
 """
 Basic visualization tools for SeisFlows to visualize waveforms, models, etc.
 """
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
