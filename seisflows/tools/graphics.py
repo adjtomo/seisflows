@@ -5,6 +5,8 @@ Basic visualization tools for SeisFlows to visualize waveforms, models, etc.
 import numpy as np
 import matplotlib.pyplot as plt
 
+from seisflows.tools import unix
+
 
 def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, **kwargs):
     """
@@ -33,16 +35,15 @@ def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, **kwargs):
     f, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
     lines = []  # for legend
-    lo = ax.plot(tr_obs.times(), tr_obs.data, c=obs_color, lw=lw, label="obs", 
-                 zorder=6)
-    ls = ax.plot(tr_syn.times(), tr_syn.data, c=syn_color, lw=lw, label="syn", 
-                 zorder=6)
-    lines.append([lo, ls])
+    lines += ax.plot(tr_obs.times(), tr_obs.data, c=obs_color, lw=lw, 
+                     label="obs", zorder=6)
+    lines += ax.plot(tr_syn.times(), tr_syn.data, c=syn_color, lw=lw, 
+                     label="syn", zorder=6)
 
     if tr_adj is not None:
         twax = ax.twinx()
-        la = twax.plot(tr_adj.times(), tr_adj.data, c=adj_color, lw=lw,
-                       label="adj", ls="--", alpha=0.75, zorder=5)
+        lines += twax.plot(tr_adj.times(), tr_adj.data, c=adj_color, lw=lw,
+                           label="adj", ls="--", alpha=0.75, zorder=5)
         twax.set_ylabel("Adj. Amplitude")
 
     plt.title(tr_syn.id)
@@ -54,6 +55,11 @@ def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, **kwargs):
 
     if not fid_out:
         fid_out = f"./{tr_syn.id.replace('.', '_')}.png"
+
+    # Overwrite existing figures
+    if os.path.exists(fid_out):
+        unix.rm(fid_out)
+
     plt.tight_layout()
     plt.savefig(fid_out)
     plt.close()
