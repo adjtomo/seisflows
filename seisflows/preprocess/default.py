@@ -92,9 +92,10 @@ class Default:
         - LATE: mute late arrivals;
         - SHORT: mute short source-receiver distances;
         - LONG: mute long source-receiver distances
-    :type plot: bool
-    :param plot: plot waveforms from each evaluation of the misfit. By default
-        turned off as this can produce many files for an interative inversion.
+    :type plot_waveforms: bool
+    :param plot_waveforms: plot waveforms from each evaluation of the misfit.
+        By default turned off as this can produce many files for an interative
+        inversion.
 
     Paths
     -----
@@ -108,8 +109,9 @@ class Default:
                  adjoint="waveform", normalize=None, filter=None,
                  min_period=None, max_period=None, min_freq=None, max_freq=None,
                  mute=None, early_slope=None, early_const=None, late_slope=None,
-                 late_const=None, short_dist=None, long_dist=None, plot=False,
-                 workdir=os.getcwd(), path_preprocess=None, path_solver=None,
+                 late_const=None, short_dist=None, long_dist=None,
+                 plot_waveforms=False, workdir=os.getcwd(), path_preprocess=None,
+                 path_solver=None,
                  **kwargs):
         """
         Preprocessing module parameters
@@ -163,7 +165,7 @@ class Default:
         self.short_dist = short_dist
         self.long_dist = long_dist
 
-        self.plot = plot
+        self.plot_waveforms = plot_waveforms
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
                                                     "preprocess"),
@@ -680,22 +682,23 @@ class Default:
             else:
                 adjsrc = None
 
-            if self.plot:
+            # Plot waveforms showing observed, synthetic and adjoint source
+            if self.plot_waveforms:
                 # If source name is not provided by calling function, assign to
                 # the given task ID which can later be used to track source name
                 if source_name is None:
                     source_name = get_task_id()
 
+                # Determine how to tag the output files
                 fig_path = os.path.join(self.path.scratch, source_name)
                 if not os.path.exists(fig_path):
                     unix.mkdir(fig_path)
-
-                plot_waveforms(
-                    tr_obs=tr_obs, tr_syn=tr_syn, tr_adj=adjsrc,
-                    fid_out=os.path.join(
-                        fig_path, f"./{tr_syn.id.replace('.', '_')}.png"
-                    )
+                # e.g., path/to/figure/NN_SSS_LL_CCC.png
+                fid_out = os.path.join(
+                    fig_path, f"{tr_syn.id.replace('.', '_')}.png"
                 )
+                plot_waveforms(tr_obs=tr_obs, tr_syn=tr_syn, tr_adj=adjsrc,
+                               fid_out=fid_out)
 
         return residual
 
