@@ -15,6 +15,9 @@ def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, **kwargs):
     manipulated by the Default preprocessing module. Plots are simple and are
     provided in a default style that can be adjusted via keyword arguments.
 
+    Cuts the x-axis (time) to the length of the synthetic seismogram as data
+    may be longer which tends to obscure signal of interest.
+
     :type tr_obs: obspy.core.stream.Stream
     :param tr_obs: observed seismogram, data
     :type tr_syn: obspy.core.stream.Stream
@@ -35,18 +38,24 @@ def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, **kwargs):
 
     f, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
+    # Plot observed and synthetic seismograms
     lines = []  # for legend
     lines += ax.plot(tr_obs.times(), tr_obs.data, c=obs_color, lw=lw, 
                      label="obs", zorder=6)
     lines += ax.plot(tr_syn.times(), tr_syn.data, c=syn_color, lw=lw, 
                      label="syn", zorder=6)
 
+    # Plot adjoint source if provided
     if tr_adj is not None:
         twax = ax.twinx()
         lines += twax.plot(tr_adj.times(), tr_adj.data, c=adj_color, lw=lw,
                            label="adj", ls="--", alpha=0.75, zorder=5)
         twax.set_ylabel("Adj. Amplitude")
 
+    # Set the x-axis limits based on syn, which is what we are interested in
+    ax.set_xlim([tr_syn.times()[0], tr_syn.times()[-1]])
+
+    # Plot attributes and labels
     plt.title(tr_syn.id)
     ax.set_xlabel("Time [s]")
     ax.set_ylabel("Amplitude")
@@ -54,6 +63,7 @@ def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, **kwargs):
     labels = [l.get_label() for l in lines]
     ax.legend(lines, labels, loc="upper right")
 
+    # Determine where to save the figure
     if not fid_out:
         fid_out = f"./{tr_syn.id.replace('.', '_')}.png"
 
