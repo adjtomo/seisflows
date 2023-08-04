@@ -49,7 +49,6 @@ class Noise(Default):
         """
         super().__init__(**kwargs)
 
-        self.path.specfem_data = path_specfem_data
 
         # Internally used paramaters that should be filled in by `setup`
         self._stations = None

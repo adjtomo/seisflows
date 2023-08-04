@@ -86,9 +86,9 @@ class Default:
         they will overwrite PERIOD parameters.
     :type mute: list
     :param mute: Data mute parameters used to zero out early / late
-        arrivals or offsets. Choose any number of:
-        
-        - EARLY: mute early arrivals;
+        arrivals or offsets. Choose the following by inputting a comma separated
+        list of strings:
+        - EARLY: mute early arrivals
         - LATE: mute late arrivals;
         - SHORT: mute short source-receiver distances;
         - LONG: mute long source-receiver distances
@@ -108,10 +108,11 @@ class Default:
                  unit_output="VEL", misfit="waveform",
                  adjoint="waveform", normalize=None, filter=None,
                  min_period=None, max_period=None, min_freq=None, max_freq=None,
+                 window_u_minmax=None,
                  mute=None, early_slope=None, early_const=None, late_slope=None,
                  late_const=None, short_dist=None, long_dist=None,
                  plot_waveforms=False, workdir=os.getcwd(), path_preprocess=None,
-                 path_solver=None,
+                 path_solver=None, path_specfem_data=None,
                  **kwargs):
         """
         Preprocessing module parameters
@@ -126,9 +127,12 @@ class Default:
         :type workdir: str
         :param workdir: working directory in which to look for data and store
         results. Defaults to current working directory
-        :type path_preprocess: str
-        :param path_preprocess: scratch path for all preprocessing processes,
-            including saving files
+        :type path_solver: str
+        :param path_solver: scratch path for solver used to access trace files
+        :type path_specfem_data: str
+        :param path_specfem_data: path to SPECFEM DATA/ directory which must
+            contain the CMTSOLUTION, STATIONS and Par_file files used for
+            running SPECFEM
         """
         self.syn_data_format = syn_data_format.upper()
         self.obs_data_format = obs_data_format.upper()
@@ -169,7 +173,8 @@ class Default:
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
                                                     "preprocess"),
-            solver=path_solver or os.path.join(workdir, "scratch", "solver")
+            solver=path_solver or os.path.join(workdir, "scratch", "solver"),
+            specfem_data=path_specfem_data or None
         )
 
         # The list <_obs_acceptable_data_formats> always includes
