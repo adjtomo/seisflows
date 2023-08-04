@@ -15,7 +15,6 @@ from seisflows import logger
 from seisflows.preprocess.default import Default
 from seisflows.tools import unix
 from seisflows.tools.config import get_task_id
-from seisflows.tools.specfem import get_station_locations
 
 
 class Noise(Default):
@@ -49,38 +48,11 @@ class Noise(Default):
         """
         super().__init__(**kwargs)
 
-        # Internally used paramaters that should be filled in by `setup`
-        self._stations = None
-
-    def setup(self):
-        """
-        Setup procedures required for preprocessing module
-        """
-        super().setup()
-
-        # Station dictionary containing locations to use for rotation
-        self._sources = get_station_locations(
-            os.path.join(self.path.specfem_data, "STATIONS")
-        )
-
     def check(self):
         """ 
         Checks parameters and paths
         """
         super().check()
-
-        # This is a redundant check on the DATA/STATIONS file (solver also
-        # runs this check). This is required by noise workflows to determine
-        # station rotation
-        assert(self.path.specfem_data is not None and
-               os.path.exists(self.path.specfem_data)), (
-            f"`path_specfem_data` must exist and must point to directory " 
-            f"containing SPECFEM input files"
-        )
-        assert(os.path.exists(
-            os.path.join(self.path.specfem_data, "STATIONS"))), (
-            f"DATA/STATIONS does not exist but is required by preprocessing"
-        )
 
         assert(self.syn_data_format.upper() == "ASCII"), \
             f"Noise preprocessing is only set up to work with 'ascii' " \
@@ -116,9 +88,6 @@ class Noise(Default):
             not required. Available are 'TT' and 'RR'. To do both, set as
             'RR,TT' (order insensitive)
         """
-        # Get a list of synthetic waveform files to pass to parallelized fx.
-        source_name = source_name or self._source_names[get_task_id()]
-
         def return_trace_fids(force, component):
             """
             Convenience string return function to get specific synthetic fids
@@ -194,24 +163,10 @@ class Noise(Default):
         # Define pertinent information about files and output names
         net, sta, cha, *ext = os.path.basename(f_nn).split(".")
         ext = ".".join(ext)  # ['semd', 'ascii'] -> 'semd.ascii.'
-
-        # Determine the source station's latitude and longitude value
-        src_lat = self._stations[source_name]["latitude"]
-        src_lon = self._stations[source_name]["longitude"]
-
-        # Determine the receiver station's name and coordinates.
-        # Assuming the structure of the file name here to get the net, sta code
         rcv_name = f"{net}_{sta}"
-        rcv_lat = self._stations[rcv_name]["latitude"]
-        rcv_lon = self._stations[rcv_name]["longitude"]
 
-        # Calculate the azimuth (theta) and rotated back-azimuth (theta prime)
-        # between the two stations. See Fig. 1 from Wang et al. (2019) equations
-        _, az, baz = gps2dist_azimuth(lat1=src_lat, lon1=src_lon,
-                                      lat2=rcv_lat, lon2=rcv_lon)
-        # Theta != Theta' for a spherical Earth, but they will be close
-        theta = np.deg2rad(az)
-        theta_p = np.deg2rad((baz - 180) % 360)
+        theta = self.srcrcv_stats.source_name.rcv_name.theta
+        theta_p = self.srcrcv_stats.source_name.rcv_name.theta_p
 
         # Read in the N/E synthetic waveforms that need to be rotated
         # First letter represents the force direction, second is component
@@ -284,9 +239,6 @@ class Noise(Default):
         """
         assert(choice in ["R", "T"]), f"`choice` must be in 'R', 'T'"
 
-        # Get a list of synthetic waveform files to pass to parallelized fx.
-        source_name = source_name or self._source_names[get_task_id()]
-
         # Define the list of file ids and paths required for rotation.
         # !!! Hard coding the file naming schema of SPECFEM adjoint sources
         _fid_wc = os.path.join(adj_path, f"*.?X{choice}.adj")
@@ -347,24 +299,9 @@ class Noise(Default):
                 f"Input adjoint source comp '{cha[-1]}' does not match "
                 f"choice '{choice}'"
                 )
-
-        # Determine the source station's latitude and longitude value
-        src_lat = self._stations[source_name]["latitude"]
-        src_lon = self._stations[source_name]["longitude"]
-
-        # Determine the receiver station's name and coordinates.
-        # Assuming the structure of the file name here to get the net, sta code
         rcv_name = f"{net}_{sta}"
-        rcv_lat = self._stations[rcv_name]["latitude"]
-        rcv_lon = self._stations[rcv_name]["longitude"]
-
-        # Calculate the azimuth (theta) and rotated back-azimuth (theta prime)
-        # between the two stations. See Fig. 1 from Wang et al. (2019) equations
-        _, az, baz = gps2dist_azimuth(lat1=src_lat, lon1=src_lon,
-                                      lat2=rcv_lat, lon2=rcv_lon)
-        # Theta != Theta' for a spherical Earth, but they will be close
-        theta = np.deg2rad(az)
-        theta_p = np.deg2rad((baz - 180) % 360)
+        theta = self.srcrcv_stats.source_name.rcv_name.theta
+        theta_p = self.srcrcv_stats.source_name.rcv_name.theta_p
 
         # Read in the N/E synthetic waveforms that need to be rotated
         # First letter represents the force direction, second is component

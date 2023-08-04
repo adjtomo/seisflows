@@ -106,6 +106,7 @@ def get_source_locations(path_to_sources, source_prefix):
     values which can be used to determine relative locations between sources
     and receivers. Used by the preprocessing module.
 
+
     :type path_to_sources: str
     :param path_to_sources: full path to all source files which should start
         with `source_prefix`. Will run a wildcard glob search on this path

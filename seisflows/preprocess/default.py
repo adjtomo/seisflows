@@ -12,6 +12,7 @@ from glob import glob
 
 from obspy import read as obspy_read
 from obspy import Stream, Trace, UTCDateTime
+from obspy.geodetics import gps2dist_azimuth
 
 from seisflows import logger
 from seisflows.tools import signal, unix
@@ -206,12 +207,14 @@ class Default:
         self._acceptable_mutes = {"EARLY", "LATE", "LONG", "SHORT"}
         self._acceptable_filters = {"BANDPASS", "LOWPASS", "HIGHPASS"}
 
+        # To be filled out by setup()
+        self.srcrcv_stats = None
+
         # Internal attributes used to keep track of inversion workflows
         self._iteration = None
         self._step_count = None
         self._stations = None
         self._sources = None
-        self._solver = solver  # name of the solver, needed for par validation
 
     def check(self):
         """ 
@@ -291,6 +294,25 @@ class Default:
         assert(self.unit_output.upper() in self._acceptable_unit_output), \
             f"unit output must be in {self._acceptable_unit_output}"
 
+        # This is a redundant check on the DATA/STATIONS file (solver also
+        # runs this check). This is required by noise workflows to determine
+        # station rotation
+        assert (self.path.specfem_data is not None and
+                os.path.exists(self.path.specfem_data)), (
+            f"`path_specfem_data` must exist and must point to directory "
+            f"containing SPECFEM input files"
+        )
+        # Ensure STATIONS files exist as the locations are used for preproc,
+        assert(os.path.exists(
+            os.path.join(self.path.specfem_data, "STATIONS"))), (
+            f"DATA/STATIONS does not exist but is required by preprocessing"
+        )
+        # Ensure source files exist as their locations are used for preproc.
+        assert(glob(os.path.join(self.path.specfem_data,
+                                 f"{self.source_prefix}_*"))), (
+            f"DATA/{self.source_prefix}_* does not exist but is required"
+        )
+
     def setup(self):
         """
         Sets up data preprocessing machinery
@@ -306,6 +328,10 @@ class Default:
             path_to_sources=self.path.specfem_data,
             source_prefix=self.source_prefix
         )
+        # Generate a lookup table that gives relative distance, azimuth etc.
+        # between each source and each station
+        self.srcrcv_stats = get_src_rcv_relative_locations(self._sources,
+                                                           self._stations)
 
     def finalize(self):
         """
@@ -987,3 +1013,31 @@ def read_ascii(fid, origintime=None):
     st = Stream([Trace(data=data, header=stats)])
 
     return st
+
+
+def get_src_rcv_relative_locations(src_dict, rcv_dict):
+    """
+    Get relative locations between sources and receivers which are used
+    as a lookup table for things like muting and rotation
+    """
+    dict_out = Dict()
+    for src_name, src_vals in src_dict.items():
+        dict_out[src_name] = Dict()
+        for rcv_name, rcv_vals in rcv_dict.items():
+            # Calculate the azimuth (theta) and rotated back-azimuth (theta prime)
+            # between the two stations. See Fig. 1 from Wang et al. (2019) equations
+            dist_m, az, baz = gps2dist_azimuth(lat1=src_vals["latitude"],
+                                               lon1=src_vals["longitude"],
+                                               lat2=rcv_vals["latitude"],
+                                               lon2=rcv_vals["longitude"]
+                                               )
+            # Theta != Theta' for a spherical Earth, but they will be close
+            # This is used for seismogram rotation
+            theta = np.deg2rad(az)
+            theta_p = np.deg2rad((baz - 180) % 360)
+
+            dict_out[src_name][rcv_name] = Dict(dist_m=dist_m, az=az,
+                                                baz=baz, theta=theta,
+                                                theta_p=theta_p)
+
+    return dict_out
