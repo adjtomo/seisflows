@@ -415,9 +415,9 @@ class Model:
             max_val = np.hstack(vals).max()
             # Choose formatter based on the magnitude of the value
             if min_val < 1 or max_val > 1E4:
-                parts = f"{min_val:.2E} <= {key} <= {max_val:.2E}"
+                parts = f"{min_val:.3E} <= {key} <= {max_val:.3E}"
             else:
-                parts = f"{min_val:.2f} <= {key} <= {max_val:.2f}"
+                parts = f"{min_val:.3f} <= {key} <= {max_val:.3f}"
             logger.info(parts)
 
     def _check_3dglobe_parameters(self, min_pr=-1., max_pr=0.5):
@@ -460,9 +460,9 @@ class Model:
             max_val = np.hstack(vals).max()
             # Choose formatter based on the magnitude of the value
             if min_val < 1 or max_val > 1E4:
-                parts = f"{min_val:.2E} <= {key} <= {max_val:.2E}"
+                parts = f"{min_val:.3E} <= {key} <= {max_val:.3E}"
             else:
-                parts = f"{min_val:.2f} <= {key} <= {max_val:.2f}"
+                parts = f"{min_val:.3f} <= {key} <= {max_val:.3f}"
             logger.info(parts)
 
     def save(self, path):
