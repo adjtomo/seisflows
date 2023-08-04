@@ -255,8 +255,8 @@ class Slurm(Cluster):
         # Do it AFTER `run_call` has been defined so that subclasses submitting
         # custom run calls can still benefit from this
         if single:
-            logger.info("replacing parts of sbatch run call for single "
-                        "process job")
+            logger.debug("replacing parts of sbatch run call for single "
+                         "process job")
             run_call = modify_run_call_single_proc(run_call)
 
         logger.debug(run_call)
