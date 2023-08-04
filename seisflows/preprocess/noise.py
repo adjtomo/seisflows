@@ -15,7 +15,7 @@ from seisflows import logger
 from seisflows.preprocess.default import Default
 from seisflows.tools import unix
 from seisflows.tools.config import get_task_id
-from seisflows.tools.specfem import read_stations
+from seisflows.tools.specfem import get_station_locations
 
 
 class Noise(Default):
@@ -34,7 +34,7 @@ class Noise(Default):
 
     ***
     """
-    def __init__(self, path_specfem_data=None, **kwargs):
+    def __init__(self, **kwargs):
         """
         Preprocessing module parameters
 
@@ -49,7 +49,6 @@ class Noise(Default):
         """
         super().__init__(**kwargs)
 
-
         # Internally used paramaters that should be filled in by `setup`
         self._stations = None
 
@@ -60,7 +59,7 @@ class Noise(Default):
         super().setup()
 
         # Station dictionary containing locations to use for rotation
-        self._stations = read_stations(
+        self._sources = get_station_locations(
             os.path.join(self.path.specfem_data, "STATIONS")
         )
 

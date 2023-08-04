@@ -17,6 +17,7 @@ from seisflows import logger
 from seisflows.tools import signal, unix
 from seisflows.tools.config import Dict, get_task_id
 from seisflows.tools.graphics import plot_waveforms
+from seisflows.tools.specfem import get_station_locations, get_source_locations
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
 from seisflows.plugins.preprocess import adjoint as adjoint_sources
@@ -86,12 +87,12 @@ class Default:
         they will overwrite PERIOD parameters.
     :type mute: list
     :param mute: Data mute parameters used to zero out early / late
-        arrivals or offsets. Choose the following by inputting a comma separated
-        list of strings:
+        arrivals or offsets. Choose the following:
         - EARLY: mute early arrivals
         - LATE: mute late arrivals;
         - SHORT: mute short source-receiver distances;
         - LONG: mute long source-receiver distances
+        input comma separated list of strings, (e.g., mute: early,late,short)
     :type plot_waveforms: bool
     :param plot_waveforms: plot waveforms from each evaluation of the misfit.
         By default turned off as this can produce many files for an interative
@@ -108,22 +109,26 @@ class Default:
                  unit_output="VEL", misfit="waveform",
                  adjoint="waveform", normalize=None, filter=None,
                  min_period=None, max_period=None, min_freq=None, max_freq=None,
-                 window_u_minmax=None,
                  mute=None, early_slope=None, early_const=None, late_slope=None,
                  late_const=None, short_dist=None, long_dist=None,
-                 plot_waveforms=False, workdir=os.getcwd(), path_preprocess=None,
-                 path_solver=None, path_specfem_data=None,
+                 plot_waveforms=False, solver=None, source_prefix=None,
+                 workdir=os.getcwd(), path_preprocess=None, path_solver=None,
+                 path_specfem_data=None,
                  **kwargs):
         """
         Preprocessing module parameters
 
         .. note::
+
             Paths and parameters listed here are shared with other modules and 
             so are not included in the class docstring.
 
         :type syn_data_format: str
         :param syn_data_format: data format for reading synthetic traces into
             memory. Shared with solver module. Available formats: 'su', 'ascii'
+        :type source_prefix: str
+        :param source_prefix: prefix of source/event/earthquake files. Used for
+            reading and determining source locations for preprocessing
         :type workdir: str
         :param workdir: working directory in which to look for data and store
         results. Defaults to current working directory
@@ -169,7 +174,10 @@ class Default:
         self.short_dist = short_dist
         self.long_dist = long_dist
 
+        # Miscellaneous paramters
+        self.source_prefix = source_prefix
         self.plot_waveforms = plot_waveforms
+
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
                                                     "preprocess"),
@@ -201,7 +209,9 @@ class Default:
         # Internal attributes used to keep track of inversion workflows
         self._iteration = None
         self._step_count = None
-        self._source_names = None
+        self._stations = None
+        self._sources = None
+        self._solver = solver  # name of the solver, needed for par validation
 
     def check(self):
         """ 
@@ -286,6 +296,16 @@ class Default:
         Sets up data preprocessing machinery
         """
         unix.mkdir(self.path.scratch)
+
+        # Station dictionary of locations 'latitude', 'longitude'
+        self._stations = get_station_locations(
+            stations_file=os.path.join(self.path.specfem_data, "STATIONS")
+        )
+
+        self._sources = get_source_locations(
+            path_to_sources=self.path.specfem_data,
+            source_prefix=self.source_prefix
+        )
 
     def finalize(self):
         """
@@ -511,9 +531,6 @@ class Default:
         :return: [(observed filename, synthetic filename)]. tuples will contain
             filenames for matching stations + component for obs and syn
         """
-        # Get organized by looking for available data
-        source_name = source_name or self._source_names[get_task_id()]
-
         obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
         syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
 
@@ -765,10 +782,6 @@ class Default:
                     fid = fid.replace(f"{ext2}{ext1}", ".adj")
 
         return fid
-
-    def finalize(self):
-        """Teardown procedures for the default preprocessing class"""
-        pass
 
     def _apply_resample(self, st_a, st_b):
         """

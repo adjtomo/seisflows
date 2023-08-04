@@ -3,6 +3,7 @@ Signal processing functions which are used to manipulate time series, or
 interact with ObsPy trace and stream objects
 
 .. note::
+
     These functions have been refactored from the original SeisFlows but have
     note been tested and frankly I am not sure what the intended use is
     for the mute function is as it has not been documented or employed in
@@ -17,6 +18,7 @@ def mask(slope, const, offset, nt, dt, length=400):
     late arrivals. Called by the Default preprocessing module.
 
     .. note::
+
         t_mask = slope * offset + const
         itmin = t_mask - length/2
         itmax = t_mask + length/2
@@ -69,7 +71,8 @@ def mask(slope, const, offset, nt, dt, length=400):
 
 def mute_arrivals(st, slope, const, choice):
     """
-    Apply a tapered mask to a record section to mute early or late arrivals
+    Apply a tapered mask to a set of waveforms in a Stream to mute early or
+    late arrivals
 
     :type st: obspy.stream
     :param st: Stream object containing waveforms to mute

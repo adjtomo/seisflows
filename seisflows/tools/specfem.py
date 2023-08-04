@@ -9,6 +9,17 @@ from glob import glob
 from seisflows.tools import msg
 from seisflows.tools.config import Dict
 
+# Used for accessing loc. information from SPECFEM2D/3D/3D_GLOBE source files
+SOURCE_KEYS = {
+    "SOURCE": {"lat": "xs", "lon": "zs", "delim": "=", },
+    "FORCESOLUTION_3D": {"lat": "latorUTM", "lon": "longorUTM", "delim": ":"},
+    "CMTSOLUTION_3D": {"lat": "latorUTM", "lon": "longorUTM", "delim": ":"},
+    "FORCESOLUTION_3DGLOBE": {"lat": "latitude", "lon": "longitude",
+                              "delim": ":"},
+    "CMTSOLUTION_3DGLOBE": {"lat": "latitude", "lon": "longitude",
+                            "delim": ":"},
+}
+
 
 def convert_stations_to_sources(stations_file, source_file, source_type,
                                 output_dir="./"):
@@ -40,24 +51,10 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
         - FORCESOLUTION_3D: SPECFEM3D Cartesian FORCESOLUTION file 
         - FORCESOLUTION_3DGLOBE: SPECFEM3D_GLOBE FORCESOLUTION file
     """
-    if source_type == "SOURCE":
-        lat_key = "xs"
-        lon_key = "zs"
-        delim = "="
-        _fid = "SOURCE"
-    elif source_type == "FORCESOLUTION_3D":
-        lat_key = "latorUTM"
-        lon_key = "longorUTM"
-        delim = ":"
-        _fid = "FORCESOLUTION"
-    elif source_type == "FORCESOLUTION_3DGLOBE":
-        lat_key = "latitude"
-        lon_key = "longitude"
-        delim = ":"
-        _fid = "FORCESOLUTION"
-    else:
-        raise KeyError(f"`source_type` must 'FORCESOLUTION_3D' or "
-                       f"'FORCESOLUTION_3DGLOBE' or 'SOURCE'")
+    assert(source_type in SOURCE_KEYS.keys()), \
+        f"`source_type` must be in {SOURCE_KEYS.keys()}"
+    keys = SOURCE_KEYS[source_type]
+    _fid = source_type.split("_")[0]  # e.g., FORCESOLUTION
 
     stations = np.loadtxt(stations_file, dtype="str")
     for i, sta in enumerate(stations):
@@ -68,8 +65,10 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
         shutil.copy(source_file, new_source)
 
         # Set the new location based on the station location
-        setpar(key=lat_key, val=latitude, file=new_source, delim=delim)
-        setpar(key=lon_key, val=longitude, file=new_source, delim=delim)
+        setpar(key=keys["lat"], val=latitude, file=new_source,
+               delim=keys["delim"])
+        setpar(key=keys["lon"], val=longitude, file=new_source,
+               delim=keys["delim"])
 
         # Enforce first line comment, see warning in docstring for explanation
         lines = open(new_source, "r").readlines()
@@ -78,7 +77,7 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
             f.writelines(lines[1:])
 
 
-def read_stations(stations_file):
+def get_station_locations(stations_file):
     """
     Read the SPECFEM STATIONS file to get metadata information about stations.
     This functionality is required in a few preprocessing or utility functions
@@ -99,6 +98,55 @@ def read_stations(stations_file):
                                             "longitude": float(longitude)
                                             }
     return Dict(sta_dict)
+
+
+def get_source_locations(path_to_sources, source_prefix):
+    """
+    Read in SOURCE/CMTSOLUTION/FORCESOLUTION files to get lat/lon/depth or x/y/z
+    values which can be used to determine relative locations between sources
+    and receivers. Used by the preprocessing module.
+
+    :type path_to_sources: str
+    :param path_to_sources: full path to all source files which should start
+        with `source_prefix`. Will run a wildcard glob search on this path
+        to look for ALL available source files
+    :type source_prefix: str
+    :param source_prefix: source file name prefix used for wildcard searching.
+        This function will look for glob(`path_to_sources`/`source_prefix`_*),
+        and tag each of the sources with whatever tag comes within wildcard *
+    :rtype: Dict
+    :return: keys are `source tag` and values are dictionaries contianing
+        'lat' and 'lon' for latitude and longitude values. If None is returned,
+        then function could not determine what keys to use for reading source.
+    """
+    src_dict = {}
+    src_files = glob(os.path.join(path_to_sources, f"{source_prefix}_*"))
+
+    # Guess the source key based on the source prefix since it's difficult
+    # to get the exact solver information into this function without a lot
+    # of extra bookkeeping
+    for source_key in SOURCE_KEYS.keys():
+        if source_prefix in source_key:
+            try:
+                keys = SOURCE_KEYS[source_key]
+                getpar(key=keys["lat"], file=src_files[0], delim=keys["delim"])
+                source_key_actual = source_key
+                break
+            except KeyError:
+                continue
+    else:
+        return None
+
+    for src_file in glob(os.path.join(path_to_sources, f"{source_prefix}_*")):
+        src_name = os.path.basename(src_file).split(f"{source_prefix}_")[-1]
+        key = SOURCE_KEYS[source_key_actual]
+        latitude = getpar(key=key["lat"], file=src_file, delim=key["delim"])[1]
+        longitude = getpar(key=key["lon"], file=src_file, delim=key["delim"])[1]
+        src_dict[src_name] = {"latitude": float(latitude),
+                              "longitude": float(longitude)
+                              }
+
+    return Dict(src_dict)
 
 
 def check_source_names(path_specfem_data, source_prefix, ntask=None):
