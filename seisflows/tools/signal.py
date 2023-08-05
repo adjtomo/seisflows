@@ -10,6 +10,7 @@ interact with ObsPy trace and stream objects
     the SeisFlows example problems.
 """
 import numpy as np
+from seisflows import logger
 
 
 def mask(slope, const, offset, nt, dt, length=400):
@@ -43,6 +44,8 @@ def mask(slope, const, offset, nt, dt, length=400):
     :rtype: np.array
     :return: A mask array that can be directly multipled with a waveform
     """
+    logger.warning("this function is currently untested, use at your own risk")
+
     # Set up the data array
     mask_arr = np.ones(nt)
 
@@ -85,6 +88,8 @@ def mute_arrivals(st, slope, const, choice):
     :rtype: obspy.stream
     :return: muted stream object
     """
+    logger.warning("this function is currently untested, use at your own risk")
+
     assert choice.upper() in ["EARLY", "LATE"]
     st_out = st.copy()
 
@@ -111,6 +116,7 @@ def mute_arrivals(st, slope, const, choice):
 def mute_offsets(st, dist, choice):
     """
     Mute traces based on a given distance (`dist`)
+
     short: ||s-r|| < `dist`
     long:  ||s-r|| > `dist`
 
@@ -124,6 +130,8 @@ def mute_offsets(st, dist, choice):
     :rtype: obspy.stream
     :return: muted stream object
     """
+    logger.warning("this function is currently untested, use at your own risk")
+
     assert choice.upper() in ["LONG", "SHORT"]
     st_out = st.copy()
 
@@ -190,56 +198,3 @@ def get_source_coords(st):
         return sx, sy, sz
     else:
         raise NotImplementedError
-
-
-# From the original SeisFlows code, not used but left just incase
-# def correlate(u, v):
-#     w = np.convolve(u, np.flipud(v))
-#     return
-#
-#
-# def tukeywin(nt, imin, imax, alpha=0.05):
-#     t = np.linspace(0,1,imax-imin)
-#     w = np.zeros(imax-imin)
-#     p = alpha/2.
-#     lo = np.floor(p*(imax-imin-1))+1
-#     hi = imax-imin-lo
-#     w[:lo] = (1+np.cos(np.pi/p*(t[:lo]-p)))/2
-#     w[lo:hi] = np.ones((hi-lo))
-#     w[hi:] = (1+np.cos(np.pi/p*(t[hi:]-p)))/2
-#     win = np.zeros(nt)
-#     win[imin:imax] = w
-#     return win
-#
-# def sconvolve(s, h, w, inplace=True):
-#     nt = h.nt
-#     nr = h.nr
-#
-#     if inplace:
-#         for ir in range(nr):
-#             s[:,ir] = np.convolve(s[:,ir], w, 'same')
-#         return s
-#     else:
-#         s2 = np.zeros((nt,nr))
-#         for ir in range(nr):
-#             s2[:,ir] = np.convolve(s[:,ir], w, 'same')
-#         return s2
-#
-# def apply_filter_backwards(self, traces):
-#     """
-#     !!! This was located in seisflows.preprocess.default, but wasn't called
-#     !!! anywhere. Have relinquished it to this graveyard until further notice.
-#     Run the apply_filter() function but backwards
-#
-#     :param traces:
-#     :return:
-#     """
-#     for tr in traces:
-#         tr.data = np.flip(tr.data)
-#
-#     traces = self.apply_filter()
-#
-#     for tr in traces:
-#         tr.data = np.flip(tr.data)
-#
-#     return traces

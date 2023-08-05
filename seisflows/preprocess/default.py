@@ -112,7 +112,7 @@ class Default:
                  min_period=None, max_period=None, min_freq=None, max_freq=None,
                  mute=None, early_slope=None, early_const=None, late_slope=None,
                  late_const=None, short_dist=None, long_dist=None,
-                 plot_waveforms=False, solver=None, source_prefix=None,
+                 plot_waveforms=False, source_prefix=None,
                  workdir=os.getcwd(), path_preprocess=None, path_solver=None,
                  path_specfem_data=None,
                  **kwargs):
@@ -878,7 +878,8 @@ class Default:
         :rtype: obspy.core.stream.Stream
         :return: muted stream object
         """
-        mute_choices = [_.upper() for _ in self.mute]
+        mute_choices = [_.upper() for _ in self.mute.split(",")]
+
         if "EARLY" in mute_choices:
             st = signal.mute_arrivals(st, slope=self.early_slope,
                                       const=self.early_const, choice="EARLY")

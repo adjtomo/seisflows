@@ -124,6 +124,11 @@ class NoiseInversion(Inversion):
             f"'FORCESOLUTION'"
         )
 
+        assert(self._modules.preprocess.syn_data_format == "ASCII"), (
+            f"Noise Inversion workflow requires solver `syn_data_format` to be " 
+            f"'ASCII'"
+        )
+
         acceptable_kernels = {"ZZ", "TT", "RR"}
         assert(set(self.kernels.split(",")).issubset(acceptable_kernels)), \
             f"`kernels` must be a subset of {acceptable_kernels}"

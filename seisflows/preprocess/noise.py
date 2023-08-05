@@ -48,16 +48,6 @@ class Noise(Default):
         """
         super().__init__(**kwargs)
 
-    def check(self):
-        """ 
-        Checks parameters and paths
-        """
-        super().check()
-
-        assert(self.syn_data_format.upper() == "ASCII"), \
-            f"Noise preprocessing is only set up to work with 'ascii' " \
-            f"sythetic format"
-
     def rotate_ne_traces_to_rt(self, source_name, syn_path, data_wildcard, 
                                kernels="RR,TT"):
         """
