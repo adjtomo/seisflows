@@ -9,12 +9,11 @@ import os
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
-from obspy.geodetics import gps2dist_azimuth
 
 from seisflows import logger
 from seisflows.preprocess.default import Default
 from seisflows.tools import unix
-from seisflows.tools.config import get_task_id
+from seisflows.tools.signal import rotate_ne_trace_to_rt, rotate_rt_adjsrc_to_ne
 
 
 class Noise(Default):
