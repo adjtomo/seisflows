@@ -9,6 +9,7 @@ import os
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
+from obspy import Stream
 
 from seisflows import logger
 from seisflows.preprocess.default import Default
@@ -154,35 +155,20 @@ class Noise(Default):
         ext = ".".join(ext)  # ['semd', 'ascii'] -> 'semd.ascii.'
         rcv_name = f"{net}_{sta}"
 
-        theta = self.srcrcv_stats.source_name.rcv_name.theta
-        theta_p = self.srcrcv_stats.source_name.rcv_name.theta_p
+        # Collect azimuth angles from lookup table computed in setup
+        theta = self.srcrcv_stats[source_name][rcv_name].theta
+        theta_p = self.srcrcv_stats[source_name][rcv_name].theta_p
 
         # Read in the N/E synthetic waveforms that need to be rotated
-        # First letter represents the force direction, second is component
-        # e.g., ne -> north force recorded on east component
-        st_nn = self.read(f_nn, data_format=self.syn_data_format)
-        st_ne = self.read(f_ne, data_format=self.syn_data_format)
-        st_ee = self.read(f_ee, data_format=self.syn_data_format)
-        st_en = self.read(f_en, data_format=self.syn_data_format)
+        # Assuming that each Stream only has one Trace in it
+        tr_nn = self.read(f_nn, data_format=self.syn_data_format)[0]
+        tr_ne = self.read(f_ne, data_format=self.syn_data_format)[0]
+        tr_ee = self.read(f_ee, data_format=self.syn_data_format)[0]
+        tr_en = self.read(f_en, data_format=self.syn_data_format)[0]
 
-        # We require four waveforms to rotate into the appropriate coord. sys.
-        # See Wang et al. (2019) Eqs. 9 and 10 for the rotation matrix def.
-        st_tt = st_nn.copy()
-        st_rr = st_nn.copy()
-        for tr_ee, tr_ne, tr_en, tr_nn, tr_tt, tr_rr in \
-                zip(st_ee, st_ne, st_en, st_nn, st_tt, st_rr):
-            # TT rotation from Wang et al. (2019) Eq. 9
-            tr_tt.data = (+ 1 * np.cos(theta) * np.cos(theta_p) * tr_ee.data
-                          - 1 * np.cos(theta) * np.sin(theta_p) * tr_ne.data
-                          - 1 * np.sin(theta) * np.cos(theta_p) * tr_en.data
-                          + 1 * np.sin(theta) * np.sin(theta_p) * tr_nn.data
-                          )
-            # RR rotation from Wang et al. (2019) Eq. 10
-            tr_rr.data = (+ 1 * np.sin(theta) * np.sin(theta_p) * tr_ee.data
-                          - 1 * np.sin(theta) * np.cos(theta_p) * tr_ne.data
-                          - 1 * np.cos(theta) * np.sin(theta_p) * tr_en.data
-                          + 1 * np.cos(theta) * np.cos(theta_p) * tr_nn.data
-                          )
+        tr_rr, tr_tt = rotate_ne_trace_to_rt(tr_ee=tr_ee, tr_ne=tr_ne,
+                                             tr_en=tr_en, tr_nn=tr_nn,
+                                             theta=theta, theta_p=theta_p)
 
         # !!! Assuming data filename structure here, try make more generic 
         # !!! using parameter `syn_path`
@@ -190,12 +176,13 @@ class Noise(Default):
             # scratch/solver/{source_name}/traces/syn/NN.SSS.?XT.sem?*
             fid_t = os.path.join(self.path.solver, source_name, "traces", "syn",
                                  f"{net}.{sta}.{cha[:2]}T.{ext}")
-            self.write(st=st_tt, fid=fid_t)
+            self.write(st=Stream(tr_tt), fid=fid_t)
+
         if "RR" in kernels:
             # scratch/solver/{source_name}/traces/syn/NN.SSS.?XR.sem?*
             fid_r = os.path.join(self.path.solver, source_name, "traces", "syn",
                                  f"{net}.{sta}.{cha[:2]}R.{ext}")
-            self.write(st=st_rr, fid=fid_r)
+            self.write(st=Stream(tr_rr), fid=fid_r)
 
     def rotate_rt_adjsrcs_to_ne(self, source_name, adj_path, choice):
         """
@@ -289,36 +276,19 @@ class Noise(Default):
                 f"choice '{choice}'"
                 )
         rcv_name = f"{net}_{sta}"
-        theta = self.srcrcv_stats.source_name.rcv_name.theta
-        theta_p = self.srcrcv_stats.source_name.rcv_name.theta_p
+
+        # Collect azimuth angles from lookup table computed in setup
+        theta = self.srcrcv_stats[source_name][rcv_name].theta
+        theta_p = self.srcrcv_stats[source_name][rcv_name].theta_p
 
         # Read in the N/E synthetic waveforms that need to be rotated
         # First letter represents the force direction, second is component
         # e.g., ne -> north force recorded on east component
-        st = self.read(fid, data_format=self.syn_data_format)
+        tr_in = self.read(fid, data_format=self.syn_data_format)[0]
 
-        # We require four waveforms to rotate into the appropriate coord. sys.
-        # See Wang et al. (2019) Eqs. 9 and 10 for the rotation matrix def.
-        st_ee = st.copy()
-        st_en = st.copy()
-        st_ne = st.copy()
-        st_nn = st.copy()
-
-        # Assuming that each Stream only has one trace
-        for tr_ee, tr_ne, tr_en, tr_nn, tr in \
-                zip(st_ee, st_ne, st_en, st_nn, st):
-            # TT rotation from Wang et al. (2019) Eq. 16
-            if choice == "T":
-                tr_ee.data = +1 * np.cos(theta) * np.cos(theta_p) * tr.data
-                tr_en.data = -1 * np.cos(theta) * np.sin(theta_p) * tr.data
-                tr_ne.data = -1 * np.sin(theta) * np.cos(theta_p) * tr.data
-                tr_nn.data = +1 * np.sin(theta) * np.sin(theta_p) * tr.data
-            # TT rotation from Wang et al. (2019) Eq. 18
-            elif choice == "R":
-                tr_ee.data = +1 * np.sin(theta) * np.sin(theta_p) * tr.data
-                tr_en.data = +1 * np.sin(theta) * np.cos(theta_p) * tr.data
-                tr_ne.data = +1 * np.cos(theta) * np.sin(theta_p) * tr.data
-                tr_nn.data = +1 * np.cos(theta) * np.cos(theta_p) * tr.data
+        tr_ee, tr_ne, tr_en, tr_nn = rotate_rt_adjsrc_to_ne(tr_in=tr_in,
+                                                            theta=theta,
+                                                            theta_p=theta_p)
 
         # Lower case for directory naming
         choice = choice.lower()
@@ -338,9 +308,7 @@ class Noise(Default):
                               f"adj_n{choice}", f"{net}.{sta}.{cha[:2]}N.{ext}")
 
         # Write out all the rotated adjoint sources 
-        self.write(st=st_ee, fid=fid_ee)
-        self.write(st=st_en, fid=fid_en)
-        self.write(st=st_ne, fid=fid_ne)
-        self.write(st=st_nn, fid=fid_nn)
-
-
+        self.write(st=Stream(tr_ee), fid=fid_ee)
+        self.write(st=Stream(tr_en), fid=fid_en)
+        self.write(st=Stream(tr_ne), fid=fid_ne)
+        self.write(st=Stream(tr_nn), fid=fid_nn)
