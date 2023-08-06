@@ -6,12 +6,6 @@ required for horizontal component sensitivity kernels (RR and TT).
 import numpy as np
 
 
-def rotate_ne_traces_to_rt(n_files, e_files):
-    """
-
-    """
-
-
 def rotate_ne_trace_to_rt(tr_ee, tr_ne, tr_en, tr_nn, theta, theta_p):
     """
     Used during ambient noise adjoint tomography (workflow: noise inversion) to
