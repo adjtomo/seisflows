@@ -44,13 +44,13 @@ class Default:
     :param misfit: misfit function for waveform comparisons. For available
         see seisflows.plugins.preprocess.misfit
     :type adjoint: str
-    :param adjoint: adjoint source misfit function (backprojection function for 
+    :param adjoint: adjoint source misfit function (backprojection function for
         migration, or the objective function in FWI). For available see
         seisflows.plugins.preprocess.adjoint
     :type normalize: str
     :param normalize: Data normalization parameters used to normalize the
-        amplitudes of waveforms. By default, set to NoneType, which means no 
-        normalization is applied. User can choose from one of the following 
+        amplitudes of waveforms. By default, set to NoneType, which means no
+        normalization is applied. User can choose from one of the following
         options to normalize BOTH `obs` and `syn` data:
 
         - TNORML1: normalize per trace by the L1 norm of itself
@@ -59,7 +59,7 @@ class Default:
         - TNORM_ABSMAX: normalize by the absolute maximum amplitude in the trace
         - TNORM_MEAN: normalize by the mean of the absolute trace
 
-        Note: options ENORML? are not currently available. If this is a 
+        Note: options ENORML? are not currently available. If this is a
         feature you would like to see, please open a GitHub Issue.
         - ENORML1: normalize per event by L1 of traces; OR
         - ENORML2: normalize per event by L2 of traces;
@@ -121,7 +121,7 @@ class Default:
 
         .. note::
 
-            Paths and parameters listed here are shared with other modules and 
+            Paths and parameters listed here are shared with other modules and
             so are not included in the class docstring.
 
         :type syn_data_format: str
@@ -202,7 +202,7 @@ class Default:
 
         # Acceptable preprocessing parameter options
         self._acceptable_norms = {"TNORML1", "TNORML2", "TNORM_MAX",
-                                  "TNORM_ABSMAX", "TNORM_MEAN"}  
+                                  "TNORM_ABSMAX", "TNORM_MEAN"}
                                   #, "ENORML1", "ENORML2"}
         self._acceptable_mutes = {"EARLY", "LATE", "LONG", "SHORT"}
         self._acceptable_filters = {"BANDPASS", "LOWPASS", "HIGHPASS"}
@@ -213,11 +213,9 @@ class Default:
         # Internal attributes used to keep track of inversion workflows
         self._iteration = None
         self._step_count = None
-        self._stations = None
-        self._sources = None
 
     def check(self):
-        """ 
+        """
         Checks parameters and paths
         """
         if self.misfit:
@@ -277,7 +275,7 @@ class Default:
             assert(self.min_freq < self.max_freq), (
                 "PAR.MIN_FREQ < PAR.MAX_FREQ"
             )
-    
+
         # Check that User-chosen data formats are acceptable
         assert(self.syn_data_format.upper() in
                 self._syn_acceptable_data_formats), (
@@ -319,19 +317,47 @@ class Default:
         """
         unix.mkdir(self.path.scratch)
 
+        # between each source and each station
+        self.srcrcv_stats = self.get_src_rcv_lookup_table()
+
+    def get_src_rcv_lookup_table(self):
+        """
+        Generate a lookup table that gives relative distance, azimuth etc. for
+        each source and receiver used in the workflow. Source and station
+        locations will be gathered from metadata files stored in the SPECFEM
+        data directory
+        """
+        # Determine source locations 'latitude' and 'longitude'
+        src_dict = get_source_locations(path_to_sources=self.path.specfem_data,
+                                        source_prefix=self.source_prefix)
+
         # Station dictionary of locations 'latitude', 'longitude'
-        self._stations = get_station_locations(
+        rcv_dict = get_station_locations(
             stations_file=os.path.join(self.path.specfem_data, "STATIONS")
         )
+        dict_out = Dict()
+        for src_name, src_vals in src_dict.items():
+            dict_out[src_name] = Dict()
+            for rcv_name, rcv_vals in rcv_dict.items():
+                # Calculate the azimuth from North of the source (theta) and azimuth
+                # from North of the receiver (theta prime). See Fig. 1 from
+                # Wang et al. (2019) for diagrammatic explanation.
+                dist_m, az, baz = gps2dist_azimuth(lat1=src_vals["latitude"],
+                                                   lon1=src_vals["longitude"],
+                                                   lat2=rcv_vals["latitude"],
+                                                   lon2=rcv_vals["longitude"]
+                                                   )
+                # Theta is the azimuth from north of the source, and theta prime
+                # is the azimuth from north of the receiver. Theta != Theta' for
+                # a spherical Earth, but they will be close.
+                theta = np.deg2rad(az)
+                theta_p = np.deg2rad((baz - 180) % 360)
 
-        self._sources = get_source_locations(
-            path_to_sources=self.path.specfem_data,
-            source_prefix=self.source_prefix
-        )
-        # Generate a lookup table that gives relative distance, azimuth etc.
-        # between each source and each station
-        self.srcrcv_stats = get_src_rcv_relative_locations(self._sources,
-                                                           self._stations)
+                dict_out[src_name][rcv_name] = Dict(dist_m=dist_m, az=az,
+                                                    baz=baz, theta=theta,
+                                                    theta_p=theta_p)
+
+        return dict_out
 
     def finalize(self):
         """
@@ -340,57 +366,6 @@ class Default:
         some finalize procedures.
         """
         pass
-
-    def read(self, fid, data_format):
-        """
-        Waveform reading functionality. Imports waveforms as Obspy streams
-
-        :type fid: str
-        :param fid: path to file to read data from
-        :type data_format: str
-        :param data_format: format of the file to read data from
-        :rtype: obspy.core.stream.Stream
-        :return: ObsPy stream containing data stored in `fid`
-        """
-        st = None
-        if data_format.upper() == "SU":
-            st = obspy_read(fid, format="SU", byteorder="<")
-        elif data_format.upper() == "SAC":
-            st = obspy_read(fid, format="SAC")
-        elif data_format.upper() == "ASCII":
-            st = read_ascii(fid)
-        return st
-
-    def write(self, st, fid):
-        """
-        Waveform writing functionality. Writes waveforms back to format that
-        SPECFEM recognizes
-
-        :type st: obspy.core.stream.Stream
-        :param st: stream to write
-        :type fid: str
-        :param fid: path to file to write stream to
-        """
-        if self.syn_data_format.upper() == "SU":
-            for tr in st:
-                # Work around for ObsPy data type conversion
-                tr.data = tr.data.astype(np.float32)
-            max_delta = 0.065535
-            dummy_delta = max_delta
-
-            if st[0].stats.delta > max_delta:
-                for tr in st:
-                    tr.stats.delta = dummy_delta
-
-            # Write data to file
-            st.write(fid, format="SU")
-
-        elif self.syn_data_format.upper() == "ASCII":
-            for tr in st:
-                # Float provides time difference between starttime and default
-                time_offset = float(tr.stats.starttime)
-                data_out = np.vstack((tr.times() + time_offset, tr.data)).T
-                np.savetxt(fid, data_out, ["%13.7f", "%17.7f"])
 
     def _calculate_misfit(self, **kwargs):
         """Wrapper for plugins.preprocess.misfit misfit/objective function"""
@@ -429,7 +404,7 @@ class Default:
         # Write adjoint sources in parallel using an empty Stream object
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
-                executor.submit(self._write_adjsrc_single, st, fid, output) 
+                executor.submit(self._write_adjsrc_single, st, fid, output)
                 for fid in data_filenames
                 ]
         # Simply wait until this task is completed
@@ -438,7 +413,8 @@ class Default:
     def _write_adjsrc_single(self, st, fid, output):
         """Parallelizable function to write out empty adjoint source"""
         adj_fid = self.rename_as_adjoint_source(os.path.basename(fid))
-        self.write(st=st, fid=os.path.join(output, adj_fid))
+        write(st=st, fid=os.path.join(output, adj_fid),
+              data_format=self.syn_data_format)
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         export_residuals=None, save_adjsrcs=None,
@@ -493,12 +469,12 @@ class Default:
         # and initialize empty adjoint sources
         obs, syn = self._setup_quantify_misfit(source_name, save_adjsrcs,
                                                components)
-        
+
         # Process each pair in parallel. Max workers is the total num. of cores
         # !!! see note in docstring !!!
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
-                executor.submit(self._quantify_misfit_single, o, s, 
+                executor.submit(self._quantify_misfit_single, o, s,
                                 source_name, save_residuals, save_adjsrcs)
                 for (o, s) in zip(obs, syn)
             ]
@@ -649,7 +625,7 @@ class Default:
 
         return obs_paths, syn_paths
 
-    def _quantify_misfit_single(self, obs_fid, syn_fid, source_name=None, 
+    def _quantify_misfit_single(self, obs_fid, syn_fid, source_name=None,
                                 save_residuals=None, save_adjsrcs=None):
         """
         Run misfit quantification for one pair of data-synthetic waveforms.
@@ -725,8 +701,8 @@ class Default:
                 )
                 fid = os.path.basename(syn_fid)
                 fid = self.rename_as_adjoint_source(fid)
-                self.write(st=Stream(adjsrc), 
-                           fid=os.path.join(save_adjsrcs, fid))
+                write(st=Stream(adjsrc), fid=os.path.join(save_adjsrcs, fid),
+                      data_format=self.syn_data_format)
             else:
                 adjsrc = None
 
@@ -836,10 +812,10 @@ class Default:
 
     def _apply_filter(self, st):
         """
-        Apply a filter to waveform data using ObsPy, throw on a standard 
+        Apply a filter to waveform data using ObsPy, throw on a standard
         demean, detrened and taper prior to filtering. Options for different
         filtering types. Uses default filter options from ObsPy.
-        
+
         Zerophase enforced to be True to avoid phase shifting data.
 
         :type st: obspy.core.stream.Stream
@@ -899,7 +875,7 @@ class Default:
 
         .. warning::
 
-            Event normalization does not currently work as this requires 
+            Event normalization does not currently work as this requires
             access to all waveform simultaneously whereas we do processing
             trace by trace. Will need to devise a method for calculating this
             in the future. For now, option has been remoevd
@@ -932,7 +908,7 @@ class Default:
             for tr in st:
                 w = np.max(tr.data)
                 tr.data /= w
-        # Normalize each trace by the maximum amplitude (neg or pos) 
+        # Normalize each trace by the maximum amplitude (neg or pos)
         elif self.normalize.upper() == "TNORM_ABSMAX":
             for tr in st:
                 w = np.abs(tr.max())
@@ -961,6 +937,59 @@ class Default:
         #         tr.data /= w
 
         return st
+
+def read(fid, data_format):
+    """
+    Waveform reading functionality. Imports waveforms as Obspy streams
+
+    :type fid: str
+    :param fid: path to file to read data from
+    :type data_format: str
+    :param data_format: format of the file to read data from
+    :rtype: obspy.core.stream.Stream
+    :return: ObsPy stream containing data stored in `fid`
+    """
+    st = None
+    if data_format.upper() == "SU":
+        st = obspy_read(fid, format="SU", byteorder="<")
+    elif data_format.upper() == "SAC":
+        st = obspy_read(fid, format="SAC")
+    elif data_format.upper() == "ASCII":
+        st = read_ascii(fid)
+    return st
+
+def write(st, fid, data_format):
+    """
+    Waveform writing functionality. Writes waveforms back to format that
+    SPECFEM recognizes
+
+    :type st: obspy.core.stream.Stream
+    :param st: stream to write
+    :type fid: str
+    :param fid: path to file to write stream to
+    :type data_format: str
+    :param data_format: format of the file to write to
+    """
+    if data_format.upper() == "SU":
+        for tr in st:
+            # Work around for ObsPy data type conversion
+            tr.data = tr.data.astype(np.float32)
+        max_delta = 0.065535
+        dummy_delta = max_delta
+
+        if st[0].stats.delta > max_delta:
+            for tr in st:
+                tr.stats.delta = dummy_delta
+
+        # Write data to file
+        st.write(fid, format="SU")
+
+    elif data_format.upper() == "ASCII":
+        for tr in st:
+            # Float provides time difference between starttime and default
+            time_offset = float(tr.stats.starttime)
+            data_out = np.vstack((tr.times() + time_offset, tr.data)).T
+            np.savetxt(fid, data_out, ["%13.7f", "%17.7f"])
 
 
 def read_ascii(fid, origintime=None):
@@ -1015,30 +1044,3 @@ def read_ascii(fid, origintime=None):
 
     return st
 
-
-def get_src_rcv_relative_locations(src_dict, rcv_dict):
-    """
-    Get relative locations between sources and receivers which are used
-    as a lookup table for things like muting and rotation
-    """
-    dict_out = Dict()
-    for src_name, src_vals in src_dict.items():
-        dict_out[src_name] = Dict()
-        for rcv_name, rcv_vals in rcv_dict.items():
-            # Calculate the azimuth (theta) and rotated back-azimuth (theta prime)
-            # between the two stations. See Fig. 1 from Wang et al. (2019) equations
-            dist_m, az, baz = gps2dist_azimuth(lat1=src_vals["latitude"],
-                                               lon1=src_vals["longitude"],
-                                               lat2=rcv_vals["latitude"],
-                                               lon2=rcv_vals["longitude"]
-                                               )
-            # Theta != Theta' for a spherical Earth, but they will be close
-            # This is used for seismogram rotation
-            theta = np.deg2rad(az)
-            theta_p = np.deg2rad((baz - 180) % 360)
-
-            dict_out[src_name][rcv_name] = Dict(dist_m=dist_m, az=az,
-                                                baz=baz, theta=theta,
-                                                theta_p=theta_p)
-
-    return dict_out

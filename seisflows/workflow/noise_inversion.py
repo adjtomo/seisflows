@@ -43,6 +43,7 @@ import os
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix, msg
+from seisflows.preprocess.default import read, write
 from seisflows.workflow.inversion import Inversion
 
 
@@ -568,8 +569,8 @@ class NoiseInversion(Inversion):
             data in this file.
         """
         # Grab a dummy synthetic trace to use for time series structure
-        st = self.preprocess.read(fid=self.solver.data_filenames("syn")[0],
-                                  data_format=self.solver.syn_data_format)
+        st = read(fid=self.solver.data_filenames("syn")[0],
+                  data_format=self.solver.syn_data_format)
         st[0].data *= 0  # zero out the amplitude for empty adjoint source
 
         # Get list of synthetic traces which require a corresponding adj source
@@ -590,7 +591,9 @@ class NoiseInversion(Inversion):
                 adjpath = os.path.join(self.trace_path("adj"), fid_out)
                 # Do not overwrite existing adjoint sources
                 if not os.path.exists(adjpath):
-                    self.preprocess.write(st=st, fid=adjpath)
+                    write(st=st, fid=adjpath,
+                          data_format=self.preprocess.syn_data_format
+                          )
 
     def postprocess_event_kernels(self):
         """
