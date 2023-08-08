@@ -536,9 +536,7 @@ class NoiseInversion(Inversion):
         # Rotate NE streams to RT in parallel
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
-                executor.submit(
-                    self._rotate_rt_adjsrc_to_ne_single, fid, choice
-                )
+                executor.submit(self._rotate_rt_adjsrc_to_ne_single, fid)
                 for fid in fids
                 ]
         # Simply wait until this task is completed with file writing
@@ -558,7 +556,7 @@ class NoiseInversion(Inversion):
         ext = ".".join(ext)  # ['semd', 'ascii'] -> 'semd.ascii.'
         rcv_name = f"{net}_{sta}"
 
-        # Collect azimuth angles from lookup table computed in setup
+        # Collect azimuth angles from lookup table computed in preprocess setup
         theta = self.preprocess.srcrcv_stats[src_name][rcv_name].theta
         theta_p = self.preprocess.srcrcv_stats[src_name][rcv_name].theta_p
 
