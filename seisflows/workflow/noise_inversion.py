@@ -528,7 +528,7 @@ class NoiseInversion(Inversion):
 
         # Generate holding directories for rotated adjoint sources which will
         # be queried during each adjoint simulation
-        for comp in [f"_e{choice.lower()}", f"_n{choice.lower()}"]:
+        for comp in [f"e{choice.lower()}", f"n{choice.lower()}"]:
             if not os.path.exists(self.trace_path(tag="adj", comp=comp)):
                 # e.g., path/to/traces/adj_et
                 unix.mkdir(self.trace_path(tag="adj", comp=comp))
