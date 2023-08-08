@@ -114,9 +114,6 @@ class NoiseInversion(Inversion):
         """
         super().check()
 
-        assert(self._modules.preprocess.__class__.__name__ == "Noise"), \
-            f"Noise Inversion workflow require the `noise` preprocessing class"
-
         assert("3D" in self._modules.solver.__class__.__name__), (
             f"Noise Inversion workflow requires solver module 'specfem3d' or " 
             f"'specfem3d_globe'"
@@ -467,8 +464,9 @@ class NoiseInversion(Inversion):
         """
         src_name = self.solver.source_name
 
-        # Define pertinent information about files and output names
+        # Figure out station and file naming from the parts of the file ID
         net, sta, cha, *ext = os.path.basename(f_nn).split(".")
+        ext = ".".join(ext)  # e.g., SEM3DGLOBE ['sem', 'ascii'] -> sem.ascii
         rcv_name = f"{net}_{sta}"
 
         # Collect azimuth angles from lookup table computed in setup
@@ -586,7 +584,7 @@ class NoiseInversion(Inversion):
                               f"{net}.{sta}.{cha[:2]}N.{ext}")
 
         # Write out all the rotated adjoint sources to the correct data
-        # directory so they are discoverable by the adjoint simulations
+        # directory, so they are discoverable by the adjoint simulations
         write(st=Stream(tr_ee), fid=fid_ee,
               data_format=self.preprocess.syn_data_format)
         write(st=Stream(tr_en), fid=fid_en,

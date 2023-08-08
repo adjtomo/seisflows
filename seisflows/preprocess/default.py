@@ -397,8 +397,8 @@ class Default:
             set to 'solver/traces/adj'
         """
         # Read in a dummy synthetic file and zero out all data to write
-        st = self.read(fid=data_filenames[0],
-                       data_format=self.syn_data_format).copy()
+        st = read(fid=data_filenames[0],
+                  data_format=self.syn_data_format).copy()
         for tr in st:
             tr.data *= 0
         # Write adjoint sources in parallel using an empty Stream object
@@ -652,8 +652,8 @@ class Default:
             comparing `obs` and `syn`
         """
         # Read in waveforms based on the User-defined format(s)
-        obs = self.read(fid=obs_fid, data_format=self.obs_data_format)
-        syn = self.read(fid=syn_fid, data_format=self.syn_data_format)
+        obs = read(fid=obs_fid, data_format=self.obs_data_format)
+        syn = read(fid=syn_fid, data_format=self.syn_data_format)
 
         # Process observations and synthetics identically
         obs, syn = self._apply_resample(obs, syn)
