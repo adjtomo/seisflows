@@ -18,6 +18,7 @@ from seisflows import logger
 from seisflows.tools import signal, unix
 from seisflows.tools.config import Dict, get_task_id
 from seisflows.tools.graphics import plot_waveforms
+from seisflows.tools.signal import normalize
 from seisflows.tools.specfem import get_station_locations, get_source_locations
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
@@ -664,8 +665,16 @@ class Default:
             obs = self._apply_mute(obs)
             syn = self._apply_mute(syn)
         if self.normalize:
-            obs = self._apply_normalize(obs)
-            syn = self._apply_normalize(syn)
+            if "RNORM_SYN" in self.normalize:
+                # normalize `obs` relative to the synthetic trace only
+                obs = normalize(st=obs, choice=self.normalize, st_rel=syn)
+            elif "RNORM_OBS" in self.normalize:
+                # normalize `syn` relative to the observed trace only
+                syn = normalize(st=syn, choice=self.normalize, st_rel=obs)
+            else:
+                # else, normalize traces relative to themselves
+                obs = normalize(st=obs, choice=self.normalize)
+                syn = normalize(st=syn, choice=self.normalize)
 
         # Write the residuals/misfit and adjoint sources for each component
         # The assumption here is that `obs` and `syn` are length=1
@@ -869,74 +878,6 @@ class Default:
 
         return st
 
-    def _apply_normalize(self, st):
-        """
-        Normalize the amplitudes of waveforms based on user choice
-
-        .. warning::
-
-            Event normalization does not currently work as this requires
-            access to all waveform simultaneously whereas we do processing
-            trace by trace. Will need to devise a method for calculating this
-            in the future. For now, option has been remoevd
-
-        :type st: obspy.core.stream.Stream
-        :param st: All of the data streams to be normalized
-        :rtype: obspy.core.stream.Stream
-        :return: stream with normalized traces
-        """
-        # Normalize each trace by its L1 norm
-        if self.normalize.upper() == "TNORML1":
-            for tr in st:
-                w = np.linalg.norm(tr.data, ord=1)
-                if w < 0:
-                    logger.warning(f"CAUTION: L1 Norm for {tr.get_id()} is "
-                                   f"negative, this will result in "
-                                   f"unintentional sign flip")
-                tr.data /= w
-        # Normalize each trace by its L2 norm
-        elif self.normalize.upper() == "TNORML2":
-            for tr in st:
-                w = np.linalg.norm(tr.data, ord=2)
-                if w < 0:
-                    logger.warning(f"CAUTION: L2 Norm for {tr.get_id()} is "
-                                   f"negative, this will result in "
-                                   f"unintentional sign flip")
-                tr.data /= w
-        # Normalize each trace by its maximum positive amplitude
-        elif self.normalize.upper() == "TNORM_MAX":
-            for tr in st:
-                w = np.max(tr.data)
-                tr.data /= w
-        # Normalize each trace by the maximum amplitude (neg or pos)
-        elif self.normalize.upper() == "TNORM_ABSMAX":
-            for tr in st:
-                w = np.abs(tr.max())
-                tr.data /= w
-        # Normalize by the mean of absolute trace amplitudes
-        elif self.normalize.upper() == "TNORM_MEAN":
-            for tr in st:
-                w = np.mean(np.abs(tr.data))
-                tr.data /= w
-
-        # !!! These are not currently accessible. Open a GitHub issue if you
-        # !!! would like to see event-based normalization
-        # Normalize an event by the L1 norm of all traces
-        # if 'ENORML1' in norm_choices:
-        #     w = 0.
-        #     for tr in st_out:
-        #         w += np.linalg.norm(tr.data, ord=1)
-        #     for tr in st_out:
-        #         tr.data /= w
-        # # Normalize an event by the L2 norm of all traces
-        # elif "ENORML2" in norm_choices:
-        #     w = 0.
-        #     for tr in st_out:
-        #         w += np.linalg.norm(tr.data, ord=2)
-        #     for tr in st_out:
-        #         tr.data /= w
-
-        return st
 
 def read(fid, data_format):
     """

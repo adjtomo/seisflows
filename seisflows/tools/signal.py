@@ -7,6 +7,104 @@ import numpy as np
 from seisflows import logger
 
 
+def normalize(st, choice=None, st_rel=None):
+    """
+    Normalize amplitudes of Stream object waveforms based on the given choice of
+    normalization function.
+
+    :type st: obspy.core.stream.Stream
+    :param st: All of the data streams to be normalized
+    :type choice: str
+    :param choice: choice of normalization parameter, from the following:
+        - None: Do not normalize. Used to bypass procedure
+        TRACE-WISE NORMALIZATION
+        - TNORML1: normalize per trace by the L1 norm of itself
+        - TNORML2: normalize per trace by the L2 norm of itself
+        - TNORM_MAX: normalize by the maximum positive amplitude in the trace
+        - TNORM_ABSMAX: normalize by the absolute maximum amplitude in the trace
+        - TNORM_MEAN: normalize by the mean of the absolute trace
+        RELATIVE NORMALIZATION
+        - RNORM_MAX: normalize `st` by the max positive amplitude of `st_rel`
+        - RNORM_ABSMAX: normalize `st` by abs max amplitude of `st_rel`
+    :type st: obspy.core.stream.Stream
+    :param st: All of the data streams to be normalized
+    :rtype: obspy.core.stream.Stream
+    :return: stream with normalized traces
+    """
+    choice = choice.upper()
+    st_out = st.copy()
+    if "RNORM" in choice:
+        assert(st_rel is not None), (
+            f"corresponding 'relative' stream is required for RNORM type "
+            f"normalizations"
+        )
+
+    # Normalize each trace by its L1 norm
+    if normalize == "TNORML1":
+        for tr in st_out:
+            w = np.linalg.norm(tr.data, ord=1)
+            if w < 0:
+                logger.warning(f"CAUTION: L1 Norm for {tr.get_id()} is "
+                               f"negative, this will result in "
+                               f"unintentional sign flip")
+            tr.data /= w
+    # Normalize each trace by its L2 norm
+    elif normalize == "TNORML2":
+        for tr in st_out:
+            w = np.linalg.norm(tr.data, ord=2)
+            if w < 0:
+                logger.warning(f"CAUTION: L2 Norm for {tr.get_id()} is "
+                               f"negative, this will result in "
+                               f"unintentional sign flip")
+            tr.data /= w
+    # Normalize each trace by its maximum positive amplitude
+    elif normalize == "TNORM_MAX":
+        for tr in st_out:
+            w = np.max(tr.data)
+            tr.data /= w
+    # Normalize each trace by the maximum amplitude (neg or pos)
+    elif normalize == "TNORM_ABSMAX":
+        for tr in st_out:
+            w = np.abs(tr.max())
+            tr.data /= w
+    # Normalize by the mean of absolute trace amplitudes
+    elif normalize == "TNORM_MEAN":
+        for tr in st_out:
+            w = np.mean(np.abs(tr.data))
+            tr.data /= w
+    # Normalize by the max amplitude of the corresponding relative trace
+    elif normalize == "RNORM_MAX":
+        for tr, tr_rel in zip(st_out, st_rel):
+            w = np.max(tr_rel)
+            tr.data /= w
+    elif normalize == "RNORM_MAX":
+        for tr, tr_rel in zip(st_out, st_rel):
+            w = np.abs(np.max(tr_rel))
+            tr.data /= w
+    else:
+        raise NotImplementedError(f"normalization choice '{choice}' is not "
+                                  f"implemented")
+
+    # !!! These are not currently working. Open a GitHub issue if you
+    # !!! would like to see event-wise normalization
+    # Normalize an event by the L1 norm of all traces
+    # if 'ENORML1' in norm_choices:
+    #     w = 0.
+    #     for tr in st_out:
+    #         w += np.linalg.norm(tr.data, ord=1)
+    #     for tr in st_out:
+    #         tr.data /= w
+    # # Normalize an event by the L2 norm of all traces
+    # elif "ENORML2" in norm_choices:
+    #     w = 0.
+    #     for tr in st_out:
+    #         w += np.linalg.norm(tr.data, ord=2)
+    #     for tr in st_out:
+    #         tr.data /= w
+
+    return st_out
+
+
 def mask(slope, const, offset, nt, dt, length=400):
     """
     Constructs a tapered mask that can be applied to trace to mute early or
@@ -162,7 +260,7 @@ def get_receiver_coords(st):
     if hasattr(st[0].stats, "su"):
         rx, ry, rz = [], [], []
 
-        for tr in st:
+        for tr in st_out:
             rx += [tr.stats.su.trace_header.group_coordinate_x]
             ry += [tr.stats.su.trace_header.group_coordinate_y]
             rz += [0.]
@@ -185,7 +283,7 @@ def get_source_coords(st):
     """
     if hasattr(st[0].stats, "su"):
         sx, sy, sz = [], [], []
-        for tr in st:
+        for tr in st_out:
             sx += [tr.stats.su.trace_header.source_coordinate_x]
             sy += [tr.stats.su.trace_header.source_coordinate_y]
             sz += [0.]
