@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 from seisflows.tools import unix
 
 
-def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, **kwargs):
+def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, title=None,
+                   **kwargs):
     """
     Very simple plotting routine to show waveforms and adjoint sources
     manipulated by the Default preprocessing module. Plots are simple and are
@@ -56,7 +57,9 @@ def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, **kwargs):
     ax.set_xlim([tr_syn.times()[0], tr_syn.times()[-1]])
 
     # Plot attributes and labels
-    plt.title(tr_syn.id)
+    if title is None:
+        title = tr_syn.id
+    plt.title(title)
     ax.set_xlabel("Time [s]")
     ax.set_ylabel("Amplitude")
 

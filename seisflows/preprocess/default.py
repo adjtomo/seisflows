@@ -722,8 +722,9 @@ class Default:
                 fid_out = os.path.join(
                     fig_path, f"{tr_syn.id.replace('.', '_')}.png"
                 )
+                title = f"{tr_syn.id}; misfit={residual:.2f}"
                 plot_waveforms(tr_obs=tr_obs, tr_syn=tr_syn, tr_adj=adjsrc,
-                               fid_out=fid_out)
+                               fid_out=fid_out, title=title)
 
         return residual
 

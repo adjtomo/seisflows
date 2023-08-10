@@ -260,11 +260,12 @@ class Inversion(Migration):
         """
         event_misfits = []
         for residuals_file in residuals_files:
+            # Tape et al. (2010) Equation 6
             event_misfit = np.loadtxt(residuals_file)
             event_misfit = np.sum(event_misfit) / (2. * len(event_misfit))
-
             event_misfits.append(event_misfit)
 
+        # Tape et al. (2010) Equation 7
         total_misfit = np.sum(event_misfits) / len(event_misfits)
 
         return total_misfit
