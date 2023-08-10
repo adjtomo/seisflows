@@ -246,9 +246,10 @@ class Inversion(Migration):
     def sum_residuals(self, residuals_files):
         """
         Convenience function to read in text files containing misfit residual
-        information written by `preprocess.quantify_misfit` and returns the
-        summed square of residuals for each a number of residual files.
-        Follows Tape et al. 2007
+        information written by `preprocess.quantify_misfit` for each event, and
+        returns the total misfit for the evaluation.
+
+        Follows Tape et al. 2010 equations 6 and 7
 
         :type residuals_files: list of str
         :param residuals_files: pathnames to residuals files for each source,
@@ -257,12 +258,16 @@ class Inversion(Migration):
         :rtype: float
         :return: sum of squares of residuals, total misfit
         """
-        residuals = np.array([])
+        event_misfits = []
         for residuals_file in residuals_files:
-            tmp = np.loadtxt(residuals_file)
-            residuals = np.append(residuals, tmp)
+            event_misfit = np.loadtxt(residuals_file)
+            event_misfit = np.sum(event_misfit) / (2. * len(event_misfit))
 
-        return np.sum(residuals ** 2.)
+            event_misfits.append(event_misfit)
+
+        total_misfit = np.sum(event_misfits) / len(event_misfits)
+
+        return total_misfit
 
     def evaluate_initial_misfit(self, save_residuals=None, **kwargs):
         """
