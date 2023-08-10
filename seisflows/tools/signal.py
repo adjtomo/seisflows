@@ -33,6 +33,27 @@ def filter(st, choice, min_freq=None, max_freq=None, zerophase=True, **kwargs):
     return st
 
 
+def trim(st, st_trim):
+    """
+    Trims the time waveform of `st_trim` to match the time series of `st`. This
+    allows cutting down longer observed waveform data so that preprocessing
+    steps are not performed on unncessarily long time series.
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream that sets the desired time series
+    :type st_trim: obspy.core.stream.Stream
+    :param st_trim: Stream that will have its time series cut to match `st`
+    :rtype: (obspy.core.stream.Stream, obspy.core.stream.Stream)
+    :return: (`st`, trimmed version of `st_trim`)
+    """
+    for tr, tr_trim in zip(st, st_trim):
+        starttime = tr.stats.starttime
+        endtime = tr.stats.endtime
+        tr_trim.trim(starttime, endtime)
+
+    return st, st_trim
+
+
 def resample(st_a, st_b):
     """
     Resample all traces in `st_a` to the sampling rate of `st_b`. Resamples
@@ -130,12 +151,12 @@ def normalize(st, choice=None, st_rel=None):
     # Normalize by the max amplitude of the corresponding relative trace
     elif "RNORM" in choice and "_MAX" in choice:
         for tr, tr_rel in zip(st_out, st_rel):
-            w = np.abs(tr_rel.data.max())
+            w = np.abs(tr.data.max()) / np.abs(tr_rel.data.max())
             tr.data /= w
     # Normalize by the abs max amplitude of the corresponding relative trace
     elif "RNORM" in choice and "ABSMAX" in choice:
         for tr, tr_rel in zip(st_out, st_rel):
-            w = tr_rel.max()  # ObsPy's Trace.max() function gives absmax
+            w = tr.max() / tr_rel.max()  # ObsPy's Trace.max() gives absmax
             tr.data /= w
     else:
         raise NotImplementedError(f"normalization choice '{choice}' is not "

@@ -15,10 +15,10 @@ from obspy import Stream, Trace, UTCDateTime
 from obspy.geodetics import gps2dist_azimuth
 
 from seisflows import logger
-from seisflows.tools import signal, unix
+from seisflows.tools import unix
 from seisflows.tools.config import Dict, get_task_id
 from seisflows.tools.graphics import plot_waveforms
-from seisflows.tools.signal import normalize, resample, filter, mute
+from seisflows.tools.signal import normalize, resample, filter, mute, trim
 from seisflows.tools.specfem import get_station_locations, get_source_locations
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
@@ -738,15 +738,18 @@ class Default:
         :type syn: obspy.core.stream.Stream
         :param syn: Stream containing synthetic waveforms
         """
+        # Resample observed waveforms to the same sampling rate as the
+        # synthetics because the output adjoint sources will need this samp rate
+        obs, syn = resample(st_a=obs, st_b=syn)
+
+        # Trim the observed seismograms to the length of the synthetics
+        obs, syn = trim(st=syn, st_trim=obs)
+
         # Apply some basic detrends to clean up data
         for st in [obs, syn]:
             st.detrend("demean")
             st.detrend("linear")
             st.taper(0.05, type="hann")
-
-        # Resample observed waveforms to the same sampling rate as the
-        # synthetics because the output adjoint sources will need this samp rate
-        obs, syn = resample(st_a=obs, st_b=syn)
 
         if self.filter:
             obs = filter(obs, choice=self.filter, min_freq=self.min_freq,
