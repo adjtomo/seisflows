@@ -7,6 +7,56 @@ import numpy as np
 from seisflows import logger
 
 
+def filter(st, choice, min_freq=None, max_freq=None, zerophase=True, **kwargs):
+    """
+    Apply a filter to waveform data using ObsPy, throw on a standard
+    demean, detrened and taper prior to filtering. Options for different
+    filtering types. Uses default filter options from ObsPy.
+
+    Zerophase enforced to be True to avoid phase shifting data.
+
+    :type st: obspy.core.stream.Stream
+    :param st: stream to be filtered
+    :rtype: obspy.core.stream.Stream
+    :return: filtered traces
+    """
+    if choice.upper() == "BANDPASS":
+        st.filter("bandpass", zerophase=zerophase,
+                  freqmin=min_freq, freqmax=max_freq)
+    elif choice.upper() == "LOWPASS":
+        st.filter("lowpass", zerophase=zerophase, freq=max_freq)
+    elif choice.upper() == "HIGHPASS":
+        st.filter("highpass", zerophase=zerophase, freq=min_freq)
+    else:
+        raise NotImplementedError(f"filter choice {choice} is not available")
+
+    return st
+
+
+def resample(st_a, st_b):
+    """
+    Resample all traces in `st_a` to the sampling rate of `st_b`. Resamples
+    one to one, that is each trace in `obs` is resampled to the
+    corresponding indexed trace in `syn`
+
+    :type st_a: obspy.core.stream.Stream
+    :param st_a: stream to be resampled using sampling rates from `st_b`
+    :type st_b: obspy.core.stream.Stream
+    :param st_b:  stream whose sampling rates will be used to resample
+        `st_a`. Usually this is the synthetic data
+    :rtype: (obspy.core.stream.Stream, obspy.core.stream.Stream)
+    :return: `st_a` (resampled), `st_b` (original)
+    """
+    for tr_a, tr_b in zip(st_a, st_b):
+        sr_a = tr_a.stats.sampling_rate
+        sr_b = tr_b.stats.sampling_rate
+        if sr_a != sr_b:
+            logger.debug(f"resampling '{tr_a.get_id()}' {sr_a}->{sr_b} Hz")
+            tr_a.resample(sampling_rate=tr_b.stats.sampling_rate)
+
+    return st_a, st_b
+
+
 def normalize(st, choice=None, st_rel=None):
     """
     Normalize amplitudes of Stream object waveforms based on the given choice of
@@ -26,11 +76,15 @@ def normalize(st, choice=None, st_rel=None):
         RELATIVE NORMALIZATION
         - RNORM_MAX: normalize `st` by the max positive amplitude of `st_rel`
         - RNORM_ABSMAX: normalize `st` by abs max amplitude of `st_rel`
-    :type st: obspy.core.stream.Stream
-    :param st: All of the data streams to be normalized
+    :type st_rel: obspy.core.stream.Stream
+    :param st_rel: Second stream used for relative normalization. Optional
+        and only required if 'RNORM' set as `choice`
     :rtype: obspy.core.stream.Stream
     :return: stream with normalized traces
     """
+    if choice is None:
+        return
+
     choice = choice.upper()
     st_out = st.copy()
     if "RNORM" in choice:
@@ -103,6 +157,13 @@ def normalize(st, choice=None, st_rel=None):
     #         tr.data /= w
 
     return st_out
+
+
+def mute():
+    """
+    Mute arrivals or offsets on a waveform based on slopes and constants
+    defined by the User.
+    """
 
 
 def mask(slope, const, offset, nt, dt, length=400):

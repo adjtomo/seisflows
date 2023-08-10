@@ -18,7 +18,7 @@ from seisflows import logger
 from seisflows.tools import signal, unix
 from seisflows.tools.config import Dict, get_task_id
 from seisflows.tools.graphics import plot_waveforms
-from seisflows.tools.signal import normalize
+from seisflows.tools.signal import normalize, resample, filter, mute
 from seisflows.tools.specfem import get_station_locations, get_source_locations
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
@@ -656,25 +656,9 @@ class Default:
         obs = read(fid=obs_fid, data_format=self.obs_data_format)
         syn = read(fid=syn_fid, data_format=self.syn_data_format)
 
-        # Process observations and synthetics identically
-        obs, syn = self._apply_resample(obs, syn)
-        if self.filter:
-            obs = self._apply_filter(obs)
-            syn = self._apply_filter(syn)
-        if self.mute:
-            obs = self._apply_mute(obs)
-            syn = self._apply_mute(syn)
-        if self.normalize:
-            if "RNORM_SYN" in self.normalize:
-                # normalize `obs` relative to the synthetic trace only
-                obs = normalize(st=obs, choice=self.normalize, st_rel=syn)
-            elif "RNORM_OBS" in self.normalize:
-                # normalize `syn` relative to the observed trace only
-                syn = normalize(st=syn, choice=self.normalize, st_rel=obs)
-            else:
-                # else, normalize traces relative to themselves
-                obs = normalize(st=obs, choice=self.normalize)
-                syn = normalize(st=syn, choice=self.normalize)
+        # Wrap all the preprocessing functions into single function so that
+        # it can be more easily overwritten by overwriting classes
+        obs, syn = self.preprocess(obs, syn)
 
         # Write the residuals/misfit and adjoint sources for each component
         # The assumption here is that `obs` and `syn` are length=1
@@ -735,6 +719,49 @@ class Default:
 
         return residual
 
+    def preprocess(self, obs, syn):
+        """
+        Convenience function that wraps all preprocessing steps so that
+        they can be more easily overwritten if the User wants preprocessing
+        that does not follow this convention
+
+        :type obs: obspy.core.stream.Stream
+        :param obs: Stream containing observed waveforms
+        :type syn: obspy.core.stream.Stream
+        :param syn: Stream containing synthetic waveforms
+        """
+        # Apply some basic detrends to clean up data
+        for st in [obs, syn]:
+            st.detrend("demean")
+            st.detrend("linear")
+            st.taper(0.05, type="hann")
+
+        # Resample observed waveforms to the same sampling rate as the
+        # synthetics because the output adjoint sources will need this samp rate
+        obs, syn = resample(st_a=obs, st_b=syn)
+
+        if self.filter:
+            obs = filter(obs, choice=self.filter, min_freq=self.min_freq,
+                         max_freq=self.max_freq)
+            syn = filter(syn, choice=self.filter, min_freq=self.min_freq,
+                         max_freq=self.max_freq)
+        if self.mute:
+            obs = self._apply_mute(obs)
+            syn = self._apply_mute(syn)
+        if self.normalize:
+            if "RNORM_SYN" in self.normalize:
+                # normalize `obs` relative to the synthetic trace only
+                obs = normalize(st=obs, choice=self.normalize, st_rel=syn)
+            elif "RNORM_OBS" in self.normalize:
+                # normalize `syn` relative to the observed trace only
+                syn = normalize(st=syn, choice=self.normalize, st_rel=obs)
+            else:
+                # else, normalize traces relative to themselves
+                obs = normalize(st=obs, choice=self.normalize)
+                syn = normalize(st=syn, choice=self.normalize)
+
+        return obs, syn
+
     def _curtail_fids_for_file_matching(self, fid_list, components=None):
         """
         Convenience function to convert NN.SSS.CCc.* -> NN.SSS.c and also
@@ -793,59 +820,6 @@ class Default:
                     fid = fid.replace(f"{ext2}{ext1}", ".adj")
 
         return fid
-
-    def _apply_resample(self, st_a, st_b):
-        """
-        Resample all traces in `st_a` to the sampling rate of `st_b`. Resamples
-        one to one, that is each trace in `obs` is resampled to the
-        corresponding indexed trace in `syn`
-
-        :type st_a: obspy.core.stream.Stream
-        :param st_a: stream to be resampled using sampling rates from `st_b`
-        :type st_b: obspy.core.stream.Stream
-        :param st_b:  stream whose sampling rates will be used to resample
-            `st_a`. Usually this is the synthetic data
-        :rtype: (obspy.core.stream.Stream, obspy.core.stream.Stream)
-        :return: `st_a` (resampled), `st_b`
-        """
-        for tr_a, tr_b in zip(st_a, st_b):
-            sr_a = tr_a.stats.sampling_rate
-            sr_b = tr_b.stats.sampling_rate
-            # Is this the correct resampling method to use?
-            if sr_a != sr_b:
-                logger.debug(f"resampling '{tr_a.get_id()}' {sr_a}->{sr_b} Hz")
-                # Resample in place
-                tr_a.resample(sampling_rate=tr_b.stats.sampling_rate)
-
-        return st_a, st_b
-
-    def _apply_filter(self, st):
-        """
-        Apply a filter to waveform data using ObsPy, throw on a standard
-        demean, detrened and taper prior to filtering. Options for different
-        filtering types. Uses default filter options from ObsPy.
-
-        Zerophase enforced to be True to avoid phase shifting data.
-
-        :type st: obspy.core.stream.Stream
-        :param st: stream to be filtered
-        :rtype: obspy.core.stream.Stream
-        :return: filtered traces
-        """
-        # Pre-processing before filtering
-        st.detrend("demean")
-        st.detrend("linear")
-        st.taper(0.05, type="hann")
-
-        if self.filter.upper() == "BANDPASS":
-            st.filter("bandpass", zerophase=True, freqmin=self.min_freq,
-                      freqmax=self.max_freq)
-        elif self.filter.upper() == "LOWPASS":
-            st.filter("lowpass", zerophase=True, freq=self.max_freq)
-        elif self.filter.upper() == "HIGHPASS":
-            st.filter("highpass", zerophase=True, freq=self.min_freq)
-
-        return st
 
     def _apply_mute(self, st):
         """
