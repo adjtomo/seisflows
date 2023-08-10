@@ -59,6 +59,14 @@ class Default:
         - TNORM_MAX: normalize by the maximum positive amplitude in the trace
         - TNORM_ABSMAX: normalize by the absolute maximum amplitude in the trace
         - TNORM_MEAN: normalize by the mean of the absolute trace
+        - RNORM_OBS_MAX: normalize synthetic traces by the maximum amplitude of
+            the corresponding observed trace
+        - RNORM_OBS_ABSMAX: normalize synthetic traces by the absolute maximum
+            amplitude of the corresponding observed trace
+        - RNORM_SYN_MAX: normalize observed traces by the maximum amplitude of
+            the corresponding synthetic trace
+        - RNORM_SYN_ABSMAX: normalize observed traces by the absolute maximum
+            amplitude of the corresponding synthetic trace
 
         Note: options ENORML? are not currently available. If this is a
         feature you would like to see, please open a GitHub Issue.
@@ -203,7 +211,9 @@ class Default:
 
         # Acceptable preprocessing parameter options
         self._acceptable_norms = {"TNORML1", "TNORML2", "TNORM_MAX",
-                                  "TNORM_ABSMAX", "TNORM_MEAN"}
+                                  "TNORM_ABSMAX", "TNORM_MEAN", "RNORM_SYN_MAX",
+                                  "RNORM_SYN_ABSMAX", "RNORM_OBS_MAX",
+                                  "RNORM_OBS_ABSMAX"}
                                   #, "ENORML1", "ENORML2"}
         self._acceptable_mutes = {"EARLY", "LATE", "LONG", "SHORT"}
         self._acceptable_filters = {"BANDPASS", "LOWPASS", "HIGHPASS"}
@@ -633,10 +643,6 @@ class Default:
         This is kept in a separate function so that it can be parallelized for
         more efficient processing.
 
-        Order of processing steps is:
-        resample -> filter (optional) -> mute (optional) -> normalize (optional)
-            -> calculate misfit (optional) -> create adjoint source (optional)
-
         :type obs_fid: str
         :param obs_fid: filename for the observed waveform to be processed
         :type syn_fid: str
@@ -658,6 +664,8 @@ class Default:
 
         # Wrap all the preprocessing functions into single function so that
         # it can be more easily overwritten by overwriting classes
+        # Default order of processing steps is:
+        # resample, filter (optional), (optional), normalize (optional)
         obs, syn = self.preprocess(obs, syn)
 
         # Write the residuals/misfit and adjoint sources for each component
@@ -746,8 +754,8 @@ class Default:
             syn = filter(syn, choice=self.filter, min_freq=self.min_freq,
                          max_freq=self.max_freq)
         if self.mute:
-            obs = self._apply_mute(obs)
-            syn = self._apply_mute(syn)
+            obs = mute(obs)
+            syn = mute(syn)
         if self.normalize:
             if "RNORM_SYN" in self.normalize:
                 # normalize `obs` relative to the synthetic trace only
@@ -820,37 +828,6 @@ class Default:
                     fid = fid.replace(f"{ext2}{ext1}", ".adj")
 
         return fid
-
-    def _apply_mute(self, st):
-        """
-        Apply mute on data based on early or late arrivals, and short or long
-        source receiver distances
-
-        .. note::
-
-            The underlying mute functions have been refactored but not tested
-            as I was not aware of the intended functionality. Not gauranteed
-            to work, use at your own risk.
-
-        :type st: obspy.core.stream.Stream
-        :param st: stream to mute
-        :rtype: obspy.core.stream.Stream
-        :return: muted stream object
-        """
-        mute_choices = [_.upper() for _ in self.mute.split(",")]
-
-        if "EARLY" in mute_choices:
-            st = signal.mute_arrivals(st, slope=self.early_slope,
-                                      const=self.early_const, choice="EARLY")
-        if "LATE" in mute_choices:
-            st = signal.mute_arrivals(st, slope=self.late_slope,
-                                      const=self.late_const, choice="LATE")
-        if "SHORT" in mute_choices:
-            st = signal.mute_offsets(st, dist=self.short_dist, choice="SHORT")
-        if "LONG" in mute_choices:
-            st = signal.mute_offsets(st, dist=self.long_dist, choice="LONG")
-
-        return st
 
 
 def read(fid, data_format):

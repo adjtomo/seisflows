@@ -51,7 +51,8 @@ def resample(st_a, st_b):
         sr_a = tr_a.stats.sampling_rate
         sr_b = tr_b.stats.sampling_rate
         if sr_a != sr_b:
-            logger.debug(f"resampling '{tr_a.get_id()}' {sr_a}->{sr_b} Hz")
+            logger.debug(f"resampling '{tr_a.get_id()}' "
+                         f"{sr_a:.3f}->{sr_b:.3f} Hz")
             tr_a.resample(sampling_rate=tr_b.stats.sampling_rate)
 
     return st_a, st_b
@@ -94,7 +95,7 @@ def normalize(st, choice=None, st_rel=None):
         )
 
     # Normalize each trace by its L1 norm
-    if normalize == "TNORML1":
+    if choice == "TNORML1":
         for tr in st_out:
             w = np.linalg.norm(tr.data, ord=1)
             if w < 0:
@@ -103,7 +104,7 @@ def normalize(st, choice=None, st_rel=None):
                                f"unintentional sign flip")
             tr.data /= w
     # Normalize each trace by its L2 norm
-    elif normalize == "TNORML2":
+    elif choice == "TNORML2":
         for tr in st_out:
             w = np.linalg.norm(tr.data, ord=2)
             if w < 0:
@@ -112,28 +113,29 @@ def normalize(st, choice=None, st_rel=None):
                                f"unintentional sign flip")
             tr.data /= w
     # Normalize each trace by its maximum positive amplitude
-    elif normalize == "TNORM_MAX":
+    elif choice == "TNORM_MAX":
         for tr in st_out:
-            w = np.max(tr.data)
+            w = np.abs(tr.data.max())
             tr.data /= w
     # Normalize each trace by the maximum amplitude (neg or pos)
-    elif normalize == "TNORM_ABSMAX":
+    elif choice == "TNORM_ABSMAX":
         for tr in st_out:
-            w = np.abs(tr.max())
+            w = tr.max()  # ObsPy's Trace.max() function gives absmax
             tr.data /= w
     # Normalize by the mean of absolute trace amplitudes
-    elif normalize == "TNORM_MEAN":
+    elif choice == "TNORM_MEAN":
         for tr in st_out:
             w = np.mean(np.abs(tr.data))
             tr.data /= w
     # Normalize by the max amplitude of the corresponding relative trace
-    elif normalize == "RNORM_MAX":
+    elif "RNORM" in choice and "_MAX" in choice:
         for tr, tr_rel in zip(st_out, st_rel):
-            w = np.max(tr_rel)
+            w = np.abs(tr_rel.data.max())
             tr.data /= w
-    elif normalize == "RNORM_MAX":
+    # Normalize by the abs max amplitude of the corresponding relative trace
+    elif "RNORM" in choice and "ABSMAX" in choice:
         for tr, tr_rel in zip(st_out, st_rel):
-            w = np.abs(np.max(tr_rel))
+            w = tr_rel.max()  # ObsPy's Trace.max() function gives absmax
             tr.data /= w
     else:
         raise NotImplementedError(f"normalization choice '{choice}' is not "
@@ -159,12 +161,30 @@ def normalize(st, choice=None, st_rel=None):
     return st_out
 
 
-def mute():
+def mute(st):
     """
-    Mute arrivals or offsets on a waveform based on slopes and constants
-    defined by the User.
-    """
+    Apply mute on data based on early or late arrivals, and short or long
+    source receiver distances
 
+    :type st: obspy.core.stream.Stream
+    :param st: stream to mute
+    :rtype: obspy.core.stream.Stream
+    :return: muted stream object
+    """
+    raise NotImplementedError
+
+    if "EARLY" in mute_choices:
+        st = signal.mute_arrivals(st, slope=self.early_slope,
+                                  const=self.early_const, choice="EARLY")
+    if "LATE" in mute_choices:
+        st = signal.mute_arrivals(st, slope=self.late_slope,
+                                  const=self.late_const, choice="LATE")
+    if "SHORT" in mute_choices:
+        st = signal.mute_offsets(st, dist=self.short_dist, choice="SHORT")
+    if "LONG" in mute_choices:
+        st = signal.mute_offsets(st, dist=self.long_dist, choice="LONG")
+
+    return st
 
 def mask(slope, const, offset, nt, dt, length=400):
     """
