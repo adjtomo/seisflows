@@ -245,7 +245,7 @@ class Slurm(Cluster):
         # Copy-paste this default run_call and adjust accordingly for subclass
         run_call = " ".join([
             f"{self.run_call_header}",
-            f"{os.path.join(ROOT_DIR, 'system', 'runscripts', 'run')}",
+            f"{self.run_functions}",
             f"--funcs {funcs_fid}",
             f"--kwargs {kwargs_fid}",
             f"--environment {self.environs or ''}"
