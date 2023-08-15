@@ -206,6 +206,7 @@ class Cluster(Workstation):
                 futures = [executor.submit(self._run_task, run_call, task_id)
                            for task_id in range(ntasks)]
 
+            # Mimic a cluster job timeout by limiting task to `tasktime`
             wait(futures, timeout=self.tasktime, return_when="FIRST_EXCEPTION")
 
             # Iterate through the Futures' results because if one of them
@@ -213,7 +214,7 @@ class Cluster(Workstation):
             # https://stackoverflow.com/questions/33448329/
             #   how-to-detect-exceptions-in-concurrent-futures-in-python3
             for future in futures:
-                future.results()
+                future.result()
 
     def _run_task(self, run_call, task_id):
         """

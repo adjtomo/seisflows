@@ -564,6 +564,13 @@ class Specfem:
             stdout = f"fwd_{self._exc2log(exc)}.log"
             self._run_binary(executable=exc, stdout=stdout)
 
+        # Error check to ensure that mesher and solver have been run succesfully
+        assert(os.path.exists(
+            os.path.join("OUTPUT_FILES", "output_mesher.txt"))
+        ), "SPECFEM mesher has failed to produce required output file, exiting"
+        assert(glob(os.path.join("OUTPUT_FILES", self.data_wildcard()))), \
+            f"SPECFEM solver has failed to produce synthetics, exiting"
+
         # Work around SPECFEM's version dependent file names
         if self.syn_data_format.upper() == "SU":
             for tag in ["d", "v", "a", "p"]:
