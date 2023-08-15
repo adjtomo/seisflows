@@ -205,7 +205,15 @@ class Cluster(Workstation):
             with ProcessPoolExecutor(max_workers=self.ntask_max) as executor:
                 futures = [executor.submit(self._run_task, run_call, task_id)
                            for task_id in range(ntasks)]
-            wait(futures)
+
+            wait(futures, timeout=self.tasktime, return_when="FIRST_EXCEPTION")
+
+            # Iterate through the Futures' results because if one of them
+            # raised an exception, it will break the main process here
+            # https://stackoverflow.com/questions/33448329/
+            #   how-to-detect-exceptions-in-concurrent-futures-in-python3
+            for future in futures:
+                future.results()
 
     def _run_task(self, run_call, task_id):
         """
