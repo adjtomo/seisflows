@@ -24,3 +24,33 @@
 - Removes GitHub links in dependencies in favor of PyPi packages
 - Fixes broken Pyatoa import statements
 - Pyadjoint misfit functions are now listed properly in the Pyaflowa docstring- 
+
+
+### #168
+This is an important PR, see PR notes for more detailed description
+
+#### MAJOR BUGS
+- Parallel written residuals file could sometimes have bad formatting
+- Residuals were appended to the same file during line search causing incorrect
+	misfit to be calculated
+- Trial model (m_try) was never exposed to line search meaning model was 
+	not updated
+
+#### Bugfixes
+- Residuals files now written per event, iteration and step 
+- Max step length now defined correctly
+- Export residuals flag now works properly
+- Synthetic traces exported at each evaluation
+
+
+### #176
+Support for HPC system Wisteria 
+
+- Makes the location of the `submit` and `run` scripts a System Class variable 
+	which can be overwritten. 
+- Adds `system.Fujitsu` as a generalized System class for HPCs using the Fujitsu
+	workload manager
+- Adds `system.Wisteria` for System interactions with HPC Wisteria
+- Custom run and submit scripts for Wisteria hardcoded to RSCGRP RC58, not 
+	generalized at the moment
+

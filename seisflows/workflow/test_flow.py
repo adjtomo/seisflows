@@ -132,7 +132,7 @@ class TestFlow:
         time.sleep(5)  # give the system a second to catch up
 
         # Check the results of the run 
-        log_files = glob(os.path.join(self.system.path.log_files, "*_*"))
+        log_files = glob(os.path.join(self.system.path.log_files, "*"))
         assert(len(log_files) == self.system.ntask), \
             f"number of log files does not match expected number of tasks"
 
@@ -167,13 +167,13 @@ class TestFlow:
         # Catch the system exit exception that is thrown when job fails
         try:
             self.system.run(funcs=[_test_function], single=True)
-            logger.critical("job was expected to fail but did not")
+            logger.critical("submitted job was expected to fail but did not")
         except SystemExit:
             logger.info("job failure catch was successful")
             pass 
     
         # Check the log file for job failure
-        log_files = glob(os.path.join(self.system.path.log_files, "*_*"))
+        log_files = glob(os.path.join(self.system.path.log_files, "*"))
         assert(len(log_files) == 1), f"only one log file expected"
 
         logger.info("job queue and fail system test finished successfully")
