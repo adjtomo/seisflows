@@ -336,12 +336,15 @@ class Forward:
                         self.evaluate_objective_function]
         else:
             run_list = [self.run_forward_simulations]
-
+            
+        # `save_residuals` hard-coded for iteration 1 and step count 0
+        # assuming workflows calling this function are evaluating the
+        # very first round of misfit quantification (i.e., i01s00)
         self.system.run(run_list, path_model=self.path.model_init,
                         save_residuals=os.path.join(self.path.eval_grad,
-                                                    "residuals.txt")
+                                                    "residuals_{src}_1_0.txt")
                         )
-
+                        
     def prepare_data_for_solver(self, **kwargs):
         """
         Determines how to provide data to each of the solvers. Either by copying
@@ -374,7 +377,7 @@ class Forward:
             self.solver.import_model(path_model=self.path.model_true)
             self.solver.forward_simulation(
                 save_traces=os.path.join(self.solver.cwd, "traces", "obs"),
-                export_traces=export_traces
+                export_traces=export_traces, save_forward=False
             )
 
     def run_forward_simulations(self, path_model, **kwargs):
@@ -406,9 +409,16 @@ class Forward:
 
         # Run the forward simulation with the given input model
         self.solver.import_model(path_model=path_model)
+        # Forward workflows do not require saving the large forward arrays
+        # because the assumption is that we will not be running adj simulations
+        if self.__class__.__name__ == "Forward":
+            save_forward = False
+            logger.info("Forward workflow, will not save forward arrays")
+        else:
+            save_forward = True
         self.solver.forward_simulation(
             save_traces=os.path.join(self.solver.cwd, "traces", "syn"),
-            export_traces=export_traces
+            export_traces=export_traces, save_forward=save_forward
         )
 
     def evaluate_objective_function(self, save_residuals=False, **kwargs):
@@ -425,10 +435,19 @@ class Forward:
                          "objective function")
             return
 
+        if save_residuals:
+            save_residuals = save_residuals.format(src=self.solver.source_name)
+
+        if self.export_residuals:
+            export_residuals = os.path.join(self.path.output, "residuals")
+        else:
+            export_residuals = False
+
         logger.debug(f"quantifying misfit with "
                      f"'{self.preprocess.__class__.__name__}'")
         self.preprocess.quantify_misfit(
             source_name=self.solver.source_name,
             save_adjsrcs=os.path.join(self.solver.cwd, "traces", "adj"),
-            save_residuals=save_residuals
+            save_residuals=save_residuals,
+            export_residuals=export_residuals
         )

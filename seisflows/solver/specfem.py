@@ -471,7 +471,7 @@ class Specfem:
         self._export_starting_models()
 
     def forward_simulation(self, executables=None, save_traces=False,
-                           export_traces=False, **kwargs):
+                           export_traces=False, save_forward=True, **kwargs):
         """
         Wrapper for SPECFEM binaries: 'xmeshfem?D' 'xgenerate_databases',
                                       'xspecfem?D'
@@ -497,13 +497,18 @@ class Specfem:
         :param export_traces: export traces from the scratch directory to a more
             permanent storage location. i.e., copy files from their original
             location
+        :type save_forward: bool
+        :param save_forward: whether to turn on the flag for saving the forward
+            arrays which are used for adjoint simulations. Not required if only
+            running forward simulations.
         """
         if executables is None:
             executables = ["bin/xmeshfem2D", "bin/xspecfem2D"]
 
         unix.cd(self.cwd)
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
-        setpar(key="SAVE_FORWARD", val=".true.", file="DATA/Par_file")
+        setpar(key="SAVE_FORWARD", val=f".{str(save_forward).lower()}.",
+               file="DATA/Par_file")
 
         # Calling subprocess.run() for each of the binary executables listed
         for exc in executables:
@@ -872,9 +877,10 @@ class Specfem:
         dst = os.path.join(cwd, "bin", "")
         unix.cp(src, dst)
 
-        # Copy all input DATA/ files except the source files
+        # Copy in all input DATA/ file that are not '{source_prefix}*'
         src = glob(os.path.join(self.path.specfem_data, "*"))
-        src = [_ for _ in src if self.source_prefix not in _]
+        src = [_ for _ in src if not
+               os.path.basename(_).startswith(self.source_prefix)]
         dst = os.path.join(cwd, "DATA", "")
         unix.cp(src, dst)
 
