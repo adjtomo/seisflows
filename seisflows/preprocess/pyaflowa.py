@@ -189,7 +189,7 @@ class Pyaflowa:
 
         # SeisFlows parameters that should be set by other modules. Keep hidden
         # so `seisflows configure` doesn't attribute these to preprocess.
-        self._syn_data_format = syn_data_format.upper()
+        self.syn_data_format = syn_data_format.upper()
         self._data_case = data_case.lower()
         if components is not None:
             self._components = list(components)  # e.g. 'RTZ' -> ['R', 'T', 'Z']
@@ -219,7 +219,7 @@ class Pyaflowa:
         Checks Parameter and Path files, will be run at the start of a Seisflows
         workflow to ensure that things are set appropriately.
         """
-        assert(self._syn_data_format.upper() == "ASCII"), \
+        assert(self.syn_data_format.upper() == "ASCII"), \
             "Pyatoa preprocess requires `syn_data_format`=='ASCII'"
 
         assert(self.path.specfem_data is not None and
