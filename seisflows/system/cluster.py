@@ -230,7 +230,7 @@ class Cluster(Workstation):
                             f"detailed error message(s). ",
                             header="system run error", border="=",
                             items=[f"RUN CALL: {run_call}",
-                                   f"TASK IDS: {', '.join(failed_jobs)}"]
+                                   f"TASK IDS: {failed_jobs}"]
                             )
                 )
                 sys.exit(-1)
