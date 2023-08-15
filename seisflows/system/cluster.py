@@ -15,6 +15,7 @@ import sys
 import subprocess
 from concurrent.futures import ProcessPoolExecutor, wait
 from seisflows import logger, ROOT_DIR
+from seisflows.tools import msg
 from seisflows.tools.unix import nproc
 from seisflows.tools.config import pickle_function_list
 from seisflows.system.workstation import Workstation
@@ -231,11 +232,28 @@ class Cluster(Workstation):
         logger.debug(f"running task id {task_id}")
         try:
             f = open(self._get_log_file(task_id), "w")
-            subprocess.run(run_call.format(task_id=task_id), shell=True,
-                           stdout=f)
+            result = subprocess.run(run_call.format(task_id=task_id),
+                                    shell=True, stdout=f)
         except subprocess.CalledProcessError as e:
             logger.critical(f"run task_id {task_id} has failed with error "
                             f"message {e}")
             sys.exit(-1)
         finally:
             f.close()
+
+        # Non-zero return code means the underlying job has failed in some way
+        if result.returncode != 0:
+            logger.critical(
+                msg.cli(f"System run call for task ID {task_id} "
+                        f"has returned a non-zero exit code suggesting an "
+                        f"external job failure. Please check logfiles (e.g., "
+                        f"`logs/*{task_id}*`) for a more detailed error "
+                        f"message. Other jobs may have failed simultaneously "
+                        f"that are not recorded here.",
+                        header="system run error", border="=",
+                        items=[f"RUN CALL: {run_call}",
+                               f"TASK ID: {task_id}"]
+                        )
+            )
+            sys.exit(-1)
+
