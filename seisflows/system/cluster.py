@@ -214,8 +214,26 @@ class Cluster(Workstation):
             # raised an exception, it will break the main process here
             # https://stackoverflow.com/questions/33448329/
             #   how-to-detect-exceptions-in-concurrent-futures-in-python3
+            failed_jobs = []
             for future in futures:
-                future.result()
+                job_id, return_code = future.result()
+                if return_code != 0:
+                    failed_jobs.append(job_id)
+
+            if failed_jobs:
+                # Non-zero return codes means underlying job failures
+                logger.critical(
+                    msg.cli(f"One or more system run calls for the given run "
+                            f"call has returned a non-zero exit code "
+                            f"suggesting external job failure(s). Please check "
+                            f"corresponding log files in `logs/` for more "
+                            f"detailed error message(s). ",
+                            header="system run error", border="=",
+                            items=[f"RUN CALL: {run_call}",
+                                   f"TASK IDS: {', '.join(failed_jobs)}"]
+                            )
+                )
+                sys.exit(-1)
 
     def _run_task(self, run_call, task_id):
         """
@@ -241,19 +259,4 @@ class Cluster(Workstation):
         finally:
             f.close()
 
-        # Non-zero return code means the underlying job has failed in some way
-        if result.returncode != 0:
-            logger.critical(
-                msg.cli(f"System run call for task ID {task_id} "
-                        f"has returned a non-zero exit code suggesting an "
-                        f"external job failure. Please check logfiles (e.g., "
-                        f"`logs/*{task_id}*`) for a more detailed error "
-                        f"message. Other jobs may have failed simultaneously "
-                        f"that are not recorded here.",
-                        header="system run error", border="=",
-                        items=[f"RUN CALL: {run_call}",
-                               f"TASK ID: {task_id}"]
-                        )
-            )
-            sys.exit(-1)
-
+        return task_id, result.returncode
