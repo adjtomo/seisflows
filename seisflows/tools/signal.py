@@ -317,7 +317,7 @@ def mute_offsets(st, dist, choice):
     :type st: obspy.stream
     :param st: Stream object containing waveforms to mute
     :type dist: float
-    :param dist: cutoff distance
+    :param dist: cutoff distancekil
     :type choice: str
     :param choice: "short" to mute short src-rcv distances,
         "long" to mute long src-rcv distances

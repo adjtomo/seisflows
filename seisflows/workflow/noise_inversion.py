@@ -758,7 +758,7 @@ class NoiseInversion(Inversion):
         # Get list of synthetic traces which require a corresponding adj source
         # and rename them so that they follow the expected SPECFEM format
         adj_fids = [
-                self.preprocess.rename_as_adjoint_source(os.path.basename(f))
+                self.solver.rename_as_adjoint_source(os.path.basename(f))
                 for f in self.solver.data_filenames("syn")
                 ]
 

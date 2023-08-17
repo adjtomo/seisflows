@@ -802,37 +802,6 @@ class Default:
 
         return short_fids
 
-    def rename_as_adjoint_source(self, fid):
-        """
-        Rename synthetic waveforms into filenames consistent with how SPECFEM
-        expects adjoint sources to be named. Usually this just means adding
-        a '.adj' to the end of the filename
-
-        :type fid: str
-        :param fid: file path to rename for adjoint source
-        :rtype: str
-        :return: renamed file that matches expected SPECFEM filename format
-            for adjoint sources
-        """
-        if not fid.endswith(".adj"):
-            if self.syn_data_format.upper() == "SU":
-                fid = f"{fid}.adj"
-            elif self.syn_data_format.upper() == "ASCII":
-                # Differentiate between SPECFEM3D and 3D_GLOBE file naming
-                # SPECFEM3D: NN.SSSS.CCC.sem?
-                # SPECFEM3D_GLOBE: NN.SSSS.CCC.sem.ascii
-                ext = os.path.splitext(fid)[-1]
-                # SPECFEM3D
-                if ".sem" in ext:
-                    fid = fid.replace(ext, ".adj")
-                # GLOBE (!!! Hardcoded to only work with ASCII format)
-                elif ext == ".ascii":
-                    root, ext1 = os.path.splitext(fid)  # .ascii
-                    root, ext2 = os.path.splitext(root)  # .sem
-                    fid = fid.replace(f"{ext2}{ext1}", ".adj")
-
-        return fid
-
 
 def read(fid, data_format):
     """
@@ -853,6 +822,7 @@ def read(fid, data_format):
     elif data_format.upper() == "ASCII":
         st = read_ascii(fid)
     return st
+
 
 def write(st, fid, data_format):
     """
