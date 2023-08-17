@@ -2,7 +2,7 @@
 """
 The Pyaflowa preprocessing module for waveform gathering, preprocessing and
 misfit quantification. We use the name 'Pyaflowa' to avoid any potential
-name overlaps with the actual pyatoa package.
+name overlaps with the actual Pyatoa package.
 """
 import os
 import logging
@@ -41,11 +41,6 @@ class Pyaflowa:
         `min_period`, no filtering if not set and `min_period also not set
    :type filter_corners: int
     :param filter_corners: number of filter corners applied to filtering
-    :type client: str
-    :param client: Client name for ObsPy FDSN data gathering. Pyatoa will
-        attempt to collect waveform and metadata based on network and
-        station codes provided in the SPECFEM STATIONS file. If set None,
-        no FDSN gathering will be attempted
     :type rotate: bool
     :param rotate: Attempt to rotate waveform components from NEZ -> RTZ
     :type pyflex_preset: str
@@ -102,7 +97,7 @@ class Pyaflowa:
     ***
     """
     def __init__(self, min_period=1., max_period=10., filter_corners=4,
-                 client=None, rotate=False, pyflex_preset="default",
+                 rotate=False, pyflex_preset="default",
                  fix_windows=False, adj_src_type="cc_traveltime", plot=True,
                  pyatoa_log_level="DEBUG", unit_output="VEL",
                  export_datasets=True, export_figures=True,
@@ -150,7 +145,6 @@ class Pyaflowa:
         self.min_period = min_period
         self.max_period = max_period
         self.filter_corners = filter_corners
-        self.client = client
         self.rotate = rotate
         self.pyflex_preset = pyflex_preset
         self.fix_windows = fix_windows
@@ -266,12 +260,11 @@ class Pyaflowa:
         # Contains paths to look for data and metadata
         self._config = Config(
             min_period=self.min_period, max_period=self.max_period,
-            filter_corners=self.filter_corners, client=self.client,
-            rotate=self.rotate, pyflex_preset=self.pyflex_preset,
-            fix_windows=self.fix_windows, adj_src_type=self.adj_src_type,
-            log_level=self.pyatoa_log_level, unit_output=self.unit_output,
-            component_list=self._components, save_to_ds=False,
-            st_obs_type=st_obs_type,
+            filter_corners=self.filter_corners, rotate=self.rotate,
+            pyflex_preset=self.pyflex_preset, fix_windows=self.fix_windows,
+            adj_src_type=self.adj_src_type, log_level=self.pyatoa_log_level,
+            unit_output=self.unit_output, component_list=self._components,
+            save_to_ds=False, st_obs_type=st_obs_type,
             paths={"waveforms": self.path["_waveforms"] or [],
                    "responses": self.path["_responses"] or [],
                    "events": [self.path.specfem_data]
@@ -373,6 +366,7 @@ class Pyaflowa:
             fid=os.path.join(self.path._logs, f"{self.ftag(config)}.log")
         )
         pyatoa_logger.info(
+
             f"\n{'=' * 80}\n{'SUMMARY':^80}\n{'=' * 80}\n"
             f"SOURCE NAME: {config.event_id}\n"
             f"WINDOWS: {nwin}\n"
