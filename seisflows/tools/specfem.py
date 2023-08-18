@@ -6,6 +6,7 @@ import os
 import numpy as np
 import shutil
 from glob import glob
+from seisflows import logger
 from seisflows.tools import msg
 from seisflows.tools.config import Dict
 
@@ -148,6 +149,46 @@ def get_source_locations(path_to_sources, source_prefix):
                               }
 
     return Dict(src_dict)
+
+
+def rename_as_adjoint_source(fid, fmt):
+    """
+    Rename SPECFEM synthetic waveform filenames consistent with how SPECFEM
+    expects adjoint sources to be named. Usually this just means adding
+    a '.adj' to the end of the filename.
+
+    :type fid: str
+    :param fid: file path of synthetic waveform to rename as adjoint source
+    :type fmt: str
+    :param fmt: expected format of the input synthetic waveform, because
+        different file formats have different filename structure. Available
+        are 'SU' (seismic unix) and 'ASCII'. Case-insensitive
+    :rtype: str
+    :return: renamed file that matches expected SPECFEM filename format
+        for adjoint sources
+    """
+    # Safety check to make sure were not trying to rename adjoint source files
+    if fid.endswith(".adj"):
+        logger.warning(f"file to be renamed already ends with .adj: {fid}")
+        return fid
+
+    if fmt.upper() == "SU":
+        fid = f"{fid}.adj"
+    elif fmt.upper() == "ASCII":
+        # Differentiate between SPECFEM3D and 3D_GLOBE file naming
+        # SPECFEM3D: NN.SSSS.CCC.sem?
+        # SPECFEM3D_GLOBE: NN.SSSS.CCC.sem.ascii
+        ext = os.path.splitext(fid)[-1]
+        # SPECFEM3D
+        if ".sem" in ext:
+            fid = fid.replace(ext, ".adj")
+        # GLOBE (!!! Hardcoded to only work with ASCII format)
+        elif ext == ".ascii":
+            root, ext1 = os.path.splitext(fid)  # .ascii
+            root, ext2 = os.path.splitext(root)  # .sem
+            fid = fid.replace(f"{ext2}{ext1}", ".adj")
+
+    return fid
 
 
 def check_source_names(path_specfem_data, source_prefix, ntask=None):

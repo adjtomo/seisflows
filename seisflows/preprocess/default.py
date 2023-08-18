@@ -19,7 +19,9 @@ from seisflows.tools import unix
 from seisflows.tools.config import Dict, get_task_id
 from seisflows.tools.graphics import plot_waveforms
 from seisflows.tools.signal import normalize, resample, filter, mute, trim
-from seisflows.tools.specfem import get_station_locations, get_source_locations
+from seisflows.tools.specfem import (get_station_locations,
+                                     get_source_locations,
+                                     rename_as_adjoint_source)
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
 from seisflows.plugins.preprocess import adjoint as adjoint_sources
@@ -423,7 +425,8 @@ class Default:
 
     def _write_adjsrc_single(self, st, fid, output):
         """Parallelizable function to write out empty adjoint source"""
-        adj_fid = self.rename_as_adjoint_source(os.path.basename(fid))
+        adj_fid = rename_as_adjoint_source(os.path.basename(fid),
+                                           fmt=self.syn_data_format)
         write(st=st, fid=os.path.join(output, adj_fid),
               data_format=self.syn_data_format)
 
@@ -701,7 +704,7 @@ class Default:
                     nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
                 )
                 fid = os.path.basename(syn_fid)
-                fid = self.rename_as_adjoint_source(fid)
+                fid = rename_as_adjoint_source(fid, fmt=self.syn_data_format)
                 write(st=Stream(adjsrc), fid=os.path.join(save_adjsrcs, fid),
                       data_format=self.syn_data_format)
             else:

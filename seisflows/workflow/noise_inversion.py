@@ -48,6 +48,7 @@ from obspy import Stream
 from seisflows import logger
 from seisflows.tools import unix, msg
 from seisflows.tools.noise import rotate_ne_trace_to_rt, rotate_rt_adjsrc_to_ne
+from seisflows.tools.specfem import rename_as_adjoint_source
 from seisflows.preprocess.default import read, write
 from seisflows.workflow.inversion import Inversion
 
@@ -757,10 +758,10 @@ class NoiseInversion(Inversion):
 
         # Get list of synthetic traces which require a corresponding adj source
         # and rename them so that they follow the expected SPECFEM format
-        adj_fids = [
-                self.solver.rename_as_adjoint_source(os.path.basename(f))
-                for f in self.solver.data_filenames("syn")
-                ]
+        adj_fids = [rename_as_adjoint_source(fid=os.path.basename(f),
+                                             fmt=self.solver.syn_data_format)
+                    for f in self.solver.data_filenames("syn")
+                    ]
 
         for fid in adj_fids:
             # !!! Making assumptions about the filenaming structure here

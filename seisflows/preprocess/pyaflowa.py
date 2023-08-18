@@ -336,18 +336,21 @@ class Pyaflowa:
             if nwin_sta is not None:
                 nwin += nwin_sta
 
+        # Calculate the misfit based on the number of windows. Equation from
+        # Tape et al. (2010). If no windows, misfit is simply raw misfit
+        try:
+            residuals = 0.5 * misfit / nwin
+        except ZeroDivisionError:
+            # Dealing with the case where nwin==0 (signifying either no
+            # windows found, or calc'ing misfit on whole trace)
+            residuals = misfit
+        with open(save_residuals, "a") as f:
+            f.write(f"{residuals:.2E}\n")
+
         # Calculate misfit based on the raw misfit and total number of windows
         if save_residuals:
-            # Calculate the misfit based on the number of windows. Equation from
-            # Tape et al. (2010). If no windows, misfit is simply raw misfit
-            try:
-                residuals = 0.5 * misfit / nwin
-            except ZeroDivisionError:
-                # Dealing with the case where nwin==0 (signifying either no
-                # windows found, or calc'ing misfit on whole trace)
-                residuals = misfit
-            with open(save_residuals, "a") as f:
-                f.write(f"{residuals:.2E}\n")
+
+        if export_residuals:
 
         # Combine all the individual .png files created into a single PDF
         if self.plot:
