@@ -15,7 +15,7 @@ from pypdf import PdfMerger
 from seisflows.tools import unix
 
 
-def merge_pdfs(fids, fid_out):
+def merge_pdfs(fids, fid_out, remove_fids=False):
     """
     Merge a list of pdfs into a single output pdf using the PyPDF2 package.
     Any desired order to the pdfs should be set in the list of input fids.
@@ -24,10 +24,10 @@ def merge_pdfs(fids, fid_out):
     :param fids: list of paths to .pdf files
     :type fid_out: str
     :param fid_out: path and name of the resulting output .pdf file
+    :type remove_fids: bool
+    :param remove_fids: remove the original input PDF files if the output PDF
+        was successfully created. Defaults to False, original files are kept.
     """
-    if not fids:
-        return
-
     merger = PdfMerger()
     for fid in fids:
         merger.append(fid)
@@ -35,8 +35,15 @@ def merge_pdfs(fids, fid_out):
     merger.write(fid_out)
     merger.close()
 
+    if remove_fids:
+        assert(os.path.exists(fid_out)), (
+            f"PDF merging failed, cannot remove original input files"
+        )
+        for fid in fids:
+            os.remove(fid)
 
-def imgs_to_pdf(fids, fid_out):
+
+def imgs_to_pdf(fids, fid_out, remove_fids=False):
     """
     Combine a list of .png files into a single PDF document
 
@@ -44,6 +51,9 @@ def imgs_to_pdf(fids, fid_out):
     :param fids: list of file ids with full pathnames to be combined
     :type fid_out: str
     :param fid_out: the name of the file to be saved with full pathname
+    :type remove_fids: bool
+    :param remove_fids: remove the original input PNG files if the output PDF
+        was successfully created. Defaults to False, original files are kept.
     """
     images = []
     for fid in fids:
@@ -55,6 +65,13 @@ def imgs_to_pdf(fids, fid_out):
 
     image_main.save(fp=fid_out, format="PDF", resolution=100., save_all=True,
                     append_images=images)
+
+    if remove_fids:
+        assert(os.path.exists(fid_out)), (
+            f"PNG merging failed, cannot remove original input files"
+        )
+        for fid in fids:
+            os.remove(fid)
 
 
 def tile_imgs(fids, fid_out):

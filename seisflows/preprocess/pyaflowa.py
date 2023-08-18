@@ -15,11 +15,11 @@ from pyasdf import ASDFDataSet
 
 from pyatoa import Config, Manager, Inspector, ManagerError
 from pyatoa.utils.read import read_station_codes
-from pyatoa.utils.images import imgs_to_pdf, merge_pdfs
 
 from seisflows import logger
 from seisflows.tools import unix
 from seisflows.tools.config import Dict, get_task_id
+from seisflows.tools.graphics import imgs_to_pdf, merge_pdfs
 from seisflows.tools.specfem import check_source_names
 
 
@@ -70,8 +70,8 @@ class Pyaflowa:
         - 'exponentiated_phase': exponentiated phase from Yuan et al. 2020
         - 'cc_traveltime': cross-correlation traveltime misfit
         - 'multitaper': multitaper misfit function
-    :type plot: bool
-    :param plot: plot waveform figures and source receiver maps during
+    :type plot_waveforms: bool
+    :param plot_waveforms: plot waveform figures and source receiver maps during
         the preprocessing stage
     :type pyatoa_log_level: str
     :param pyatoa_log_level: Log level to set Pyatoa, Pyflex, Pyadjoint.
@@ -99,8 +99,9 @@ class Pyaflowa:
     """
     def __init__(self, min_period=1., max_period=10., filter_corners=4,
                  rotate=False, pyflex_preset="default",
-                 fix_windows=False, adj_src_type="cc_traveltime", plot=True,
-                 pyatoa_log_level="DEBUG", unit_output="VEL",
+                 fix_windows=False, adj_src_type="cc_traveltime",
+                 plot_waveforms=True, pyatoa_log_level="DEBUG",
+                 unit_output="VEL",
                  export_datasets=True, export_figures=True,
                  export_log_files=True, workdir=os.getcwd(),
                  path_preprocess=None, path_solver=None, path_specfem_data=None,
@@ -148,7 +149,7 @@ class Pyaflowa:
         self.pyflex_preset = pyflex_preset
         self.fix_windows = fix_windows
         self.adj_src_type = adj_src_type
-        self.plot = plot
+        self.plot_waveforms = plot_waveforms
         self.pyatoa_log_level = pyatoa_log_level
         self.unit_output = unit_output
 
@@ -355,9 +356,12 @@ class Pyaflowa:
 
         # Combine all the individual .png files created into a single PDF for
         # easier scrolling convenience
-        if self.plot:
-            fid = os.path.join(self.path._figures, f"{self.ftag(config)}.pdf")
-            self._make_event_figure_pdf(source_name=source_name, output_fid=fid)
+        if self.plot_waveforms:
+            fids = sorted(glob(os.path.join(self.path._figures,
+                                            f"{source_name}*.png")))
+            fid_out = os.path.join(self.path._figures,
+                                   f"{self.ftag(config)}.pdf")
+            imgs_to_pdf(fids, fid_out, remove_fids=True)
 
         # Finally, collect all the temporary log files and write a main log file
         # that summarizes the entire preprocessing workflow
@@ -489,7 +493,7 @@ class Pyaflowa:
 
         # Plot waveform + map figure. Map may fail if we don't have appropriate
         # metdata, in which case we fall back to plotting waveform only
-        if self.plot:
+        if self.plot_waveforms:
             # e.g., 001_i01_s00_XX_ABC.png
             save = os.path.join(self.path["_figures"], f"{tag}.png")
             try:
@@ -558,7 +562,16 @@ class Pyaflowa:
                            f"creation -- will not create inspector:\n{e}")
 
         # Make the final PDF for easier User ingestion of waveform/map figures
-        self._make_evaluation_composite_pdf()
+        if self.plot_waveforms:
+            event_pdfs = sorted(glob(os.path.join(self.path._figures,
+                                                  "*_*_*.pdf")))
+
+            # Strip off event name to get evaluation tag, i.e.: i01_s00.pdf
+            fid_out = "_".join(os.path.basename(event_pdfs[0]).split("_")[1:])
+            path_out = os.path.join(self.path._figures, f"{fid_out}")
+
+            # Merge PDFs into a single PDF, delete originals
+            merge_pdfs(fids=event_pdfs, fid_out=path_out, remove_fids=True)
 
         # Move scratch/ directory results into more permanent storage
         if self.export_datasets:
@@ -706,51 +719,3 @@ class Pyaflowa:
                 with open(tmp_log, "r") as fr:
                     fw.writelines(fr.readlines())
                 unix.rm(tmp_log)  # delete after writing
-
-    def _make_event_figure_pdf(self, source_name, output_fid):
-        """
-        Combines source-receiver output PNGS into a single event-specific PDF.
-        Mostly a convenience function to make it easier to ingest waveform
-        figures during a workflow.
-
-        :type source_name: str
-        :param source_name: name of event to search for input files
-        :type output_fid: str
-        :param output_fid: full path and filename for output PDF which will be
-            a combination of all the PNG files created for each station
-        """
-        # Sorrted by network and station name
-        input_fids = sorted(glob(os.path.join(self.path._figures,
-                                              f"{source_name}*.png")))
-        if not input_fids:
-            logger.warning(f"Pyatoa found no event figures for {source_name} "
-                           f"to combine")
-            return
-        # Merge all output pdfs into a single pdf, delete originals if okay
-        imgs_to_pdf(fids=sorted(input_fids), fid_out=output_fid)
-        if os.path.exists(output_fid):
-            for fid in input_fids:
-                os.remove(fid)
-
-    def _make_evaluation_composite_pdf(self):
-        """
-        Combines event-specific PDFs to make an evaluation-specific PDF.
-        By evaluation we mean any given set of foward simulations, e.g., i01s00
-
-        This is meant to make it easier for the User to scroll through figures.
-        Deletes the original event-specific PDFs to keep filecount down
-        """
-        # Event PDFs named like: 001_i01_s00.pdf
-        event_pdfs = sorted(glob(os.path.join(self.path._figures, "*_*_*.pdf")))
-        if not event_pdfs:
-            logger.warning("Pyatoa could not find event PDFs to merge")
-            return
-        # Strip off event name to get evaluation tag for fid, i.e.: i01_s00.pdf
-        fid_out = "_".join(os.path.basename(event_pdfs[0]).split("_")[1:])
-        path_out = os.path.join(self.path._figures, f"{fid_out}")
-        # Merge PDFs into a single PDF, delete originals
-        merge_pdfs(fids=event_pdfs, fid_out=path_out)
-        if os.path.exists(path_out):
-            for event_pdf in event_pdfs:
-                os.remove(event_pdf)
-
