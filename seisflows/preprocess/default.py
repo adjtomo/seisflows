@@ -492,6 +492,8 @@ class Default:
                                 source_name, save_residuals, save_adjsrcs)
                 for (o, s) in zip(obs, syn)
             ]
+        wait(futures)
+
         if save_residuals:
             # Results are returned in the order that they were submitted and
             # writte to text file for other modules to find
@@ -499,9 +501,6 @@ class Default:
                 for future in futures:
                     residual = future.result()
                     f.write(f"{residual:.2E}\n")
-        else:
-            # Simply wait for all processes to finish before proceeding
-            wait(futures)
 
         # Exporting residuals to disk (output/) for more permanent storage
         if export_residuals:

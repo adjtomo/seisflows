@@ -15,6 +15,7 @@ from pyasdf import ASDFDataSet
 
 from pyatoa import Config, Manager, Inspector, ManagerError
 from pyatoa.utils.read import read_station_codes
+from pysep.utils.io
 
 from seisflows import logger
 from seisflows.tools import unix
@@ -208,6 +209,9 @@ class Pyaflowa:
         self._station_codes = []
         self._source_names = []
 
+        # Turn off main logger, which will be toggled on by later jobs
+        logging.getLogger("pyatoa").setLevel("CRITICAL")
+
     def check(self):
         """ 
         Checks Parameter and Path files, will be run at the start of a Seisflows
@@ -326,29 +330,36 @@ class Pyaflowa:
         # Generate an event/evaluation specific config object to control Pyatoa
         config = self.set_config(source_name, iteration, step_count, components)
 
-        # Process each pair in parallel. Max workers is the total num. of cores
-        # !!! see note in docstring !!!
-        with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
-            futures = [
-                executor.submit(self._quantify_misfit_single, config, code,
-                                save_adjsrcs) for code in self._station_codes
-            ]
-        # Initialize empty values to store statistics on the entire misfit quant
+        # Process each pair in serial. Max workers is the total num. of cores
         total_misfit, total_windows = 0, 0
-        residuals = []
-        for future in futures:
-            misfit, nwin = future.result()
-            residual = misfit / nwin
+        for code in self._station_codes:
+            misfit, nwin = self._quantify_misfit_single(config, code,
+                                                        save_adjsrcs)
 
             total_misfit += misfit
             total_windows += nwin
-            residuals.append(residual)
+
+        # # Process each pair in parallel. Max workers is the total num. of cores
+        # with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+        #     futures = [
+        #         executor.submit(self._quantify_misfit_single, config, code,
+        #                         save_adjsrcs) for code in self._station_codes
+        #     ]
+        # wait(futures)
+        # # Initialize empty values to store statistics on the entire misfit quant
+        # total_misfit, total_windows = 0, 0
+        # for future in futures:
+        #     misfit, nwin = future.result()
+        #
+        #     total_misfit += misfit
+        #     total_windows += nwin
 
         # Save residuals to external file for Workflow to calculate misfit `f`
+        # Slightly different than Default preprocessing because we need to
+        # normalize by the total number of windows
         if save_residuals:
             with open(save_residuals, "a") as f:
-                for residual in residuals:
-                    f.write(f"{residual:.2E}\n")
+                f.write(f"{total_misfit / total_windows:.2E}\n")
         if export_residuals:
             if not os.path.exists(export_residuals):
                 unix.mkdir(export_residuals)
@@ -408,7 +419,8 @@ class Pyaflowa:
 
         config.iteration = iteration
         config.step_count = step_count
-        config.component_list = components
+        if components is not None:
+            config.component_list = components
 
         # Force the Manager to look in the solver directory for data
         # note: we are assuming the SeisFlows `solver` directory structure here.
@@ -468,14 +480,21 @@ class Pyaflowa:
         mgmt = Manager(config=config, ds=ds)
         # If data gather fails, return because there's nothing else we can do
         try:
+
             # `gather` function uses Config path structure and Client attribute
             # to search for data on disk or via webservices (if requested).
             mgmt.gather(event_id=config.event_id,
                         prefix=f"{self._source_prefix}_",
                         code=station_code,
+                        # !!! HARDCODED, REMOVE THIS !!!
                         obs_fid_template="{net}.{sta}.{cha}.SAC",
                         obs_dir_template=""
+                        # !!! HARDCODED, REMOVE THIS !!!
                         )
+            mgmt.event = mgmt.gatherer.fetch_event_by_dir(
+                event_id=config.event_id,
+            )
+
         except ManagerError as e:
             station_logger.warning(e)
             return None, None
@@ -719,3 +738,10 @@ class Pyaflowa:
                 with open(tmp_log, "r") as fr:
                     fw.writelines(fr.readlines())
                 unix.rm(tmp_log)  # delete after writing
+
+
+def read_event(fid, origintime=None):
+    """
+    Read SPECFEM-based event file to get information about hypocentral location,
+    and origin time, which are used to set synthetic start times
+    """
