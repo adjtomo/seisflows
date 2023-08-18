@@ -9,6 +9,7 @@ import logging
 import time
 import random
 import numpy as np
+from concurrent.futures import ProcessPoolExecutor
 from glob import glob
 from pyasdf import ASDFDataSet
 
@@ -324,45 +325,46 @@ class Pyaflowa:
         # Generate an event/evaluation specific config object to control Pyatoa
         config = self.set_config(source_name, iteration, step_count, components)
 
-        # Run misfit quantification for ALL stations and this given event
-        misfit, nwin = 0, 0
-        for code in self._station_codes:
-            misfit_sta, nwin_sta = self.quantify_misfit_station(
-                config=config, station_code=code, save_adjsrcs=save_adjsrcs,
-                **kwargs
-            )
-            if misfit_sta is not None:
-                misfit += misfit_sta
-            if nwin_sta is not None:
-                nwin += nwin_sta
+        # Process each pair in parallel. Max workers is the total num. of cores
+        # !!! see note in docstring !!!
+        with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+            futures = [
+                executor.submit(self._quantify_misfit_single, config, code,
+                                save_adjsrcs) for code in self._station_codes
+            ]
+        # Initialize empty values to store statistics on the entire misfit quant
+        total_misfit, total_windows = 0, 0
+        residuals = []
+        for future in futures:
+            misfit, nwin = future.result()
+            residual = misfit / nwin
 
-        # Calculate the misfit based on the number of windows. Equation from
-        # Tape et al. (2010). If no windows, misfit is simply raw misfit
-        try:
-            residuals = 0.5 * misfit / nwin
-        except ZeroDivisionError:
-            # Dealing with the case where nwin==0 (signifying either no
-            # windows found, or calc'ing misfit on whole trace)
-            residuals = misfit
-        with open(save_residuals, "a") as f:
-            f.write(f"{residuals:.2E}\n")
+            total_misfit += misfit
+            total_windows += nwin
+            residuals.append(residual)
 
-        # Calculate misfit based on the raw misfit and total number of windows
+        # Save residuals to external file for Workflow to calculate misfit `f`
         if save_residuals:
-
+            with open(save_residuals, "a") as f:
+                for residual in residuals:
+                    f.write(f"{residual:.2E}\n")
         if export_residuals:
+            if not os.path.exists(export_residuals):
+                unix.mkdir(export_residuals)
+            unix.cp(src=save_residuals, dst=export_residuals)
 
-        # Combine all the individual .png files created into a single PDF
+        # Combine all the individual .png files created into a single PDF for
+        # easier scrolling convenience
         if self.plot:
             fid = os.path.join(self.path._figures, f"{self.ftag(config)}.pdf")
             self._make_event_figure_pdf(source_name=source_name, output_fid=fid)
 
         # Finally, collect all the temporary log files and write a main log file
+        # that summarizes the entire preprocessing workflow
         pyatoa_logger = self._config_adjtomo_loggers(
             fid=os.path.join(self.path._logs, f"{self.ftag(config)}.log")
         )
         pyatoa_logger.info(
-
             f"\n{'=' * 80}\n{'SUMMARY':^80}\n{'=' * 80}\n"
             f"SOURCE NAME: {config.event_id}\n"
             f"WINDOWS: {nwin}\n"
@@ -416,7 +418,7 @@ class Pyaflowa:
 
         return config
 
-    def quantify_misfit_station(self, config, station_code, save_adjsrcs=False):
+    def _quantify_misfit_single(self, config, station_code, save_adjsrcs=False):
         """
         Main Pyatoa processing function to quantify misfit + generation adjsrc.
 
@@ -470,13 +472,6 @@ class Pyaflowa:
                         obs_fid_template="{net}.{sta}.{cha}.SAC",
                         obs_dir_template=""
                         )
-
-            # mgmt.event = mgmt.gatherer.gather_event(
-            #     event_id=config.event_id, prefix=f"{self._source_prefix}_"
-            # )
-            # mgmt.inv = mgmt.gatherer.gather_station(code=station_code)
-            # mgmt.st_obs = mgmt.gatherer.gather_observed(code=station_code)
-            # mgmt.st_syn = mgmt.gatherer.gather_synthetic(code=station_code)
         except ManagerError as e:
             station_logger.warning(e)
             return None, None
