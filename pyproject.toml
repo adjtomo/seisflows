@@ -16,6 +16,7 @@ authors = [
 dependencies = [
     "obspy",
     "pyyaml",
+    "pypdf",
 	"IPython",
 	"dill",
 	"pyatoa>=0.2.2",
