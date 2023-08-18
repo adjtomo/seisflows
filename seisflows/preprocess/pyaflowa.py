@@ -101,13 +101,11 @@ class Pyaflowa:
                  fix_windows=False, adj_src_type="cc_traveltime", plot=True,
                  pyatoa_log_level="DEBUG", unit_output="VEL",
                  export_datasets=True, export_figures=True,
-                 export_log_files=True,
-                 workdir=os.getcwd(), path_preprocess=None,
-                 path_solver=None, path_specfem_data=None, path_data=None,
-                 path_output=None, syn_data_format="ascii",
-                 data_case="data", components=None,
-                 start=None, ntask=1, nproc=1, source_prefix=None,
-                 **kwargs):
+                 export_log_files=True, workdir=os.getcwd(),
+                 path_preprocess=None, path_solver=None, path_specfem_data=None,
+                 path_data=None, path_output=None, syn_data_format="ascii",
+                 data_case="data", components=None, start=None,
+                 ntask=1, nproc=1, source_prefix=None, **kwargs):
         """
         Pyatoa preprocessing parameters
 
@@ -294,8 +292,8 @@ class Pyaflowa:
         return f"{config.event_id}_{config.iter_tag}_{config.step_tag}"
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
-                        export_residuals=None, save_adjsrcs=None, iteration=1,
-                        step_count=0, parallel=False, **kwargs):
+                        export_residuals=None, save_adjsrcs=None,
+                        components=None, iteration=1, step_count=0, **kwargs):
         """
         Main processing function to be called by Workflow module. Generates
         total misfit and adjoint sources for a given event with name 
@@ -324,24 +322,19 @@ class Pyaflowa:
             inversion. Defaults to 0 if not given (1st evaluation)
         """
         # Generate an event/evaluation specific config object to control Pyatoa
-        config = self.set_config(source_name, iteration, step_count)
+        config = self.set_config(source_name, iteration, step_count, components)
 
         # Run misfit quantification for ALL stations and this given event
         misfit, nwin = 0, 0
-        # Run processing in parallel
-        if parallel:
-            # MPI Implementation
-            pass
-        # Run processing in serial
-        else:
-            for code in self._station_codes:
-                misfit_sta, nwin_sta = self.quantify_misfit_station(
-                    config=config, station_code=code, save_adjsrcs=save_adjsrcs
-                )
-                if misfit_sta is not None:
-                    misfit += misfit_sta
-                if nwin_sta is not None:
-                    nwin += nwin_sta
+        for code in self._station_codes:
+            misfit_sta, nwin_sta = self.quantify_misfit_station(
+                config=config, station_code=code, save_adjsrcs=save_adjsrcs,
+                **kwargs
+            )
+            if misfit_sta is not None:
+                misfit += misfit_sta
+            if nwin_sta is not None:
+                nwin += nwin_sta
 
         # Calculate misfit based on the raw misfit and total number of windows
         if save_residuals:
@@ -375,7 +368,8 @@ class Pyaflowa:
             )
         self._collect_tmp_log_files(pyatoa_logger, config.event_id)
 
-    def set_config(self, source_name=None, iteration=1, step_count=0):
+    def set_config(self, source_name=None, iteration=1, step_count=0,
+                   components=None):
         """
         Create an event-specific Config object which contains information about
         the current event, and position in the workflow evaluation. Also
@@ -405,6 +399,7 @@ class Pyaflowa:
 
         config.iteration = iteration
         config.step_count = step_count
+        config.component_list = components
 
         # Force the Manager to look in the solver directory for data
         # note: we are assuming the SeisFlows `solver` directory structure here.
@@ -468,7 +463,17 @@ class Pyaflowa:
             # to search for data on disk or via webservices (if requested).
             mgmt.gather(event_id=config.event_id,
                         prefix=f"{self._source_prefix}_",
-                        code=station_code)
+                        code=station_code,
+                        obs_fid_template="{net}.{sta}.{cha}.SAC",
+                        obs_dir_template=""
+                        )
+
+            # mgmt.event = mgmt.gatherer.gather_event(
+            #     event_id=config.event_id, prefix=f"{self._source_prefix}_"
+            # )
+            # mgmt.inv = mgmt.gatherer.gather_station(code=station_code)
+            # mgmt.st_obs = mgmt.gatherer.gather_observed(code=station_code)
+            # mgmt.st_syn = mgmt.gatherer.gather_synthetic(code=station_code)
         except ManagerError as e:
             station_logger.warning(e)
             return None, None

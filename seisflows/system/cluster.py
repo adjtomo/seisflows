@@ -229,11 +229,12 @@ class Cluster(Workstation):
             if failed_jobs:
                 # Non-zero return codes means underlying job failures
                 logger.critical(
-                    msg.cli(f"One or more system run calls for the given run "
-                            f"call has returned a non-zero exit code "
-                            f"suggesting external job failure(s). Please check "
+                    msg.cli(f"The system attempt to run the given `run call` "
+                            f"for the following `task ids` has returned a "
+                            f"non-zero exit code suggesting external job "
+                            f"failure(s). Please check the "
                             f"corresponding log files in `logs/` for more "
-                            f"detailed error message(s). ",
+                            f"detailed error message(s)",
                             header="system run error", border="=",
                             items=[f"RUN CALL: {run_call}",
                                    f"TASK IDS: {failed_jobs}"]
