@@ -8,7 +8,6 @@ dependencies:
     - cartopy
     - pyyaml
     - pypdf
-    - pysep-adjtomo
     - pip:
       - -e .
        

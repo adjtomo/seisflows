@@ -6,6 +6,7 @@ import os
 import numpy as np
 import shutil
 from glob import glob
+
 from seisflows import logger
 from seisflows.tools import msg
 from seisflows.tools.config import Dict

@@ -15,7 +15,6 @@ from pyasdf import ASDFDataSet
 
 from pyatoa import Config, Manager, Inspector, ManagerError
 from pyatoa.utils.read import read_station_codes
-from pysep.utils.io
 
 from seisflows import logger
 from seisflows.tools import unix
@@ -491,9 +490,7 @@ class Pyaflowa:
                         obs_dir_template=""
                         # !!! HARDCODED, REMOVE THIS !!!
                         )
-            mgmt.event = mgmt.gatherer.fetch_event_by_dir(
-                event_id=config.event_id,
-            )
+            mgmt.event = read_event(event_id=config.event_id)
 
         except ManagerError as e:
             station_logger.warning(e)
@@ -740,8 +737,4 @@ class Pyaflowa:
                 unix.rm(tmp_log)  # delete after writing
 
 
-def read_event(fid, origintime=None):
-    """
-    Read SPECFEM-based event file to get information about hypocentral location,
-    and origin time, which are used to set synthetic start times
-    """
+
