@@ -741,8 +741,21 @@ def write(st, fid, data_format):
 
 def read_ascii(fid, origintime=None):
     """
-    Read waveforms in two-column ASCII format. This is copied directly from
-    pyatoa.utils.read.read_sem()
+    Converts SPECFEM synthetics into ObsPy Stream objects with the correct
+    header information.
+
+    .. note::
+
+        This is a trimmed down version of pysep.utils.io.read_sem() which is
+        copied here for better visibility within SeisFlows, and ignores things
+        like SAC headers.
+
+    :type fid: str
+    :param fid: path of the given ascii file
+    :type origintime: obspy.UTCDateTime
+    :param origintime: UTCDatetime object for the origintime of the event
+    :rtype st: obspy.Stream.stream
+    :return st: stream containing header and data info taken from ascii file
     """
     try:
         times = np.loadtxt(fname=fid, usecols=0)
@@ -771,7 +784,7 @@ def read_ascii(fid, origintime=None):
         data = np.array(data)
 
     if origintime is None:
-        origintime = UTCDateTime("1970-01-01T00:00:00")
+        origintime = UTCDateTime("2000-01-01T00:00:00")
 
     # We assume that dt is constant after 'precision' decimal points
     delta = round(times[1] - times[0], 4)

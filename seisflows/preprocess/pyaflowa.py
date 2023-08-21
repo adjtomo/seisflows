@@ -9,12 +9,12 @@ import logging
 import time
 import random
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
 from pyasdf import ASDFDataSet
 
 from pyatoa import Config, Manager, Inspector, ManagerError
-from pyatoa.utils.read import read_station_codes
+from pyatoa.utils.read import read_station_codes, read_events_plus
 
 from seisflows import logger
 from seisflows.tools import unix
@@ -263,7 +263,6 @@ class Pyaflowa:
             st_obs_type = "obs"
 
         # Convert SeisFlows user parameters into Pyatoa config parameters
-        # Contains paths to look for data and metadata
         self._config = Config(
             min_period=self.min_period, max_period=self.max_period,
             filter_corners=self.filter_corners, rotate=self.rotate,
@@ -271,10 +270,7 @@ class Pyaflowa:
             adj_src_type=self.adj_src_type, log_level=self.pyatoa_log_level,
             unit_output=self.unit_output, component_list=self._components,
             save_to_ds=False, st_obs_type=st_obs_type,
-            paths={"waveforms": self.path["_waveforms"] or [],
-                   "responses": self.path["_responses"] or [],
-                   "events": [self.path.specfem_data]
-                   }
+            tshift_acceptance_level=150,
         )
         # Generate a list of station codes that will be used to search for data
         self._station_codes = read_station_codes(
@@ -301,7 +297,8 @@ class Pyaflowa:
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         export_residuals=None, save_adjsrcs=None,
-                        components=None, iteration=1, step_count=0, **kwargs):
+                        components=None, iteration=1, step_count=0,
+                        _serial=True, **kwargs):
         """
         Main processing function to be called by Workflow module. Generates
         total misfit and adjoint sources for a given event with name 
@@ -338,6 +335,9 @@ class Pyaflowa:
         :param step_count: current step count of the line search. Information
             should be provided by the `optimize` module if we are running an
             inversion. Defaults to 0 if not given (1st evaluation)
+        :type _serial: bool
+        :param _serial: debug function to turn preprocessing to a serial task
+            whereas it is normally a multiprocessed parallel task
         """
         # Set a unique Config object to specify which Source we want to process
         config = self._config.copy()
@@ -357,28 +357,29 @@ class Pyaflowa:
         )
 
         # Process each pair in serial. Max workers is the total num. of cores
-        total_misfit, total_windows = 0, 0
-        for obs, syn in zip(observed, synthetic):
-            misfit, nwin = self._quantify_misfit_single(obs, syn, config,
-                                                        save_adjsrcs)
+        if _serial:
+            total_misfit, total_windows = 0, 0
+            for obs, syn in zip(observed, synthetic):
+                misfit, nwin = self._quantify_misfit_single(obs, syn, config,
+                                                            save_adjsrcs)
 
-            total_misfit += misfit
-            total_windows += nwin
+                total_misfit += misfit or 0
+                total_windows += nwin or 0
+        else:
+            # Process each pair in parallel. Max workers is total num. of cores
+            with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+                futures = [
+                    executor.submit(self._quantify_misfit_single, config, code,
+                                    save_adjsrcs) for code in self._station_codes
+                ]
+            wait(futures)
+            # Initialize empty values to store statistics on entire misfit quant
+            total_misfit, total_windows = 0, 0
+            for future in futures:
+                misfit, nwin = future.result()
 
-        # # Process each pair in parallel. Max workers is the total num. of cores
-        # with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
-        #     futures = [
-        #         executor.submit(self._quantify_misfit_single, config, code,
-        #                         save_adjsrcs) for code in self._station_codes
-        #     ]
-        # wait(futures)
-        # # Initialize empty values to store statistics on the entire misfit quant
-        # total_misfit, total_windows = 0, 0
-        # for future in futures:
-        #     misfit, nwin = future.result()
-        #
-        #     total_misfit += misfit
-        #     total_windows += nwin
+                total_misfit += misfit or 0
+                total_windows += nwin or 0
 
         # Save residuals to external file for Workflow to calculate misfit `f`
         # Slightly different than Default preprocessing because we need to
@@ -402,7 +403,7 @@ class Pyaflowa:
 
         # Finally, collect all the temporary log files and write a main log file
         # that summarizes the entire preprocessing workflow
-        pyatoa_logger = self._config_adjtomo_loggers(
+        pyatoa_logger = self._config_auxiliary_loggers(
             fid=os.path.join(self.path._logs, f"{self.ftag(config)}.log")
         )
         pyatoa_logger.info(
@@ -438,16 +439,23 @@ class Pyaflowa:
             will be saved. They of course can be saved manually later using
             Pyatoa + PyASDF
         """
+        # Read in data required for processing
         obs = read(fid=obs_fid, data_format=self.obs_data_format)
         syn = read(fid=syn_fid, data_format=self.syn_data_format)
+        cat = read_events_plus(
+            fid=os.path.join(self.path.specfem_data,
+                             f"{self._source_prefix}_{config.event_id}"),
+            fmt=self._source_prefix
+        )
 
         # Unique identifier for the given source-receiver pair for file naming
         # Something like: 001_i01_s00_XX_XYZ
         tag = f"{self.ftag(config)}_{syn[0].id.replace('.', '_')}"
 
         # Configure a single source-receiver pair temporary logger
-        log_file = os.path.join(self.path._tmplogs, f"{tag}.log")
-        station_logger = self._config_adjtomo_loggers(fid=log_file)
+        station_logger = self._config_auxiliary_loggers(
+            fid=os.path.join(self.path._tmplogs, f"{tag}.log")
+        )
         station_logger.info(f"\n{'/' * 80}\n{syn[0].id:^80}\n{'/' * 80}")
 
         # Check whether or not we want to use misfit windows from last eval.
@@ -461,21 +469,15 @@ class Pyaflowa:
             ds = ASDFDataSet(ds_fid, mode="r")  # NOTE: read only mode
         else:
             ds = None
-        mgmt = Manager(st_obs=obs, st_syn=syn, config=config, ds=ds)
-        # See if we can get some metadata, if not we proceed with waveforms only
-        try:
-            mgmt.event = mgmt.gatherer.fetch_event_by_dir(
-                event_id=config.event_id, prefix=f"{self._source_prefix}_"
-            )
-            mgmt.inv = mgmt.gatherer.fetch_inv_by_dir(code=obs[0].id)
-        except ManagerError as e:
-            station_logger.warning(f"could not gather metadata: {e}")
+
+        mgmt = Manager(st_obs=obs, st_syn=syn, event=cat[0],
+                       config=config, ds=ds)
 
         # If any part of this processing fails, move on to plotting because we
         # will have gathered waveform data so a figure is still useful.
         try:
-            mgmt.standardize(normalize_to="syn")
-            mgmt.preprocess(remove_response=False)  # !!! HARDCODE
+            mgmt.standardize()
+            mgmt.preprocess(remove_response=False, normalize_to="syn")
             mgmt.window(fix_windows=_fix_win)
             mgmt.measure()
         except ManagerError as e:
@@ -643,7 +645,7 @@ class Pyaflowa:
 
         return fix_windows, msg
 
-    def _config_adjtomo_loggers(self, fid):
+    def _config_auxiliary_loggers(self, fid):
         """
         Create a log file to track processing of a given source-receiver pair.
         Because each station is processed asynchronously, we don't want them to
