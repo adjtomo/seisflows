@@ -112,6 +112,7 @@ def return_matching_waveform_files(obs_path, syn_path, obs_fmt="ASCII",
             comp = cha[-1]
             # Ignore non-selected components if User requests
             if components and comp not in components:
+                lists.append("")
                 continue
             # NN.SSS.c
             lists.append(f"{net}.{sta}.{comp}")
