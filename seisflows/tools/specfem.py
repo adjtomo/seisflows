@@ -23,6 +23,125 @@ SOURCE_KEYS = {
 }
 
 
+def return_matching_waveform_files(obs_path, syn_path, obs_fmt="ASCII",
+                                   syn_fmt="ASCII", components=None):
+    """
+    Gather a list of filenames of matching waveform IDs which are sorted and
+    match for given paths to 'observed' and 'synthetic' waveform data. This is
+    useful because often the available 'observed' data will not match all of
+    the 'synthetic' data that is generated during a simulation, so this function
+    helps determine which files/stations can be accessed for misfit
+    quantification.
+
+    .. note::
+
+        Waveform files are expected to be in the format
+        NN.SSS.CCc.* (N=network, S=station, C=channel, c=component;
+        following SPECFEM ASCII formatting). They will be matched on
+        `NN.SSS.c` (dropping channel naming because SEED convention may have
+        different channel naming). For example, synthetic name
+        'AA.S001.BXZ.semd' will be converted to 'AA.S001.Z', and matching
+        observation 'AA.S001.HHZ.SAC' will be converted to 'AA.S001.Z'.
+        These two will be matched.
+
+    :type obs_path: str
+    :param obs_path: the path to observed data waveforms for a given source.
+        In SeisFlows this will typically point to somewhere like:
+         'scratch/solver/<SOURCE_NAME>/traces/obs/'
+    :type syn_path: str
+    :param syn_path: the path to synthetic data waveforms for a given source.
+        In SeisFlows this will typically point to somewhere like:
+         'scratch/solver/<SOURCE_NAME>/traces/syn/'
+    :type obs_fmt: str
+    :param obs_fmt: expected file format of the observed waveforms. Used for
+        safety checks that only one expected file format will be read. Defaults
+        to 'ASCII'
+    :type syn_fmt: str
+    :param syn_fmt: expected file format of the synthetic waveforms. Used for
+        safety checks that only one expected file format will be read. Defaults
+        to 'ASCII'
+    :type components: list
+    :param components: optional list of components to ignore preprocessing
+        traces that do not have matching components. The adjoint sources for
+        these components will be 0. E.g., ['Z', 'N']. If None, all available
+        components will be considered.
+    :rtype: list of tuples
+    :return: [(observed filename, synthetic filename)]. tuples will contain
+        filenames for matching stations + component for obs and syn
+    """
+    observed = sorted(os.listdir(obs_path))
+    synthetic = sorted(os.listdir(syn_path))
+
+    logger.debug(f"found {len(observed)} obs and {len(synthetic)} syn "
+                 f"waveforms for given paths")
+
+    assert(len(observed) != 0 and len(synthetic) != 0), \
+        f"cannot quantify misfit, missing observed or synthetic traces"
+
+    # Verify all traces have acceptable formats that are expected by SeisFlows
+    for key, files, fmt in zip(["observed", "synthetic"],
+                               [observed, synthetic],
+                               [obs_fmt, syn_fmt]):
+        # Check all available file extensions to ensure that there is only one
+        exts = list(set([os.path.splitext(x)[-1] for x in files]))
+        assert(len(exts) == 1), (
+            f"{key} files have too many available file formats ({exts}), and "
+            f"only 1 was expected ({fmt})"
+        )
+        ext = exts[0].upper()  # e.g., .ASCII
+
+        # Check if the expected file format matches the provided files
+        if fmt.upper() == "ASCII":
+            # SPECFEM3D and 3D_GLOBE name their ASCII files slightly differently
+            ext_ok = (ext == ".ASCII") or (".SEM" in ext)
+        elif fmt.upper() == "SU":
+            raise NotImplementedError
+        else:
+            ext_ok = bool(ext == f".{fmt}")
+        assert ext_ok, f"{key} data unexpected file format {ext} != {fmt}"
+
+    # Format path/to/NN.SSS.CCc* -> NN.SSS.c (see docstring note for details)
+    match_obs, match_syn = [], []
+    for files, lists in zip([observed, synthetic], [match_obs, match_syn]):
+        # Drop full path incase these are given as absolute paths
+        full_fids = [os.path.basename(_) for _ in files]
+        # Split into expected format NN.SSS.CCc, drop extension
+        fids = [_.split(".")[:3] for _ in full_fids]
+        for fid in fids:
+            net, sta, cha = fid
+            comp = cha[-1]
+            # Ignore non-selected components if User requests
+            if components and comp not in components:
+                continue
+            # NN.SSS.c
+            lists.append(f"{net}.{sta}.{comp}")
+
+    # only return traces that have both observed and synthetic file match
+    match_traces = \
+            sorted(list(set(match_syn).intersection(set(match_obs))))
+    logger.info(f"{len(match_traces)} traces matching between `obs` and `syn`")
+
+    # Final check to makes sure that we still have data that can be compared
+    assert(len(match_traces) != 0), (
+        f"there are no traces with both observed and synthetic files for "
+        f"the given paths. Please verify that waveform files within paths "
+        f"have the format 'NN.SSS.CCc*', which match on variables 'N', 'S', "
+        f"and 'c'"
+    )
+
+    # Generate the list of full path waveform fids for matching obs + syn
+    obs_paths, syn_paths = [], []
+    for short_fid in match_traces:
+        # Find the corresponding full path name based on the short match vrs
+        obs_fid = observed[match_obs.index(short_fid)]
+        obs_paths.append(os.path.join(obs_path, obs_fid))
+
+        syn_fid = synthetic[match_syn.index(short_fid)]
+        syn_paths.append(os.path.join(syn_path, syn_fid))
+
+    return obs_paths, syn_paths
+
+
 def convert_stations_to_sources(stations_file, source_file, source_type,
                                 output_dir="./"):
     """

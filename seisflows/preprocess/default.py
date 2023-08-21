@@ -21,7 +21,8 @@ from seisflows.tools.graphics import plot_waveforms
 from seisflows.tools.signal import normalize, resample, filter, mute, trim
 from seisflows.tools.specfem import (get_station_locations,
                                      get_source_locations,
-                                     rename_as_adjoint_source)
+                                     rename_as_adjoint_source,
+                                     return_matching_waveform_files)
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
 from seisflows.plugins.preprocess import adjoint as adjoint_sources
@@ -512,28 +513,8 @@ class Default:
                                components=None):
         """
         Gather a list of filenames of matching waveform IDs that can be
-        run through the misfit quantification step. Perform some checks to
-        ensure that the data is provided in usable formats and that
-        preprocessing is only run for synthetics which have a matching
-        observation.
-
-        .. note::
-
-            Obs and syn waveform files are expected to be in the format
-            NN.SSS.CCc.* (N=network, S=station, C=channel, c=component;
-            following SPECFEM ASCII formatting). They will be matched on
-            `NN.SSS.c` (dropping channel naming because SEED convention may have
-            different channel naming). For example, synthetic name
-            'AA.S001.BXZ.semd' will be converted to 'AA.S001.Z', and matching
-            observation 'AA.S001.HHZ.SAC' will be converted to 'AA.S001.Z'.
-            These two will be matched.
-
-        .. note::
-
-            Assumes the directory structure that has been set up by the solver.
-            That is, that waveforms are stored in directories:
-            `scratch/solver/{source_name}/traces/obs`  for observations
-            `scratch/solver/{source_name}/traces/syn`  for synthetics
+        run through the misfit quantification step, and generate empty adjoint
+        sources so that Solver knows which components are zero'd out.
 
         :type source_name: str
         :param source_name: the name of the source to process
@@ -549,15 +530,6 @@ class Default:
         obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
         syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
 
-        observed = sorted(os.listdir(obs_path))
-        synthetic = sorted(os.listdir(syn_path))
-
-        logger.debug(f"found {len(observed)} obs and {len(synthetic)} syn "
-                     f"waveforms for event {source_name}")
-
-        assert (len(observed) != 0 and len(synthetic) != 0), \
-            f"cannot quantify misfit, missing observed or synthetic traces"
-
         # Initialize empty adjoint sources for all synthetics that may or may
         # not be overwritten by the misfit quantification step
         if save_adjsrcs is not None:
@@ -565,78 +537,13 @@ class Default:
             self.initialize_adjoint_traces(data_filenames=syn_filenames,
                                            output=save_adjsrcs)
 
-        # Verify observed traces format is acceptable within this module
-        obs_ext = list(set([os.path.splitext(x)[-1] for x in observed]))
-        assert(len(obs_ext) == 1), (
-            f"'{source_name}/traces/obs' has > 1 file formats available, but "
-            f"only 1 ({self.obs_data_format}) was expected"
-        )
-        # Check if the expected file format matches the provided one
-        if self.obs_data_format.upper() == "ASCII":
-            obs_ext_ok = obs_ext[0].upper() in [".ASCII",
-                                                f".SEM{self.unit_output[0]}"]
-        else:
-            obs_ext_ok = obs_ext[0].upper() == f".{self.obs_data_format}"
-        assert obs_ext_ok, (
-            f"{source_name}/traces/obs unexpected file format "
-            f"{obs_ext[0].upper()} != {self.obs_data_format}"
+        # Return a matching list of observed and synthetic waveform filenames
+        observed, synthetic = return_matching_waveform_files(
+            obs_path, syn_path, obs_fmt=self.obs_data_format,
+            syn_fmt=self.syn_data_format, components=components
         )
 
-        # Do the same checks but for the synthetic waveforms
-        syn_ext = list(set([os.path.splitext(x)[-1] for x in synthetic]))
-        assert(len(syn_ext) == 1), (
-            f"'{source_name}/traces/syn' has > 1 file formats available, but "
-            f"only 1 ({self.syn_data_format}) was expected"
-        )
-        # Check if the expected file format matches the provided one
-        if self.syn_data_format.upper() == "ASCII":
-            syn_ext_ok = syn_ext[0].upper() in [".ASCII",
-                                                f".SEM{self.unit_output[0]}"]
-        else:
-            syn_ext_ok = syn_ext[0].upper() == f".{self.syn_data_format}"
-        assert syn_ext_ok, (
-            f"{source_name}/traces/syn unexpected file format "
-            f"{syn_ext[0].upper()} != {self.syn_data_format}"
-        )
-
-        # fmt path/to/NN.SSS.CCc* -> NN.SSS.c (see docstring note for details)
-        match_obs = self._curtail_fids_for_file_matching(observed)
-        match_syn = self._curtail_fids_for_file_matching(synthetic)
-
-        # only return traces that have both observed and synthetic file match
-        match_traces = \
-                sorted(list(set(match_syn).intersection(set(match_obs))))
-        logger.info(f"{len(match_traces)} traces matching between obs and syn")
-
-        # Curtail based on user-chosen components if required
-        if components:
-            match_comps = []
-            for comp in components:
-                match_comps += [_ for _ in match_traces if _.endswith(comp)]
-            match_traces = match_comps
-            logger.info(f"{len(match_traces)} traces with comps {components}")
-
-        # Final check to makes sure that we still have data that can be compared
-        assert(len(match_traces) != 0), (
-            f"there are no traces with both observed and synthetic files for "
-            f"source: {source_name}; verify that 'traces/obs' and 'traces/syn' "
-            f"have the format 'NN.SSS.CCc*', and match on variables 'N', 'S', "
-            f"and 'c'"
-        )
-        logger.info(f"{source_name} has {len(match_traces)} matching traces "
-                    f"for preprocessing")
-
-        # Generate the list of full path waveform fids for matching obs + syn
-        obs_paths, syn_paths = [], []
-        for short_fid in match_traces:
-            # Find the corresponding full path name based on the short match vrs
-            obs_fid = observed[match_obs.index(short_fid)]
-            obs_paths.append(os.path.join(obs_path, obs_fid))
-
-            syn_fid = synthetic[match_syn.index(short_fid)]
-            syn_paths.append(os.path.join(syn_path, syn_fid))
-
-        return obs_paths, syn_paths
+        return observed, synthetic
 
     def _quantify_misfit_single(self, obs_fid, syn_fid, source_name=None,
                                 save_residuals=None, save_adjsrcs=None):
@@ -776,34 +683,6 @@ class Default:
 
         return obs, syn
 
-    def _curtail_fids_for_file_matching(self, fid_list, components=None):
-        """
-        Convenience function to convert NN.SSS.CCc.* -> NN.SSS.c and also
-        curtail list of file IDs by component
-
-        :type fid_list: list of str
-        :param fid_list: list of file path/IDs that need to be shortened
-        :type components: list
-        :param components: optional list of components to ignore preprocessing
-            traces that do not have matching components. The adjoint sources for
-            these components will be 0. E.g., ['Z', 'N']. If None, all available
-            components will be considered.
-        :rtype: list of str
-        :return: list of shortened file IDs
-        """
-        # Drop full path incase these are given as absolute paths
-        full_fids = [os.path.basename(_) for _ in fid_list]
-        # Split into expected format NN.SSS.CCc, drop extension
-        fids = [_.split(".")[:3] for _ in full_fids]
-        short_fids = []
-        for fid in fids:
-            net, sta, cha = fid
-            comp = cha[-1]
-            # NN.SSS.c
-            short_fids.append(f"{net}.{sta}.{comp}")
-
-        return short_fids
-
 
 def read(fid, data_format):
     """
@@ -911,4 +790,5 @@ def read_ascii(fid, origintime=None):
     st = Stream([Trace(data=data, header=stats)])
 
     return st
+
 

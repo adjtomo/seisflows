@@ -433,7 +433,8 @@ class Pyaflowa:
 
         return config
 
-    def _quantify_misfit_single(self, config, station_code, save_adjsrcs=False):
+    def _quantify_misfit_single(self, source_name, station_code,
+                                config=None, save_adjsrcs=False):
         """
         Main Pyatoa processing function to quantify misfit + generation adjsrc.
 
@@ -490,8 +491,6 @@ class Pyaflowa:
                         obs_dir_template=""
                         # !!! HARDCODED, REMOVE THIS !!!
                         )
-            mgmt.event = read_event(event_id=config.event_id)
-
         except ManagerError as e:
             station_logger.warning(e)
             return None, None
@@ -499,8 +498,8 @@ class Pyaflowa:
         # If any part of this processing fails, move on to plotting because we
         # will have gathered waveform data so a figure is still useful.
         try:
-            mgmt.standardize()
-            mgmt.preprocess()
+            mgmt.standardize(normalize_to="syn")
+            mgmt.preprocess(remove_response=False)  # !!! HARDCODE
             mgmt.window(fix_windows=_fix_win)
             mgmt.measure()
         except ManagerError as e:
