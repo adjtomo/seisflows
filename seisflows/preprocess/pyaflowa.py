@@ -18,11 +18,11 @@ from pyatoa.utils.read import read_station_codes, read_events_plus
 
 from seisflows import logger
 from seisflows.tools import unix
-from seisflows.tools.config import Dict, get_task_id
+from seisflows.tools.config import Dict
 from seisflows.tools.graphics import imgs_to_pdf, merge_pdfs
 from seisflows.tools.specfem import (check_source_names,
                                      return_matching_waveform_files)
-from seisflows.preprocess.default import read
+from seisflows.preprocess.default import read, initialize_adjoint_traces
 
 
 class Pyaflowa:
@@ -347,32 +347,29 @@ class Pyaflowa:
         if components is not None:
             config.component_list = components
 
-        # Return a matching list of observed and synthetic waveform filenames
-        obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
-        syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
+        # Generate empty adjoint sources and return a matching list of files
+        # that will be fed into the misfit quantification machinery
+        obs, syn = self._setup_quantify_misfit(source_name, save_adjsrcs,
+                                               components)
 
-        observed, synthetic = return_matching_waveform_files(
-            obs_path, syn_path, obs_fmt=self.obs_data_format,
-            syn_fmt=self.syn_data_format, components=components
-        )
-
-        # Process each pair in serial. Max workers is the total num. of cores
+        # Process each pair in serial.
         if _serial:
             total_misfit, total_windows = 0, 0
-            for obs, syn in zip(observed, synthetic):
-                misfit, nwin = self._quantify_misfit_single(obs, syn, config,
+            for o, s in zip(obs, syn):
+                misfit, nwin = self._quantify_misfit_single(o, s, config,
                                                             save_adjsrcs)
 
                 total_misfit += misfit or 0
                 total_windows += nwin or 0
+        # Process each pair in parallel. Max workers is total num. of cores
         else:
-            # Process each pair in parallel. Max workers is total num. of cores
             with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
                 futures = [
-                    executor.submit(self._quantify_misfit_single, config, code,
-                                    save_adjsrcs) for code in self._station_codes
+                    executor.submit(self._quantify_misfit_single, o, s, config,
+                                    save_adjsrcs) for o, s in zip(obs, syn)
                 ]
             wait(futures)
+
             # Initialize empty values to store statistics on entire misfit quant
             total_misfit, total_windows = 0, 0
             for future in futures:
@@ -409,11 +406,48 @@ class Pyaflowa:
         pyatoa_logger.info(
             f"\n{'=' * 80}\n{'SUMMARY':^80}\n{'=' * 80}\n"
             f"SOURCE NAME: {config.event_id}\n"
-            f"WINDOWS: {nwin}\n"
-            f"RAW MISFIT: {misfit:.4f}\n"
+            f"WINDOWS: {total_windows}\n"
+            f"RAW MISFIT: {total_misfit:.4f}\n"
             f"\n{'=' * 80}\n{'RAW LOGS':^80}\n{'=' * 80}"
             )
         self._collect_tmp_log_files(pyatoa_logger, config.event_id)
+
+    def _setup_quantify_misfit(self, source_name, save_adjsrcs=None,
+                               components=None):
+        """
+        Gather a list of filenames of matching waveform IDs that can be
+        run through the misfit quantification step, and generate empty adjoint
+        sources so that Solver knows which components are zero'd out.
+
+        :type source_name: str
+        :param source_name: the name of the source to process
+        :type components: list
+        :param components: optional list of components to ignore preprocessing
+            traces that do not have matching components. The adjoint sources for
+            these components will be 0. E.g., ['Z', 'N']. If None, all available
+            components will be considered.
+        :rtype: list of tuples
+        :return: [(observed filename, synthetic filename)]. tuples will contain
+            filenames for matching stations + component for obs and syn
+        """
+        obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
+        syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
+
+        # Initialize empty adjoint sources for all synthetics that may or may
+        # not be overwritten by the misfit quantification step
+        if save_adjsrcs is not None:
+            syn_filenames = glob(os.path.join(syn_path, "*"))
+            initialize_adjoint_traces(data_filenames=syn_filenames,
+                                      fmt=self.syn_data_format,
+                                      path_out=save_adjsrcs)
+
+        # Return a matching list of observed and synthetic waveform filenames
+        observed, synthetic = return_matching_waveform_files(
+            obs_path, syn_path, obs_fmt=self.obs_data_format,
+            syn_fmt=self.syn_data_format, components=components
+        )
+
+        return observed, synthetic
 
     def _quantify_misfit_single(self, obs_fid, syn_fid, config,
                                 save_adjsrcs=False):

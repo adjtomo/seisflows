@@ -395,42 +395,6 @@ class Default:
         else:
             return None
 
-    def initialize_adjoint_traces(self, data_filenames, output):
-        """
-        SPECFEM requires that adjoint traces be present for every matching
-        synthetic seismogram. If an adjoint source does not exist, it is
-        simply set as zeros. This function creates all adjoint traces as
-        zeros, to be filled out later. Does this in parallel for speedup
-
-        :type data_filenames: list of str
-        :param data_filenames: existing solver waveforms (synthetic) to read.
-            These will be copied, zerod out, and saved to path `save`. Should
-            come from solver.data_filenames
-        :type output: str
-        :param output: path to save the new adjoint traces to. Ideally this is
-            set to 'solver/traces/adj'
-        """
-        # Read in a dummy synthetic file and zero out all data to write
-        st = read(fid=data_filenames[0],
-                  data_format=self.syn_data_format).copy()
-        for tr in st:
-            tr.data *= 0
-        # Write adjoint sources in parallel using an empty Stream object
-        with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
-            futures = [
-                executor.submit(self._write_adjsrc_single, st, fid, output)
-                for fid in data_filenames
-                ]
-        # Simply wait until this task is completed
-        wait(futures)
-
-    def _write_adjsrc_single(self, st, fid, output):
-        """Parallelizable function to write out empty adjoint source"""
-        adj_fid = rename_as_adjoint_source(os.path.basename(fid),
-                                           fmt=self.syn_data_format)
-        write(st=st, fid=os.path.join(output, adj_fid),
-              data_format=self.syn_data_format)
-
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         export_residuals=None, save_adjsrcs=None,
                         components=None, iteration=1, step_count=0, **kwargs):
@@ -534,8 +498,9 @@ class Default:
         # not be overwritten by the misfit quantification step
         if save_adjsrcs is not None:
             syn_filenames = glob(os.path.join(syn_path, "*"))
-            self.initialize_adjoint_traces(data_filenames=syn_filenames,
-                                           output=save_adjsrcs)
+            initialize_adjoint_traces(data_filenames=syn_filenames,
+                                      fmt=self.syn_data_format,
+                                      path_out=save_adjsrcs)
 
         # Return a matching list of observed and synthetic waveform filenames
         observed, synthetic = return_matching_waveform_files(
@@ -803,5 +768,44 @@ def read_ascii(fid, origintime=None):
     st = Stream([Trace(data=data, header=stats)])
 
     return st
+
+
+def initialize_adjoint_traces(data_filenames, fmt, path_out="./"):
+    """
+    SPECFEM requires that adjoint traces be present for every matching
+    synthetic seismogram. If an adjoint source does not exist, it is
+    simply set as zeros. This function creates all adjoint traces as
+    zeros, to be filled out later. Does this in parallel for speedup
+
+    :type data_filenames: list of str
+    :param data_filenames: existing solver waveforms (synthetic) to read.
+        These will be copied, zerod out, and saved to path `save`. Should
+        come from solver.data_filenames
+    :type fmt: str
+    :param fmt: format of the input waveforms which will be fed to the `read`
+        function to get a working Stream object used to write empty adjsrcs
+    :type path_out: str
+    :param path_out: path to save the new adjoint traces to. Ideally this is
+        set to 'solver/traces/adj'
+    """
+    def _write_adjsrc_single(self, st, fid, output):
+        """Parallelizable function to write out empty adjoint source"""
+        adj_fid = rename_as_adjoint_source(os.path.basename(fid),
+                                           fmt=self.syn_data_format)
+        write(st=st, fid=os.path.join(output, adj_fid),
+              data_format=self.syn_data_format)
+
+    # Read in a dummy synthetic file and zero out all data to write
+    st = read(fid=data_filenames[0], data_format=fmt).copy()
+    for tr in st:
+        tr.data *= 0
+    # Write adjoint sources in parallel using an empty Stream object
+    with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+        futures = [
+            executor.submit(_write_adjsrc_single, st, fid, path_out)
+            for fid in data_filenames
+            ]
+    # Simply wait until this task is completed
+    wait(futures)
 
 
