@@ -541,7 +541,15 @@ class SeisFlows:
             return docfinal
 
         def write_dict_to_yaml(f, d, written, recursive=0):
-            """Convenience function to convert Python dict() -> YAML"""
+            """
+            Convenience function to convert Python dict() -> YAML
+            Allows for nested dictionaries to be written through recursive calls
+
+            :type f: _io.TextIOWrapper
+            :type d: dict
+            :type written: list
+            :type recursive: int
+            """
             # Write the parameters, make sure to not have the same one twice
             for key, val in d.items():
                 # Skip already written, hidden vars, and paths

@@ -780,11 +780,6 @@ def initialize_adjoint_traces(data_filenames, fmt, path_out="./"):
     :param path_out: path to save the new adjoint traces to. Ideally this is
         set to 'solver/traces/adj'
     """
-    def _write_adjsrc_single(st, fid, output):
-        """Parallelizable function to write out empty adjoint source"""
-        adj_fid = rename_as_adjoint_source(os.path.basename(fid), fmt=fmt)
-        write(st=st, fid=os.path.join(output, adj_fid), data_format=fmt)
-
     # Read in a dummy synthetic file and zero out all data to write
     st = read(fid=data_filenames[0], data_format=fmt).copy()
     for tr in st:
@@ -792,10 +787,15 @@ def initialize_adjoint_traces(data_filenames, fmt, path_out="./"):
     # Write adjoint sources in parallel using an empty Stream object
     with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
         futures = [
-            executor.submit(_write_adjsrc_single, st, fid, path_out)
+            executor.submit(_write_adjsrc_single, st, fid, path_out, fmt)
             for fid in data_filenames
             ]
     # Simply wait until this task is completed
     wait(futures)
 
+
+def _write_adjsrc_single(st, fid, output, fmt):
+    """Parallelizable function to write out empty adjoint source"""
+    adj_fid = rename_as_adjoint_source(os.path.basename(fid), fmt=fmt)
+    write(st=st, fid=os.path.join(output, adj_fid), data_format=fmt)
 

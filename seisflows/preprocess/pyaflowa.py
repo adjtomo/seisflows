@@ -299,7 +299,7 @@ class Pyaflowa:
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         export_residuals=None, save_adjsrcs=None,
                         components=None, iteration=1, step_count=0,
-                        _serial=True, **kwargs):
+                        _serial=False, **kwargs):
         """
         Main processing function to be called by Workflow module. Generates
         total misfit and adjoint sources for a given event with name 
@@ -532,7 +532,7 @@ class Pyaflowa:
         while True:
             try:
                 with ASDFDataSet(ds_fid, mode="a") as ds:
-                    mgmt.write(ds=ds)
+                    mgmt.write_to_dataset(ds=ds)
                 break
             except (BlockingIOError, FileExistsError):
                 # Random sleep time [0,1]s to decrease chances of two processes
