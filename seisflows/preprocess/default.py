@@ -788,12 +788,10 @@ def initialize_adjoint_traces(data_filenames, fmt, path_out="./"):
     :param path_out: path to save the new adjoint traces to. Ideally this is
         set to 'solver/traces/adj'
     """
-    def _write_adjsrc_single(self, st, fid, output):
+    def _write_adjsrc_single(st, fid, output):
         """Parallelizable function to write out empty adjoint source"""
-        adj_fid = rename_as_adjoint_source(os.path.basename(fid),
-                                           fmt=self.syn_data_format)
-        write(st=st, fid=os.path.join(output, adj_fid),
-              data_format=self.syn_data_format)
+        adj_fid = rename_as_adjoint_source(os.path.basename(fid), fmt=fmt)
+        write(st=st, fid=os.path.join(output, adj_fid), data_format=fmt)
 
     # Read in a dummy synthetic file and zero out all data to write
     st = read(fid=data_filenames[0], data_format=fmt).copy()
