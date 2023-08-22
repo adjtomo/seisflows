@@ -6,6 +6,7 @@ import os
 import numpy as np
 import shutil
 from glob import glob
+from obspy.geodetics import gps2dist_azimuth
 
 from seisflows import logger
 from seisflows.tools import msg
@@ -21,6 +22,60 @@ SOURCE_KEYS = {
     "CMTSOLUTION_3DGLOBE": {"lat": "latitude", "lon": "longitude",
                             "delim": ":"},
 }
+
+
+def get_src_rcv_lookup_table(path_to_data, source_prefix="CMTSOLUTION",
+                             stations_file="STATIONS"):
+    """
+    Generate a lookup table that gives relative distance, azimuth etc. for
+    each source and receiver used in the workflow. Source and station
+    locations will be gathered from metadata files stored in the SPECFEM
+    data directory.
+
+    :type path_to_data: str
+    :param path_to_data: full path to the SPECFEM DATA/ directory which should
+        contain the source file (e.g., CMTSOLUTION, FORCESOLUTION), and the
+        STATIONS file whose name is defined by `station_file`.
+    :type source_prefix: str
+    :param source_prefix: prefix of all the source files that will be wildcard
+        searched for using the following wildcard: {source_prefix}_*. e.g., if
+        all your files are CMTSOLUTIONS (CMTSOLUTION_001, CMTSOLUTION_002), then
+        `source_prefix` should be 'CMTSOLUTION'
+    :type stations_file: str
+    :param stations_file: the name of the STATIONS file in the SPECFEM DATA
+        directory `path_to_data`. By default this is STATIONS
+    """
+    # Determine source locations 'latitude' and 'longitude'
+    src_dict = get_source_locations(path_to_sources=path_to_data,
+                                    source_prefix=source_prefix)
+
+    # Station dictionary of locations 'latitude', 'longitude'
+    rcv_dict = get_station_locations(
+        stations_file=os.path.join(path_to_data, stations_file)
+    )
+    dict_out = Dict()
+    for src_name, src_vals in src_dict.items():
+        dict_out[src_name] = Dict()
+        for rcv_name, rcv_vals in rcv_dict.items():
+            # Calculate the azimuth from North of the source (theta) and azimuth
+            # from North of the receiver (theta prime). See Fig. 1 from
+            # Wang et al. (2019) for diagrammatic explanation.
+            dist_m, az, baz = gps2dist_azimuth(lat1=src_vals["latitude"],
+                                               lon1=src_vals["longitude"],
+                                               lat2=rcv_vals["latitude"],
+                                               lon2=rcv_vals["longitude"]
+                                               )
+            # Theta is the azimuth from north of the source, and theta prime
+            # is the azimuth from north of the receiver. Theta != Theta' for
+            # a spherical Earth, but they will be close.
+            theta = np.deg2rad(az)
+            theta_p = np.deg2rad((baz - 180) % 360)
+
+            dict_out[src_name][rcv_name] = Dict(dist_m=dist_m, az=az,
+                                                baz=baz, theta=theta,
+                                                theta_p=theta_p)
+
+    return dict_out
 
 
 def return_matching_waveform_files(obs_path, syn_path, obs_fmt="ASCII",

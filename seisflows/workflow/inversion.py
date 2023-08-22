@@ -262,7 +262,13 @@ class Inversion(Migration):
         for residuals_file in residuals_files:
             # Tape et al. (2010) Equation 6
             event_misfit = np.loadtxt(residuals_file)
-            event_misfit = np.sum(event_misfit) / (2. * len(event_misfit))
+            # Some preprocessing modules only return a single misfit value
+            # which will fail when called with len()
+            try:
+                num_measurements = len(event_misfit)
+            except TypeError:
+                num_measurements = 1
+            event_misfit = np.sum(event_misfit) / (2. * num_measurements)
             event_misfits.append(event_misfit)
 
         # Tape et al. (2010) Equation 7

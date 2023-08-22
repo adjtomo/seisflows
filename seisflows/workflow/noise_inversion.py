@@ -472,8 +472,8 @@ class NoiseInversion(Inversion):
         rcv_name = f"{net}_{sta}"
 
         # Collect azimuth angles from lookup table computed in setup
-        theta = self.preprocess.srcrcv_stats[src_name][rcv_name].theta
-        theta_p = self.preprocess.srcrcv_stats[src_name][rcv_name].theta_p
+        theta = self.preprocess._srcrcv_stats[src_name][rcv_name].theta
+        theta_p = self.preprocess._srcrcv_stats[src_name][rcv_name].theta_p
 
         # Read in the N/E synthetic waveforms that need to be rotated
         # Assuming that each Stream only has one Trace in it
@@ -559,8 +559,8 @@ class NoiseInversion(Inversion):
         rcv_name = f"{net}_{sta}"
 
         # Collect azimuth angles from lookup table computed in preprocess setup
-        theta = self.preprocess.srcrcv_stats[src_name][rcv_name].theta
-        theta_p = self.preprocess.srcrcv_stats[src_name][rcv_name].theta_p
+        theta = self.preprocess._srcrcv_stats[src_name][rcv_name].theta
+        theta_p = self.preprocess._srcrcv_stats[src_name][rcv_name].theta_p
 
         # Read in the N/E synthetic waveforms that need to be rotated
         # First letter represents the force direction, second is component

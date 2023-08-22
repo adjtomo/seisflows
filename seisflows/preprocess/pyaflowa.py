@@ -21,7 +21,8 @@ from seisflows.tools import unix
 from seisflows.tools.config import Dict
 from seisflows.tools.graphics import imgs_to_pdf, merge_pdfs
 from seisflows.tools.specfem import (check_source_names,
-                                     return_matching_waveform_files)
+                                     return_matching_waveform_files,
+                                     get_src_rcv_lookup_table)
 from seisflows.preprocess.default import read, initialize_adjoint_traces
 
 
@@ -211,6 +212,7 @@ class Pyaflowa:
         self._acceptable_unit_outputs = ["VEL", "DISP", "ACC"]
 
         # Internal attributes to be filled in by setup()
+        self._srcrcv_stats = None
         self._config = None
         self._fix_windows = False
         self._station_codes = []
@@ -249,11 +251,6 @@ class Pyaflowa:
         Sets up data preprocessing machinery by establishing an internally
         defined directory structure that will be used to store the outputs 
         of the preprocessing workflow
-
-        .. note::
-
-            `config.save_to_ds` must be set False, otherwise Pyatoa will try to
-            write to a read-only ASDFDataSet causing preprocessing to fail.
         """
         for pathname in ["scratch", "_logs", "_tmplogs", "_datasets",
                          "_figures"]:
@@ -282,6 +279,12 @@ class Pyaflowa:
         self._source_names = check_source_names(
             path_specfem_data=self.path.specfem_data,
             source_prefix=self._source_prefix, ntask=self._ntask
+        )
+
+        # Get a lookup table providing relationships between each source and sta
+        self._srcrcv_stats = get_src_rcv_lookup_table(
+            path_to_data=self.path.specfem_data,
+            source_prefix=self.source_prefix
         )
 
     @staticmethod
@@ -491,7 +494,12 @@ class Pyaflowa:
         # Setup ASDFDataSet in read only so we can pull data/windows in parallel
         ds_fid = os.path.join(self.path["_datasets"], f"{config.event_id}.h5")
         if os.path.exists(ds_fid):
-            ds = ASDFDataSet(ds_fid, mode="r")  # NOTE: read only mode
+            while True:
+                try:
+                    ds = ASDFDataSet(ds_fid, mode="r")  # NOTE: read only mode
+                    break
+                except BlockingIOError:
+                    pass
         else:
             ds = None
 

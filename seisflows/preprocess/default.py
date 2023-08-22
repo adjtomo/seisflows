@@ -12,15 +12,13 @@ from glob import glob
 
 from obspy import read as obspy_read
 from obspy import Stream, Trace, UTCDateTime
-from obspy.geodetics import gps2dist_azimuth
 
 from seisflows import logger
 from seisflows.tools import unix
 from seisflows.tools.config import Dict, get_task_id
 from seisflows.tools.graphics import plot_waveforms
 from seisflows.tools.signal import normalize, resample, filter, mute, trim
-from seisflows.tools.specfem import (get_station_locations,
-                                     get_source_locations,
+from seisflows.tools.specfem import (get_src_rcv_lookup_table,
                                      rename_as_adjoint_source,
                                      return_matching_waveform_files)
 
@@ -221,8 +219,8 @@ class Default:
         self._acceptable_mutes = {"EARLY", "LATE", "LONG", "SHORT"}
         self._acceptable_filters = {"BANDPASS", "LOWPASS", "HIGHPASS"}
 
-        # To be filled out by setup()
-        self.srcrcv_stats = None
+        # Internal attributes to be filled in by setup()
+        self._srcrcv_stats = None
 
         # Internal attributes used to keep track of inversion workflows
         self._iteration = None
@@ -331,48 +329,11 @@ class Default:
         """
         unix.mkdir(self.path.scratch)
 
-        # between each source and each station
-        self.srcrcv_stats = self.get_src_rcv_lookup_table()
-
-    def get_src_rcv_lookup_table(self):
-        """
-        Generate a lookup table that gives relative distance, azimuth etc. for
-        each source and receiver used in the workflow. Source and station
-        locations will be gathered from metadata files stored in the SPECFEM
-        data directory
-        """
-        # Determine source locations 'latitude' and 'longitude'
-        src_dict = get_source_locations(path_to_sources=self.path.specfem_data,
-                                        source_prefix=self.source_prefix)
-
-        # Station dictionary of locations 'latitude', 'longitude'
-        rcv_dict = get_station_locations(
-            stations_file=os.path.join(self.path.specfem_data, "STATIONS")
+        # Get a lookup table providing relationships between each source and sta
+        self._srcrcv_stats = get_src_rcv_lookup_table(
+            path_to_data=self.path.specfem_data,
+            source_prefix=self.source_prefix
         )
-        dict_out = Dict()
-        for src_name, src_vals in src_dict.items():
-            dict_out[src_name] = Dict()
-            for rcv_name, rcv_vals in rcv_dict.items():
-                # Calculate the azimuth from North of the source (theta) and azimuth
-                # from North of the receiver (theta prime). See Fig. 1 from
-                # Wang et al. (2019) for diagrammatic explanation.
-                dist_m, az, baz = gps2dist_azimuth(lat1=src_vals["latitude"],
-                                                   lon1=src_vals["longitude"],
-                                                   lat2=rcv_vals["latitude"],
-                                                   lon2=rcv_vals["longitude"]
-                                                   )
-                # Theta is the azimuth from north of the source, and theta prime
-                # is the azimuth from north of the receiver. Theta != Theta' for
-                # a spherical Earth, but they will be close.
-                theta = np.deg2rad(az)
-                theta_p = np.deg2rad((baz - 180) % 360)
-
-                dict_out[src_name][rcv_name] = Dict(dist_m=dist_m, az=az,
-                                                    baz=baz, theta=theta,
-                                                    theta_p=theta_p)
-
-        return dict_out
-
     def finalize(self):
         """
         Teardown procedures for the default preprocessing class. Required
