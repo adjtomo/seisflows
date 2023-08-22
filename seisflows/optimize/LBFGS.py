@@ -69,8 +69,6 @@ class LBFGS(Gradient):
 
         # Overwrite user-chosen line search. L-BFGS requires 'Backtrack'ing LS
         if self.line_search_method.title() != "Backtrack":
-            logger.warning(f"L-BFGS optimization requires 'backtrack'ing line "
-                           f"search. Overwriting '{self.line_search_method}'")
             self.line_search_method = "Backtrack"
             self._line_search = getattr(
                 line_search_dir, self.line_search_method)(

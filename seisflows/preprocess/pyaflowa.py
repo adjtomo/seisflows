@@ -272,8 +272,9 @@ class Pyaflowa:
             pyflex_parameters=self.pyflex_parameters,
             pyadjoint_parameters=self.pyadjoint_parameters
         )
+
         # Generate a list of station codes that will be used to search for data
-        self._station_codes = read_station_codelss(
+        self._station_codes = read_station_codes(
             path_to_stations=os.path.join(self.path.specfem_data, "STATIONS"),
             loc="*", cha="*"
         )
