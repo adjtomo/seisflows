@@ -540,6 +540,25 @@ class SeisFlows:
                                 docssplit])
             return docfinal
 
+        def write_dict_to_yaml(f, d, written, recursive=0):
+            """Convenience function to convert Python dict() -> YAML"""
+            # Write the parameters, make sure to not have the same one twice
+            for key, val in d.items():
+                # Skip already written, hidden vars, and paths
+                if (key in written) or key.startswith("_") or key == "path":
+                    continue
+                # Deal with nested dictionaries. Keep them condensed but
+                # ensure that NoneType -> null
+                if isinstance(val, dict):
+                    f.write(f"{key}: \n")
+                    write_dict_to_yaml(f, val, written, recursive+1)
+                else:
+                    # YAML wants NoneType to be 'null'
+                    if val is None:
+                        val = "null"
+                    f.write(f"{'  ' * recursive}{key}: {val}\n")
+                    written.append(key)
+
         # Load in a barebones parameter file and instantiate specific classes
         parameters = load_yaml(os.path.join(self._args.workdir,
                                             self._args.parameter_file))
@@ -559,16 +578,7 @@ class SeisFlows:
                     continue
                 docstring = split_module_docstring(module, 0)
                 f.write(f"# {'=' * 77}\n#{docstring}\n# {'=' * 77}\n")
-                # Write the parameters, make sure to not have the same one twice
-                for key, val in vars(module).items():
-                    # Skip already written, hidden vars, and paths
-                    if (key in written) or key.startswith("_") or key == "path":
-                        continue
-                    # YAML wants NoneType to be 'null'
-                    if val is None:
-                        val = "null"
-                    f.write(f"{key}: {val}\n")
-                    written.append(key)
+                write_dict_to_yaml(f, vars(module), written)
 
             # Write docstrings for publically accesible path structure
             f.write(f"# {'=' * 77}\n")

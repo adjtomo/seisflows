@@ -38,19 +38,17 @@ class Pyaflowa:
     :param min_period: Minimum filter corner in unit seconds. Bandpass
     filter if set with `max_period`, highpass filter if set without
     `max_period`, no filtering if not set and `max_period also not set
-    :type max_period: float
-    :param max_period: Maximum filter corner in unit seconds. Bandpass
-        filter if set with `min_period`, lowpass filter if set without
-        `min_period`, no filtering if not set and `min_period also not set
-   :type filter_corners: int
-    :param filter_corners: number of filter corners applied to filtering
-    :type rotate: bool
-    :param rotate: Attempt to rotate waveform components from NEZ -> RTZ
-    :type pyflex_preset: str
-    :param pyflex_preset: Parameter map for misfit window configuration
-        defined by Pyflex. IF None, misfit and adjoint sources will be
-        calculated on whole traces. For available choices, see Pyatoa docs
-        page (pyatoa.rtfd.io)
+    :type pyflex_parameters: dict
+    :param pyflex_parameters: overwrite for Pyflex parameters defined
+        in the Pyflex.Config object. Incorrectly defined argument names
+        will raise a TypeError. See Pyflex docs for detailed parameter defs:
+        http://adjtomo.github.io/pyflex/#config-object
+    :type pyadjoint_parameters: dict
+    :param pyadjoint_parameters: overwrite for Pyadjoint parameters defined
+        in the Pyadjoint.Config object for the given `adj_src_type`.
+        Incorrectly defined argument names will raise a TypeError. See
+        Pyadjoint docs for detailed parameter definitions:
+        https://adjtomo.github.io/pyadjoint/
     :type fix_windows: bool or str
     :param fix_windows: How to address misfit window evaluation at each
         evaluation. Options to re-use misfit windows collected during an
@@ -64,9 +62,7 @@ class Pyaflowa:
         the workflow, i.e., at self.par.BEGIN
     :type adj_src_type: str
     :param adj_src_type: Adjoint source type to evaluate misfit, defined by
-        Pyadjoint. See `pyadjoint.config.ADJSRC_TYPES` for available options.
-        Listed below, they are:
-        
+        Pyadjoint. See `pyadjoint.config.ADJSRC_TYPES` for detailed options list
         - 'waveform': waveform misfit function
         - 'convolution': convolution misfit function
         - 'exponentiated_phase': exponentiated phase from Yuan et al. 2020
@@ -74,7 +70,8 @@ class Pyaflowa:
         - 'multitaper': multitaper misfit function
     :type plot_waveforms: bool
     :param plot_waveforms: plot waveform figures and source receiver maps during
-        the preprocessing stage
+        the preprocessing stage. Maps require metadata, and if they are not
+        provided then only waveforms + windows + adjoint sources will be plotted
     :type pyatoa_log_level: str
     :param pyatoa_log_level: Log level to set Pyatoa, Pyflex, Pyadjoint.
         Available: ['null': no logging, 'warning': warnings only,
@@ -82,7 +79,7 @@ class Pyaflowa:
     :type unit_output: str
     :param unit_output: Data units. Must match the synthetic output of
         external solver. Available: ['DISP': displacement, 'VEL': velocity,
-        'ACC': acceleration]
+        'ACC': acceleration]. Requires metadata.
     :type export_datasets: bool
     :param export_datasets: periodically save the output ASDFDataSets which
         contain data, metadata and results collected during the
@@ -99,11 +96,10 @@ class Pyaflowa:
     :param path_preprocess: scratch path for preprocessing related steps
     ***
     """
-    def __init__(self, min_period=1., max_period=10., filter_corners=4,
-                 rotate=False, pyflex_preset="default",
+    def __init__(self, min_period=1., max_period=10.,
+                 pyflex_parameters=None, pyadjoint_parameters=None,
                  fix_windows=False, adj_src_type="cc_traveltime",
                  plot_waveforms=True, pyatoa_log_level="DEBUG",
-                 unit_output="VEL",
                  export_datasets=True, export_figures=True,
                  export_log_files=True, workdir=os.getcwd(),
                  path_preprocess=None, path_solver=None, path_specfem_data=None,
@@ -144,16 +140,13 @@ class Pyaflowa:
         :param path_data: path to any externally stored data required by the 
             solver
         """
+        # Pyatoa related parameters
         self.min_period = min_period
         self.max_period = max_period
-        self.filter_corners = filter_corners
-        self.rotate = rotate
-        self.pyflex_preset = pyflex_preset
         self.fix_windows = fix_windows
         self.adj_src_type = adj_src_type
         self.plot_waveforms = plot_waveforms
         self.pyatoa_log_level = pyatoa_log_level
-        self.unit_output = unit_output
 
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
@@ -163,6 +156,18 @@ class Pyaflowa:
             specfem_data=path_specfem_data,
             data=path_data,
         )
+
+        # Set the Pyflex and Pyadjoint external parameters
+        _cfg = Config(pyflex_parameters=pyflex_parameters,
+                      pyadjoint_parameters=pyadjoint_parameters)
+        self.pyflex_parameters = {
+            key: val for key, val in _cfg.pfcfg.items() if key not in
+            ["min_period", "max_period"]}
+        # Ignore meta-config parameters that are hardcoded in lower levels
+        self.pyadjoint_parameters = {
+            key: val for key, val in _cfg.pacfg.items() if key not in
+            ["min_period", "max_period", "adjsrc_type", "double_difference"]
+        }
 
         # How to handle saving output data to disk
         self.export_datasets = export_datasets
@@ -239,9 +244,6 @@ class Pyaflowa:
         assert(self._fix_windows in self._acceptable_fix_windows), \
             f"Pyatoa `fix_windows` must be in {self._acceptable_fix_windows}"
 
-        assert(self.unit_output in self._acceptable_unit_outputs), \
-            f"Pyatoa `unit_output` must be in {self._acceptable_unit_outputs}"
-
     def setup(self):
         """
         Sets up data preprocessing machinery by establishing an internally
@@ -265,15 +267,13 @@ class Pyaflowa:
         # Convert SeisFlows user parameters into Pyatoa config parameters
         self._config = Config(
             min_period=self.min_period, max_period=self.max_period,
-            filter_corners=self.filter_corners, rotate=self.rotate,
-            pyflex_preset=self.pyflex_preset, fix_windows=self.fix_windows,
-            adj_src_type=self.adj_src_type, log_level=self.pyatoa_log_level,
-            unit_output=self.unit_output, component_list=self._components,
-            save_to_ds=False, st_obs_type=st_obs_type,
-            tshift_acceptance_level=150,
+            adj_src_type=self.adj_src_type, component_list=self._components,
+            st_obs_type=st_obs_type, st_syn_type="syn",
+            pyflex_parameters=self.pyflex_parameters,
+            pyadjoint_parameters=self.pyadjoint_parameters
         )
         # Generate a list of station codes that will be used to search for data
-        self._station_codes = read_station_codes(
+        self._station_codes = read_station_codelss(
             path_to_stations=os.path.join(self.path.specfem_data, "STATIONS"),
             loc="*", cha="*"
         )
@@ -315,7 +315,7 @@ class Pyaflowa:
             is assigned by system.run()
         :type save_residuals: str
         :param save_residuals: if not None, path to write misfit/residuls to
-        :type export_residuals: bool
+        :type export_residuals: str
         :param export_residuals: export all residuals (data-synthetic misfit)
             that are generated by the external solver to `path_output`. If
             False, residuals stored in scratch may be discarded at any time in
@@ -398,19 +398,8 @@ class Pyaflowa:
                                    f"{self.ftag(config)}.pdf")
             imgs_to_pdf(fids, fid_out, remove_fids=True)
 
-        # Finally, collect all the temporary log files and write a main log file
-        # that summarizes the entire preprocessing workflow
-        pyatoa_logger = self._config_auxiliary_loggers(
-            fid=os.path.join(self.path._logs, f"{self.ftag(config)}.log")
-        )
-        pyatoa_logger.info(
-            f"\n{'=' * 80}\n{'SUMMARY':^80}\n{'=' * 80}\n"
-            f"SOURCE NAME: {config.event_id}\n"
-            f"WINDOWS: {total_windows}\n"
-            f"RAW MISFIT: {total_misfit:.4f}\n"
-            f"\n{'=' * 80}\n{'RAW LOGS':^80}\n{'=' * 80}"
-            )
-        self._collect_tmp_log_files(pyatoa_logger, config.event_id)
+        # Collect all temp log files into a single log file
+        self._finalize_logging(config, total_windows, total_misfit)
 
     def _setup_quantify_misfit(self, source_name, save_adjsrcs=None,
                                components=None):
@@ -487,9 +476,10 @@ class Pyaflowa:
         tag = f"{self.ftag(config)}_{syn[0].id.replace('.', '_')}"
 
         # Configure a single source-receiver pair temporary logger
-        station_logger = self._config_auxiliary_loggers(
+        station_logger = self._config_auxiliary_logger(
             fid=os.path.join(self.path._tmplogs, f"{tag}.log")
         )
+        # Temporary log header is just the name of the station we're after
         station_logger.info(f"\n{'/' * 80}\n{syn[0].id:^80}\n{'/' * 80}")
 
         # Check whether or not we want to use misfit windows from last eval.
@@ -519,7 +509,7 @@ class Pyaflowa:
             pass
 
         # Plot waveform + map figure. Map may fail if we don't have appropriate
-        # metdata, in which case we fall back to plotting waveform only
+        # metadata, in which case we fall back to plotting waveform only
         if self.plot_waveforms:
             # e.g., 001_i01_s00_XX_ABC.png
             save = os.path.join(self.path["_figures"], f"{tag}.png")
@@ -530,13 +520,12 @@ class Pyaflowa:
                 mgmt.plot(choice="wav", show=False, save=save)
 
         # Write out the .adj adjoint source files for solver to discover.
-        # Write empty adjoint sources for components with no adjoint sources
         if mgmt.stats.misfit is not None and save_adjsrcs:
-            mgmt.write_adjsrcs(path=save_adjsrcs, write_blanks=True)
+            mgmt.write_adjsrcs(path=save_adjsrcs, write_blanks=False)
 
         # Wait until the very end to write to the HDF5 file, then do it
         # pseudo-serially to get around trying to parallel write to HDF5 file
-        # WARNING: This is the biggest potential bottleneck of preprocessing
+        # WARNING: This is a big potential bottleneck here
         if ds is not None:
             ds._close()  # close the read-only version so we can open in write
         while True:
@@ -679,7 +668,7 @@ class Pyaflowa:
 
         return fix_windows, msg
 
-    def _config_auxiliary_loggers(self, fid):
+    def _config_auxiliary_logger(self, fid):
         """
         Create a log file to track processing of a given source-receiver pair.
         Because each station is processed asynchronously, we don't want them to
@@ -709,7 +698,7 @@ class Pyaflowa:
 
         return logger
 
-    def _collect_tmp_log_files(self, pyatoa_logger, event_id):
+    def _finalize_logging(self, config, total_windows, total_misfit):
         """
         Each source-receiver pair has made its own log file. This function
         collects these files and writes their content back into the main log.
@@ -732,15 +721,32 @@ class Pyaflowa:
             https://stackless.readthedocs.io/en/3.7-slp/howto/
               logging-cookbook.html#using-concurrent-futures-processpoolexecutor
 
-        :type pyatoa_logger: logging.Logger
-        :param pyatoa_logger: The main logger for a given event, should be
-            defined by `pyaflowa.quantify_misfit()`
-        :type event_id: str
-        :param event_id: given event id that we are concerned with. Used to
-            search for matching log files in the temporary log file directory
+        :type config: pyatoa.core.config.Config
+        :param config: Config object that will be queried for iteration, step
+            count and event ID information
+        :type total_windows: int
+        :param total_windows: total number of windows collected for a given
+            source. this will be written to the final log message
+        :type total_misfit: float
+        :param total_misfit: total misfit for a given source. this will be
+            written to the final log message
         """
+        pyatoa_logger = self._config_auxiliary_logger(
+            fid=os.path.join(self.path._logs, f"{self.ftag(config)}.log")
+        )
+        # Summary log message so that User can quickly assess each source
+        pyatoa_logger.info(
+            f"\n{'=' * 80}\n{'SUMMARY':^80}\n{'=' * 80}\n"
+            f"SOURCE NAME: {config.event_id}\n"
+            f"WINDOWS: {total_windows}\n"
+            f"RAW MISFIT: {total_misfit:.4f}\n"
+            f"\n{'=' * 80}\n{'RAW LOGS':^80}\n{'=' * 80}"
+            )
+
+        # Collect each station's log file and write them into the main file
         tmp_logs = sorted(glob(os.path.join(self.path._tmplogs,
-                                            f"*{event_id}_*.log")))
+                                            f"*{config.event_id}_*.log")))
+
         with open(pyatoa_logger.handlers[0].baseFilename, "a") as fw:
             for tmp_log in tmp_logs:
                 with open(tmp_log, "r") as fr:
