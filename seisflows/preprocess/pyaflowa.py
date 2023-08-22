@@ -72,8 +72,8 @@ class Pyaflowa:
     :param plot_waveforms: plot waveform figures and source receiver maps during
         the preprocessing stage. Maps require metadata, and if they are not
         provided then only waveforms + windows + adjoint sources will be plotted
-    :type pyatoa_log_level: str
-    :param pyatoa_log_level: Log level to set Pyatoa, Pyflex, Pyadjoint.
+    :type preprocess_log_level: str
+    :param preprocess_log_level: Log level to set Pyatoa, Pyflex, Pyadjoint.
         Available: ['null': no logging, 'warning': warnings only,
         'info': task tracking, 'debug': log all small details (recommended)]
     :type unit_output: str
@@ -99,7 +99,7 @@ class Pyaflowa:
     def __init__(self, min_period=1., max_period=10.,
                  pyflex_parameters=None, pyadjoint_parameters=None,
                  fix_windows=False, adj_src_type="cc_traveltime",
-                 plot_waveforms=True, pyatoa_log_level="DEBUG",
+                 plot_waveforms=True, preprocess_log_level="DEBUG",
                  export_datasets=True, export_figures=True,
                  export_log_files=True, workdir=os.getcwd(),
                  path_preprocess=None, path_solver=None, path_specfem_data=None,
@@ -146,7 +146,7 @@ class Pyaflowa:
         self.fix_windows = fix_windows
         self.adj_src_type = adj_src_type
         self.plot_waveforms = plot_waveforms
-        self.pyatoa_log_level = pyatoa_log_level
+        self.preprocess_log_level = preprocess_log_level
 
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
@@ -693,7 +693,7 @@ class Pyaflowa:
             while logger.hasHandlers():
                 logger.removeHandler(logger.handlers[0])
             # Log to new temporary file
-            logger.setLevel(self.pyatoa_log_level)
+            logger.setLevel(self.preprocess_log_level)
             logger.addHandler(handler)
 
         return logger
