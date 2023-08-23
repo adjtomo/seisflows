@@ -478,6 +478,13 @@ class Pyaflowa:
         syn = read(fid=syn_fid, data_format=self.syn_data_format,
                    origintime=cat[0].preferred_origin().time)
 
+        # Attempt to gather station metadata from data directory, or SAC header
+        if self.obs_data_format == "SAC":
+            inv = get_inv_from_sac_header(obs)
+        else:
+
+
+
         # Unique identifier for the given source-receiver pair for file naming
         # Something like: 001_i01_s00_XX_XYZ
         tag = f"{self.ftag(config)}_{syn[0].id.replace('.', '_')}"

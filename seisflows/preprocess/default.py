@@ -612,14 +612,14 @@ def read(fid, data_format, **kwargs):
     :param data_format: format of the file to read data from
     :rtype: obspy.core.stream.Stream
     :return: ObsPy stream containing data stored in `fid`
+    :raises TypeError: if the provided data format cannot be read
     """
-    st = None
     if data_format.upper() == "SU":
         st = obspy_read(fid, format="SU", byteorder="<", **kwargs)
-    elif data_format.upper() == "SAC":
-        st = obspy_read(fid, format="SAC", **kwargs)
     elif data_format.upper() == "ASCII":
         st = read_ascii(fid, **kwargs)
+    else:
+        st = obspy_read(fid, format=data_format.upper(), **kwargs)
     return st
 
 

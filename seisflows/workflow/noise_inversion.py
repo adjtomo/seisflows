@@ -439,7 +439,6 @@ class NoiseInversion(Inversion):
         assert (len(fids_nn) == len(fids_ne) == len(fids_en) == len(fids_ee)), \
             f"number of synthetic waveforms does not match for all comps"
 
-        import pdb;pdb.set_trace()
         # Rotate NE streams to RT in parallel
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
@@ -487,8 +486,6 @@ class NoiseInversion(Inversion):
         tr_rr, tr_tt = rotate_ne_trace_to_rt(tr_ee=tr_ee, tr_ne=tr_ne,
                                              tr_en=tr_en, tr_nn=tr_nn,
                                              theta=theta, theta_p=theta_p)
-
-        import pdb;pdb.set_trace()
 
         # Write synthetics back to the main synthetic trace directory for
         # subsequent misfit quantification

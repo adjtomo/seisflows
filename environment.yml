@@ -9,5 +9,6 @@ dependencies:
     - pyyaml
     - pypdf
     - pip:
+      - pysep-adjtomo
       - -e .
        
