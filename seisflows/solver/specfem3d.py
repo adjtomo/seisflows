@@ -53,6 +53,15 @@ class Specfem3D(Specfem):
             self._parameters += ["vp"]
         elif self.materials.upper() == "ELASTIC":
             self._parameters += ["vp", "vs"]
+        elif self.materials.upper() == "ANISOTROPIC":
+            self._parameters += ["vp", "vs"]
+            # General 21 parameter anisotropy: c11, c12... c66
+            for i in range(1, 7):
+                for j in range(1, 7):
+                    if j >= i:
+                        self._parameters.append(f"c{i}{j}")
+        else:
+            raise NotImplementedError(f"invalid material: {self.materials}")
 
         # Overwriting the base class parameters
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
