@@ -14,7 +14,7 @@ from glob import glob
 from pyasdf import ASDFDataSet
 
 from pyatoa import Config, Manager, Inspector, ManagerError
-from pyatoa.utils.read import read_station_codes, read_events_plus
+from pysep.utils.io import read_events_plus, read_stations
 
 from seisflows import logger
 from seisflows.tools import unix
@@ -270,11 +270,6 @@ class Pyaflowa:
             pyadjoint_parameters=self.pyadjoint_parameters
         )
 
-        # Generate a list of station codes that will be used to search for data
-        self._station_codes = read_station_codes(
-            path_to_stations=os.path.join(self.path.specfem_data, "STATIONS"),
-            loc="*", cha="*"
-        )
         # Get an internal list of source names. Will be the same as solver
         self._source_names = check_source_names(
             path_specfem_data=self.path.specfem_data,

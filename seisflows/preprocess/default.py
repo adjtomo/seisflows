@@ -334,6 +334,7 @@ class Default:
             path_to_data=self.path.specfem_data,
             source_prefix=self.source_prefix
         )
+
     def finalize(self):
         """
         Teardown procedures for the default preprocessing class. Required
