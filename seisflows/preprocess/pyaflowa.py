@@ -189,10 +189,10 @@ class Pyaflowa:
             self.path["_waveforms"] = None
             self.path["_responses"] = None
 
-        # SeisFlows parameters that should be set by other modules. Keep hidden
-        # so `seisflows configure` doesn't attribute these to preprocess.
+        # Pyaflowa parameters that should be set by other modules.
         self.syn_data_format = syn_data_format.upper()
         self.obs_data_format = obs_data_format.upper()
+        self.source_prefix = source_prefix
         self._data_case = data_case.lower()
         if components is not None:
             self._components = list(components)  # e.g. 'RTZ' -> ['R', 'T', 'Z']
@@ -467,13 +467,16 @@ class Pyaflowa:
             Pyatoa + PyASDF
         """
         # Read in data required for processing
-        obs = read(fid=obs_fid, data_format=self.obs_data_format)
-        syn = read(fid=syn_fid, data_format=self.syn_data_format)
         cat = read_events_plus(
             fid=os.path.join(self.path.specfem_data,
                              f"{self._source_prefix}_{config.event_id}"),
             fmt=self._source_prefix
         )
+        # parameter `origintime` will only be applied if format=='ASCII'
+        obs = read(fid=obs_fid, data_format=self.obs_data_format,
+                   origintime=cat[0].preferred_origin().time)
+        syn = read(fid=syn_fid, data_format=self.syn_data_format,
+                   origintime=cat[0].preferred_origin().time)
 
         # Unique identifier for the given source-receiver pair for file naming
         # Something like: 001_i01_s00_XX_XYZ

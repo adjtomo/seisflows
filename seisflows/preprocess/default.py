@@ -602,7 +602,7 @@ class Default:
         return obs, syn
 
 
-def read(fid, data_format):
+def read(fid, data_format, **kwargs):
     """
     Waveform reading functionality. Imports waveforms as Obspy streams
 
@@ -615,11 +615,11 @@ def read(fid, data_format):
     """
     st = None
     if data_format.upper() == "SU":
-        st = obspy_read(fid, format="SU", byteorder="<")
+        st = obspy_read(fid, format="SU", byteorder="<", **kwargs)
     elif data_format.upper() == "SAC":
-        st = obspy_read(fid, format="SAC")
+        st = obspy_read(fid, format="SAC", **kwargs)
     elif data_format.upper() == "ASCII":
-        st = read_ascii(fid)
+        st = read_ascii(fid, **kwargs)
     return st
 
 
@@ -651,13 +651,17 @@ def write(st, fid, data_format):
 
     elif data_format.upper() == "ASCII":
         for tr in st:
-            # Float provides time difference between starttime and default
-            time_offset = float(tr.stats.starttime)
+            # Time offset should have been set by `read_ascii` when reading in
+            # the original ASCII waveform file
+            try:
+                time_offset = tr.stats.time_offset
+            except AttributeError:
+                time_offset = 0
             data_out = np.vstack((tr.times() + time_offset, tr.data)).T
             np.savetxt(fid, data_out, ["%13.7f", "%17.7f"])
 
 
-def read_ascii(fid, origintime=None):
+def read_ascii(fid, origintime=None, **kwargs):
     """
     Converts SPECFEM synthetics into ObsPy Stream objects with the correct
     header information.
