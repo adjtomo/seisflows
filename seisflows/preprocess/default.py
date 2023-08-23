@@ -671,7 +671,7 @@ def read_ascii(fid, origintime=None, **kwargs):
 
         This is a trimmed down version of pysep.utils.io.read_sem() which is
         copied here for better visibility within SeisFlows, and ignores things
-        like SAC headers.
+        like SAC headers appending
 
     :type fid: str
     :param fid: path of the given ascii file

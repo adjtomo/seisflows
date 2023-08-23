@@ -20,8 +20,7 @@ from seisflows import logger
 from seisflows.tools import unix
 from seisflows.tools.config import Dict
 from seisflows.tools.graphics import imgs_to_pdf, merge_pdfs
-from seisflows.tools.specfem import (check_source_names,
-                                     return_matching_waveform_files,
+from seisflows.tools.specfem import (return_matching_waveform_files,
                                      get_src_rcv_lookup_table)
 from seisflows.preprocess.default import read, initialize_adjoint_traces
 
@@ -105,7 +104,7 @@ class Pyaflowa:
                  export_log_files=True, workdir=os.getcwd(),
                  path_preprocess=None, path_solver=None, path_specfem_data=None,
                  path_data=None, path_output=None, obs_data_format="SAC",
-                 syn_data_format="ascii", data_case="data", components=None,
+                 syn_data_format="ASCII", data_case="data", components=None,
                  start=None, ntask=1, nproc=1, source_prefix=None, **kwargs):
         """
         Pyatoa preprocessing parameters
@@ -149,15 +148,6 @@ class Pyaflowa:
         self.plot_waveforms = plot_waveforms
         self.preprocess_log_level = preprocess_log_level
 
-        self.path = Dict(
-            scratch=path_preprocess or os.path.join(workdir, "scratch",
-                                                    "preprocess"),
-            solver=path_solver or os.path.join(workdir, "scratch", "solver"),
-            output=path_output or os.path.join(workdir, "output"),
-            specfem_data=path_specfem_data,
-            data=path_data,
-        )
-
         # Set the Pyflex and Pyadjoint external parameters
         _cfg = Config(pyflex_parameters=pyflex_parameters,
                       pyadjoint_parameters=pyadjoint_parameters)
@@ -175,51 +165,49 @@ class Pyaflowa:
         self.export_figures = export_figures
         self.export_log_files = export_log_files
 
-        # Pyatoa-specific internal directory structure for storing data etc.
+        # Preprocessing path variables that allow the module to keep track of IO
+        self.path = Dict(
+            scratch=path_preprocess or os.path.join(workdir, "scratch",
+                                                    "preprocess"),
+            solver=path_solver or os.path.join(workdir, "scratch", "solver"),
+            output=path_output or os.path.join(workdir, "output"),
+            specfem_data=path_specfem_data,
+            data=path_data,
+        )
+
+        # Pyatoa-specific internal directory structure for storing data within
+        # the SeisFlows scratch/ directory
         self.path["_logs"] = os.path.join(self.path.scratch, "logs")
         self.path["_tmplogs"] = os.path.join(self.path._logs, "tmp")
         self.path["_datasets"] = os.path.join(self.path.scratch, "datasets")
         self.path["_figures"] = os.path.join(self.path.scratch, "figures")
 
-        # Where to look for externally stored waveform data and response files
-        if self.path.data:
-            self.path["_waveforms"] = os.path.join(self.path.data, "mseed")
-            self.path["_responses"] = os.path.join(self.path.data, "seed")
-        else:
-            self.path["_waveforms"] = None
-            self.path["_responses"] = None
-
-        # Pyaflowa parameters that should be set by other modules.
+        # Parameters that are defined by other modules but accessed by Pyaflowa
         self.syn_data_format = syn_data_format.upper()
         self.obs_data_format = obs_data_format.upper()
         self.source_prefix = source_prefix
         self._data_case = data_case.lower()
+        self._start = start
+        self._ntask = ntask
+        self._nproc = nproc
+        self._source_prefix = source_prefix
         if components is not None:
             self._components = list(components)  # e.g. 'RTZ' -> ['R', 'T', 'Z']
         else:
             self._components = components
 
-        self._start = start
-        self._ntask = ntask
-        self._nproc = nproc
-        self._source_prefix = source_prefix
-
-        # Internal parameters to check against user-set parameters
+        # Internal acceptable definitions to check against User-set parameters
         self._syn_acceptable_data_formats = ["ASCII"]
         self._acceptable_source_prefixes = ["SOURCE", "FORCESOLUTION",
                                             "CMTSOLUTION"]
         self._acceptable_fix_windows = ["ITER", "ONCE", True, False]
         self._acceptable_unit_outputs = ["VEL", "DISP", "ACC"]
 
-        # Internal attributes to be filled in by setup()
-        self._srcrcv_stats = None
+        # Internal bookkeeping attributes to be filled in by self.setup()
+        self._inv = None
         self._config = None
+        self._srcrcv_stats = None
         self._fix_windows = False
-        self._station_codes = []
-        self._source_names = []
-
-        # Turn off main logger, which will be toggled on by later jobs
-        logging.getLogger("pyatoa").setLevel("CRITICAL")
 
     def check(self):
         """ 
@@ -252,6 +240,7 @@ class Pyaflowa:
         defined directory structure that will be used to store the outputs 
         of the preprocessing workflow
         """
+        # Create the internal directory structure required for storing results
         for pathname in ["scratch", "_logs", "_tmplogs", "_datasets",
                          "_figures"]:
             unix.mkdir(self.path[pathname])
@@ -270,16 +259,14 @@ class Pyaflowa:
             pyadjoint_parameters=self.pyadjoint_parameters
         )
 
-        # Get an internal list of source names. Will be the same as solver
-        self._source_names = check_source_names(
-            path_specfem_data=self.path.specfem_data,
-            source_prefix=self._source_prefix, ntask=self._ntask
-        )
-
         # Get a lookup table providing relationships between each source and sta
         self._srcrcv_stats = get_src_rcv_lookup_table(
             path_to_data=self.path.specfem_data,
             source_prefix=self.source_prefix
+        )
+        # Get station metadata from the STATIONS file to be used for processing
+        self._inv = read_stations(
+            os.path.join(self.path.specfem_data, "STATIONS")
         )
 
     @staticmethod
@@ -461,34 +448,30 @@ class Pyaflowa:
             will be saved. They of course can be saved manually later using
             Pyatoa + PyASDF
         """
-        # Read in data required for processing
+        # READ DATA
+        # Event metadata from SPECFEM DATA/ (CMTSOLUTION, FORCESOLUTION etc.)
         cat = read_events_plus(
             fid=os.path.join(self.path.specfem_data,
                              f"{self._source_prefix}_{config.event_id}"),
-            fmt=self._source_prefix
+            format=self._source_prefix
         )
-        # parameter `origintime` will only be applied if format=='ASCII'
+        # Waveform input; `origintime` will only be applied if format=='ASCII'
         obs = read(fid=obs_fid, data_format=self.obs_data_format,
                    origintime=cat[0].preferred_origin().time)
         syn = read(fid=syn_fid, data_format=self.syn_data_format,
                    origintime=cat[0].preferred_origin().time)
 
-        # Attempt to gather station metadata from data directory, or SAC header
-        if self.obs_data_format == "SAC":
-            inv = get_inv_from_sac_header(obs)
-        else:
+        # Use synthetics to select inventory because it's assumed more stable
+        inv = self._inv.select(network=syn[0].stats.network,
+                               station=syn[0].stats.station)
 
-
-
-        # Unique identifier for the given source-receiver pair for file naming
-        # Something like: 001_i01_s00_XX_XYZ
+        # SET UP LOGGER
+        # Tag is a unique identifier for logs like: 001_i01_s00_XX_XYZ
         tag = f"{self.ftag(config)}_{syn[0].id.replace('.', '_')}"
-
-        # Configure a single source-receiver pair temporary logger
         station_logger = self._config_auxiliary_logger(
             fid=os.path.join(self.path._tmplogs, f"{tag}.log")
         )
-        # Temporary log header is just the name of the station we're after
+        # Write a log header to make it easier to sort through logs
         station_logger.info(f"\n{'/' * 80}\n{syn[0].id:^80}\n{'/' * 80}")
 
         # Check whether or not we want to use misfit windows from last eval.
@@ -496,23 +479,11 @@ class Pyaflowa:
                                                    step_count=config.step_count)
         station_logger.info(_msg)
 
-        # Setup ASDFDataSet in read only so we can pull data/windows in parallel
-        ds_fid = os.path.join(self.path["_datasets"], f"{config.event_id}.h5")
-        if os.path.exists(ds_fid):
-            while True:
-                try:
-                    ds = ASDFDataSet(ds_fid, mode="r")  # NOTE: read only mode
-                    break
-                except BlockingIOError:
-                    pass
-        else:
-            ds = None
+        # BEGIN PROCESSING
+        mgmt = Manager(st_obs=obs, st_syn=syn, event=cat[0], inv=inv,
+                       config=config)
 
-        mgmt = Manager(st_obs=obs, st_syn=syn, event=cat[0],
-                       config=config, ds=ds)
-
-        # If any part of this processing fails, move on to plotting because we
-        # will have gathered waveform data so a figure is still useful.
+        # If any part of this processing fails, move on to plotting
         try:
             mgmt.standardize()
             mgmt.preprocess(remove_response=False, normalize_to="syn")
@@ -537,14 +508,13 @@ class Pyaflowa:
         if mgmt.stats.misfit is not None and save_adjsrcs:
             mgmt.write_adjsrcs(path=save_adjsrcs, write_blanks=False)
 
-        # Wait until the very end to write to the HDF5 file, then do it
-        # pseudo-serially to get around trying to parallel write to HDF5 file
-        # WARNING: This is a big potential bottleneck here
-        if ds is not None:
-            ds._close()  # close the read-only version so we can open in write
+        # Write Manager data directly to an ASDFDataSet for data storage and
+        # later assessments using the Inspector
         while True:
             try:
-                with ASDFDataSet(ds_fid, mode="a") as ds:
+                with ASDFDataSet(os.path.join(self.path["_datasets"],
+                                              f"{config.event_id}.h5"),
+                                 mode="a") as ds:
                     mgmt.write_to_dataset(ds=ds)
                 break
             except (BlockingIOError, FileExistsError):
@@ -565,6 +535,7 @@ class Pyaflowa:
         :return: sum of squares of residuals
         """
         summed_residuals = np.sum(residuals)
+
         return summed_residuals / self._ntask
 
     def finalize(self):
