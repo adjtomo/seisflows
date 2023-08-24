@@ -424,6 +424,36 @@ class Pyaflowa:
 
         return observed, synthetic
 
+    def _instantiate_manager(self, obs_fid, syn_fid, config):
+        """
+        Convenience function to return a Manager object that is filled with
+        the required data and metadata. This is defined as it's own function
+        primarily for debuggin purposes as it allows the User to quickly
+        retrieve an object ready for processing
+        """
+        # READ DATA
+        # Event metadata from SPECFEM DATA/ (CMTSOLUTION, FORCESOLUTION etc.)
+        cat = read_events_plus(
+            fid=os.path.join(self.path.specfem_data,
+                             f"{self._source_prefix}_{config.event_id}"),
+            format=self._source_prefix
+        )
+        # Waveform input; `origintime` will only be applied if format=='ASCII'
+        obs = read(fid=obs_fid, data_format=self.obs_data_format,
+                   origintime=cat[0].preferred_origin().time)
+        syn = read(fid=syn_fid, data_format=self.syn_data_format,
+                   origintime=cat[0].preferred_origin().time)
+
+        # Use synthetics to select inventory because it's assumed more stable
+        inv = self._inv.select(network=syn[0].stats.network,
+                               station=syn[0].stats.station)
+
+        # BEGIN PROCESSING
+        mgmt = Manager(st_obs=obs, st_syn=syn, event=cat[0], inv=inv,
+                       config=config)
+
+        return mgmt
+
     def _quantify_misfit_single(self, obs_fid, syn_fid, config,
                                 save_adjsrcs=False):
         """
@@ -448,40 +478,24 @@ class Pyaflowa:
             will be saved. They of course can be saved manually later using
             Pyatoa + PyASDF
         """
-        # READ DATA
-        # Event metadata from SPECFEM DATA/ (CMTSOLUTION, FORCESOLUTION etc.)
-        cat = read_events_plus(
-            fid=os.path.join(self.path.specfem_data,
-                             f"{self._source_prefix}_{config.event_id}"),
-            format=self._source_prefix
-        )
-        # Waveform input; `origintime` will only be applied if format=='ASCII'
-        obs = read(fid=obs_fid, data_format=self.obs_data_format,
-                   origintime=cat[0].preferred_origin().time)
-        syn = read(fid=syn_fid, data_format=self.syn_data_format,
-                   origintime=cat[0].preferred_origin().time)
-
-        # Use synthetics to select inventory because it's assumed more stable
-        inv = self._inv.select(network=syn[0].stats.network,
-                               station=syn[0].stats.station)
+        # Retrieve a Manager object that is alraedy filled with data
+        mgmt = self._instantiate_manager(obs_fid, syn_fid, config)
 
         # SET UP LOGGER
         # Tag is a unique identifier for logs like: 001_i01_s00_XX_XYZ
-        tag = f"{self.ftag(config)}_{syn[0].id.replace('.', '_')}"
+        tag = f"{self.ftag(config)}_{mgmt.st_syn[0].id.replace('.', '_')}"
         station_logger = self._config_auxiliary_logger(
             fid=os.path.join(self.path._tmplogs, f"{tag}.log")
         )
         # Write a log header to make it easier to sort through logs
-        station_logger.info(f"\n{'/' * 80}\n{syn[0].id:^80}\n{'/' * 80}")
+        station_logger.info(f"\n{'/' * 80}\n"
+                            f"{mgmt.st_syn[0].id:^80}\n"
+                            f"{'/' * 80}")
 
         # Check whether or not we want to use misfit windows from last eval.
         _fix_win, _msg = self._check_fixed_windows(iteration=config.iteration,
                                                    step_count=config.step_count)
         station_logger.info(_msg)
-
-        # BEGIN PROCESSING
-        mgmt = Manager(st_obs=obs, st_syn=syn, event=cat[0], inv=inv,
-                       config=config)
 
         # If any part of this processing fails, move on to plotting
         try:
