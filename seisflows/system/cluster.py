@@ -60,7 +60,7 @@ class Cluster(Workstation):
     # Setting them outside init allows them to be inherited by all child classes
     # implicitely. Should not be edited unless using custom submit/run scripts
     submit_workflow = os.path.join(ROOT_DIR, "system", "runscripts", "submit")
-    run_functionu = os.path.join(ROOT_DIR, "system", "runscripts", "run")
+    run_function = os.path.join(ROOT_DIR, "system", "runscripts", "run")
 
     def __init__(self, title=None, mpiexec="", ntask_max=None, walltime=10,
                  tasktime=1, environs="", **kwargs):
