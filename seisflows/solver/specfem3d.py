@@ -73,15 +73,31 @@ class Specfem3D(Specfem):
         self._model_databases = None
         self.path._vtk_files = os.path.join(self.path.scratch, "vtk_files")
 
+    def check(self):
+        """SPECFEM3D_Cartesian specific check tasks"""
+        super().check()
+
+        if self.materials.upper() == "ANISOTROPIC":
+            logger.warning("the 'ANISOTROPIC' material parameter is an "
+                           "experimental feature that requires "
+                           "a modified version of SPECFEM3D. Use at your own "
+                           "risk, not guaranteed to work")
+
+            anisotropic_kl = getpar(key="ANISOTROPIC_KL", 
+                                    file=os.path.join(self.path.specfem_data, 
+                                                      "Par_file"))[1]
+            assert(anisotropic_kl == ".true."), (
+                f"SPECFEM3D Par_file parameter 'ANISOTROPIC_KL' must be set "
+                f"'.true.' for ANISOTROPIC parameters"
+                )
+
+
     def setup(self):
         """
         Generate .vtk files for the initial and target (if applicable) models,
         which the User can use for external visualization
         """
         super().setup()
-
-        # Work-in-progress
-        # self.combine_vol_data_vtk()
 
     def data_wildcard(self, comp="?"):
         """

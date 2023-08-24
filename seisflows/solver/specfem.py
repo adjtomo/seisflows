@@ -170,7 +170,7 @@ class Specfem:
         self._available_model_types = ["gll"]
         self._available_materials = [
             "ELASTIC", "ACOUSTIC",  # specfem2d and specfem3d
-            "TRANSVSERSE_ISOTROPIC"  # specfem3d and 3d_globe
+            "TRANSVSERSE_ISOTROPIC",  # specfem3d and 3d_globe
             "ANISOTROPIC",  # specfem3d
         ]
         # SPECFEM2D specific attributes. Should be overwritten by 3D versions
