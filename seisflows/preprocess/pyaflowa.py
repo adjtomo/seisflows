@@ -190,7 +190,10 @@ class Pyaflowa:
         # SeisFlows parameters that should be set by other modules. Keep hidden
         # so `seisflows configure` doesn't attribute these to preprocess.
         self._syn_data_format = syn_data_format.upper()
-        self._data_case = data_case.lower()
+        if data_case is not None:
+            self._data_case = data_case.lower()
+        else:
+            self._data_case = data_case
         if components is not None:
             self._components = list(components)  # e.g. 'RTZ' -> ['R', 'T', 'Z']
         else:

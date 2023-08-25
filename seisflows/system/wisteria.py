@@ -62,6 +62,10 @@ class Wisteria(Fujitsu):
         - debug-a: Aquarius debug, 30 min max, [1, 1] nodes available
         - short-a: Aquarius short, 2 hr. max, [1, 2] nodes available
         - regular-a: Aquarius regular, 24-48 hr. max, [1, 8] nodes available
+    :type gpu: int
+    :param gpu: if not None, tells SeisFlows to use the GPU version of SPECFEM, 
+        the integer value of `gpu` will set the number of requested GPUs for a 
+        simulation on system (i.e., #PJM -L gpu=`gpu`)
 
     Paths
     -----
@@ -76,20 +80,36 @@ class Wisteria(Fujitsu):
     submit_workflow = os.path.join(ROOT_DIR, "system", "runscripts",
                                    "custom_submit-wisteria")   
     run_functions = os.path.join(ROOT_DIR, "system", "runscripts", 
-                                 "custom_run-wisteria")   
+                                 "custom_run-wisteria_gpu")   
 
-    def __init__(self, user=None, group=None, rscgrp=None, **kwargs):
+    def __init__(self, user=None, group=None, rscgrp=None, gpu=None, **kwargs):
         """Wisteria init"""
         super().__init__(**kwargs)
 
         self.group = group
         self.rscgrp = rscgrp
+        self.gpu = gpu
 
         # Wisteria resource groups and their cores per node
         self._rscgrps = {
                 "debug-o": 48, "short-o": 48, "regular-o": 48, "priority-o": 48,
-                "debug-a": 48, "short-a": 48, "regular-a": 48
+                "debug-a": 48, "short-a": 48, "regular-a": 48, "share-debug": 48
                 }
+
+        if bool(self.gpu):
+            run_functions = f"{self.run_functions}_gpu"
+
+    @property
+    def run_call_header(self):
+        """Override run call header to allow for GPU version requirements"""
+        if self.gpu:
+            _call = super().run_call_header.replace(
+                    f"-L node={self.nodes}",
+                    f"-L gpu={self.gpu}"
+                    )
+            return _call
+        else:
+            return super().run_call_header
 
     def submit(self, workdir=None, parameter_file="parameters.yaml"):            
         """                                                                      
