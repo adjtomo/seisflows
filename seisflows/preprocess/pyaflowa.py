@@ -148,7 +148,8 @@ class Pyaflowa:
         self.preprocess_log_level = preprocess_log_level
 
         # Set the Pyflex and Pyadjoint external parameters
-        _cfg = Config(pyflex_parameters=pyflex_parameters,
+        _cfg = Config(adj_src_type=adj_src_type,
+                      pyflex_parameters=pyflex_parameters,
                       pyadjoint_parameters=pyadjoint_parameters)
         self.pyflex_parameters = {
             key: val for key, val in _cfg.pfcfg.items() if key not in
@@ -493,13 +494,14 @@ class Pyaflowa:
                                                    step_count=config.step_count)
         station_logger.info(_msg)
 
-        # If any part of this processing fails, move on to plotting
+        # If any part of this processing fails for whatever reason, move on to 
+        # plotting and don't let it affect the other tasks
         try:
             mgmt.standardize()
             mgmt.preprocess(remove_response=False, normalize_to="syn")
             mgmt.window(fix_windows=_fix_win)
             mgmt.measure()
-        except ManagerError as e:
+        except Exception as e:
             station_logger.warning(e)
             pass
 
