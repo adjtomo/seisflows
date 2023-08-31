@@ -36,7 +36,11 @@ class Cluster(Workstation):
     :param mpiexec: Function used to invoke executables on the system.
         For example 'mpirun', 'mpiexec', 'srun', 'ibrun'
     :type ntask_max: int
-    :param ntask_max: limit the number of concurrent tasks in a given array job
+    :param ntask_max: limit the number of concurrent tasks in a given array job.
+        Note that if you are directly running the Cluster system on a 
+        workstation or the login node of your cluster, try to adhere to 
+        the number of cores on your system should be <= `ntask_max` * `nproc`,
+        otherwise you may face memory allocation errors
     :type walltime: float
     :param walltime: maximum job time in minutes for the master SeisFlows
         job submitted to cluster. Fractions of minutes acceptable.

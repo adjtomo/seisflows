@@ -364,6 +364,9 @@ class Pyaflowa:
                 total_misfit += misfit or 0
                 total_windows += nwin or 0
 
+        logger.info(f"{source_name}; misfit={total_misfit:.2E}; "
+                    f"nwin={total_windows}")
+
         # Save residuals to external file for Workflow to calculate misfit `f`
         # Slightly different than Default preprocessing because we need to
         # normalize by the total number of windows
