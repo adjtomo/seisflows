@@ -250,7 +250,7 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
         # Enforce first line comment, see warning in docstring for explanation
         lines = open(new_source, "r").readlines()
         with open(new_source, "w") as f:
-            f.write(f"FORCE{i:0>3}\n")
+            f.write(f"FORCE_{network}_{station}\n")
             f.writelines(lines[1:])
 
 

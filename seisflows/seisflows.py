@@ -62,7 +62,7 @@ def sfparser():
                     f"{f'SeisFlows v{__version__}':^80}\n\n"
                     f"{'='*80}",
         epilog="'seisflows [command] -h' for more detailed descriptions "
-               "of each command.",
+               "of each command",
     )
 
     # Optional parameters
@@ -217,7 +217,7 @@ def sfparser():
         "plot2d", formatter_class=argparse.RawDescriptionHelpFormatter,
         description="""Plots model/kernels/gradient files located in the output/
         directory. ONLY available for SPECFEM2D models.""",
-        help="Plot 2D figures of models/kernels/gradients.")
+        help="Plot 2D figures of models/kernels/gradients")
 
     plot2d.add_argument("name", type=str, nargs="?",
                         help="Name of directory in the output/ directory")
@@ -352,10 +352,6 @@ working state before the workflow can be resumed
                           help="Number of processors to use for MPI runs. "
                                "Default values chosen for each example problem."
                           )
-    # =========================================================================
-    subparser.add_parser(
-        "version", help="Start interactive debug environment",
-        description="Print current package version number")
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par,
