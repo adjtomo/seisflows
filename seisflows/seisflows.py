@@ -19,7 +19,7 @@ import sys
 import argparse
 from glob import glob
 from inspect import getmro
-from seisflows import logger, ROOT_DIR, NAMES
+from seisflows import logger, ROOT_DIR, NAMES, __version__
 from seisflows.tools import unix, msg
 from seisflows.tools.config import load_yaml, custom_import, import_seisflows
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
@@ -59,7 +59,7 @@ def sfparser():
     parser = argparse.ArgumentParser(
         formatter_class=SubcommandHelpFormatter,
         description=f"{'='*80}\n\n"
-                    f"{'SeisFlows: Waveform Inversion Package':^80}\n\n"
+                    f"{f'SeisFlows v{__version__}':^80}\n\n"
                     f"{'='*80}",
         epilog="'seisflows [command] -h' for more detailed descriptions "
                "of each command.",
@@ -352,6 +352,10 @@ working state before the workflow can be resumed
                           help="Number of processors to use for MPI runs. "
                                "Default values chosen for each example problem."
                           )
+    # =========================================================================
+    subparser.add_parser(
+        "version", help="Start interactive debug environment",
+        description="Print current package version number")
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par,
