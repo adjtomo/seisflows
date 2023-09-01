@@ -17,6 +17,8 @@ to get ZZ, RR and TT SGFs that can be compared to data.
 
 .. note:: Kernel Naming
 
+    Naming convention: AB (A=force source direction, B=waveform component)
+
     The kernel naming convention used in this workflow follows from Ref. 1.
     Two letter names (e.g., AB) where first letter (A) represents input force
     direction, and second letter (B) represents the component of the recorded
@@ -316,24 +318,22 @@ class NoiseInversion(Inversion):
     def prepare_data_for_solver(self, **kwargs):
         """
         Function Override of `workflow.forward.prepare_data_for_solver()` 
-        This will be run from within the `evaluate_initial_misfit` function.
+        run from within the `evaluate_initial_misfit` function
+
+        Modifies the location of expected observed data, and removes any data
+        previously stored within the `solver/traces/obs/` directory to avoid
+        data conflict during workflow
+
+        Data are searched for under the following locations:
+
+            ZZ kernel: `path_data`/{source_name}/ZZ/*
+            RR kernel: `path_data`/{source_name}/RR/*
+            TT kernel: `path_data`/{source_name}/TT/*
 
         .. note ::
 
             Must be run by system.run() so that solvers are assigned individual
             task ids and working directories
-
-        .. note::
-
-            Changes the location of expected observed data, and removes any data
-            previously stored within the `solver/traces/obs/` directory to avoid
-            data conflict during workflow
-
-            Data are searched for under the following locations:
-
-                ZZ kernel: `path_data`/{source_name}/ZZ/*
-                RR kernel: `path_data`/{source_name}/RR/*
-                TT kernel: `path_data`/{source_name}/TT/*
         """
         # Define where the obs data is stored
         dst = self.trace_path("obs")
@@ -361,35 +361,40 @@ class NoiseInversion(Inversion):
     def evaluate_objective_function(self, save_residuals=False, components=None,
                                     **kwargs):
         """
-        Function Override of `workflow.inversion.evaluate_objective_function` to
-        get expected adjoint sources for each kernel.
+        Function Override of `workflow.inversion.evaluate_objective_function`
+        run from within the `evaluate_initial_misfit` function
 
-        Calls Preprocessing module to calculate misfit (f) and adjoint sources.
-
-        ZZ kernel creation requires little modification and generally follows
-        the original workflow function.
-
-        RR and TT kernels require modification:
-        - output synthetics are rotated from N/E to R/T, to match EGF data for
-          misfit quantification
-        - R and T adjoint sources are rotated back to N and E for
-          adjoint simulations
+        - ZZ kernel follows standard procedure as a normal inversion
+        - RR and TT kernels require modification:
+            - N/E synthetics rotated -> R/T, to match EGF data
+            - Objective function evaluated for R/T, R/T adj. srcs generated
+            - R/T adjoint sources rotated back -> N/E for adjoint simulations
 
         .. note::
 
             Must be run by system.run() so that solvers are assigned individual
             task ids/ working directories.
+
+        :type save_residuals: str
+        :param save_residuals: if not None, path to write misfit/residuls to
+        :type components: list
+        :param components: optional list of components to ignore preprocessing
+            traces that do not have matching components. The adjoint sources for
+            these components will be 0. E.g., ['Z', 'N']. If None, all available
+            components will be considered.
         """
         # Z component force behaves like a normal workflow, except that we only
-        # create adjoint sources for the Z component, E and N will be zeros
+        # create adjoint sources for the Z component (E, N will be 0's)
         if self._force == "Z":
             super().evaluate_objective_function(save_residuals=save_residuals,
                                                 components=["Z"])
         # Run E and N misfit quantification
         else:
-            # Order of forward simulations matters! E simulations must be first
+            # ==================================================================
+            # IMPORTANT: The order of simulations matters here! E must be first
+            # ==================================================================
             if self._force == "E":
-                logger.info("waiting for additional N component forward "
+                logger.info("waiting for additional 'N' component forward "
                             "simulation before proceeding with R/T "
                             "preprocessing")
                 return
@@ -403,6 +408,7 @@ class NoiseInversion(Inversion):
             super().evaluate_objective_function(save_residuals=save_residuals,
                                                 components=["T", "R"]
                                                 )
+
             # Re-rotate T and R adjoint sources to N and E components for 
             # adjoint simulations. Only rotate what is required for adj sim.
             for choice in ["T", "R"]:
@@ -411,8 +417,15 @@ class NoiseInversion(Inversion):
 
     def rotate_ne_traces_to_rt(self):
         """
-        Rotates N and E component waveforms generated by N and E force sources
-        into R and T component, generated by R and T force sources.
+        Parallelized rotation function to get N and E component synthetic
+        waveforms, generated by N and E forcesolution simulations, into
+        R and T component synthetics, generated by R and T force sources.
+
+        See Reference 1 in top docstring for detailed explanation. General idea
+        is that you cannot have a radial or transverse source for N>1 stations
+        with only one simulation, so instead we run N and E force simulations,
+        and then rotate the orthogonal N and E component synthetics to get
+        RR and TT Synthetic Greens Functions.
 
         .. note::
 
@@ -423,64 +436,63 @@ class NoiseInversion(Inversion):
 
         # Gather waveform files from previous simulations and sort so that they
         # are technically in the same order. Assuming directory structure here.
-        fids_nn = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="n"),
-                                           self.solver.data_wildcard(comp="N")))
-                         )
-        fids_ne = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="n"),
+        # Naming scheme: 1st letter is generating source, 2nd is component
+        fids_ee = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="e"),
                                            self.solver.data_wildcard(comp="E")))
                          )
         fids_en = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="e"),
                                            self.solver.data_wildcard(comp="N")))
                          )
-        fids_ee = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="e"),
+        fids_ne = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="n"),
                                            self.solver.data_wildcard(comp="E")))
                          )
+        fids_nn = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="n"),
+                                           self.solver.data_wildcard(comp="N")))
+                         )
 
-        # Double check that we have found files and that they match
-        assert(len(fids_nn) != 0), f"No synthetic traces found for rotation"
+        # Double check that we have found files, and that they match
+        assert(len(fids_ee) != 0), f"No synthetic traces found for rotation"
+        assert (len(fids_ee) == len(fids_en) == len(fids_ne) == len(fids_nn)), \
+            f"number of synthetic waveforms does not match for all components"
 
-        # Ensure that we actually found files and that they all match
-        assert (len(fids_nn) == len(fids_ne) == len(fids_en) == len(fids_ee)), \
-            f"number of synthetic waveforms does not match for all comps"
-
-        # Rotate NE streams to RT in parallel
+        # Rotate NE synthetics to RT synthetics, in parallel
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
                 executor.submit(self._rotate_ne_trace_to_rt_single,
-                                f_nn, f_ne, f_en, f_ee)
-                for f_nn, f_ne, f_en, f_ee in zip(fids_nn, fids_ne,
-                                                  fids_en, fids_ee)
+                                f_ee, f_en, f_ne, f_nn)
+                for f_ee, f_en, f_ne, f_nn in zip(fids_ee, fids_en,
+                                                  fids_ne, fids_nn)
                 ]
-        # Simply wait until this task is completed because they are file writing
+        # Simply wait until this task is completed because its just file writing
         wait(futures)
 
-    def _rotate_ne_trace_to_rt_single(self, f_nn, f_ne, f_en, f_ee):
+    def _rotate_ne_trace_to_rt_single(self, f_ee, f_en, f_ne, f_nn):
         """
-        Parallalizable function to be called in scucession to rotate NE traces
-        to RT for use in misfit quantification
+        Parallalizable private function to rotate NE synthetics to RR and TT
 
-        :type f_nn: str
-        :param f_nn: path to the NN synthetic waveform (N force, N component)
-        :type f_ne: str
-        :param f_ne: path to the NE synthetic waveform (N force, E component)
+        :type f_ee: str
+        :param f_ee: path to the EE synthetic waveform (E force, E  component)
         :type f_en: str
         :param f_en: path to the EN synthetic waveform (E force, N component)
+        :type f_ne: str
+        :param f_ne: path to the NE synthetic waveform (N force, E component)
         :type f_nn: str
         :param f_nn: path to the NN synthetic waveform (N force, N component)
         """
         src_name = self.solver.source_name
 
         # Figure out station and file naming from the parts of the file ID
+        # !!! Assuming SPECFEM3D file naming structure here
         net, sta, cha, *ext = os.path.basename(f_nn).split(".")
         ext = ".".join(ext)  # e.g., SEM3DGLOBE ['sem', 'ascii'] -> sem.ascii
         rcv_name = f"{net}_{sta}"
 
-        # Collect azimuth angles from lookup table computed in setup
+        # Get azimuth angles from lookup table for the given src-rcv pair
         theta = self.preprocess._srcrcv_stats[src_name][rcv_name].theta
         theta_p = self.preprocess._srcrcv_stats[src_name][rcv_name].theta_p
 
         # Read in the N/E synthetic waveforms that need to be rotated
-        # Assuming that each Stream only has one Trace in it
+        # !!! Assuming that each Stream only has one Trace in it
         tr_nn = read(f_nn, data_format=self.solver.syn_data_format)[0]
         tr_ne = read(f_ne, data_format=self.solver.syn_data_format)[0]
         tr_ee = read(f_ee, data_format=self.solver.syn_data_format)[0]

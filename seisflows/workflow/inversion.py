@@ -222,8 +222,10 @@ class Inversion(Migration):
     def evaluate_objective_function(self, save_residuals=False, components=None,
                                     **kwargs):
         """
-        Simple overwrite to include iteration and step count parameters into
-        preprocessing for file naming and tagging.
+        Function Override of `workflow.forward.evaluate_objective_function`
+
+        Simple override to include iteration and step count parameters into
+        preprocessing for file naming and tagging. Machinery remains the same.
 
         .. note::
             Must be run by system.run() so that solvers are assigned individual

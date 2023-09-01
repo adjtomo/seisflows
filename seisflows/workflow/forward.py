@@ -363,11 +363,10 @@ class Forward:
                                 **kwargs):
         """
         Determines how to provide data to each of the solvers. Either by
-        symlinking data in from a user-provided path, or generating synthetic
-        'data' using
-        a target model.
-
-        This usually only needs to be run once per workflow, even for inversions
+        symlinking (or copying) data in from a user-provided path, or by
+        generating synthetic 'data' by running forward simulations through the
+        target model. This usually only needs to be run once per workflow, even
+        for inversions
 
         .. note ::
 
@@ -392,10 +391,12 @@ class Forward:
 
         # CASE=='data': import data from an external directory
         if self.data_case == "data":
-            if _src is None:
-                src = os.path.join(self.path.data, self.solver.source_name, "*")
-            else:
-                src = _src
+            logger.info(f"copying data from `path_data`")
+
+            src = _src or os.path.join(self.path.data,
+                                       self.solver.source_name, "*")
+            logger.debug(f"looking for data in: '{src}'")
+
             # If no data are found, exit this process, as we cannot continue
             if not glob(src):
                 logger.critical(msg.cli(
@@ -405,10 +406,6 @@ class Forward:
                     header="data import error")
                 )
 
-            logger.info(f"copying data from `path_data`")
-            logger.debug(f"looking for data in: '{src}'")
-
-            # Store the data in the scratch/solver directory
             dst = os.path.join(self.solver.cwd, "traces", "obs", "")
 
             # Check if there is data already in the directory, User may have 
@@ -416,22 +413,15 @@ class Forward:
             if glob(os.path.join(dst, "*")):
                 logger.warning(f"data already found in 'traces/obs' for "
                                f"{self.solver.source_name}, will not copy data")
-            # If no data found in the source directory, warn User
-            elif not glob(src):
-                logger.critical(msg.cli(
-                    f"{self.solver.source_name} found no `obs` data with "
-                    f"wildcard: '{src}'. Please check `path_data` or manually "
-                    f"import data and re-submit", border="=", 
-                    header="data import error")
-                    )
-                sys.exit(-1)
-            # Default behavior, symlink source data from external directory
             else:
                 for src_ in glob(src):
+                    # Symlink or copy data to scratch dir. (symlink by default)
                     _copy_function(src_, dst)
 
         # CASE=='synthetic': generate synthetic 'data' from target model
         elif self.data_case == "synthetic":
+            logger.info(f"generating 'data' w/ fwd. sim. through target model")
+
             # Figure out where to export waveform files to, if requested
             if self.export_traces:
                 export_traces = os.path.join(self.path.output,
