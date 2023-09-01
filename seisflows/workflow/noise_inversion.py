@@ -708,11 +708,11 @@ class NoiseInversion(Inversion):
         # tag is set so that subsequent trace exports don't overwrite existing
         # If parameter `export_traces` is set False, this will be ignored
         if export_traces is None:
-            # e.g., output/{source}/syn_Z_i01s00/*
-            export_traces = os.path.join(self.path.output, "solver",
-                                         self.solver.source_name,
-                                         f"syn_{self._force}_{self.evaluation}"
-                                         )
+            # e.g., output/i01s00/{source}/syn_Z/*
+            export_traces = os.path.join(
+                self.path.output, "solver", self.evaluation,
+                self.solver.source_name, f"syn_{self._force}"
+            )
 
         super().run_forward_simulations(path_model, save_traces=save_traces,
                                         export_traces=export_traces, **kwargs

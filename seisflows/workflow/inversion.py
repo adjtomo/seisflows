@@ -368,6 +368,23 @@ class Inversion(Migration):
         else:
             logger.info("skipping misfit summation")
 
+    def run_forward_simulations(self, path_model, save_traces=None,
+                                export_traces=None, **kwargs):
+        """
+        Overrides 'workflow.forward.run_forward_simulation' to hijack the
+        default path location for exporting traces to disk
+        """
+        if export_traces is None:
+            # e.g., output/i01s00/{source}/syn/*
+            export_traces = os.path.join(
+                self.path.output, "solver", self.evaluation,
+                self.solver.source_name, f"syn"
+            )
+
+        super().run_forward_simulations(path_model, save_traces=save_traces,
+                                        export_traces=export_traces, **kwargs
+                                        )
+
     def evaluate_gradient_from_kernels(self):
         """
         Overwrite `workflow.migration` to convert the current model and the
@@ -569,15 +586,6 @@ class Inversion(Migration):
             model = self.optimize.load_vector("m_new")
             model.write(path=os.path.join(self.path.output,
                                           f"MODEL_{self.iteration:0>2}"),
-                        )
-
-        # Gather exported synthetics to ensure they are not overwritten
-        if self.export_traces:
-            for source_name in self.solver.source_names:
-                unix.mv(src=os.path.join(self.path.output, source_name),
-                        dst=os.path.join(self.path.output,
-                                         f"solver_{self.iteration:0>2}",
-                                         source_name)
                         )
 
         # Update optimization

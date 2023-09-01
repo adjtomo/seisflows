@@ -441,7 +441,10 @@ class Forward:
     def run_forward_simulations(self, path_model, save_traces=None,
                                 export_traces=None, **kwargs):
         """
-        Performs forward simulation for a single given event.
+        Performs forward simulation through model saved in `path_model` for a
+        single event. Upon successful completion of forward simulation,
+        synthetic waveforms are moved to location `save_traces` for processing,
+        and/or exported permanently to location on disk `export_traces`.
 
         .. note::
 
@@ -469,25 +472,25 @@ class Forward:
             file to access this option. Overriding classes may re-direct
             synthetics by setting this variable.
         """
-        if save_traces is None:
-            save_traces = os.path.join(self.solver.cwd, "traces", "syn")
-        if export_traces is None:
-            export_traces = os.path.join(self.path.output, "solver",
-                                         self.solver.source_name, "syn")
-
-        assert(os.path.exists(path_model)), \
-            f"Model path for objective function does not exist"
-
         logger.info(f"evaluating objective function for source "
                     f"{self.solver.source_name}")
         logger.debug(f"running forward simulation with "
                      f"'{self.solver.__class__.__name__}'")
 
-        # If requested, synthetic waveforms will be saved permanently to:
-        # 'output/solver/001/syn/NN.SSS.BXY.semd'
-        # User can turn off trace export by setting `export_traces` to False
-        if not self.export_traces:
+        # Default value for saving waveforms for processing
+        if save_traces is None:
+            save_traces = os.path.join(self.solver.cwd, "traces", "syn")
+        # Default value for exporting waveforms to disk to save
+        if self.export_traces:
+            # e.g., output/solver/{source}/syn/*
+            export_traces = export_traces or \
+                            os.path.join(self.path.output, "solver",
+                                         self.solver.source_name, "syn")
+        else:
             export_traces = False
+
+        assert(os.path.exists(path_model)), \
+            f"Model path for objective function does not exist"
 
         # We will run the forward simulation with the given input model
         self.solver.import_model(path_model=path_model)
