@@ -436,15 +436,15 @@ class NoiseInversion(Inversion):
 
         # Gather waveform files from previous simulations and sort so that they
         # are technically in the same order. Assuming directory structure here.
-        # Naming scheme: 1st letter is generating source, 2nd is component
+        # Naming convention: AB (A=force source direction, B=waveform component)
         fids_ee = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="e"),
+                                           self.solver.data_wildcard(comp="E")))
+                         )
+        fids_ne = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="n"),
                                            self.solver.data_wildcard(comp="E")))
                          )
         fids_en = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="e"),
                                            self.solver.data_wildcard(comp="N")))
-                         )
-        fids_ne = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="n"),
-                                           self.solver.data_wildcard(comp="E")))
                          )
         fids_nn = sorted(glob(os.path.join(self.trace_path(tag="syn", comp="n"),
                                            self.solver.data_wildcard(comp="N")))
@@ -452,30 +452,35 @@ class NoiseInversion(Inversion):
 
         # Double check that we have found files, and that they match
         assert(len(fids_ee) != 0), f"No synthetic traces found for rotation"
-        assert (len(fids_ee) == len(fids_en) == len(fids_ne) == len(fids_nn)), \
+        assert (len(fids_ee) == len(fids_ne) == len(fids_en) == len(fids_nn)), \
             f"number of synthetic waveforms does not match for all components"
 
         # Rotate NE synthetics to RT synthetics, in parallel
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
                 executor.submit(self._rotate_ne_trace_to_rt_single,
-                                f_ee, f_en, f_ne, f_nn)
-                for f_ee, f_en, f_ne, f_nn in zip(fids_ee, fids_en,
-                                                  fids_ne, fids_nn)
+                                f_ee, f_ne, f_en, f_nn)
+                for f_ee, f_ne, f_en, f_nn in zip(fids_ee, fids_ne,
+                                                  fids_en, fids_nn)
                 ]
         # Simply wait until this task is completed because its just file writing
         wait(futures)
 
-    def _rotate_ne_trace_to_rt_single(self, f_ee, f_en, f_ne, f_nn):
+    def _rotate_ne_trace_to_rt_single(self, f_ee, f_ne, f_en, f_nn):
         """
         Parallalizable private function to rotate NE synthetics to RR and TT
 
+        .. note::
+
+            Must be run by system.run() so that solvers are assigned individual
+            task ids/ working directories.
+
         :type f_ee: str
-        :param f_ee: path to the EE synthetic waveform (E force, E  component)
-        :type f_en: str
-        :param f_en: path to the EN synthetic waveform (E force, N component)
+        :param f_ee: path to the EE synthetic waveform (E force, E component)
         :type f_ne: str
         :param f_ne: path to the NE synthetic waveform (N force, E component)
+        :type f_en: str
+        :param f_en: path to the EN synthetic waveform (E force, N component)
         :type f_nn: str
         :param f_nn: path to the NN synthetic waveform (N force, N component)
         """
@@ -493,18 +498,19 @@ class NoiseInversion(Inversion):
 
         # Read in the N/E synthetic waveforms that need to be rotated
         # !!! Assuming that each Stream only has one Trace in it
-        tr_nn = read(f_nn, data_format=self.solver.syn_data_format)[0]
-        tr_ne = read(f_ne, data_format=self.solver.syn_data_format)[0]
         tr_ee = read(f_ee, data_format=self.solver.syn_data_format)[0]
+        tr_ne = read(f_ne, data_format=self.solver.syn_data_format)[0]
         tr_en = read(f_en, data_format=self.solver.syn_data_format)[0]
+        tr_nn = read(f_nn, data_format=self.solver.syn_data_format)[0]
 
-        # Apply rotation to get RR and TT synthetics
+        # Rotate to get RR and TT synthetics; Wang et al. (2019) Eq. 9/10
         tr_rr, tr_tt = rotate_ne_trace_to_rt(tr_ee=tr_ee, tr_ne=tr_ne,
                                              tr_en=tr_en, tr_nn=tr_nn,
-                                             theta=theta, theta_p=theta_p)
+                                             theta=theta, theta_p=theta_p
+                                             )
 
-        # Write synthetics back to the main synthetic trace directory for
-        # subsequent misfit quantification
+        # Write TT/RR synthetics back to the main synthetic trace directory
+        # !!! Assuming SPECFEM adjoint source file name structure
         if "TT" in self.kernels:
             # scratch/solver/{source_name}/traces/syn/NN.SSS.?XT.sem?*
             fid_t = os.path.join(self.solver.cwd, "traces", "syn",
@@ -520,27 +526,37 @@ class NoiseInversion(Inversion):
 
     def rotate_rt_adjsrcs_to_ne(self, choice):
         """
-        Rotates N and E synthetics generated by N and E forward simulations to
-        RR and TT component using the (back)azimuth between two stations. Saves
-        the resulting waveforms to `solver/{source_name}/traces/syn/*`
+        Rotates R and T adjoint sources generated by the preprocessing module
+        back to N and E component synthetics. See `rotate_ne_traces_to_rt` and
+        Ref. 1 for explanations on why this is necessary.
 
-        Necessary because the ANAT simulations are performed for N and E forces
-        and components, but EGF data is usually given in R and T components to
-        isolate Rayleigh and Love waves.
+        Four potential sets of adjoint sources generated during workflow:
+        - ER: RR synthetics that have been rotated so that they appear to
+            originate from an E component force source.
+        - ET: TT synthetics that have been rotated so that they appear to
+            originate from an E component force source
+        - NR: RR synthetics that have been rotated so that they appear to
+            originate from an N component force source
+        - NT: TT synthetics that have been rotated so that they appear to
+            originate from an N component force source
+
+        .. note::
+
+            Must be run by system.run() so that solvers are assigned individual
+            task ids/ working directories.
 
         :type choice: str
         :param choice: define the input component, 'R' or 'T' for the incoming
-            adjoint source. Also gathered from `fid` but this is used to keep
-            things safer and more explicit.
+            adjoint source as rotation matrix will be different for both.
         """
         assert(choice in ["R", "T"]), f"`choice` must be in 'R', 'T'"
 
-        # Define the list of file ids and paths required for rotation.
-        # !!! Hard coding the file naming schema of SPECFEM adjoint sources
+        # Find all available adjoint sourcse for a given choice R or T
+        # !!! Hard code the file naming scheme of SPECFEM adjoint sources
         _fid_wc = os.path.join(self.trace_path(tag="adj"), f"*.?X{choice}.adj")
         fids = sorted(glob(_fid_wc))
 
-        # Few checks before providing this to parallel processing
+        # Check that we actually have data, otherwise what's the point?
         assert fids, f"no adjoint sources found for path: {_fid_wc}"
         logger.info(f"rotating {len(fids)} {choice} component adjoint sources")
 
@@ -554,23 +570,36 @@ class NoiseInversion(Inversion):
         # Rotate NE streams to RT in parallel
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
-                executor.submit(self._rotate_rt_adjsrc_to_ne_single, fid)
-                for fid in fids
+                executor.submit(self._rotate_rt_adjsrc_to_ne_single,
+                                fid, choice) for fid in fids
                 ]
         # Simply wait until this task is completed with file writing
         wait(futures)
 
-    def _rotate_rt_adjsrc_to_ne_single(self, fid):
+    def _rotate_rt_adjsrc_to_ne_single(self, fid, choice=None):
         """
-        Parallellizable function to rotate N and E trace to R and T based on
-        a single source station and receiver station pair and their
-        respective azimuth v# e.g., path/to/traces/adj_et
+        Parallellizable function to rotate R or T adjoint sources to N and E
+        component synthetics for use in adjoint simulations.
+
+        .. note::
+
+            Must be run by system.run() so that solvers are assigned individual
+            task ids/ working directories.
+
+        :type fid: str
+        :param fid: path to the RR or TT adjoint source that will be read in and
+            rotated into four separate adjoint sources
+        :type choice: str
+        :param choice: define the input component, 'R' or 'T' for the incoming
+            adjoint source as rotation matrix will be different for both.
         """
         src_name = self.solver.source_name
 
         # Define pertinent information about files and output names
         net, sta, cha, *ext = os.path.basename(fid).split(".")
-        comp = cha[-1].lower()
+        _comp = cha[-1].lower()
+        if choice is None:
+            choice = _comp  # R or T, used for file naming
         ext = ".".join(ext)  # ['semd', 'ascii'] -> 'semd.ascii.'
         rcv_name = f"{net}_{sta}"
 
@@ -578,37 +607,31 @@ class NoiseInversion(Inversion):
         theta = self.preprocess._srcrcv_stats[src_name][rcv_name].theta
         theta_p = self.preprocess._srcrcv_stats[src_name][rcv_name].theta_p
 
-        # Read in the N/E synthetic waveforms that need to be rotated
-        # First letter represents the force direction, second is component
-        # e.g., ne -> north force recorded on east component
-        tr_in = read(fid, data_format=self.preprocess.syn_data_format)[0]
+        # Read in the R or T adjoint source that needs to be rotated
+        tr = read(fid, data_format=self.preprocess.syn_data_format)[0]
 
         # Rotate the given adjoint source to get four adjoint sources which
         # are required for the N and E component adjoint simulations
-        tr_ee, tr_ne, tr_en, tr_nn = rotate_rt_adjsrc_to_ne(tr_in=tr_in,
+        tr_ee, tr_ne, tr_en, tr_nn = rotate_rt_adjsrc_to_ne(tr=tr,
                                                             theta=theta,
                                                             theta_p=theta_p)
 
-        # EE and EN are used for the E forcesolution adjoint simulation
-        fid_ee = os.path.join(self.trace_path(tag="adj", comp=f"e{comp}"),
-                              f"{net}.{sta}.{cha[:2]}E.{ext}")
-        fid_en = os.path.join(self.trace_path(tag="adj", comp=f"e{comp}"),
-                              f"{net}.{sta}.{cha[:2]}N.{ext}")
-        fid_ne = os.path.join(self.trace_path(tag="adj", comp=f"n{comp}"),
-                              f"{net}.{sta}.{cha[:2]}E.{ext}")
-        fid_nn = os.path.join(self.trace_path(tag="adj", comp=f"n{comp}"),
-                              f"{net}.{sta}.{cha[:2]}N.{ext}")
+        # Write out four adjoint sources, one for each force + component combo,
+        # write out the adjoint source in the correct sub-directory to determine
+        # if it came from a TT or RR adjoint source
+        write_dict = {"ee": tr_ee, "ne": tr_ne, "en": tr_en, "nn": tr_nn}
 
-        # Write out all the rotated adjoint sources to the correct data
-        # directory, so they are discoverable by the adjoint simulations
-        write(st=Stream(tr_ee), fid=fid_ee,
-              data_format=self.preprocess.syn_data_format)
-        write(st=Stream(tr_en), fid=fid_en,
-              data_format=self.preprocess.syn_data_format)
-        write(st=Stream(tr_ne), fid=fid_ne,
-              data_format=self.preprocess.syn_data_format)
-        write(st=Stream(tr_nn), fid=fid_nn,
-              data_format=self.preprocess.syn_data_format)
+        for force in ["e", "n"]:
+            for comp in ["e", "n"]:
+                # e.g., traces/adj_er/NN.SSS.CCN.*
+                fid = os.path.join(
+                    self.trace_path(tag="adj", comp=f"{force}{choice.lower()}"),
+                    f"{net}.{sta}.{cha[:2]}{comp.upper()}.{ext}"
+                )
+                tr = write_dict[f"{force}{comp}"]
+                write(st=Stream(tr), fid=fid,
+                      data_format=self.preprocess.syn_data_format
+                      )
 
     def run_forward_simulations(self, path_model, **kwargs):
         """
