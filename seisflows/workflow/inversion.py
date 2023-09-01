@@ -285,25 +285,29 @@ class Inversion(Migration):
 
         :type save_residuals: str
         :param save_residuals: Location to save 'residuals_*.txt files which are
-            used to calculate total misfit (f_new), requires a string formatter
-            {src} so that the preprocessing module can generate a new file for
-            each source. Remainder of string is some combination of the
-            iteration, step count etc. . Allows inheriting workflows to
-            override this path if more specific file naming is required.
+            used to calculate total misfit (f_new).
+            - Requires a string formatter '{src}', e.g., 'residual_{src}.txt'
+            - String formatter used by preprocessing module to tag files for
+            each source to avoid multiple processes writing to the same file.
+            - Remainder of string may be some combination of the
+            iteration, step count etc. Determined by calling workflow.
 
         Keyword Arguments
         ::
             bool sum_residuals:
-                Used to sum all residuals files from preprocessing module into a
-                single value (f_new) which is used for tracking the gradient of
-                the misfit function. Defaults to True which is normally fine for
-                all purposes. This is made an option because some workflows like
-                the ambient noise inversion require multiple forward runs before
+                Bool to determine whether to sum all residuals files saved under
+                `save_residuals` filenames. The default behavior should be True,
+                that is, once we run preprocessing, we should calculate the
+                misfit 'f'. This flag is an option because some workflows, like
+                ambient noise inversion, require multiple forward runs before
                 summing residuals, so it doesn't make sense to sum each time
                 this function is called.
         """
         # Set behavior and paths for saving the residuals_*.txt files
-        sum_residuals = kwargs.get("sum_residuals", False)
+        sum_residuals = kwargs.get("sum_residuals", True)
+
+        # Inversion workflows tag residual file by iteration and step count.
+        # Since this is the initial misfit, we assuem step count == 0
         if save_residuals is None:
             save_residuals = os.path.join(
                 self.path.eval_grad, f"residuals_{{src}}_{self.iteration}_0.txt"

@@ -237,11 +237,6 @@ class NoiseInversion(Inversion):
 
             9. Sum kernels K = K_RR + K_TT
         """
-        # Set up a template file name, will be used for preprocessing residuals
-        # Looks like e.g., 'residuals_NN_SSS_1_0_ZZ.txt'
-        residuals_fid = f"residuals_{{src}}_{self.iteration}_0_{{tag}}.txt"
-        save_residuals = os.path.join(self.path.eval_grad, residuals_fid)
-
         if "ZZ" in self.kernels:
             logger.info(msg.mnr("EVALUATING ZZ KERNELS FOR INITIAL MODEL"))
 
@@ -250,11 +245,13 @@ class NoiseInversion(Inversion):
             self._force = "Z"
             self._cmpnt = "Z"
 
-            # Run the forward solver to generate SGFs and adjoint sources.
+            # Run the forward solver to generate ZZ SGFs and adjoint sources.
             # Save the residual files but do not sum, will sum all at very end
+            # Residuals file looks like e.g., 'residuals_{src}_1_0_Z.txt'
             self.evaluate_initial_misfit(
-                save_residuals=save_residuals.format(src="{src}",
-                                                     tag=self._force),
+                save_residuals=os.path.join(
+                    self.path.eval_grad,
+                    f"residuals_{{src}}_{self.iteration}_0_Z.txt"),
                 sum_residuals=False
             )
 
@@ -265,14 +262,17 @@ class NoiseInversion(Inversion):
             logger.info(msg.mnr("EVALUATING RR/TT KERNELS FOR INITIAL MODEL"))
 
             # Run the forward solver to generate E? and N? SGFs and adj sources
-            # Order of simulations matters here! E must be first as preprocess
-            # will hold until N simulations are run. The result of this step
-            # are R and T adjoint sources
-            for force in ["E", "N"]:
+            # ==================================================================
+            # IMPORTANT: The order of simulations matters here! E must be first
+            # ==================================================================
+            # Preprocess waits until N simulations. Results in R, T adjoint srcs
+            for force in ["E", "N"]:  # <- E before N required!
                 self._force = force
                 logger.info(f"running misfit evaluation for: '{self._force}'")
                 self.evaluate_initial_misfit(
-                    save_residuals=save_residuals.format(src="{src}", tag="RT"),
+                    save_residuals=os.path.join(
+                        self.path.eval_grad,
+                        f"residuals_{{src}}_{self.iteration}_0_RT.txt"),
                     sum_residuals=False
                 )
 
@@ -302,7 +302,9 @@ class NoiseInversion(Inversion):
         # Sum all the misfit values together to create misfit value `f_new`.
         # This is the same process that occurs at the end of
         # Inversion.evaluate_initial_misfit but slightly more general
-        residuals_files = glob(save_residuals.format(src="*", tag="*"))
+        residuals_files = glob(os.path.join(
+            self.path.eval_grad, f"residuals_*_{self.iteration}_0_*.txt")
+        )
         total_misfit = self.sum_residuals(residuals_files)
         self.optimize.save_vector(name="f_new", m=total_misfit)
         logger.info(f"total misfit `f_new` ({self.evaluation}) = "
