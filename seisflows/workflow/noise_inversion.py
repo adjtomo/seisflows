@@ -607,11 +607,15 @@ class NoiseInversion(Inversion):
         theta = self.preprocess._srcrcv_stats[src_name][rcv_name].theta
         theta_p = self.preprocess._srcrcv_stats[src_name][rcv_name].theta_p
 
-        # Read in the R or T adjoint source that needs to be rotated
+        # Read in the R or T adjoint source that needs to be rotated. Double
+        # check that everyone agrees on the choice of R or T
         tr = read(fid, data_format=self.preprocess.syn_data_format)[0]
+        assert(choice == tr.stats.component), \
+            f"`choice` {choice} mismatch trace component {tr.stats.component}"
 
         # Rotate the given adjoint source to get four adjoint sources which
         # are required for the N and E component adjoint simulations
+        # Follows Wang et al. (2019) Eqs. 16, 18
         tr_ee, tr_ne, tr_en, tr_nn = rotate_rt_adjsrc_to_ne(tr=tr,
                                                             theta=theta,
                                                             theta_p=theta_p)
