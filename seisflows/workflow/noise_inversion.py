@@ -247,15 +247,17 @@ class NoiseInversion(Inversion):
 
             # Run the forward solver to generate ZZ SGFs and adjoint sources.
             # Save the residual files but do not sum, will sum all at very end
-            # Residuals file looks like e.g., 'residuals_{src}_1_0_Z.txt'
+            # Residuals file looks like e.g., 'residuals_{src}_i01s00_ZZ.txt'
             self.evaluate_initial_misfit(
                 save_residuals=os.path.join(
                     self.path.eval_grad,
-                    f"residuals_{{src}}_{self.iteration}_0_Z.txt"),
+                    f"residuals_{{src}}_{self.evaluation}_ZZ.txt"),
                 sum_residuals=False
             )
 
-            # Run the adjoint solver to generate kernels for ZZ
+            # Run the adjoint solver to generate kernels for ZZ. This must be
+            # done before moving to R/T kernels because they will overwrite
+            # the ZZ synthetics and adjoint sources
             self.run_adjoint_simulations()
 
         if "RR" in self.kernels or "TT" in self.kernels:
@@ -269,10 +271,11 @@ class NoiseInversion(Inversion):
             for force in ["E", "N"]:  # <- E before N required!
                 self._force = force
                 logger.info(f"running misfit evaluation for: '{self._force}'")
+                # Residuals file e.g., 'residuals_{src}_i01s00_RT.txt'
                 self.evaluate_initial_misfit(
                     save_residuals=os.path.join(
                         self.path.eval_grad,
-                        f"residuals_{{src}}_{self.iteration}_0_RT.txt"),
+                        f"residuals_{{src}}_{self.evaluation}_RT.txt"),
                     sum_residuals=False
                 )
 
@@ -303,7 +306,7 @@ class NoiseInversion(Inversion):
         # This is the same process that occurs at the end of
         # Inversion.evaluate_initial_misfit but slightly more general
         residuals_files = glob(os.path.join(
-            self.path.eval_grad, f"residuals_*_{self.iteration}_0_*.txt")
+            self.path.eval_grad, f"residuals_*_{self.evaluation}_??.txt")
         )
         total_misfit = self.sum_residuals(residuals_files)
         self.optimize.save_vector(name="f_new", m=total_misfit)

@@ -320,18 +320,20 @@ class Forward:
             iteration, step count etc. . Allows inheriting workflows to
             override this path if more specific file naming is required.
         """
+        logger.info(msg.mnr("EVALUATING MISFIT FOR INITIAL MODEL"))
+
+        # Forward workflow may not have access to optimization module, so we do
+        # only tag residuals files with the source name
         if save_residuals is None:
             save_residuals = os.path.join(self.path.eval_grad,
-                                          "residuals_{src}_1_0.txt")
-
-        # Require that `save_residuals` has an f-string formatter 'src' that
-        # allows each source process to write to its own file
-        assert("{src}" in save_residuals), (
-            f"Workflow path `save_residuals` requires string formatter "
-            "{src} within the string name"
-        )
-
-        logger.info(msg.mnr("EVALUATING MISFIT FOR INITIAL MODEL"))
+                                          "residuals_{src}.txt")
+        else:
+            # Require that `save_residuals` has an f-string formatter 'src' that
+            # allows each source process to write to its own file
+            assert("{src}" in save_residuals), (
+                f"Workflow path `save_residuals` requires string formatter "
+                "{src} within the string name"
+            )
 
         # Check if we can read in the models to disk prior to submitting jobs
         # this may exit the workflow if we get a read error
