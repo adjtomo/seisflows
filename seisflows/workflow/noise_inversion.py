@@ -637,14 +637,13 @@ class NoiseInversion(Inversion):
                       data_format=self.preprocess.syn_data_format
                       )
 
-    def run_forward_simulations(self, path_model, **kwargs):
+    def run_forward_simulations(self, path_model, save_traces=None,
+                                export_traces=None, **kwargs):
         """
         Function Override of `workflow.forward.run_forward_simulation` 
 
-        Performs curated FORCESOLUTION file manipulation and output file 
-        redirects to get synthetic waveform data in the correct location for
-        future preprocessing steps. Able to handle Z, N and E forces required 
-        for ZZ, TT and RR kernel generation.
+        - Edits FORCESOLUTION file to set the correct force direction (E, N, Z)
+        - Redirect trace saving/export for more refined tagging based on force
 
         .. note::
 
@@ -655,26 +654,41 @@ class NoiseInversion(Inversion):
         :param path_model: path to SPECFEM model files used to run the forwarsd
             simulations. Files will be copied to each individual solver
             directory.
+        :type save_traces: str
+        :param save_traces: full path location to save synthetic traces after
+            successful completion of forward simulations. By default, they are
+            stored in 'scratch/solver/<SOURCE_NAME>/traces/syn'. Overriding
+            classes may re-direct synthetics by setting this variable
+        :type export_traces: str
+        :param export_traces: full path location to export (copy) synthetic
+            traces after successful completion of forward simulations. Each fwd
+            simulation erases the synthetics of the previous forward simulation,
+            so exporting to disk is important if the User wants to save
+            waveform data. Set parameter `export_traces` True in the parameter
+            file to access this option. Overriding classes may re-direct
+            synthetics by setting this variable.
         :raises AssertionError: if internal variable `_force` is not set by
             the calling function
         """
-        # Internal variable check
+        # Internal variable check to make sure class variable properly set
         assert(self._force is not None), (
             f"`run_forward_simulation` requires that the internal attribute " 
             f"`_force` is set prior to running forward simulations"
         )
 
         # Edit the force vector based on the internal value for chosen kernel
-        kernel_vals, save_traces = None, None
+        # !!! SPECFEM3D(_Globe) specific force file formatting
+        kernel_vals = None
         if self._force == "Z":
             kernel_vals = ["0.d0", "0.d0", "1.d0"]  # format: [E, N, Z]
             # ZZ SGFs are just saved straight to the 'syn' directory
             save_traces = self.trace_path(tag="syn")
         else:
-            if self._force == "N":
-                kernel_vals = ["0.d0", "1.d0", "0.d0"]  # format: [E, N, Z]
-            elif self._force == "E":
+            if self._force == "E":
                 kernel_vals = ["1.d0", "0.d0", "0.d0"]  # format: [E, N, Z]
+            elif self._force == "N":
+                kernel_vals = ["0.d0", "1.d0", "0.d0"]  # format: [E, N, Z]
+
             # e.g., solver/{source_name}/traces/syn_e
             save_traces = self.trace_path(tag="syn", comp=self._force)
 
@@ -683,6 +697,7 @@ class NoiseInversion(Inversion):
         unix.mkdir(save_traces)
 
         # Set FORCESOLUTION (3D/3D_GLOBE) to ensure correct force for kernel
+        # Assuming we have 'cd'd into the current working directory
         self.solver.set_parameters(keys=["component dir vect source E",
                                          "component dir vect source N",
                                          "component dir vect source Z_UP"],
@@ -691,14 +706,13 @@ class NoiseInversion(Inversion):
 
         # Exporting traces to disk for permanent saving. Ensure that the force
         # tag is set so that subsequent trace exports don't overwrite existing
-        if self.export_traces:
-            # e.g., output/{source}/syn_Z_1_0/*
-            export_traces = os.path.join(
-                self.path.output, self.solver.source_name,
-                f"syn_{self._force}_{self.evaluation}"
-            )
-        else:
-            export_traces = False
+        # If parameter `export_traces` is set False, this will be ignored
+        if export_traces is None:
+            # e.g., output/{source}/syn_Z_i01s00/*
+            export_traces = os.path.join(self.path.output, "solver",
+                                         self.solver.source_name,
+                                         f"syn_{self._force}_{self.evaluation}"
+                                         )
 
         super().run_forward_simulations(path_model, save_traces=save_traces,
                                         export_traces=export_traces, **kwargs

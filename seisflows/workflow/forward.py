@@ -438,7 +438,8 @@ class Forward:
                 export_traces=export_traces, save_forward=False
             )
 
-    def run_forward_simulations(self, path_model, **kwargs):
+    def run_forward_simulations(self, path_model, save_traces=None,
+                                export_traces=None, **kwargs):
         """
         Performs forward simulation for a single given event.
 
@@ -454,15 +455,25 @@ class Forward:
         :param path_model: path to SPECFEM model files used to run the forwarsd
             simulations. Files will be copied to each individual solver
             directory.
+        :type save_traces: str
+        :param save_traces: full path location to save synthetic traces after
+            successful completion of forward simulations. By default, they are
+            stored in 'scratch/solver/<SOURCE_NAME>/traces/syn'. Overriding
+            classes may re-direct synthetics by setting this variable
+        :type export_traces: str
+        :param export_traces: full path location to export (copy) synthetic
+            traces after successful completion of forward simulations. Each fwd
+            simulation erases the synthetics of the previous forward simulation,
+            so exporting to disk is important if the User wants to save
+            waveform data. Set parameter `export_traces` True in the parameter
+            file to access this option. Overriding classes may re-direct
+            synthetics by setting this variable.
         """
-        # Allow overriding Workflows to change the default directory structures
-        # for where traces are saved and exported
-        save_traces = kwargs.get("save_traces", 
-                                 os.path.join(self.solver.cwd, "traces", "syn"))
-        export_traces = kwargs.get("export_traces",
-                                   os.path.join(self.path.output, "solver",
-                                                self.solver.source_name, "syn")
-                                   )
+        if save_traces is None:
+            save_traces = os.path.join(self.solver.cwd, "traces", "syn")
+        if export_traces is None:
+            export_traces = os.path.join(self.path.output, "solver",
+                                         self.solver.source_name, "syn")
 
         assert(os.path.exists(path_model)), \
             f"Model path for objective function does not exist"
@@ -478,14 +489,14 @@ class Forward:
         if not self.export_traces:
             export_traces = False
 
-        # Run the forward simulation with the given input model
+        # We will run the forward simulation with the given input model
         self.solver.import_model(path_model=path_model)
 
         # Forward workflows do not require saving the large forward arrays
         # because the assumption is that we will not be running adj simulations
         if self.__class__.__name__ == "Forward":
             save_forward = False
-            logger.info("Forward workflow, will not save forward arrays")
+            logger.info("Running Forward workflow, will not save forward array")
         else:
             save_forward = True
 
