@@ -359,13 +359,15 @@ class Forward:
                         **kwargs
                         )
 
-    def prepare_data_for_solver(self, _src=None, **kwargs):
+    def prepare_data_for_solver(self, _src=None, _copy_function=unix.ln,
+                                **kwargs):
         """
-        Determines how to provide data to each of the solvers. Either by copying
-        data in from a user-provided path, or generating synthetic 'data' using
+        Determines how to provide data to each of the solvers. Either by
+        symlinking data in from a user-provided path, or generating synthetic
+        'data' using
         a target model.
 
-        This only needs to be run once per workflow
+        This usually only needs to be run once per workflow, even for inversions
 
         .. note ::
 
@@ -378,18 +380,35 @@ class Forward:
             that data is searched for. Needs to be a wildcard. 
             By default this function looks at the following wildcard path:
             '{path_data}/{source_name}/*'
+        :type _copy_function: function
+        :param _copy_function: how to transfer data from `path_data` to scratch
+            - unix.ln (default): symlink data to avoid copying large amounts of
+                data onto the scratch directory.
+            - unix.cp: copy data to avoid burdening filesystem that actual data
+                resides on, or to avoid touching the original data on disk.
         """
         logger.info(f"preparing observation data for source "
                     f"{self.solver.source_name}")
 
         # CASE=='data': import data from an external directory
         if self.data_case == "data":
-            logger.info(f"copying data from `path_data`")
-
             if _src is None:
                 src = os.path.join(self.path.data, self.solver.source_name, "*")
             else:
                 src = _src
+            # If no data are found, exit this process, as we cannot continue
+            if not glob(src):
+                logger.critical(msg.cli(
+                    f"{self.solver.source_name} found no `obs` data with "
+                    f"wildcard: '{src}'. Please check `path_data` or manually "
+                    f"import data and re-submit", border="=",
+                    header="data import error")
+                )
+
+            logger.info(f"copying data from `path_data`")
+            logger.debug(f"looking for data in: '{src}'")
+
+            # Store the data in the scratch/solver directory
             dst = os.path.join(self.solver.cwd, "traces", "obs", "")
 
             # Check if there is data already in the directory, User may have 
@@ -409,7 +428,7 @@ class Forward:
             # Default behavior, symlink source data from external directory
             else:
                 for src_ in glob(src):
-                    unix.ln(src_, dst)
+                    _copy_function(src_, dst)
 
         # CASE=='synthetic': generate synthetic 'data' from target model
         elif self.data_case == "synthetic":

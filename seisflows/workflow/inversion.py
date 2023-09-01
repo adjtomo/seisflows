@@ -346,6 +346,7 @@ class Inversion(Migration):
                 m_new = self.optimize.load_vector("m_new")
                 m_new.write(path=path_model)
 
+                # Skip data preparation because iteration 1 will have set it up
                 self.system.run(
                     [self.run_forward_simulations,
                      self.evaluate_objective_function],

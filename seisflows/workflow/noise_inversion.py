@@ -338,12 +338,12 @@ class NoiseInversion(Inversion):
         # Define where the obs data is stored
         dst = self.trace_path("obs")
 
-        # Since we need to run multiple preprocessing runs, we remove any
-        # existing data that might have been placed here previously to avoid
-        # data conflicts
+        # Since we need multiple preprocessing runs, we remove any existing data
+        # that might have been set previously to avoid data conflicts/confusion
         unix.rm(glob(os.path.join(dst, "*")))
 
-        # Used for wildcard path naming ('ZZ,RR,TT' -> 'RT')
+        # Used for wildcard path naming to get R and T ('ZZ,RR,TT' -> 'RT')
+        # Note that wildcard will be 'R', 'T', or 'RT'
         wildcard = "".join([_[0] for _ in self.kernels.split(",") if _ != "ZZ"])
 
         # Generating a wildcard string that will be used to copy in data
@@ -352,11 +352,10 @@ class NoiseInversion(Inversion):
                 "E": f"[{wildcard}][{wildcard}]"
                 }[self._force]
 
-        # Access the specific 'obs' data path and feed that to the original fx.
-        # !!! Assuming the data directory structure
+        # Tell the original `Forward.prepare_data_for_solver` function where to
+        # look for the required EGF data, which is assumed to be stored within
+        # <PATH_DATA>/<SOURCE_NAME>/<RR_OR_TT>/*
         src = os.path.join(self.path.data, self.solver.source_name, dir_, "*")
-
-        # Use Forward workflow machinery to copy in required EGF data
         super().prepare_data_for_solver(_src=src)
 
     def evaluate_objective_function(self, save_residuals=False, components=None,
