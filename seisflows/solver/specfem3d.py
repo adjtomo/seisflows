@@ -193,6 +193,7 @@ class Specfem3D(Specfem):
         setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
         # Make sure we have a STATIONS_ADJOINT file. Simply copy STATIONS file
+        # we expect that preprocessing has created ALL required adjoint sources
         dst = os.path.join(self.cwd, "DATA", "STATIONS_ADJOINT")
         if not os.path.exists(dst):
             src = os.path.join(self.cwd, "DATA", "STATIONS")

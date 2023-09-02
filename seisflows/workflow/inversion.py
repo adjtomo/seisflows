@@ -263,7 +263,6 @@ class Inversion(Migration):
         """
         event_misfits = []
         for residuals_file in residuals_files:
-            # Tape et al. (2010) Equation 6
             event_misfit = np.loadtxt(residuals_file)
             # Some preprocessing modules only return a single misfit value
             # which will fail when called with len()
@@ -271,6 +270,7 @@ class Inversion(Migration):
                 num_measurements = len(event_misfit)
             except TypeError:
                 num_measurements = 1
+            # Tape et al. (2010) Equation 6
             event_misfit = np.sum(event_misfit) / (2. * num_measurements)
             event_misfits.append(event_misfit)
 
@@ -385,6 +385,23 @@ class Inversion(Migration):
                                         export_traces=export_traces, **kwargs
                                         )
 
+    def _run_adjoint_simulation_single(self, save_kernels=None,
+                                       export_kernels=None, **kwargs):
+        """
+        Overrides 'workflow.migration._run_adjoint_simulation_single' to hijack
+        the default path location for exporting kernels to disk
+        """
+        # Set default value for `export_kernels` or take program default
+        if export_kernels is None:
+            export_kernels = os.path.join(
+                self.path.output, "kernels", self.evaluation,
+                self.solver.source_name
+            )
+
+        super()._run_adjoint_simulation_single(save_kernels=save_kernels,
+                                               export_kernels=export_kernels,
+                                               **kwargs)
+
     def evaluate_gradient_from_kernels(self):
         """
         Overwrite `workflow.migration` to convert the current model and the
@@ -392,14 +409,6 @@ class Inversion(Migration):
         into optimization vectors that can be used for model updates.
         """
         super().evaluate_gradient_from_kernels()
-
-        # Rename kernels (K) and gradient (G) output files by iteration number
-        # so they don't get overwritten by future iterations.
-        src = os.path.join(self.path.output, "kernels")
-        dst = os.path.join(self.path.output, f"KERNELS_{self.iteration:0>2}")
-        if os.path.exists(src):
-            logger.debug(f"{src} -> {dst}")
-            unix.mv(src, dst)
 
         src = os.path.join(self.path.output, "gradient")
         dst = os.path.join(self.path.output, f"GRADIENT_{self.iteration:0>2}")

@@ -839,11 +839,11 @@ class NoiseInversion(Inversion):
         """
         Function Override of `workflow.migration.postprocess_event_kernels`
 
-        Combines multiple individual kernels, K, for each source.
-        That is `K_event = K_ZZ + K_TT + K_RR`, where (K_TT = K_ET + K_NT and 
-        K_RR = K_ER + K_NR). Uses the original function machinery to do the
-        final kernel summation (K_misfit = sum(K_event)) and postprocessing
-        (smoothing, masking, etc.)
+        - Combines multiple individual kernels, K, for each source.
+        - `K_event = K_ZZ + K_TT + K_RR`, where (K_TT = K_ET + K_NT and
+            K_RR = K_ER + K_NR).
+        - Uses the original function machinery to do the final kernel summation,
+            K_misfit = sum(K_event) and postprocessing (smooth, mask, etc.)
 
         .. warning::
 
@@ -871,13 +871,13 @@ class NoiseInversion(Inversion):
         def generate_event_kernels(**kwargs):
             """
             Combine horizontal (TT=ET+NT; RR=ER+NR) kernels and then sum
-            all individual kernel contributions (ZZ+RR+TT) to generate the final
-            event kernel for each source.
+            all individual kernel contributions (K=ZZ+RR+TT) to generate the
+            final event kernel for each source.
 
             .. note::
 
                 Must be run by system.run(single=True) so that the operation
-                has access to the compute node for the kernel combination
+                has access to one compute node for the kernel combination
             """
             # Parameters are constant and static for this whole process
             parameters = [f"{par}_kernel" for par in self.solver._parameters] 
@@ -889,24 +889,24 @@ class NoiseInversion(Inversion):
                 src_path = os.path.join(self.path.eval_grad, "kernels", src)
 
                 # This will bring in all available kernels from: ER, NR, ET, NT
-                for kernel in ["RR", "TT"]:
-                    if kernel not in self.kernels:
-                        continue
-                    input_paths = [os.path.join(src_path, f"E{kernel[0]}"),
-                                   os.path.join(src_path, f"N{kernel[0]}")]
-
-                # Sum in ZZ kernels to the final event kernel if available
+                input_paths = []
+                if "RR" in self.kernels:
+                    input_paths.append(os.path.join(src_path, "ER"))
+                    input_paths.append(os.path.join(src_path, "NR"))
+                if "TT" in self.kernels:
+                    input_paths.append(os.path.join(src_path, "ET"))
+                    input_paths.append(os.path.join(src_path, "NT"))
                 if "ZZ" in self.kernels:
                     input_paths.append(os.path.join(src_path, "ZZ"))
 
-                # We drop the event kernel directly into the source 
+                # We save the summed event kernel directly into the source
                 # subdirectory to match the expected input of the original fx.
                 output_path = os.path.join(self.path.eval_grad, "kernels", src)
 
-                # Use the solver function to combine kernels
+                # Calling SPECFEM binaries to do the actual kernel summation
                 self.solver.combine(input_paths, output_path, parameters)
         
-        # Run above function on system to get access to compute node
+        # Run above function on system using a single compute node
         self.system.run([generate_event_kernels], single=True)
 
         # Now the original function takes over and combines event kernels into
@@ -918,9 +918,7 @@ class NoiseInversion(Inversion):
         Function Overwrite of `workflow.inversion._evaluate_line_search_misfit`
         Called inside `workflow.inversion.perform_line_search`
         
-        Line search requires running forward simulations multiple times to 
-        generate the correct synthetics, as well as some synthetic rotation
-        if TT or RR included in kernels
+        - Line search m
 
         TODO clean out the traces/syn directory because it is causing false
             misfit calculations for 'evaluate_objective_function'
@@ -931,14 +929,6 @@ class NoiseInversion(Inversion):
             ignored and the final residual file will only be created once all 
             forward simulations are run
         """
-        iteration = self.iteration
-        step_count = self.optimize.step_count
-
-        # Set up a template file name, will be used for preprocessing residuals
-        # Same as in `generate_kernels` (!!! Should this be made a parameter?)
-        resi_rid = f"residuals_{{src}}_{iteration}_{step_count}_{{tag}}.txt"
-        save_residuals = os.path.join(self.path.eval_func, resi_rid)
-
         # Pre-set functions and parameters for system.run calls
         run_list = [self.prepare_data_for_solver,
                     self.run_forward_simulations,
@@ -949,12 +939,12 @@ class NoiseInversion(Inversion):
         # Determine which forward simulations we will need to run
         forces = []
         if "ZZ" in self.kernels:
-            forces.append("Z")
+            forces += ["Z"]
         if ("RR" in self.kernels) or ("TT" in self.kernels):
-            # Order of simulations matters here! E must be first as
-            # preprocessing will hold until N simulations are run.
-            forces.append("E")
-            forces.append("N")
+            # ==================================================================
+            # IMPORTANT: The order of forces matters here! E must be first
+            # ==================================================================
+            forces += ["E", "N"]
 
         # Run forward simulations and misfit calculation for each required force
         for force in forces:
@@ -964,14 +954,20 @@ class NoiseInversion(Inversion):
             tag = {"Z": "Z", "N": "RT", "E": "RT"}[self._force]
             self.system.run(
                 run_list, path_model=path_model,
-                save_residuals=save_residuals.format(src="{src}", tag=tag)
+                save_residuals=os.path.join(
+                    self.path.eval_func,
+                    f"residuals_{{src}}_{self.evaluation}_{tag}.txt"
+                )
             )
        
-        # Sum misfit from all forward simulations
-        residuals_files = glob(save_residuals.format(src="*", tag="*"))
+        # Sum the misfit from all forward simulations and all kernels
+        residuals_files = glob(
+            os.path.join(self.path.eval_func,
+                         f"residuals_*_{self.evaluation}_*.txt")
+        )
         assert residuals_files, (
-                f"No residuals files found for Iteration {iteration} and "
-                f"step count {step_count}. Please check preprocessing"
+                f"No residuals files found for {self.evaluation}. "
+                f"Please check that preprocessing completed successfully"
                 )
         total_misfit = self.sum_residuals(residuals_files)
 

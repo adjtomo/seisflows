@@ -247,12 +247,8 @@ class Specfem3DGlobe(Specfem):
         elif self.materials.upper() == "ANISOTROPIC":
             anisotropic_kl = ".true."
             save_transverse_kl_only = ".true."
-        elif self.materials.upper() == "FULLY_ANISOTROPIC":
-            # Work in progress, setting up for full 21 parameter anisotropy
-            raise NotImplementedError("Full anisotropy is not yet implemented "
-                                      "in SeisFlows")
-            anisotropic_kl = ".true."
-            save_transverse_kl_only = ".false."
+        else:
+            raise NotImplementedError("unexpected value for `solver.materials`")
 
         unix.cd(self.cwd)
         setpar(key="ANISOTROPIC_KL", val=anisotropic_kl, file="DATA/Par_file")
@@ -265,7 +261,8 @@ class Specfem3DGlobe(Specfem):
                                    export_kernels=export_kernels)
 
         # Working around fact that `absorb_buffer` files have diff naming w.r.t
-        # SPECFEM3D. Will also remove `save_forward_arrays`
+        # SPECFEM3D. Will also remove `save_forward_arrays` to free up space
+        # since we no longer need these
         if self.prune_scratch:                                                   
             for glob_key in ["proc??????_reg?_absorb_buffer.bin"]: 
                 logger.debug(f"removing '{glob_key}' files from database "       

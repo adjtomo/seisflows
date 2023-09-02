@@ -663,7 +663,7 @@ class Specfem:
                     logger.warning(f"no kernel files for '{par}', cant export")
 
         # Save kernels: move kernels to an internal directory for later steps
-        #   so they don't get overwritten by future adjoint simulations
+        # so they don't get overwritten by future adjoint simulations
         if save_kernels:
             unix.mkdir(save_kernels)
             for par in self._parameters:
@@ -680,7 +680,7 @@ class Specfem:
         - alpha -> vp
         - beta -> vs
         
-        Performed directly inside the directory so that the rename won't affect 
+        Performed directly inside the directory so that rename won't affect
         any strings in the full path. Deals with both SPECFEM3D and 3D_GLOBE.
         GLOBE version adds in the 'reg?' tag that needs to be considered.
 

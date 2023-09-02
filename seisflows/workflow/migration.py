@@ -108,6 +108,7 @@ class Migration(Forward):
         naming to ensure kernels are discoverable by other modules. 
 
         .. note::
+
             This is a relatively simple function, but it keeps the approach 
             general by allowing other workflows to include pre- and post-
             processing tasks, or to overwrite the adjoint simulation task

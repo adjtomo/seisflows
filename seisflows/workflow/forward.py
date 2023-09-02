@@ -451,6 +451,7 @@ class Forward:
             if PAR.PREPROCESS == None, will not perform misfit quantification
 
         .. note::
+
             Must be run by system.run() so that solvers are assigned individual
             task ids/ working directories.
 
