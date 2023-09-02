@@ -300,7 +300,8 @@ class Forward:
         self.checkpoint()
         logger.info(f"finished all {len(self.task_list)} tasks in task list")
 
-    def evaluate_initial_misfit(self, save_residuals=None, **kwargs):
+    def evaluate_initial_misfit(self, path_model=None, save_residuals=None,
+                                **kwargs):
         """
         Evaluate the initial model misfit. This requires setting up 'data'
         before generating synthetics, which is either copied from user-supplied
@@ -312,12 +313,16 @@ class Forward:
             This is run altogether on system to save on queue time waits,
             because we are potentially running two simulations back to back.
 
+        :type path_model: str
+        :param path_model: path to the model files that will be used to evaluate
+            initial misfit. If not given, defaults to searching for model
+            provided in `path_model_init`.
         :type save_residuals: str
         :param save_residuals: Location to save 'residuals_*.txt files which are
             used to calculate total misfit (f_new), requires a string formatter
             {src} so that the preprocessing module can generate a new file for
             each source. Remainder of string is some combination of the
-            iteration, step count etc. . Allows inheriting workflows to
+            iteration, step count etc. Allows inheriting workflows to
             override this path if more specific file naming is required.
         """
         logger.info(msg.mnr("EVALUATING MISFIT FOR INITIAL MODEL"))
@@ -337,13 +342,12 @@ class Forward:
 
         # Check if we can read in the models to disk prior to submitting jobs
         # this may exit the workflow if we get a read error
-        if self.path.model_init is not None:
-            logger.info("initial model parameters:")
-            self.solver.check_model_values(path=self.path.model_init)
+        if path_model is not None:
+            logger.info("evaluating misfit for model in `path_model_init`")
+            path_model = self.path.model_init
 
-        if self.path.model_true is not None:
-            logger.info("true/target model parameters:")
-            self.solver.check_model_values(path=self.path.model_true)
+        logger.info("checking model parameters:")
+        self.solver.check_model_values(path=path_model)
 
         # If no preprocessing module, then all the additional functions for
         # working with `data` are unncessary.
@@ -386,6 +390,19 @@ class Forward:
             - unix.cp: copy data to avoid burdening filesystem that actual data
                 resides on, or to avoid touching the original data on disk.
         """
+        # Location to store 'observation' data
+        dst = os.path.join(self.solver.cwd, "traces", "obs", "")
+
+        # Check if there is data already in the directory, User may have
+        # manually input it here, or we are on iteration > 1 so data has already
+        # been prepared, either way, make sure we don't overwrite it
+        if glob(os.path.join(dst, "*")):
+            logger.warning(f"data already found in "
+                           f"{self.solver.source_name}/traces/obs/*, "
+                           f"skipping data preparation"
+                           )
+            return
+
         logger.info(f"preparing observation data for source "
                     f"{self.solver.source_name}")
 
@@ -406,17 +423,9 @@ class Forward:
                     header="data import error")
                 )
 
-            dst = os.path.join(self.solver.cwd, "traces", "obs", "")
-
-            # Check if there is data already in the directory, User may have 
-            # manually input it here, make sure we don't overwrite it
-            if glob(os.path.join(dst, "*")):
-                logger.warning(f"data already found in 'traces/obs' for "
-                               f"{self.solver.source_name}, will not copy data")
-            else:
-                for src_ in glob(src):
-                    # Symlink or copy data to scratch dir. (symlink by default)
-                    _copy_function(src_, dst)
+            for src_ in glob(src):
+                # Symlink or copy data to scratch dir. (symlink by default)
+                _copy_function(src_, dst)
 
         # CASE=='synthetic': generate synthetic 'data' from target model
         elif self.data_case == "synthetic":
@@ -428,6 +437,10 @@ class Forward:
                                              self.solver.source_name, "obs")
             else:
                 export_traces = False
+
+            # Check the final model because it will be used to generate data
+            logger.info("true/target model parameters:")
+            self.solver.check_model_values(path=self.path.model_true)
 
             # Run the forward solver with target model and save traces the 'obs'
             logger.info(f"running forward simulation w/ target model for "

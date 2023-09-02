@@ -339,7 +339,8 @@ class NoiseInversion(Inversion):
         dst = self.trace_path("obs")
 
         # Since we need multiple preprocessing runs, we remove any existing data
-        # that might have been set previously to avoid data conflicts/confusion
+        # that might have been set previously to avoid data conflicts/confusion,
+        # otherwise the original function will skip trying to find data
         unix.rm(glob(os.path.join(dst, "*")))
 
         # Used for wildcard path naming to get R and T ('ZZ,RR,TT' -> 'RT')
@@ -731,7 +732,7 @@ class NoiseInversion(Inversion):
 
         .. note::
 
-            Must be run by system.run() so that solvers are assigned
+            Must be run by system.run() soj, that solvers are assigned
             individual task ids/working directories.
         """
         # Internal variable check
