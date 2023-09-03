@@ -565,9 +565,13 @@ class Specfem:
             self._run_binary(executable=exc, stdout=stdout)
 
         # Error check to ensure that mesher and solver have been run succesfully
-        _mesh = os.path.exists(os.path.join("OUTPUT_FILES", "output_mesher.txt"))
+        # !!! Temporarily removed check because SPECFEM2D does not create this
+        # !!! file
+        # _mesh = os.path.exists(os.path.join("OUTPUT_FILES", 
+        #                                     "output_mesher.txt"))
         _solv = bool(glob(os.path.join("OUTPUT_FILES", self.data_wildcard())))
-        if not _mesh or not _solv:
+        #if not _mesh or not _solv:
+        if not _solv:
             logger.critical(msg.cli(f"solver failed to produce expected files",
                             header="external solver error", border="="))
             sys.exit(-1)
