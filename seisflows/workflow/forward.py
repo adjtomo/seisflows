@@ -342,7 +342,7 @@ class Forward:
 
         # Check if we can read in the models to disk prior to submitting jobs
         # this may exit the workflow if we get a read error
-        if path_model is not None:
+        if path_model is None:
             logger.info("evaluating misfit for model in `path_model_init`")
             path_model = self.path.model_init
 
