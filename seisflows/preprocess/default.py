@@ -18,8 +18,7 @@ from seisflows.tools import unix
 from seisflows.tools.config import Dict, get_task_id
 from seisflows.tools.graphics import plot_waveforms
 from seisflows.tools.signal import normalize, resample, filter, mute, trim
-from seisflows.tools.specfem import (get_src_rcv_lookup_table,
-                                     rename_as_adjoint_source,
+from seisflows.tools.specfem import (rename_as_adjoint_source,
                                      return_matching_waveform_files)
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
@@ -219,9 +218,6 @@ class Default:
         self._acceptable_mutes = {"EARLY", "LATE", "LONG", "SHORT"}
         self._acceptable_filters = {"BANDPASS", "LOWPASS", "HIGHPASS"}
 
-        # Internal attributes to be filled in by setup()
-        self._srcrcv_stats = None
-
         # Internal attributes used to keep track of inversion workflows
         self._iteration = None
         self._step_count = None
@@ -328,12 +324,6 @@ class Default:
         Sets up data preprocessing machinery
         """
         unix.mkdir(self.path.scratch)
-
-        # Get a lookup table providing relationships between each source and sta
-        self._srcrcv_stats = get_src_rcv_lookup_table(
-            path_to_data=self.path.specfem_data,
-            source_prefix=self.source_prefix
-        )
 
     def finalize(self):
         """

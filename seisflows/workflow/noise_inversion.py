@@ -50,7 +50,8 @@ from obspy import Stream
 from seisflows import logger
 from seisflows.tools import unix, msg
 from seisflows.tools.noise import rotate_ne_trace_to_rt, rotate_rt_adjsrc_to_ne
-from seisflows.tools.specfem import rename_as_adjoint_source
+from seisflows.tools.specfem import (rename_as_adjoint_source, 
+                                     get_src_rcv_lookup_table)
 from seisflows.preprocess.default import read, write
 from seisflows.workflow.inversion import Inversion
 
@@ -110,6 +111,10 @@ class NoiseInversion(Inversion):
         self._force = None  # direction of input force for fwd/adj simulation
         self._cmpnt = None  # component of output synthetics/adjsrcs used
 
+        # Internal lookup table for theta and theta_prime values which are 
+        # used for waveform rotation. To be filled by setup()
+        self._srcrcv_stats = None
+
     def check(self):
         """
         Additional checks for the Noise Inversion Workflow to ensure the
@@ -142,6 +147,15 @@ class NoiseInversion(Inversion):
         # TODO: Check whether data exists for all sources/master stations
 
         # TODO: Check that solver parameter ROTATE_SEISMOGRAMS_RTZ == False (?)
+
+    def setup(self):
+        """Set up some required attributes for Noise Inversion"""
+        super().setup()
+
+        self._srcrcv_stats = get_src_rcv_lookup_table(
+            path_to_data=self.solver.path.specfem_data,
+            source_prefix=self.solver.source_prefix
+        )
 
     @property
     def task_list(self):
@@ -494,8 +508,8 @@ class NoiseInversion(Inversion):
         rcv_name = f"{net}_{sta}"
 
         # Get azimuth angles from lookup table for the given src-rcv pair
-        theta = self.preprocess._srcrcv_stats[src_name][rcv_name].theta
-        theta_p = self.preprocess._srcrcv_stats[src_name][rcv_name].theta_p
+        theta = self._srcrcv_stats[src_name][rcv_name].theta
+        theta_p = self._srcrcv_stats[src_name][rcv_name].theta_p
 
         # Read in the N/E synthetic waveforms that need to be rotated
         # !!! Assuming that each Stream only has one Trace in it
@@ -605,8 +619,8 @@ class NoiseInversion(Inversion):
         rcv_name = f"{net}_{sta}"
 
         # Collect azimuth angles from lookup table computed in preprocess setup
-        theta = self.preprocess._srcrcv_stats[src_name][rcv_name].theta
-        theta_p = self.preprocess._srcrcv_stats[src_name][rcv_name].theta_p
+        theta = self._srcrcv_stats[src_name][rcv_name].theta
+        theta_p = self._srcrcv_stats[src_name][rcv_name].theta_p
 
         # Read in the R or T adjoint source that needs to be rotated. Double
         # check that everyone agrees on the choice of R or T

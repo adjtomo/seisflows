@@ -20,8 +20,7 @@ from seisflows import logger
 from seisflows.tools import unix
 from seisflows.tools.config import Dict
 from seisflows.tools.graphics import imgs_to_pdf, merge_pdfs
-from seisflows.tools.specfem import (return_matching_waveform_files,
-                                     get_src_rcv_lookup_table)
+from seisflows.tools.specfem import return_matching_waveform_files
 from seisflows.preprocess.default import read, initialize_adjoint_traces
 
 
@@ -206,7 +205,6 @@ class Pyaflowa:
         # Internal bookkeeping attributes to be filled in by self.setup()
         self._inv = None
         self._config = None
-        self._srcrcv_stats = None
         self._fix_windows = False
 
     def check(self):
@@ -259,11 +257,6 @@ class Pyaflowa:
             pyadjoint_parameters=self.pyadjoint_parameters
         )
 
-        # Get a lookup table providing relationships between each source and sta
-        self._srcrcv_stats = get_src_rcv_lookup_table(
-            path_to_data=self.path.specfem_data,
-            source_prefix=self.source_prefix
-        )
         # Get station metadata from the STATIONS file to be used for processing
         self._inv = read_stations(
             os.path.join(self.path.specfem_data, "STATIONS")
