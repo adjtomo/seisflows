@@ -509,7 +509,8 @@ class Pyaflowa:
             mgmt.standardize()
             mgmt.preprocess(remove_response=False, normalize_to="syn")
             if fix_windows:
-                # Retrieve windows from the last available evaluation
+                # Retrieve windows from the last available evaluation. Wrap in
+                # try-except block incase file lock is in place by other procs.
                 while True:
                     try:
                         with ASDFDataSet(
@@ -517,6 +518,7 @@ class Pyaflowa:
                                              f"{config.event_id}.h5"),
                                 mode="r") as ds:
                             mgmt.retrieve_windows_from_dataset(ds=ds)
+                        break
                     except (BlockingIOError, FileExistsError):
                         # Random sleep time [0,1]s to decrease chances of two
                         # processes attempting to access at exactly the same
