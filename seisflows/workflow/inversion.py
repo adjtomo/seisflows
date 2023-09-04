@@ -580,7 +580,7 @@ class Inversion(Migration):
         total_misfit = self.sum_residuals(residuals_files)
 
         logger.debug(f"misfit for trial model "
-                     f"(f_try; {self.evaluation} == {total_misfit:.2E}")
+                     f"(f_try); {self.evaluation} == {total_misfit:.2E}")
         self.optimize.save_vector(name="f_try", m=total_misfit)
 
     def finalize_iteration(self):

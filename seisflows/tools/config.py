@@ -247,7 +247,7 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True,
         )
     else:
         # Clean logging statement with only time and message
-        fmt_str = "%(asctime)s (%(levelname).1s) | %(message)s"
+        fmt_str = "%(asctime)s (%(levelname).4s) | %(message)s"
 
     # Instantiate logger during _register() as we now have user-defined pars
     logger.setLevel(level)

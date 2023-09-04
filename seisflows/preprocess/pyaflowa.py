@@ -259,9 +259,13 @@ class Pyaflowa:
         )
 
         # Get station metadata from the STATIONS file to be used for processing
-        self._inv = read_stations(
-            os.path.join(self.path.specfem_data, "STATIONS")
-        )
+        try:
+            self._inv = read_stations(
+                os.path.join(self.path.specfem_data, "STATIONS")
+            )
+        except Exception as e:
+            logger.warning(f"cannot read STATIONS file, {e}, Pyaflowa will not "
+                           f"be able to plot maps")
 
     @staticmethod
     def ftag(config):
@@ -442,11 +446,15 @@ class Pyaflowa:
                    origintime=cat[0].preferred_origin().time)
 
         # Use synthetics to select inventory because it's assumed more stable
-        inv = self._inv.select(network=syn[0].stats.network,
-                               station=syn[0].stats.station)
+        # If none available, default to None meaning no maps can be plotted
+        if self._inv:
+            inv = self._inv.select(network=syn[0].stats.network,
+                                   station=syn[0].stats.station)
+        else:
+            inv = None
 
         mgmt = Manager(st_obs=obs, st_syn=syn, event=cat[0], inv=inv,
-                       config=config, ds=ds)
+                       config=config)
 
         return mgmt
 
@@ -690,7 +698,7 @@ class Pyaflowa:
         logfmt = "[%(asctime)s] - %(name)s - %(levelname)s: %(message)s"
         formatter = logging.Formatter(logfmt, datefmt="%Y-%m-%d %H:%M:%S")
         handler.setFormatter(formatter)
-        for log in ["pyflex", "pyadjoint", "pysep", "pyatoa"]:
+        for log in ["pyflex", "pyadjoint", "pyatoa", "pysep"]:
             # Set the overall log level
             logger = logging.getLogger(log)
             # Turn off any existing handlers (stream and file)
