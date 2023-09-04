@@ -123,6 +123,9 @@ class Forward:
                     continue
                 key, val = line.strip().split(":")
                 self._states[key] = val.strip()
+        else:
+            for func in self.task_list:
+                self._states[func.__name__] = "pending"
 
     @property
     def task_list(self):
@@ -145,6 +148,23 @@ class Forward:
         :return: list of methods to call in order during a workflow
         """
         return [self.evaluate_initial_misfit]
+
+    @property
+    def func_list(self):
+        """
+        WORKFLOW-DEPENDENT FUNCTION LIST. This property defines the functions that
+        compose all the tasks of the workflow.
+        """
+        return ["prepare_data_for_solver", "run_forward_simulations",
+                "evaluate_objective_function"]
+
+    @property
+    def source_state_file(self):
+        """
+        This property returns the path of the state file of the current source
+        """
+        return os.path.join(self.path.scratch,
+                            f"sfstate_{self.solver.source_name}.txt")
 
     def check(self):
         """
@@ -232,20 +252,14 @@ class Forward:
                 )
                 self._modules[opt_mod].setup()
 
-        # Generate the state file to keep track of task completion
-        if not os.path.exists(self.path.state_file):
-            with open(self.path.state_file, "w") as f:
-                f.write(f"# SeisFlows State File\n")
-                f.write(f"# {asctime()}\n")
-                f.write(f"# Acceptable states: 'completed', 'failed', "
-                        f"'pending'\n")
-                f.write(f"# =======================================\n")
-
         # Distribute modules to the class namespace. We don't do this at init
         # incase _modules was set as NoneType
         self.solver = self._modules.solver  # NOQA
         self.system = self._modules.system  # NOQA
         self.preprocess = self._modules.preprocess  # NOQA
+
+        # Generate the state file to keep track of the workflow tasks
+        self._generate_workflow_state_file()
 
     def checkpoint(self):
         """
@@ -263,6 +277,21 @@ class Forward:
                 if line.startswith("#"):
                     f.write(line)
             for key, val in self._states.items():
+                f.write(f"{key}: {val}\n")
+
+    def checkpoint_source(self, source_state):
+        """
+        Per source, saves the state of the functions composing the tasks of
+        the workflow
+        """
+        with open(self.source_state_file, "r") as f:
+            lines = f.readlines()
+
+        with open(self.source_state_file, "w") as f:
+            for line in lines:
+                if line.startswith("#"):
+                    f.write(line)
+            for key, val in source_state.items():
                 f.write(f"{key}: {val}\n")
 
     def run(self):
@@ -284,9 +313,11 @@ class Forward:
             # encountered for the first time
             else:
                 try:
+                    self._generate_sources_state_file(func.__name__)
                     func()
                     self._states[func.__name__] = "completed"
                     self.checkpoint()
+                    self._delete_sources_state_file()
                 except Exception as e:
                     self._states[func.__name__] = "failed"
                     self.checkpoint()
@@ -451,3 +482,52 @@ class Forward:
             save_residuals=save_residuals,
             export_residuals=export_residuals
         )
+
+    def _generate_workflow_state_file(self):
+        """
+        Generates a file that tracks the state of the workflow tasks
+        """
+        if not os.path.exists(self.path.state_file):
+            with open(self.path.state_file, "w") as f:
+                _line = (f"# SeisFlows State File "
+                         f"(Workflow: {self.__class__.__name__})\n")
+                f.write(_line)
+                for key, val in self._states.items():
+                    f.write(f"{key}: {val}\n")
+
+    def _generate_sources_state_file(self, task):
+        """
+        For each source, this function generates a file that tracks the state
+        of the functions composing all the workflow tasks
+        """
+        for source_name in self.solver.source_names:
+            source_state_file = os.path.join(self.path.scratch,
+                                             f"sfstate_{source_name}.txt")
+            if not os.path.exists(source_state_file):
+                with open (source_state_file, "w") as f:
+                    _line = (f"# SeisFlows State File "
+                             f"(Task: {task} / Source: {source_name})\n")
+                    f.write(_line)
+                    for func in self.func_list:
+                        f.write(f"{func}: pending\n")
+
+    def _delete_sources_state_file(self):
+        """
+        Deletes all sources state file
+        """
+        for source_name in self.solver.source_names:
+            source_state_file = os.path.join(self.path.scratch,
+                                             f"sfstate_{source_name}.txt")
+            unix.rm(source_state_file)
+
+    def _read_source_state_file(self):
+        """
+        Reads a source state file
+        """
+        source_state = {}
+        for line in open(self.source_state_file, "r").readlines():
+            if line.startswith("#"):
+                continue
+            key, val = line.strip().split(":")
+            source_state[key] = val.strip()
+        return source_state
