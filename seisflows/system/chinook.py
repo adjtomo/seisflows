@@ -69,6 +69,7 @@ class Chinook(Slurm):
         """
         _call = " ".join([
             f"sbatch",
+            f"{self.slurm_args or ''}",
             f"--job-name={self.title}",
             f"--output={self.path.output_log}",
             f"--error={self.path.output_log}",
