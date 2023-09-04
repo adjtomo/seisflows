@@ -14,6 +14,7 @@ from glob import glob
 from pyasdf import ASDFDataSet
 
 from pyatoa import Config, Manager, Inspector, ManagerError
+from pyatoa.utils.asdf.load import load_windows
 from pysep.utils.io import read_events_plus, read_stations
 
 from seisflows import logger
@@ -264,8 +265,8 @@ class Pyaflowa:
                 os.path.join(self.path.specfem_data, "STATIONS")
             )
         except Exception as e:
-            logger.warning(f"cannot read STATIONS file, {e}, Pyaflowa will not "
-                           f"be able to plot maps")
+            logger.warning(f"cannot read STATIONS file, Pyaflowa will not "
+                           f"be able to plot maps: '{e}' ")
 
     @staticmethod
     def ftag(config):
@@ -497,22 +498,33 @@ class Pyaflowa:
                             f"{'/' * 80}")
 
         # Check whether or not we want to use misfit windows from last eval.
-        _fix_win, _msg = self._check_fixed_windows(iteration=config.iteration,
-                                                   step_count=config.step_count)
+        fix_windows, _msg = self._check_fixed_windows(
+            iteration=config.iteration, step_count=config.step_count
+        )
         station_logger.info(_msg)
-
-        # Dataset will be used for collecting fixed windows 
-        if _fix_win:
-            ds = ASDFDataSet(os.path.join(self.path["_datasets"],
-                                          f"{config.event_id}.h5"), mode="r")
-            mgmt.ds = ds
 
         # If any part of this processing fails for whatever reason, move on to 
         # plotting and don't let it affect the other tasks
         try:
             mgmt.standardize()
             mgmt.preprocess(remove_response=False, normalize_to="syn")
-            mgmt.window(fix_windows=_fix_win)
+            if fix_windows:
+                # Retrieve windows from the last available evaluation
+                while True:
+                    try:
+                        with ASDFDataSet(
+                                os.path.join(self.path["_datasets"],
+                                             f"{config.event_id}.h5"),
+                                mode="r") as ds:
+                            mgmt.retrieve_windows_from_dataset(ds=ds)
+                    except (BlockingIOError, FileExistsError):
+                        # Random sleep time [0,1]s to decrease chances of two
+                        # processes attempting to access at exactly the same
+                        # time
+                        time.sleep(random.random())
+                del ds
+            else:
+                mgmt.window()
             mgmt.measure()
         except Exception as e:
             station_logger.warning(e)
@@ -535,8 +547,6 @@ class Pyaflowa:
 
         # Write Manager data directly to an ASDFDataSet for data storage and
         # later assessments using the Inspector
-        if mgmt.ds:
-            del mgmt.ds # close reference to Dataset so we can re-open
         while True:
             try:
                 with ASDFDataSet(os.path.join(self.path["_datasets"],

@@ -241,13 +241,13 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True,
     if verbose:
         # More verbose logging statement for debugging
         fmt_str = (
-            "%(asctime)s | %(levelname)-5s | "
+            "%(asctime)s | %(levelname)-5s "
             "%(filename)s -> %(funcName)s():L%(lineno)s\n"
             "> %(message)s"
         )
     else:
         # Clean logging statement with only time and message
-        fmt_str = "%(asctime)s (%(levelname).4s) | %(message)s"
+        fmt_str = "%(asctime)s [%(levelname).4s] | %(message)s"
 
     # Instantiate logger during _register() as we now have user-defined pars
     logger.setLevel(level)
