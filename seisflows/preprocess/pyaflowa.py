@@ -743,12 +743,17 @@ class Pyaflowa:
         # Collect each station's log file and write them into the main file
         tmp_logs = sorted(glob(os.path.join(self.path._tmplogs,
                                             f"*{config.event_id}_*.log")))
-
+        # Give time to ensure logs are available and written
+        time.sleep(10)
         with open(pyatoa_logger.handlers[0].baseFilename, "a") as fw:
             for tmp_log in tmp_logs:
-                with open(tmp_log, "r") as fr:
-                    fw.writelines(fr.readlines())
-                unix.rm(tmp_log)  # delete after writing
+                try:
+                    with open(tmp_log, "r") as fr:
+                        fw.writelines(fr.readlines())
+                    unix.rm(tmp_log)  # delete after writing
+                except FileNotFoundError:
+                    logger.warning(f"error reading {tmp_log}")
+                    continue
 
 
 
