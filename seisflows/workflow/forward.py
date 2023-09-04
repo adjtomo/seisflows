@@ -386,6 +386,10 @@ class Forward:
             Must be run by system.run() so that solvers are assigned individual
             task ids and working directories
         """
+        source_state = self._read_source_state_file()
+        if source_state["prepare_data_for_solver"] == "completed":
+            return
+
         logger.info(f"preparing observation data for source "
                     f"{self.solver.source_name}")
 
@@ -411,6 +415,9 @@ class Forward:
                 export_traces=export_traces, save_forward=False
             )
 
+        source_state["prepare_data_for_solver"] = "completed"
+        self.checkpoint_source(source_state)
+
     def run_forward_simulations(self, path_model, **kwargs):
         """
         Performs forward simulation for a single given event.
@@ -422,6 +429,10 @@ class Forward:
             Must be run by system.run() so that solvers are assigned individual
             task ids/ working directories.
         """
+        source_state = self._read_source_state_file()
+        if source_state["run_forward_simulations"] == "completed":
+            return
+
         assert(os.path.exists(path_model)), \
             f"Model path for objective function does not exist"
 
@@ -452,6 +463,9 @@ class Forward:
             export_traces=export_traces, save_forward=save_forward
         )
 
+        source_state["run_forward_simulations"] = "completed"
+        self.checkpoint_source(source_state)
+
     def evaluate_objective_function(self, save_residuals=False, **kwargs):
         """
         Uses the preprocess module to evaluate the misfit/objective function
@@ -461,6 +475,10 @@ class Forward:
             Must be run by system.run() so that solvers are assigned individual
             task ids/ working directories.
         """
+        source_state = self._read_source_state_file()
+        if source_state["evaluate_objective_function"] == "completed":
+            return
+
         if self.preprocess is None:
             logger.debug("no preprocessing module selected, will not evaluate "
                          "objective function")
@@ -482,6 +500,9 @@ class Forward:
             save_residuals=save_residuals,
             export_residuals=export_residuals
         )
+
+        source_state["evaluate_objective_function"] = "completed"
+        self.checkpoint_source(source_state)
 
     def _generate_workflow_state_file(self):
         """
