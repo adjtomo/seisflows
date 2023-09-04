@@ -445,9 +445,8 @@ class Pyaflowa:
         inv = self._inv.select(network=syn[0].stats.network,
                                station=syn[0].stats.station)
 
-        # BEGIN PROCESSING
         mgmt = Manager(st_obs=obs, st_syn=syn, event=cat[0], inv=inv,
-                       config=config)
+                       config=config, ds=ds)
 
         return mgmt
 
@@ -494,6 +493,12 @@ class Pyaflowa:
                                                    step_count=config.step_count)
         station_logger.info(_msg)
 
+        # Dataset will be used for collecting fixed windows 
+        if _fix_win:
+            ds = ASDFDataSet(os.path.join(self.path["_datasets"],
+                                          f"{config.event_id}.h5"), mode="r")
+            mgmt.ds = ds
+
         # If any part of this processing fails for whatever reason, move on to 
         # plotting and don't let it affect the other tasks
         try:
@@ -522,6 +527,8 @@ class Pyaflowa:
 
         # Write Manager data directly to an ASDFDataSet for data storage and
         # later assessments using the Inspector
+        if mgmt.ds:
+            del mgmt.ds # close reference to Dataset so we can re-open
         while True:
             try:
                 with ASDFDataSet(os.path.join(self.path["_datasets"],
