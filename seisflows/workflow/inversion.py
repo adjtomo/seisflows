@@ -83,6 +83,7 @@ class Inversion(Migration):
         self.export_model = export_model
         self.thrifty = thrifty
 
+
         # Append an additional path for line search function evaluations
         self.path["eval_func"] = path_eval_func or \
                                  os.path.join(self.path.workdir, "scratch",
@@ -93,12 +94,12 @@ class Inversion(Migration):
         self._thrifty_status = False
         self._required_modules = ["system", "solver", "preprocess", "optimize"]
 
-        # Grab iteration from state file
+        # Grab iteration from state file, or set None to have setup() set it
         if "iteration" in self._states:
             self.iteration = int(self._states["iteration"])
             logger.debug(f"setting iteration=={self.iteration} from state file")
         else:
-            self.iteration = start
+            self.iteration = None
 
     @property
     def evaluation(self):
@@ -148,17 +149,20 @@ class Inversion(Migration):
             f"Incorrect START or END parameter. Values must be in order: " \
             f"1 <= {self.start} <= {self.end}"
 
-        assert(self.start <= self.iteration <= self.end), \
-            f"`workflow.iteration` must be between `start` and `end`"
+        if self.iteration:
+            assert(self.start <= self.iteration <= self.end), (
+                f"`workflow.iteration`=={self.iteration} must be between parameters"
+                f"`start` and `end`"
+            )
 
-        if self.iteration > 1:
-            assert(os.path.exists(self.path.eval_grad)), \
-                f"scratch path `eval_grad` does not exist but should for a " \
-                f"workflow with `iteration` >= 1"
+            if self.iteration > 1:
+                assert(os.path.exists(self.path.eval_grad)), \
+                    f"scratch path `eval_grad` does not exist but should for a " \
+                    f"workflow with `iteration` >= 1"
 
-        if self.iteration >= self.end + 1:
-            logger.warning(f"current `iteration` is >= chosen `end` point. "
-                           f"Inversion workflow will not `run`")
+            if self.iteration >= self.end + 1:
+                logger.warning(f"current `iteration` is >= chosen `end` point. "
+                               f"Inversion workflow will not `run`")
 
         if self.thrifty:
             assert(self._optimize_name == "LBFGS"), (
@@ -183,6 +187,9 @@ class Inversion(Migration):
 
         # If optimization has been run before, re-load from checkpoint
         self.optimize.load_checkpoint()
+
+        if self.iteration is None:
+            self.iteration = self.start
 
     def run(self):
         """Call the forward.run() function iteratively, from `start` to `end`"""

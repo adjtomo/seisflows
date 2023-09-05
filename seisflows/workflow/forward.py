@@ -358,7 +358,7 @@ class Forward:
         else:
             run_list = [self.run_forward_simulations]
 
-        self.system.run(run_list, path_model=self.path.model_init,
+        self.system.run(run_list, path_model=path_model,
                         save_residuals=save_residuals,
                         **kwargs
                         )
