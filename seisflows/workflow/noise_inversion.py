@@ -318,16 +318,19 @@ class NoiseInversion(Inversion):
                 self._cmpnt = None
                 self._force = None
 
-        # Sum all the misfit values together to create misfit value `f_new`.
-        # This is the same process that occurs at the end of
-        # Inversion.evaluate_initial_misfit but slightly more general
-        residuals_files = glob(os.path.join(
-            self.path.eval_grad, f"residuals_*_{self.evaluation}_??.txt")
-        )
-        total_misfit = self.sum_residuals(residuals_files)
-        self.optimize.save_vector(name="f_new", m=total_misfit)
-        logger.info(f"total misfit `f_new` ({self.evaluation}) = "
-                    f"{total_misfit:.2E}")
+        # Skip misfit summation if we are in a Thrifty inversion iteration
+        if self.thrifty and self._thrifty_status:
+            total_misfit = self.optimize.load_vector(name="f_old")
+            logger.info(f"total misfit `f_new` ({self.evaluation}) = "
+                        f"{total_misfit:.2E}")
+        else:
+            # Sum all the misfit values together to create misfit value `f_new`.
+            # This is the same process that occurs at the end of
+            # Inversion.evaluate_initial_misfit but slightly more general
+            residuals_files = glob(os.path.join(
+                self.path.eval_grad, f"residuals_*_{self.evaluation}_??.txt")
+            )
+            self.sum_residuals(residuals_files, save_to="f_new")
 
     def prepare_data_for_solver(self, **kwargs):
         """
@@ -980,13 +983,6 @@ class NoiseInversion(Inversion):
             os.path.join(self.path.eval_func,
                          f"residuals_*_{self.evaluation}_*.txt")
         )
-        assert residuals_files, (
-                f"No residuals files found for {self.evaluation}. "
-                f"Please check that preprocessing completed successfully"
-                )
-        total_misfit = self.sum_residuals(residuals_files)
-
-        logger.debug(f"misfit for trial model (f_try) == {total_misfit:.2E}")
-        self.optimize.save_vector(name="f_try", m=total_misfit)
+        self.sum_residuals(residuals_files, save_to="f_try")
 
 
