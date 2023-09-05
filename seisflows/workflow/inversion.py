@@ -340,8 +340,7 @@ class Inversion(Migration):
             # model from previous line search. This can only happen mid-workflow
             # because we are assuming no solver/preprocess parameters have
             # changed. If they have, then we need to rerun the fwd solver
-            if self.thrifty and (
-                    self._thrifty_status or self.iteration == self.start):
+            if self.thrifty and self._thrifty_status:
                 logger.info(msg.mnr("THRIFTY INVERSION; SKIP MISFIT EVAL"))
                 return
             # Non-Thrifty, run forward simulation with previous model.
