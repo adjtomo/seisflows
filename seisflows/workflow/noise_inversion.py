@@ -319,14 +319,14 @@ class NoiseInversion(Inversion):
                 self._force = None
 
         # Skip misfit summation if we are in a Thrifty inversion iteration
+        # Optimize.finalize_search will have set the line search misfit as f_new
         if self.thrifty and self._thrifty_status:
-            total_misfit = self.optimize.load_vector(name="f_old")
+            total_misfit = self.optimize.load_vector(name="f_new")
             logger.info(f"total misfit `f_new` ({self.evaluation}) = "
                         f"{total_misfit:.2E}")
+        # Sum all the misfit values together to create misfit value `f_new` for
+        # current accepted model `m_new`
         else:
-            # Sum all the misfit values together to create misfit value `f_new`.
-            # This is the same process that occurs at the end of
-            # Inversion.evaluate_initial_misfit but slightly more general
             residuals_files = glob(os.path.join(
                 self.path.eval_grad, f"residuals_*_{self.evaluation}_??.txt")
             )
