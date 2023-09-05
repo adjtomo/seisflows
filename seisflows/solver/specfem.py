@@ -98,7 +98,7 @@ class Specfem:
     ***
     """
     def __init__(self, syn_data_format="ascii",  materials="acoustic",
-                 density=False, nproc=1, ntask=1, attenuation=False,
+                 update_density=False, nproc=1, ntask=1, attenuation=False,
                  smooth_h=0., smooth_v=0., components=None,
                  source_prefix=None, mpiexec=None, workdir=os.getcwd(),
                  path_solver=None, path_eval_grad=None,
@@ -132,7 +132,7 @@ class Specfem:
         self.materials = materials
         self.nproc = nproc
         self.ntask = ntask
-        self.density = density
+        self.update_density = update_density
         self.attenuation = attenuation
         self.smooth_h = smooth_h
         self.smooth_v = smooth_v
@@ -155,7 +155,7 @@ class Specfem:
 
         # Private internal parameters for keeping track of solver requirements
         self._parameters = []
-        if self.density:
+        if self.update_density:
             self._parameters.append("rho")
 
         self._mpiexec = mpiexec
@@ -259,7 +259,7 @@ class Specfem:
             source_prefix=self.source_prefix, ntask=self.ntask
         )
 
-        assert(isinstance(self.density, bool)), \
+        assert(isinstance(self.update_density, bool)), \
             f"solver `density` must be True (variable) or False (constant)"
 
         # Check the size of the DATA/ directory and let the User know if 
