@@ -283,7 +283,7 @@ class Pyaflowa:
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         export_residuals=None, save_adjsrcs=None,
                         components=None, iteration=1, step_count=0,
-                        _serial=False, **kwargs):
+                        _serial=True, **kwargs):
         """
         Main processing function to be called by Workflow module. Generates
         total misfit and adjoint sources for a given event with name 
