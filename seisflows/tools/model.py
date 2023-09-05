@@ -413,12 +413,13 @@ class Model:
         for key, vals in self.model.items():
             min_val = np.hstack(vals).min()
             max_val = np.hstack(vals).max()
+            mean_val = np.hstack(vals).mean()
             # Choose formatter based on the magnitude of the value
             if min_val < 1 or max_val > 1E4:
-                parts = f"{min_val:.3E} <= {key} <= {max_val:.3E}"
+                part = f"{key} {min_val:.3E} <= {mean_val:.3E} <= {max_val:.3E}"
             else:
-                parts = f"{min_val:.3f} <= {key} <= {max_val:.3f}"
-            logger.info(parts)
+                parti = f"{key} {min_val:.3f} <= {mean_val:.3f} <= {max_val:.3f}"
+            logger.info(part)
 
     def _check_3dglobe_parameters(self, min_pr=-1., max_pr=0.5):
         """
