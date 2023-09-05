@@ -485,7 +485,7 @@ class Gradient:
         # Choose minimum misfit value as final misfit/model. index 0 is initial
         f = self._line_search.get_search_history()[1]
         self.save_vector("f_new", f.min())
-        logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
+        logger.info(f"misfit of accepted trial model is f={f.min():.2E}")
 
         logger.info("resetting line search step count to 0")
         self._line_search.step_count = 0
