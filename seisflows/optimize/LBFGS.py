@@ -183,7 +183,7 @@ class LBFGS(Gradient):
                 restarted = False
             else:
                 logger.info("new search direction not appropriate, defaulting "
-                            "to gradient desceitn")
+                            "to gradient descent")
                 self.restart()
                 p_new.update(vector=-1 * g.vector)
                 restarted = True
