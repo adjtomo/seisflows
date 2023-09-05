@@ -15,7 +15,7 @@ from pkgutil import find_loader
 from importlib import import_module
 
 from seisflows import logger, NAMES
-from seisflows.tools import msg
+from seisflows.tools import msg, unix
 
 ENV_VARIABLES = ["SEISFLOWS_TASKID", "SLURM_ARRAY_TASK_ID"]
 
@@ -393,6 +393,31 @@ def pickle_function_list(functions, path=os.getcwd(), **kwargs):
         dill.dump(obj=kwargs, file=f)
 
     return fid_funcs_pickle, fid_kwargs_pickle
+
+def copy_file(fid, copy_to="./"):
+    """
+    Copy files to a location but do not overwrite if file already exists in
+    `copy_to`. If the file already exists, append a number before the file ext.
+
+    This is mainly used when resuming a workflow, where old log and parameter
+    files may be overwritten or changed.
+
+    :type fid: str
+    :param fid: full path to the file that should be copied. If `fid` does not
+        exist, nothing happens
+    :type copy_to: str
+    :param copy_to: location to copy the file to. file name will be the same.
+        defaults to current working directory
+    """
+    assert(os.path.exists(fid)), f"source file to copy does not exist: {fid}"
+    i = 1
+    src = os.path.basename(fid)
+    dst = os.path.join(copy_to, number_fid(src, i))
+    while os.path.exists(dst):
+        i += 1
+        dst = os.path.join(copy_to, number_fid(src, i))
+    logger.debug(f"copying file {src} to {copy_to} number {i}")
+    unix.cp(src=src, dst=dst)
 
 
 def number_fid(fid, i=0):

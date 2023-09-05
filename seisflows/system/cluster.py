@@ -17,7 +17,7 @@ from concurrent.futures import ProcessPoolExecutor, wait
 from seisflows import logger, ROOT_DIR
 from seisflows.tools import msg
 from seisflows.tools.unix import nproc
-from seisflows.tools.config import pickle_function_list
+from seisflows.tools.config import pickle_function_list, copy_file
 from seisflows.system.workstation import Workstation
 
 
@@ -134,7 +134,12 @@ class Cluster(Workstation):
             be discouraged by sys admins as some  array processing will take 
             place on the shared login node. 
         """
-        # Determine where the submit call will be sent (login or compute node)
+        # Copy log files if present to avoid overwriting
+        for src in [self.path.output_log, self.path.par_file]:
+            if os.path.exists(src) and os.path.exists(self.path.log_files):
+                copy_file(src, copy_to=self.path.log_files)
+
+        # Determine where submit call will be sent (login or compute node)
         if login:
             header = ""
             logger.info("submitting master job on login node")

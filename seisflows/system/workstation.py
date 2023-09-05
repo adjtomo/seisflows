@@ -12,7 +12,7 @@ from contextlib import redirect_stdout
 from seisflows import logger
 from seisflows.tools import unix
 from seisflows.tools.config import Dict, import_seisflows
-from seisflows.tools.config import number_fid, set_task_id
+from seisflows.tools.config import copy_file, set_task_id
 
 
 class Workstation:
@@ -141,18 +141,6 @@ class Workstation:
         for path in [self.path.scratch, self.path.output, self.path.log_files]:
             unix.mkdir(path)
 
-        # If resuming, move old log files to keep them out of the way. Number
-        # in ascending order, so we don't end up overwriting things
-        for src in [self.path.output_log, self.path.par_file]:
-            i = 1
-            if os.path.exists(src):
-                dst = os.path.join(self.path.log_files, number_fid(src, i))
-                while os.path.exists(dst):
-                    i += 1
-                    dst = os.path.join(self.path.log_files, number_fid(src, i))
-                logger.debug(f"copying par/log file to: {dst}")
-                unix.cp(src=src, dst=dst)
-
     def submit(self, workdir=None, parameter_file="parameters.yaml"):
         """
         Submits the main workflow job as a serial job submitted directly to
@@ -164,6 +152,11 @@ class Workstation:
         :param parameter_file: parameter file name used to instantiate the
             SeisFlows package
         """
+        # Copy log files if present to avoid overwriting
+        for src in [self.path.output_log, self.path.par_file]:
+            if os.path.exists(src) and os.path.exists(self.path.log_files):
+                copy_file(src, copy_to=self.path.log_files)
+
         workflow = import_seisflows(workdir=workdir or self.path.workdir,
                                     parameter_file=parameter_file)
         workflow.check()
