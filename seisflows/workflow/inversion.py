@@ -97,7 +97,7 @@ class Inversion(Migration):
         # Grab iteration from state file, or set None to have setup() set it
         if "iteration" in self._states:
             self.iteration = int(self._states["iteration"])
-            logger.debug(f"setting iteration=={self.iteration} from state file")
+            logger.debug(f"`iteration`={self.iteration} (from state file)")
         else:
             self.iteration = None
 
@@ -274,7 +274,7 @@ class Inversion(Migration):
         :return: sum of squares of residuals, total misfit
         """
         # Catch empty files because usually we feed this function with a glob
-        if not residuals files:
+        if not residuals_files:
             logger.critical(
                 msg.cli(f"Residuals files not found for {self.evaluation}, "
                         f"preprocessing may have failed. Please check logs.",
