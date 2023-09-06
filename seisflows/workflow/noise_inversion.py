@@ -27,6 +27,29 @@ to get ZZ, RR and TT SGFs that can be compared to data.
     (e.g., ZT) are also possible, but not currently supported. Please open
     a GitHub issue if you would like to see these supported.
 
+.. note:: TT/RR Workflow Steps:
+
+    FORWARD SIMULATIONS
+    1. Run E component forward simulation, save ZNE traces & fwd arrays
+    2. Run N component forward simulations, save ZNE traces & fwd arrays
+    3. Rotate N and E component SGF to R and T components based on
+       source-receiver azimuth
+    4. Calculate RR and TT adjoint sources (u_rr, u_tt) w.r.t EGF data
+
+    GENERATE TT KERNELS
+    5a. Rotate u_tt to N and E (u_ee, u_en, u_ne, u_nn)
+    6a. Run ET adjoint simulation (injecting u_ee, u_en) for K_ET
+    7a. Run NT adjoint simulation (injecting u_ne, u_nn) for K_NT
+    8a. Sum T kernels, K_ET + K_NT = K_TT
+
+    GENERATE RR KERNELS
+    5b. Rotate u_rr to N and E (u_ee, u_en, u_ne, u_nn)
+    6b. Run ER adjoint simulation (injecting u_ee, u_en) for K_ER
+    7b. Run NR adjoint simulation (injecting u_ne, u_nn) for K_NR
+    8b. Sum R kernels, K_ER + K_NR = K_RR
+
+    9. Sum kernels K = K_RR + K_TT
+
 .. note:: References
 
     1. "Three‐dimensional sensitivity kernels for multicomponent empirical
@@ -48,7 +71,7 @@ from glob import glob
 from obspy import Stream
 
 from seisflows import logger
-from seisflows.tools import unix, msg
+from seisflows.tools import unix
 from seisflows.tools.noise import rotate_ne_trace_to_rt, rotate_rt_adjsrc_to_ne
 from seisflows.tools.specfem import (rename_as_adjoint_source, 
                                      get_src_rcv_lookup_table)
@@ -81,13 +104,13 @@ class NoiseInversion(Inversion):
     :type kernels: str
     :param kernels: comma-separated list of kernels to generate w.r.t available
         EGF data. Corresponding data must be available. Available options are:
-
-        - 'ZZ': vertical component force recorded on vertical component.
-          Represents Rayleigh wave energy
-        - 'TT': transverse copmonent force recorded on transverse component.
-          Represents Love wave energy
-        - 'RR': radial component force recorded on radial component.
-          Represents Rayleigh wave energy
+        - ZZ: Generates Synthetic Greens Functions (SGF) for the ZZ (vertical)
+        component by running forward simulations for each master station using a
+        +Z component force, and then running an adjoint simulation to generate
+        kernels.
+        - TT/RR: Generate Synthetic Greens Functions (SGF) for the TT
+        (transvserse) and/or RR (radial) component(s) following processing
+        steps laid out in Wang et al. (2019) and outlined below:
 
         Example inputs would be 'ZZ' or 'ZZ,TT' or 'ZZ,TT,RR'. Case insensitive
 
@@ -178,14 +201,27 @@ class NoiseInversion(Inversion):
         :rtype: list
         :return: list of methods to call in order during a workflow
         """
-        # Standard inversion tasks
-        return [self.generate_event_kernels,
-                self.postprocess_event_kernels,
-                self.evaluate_gradient_from_kernels,
-                self.initialize_line_search,
-                self.perform_line_search,
-                self.finalize_iteration
-                ]
+        task_list = []
+        # Determine which functions to run based on kernel choice
+        if "ZZ" in self.kernels:
+            task_list += [self.evaluate_zz_misfit,
+                          self.run_zz_adjoint_simulations
+                          ]
+        if ("RR" in self.kernels) or ("TT" in self.kernels):
+            task_list += [self.evaluate_rt_misfit,
+                          self.run_rt_adjoint_simulations
+                          ]
+
+        # The remainder of these are standard inversion tasks
+        task_list += [self.sum_all_residuals,
+                      self.postprocess_event_kernels,
+                      self.evaluate_gradient_from_kernels,
+                      self.initialize_line_search,
+                      self.perform_line_search,
+                      self.finalize_iteration
+                      ]
+
+        return task_list
 
     def trace_path(self, tag, comp=None):
         """
@@ -214,117 +250,98 @@ class NoiseInversion(Inversion):
             tag = f"{tag}_{comp}".lower()
         return os.path.join(self.solver.cwd, "traces", tag)
 
-    def generate_event_kernels(self):
+    def evaluate_zz_misfit(self):
         """
-        Main processing function for Noise Inversion workflow, which manipulates
-        the standard Inversion workflow functions `evaluate_initial_misfit` and
-        `run_adjoint_simulations`.
-
-        Uses User-defined parameter `kernels` to determine workflow:
-
-        - ZZ: Generates Synthetic Greens Functions (SGF) for the ZZ component by
-            running forward simulations for each master station using a +Z
-            component force, and then running an adjoint simulation to generate
-            kernels.
-        - TT/RR: Generate Synthetic Greens Functions (SGF) for the TT and/or RR
-            component(s) following processing steps laid out in
-            Wang et al. (2019) and outlined below:
-
-        .. note:: TT/RR Workflow Steps:
-
-            FORWARD SIMULATIONS
-            1. Run E component forward simulation, save ZNE traces & fwd arrays
-            2. Run N component forward simulations, save ZNE traces & fwd arrays
-            3. Rotate N and E component SGF to R and T components based on
-               source-receiver azimuth
-            4. Calculate RR and TT adjoint sources (u_rr, u_tt) w.r.t EGF data
-
-            GENERATE TT KERNELS
-            5a. Rotate u_tt to N and E (u_ee, u_en, u_ne, u_nn)
-            6a. Run ET adjoint simulation (injecting u_ee, u_en) for K_ET
-            7a. Run NT adjoint simulation (injecting u_ne, u_nn) for K_NT
-            8a. Sum T kernels, K_ET + K_NT = K_TT
-
-            GENERATE RR KERNELS
-            5b. Rotate u_rr to N and E (u_ee, u_en, u_ne, u_nn)
-            6b. Run ER adjoint simulation (injecting u_ee, u_en) for K_ER
-            7b. Run NR adjoint simulation (injecting u_ne, u_nn) for K_NR
-            8b. Sum R kernels, K_ER + K_NR = K_RR
-
-            9. Sum kernels K = K_RR + K_TT
+        Run the forward solver to generate ZZ SGFs using a +Z component FORCE,
+        and evalaute the misfit using the preprocessing module. Save the
+        residual files but do not sum them.
         """
-        if "ZZ" in self.kernels:
-            logger.info(msg.mnr("EVALUATING ZZ KERNELS FOR INITIAL MODEL"))
+        logger.info("running ZZ misfit evaluation")
 
-            # Internal tracking parameters used to name sub-directories, save
-            # files and dictate how simulatuions are run
-            self._force = "Z"
-            self._cmpnt = "Z"
+        # Internal tracking parameters used to name sub-directories, save files
+        self._force = "Z"
+        self._cmpnt = "Z"
 
-            # Run the forward solver to generate ZZ SGFs and adjoint sources.
-            # Save the residual files but do not sum, will sum all at very end
-            # Residuals file looks like e.g., 'residuals_{src}_i01s00_ZZ.txt'
+        # Residuals file looks like e.g., 'residuals_{src}_i01s00_ZZ.txt'
+        super().evaluate_initial_misfit(save_residuals=os.path.join(
+            self.path.eval_grad, f"residuals_{{src}}_{self.evaluation}_ZZ.txt"),
+            sum_residuals=False
+        )
+
+    def run_zz_adjoint_simulations(self):
+        """
+        Run the adjoint solver to generate kernels for ZZ using the ZZ adjoint
+        sources and applying the saved forward arrays from the ZZ forward
+        simulation.
+        """
+        logger.info("running ZZ adjoint simulation")
+
+        # Internal tracking parameters used to name sub-directories, save files
+        self._force = "Z"
+        self._cmpnt = "Z"
+        super().run_adjoint_simulations()
+
+    def evaluate_rt_misfit(self):
+        """
+        Run the forward solver to generate E and N SGFs from E and N component
+        FORCES. Preprocessing will wait until the N simulations have finished
+        prior to rotating N and E SGF to RR and TT components. Preprocessing
+        calculates misfit on the R and T components and then we rotate RR and TT
+        adjoint sources into N and E components.
+
+        .. warning::
+
+            IMPORTANT: The order of simulations matters here! E must be first
+        """
+        logger.info("evaluating RR and/or TT misfit")
+
+        for force in ["E", "N"]:  # <- E before N required!
+            self._force = force
+            logger.info(f"running misfit evaluation for: '{self._force}'")
+            # Residuals file e.g., 'residuals_{src}_i01s00_RT.txt'
             self.evaluate_initial_misfit(
                 save_residuals=os.path.join(
                     self.path.eval_grad,
-                    f"residuals_{{src}}_{self.evaluation}_ZZ.txt"),
+                    f"residuals_{{src}}_{self.evaluation}_RT.txt"),
                 sum_residuals=False
             )
 
-            # Run the adjoint solver to generate kernels for ZZ. This must be
-            # done before moving to R/T kernels because they will overwrite
-            # the ZZ synthetics and adjoint sources
-            self.run_adjoint_simulations()
+    def run_rt_adjoint_simulations(self):
+        """
+        Run adjoint solver for each kernel RR and TT (if requested) by running
+        two adjoint simulations (E and N) per kernel with the appropriate
+        saved E and N forward arrays.
+        """
+        # Set internal variables for directory and file naming
+        for cmpnt in ["T", "R"]:
+            self._cmpnt = cmpnt  # T or R
 
-        if "RR" in self.kernels or "TT" in self.kernels:
-            logger.info(msg.mnr("EVALUATING RR/TT KERNELS FOR INITIAL MODEL"))
+            # Skip over a specific kernel if User did not request
+            if cmpnt not in self.kernels:  # e.g., if 'R' in 'RR,TT'
+                continue
 
-            # Run the forward solver to generate E? and N? SGFs and adj sources
-            # ==================================================================
-            # IMPORTANT: The order of simulations matters here! E must be first
-            # ==================================================================
-            # Preprocess waits until N simulations. Results in R, T adjoint srcs
-            for force in ["E", "N"]:  # <- E before N required!
+            # We require two adjoint simulations/kernel to recover gradient
+            for force in ["E", "N"]:
                 self._force = force
-                logger.info(f"running misfit evaluation for: '{self._force}'")
-                # Residuals file e.g., 'residuals_{src}_i01s00_RT.txt'
-                self.evaluate_initial_misfit(
-                    save_residuals=os.path.join(
-                        self.path.eval_grad,
-                        f"residuals_{{src}}_{self.evaluation}_RT.txt"),
-                    sum_residuals=False
-                )
+                logger.info(f"running {self._force}{self._cmpnt} adjoint "
+                            f"simulation")
+                self.run_adjoint_simulations()
 
-            # Run adjoint solver for each kernel RR and TT (if requested) by
-            # running two adjoint simulations (E and N) per kernel.
-            for cmpnt in ["T", "R"]:
-                # Skip over if User did not request
-                if cmpnt not in self.kernels:  # e.g., if 'R' in 'RR,TT'
-                    continue
-
-                # Set internal kernel variable which will let all spawned jobs
-                # know which set of adjoint sources are required for their sim
-                logger.info(f"running generating kernel for component: {cmpnt}")
-                self._cmpnt = cmpnt  # T or R
-
-                # We require two adjoint simulations/kernel to recover gradient
-                for force in ["E", "N"]:
-                    self._force = force
-                    logger.info(f"running adjoint simulation for "
-                                f"'{self._force}{self._cmpnt}'")
-                    self.run_adjoint_simulations()
-
-                # Unset internal variables to avoid any confusion in future runs
-                self._cmpnt = None
-                self._force = None
-
-        # Skip misfit summation if we are in a Thrifty inversion iteration
-        # Optimize.finalize_search will have set the line search misfit as f_new
+    def sum_all_residuals(self):
+        """
+        Misfit files are tagged with the intended kernel they are generated
+        for, which does not match the original `workflow.inversion` formatting.
+        This function makes summation of residuals files more broad to encompass
+        the updated file naming
+        """
+        # If we are the middle of a thrifty inversion, simply load the misfit
+        # of the last accepted line search evaluation
         if self.thrifty and self._thrifty_status:
             total_misfit = self.optimize.load_vector(name="f_new")
             logger.info(f"total misfit `f_new` ({self.evaluation}) = "
                         f"{total_misfit:.2E}")
-        # Sum all the misfit values together to create misfit value `f_new` for
+        # Else: sum all the misfit values from the ZZ, RR and TT misfit
+        # evaluations (if accesible) together to create misfit value `f_new` for
         # current accepted model `m_new`
         else:
             residuals_files = glob(os.path.join(
