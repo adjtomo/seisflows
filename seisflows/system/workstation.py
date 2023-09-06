@@ -208,26 +208,48 @@ class Workstation:
         """
         Return a list of Task IDs (linked to each indiviudal source) to supply
         to the 'run' function. By default this returns a range of available
-        tasks from [0:ntask].
+        tasks [0:ntask)
 
         However, for debug purposes, or for single runs, allow the user to set
-        the internal variable `select_tasks`, which will override this function
+        the variable `select_tasks`, which will override this function
         and only run selected tasks. This is useful in the case where, e.g.,
-        a few run tasks fail (e.g., fwd simulation) and the User only wants to
-        re-run these tasks to avoid the computational burden of re-running
-        `ntask` simulations.
+        a few run tasks fail and the User only wants to re-run these tasks to 
+        avoid the computational burden of re-running all `ntask` simulations.
 
+        Example `select_tasks` input follows SLURM acceptable --array arguments
+
+        Input: 1,3,5-9:2,10 -> Output: 1,3,5,7,9,10
+
+        where '-' denotes a range (inclusive), and ':' denotes an optional step.
+        If ':' step is not given for a range, then step defaults to 1.
+
+        :type single: bool
+        :param single: If we only want to run a single process, this is will 
+            default to TaskID == 0
         :rtype: list
         :return: a list of task IDs to be used by the `run` function
-            - if single==True: [0]
-            - if self._select_tasks is None: [0, ..., `ntask`]
-            - if self._select_tasks: User input list of task ids
         """
         if single:
             task_ids = [0]
         else:
             if self.select_tasks is not None:
-                task_ids = self.select_tasks.split(",")  # e.g., [1, 5, 8, 9]
+                task_ids = []
+                parts = self.select_tasks.split(",")  # e.g., 1,3,5-9,10
+                for part in parts:
+                    # e.g., 5-9 -> 5,6,7,8,9
+                    if "-" in part:
+                        # e.g., 5-9:2 -> 5,7,9
+                        if ":" in part:
+                            part, step = part.split(":")
+                        else:
+                            step = 1
+                        start, stop = part.split("-")
+                        # Range is inclusive of both ends, default step is 1
+                        task_ids += list(range(int(start), int(stop) + 1, 
+                                               int(step)))
+                    else:
+                        task_ids.append(int(part))
+
             else:
                 task_ids = list(range(0, self.ntask, 1))
 

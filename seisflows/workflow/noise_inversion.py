@@ -201,27 +201,17 @@ class NoiseInversion(Inversion):
         :rtype: list
         :return: list of methods to call in order during a workflow
         """
-        task_list = []
-        # Determine which functions to run based on kernel choice
-        if "ZZ" in self.kernels:
-            task_list += [self.evaluate_zz_misfit,
-                          self.run_zz_adjoint_simulations
-                          ]
-        if ("RR" in self.kernels) or ("TT" in self.kernels):
-            task_list += [self.evaluate_rt_misfit,
-                          self.run_rt_adjoint_simulations
-                          ]
-
-        # The remainder of these are standard inversion tasks
-        task_list += [self.sum_all_residuals,
-                      self.postprocess_event_kernels,
-                      self.evaluate_gradient_from_kernels,
-                      self.initialize_line_search,
-                      self.perform_line_search,
-                      self.finalize_iteration
-                      ]
-
-        return task_list
+        return [self.evaluate_zz_misfit,
+                self.run_zz_adjoint_simulations,
+                self.evaluate_rt_misfit,
+                self.run_rt_adjoint_simulations,
+                self.sum_all_residuals,
+                self.postprocess_event_kernels,
+                self.evaluate_gradient_from_kernels,
+                self.initialize_line_search,
+                self.perform_line_search,
+                self.finalize_iteration
+                ]
 
     def trace_path(self, tag, comp=None):
         """
@@ -256,6 +246,10 @@ class NoiseInversion(Inversion):
         and evalaute the misfit using the preprocessing module. Save the
         residual files but do not sum them.
         """
+        # Skip if not valid
+        if "ZZ" not in self.kernels:
+            return 
+
         logger.info("running ZZ misfit evaluation")
 
         # Internal tracking parameters used to name sub-directories, save files
@@ -274,6 +268,10 @@ class NoiseInversion(Inversion):
         sources and applying the saved forward arrays from the ZZ forward
         simulation.
         """
+        # Skip if not valid
+        if "ZZ" not in self.kernels:
+            return 
+
         logger.info("running ZZ adjoint simulation")
 
         # Internal tracking parameters used to name sub-directories, save files
@@ -293,6 +291,10 @@ class NoiseInversion(Inversion):
 
             IMPORTANT: The order of simulations matters here! E must be first
         """
+        # Skip if not valid
+        if "RR" not in self.kernels or "TT" not in self.kernels:
+            return 
+
         logger.info("evaluating RR and/or TT misfit")
 
         for force in ["E", "N"]:  # <- E before N required!
@@ -312,6 +314,10 @@ class NoiseInversion(Inversion):
         two adjoint simulations (E and N) per kernel with the appropriate
         saved E and N forward arrays.
         """
+        # Skip if not valid
+        if "RR" not in self.kernels or "TT" not in self.kernels:
+            return 
+
         # Set internal variables for directory and file naming
         for cmpnt in ["T", "R"]:
             self._cmpnt = cmpnt  # T or R
