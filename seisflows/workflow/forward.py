@@ -274,7 +274,7 @@ class Forward:
         """
         logger.info(msg.mjr(f"RUNNING {self.__class__.__name__.upper()} "
                             f"WORKFLOW"))
-
+        n = 0  # To keep track of number of tasks completed
         for func in self.task_list:
             # Skip over functions which have already been completed
             if (func.__name__ in self._states.keys()) and (
@@ -286,6 +286,7 @@ class Forward:
             else:
                 try:
                     func()
+                    n += 1
                     self._states[func.__name__] = "completed"
                     self.checkpoint()
                 except Exception as e:
@@ -298,7 +299,7 @@ class Forward:
                 break
 
         self.checkpoint()
-        logger.info(f"finished all {len(self.task_list)} tasks in task list")
+        logger.info(f"completed {n} tasks in requested task list successfully")
 
     def evaluate_initial_misfit(self, path_model=None, save_residuals=None,
                                 **kwargs):

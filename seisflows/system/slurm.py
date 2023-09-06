@@ -301,7 +301,7 @@ class Slurm(Cluster):
         tasks from [0:ntask].
 
         However, for debug purposes, or for single runs, allow the user to set
-        the internal variable `_select_tasks`, which will override this function
+        the internal variable `select_tasks`, which will override this function
         and only run selected tasks. This is useful in the case where, e.g.,
         a few run tasks fail (e.g., fwd simulation) and the User only wants to
         re-run these tasks to avoid the computational burden of re-running
@@ -310,16 +310,16 @@ class Slurm(Cluster):
         :rtype: str
         :return: a list of task IDs to be used by the `run` function
             - if single==True: "0"
-            - if self._select_tasks is None: "0-`ntask`%`ntask_max`"
-            - if self._select_tasks: e.g., "0,1,4,6"
+            - if self.select_tasks is None: "0-`ntask`%`ntask_max`"
+            - if self.select_tasks: e.g., "0,1,4,6"
         """
         if single:
             task_ids = "0"
         else:
-            if self._select_tasks is not None:
-                task_ids = ",".join(self._select_tasks)
+            if self.select_tasks is not None:
+                task_ids = self.select_tasks
             else:
-                task_ids = "0-{self.ntask-1}%{self.ntask_max}"
+                task_ids = f"0-{self.ntask-1}%{self.ntask_max}"
 
         return task_ids
 

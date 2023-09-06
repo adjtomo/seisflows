@@ -33,6 +33,11 @@ class Workstation:
         serial simulations, and `nproc`>1 for parallel simulations.
     :type mpiexec: str
     :param mpiexec: MPI executable on system. Defaults to 'mpirun -n ${NPROC}'
+    :type select_tasks: str
+    :param select_tasks: debug variable to allow the User to select which
+        task IDs are provided to the `run` command. Useful for re-running failed
+        simulations where you only want to re-run a subset of your task load.
+        Example input would be '0,1,2,5'
     :type log_level: str
     :param log_level: logger level to pass to logging module.
         Available: 'debug', 'info', 'warning', 'critical'
@@ -54,10 +59,10 @@ class Workstation:
         saved whenever a number of parallel tasks are run on the system.
     ***
     """
-    def __init__(self, ntask=1, nproc=1, mpiexec=None, log_level="DEBUG",
-                 verbose=False, workdir=os.getcwd(), path_output=None,
-                 path_system=None, path_par_file=None, path_output_log=None,
-                 path_log_files=None, **kwargs):
+    def __init__(self, ntask=1, nproc=1, mpiexec=None, select_tasks=None,
+                 log_level="DEBUG", verbose=False, workdir=os.getcwd(), 
+                 path_output=None, path_system=None, path_par_file=None, 
+                 path_output_log=None, path_log_files=None, **kwargs):
         """
         Workstation System Class Parameters
 
@@ -92,7 +97,7 @@ class Workstation:
         self._acceptable_log_levels = ["CRITICAL", "WARNING", "INFO", "DEBUG"]
 
         # Debug variable to overwrite `task` submission
-        self._select_tasks = None
+        self.select_tasks = select_tasks
 
     def check(self):
         """
@@ -122,6 +127,10 @@ class Workstation:
                     f"MPI module is loaded and accessible from the command line"
                 )
                 sys.exit(-1)
+
+        # !!! ADD SELECT TASK CHECK FOR COMMA SEPARATED AND LIST CREATEABLE
+        # if self.select_tasks:
+            
 
     def setup(self):
         """
@@ -202,7 +211,7 @@ class Workstation:
         tasks from [0:ntask].
 
         However, for debug purposes, or for single runs, allow the user to set
-        the internal variable `_select_tasks`, which will override this function
+        the internal variable `select_tasks`, which will override this function
         and only run selected tasks. This is useful in the case where, e.g.,
         a few run tasks fail (e.g., fwd simulation) and the User only wants to
         re-run these tasks to avoid the computational burden of re-running
@@ -217,8 +226,8 @@ class Workstation:
         if single:
             task_ids = [0]
         else:
-            if self._select_tasks is not None:
-                task_ids = self._select_tasks  # e.g., [1, 5, 8, 9]
+            if self.select_tasks is not None:
+                task_ids = self.select_tasks.split(",")  # e.g., [1, 5, 8, 9]
             else:
                 task_ids = list(range(0, self.ntask, 1))
 
