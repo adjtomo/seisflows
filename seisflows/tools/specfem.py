@@ -441,7 +441,8 @@ def getpar(key, file, delim="=", match_partial=False):
         # To allow for nested parameters
         if line.strip().upper().startswith(key.upper()):
             try:
-                key_out, val = line.strip().split(delim)
+                # Split on the first occurrence, assuming key has not delim
+                key_out, val = line.strip().split(delim, 1)
             except ValueError as e:
                 raise ValueError(
                     f"Could not split line with delimiter '{delim}'. Error "

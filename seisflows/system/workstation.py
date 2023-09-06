@@ -33,11 +33,16 @@ class Workstation:
         serial simulations, and `nproc`>1 for parallel simulations.
     :type mpiexec: str
     :param mpiexec: MPI executable on system. Defaults to 'mpirun -n ${NPROC}'
-    :type select_tasks: str
-    :param select_tasks: debug variable to allow the User to select which
-        task IDs are provided to the `run` command. Useful for re-running failed
-        simulations where you only want to re-run a subset of your task load.
-        Example input would be '0,1,2,5'
+    :type array: str
+    :param array: for `ntask` > 1, determine which tasks to submit to run. By
+        default (NoneType) this submits all task IDs [0:ntask), or for single
+        runs, submits only the first task ID, 0. However, for debugging or
+        manual control purposes, Users may input a string of task IDs that they
+        would like to run. Follows formatting of SLURM array directive
+        (https://slurm.schedmd.com/job_array.html), which is, for example:
+        1,2,3-8:2,10 -> 1,2,3,5,7,10
+        where '-' denotes a range (inclusive), and ':' denotes an optional step.
+        If ':' step is not given for a range, then step defaults to 1.
     :type log_level: str
     :param log_level: logger level to pass to logging module.
         Available: 'debug', 'info', 'warning', 'critical'
@@ -59,7 +64,7 @@ class Workstation:
         saved whenever a number of parallel tasks are run on the system.
     ***
     """
-    def __init__(self, ntask=1, nproc=1, mpiexec=None, select_tasks=None,
+    def __init__(self, ntask=1, nproc=1, mpiexec=None, array=None,
                  log_level="DEBUG", verbose=False, workdir=os.getcwd(), 
                  path_output=None, path_system=None, path_par_file=None, 
                  path_output_log=None, path_log_files=None, **kwargs):
@@ -82,6 +87,7 @@ class Workstation:
         self.ntask = ntask
         self.nproc = nproc
         self.mpiexec = mpiexec
+        self.array = array
         self.log_level = log_level.upper()
         self.verbose = verbose
 
@@ -95,9 +101,6 @@ class Workstation:
             output_log=path_output_log or os.path.join(workdir, "sflog.txt"),
         )
         self._acceptable_log_levels = ["CRITICAL", "WARNING", "INFO", "DEBUG"]
-
-        # Debug variable to overwrite `task` submission
-        self.select_tasks = select_tasks
 
     def check(self):
         """
@@ -127,10 +130,14 @@ class Workstation:
                     f"MPI module is loaded and accessible from the command line"
                 )
                 sys.exit(-1)
-
-        # !!! ADD SELECT TASK CHECK FOR COMMA SEPARATED AND LIST CREATEABLE
-        # if self.select_tasks:
-            
+        # Check formatting of array parameters if provided
+        if self.array is not None:
+            try:
+                self.task_ids()
+            except Exception as e:
+                logger.critical(f"`array` argument can not be parsed by System "
+                                f"module. Please check error message: {e}")
+                sys.exit(-1)
 
     def setup(self):
         """
@@ -208,20 +215,8 @@ class Workstation:
         """
         Return a list of Task IDs (linked to each indiviudal source) to supply
         to the 'run' function. By default this returns a range of available
-        tasks [0:ntask)
-
-        However, for debug purposes, or for single runs, allow the user to set
-        the variable `select_tasks`, which will override this function
-        and only run selected tasks. This is useful in the case where, e.g.,
-        a few run tasks fail and the User only wants to re-run these tasks to 
-        avoid the computational burden of re-running all `ntask` simulations.
-
-        Example `select_tasks` input follows SLURM acceptable --array arguments
-
-        Input: 1,3,5-9:2,10 -> Output: 1,3,5,7,9,10
-
-        where '-' denotes a range (inclusive), and ':' denotes an optional step.
-        If ':' step is not given for a range, then step defaults to 1.
+        tasks [0:ntask). See class docstring of parameter `array` for how to
+        manually set task_ids to use for run call.
 
         :type single: bool
         :param single: If we only want to run a single process, this is will 
@@ -232,9 +227,9 @@ class Workstation:
         if single:
             task_ids = [0]
         else:
-            if self.select_tasks is not None:
+            if self.array is not None:
                 task_ids = []
-                parts = self.select_tasks.split(",")  # e.g., 1,3,5-9,10
+                parts = self.array.split(",")  # e.g., 1,3,5-9,10
                 for part in parts:
                     # e.g., 5-9 -> 5,6,7,8,9
                     if "-" in part:

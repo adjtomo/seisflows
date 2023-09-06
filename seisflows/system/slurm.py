@@ -293,32 +293,26 @@ class Slurm(Cluster):
     def task_ids(self, single=False):
         """
         Overwrite `system.workstation.task_ids` to get SLURM specific array
-        configurations which are given as strings for the --array SLURM
-        directive, rather than lists.
+        configurations which are passed as strings for the --array={task_ids()}
+        SLURM directive, rather than lists which is how `system.workstation`
+        handles this
 
-        Return a list of Task IDs (linked to each indiviudal source) to supply
-        to the 'run' function. By default this returns a range of available
-        tasks from [0:ntask].
+        Relevant format definition: https://slurm.schedmd.com/job_array.html
 
-        However, for debug purposes, or for single runs, allow the user to set
-        the internal variable `select_tasks`, which will override this function
-        and only run selected tasks. This is useful in the case where, e.g.,
-        a few run tasks fail (e.g., fwd simulation) and the User only wants to
-        re-run these tasks to avoid the computational burden of re-running
-        `ntask` simulations.
-
+        :type single: bool
+        :param single: If we only want to run a single process, this is will
+            default to TaskID == 0
         :rtype: str
-        :return: a list of task IDs to be used by the `run` function
-            - if single==True: "0"
-            - if self.select_tasks is None: "0-`ntask`%`ntask_max`"
-            - if self.select_tasks: e.g., "0,1,4,6"
+        :return: string formatter of Task IDs to be used by the `run` function
+            via the `run_call_header`
         """
         if single:
             task_ids = "0"
         else:
-            if self.select_tasks is not None:
-                task_ids = self.select_tasks
+            if self.array is not None:
+                task_ids = self.array
             else:
+                # e.g., 0-79%15 means 80 jobs, 15 at a time
                 task_ids = f"0-{self.ntask-1}%{self.ntask_max}"
 
         return task_ids
