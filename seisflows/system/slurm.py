@@ -171,7 +171,7 @@ class Slurm(Cluster):
              f"--ntasks={self.nproc:d}",
              f"--time={self._tasktime}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",
-             f"--array=0-{self.ntask-1}%{self.ntask_max}",
+             f"--array={self.task_ids()}",
              f"--parsable"
         ])
         return _call
@@ -289,6 +289,39 @@ class Slurm(Cluster):
             # Wait for all processes to finish and write to disk (if they do)
             # Moving on too quickly may result in required files not being avail
             time.sleep(5)
+
+    def task_ids(self, single=False):
+        """
+        Overwrite `system.workstation.task_ids` to get SLURM specific array
+        configurations which are given as strings for the --array SLURM
+        directive, rather than lists.
+
+        Return a list of Task IDs (linked to each indiviudal source) to supply
+        to the 'run' function. By default this returns a range of available
+        tasks from [0:ntask].
+
+        However, for debug purposes, or for single runs, allow the user to set
+        the internal variable `_select_tasks`, which will override this function
+        and only run selected tasks. This is useful in the case where, e.g.,
+        a few run tasks fail (e.g., fwd simulation) and the User only wants to
+        re-run these tasks to avoid the computational burden of re-running
+        `ntask` simulations.
+
+        :rtype: str
+        :return: a list of task IDs to be used by the `run` function
+            - if single==True: "0"
+            - if self._select_tasks is None: "0-`ntask`%`ntask_max`"
+            - if self._select_tasks: e.g., "0,1,4,6"
+        """
+        if single:
+            task_ids = "0"
+        else:
+            if self._select_tasks is not None:
+                task_ids = ",".join(self._select_tasks)
+            else:
+                task_ids = "0-{self.ntask-1}%{self.ntask_max}"
+
+        return task_ids
 
 
 def check_job_status_array(job_id):
@@ -432,7 +465,7 @@ def modify_run_call_single_proc(run_call):
     """
     for part in run_call.split(" "):
         if "--array" in part:
-            run_call = run_call.replace(part, "--array=0-0")
+            run_call = run_call.replace(part, "--array=0")
         elif "--ntasks" in part:
             run_call = run_call.replace(part, "--ntasks=1")
 

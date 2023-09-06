@@ -91,6 +91,9 @@ class Workstation:
         )
         self._acceptable_log_levels = ["CRITICAL", "WARNING", "INFO", "DEBUG"]
 
+        # Debug variable to overwrite `task` submission
+        self._select_tasks = None
+
     def check(self):
         """
         Checks parameters and paths
@@ -180,12 +183,7 @@ class Workstation:
             defined, such that the job is submitted as a single-core job to
             the system.
         """
-        if single:
-            ntasks = 1
-        else:
-            ntasks = self.ntask
-
-        for task_id in range(ntasks):
+        for task_id in self.task_ids(single):
             # Set Task ID for currently running process
             set_task_id(task_id)
             log_file = self._get_log_file(task_id)
@@ -196,6 +194,35 @@ class Workstation:
                 with redirect_stdout(f):
                     for func in funcs:
                         func(**kwargs)
+
+    def task_ids(self, single=False):
+        """
+        Return a list of Task IDs (linked to each indiviudal source) to supply
+        to the 'run' function. By default this returns a range of available
+        tasks from [0:ntask].
+
+        However, for debug purposes, or for single runs, allow the user to set
+        the internal variable `_select_tasks`, which will override this function
+        and only run selected tasks. This is useful in the case where, e.g.,
+        a few run tasks fail (e.g., fwd simulation) and the User only wants to
+        re-run these tasks to avoid the computational burden of re-running
+        `ntask` simulations.
+
+        :rtype: list
+        :return: a list of task IDs to be used by the `run` function
+            - if single==True: [0]
+            - if self._select_tasks is None: [0, ..., `ntask`]
+            - if self._select_tasks: User input list of task ids
+        """
+        if single:
+            task_ids = [0]
+        else:
+            if self._select_tasks is not None:
+                task_ids = self._select_tasks  # e.g., [1, 5, 8, 9]
+            else:
+                task_ids = list(range(0, self.ntask, 1))
+
+        return task_ids
 
     def _get_log_file(self, task_id):
         """

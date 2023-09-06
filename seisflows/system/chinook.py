@@ -99,7 +99,7 @@ class Chinook(Slurm):
             # f"--tasks-per-node={self.node_size}",  # actually not required?
             f"--time={self._tasktime}",
             f"--output={os.path.join(self.path.log_files, '%A_%a')}",
-            f"--array=0-{self.ntask-1 % self.ntask_max}",
+            f"--array={self.task_ids()}",
             f"--parsable"
         ])
         return _call

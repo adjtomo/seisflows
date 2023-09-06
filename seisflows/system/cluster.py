@@ -116,6 +116,7 @@ class Cluster(Workstation):
         """
         return ""
 
+
     def submit(self, workdir=None, parameter_file="parameters.yaml", 
                login=False):
         """
@@ -193,14 +194,14 @@ class Cluster(Workstation):
             arguments
         """
         # Single tasks only need to be run one time, as `TASK_ID` === 0
-        ntasks = {True: 1, False: self.ntask}[single]
+        task_ids = self.task_ids(single)
         funcs_fid, kwargs_fid = pickle_function_list(functions=funcs,
                                                      path=self.path.scratch,
                                                      verbose=self.verbose,
                                                      level=self.log_level,
                                                      **kwargs)
         logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
-                    f"system {ntasks} times")
+                    f"system {len(task_ids)} times")
 
         # Create the run call which will simply call an external Python script
         # e.g., run --funcs func.p --kwargs kwargs.p --environment ...
@@ -213,14 +214,15 @@ class Cluster(Workstation):
         ])
         logger.debug(run_call)
 
-        # Don't need to spin up concurrent.futures for a single run
+        # Don't need to spin up concurrent.futures for a single run so we just
+        # call a function instead
         if single:
             self._run_task(run_call=run_call, task_id=0)
         # Run tasks in parallel and wait for all of them to finish
         else:
             with ProcessPoolExecutor(max_workers=self.ntask_max) as executor:
                 futures = [executor.submit(self._run_task, run_call, task_id)
-                           for task_id in range(ntasks)]
+                           for task_id in task_ids]
 
             # Mimic a cluster job timeout by limiting task to `tasktime`
             wait(futures, timeout=self.tasktime, return_when="FIRST_EXCEPTION")
