@@ -202,7 +202,7 @@ class Inversion(Migration):
                 self.iteration += 1
                 logger.info(f"setting current iteration to: {self.iteration}")
                 # Set the state file to pending for new iteration
-                self._states = {key: "pending" for key in self._states}
+                self._states = {key: 0 for key in self._states}
                 self.checkpoint()
             else:
                 break
@@ -524,18 +524,19 @@ class Inversion(Migration):
 
     def update_line_search(self):
         """
-        Conducts line search in given search direction until the objective
-        function is reduced acceptably, or the line search fails due to
-        user-defined limit criteria.
+        Given the misfit `f_try` calculated in `evaluate_line_search_misfit`,
+        use the Optimization module to determine if the line search has passed,
+        failed, or needs to perform a subsequent step.
+        The line search state machine acts in the following way:
+        - Pass: Run clean up and proceed with workflow
+        - Try: Re-calculate step length (alpha) and re-evaluate misfit (f_try)
+        - Fail: Try to restart optimization module and restart line search. If
+            still failing, exit workflow
 
         .. note::
-            Starts on step_count == 1 because step_count == 0 will be the
-            misfit of the starting model
 
-        Status codes:
-            status > 0  : finished
-            status == 0 : not finished
-            status < 0  : failed
+            Line search starts on step_count == 1 because step_count == 0 is
+            considered the misfit of the starting model
         """
         # Determine whether the line search successfully reduced misfit (PASS),
         # must attempt another step (TRY), or has failed completely (FAIL)
@@ -585,6 +586,7 @@ class Inversion(Migration):
                 # Reset the line search machinery; set step count to 0
                 self.optimize.restart()
                 self.optimize.checkpoint()
+                # Re-set state file to ensure that job failure will recover
                 self.evaluate_line_search_misfit()
                 self.update_line_search()  # RECURSIVE CALL
             # If we can't then line search has failed. Abort workflow
@@ -596,7 +598,6 @@ class Inversion(Migration):
                             header="line search failed")
                 )
                 sys.exit(-1)
-
 
     def finalize_iteration(self):
         """

@@ -238,9 +238,8 @@ class Forward:
             with open(self.path.state_file, "w") as f:
                 f.write(f"# SeisFlows State File\n")
                 f.write(f"# {asctime()}\n")
-                f.write(f"# Acceptable states: 'completed', 'failed', "
-                        f"'pending'\n")
-                f.write(f"# =======================================\n")
+                f.write(f"#'1: complete', '0: pending', '-1: failed'\n")
+                f.write(f"# ========================================\n")
 
         # Distribute modules to the class namespace. We don't do this at init
         # incase _modules was set as NoneType
@@ -278,7 +277,7 @@ class Forward:
         for func in self.task_list:
             # Skip over functions which have already been completed
             if (func.__name__ in self._states.keys()) and (
-                    self._states[func.__name__] == "completed"):
+                    self._states[func.__name__] == 1):  # completed
                 logger.info(f"'{func.__name__}' has already been run, skipping")
                 continue
             # Otherwise attempt to run functions that have failed or are
@@ -287,10 +286,10 @@ class Forward:
                 try:
                     func()
                     n += 1
-                    self._states[func.__name__] = "completed"
+                    self._states[func.__name__] = 1  # completed
                     self.checkpoint()
                 except Exception as e:
-                    self._states[func.__name__] = "failed"
+                    self._states[func.__name__] = -1  # failed
                     self.checkpoint()
                     raise
             # Allow user to prematurely stop a workflow after a given task
