@@ -262,6 +262,10 @@ class NoiseInversion(Inversion):
             sum_residuals=False
         )
 
+        # !!! Kludge rename all figures so they don't get overwritten
+        fids = glob(os.path.join(self.preprocess.path["_figures"], "*.pdf"))
+        unix.rename(".pdf", "_ZZ.pdf", fids)
+
     def run_zz_adjoint_simulations(self):
         """
         Run the adjoint solver to generate kernels for ZZ using the ZZ adjoint
@@ -292,7 +296,7 @@ class NoiseInversion(Inversion):
             IMPORTANT: The order of simulations matters here! E must be first
         """
         # Skip if not valid
-        if "RR" not in self.kernels or "TT" not in self.kernels:
+        if ("RR" not in self.kernels) and ("TT" not in self.kernels):
             return 
 
         logger.info("evaluating RR and/or TT misfit")
@@ -308,6 +312,11 @@ class NoiseInversion(Inversion):
                 sum_residuals=False
             )
 
+        # !!! Kludge rename all figures so they don't get overwritten
+        fids = glob(os.path.join(self.preprocess.path["_figures"], "*.pdf"))
+        fids = [_ for _ in fids if "_ZZ" not in _]
+        unix.rename(".pdf", "_RT.pdf", fids)
+
     def run_rt_adjoint_simulations(self):
         """
         Run adjoint solver for each kernel RR and TT (if requested) by running
@@ -315,7 +324,7 @@ class NoiseInversion(Inversion):
         saved E and N forward arrays.
         """
         # Skip if not valid
-        if "RR" not in self.kernels or "TT" not in self.kernels:
+        if ("RR" not in self.kernels) and ("TT" not in self.kernels):
             return 
 
         # Set internal variables for directory and file naming
@@ -429,9 +438,6 @@ class NoiseInversion(Inversion):
         if self._force == "Z":
             super().evaluate_objective_function(save_residuals=save_residuals,
                                                 components=["Z"])
-            # !!! Kludge rename all figures so they don't get overwritten
-            fids = glob(os.path.join(self.preprocess.path["_figures"], "*.png"))
-            unix.rename(".png", "_ZZ.png", fids)
         # Run E and N misfit quantification
         else:
             # ==================================================================
@@ -452,11 +458,6 @@ class NoiseInversion(Inversion):
             super().evaluate_objective_function(save_residuals=save_residuals,
                                                 components=["T", "R"]
                                                 )
-
-            # !!! Kludge rename all figures so they don't get overwritten
-            fids = glob(os.path.join(self.preprocess.path["_figures"], "*.png"))
-            fids = [_ for _ in fids if "_ZZ" not in _]
-            unix.rename(".png", "_RT.png", fids)
 
             # Re-rotate T and R adjoint sources to N and E components for 
             # adjoint simulations. Only rotate what is required for adj sim.
