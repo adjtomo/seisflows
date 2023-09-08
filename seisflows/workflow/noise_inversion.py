@@ -266,6 +266,9 @@ class NoiseInversion(Inversion):
         fids = glob(os.path.join(self.preprocess.path["_figures"], "*.pdf"))
         unix.rename(".pdf", "_ZZ.pdf", fids)
 
+        fids = glob(os.path.join(self.preprocess.path["_logs"], "*.log"))
+        unix.rename(".log", "_ZZ.log", fids)
+
     def run_zz_adjoint_simulations(self):
         """
         Run the adjoint solver to generate kernels for ZZ using the ZZ adjoint
@@ -316,6 +319,10 @@ class NoiseInversion(Inversion):
         fids = glob(os.path.join(self.preprocess.path["_figures"], "*.pdf"))
         fids = [_ for _ in fids if "_ZZ" not in _]
         unix.rename(".pdf", "_RT.pdf", fids)
+
+        fids = glob(os.path.join(self.preprocess.path["_logs"], "*.log"))
+        fids = [_ for _ in fids if "_ZZ" not in _]
+        unix.rename(".log", "_ZZ.log", fids)
 
     def run_rt_adjoint_simulations(self):
         """
@@ -967,11 +974,6 @@ class NoiseInversion(Inversion):
         """
         Function Overwrite of `workflow.inversion._evaluate_line_search_misfit`
         Called inside `workflow.inversion.perform_line_search`
-        
-        - Line search m
-
-        TODO clean out the traces/syn directory because it is causing false
-            misfit calculations for 'evaluate_objective_function'
 
         .. warning::
 
@@ -997,7 +999,7 @@ class NoiseInversion(Inversion):
             forces += ["E", "N"]
 
         # Run forward simulations and misfit calculation for each required force
-        for force in forces:
+        for i, force in enumerate(forces):
             self._force = force
             logger.info(f"running misfit evaluation for: '{self._force}'")
             # Z residuals will be saved tag Z, N/E residuals saved tag RT
@@ -1009,6 +1011,13 @@ class NoiseInversion(Inversion):
                     f"residuals_{{src}}_{self.evaluation}_{tag}.txt"
                 )
             )
+
+            # !!! Kludge rename all figures so they don't get overwritten
+            fids = glob(os.path.join(self.preprocess.path["_figures"], "*.pdf"))
+            unix.rename(".pdf", "_ZZ.pdf", fids)
+
+            fids = glob(os.path.join(self.preprocess.path["_logs"], "*.log"))
+            unix.rename(".log", "_ZZ.log", fids)
        
         # Sum the misfit from all forward simulations and all kernels
         residuals_files = glob(
