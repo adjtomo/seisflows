@@ -117,13 +117,13 @@ class Forward:
         self._optional_modules = ["preprocess"]
 
         # Read in any existing state file which keeps track of workflow tasks
-        self._states = {}
+        self._states = {task.__name__: 0 for task in self.task_list}
         if os.path.exists(self.path.state_file):
             for line in open(self.path.state_file, "r").readlines():
                 if line.startswith("#"):
                     continue
                 key, val = line.strip().split(":")
-                self._states[key] = val.strip()
+                self._states[key] = int(val.strip())
 
     @property
     def task_list(self):
@@ -240,8 +240,6 @@ class Forward:
                 f.write(f"# {asctime()}\n")
                 f.write(f"#'1: complete', '0: pending', '-1: failed'\n")
                 f.write(f"# ========================================\n")
-        # Write out the full state file
-        self.checkpoint()
 
         # Distribute modules to the class namespace. We don't do this at init
         # incase _modules was set as NoneType

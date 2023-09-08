@@ -94,6 +94,7 @@ class Inversion(Migration):
         self._thrifty_status = False
         self._required_modules = ["system", "solver", "preprocess", "optimize"]
 
+        import pdb;pdb.set_trace()
         # Grab iteration from state file, or set None to have setup() set it
         if "iteration" in self._states:
             self.iteration = int(self._states["iteration"])
