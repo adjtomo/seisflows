@@ -209,7 +209,8 @@ class NoiseInversion(Inversion):
                 self.postprocess_event_kernels,
                 self.evaluate_gradient_from_kernels,
                 self.initialize_line_search,
-                self.perform_line_search,
+                self.evaluate_line_search_misfit,
+                self.update_line_search,
                 self.finalize_iteration
                 ]
 
@@ -1010,7 +1011,6 @@ class NoiseInversion(Inversion):
 
             self._force = force
             logger.info(f"running misfit evaluation for: '{self._force}'")
-            # Z residuals will be saved tag Z, N/E residuals saved tag RT
             if self._force == "Z":
                 tag = "ZZ"
             else:

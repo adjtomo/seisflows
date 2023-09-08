@@ -240,6 +240,8 @@ class Forward:
                 f.write(f"# {asctime()}\n")
                 f.write(f"#'1: complete', '0: pending', '-1: failed'\n")
                 f.write(f"# ========================================\n")
+        # Write out the full state file
+        self.checkpoint()
 
         # Distribute modules to the class namespace. We don't do this at init
         # incase _modules was set as NoneType
