@@ -1005,8 +1005,9 @@ class NoiseInversion(Inversion):
 
         # Run forward simulations and misfit calculation for each required force
         for i, force in enumerate(forces):
+            _state_check = f"evaluate_line_search_misfit_{force}"
             # Intermediate state check
-            if self._states[f"evaluate_line_search_misfit_{force}"] == 1:
+            if _state_check in self._states and bool(self._states[_state_check]):
                 continue
 
             self._force = force
@@ -1027,7 +1028,7 @@ class NoiseInversion(Inversion):
                 )
             )
             self._rename_preprocess_files(tag)
-            self._states[f"evaluate_line_search_misfit_{force}"] = 1
+            self._states[_state_check] = 1
        
         # Sum the misfit from all forward simulations and all kernels
         residuals_files = glob(
@@ -1035,4 +1036,8 @@ class NoiseInversion(Inversion):
                          f"residuals_*_{self.evaluation}_*.txt")
         )
         self.sum_residuals(residuals_files, save_to="f_try")
+
+        # Reset states incase we need to run again
+        for force in forces:
+            self._states[f"evaluate_line_search_misfit_{force}"] = 0
 

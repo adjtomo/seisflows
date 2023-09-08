@@ -548,6 +548,7 @@ class Pyaflowa:
 
         # Write Manager data directly to an ASDFDataSet for data storage and
         # later assessments using the Inspector
+        _waited = 0
         while True:
             try:
                 with ASDFDataSet(os.path.join(self.path["_datasets"],
@@ -555,10 +556,16 @@ class Pyaflowa:
                                  mode="a") as ds:
                     mgmt.write_to_dataset(ds=ds)
                 break
-            except (BlockingIOError, FileExistsError):
+            except (OSError, BlockingIOError, FileExistsError):
                 # Random sleep time [0,1]s to decrease chances of two processes
                 # attempting to access at exactly the same time
-                time.sleep(random.random())
+                _wait = 10 * random.random()  # (0,10]s
+                _waited += _wait
+                if _waited > 10 * 60:  # 10m of waiting
+                    sys.exit(-1)
+
+                time.sleep(_wait)
+                
 
         return mgmt.stats.misfit, mgmt.stats.nwin
 
