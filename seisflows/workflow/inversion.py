@@ -498,11 +498,6 @@ class Inversion(Migration):
         logger.info(msg.sub(f"LINE SEARCH STEP COUNT "
                             f"{self.optimize.step_count:0>2}"))
 
-        # Define where we are in the inversion for file passing between
-        # preprocess and workflow modules
-        iteration = self.iteration
-        step_count = self.optimize.step_count
-
         self.system.run(
             [self.run_forward_simulations,
              self.evaluate_objective_function],
@@ -576,6 +571,9 @@ class Inversion(Migration):
 
             # Checkpoint and re-run line search evaluation
             self.optimize.checkpoint()
+            # Re-set state file to ensure that job failure will recover
+            self._states["evaluate_line_search_misfit"] = 0
+            # Recursively run the line search to get a new misfit
             self.evaluate_line_search_misfit()
             self.update_line_search()  # RECURSIVE CALL
         elif status.upper() == "FAIL":
@@ -587,6 +585,8 @@ class Inversion(Migration):
                 self.optimize.restart()
                 self.optimize.checkpoint()
                 # Re-set state file to ensure that job failure will recover
+                self._states["evaluate_line_search_misfit"] = 0
+                # Recursively run the line search to get a new misfit
                 self.evaluate_line_search_misfit()
                 self.update_line_search()  # RECURSIVE CALL
             # If we can't then line search has failed. Abort workflow

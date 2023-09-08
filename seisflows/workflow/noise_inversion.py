@@ -71,7 +71,7 @@ from glob import glob
 from obspy import Stream
 
 from seisflows import logger
-from seisflows.tools import unix
+from seisflows.tools import unix, msg
 from seisflows.tools.noise import rotate_ne_trace_to_rt, rotate_rt_adjsrc_to_ne
 from seisflows.tools.specfem import (rename_as_adjoint_source, 
                                      get_src_rcv_lookup_table)
@@ -261,13 +261,7 @@ class NoiseInversion(Inversion):
             self.path.eval_grad, f"residuals_{{src}}_{self.evaluation}_ZZ.txt"),
             sum_residuals=False
         )
-
-        # !!! Kludge rename all figures so they don't get overwritten
-        fids = glob(os.path.join(self.preprocess.path["_figures"], "*.pdf"))
-        unix.rename(".pdf", "_ZZ.pdf", fids)
-
-        fids = glob(os.path.join(self.preprocess.path["_logs"], "*.log"))
-        unix.rename(".log", "_ZZ.log", fids)
+        self._rename_preprocess_files(tag="ZZ")
 
     def run_zz_adjoint_simulations(self):
         """
@@ -314,15 +308,7 @@ class NoiseInversion(Inversion):
                     f"residuals_{{src}}_{self.evaluation}_RT.txt"),
                 sum_residuals=False
             )
-
-        # !!! Kludge rename all figures so they don't get overwritten
-        fids = glob(os.path.join(self.preprocess.path["_figures"], "*.pdf"))
-        fids = [_ for _ in fids if "_ZZ" not in _]
-        unix.rename(".pdf", "_RT.pdf", fids)
-
-        fids = glob(os.path.join(self.preprocess.path["_logs"], "*.log"))
-        fids = [_ for _ in fids if "_ZZ" not in _]
-        unix.rename(".log", "_ZZ.log", fids)
+        self._rename_preprocess_files(tag="RT")
 
     def run_rt_adjoint_simulations(self):
         """
@@ -348,6 +334,26 @@ class NoiseInversion(Inversion):
                 logger.info(f"running {self._force}{self._cmpnt} adjoint "
                             f"simulation")
                 self.run_adjoint_simulations()
+
+    def _rename_preprocess_files(self, tag):
+        """
+        Prevent preprocess module from overwriting its own log and figure files
+        by simply renaming them with a tag.
+
+        .. warning::
+
+            This feels kludge-y, try to not have to do this by allowing misfit
+            evaluation functions to set a tag on the figure/log naming
+        """
+        fids = glob(os.path.join(self.preprocess.path["_figures"],
+                                 f"*{self.evaluation}.pdf"))
+        unix.rename(f"{self.evaluation}.pdf",
+                    f"{self.evaluation}_{tag}.pdf", fids)
+
+        fids = glob(os.path.join(self.preprocess.path["_logs"],
+                                 f"*{self.evaluation}.log"))
+        unix.rename(f"{self.evaluation}.log",
+                    f"{self.evaluation}_{tag}.log", fids)
 
     def sum_all_residuals(self):
         """
@@ -970,10 +976,13 @@ class NoiseInversion(Inversion):
         # a misfit kernel, and applies smoothing, masking, etc.
         super().postprocess_event_kernels()
 
-    def _evaluate_line_search_misfit(self):
+    def evaluate_line_search_misfit(self):
         """
         Function Overwrite of `workflow.inversion._evaluate_line_search_misfit`
-        Called inside `workflow.inversion.perform_line_search`
+        Called inside `workflow.inversion.perform_line_search`.
+
+        Alters the original function by allowing for multiple forward
+        simulations required for both vertical and horizontal SGF creation.
 
         .. warning::
 
@@ -981,43 +990,44 @@ class NoiseInversion(Inversion):
             ignored and the final residual file will only be created once all 
             forward simulations are run
         """
-        # Pre-set functions and parameters for system.run calls
-        run_list = [self.prepare_data_for_solver,
-                    self.run_forward_simulations,
-                    self.evaluate_objective_function
-                    ]
-        path_model = os.path.join(self.path.eval_func, "model")
+        # Step count += 1
+        self.optimize.increment_step_count()
+        logger.info(msg.sub(f"LINE SEARCH STEP COUNT "
+                            f"{self.optimize.step_count:0>2}"))
 
         # Determine which forward simulations we will need to run
         forces = []
         if "ZZ" in self.kernels:
             forces += ["Z"]
         if ("RR" in self.kernels) or ("TT" in self.kernels):
-            # ==================================================================
-            # IMPORTANT: The order of forces matters here! E must be first
-            # ==================================================================
-            forces += ["E", "N"]
+            forces += sorted(["E", "N"])  # E before N required
 
         # Run forward simulations and misfit calculation for each required force
         for i, force in enumerate(forces):
+            # Intermediate state check
+            if self._states[f"evaluate_line_search_misfit_{force}"] == 1:
+                continue
+
             self._force = force
             logger.info(f"running misfit evaluation for: '{self._force}'")
             # Z residuals will be saved tag Z, N/E residuals saved tag RT
-            tag = {"Z": "Z", "N": "RT", "E": "RT"}[self._force]
+            if self._force == "Z":
+                tag = "ZZ"
+            else:
+                tag = "RT"
             self.system.run(
-                run_list, path_model=path_model,
+                [self.prepare_data_for_solver,
+                 self.run_forward_simulations,
+                 self.evaluate_objective_function
+                 ],
+                path_model=os.path.join(self.path.eval_func, "model"),
                 save_residuals=os.path.join(
                     self.path.eval_func,
                     f"residuals_{{src}}_{self.evaluation}_{tag}.txt"
                 )
             )
-
-            # !!! Kludge rename all figures so they don't get overwritten
-            fids = glob(os.path.join(self.preprocess.path["_figures"], "*.pdf"))
-            unix.rename(".pdf", "_ZZ.pdf", fids)
-
-            fids = glob(os.path.join(self.preprocess.path["_logs"], "*.log"))
-            unix.rename(".log", "_ZZ.log", fids)
+            self._rename_preprocess_files(tag)
+            self._states[f"evaluate_line_search_misfit_{force}"] = 1
        
         # Sum the misfit from all forward simulations and all kernels
         residuals_files = glob(
@@ -1025,5 +1035,4 @@ class NoiseInversion(Inversion):
                          f"residuals_*_{self.evaluation}_*.txt")
         )
         self.sum_residuals(residuals_files, save_to="f_try")
-
 
