@@ -259,7 +259,8 @@ class NoiseInversion(Inversion):
 
         # Residuals file looks like e.g., 'residuals_{src}_i01s00_ZZ.txt'
         super().evaluate_initial_misfit(save_residuals=os.path.join(
-            self.path.eval_grad, f"residuals_{{src}}_{self.evaluation}_ZZ.txt"),
+            self.path.eval_grad, "residuals", 
+            f"residuals_{{src}}_{self.evaluation}_ZZ.txt"),
             sum_residuals=False
         )
         self._rename_preprocess_files(tag="ZZ")
@@ -305,7 +306,7 @@ class NoiseInversion(Inversion):
             # Residuals file e.g., 'residuals_{src}_i01s00_RT.txt'
             self.evaluate_initial_misfit(
                 save_residuals=os.path.join(
-                    self.path.eval_grad,
+                    self.path.eval_grad, "residuals",
                     f"residuals_{{src}}_{self.evaluation}_RT.txt"),
                 sum_residuals=False
             )
@@ -374,7 +375,8 @@ class NoiseInversion(Inversion):
         # current accepted model `m_new`
         else:
             residuals_files = glob(os.path.join(
-                self.path.eval_grad, f"residuals_*_{self.evaluation}_??.txt")
+                self.path.eval_grad, "residuals", 
+                f"residuals_*_{self.evaluation}_??.txt")
             )
             self.sum_residuals(residuals_files, save_to="f_new")
 
@@ -1023,7 +1025,7 @@ class NoiseInversion(Inversion):
                  ],
                 path_model=os.path.join(self.path.eval_func, "model"),
                 save_residuals=os.path.join(
-                    self.path.eval_func,
+                    self.path.eval_func, "residuals",
                     f"residuals_{{src}}_{self.evaluation}_{tag}.txt"
                 )
             )
@@ -1032,7 +1034,7 @@ class NoiseInversion(Inversion):
        
         # Sum the misfit from all forward simulations and all kernels
         residuals_files = glob(
-            os.path.join(self.path.eval_func,
+            os.path.join(self.path.eval_func, "residuals", 
                          f"residuals_*_{self.evaluation}_*.txt")
         )
         self.sum_residuals(residuals_files, save_to="f_try")

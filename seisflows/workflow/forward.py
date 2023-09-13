@@ -330,7 +330,7 @@ class Forward:
         # Forward workflow may not have access to optimization module, so we do
         # only tag residuals files with the source name
         if save_residuals is None:
-            save_residuals = os.path.join(self.path.eval_grad,
+            save_residuals = os.path.join(self.path.eval_grad, "residuals",
                                           "residuals_{src}.txt")
         else:
             # Require that `save_residuals` has an f-string formatter 'src' that

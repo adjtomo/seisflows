@@ -182,6 +182,8 @@ class Inversion(Migration):
         super().setup()
 
         unix.mkdir(self.path.eval_func)
+        unix.mkdir(os.path.join(self.path.eval_grad, "residuals"))
+        unix.mkdir(os.path.join(self.path.eval_func, "residuals"))
 
         self.optimize = self._modules.optimize  # NOQA
 
@@ -342,7 +344,8 @@ class Inversion(Migration):
         # Since this is the initial misfit, we assume the step count == 0
         if save_residuals is None:
             save_residuals = os.path.join(
-                self.path.eval_grad, f"residuals_{{src}}_{self.evaluation}.txt"
+                self.path.eval_grad, "residuals", 
+                f"residuals_{{src}}_{self.evaluation}.txt"
             )
         else:
             assert("{src}" in save_residuals), (
@@ -503,12 +506,13 @@ class Inversion(Migration):
              self.evaluate_objective_function],
             path_model=os.path.join(self.path.eval_func, "model"),
             save_residuals=os.path.join(
-                self.path.eval_func,
+                self.path.eval_func, "residuals",
                 f"residuals_{{src}}_{self.evaluation}.txt")
         )
 
         residuals_files = glob(os.path.join(
-            self.path.eval_func, f"residuals_*_{self.evaluation}.txt")
+            self.path.eval_func, "residuals", 
+            f"residuals_*_{self.evaluation}.txt")
             )
         assert residuals_files, (
                 f"No residuals files found for evaluation {self.evaluation} "
