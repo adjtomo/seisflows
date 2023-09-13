@@ -277,7 +277,7 @@ class Pyaflowa:
         :param config: Configuration object that must contain the 'event_id',
             iteration and step count
         """
-        return f"{config.event_id}_{config.iter_tag}_{config.step_tag}"
+        return f"{config.event_id}_{config.iter_tag}{config.step_tag}"
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         export_residuals=None, save_adjsrcs=None,
@@ -506,6 +506,14 @@ class Pyaflowa:
         # plotting and don't let it affect the other tasks
         try:
             mgmt.standardize()
+
+            # Copy the standardized version of the waveform to save into the
+            # ASDFDataSet because we don't want to save processed versions
+            st_obs_raw = mgmt.st_obs.copy()
+            st_syn_raw = mgmt.st_syn.copy()
+
+            # Filter waveforms
+            # !!! HARDCODE NORMALIZATION FOR ANAT, REMOVE THIS !!!
             mgmt.preprocess(remove_response=False, normalize_to="syn")
             if fix_windows:
                 # Retrieve windows from the last available evaluation. Wrap in
@@ -554,6 +562,10 @@ class Pyaflowa:
                 with ASDFDataSet(os.path.join(self.path["_datasets"],
                                               f"{config.event_id}.h5"),
                                  mode="a") as ds:
+                    # Write the raw, standardized version of the waveforms into
+                    # the ASDFDataSet so that it's possible to re-process later
+                    mgmt.st_obs = st_obs_raw
+                    mgmt.st_syn = st_syn_raw
                     mgmt.write_to_dataset(ds=ds)
                 break
             except (OSError, BlockingIOError, FileExistsError):
@@ -773,11 +785,13 @@ class Pyaflowa:
             f"\n{'=' * 80}\n{'RAW LOGS':^80}\n{'=' * 80}"
             )
 
+        # Give ample time to ensure logs are available and written
+        time.sleep(30)
+
         # Collect each station's log file and write them into the main file
         tmp_logs = sorted(glob(os.path.join(self.path._tmplogs,
-                                            f"*{config.event_id}_*.log")))
-        # Give time to ensure logs are available and written
-        time.sleep(10)
+                                            f"{config.event_id}_*.log")))
+
         with open(pyatoa_logger.handlers[0].baseFilename, "a") as fw:
             for tmp_log in tmp_logs:
                 try:
