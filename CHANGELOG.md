@@ -1,5 +1,119 @@
 # SeisFlows Changelog
 
+## v3.0.0
+
+Ambient Noise Adjoint Tomography (ANAT) implementation and associated package
+changes.
+
+### Major Changes
+- Workflow:
+    - State file changed states from words to integers (completed -> 1, 
+      failed -> -1, pending -> 0), and full state file is created at workflow
+      setup, rather than one by one as each function completes
+    - Inversion:
+        - Changed total misfit summation from summed + squared to L1 norm.
+        - Line search has been broken into multiple functions to facilitate
+          restarting failed line searches: 
+          perform_line_search() -> evaluate_line_search_misfit() + update_line_search()
+    - NoiseInversion:
+        - Modifies the Inversion class to invert for ZZ, RR and TT empirical 
+          Green's functions
+        - Utility function to rotate EE, EN, NE, NN waveforms to RR and TT
+        - Utility function to rotate RR and TT adjoint sources to EE, EN, NE, NN
+        - Utility function to convert STATIONS file to N SOURCE files since 
+          virtual sources are required for ambient noise adjoint tomography
+        - Functionality to create a source-receiver lookup table that contains
+          information on azimuth + backazimuth required for RR/TT kernels
+- Preprocessing:
+    - Default (major upgrades)
+        - Force 'obs' data to match 'syn' data sampling rate
+        - Parallelized misfit quantification with concurrent futures
+        - Zero'd adjoint source generation now occurs at module setup 
+          (parallelized)
+        - Added additional normalization options
+        - Allows selection by component for misfiti quantification
+        - Improved obs-syn file match validation
+        - Removed the ability to `sum_residuals`, which required Preprocess to 
+          know too many things about the workflow. Now handled by Workflow.
+        - Added a simple waveform plotter to show obs, syn and adjoint source
+        - Split off preprocessing functions (mute, normalize) to `tools` which
+          Preprocess can import
+    - Pyaflowa
+        - Removed `client` parameter to match Pyatoa > 0.3.0
+        - Allow processing only for specific components
+        - Data reading abstraction simplified, no longer builds paths from parts
+          but instead explcitely reads data + metadata like Default preproc.
+        - Pyflex preset now directly part of parameter file so that User can
+          edit them directly
+- System:
+    - Cluster (and derived classes):
+        - New parameter `array`: For debug purposes, allow running only specific
+          task IDs to e.g., re-run failed processes. Input style follows SLURM
+          array argument 
+        - Submit jobs directly to the login node with the -l/--login flag
+        - Non-zero exit code error catching added to concurrent future calls
+    - Slurm (and derived classes): 
+        - Added a timeout counter and extended timeout value for checking
+          output of `sacct` for queue checking due to premature job exits with
+          empty `sacct` returns (i.e., it takes a while for compute nodes to 
+          spin up and be visible in `sacct`)
+- Solver: 
+    - API change: solver.combine() made more generic and no longer hardcodes
+      assumed directory structure
+    - Parameter change: `density` -> `update_density`
+    - Model parameter checks removed from Solver's abilities. These are now 
+      handled by Workflow
+    - Takes over responsibility for renaming adjoint sources 
+    - Takes over responsibility for obs-syn filename matching prior to preproc.
+- New Dependencies:
+    - PyPDF: for PDF mergers in Pyaflowa preprocessing
+    - PySEP: for SPECFEM-specific read functions 
+
+### Minor Changes
+- Solver: 
+    - Parallelized directory initialization w/ concurrent futures
+    - Kernel renaming defined as a separate function (previously part of 
+      adjoint simulation), so that it can be called by debugger
+- Optimization:
+    - Improves step length overwrite log messaging
+    - Skips initial line search calculation if initial step length requested
+- Workflow: Allow other workflows to overwrite the default location where 
+  synthetic waveforms are saved
+- Model checking now occurs in Workflow rather than Solver functions
+- Workflow data preparation now symlinks in real data rather than copies it,
+  to avoid heavy file overhead
+- Removed unnused `graphics` utilities and adopted all of Pyatoa's PNG and PDF
+  image manipulation utilities for use in Pyaflowa preprocessing (adds PyPDF as
+  dependency)
+- Removed large sections of commented out code from command line tool
+- Single source version number in `pyproject.toml`
+- Logger aesthetic change to show first four letters of message type rather than
+  first letter (e.g., I -> INFO, W -> WARN, D -> DEBU)
+- Model parameter check now includes mean values in addition to min and max
+
+### Bugfixes
+- Major: SPECFEM3D\_GLOBE based solvers were NOT updating the model during 
+  Inversion workflows ecause `xmeshfem3D` was not being called, and therefore 
+  not updating database files.
+- Cross-correlation Traveltime misfit function was not squared, allowing CC 
+  values to be negative. Now follows Tromp (2005) where we square the time shift
+- `mpiexec` was being set inside System initiation, causing check statement to 
+  fail quietly
+- System.Cluster.Run now passes User-defined arguments for log level and 
+  verbosity to each child process allowing for uniform logs for all jobs
+- `seisflows swap` allow paths to be set relative or absolute, previously they
+  were forced to absolute
+- Old Optimization files (e.g., m\_old) were not being deleted due to missing 
+  file extensions. Not critical because they were not used, and overwritten
+
+### Misc.
+- Removed hard requirement that `import_seisflows` required all Workflows have
+  `modules` as their first argument. Only Forward workflow requires.
+- Removed Optimize load checkpoint from inversion setup because it was already
+  run by Optimize setup
+
+
+
 ## v2.1.1
 
 - Updates and simplifies install procedure using 'environment.yml' and 

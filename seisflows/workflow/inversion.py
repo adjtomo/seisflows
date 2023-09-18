@@ -135,7 +135,8 @@ class Inversion(Migration):
                 self.postprocess_event_kernels,
                 self.evaluate_gradient_from_kernels,
                 self.initialize_line_search,
-                self.perform_line_search,
+                self.evaluate_line_search_misfit,
+                self.update_line_search,
                 self.finalize_iteration
                 ]
 
