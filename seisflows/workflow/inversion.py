@@ -210,24 +210,24 @@ class Inversion(Migration):
             else:
                 break
 
-    # def checkpoint(self):
-    #     """
-    #     Add an additional line in the state file to keep track of iteration
-    #     """
-    #     super().checkpoint()
+    def checkpoint(self):
+        """
+        Add an additional line in the state file to keep track of iteration
+        """
+        super().checkpoint()
 
-    #     with open(self.path.state_file, "r") as f:
-    #         lines = f.readlines()
-    #     # Clear out the previous 'iteration' line and add in new
-    #     for i, line in enumerate(lines[:]):
-    #         if "iteration:" in line:
-    #             lines.pop(i)
-    #             break
-    #     lines.append(f"iteration: {self.iteration}")
+        with open(self.path.state_file, "r") as f:
+            lines = f.readlines()
+        # Clear out the previous 'iteration' line and add in new
+        for i, line in enumerate(lines[:]):
+            if "iteration:" in line:
+                lines.pop(i)
+                break
+        lines.append(f"iteration: {self.iteration}")
 
-    #     # Rewrite checkpoint file with new iteration line
-    #     with open(self.path.state_file, "w") as f:
-    #         f.writelines(lines)
+        # Rewrite checkpoint file with new iteration line
+        with open(self.path.state_file, "w") as f:
+            f.writelines(lines)
 
     def evaluate_objective_function(self, save_residuals=False, components=None,
                                     **kwargs):

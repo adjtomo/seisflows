@@ -298,7 +298,7 @@ class Specfem:
             )
             sys.exit(-1)
 
-    def set_parameters(self, keys, vals, file, delim):
+    def set_parameters(self, keys, vals, file, delim, **kwargs):
         """
         Public API that allows other modules modify solver-specific files with
         paths relative to the `cwd` attribute.
@@ -306,17 +306,23 @@ class Specfem:
         Primarily used to modify locations or force vector direction for
         the generation of different kernels in noise workflows.
 
-        Only works if file exists, otherwise nothing happens, so be careful.
+        Only works if file exists, otherwise raises FileNotFoundError
+        Kwargs are passed to `seisflows.tools.specfem.setpar()`
 
         :type key: str
         :param key: case-insensitive key to match in par_file. must match EXACT
         :type val: str
         :param val: value to OVERWRITE to the given key
+        :raises FileNotFoundError: if `file` does not exist within the solver's
+            working directory
         """
         os.chdir(self.cwd)
         if os.path.exists(file):
             for key, val in zip(keys, vals):
-                setpar(key=key, val=val, file=file, delim=delim)
+                setpar(key=key, val=val, file=file, delim=delim, **kwargs)
+        else:
+            raise FileNotFoundError(f"solver/{file} not found, cannot set "
+                                    f"parameters")
 
     @property
     def source_names(self):

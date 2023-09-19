@@ -379,6 +379,7 @@ class Pyaflowa:
         # Combine all the individual .png files created into a single PDF for
         # easier scrolling convenience
         if self.plot_waveforms:
+            # Merge all .png files to a .pdf
             fids = sorted(glob(os.path.join(self.path._figures,
                                             f"{source_name}*.png")))
             fid_out = os.path.join(self.path._figures,
@@ -621,10 +622,11 @@ class Pyaflowa:
 
         # Make the final PDF for easier User ingestion of waveform/map figures
         if self.plot_waveforms:
+            # Expected format of PDFs is <source>_<evaluation><optional_tag>.pdf
             event_pdfs = sorted(glob(os.path.join(self.path._figures,
-                                                  "*_*_*.pdf")))
+                                                  "*_i??s??*.pdf")))
 
-            # Strip off event name to get evaluation tag, i.e.: i01_s00.pdf
+            # Strip off event name to get evaluation tag, i.e.: i01s00<tag>.pdf
             fid_out = "_".join(os.path.basename(event_pdfs[0]).split("_")[1:])
             path_out = os.path.join(self.path._figures, f"{fid_out}")
 

@@ -409,7 +409,8 @@ def check_source_names(path_specfem_data, source_prefix, ntask=None):
     return names
 
 
-def getpar(key, file, delim="=", match_partial=False):
+def getpar(key, file, delim="=", match_partial=False, comment="#", 
+           _fmt_dbl=True):
     """
     Reads and returns parameters from a SPECFEM or SeisFlows parameter file
     Assumes the parameter file is formatted in the following way:
@@ -428,6 +429,16 @@ def getpar(key, file, delim="=", match_partial=False):
     :param match_partial: allow partial key matches, e.g., allow key='tit' to
         return value for 'title'. Defaults to False as this can have
         unintended consequences
+    :type comment: str
+    :param comment: character used to delimit comments in the file. Defaults to
+        '#' for the SPECFEM Par_file, but things like the FORCESOLUTION use '!'
+    :type _fmt_dbl: bool
+    :param _fmt_dbl: the SPECFEM files use FORTRAN double precision notation 
+        to define floats (e.g., 2.5d0 == 2.5, or 1.2e2 == 1.2*10^2). Usually it 
+        is preferable to convert this notation directly to a Python float, so
+        this is set True by default. However, in cases where we are doing string
+        replacement, like when using `setpar`, we do not want to format the 
+        double precision values, so this should be set False.
     :rtype: tuple (str, str, int)
     :return: a tuple of the key, value and line number (indexed from 0).
         The key will match exactly how it looks in the Par_file
@@ -456,14 +467,14 @@ def getpar(key, file, delim="=", match_partial=False):
             if (not match_partial) and (key_out.upper() != key.upper()):
                 continue
             # Drop any trailing line comments
-            if "#" in val:
-                val = val.split("#")[0]
+            if comment in val:
+                val = val.split(comment)[0]
             # One last strip to remove any whitespace
             val = val.strip()
             # Address the fact that SPECFEM Par_file sometimes lists values as
             # formatted strings, e.g., 38.0d-2
             try:
-                if len(val.split("d")) == 2:
+                if len(val.split("d")) == 2 and _fmt_dbl:
                     num, exp = val.split("d")
                     val = str(float(num) * 10 ** int(exp))
             except ValueError as e:
@@ -475,9 +486,9 @@ def getpar(key, file, delim="=", match_partial=False):
     return key_out, val, i
 
 
-def setpar(key, val, file, delim="=", match_partial=False):
+def setpar(key, val, file, delim="=", **kwargs):
     """
-    Overwrites parameter value to a SPECFEM Par_file.
+    Overwrites parameter value to a SPECFEM Par_file. Kwargs passed to `getpar`
 
     :type key: str
     :param key: case-insensitive key to match in par_file. must be EXACT match
@@ -493,7 +504,7 @@ def setpar(key, val, file, delim="=", match_partial=False):
         return value for 'title'. Defaults to False as this can have
         unintended consequences
     """
-    key_out, val_out, i = getpar(key, file, delim, match_partial)
+    key_out, val_out, i = getpar(key, file, delim, _fmt_dbl=False, **kwargs)
     if key_out is None:
         return
 
@@ -505,6 +516,10 @@ def setpar(key, val, file, delim="=", match_partial=False):
     if val_out != "":
         key, val_and_comment = lines[i].split(delim)
         val_and_comment = val_and_comment.replace(val_out, str(val), 1)
+        assert(str(val) in val_and_comment), (
+                f"unexpected error in parameter value replacement when trying "
+                f"to replace '{val_out}' with '{val}' in '{val_and_comment}'"
+                )
         lines[i] = delim.join([key, val_and_comment])
     else:
         # Special case where the initial parameter is empty so we just replace

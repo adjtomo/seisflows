@@ -768,7 +768,7 @@ class NoiseInversion(Inversion):
                                          "component dir vect source N",
                                          "component dir vect source Z_UP"],
                                    vals=kernel_vals, file="DATA/FORCESOLUTION",
-                                   delim=":")
+                                   delim=":", comment="!")
 
         # Exporting traces to disk for permanent saving. Ensure that the force
         # tag is set so that subsequent trace exports don't overwrite existing
