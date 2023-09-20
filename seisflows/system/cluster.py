@@ -44,12 +44,6 @@ class Cluster(Workstation):
     :type walltime: float
     :param walltime: maximum job time in minutes for the master SeisFlows
         job submitted to cluster. Fractions of minutes acceptable.
-    :type tasktime: float
-    :param tasktime: maximum job time in minutes for each job spawned by
-        the SeisFlows master job during a workflow. These include, e.g.,
-        running the forward solver, adjoint solver, smoother, kernel combiner.
-        All spawned tasks receive the same task time. Fractions of minutes
-        acceptable.
     :type environs: str
     :param environs: Optional environment variables to be provided in the
         following format VAR1=var1,VAR2=var2... Will be set using
@@ -68,7 +62,7 @@ class Cluster(Workstation):
     run_functions = os.path.join(ROOT_DIR, "system", "runscripts", "run")
 
     def __init__(self, title=None, mpiexec="", ntask_max=None, walltime=10,
-                 tasktime=1, environs="", **kwargs):
+                 environs="", **kwargs):
         """Instantiate the Cluster System class"""
         super().__init__(**kwargs)
 
@@ -79,8 +73,8 @@ class Cluster(Workstation):
         self.mpiexec = mpiexec
         self.ntask_max = ntask_max or nproc() - 1  # -1 because master job
         self.walltime = walltime
-        self.tasktime = tasktime
         self.environs = environs or ""
+
 
     @property
     def submit_call_header(self):
@@ -162,7 +156,7 @@ class Cluster(Workstation):
             logger.critical(f"SeisFlows master job has failed with: {e}")
             sys.exit(-1)
 
-    def run(self, funcs, single=False, **kwargs):
+    def run(self, funcs, single=False, tasktime=None, **kwargs):
         """
         Runs tasks multiple times in parallel by submitting NTASK new jobs to
         system. The list of functions and its kwargs are saved as pickles files,
@@ -187,12 +181,16 @@ class Cluster(Workstation):
             This will change how the job array and the number of tasks is
             defined, such that the job is submitted as a single-core job to
             the system.
-        :type run_call: str
-        :param run_call: the call used to submit the run script. If None,
-            attempts default run call which should be suited for the given
-            system. Can be overwritten by child classes to involve other
-            arguments
+        :type tasktime: float
+        :param tasktime: Custom tasktime in units minutes for running the given
+            functions `funcs`. If not given, defaults to the System variable
+            `tasktime`. If System `tasktime` is also None, defaults to no
+            tasktime (inifinty time). If tasks exceed the given `tasktime`,
+            the program will exit
         """
+        if tasktime is None:
+            tasktime = self.tasktime or np.inf
+
         # Single tasks only need to be run one time, as `TASK_ID` === 0
         task_ids = self.task_ids(single)
         funcs_fid, kwargs_fid = pickle_function_list(functions=funcs,
@@ -225,7 +223,7 @@ class Cluster(Workstation):
                            for task_id in task_ids]
 
             # Mimic a cluster job timeout by limiting task to `tasktime`
-            wait(futures, timeout=self.tasktime, return_when="FIRST_EXCEPTION")
+            wait(futures, timeout=tasktime, return_when="FIRST_EXCEPTION")
 
             # Iterate through the Futures' results because if one of them
             # raised an exception, it will break the main process here

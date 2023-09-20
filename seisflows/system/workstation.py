@@ -7,6 +7,7 @@ e.g., a workstation or a laptop. All other `System` classes build on this class.
 import os
 import sys
 import subprocess
+import time
 from contextlib import redirect_stdout
 
 from seisflows import logger
@@ -31,6 +32,12 @@ class Workstation:
     :type nproc: int
     :param nproc: number of processors to use for each simulation. Choose 1 for
         serial simulations, and `nproc`>1 for parallel simulations.
+    :type tasktime: float
+    :param tasktime: maximum job time in units minutes for each job spawned by
+        the SeisFlows master job during a workflow. These include, e.g.,
+        running the forward solver, adjoint solver, smoother, kernel combiner.
+        All spawned tasks receive the same task time. Fractions of minutes
+        acceptable. If set as `None`, no tasktime will be enforced.
     :type mpiexec: str
     :param mpiexec: MPI executable on system. Defaults to 'mpirun -n ${NPROC}'
     :type array: str
@@ -48,8 +55,9 @@ class Workstation:
         Available: 'debug', 'info', 'warning', 'critical'
     :type verbose: bool
     :param verbose: if True, formats the log messages to include the file
-        name, line number and message type. Useful for debugging but
-        also very verbose.
+        name and line number of the log message in the source code, as well as 
+        the message and message type. Useful for debugging but also very verbose
+        so not recommended for production runs.
 
     Paths
     -----
@@ -64,10 +72,11 @@ class Workstation:
         saved whenever a number of parallel tasks are run on the system.
     ***
     """
-    def __init__(self, ntask=1, nproc=1, mpiexec=None, array=None,
-                 log_level="DEBUG", verbose=False, workdir=os.getcwd(), 
-                 path_output=None, path_system=None, path_par_file=None, 
-                 path_output_log=None, path_log_files=None, **kwargs):
+    def __init__(self, ntask=1, nproc=1, tasktime=None, mpiexec=None, 
+                 array=None, log_level="DEBUG", verbose=False, 
+                 workdir=os.getcwd(), path_output=None, path_system=None, 
+                 path_par_file=None, path_output_log=None, path_log_files=None, 
+                 **kwargs):
         """
         Workstation System Class Parameters
 
@@ -86,6 +95,7 @@ class Workstation:
         """
         self.ntask = ntask
         self.nproc = nproc
+        self.tasktime = tasktime
         self.mpiexec = mpiexec
         self.array = array
         self.log_level = log_level.upper()
@@ -182,7 +192,7 @@ class Workstation:
         workflow.setup()
         workflow.run()
 
-    def run(self, funcs, single=False, **kwargs):
+    def run(self, funcs, single=False, tasktime=None, **kwargs):
         """
         Executes task multiple times in serial.
 
@@ -198,18 +208,39 @@ class Workstation:
             This will change how the job array and the number of tasks is
             defined, such that the job is submitted as a single-core job to
             the system.
+        :type tasktime: float
+        :param tasktime: Custom tasktime in units minutes for running the given 
+            functions `funcs`. If not given, defaults to the System variable
+            `tasktime`. If System `tasktime` is also None, defaults to no 
+            tasktime (inifinty time). If tasks exceed the given `tasktime`, 
+            the program will exit
         """
-        for task_id in self.task_ids(single):
-            # Set Task ID for currently running process
-            set_task_id(task_id)
-            log_file = self._get_log_file(task_id)
+        if tasktime is None:
+            tasktime = self.tasktime or np.inf  
 
-            # Redirect output to a log file to mimic cluster runs where 'run'
-            # task output logs are sent to different files
-            with open(log_file, "w") as f:
-                with redirect_stdout(f):
-                    for func in funcs:
-                        func(**kwargs)
+        for task_id in self.task_ids(single):
+            _start = time.time()
+            while time.time() < _start + (tasktime * 60):  # units: seconds
+                # Set Task ID for currently running process
+                set_task_id(task_id)
+                log_file = self._get_log_file(task_id)
+
+                # Redirect output to a log file to mimic cluster runs where 'run'
+                # task output logs are sent to different files
+                with open(log_file, "w") as f:
+                    with redirect_stdout(f):
+                        for func in funcs:
+                            func(**kwargs)
+                break
+            else:
+                logger.critical(
+                        msg.cli(f"System Task {task_id} has exceeded the "
+                                f"defined tasktime {tasktime}. Please "
+                                f"check log files and adjust `tasktime` if "
+                                f"required", header="timeout error", 
+                                border="=")
+                            )
+                sys.exit(-1)
 
     def task_ids(self, single=False):
         """
