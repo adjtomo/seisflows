@@ -220,27 +220,27 @@ class Workstation:
 
         for task_id in self.task_ids(single):
             _start = time.time()
-            while time.time() < _start + (tasktime * 60):  # units: seconds
-                # Set Task ID for currently running process
-                set_task_id(task_id)
-                log_file = self._get_log_file(task_id)
+            # Set Task ID for currently running process
+            set_task_id(task_id)
+            log_file = self._get_log_file(task_id)
 
-                # Redirect output to a log file to mimic cluster runs where 'run'
-                # task output logs are sent to different files
-                with open(log_file, "w") as f:
-                    with redirect_stdout(f):
-                        for func in funcs:
-                            func(**kwargs)
-                break
-            else:
-                logger.critical(
-                        msg.cli(f"System Task {task_id} has exceeded the "
-                                f"defined tasktime {tasktime}. Please "
-                                f"check log files and adjust `tasktime` if "
-                                f"required", header="timeout error", 
-                                border="=")
-                            )
-                sys.exit(-1)
+            # Redirect output to a log file to mimic cluster runs where 'run'
+            # task output logs are sent to different files
+            with open(log_file, "w") as f:
+                with redirect_stdout(f):
+                    for func in funcs:
+                        func(**kwargs)
+                        # Check timeout condition. This is imprecise as it 
+                        # allows the function to finish first. But we assume 
+                        # workstation approaches don't need precise timekeeping
+                        if time.time() - _start > (tasktime * 60):  # seconds
+                            logger.critical(msg.cli(
+                                f"System Task {task_id} has exceeded the "
+                                f"defined tasktime {tasktime}m. Please check "
+                                f"log files and adjust `tasktime` if required", 
+                                header="timeout error",  border="=")
+                                )
+                            sys.exit(-1)
 
     def task_ids(self, single=False):
         """

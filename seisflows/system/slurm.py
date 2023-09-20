@@ -90,7 +90,7 @@ class Slurm(Cluster):
         self._partitions = {}
 
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
-        self._tasktime = str(timedelta(minutes=self.tasktime))
+        self._tasktime = None
         self._walltime = str(timedelta(minutes=self.walltime))
 
     def check(self):
@@ -210,7 +210,7 @@ class Slurm(Cluster):
 
         return job_id
 
-    def run(self, funcs, single=False, **kwargs):
+    def run(self, funcs, single=False, tasktime=None, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on a SLURM
         cluster. Executes the list of functions (`funcs`) NTASK times with each
@@ -228,7 +228,17 @@ class Slurm(Cluster):
             This will change how the job array and the number of tasks is
             defined, such that the job is submitted as a single-core job to
             the system.
+        :type tasktime: float
+        :param tasktime: Custom tasktime in units minutes for running the given
+            functions `funcs`. If not given, defaults to the System variable
+            `tasktime`. If tasks exceed the given `tasktime`, the program will 
+            exit
         """
+        # Allow custom tasktime, else default to System variable
+        if tasktime is None:
+            tasktime = self.tasktime
+        self._tasktime = str(timedelta(minutes=tasktime))
+
         funcs_fid, kwargs_fid = pickle_function_list(
                 funcs, path=self.path.scratch, verbose=self.verbose,
                 level=self.log_level, **kwargs
