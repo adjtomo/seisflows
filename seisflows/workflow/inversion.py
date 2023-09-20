@@ -218,11 +218,11 @@ class Inversion(Migration):
 
         with open(self.path.state_file, "r") as f:
             lines = f.readlines()
-        # Clear out the previous 'iteration' line and add in new
-        for i, line in enumerate(lines[:]):
-            if "iteration:" in line:
+        # Clear out the previous 'iteration' line by reverse scanning through
+        # the list and deleting any mention of 'iteration'
+        for i in range(len(lines)-1, -1, -1):
+            if lines[i].startswith("iteration"):
                 lines.pop(i)
-                break
         lines.append(f"iteration: {self.iteration}")
 
         # Rewrite checkpoint file with new iteration line
