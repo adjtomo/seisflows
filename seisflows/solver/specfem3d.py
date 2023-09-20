@@ -54,7 +54,6 @@ class Specfem3D(Specfem):
         elif self.materials.upper() == "ELASTIC":
             self._parameters += ["vp", "vs"]
         elif self.materials.upper() == "ANISOTROPIC":
-            self._parameters += ["vp", "vs"]
             # General 21 parameter anisotropy: c11, c12... c66
             for i in range(1, 7):
                 for j in range(1, 7):
