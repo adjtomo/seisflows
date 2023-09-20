@@ -23,7 +23,7 @@ from seisflows import logger, ROOT_DIR, NAMES, __version__
 from seisflows.tools import unix, msg
 from seisflows.tools.config import load_yaml, custom_import, import_seisflows
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
-                                     setpar_vel_model)
+                                     setpar_vel_model, check_source_names)
 
 
 
@@ -254,6 +254,7 @@ Stream.plot() function under the hood. Example call would be
 Print information related to an active environment
 
     modules       List available module names for all available packages
+    sources       List all source names and their respective task index
     tasks         Print out the workflow task list for valid `stop_after` values
     inherit       Track inheritance chain for all modules, determine method 
                   ownership for a given function. 
@@ -1091,6 +1092,7 @@ class SeisFlows:
         :param choice: underlying sub-function to choose
         """
         acceptable_args = {"modules": self._print_modules,
+                           "sources": self._print_source_names,
                            "tasks": self._print_tasks,
                            "inherit": self._print_inheritance}
 
@@ -1314,6 +1316,24 @@ class SeisFlows:
         items = [f"{a+1}: {b.__name__}" for a, b in enumerate(wf.task_list)]
         print(msg.cli(f"Task list for {type(wf)}", items=items,
                       header="seisflows workflow task list"))
+
+    def _print_source_names(self, **kwargs):
+        """
+        Simply print out the seisflows.workflow.main() flow variable which
+        describes what order workflow functions will be run. Useful for
+        filling out the RESUME_FROM and STOP_AFTER parameters.
+
+        .. rubric::
+            $ seisflows print flow
+        """
+        parameters = load_yaml(os.path.join(self._args.workdir,
+                                            self._args.parameter_file))
+        source_names = check_source_names(
+            path_specfem_data=parameters.path_specfem_data,
+            source_prefix=parameters.source_prefix, ntask=parameters.ntask
+        )
+        items = [f"{a}: {b}" for a, b in enumerate(source_names)]
+        print(msg.cli(items=items, header="seisflows solver source names"))
 
     def _print_inheritance(self, name=None, func=None, **kwargs):
         """
