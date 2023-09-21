@@ -599,41 +599,12 @@ class Pyaflowa:
     def finalize(self):
         """
         Run serial finalization tasks at the end of a given iteration. These 
-        tasks are specific to Pyatoa, used to aggregate figures and data.
-
-        .. note::
-
-            This finalize function performs the following tasks:
-            * Generate .csv files using the Inspector
-            * Aggregate event-specific PDFs into a single evaluation PDF
-            * Save scratch/ data into output/ if requested
+        tasks are specific to Pyatoa, used to store figures and data in the
+        more permanent output/ directory. Scratch files are deleted during 
+        this operation to free up disk space.
         """
-        # Generate the Inspector from existing datasets and save to disk
-        # Allow this is fail, which might happen if we don't have enough data
-        # or the Dataset is not formatted as expected
-        unix.cd(self.path._datasets)
-        insp = Inspector("inspector", verbose=False)
-        try:
-            insp.discover()
-            insp.save()
-        except Exception as e:
-            logger.warning(f"Uncontrolled exception in Pyatoa Inspector "
-                           f"creation -- will not create inspector:\n{e}")
-
-        # Make the final PDF for easier User ingestion of waveform/map figures
-        if self.plot_waveforms:
-            # Expected format of PDFs is <source>_<evaluation><optional_tag>.pdf
-            event_pdfs = sorted(glob(os.path.join(self.path._figures,
-                                                  "*_i??s??*.pdf")))
-
-            # Strip off event name to get evaluation tag, i.e.: i01s00<tag>.pdf
-            fid_out = "_".join(os.path.basename(event_pdfs[0]).split("_")[1:])
-            path_out = os.path.join(self.path._figures, f"{fid_out}")
-
-            # Merge PDFs into a single PDF, delete originals
-            merge_pdfs(fids=event_pdfs, fid_out=path_out, remove_fids=True)
-
-        # Move scratch/ directory results into more permanent storage
+        # Move scratch/ directory results into more permanent storage. Do not
+        # bomb out datasets because we use them to store window information
         if self.export_datasets:
             src = glob(os.path.join(self.path._datasets, "*.h5"))
             src += glob(os.path.join(self.path._datasets, "*.csv"))  # inspector
@@ -641,17 +612,65 @@ class Pyaflowa:
             unix.mkdir(dst)
             unix.cp(src, dst)
 
-        if self.export_figures:
-            src = glob(os.path.join(self.path._figures, "*.pdf"))
+        # Organize waveform figures for easier navigability. Only do this if we
+        # are going to export otherwise theres no point
+        if self.plot_waveforms and self.export_figures:
+            # Determine the available evaluation tags
+            evaluations = []
+            # Expected fmt: <source_name>_<evaluation><tag>.pdf
+            for fid in glob(os.path.join(self.path._figures, "*_i??s??*.pdf")):
+                for part in os.path.basename(fid).split("_"):
+                    # Slightly hacky, expecting that eval is the only tag in the
+                    # filename that matches the format i?????
+                    if part.startswith("i") and len(part) == 6:  # i??s??
+                        if part not in evaluations:
+                            evaluations.append(part)
+
+            # Move every evaluation into its own directory for easier navi. 
+            for eval_ in set(evaluations):
+                dst = os.path.join(self.path._figures, eval_)
+                src = glob(os.path.join(self.path._figures, f"*_{eval_}*.pdf"))
+                unix.mkdir(os.path.join(self.path._figures, eval_))
+                unix.mv(src, dst)
+
+            # Save figure files to output (if requested)
+            src = glob(os.path.join(self.path._figures, "i??s??"))
             dst = os.path.join(self.path.output, "pyaflowa", "figures", "")
             unix.mkdir(dst)
-            unix.cp(src, dst)
+            unix.mv(src, dst)
 
+        # Save log files to output (if requested)
         if self.export_log_files:
-            src = glob(os.path.join(self.path._logs, "*.log"))
+            # Determine the available evaluation tags
+            evaluations = []
+            # Expected fmt: <source_name>_<evaluation><tag>.log
+            for fid in glob(os.path.join(self.path._logs, "*_i??s??*.log")):
+                for part in os.path.basename(fid).split("_"):
+                    # Slightly hacky, expecting that eval is the only tag in the
+                    # filename that matches the format i?????
+                    if part.startswith("i") and len(part) == 6:  # i??s??
+                        if part not in evaluations:
+                            evaluations.append(part)
+
+            # Move every evaluation into its own directory for easier navi. 
+            for eval_ in set(evaluations):
+                dst = os.path.join(self.path._logs, eval_)
+                src = glob(os.path.join(self.path._logs, f"*_{eval_}*.log"))
+                unix.mkdir(os.path.join(self.path._logs, eval_))
+                unix.mv(src, dst)
+
+            src = glob(os.path.join(self.path._logs, "i??s??"))
             dst = os.path.join(self.path.output, "pyaflowa", "logs", "")
             unix.mkdir(dst)
-            unix.cp(src, dst)
+            unix.mv(src, dst)
+
+        # Bomb out the scratch directory regardless of export status
+        unix.rm(self.path._figures)
+        unix.mkdir(self.path._figures)
+
+        # Bomb out the scratch directory regardless of export status
+        unix.rm(self.path._logs)
+        unix.mkdir(self.path._logs)
 
     def _check_fixed_windows(self, iteration, step_count):
         """
