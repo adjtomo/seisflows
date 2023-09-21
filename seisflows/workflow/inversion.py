@@ -619,6 +619,15 @@ class Inversion(Migration):
                                           f"MODEL_{self.iteration:0>2}"),
                         )
 
+        # Organize log files to keep file count in the main log dir. low
+        logdir = os.path.join(self.system.path.log_files, 
+                              f"LOGS_i{self.iteration:0>2}")
+        unix.mkdir(logdir)
+        fids = glob(os.path.join(self.system.path.log_files, "*"))
+        fids = [fid for fid in fids if not 
+                os.path.basename(fid).startswith("LOGS_")]
+        unix.mv(fids, logdir)
+
         # Update optimization
         self.optimize.checkpoint()
 
