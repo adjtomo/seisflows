@@ -170,6 +170,11 @@ class Workstation:
         for path in [self.path.scratch, self.path.output, self.path.log_files]:
             unix.mkdir(path)
 
+    def finalize(self):
+        """Tear down tasks for the end of an Inversion-based iteration"""
+        unix.rm(self.path.scratch)
+        unix.mkdir(self.path.scratch)
+
     def submit(self, workdir=None, parameter_file="parameters.yaml"):
         """
         Submits the main workflow job as a serial job submitted directly to

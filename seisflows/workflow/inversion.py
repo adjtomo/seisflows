@@ -610,16 +610,19 @@ class Inversion(Migration):
         carried out. Contains some logic to consider whether or not to continue
         with a thrifty inversion.
         """
-        logger.info(msg.sub("CLEANING WORKDIR FOR NEXT ITERATION"))
+        logger.info(msg.sub("FINALIZING ITERATION"))
 
         # Export scratch files to output if requested
         if self.export_model:
+
             model = self.optimize.load_vector("m_new")
-            model.write(path=os.path.join(self.path.output,
-                                          f"MODEL_{self.iteration:0>2}"),
-                        )
+            m_fid = os.path.join(self.path.output, 
+                                 f"MODEL_{self.iteration:0>2}")
+            logger.info(f"writing model `m_new` to {m_fid}")
+            model.write(path=m_fid)
 
         # Organize log files to keep file count in the main log dir. low
+        logger.debug(f"organizing log files in {self.system.path.log_files}")
         logdir = os.path.join(self.system.path.log_files, 
                               f"LOGS_i{self.iteration:0>2}")
         unix.mkdir(logdir)
@@ -628,24 +631,30 @@ class Inversion(Migration):
                 os.path.basename(fid).startswith("LOGS_")]
         unix.mv(fids, logdir)
 
-        # Update optimization
+        # Update optimization on disk 
         self.optimize.checkpoint()
 
-        # Clear out the scratch directory
+        # Thrifty Inversion keeps the last function evaluation for next iteration
         self._thrifty_status = self._update_thrifty_status()
         if self._thrifty_status:
             unix.rm(self.path.eval_grad)
             # Eval func model now defines the current model 'm_new'
             unix.mv(self.path.eval_func, self.path.eval_grad)
             unix.mkdir(self.path.eval_func)
+        # Std. Inversion bombs out both eval dirs., next iter will start fresh
         else:
+            logger.info("cleaning out scratch directory for next iteration")
             unix.rm(self.path.eval_grad)
             unix.rm(self.path.eval_func)
 
             unix.mkdir(self.path.eval_grad)
             unix.mkdir(self.path.eval_func)
 
-        self.preprocess.finalize()
+        # Run finalization/tear down procedures for all modules that have it
+        for name, module in self._modules.items():
+            if hasattr(module, "finalize"):
+                logger.info(f"running finalization for '{name}' module")
+                module.finalize()
 
     def _update_thrifty_status(self):
         """
