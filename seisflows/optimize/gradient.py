@@ -362,12 +362,12 @@ class Gradient:
         if self.step_len_init and len(self._line_search.step_lens) <= 1:
             alpha = self.step_len_init * norm_m / norm_p
             logger.debug(f"setting first step length with user-requested "
-                         f"`step_len_init`={self.step_len_init}. "
-                         f"alpha_new={alpha:.2E}")
+                         f"`step_len_init`={self.step_len_init}")
         # Normal operation - Calculate step based on position in line search
         # note that safeguard may be appled in the line search if alpha too big
         else:
             alpha, _ = self._line_search.calculate_step_length()
+        logger.info(f"step length `alpha` = {alpha:.2E}")
 
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
