@@ -136,15 +136,15 @@ def sfparser():
                         help="Optional override of the 'STOP_AFTER' parameter")
     # Argument `login` is shared between functions 'submit' and 'restart' so 
     # define its behavior once and for all here and provide to each parser
-    _login_kwargs = dict(
+    _direct_kwargs = dict(
             default=False, action="store_true", 
-            help="`cluster`-based systems only: submit master job directly to "
-                 "the login node rather than as a separate process on a "
+            help="`cluster`-based systems only: submit master job 'direct'ly "
+                 "to login node rather than as a separate process on a "
                  "compute node. Useful for avoiding queue times for master job "
                  "but may be discouraged by sysadmins as some processing will "
                  "take place on the shared login node")
 
-    submit.add_argument("-l", "--login", **_login_kwargs)
+    submit.add_argument("-d", "--direct", **_login_kwargs)
     # =========================================================================
     restart = subparser.add_parser(
         "restart", help="Remove current environment and submit new workflow",
@@ -755,14 +755,14 @@ class SeisFlows:
 
         parameters = load_yaml(self._args.parameter_file)
         system = custom_import("system", parameters.system)(**parameters)
-        if self._args.login is True:
+        if self._args.direct is True:
             try:
                 system.submit(workdir=self._args.workdir,
                               parameter_file=self._args.parameter_file,
-                              login=True)
+                              direct=True)
             except TypeError:
                 print(msg.cli(f"System '{parameters.system}' does not accept "
-                              "argument `login`. This feature is only allowed "
+                              "argument `direct`. This feature is only allowed "
                               "for `cluster`-based systems. Please check "
                               "system and try again.",
                               border="=", header="submit error"))

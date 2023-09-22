@@ -656,7 +656,9 @@ class Inversion(Migration):
         # Run finalization/tear down procedures for all modules that have it
         for name, module in self._modules.items():
             if hasattr(module, "finalize"):
-                logger.info(f"running finalization for '{name}' module")
+                logger.info(f"running finalization for module "
+                            f"'{name}.{self._modules[name].__class__.__name__}'"
+                            )
                 module.finalize()
 
     def _update_thrifty_status(self):

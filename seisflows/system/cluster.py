@@ -112,7 +112,7 @@ class Cluster(Workstation):
 
 
     def submit(self, workdir=None, parameter_file="parameters.yaml", 
-               login=False):
+               direct=False):
         """
         Submits the main workflow job as a separate job submitted directly to
         the system that is running the master job
@@ -122,8 +122,8 @@ class Cluster(Workstation):
         :type parameter_file: str
         :param parameter_file: paramter file file name used to instantiate
             the SeisFlows package
-        :type login: bool
-        :param login: (used for overriding system modules) submits the main 
+        :type direct: bool
+        :param direct: (used for overriding system modules) submits the main 
             workflow job directly to the login node rather than as a separate 
             process on a compute node. Avoids queue times and walltimes but may 
             be discouraged by sys admins as some  array processing will take 
@@ -135,9 +135,9 @@ class Cluster(Workstation):
                 copy_file(src, copy_to=self.path.log_files)
 
         # Determine where submit call will be sent (login or compute node)
-        if login:
+        if direct:
             header = ""
-            logger.info("submitting master job on login node")
+            logger.info("submitting master job directly to login node")
         else:
             header = self.submit_call_header
 
