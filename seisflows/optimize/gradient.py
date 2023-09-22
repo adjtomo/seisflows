@@ -341,7 +341,8 @@ class Gradient:
         gtg = dot(g.vector, g.vector)
         gtp = dot(g.vector, p.vector)
 
-        # Restart plugin line search if the optimization library restarts
+        # Restart plugin line search if the optimization library restarts, 
+        # restart conditions are determined in `Optimize.compute_direction()`
         if self._restarted:
             self._line_search.clear_search_history()
 
@@ -494,7 +495,7 @@ class Gradient:
         """
         After a failed line search, this determines if restart is worthwhile
         by checking, in effect, if the search direction was the same as the
-        negative gradientdirection.
+        negative gradient direction.
 
         Essentially checking if this is a steepest-descent optimization, which
         cannot and should not be restarted. If the search direction is calc'ed
@@ -515,8 +516,12 @@ class Gradient:
                      f"theta: {theta:6.3f}")
 
         if abs(theta) < threshold:
+            logger.info(f"search direction below threshold {threshold}, will "
+                        f"not attempt restart")
             return False  # Do not restart
         else:
+            logger.info(f"search direction above threshold {threshold}, "
+                        f"attempting restart")
             return True  # Go for restart
 
     def restart(self):

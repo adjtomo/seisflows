@@ -196,20 +196,16 @@ class LBFGS(Gradient):
     def restart(self):
         """
         Restart the L-BFGS optimization algorithm by clearing out stored
-        gradient memory.
+        gradient memory. The workflow will need to call `compute_direction` and
+        `initialize_search` afterwards to properly re-instantiate the line
+        search machinery. 
         """
         logger.info("restarting L-BFGS optimization algorithm")
 
-        # Fall back to gradient descent for search direction
-        g = self.load_vector("g_new")
-        p_new = g.copy()
-        p_new.update(vector=-1 * g.vector)
-        self.save_vector("p_new", p_new)
-
-        # Clear internal memory
+        # Clear internal memory back to default values
         self._line_search.clear_search_history()
         self._restarted = True
-        self._LBFGS_iter = 1
+        self._LBFGS_iter = 0  # will be incremented to 1 by `compute_direction`
         self._memory_used = 0
 
         # Clear out previous gradient information

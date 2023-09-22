@@ -527,6 +527,7 @@ class Inversion(Migration):
         Given the misfit `f_try` calculated in `evaluate_line_search_misfit`,
         use the Optimization module to determine if the line search has passed,
         failed, or needs to perform a subsequent step.
+
         The line search state machine acts in the following way:
         - Pass: Run clean up and proceed with workflow
         - Try: Re-calculate step length (alpha) and re-evaluate misfit (f_try)
@@ -576,8 +577,10 @@ class Inversion(Migration):
 
             # Checkpoint and re-run line search evaluation
             self.optimize.checkpoint()
+
             # Re-set state file to ensure that job failure will recover
             self._states["evaluate_line_search_misfit"] = 0
+
             # Recursively run the line search to get a new misfit
             self.evaluate_line_search_misfit()
             self.update_line_search()  # RECURSIVE CALL
@@ -589,9 +592,12 @@ class Inversion(Migration):
                 # Reset the line search machinery; set step count to 0
                 self.optimize.restart()
                 self.optimize.checkpoint()
+
                 # Re-set state file to ensure that job failure will recover
                 self._states["evaluate_line_search_misfit"] = 0
-                # Recursively run the line search to get a new misfit
+
+                # Restart the entire line search procedure
+                self.initialize_line_search()
                 self.evaluate_line_search_misfit()
                 self.update_line_search()  # RECURSIVE CALL
             # If we can't then line search has failed. Abort workflow

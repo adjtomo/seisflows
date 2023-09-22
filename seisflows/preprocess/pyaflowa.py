@@ -671,6 +671,7 @@ class Pyaflowa:
         # Bomb out the scratch directory regardless of export status
         unix.rm(self.path._logs)
         unix.mkdir(self.path._logs)
+        unix.mkdir(os.path.join(self.path._logs, "tmp"))
 
     def _check_fixed_windows(self, iteration, step_count):
         """
