@@ -139,6 +139,6 @@ found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683
    :caption: Development
 
    extending
-   changelog
+   CHANGELOG
    code_dev_plan
 

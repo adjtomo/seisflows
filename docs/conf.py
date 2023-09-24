@@ -36,7 +36,8 @@ for _line in _lines:
 # ones.
 extensions = [
         "sphinx_rtd_theme",
-        "autoapi.extension"
+        "autoapi.extension",
+        "myst_parser"
 ]
 
 # Add any paths that contain templates here, relative to this directory.
