@@ -369,12 +369,11 @@ class Pyaflowa:
         # Slightly different than Default preprocessing because we need to
         # normalize by the total number of windows
         if save_residuals:
-            with open(save_residuals, "a") as f:
+            with open(save_residuals, "w") as f:
                 f.write(f"{total_misfit / total_windows:.2E}\n")
-        if export_residuals:
-            if not os.path.exists(export_residuals):
+            if export_residuals:
                 unix.mkdir(export_residuals)
-            unix.cp(src=save_residuals, dst=export_residuals)
+                unix.cp(src=save_residuals, dst=export_residuals)
 
         # Combine all the individual .png files created into a single PDF for
         # easier scrolling convenience

@@ -144,7 +144,7 @@ def sfparser():
                  "but may be discouraged by sysadmins as some processing will "
                  "take place on the shared login node")
 
-    submit.add_argument("-d", "--direct", **_login_kwargs)
+    submit.add_argument("-d", "--direct", **_direct_kwargs)
     # =========================================================================
     restart = subparser.add_parser(
         "restart", help="Remove current environment and submit new workflow",
@@ -154,7 +154,7 @@ def sfparser():
     )
     restart.add_argument("-f", "--force", action="store_true",
                          help="Skip the clean warning check statement")
-    restart.add_argument("-l", "--login", **_login_kwargs)
+    restart.add_argument("-d", "--direct", **_direct_kwargs)
     # =========================================================================
     clean = subparser.add_parser(
         "clean", help="Remove files relating to an active working environment",

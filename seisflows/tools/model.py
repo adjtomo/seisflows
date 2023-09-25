@@ -359,11 +359,30 @@ class Model:
             model[key] = np.array(model[key])
         return model
 
+    def print_stats(self):
+        """
+        Print out all model parameters (min, mean, max) in the logger. Useful
+        for checking if models are different, if a model is being satisfactorily 
+        udpated, or for debugging purposes.
+        """
+        # Tell the User min and max values of the updated model
+        for key, vals in self.model.items():
+            min_val = np.hstack(vals).min()
+            max_val = np.hstack(vals).max()
+            mean_val = np.hstack(vals).mean()
+            # Choose formatter based on the magnitude of the value
+            if min_val < 1 or max_val > 1E4:
+                parts = (f"{key}: min={min_val:.3E}; mean={mean_val:.3E}; "
+                         f"max={max_val:.3E}")
+            else:
+                parts = (f"{key}: min={min_val:.3f}; mean={mean_val:.3f}; "
+                         f"max={max_val:.3f}")
+            logger.info(parts)
+
     def check(self, min_pr=-1., max_pr=0.5):
         """
         Checks parameters in the model. If Vs and Vp present, checks poissons
-        ratio. Checks for negative velocity values. And prints out model
-        min/max values
+        ratio. Checks for negative velocity values. 
 
         :type min_pr: float
         :para min_pr: minimum allowable Poisson's ratio, if applicable
@@ -409,20 +428,6 @@ class Model:
         if "vp" in self.model and np.hstack(self.model.vp).min() < 0:
             logger.warning(f"Vp minimum is negative {self.model.vp.min()}")
 
-        # Tell the User min and max values of the updated model
-        for key, vals in self.model.items():
-            min_val = np.hstack(vals).min()
-            max_val = np.hstack(vals).max()
-            mean_val = np.hstack(vals).mean()
-            # Choose formatter based on the magnitude of the value
-            if min_val < 1 or max_val > 1E4:
-                parts = (f"{key}: min={min_val:.3E}; mean={mean_val:.3E}; "
-                         f"max={max_val:.3E}")
-            else:
-                parts = (f"{key}: min={min_val:.3f}; mean={mean_val:.3f}; "
-                         f"max={max_val:.3f}")
-            logger.info(parts)
-
     def _check_3dglobe_parameters(self, min_pr=-1., max_pr=0.5):
         """
         Checks parameters for SPECFEM3D_GLOBE derived models
@@ -456,20 +461,6 @@ class Model:
                             logger.warning(f"minimum {vp_par}, {vs_par} "
                                            f"poisson's ratio out of bounds: "
                                            f"{pr.min():.2f} < {min_pr}")
-
-        # SPECFEM3D_GLOBE requires an additional separation by region
-        for key, vals in self.model.items():
-            min_val = np.hstack(vals).min()
-            max_val = np.hstack(vals).max()
-            mean_val = np.hstack(vals).mean()
-            # Choose formatter based on the magnitude of the value
-            if min_val < 1 or max_val > 1E4:
-                parts = (f"{key}: min={min_val:.3E}; mean={mean_val:.3E}; "
-                         f"max={max_val:.3E}")
-            else:
-                parts = (f"{key}: min={min_val:.3f}; mean={mean_val:.3f}; "
-                         f"max={max_val:.3f}")
-            logger.info(parts)
 
     def save(self, path):
         """

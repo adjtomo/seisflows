@@ -411,11 +411,10 @@ class Default:
                     residual = future.result()
                     f.write(f"{residual:.2E}\n")
 
-        # Exporting residuals to disk (output/) for more permanent storage
-        if export_residuals:
-            if not os.path.exists(export_residuals):
+            # Exporting residuals to disk (output/) for more permanent storage
+            if export_residuals:
                 unix.mkdir(export_residuals)
-            unix.cp(src=save_residuals, dst=export_residuals)
+                unix.cp(src=save_residuals, dst=export_residuals)
 
     def _setup_quantify_misfit(self, source_name, save_adjsrcs=None,
                                components=None):

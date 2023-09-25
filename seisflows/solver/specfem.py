@@ -292,6 +292,7 @@ class Specfem:
                        regions=self._regions)
         try:
             _model.check()
+            _model.print_stats()
         except AssertionError as e:
             logger.critical(
                 msg.cli(str(e), header="model read error", border="=")

@@ -644,6 +644,7 @@ class Inversion(Migration):
             # Eval func model now defines the current model 'm_new'
             unix.mv(self.path.eval_func, self.path.eval_grad)
             unix.mkdir(self.path.eval_func)
+            unix.mkdir(os.path.join(self.path.eval_func, "residuals"))
         # Std. Inversion bombs out both eval dirs., next iter will start fresh
         else:
             logger.info("cleaning out scratch directory for next iteration")
@@ -652,6 +653,9 @@ class Inversion(Migration):
 
             unix.mkdir(self.path.eval_grad)
             unix.mkdir(self.path.eval_func)
+
+            unix.mkdir(os.path.join(self.path.eval_grad, "residuals"))
+            unix.mkdir(os.path.join(self.path.eval_func, "residuals"))
 
         # Run finalization/tear down procedures for all modules that have it
         for name, module in self._modules.items():
