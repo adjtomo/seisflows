@@ -208,11 +208,15 @@ class LBFGS(Gradient):
         self._LBFGS_iter = 0  # will be incremented to 1 by `compute_direction`
         self._memory_used = 0
 
-        # Clear out previous gradient information
-        s = np.memmap(filename=self.path._s_file, mode="r+")
-        y = np.memmap(filename=self.path._y_file, mode="r+")
-        s[:] = 0.
-        y[:] = 0.
+        # Clear out previous gradient information. Check file existence first
+        # because the first iteration will not have generated S and Y yet, but
+        # we may want to run restart for manual line search restart
+        if os.path.exists(self.path._s_file):
+            s = np.memmap(filename=self.path._s_file, mode="r+")
+            s[:] = 0.
+        if os.path.exists(self.path._y_file):
+            y = np.memmap(filename=self.path._y_file, mode="r+")
+            y[:] = 0.
 
     def _update_search_history(self):
         """

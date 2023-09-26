@@ -455,12 +455,10 @@ class Inversion(Migration):
         direction (p_new) to recover the trial model (m_try). This model is
         then exposed on disk to the solver.
         """
-        logger.info(msg.mnr("RUNNING LINE SEARCH"))
-        logger.info(f"initializing "
-                    f"'{self.optimize.line_search_method}'ing "
-                    f"line search")
+        logger.info(msg.mnr("INITIALIZING LINE SEARCH"))
 
-        # 'p' is the search direction used to perturb the initial model
+        # 'p' is the search direction used to perturb the initial model. For a 
+        # simple gradient descent, p = -g
         p_new = self.optimize.compute_direction()
         if sum(p_new.vector) == 0:
             logger.critical(msg.cli(
@@ -472,7 +470,7 @@ class Inversion(Migration):
             sys.exit(-1)
         self.optimize.save_vector(name="p_new", m=p_new)
 
-        # Scale search direction with step length alpha generate a model update
+        # Scale search direction 'p' with step length 'alpha' to update model 
         m_try, alpha = self.optimize.initialize_search()
         self.optimize.save_vector(name="m_try", m=m_try)
         self.optimize.save_vector(name="alpha", m=alpha)
@@ -481,6 +479,7 @@ class Inversion(Migration):
         # Expose model `m_try` to the solver by placing it in eval_func dir.
         _path_m_try = os.path.join(self.path.eval_func, "model")
         m_try.write(path=_path_m_try)
+
         logger.info(f"`m_try` model parameters for initial line search step")
         self.solver.check_model_values(path=_path_m_try)
 

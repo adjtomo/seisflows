@@ -372,9 +372,11 @@ class Gradient:
         # The new model is the old model, scaled by the step direction and
         # gradient threshold to remove any outlier values
         m_try = m.copy()
-        m_try.update(vector=m.vector + alpha * p.vector)
-        logger.info("trial model 'm_try' parameters: ")
-        m_try.check()
+        dm = alpha * p.vector  # update = step length * step direction
+        logger.info(f"model update `dm` min, max = "
+                    f"{dm.min():.2E}, {dm.max():.2E}")
+
+        m_try.update(vector=m.vector + dm)
 
         return m_try, alpha
 
