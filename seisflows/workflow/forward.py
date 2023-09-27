@@ -202,8 +202,7 @@ class Forward:
         Makes required path structure for the workflow, runs setup functions
         for all the required modules of this workflow.
         """
-        logger.info(msg.mjr(f"SETTING UP {self.__class__.__name__.upper()} "
-                            f"WORKFLOW"))
+        logger.info(f"SETTING UP {self.__class__.__name__.upper()} WORKFLOW")
 
         # Create the desired directory structure
         for path in self.path.values():

@@ -103,11 +103,6 @@ def sfparser():
     configure.add_argument("-a", "--absolute_paths", action="store_true",
                            help="Set paths as absolute. If not used (default), "
                                 "paths are set relative to `pwd`")
-    configure.add_argument("-s", "--show_hidden", action="store_true",
-                           help="Some paths and parameters are hidden by "
-                                "default and likely do not need to be shown. "
-                                "Advanced Users who want full control can use "
-                                "this option to reveal these.")
     # =========================================================================
     swap = subparser.add_parser(
         "swap", help="Swap module parameters in an existing parameter file",
@@ -493,7 +488,7 @@ class SeisFlows:
             f.write(msg.base_parameter_file)
         print(msg.cli(f"created parameter file: {self._args.parameter_file}"))
 
-    def configure(self, absolute_paths=False, show_hidden=False, **kwargs):
+    def configure(self, absolute_paths=False, **kwargs):
         """
         Dynamically generate the parameter file by writing out docstrings and
         default values for each of the SeisFlows module parameters.
@@ -524,25 +519,16 @@ class SeisFlows:
         :param absolute_paths: if True, expand pathnames to absolute paths,
             else if False, use path names relative to the working directory.
             Defaults to False, uses relative paths.
-        :type show_hidden: bool
-        :param show_hidden: show hidden paths and parameters in the configured
-            parameter file. Otherwise, by default, some paths and parameters
-            will not be included in the parameter file
         """
         from traceback import format_exc
         
-        # Paths/pars that are okay staying default but can be exposed by User 
+        # Paths/pars that are okay staying default and will be kept together
         # with -s/--show_hidden
-        _hidden_parameters = []
-        _hidden_paths = ["workdir", "output", "scratch", "solver", 
-                         "eval_grad", "eval_func", "state_file", "par_file", 
-                         "log_files",]
+        _default_paths = ["workdir", "output_log", "state_file", "par_file", 
+                          "output", "scratch", "solver", "log_files",
+                          "eval_grad", "eval_func"]
 
         print("configuring SeisFlows parameter file")
-
-        if show_hidden:
-            print(f"+ showing hidden paths: {_hidden_paths}")
-            print(f"+ showing hidden parameters: {_hidden_parameters}")
 
         def split_module_docstring(mod, idx):
             """
@@ -573,9 +559,6 @@ class SeisFlows:
             for key, val in d.items():
                 # Skip already written, hidden vars, and path dictionaries
                 if (key in written) or key.startswith("_") or key == "path":
-                    continue
-                # Skip hidden parameters
-                if not show_hidden and (key in _hidden_parameters):
                     continue
                 # Deal with nested dictionaries. Keep them condensed but
                 # ensure that NoneType -> null
@@ -628,7 +611,7 @@ class SeisFlows:
             f.write(f"# {'=' * 77}\n")
 
             # Write values for publically accessible path structure
-            written = []
+            written, defaults = [], {}
             for module in modules:
                 if not module:
                     continue
@@ -636,10 +619,10 @@ class SeisFlows:
                     # '_key' means hidden path so don't include in par file
                     if key in written or key.startswith("_"):
                         continue
-                    # Don't show hidden variables
-                    if not show_hidden and (key in _hidden_paths):
+                    # Don't write default paths yet, will write at the end
+                    if key in _default_paths:
+                        defaults[key] = val
                         continue
-
                     if val is None:
                         val = "null"
                     if absolute_paths:
@@ -648,6 +631,20 @@ class SeisFlows:
                         val = os.path.relpath(val)
                     f.write(f"path_{key}: {val}\n")
                     written.append(key)
+            # Write out the default paths at the very end
+            f.write(f"# {'-' * 77}\n")
+            f.write(f"# Parameters below define the working directory and "
+                    f"can be left default\n")
+            f.write(f"# {'-' * 77}\n")
+            for key in _default_paths:
+                if key in defaults:
+                    val = defaults[key]
+                    if absolute_paths:
+                        val = os.path.abspath(val)
+                    else:
+                        val = os.path.relpath(val)
+                    f.write(f"path_{key}: {val}\n")
+
         except Exception:
             unix.rm(self._args.parameter_file)
             unix.cp(temp_par_file, self._args.parameter_file)
@@ -862,8 +859,8 @@ class SeisFlows:
 
         print(msg.cli("SeisFlows's debug mode is an embedded IPython "
                       "environment. All modules are loaded by default. "
-                      "Any changes made here will not be saved unless "
-                      "you explicitely run: 'workflow.checkpoint()'",
+                      "To save changes made, type: 'workflow.checkpoint()'. "
+                      "To exit debug mode, type: 'exit()'",
                       header="debug", border="="))
 
         embed(colors="Neutral")
