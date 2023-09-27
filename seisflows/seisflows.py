@@ -81,16 +81,12 @@ def sfparser():
     # The following subparsers constitute the available SeisFlows commands
     # and each refers to a function within the SeisFlows class.
     # =========================================================================
-    setup = subparser.add_parser(
-        "setup", help="Setup working directory from scratch",
+    init = subparser.add_parser(
+        "init", help="Runs SeisFlows first-time initiation procedures.",
         description="""In the specified working directory, copy template 
-        parameter file containing only module choices, and symlink source code 
-        for both the base and super repositories for easy edit access. If a 
-        parameter file matching the provided name exists in the working 
-        directory, a prompt will appear asking the user if they want to 
-        overwrite."""
+        parameter file containing only module choices."""
     )
-    setup.add_argument("-f", "--force", action="store_true",
+    init.add_argument("-f", "--force", action="store_true",
                        help="automatically overwrites existing parameter file")
     # =========================================================================
     configure = subparser.add_parser(
@@ -213,10 +209,11 @@ def sfparser():
                     "file has been set correctly"
     )
     # =========================================================================
-    init = subparser.add_parser(
-        "init", formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="Run check and setup functions to generate a SeisFlows "
-                    "working directory")
+    setup = subparser.add_parser(
+        "setup", formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Run parameter 'check' and module 'setup' all modules "
+                    "to generate a valid SeisFlows working directory. This "
+                    "will not perform any computationally expensive procedures")
     # =========================================================================
     plot2d = subparser.add_parser(
         "plot2d", formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -468,7 +465,7 @@ class SeisFlows:
         """
         return [_ for _ in dir(self) if not _.startswith("_")]
 
-    def setup(self, force=False, **kwargs):
+    def init(self, force=False, **kwargs):
         """
         Initiate a SeisFlows working directory from scratch by establishing a
         template parameter file.
@@ -539,7 +536,7 @@ class SeisFlows:
         _hidden_parameters = []
         _hidden_paths = ["workdir", "output", "scratch", "solver", 
                          "eval_grad", "eval_func", "state_file", "par_file", 
-                         "log_files", "output_log"]
+                         "log_files",]
 
         print("configuring SeisFlows parameter file")
 
@@ -758,7 +755,7 @@ class SeisFlows:
         except AssertionError as e:
             print(msg.cli(str(e), border="=", header="parameter errror"))
 
-    def init(self, **kwargs):
+    def setup(self, **kwargs):
         """
         Run check() + setup() functions for a given parameter file and each of
         the SeisFlows modules, ensuring that parameters are acceptable for the

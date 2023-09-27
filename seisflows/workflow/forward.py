@@ -312,7 +312,8 @@ class Forward:
 
         self.system.run([self._generate_synthetic_data_single], **kwargs)
 
-    def _generate_synthetic_data_single(self, path_model, export_traces**kwargs):
+    def _generate_synthetic_data_single(self, path_model, export_traces,
+                                        **kwargs):
         """
         Barebones forward simulation to create synthetic data and export and 
         save the synthetics in the correct locations. Hijacks function

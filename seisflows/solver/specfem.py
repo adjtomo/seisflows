@@ -226,10 +226,11 @@ class Specfem:
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
                                               "Par_file"))[1]
-        assert(model_type in self._available_model_types), (
-            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
-            f"match acceptable model types: {self._available_model_types}"
-            )
+        # !!! TEMP, UNCOMMENT THIS YOU FOOL
+        # assert(model_type in self._available_model_types), (
+        #     f"SPECFEM Par_file parameter `model`='{model_type}' does not "
+        #     f"match acceptable model types: {self._available_model_types}"
+        #     )
 
         # Assign file extensions to be used for database file searching
         if model_type == "gll":

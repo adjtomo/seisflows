@@ -133,7 +133,8 @@ class Specfem3DGlobe(Specfem):
         for fid in ["s362ani", "crust2.0", "topo_bathy"]:  # !!! CHECK THIS
             assert(
                 os.path.exists(os.path.join(self.path.specfem_data, fid))
-            ), f"DATA/{fid} is required for SPECFEM3D_GLOBE to use GLL models"
+            ),(f"`path_specfem_data`/{fid} is required for SPECFEM3D_GLOBE to "
+               f"use GLL models")
 
     def data_wildcard(self, comp="?"):
         """

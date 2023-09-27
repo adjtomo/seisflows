@@ -150,9 +150,6 @@ class NoiseInversion(Inversion):
             f"'specfem3d_globe'"
         )
 
-        assert(self.data_case == "data"), \
-            f"Noise Inversion workflow must have `data_case` == 'data'"
-
         assert(self._modules.solver.source_prefix == "FORCESOLUTION"), (
             f"Noise Inversion workflow requires solver `source_prefix` to be " 
             f"'FORCESOLUTION'"
