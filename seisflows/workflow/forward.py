@@ -144,7 +144,9 @@ class Forward:
         :rtype: list
         :return: list of methods to call in order during a workflow
         """
-        return [self.evaluate_initial_misfit]
+        return [self.generate_synthetic_data,
+                self.evaluate_initial_misfit
+                ]
 
     def check(self):
         """
@@ -292,6 +294,43 @@ class Forward:
         self.checkpoint()
         logger.info(f"completed {n} tasks in requested task list successfully")
 
+    def generate_synthetic_data(self, **kwargs):
+        """
+        For synthetic inversion cases, we can use the workflow machinery to
+        generate 'data' by running simulations through a target/true model for 
+        each of our `ntask` sources. This only needs to be run once during a 
+        workflow.
+        """
+        if not self.generate_data:
+            return
+
+        logger.info(msg.mnr("GENERATING SYNTHETIC DATA W/ TARGET MODEL"))
+
+        # Check the target model that will be used to generate data
+        logger.info("checking true/target model parameters:")
+        self.solver.check_model_values(path=self.path.model_true)
+
+        self.system.run([self._generate_synthetic_data_single], **kwargs)
+
+    def _generate_synthetic_data_single(self, path_model, export_traces**kwargs):
+        """
+        Barebones forward simulation to create synthetic data and export and 
+        save the synthetics in the correct locations. Hijacks function
+        `run_forward_simulations` but uses some different path exports
+
+        .. note::
+
+            Must be run by system.run() so that solvers are assigned 
+            individual task ids/ working directories.
+        """
+        self.run_forward_simulations(
+                path_model=self.path.model_true,
+                export_traces=os.path.join(self.path.data, 
+                                           self.solver.source_name),
+                save_traces=os.path.join(self.solver.cwd, "traces", "obs"),
+                save_forward=False
+                )
+
     def evaluate_initial_misfit(self, path_model=None, save_residuals=None,
                                 **kwargs):
         """
@@ -318,11 +357,6 @@ class Forward:
             override this path if more specific file naming is required.
         """
         logger.info(msg.mnr("EVALUATING MISFIT FOR INITIAL MODEL"))
-
-        # If this is a synthetic inversion, we must first generate data
-        if self.generate_data:
-            logger.info("generating synthetic 'data' using target model")
-            self.system.run([self.generate_synthetic_data])
 
         # Forward workflow may not have access to optimization module, so we 
         # only tag residuals files with the source name
@@ -359,35 +393,6 @@ class Forward:
                         save_residuals=save_residuals,
                         **kwargs
                         )
-
-    def generate_synthetic_data(self):
-        """
-        For synthetic inversion cases, we can use the workflow machinery to
-        generate 'data' by running simulations through a target/true model for 
-        each of our `ntask` sources. This only needs to be run once during a 
-        workflow.
-
-        .. note::
-
-            Must be run by system.run() so that solvers are assigned individual
-            task ids/ working directories.
-        """
-        # Check the final model because it will be used to generate data
-        logger.info("true/target model parameters:")
-        self.solver.check_model_values(path=self.path.model_true)
-
-        # Export traces to disk so that the workflow can find it afterwards
-        export_traces = os.path.join(self.path.data, self.solver.source_name,
-                                     "obs")
-
-        # Run the forward solver with target model and save traces the 'obs'
-        logger.info(f"running forward simulation w/ target model for "
-                    f"{self.solver.source_name}")
-        self.solver.import_model(path_model=self.path.model_true)
-        self.solver.forward_simulation(
-            save_traces=os.path.join(self.solver.cwd, "traces", "obs"),
-            export_traces=export_traces, save_forward=False
-        )
 
     def prepare_data_for_solver(self, _src=None, _copy_function=unix.ln,
                                 **kwargs):
@@ -431,10 +436,6 @@ class Forward:
 
         logger.info(f"preparing observation data for source "
                     f"{self.solver.source_name}")
-
-        # CASE=='data': import data from an external directory
-        logger.info(f"copying data from `path_data`")
-
         src = _src or os.path.join(self.path.data,
                                    self.solver.source_name, "*")
         logger.debug(f"looking for data in: '{src}'")
@@ -454,7 +455,8 @@ class Forward:
             _copy_function(src_, dst)
 
     def run_forward_simulations(self, path_model, save_traces=None,
-                                export_traces=None, **kwargs):
+                                export_traces=None, save_forward=None, 
+                                **kwargs):
         """
         Performs forward simulation through model saved in `path_model` for a
         single event. Upon successful completion of forward simulation,
@@ -487,6 +489,10 @@ class Forward:
             waveform data. Set parameter `export_traces` True in the parameter
             file to access this option. Overriding classes may re-direct
             synthetics by setting this variable.
+        :type save_forward: bool
+        :param save_forward: whether to turn on the flag for saving the forward
+            arrays which are used for adjoint simulations. Not required if only
+            running forward simulations
         """
         logger.info(f"evaluating objective function for source "
                     f"{self.solver.source_name}")
@@ -496,6 +502,7 @@ class Forward:
         # Default value for saving waveforms for processing
         if save_traces is None:
             save_traces = os.path.join(self.solver.cwd, "traces", "syn")
+
         # Default value for exporting waveforms to disk to save
         if self.export_traces:
             # e.g., output/solver/{source}/syn/*
@@ -513,11 +520,12 @@ class Forward:
 
         # Forward workflows do not require saving the large forward arrays
         # because the assumption is that we will not be running adj simulations
-        if self.__class__.__name__ == "Forward":
-            save_forward = False
-            logger.info("Running Forward workflow, will not save forward array")
-        else:
-            save_forward = True
+        if save_forward is None:
+            if self.__class__.__name__ == "Forward":
+                save_forward = False
+                logger.info("'Forward' workflow, will not save forward array")
+            else:
+                save_forward = True
 
         self.solver.forward_simulation(save_traces=save_traces,
                                        export_traces=export_traces, 

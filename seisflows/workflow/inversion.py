@@ -130,7 +130,8 @@ class Inversion(Migration):
         :rtype: list
         :return: list of methods to call in order during a workflow
         """
-        return [self.evaluate_initial_misfit,
+        return [self.generate_synthetic_data,
+                self.evaluate_initial_misfit,
                 self.run_adjoint_simulations,
                 self.postprocess_event_kernels,
                 self.evaluate_gradient_from_kernels,
@@ -225,6 +226,16 @@ class Inversion(Migration):
         # Rewrite checkpoint file with new iteration line
         with open(self.path.state_file, "w") as f:
             f.writelines(lines)
+
+    def generate_synthetic_data(**kwargs):
+        """
+        Function Override of `workflow.forward.generate_synthetic_data` 
+
+        Add an additional criteria (iteration > 1) that skips over this function
+        """
+        if self.iteration > 1:
+            return
+        super().generate_synthetic_data(**kwargs)
 
     def evaluate_objective_function(self, save_residuals=False, components=None,
                                     **kwargs):

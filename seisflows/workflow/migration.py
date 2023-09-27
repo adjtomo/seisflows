@@ -96,7 +96,8 @@ class Migration(Forward):
         :rtype: list
         :return: list of methods to call in order during a workflow
         """
-        return [self.evaluate_initial_misfit,
+        return [self.generate_synthetic_data,
+                self.evaluate_initial_misfit,
                 self.run_adjoint_simulations,
                 self.postprocess_event_kernels,
                 self.evaluate_gradient_from_kernels
