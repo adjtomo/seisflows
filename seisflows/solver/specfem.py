@@ -143,7 +143,7 @@ class Specfem:
         self.path = Dict(
             scratch=path_solver or os.path.join(workdir, "scratch", "solver"),
             eval_grad=path_eval_grad or
-                      os.path.join(workdir, "scratch", "evalgrad"),
+                      os.path.join(workdir, "scratch", "eval_grad"),
             data=path_data or os.path.join(workdir, "SFDATA"),
             output=path_output or os.path.join(workdir, "output"),
             specfem_bin=path_specfem_bin,

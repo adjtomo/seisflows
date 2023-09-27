@@ -525,8 +525,8 @@ class SeisFlows:
         # Paths/pars that are okay staying default and will be kept together
         # with -s/--show_hidden
         _default_paths = ["workdir", "output_log", "state_file", "par_file", 
-                          "output", "scratch", "solver", "log_files",
-                          "eval_grad", "eval_func"]
+                          "output", "scratch", "log_files"]
+        _ignore_paths = ["solver", "eval_func", "eval_grad"]
 
         print("configuring SeisFlows parameter file")
 
@@ -619,10 +619,13 @@ class SeisFlows:
                     # '_key' means hidden path so don't include in par file
                     if key in written or key.startswith("_"):
                         continue
+                    elif key in _ignore_paths:
+                        continue
                     # Don't write default paths yet, will write at the end
-                    if key in _default_paths:
+                    elif key in _default_paths and key not in defaults:
                         defaults[key] = val
                         continue
+                    
                     if val is None:
                         val = "null"
                     if absolute_paths:
