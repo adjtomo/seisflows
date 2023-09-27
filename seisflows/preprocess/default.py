@@ -402,6 +402,12 @@ class Default:
                 for (o, s) in zip(obs, syn)
             ]
         wait(futures)
+        for future in futures:
+            try:
+                future.result()
+            except Exception as e:
+                logger.critical(f"preprocessing error: {e}")
+                sys.exit(-1)
 
         if save_residuals:
             # Results are returned in the order that they were submitted and
