@@ -226,11 +226,10 @@ class Specfem:
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
                                               "Par_file"))[1]
-        # !!! TEMP, UNCOMMENT THIS YOU FOOL
-        # assert(model_type in self._available_model_types), (
-        #     f"SPECFEM Par_file parameter `model`='{model_type}' does not "
-        #     f"match acceptable model types: {self._available_model_types}"
-        #     )
+        assert(model_type in self._available_model_types), (
+            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
+            f"match acceptable model types: {self._available_model_types}"
+            )
 
         # Assign file extensions to be used for database file searching
         if model_type == "gll":
@@ -948,6 +947,13 @@ class Specfem:
                     for cwd in source_paths
                 ]
             wait(futures)
+            # If any of the jobs, calling the result will raise the Exception
+            for future in futures:
+                try:
+                    future.result()
+                except Exception as e:
+                    logger.critical(f"directory initialization error: {e}")
+                    sys.exit(-1)
         else:
             for source_name in self.source_names:
                 cwd = os.path.join(self.path.scratch, source_name)
@@ -986,7 +992,6 @@ class Specfem:
             source_name = os.path.basename(cwd)
 
         logger.debug(f"initializing solver directory source: {source_name}")
-
         # Starting from a fresh working directory
         unix.rm(cwd)
         unix.mkdir(cwd)
