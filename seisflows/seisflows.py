@@ -107,6 +107,11 @@ def sfparser():
     configure.add_argument("-a", "--absolute_paths", action="store_true",
                            help="Set paths as absolute. If not used (default), "
                                 "paths are set relative to `pwd`")
+    configure.add_argument("-s", "--show_hidden", action="store_true",
+                           help="Some paths and parameters are hidden by "
+                                "default and likely do not need to be shown. "
+                                "Advanced Users who want full control can use "
+                                "this option to reveal these.")
     # =========================================================================
     swap = subparser.add_parser(
         "swap", help="Swap module parameters in an existing parameter file",
@@ -522,18 +527,25 @@ class SeisFlows:
         :param absolute_paths: if True, expand pathnames to absolute paths,
             else if False, use path names relative to the working directory.
             Defaults to False, uses relative paths.
+        :type show_hidden: bool
+        :param show_hidden: show hidden paths and parameters in the configured
+            parameter file. Otherwise, by default, some paths and parameters
+            will not be included in the parameter file
         """
         from traceback import format_exc
         
         # Paths/pars that are okay staying default but can be exposed by User 
+        # with -s/--show_hidden
         _hidden_parameters = []
-        _hidden_paths = ["workdir", "scratch", "eval_grad", "eval_func", 
-                         "state_file", "par_file", "log_files", "output_log",
-                         "solver"]
-        _hidden_paths = [f"path_{s}" for s in _hidden_paths]  # path_scratch
-
+        _hidden_paths = ["workdir", "output", "scratch", "solver", 
+                         "eval_grad", "eval_func", "state_file", "par_file", 
+                         "log_files", "output_log"]
 
         print("configuring SeisFlows parameter file")
+
+        if show_hidden:
+            print(f"+ showing hidden paths: {_hidden_paths}")
+            print(f"+ showing hidden parameters: {_hidden_parameters}")
 
         def split_module_docstring(mod, idx):
             """
@@ -548,14 +560,6 @@ class SeisFlows:
             docssplit = docstring.split("***\n#")
             docfinal = "".join([_.split("Paths\n#    -----\n#")[idx] for _ in
                                 docssplit])
-
-            # Get rid of hidden paths/parameters if requested
-            if show_hidden:
-                _hidden = [_hidden_parameters, _hidden_paths][idx]
-                import pdb;pdb.set_trace()
-                
-
-
             return docfinal
 
         def write_dict_to_yaml(f, d, written, recursive=0):
@@ -570,8 +574,11 @@ class SeisFlows:
             """
             # Write the parameters, make sure to not have the same one twice
             for key, val in d.items():
-                # Skip already written, hidden vars, and paths
+                # Skip already written, hidden vars, and path dictionaries
                 if (key in written) or key.startswith("_") or key == "path":
+                    continue
+                # Skip hidden parameters
+                if not show_hidden and (key in _hidden_parameters):
                     continue
                 # Deal with nested dictionaries. Keep them condensed but
                 # ensure that NoneType -> null
@@ -632,6 +639,10 @@ class SeisFlows:
                     # '_key' means hidden path so don't include in par file
                     if key in written or key.startswith("_"):
                         continue
+                    # Don't show hidden variables
+                    if not show_hidden and (key in _hidden_paths):
+                        continue
+
                     if val is None:
                         val = "null"
                     if absolute_paths:
