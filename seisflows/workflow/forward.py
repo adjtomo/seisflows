@@ -109,7 +109,7 @@ class Forward:
             model_true=path_model_true,
             state_file=path_state_file or
                        os.path.join(workdir, "sfstate.txt"),
-            data=path_data,
+            data=path_data or os.path.join(workdir, "data"),
         )
 
         self._required_modules = ["system", "solver"]
@@ -183,7 +183,6 @@ class Forward:
                     f"option `generate_data` requires 'path_model_true' "
                     f"to exist, which points to a target model"
                     )
-            else:          
                 assert(self.path.data is not None and
                        os.path.exists(self.path.data)), \
                     f"`path_data` is required for data-synthetic comparisons"
@@ -364,8 +363,9 @@ class Forward:
     def generate_synthetic_data(self):
         """
         For synthetic inversion cases, we can use the workflow machinery to
-        generate 'data' by running simulations through a target/true model. This
-        only needs to be run once during a workflow.
+        generate 'data' by running simulations through a target/true model for 
+        each of our `ntask` sources. This only needs to be run once during a 
+        workflow.
 
         .. note::
 
@@ -376,9 +376,9 @@ class Forward:
         logger.info("true/target model parameters:")
         self.solver.check_model_values(path=self.path.model_true)
 
-        # Export traces to disk because 'data' is static after creation
-        export_traces = os.path.join(self.path.output, "DATA",
-                                     self.solver.source_name, "obs")
+        # Export traces to disk so that the workflow can find it afterwards
+        export_traces = os.path.join(self.path.data, self.solver.source_name,
+                                     "obs")
 
         # Run the forward solver with target model and save traces the 'obs'
         logger.info(f"running forward simulation w/ target model for "

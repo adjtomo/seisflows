@@ -491,7 +491,7 @@ class SeisFlows:
             f.write(msg.base_parameter_file)
         print(msg.cli(f"created parameter file: {self._args.parameter_file}"))
 
-    def configure(self, absolute_paths=False, **kwargs):
+    def configure(self, absolute_paths=False, show_hidden=False, **kwargs):
         """
         Dynamically generate the parameter file by writing out docstrings and
         default values for each of the SeisFlows module parameters.
@@ -524,6 +524,14 @@ class SeisFlows:
             Defaults to False, uses relative paths.
         """
         from traceback import format_exc
+        
+        # Paths/pars that are okay staying default but can be exposed by User 
+        _hidden_parameters = []
+        _hidden_paths = ["workdir", "scratch", "eval_grad", "eval_func", 
+                         "state_file", "par_file", "log_files", "output_log",
+                         "solver"]
+        _hidden_paths = [f"path_{s}" for s in _hidden_paths]  # path_scratch
+
 
         print("configuring SeisFlows parameter file")
 
@@ -533,12 +541,21 @@ class SeisFlows:
             and remove the path docstrings, those come later.
 
             :type idx: int
-            :param idx: 0 returns parameter docstrings, 1 returns path docstring
+            :param idx: 0 returns parameter docstrings, 1 or -1 returns path 
+                docstring
             """
             docstring = mod.__doc__.replace("\n", "\n#")
             docssplit = docstring.split("***\n#")
             docfinal = "".join([_.split("Paths\n#    -----\n#")[idx] for _ in
                                 docssplit])
+
+            # Get rid of hidden paths/parameters if requested
+            if show_hidden:
+                _hidden = [_hidden_parameters, _hidden_paths][idx]
+                import pdb;pdb.set_trace()
+                
+
+
             return docfinal
 
         def write_dict_to_yaml(f, d, written, recursive=0):
@@ -571,6 +588,11 @@ class SeisFlows:
         # Load in a barebones parameter file and instantiate specific classes
         parameters = load_yaml(os.path.join(self._args.workdir,
                                             self._args.parameter_file))
+        if len(parameters) > 5:
+            print("error: parameter file has already been configured, either "
+                  "create a new file with 'setup' or swap modules with 'swap'")
+            sys.exit(-1)
+
         modules = [custom_import(name, parameters[name])() for name in NAMES]
 
         # If writing to parameter file fails for any reason, the file will be
