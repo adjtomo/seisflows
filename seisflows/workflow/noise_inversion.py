@@ -168,6 +168,8 @@ class NoiseInversion(Inversion):
 
         # TODO: Check that solver parameter ROTATE_SEISMOGRAMS_RTZ == False (?)
 
+        # TODO: Check that Par_file 'USE_FORCE_POINT_SOURCE' = .true.
+
     def setup(self):
         """Set up some required attributes for Noise Inversion"""
         super().setup()
