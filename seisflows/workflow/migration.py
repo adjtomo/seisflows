@@ -165,6 +165,12 @@ class Migration(Forward):
         then (optionally) smooth the output misfit kernel by convolving with
         a 3D Gaussian function with user-defined horizontal and vertical
         half-widths.
+
+        .. note::
+
+            If you hit a floating point error during the smooth operation, 
+            your kernels may be zero due to something going awry in the
+            misfit quantification or adjoint simulations.
         """
         def combine_event_kernels(**kwargs):
             """Combine event kernels into a misfit kernel"""
