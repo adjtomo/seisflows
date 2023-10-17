@@ -1023,8 +1023,10 @@ class NoiseInversion(Inversion):
             logger.info(f"running misfit evaluation for: '{self._force}'")
             if self._force == "Z":
                 tag = "ZZ"
+                components = ["Z"]
             else:
                 tag = "RT"
+                components = ["T", "R"]
             self.system.run(
                 [self.prepare_data_for_solver,
                  self.run_forward_simulations,
@@ -1033,8 +1035,8 @@ class NoiseInversion(Inversion):
                 path_model=os.path.join(self.path.eval_func, "model"),
                 save_residuals=os.path.join(
                     self.path.eval_func, "residuals",
-                    f"residuals_{{src}}_{self.evaluation}_{tag}.txt"
-                )
+                    f"residuals_{{src}}_{self.evaluation}_{tag}.txt"),
+                components=components
             )
             self._rename_preprocess_files(tag)
             self._states[_state_check] = 1

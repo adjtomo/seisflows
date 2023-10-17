@@ -5,6 +5,7 @@ misfit quantification. We use the name 'Pyaflowa' to avoid any potential
 name overlaps with the actual Pyatoa package.
 """
 import os
+import sys
 import logging
 import time
 import random
