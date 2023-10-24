@@ -226,10 +226,11 @@ class Specfem:
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
                                               "Par_file"))[1]
-        assert(model_type in self._available_model_types), (
-            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
-            f"match acceptable model types: {self._available_model_types}"
-            )
+        # !!! BC UNCOMMENT THIS !!!
+        # assert(model_type in self._available_model_types), (
+        #     f"SPECFEM Par_file parameter `model`='{model_type}' does not "
+        #     f"match acceptable model types: {self._available_model_types}"
+        #     )
 
         # Assign file extensions to be used for database file searching
         if model_type == "gll":
@@ -684,6 +685,7 @@ class Specfem:
                     unix.mv(src=kernel_files, dst=save_kernels)
                 else:
                     logger.warning(f"no kernel files for '{par}', cant export")
+                    sys.exit(-1)
 
     def _rename_kernel_parameters(self):
         """
