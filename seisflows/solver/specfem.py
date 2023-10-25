@@ -283,6 +283,9 @@ class Specfem:
         self._export_starting_models()
 
         # Assign file extensions to be used for database file searching
+        model_type = getpar(key="MODEL",
+                            file=os.path.join(self.path.specfem_data,
+                                              "Par_file"))[1]
         if "gll" in model_type:
             self._ext = ".bin"
         else:
