@@ -233,12 +233,12 @@ class Specfem:
         #     )
 
         # Assign file extensions to be used for database file searching
-        if model_type == "gll":
+        if "gll" in model_type:
             self._ext = ".bin"
         else:
             logger.warning("no file model/kernel file extension found, this "
                            "may cause critical issues when looking for files. "
-                           "check SPECFEM parameter `model`")
+                           "check SPECFEM parameter `model`.")
 
         # Make sure the initial model is set and actually contains files
         assert(self.path.model_init is not None and
@@ -684,7 +684,9 @@ class Specfem:
                     logger.debug(f"moving '{par}' kernels to {save_kernels}")
                     unix.mv(src=kernel_files, dst=save_kernels)
                 else:
-                    logger.warning(f"no kernel files for '{par}', cant export")
+                    logger.critical(f"no kernel files found for '{par}', "
+                                    f"please check adjoint solver log for "
+                                    f"{self.source_name}")
                     sys.exit(-1)
 
     def _rename_kernel_parameters(self):
