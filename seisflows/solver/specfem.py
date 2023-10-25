@@ -232,14 +232,6 @@ class Specfem:
         #     f"match acceptable model types: {self._available_model_types}"
         #     )
 
-        # Assign file extensions to be used for database file searching
-        if "gll" in model_type:
-            self._ext = ".bin"
-        else:
-            logger.warning("no file model/kernel file extension found, this "
-                           "may cause critical issues when looking for files. "
-                           "check SPECFEM parameter `model`.")
-
         # Make sure the initial model is set and actually contains files
         assert(self.path.model_init is not None and
                os.path.exists(self.path.model_init)), \
@@ -277,6 +269,26 @@ class Specfem:
                             f"sure to check if this file is necessary for your "
                             f"workflow"
                             )
+
+    def setup(self):
+        """
+        Prepares solver scratch directories for an impending workflow.
+
+        Sets up directory structure expected by SPECFEM and copies or generates
+        seismic data to be inverted or migrated.
+
+        Exports INIT/STARTING and TRUE/TARGET models to disk (output/ dir.)
+        """
+        self._initialize_working_directories()
+        self._export_starting_models()
+
+        # Assign file extensions to be used for database file searching
+        if "gll" in model_type:
+            self._ext = ".bin"
+        else:
+            logger.warning("no file model/kernel file extension found, this "
+                           "may cause critical issues when looking for files. "
+                           "check SPECFEM parameter `model`.")
 
     def check_model_values(self, path):
         """
@@ -513,18 +525,6 @@ class Specfem:
             `solver.cwd`
         """
         return "OUTPUT_FILES"
-
-    def setup(self):
-        """
-        Prepares solver scratch directories for an impending workflow.
-
-        Sets up directory structure expected by SPECFEM and copies or generates
-        seismic data to be inverted or migrated.
-
-        Exports INIT/STARTING and TRUE/TARGET models to disk (output/ dir.)
-        """
-        self._initialize_working_directories()
-        self._export_starting_models()
 
     def forward_simulation(self, executables=None, save_traces=False,
                            export_traces=False, save_forward=True, **kwargs):
