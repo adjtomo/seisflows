@@ -317,24 +317,28 @@ class NoiseInversion(Inversion):
         two adjoint simulations (E and N) per kernel with the appropriate
         saved E and N forward arrays.
         """
-        # Skip if not valid
-        if ("RR" not in self.kernels) and ("TT" not in self.kernels):
-            return 
+        # Two adjoint simulations required per kernel T or R
+        for pair in ["ET", "NT", "ER", "NR"]:
+            self._force, self._cmpnt = pair
 
-        # Set internal variables for directory and file naming
-        for cmpnt in ["T", "R"]:
-            self._cmpnt = cmpnt  # T or R
-
-            # Skip over a specific kernel if User did not request
-            if cmpnt not in self.kernels:  # e.g., if 'R' in 'RR,TT'
+            # Don't run a simulation if we don't need the kernels
+            if self._cmpnt not in self.kernels:
                 continue
 
-            # We require two adjoint simulations/kernel to recover gradient
-            for force in ["E", "N"]:
-                self._force = force
-                logger.info(f"running {self._force}{self._cmpnt} adjoint "
-                            f"simulation")
-                self.run_adjoint_simulations()
+            # Intermediate state check to avoid rerunning all after failure
+            _state_check = f"run_rt_adjoint_simulations_{pair}"
+            if _state_check in self._states and bool(self._states[_state_check]):
+                continue
+
+            logger.info(f"running {self._force}{self._cmpnt} adjoint "
+                        f"simulation")
+            self.run_adjoint_simulations()
+            self._states[_state_check] = 1
+            self.checkpoint()
+
+        # Unset internal tracking variables for safety
+        self._force = None
+        self._cmpnt = None
 
     def _rename_preprocess_files(self, tag):
         """
@@ -1044,6 +1048,7 @@ class NoiseInversion(Inversion):
             )
             self._rename_preprocess_files(tag)
             self._states[_state_check] = 1
+            self.checkpoint()
        
         # Sum the misfit from all forward simulations and all kernels
         residuals_files = glob(
