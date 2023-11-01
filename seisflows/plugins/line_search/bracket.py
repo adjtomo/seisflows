@@ -17,7 +17,6 @@ import os
 import numpy as np
 
 from seisflows import logger
-from seisflows.tools.array import count_zeros
 from seisflows.tools.math import parabolic_backtrack, polynomial_fit
 
 
@@ -50,6 +49,19 @@ class Bracket:
         self.gtg = []
         self.gtp = []
         self.step_count = 0
+    
+    @property
+    def update_count(self)
+        """
+        Convenience property to determine the number of model updates that
+        have been performed so far by counting the number of step lengths
+        which equal 0, signalling an initial misfit evaluation, ignoring the
+        very first evaluation.
+
+        :rtype: int
+        :return: the number of updates that an inversion has seen. [0, inf)
+        """
+        return max(sum(np.array(self.step_lens) == 0) - 1, 0)
 
     def update_search_history(self, func_val, step_len, gtg=None, gtp=None):
         """
@@ -94,35 +106,67 @@ class Bracket:
         calculate step length. From the full collection of the search history,
         only returns values relevant to the current line search.
 
+        .. note::
+
+            In the original SeisFlows the values of the search history were
+            non-intuitive and difficult to understand at a glance. The 
+            original values are copied here as they relate to the mathematical
+            formulations and so are still important:
+        
+            i = self.step_count  
+            k = len(self.step_lens)
+            x = np.array(self.step_lens[k - i - 1:k])
+            f = np.array(self.func_vals[k - i - 1:k])
+            j = count_zeros(self.step_lens) - 1  # update count
+
         :type sort: bool
         :param sort: sort the search history by step length
-        :rtype x: np.array
-        :return x: list of step lenths from current line search
-        :rtype f: np.array
-        :return f: correpsonding list of function values
-        :rtype gtg: list
-        :return gtg: dot product dot product of gradient with itself
-        :rtype gtp: list
         :return gtp: dot product of gradient and search direction
-        :rtype i: int
-        :return i: step_count
-        :rtype j: int
-        :return j: number of iterations corresponding to 0 step length,
-            i.e., the update count
+        :rtype: (np.array, np.array)
+        :return: (step lengths of current line search, 
+                  misfits of current line search)
         """
-        i = self.step_count
-        k = len(self.step_lens)
-        x = np.array(self.step_lens[k - i - 1:k])
-        f = np.array(self.func_vals[k - i - 1:k])
-        j = count_zeros(self.step_lens) - 1  # update count
+        # Number of steps taken the current line search
+        nsteps = self.step_count + 1  # i; +1 to include 0
+
+        # Only return the last valid step lengths and misfit values that 
+        # represent the current line search
+        step_lens = np.array(self.step_lens[-nsteps:])  # x
+        func_vals = np.array(self.func_vals[-nsteps:])  # f
 
         # Sort by step length
         if sort:
-            f = f[abs(x).argsort()]
-            x = x[abs(x).argsort()]
+            func_vals = func_vals[abs(step_lens).argsort()]
+            step_lens = step_lens[abs(step_lens).argsort()]
 
-        return x, f, self.gtg, self.gtp, i, j
+        return step_lens, func_vals
+    
+    def revert_search_history(self, steps=None):
+        """
+        Occasionally a line search will break mid-search and will need to be
+        rolled back to the previous step count so that the line search can
+        be resumed safely. This function steps back the search history by 
+        a number of step counts `steps`. If `steps` is None, then this will
+        revert the line search to step count 0 (restarting line search)
 
+        .. note::
+
+            You must run `optimize.checkpoint()` to have this change take 
+            effect in the workflow.
+
+        .. warning::
+
+            Once checkpointed, this information is lost and cannot be 
+            recovered easily.
+
+        :type steps: int
+        :param steps: number of line search steps to roll back. If None 
+            (default), reverts line search to step count 0 (full restart). If
+            `steps` is greater than the number of steps taken in the current 
+            line search, will revert to step count 0.
+        """
+        i = self.step_count
+        
     def _print_stats(self, x, f):
         """Print out misfit values and step lengths to the logger"""
         x_str = ", ".join([f"{_:.2E}" for _ in x])
@@ -147,13 +191,13 @@ class Bracket:
             status==how to treat the next step count evaluation)
         """
         # Determine the line search history
-        x, f, gtg, gtp, step_count, update_count = self.get_search_history()
+        x, f = self.get_search_history()  
         self._print_stats(x, f)
 
         # For the first inversion and initial step, set alpha manually
-        if step_count == 0 and update_count == 0:
+        if step_count == 0 and self.update_count == 0:
             # Based on idea from Dennis and Schnabel
-            alpha = gtg[-1] ** -1
+            alpha = self.gtg[-1] ** -1
             logger.info(f"try: first evaluation, attempt guess step length, "
                         f"alpha={alpha:.2E}")
             status = "TRY"
@@ -161,7 +205,7 @@ class Bracket:
         elif step_count == 0:
             # Based on the first equation in sec 3.5 of Nocedal and Wright 2ed
             idx = np.argmin(self.func_vals[:-1])
-            alpha = self.step_lens[idx] * gtp[-2] / gtp[-1]
+            alpha = self.step_lens[idx] * self.gtp[-2] / self.gtp[-1]
             logger.info(f"try: first step count of iteration, "
                         f"setting scaled step length, alpha={alpha:.2E}")
             status = "TRY"
@@ -186,7 +230,7 @@ class Bracket:
             status = "TRY"
         # If misfit increases, reduce step length by backtracking
         elif step_count < self.step_count_max:
-            slope = gtp[-1] / gtg[-1]
+            slope = self.gtp[-1] / self.gtg[-1]
             alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
                                         f1=f[1], b1=0.1, b2=0.5)
             logger.info(f"try: misfit increasing, attempting "

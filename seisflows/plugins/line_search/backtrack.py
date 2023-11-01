@@ -57,12 +57,13 @@ class Backtrack(Bracket):
         :return: (alpha==calculated step length,
             status==how to treat the next step count evaluation)
         """
-        # Determine the line search history
-        x, f, gtg, gtp, step_count, update_count = self.get_search_history()
+        # Determine the current line search history
+        x, f = self.get_search_history()
+        
 
         # quasi-Newton direction is not yet scaled properly, so instead
         # of a bactracking line perform a bracketing line search
-        if update_count == 0:
+        if self.update_count == 0:
             alpha, status = super().calculate_step_length()
        
         # Assumed well scaled search direction, attempt backtracking line search 
@@ -83,7 +84,7 @@ class Backtrack(Bracket):
                 status = "PASS"
             # If misfit continually increases, decrease step length
             elif step_count < self.step_count_max:
-                slope = gtp[-1] / gtg[-1]
+                slope = self.gtp[-1] / self.gtg[-1]
                 alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
                                             f1=f[1], b1=0.1, b2=0.5)
                 logger.info(f"try: misfit increasing, attempting "

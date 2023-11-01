@@ -478,15 +478,12 @@ class Gradient:
             dst = src.replace("_new.", "_old.")
             unix.mv(src, dst)
 
-        # Reconstruct
-        x, f, *_ = self._line_search.get_search_history()
-
         logger.info("setting accepted trial model (try) as current model (new)")
         unix.mv(src=os.path.join(self.path.scratch, "m_try.npz"),
                 dst=os.path.join(self.path.scratch, "m_new.npz"))
 
         # Choose minimum misfit value as final misfit/model. index 0 is initial
-        f = self._line_search.get_search_history()[1]
+        x, f = self._line_search.get_search_history()
         self.save_vector("f_new", f.min())
         logger.info(f"misfit of accepted trial model is f={f.min():.2E}")
 
@@ -555,12 +552,12 @@ class Gradient:
             >>> np.genfromtxt("optim_stats.txt", delimiter=",", names=True, \
                               dtype=None)
         """
-        logger.info(f"writing optimization stats")
+        logger.info(f"writing optimization stats: '{self.path._stats_file}'")
 
         # Gather required information from line search parameters
         g = self.load_vector("g_new")
         p = self.load_vector("p_new")
-        x, f, *_ = self._line_search.get_search_history()
+        x, f  = self._line_search.get_search_history()
 
         # Calculated stats factors
         # TODO What is this? It was returning a RuntimeError for value too small
