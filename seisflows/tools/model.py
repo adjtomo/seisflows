@@ -388,19 +388,26 @@ class Model:
         :para min_pr: minimum allowable Poisson's ratio, if applicable
         :type max_pr: float
         :param max_pr: maximum allowable Poisson's ratio, if applicable
-        :raises AssertionError: if the input model has no values for any of its
-            parameters. This usually happens if the parameters are defined
-            incorrectly w.r.t the input model path
+        :raises AssertionError: 
+            - if the input model has no values for any of its parameters
+            - if the model contains any NaN values 
         """
         # Checks to make sure the model is filled out, otherwise the following
         # checks will fail unexpectedly
         for key, val in self.model.items():
+            # Make sure there are values in the model (not empty)
             assert(val.any()), (
                  f"SPECFEM_{self.flavor} model '{key}' has no values, please "
                  f"check your input model `path_model_init` and the chosen "
                  f"`material` which controls the expected parameters"
                  )
+            # Make sure none of the values are NaNs
+            assert(not np.isnan(val).any()), (
+                 f"SPECFEM_{self.flavor} model '{key}' contains NaN values and "
+                 f"should not, please check your model construction"
+                 )
 
+        # Check the physicality of the parameters
         if self.flavor in ["2D", "3D"]:
             self._check_2d3d_parameters(min_pr, max_pr)
         elif self.flavor == "3DGLOBE":

@@ -860,7 +860,7 @@ class SeisFlows:
         for module in [workflow, system, solver, preprocess, optimize]:
             print(f"{module.__class__}")
 
-        print(msg.cli("SeisFlows's debug mode is an embedded IPython "
+        print(msg.cli("SeisFlows' debug mode is an embedded IPython "
                       "environment. All modules are loaded by default. "
                       "To save changes made, type: 'workflow.checkpoint()'. "
                       "To exit debug mode, type: 'exit()'",
