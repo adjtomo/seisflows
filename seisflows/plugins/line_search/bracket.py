@@ -49,19 +49,6 @@ class Bracket:
         self.gtg = []
         self.gtp = []
         self.step_count = 0
-    
-    @property
-    def update_count(self)
-        """
-        Convenience property to determine the number of model updates that
-        have been performed so far by counting the number of step lengths
-        which equal 0, signalling an initial misfit evaluation, ignoring the
-        very first evaluation.
-
-        :rtype: int
-        :return: the number of updates that an inversion has seen. [0, inf)
-        """
-        return max(sum(np.array(self.step_lens) == 0) - 1, 0)
 
     def update_search_history(self, func_val, step_len, gtg=None, gtp=None):
         """
@@ -195,7 +182,7 @@ class Bracket:
         self._print_stats(x, f)
 
         # For the first inversion and initial step, set alpha manually
-        if step_count == 0 and self.update_count == 0:
+        if bool(self.step_lens.count(0)) and step_count == 0:  # == i00s00
             # Based on idea from Dennis and Schnabel
             alpha = self.gtg[-1] ** -1
             logger.info(f"try: first evaluation, attempt guess step length, "
