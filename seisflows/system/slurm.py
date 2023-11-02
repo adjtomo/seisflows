@@ -229,7 +229,6 @@ class Slurm(Cluster):
             logger.critical(f"parsed job id '{job_id}' does not evaluate as an "
                             f"integer, please check that function "
                             f"`system._stdout_to_job_id()` is set correctly")
-            logger.critical(e)
             sys.exit(-1)
 
         return job_id
@@ -293,18 +292,22 @@ class Slurm(Cluster):
         # Monitor the job queue until all jobs have finished
         status = self.monitor_job_status(job_id)
 
-        # Failed job
+        # Failed job can either try to re-run, or simply exit the program
         if status == -1:  
             # Failure recovery mechanism. Determine which jobs did not complete
             # and attempt to rerun them up to a certain amount of times
-            if self.rerun and _attempts <= self.rerun:
-                failed_jobs, _ = self.query_job_states(
-                                            job_id, states=self._failed_states
-                                            )
-                array_str = ",".join([_ for _ in failed_jobs])
+            if self.rerun and _attempts < self.rerun:
+                jobs, states = self.query_job_states(job_id)
+                # Here we are assuming that the job index matches the task IDs
+                failed_array = []
+                for i, (job, state) in enumerate(zip(jobs, states)):
+                    if state in self._failed_states:
+                        failed_array.append(i)
+                array_str = ",".join([str(_) for _ in failed_array])
 
-                logger.info(f"attempt rerun {len(failed_jobs)} failed jobs")
-                logger.debug(array_str)
+                logger.info(f"attempt {_attempts+1}/{self.rerun} rerun "
+                            f"{len(failed_array)} failed jobs")
+                logger.debug(f"task ids to rerun: {array_str}")
 
                 # Recursively 'run' the functions but only with the failed jobs,
                 # assuming that all other jobs completed nominally
@@ -353,7 +356,7 @@ class Slurm(Cluster):
 
         return task_ids
 
-    def query_job_states(self, job_id, states=None):
+    def query_job_states(self, job_id):
         """
         Overwrites `system.cluster.Cluster.query_job_states`
 
@@ -375,9 +378,6 @@ class Slurm(Cluster):
         :type job_id: str
         :param job_id: main job id to query, returned from the subprocess.run 
             that ran the jobs
-        :type states: list
-        :param states: If not None, return only job IDs which match the states
-            requested. Useful, e.g., to find only failing jobs
         :rtype: (list, list)
         :return: (job ids, corresponding job states). Returns (None, None) if
             `sacct` does not return a useful stdout (e.g., jobs have not
@@ -397,11 +397,12 @@ class Slurm(Cluster):
             if not job_line:
                 continue
             job_id, job_state = job_line.split()
-            # If requested, skip states that don't match
-            if states and job_state not in states:
-                continue
             job_ids.append(job_id)
             job_states.append(job_state)
+    
+        # Sort by job ids because we assume that logically job numbers are in
+        # a numerically ascending order i.e., 1,2,3 or 1_1, 1_2, 1_3
+        job_ids, job_states = zip(*sorted(zip(job_ids, job_states)))
 
         return job_ids, job_states
 

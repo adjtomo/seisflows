@@ -224,16 +224,22 @@ class TestFlow:
     def test_array_job_rerun(self):
         """
         Test that partial array job failures will cause the entire main job
-        to crash
+        to crash. The idea behind this function is that we want a job to fail 
+        once, and then pass on the second attempt. Because of the architecture
+        of the failure recovery mechanism, we cannot incremenet a counter to 
+        check if the job has been rereun, so we check that the correct amount
+        of log files has been produced
         """
         self.system.rerun = 1
+        self.system.ntask = 3
+        failed_task_ids = [1, 2]  # 0 should pass, 1 and 2 should fail
 
         logger.info("running system test for array job rerun capability")
 
         def _test_function(**kwargs):
             time.sleep(10)  # need to wait for queue system to catch up
             print(f"hello world from task id: {get_task_id()}")
-            if get_task_id() in [1, 2]:  # assuming `ntask`==3
+            if get_task_id() in failed_task_ids: 
                 sys.exit(-1)  # intentional job failure
 
         # Clear the log files dir. as this is how we will check results
@@ -250,6 +256,7 @@ class TestFlow:
     
         # Check the log file for job failure
         log_files = glob(os.path.join(self.system.path.log_files, "*"))
-        assert(len(log_files) == 1), f"only one log file expected"
+        nlog_files = self.system.ntask + len(failed_task_ids)
+        assert(len(log_files) == nlog_files), f"{nlog_files} log files expected"
 
-        logger.info("job queue and fail system test finished successfully")
+        logger.info("job array recovery mechanism completed successfully")
