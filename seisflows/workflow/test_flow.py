@@ -66,9 +66,9 @@ class TestFlow:
         if not self.system:
             logger.warning("No `system` module chosen, skipping system tests")
         else:
-            _task_list += [# self.test_system_print_hello_world,
-                           # self.test_single_job_failure,
-                           # self.test_partial_array_job_failure,
+            _task_list += [self.test_system_print_hello_world,
+                           self.test_single_job_failure,
+                           self.test_partial_array_job_failure,
                            self.test_array_job_rerun
                            ]
 
@@ -128,7 +128,7 @@ class TestFlow:
         running task id to check that task id printing works. Check that the 
         output log messages show the correct task id and log statement
         """
-        logger.info("running system test for job array submission")
+        logger.info(msg.mnr("test array job submission"))
 
         def _test_function(**kwargs):
             print(f"hello world from task id: {get_task_id()}")
@@ -152,16 +152,14 @@ class TestFlow:
                 assert(f"hello world from task id: {i}" in f.read()), \
                     f"log file '{fid}' does not show correct log message"
 
-        logger.info("job array submission system test finished successfully")
+        logger.info("finished successfully")
 
     def test_single_job_failure(self):
         """
-        Simple wait function to be called by system run, used to test
-        job status check function which monitors job queue. Throw in a job
-        failure at the end of the function to check that system exit works
+        Test a single job run with built in failure to ensure that single job 
+        run call modifications work and can be caught.
         """
-        logger.info("running system test for job queue monitoring and "
-                    "job failure catching")
+        logger.info(msg.mnr("test for single job failure catch"))
 
         def _test_function(**kwargs):
             for i in range(1, 11):
@@ -187,15 +185,14 @@ class TestFlow:
         log_files = glob(os.path.join(self.system.path.log_files, "*"))
         assert(len(log_files) == 1), f"only one log file expected"
 
-        logger.info("job queue and fail system test finished successfully")
+        logger.info("finished successfully")
             
     def test_partial_array_job_failure(self):
         """
         Test that partial array job failures will cause the entire main job
-        to crash
+        to crash. Catch the resulting error to make sure Testflow can continue
         """
-        logger.info("running system test for job queue monitoring and "
-                    "job failure catching")
+        logger.info(msg.mnr("test partial array job failure"))
 
         def _test_function(**kwargs):
             time.sleep(10)  # need to wait for queue system to catch up
@@ -217,9 +214,9 @@ class TestFlow:
     
         # Check the log file for job failure
         log_files = glob(os.path.join(self.system.path.log_files, "*"))
-        assert(len(log_files) == 1), f"only one log file expected"
+        assert(len(log_files) == 3), f"unexpected number of log files found"
 
-        logger.info("job queue and fail system test finished successfully")
+        logger.info("finished successfully")
 
     def test_array_job_rerun(self):
         """
@@ -230,11 +227,11 @@ class TestFlow:
         check if the job has been rereun, so we check that the correct amount
         of log files has been produced
         """
+        logger.info(msg.mnr("test system job failure rerun"))
+
         self.system.rerun = 1
         self.system.ntask = 3
         failed_task_ids = [1, 2]  # 0 should pass, 1 and 2 should fail
-
-        logger.info("running system test for array job rerun capability")
 
         def _test_function(**kwargs):
             time.sleep(10)  # need to wait for queue system to catch up
@@ -259,4 +256,4 @@ class TestFlow:
         nlog_files = self.system.ntask + len(failed_task_ids)
         assert(len(log_files) == nlog_files), f"{nlog_files} log files expected"
 
-        logger.info("job array recovery mechanism completed successfully")
+        logger.info("finished successfully")
