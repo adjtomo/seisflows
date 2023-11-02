@@ -50,6 +50,13 @@ class Workstation:
         1,2,3-8:2,10 -> 1,2,3,5,7,10
         where '-' denotes a range (inclusive), and ':' denotes an optional step.
         If ':' step is not given for a range, then step defaults to 1.
+    :type rerun: int
+    :param rerun: [EXPERIMENTAL FEATURE] attempt to re-run failed tasks or 
+        array tasks submitted with `run`. Collects information about failed 
+        jobs (or array jobs) after a failure, and re-submits with `run`. 
+        `rerun` is an integer defining how many times the User wants System to
+        try and rerun before failing the entire job. If 0 (default), a single
+        task failure will cause main job failure.
     :type log_level: str
     :param log_level: logger level to pass to logging module.
         Available: 'debug', 'info', 'warning', 'critical'
@@ -73,7 +80,7 @@ class Workstation:
     ***
     """
     def __init__(self, ntask=1, nproc=1, tasktime=None, mpiexec=None, 
-                 array=None, log_level="DEBUG", verbose=False, 
+                 array=None, rerun=0, log_level="DEBUG", verbose=False, 
                  workdir=os.getcwd(), path_output=None, path_system=None, 
                  path_par_file=None, path_output_log=None, path_log_files=None, 
                  **kwargs):
@@ -96,6 +103,7 @@ class Workstation:
         self.ntask = ntask
         self.nproc = nproc
         self.tasktime = tasktime
+        self.rerun = retry
         self.mpiexec = mpiexec
         self.array = array
         self.log_level = log_level.upper()
@@ -148,6 +156,9 @@ class Workstation:
                 logger.critical(f"`array` argument can not be parsed by System "
                                 f"module. Please check error message: {e}")
                 sys.exit(-1)
+    
+        assert(isinstance(rerun, int)), f"`rerun` must be an integer [0,inf)"
+        assert(rerun >= 0), f"`rerun` must be in bounds [0, inf)"
 
     def setup(self):
         """
