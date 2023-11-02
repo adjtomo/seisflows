@@ -36,8 +36,10 @@ from seisflows.tools import msg
 from seisflows.tools.config import pickle_function_list
 
 
-# Define bad states defined by SLURM which signifiy failed jobs
-BAD_STATES = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY", "CANCELLED"]
+# Assign states defined by SLURM which signifiy the status of a job
+FAILED_STATES = ["TIMEOUT", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY", "CANCELLED"]
+PENDING_STATES = ["PENDING"]
+COMPLETED_STATES = ["COMPLETED"]
 
 # Time to wait [s] in between queries to SLURM system queue using sacct
 # Helps give SLURM system time to catch up to job submissions and queue updates
@@ -271,14 +273,15 @@ class Slurm(Cluster):
 
         logger.debug(run_call)
 
-        # Grab the job id (used to monitor job status) from the stdout message
+        # RUN the job by submitting the sbatch directive to system
+        # get job id (used to monitor job status) from the stdout message
         stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
                                 text=True, shell=True).stdout
         job_id = self._stdout_to_job_id(stdout)
 
         # Monitor the job queue until all jobs have completed, or any one fails
         try:
-            status = check_job_status_array(job_id)
+            status = monitor_job_status(job_id)
         except FileNotFoundError:
             logger.critical(f"cannot access job information through 'sacct', "
                             f"waited {TIMEOUT_S}s with no return, please "
@@ -286,6 +289,7 @@ class Slurm(Cluster):
                             f"increase timeout constant in `system.slurm`")
             sys.exit(-1)
 
+        # Job has completed
         if status == -1:  # Failed job
             logger.critical(
                 msg.cli(f"Stopping workflow. Please check logs for details.",
@@ -328,79 +332,72 @@ class Slurm(Cluster):
         return task_ids
 
 
-def check_job_status_array(job_id):
+# SLURM-specific functions that are broken out of the class definition because 
+# they are useful as indepedent functions for monitoring the queue
+def monitor_job_status(job_id):
     """
     Repeatedly check the status of a currently running job using 'sacct'.
     If the job goes into a bad state like 'FAILED', log the failing
     job's id and their states. If all jobs complete nominally, return
 
     .. note::
+
         The time.sleep() is critical before querying job status because the 
         system will likely take a second to intitiate jobs so if we 
         `query_job_states` before this has happenend, it will return empty
         lists and cause the function to error out
 
-    :type job_id: str
-    :param job_id: main job id to query, returned from the subprocess.run that
-    ran the jobs
+    :type job_id: str or list
+    :param job_id: main job id(s) to query, returned from the subprocess.run 
+        that ran the job(s). 
+        - if single value, we expect that jobs have been submitted as a job 
+          array (e.g., 1_0, 1_1, 1_2)
+        -if a list, we expect that the jobs have been submitted with independent
+         job numbers (e.g, 0, 1, 2)
     :rtype: int
     :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
         fail (one or more jobs returned failing status)
     :raises FileNotFoundError: if 'sacct' does not return any output for ~1 min.
     """
     logger.info(f"monitoring job status for submitted job: {job_id}")
+    bad_jobs = []  # used to keep track of failed jobs
     while True:
         time.sleep(WAIT_TIME_S)  # give job time to process 
-        job_ids, states = query_job_states(job_id)
+
+        # Treat job arrays and job lists differently
+        if isinstance(job_id, list):
+            job_ids, states = [], []
+            for jid in job_id:
+                _job_ids, _states = query_job_states(jid)                         
+                job_ids += _job_ids            
+                states += _states       
+        else:                                             
+            job_ids, states = query_job_states(job_id)
+
         # Sometimes query_job_state() does not return, so we wait again
         if not job_ids or not states:
             continue
-        if all([state == "COMPLETED" for state in states]):
-            logger.debug("all array jobs returned a 'COMPLETED' state")
+
+        # STATE COMPLETE: All jobs completed nominally, success
+        if all([state in COMPLETED_STATES for state in states]):
+            logger.debug(f"all array jobs returned a completed state")
             return 1  # Pass
-        elif any([check in states for check in BAD_STATES]):  # Any bad states?
-            logger.info("atleast 1 system job returned a failing exit code")
+        # STATE FAILED: All jobs are finished, but not all 'COMPLETED'
+        elif all([state not in PENDING_STATES for state in states]):
+            logger.debug("some array jobs have returned a non-completed state")
+            return -1
+        # STATE FAILING: Jobs still running, some returned non-complete state
+        elif any([check in states for check in FAILED_STATES]):  # Any bad states?
             for job_id, state in zip(job_ids, states):
-                if state in BAD_STATES:
-                    logger.debug(f"{job_id}: {state}")
-            return -1  # Fail
-
-def check_job_status_list(job_ids):                                          
-    """                                                                          
-    Check the status of a list of currently running jobs. This is used for 
-    systems that cannot submit array jobs (e.g., Frontera) where we instead
-    submit jobs one by one and have to check the status of all those jobs
-    together.
-
-    :type job_ids: list of str
-    :param job_id: job ID's to query with SACCT. Will be considered one group
-        of jobs, who all need to finish successfully otherwise the entire group
-        is considered failed
-    :rtype: int
-    :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
-        fail (one or more jobs returned failing status)
-    :raises FileNotFoundError: if 'sacct' does not return any output for ~1 min.
-    """                                                                          
-    logger.info(f"monitoring job status for {len(job_ids)} submitted jobs")      
-                                                                                 
-    while True:                                                                  
-        time.sleep(WAIT_TIME_S)                                                            
-        job_id_list, states = [], []
-        for job_id in job_ids:                                                   
-            _job_ids, _states = query_job_states(job_id)                         
-            job_id_list += _job_ids                                              
-            states += _states                                                    
-        # Sometimes query_job_state() does not return, so we wait again
-        if not states or not job_id_list:
+                if state in FAILED_STATES:
+                    # Let User know failing jobs as they arise, and only once
+                    if job_id not in bad_jobs:
+                        logger.critical(f"{job_id}: {state}")
+                        bad_jobs.append(job_id)
+            continue    
+        # STATE PENDING: Jobs still running, mixture of 'PENDING', 'COMPLETE'
+        else:
             continue
-        if all([state == "COMPLETED" for state in states]):                      
-            return 1  # Pass                                                     
-        elif any([check in states for check in BAD_STATES]):  # Any bad states?  
-            logger.info("atleast 1 system job returned a failing exit code")     
-            for job_id, state in zip(job_ids, states):                           
-                if state in BAD_STATES:                                          
-                    logger.debug(f"{job_id}: {state}")                           
-            return -1  # Fail  
 
 
 def query_job_states(job_id, _recheck=0):
@@ -456,6 +453,7 @@ def query_job_states(job_id, _recheck=0):
         job_states.append(job_state)
 
     return job_ids, job_states
+
 
 def modify_run_call_single_proc(run_call):
     """

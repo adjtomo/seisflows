@@ -103,7 +103,7 @@ class Workstation:
         self.ntask = ntask
         self.nproc = nproc
         self.tasktime = tasktime
-        self.rerun = retry
+        self.rerun = rerun
         self.mpiexec = mpiexec
         self.array = array
         self.log_level = log_level.upper()

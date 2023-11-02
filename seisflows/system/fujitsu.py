@@ -28,6 +28,9 @@ from seisflows.tools.config import pickle_function_list
 # Acceptable job statuses are 'QUEUED', 'RUNNING', 'END'
 BAD_STATES = ["CANCEL", "HOLD", "ERROR"]
 
+# Define the completed state, which may change for different systems
+COMPLETE_STATE = "END"
+
 
 class Fujitsu(Cluster):
     """
@@ -264,7 +267,7 @@ class Fujitsu(Cluster):
 
         # Monitor the job queue until all jobs have completed, or any one fails
         try:
-            status = check_job_status_array(job_id)
+            status = check_job_status(job_id)
         except FileNotFoundError:
             logger.critical(f"cannot access job information through 'pjstat', "
                             f"waited 50s with no return, please check job "
@@ -310,18 +313,32 @@ def check_job_status_list(job_ids):
         for job_id in job_ids:                                                   
             _job_ids, _states = query_job_states(job_id)                         
             job_id_list += _job_ids                                              
-            states += _states                                                    
+            states += _states        
+                                                        
         # Sometimes query_job_state() does not return, so we wait again
         if not states or not job_id_list:
             continue
-        if all([state == "END" for state in states]):                      
-            return 1  # Pass                                                     
-        elif any([check in states for check in BAD_STATES]):  # Any bad states?  
-            logger.info("atleast 1 system job returned a failing exit code")     
-            for job_id, state in zip(job_ids, states):                           
-                if state in BAD_STATES:                                          
-                    logger.debug(f"{job_id}: {state}")                           
-            return -1  # Fail  
+
+        # STATE COMPLETE: All jobs completed nominally, success
+        if all([state == COMPLETE_STATE for state in states]):
+            logger.debug(f"all array jobs returned a {COMPLETE_STATE} state")
+            return 1  # Pass
+        # STATE FAILED: All jobs are finished, but not all 'COMPLETED'
+        elif all([state != "PENDING" for state in states]):
+            logger.debug("some array jobs have returned a non-complete state")
+            return -1
+        # STATE FAILING: Jobs still running, some returned non-complete state
+        elif any([check in states for check in BAD_STATES]):  # Any bad states?
+            for job_id, state in zip(job_ids, states):
+                if state in BAD_STATES:
+                    # Let User know failing jobs as they arise, and only once
+                    if job_id not in bad_jobs:
+                        logger.info(f"{job_id}: {state}")
+                        bad_jobs.append(job_id)
+            continue    
+        # STATE PENDING: Jobs still running, mixture of 'PENDING', 'COMPLETE'
+        else:
+            continue
 
 
 def query_job_states(job_id, _recheck=0):
