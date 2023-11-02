@@ -13,6 +13,7 @@ actually submitting to any job scheduler.
 import os
 import sys
 import subprocess
+import time
 from concurrent.futures import ProcessPoolExecutor, wait
 from seisflows import logger, ROOT_DIR
 from seisflows.tools import msg
@@ -283,7 +284,7 @@ class Cluster(Workstation):
 
         return task_id, result.returncode
 
-    def monitor_job_status(job_id):
+    def monitor_job_status(self, job_id):
         """
         Repeatedly check the status of a currently running job(s) in a clusters' 
         queue. If the job goes into a bad state (like 'FAILED'), log the 
@@ -320,7 +321,7 @@ class Cluster(Workstation):
         logger.info(f"monitoring job status for job: {job_id}")
         bad_jobs = []  # used to keep track of failed jobs
         while True:
-            time.sleep(WAIT_TIME_S)  # give job time to process 
+            time.sleep(25)  # give job time to initialize in queue (units: s)
 
             # Treat job arrays and job lists differently
             if isinstance(job_id, list):

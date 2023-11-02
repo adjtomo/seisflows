@@ -109,7 +109,7 @@ class TestFlow:
         for func in self.task_list:
             func()
 
-        logger.info(msg.mjr("FINISHED TEST WORKFLOW"))
+        logger.info(msg.mjr("FINISHED TEST WORKFLOW SUCCESSFULLY"))
 
     def test_system_print_hello_world(self):
         """
@@ -119,7 +119,7 @@ class TestFlow:
         """
         logger.info("running system test for job array submission")
 
-        def _test_function():
+        def _test_function(**kwargs):
             print(f"hello world from task id: {get_task_id()}")
 
         # Clear the log files dir. as this is how we will check results
@@ -153,7 +153,7 @@ class TestFlow:
         logger.info("running system test for job queue monitoring and "
                     "job failure catching")
 
-        def _test_function():
+        def _test_function(**kwargs):
             for i in range(1, 11):
                 time.sleep(1)
                 print(f"Task ID {get_task_id()} waited {i} sec.")
@@ -169,7 +169,8 @@ class TestFlow:
             self.system.run(funcs=[_test_function], single=True)
             logger.critical("submitted job was expected to fail but did not")
         except SystemExit:
-            logger.info("job failure catch was successful")
+            logger.info("job failure catch was successful, you can safely 
+                        "ignore any error logs preceding this message")
             pass 
     
         # Check the log file for job failure

@@ -157,8 +157,8 @@ class Workstation:
                                 f"module. Please check error message: {e}")
                 sys.exit(-1)
     
-        assert(isinstance(rerun, int)), f"`rerun` must be an integer [0,inf)"
-        assert(rerun >= 0), f"`rerun` must be in bounds [0, inf)"
+        assert(isinstance(self.rerun, int)), f"`rerun` must be an int [0,inf)"
+        assert(self.rerun >= 0), f"`rerun` must be in bounds [0, inf)"
 
     def setup(self):
         """
